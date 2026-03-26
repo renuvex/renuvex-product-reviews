@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import axios from 'axios';
 import { CheckCircle2, MessageSquare, Settings, Star, Trash2, Check, X, Reply } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -138,10 +139,12 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                             try {
                               const imgs = JSON.parse(review.images);
                               return Array.isArray(imgs) ? imgs.map((img: string, idx: number) => (
-                                <img 
-                                  key={idx} 
-                                  src={img} 
-                                  alt="Review" 
+                                <Image
+                                  key={idx}
+                                  src={img}
+                                  alt="Review"
+                                  width={48}
+                                  height={48}
                                   className="w-12 h-12 object-cover rounded border border-gray-200 cursor-zoom-in"
                                   onClick={() => window.open(img, '_blank')}
                                 />
@@ -206,7 +209,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-emerald-600 bg-emerald-50 border-emerald-200 text-sm py-1 px-3">
-            <CheckCircle2 size={14} className="mr-1" /> İkas'a Bağlı
+            <CheckCircle2 size={14} className="mr-1" /> İkas&apos;a Bağlı
           </Badge>
         </div>
       </div>
