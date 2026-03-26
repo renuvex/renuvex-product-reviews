@@ -1,5 +1,5 @@
 import { AppBridgeHelper } from '@ikas/app-helpers';
-import { useRouter } from 'next/navigation';
+import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import crypto from 'crypto';
 
 /** Key used for storing tokens in session storage */
@@ -96,7 +96,7 @@ export class TokenHelpers {
    * - Falls back to authorization page if required parameters are missing
    */
   static setToken = async (
-    router: ReturnType<typeof useRouter>, 
+    router: AppRouterInstance,
     params: URLSearchParams
   ): Promise<void> => {
     // Check if all required OAuth callback parameters are present
