@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model AuthToken {
+  id              String   @id
+  merchantId      String
+  authorizedAppId String?  @unique
+  salesChannelId  String?
+  type            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deleted         Boolean  @default(false)
+
+  accessToken     String
+  tokenType       String
+  expiresIn       Int
+  expireDate      DateTime
+  refreshToken    String
+  scope           String?
+}
+
+model Review {
+  id            String   @id @default(uuid())
+  storeId       String   // Which ikas store this belongs to (merchantId)
+  productId     String   // The product ID in Ikas
+  rating        Int
+  comment       String?
+  author        String
+  email         String?
+  status        String   @default("pending") // pending, approved, rejected
+  merchantReply String?  // Store owner's reply to the customer's review
+  images        String?  // JSON stringified array of image URLs
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([productId])
+}
+
+model StoreSettings {
+  id              String   @id @default(uuid())
+  storeId         String   @unique
+  widgetColor     String   @default("#000000")
+  widgetTitle     String   @default("Müşteri Yorumları")
+  widgetTemplate  String   @default("classic")
+  autoApprove     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
