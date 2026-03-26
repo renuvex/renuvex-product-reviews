@@ -302,12 +302,29 @@
   // ── iKAS Storefront Events integration ───────────────────────────────────
   // Fires only on product detail pages — no DOM polling, no false positives
 
+  function getProductIdFromPage() {
+    // Try IkasStorefront global (set before PRODUCT_VIEW fires)
+    if (window.IkasStorefront && window.IkasStorefront.product && window.IkasStorefront.product.id) {
+      return window.IkasStorefront.product.id;
+    }
+    // Try URL: /products/slug--PRODUCT_ID or /urun/slug--PRODUCT_ID
+    const match = window.location.pathname.match(/--([a-f0-9-]{36})(?:\/|$|\?)/);
+    if (match) return match[1];
+    // Try URL query param ?productId=
+    const qp = new URLSearchParams(window.location.search).get('productId');
+    if (qp) return qp;
+    return null;
+  }
+
   function attachEvents() {
     if (window.IkasEvents) {
       window.IkasEvents.subscribe('PRODUCT_VIEW', function (data) {
         const productId = data && (data.productId || (data.product && data.product.id));
         if (productId) bootstrap(productId);
       });
+      // Event may have already fired before this script loaded — try to render now
+      const currentProductId = getProductIdFromPage();
+      if (currentProductId) bootstrap(currentProductId);
     } else {
       // Fallback: wait for IkasEvents to become available (injected after DOM ready)
       let attempts = 0;
