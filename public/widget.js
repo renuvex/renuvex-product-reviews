@@ -318,9 +318,14 @@
 
   function attachEvents() {
     if (window.IkasEvents) {
-      window.IkasEvents.subscribe('PRODUCT_VIEW', function (data) {
-        const productId = data && (data.productId || (data.product && data.product.id));
-        if (productId) bootstrap(productId);
+      window.IkasEvents.subscribe({
+        id: 'ikas-reviews-widget',
+        callback: function (event) {
+          if (event && event.type === 'PRODUCT_VIEW') {
+            const productId = event.data && event.data.productDetail && event.data.productDetail.id;
+            if (productId) bootstrap(productId);
+          }
+        },
       });
       // Event may have already fired before this script loaded — try to render now
       const currentProductId = getProductIdFromPage();
