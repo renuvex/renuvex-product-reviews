@@ -434,13 +434,24 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      attachEvents();
-      renderListingBadges();
-    });
-  } else {
+  function init() {
     attachEvents();
     renderListingBadges();
   }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // SPA navigasyonu: hem ileri (pushState) hem geri (popstate) navigasyonda badge'leri yeniden ekle
+  var _push = history.pushState;
+  history.pushState = function () {
+    _push.apply(this, arguments);
+    setTimeout(renderListingBadges, 300);
+  };
+  window.addEventListener('popstate', function () {
+    setTimeout(renderListingBadges, 300);
+  });
 })();
