@@ -49,23 +49,33 @@ export async function POST(req: Request) {
         const response = await axios.post(
             'https://api.myikas.com/api/v2/admin/graphql',
             {
-                query,
-                variables: {
-                    input: {
-                        pagination: {
-                            page: 1,
-                            limit: 250 // Tek seferde 250 ürün çekelim
+                query: `
+                    query {
+                        listProduct {
+                            data {
+                                id
+                                name
+                            }
                         }
                     }
-                }
+                `
             },
             {
                 headers: {
                     'Authorization': `Bearer ${auth.accessToken}`,
+                    'X-IKAS-STORE-ID': storeId,
                     'Content-Type': 'application/json'
                 }
             }
         );
+
+        if (response.data.errors) {
+            console.error('[GRAPHQL ERRORS]:', response.data.errors);
+            return NextResponse.json({ 
+                error: 'GraphQL Hatası', 
+                details: JSON.stringify(response.data.errors) 
+            }, { status: 400 });
+        }
 
         const products = response.data?.data?.listProduct?.data || [];
         console.log(`[SYNC] ${products.length} ürün bulundu.`);
@@ -96,7 +106,7 @@ export async function POST(req: Request) {
         console.error('[SYNC ERROR]:', error.response?.data || error.message);
         return NextResponse.json({ 
             error: 'Ürünler eşitlenirken hata oluştu.', 
-            details: error.message 
+            details: JSON.stringify(error.response?.data || error.message)
         }, { status: 500 });
     }
 }
