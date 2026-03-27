@@ -424,22 +424,27 @@
         if (!avgRating || !totalCount) return;
 
         // Badge zaten eklenmiş mi?
-        const cardEl = linkEl.closest('li, article, [class*="product"], [class*="card"], [class*="item"]') || linkEl.parentElement;
+        const cardEl = linkEl.closest('li, article, [class*="product"], [class*="card"], [class*="item"]');
         if (!cardEl || cardEl.querySelector('.ikr-listing-badge')) return;
+
+        // Kategori ismi gibi üst seviye linkleri ele (Ürün kartı içinde değilse çalışma)
+        if (cardEl.tagName === 'BODY' || cardEl.id === '__next') return;
 
         const badge = document.createElement('div');
         badge.className = 'ikr-listing-badge';
-        badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-top:4px;';
+        badge.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;margin:5px 0;width:100%;';
         badge.innerHTML =
           '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) + '</span>' +
-          '<span style="color:#555;">(' + totalCount + ')</span>';
+          '<span style="color:#888;">(' + totalCount + ')</span>';
 
-        // Ürün adı veya fiyat elementinin altına ekle
-        const titleEl = cardEl.querySelector('h2, h3, h4, p, span');
+        // Ürün adı veya fiyat elementinin altına ekle 
+        // İkas temalarında genelde h3 veya p kullanılır. En garanti h3 veya kalıba göre ilk p'dir.
+        const titleEl = cardEl.querySelector('h3, h4, [class*="title"], [class*="name"]');
         if (titleEl && titleEl.parentNode) {
           titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
         } else {
-          cardEl.appendChild(badge);
+          // Fallback: Linkin hemen altına veya kartın en altına
+          linkEl.parentNode.insertBefore(badge, linkEl.nextSibling);
         }
       });
     } catch (_) {
