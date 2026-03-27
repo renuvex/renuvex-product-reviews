@@ -50,12 +50,14 @@ export async function GET(req: Request) {
         };
     });
 
-    return setCorsHeaders(NextResponse.json({ 
+    const res = NextResponse.json({
       data: {
         reviews: formattedReviews,
         totalCount: formattedReviews.length,
-      } 
-    }));
+      }
+    });
+    res.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    return setCorsHeaders(res);
   } catch (error: any) {
     console.error('[GET] Reviews ERROR:', error);
     return setCorsHeaders(NextResponse.json({ error: error.message }, { status: 500 }));
