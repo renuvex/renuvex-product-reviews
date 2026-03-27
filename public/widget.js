@@ -445,7 +445,7 @@
 
         var badge = document.createElement('div');
         badge.setAttribute('data-ikr-listing-badge', '1');
-        badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:4px;margin-bottom:4px;font-size:12px;color:#555;pointer-events:none;';
+        badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;';
         badge.innerHTML =
           '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(parseFloat(rating.avg))) + '☆'.repeat(5 - Math.round(parseFloat(rating.avg))) + '</span>' +
           '<span>' + rating.avg + ' (' + rating.count + ')</span>';
@@ -471,13 +471,11 @@
     init();
   }
 
-  // SPA navigasyonu: hem ileri (pushState) hem geri (popstate) navigasyonda badge'leri yeniden ekle
-  var _push = history.pushState;
-  history.pushState = function () {
-    _push.apply(this, arguments);
-    setTimeout(renderListingBadges, 300);
-  };
-  window.addEventListener('popstate', function () {
-    setTimeout(renderListingBadges, 300);
+  // DOM değişimini izleyerek listing badge'lerini otomatik ekle (SPA navigasyon + lazy load)
+  var _badgeDebounce;
+  var _badgeObserver = new MutationObserver(function () {
+    clearTimeout(_badgeDebounce);
+    _badgeDebounce = setTimeout(renderListingBadges, 200);
   });
+  _badgeObserver.observe(document.body, { childList: true, subtree: true });
 })();
