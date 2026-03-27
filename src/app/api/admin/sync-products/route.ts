@@ -50,23 +50,15 @@ export async function POST(req: Request) {
             'https://api.myikas.com/api/v1/admin/graphql',
             {
                 query: `
-                    query listProduct($input: ListProductInput!) {
-                        listProduct(input: $input) {
+                    query {
+                        listProduct {
                             data {
                                 id
                                 name
                             }
                         }
                     }
-                `,
-                variables: {
-                    input: {
-                        pagination: {
-                            page: 1,
-                            limit: 250
-                        }
-                    }
-                }
+                `
             },
             {
                 headers: {
