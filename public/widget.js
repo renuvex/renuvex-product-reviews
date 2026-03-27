@@ -403,8 +403,14 @@
           '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(parseFloat(rating.avg))) + '☆'.repeat(5 - Math.round(parseFloat(rating.avg))) + '</span>' +
           '<span>' + rating.avg + ' (' + rating.count + ')</span>';
 
-        // Link'in sonuna ekle
-        a.appendChild(badge);
+        // Ürün adı elementinden sonra ekle (h2, h3, [class*="product-name"], [class*="product-title"])
+        var nameEl = a.querySelector('h2') || a.querySelector('h3') ||
+          a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]');
+        if (nameEl && nameEl.parentNode) {
+          nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+        } else {
+          a.appendChild(badge);
+        }
       });
     });
   }
