@@ -224,6 +224,10 @@
       fileInput.onchange = async function (e) {
         const files = Array.from(e.target.files);
         for (const file of files) {
+          if (file.size > 5 * 1024 * 1024) {
+            alert(file.name + ' dosyası 5MB sınırını aşıyor. Lütfen daha küçük bir görsel seçin.');
+            continue;
+          }
           const item = document.createElement('div');
           item.className = 'ikr-preview-item';
           item.innerHTML = '<img class="ikr-preview-img" src="' + URL.createObjectURL(file) + '"><div class="ikr-preview-loading">...</div>';
