@@ -313,16 +313,6 @@
   // ── Bootstrap ─────────────────────────────────────────────────────────────
 
   async function bootstrap(productId) {
-    // Ürün detay sayfasındaki slug'ı cache'e yaz (fire & forget)
-    var pageSlug = window.location.pathname.replace(/^\//, '').split('?')[0];
-    if (pageSlug) {
-      fetch(API_BASE + '/api/public/ratings-by-slug', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: [], cacheSlug: { slug: pageSlug, productId: productId } }),
-      }).catch(function () {});
-    }
-
     try {
       const res = await fetch(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
       const settings = await res.json();
@@ -378,87 +368,9 @@
     }
   }
 
-  // ── Listing page badges (kategori / anasayfa) ─────────────────────────────
-  // Her ürün linkini tarar, slug'ları API'ye gönderir, mini badge ekler
-
-  async function renderListingBadges() {
-    // Ürün linklerini bul — anasayfa/kategori linkleri nav/footer/sosyal medya hariç
-    const excludedPaths = ['account', 'pages', 'blog', 'search', 'cart'];
-    const productLinks = [...document.querySelectorAll('a[href]')].filter(function (a) {
-      try {
-        const url = new URL(a.href);
-        if (url.hostname !== window.location.hostname) return false;
-        const path = url.pathname.replace(/^\//, '');
-        if (!path || path === '') return false;
-        if (excludedPaths.some(function (ex) { return path.startsWith(ex); })) return false;
-        return true;
-      } catch (_) { return false; }
-    });
-
-    if (productLinks.length === 0) return;
-
-    // Slug → link element eşleştirmesi
-    const slugMap = {};
-    productLinks.forEach(function (a) {
-      const slug = new URL(a.href).pathname.replace(/^\//, '').split('?')[0];
-      if (slug && !slugMap[slug]) slugMap[slug] = a;
-    });
-
-    const slugs = Object.keys(slugMap);
-    if (slugs.length === 0) return;
-
-    try {
-      const res = await fetch(API_BASE + '/api/public/ratings-by-slug', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: slugs }),
-      });
-      if (!res.ok) return;
-      const json = await res.json();
-      const ratings = json.data || {};
-
-      Object.keys(ratings).forEach(function (slug) {
-        const linkEl = slugMap[slug];
-        if (!linkEl) return;
-        const { avgRating, totalCount } = ratings[slug];
-        if (!avgRating || !totalCount) return;
-
-        // Badge zaten eklenmiş mi?
-        const cardEl = linkEl.closest('li, article, [class*="product"], [class*="card"], [class*="item"]');
-        if (!cardEl || cardEl.querySelector('.ikr-listing-badge')) return;
-
-        // Kategori ismi gibi üst seviye linkleri ele (Ürün kartı içinde değilse çalışma)
-        if (cardEl.tagName === 'BODY' || cardEl.id === '__next') return;
-
-        const badge = document.createElement('div');
-        badge.className = 'ikr-listing-badge';
-        badge.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;margin:5px 0;width:100%;';
-        badge.innerHTML =
-          '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) + '</span>' +
-          '<span style="color:#888;">(' + totalCount + ')</span>';
-
-        // Ürün adı veya fiyat elementinin altına ekle 
-        // İkas temalarında genelde h3 veya p kullanılır. En garanti h3 veya kalıba göre ilk p'dir.
-        const titleEl = cardEl.querySelector('h3, h4, [class*="title"], [class*="name"]');
-        if (titleEl && titleEl.parentNode) {
-          titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
-        } else {
-          // Fallback: Linkin hemen altına veya kartın en altına
-          linkEl.parentNode.insertBefore(badge, linkEl.nextSibling);
-        }
-      });
-    } catch (_) {
-      // Listing badge hatası — sessizce geç
-    }
-  }
-
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      attachEvents();
-      renderListingBadges();
-    });
+    document.addEventListener('DOMContentLoaded', attachEvents);
   } else {
     attachEvents();
-    renderListingBadges();
   }
 })();
