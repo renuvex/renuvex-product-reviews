@@ -25,17 +25,45 @@ export async function POST(req: Request) {
         }
 
         // 1. Mağazanın access token'ını bul
-        const auth = await prisma.authToken.findFirst({
+        let auth = await prisma.authToken.findFirst({
             where: { merchantId: storeId }
         });
 
         if (!auth || !auth.accessToken) {
-            return NextResponse.json({ error: 'Yetkilendirme hatası' }, { status: 401 });
+            return NextResponse.json({ error: 'Yetkilendirme hatası', details: 'Veritabanında bu mağaza için anahtar bulunamadı.' }, { status: 401 });
         }
 
-        // 2. İkas STOREFRONT API'den ürünleri çek (Halka açık, login istemez!)
+        // 1.1 Token süresini kontrol et ve gerekirse tazele
+        const now = new Date();
+        if (auth.expireDate && now >= new Date(auth.expireDate)) {
+            console.log('[SYNC] Token süresi dolmuş, tazeleniyor...');
+            try {
+                const refreshRes = await axios.post('https://api.myikas.com/api/v1/authorized-app/token', {
+                    grant_type: 'refresh_token',
+                    refresh_token: auth.refreshToken,
+                    client_id: process.env.IKAS_CLIENT_ID,
+                    client_secret: process.env.IKAS_CLIENT_SECRET
+                });
+
+                const newTokenData = refreshRes.data;
+                auth = await prisma.authToken.update({
+                    where: { id: auth.id },
+                    data: {
+                        accessToken: newTokenData.access_token,
+                        expireDate: new Date(Date.now() + newTokenData.expires_in * 1000),
+                        refreshToken: newTokenData.refresh_token || auth.refreshToken
+                    }
+                });
+                console.log('[SYNC] Token başarıyla tazelendi.');
+            } catch (err: any) {
+                console.error('[SYNC AUTH REFRESH ERROR]:', err.response?.data || err.message);
+                return NextResponse.json({ error: 'Yetki tazeleme hatası', details: 'Lütfen uygulamayı İkas panelinden silip tekrar yükleyin.' }, { status: 401 });
+            }
+        }
+
+        // 2. İkas Admin API'den ürünleri çek (V1 stabil yol)
         const response = await axios.post(
-            'https://api.myikas.com/api/v1/storefront/graphql',
+            'https://api.myikas.com/api/v1/admin/graphql',
             {
                 query: `
                     query {
@@ -50,6 +78,7 @@ export async function POST(req: Request) {
             },
             {
                 headers: {
+                    'Authorization': `Bearer ${auth.accessToken}`,
                     'X-IKAS-STORE-ID': storeId,
                     'Content-Type': 'application/json'
                 }
