@@ -105,11 +105,10 @@
         // Manuel anchor öncelikli
         anchorEl.appendChild(container);
       } else {
-        // Otomatik: h1'in parent'ına ekle
-        const h1 = document.querySelector('h1');
-        const parent = h1 && h1.parentElement;
-        if (!parent) return;
-        parent.appendChild(container);
+        // Otomatik: ikas resmi tema standart container'ı
+        const detailBox = document.querySelector('[class*="product-detail-page-detail-box"]');
+        if (!detailBox) return;
+        detailBox.appendChild(container);
       }
     }
 
