@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         }
 
         // 1. Mağazanın access token'ını bul
-        const auth = await prisma.authToken.findUnique({
+        const auth = await prisma.authToken.findFirst({
             where: { merchantId: storeId }
         });
 
