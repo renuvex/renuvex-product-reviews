@@ -471,8 +471,6 @@
         var nameEl = findNameEl(a, productName);
         if (nameEl && nameEl.parentNode) {
           nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
-        } else {
-          a.appendChild(badge);
         }
       });
     });
