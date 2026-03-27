@@ -445,7 +445,7 @@
 
         var badge = document.createElement('div');
         badge.setAttribute('data-ikr-listing-badge', '1');
-        badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:4px;font-size:12px;color:#555;pointer-events:none;';
+        badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:4px;margin-bottom:4px;font-size:12px;color:#555;pointer-events:none;';
         badge.innerHTML =
           '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(parseFloat(rating.avg))) + '☆'.repeat(5 - Math.round(parseFloat(rating.avg))) + '</span>' +
           '<span>' + rating.avg + ' (' + rating.count + ')</span>';
