@@ -33,25 +33,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Yetkilendirme hatası' }, { status: 401 });
         }
 
-        // 2. İkas Admin API'den ürünleri çek (GraphQL)
-        // Not: slug alanı GraphQL'de doğrudan yoksa isimden türetilecek
-        const query = `
-            query listProduct($input: ListProductInput!) {
-                listProduct(input: $input) {
-                    data {
-                        id
-                        name
-                    }
-                }
-            }
-        `;
-
+        // 2. İkas STOREFRONT API'den ürünleri çek (Halka açık, login istemez!)
         const response = await axios.post(
-            'https://api.myikas.com/api/v1/admin/graphql',
+            'https://api.myikas.com/api/v1/storefront/graphql',
             {
                 query: `
                     query {
-                        listProduct {
+                        listProduct(input: { pagination: { limit: 100, page: 1 } }) {
                             data {
                                 id
                                 name
@@ -62,7 +50,6 @@ export async function POST(req: Request) {
             },
             {
                 headers: {
-                    'Authorization': `Bearer ${auth.accessToken}`,
                     'X-IKAS-STORE-ID': storeId,
                     'Content-Type': 'application/json'
                 }
@@ -70,9 +57,9 @@ export async function POST(req: Request) {
         );
 
         if (response.data.errors) {
-            console.error('[GRAPHQL ERRORS]:', response.data.errors);
+            console.error('[STOREFRONT ERRORS]:', response.data.errors);
             return NextResponse.json({ 
-                error: 'GraphQL Hatası', 
+                error: 'Storefront Hatası', 
                 details: JSON.stringify(response.data.errors) 
             }, { status: 400 });
         }
