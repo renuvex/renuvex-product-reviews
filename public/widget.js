@@ -339,9 +339,9 @@
 
   var EXCLUDED = ['account', 'pages', 'blog', 'search', 'cart', 'checkout', 'siparis', 'odeme'];
 
-  function getListingSlugs() {
-    // Önce JSON-LD ItemList'ten dene (en güvenilir)
-    var slugs = [];
+  // JSON-LD ItemList'ten slug → ürün adı haritası oluşturur
+  function getSlugNameMap() {
+    var map = {};
     var scripts = document.querySelectorAll('script[type="application/ld+json"]');
     for (var i = 0; i < scripts.length; i++) {
       try {
@@ -352,18 +352,41 @@
             if (!url) return;
             var path = new URL(url).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
             if (path && !EXCLUDED.some(function (e) { return path.startsWith(e); })) {
-              slugs.push(path);
+              map[path] = (item.item && item.item.name) ? item.item.name.trim() : null;
             }
           });
-          if (slugs.length) return [...new Set(slugs)];
+          if (Object.keys(map).length) return map;
         }
       } catch (_) {}
     }
-    return [];
+    return map;
+  }
+
+  function findNameEl(a, productName) {
+    // 1. JSON-LD'den gelen ürün adı ile heading text'ini eşleştir — en güvenilir yöntem
+    if (productName) {
+      var headings = a.querySelectorAll('h1,h2,h3,h4,h5,h6');
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].textContent.trim() === productName) return headings[i];
+      }
+      // Heading yoksa ürün adını içeren herhangi bir elementi bul
+      var allEls = a.querySelectorAll('*');
+      for (var j = 0; j < allEls.length; j++) {
+        if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) return allEls[j];
+      }
+    }
+    // 2. Fallback: class adı bazlı seçiciler
+    return a.querySelector('[class*="product-name"]') ||
+      a.querySelector('[class*="product-title"]') ||
+      a.querySelector('[class*="name"]') ||
+      a.querySelector('h2') ||
+      a.querySelector('h3') ||
+      null;
   }
 
   async function renderListingBadges() {
-    var slugs = getListingSlugs();
+    var slugNameMap = getSlugNameMap();
+    var slugs = Object.keys(slugNameMap);
     if (!slugs.length) return;
 
     var res;
@@ -379,16 +402,14 @@
     try { json = await res.json(); } catch (_) { return; }
     var ratings = json.data || {};
 
-    // Her unique slug için linki bul ve badge ekle
-    // Aynı slug'a birden fazla link olabilir — Set ile tek badge ekle
     slugs.forEach(function (slug) {
       var rating = ratings[slug];
       if (!rating) return;
+      var productName = slugNameMap[slug];
 
-      // Bu slug'a ait tüm linkleri bul
       var links = document.querySelectorAll('a[href]');
       links.forEach(function (a) {
-        if (a.getAttribute('data-ikr-badge')) return; // zaten işaretli
+        if (a.getAttribute('data-ikr-badge')) return;
         try {
           var path = new URL(a.href).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
           if (path !== slug) return;
@@ -403,9 +424,7 @@
           '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(parseFloat(rating.avg))) + '☆'.repeat(5 - Math.round(parseFloat(rating.avg))) + '</span>' +
           '<span>' + rating.avg + ' (' + rating.count + ')</span>';
 
-        // Ürün adı elementinden sonra ekle (h2, h3, [class*="product-name"], [class*="product-title"])
-        var nameEl = a.querySelector('h2') || a.querySelector('h3') ||
-          a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]');
+        var nameEl = findNameEl(a, productName);
         if (nameEl && nameEl.parentNode) {
           nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
         } else {
