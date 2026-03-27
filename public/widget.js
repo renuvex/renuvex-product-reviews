@@ -384,8 +384,34 @@
       null;
   }
 
+  // DOM'daki ürün linklerinden slug → ürün adı haritası çıkarır (slayt, öne çıkan ürünler vb.)
+  function getSlugNameMapFromDOM() {
+    var map = {};
+    var links = document.querySelectorAll('a[href]');
+    links.forEach(function (a) {
+      try {
+        var path = new URL(a.href).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
+        if (!path || EXCLUDED.some(function (e) { return path.startsWith(e); })) return;
+        if (map[path]) return; // zaten var
+        // Sadece ürün kartı olan linkleri al (product-container içerenleri)
+        if (!a.querySelector('[class*="product-container"]') && !a.querySelector('[class*="product-name"]') && !a.querySelector('[class*="product-title"]')) return;
+        // Ürün adını bulmaya çalış
+        var nameEl = a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
+          a.querySelector('.text-sm.font-semibold') || a.querySelector('h2') || a.querySelector('h3');
+        map[path] = nameEl ? nameEl.textContent.trim() : null;
+      } catch (_) {}
+    });
+    return map;
+  }
+
   async function renderListingBadges() {
+    // JSON-LD'den slug haritası al (kategori sayfaları)
     var slugNameMap = getSlugNameMap();
+    // DOM'dan ek slug haritası ekle (slayt, öne çıkan ürünler vb.)
+    var domMap = getSlugNameMapFromDOM();
+    Object.keys(domMap).forEach(function (slug) {
+      if (!slugNameMap[slug]) slugNameMap[slug] = domMap[slug];
+    });
     var slugs = Object.keys(slugNameMap);
     if (!slugs.length) return;
 
