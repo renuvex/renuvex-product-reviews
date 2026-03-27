@@ -15,6 +15,7 @@ interface Review {
   id: string;
   storeId: string;
   productId: string;
+  productName: string | null;
   rating: number;
   comment: string | null;
   author: string;
@@ -141,7 +142,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                   <TableRow key={review.id}>
                     <TableCell>
                       <div className="font-medium">{review.author}</div>
-                      <div className="text-sm text-muted-foreground">{review.productId}</div>
+                      <div className="text-sm font-semibold text-primary">{review.productName || review.productId}</div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {new Date(review.createdAt).toLocaleDateString('tr-TR')}
                       </div>
