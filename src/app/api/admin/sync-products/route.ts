@@ -24,9 +24,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Mağaza kimliği eksik' }, { status: 400 });
         }
 
-        // 1. Mağazanın access token'ını bul
+        // 1. Mağazanın access token'ını bul (En güncel olanını al)
         let auth = await prisma.authToken.findFirst({
-            where: { merchantId: storeId }
+            where: { merchantId: storeId },
+            orderBy: { updatedAt: 'desc' }
         });
 
         if (!auth || !auth.accessToken) {
@@ -37,12 +38,23 @@ export async function POST(req: Request) {
         const now = new Date();
         if (auth.expireDate && now >= new Date(auth.expireDate)) {
             console.log('[SYNC] Token süresi dolmuş, tazeleniyor...');
+            
+            const clientId = process.env.IKAS_CLIENT_ID;
+            const clientSecret = process.env.IKAS_CLIENT_SECRET;
+
+            if (!clientId || !clientSecret) {
+                return NextResponse.json({ 
+                    error: 'Konfigürasyon hatası', 
+                    details: 'Vercel üzerindeki IKAS_CLIENT_ID veya IKAS_CLIENT_SECRET eksik.' 
+                }, { status: 500 });
+            }
+
             try {
                 const refreshRes = await axios.post('https://api.myikas.com/api/v1/authorized-app/token', {
                     grant_type: 'refresh_token',
                     refresh_token: auth.refreshToken,
-                    client_id: process.env.IKAS_CLIENT_ID,
-                    client_secret: process.env.IKAS_CLIENT_SECRET
+                    client_id: clientId,
+                    client_secret: clientSecret
                 });
 
                 const newTokenData = refreshRes.data;
