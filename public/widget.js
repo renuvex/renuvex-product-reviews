@@ -314,6 +314,13 @@
     if (window.IkasStorefront && window.IkasStorefront.product && window.IkasStorefront.product.id) {
       return window.IkasStorefront.product.id;
     }
+    // Try __NEXT_DATA__ pageSpecificData (ikas standart yapısı)
+    try {
+      var pageProps = window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps;
+      if (pageProps && pageProps.pageType === 'PRODUCT' && pageProps.pageSpecificData && pageProps.pageSpecificData.id) {
+        return pageProps.pageSpecificData.id;
+      }
+    } catch (_) {}
     // Try URL: /products/slug--PRODUCT_ID or /urun/slug--PRODUCT_ID
     const match = window.location.pathname.match(/--([a-f0-9-]{36})(?:\/|$|\?)/);
     if (match) return match[1];
