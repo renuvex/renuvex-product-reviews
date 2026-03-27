@@ -79,7 +79,7 @@ export async function POST(req: Request) {
             {
                 query: `
                     query {
-                        listProduct(input: { pagination: { limit: 100, page: 1 } }) {
+                        listProduct {
                             data {
                                 id
                                 name
