@@ -239,10 +239,20 @@
         btn.textContent = 'Gönderiliyor...';
         msgDiv.innerHTML = '';
         try {
+          const titleEl = document.querySelector('h1');
+          const productName = titleEl ? titleEl.innerText.trim() : null;
           const r = await fetch(API_BASE + '/api/public/reviews', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ storeId: PUBLIC_API_KEY, productId: productId, author: author, comment: comment, rating: currentRating, images: uploadedImages }),
+            body: JSON.stringify({ 
+              storeId: PUBLIC_API_KEY, 
+              productId: productId, 
+              productName: productName,
+              author: author, 
+              comment: comment, 
+              rating: currentRating, 
+              images: uploadedImages 
+            }),
           });
           if (r.ok) {
             msgDiv.innerHTML = '<div style="color:#059669;font-weight:bold;">✓ Teşekkürler! Yorumunuz alındı.</div>';
