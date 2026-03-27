@@ -235,41 +235,40 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="pending" className="flex flex-col md:flex-row gap-8">
-        <TabsList className="flex flex-col h-fit p-2 bg-muted/30 rounded-xl w-full md:w-64 shrink-0 border border-border/50">
-          <TabsTrigger value="pending" className="w-full justify-start py-2.5 px-4 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm mb-1">
+      <Tabs defaultValue="pending" orientation="vertical" className="gap-8">
+        <TabsList className="h-fit p-2 bg-muted/30 rounded-xl w-64 shrink-0 border border-border/50">
+          <TabsTrigger value="pending" className="py-2.5 px-4 rounded-lg mb-1">
             <MessageSquare size={16} className="mr-2" />
             Bekleyen Onaylar
             <Badge variant="secondary" className="ml-auto bg-black text-white">{reviews.filter(r => r.status === 'pending').length}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="approved" className="w-full justify-start py-2.5 px-4 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm mb-1">
+          <TabsTrigger value="approved" className="py-2.5 px-4 rounded-lg mb-1">
             <Check size={16} className="mr-2" />
             Onaylı Yorumlar
           </TabsTrigger>
-          <TabsTrigger value="rejected" className="w-full justify-start py-2.5 px-4 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm mb-1">
+          <TabsTrigger value="rejected" className="py-2.5 px-4 rounded-lg mb-1">
             <X size={16} className="mr-2" />
             Reddedilenler
           </TabsTrigger>
-          <div className="my-2 border-t border-border/50" />
-          <TabsTrigger value="settings" className="w-full justify-start py-2.5 px-4 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <div className="my-2 border-t border-border/50 w-full" />
+          <TabsTrigger value="settings" className="py-2.5 px-4 rounded-lg">
             <Settings size={16} className="mr-2" />
             Widget Ayarları
           </TabsTrigger>
         </TabsList>
 
-        <div className="flex-1 w-full min-w-0">
-          <TabsContent value="pending" className="m-0 mt-0">
-            {renderTabContent('pending')}
-          </TabsContent>
-          <TabsContent value="approved" className="m-0 mt-0">
-            {renderTabContent('approved')}
-          </TabsContent>
-          <TabsContent value="rejected" className="m-0 mt-0">
-            {renderTabContent('rejected')}
-          </TabsContent>
+        <TabsContent value="pending" className="m-0">
+          {renderTabContent('pending')}
+        </TabsContent>
+        <TabsContent value="approved" className="m-0">
+          {renderTabContent('approved')}
+        </TabsContent>
+        <TabsContent value="rejected" className="m-0">
+          {renderTabContent('rejected')}
+        </TabsContent>
 
-          <TabsContent value="settings" className="m-0 mt-0">
-            <Card className="border-border/50 shadow-sm">
+        <TabsContent value="settings" className="m-0">
+          <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle>Widget Görünüm Ayarları</CardTitle>
               <CardDescription>Müşterilerin ürün sayfalarında göreceği yorum panelinin tasarımını özelleştirin.</CardDescription>
@@ -278,52 +277,49 @@ export default function HomePage({ token, storeName }: HomePageProps) {
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="title">Widget Başlığı</Label>
-                  <Input 
-                    id="title" 
-                    value={settings.widgetTitle || "Müşteri Değerlendirmeleri"} 
-                    onChange={(e) => setSettings({ ...settings, widgetTitle: e.target.value })} 
+                  <Input
+                    id="title"
+                    value={settings.widgetTitle || "Müşteri Değerlendirmeleri"}
+                    onChange={(e) => setSettings({ ...settings, widgetTitle: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="color">Ana Tema Rengi</Label>
                   <div className="flex gap-2">
-                    <Input 
-                      id="color" 
-                      type="color" 
-                      className="w-[80px] p-1 h-10" 
-                      value={settings.widgetColor || "#000000"} 
+                    <Input
+                      id="color"
+                      type="color"
+                      className="w-[80px] p-1 h-10"
+                      value={settings.widgetColor || "#000000"}
                       onChange={(e) => setSettings({ ...settings, widgetColor: e.target.value })}
                     />
-                    <Input 
-                      value={settings.widgetColor || "#000000"} 
+                    <Input
+                      value={settings.widgetColor || "#000000"}
                       onChange={(e) => setSettings({ ...settings, widgetColor: e.target.value })}
-                      className="flex-1" 
+                      className="flex-1"
                     />
                   </div>
                 </div>
-                
-                {/* Widget şablonu seçimi kaldırıldı, sadece Klasik şablon kullanılıyor */}
 
                 <div className="space-y-2 flex flex-col justify-center">
-                   <Label htmlFor="autoApprove" className="flex items-center gap-2 cursor-pointer mt-4">
-                     <input
-                       id="autoApprove"
-                       type="checkbox"
-                       className="w-4 h-4"
-                       checked={settings.autoApprove || false}
-                       onChange={(e) => setSettings({ ...settings, autoApprove: e.target.checked })}
-                     />
-                     Yeni Yorumları Otomatik Onayla (Beklemeye almaz)
-                   </Label>
+                  <Label htmlFor="autoApprove" className="flex items-center gap-2 cursor-pointer mt-4">
+                    <input
+                      id="autoApprove"
+                      type="checkbox"
+                      className="w-4 h-4"
+                      checked={settings.autoApprove || false}
+                      onChange={(e) => setSettings({ ...settings, autoApprove: e.target.checked })}
+                    />
+                    Yeni Yorumları Otomatik Onayla (Beklemeye almaz)
+                  </Label>
                 </div>
               </div>
-              
+
               <Button onClick={saveSettings}>Ayarları Kaydet</Button>
             </CardContent>
           </Card>
         </TabsContent>
-      </div>
-    </Tabs>
+      </Tabs>
     </div>
   );
 }
