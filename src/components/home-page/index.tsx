@@ -11,14 +11,34 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+interface Review {
+  id: string;
+  storeId: string;
+  productId: string;
+  rating: number;
+  comment: string | null;
+  author: string;
+  status: string;
+  merchantReply: string | null;
+  images: string | null;
+  createdAt: string;
+}
+
+interface StoreSettings {
+  widgetTitle?: string;
+  widgetColor?: string;
+  widgetTemplate?: string;
+  autoApprove?: boolean;
+}
+
 interface HomePageProps {
   token: string | null;
   storeName?: string;
 }
 
 export default function HomePage({ token, storeName }: HomePageProps) {
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [settings, setSettings] = useState<any>({});
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>({});
   const [loading, setLoading] = useState(true);
 
   // Verileri Backend'den (Prisma) Çekme Fonksiyonu
@@ -35,10 +55,10 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         ]);
         
         if (reviewsRes.data?.data) {
-          setReviews(reviewsRes.data.data);
+          setReviews(reviewsRes.data.data as Review[]);
         }
         if (settingsRes.data?.data) {
-          setSettings(settingsRes.data.data);
+          setSettings(settingsRes.data.data as StoreSettings);
         }
       } catch (error) {
         console.error("Veriler çekilirken hata:", error);

@@ -114,7 +114,6 @@ export async function GET(request: NextRequest) {
     // Build the final AuthToken object
     const token: AuthToken = {
       ...tokenTemp,
-      id: authorizedAppId,
       authorizedAppId,
       merchantId,
       expireDate,
