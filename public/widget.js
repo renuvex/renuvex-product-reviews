@@ -89,7 +89,7 @@
 
   // ── Core render ───────────────────────────────────────────────────────────
 
-  async function render(productId, settings) {
+  async function render(productId, settings, reviewsData) {
     const { widgetColor, widgetTitle, widgetTemplate } = settings;
 
     injectStyles(widgetTemplate, widgetColor);
@@ -107,11 +107,7 @@
     container.innerHTML = '<p style="text-align:center;padding:20px;">Yükleniyor...</p>';
 
     try {
-      const res = await fetch(
-        API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
-        '&productId=' + encodeURIComponent(productId)
-      );
-      const data = await res.json();
+      const data = reviewsData || {};
       const reviews = (data.data && data.data.reviews) || [];
       const totalCount = (data.data && data.data.totalCount) || 0;
 
@@ -277,13 +273,28 @@
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
 
+  const SETTINGS_CACHE_KEY = 'ikr_settings_' + PUBLIC_API_KEY;
+
+  async function fetchSettings() {
+    const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+    if (cached) return JSON.parse(cached);
+    const res = await fetch(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
+    const settings = await res.json();
+    sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settings));
+    return settings;
+  }
+
   async function bootstrap(productId) {
+    const FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları', widgetTemplate: 'classic' };
     try {
-      const res = await fetch(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
-      const settings = await res.json();
-      await render(productId, settings);
+      const [settings, reviewsRes] = await Promise.all([
+        fetchSettings(),
+        fetch(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId))
+      ]);
+      const reviewsData = await reviewsRes.json();
+      await render(productId, settings, reviewsData);
     } catch (_) {
-      await render(productId, { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları', widgetTemplate: 'classic' });
+      await render(productId, FALLBACK, null);
     }
   }
 
