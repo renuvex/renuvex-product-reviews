@@ -97,11 +97,20 @@
     // Find or create container
     let container = document.getElementById('ikas-reviews');
     if (!container) {
-      const anchorEl = document.getElementById('ikas-reviews-anchor');
-      if (!anchorEl) return; // Anchor yoksa çalışma
       container = document.createElement('div');
       container.id = 'ikas-reviews';
-      anchorEl.appendChild(container);
+
+      const anchorEl = document.getElementById('ikas-reviews-anchor');
+      if (anchorEl) {
+        // Manuel anchor öncelikli
+        anchorEl.appendChild(container);
+      } else {
+        // Otomatik: h1'in parent'ına ekle
+        const h1 = document.querySelector('h1');
+        const parent = h1 && h1.parentElement;
+        if (!parent) return;
+        parent.appendChild(container);
+      }
     }
 
     container.innerHTML = '<p style="text-align:center;padding:20px;">Yükleniyor...</p>';
