@@ -29,6 +29,7 @@ model Review {
   id            String   @id @default(uuid())
   storeId       String   // Which ikas store this belongs to (merchantId)
   productId     String   // The product ID in Ikas
+  productName   String?  // The product name captured at the time of review
   rating        Int
   comment       String?
   author        String
