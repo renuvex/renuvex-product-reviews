@@ -321,9 +321,11 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                           const res = await axios.post('/api/admin/sync-products', {}, {
                             headers: { 'x-merchant-id': '02786d4b-a09b-4b36-ad8c-56e6d396f6fd' }
                           });
-                          alert(`✅ BaŞARILI! ${res.data.count || 0} ürün senkronize edildi. Artık tüm listeleme sayfalarında yıldızlar görünecek!`);
+                          alert(`✅ BAŞARILI! ${res.data.count || 0} ürün senkronize edildi. Artık tüm listeleme sayfalarında yıldızlar görünecek!`);
                         } catch (e: any) {
-                          alert('❌ Hata: Ürünler eşitlenemedi. ' + (e.response?.data?.error || e.message));
+                          const errorMsg = e.response?.data?.error || e.message;
+                          const errorDetail = e.response?.data?.details || '';
+                          alert(`❌ Hata: ${errorMsg}\n\nDetay: ${errorDetail}`);
                         } finally {
                           btn.disabled = false;
                           btn.innerText = originalText;
