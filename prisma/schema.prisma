@@ -47,8 +47,6 @@ model Review {
   @@index([productId])
 }
 
-// ProductSlugCache kaldırıldı - artık gerek yok
-
 model StoreSettings {
   id              String   @id @default(uuid())
   storeId         String   @unique

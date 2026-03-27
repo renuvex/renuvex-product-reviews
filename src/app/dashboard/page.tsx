@@ -39,6 +39,13 @@ export default function DashboardPage() {
     }
   }, [fetchStoreName]);
 
+  // Close the loader shown by ikas platform when opening the iframe
+  useEffect(() => {
+    // Import helper inline if needed or at the top
+    const { AppBridgeHelper } = require('@ikas/app-helpers');
+    AppBridgeHelper.closeLoader();
+  }, []);
+
   // Run initialization on mount
   useEffect(() => {
     initializeDashboard();
