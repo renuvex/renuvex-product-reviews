@@ -48,7 +48,6 @@ model StoreSettings {
   storeId         String   @unique
   widgetColor     String   @default("#000000")
   widgetTitle     String   @default("Müşteri Yorumları")
-  widgetTemplate  String   @default("classic")
   autoApprove     Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

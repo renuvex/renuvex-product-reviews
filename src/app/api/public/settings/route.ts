@@ -30,14 +30,12 @@ export async function GET(req: Request) {
     select: {
       widgetColor: true,
       widgetTitle: true,
-      widgetTemplate: true,
     },
   });
 
   const result = settings ?? {
     widgetColor: '#000000',
     widgetTitle: 'Müşteri Yorumları',
-    widgetTemplate: 'classic',
   };
 
   return setCorsHeaders(NextResponse.json(result));
