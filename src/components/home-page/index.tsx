@@ -279,7 +279,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                   </div>
                 </div>
                 
-                <div className="space-y-2 col-span-2">
+                <div className="space-y-4 col-span-2">
                   <Label>Widget Şablonu</Label>
                   <div className="grid grid-cols-3 gap-3 mt-1">
                     {[
@@ -304,8 +304,40 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                   </div>
                 </div>
 
+                <div className="col-span-2 mt-4 pt-4 border-t border-gray-100">
+                  <Label className="text-sm font-bold block mb-2">Hızlı İşlemler & Senkronizasyon ⚡️</Label>
+                  <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-emerald-900">Otomatik Badge Eşitleme</h4>
+                      <p className="text-xs text-emerald-700 mt-1">Anasayfa ve kategori sayfalarındaki yıldızları tüm ürünlerde aktif etmek için ürünleri İkas'tan çekin.</p>
+                    </div>
+                    <Button 
+                      onClick={async () => {
+                        const btn = document.activeElement as HTMLButtonElement;
+                        const originalText = btn.innerText;
+                        btn.disabled = true;
+                        btn.innerText = 'Eşitleniyor... 🔄';
+                        try {
+                          const res = await axios.post('/api/admin/sync-products', {}, {
+                            headers: { 'x-merchant-id': '02786d4b-a09b-4b36-ad8c-56e6d396f6fd' }
+                          });
+                          alert(`✅ BaŞARILI! ${res.data.count || 0} ürün senkronize edildi. Artık tüm listeleme sayfalarında yıldızlar görünecek!`);
+                        } catch (e: any) {
+                          alert('❌ Hata: Ürünler eşitlenemedi. ' + (e.response?.data?.error || e.message));
+                        } finally {
+                          btn.disabled = false;
+                          btn.innerText = originalText;
+                        }
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 px-4"
+                    >
+                      Ürünleri Şimdi Eşitle 🛰️
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="space-y-2 flex flex-col justify-center">
-                   <Label htmlFor="autoApprove" className="flex items-center gap-2 cursor-pointer mt-6">
+                   <Label htmlFor="autoApprove" className="flex items-center gap-2 cursor-pointer mt-4">
                      <input
                        id="autoApprove"
                        type="checkbox"
