@@ -20,9 +20,26 @@ export async function OPTIONS() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { storeId, slugs } = body;
+    const { storeId, slugs, cacheSlug } = body;
 
-    if (!storeId || !Array.isArray(slugs) || slugs.length === 0) {
+    if (!storeId) {
+      return setCorsHeaders(NextResponse.json({ error: 'Eksik parametre' }, { status: 400 }));
+    }
+
+    // Ürün detay sayfasından gelen slug → productId cache'leme
+    if (cacheSlug && cacheSlug.slug && cacheSlug.productId) {
+      await prisma.productSlugCache.upsert({
+        where: { storeId_slug: { storeId, slug: cacheSlug.slug } },
+        update: { productId: cacheSlug.productId },
+        create: { storeId, slug: cacheSlug.slug, productId: cacheSlug.productId },
+      }).catch(() => {});
+      // Sadece cache yazma isteğiyse erken dön
+      if (!Array.isArray(slugs) || slugs.length === 0) {
+        return setCorsHeaders(NextResponse.json({ data: {} }));
+      }
+    }
+
+    if (!Array.isArray(slugs) || slugs.length === 0) {
       return setCorsHeaders(NextResponse.json({ error: 'Eksik parametre' }, { status: 400 }));
     }
 
@@ -35,58 +52,9 @@ export async function POST(request: Request) {
     const cachedSlugSet = new Set(cachedSlugs.map((c: any) => c.slug));
     const missingSlugs = slugs.filter((s: string) => !cachedSlugSet.has(s));
 
-    // Cache miss varsa ikas Admin API'den çek
-    if (missingSlugs.length > 0) {
-      const authToken = await prisma.authToken.findFirst({
-        where: { merchantId: storeId, deleted: false },
-        orderBy: { updatedAt: 'desc' },
-      });
-
-      if (authToken) {
-        try {
-          // ikas GraphQL - slug ile ürün sorgula
-          const query = `
-            query {
-              listProduct(
-                pagination: { limit: 100 }
-              ) {
-                data {
-                  id
-                  slug
-                }
-              }
-            }
-          `;
-
-          const ikasRes = await fetch('https://api.myikas.com/api/v1/admin/graphql', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken.accessToken}`,
-            },
-            body: JSON.stringify({ query }),
-          });
-
-          if (ikasRes.ok) {
-            const ikasData = await ikasRes.json();
-            const products = ikasData?.data?.listProduct?.data || [];
-
-            // Sadece eksik slug'larla eşleşenleri cache'e yaz
-            const toUpsert = products.filter((p: any) => missingSlugs.includes(p.slug));
-            for (const p of toUpsert) {
-              await prisma.productSlugCache.upsert({
-                where: { storeId_slug: { storeId, slug: p.slug } },
-                update: { productId: p.id },
-                create: { storeId, slug: p.slug, productId: p.id },
-              });
-              cachedSlugs.push({ slug: p.slug, productId: p.id } as any);
-            }
-          }
-        } catch (_) {
-          // ikas API hatası — cache'deki verilerle devam et
-        }
-      }
-    }
+    // Cache miss olan slug'lar için şimdilik yapacak bir şey yok.
+    // slug → productId eşleştirmesi, kullanıcı ürün detay sayfasını ziyaret ettiğinde
+    // otomatik olarak cacheSlug mekanizmasıyla doldurulur.
 
     // Her slug için productId'yi bul, DB'den rating çek
     const result: Record<string, { avgRating: number; totalCount: number }> = {};

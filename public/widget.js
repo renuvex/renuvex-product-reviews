@@ -313,6 +313,16 @@
   // ── Bootstrap ─────────────────────────────────────────────────────────────
 
   async function bootstrap(productId) {
+    // Ürün detay sayfasındaki slug'ı cache'e yaz (fire & forget)
+    var pageSlug = window.location.pathname.replace(/^\//, '').split('?')[0];
+    if (pageSlug) {
+      fetch(API_BASE + '/api/public/ratings-by-slug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: [], cacheSlug: { slug: pageSlug, productId: productId } }),
+      }).catch(function () {});
+    }
+
     try {
       const res = await fetch(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
       const settings = await res.json();
