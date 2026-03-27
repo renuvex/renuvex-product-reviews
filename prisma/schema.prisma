@@ -47,6 +47,17 @@ model Review {
   @@index([productId])
 }
 
+model ProductSlugCache {
+  id        String   @id @default(uuid())
+  storeId   String
+  slug      String
+  productId String
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, slug])
+  @@index([storeId])
+}
+
 model StoreSettings {
   id              String   @id @default(uuid())
   storeId         String   @unique
