@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         `;
 
         const response = await axios.post(
-            'https://api.ikas.com/admin/graphql',
+            'https://api.myikas.com/api/v2/admin/graphql',
             {
                 query,
                 variables: {
