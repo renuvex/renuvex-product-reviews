@@ -194,6 +194,32 @@
       html += '</div>';
       container.innerHTML = html;
 
+      // ── Rating badge (ürün başlığının altına) ─────────────────────────────
+      if (!document.getElementById('ikr-rating-badge')) {
+        const avgRating = reviews.length
+          ? (reviews.reduce(function (s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1)
+          : null;
+        const titleEl =
+          document.querySelector('.product-detail-page-buy-box h1') ||
+          document.querySelector('.product-detail-page-buy-box h2') ||
+          document.querySelector('.product-detail-page-buy-box [class*="title"]') ||
+          document.querySelector('h1');
+        if (titleEl && avgRating) {
+          const badge = document.createElement('a');
+          badge.id = 'ikr-rating-badge';
+          badge.href = '#ikas-reviews';
+          badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;';
+          badge.innerHTML =
+            '<span style="color:#f59e0b;font-size:16px;">' + '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) + '</span>' +
+            '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
+          badge.onclick = function (e) {
+            e.preventDefault();
+            document.getElementById('ikas-reviews').scrollIntoView({ behavior: 'smooth' });
+          };
+          titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+        }
+      }
+
       // ── Review form ───────────────────────────────────────────────────────
       const widgetEl = container.querySelector('#ikas-reviews-widget');
       const form = document.createElement('div');
