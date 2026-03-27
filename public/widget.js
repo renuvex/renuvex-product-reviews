@@ -196,9 +196,7 @@
         const avgRating = reviews.length
           ? (reviews.reduce(function (s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1)
           : null;
-        const titleEl =
-          document.querySelector('.product-name-main h1') ||
-          document.querySelector('h1');
+        const titleEl = document.querySelector('h1');
         if (titleEl && avgRating) {
           const badge = document.createElement('a');
           badge.id = 'ikr-rating-badge';
