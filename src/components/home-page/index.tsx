@@ -123,7 +123,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
             {statusFilter === 'pending' ? 'Bekleyen Yorumlar' : statusFilter === 'approved' ? 'Onaylı Yorumlar' : 'Reddedilen Yorumlar'}
           </CardTitle>
           <CardDescription>
-            {loading ? "Yükleniyor..." : `${filtered.length} adet yorum bulunuyor.`}
+            {loading ? "Lütfen Bekleyin..." : `${filtered.length} adet yorum bulunuyor.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -235,39 +235,41 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList className="bg-muted/50 p-1 w-full justify-start h-auto rounded-lg">
-          <TabsTrigger value="pending" className="data-[state=active]:bg-white pb-2 pt-2 px-6">
+      <Tabs defaultValue="pending" className="flex flex-col md:flex-row gap-8">
+        <TabsList className="flex flex-col h-fit p-2 bg-muted/30 rounded-xl w-full md:w-64 shrink-0 border border-border/50">
+          <TabsTrigger value="pending" className="w-full justify-start py-2.5 px-4 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm mb-1">
             <MessageSquare size={16} className="mr-2" />
             Bekleyen Onaylar
-            <Badge variant="secondary" className="ml-2 bg-black text-white">{reviews.filter(r => r.status === 'pending').length}</Badge>
+            <Badge variant="secondary" className="ml-auto bg-black text-white">{reviews.filter(r => r.status === 'pending').length}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="approved" className="data-[state=active]:bg-white pb-2 pt-2 px-6">
+          <TabsTrigger value="approved" className="w-full justify-start py-2.5 px-4 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm mb-1">
             <Check size={16} className="mr-2" />
-            Onaylı
+            Onaylı Yorumlar
           </TabsTrigger>
-          <TabsTrigger value="rejected" className="data-[state=active]:bg-white pb-2 pt-2 px-6">
+          <TabsTrigger value="rejected" className="w-full justify-start py-2.5 px-4 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm mb-1">
             <X size={16} className="mr-2" />
-            Reddedilen
+            Reddedilenler
           </TabsTrigger>
-          <TabsTrigger value="settings" className="data-[state=active]:bg-white pb-2 pt-2 px-6 ml-auto">
+          <div className="my-2 border-t border-border/50" />
+          <TabsTrigger value="settings" className="w-full justify-start py-2.5 px-4 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Settings size={16} className="mr-2" />
             Widget Ayarları
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="m-0">
-          {renderTabContent('pending')}
-        </TabsContent>
-        <TabsContent value="approved" className="m-0">
-          {renderTabContent('approved')}
-        </TabsContent>
-        <TabsContent value="rejected" className="m-0">
-          {renderTabContent('rejected')}
-        </TabsContent>
+        <div className="flex-1 w-full min-w-0">
+          <TabsContent value="pending" className="m-0 mt-0">
+            {renderTabContent('pending')}
+          </TabsContent>
+          <TabsContent value="approved" className="m-0 mt-0">
+            {renderTabContent('approved')}
+          </TabsContent>
+          <TabsContent value="rejected" className="m-0 mt-0">
+            {renderTabContent('rejected')}
+          </TabsContent>
 
-        <TabsContent value="settings" className="m-0">
-          <Card>
+          <TabsContent value="settings" className="m-0 mt-0">
+            <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle>Widget Görünüm Ayarları</CardTitle>
               <CardDescription>Müşterilerin ürün sayfalarında göreceği yorum panelinin tasarımını özelleştirin.</CardDescription>
@@ -320,7 +322,8 @@ export default function HomePage({ token, storeName }: HomePageProps) {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+      </div>
+    </Tabs>
     </div>
   );
 }
