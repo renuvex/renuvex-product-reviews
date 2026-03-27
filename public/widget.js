@@ -140,14 +140,23 @@
     // Find or create container
     let container = document.getElementById('ikas-reviews');
     if (!container) {
-      const anchor =
-        document.querySelector('.product-detail-page-tabs') ||
-        document.querySelector('.product-detail-page-buy-box') ||
-        document.querySelector('.product-detail');
-      if (!anchor) return;
-      container = document.createElement('div');
-      container.id = 'ikas-reviews';
-      anchor.parentNode.insertBefore(container, anchor.nextSibling);
+      const anchorEl = document.getElementById('ikas-reviews-anchor');
+      if (anchorEl) {
+        // Manuel anchor varsa direkt içine mount et
+        container = document.createElement('div');
+        container.id = 'ikas-reviews';
+        anchorEl.appendChild(container);
+      } else {
+        // Fallback: ikas sabit class'larına göre inject et
+        const anchor =
+          document.querySelector('.product-detail-page-tabs') ||
+          document.querySelector('.product-detail-page-buy-box') ||
+          document.querySelector('.product-detail');
+        if (!anchor) return;
+        container = document.createElement('div');
+        container.id = 'ikas-reviews';
+        anchor.parentNode.insertBefore(container, anchor.nextSibling);
+      }
     }
 
     container.innerHTML = '<p style="text-align:center;padding:20px;">Yükleniyor...</p>';
