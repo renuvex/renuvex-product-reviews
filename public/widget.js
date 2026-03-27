@@ -37,50 +37,7 @@
     .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
   `;
 
-  const MINIMAL_CSS = `
-    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#333;margin:30px 0;padding:0}
-    .ikr-header{margin-bottom:20px}
-    .ikr-title{font-size:18px;font-weight:600;border:none}
-    .ikr-review{padding:18px 0;border-bottom:1px solid #f0f0f0}
-    .ikr-author{font-weight:600;font-size:14px}
-    .ikr-date{color:#aaa;font-size:11px;margin-left:8px}
-    .ikr-body{margin-top:8px;line-height:1.5;color:#555;font-size:14px}
-    .ikr-gallery{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-    .ikr-img{width:80px;height:80px;object-fit:cover;border-radius:4px;cursor:zoom-in}
-    .ikr-reply{margin-top:10px;padding:10px;background:#fafafa;border-radius:4px;font-size:13px;color:#666}
-    .ikr-form{margin-top:25px}
-    .ikr-input,.ikr-textarea{width:100%;padding:8px;margin-top:6px;border:1px solid #e5e5e5;border-radius:4px;font-size:13px;box-sizing:border-box}
-    .ikr-btn{background:var(--ikr-color,#333);color:#fff;padding:8px 20px;border-radius:4px;cursor:pointer;border:none;font-weight:500;margin-top:12px;font-size:13px}
-    .ikr-btn:disabled{opacity:.5;cursor:not-allowed}
-    .ikr-photo-btn{background:transparent;color:#888;padding:6px 12px;border-radius:4px;cursor:pointer;border:1px solid #ddd;font-size:12px;display:inline-block;margin-top:8px}
-    .ikr-preview-item{position:relative;display:inline-block;margin-right:6px;margin-top:6px}
-    .ikr-preview-img{width:50px;height:50px;object-fit:cover;border-radius:4px}
-    .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:4px}
-  `;
-
-  const CARD_CSS = `
-    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#111;margin:40px 0;padding:0}
-    .ikr-header{margin-bottom:25px}
-    .ikr-title{font-size:20px;font-weight:700}
-    .ikr-reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
-    .ikr-review{background:#fff;border:1px solid #eee;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-    .ikr-author{font-weight:700;font-size:14px}
-    .ikr-date{color:#aaa;font-size:11px;margin-left:8px}
-    .ikr-body{margin-top:10px;line-height:1.5;color:#444;font-size:14px}
-    .ikr-gallery{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-    .ikr-img{width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:zoom-in}
-    .ikr-reply{margin-top:12px;padding:10px 12px;background:#f7f7f7;border-radius:8px;font-size:13px}
-    .ikr-form{background:#fff;border:1px solid #eee;padding:25px;border-radius:16px;margin-top:30px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
-    .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;box-sizing:border-box}
-    .ikr-btn{background:var(--ikr-color,#111);color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;border:none;font-weight:600;margin-top:15px}
-    .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
-    .ikr-photo-btn{background:#f5f5f5;color:#555;padding:8px 14px;border-radius:8px;cursor:pointer;border:1px dashed #ddd;font-size:13px;display:inline-block;margin-top:10px}
-    .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
-    .ikr-preview-img{width:56px;height:56px;object-fit:cover;border-radius:6px}
-    .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
-  `;
-
-  const CSS_MAP = { classic: CLASSIC_CSS, minimal: MINIMAL_CSS, card: CARD_CSS };
+  const CSS_MAP = { classic: CLASSIC_CSS };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -158,15 +115,12 @@
       const reviews = (data.data && data.data.reviews) || [];
       const totalCount = (data.data && data.data.totalCount) || 0;
 
-      const isCard = widgetTemplate === 'card';
-
       let html = '<div id="ikas-reviews-widget">';
       html += '<div class="ikr-header"><h2 class="ikr-title">' + widgetTitle + ' (' + totalCount + ')</h2></div>';
 
       if (reviews.length === 0) {
         html += '<p style="color:#888;text-align:center;padding:30px 0;">Henüz yorum yok.</p>';
       } else {
-        if (isCard) html += '<div class="ikr-reviews-grid">';
         reviews.forEach(function (r) {
           const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
           const images = r.images && Array.isArray(r.images) && r.images.length
@@ -185,7 +139,6 @@
             + reply
             + '</div>';
         });
-        if (isCard) html += '</div>';
       }
 
       html += '</div>';

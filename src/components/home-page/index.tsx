@@ -299,30 +299,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                   </div>
                 </div>
                 
-                <div className="space-y-4 col-span-2">
-                  <Label>Widget Şablonu</Label>
-                  <div className="grid grid-cols-3 gap-3 mt-1">
-                    {[
-                      { value: 'classic', label: 'Klasik', desc: 'Tam genişlik, bölünmüş liste' },
-                      { value: 'minimal', label: 'Minimal', desc: 'Sade, az çerçeve' },
-                      { value: 'card', label: 'Kart', desc: 'Grid kart dizimi' },
-                    ].map((t) => (
-                      <button
-                        key={t.value}
-                        type="button"
-                        onClick={() => setSettings({ ...settings, widgetTemplate: t.value })}
-                        className={`rounded-lg border-2 p-3 text-left transition-colors ${
-                          (settings.widgetTemplate || 'classic') === t.value
-                            ? 'border-black bg-black/5'
-                            : 'border-gray-200 hover:border-gray-400'
-                        }`}
-                      >
-                        <div className="font-semibold text-sm">{t.label}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{t.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Widget şablonu seçimi kaldırıldı, sadece Klasik şablon kullanılıyor */}
 
                 <div className="space-y-2 flex flex-col justify-center">
                    <Label htmlFor="autoApprove" className="flex items-center gap-2 cursor-pointer mt-4">
