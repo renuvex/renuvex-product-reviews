@@ -17,7 +17,7 @@
   // ── Styles ────────────────────────────────────────────────────────────────
 
   const CLASSIC_CSS = `
-    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#111;max-width:900px;margin:40px auto;padding:0 15px}
+    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#111;margin:40px 0;padding:0}
     .ikr-header{border-bottom:2px solid #eee;padding-bottom:15px;margin-bottom:25px}
     .ikr-title{font-size:22px;font-weight:800}
     .ikr-review{padding:25px 0;border-bottom:1px solid #eee}
@@ -38,7 +38,7 @@
   `;
 
   const MINIMAL_CSS = `
-    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#333;max-width:800px;margin:30px 0;padding:0}
+    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#333;margin:30px 0;padding:0}
     .ikr-header{margin-bottom:20px}
     .ikr-title{font-size:18px;font-weight:600;border:none}
     .ikr-review{padding:18px 0;border-bottom:1px solid #f0f0f0}
@@ -59,7 +59,7 @@
   `;
 
   const CARD_CSS = `
-    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#111;max-width:960px;margin:40px auto;padding:0 15px}
+    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#111;margin:40px 0;padding:0}
     .ikr-header{margin-bottom:25px}
     .ikr-title{font-size:20px;font-weight:700}
     .ikr-reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
