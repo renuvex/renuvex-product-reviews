@@ -83,6 +83,9 @@ export async function POST(req: Request) {
                             data {
                                 id
                                 name
+                                links {
+                                    urlSlug
+                                }
                             }
                         }
                     }
@@ -113,13 +116,15 @@ export async function POST(req: Request) {
         }
 
         // 3. Veritabanına (Cache) kaydet
-        // Batch işlem daha performanslı olur
         const upsertPromises = products.map((p: any) => {
-            const slug = slugify(p.name);
+            // İkas v1'de slug genellikle links[0].urlSlug veya benzeri bir yerdedir
+            // Eğer gelmezse fallback olarak yine slugify kullanırız
+            const actualSlug = p.links?.[0]?.urlSlug || slugify(p.name);
+            
             return prisma.productSlugCache.upsert({
-                where: { storeId_slug: { storeId, slug } },
+                where: { storeId_slug: { storeId, slug: actualSlug } },
                 update: { productId: p.id },
-                create: { storeId, slug, productId: p.id }
+                create: { storeId, slug: actualSlug, productId: p.id }
             });
         });
 
