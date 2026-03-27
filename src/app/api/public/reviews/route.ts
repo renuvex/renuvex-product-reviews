@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log('[DEBUG] Gelen Yorum Verisi:', body);
 
-    const { storeId, productId, productName, rating, comment, author, email, images } = body;
+    const { storeId, productId, slug, productName, rating, comment, author, email, images } = body;
 
     // Temel alan kontrolü
     if (!storeId || !productId || !rating || !author) {
@@ -90,6 +90,7 @@ export async function POST(request: Request) {
       data: {
         storeId: String(storeId),
         productId: String(productId),
+        slug: slug ? String(slug) : null,
         productName: productName ? String(productName) : null,
         rating: Number(rating),
         comment: comment || '',

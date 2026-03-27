@@ -29,6 +29,7 @@ model Review {
   id            String   @id @default(uuid())
   storeId       String   // Which ikas store this belongs to (merchantId)
   productId     String   // The product ID in Ikas
+  slug          String?  // Product slug for listing page badge lookup
   productName   String?  // The product name captured at the time of review
   rating        Int
   comment       String?
@@ -42,6 +43,7 @@ model Review {
 
   @@index([storeId])
   @@index([productId])
+  @@index([storeId, slug])
 }
 
 model StoreSettings {

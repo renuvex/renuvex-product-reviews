@@ -241,17 +241,19 @@
         try {
           const titleEl = document.querySelector('h1');
           const productName = titleEl ? titleEl.innerText.trim() : null;
+          const pageSlug = window.location.pathname.replace(/^\//, '').split('?')[0].split('/')[0];
           const r = await fetch(API_BASE + '/api/public/reviews', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              storeId: PUBLIC_API_KEY, 
-              productId: productId, 
+            body: JSON.stringify({
+              storeId: PUBLIC_API_KEY,
+              productId: productId,
+              slug: pageSlug || null,
               productName: productName,
-              author: author, 
-              comment: comment, 
-              rating: currentRating, 
-              images: uploadedImages 
+              author: author,
+              comment: comment,
+              rating: currentRating,
+              images: uploadedImages
             }),
           });
           if (r.ok) {
@@ -331,9 +333,89 @@
     }
   }
 
+  // ── Listing / Category badge ──────────────────────────────────────────────
+  // JSON-LD ItemList'ten slug'ları okur, toplu API'ye gönderir,
+  // her ürün linkinin içine mini rating badge ekler.
+
+  var EXCLUDED = ['account', 'pages', 'blog', 'search', 'cart', 'checkout', 'siparis', 'odeme'];
+
+  function getListingSlugs() {
+    // Önce JSON-LD ItemList'ten dene (en güvenilir)
+    var slugs = [];
+    var scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (var i = 0; i < scripts.length; i++) {
+      try {
+        var data = JSON.parse(scripts[i].textContent);
+        if (data['@type'] === 'ItemList' && Array.isArray(data.itemListElement)) {
+          data.itemListElement.forEach(function (item) {
+            var url = (item.item && item.item.offers && item.item.offers.url) || '';
+            if (!url) return;
+            var path = new URL(url).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
+            if (path && !EXCLUDED.some(function (e) { return path.startsWith(e); })) {
+              slugs.push(path);
+            }
+          });
+          if (slugs.length) return [...new Set(slugs)];
+        }
+      } catch (_) {}
+    }
+    return [];
+  }
+
+  async function renderListingBadges() {
+    var slugs = getListingSlugs();
+    if (!slugs.length) return;
+
+    var res;
+    try {
+      res = await fetch(API_BASE + '/api/public/ratings-by-slug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: slugs }),
+      });
+    } catch (_) { return; }
+
+    var json;
+    try { json = await res.json(); } catch (_) { return; }
+    var ratings = json.data || {};
+
+    // Her unique slug için linki bul ve badge ekle
+    // Aynı slug'a birden fazla link olabilir — Set ile tek badge ekle
+    slugs.forEach(function (slug) {
+      var rating = ratings[slug];
+      if (!rating) return;
+
+      // Bu slug'a ait tüm linkleri bul
+      var links = document.querySelectorAll('a[href]');
+      links.forEach(function (a) {
+        if (a.getAttribute('data-ikr-badge')) return; // zaten işaretli
+        try {
+          var path = new URL(a.href).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
+          if (path !== slug) return;
+        } catch (_) { return; }
+
+        a.setAttribute('data-ikr-badge', '1');
+
+        var badge = document.createElement('div');
+        badge.setAttribute('data-ikr-listing-badge', '1');
+        badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:4px;font-size:12px;color:#555;pointer-events:none;';
+        badge.innerHTML =
+          '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(parseFloat(rating.avg))) + '☆'.repeat(5 - Math.round(parseFloat(rating.avg))) + '</span>' +
+          '<span>' + rating.avg + ' (' + rating.count + ')</span>';
+
+        // Link'in sonuna ekle
+        a.appendChild(badge);
+      });
+    });
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attachEvents);
+    document.addEventListener('DOMContentLoaded', function () {
+      attachEvents();
+      renderListingBadges();
+    });
   } else {
     attachEvents();
+    renderListingBadges();
   }
 })();
