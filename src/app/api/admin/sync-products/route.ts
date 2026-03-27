@@ -47,18 +47,26 @@ export async function POST(req: Request) {
         `;
 
         const response = await axios.post(
-            'https://api.myikas.com/api/v2/admin/graphql',
+            'https://api.myikas.com/api/v1/admin/graphql',
             {
                 query: `
-                    query {
-                        listProduct {
+                    query listProduct($input: ListProductInput!) {
+                        listProduct(input: $input) {
                             data {
                                 id
                                 name
                             }
                         }
                     }
-                `
+                `,
+                variables: {
+                    input: {
+                        pagination: {
+                            page: 1,
+                            limit: 250
+                        }
+                    }
+                }
             },
             {
                 headers: {
