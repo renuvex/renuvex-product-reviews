@@ -430,20 +430,25 @@
 
   // [B] Settings cache TTL — 5 dakika
   var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
+  // 404 (store kurulmamış) için kısa TTL — 30 saniye
+  var SETTINGS_404_TTL = 30 * 1000;
 
   async function fetchSettings() {
+    var staleEntry = null;
     var cached = cacheGet(SETTINGS_CACHE_KEY);
     if (cached) {
       try {
         var entry = JSON.parse(cached);
-        // { t, v } formatında TTL'li cache — v null ise store bulunamadı demek
-        if (entry && entry.t !== undefined) {
-          if (Date.now() - entry.t < SETTINGS_CACHE_TTL) return entry.v || null;
-          // Süresi dolmuş — temizle, yeniden fetch et
+        if (entry && entry.t !== undefined && entry.v) {
+          // Geçerli cache — TTL dolmamışsa direkt döndür
+          if (Date.now() - entry.t < SETTINGS_CACHE_TTL) return entry.v;
+          // TTL dolmuş ama geçerli veri var — stale-if-error için sakla
+          staleEntry = entry.v;
+          cacheSet(SETTINGS_CACHE_KEY, '');
+        } else {
+          // null veya eski format — temizle
           cacheSet(SETTINGS_CACHE_KEY, '');
         }
-        // Eski format (raw null veya raw object) — temizle, yeniden fetch et
-        cacheSet(SETTINGS_CACHE_KEY, '');
       } catch (_) {
         cacheSet(SETTINGS_CACHE_KEY, '');
       }
@@ -451,15 +456,20 @@
     try {
       var res = await fetchWithTimeout(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
       if (!res.ok) {
-        cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: null }));
-        return null;
+        // 404 — store kurulmamış, kısa TTL ile cache'le (thundering herd önlemi)
+        if (res.status === 404) {
+          cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now() - (SETTINGS_CACHE_TTL - SETTINGS_404_TTL), v: null }));
+        }
+        // 5xx — geçici hata, cache'leme; stale-if-error: eski geçerli cache varsa onu kullan
+        return staleEntry || null;
       }
       var settings = await res.json();
       cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: settings }));
       return settings;
     } catch (err) {
+      // Network hatası / timeout — cache'leme; stale-if-error: eski geçerli cache varsa kullan
       console.error('[ikr] fetchSettings error:', err);
-      return null;
+      return staleEntry || null;
     }
   }
 
@@ -468,21 +478,34 @@
 
   async function fetchReviews(productId) {
     var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId;
+    var staleReviews = null;
     var cached = cacheGet(key);
     if (cached) {
       try {
         var entry = JSON.parse(cached);
-        if (entry && entry.t !== undefined) {
+        if (entry && entry.t !== undefined && entry.v) {
           if (Date.now() - entry.t < REVIEWS_CACHE_TTL) return entry.v;
+          // TTL dolmuş ama geçerli veri var — stale-if-error için sakla
+          staleReviews = entry.v;
+          cacheSet(key, '');
+        } else {
           cacheSet(key, '');
         }
-        cacheSet(key, '');
       } catch (_) { cacheSet(key, ''); }
     }
-    var res = await fetchWithTimeout(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId));
-    var data = await res.json();
-    cacheSet(key, JSON.stringify({ t: Date.now(), v: data }));
-    return data;
+    try {
+      var res = await fetchWithTimeout(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId));
+      if (!res.ok) {
+        // Hata — cache'leme; stale-if-error: eski geçerli cache varsa kullan
+        return staleReviews || null;
+      }
+      var data = await res.json();
+      cacheSet(key, JSON.stringify({ t: Date.now(), v: data }));
+      return data;
+    } catch (err) {
+      console.error('[ikr] fetchReviews error:', err);
+      return staleReviews || null;
+    }
   }
 
   // [1] bootstrap — productId bazlı mutex (aynı ürün için çift çağrı engeli)
@@ -713,6 +736,10 @@
         });
       } catch (err) {
         console.error('[ikr] ratings-by-slug fetch error:', err);
+        return;
+      }
+      if (!res.ok) {
+        console.error('[ikr] ratings-by-slug HTTP error:', res.status);
         return;
       }
       try { ratingsJson = await res.json(); } catch (err) {
