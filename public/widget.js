@@ -528,7 +528,12 @@
           '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(parseFloat(rating.avg))) + '☆'.repeat(5 - Math.round(parseFloat(rating.avg))) + '</span>' +
           '<span>' + rating.avg + ' (' + rating.count + ')</span>';
 
-        nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+        // nameEl linkin kendisiyse badge'i link içine ekle, değilse sonrasına ekle
+        if (nameEl.tagName === 'A') {
+          nameEl.appendChild(badge);
+        } else {
+          nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+        }
       });
     });
   }
