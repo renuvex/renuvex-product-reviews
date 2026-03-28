@@ -591,7 +591,7 @@
                 }
               });
               // Flag false ise render et — zaten render olduysa yapma
-              renderListingBadges(listingBadgeGen);
+              renderListingBadges();
             }
           }
           if (event && event.type === 'PRODUCT_VIEW') {
@@ -605,7 +605,7 @@
           if (event && event.type === 'PAGE_VIEW') {
             // Sıfırla — bir sonraki VIEW_LISTING render edecek
             listingBadgeRendered = false;
-            listingBadgeGen++;
+
             ikrSlugMap = {};
           }
         },
@@ -633,10 +633,7 @@
 
   // [7] renderListingBadges cache — aynı sayfa için API tekrar çağrılmasın
   var listingBadgeRendered = false;
-  // Generation counter — duplicate PAGE_VIEW event'lerinde eski in-flight render'ı iptal et
-  var listingBadgeGen = 0;
-
-  // VIEW_LISTING event'inden biriktirilen slug→name map
+// VIEW_LISTING event'inden biriktirilen slug→name map
   var ikrSlugMap = {};
 
   // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
@@ -708,7 +705,7 @@
   }
 
 
-  async function renderListingBadges(gen) {
+  async function renderListingBadges() {
     // [7] Ürün sayfasındaysa listing badge çalışmasın
     if (document.getElementById('ikas-reviews-anchor')) return;
     // [7] Aynı sayfa için tekrar API çağrısı yapma
@@ -768,7 +765,6 @@
     ]);
 
     var settings = results[0];
-    if (gen !== undefined && gen !== listingBadgeGen) return;
     if (!settings) return;
 
     if (needRatings && results[1]) {
@@ -779,9 +775,6 @@
         cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
       }
     }
-
-    // Generation kontrolü: fetch sırasında yeni PAGE_VIEW geldiyse badge inject etme
-    if (gen !== undefined && gen !== listingBadgeGen) return;
 
     slugs.forEach(function (slug) {
       var rating = ratings[slug];
