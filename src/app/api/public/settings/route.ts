@@ -30,13 +30,15 @@ export async function GET(req: Request) {
     }),
   ]);
 
+  console.log('[settings] publicApiKey:', publicApiKey, 'settings:', !!settings, 'token:', !!token, 'expireDate:', token?.expireDate);
   if (!settings || !token) {
-    return withCors(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
+    return withCors(NextResponse.json({ error: 'Store not found', debug: { hasSettings: !!settings, hasToken: !!token } }, { status: 404 }));
   }
 
   // Token süresi dolmuşsa widget'ı durdur
   if (token.expireDate && new Date(token.expireDate) < new Date()) {
-    return withCors(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
+    console.log('[settings] token expired:', token.expireDate);
+    return withCors(NextResponse.json({ error: 'Token expired', expireDate: token.expireDate.toISOString() }, { status: 404 }));
   }
 
   return withCors(NextResponse.json(settings));
