@@ -454,12 +454,20 @@
         var path = new URL(a.href).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
         if (!path || EXCLUDED.some(function (e) { return path.startsWith(e); })) return;
         if (map[path]) return; // zaten var
-        // Sadece ürün kartı olan linkleri al (product-container içerenleri)
-        if (!a.querySelector('[class*="product-container"]') && !a.querySelector('[class*="product-name"]') && !a.querySelector('[class*="product-title"]')) return;
+        // Ürün kartı tespiti: link içinde product-container/name/title class'ı var mı?
+        var hasProductClass = a.querySelector('[class*="product-container"]') ||
+          a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]');
+        // Ya da parent'ı container class'lı mı? (bazı temalar)
+        var parentIsContainer = a.parentElement && a.parentElement.className &&
+          a.parentElement.className.indexOf('container') !== -1;
+        // Ya da link textContent ürün adı gibi görünüyor mu? (kısa, anlamlı metin)
+        var linkText = a.textContent.trim();
+        var looksLikeProduct = linkText.length > 2 && linkText.length < 120 && !a.querySelector('img');
+        if (!hasProductClass && !parentIsContainer && !looksLikeProduct) return;
         // Ürün adını bulmaya çalış
         var nameEl = a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
           a.querySelector('.text-sm.font-semibold') || a.querySelector('h2') || a.querySelector('h3');
-        map[path] = nameEl ? nameEl.textContent.trim() : null;
+        map[path] = nameEl ? nameEl.textContent.trim() : (linkText || null);
       } catch (_) {}
     });
     return map;
