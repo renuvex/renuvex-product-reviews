@@ -622,11 +622,6 @@
       // Event daha önce tetiklendiyse sayfa verisinden ürün tespiti
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
-      // DOM her zaman hazır — hemen render başlat (VIEW_LISTING beklenmez)
-      clearTimeout(ikrListingDebounce);
-      ikrListingDebounce = setTimeout(function() {
-        renderListingBadges(listingBadgeGen);
-      }, 0);
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
