@@ -592,8 +592,9 @@
               });
               // İlk açılışta PAGE_VIEW gelmeyebilir — debounce ile son VIEW_LISTING'den sonra render et
               clearTimeout(ikrListingDebounce);
+              var capturedGen = listingBadgeGen;
               ikrListingDebounce = setTimeout(function() {
-                renderListingBadges(listingBadgeGen);
+                if (capturedGen === listingBadgeGen) renderListingBadges(listingBadgeGen);
               }, 200);
             }
           }
