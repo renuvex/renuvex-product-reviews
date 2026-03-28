@@ -619,13 +619,11 @@
       // Event daha önce tetiklendiyse sayfa verisinden ürün tespiti
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
-      // Subscribe olduktan sonra map zaten dolmuşsa (event'ler kaçırıldıysa) render tetikle
-      if (Object.keys(ikrSlugMap).length) {
-        clearTimeout(ikrListingDebounce);
-        ikrListingDebounce = setTimeout(function() {
-          renderListingBadges(listingBadgeGen);
-        }, 200);
-      }
+      // DOM her zaman hazır — hemen render başlat (VIEW_LISTING beklenmez)
+      clearTimeout(ikrListingDebounce);
+      ikrListingDebounce = setTimeout(function() {
+        renderListingBadges(listingBadgeGen);
+      }, 0);
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
@@ -734,11 +732,11 @@
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
     document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
 
-    var slugNameMap = ikrSlugMap;
-    // VIEW_LISTING kaçırıldıysa DOM'dan slug topla (fallback)
-    if (!Object.keys(slugNameMap).length) {
-      slugNameMap = getSlugNameMapFromDOM();
-    }
+    // DOM her zaman taranır (birincil kaynak) + VIEW_LISTING map'i ek kaynak olarak eklenir
+    var slugNameMap = getSlugNameMapFromDOM();
+    Object.keys(ikrSlugMap).forEach(function(slug) {
+      slugNameMap[slug] = ikrSlugMap[slug]; // VIEW_LISTING'den gelen isim DOM'u override eder
+    });
     var slugs = Object.keys(slugNameMap);
     if (!slugs.length) return;
 
