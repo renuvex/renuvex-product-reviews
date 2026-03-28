@@ -213,8 +213,9 @@
               var gallery = document.createElement('div');
               gallery.className = 'ikr-gallery';
               r.images.forEach(function (imgUrl) {
+                if (!imgUrl || imgUrl.indexOf('https://') !== 0) return; // güvenli olmayan URL'leri atla
                 var imgEl = document.createElement('img');
-                imgEl.src = imgUrl;           // tarayıcı URL'yi encode eder
+                imgEl.src = imgUrl;
                 imgEl.className = 'ikr-img';
                 imgEl.setAttribute('data-ikr-img-url', imgUrl);
                 gallery.appendChild(imgEl);
@@ -240,10 +241,13 @@
 
         container.appendChild(widget);
 
-        // image onclick — event delegation, XSS riski yok
+        // image onclick — event delegation, URL protokol validasyonu ile güvenli
         container.addEventListener('click', function (e) {
           var img = e.target.closest('[data-ikr-img-url]');
-          if (img) window.open(img.getAttribute('data-ikr-img-url'), '_blank');
+          if (img) {
+            var url = img.getAttribute('data-ikr-img-url');
+            if (url && url.indexOf('https://') === 0) window.open(url, '_blank');
+          }
         });
 
         // ── Rating badge (ürün başlığının altına) ─────────────────────────────
@@ -302,8 +306,15 @@
 
         var fileInput = form.querySelector('#ikr-file-input');
         var previewsDiv = form.querySelector('#ikr-photo-previews');
+        var isUploading = false;
 
         fileInput.onchange = async function (e) {
+          if (isUploading) return; // concurrent upload engeli
+          isUploading = true;
+          fileInput.disabled = true;
+          // Her yeni seçimde önceki upload'ları sıfırla — biriken görsel gönderimini önle
+          uploadedImages = [];
+          previewsDiv.innerHTML = '';
           var files = Array.from(e.target.files);
           for (var fi = 0; fi < files.length; fi++) {
             var file = files[fi];
@@ -339,6 +350,9 @@
               loadingEl.style.color = '#dc2626';
             }
           }
+          isUploading = false;
+          fileInput.disabled = false;
+          fileInput.value = '';
         };
 
         form.querySelector('#ikr-submit').onclick = async function () {
@@ -439,14 +453,22 @@
     if (cached) {
       try {
         var entry = JSON.parse(cached);
-        if (entry && entry.t !== undefined && entry.v) {
-          // Geçerli cache — TTL dolmamışsa direkt döndür
-          if (Date.now() - entry.t < SETTINGS_CACHE_TTL) return entry.v;
-          // TTL dolmuş ama geçerli veri var — stale-if-error için sakla
-          staleEntry = entry.v;
-          cacheSet(SETTINGS_CACHE_KEY, '');
+        if (entry && entry.t !== undefined) {
+          // 404 cache: notFound flag'i olan entry — kısa TTL kontrolü
+          if (entry.notFound) {
+            if (Date.now() - entry.t < SETTINGS_404_TTL) return null;
+            cacheSet(SETTINGS_CACHE_KEY, '');
+          } else if (entry.v) {
+            // Geçerli cache — TTL dolmamışsa direkt döndür
+            if (Date.now() - entry.t < SETTINGS_CACHE_TTL) return entry.v;
+            // TTL dolmuş ama geçerli veri var — stale-if-error için sakla
+            staleEntry = entry.v;
+            cacheSet(SETTINGS_CACHE_KEY, '');
+          } else {
+            // Eski format — temizle
+            cacheSet(SETTINGS_CACHE_KEY, '');
+          }
         } else {
-          // null veya eski format — temizle
           cacheSet(SETTINGS_CACHE_KEY, '');
         }
       } catch (_) {
@@ -456,9 +478,9 @@
     try {
       var res = await fetchWithTimeout(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
       if (!res.ok) {
-        // 404 — store kurulmamış, kısa TTL ile cache'le (thundering herd önlemi)
+        // 404 — store kurulmamış, notFound flag ile kısa TTL cache (thundering herd önlemi)
         if (res.status === 404) {
-          cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now() - (SETTINGS_CACHE_TTL - SETTINGS_404_TTL), v: null }));
+          cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), notFound: true }));
         }
         // 5xx — geçici hata, cache'leme; stale-if-error: eski geçerli cache varsa onu kullan
         return staleEntry || null;
@@ -548,8 +570,13 @@
     return null;
   }
 
+  var ikasEventsAttached = false;
+
   function attachEvents() {
     if (window.IkasEvents) {
+      // Duplicate subscription önlemi — script iki kez çalışırsa tek subscription kalır
+      if (ikasEventsAttached) return;
+      ikasEventsAttached = true;
       window.IkasEvents.subscribe({
         id: 'ikas-reviews-widget',
         callback: function (event) {
@@ -560,7 +587,8 @@
           }
           if (event && event.type === 'PAGE_VIEW') {
             listingBadgeRendered = false;
-            renderListingBadges();
+            listingBadgeGen++;
+            renderListingBadges(listingBadgeGen);
           }
         },
       });
@@ -588,6 +616,8 @@
 
   // [7] renderListingBadges cache — aynı sayfa için API tekrar çağrılmasın
   var listingBadgeRendered = false;
+  // Generation counter — duplicate PAGE_VIEW event'lerinde eski in-flight render'ı iptal et
+  var listingBadgeGen = 0;
 
   function getSlugNameMap() {
     var map = {};
@@ -660,6 +690,9 @@
     var links = document.querySelectorAll('a[href]');
     links.forEach(function (a) {
       try {
+        var href = a.getAttribute('href');
+        // Hızlı ön eleme: href yoksa, hash/query only ise, ya da excluded path ise atla
+        if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
         // [5] extractSlug helper kullanımı
         var path = extractSlug(a.href);
         if (!path || EXCLUDED.some(function (e) { return path.startsWith(e); })) return;
@@ -692,17 +725,21 @@
     return map;
   }
 
-  async function renderListingBadges() {
+  async function renderListingBadges(gen) {
     // [7] Ürün sayfasındaysa listing badge çalışmasın
     if (document.getElementById('ikas-reviews-anchor')) return;
     // [7] Aynı sayfa için tekrar API çağrısı yapma
     if (listingBadgeRendered) return;
+    // Async await'lerden önce flag'i set et — paralel çağrıların çift badge inject etmesini engelle
+    listingBadgeRendered = true;
 
     // SPA nav'da DOM'da kalan eski attribute'ları temizle (link elementleri yeniden kullanılıyor olabilir)
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
     document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
 
     var settings = await fetchSettings();
+    // Generation kontrolü: await sırasında yeni PAGE_VIEW geldiyse bu render'ı iptal et
+    if (gen !== undefined && gen !== listingBadgeGen) return;
     if (!settings) return;
 
     var slugNameMap = getSlugNameMap();
@@ -713,42 +750,53 @@
     var slugs = Object.keys(slugNameMap);
     if (!slugs.length) return;
 
-    var ratingsJson;
-    var ratingsKey = 'ikr_ratings_' + PUBLIC_API_KEY + '_' + slugs.slice().sort().join(',');
+    // Slug'ları 50'lik batch'lere böl — büyük kategorilerde oversized POST önlemi
+    var SLUG_BATCH_SIZE = 50;
+    var sortedSlugs = slugs.slice().sort();
+    var ratingsKey = 'ikr_ratings_' + PUBLIC_API_KEY + '_' + sortedSlugs.join(',');
+    var ratings = {};
+
     var ratingsCached = cacheGet(ratingsKey);
     if (ratingsCached) {
       try {
         var ratingsEntry = JSON.parse(ratingsCached);
         if (ratingsEntry && ratingsEntry.t !== undefined && Date.now() - ratingsEntry.t < 5 * 60 * 1000) {
-          ratingsJson = ratingsEntry.v;
+          ratings = ratingsEntry.v || {};
         } else {
           cacheSet(ratingsKey, '');
         }
       } catch (_) { cacheSet(ratingsKey, ''); }
     }
-    if (!ratingsJson) {
-      var res;
-      try {
-        res = await fetchWithTimeout(API_BASE + '/api/public/ratings-by-slug', {
+
+    if (!Object.keys(ratings).length) {
+      // Batch fetch: 50'lik gruplara böl, paralel gönder
+      var batches = [];
+      for (var bi = 0; bi < sortedSlugs.length; bi += SLUG_BATCH_SIZE) {
+        batches.push(sortedSlugs.slice(bi, bi + SLUG_BATCH_SIZE));
+      }
+      var batchResults = await Promise.all(batches.map(function (batch) {
+        return fetchWithTimeout(API_BASE + '/api/public/ratings-by-slug', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: slugs }),
+          body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: batch }),
+        }).then(function (res) {
+          if (!res.ok) { console.error('[ikr] ratings-by-slug HTTP error:', res.status); return {}; }
+          return res.json().then(function (json) { return json.data || {}; });
+        }).catch(function (err) {
+          console.error('[ikr] ratings-by-slug fetch error:', err);
+          return {};
         });
-      } catch (err) {
-        console.error('[ikr] ratings-by-slug fetch error:', err);
-        return;
+      }));
+      batchResults.forEach(function (batchData) {
+        Object.keys(batchData).forEach(function (slug) { ratings[slug] = batchData[slug]; });
+      });
+      if (Object.keys(ratings).length) {
+        cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
       }
-      if (!res.ok) {
-        console.error('[ikr] ratings-by-slug HTTP error:', res.status);
-        return;
-      }
-      try { ratingsJson = await res.json(); } catch (err) {
-        console.error('[ikr] ratings-by-slug parse error:', err);
-        return;
-      }
-      cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratingsJson }));
     }
-    var ratings = ratingsJson.data || {};
+
+    // Generation kontrolü: fetch sırasında yeni PAGE_VIEW geldiyse badge inject etme
+    if (gen !== undefined && gen !== listingBadgeGen) return;
 
     slugs.forEach(function (slug) {
       var rating = ratings[slug];
@@ -785,13 +833,11 @@
         }
       });
     });
-
-    listingBadgeRendered = true;
   }
 
   function init() {
     attachEvents();
-    renderListingBadges();
+    renderListingBadges(listingBadgeGen);
   }
 
   if (document.readyState === 'loading') {
