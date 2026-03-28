@@ -132,9 +132,11 @@ export async function GET(request: NextRequest) {
     }
     try {
       const storefrontResponse = await ikas.queries.listStorefront();
+      console.log('[widget-inject] listStorefront success:', storefrontResponse.isSuccess, 'count:', storefrontResponse.data?.listStorefront?.length, 'merchantId:', merchantId);
       if (storefrontResponse.isSuccess && storefrontResponse.data?.listStorefront?.length) {
         const deployUrl = process.env.NEXT_PUBLIC_DEPLOY_URL;
-        await Promise.all(
+        console.log('[widget-inject] deployUrl:', deployUrl);
+        const results = await Promise.all(
           storefrontResponse.data.listStorefront.map((storefront) =>
             ikas.mutations.createStorefrontJSScript({
               input: {
@@ -147,9 +149,9 @@ export async function GET(request: NextRequest) {
             })
           )
         );
+        console.log('[widget-inject] createStorefrontJSScript results:', JSON.stringify(results.map(r => ({ isSuccess: r.isSuccess, errors: r.errors }))));
       }
     } catch (scriptError) {
-      // Non-fatal: log but don't block the OAuth flow
       console.error('Widget script injection failed:', scriptError);
     }
 
