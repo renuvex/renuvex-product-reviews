@@ -132,6 +132,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Auto-inject widget script into all storefronts
+    // Delete existing scripts first to avoid duplicates accumulating across reinstalls
+    try { await ikas.mutations.deleteStorefrontJSScript(); } catch (_) {}
     try {
       const storefrontResponse = await ikas.queries.listStorefront();
       console.log('[widget-inject] listStorefront success:', storefrontResponse.isSuccess, 'count:', storefrontResponse.data?.listStorefront?.length, 'merchantId:', merchantId);
