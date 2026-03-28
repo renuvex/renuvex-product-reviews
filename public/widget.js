@@ -401,22 +401,34 @@
   }
 
   function findNameEl(a, productName) {
-    // 1. JSON-LD'den gelen ürün adı ile heading text'ini eşleştir — en güvenilir yöntem
+    // 1. Link içinde heading text eşleştirme
     if (productName) {
       var headings = a.querySelectorAll('h1,h2,h3,h4,h5,h6');
       for (var i = 0; i < headings.length; i++) {
         if (headings[i].textContent.trim() === productName) return headings[i];
       }
-      // Heading yoksa ürün adını içeren herhangi bir elementi bul
+      // Heading yoksa link içinde text eşleştir
       var allEls = a.querySelectorAll('*');
       for (var j = 0; j < allEls.length; j++) {
         if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) return allEls[j];
       }
+      // 2. Link dışında: ikas productCard + textContainer pattern (resmi temalar)
+      var card = a.parentElement && a.parentElement.parentElement;
+      if (card && card.className && card.className.indexOf('productCard') !== -1) {
+        var textContainer = card.querySelector('[class*="textContainer"]');
+        if (textContainer) {
+          var cardEls = textContainer.querySelectorAll('*');
+          for (var k = 0; k < cardEls.length; k++) {
+            if (cardEls[k].children.length === 0 && cardEls[k].textContent.trim() === productName) return cardEls[k];
+          }
+          // textContainer içinde tam eşleşme yoksa textContainer'ın ilk text child'ını döndür
+          return textContainer.firstElementChild || textContainer;
+        }
+      }
     }
-    // 2. Fallback: class adı bazlı seçiciler
+    // 3. Fallback: class adı bazlı seçiciler
     return a.querySelector('[class*="product-name"]') ||
       a.querySelector('[class*="product-title"]') ||
-      a.querySelector('[class*="name"]') ||
       a.querySelector('h2') ||
       a.querySelector('h3') ||
       null;
