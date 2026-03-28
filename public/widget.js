@@ -267,7 +267,9 @@
             var badge = document.createElement('a');
             badge.id = 'ikr-rating-badge';
             badge.href = '#ikas-reviews';
-            badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;';
+            var titleAlign = window.getComputedStyle(titleEl).textAlign;
+            var justifyVal = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
+            badge.style.cssText = 'display:flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;justify-content:' + justifyVal + ';';
             // [4] starsHTML helper kullanımı
             badge.innerHTML = starsHTML(avgRating, '16px') +
               '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
