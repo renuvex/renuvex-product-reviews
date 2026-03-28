@@ -121,11 +121,16 @@
 
   // ── Core render ───────────────────────────────────────────────────────────
 
-  // [2] render() race condition koruması — aynı anda sadece 1 render
+  // [2] render() race condition koruması — aynı anda sadece 1 render, pending slot ile istek kaybı önlenir
   var renderInProgress = false;
+  var pendingRender = null;
 
   async function render(productId, settings, reviewsData, productName) {
-    if (renderInProgress) return;
+    if (renderInProgress) {
+      // Render devam ederken gelen isteği slot'a yaz; mevcut render bitince çalışır
+      pendingRender = { productId: productId, settings: settings, reviewsData: reviewsData, productName: productName };
+      return;
+    }
     renderInProgress = true;
 
     try {
@@ -242,30 +247,32 @@
         });
 
         // ── Rating badge (ürün başlığının altına) ─────────────────────────────
-        if (!document.getElementById('ikr-rating-badge')) {
-          var avgRating = reviews.length
-            ? (reviews.reduce(function (s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1)
-            : null;
-          if (avgRating) {
-            // Listing badge'leri temizle (ürün sayfasında gereksiz)
-            document.querySelectorAll('[data-ikr-listing-badge]').forEach(function (b) { b.remove(); });
+        // Önceki üründen kalan eski badge'i her zaman temizle
+        var oldBadge = document.getElementById('ikr-rating-badge');
+        if (oldBadge) oldBadge.remove();
 
-            var titleEl = findProductTitleEl(productName);
-            if (titleEl && titleEl.parentNode) {
-              var badge = document.createElement('a');
-              badge.id = 'ikr-rating-badge';
-              badge.href = '#ikas-reviews';
-              badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;';
-              // [4] starsHTML helper kullanımı
-              badge.innerHTML = starsHTML(avgRating, '16px') +
-                '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
-              badge.onclick = function (e) {
-                e.preventDefault();
-                var rev = document.getElementById('ikas-reviews');
-                if (rev) rev.scrollIntoView({ behavior: 'smooth' });
-              };
-              titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
-            }
+        var avgRating = reviews.length
+          ? (reviews.reduce(function (s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1)
+          : null;
+        if (avgRating) {
+          // Listing badge'leri temizle (ürün sayfasında gereksiz)
+          document.querySelectorAll('[data-ikr-listing-badge]').forEach(function (b) { b.remove(); });
+
+          var titleEl = findProductTitleEl(productName);
+          if (titleEl && titleEl.parentNode) {
+            var badge = document.createElement('a');
+            badge.id = 'ikr-rating-badge';
+            badge.href = '#ikas-reviews';
+            badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;';
+            // [4] starsHTML helper kullanımı
+            badge.innerHTML = starsHTML(avgRating, '16px') +
+              '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
+            badge.onclick = function (e) {
+              e.preventDefault();
+              var rev = document.getElementById('ikas-reviews');
+              if (rev) rev.scrollIntoView({ behavior: 'smooth' });
+            };
+            titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
           }
         }
 
@@ -381,6 +388,11 @@
       }
     } finally {
       renderInProgress = false;
+      if (pendingRender) {
+        var next = pendingRender;
+        pendingRender = null;
+        render(next.productId, next.settings, next.reviewsData, next.productName);
+      }
     }
   }
 
@@ -451,6 +463,28 @@
     }
   }
 
+  // Reviews cache — fetchSettings ile aynı { t, v } TTL pattern'ı
+  var REVIEWS_CACHE_TTL = 5 * 60 * 1000;
+
+  async function fetchReviews(productId) {
+    var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId;
+    var cached = cacheGet(key);
+    if (cached) {
+      try {
+        var entry = JSON.parse(cached);
+        if (entry && entry.t !== undefined) {
+          if (Date.now() - entry.t < REVIEWS_CACHE_TTL) return entry.v;
+          cacheSet(key, '');
+        }
+        cacheSet(key, '');
+      } catch (_) { cacheSet(key, ''); }
+    }
+    var res = await fetchWithTimeout(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId));
+    var data = await res.json();
+    cacheSet(key, JSON.stringify({ t: Date.now(), v: data }));
+    return data;
+  }
+
   // [1] bootstrap — productId bazlı mutex (aynı ürün için çift çağrı engeli)
   var bootstrapCache = {};
 
@@ -461,8 +495,7 @@
     try {
       var settings = await fetchSettings();
       if (!settings) return;
-      var reviewsRes = await fetchWithTimeout(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId));
-      var reviewsData = await reviewsRes.json();
+      var reviewsData = await fetchReviews(productId);
       await render(productId, settings, reviewsData, productName);
     } catch (err) {
       console.error('[ikr] bootstrap error:', err);
@@ -503,6 +536,7 @@
             if (productId) bootstrap(productId, productName);
           }
           if (event && event.type === 'PAGE_VIEW') {
+            listingBadgeRendered = false;
             renderListingBadges();
           }
         },
@@ -641,6 +675,10 @@
     // [7] Aynı sayfa için tekrar API çağrısı yapma
     if (listingBadgeRendered) return;
 
+    // SPA nav'da DOM'da kalan eski attribute'ları temizle (link elementleri yeniden kullanılıyor olabilir)
+    document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
+    document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
+
     var settings = await fetchSettings();
     if (!settings) return;
 
@@ -652,24 +690,38 @@
     var slugs = Object.keys(slugNameMap);
     if (!slugs.length) return;
 
-    var res;
-    try {
-      res = await fetchWithTimeout(API_BASE + '/api/public/ratings-by-slug', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: slugs }),
-      });
-    } catch (err) {
-      console.error('[ikr] ratings-by-slug fetch error:', err);
-      return;
+    var ratingsJson;
+    var ratingsKey = 'ikr_ratings_' + PUBLIC_API_KEY + '_' + slugs.slice().sort().join(',');
+    var ratingsCached = cacheGet(ratingsKey);
+    if (ratingsCached) {
+      try {
+        var ratingsEntry = JSON.parse(ratingsCached);
+        if (ratingsEntry && ratingsEntry.t !== undefined && Date.now() - ratingsEntry.t < 5 * 60 * 1000) {
+          ratingsJson = ratingsEntry.v;
+        } else {
+          cacheSet(ratingsKey, '');
+        }
+      } catch (_) { cacheSet(ratingsKey, ''); }
     }
-
-    var json;
-    try { json = await res.json(); } catch (err) {
-      console.error('[ikr] ratings-by-slug parse error:', err);
-      return;
+    if (!ratingsJson) {
+      var res;
+      try {
+        res = await fetchWithTimeout(API_BASE + '/api/public/ratings-by-slug', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: slugs }),
+        });
+      } catch (err) {
+        console.error('[ikr] ratings-by-slug fetch error:', err);
+        return;
+      }
+      try { ratingsJson = await res.json(); } catch (err) {
+        console.error('[ikr] ratings-by-slug parse error:', err);
+        return;
+      }
+      cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratingsJson }));
     }
-    var ratings = json.data || {};
+    var ratings = ratingsJson.data || {};
 
     slugs.forEach(function (slug) {
       var rating = ratings[slug];
