@@ -315,7 +315,11 @@
     return settings;
   }
 
+  let bootstrapInProgress = false;
+
   async function bootstrap(productId, productName) {
+    if (bootstrapInProgress) return;
+    bootstrapInProgress = true;
     const FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları', widgetTemplate: 'classic' };
     try {
       const settings = await fetchSettings();
@@ -327,6 +331,8 @@
       await render(productId, settings, reviewsData, productName);
     } catch (_) {
       await render(productId, FALLBACK, null, productName);
+    } finally {
+      bootstrapInProgress = false;
     }
   }
 
