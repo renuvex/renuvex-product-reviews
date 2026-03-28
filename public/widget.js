@@ -590,7 +590,6 @@
                   ikrSlugMap[p.metaData.slug] = p.name;
                 }
               });
-              scheduleRender();
             }
           }
           if (event && event.type === 'PRODUCT_VIEW') {
@@ -603,8 +602,7 @@
           }
           if (event && event.type === 'PAGE_VIEW') {
             listingBadgeRendered = false;
-            ikrSlugMap = {};
-            scheduleRender();
+            renderListingBadges();
           }
         },
       });
@@ -612,7 +610,7 @@
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
       // Subscribe olduktan sonra hemen render — VIEW_LISTING kaçırılmış olabilir, DOM fallback devreye girer
-      scheduleRender();
+      renderListingBadges();
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
@@ -631,17 +629,8 @@
   // ── Listing / Category badge ──────────────────────────────────────────────
 
 
-  var listingBadgeRendered = false;  // tek render flag
-  var listingRenderTimer = null;     // debounce timer
-  var ikrSlugMap = {};               // VIEW_LISTING'den gelen slug→name map
-
-  // Debounce: birden fazla tetikleyici (VIEW_LISTING x2, PAGE_VIEW, attach) tek render'a indirgenir
-  function scheduleRender() {
-    clearTimeout(listingRenderTimer);
-    listingRenderTimer = setTimeout(function() {
-      if (!listingBadgeRendered) renderListingBadges();
-    }, 100);
-  }
+  var listingBadgeRendered = false;
+  var ikrSlugMap = {};
 
   // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
   // slug→null map döner (isim bilinmiyor, findNameEl class/heading fallback kullanır)
