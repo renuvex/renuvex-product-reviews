@@ -630,8 +630,9 @@
 
   // ── Listing / Category badge ──────────────────────────────────────────────
 
-
   var listingBadgeRendered = false;
+  var listingRenderInProgress = false;
+  var listingRenderQueued = false;
   var ikrSlugMap = {};
 
   // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
@@ -706,11 +707,14 @@
   async function renderListingBadges() {
     // Ürün sayfasındaysa çalışmasın
     if (document.getElementById('ikas-reviews-anchor')) return;
-    // Zaten render edildi — tekrar çalışmasın
+    // Render devam ediyorsa kuyruğa al — tamamlanınca bir kez daha çalışır
+    if (listingRenderInProgress) { listingRenderQueued = true; return; }
+    // Zaten render edildi ve kuyrukta bekleyen yoksa çalışmasın
     if (listingBadgeRendered) return;
     listingBadgeRendered = true;
+    listingRenderInProgress = true;
     // DOM'da zaten badge varsa render etme (duplicate önlemi)
-    if (document.querySelector('[data-ikr-listing-badge]')) return;
+    if (document.querySelector('[data-ikr-listing-badge]')) { listingRenderInProgress = false; return; }
 
     // SPA nav'da eski attribute'ları temizle
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
@@ -811,6 +815,14 @@
         }
       });
     });
+
+    listingRenderInProgress = false;
+    // Kuyrukta bekleyen istek varsa (spam sırasında geldi) bir kez daha çalıştır
+    if (listingRenderQueued) {
+      listingRenderQueued = false;
+      listingBadgeRendered = false;
+      renderListingBadges();
+    }
   }
 
   function init() {
