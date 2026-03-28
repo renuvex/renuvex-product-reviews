@@ -734,11 +734,6 @@
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
     document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
 
-    var settings = await fetchSettings();
-    // Generation kontrolü: await sırasında yeni PAGE_VIEW geldiyse bu render'ı iptal et
-    if (gen !== undefined && gen !== listingBadgeGen) return;
-    if (!settings) return;
-
     var slugNameMap = ikrSlugMap;
     // VIEW_LISTING kaçırıldıysa DOM'dan slug topla (fallback)
     if (!Object.keys(slugNameMap).length) {
@@ -747,7 +742,7 @@
     var slugs = Object.keys(slugNameMap);
     if (!slugs.length) return;
 
-    // Slug'ları 50'lik batch'lere böl — büyük kategorilerde oversized POST önlemi
+    // settings ve ratings paralel başlat
     var SLUG_BATCH_SIZE = 50;
     var sortedSlugs = slugs.slice().sort();
     var ratingsKey = 'ikr_ratings_' + PUBLIC_API_KEY + '_' + sortedSlugs.join(',');
@@ -765,27 +760,34 @@
       } catch (_) { cacheSet(ratingsKey, ''); }
     }
 
-    if (!Object.keys(ratings).length) {
-      // Batch fetch: 50'lik gruplara böl, paralel gönder
-      var batches = [];
-      for (var bi = 0; bi < sortedSlugs.length; bi += SLUG_BATCH_SIZE) {
-        batches.push(sortedSlugs.slice(bi, bi + SLUG_BATCH_SIZE));
-      }
-      var batchResults = await Promise.all(batches.map(function (batch) {
+    // settings ve ratings-by-slug paralel fetch — ikisi de cache miss ise aynı anda gönder
+    var batches = [];
+    for (var bi = 0; bi < sortedSlugs.length; bi += SLUG_BATCH_SIZE) {
+      batches.push(sortedSlugs.slice(bi, bi + SLUG_BATCH_SIZE));
+    }
+
+    var needRatings = !Object.keys(ratings).length;
+    var results = await Promise.all([
+      fetchSettings(),
+      needRatings ? Promise.all(batches.map(function(batch) {
         return fetchWithTimeout(API_BASE + '/api/public/ratings-by-slug', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: batch }),
-        }).then(function (res) {
-          if (!res.ok) { console.error('[ikr] ratings-by-slug HTTP error:', res.status); return {}; }
-          return res.json().then(function (json) { return json.data || {}; });
-        }).catch(function (err) {
-          console.error('[ikr] ratings-by-slug fetch error:', err);
-          return {};
-        });
-      }));
-      batchResults.forEach(function (batchData) {
-        Object.keys(batchData).forEach(function (slug) { ratings[slug] = batchData[slug]; });
+        }).then(function(res) {
+          if (!res.ok) return {};
+          return res.json().then(function(json) { return json.data || {}; });
+        }).catch(function() { return {}; });
+      })) : Promise.resolve(null),
+    ]);
+
+    var settings = results[0];
+    if (gen !== undefined && gen !== listingBadgeGen) return;
+    if (!settings) return;
+
+    if (needRatings && results[1]) {
+      results[1].forEach(function(batchData) {
+        Object.keys(batchData).forEach(function(slug) { ratings[slug] = batchData[slug]; });
       });
       if (Object.keys(ratings).length) {
         cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
