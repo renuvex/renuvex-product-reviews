@@ -32,11 +32,16 @@ export async function GET(req: Request) {
     }),
     prisma.authToken.findFirst({
       where: { merchantId: publicApiKey },
-      select: { authorizedAppId: true },
+      select: { authorizedAppId: true, expireDate: true },
     }),
   ]);
 
   if (!settings || !token) {
+    return setCorsHeaders(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
+  }
+
+  // Token süresi dolmuşsa widget'ı durdur
+  if (token.expireDate && new Date(token.expireDate) < new Date()) {
     return setCorsHeaders(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
   }
 
