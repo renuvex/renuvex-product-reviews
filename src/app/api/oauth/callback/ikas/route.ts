@@ -136,11 +136,9 @@ export async function GET(request: NextRequest) {
     try { await ikas.mutations.deleteStorefrontJSScript(); } catch (_) {}
     try {
       const storefrontResponse = await ikas.queries.listStorefront();
-      console.log('[widget-inject] listStorefront success:', storefrontResponse.isSuccess, 'count:', storefrontResponse.data?.listStorefront?.length, 'merchantId:', merchantId);
       if (storefrontResponse.isSuccess && storefrontResponse.data?.listStorefront?.length) {
         const deployUrl = process.env.NEXT_PUBLIC_DEPLOY_URL;
-        console.log('[widget-inject] deployUrl:', deployUrl);
-        const results = await Promise.all(
+        await Promise.all(
           storefrontResponse.data.listStorefront.map((storefront) =>
             ikas.mutations.createStorefrontJSScript({
               input: {
@@ -153,7 +151,6 @@ export async function GET(request: NextRequest) {
             })
           )
         );
-        console.log('[widget-inject] createStorefrontJSScript results:', JSON.stringify(results.map(r => ({ isSuccess: r.isSuccess, errors: r.errors, data: r.data }))));
       }
     } catch (scriptError) {
       console.error('Widget script injection failed:', scriptError);
