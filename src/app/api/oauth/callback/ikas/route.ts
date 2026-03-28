@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
             })
           )
         );
-        console.log('[widget-inject] createStorefrontJSScript results:', JSON.stringify(results.map(r => ({ isSuccess: r.isSuccess, errors: r.errors }))));
+        console.log('[widget-inject] createStorefrontJSScript results:', JSON.stringify(results.map(r => ({ isSuccess: r.isSuccess, errors: r.errors, data: r.data }))));
       }
     } catch (scriptError) {
       console.error('Widget script injection failed:', scriptError);
