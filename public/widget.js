@@ -590,39 +590,29 @@
                   ikrSlugMap[p.metaData.slug] = p.name;
                 }
               });
-              // Sadece map'i doldur — render PAGE_VIEW tarafından tetiklenecek
+              // Flag false ise render et — zaten render olduysa yapma
+              renderListingBadges(listingBadgeGen);
             }
           }
           if (event && event.type === 'PRODUCT_VIEW') {
             var productId = event.data && event.data.productDetail && event.data.productDetail.id;
             var productName = event.data && event.data.productDetail && event.data.productDetail.name;
             if (productId) {
-              // SPA navigation: her ürün geçişinde reviews cache'ini temizle — taze veri çek
               cacheSet('ikr_reviews_' + PUBLIC_API_KEY + '_' + productId, '');
               bootstrap(productId, productName);
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
+            // Sıfırla — bir sonraki VIEW_LISTING render edecek
             listingBadgeRendered = false;
             listingBadgeGen++;
             ikrSlugMap = {};
-            clearTimeout(ikrListingDebounce);
-            // VIEW_LISTING gelmese bile DOM taraması render'ı tetikler
-            var capturedGen = listingBadgeGen;
-            ikrListingDebounce = setTimeout(function() {
-              if (capturedGen === listingBadgeGen) renderListingBadges(listingBadgeGen);
-            }, 300);
           }
         },
       });
       // Event daha önce tetiklendiyse sayfa verisinden ürün tespiti
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
-      // İlk yükleme: PAGE_VIEW gelmeden önce bir kez render — VIEW_LISTING map'ini bekle
-      var initGen = listingBadgeGen;
-      ikrListingDebounce = setTimeout(function() {
-        if (initGen === listingBadgeGen) renderListingBadges(listingBadgeGen);
-      }, 500);
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
@@ -648,7 +638,6 @@
 
   // VIEW_LISTING event'inden biriktirilen slug→name map
   var ikrSlugMap = {};
-  var ikrListingDebounce = null;
 
   // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
   // slug→null map döner (isim bilinmiyor, findNameEl class/heading fallback kullanır)
