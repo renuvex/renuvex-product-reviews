@@ -4,6 +4,11 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { getIkas } from '@/helpers/api-helpers';
 import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
+import { withCors, corsOptions } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return corsOptions();
+}
 
 /**
  * POST: Tüm mevcut temalara widget scriptini inject et / güncelle.
@@ -87,9 +92,9 @@ export async function POST(request: Request) {
     const failed = results.filter((r) => r.action === 'failed').length;
     const success = results.length - failed;
 
-    return NextResponse.json({ data: { success, failed, total: results.length, results } });
+    return withCors(NextResponse.json({ data: { success, failed, total: results.length, results } }));
   } catch (error: any) {
     console.error('[inject-scripts] ERROR:', error);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return withCors(NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 }));
   }
 }
