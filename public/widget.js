@@ -467,7 +467,20 @@
         // Ürün adını bulmaya çalış
         var nameEl = a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
           a.querySelector('.text-sm.font-semibold') || a.querySelector('h2') || a.querySelector('h3');
-        map[path] = nameEl ? nameEl.textContent.trim() : (linkText || null);
+        if (nameEl) {
+          map[path] = nameEl.textContent.trim();
+        } else {
+          // linkText fiyat da içerebilir ("Ürün Adı₺16.00"), ilk leaf text el'i al
+          var firstTextEl = null;
+          var allLinkEls = a.querySelectorAll('*');
+          for (var t = 0; t < allLinkEls.length; t++) {
+            if (allLinkEls[t].children.length === 0 && allLinkEls[t].textContent.trim().length > 2) {
+              firstTextEl = allLinkEls[t];
+              break;
+            }
+          }
+          map[path] = firstTextEl ? firstTextEl.textContent.trim() : (linkText || null);
+        }
       } catch (_) {}
     });
     return map;
