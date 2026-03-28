@@ -707,12 +707,13 @@
           a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]');
         var parentIsContainer = a.parentElement && a.parentElement.className &&
           (a.parentElement.className.indexOf('container') !== -1 || a.parentElement.className.indexOf('product-card') !== -1);
-        // Üst elementin class'ında product-card pattern'ı varsa da ürün linki say
+        // Üst elementin class'ında product-card veya product-list pattern'ı varsa da ürün linki say
         var ancestorIsProductCard = !hasProductClass && !parentIsContainer && (function() {
           var el = a.parentElement;
           for (var i = 0; i < 3; i++) {
             if (!el) break;
-            if (el.className && typeof el.className === 'string' && el.className.indexOf('product-card') !== -1) return true;
+            if (el.className && typeof el.className === 'string' &&
+              (el.className.indexOf('product-card') !== -1 || el.className.indexOf('product-list') !== -1 || el.className.indexOf('productContainer') !== -1)) return true;
             el = el.parentElement;
           }
           return false;
