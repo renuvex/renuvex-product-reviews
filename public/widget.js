@@ -619,18 +619,25 @@
       // Event daha önce tetiklendiyse sayfa verisinden ürün tespiti
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
+      // Subscribe olduktan sonra map zaten dolmuşsa (event'ler kaçırıldıysa) render tetikle
+      if (Object.keys(ikrSlugMap).length) {
+        clearTimeout(ikrListingDebounce);
+        ikrListingDebounce = setTimeout(function() {
+          renderListingBadges(listingBadgeGen);
+        }, 200);
+      }
     } else {
-      // Fallback: IkasEvents yüklenene kadar bekle
+      // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
       function tryAttach() {
         if (window.IkasEvents) {
           attachEvents();
-        } else if (attempts < 20) {
+        } else if (attempts < 100) {
           attempts++;
-          setTimeout(tryAttach, 500);
+          setTimeout(tryAttach, 50);
         }
       }
-      setTimeout(tryAttach, 500);
+      setTimeout(tryAttach, 50);
     }
   }
 
