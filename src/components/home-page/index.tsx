@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
-import { CheckCircle2, MessageSquare, Settings, Star, Trash2, Check, X, Reply } from 'lucide-react';
+import { CheckCircle2, MessageSquare, Settings, Star, Check, X, Reply } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 interface Review {
   id: string;
@@ -73,17 +72,17 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   // Yorum Durumunu Güncelleme (Onayla / Reddet)
   const handleStatusChange = async (id: string, newStatus: string) => {
-    // Ekranda (UI) anında güncelle
+    const previousReviews = reviews;
     setReviews(reviews.map(r => r.id === id ? { ...r, status: newStatus } : r));
-
-    // Veritabanına (DB) isteği yolla
     try {
-      await axios.put('/api/admin/reviews', 
-        { id, status: newStatus }, 
+      await axios.put('/api/admin/reviews',
+        { id, status: newStatus },
         { headers: { Authorization: `JWT ${token}` } }
       );
     } catch (error) {
       console.error("Durum güncellenemedi:", error);
+      setReviews(previousReviews);
+      alert("Durum güncellenirken bir hata oluştu, lütfen tekrar deneyin.");
     }
   };
 

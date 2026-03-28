@@ -44,6 +44,8 @@ model Review {
   @@index([storeId])
   @@index([productId])
   @@index([storeId, slug])
+  @@index([storeId, status])
+  @@index([status, createdAt])
 }
 
 model StoreSettings {

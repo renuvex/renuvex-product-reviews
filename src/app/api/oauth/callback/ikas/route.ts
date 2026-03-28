@@ -124,6 +124,12 @@ export async function GET(request: NextRequest) {
     await AuthTokenManager.put(token);
 
     // Auto-inject widget script into all storefronts
+    // Delete any existing script first to prevent duplicates on re-install
+    try {
+      await ikas.mutations.deleteStorefrontJSScript();
+    } catch (_) {
+      // Non-fatal: script may not exist yet on first install
+    }
     try {
       const storefrontResponse = await ikas.queries.listStorefront();
       if (storefrontResponse.isSuccess && storefrontResponse.data?.listStorefront?.length) {

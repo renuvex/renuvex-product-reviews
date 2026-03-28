@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-const setCorsHeaders = (res: NextResponse) => {
-  res.headers.set('Access-Control-Allow-Origin', '*');
-  res.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-  return res;
-};
+import { withCors, corsOptions } from '@/lib/cors';
 
 export async function OPTIONS() {
-  return setCorsHeaders(new NextResponse(null, { status: 204 }));
+  return corsOptions();
 }
 
 /**
@@ -22,7 +16,7 @@ export async function GET(req: Request) {
   const publicApiKey = searchParams.get('publicApiKey');
 
   if (!publicApiKey) {
-    return setCorsHeaders(NextResponse.json({ error: 'Missing publicApiKey' }, { status: 400 }));
+    return withCors(NextResponse.json({ error: 'Missing publicApiKey' }, { status: 400 }));
   }
 
   const [settings, token] = await Promise.all([
@@ -37,13 +31,13 @@ export async function GET(req: Request) {
   ]);
 
   if (!settings || !token) {
-    return setCorsHeaders(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
+    return withCors(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
   }
 
   // Token süresi dolmuşsa widget'ı durdur
   if (token.expireDate && new Date(token.expireDate) < new Date()) {
-    return setCorsHeaders(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
+    return withCors(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
   }
 
-  return setCorsHeaders(NextResponse.json(settings));
+  return withCors(NextResponse.json(settings));
 }

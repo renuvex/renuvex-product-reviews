@@ -5,6 +5,7 @@ import { validateRequest } from '@/lib/validation';
 import { OAuthAPI } from '@ikas/admin-api-client';
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
+import crypto from 'crypto';
 
 // Validation schemas
 const authorizeSchema = z.object({
@@ -34,8 +35,8 @@ export async function GET(request: NextRequest) {
 
     const { storeName } = validation.data;
 
-    // Generate a random state string for CSRF protection
-    const state = Math.random().toFixed(16);
+    // Generate a cryptographically secure state string for CSRF protection
+    const state = crypto.randomBytes(32).toString('hex');
 
     // Retrieve the current session and update it with state and storeName
     const session = await getSession();
@@ -56,13 +57,6 @@ export async function GET(request: NextRequest) {
       `&scope=${encodeURIComponent(config.oauth.scope)}` +
       `&state=${encodeURIComponent(state)}`;
 
-    // Redirect the user to the Ikas OAuth authorization page
-    console.log("=== OAUTH DEBUG ===");
-    console.log(`clientId: ${config.oauth.clientId}`);
-    console.log(`redirectUri: ${config.oauth.redirectUri}`);
-    console.log(`state: ${state}`);
-    console.log(`oauthBaseUrl: ${oauthBaseUrl}`);
-    console.log("===================\n");
     return NextResponse.redirect(authorizeUrl);
   } catch (error) {
     // Log and return a 500 error if something goes wrong

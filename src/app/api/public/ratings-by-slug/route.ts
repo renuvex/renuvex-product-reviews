@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-const setCorsHeaders = (res: NextResponse) => {
-  res.headers.set('Access-Control-Allow-Origin', '*');
-  res.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-  return res;
-};
+import { withCors, corsOptions } from '@/lib/cors';
 
 export async function OPTIONS() {
-  return setCorsHeaders(new NextResponse(null, { status: 204 }));
+  return corsOptions();
 }
 
 /**
@@ -22,15 +16,24 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { storeId, slugs } = body;
 
-    if (!storeId || !Array.isArray(slugs) || slugs.length === 0) {
-      return setCorsHeaders(NextResponse.json({ data: {} }));
+    if (!storeId || typeof storeId !== 'string' || !Array.isArray(slugs) || slugs.length === 0) {
+      return withCors(NextResponse.json({ data: {} }));
+    }
+
+    // [C] Max 100 slug — sonsuz sorgu engeli
+    const safeSlugs = slugs
+      .filter((s: unknown) => typeof s === 'string' && s.length > 0 && s.length <= 200)
+      .slice(0, 100);
+
+    if (safeSlugs.length === 0) {
+      return withCors(NextResponse.json({ data: {} }));
     }
 
     // Tüm slug'lar için onaylı yorumları tek sorguda çek
     const reviews = await prisma.review.findMany({
       where: {
         storeId,
-        slug: { in: slugs },
+        slug: { in: safeSlugs },
         status: 'approved',
       },
       select: { slug: true, rating: true },
@@ -53,9 +56,9 @@ export async function POST(request: Request) {
 
     const res = NextResponse.json({ data });
     res.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-    return setCorsHeaders(res);
+    return withCors(res);
   } catch (error: any) {
     console.error('[ratings-by-slug] ERROR:', error);
-    return setCorsHeaders(NextResponse.json({ data: {} }, { status: 500 }));
+    return withCors(NextResponse.json({ data: {} }, { status: 500 }));
   }
 }

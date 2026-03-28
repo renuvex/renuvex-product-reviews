@@ -44,6 +44,14 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  // [15] fetch with timeout — 8sn sonra abort
+  function fetchWithTimeout(url, options, ms) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, ms || 8000);
+    return fetch(url, Object.assign({}, options, { signal: ctrl.signal }))
+      .finally(function () { clearTimeout(timer); });
+  }
+
   // [5] URL parsing helper — tek yerden yönetim
   function extractSlug(url) {
     try {
@@ -144,36 +152,88 @@
         var reviews = (data.data && data.data.reviews) || [];
         var totalCount = (data.data && data.data.totalCount) || 0;
 
-        var html = '<div id="ikas-reviews-widget">';
-        html += '<div class="ikr-header"><h2 class="ikr-title">' + widgetTitle + ' (' + totalCount + ')</h2></div>';
+        // [16] Önceki listener'ı temizle, clone ile tüm listener'ları sıfırla
+        var fresh = container.cloneNode(false);
+        container.parentNode.replaceChild(fresh, container);
+        container = fresh;
+
+        var widget = document.createElement('div');
+        widget.id = 'ikas-reviews-widget';
+
+        // Başlık
+        var header = document.createElement('div');
+        header.className = 'ikr-header';
+        var h2 = document.createElement('h2');
+        h2.className = 'ikr-title';
+        h2.textContent = widgetTitle + ' (' + totalCount + ')';
+        header.appendChild(h2);
+        widget.appendChild(header);
 
         if (reviews.length === 0) {
-          html += '<p style="color:#888;text-align:center;padding:30px 0;">Henüz yorum yok.</p>';
+          var empty = document.createElement('p');
+          empty.style.cssText = 'color:#888;text-align:center;padding:30px 0;';
+          empty.textContent = 'Henüz yorum yok.';
+          widget.appendChild(empty);
         } else {
           reviews.forEach(function (r) {
-            // [4] starsHTML helper kullanımı
-            var stars = starsHTML(r.rating, null);
-            var images = r.images && Array.isArray(r.images) && r.images.length
-              ? '<div class="ikr-gallery">' + r.images.map(function (img) {
-                  // [XSS fix] onclick string concatenation yerine data attribute
-                  return '<img src="' + img + '" class="ikr-img" data-ikr-img-url="' + img + '">';
-                }).join('') + '</div>'
-              : '';
-            var reply = r.merchantReply
-              ? '<div class="ikr-reply"><strong>Mağaza Yanıtı:</strong><br>' + r.merchantReply + '</div>'
-              : '';
-            html += '<div class="ikr-review">'
-              + '<div><span class="ikr-author">' + r.author + '</span><span class="ikr-date">' + formatDate(r.createdAt) + '</span></div>'
-              + '<div style="margin-top:4px;">' + stars + '</div>'
-              + '<p class="ikr-body">' + (r.comment || '') + '</p>'
-              + images
-              + reply
-              + '</div>';
+            var reviewEl = document.createElement('div');
+            reviewEl.className = 'ikr-review';
+
+            // Yazar + tarih satırı
+            var meta = document.createElement('div');
+            var authorEl = document.createElement('span');
+            authorEl.className = 'ikr-author';
+            authorEl.textContent = r.author || '';
+            var dateEl = document.createElement('span');
+            dateEl.className = 'ikr-date';
+            dateEl.textContent = formatDate(r.createdAt);
+            meta.appendChild(authorEl);
+            meta.appendChild(dateEl);
+            reviewEl.appendChild(meta);
+
+            // Yıldızlar — starsHTML sadece ★☆ unicode + renk, XSS yok
+            var starsWrapEl = document.createElement('div');
+            starsWrapEl.style.marginTop = '4px';
+            starsWrapEl.innerHTML = starsHTML(r.rating, null);
+            reviewEl.appendChild(starsWrapEl);
+
+            // Yorum metni — textContent ile güvenli
+            var body = document.createElement('p');
+            body.className = 'ikr-body';
+            body.textContent = r.comment || '';
+            reviewEl.appendChild(body);
+
+            // Görseller — DOM API ile güvenli src/data attr
+            if (r.images && Array.isArray(r.images) && r.images.length) {
+              var gallery = document.createElement('div');
+              gallery.className = 'ikr-gallery';
+              r.images.forEach(function (imgUrl) {
+                var imgEl = document.createElement('img');
+                imgEl.src = imgUrl;           // tarayıcı URL'yi encode eder
+                imgEl.className = 'ikr-img';
+                imgEl.setAttribute('data-ikr-img-url', imgUrl);
+                gallery.appendChild(imgEl);
+              });
+              reviewEl.appendChild(gallery);
+            }
+
+            // Mağaza yanıtı — textContent ile güvenli
+            if (r.merchantReply) {
+              var replyEl = document.createElement('div');
+              replyEl.className = 'ikr-reply';
+              var replyLabel = document.createElement('strong');
+              replyLabel.textContent = 'Mağaza Yanıtı:';
+              replyEl.appendChild(replyLabel);
+              replyEl.appendChild(document.createElement('br'));
+              replyEl.appendChild(document.createTextNode(r.merchantReply));
+              reviewEl.appendChild(replyEl);
+            }
+
+            widget.appendChild(reviewEl);
           });
         }
 
-        html += '</div>';
-        container.innerHTML = html;
+        container.appendChild(widget);
 
         // image onclick — event delegation, XSS riski yok
         container.addEventListener('click', function (e) {
@@ -250,7 +310,7 @@
             previewsDiv.appendChild(item);
             var loadingEl = item.querySelector('.ikr-preview-loading');
             try {
-              var signRes = await fetch(API_BASE + '/api/public/upload/sign', { method: 'POST' });
+              var signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
               if (!signRes.ok) throw new Error('sign failed');
               var sign = await signRes.json();
               var fd = new FormData();
@@ -287,7 +347,7 @@
             // [5] extractSlug helper kullanımı
             var pageSlug = extractSlug(window.location.href);
             var submitName = productName || (document.querySelector('h1') ? document.querySelector('h1').innerText.trim() : null);
-            var r = await fetch(API_BASE + '/api/public/reviews', {
+            var r = await fetchWithTimeout(API_BASE + '/api/public/reviews', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -356,26 +416,35 @@
     try { sessionStorage.setItem(key, val); } catch (_) { _memCache[key] = val; }
   }
 
+  // [B] Settings cache TTL — 5 dakika
+  var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
+
   async function fetchSettings() {
     var cached = cacheGet(SETTINGS_CACHE_KEY);
     if (cached) {
       try {
-        var parsed = JSON.parse(cached);
-        if (parsed === null) return null;
-        return parsed;
+        var entry = JSON.parse(cached);
+        // null → store bulunamadı, cache geçerliyse hemen dön
+        if (entry === null) return null;
+        // { t, v } formatında TTL'li cache
+        if (entry && entry.t && entry.v !== undefined) {
+          if (Date.now() - entry.t < SETTINGS_CACHE_TTL) return entry.v;
+          // Süresi dolmuş — temizle
+          cacheSet(SETTINGS_CACHE_KEY, '');
+        }
       } catch (_) {
         // Bozuk cache — temizle ve tekrar fetch et
         cacheSet(SETTINGS_CACHE_KEY, '');
       }
     }
     try {
-      var res = await fetch(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
+      var res = await fetchWithTimeout(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
       if (!res.ok) {
         cacheSet(SETTINGS_CACHE_KEY, JSON.stringify(null));
         return null;
       }
       var settings = await res.json();
-      cacheSet(SETTINGS_CACHE_KEY, JSON.stringify(settings));
+      cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: settings }));
       return settings;
     } catch (err) {
       console.error('[ikr] fetchSettings error:', err);
@@ -393,7 +462,7 @@
     try {
       var settings = await fetchSettings();
       if (!settings) return;
-      var reviewsRes = await fetch(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId));
+      var reviewsRes = await fetchWithTimeout(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId));
       var reviewsData = await reviewsRes.json();
       await render(productId, settings, reviewsData, productName);
     } catch (err) {
@@ -586,7 +655,7 @@
 
     var res;
     try {
-      res = await fetch(API_BASE + '/api/public/ratings-by-slug', {
+      res = await fetchWithTimeout(API_BASE + '/api/public/ratings-by-slug', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: slugs }),

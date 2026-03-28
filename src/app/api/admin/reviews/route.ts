@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 
 /**
- * Handle GET requests: Fetch all reviews for the authenticated merchant
+ * Handle GET requests: Fetch reviews for the authenticated merchant (paginated)
+ * Query params: page (default 1), limit (default 20), status (optional filter)
  */
 export async function GET(request: Request) {
   try {
@@ -12,12 +13,31 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const reviews = await prisma.review.findMany({
-      where: { storeId: user.merchantId },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    const status = searchParams.get('status') || undefined;
+    const skip = (page - 1) * limit;
 
-    return NextResponse.json({ data: reviews });
+    const where = {
+      storeId: user.merchantId,
+      ...(status && { status }),
+    };
+
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.review.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      data: reviews,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     console.error('Error fetching reviews:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
