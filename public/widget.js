@@ -601,8 +601,10 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
+            // Eski badge'leri temizle — yeni sayfada yeniden render edilecek
+            document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(el) { el.remove(); });
             listingBadgeRendered = false;
-            renderListingBadges();
+            setTimeout(renderListingBadges, 0);
           }
         },
       });
@@ -707,6 +709,8 @@
     // Zaten render edildi — tekrar çalışmasın
     if (listingBadgeRendered) return;
     listingBadgeRendered = true;
+    // DOM'da zaten badge varsa render etme (duplicate önlemi)
+    if (document.querySelector('[data-ikr-listing-badge]')) return;
 
     // SPA nav'da eski attribute'ları temizle
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
