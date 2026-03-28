@@ -442,8 +442,8 @@
     try { sessionStorage.setItem(key, val); } catch (_) { _memCache[key] = val; }
   }
 
-  // [B] Settings cache TTL — 5 dakika
-  var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
+  // [B] Settings cache TTL — 1 dakika
+  var SETTINGS_CACHE_TTL = 1 * 60 * 1000;
   // 404 (store kurulmamış) için kısa TTL — 30 saniye
   var SETTINGS_404_TTL = 30 * 1000;
 
@@ -496,7 +496,7 @@
   }
 
   // Reviews cache — fetchSettings ile aynı { t, v } TTL pattern'ı
-  var REVIEWS_CACHE_TTL = 5 * 60 * 1000;
+  var REVIEWS_CACHE_TTL = 1 * 60 * 1000;
 
   async function fetchReviews(productId) {
     var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId;
@@ -760,7 +760,7 @@
     if (ratingsCached) {
       try {
         var ratingsEntry = JSON.parse(ratingsCached);
-        if (ratingsEntry && ratingsEntry.t !== undefined && Date.now() - ratingsEntry.t < 5 * 60 * 1000) {
+        if (ratingsEntry && ratingsEntry.t !== undefined && Date.now() - ratingsEntry.t < 1 * 60 * 1000) {
           ratings = ratingsEntry.v || {};
         } else {
           cacheSet(ratingsKey, '');
