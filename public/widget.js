@@ -603,10 +603,9 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
-            // Sıfırla — bir sonraki VIEW_LISTING render edecek
             listingBadgeRendered = false;
-
             ikrSlugMap = {};
+            renderListingBadges();
           }
         },
       });
