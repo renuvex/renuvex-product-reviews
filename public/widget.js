@@ -412,6 +412,8 @@
       for (var j = 0; j < allEls.length; j++) {
         if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) return allEls[j];
       }
+      // Link'in kendisi productName ile başlıyorsa (fiyat da içerebilir) linki döndür
+      if (a.textContent.trim().indexOf(productName) === 0) return a;
       // 2. Link dışında: kardeş elementlerde ara (aynı parent içindeki diğer linkler dahil)
       var parent = a.parentElement;
       if (parent) {
