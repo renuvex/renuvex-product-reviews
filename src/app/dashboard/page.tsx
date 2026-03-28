@@ -33,6 +33,8 @@ export default function DashboardPage() {
 
       if (fetchedToken) {
         await fetchStoreName(fetchedToken);
+        // Aktif temaya script inject et — sessizce, hata olsa bile devam et
+        ApiRequests.ikas.injectScripts(fetchedToken).catch(() => {});
       }
     } catch (error) {
       console.error('Error initializing dashboard:', error);

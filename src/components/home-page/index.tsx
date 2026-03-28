@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
-import { CheckCircle2, MessageSquare, Settings, Star, Check, X, Reply, RefreshCw } from 'lucide-react';
-import { ApiRequests } from '@/lib/api-requests';
+import { CheckCircle2, MessageSquare, Settings, Star, Check, X, Reply } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -41,8 +40,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [settings, setSettings] = useState<StoreSettings>({});
   const [loading, setLoading] = useState(true);
-  const [injectingScripts, setInjectingScripts] = useState(false);
-  const [injectResult, setInjectResult] = useState<string | null>(null);
 
   // Verileri Backend'den (Prisma) Çekme Fonksiyonu
   useEffect(() => {
@@ -86,24 +83,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       console.error("Durum güncellenemedi:", error);
       setReviews(previousReviews);
       alert("Durum güncellenirken bir hata oluştu, lütfen tekrar deneyin.");
-    }
-  };
-
-  // Tüm temalara script inject et
-  const handleInjectScripts = async () => {
-    if (!token) return;
-    setInjectingScripts(true);
-    setInjectResult(null);
-    try {
-      const res = await ApiRequests.ikas.injectScripts(token);
-      if (res.data?.data) {
-        const { success, failed, total } = res.data.data;
-        setInjectResult(`${total} temadan ${success} tanesine script eklendi${failed > 0 ? `, ${failed} başarısız` : ''}.`);
-      }
-    } catch (error) {
-      setInjectResult('Script eklenirken bir hata oluştu, lütfen tekrar deneyin.');
-    } finally {
-      setInjectingScripts(false);
     }
   };
 
@@ -336,20 +315,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
               </div>
 
               <Button onClick={saveSettings}>Ayarları Kaydet</Button>
-
-              <div className="border-t border-border/50 pt-6 mt-2">
-                <div className="mb-2">
-                  <h3 className="text-sm font-semibold">Script Senkronizasyonu</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Yeni tema eklediyseniz widget scriptini tüm temalara yeniden inject etmek için kullanın.</p>
-                </div>
-                <Button variant="outline" onClick={handleInjectScripts} disabled={injectingScripts}>
-                  <RefreshCw size={14} className={`mr-2 ${injectingScripts ? 'animate-spin' : ''}`} />
-                  {injectingScripts ? 'Script ekleniyor...' : 'Tüm Temalara Script Ekle'}
-                </Button>
-                {injectResult && (
-                  <p className="text-xs mt-2 text-muted-foreground">{injectResult}</p>
-                )}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
