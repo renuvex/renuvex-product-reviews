@@ -590,7 +590,7 @@
                   ikrSlugMap[p.metaData.slug] = p.name;
                 }
               });
-              renderListingBadges(listingRenderSeq);
+              scheduleRender();
             }
           }
           if (event && event.type === 'PRODUCT_VIEW') {
@@ -602,7 +602,9 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
-            renderListingBadges(listingRenderSeq);
+            listingBadgeRendered = false;
+            ikrSlugMap = {};
+            scheduleRender();
           }
         },
       });
@@ -610,7 +612,7 @@
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
       // Subscribe olduktan sonra hemen render — VIEW_LISTING kaçırılmış olabilir, DOM fallback devreye girer
-      renderListingBadges(listingRenderSeq);
+      scheduleRender();
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
@@ -629,10 +631,17 @@
   // ── Listing / Category badge ──────────────────────────────────────────────
 
 
-  // Her sayfa değişiminde artan sayaç — in-flight render'ları iptal etmek için
-  var listingRenderSeq = 0;
-  // VIEW_LISTING event'inden biriktirilen slug→name map
-  var ikrSlugMap = {};
+  var listingBadgeRendered = false;  // tek render flag
+  var listingRenderTimer = null;     // debounce timer
+  var ikrSlugMap = {};               // VIEW_LISTING'den gelen slug→name map
+
+  // Debounce: birden fazla tetikleyici (VIEW_LISTING x2, PAGE_VIEW, attach) tek render'a indirgenir
+  function scheduleRender() {
+    clearTimeout(listingRenderTimer);
+    listingRenderTimer = setTimeout(function() {
+      if (!listingBadgeRendered) renderListingBadges();
+    }, 100);
+  }
 
   // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
   // slug→null map döner (isim bilinmiyor, findNameEl class/heading fallback kullanır)
@@ -703,15 +712,14 @@
   }
 
 
-  async function renderListingBadges(seq) {
-    // Ürün sayfasındaysa listing badge çalışmasın
+  async function renderListingBadges() {
+    // Ürün sayfasındaysa çalışmasın
     if (document.getElementById('ikas-reviews-anchor')) return;
-    // Seq kontrolü — bu render hâlâ geçerli mi?
-    if (seq !== listingRenderSeq) return;
-    // Render başladı — seq artır, paralel çağrıları iptal et
-    listingRenderSeq++;
+    // Zaten render edildi — tekrar çalışmasın
+    if (listingBadgeRendered) return;
+    listingBadgeRendered = true;
 
-    // SPA nav'da DOM'da kalan eski attribute'ları temizle (link elementleri yeniden kullanılıyor olabilir)
+    // SPA nav'da eski attribute'ları temizle
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
     document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
 
@@ -764,8 +772,6 @@
 
     var settings = results[0];
     if (!settings) return;
-    // Await sırasında sayfa değiştiyse iptal et
-    if (seq !== listingRenderSeq) return;
 
     if (needRatings && results[1]) {
       results[1].forEach(function(batchData) {
