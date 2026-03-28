@@ -613,6 +613,8 @@
       // Event daha önce tetiklendiyse sayfa verisinden ürün tespiti
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
+      // Subscribe olduktan sonra hemen render — VIEW_LISTING kaçırılmış olabilir, DOM fallback devreye girer
+      renderListingBadges();
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
