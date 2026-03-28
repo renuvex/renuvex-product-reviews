@@ -424,23 +424,22 @@
     if (cached) {
       try {
         var entry = JSON.parse(cached);
-        // null → store bulunamadı, cache geçerliyse hemen dön
-        if (entry === null) return null;
-        // { t, v } formatında TTL'li cache
-        if (entry && entry.t && entry.v !== undefined) {
-          if (Date.now() - entry.t < SETTINGS_CACHE_TTL) return entry.v;
-          // Süresi dolmuş — temizle
+        // { t, v } formatında TTL'li cache — v null ise store bulunamadı demek
+        if (entry && entry.t !== undefined) {
+          if (Date.now() - entry.t < SETTINGS_CACHE_TTL) return entry.v || null;
+          // Süresi dolmuş — temizle, yeniden fetch et
           cacheSet(SETTINGS_CACHE_KEY, '');
         }
+        // Eski format (raw null veya raw object) — temizle, yeniden fetch et
+        cacheSet(SETTINGS_CACHE_KEY, '');
       } catch (_) {
-        // Bozuk cache — temizle ve tekrar fetch et
         cacheSet(SETTINGS_CACHE_KEY, '');
       }
     }
     try {
       var res = await fetchWithTimeout(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
       if (!res.ok) {
-        cacheSet(SETTINGS_CACHE_KEY, JSON.stringify(null));
+        cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: null }));
         return null;
       }
       var settings = await res.json();
