@@ -496,8 +496,10 @@
 
         var nameEl = findNameEl(a, productName);
         if (!nameEl || !nameEl.parentNode) return;
+        if (nameEl.getAttribute('data-ikr-name')) return; // Bu nameEl'e zaten badge eklendi
 
         a.setAttribute('data-ikr-badge', '1');
+        nameEl.setAttribute('data-ikr-name', '1');
         badgeAdded = true;
 
         var badge = document.createElement('div');
