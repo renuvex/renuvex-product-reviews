@@ -33,10 +33,9 @@ export async function GET(req: Request) {
     },
   });
 
-  const result = settings ?? {
-    widgetColor: '#000000',
-    widgetTitle: 'Müşteri Yorumları',
-  };
+  if (!settings) {
+    return setCorsHeaders(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
+  }
 
-  return setCorsHeaders(NextResponse.json(result));
+  return setCorsHeaders(NextResponse.json(settings));
 }

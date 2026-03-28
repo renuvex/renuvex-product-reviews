@@ -293,8 +293,16 @@
 
   async function fetchSettings() {
     const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-    if (cached) return JSON.parse(cached);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed === null) return null;
+      return parsed;
+    }
     const res = await fetch(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
+    if (!res.ok) {
+      sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(null));
+      return null;
+    }
     const settings = await res.json();
     sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settings));
     return settings;
@@ -303,8 +311,9 @@
   async function bootstrap(productId, productName) {
     const FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları', widgetTemplate: 'classic' };
     try {
-      const [settings, reviewsRes] = await Promise.all([
-        fetchSettings(),
+      const settings = await fetchSettings();
+      if (!settings) return; // Mağaza kayıtlı değil, widget'ı durdur
+      const [reviewsRes] = await Promise.all([
         fetch(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId))
       ]);
       const reviewsData = await reviewsRes.json();
@@ -487,6 +496,9 @@
   }
 
   async function renderListingBadges() {
+    // Mağaza kayıtlı değilse durdur
+    var settings = await fetchSettings();
+    if (!settings) return;
     // JSON-LD'den slug haritası al (kategori sayfaları)
     var slugNameMap = getSlugNameMap();
     // DOM'dan ek slug haritası ekle (slayt, öne çıkan ürünler vb.)
