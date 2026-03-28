@@ -412,9 +412,9 @@
       for (var j = 0; j < allEls.length; j++) {
         if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) return allEls[j];
       }
-      // 2. Link dışında: ikas productCard + textContainer pattern (resmi temalar)
+      // 2. Link dışında: ikas productCard / productContainer + textContainer pattern (resmi temalar)
       var card = a.parentElement && a.parentElement.parentElement;
-      if (card && card.className && card.className.indexOf('productCard') !== -1) {
+      if (card && card.className && (card.className.indexOf('productCard') !== -1 || card.className.indexOf('productContainer') !== -1)) {
         var textContainer = card.querySelector('[class*="textContainer"]');
         if (textContainer) {
           var cardEls = textContainer.querySelectorAll('*');
@@ -483,15 +483,22 @@
       if (!rating) return;
       var productName = slugNameMap[slug];
 
+      // Slug başına sadece 1 badge — ilk uygun linke ekle
+      var badgeAdded = false;
       var links = document.querySelectorAll('a[href]');
       links.forEach(function (a) {
+        if (badgeAdded) return;
         if (a.getAttribute('data-ikr-badge')) return;
         try {
           var path = new URL(a.href).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
           if (path !== slug) return;
         } catch (_) { return; }
 
+        var nameEl = findNameEl(a, productName);
+        if (!nameEl || !nameEl.parentNode) return;
+
         a.setAttribute('data-ikr-badge', '1');
+        badgeAdded = true;
 
         var badge = document.createElement('div');
         badge.setAttribute('data-ikr-listing-badge', '1');
@@ -500,10 +507,7 @@
           '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(parseFloat(rating.avg))) + '☆'.repeat(5 - Math.round(parseFloat(rating.avg))) + '</span>' +
           '<span>' + rating.avg + ' (' + rating.count + ')</span>';
 
-        var nameEl = findNameEl(a, productName);
-        if (nameEl && nameEl.parentNode) {
-          nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
-        }
+        nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
       });
     });
   }
