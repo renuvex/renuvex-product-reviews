@@ -71,6 +71,31 @@ export interface DeleteStorefrontJSScriptMutation {
   deleteStorefrontJSScript: DeleteStorefrontJSScriptMutationData;
 }
 
+export type UpdateStorefrontJSScriptInput = {
+  id: string;
+  contentType?: StorefrontJSScriptContentTypeEnum;
+  fileName?: string;
+  isHighPriority?: boolean;
+  name?: string;
+  scriptContent?: string;
+  storefrontId?: string;
+}
+
+export type UpdateStorefrontJSScriptMutationVariables = {
+  input: UpdateStorefrontJSScriptInput;
+}
+
+export type UpdateStorefrontJSScriptMutationData = {
+  id: string;
+  name: string;
+  storefrontId: string;
+  isActive: boolean;
+}
+
+export interface UpdateStorefrontJSScriptMutation {
+  updateStorefrontJSScript: UpdateStorefrontJSScriptMutationData;
+}
+
 export class GeneratedQueries {
   client: BaseGraphQLAPIClient<any>;
 
@@ -144,6 +169,20 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<DeleteStorefrontJSScriptMutation>>({ mutation });
+  }
+
+  async updateStorefrontJSScript(variables: UpdateStorefrontJSScriptMutationVariables): Promise<APIResult<Partial<UpdateStorefrontJSScriptMutation>>> {
+    const mutation = `
+  mutation updateStorefrontJSScript($input: UpdateStorefrontJSScriptInput!) {
+    updateStorefrontJSScript(input: $input) {
+      id
+      name
+      storefrontId
+      isActive
+    }
+  }
+`;
+    return this.client.mutate<Partial<UpdateStorefrontJSScriptMutation>>({ mutation, variables });
   }
 }
 

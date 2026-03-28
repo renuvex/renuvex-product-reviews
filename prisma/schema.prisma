@@ -49,11 +49,13 @@ model Review {
 }
 
 model StoreSettings {
-  id              String   @id @default(uuid())
-  storeId         String   @unique
-  widgetColor     String   @default("#000000")
-  widgetTitle     String   @default("Müşteri Yorumları")
-  autoApprove     Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(uuid())
+  storeId          String   @unique
+  widgetColor      String   @default("#000000")
+  widgetTitle      String   @default("Müşteri Yorumları")
+  autoApprove      Boolean  @default(false)
+  /// JSON map of storefrontId -> ikas scriptId, used for update-in-place instead of delete+create
+  storefrontScripts Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

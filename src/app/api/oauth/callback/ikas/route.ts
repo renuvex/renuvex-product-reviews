@@ -131,26 +131,66 @@ export async function GET(request: NextRequest) {
       create: { storeId: merchantId },
     });
 
-    // Auto-inject widget script into all storefronts
-    // Delete existing scripts first to avoid duplicates accumulating across reinstalls
-    try { await ikas.mutations.deleteStorefrontJSScript(); } catch (_) {}
+    // Auto-inject widget script into all storefronts using upsert (update if known ID, create otherwise)
     try {
       const storefrontResponse = await ikas.queries.listStorefront();
       if (storefrontResponse.isSuccess && storefrontResponse.data?.listStorefront?.length) {
         const deployUrl = process.env.NEXT_PUBLIC_DEPLOY_URL;
+        const scriptContent = `<script src="${deployUrl}/widget.js?publicApiKey=${merchantId}" async></script>`;
+
+        // Load previously saved scriptId map from DB (storefrontId -> ikas scriptId)
+        const settings = await prisma.storeSettings.findUnique({ where: { storeId: merchantId } });
+        const existingScripts: Record<string, string> = (settings?.storefrontScripts as Record<string, string>) ?? {};
+        const updatedScripts: Record<string, string> = { ...existingScripts };
+
         await Promise.all(
-          storefrontResponse.data.listStorefront.map((storefront) =>
-            ikas.mutations.createStorefrontJSScript({
-              input: {
-                contentType: StorefrontJSScriptContentTypeEnum.SCRIPT,
-                name: 'yorum-paneli-widget',
-                scriptContent: `<script src="${deployUrl}/widget.js?publicApiKey=${merchantId}" async></script>`,
-                storefrontId: storefront.id!,
-                isHighPriority: false,
-              },
-            })
-          )
+          storefrontResponse.data.listStorefront.map(async (storefront) => {
+            const storefrontId = storefront.id!;
+            const existingScriptId = existingScripts[storefrontId];
+
+            if (existingScriptId) {
+              // Update in-place — does not touch other apps' scripts
+              const result = await ikas.mutations.updateStorefrontJSScript({
+                input: { id: existingScriptId, scriptContent },
+              });
+              if (!result.isSuccess) {
+                // Script may have been deleted externally — fall back to create
+                const created = await ikas.mutations.createStorefrontJSScript({
+                  input: {
+                    contentType: StorefrontJSScriptContentTypeEnum.SCRIPT,
+                    name: 'yorum-paneli-widget',
+                    scriptContent,
+                    storefrontId,
+                    isHighPriority: false,
+                  },
+                });
+                if (created.isSuccess && created.data?.createStorefrontJSScript?.id) {
+                  updatedScripts[storefrontId] = created.data.createStorefrontJSScript.id;
+                }
+              }
+            } else {
+              // First install for this storefront — create and save the returned ID
+              const created = await ikas.mutations.createStorefrontJSScript({
+                input: {
+                  contentType: StorefrontJSScriptContentTypeEnum.SCRIPT,
+                  name: 'yorum-paneli-widget',
+                  scriptContent,
+                  storefrontId,
+                  isHighPriority: false,
+                },
+              });
+              if (created.isSuccess && created.data?.createStorefrontJSScript?.id) {
+                updatedScripts[storefrontId] = created.data.createStorefrontJSScript.id;
+              }
+            }
+          })
         );
+
+        // Persist updated scriptId map
+        await prisma.storeSettings.update({
+          where: { storeId: merchantId },
+          data: { storefrontScripts: updatedScripts },
+        });
       }
     } catch (scriptError) {
       console.error('Widget script injection failed:', scriptError);
