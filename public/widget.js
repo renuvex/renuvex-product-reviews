@@ -724,15 +724,19 @@
         var linkText = a.textContent.trim();
         var looksLikeProduct = linkText.length > 2 && linkText.length < 120 && !a.querySelector('img');
         if (!hasProductClass && !parentIsContainer && !ancestorIsProductCard && !looksLikeProduct) return;
-        var nameEl = a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
+        var nameEl = a.querySelector('[class*="productTitle"]') || a.querySelector('[class*="productName"]') ||
+          a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
           a.querySelector('.text-sm.font-semibold') || a.querySelector('h2') || a.querySelector('h3');
         if (nameEl) {
           map[path] = nameEl.textContent.trim();
         } else {
-          // linkText fiyat da içerebilir, ilk leaf text el'i al
+          // linkText fiyat/indirim badge da içerebilir — productTag class'lı elementleri atla
           var firstTextEl = null;
           var allLinkEls = a.querySelectorAll('*');
           for (var t = 0; t < allLinkEls.length; t++) {
+            var elClass = allLinkEls[t].className || '';
+            if (typeof elClass !== 'string') elClass = '';
+            if (elClass.indexOf('Tag') !== -1 || elClass.indexOf('tag') !== -1 || elClass.indexOf('badge') !== -1 || elClass.indexOf('discount') !== -1) continue;
             if (allLinkEls[t].children.length === 0 && allLinkEls[t].textContent.trim().length > 2) {
               firstTextEl = allLinkEls[t];
               break;
