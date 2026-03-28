@@ -2,15 +2,18 @@
   'use strict';
 
   // publicApiKey (= merchantId) is passed via the script src URL:
-  // <script src="/widget.js?publicApiKey=MERCHANT_ID" async></script>
+  // <script src="/widget.js?publicApiKey=MERCHANT_ID" defer></script>
   const scriptTag = document.currentScript || (function () {
-    const scripts = document.getElementsByTagName('script');
+    var scripts = document.getElementsByTagName('script');
+    for (var i = scripts.length - 1; i >= 0; i--) {
+      if (scripts[i].src && scripts[i].src.indexOf('/widget.js') !== -1) return scripts[i];
+    }
     return scripts[scripts.length - 1];
   })();
   const scriptSrc = scriptTag ? scriptTag.src : '';
   const urlParams = new URLSearchParams(scriptSrc.split('?')[1] || '');
   const PUBLIC_API_KEY = urlParams.get('publicApiKey');
-  const API_BASE = scriptSrc ? scriptSrc.split('/widget.js')[0] : '';
+  const API_BASE = scriptSrc ? scriptSrc.split('?')[0].replace(/\/widget\.js$/, '') : '';
 
   if (!PUBLIC_API_KEY) return; // No store key — do nothing
 
@@ -41,16 +44,33 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  // [5] URL parsing helper — tek yerden yönetim
+  function extractSlug(url) {
+    try {
+      return new URL(url, window.location.origin).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
+    } catch (_) { return ''; }
+  }
+
+  // [4] Yıldız HTML helper — tek yerden yönetim
+  var STAR_COLOR = '#f59e0b';
+  function starsHTML(rating, size) {
+    var r = Math.round(parseFloat(rating)) || 0;
+    var filled = '★'.repeat(Math.min(r, 5));
+    var empty = '☆'.repeat(Math.max(5 - r, 0));
+    var style = 'color:' + STAR_COLOR + ';' + (size ? 'font-size:' + size + ';' : '');
+    return '<span style="' + style + '">' + filled + empty + '</span>';
+  }
+
   function injectStyles(template, color) {
-    let el = document.getElementById('ikr-styles');
+    var el = document.getElementById('ikr-styles');
     if (!el) {
       el = document.createElement('style');
       el.id = 'ikr-styles';
       document.head.appendChild(el);
     }
-    const css = CSS_MAP[template] || CSS_MAP.classic;
+    var css = CSS_MAP[template] || CSS_MAP.classic;
     el.textContent = css;
-    document.documentElement.style.setProperty('--ikr-color', color || '#111');
+    document.documentElement.style.setProperty('--ikr-color', /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#111');
   }
 
   function formatDate(iso) {
@@ -62,300 +82,344 @@
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;gap:4px;';
     wrap.setAttribute('data-rating', rating);
+    const stars = [];
 
     function update(hovered) {
-      wrap.querySelectorAll('span').forEach((s, idx) => {
+      stars.forEach(function (s, idx) {
         s.textContent = idx < hovered ? '★' : '☆';
-        s.style.color = idx < hovered ? '#f59e0b' : '#ddd';
+        s.style.color = idx < hovered ? STAR_COLOR : '#ddd';
       });
     }
 
-    for (let i = 1; i <= 5; i++) {
-      const star = document.createElement('span');
-      star.textContent = i <= rating ? '★' : '☆';
-      star.style.cssText = 'font-size:20px;color:' + (i <= rating ? '#f59e0b' : '#ddd') + ';cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s';
-      if (interactive) {
-        star.onmouseover = () => update(i);
-        star.onclick = () => { wrap.setAttribute('data-rating', i); onChange && onChange(i); update(i); };
-      }
-      wrap.appendChild(star);
+    for (var i = 1; i <= 5; i++) {
+      (function (idx) {
+        const star = document.createElement('span');
+        star.textContent = idx <= rating ? '★' : '☆';
+        star.style.cssText = 'font-size:20px;color:' + (idx <= rating ? STAR_COLOR : '#ddd') + ';cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s';
+        if (interactive) {
+          star.onmouseover = function () { update(idx); };
+          star.onclick = function () { wrap.setAttribute('data-rating', idx); onChange && onChange(idx); update(idx); };
+        }
+        stars.push(star);
+        wrap.appendChild(star);
+      })(i);
     }
 
     if (interactive) {
-      wrap.onmouseleave = () => update(parseInt(wrap.getAttribute('data-rating') || '0'));
+      wrap.onmouseleave = function () { update(parseInt(wrap.getAttribute('data-rating') || '0')); };
     }
     return wrap;
   }
 
   // ── Core render ───────────────────────────────────────────────────────────
 
+  // [2] render() race condition koruması — aynı anda sadece 1 render
+  var renderInProgress = false;
+
   async function render(productId, settings, reviewsData, productName) {
-    const { widgetColor, widgetTitle, widgetTemplate } = settings;
-
-    injectStyles(widgetTemplate, widgetColor);
-
-    // Find or create container
-    let container = document.getElementById('ikas-reviews');
-    if (!container) {
-      const anchorEl = document.getElementById('ikas-reviews-anchor');
-      if (!anchorEl) return; // Anchor yoksa çalışma
-      container = document.createElement('div');
-      container.id = 'ikas-reviews';
-      anchorEl.appendChild(container);
-    }
-
-    container.innerHTML = '<p style="text-align:center;padding:20px;">Yükleniyor...</p>';
+    if (renderInProgress) return;
+    renderInProgress = true;
 
     try {
-      const data = reviewsData || {};
-      const reviews = (data.data && data.data.reviews) || [];
-      const totalCount = (data.data && data.data.totalCount) || 0;
+      var widgetColor = settings.widgetColor;
+      var widgetTitle = settings.widgetTitle;
+      var widgetTemplate = settings.widgetTemplate;
 
-      let html = '<div id="ikas-reviews-widget">';
-      html += '<div class="ikr-header"><h2 class="ikr-title">' + widgetTitle + ' (' + totalCount + ')</h2></div>';
+      injectStyles(widgetTemplate, widgetColor);
 
-      if (reviews.length === 0) {
-        html += '<p style="color:#888;text-align:center;padding:30px 0;">Henüz yorum yok.</p>';
-      } else {
-        reviews.forEach(function (r) {
-          const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
-          const images = r.images && Array.isArray(r.images) && r.images.length
-            ? '<div class="ikr-gallery">' + r.images.map(function (img) {
-                return '<img src="' + img + '" class="ikr-img" onclick="window.open(\'' + img + '\',\'_blank\')">';
-              }).join('') + '</div>'
-            : '';
-          const reply = r.merchantReply
-            ? '<div class="ikr-reply"><strong>Mağaza Yanıtı:</strong><br>' + r.merchantReply + '</div>'
-            : '';
-          html += '<div class="ikr-review">'
-            + '<div><span class="ikr-author">' + r.author + '</span><span class="ikr-date">' + formatDate(r.createdAt) + '</span></div>'
-            + '<div style="color:#f59e0b;margin-top:4px;">' + stars + '</div>'
-            + '<p class="ikr-body">' + (r.comment || '') + '</p>'
-            + images
-            + reply
-            + '</div>';
-        });
+      // Find or create container
+      var container = document.getElementById('ikas-reviews');
+      if (!container) {
+        var anchorEl = document.getElementById('ikas-reviews-anchor');
+        if (!anchorEl) return;
+        container = document.createElement('div');
+        container.id = 'ikas-reviews';
+        anchorEl.appendChild(container);
       }
 
-      html += '</div>';
-      container.innerHTML = html;
+      container.innerHTML = '<p style="text-align:center;padding:20px;">Yükleniyor...</p>';
 
-      // ── Rating badge (ürün başlığının altına) ─────────────────────────────
-      if (!document.getElementById('ikr-rating-badge')) {
-        const avgRating = reviews.length
-          ? (reviews.reduce(function (s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1)
-          : null;
-        if (avgRating) {
-          // Ürün adı ile DOM'da text eşleştirme — tema bağımsız
-          var titleEl = null;
-          if (productName) {
-            var allEls = document.querySelectorAll('h1,h2,h3,h4,h5,h6,div,span,p');
-            for (var i = 0; i < allEls.length; i++) {
-              var el = allEls[i];
-              if (el.children.length === 0 && el.textContent.trim() === productName &&
-                  el.tagName !== 'TITLE' && el.tagName !== 'SCRIPT' &&
-                  !el.closest('[data-ikr-listing-badge]')) {
-                titleEl = el;
-                break;
-              }
-            }
-          }
-          // Fallback: h1
-          if (!titleEl) titleEl = document.querySelector('h1');
-          // titleEl listing badge içindeyse üst parent'ı al
-          if (titleEl && titleEl.closest('[data-ikr-listing-badge]')) {
-            titleEl = document.querySelector('h1');
-          }
-          // Eklenmeden önce mevcut listing badge'leri temizle (ürün sayfasında gereksiz)
-          document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(b) { b.remove(); });
-          if (titleEl && titleEl.parentNode) {
-            const badge = document.createElement('a');
-            badge.id = 'ikr-rating-badge';
-            badge.href = '#ikas-reviews';
-            badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;';
-            badge.innerHTML =
-              '<span style="color:#f59e0b;font-size:16px;">' + '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) + '</span>' +
-              '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
-            badge.onclick = function (e) {
-              e.preventDefault();
-              document.getElementById('ikas-reviews').scrollIntoView({ behavior: 'smooth' });
-            };
-            titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
-          }
-        }
-      }
+      try {
+        var data = reviewsData || {};
+        var reviews = (data.data && data.data.reviews) || [];
+        var totalCount = (data.data && data.data.totalCount) || 0;
 
-      // ── Review form ───────────────────────────────────────────────────────
-      const widgetEl = container.querySelector('#ikas-reviews-widget');
-      const form = document.createElement('div');
-      form.className = 'ikr-form';
-      form.innerHTML = [
-        '<h3 style="font-weight:700;margin-top:0;">Yorum Yapın</h3>',
-        '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız Soyadınız">',
-        '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3"></textarea>',
-        '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;">Puanınız:</label><div id="ikr-stars-input"></div></div>',
-        '<div id="ikr-photo-section">',
-        '  <label class="ikr-photo-btn">📷 Fotoğraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple></label>',
-        '  <div id="ikr-photo-previews" style="margin-top:10px"></div>',
-        '</div>',
-        '<button id="ikr-submit" class="ikr-btn">Yorumu Gönder</button>',
-        '<div id="ikr-msg" style="margin-top:10px;"></div>',
-      ].join('');
-      widgetEl.appendChild(form);
+        var html = '<div id="ikas-reviews-widget">';
+        html += '<div class="ikr-header"><h2 class="ikr-title">' + widgetTitle + ' (' + totalCount + ')</h2></div>';
 
-      let currentRating = 5;
-      const uploadedImages = [];
-
-      const starsWrap = renderStars(5, true, function (v) { currentRating = v; });
-      form.querySelector('#ikr-stars-input').appendChild(starsWrap);
-
-      const fileInput = form.querySelector('#ikr-file-input');
-      const previewsDiv = form.querySelector('#ikr-photo-previews');
-
-      fileInput.onchange = async function (e) {
-        const files = Array.from(e.target.files);
-        for (const file of files) {
-          if (file.size > 5 * 1024 * 1024) {
-            alert(file.name + ' dosyası 5MB sınırını aşıyor. Lütfen daha küçük bir görsel seçin.');
-            continue;
-          }
-          const item = document.createElement('div');
-          item.className = 'ikr-preview-item';
-          item.innerHTML = '<img class="ikr-preview-img" src="' + URL.createObjectURL(file) + '"><div class="ikr-preview-loading">...</div>';
-          previewsDiv.appendChild(item);
-          const loadingEl = item.querySelector('.ikr-preview-loading');
-          try {
-            const signRes = await fetch(API_BASE + '/api/public/upload/sign', { method: 'POST' });
-            if (!signRes.ok) throw new Error('sign failed');
-            const sign = await signRes.json();
-            const fd = new FormData();
-            fd.append('file', file);
-            fd.append('api_key', sign.api_key);
-            fd.append('timestamp', sign.timestamp);
-            fd.append('signature', sign.signature);
-            fd.append('folder', 'review_images');
-            const up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
-            const upData = await up.json();
-            if (upData.secure_url) {
-              uploadedImages.push(upData.secure_url);
-              loadingEl.textContent = '✓';
-              loadingEl.style.color = '#059669';
-            }
-          } catch (_) {
-            loadingEl.textContent = '✗';
-            loadingEl.style.color = '#dc2626';
-          }
-        }
-      };
-
-      form.querySelector('#ikr-submit').onclick = async function () {
-        const btn = this;
-        const author = form.querySelector('#ikr-name').value.trim();
-        const comment = form.querySelector('#ikr-comment').value.trim();
-        const msgDiv = form.querySelector('#ikr-msg');
-        if (!author) { alert('Lütfen adınızı girin.'); return; }
-        btn.disabled = true;
-        btn.textContent = 'Gönderiliyor...';
-        msgDiv.innerHTML = '';
-        try {
-          const titleEl = document.querySelector('h1');
-          const productName = titleEl ? titleEl.innerText.trim() : null;
-          const pageSlug = window.location.pathname.replace(/^\//, '').split('?')[0].split('/')[0];
-          const r = await fetch(API_BASE + '/api/public/reviews', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              storeId: PUBLIC_API_KEY,
-              productId: productId,
-              slug: pageSlug || null,
-              productName: productName,
-              author: author,
-              comment: comment,
-              rating: currentRating,
-              images: uploadedImages
-            }),
+        if (reviews.length === 0) {
+          html += '<p style="color:#888;text-align:center;padding:30px 0;">Henüz yorum yok.</p>';
+        } else {
+          reviews.forEach(function (r) {
+            // [4] starsHTML helper kullanımı
+            var stars = starsHTML(r.rating, null);
+            var images = r.images && Array.isArray(r.images) && r.images.length
+              ? '<div class="ikr-gallery">' + r.images.map(function (img) {
+                  // [XSS fix] onclick string concatenation yerine data attribute
+                  return '<img src="' + img + '" class="ikr-img" data-ikr-img-url="' + img + '">';
+                }).join('') + '</div>'
+              : '';
+            var reply = r.merchantReply
+              ? '<div class="ikr-reply"><strong>Mağaza Yanıtı:</strong><br>' + r.merchantReply + '</div>'
+              : '';
+            html += '<div class="ikr-review">'
+              + '<div><span class="ikr-author">' + r.author + '</span><span class="ikr-date">' + formatDate(r.createdAt) + '</span></div>'
+              + '<div style="margin-top:4px;">' + stars + '</div>'
+              + '<p class="ikr-body">' + (r.comment || '') + '</p>'
+              + images
+              + reply
+              + '</div>';
           });
-          if (r.ok) {
-            msgDiv.innerHTML = '<div style="color:#059669;font-weight:bold;">✓ Teşekkürler! Yorumunuz alındı.</div>';
-            setTimeout(function () { location.reload(); }, 1500);
-          } else {
-            const err = await r.json().catch(function () { return {}; });
-            throw new Error(err.error || 'Yorum kaydedilemedi.');
-          }
-        } catch (e) {
-          alert('Hata: ' + e.message);
-          btn.disabled = false;
-          btn.textContent = 'Yorumu Gönder';
         }
-      };
 
-    } catch (_) {
-      container.innerHTML = '<p style="text-align:center;color:#dc2626;">Yorumlar yüklenirken bir hata oluştu.</p>';
+        html += '</div>';
+        container.innerHTML = html;
+
+        // image onclick — event delegation, XSS riski yok
+        container.addEventListener('click', function (e) {
+          var img = e.target.closest('[data-ikr-img-url]');
+          if (img) window.open(img.getAttribute('data-ikr-img-url'), '_blank');
+        });
+
+        // ── Rating badge (ürün başlığının altına) ─────────────────────────────
+        if (!document.getElementById('ikr-rating-badge')) {
+          var avgRating = reviews.length
+            ? (reviews.reduce(function (s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1)
+            : null;
+          if (avgRating) {
+            // Listing badge'leri temizle (ürün sayfasında gereksiz)
+            document.querySelectorAll('[data-ikr-listing-badge]').forEach(function (b) { b.remove(); });
+
+            var titleEl = findProductTitleEl(productName);
+            if (titleEl && titleEl.parentNode) {
+              var badge = document.createElement('a');
+              badge.id = 'ikr-rating-badge';
+              badge.href = '#ikas-reviews';
+              badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;';
+              // [4] starsHTML helper kullanımı
+              badge.innerHTML = starsHTML(avgRating, '16px') +
+                '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
+              badge.onclick = function (e) {
+                e.preventDefault();
+                var rev = document.getElementById('ikas-reviews');
+                if (rev) rev.scrollIntoView({ behavior: 'smooth' });
+              };
+              titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+            }
+          }
+        }
+
+        // ── Review form ───────────────────────────────────────────────────────
+        var widgetEl = container.querySelector('#ikas-reviews-widget');
+        var form = document.createElement('div');
+        form.className = 'ikr-form';
+        form.innerHTML = [
+          '<h3 style="font-weight:700;margin-top:0;">Yorum Yapın</h3>',
+          '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız Soyadınız">',
+          '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3"></textarea>',
+          '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;">Puanınız:</label><div id="ikr-stars-input"></div></div>',
+          '<div id="ikr-photo-section">',
+          '  <label class="ikr-photo-btn">📷 Fotoğraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple></label>',
+          '  <div id="ikr-photo-previews" style="margin-top:10px"></div>',
+          '</div>',
+          '<button id="ikr-submit" class="ikr-btn">Yorumu Gönder</button>',
+          '<div id="ikr-msg" style="margin-top:10px;"></div>',
+        ].join('');
+        widgetEl.appendChild(form);
+
+        var currentRating = 5;
+        var uploadedImages = [];
+
+        var starsWrap = renderStars(5, true, function (v) { currentRating = v; });
+        form.querySelector('#ikr-stars-input').appendChild(starsWrap);
+
+        var fileInput = form.querySelector('#ikr-file-input');
+        var previewsDiv = form.querySelector('#ikr-photo-previews');
+
+        fileInput.onchange = async function (e) {
+          var files = Array.from(e.target.files);
+          for (var fi = 0; fi < files.length; fi++) {
+            var file = files[fi];
+            if (file.size > 5 * 1024 * 1024) {
+              alert(file.name + ' dosyası 5MB sınırını aşıyor. Lütfen daha küçük bir görsel seçin.');
+              continue;
+            }
+            var item = document.createElement('div');
+            item.className = 'ikr-preview-item';
+            item.innerHTML = '<img class="ikr-preview-img" src="' + URL.createObjectURL(file) + '"><div class="ikr-preview-loading">...</div>';
+            previewsDiv.appendChild(item);
+            var loadingEl = item.querySelector('.ikr-preview-loading');
+            try {
+              var signRes = await fetch(API_BASE + '/api/public/upload/sign', { method: 'POST' });
+              if (!signRes.ok) throw new Error('sign failed');
+              var sign = await signRes.json();
+              var fd = new FormData();
+              fd.append('file', file);
+              fd.append('api_key', sign.api_key);
+              fd.append('timestamp', sign.timestamp);
+              fd.append('signature', sign.signature);
+              fd.append('folder', 'review_images');
+              var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
+              var upData = await up.json();
+              if (upData.secure_url) {
+                uploadedImages.push(upData.secure_url);
+                loadingEl.textContent = '✓';
+                loadingEl.style.color = '#059669';
+              }
+            } catch (err) {
+              console.error('[ikr] Image upload failed:', err);
+              loadingEl.textContent = '✗';
+              loadingEl.style.color = '#dc2626';
+            }
+          }
+        };
+
+        form.querySelector('#ikr-submit').onclick = async function () {
+          var btn = this;
+          var author = form.querySelector('#ikr-name').value.trim();
+          var comment = form.querySelector('#ikr-comment').value.trim();
+          var msgDiv = form.querySelector('#ikr-msg');
+          if (!author) { alert('Lütfen adınızı girin.'); return; }
+          btn.disabled = true;
+          btn.textContent = 'Gönderiliyor...';
+          msgDiv.innerHTML = '';
+          try {
+            // [5] extractSlug helper kullanımı
+            var pageSlug = extractSlug(window.location.href);
+            var submitName = productName || (document.querySelector('h1') ? document.querySelector('h1').innerText.trim() : null);
+            var r = await fetch(API_BASE + '/api/public/reviews', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                storeId: PUBLIC_API_KEY,
+                productId: productId,
+                slug: pageSlug || null,
+                productName: submitName,
+                author: author,
+                comment: comment,
+                rating: currentRating,
+                images: uploadedImages
+              }),
+            });
+            if (r.ok) {
+              msgDiv.innerHTML = '<div style="color:#059669;font-weight:bold;">✓ Teşekkürler! Yorumunuz alındı.</div>';
+              setTimeout(function () { location.reload(); }, 1500);
+            } else {
+              var err = await r.json().catch(function () { return {}; });
+              throw new Error(err.error || 'Yorum kaydedilemedi.');
+            }
+          } catch (e) {
+            alert('Hata: ' + e.message);
+            btn.disabled = false;
+            btn.textContent = 'Yorumu Gönder';
+          }
+        };
+
+      } catch (err) {
+        console.error('[ikr] render error:', err);
+        container.innerHTML = '<p style="text-align:center;color:#dc2626;">Yorumlar yüklenirken bir hata oluştu.</p>';
+      }
+    } finally {
+      renderInProgress = false;
     }
+  }
+
+  // ── Ürün başlığı elementi bulma (ürün sayfası badge'i için) ───────────────
+  // [3] findNameEl'den ayrıldı — sadece ürün sayfası h1 tespiti
+  function findProductTitleEl(productName) {
+    if (productName) {
+      var allEls = document.querySelectorAll('h1,h2,h3,h4,h5,h6,div,span,p');
+      for (var i = 0; i < allEls.length; i++) {
+        var el = allEls[i];
+        if (el.children.length === 0 &&
+            el.textContent.trim() === productName &&
+            el.tagName !== 'TITLE' &&
+            !el.closest('[data-ikr-listing-badge]') &&
+            !el.closest('#ikas-reviews')) {
+          return el;
+        }
+      }
+    }
+    return document.querySelector('h1');
   }
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
 
   const SETTINGS_CACHE_KEY = 'ikr_settings_' + PUBLIC_API_KEY;
 
-  async function fetchSettings() {
-    const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (parsed === null) return null;
-      return parsed;
-    }
-    const res = await fetch(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
-    if (!res.ok) {
-      sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(null));
-      return null;
-    }
-    const settings = await res.json();
-    sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settings));
-    return settings;
+  // [6] sessionStorage try-catch — private browsing / quota exceeded ortamları
+  var _memCache = {};
+  function cacheGet(key) {
+    try { return sessionStorage.getItem(key); } catch (_) { return _memCache[key] || null; }
+  }
+  function cacheSet(key, val) {
+    try { sessionStorage.setItem(key, val); } catch (_) { _memCache[key] = val; }
   }
 
-  let bootstrapInProgress = false;
+  async function fetchSettings() {
+    var cached = cacheGet(SETTINGS_CACHE_KEY);
+    if (cached) {
+      try {
+        var parsed = JSON.parse(cached);
+        if (parsed === null) return null;
+        return parsed;
+      } catch (_) {
+        // Bozuk cache — temizle ve tekrar fetch et
+        cacheSet(SETTINGS_CACHE_KEY, '');
+      }
+    }
+    try {
+      var res = await fetch(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
+      if (!res.ok) {
+        cacheSet(SETTINGS_CACHE_KEY, JSON.stringify(null));
+        return null;
+      }
+      var settings = await res.json();
+      cacheSet(SETTINGS_CACHE_KEY, JSON.stringify(settings));
+      return settings;
+    } catch (err) {
+      console.error('[ikr] fetchSettings error:', err);
+      return null;
+    }
+  }
+
+  // [1] bootstrap — productId bazlı mutex (aynı ürün için çift çağrı engeli)
+  var bootstrapCache = {};
 
   async function bootstrap(productId, productName) {
-    if (bootstrapInProgress) return;
-    bootstrapInProgress = true;
-    const FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları', widgetTemplate: 'classic' };
+    if (bootstrapCache[productId]) return;
+    bootstrapCache[productId] = true;
+    var FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları', widgetTemplate: 'classic' };
     try {
-      const settings = await fetchSettings();
-      if (!settings) return; // Mağaza kayıtlı değil, widget'ı durdur
-      const [reviewsRes] = await Promise.all([
-        fetch(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId))
-      ]);
-      const reviewsData = await reviewsRes.json();
+      var settings = await fetchSettings();
+      if (!settings) return;
+      var reviewsRes = await fetch(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId));
+      var reviewsData = await reviewsRes.json();
       await render(productId, settings, reviewsData, productName);
-    } catch (_) {
+    } catch (err) {
+      console.error('[ikr] bootstrap error:', err);
       await render(productId, FALLBACK, null, productName);
     } finally {
-      bootstrapInProgress = false;
+      // SPA navigasyonunda farklı ürüne geçince tekrar çalışabilsin
+      delete bootstrapCache[productId];
     }
   }
 
   // ── iKAS Storefront Events integration ───────────────────────────────────
-  // Fires only on product detail pages — no DOM polling, no false positives
 
   function getProductFromPage() {
-    // Try __NEXT_DATA__ pageSpecificData (ikas standart yapısı)
     try {
       var pageProps = window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps;
       if (pageProps && pageProps.pageType === 'PRODUCT' && pageProps.pageSpecificData && pageProps.pageSpecificData.id) {
         return { id: pageProps.pageSpecificData.id, name: pageProps.pageSpecificData.name || null };
       }
     } catch (_) {}
-    // Try IkasStorefront global
     if (window.IkasStorefront && window.IkasStorefront.product && window.IkasStorefront.product.id) {
       return { id: window.IkasStorefront.product.id, name: window.IkasStorefront.product.name || null };
     }
-    // Try URL: /products/slug--PRODUCT_ID or /urun/slug--PRODUCT_ID
-    const match = window.location.pathname.match(/--([a-f0-9-]{36})(?:\/|$|\?)/);
+    var match = window.location.pathname.match(/--([a-f0-9-]{36})(?:\/|$|\?)/);
     if (match) return { id: match[1], name: null };
-    // Try URL query param ?productId=
-    const qp = new URLSearchParams(window.location.search).get('productId');
+    var qp = new URLSearchParams(window.location.search).get('productId');
     if (qp) return { id: qp, name: null };
     return null;
   }
@@ -366,8 +430,8 @@
         id: 'ikas-reviews-widget',
         callback: function (event) {
           if (event && event.type === 'PRODUCT_VIEW') {
-            const productId = event.data && event.data.productDetail && event.data.productDetail.id;
-            const productName = event.data && event.data.productDetail && event.data.productDetail.name;
+            var productId = event.data && event.data.productDetail && event.data.productDetail.id;
+            var productName = event.data && event.data.productDetail && event.data.productDetail.name;
             if (productId) bootstrap(productId, productName);
           }
           if (event && event.type === 'PAGE_VIEW') {
@@ -375,31 +439,31 @@
           }
         },
       });
-      // Event may have already fired before this script loaded — try to render now
-      const product = getProductFromPage();
+      // Event daha önce tetiklendiyse sayfa verisinden ürün tespiti
+      var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
     } else {
-      // Fallback: wait for IkasEvents to become available
-      let attempts = 0;
-      const poll = setInterval(function () {
-        attempts++;
+      // Fallback: IkasEvents yüklenene kadar bekle
+      var attempts = 0;
+      function tryAttach() {
         if (window.IkasEvents) {
-          clearInterval(poll);
           attachEvents();
-        } else if (attempts > 20) {
-          clearInterval(poll);
+        } else if (attempts < 20) {
+          attempts++;
+          setTimeout(tryAttach, 500);
         }
-      }, 500);
+      }
+      setTimeout(tryAttach, 500);
     }
   }
 
   // ── Listing / Category badge ──────────────────────────────────────────────
-  // JSON-LD ItemList'ten slug'ları okur, toplu API'ye gönderir,
-  // her ürün linkinin içine mini rating badge ekler.
 
   var EXCLUDED = ['account', 'pages', 'blog', 'search', 'cart', 'checkout', 'siparis', 'odeme'];
 
-  // JSON-LD ItemList'ten slug → ürün adı haritası oluşturur
+  // [7] renderListingBadges cache — aynı sayfa için API tekrar çağrılmasın
+  var listingBadgeRendered = false;
+
   function getSlugNameMap() {
     var map = {};
     var scripts = document.querySelectorAll('script[type="application/ld+json"]');
@@ -410,7 +474,8 @@
           data.itemListElement.forEach(function (item) {
             var url = (item.item && item.item.offers && item.item.offers.url) || '';
             if (!url) return;
-            var path = new URL(url).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
+            // [5] extractSlug helper kullanımı
+            var path = extractSlug(url);
             if (path && !EXCLUDED.some(function (e) { return path.startsWith(e); })) {
               map[path] = (item.item && item.item.name) ? item.item.name.trim() : null;
             }
@@ -422,31 +487,20 @@
     return map;
   }
 
+  // [3] findNameEl — sadeleştirilmiş, tahmin edilebilir öncelik sırası
   function findNameEl(a, productName) {
-    // 1. Link içinde heading text eşleştirme
     if (productName) {
+      // 1. Link içinde heading eşleştirme
       var headings = a.querySelectorAll('h1,h2,h3,h4,h5,h6');
       for (var i = 0; i < headings.length; i++) {
         if (headings[i].textContent.trim() === productName) return headings[i];
       }
-      // Heading yoksa link içinde text eşleştir
+      // 2. Link içinde leaf element eşleştirme
       var allEls = a.querySelectorAll('*');
       for (var j = 0; j < allEls.length; j++) {
         if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) return allEls[j];
       }
-      // Link'in kendisi productName ile başlıyorsa (fiyat da içerebilir) linki döndür
-      if (a.textContent.trim().indexOf(productName) === 0) return a;
-      // 2. Link dışında: kardeş elementlerde ara (aynı parent içindeki diğer linkler dahil)
-      var parent = a.parentElement;
-      if (parent) {
-        // Kardeş linklerde text eşleştir
-        var siblings = parent.querySelectorAll('*');
-        for (var s = 0; s < siblings.length; s++) {
-          if (siblings[s] === a || a.contains(siblings[s])) continue;
-          if (siblings[s].children.length === 0 && siblings[s].textContent.trim() === productName) return siblings[s];
-        }
-      }
-      // 3. Link dışında: ikas productCard / productContainer + textContainer pattern (resmi temalar)
+      // 3. ikas resmi tema — productCard/productContainer + textContainer pattern
       var card = a.parentElement && a.parentElement.parentElement;
       if (card && card.className && (card.className.indexOf('productCard') !== -1 || card.className.indexOf('productContainer') !== -1)) {
         var textContainer = card.querySelector('[class*="textContainer"]');
@@ -458,8 +512,17 @@
           return textContainer.firstElementChild || textContainer;
         }
       }
+      // 4. Kardeş elementlerde ara
+      var parent = a.parentElement;
+      if (parent) {
+        var siblings = parent.querySelectorAll('*');
+        for (var s = 0; s < siblings.length; s++) {
+          if (siblings[s] === a || a.contains(siblings[s])) continue;
+          if (siblings[s].children.length === 0 && siblings[s].textContent.trim() === productName) return siblings[s];
+        }
+      }
     }
-    // 3. Fallback: class adı bazlı seçiciler
+    // 5. Fallback: class bazlı seçiciler
     return a.querySelector('[class*="product-name"]') ||
       a.querySelector('[class*="product-title"]') ||
       a.querySelector('h2') ||
@@ -467,32 +530,28 @@
       null;
   }
 
-  // DOM'daki ürün linklerinden slug → ürün adı haritası çıkarır (slayt, öne çıkan ürünler vb.)
   function getSlugNameMapFromDOM() {
     var map = {};
     var links = document.querySelectorAll('a[href]');
     links.forEach(function (a) {
       try {
-        var path = new URL(a.href).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
+        // [5] extractSlug helper kullanımı
+        var path = extractSlug(a.href);
         if (!path || EXCLUDED.some(function (e) { return path.startsWith(e); })) return;
-        if (map[path]) return; // zaten var
-        // Ürün kartı tespiti: link içinde product-container/name/title class'ı var mı?
+        if (map[path]) return;
         var hasProductClass = a.querySelector('[class*="product-container"]') ||
           a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]');
-        // Ya da parent'ı container class'lı mı? (bazı temalar)
         var parentIsContainer = a.parentElement && a.parentElement.className &&
           a.parentElement.className.indexOf('container') !== -1;
-        // Ya da link textContent ürün adı gibi görünüyor mu? (kısa, anlamlı metin)
         var linkText = a.textContent.trim();
         var looksLikeProduct = linkText.length > 2 && linkText.length < 120 && !a.querySelector('img');
         if (!hasProductClass && !parentIsContainer && !looksLikeProduct) return;
-        // Ürün adını bulmaya çalış
         var nameEl = a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
           a.querySelector('.text-sm.font-semibold') || a.querySelector('h2') || a.querySelector('h3');
         if (nameEl) {
           map[path] = nameEl.textContent.trim();
         } else {
-          // linkText fiyat da içerebilir ("Ürün Adı₺16.00"), ilk leaf text el'i al
+          // linkText fiyat da içerebilir, ilk leaf text el'i al
           var firstTextEl = null;
           var allLinkEls = a.querySelectorAll('*');
           for (var t = 0; t < allLinkEls.length; t++) {
@@ -509,12 +568,15 @@
   }
 
   async function renderListingBadges() {
-    // Mağaza kayıtlı değilse durdur
+    // [7] Ürün sayfasındaysa listing badge çalışmasın
+    if (document.getElementById('ikas-reviews-anchor')) return;
+    // [7] Aynı sayfa için tekrar API çağrısı yapma
+    if (listingBadgeRendered) return;
+
     var settings = await fetchSettings();
     if (!settings) return;
-    // JSON-LD'den slug haritası al (kategori sayfaları)
+
     var slugNameMap = getSlugNameMap();
-    // DOM'dan ek slug haritası ekle (slayt, öne çıkan ürünler vb.)
     var domMap = getSlugNameMapFromDOM();
     Object.keys(domMap).forEach(function (slug) {
       if (!slugNameMap[slug]) slugNameMap[slug] = domMap[slug];
@@ -529,10 +591,16 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: slugs }),
       });
-    } catch (_) { return; }
+    } catch (err) {
+      console.error('[ikr] ratings-by-slug fetch error:', err);
+      return;
+    }
 
     var json;
-    try { json = await res.json(); } catch (_) { return; }
+    try { json = await res.json(); } catch (err) {
+      console.error('[ikr] ratings-by-slug parse error:', err);
+      return;
+    }
     var ratings = json.data || {};
 
     slugs.forEach(function (slug) {
@@ -540,20 +608,18 @@
       if (!rating) return;
       var productName = slugNameMap[slug];
 
-      // Slug başına sadece 1 badge — ilk uygun linke ekle
       var badgeAdded = false;
       var links = document.querySelectorAll('a[href]');
       links.forEach(function (a) {
         if (badgeAdded) return;
         if (a.getAttribute('data-ikr-badge')) return;
-        try {
-          var path = new URL(a.href).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
-          if (path !== slug) return;
-        } catch (_) { return; }
+        // [5] extractSlug helper kullanımı
+        var path = extractSlug(a.href);
+        if (path !== slug) return;
 
         var nameEl = findNameEl(a, productName);
         if (!nameEl || !nameEl.parentNode) return;
-        if (nameEl.getAttribute('data-ikr-name')) return; // Bu nameEl'e zaten badge eklendi
+        if (nameEl.getAttribute('data-ikr-name')) return;
 
         a.setAttribute('data-ikr-badge', '1');
         nameEl.setAttribute('data-ikr-name', '1');
@@ -562,11 +628,9 @@
         var badge = document.createElement('div');
         badge.setAttribute('data-ikr-listing-badge', '1');
         badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;';
-        badge.innerHTML =
-          '<span style="color:#f59e0b;">' + '★'.repeat(Math.round(parseFloat(rating.avg))) + '☆'.repeat(5 - Math.round(parseFloat(rating.avg))) + '</span>' +
-          '<span>' + rating.avg + ' (' + rating.count + ')</span>';
+        // [4] starsHTML helper kullanımı
+        badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
 
-        // nameEl linkin kendisiyse badge'i link içine ekle, değilse sonrasına ekle
         if (nameEl.tagName === 'A') {
           nameEl.appendChild(badge);
         } else {
@@ -574,6 +638,8 @@
         }
       });
     });
+
+    listingBadgeRendered = true;
   }
 
   function init() {
@@ -587,5 +653,4 @@
     init();
   }
 
-  // SPA navigasyon: IkasEvents PAGE_VIEW ile renderListingBadges tetikleniyor (attachEvents içinde)
 })();
