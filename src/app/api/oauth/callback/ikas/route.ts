@@ -136,6 +136,7 @@ export async function GET(request: NextRequest) {
                 name: 'yorum-paneli-widget',
                 scriptContent: `<script src="${deployUrl}/widget.js?publicApiKey=${merchantId}" async></script>`,
                 storefrontId: storefront.id!,
+                isHighPriority: false,
               },
             })
           )

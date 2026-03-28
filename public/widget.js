@@ -89,7 +89,7 @@
 
   // ── Core render ───────────────────────────────────────────────────────────
 
-  async function render(productId, settings, reviewsData) {
+  async function render(productId, settings, reviewsData, productName) {
     const { widgetColor, widgetTitle, widgetTemplate } = settings;
 
     injectStyles(widgetTemplate, widgetColor);
@@ -145,20 +145,36 @@
         const avgRating = reviews.length
           ? (reviews.reduce(function (s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1)
           : null;
-        const titleEl = document.querySelector('h1');
-        if (titleEl && avgRating) {
-          const badge = document.createElement('a');
-          badge.id = 'ikr-rating-badge';
-          badge.href = '#ikas-reviews';
-          badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;';
-          badge.innerHTML =
-            '<span style="color:#f59e0b;font-size:16px;">' + '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) + '</span>' +
-            '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
-          badge.onclick = function (e) {
-            e.preventDefault();
-            document.getElementById('ikas-reviews').scrollIntoView({ behavior: 'smooth' });
-          };
-          titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+        if (avgRating) {
+          // Ürün adı ile DOM'da text eşleştirme — tema bağımsız
+          var titleEl = null;
+          if (productName) {
+            var allEls = document.querySelectorAll('h1,h2,h3,h4,h5,h6,div,span,p');
+            for (var i = 0; i < allEls.length; i++) {
+              var el = allEls[i];
+              if (el.children.length === 0 && el.textContent.trim() === productName &&
+                  el.tagName !== 'TITLE' && el.tagName !== 'SCRIPT') {
+                titleEl = el;
+                break;
+              }
+            }
+          }
+          // Fallback: h1
+          if (!titleEl) titleEl = document.querySelector('h1');
+          if (titleEl && titleEl.parentNode) {
+            const badge = document.createElement('a');
+            badge.id = 'ikr-rating-badge';
+            badge.href = '#ikas-reviews';
+            badge.style.cssText = 'display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;';
+            badge.innerHTML =
+              '<span style="color:#f59e0b;font-size:16px;">' + '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) + '</span>' +
+              '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
+            badge.onclick = function (e) {
+              e.preventDefault();
+              document.getElementById('ikas-reviews').scrollIntoView({ behavior: 'smooth' });
+            };
+            titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+          }
         }
       }
 
@@ -284,7 +300,7 @@
     return settings;
   }
 
-  async function bootstrap(productId) {
+  async function bootstrap(productId, productName) {
     const FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları', widgetTemplate: 'classic' };
     try {
       const [settings, reviewsRes] = await Promise.all([
@@ -292,33 +308,33 @@
         fetch(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId))
       ]);
       const reviewsData = await reviewsRes.json();
-      await render(productId, settings, reviewsData);
+      await render(productId, settings, reviewsData, productName);
     } catch (_) {
-      await render(productId, FALLBACK, null);
+      await render(productId, FALLBACK, null, productName);
     }
   }
 
   // ── iKAS Storefront Events integration ───────────────────────────────────
   // Fires only on product detail pages — no DOM polling, no false positives
 
-  function getProductIdFromPage() {
-    // Try IkasStorefront global (set before PRODUCT_VIEW fires)
-    if (window.IkasStorefront && window.IkasStorefront.product && window.IkasStorefront.product.id) {
-      return window.IkasStorefront.product.id;
-    }
+  function getProductFromPage() {
     // Try __NEXT_DATA__ pageSpecificData (ikas standart yapısı)
     try {
       var pageProps = window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps;
       if (pageProps && pageProps.pageType === 'PRODUCT' && pageProps.pageSpecificData && pageProps.pageSpecificData.id) {
-        return pageProps.pageSpecificData.id;
+        return { id: pageProps.pageSpecificData.id, name: pageProps.pageSpecificData.name || null };
       }
     } catch (_) {}
+    // Try IkasStorefront global
+    if (window.IkasStorefront && window.IkasStorefront.product && window.IkasStorefront.product.id) {
+      return { id: window.IkasStorefront.product.id, name: window.IkasStorefront.product.name || null };
+    }
     // Try URL: /products/slug--PRODUCT_ID or /urun/slug--PRODUCT_ID
     const match = window.location.pathname.match(/--([a-f0-9-]{36})(?:\/|$|\?)/);
-    if (match) return match[1];
+    if (match) return { id: match[1], name: null };
     // Try URL query param ?productId=
     const qp = new URLSearchParams(window.location.search).get('productId');
-    if (qp) return qp;
+    if (qp) return { id: qp, name: null };
     return null;
   }
 
@@ -329,15 +345,19 @@
         callback: function (event) {
           if (event && event.type === 'PRODUCT_VIEW') {
             const productId = event.data && event.data.productDetail && event.data.productDetail.id;
-            if (productId) bootstrap(productId);
+            const productName = event.data && event.data.productDetail && event.data.productDetail.name;
+            if (productId) bootstrap(productId, productName);
+          }
+          if (event && event.type === 'PAGE_VIEW') {
+            renderListingBadges();
           }
         },
       });
       // Event may have already fired before this script loaded — try to render now
-      const currentProductId = getProductIdFromPage();
-      if (currentProductId) bootstrap(currentProductId);
+      const product = getProductFromPage();
+      if (product) bootstrap(product.id, product.name);
     } else {
-      // Fallback: wait for IkasEvents to become available (injected after DOM ready)
+      // Fallback: wait for IkasEvents to become available
       let attempts = 0;
       const poll = setInterval(function () {
         attempts++;
@@ -487,11 +507,5 @@
     init();
   }
 
-  // DOM değişimini izleyerek listing badge'lerini otomatik ekle (SPA navigasyon + lazy load)
-  var _badgeDebounce;
-  var _badgeObserver = new MutationObserver(function () {
-    clearTimeout(_badgeDebounce);
-    _badgeDebounce = setTimeout(renderListingBadges, 200);
-  });
-  _badgeObserver.observe(document.body, { childList: true, subtree: true });
+  // SPA navigasyon: IkasEvents PAGE_VIEW ile renderListingBadges tetikleniyor (attachEvents içinde)
 })();
