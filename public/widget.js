@@ -604,7 +604,8 @@
           }
           if (event && event.type === 'PAGE_VIEW') {
             listingBadgeRendered = false;
-            ikrSlugMap = {};
+            // ikrSlugMap sıfırlanmıyor — slug→name eşleşmesi tüm sayfalarda geçerli
+            renderListingBadges();
           }
         },
       });
