@@ -707,7 +707,8 @@
         if (!path || EXCLUDED.some(function (e) { return path.startsWith(e); })) return;
         if (map[path]) return;
         var hasProductClass = a.querySelector('[class*="product-container"]') ||
-          a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]');
+          a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
+          a.querySelector('[class*="productTitle"]') || a.querySelector('[class*="productName"]');
         var parentIsContainer = a.parentElement && a.parentElement.className &&
           (a.parentElement.className.indexOf('container') !== -1 || a.parentElement.className.indexOf('product-card') !== -1);
         // Üst elementin class'ında product-card veya product-list pattern'ı varsa da ürün linki say
