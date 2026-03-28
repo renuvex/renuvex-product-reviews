@@ -153,7 +153,8 @@
             for (var i = 0; i < allEls.length; i++) {
               var el = allEls[i];
               if (el.children.length === 0 && el.textContent.trim() === productName &&
-                  el.tagName !== 'TITLE' && el.tagName !== 'SCRIPT') {
+                  el.tagName !== 'TITLE' && el.tagName !== 'SCRIPT' &&
+                  !el.closest('[data-ikr-listing-badge]')) {
                 titleEl = el;
                 break;
               }
@@ -161,6 +162,12 @@
           }
           // Fallback: h1
           if (!titleEl) titleEl = document.querySelector('h1');
+          // titleEl listing badge içindeyse üst parent'ı al
+          if (titleEl && titleEl.closest('[data-ikr-listing-badge]')) {
+            titleEl = document.querySelector('h1');
+          }
+          // Eklenmeden önce mevcut listing badge'leri temizle (ürün sayfasında gereksiz)
+          document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(b) { b.remove(); });
           if (titleEl && titleEl.parentNode) {
             const badge = document.createElement('a');
             badge.id = 'ikr-rating-badge';
