@@ -590,8 +590,11 @@
                   ikrSlugMap[p.metaData.slug] = p.name;
                 }
               });
-              // İlk açılışta PAGE_VIEW gelmeyebilir — VIEW_LISTING'den render tetikle
-              renderListingBadges(listingBadgeGen);
+              // İlk açılışta PAGE_VIEW gelmeyebilir — debounce ile son VIEW_LISTING'den sonra render et
+              clearTimeout(ikrListingDebounce);
+              ikrListingDebounce = setTimeout(function() {
+                renderListingBadges(listingBadgeGen);
+              }, 200);
             }
           }
           if (event && event.type === 'PRODUCT_VIEW') {
@@ -643,6 +646,7 @@
 
   // VIEW_LISTING event'inden biriktirilen slug→name map
   var ikrSlugMap = {};
+  var ikrListingDebounce = null;
 
   // [3] findNameEl — sadeleştirilmiş, tahmin edilebilir öncelik sırası
   function findNameEl(a, productName) {
