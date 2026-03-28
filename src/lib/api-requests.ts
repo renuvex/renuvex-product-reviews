@@ -2,11 +2,8 @@ import axios from 'axios';
 import { GetMerchantApiResponse } from '../app/api/ikas/get-merchant/route';
 import { ApiResponseType } from '../globals/constants';
 
-// iframe içinde çalışırken relative URL ikas domain'ine gider — absolute URL kullan
-const DEPLOY_URL = process.env.NEXT_PUBLIC_DEPLOY_URL || '';
-
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
-  return axios.post<ApiResponseType<T>>(DEPLOY_URL + url, data, {
+  return axios.post<ApiResponseType<T>>(url, data, {
     headers: token
       ? {
           Authorization: `JWT ${token}`,
@@ -16,7 +13,7 @@ export async function makePostRequest<T>({ url, data, token }: { url: string; da
 }
 
 export async function makeGetRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
-  return axios.get<ApiResponseType<T>>(DEPLOY_URL + url, {
+  return axios.get<ApiResponseType<T>>(url, {
     params: data,
     headers: token
       ? {
