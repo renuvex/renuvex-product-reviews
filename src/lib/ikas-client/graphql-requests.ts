@@ -28,6 +28,17 @@ export const LIST_STOREFRONT = gql`
   }
 `;
 
+export const CREATE_STOREFRONT_JS_SCRIPT = gql`
+  mutation createStorefrontJSScript($input: CreateStorefrontJSScriptInput!) {
+    createStorefrontJSScript(input: $input) {
+      id
+      name
+      storefrontId
+      isActive
+    }
+  }
+`;
+
 export const UPDATE_STOREFRONT_JS_SCRIPT = gql`
   mutation updateStorefrontJSScript($input: UpdateStorefrontJSScriptInput!) {
     updateStorefrontJSScript(input: $input) {

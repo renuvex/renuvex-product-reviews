@@ -5,6 +5,15 @@ export enum StorefrontJSScriptContentTypeEnum {
   SCRIPT = "SCRIPT"
 }
 
+export type CreateStorefrontJSScriptInput = {
+  contentType: StorefrontJSScriptContentTypeEnum;
+  fileName?: string;
+  isHighPriority?: boolean;
+  name: string;
+  scriptContent: string;
+  storefrontId: string;
+}
+
 export type UpdateStorefrontJSScriptInput = {
   contentType?: StorefrontJSScriptContentTypeEnum;
   fileName?: string;
@@ -47,6 +56,21 @@ export type ListStorefrontQueryData = Array<{
 
 export interface ListStorefrontQuery {
   listStorefront: ListStorefrontQueryData;
+}
+
+export type CreateStorefrontJSScriptMutationVariables = {
+  input: CreateStorefrontJSScriptInput;
+}
+
+export type CreateStorefrontJSScriptMutationData = {
+  id: string;
+  name: string;
+  storefrontId: string;
+  isActive: boolean;
+}
+
+export interface CreateStorefrontJSScriptMutation {
+  createStorefrontJSScript: CreateStorefrontJSScriptMutationData;
 }
 
 export type UpdateStorefrontJSScriptMutationVariables = {
@@ -122,6 +146,20 @@ export class GeneratedMutations {
 
   constructor(client: BaseGraphQLAPIClient<any>) {
     this.client = client;
+  }
+
+  async createStorefrontJSScript(variables: CreateStorefrontJSScriptMutationVariables): Promise<APIResult<Partial<CreateStorefrontJSScriptMutation>>> {
+    const mutation = `
+  mutation createStorefrontJSScript($input: CreateStorefrontJSScriptInput!) {
+    createStorefrontJSScript(input: $input) {
+      id
+      name
+      storefrontId
+      isActive
+    }
+  }
+`;
+    return this.client.mutate<Partial<CreateStorefrontJSScriptMutation>>({ mutation, variables });
   }
 
   async updateStorefrontJSScript(variables: UpdateStorefrontJSScriptMutationVariables): Promise<APIResult<Partial<UpdateStorefrontJSScriptMutation>>> {
