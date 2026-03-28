@@ -602,7 +602,6 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
-            listingRenderSeq++;
             renderListingBadges(listingRenderSeq);
           }
         },
@@ -709,6 +708,8 @@
     if (document.getElementById('ikas-reviews-anchor')) return;
     // Seq kontrolü — bu render hâlâ geçerli mi?
     if (seq !== listingRenderSeq) return;
+    // Render başladı — seq artır, paralel çağrıları iptal et
+    listingRenderSeq++;
 
     // SPA nav'da DOM'da kalan eski attribute'ları temizle (link elementleri yeniden kullanılıyor olabilir)
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
