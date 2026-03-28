@@ -590,8 +590,7 @@
                   ikrSlugMap[p.metaData.slug] = p.name;
                 }
               });
-              // Flag false ise render et — zaten render olduysa yapma
-              renderListingBadges();
+              renderListingBadges(listingRenderSeq);
             }
           }
           if (event && event.type === 'PRODUCT_VIEW') {
@@ -603,9 +602,8 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
-            listingBadgeRendered = false;
-            // ikrSlugMap sıfırlanmıyor — slug→name eşleşmesi tüm sayfalarda geçerli
-            renderListingBadges();
+            listingRenderSeq++;
+            renderListingBadges(listingRenderSeq);
           }
         },
       });
@@ -613,7 +611,7 @@
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
       // Subscribe olduktan sonra hemen render — VIEW_LISTING kaçırılmış olabilir, DOM fallback devreye girer
-      renderListingBadges();
+      renderListingBadges(listingRenderSeq);
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
@@ -632,9 +630,9 @@
   // ── Listing / Category badge ──────────────────────────────────────────────
 
 
-  // [7] renderListingBadges cache — aynı sayfa için API tekrar çağrılmasın
-  var listingBadgeRendered = false;
-// VIEW_LISTING event'inden biriktirilen slug→name map
+  // Her sayfa değişiminde artan sayaç — in-flight render'ları iptal etmek için
+  var listingRenderSeq = 0;
+  // VIEW_LISTING event'inden biriktirilen slug→name map
   var ikrSlugMap = {};
 
   // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
@@ -706,13 +704,11 @@
   }
 
 
-  async function renderListingBadges() {
-    // [7] Ürün sayfasındaysa listing badge çalışmasın
+  async function renderListingBadges(seq) {
+    // Ürün sayfasındaysa listing badge çalışmasın
     if (document.getElementById('ikas-reviews-anchor')) return;
-    // [7] Aynı sayfa için tekrar API çağrısı yapma
-    if (listingBadgeRendered) return;
-    // Async await'lerden önce flag'i set et — paralel çağrıların çift badge inject etmesini engelle
-    listingBadgeRendered = true;
+    // Seq kontrolü — bu render hâlâ geçerli mi?
+    if (seq !== listingRenderSeq) return;
 
     // SPA nav'da DOM'da kalan eski attribute'ları temizle (link elementleri yeniden kullanılıyor olabilir)
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
@@ -767,6 +763,8 @@
 
     var settings = results[0];
     if (!settings) return;
+    // Await sırasında sayfa değiştiyse iptal et
+    if (seq !== listingRenderSeq) return;
 
     if (needRatings && results[1]) {
       results[1].forEach(function(batchData) {
