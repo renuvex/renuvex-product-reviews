@@ -27,6 +27,7 @@ export async function GET(req: Request) {
     prisma.authToken.findFirst({
       where: { merchantId: publicApiKey },
       select: { authorizedAppId: true, expireDate: true },
+      orderBy: { expireDate: 'desc' },
     }),
   ]);
 
