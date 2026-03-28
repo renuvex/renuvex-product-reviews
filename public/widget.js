@@ -837,7 +837,8 @@
 
   function init() {
     attachEvents();
-    renderListingBadges(listingBadgeGen);
+    // renderListingBadges burada çağrılmıyor — ikas PAGE_VIEW event'i zaten tetikliyor.
+    // Hem init() hem PAGE_VIEW çağrılırsa duplicate badge oluşuyor.
   }
 
   if (document.readyState === 'loading') {
