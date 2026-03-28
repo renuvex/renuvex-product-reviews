@@ -583,7 +583,11 @@
           if (event && event.type === 'PRODUCT_VIEW') {
             var productId = event.data && event.data.productDetail && event.data.productDetail.id;
             var productName = event.data && event.data.productDetail && event.data.productDetail.name;
-            if (productId) bootstrap(productId, productName);
+            if (productId) {
+              // SPA navigation: her ürün geçişinde reviews cache'ini temizle — taze veri çek
+              cacheSet('ikr_reviews_' + PUBLIC_API_KEY + '_' + productId, '');
+              bootstrap(productId, productName);
+            }
           }
           if (event && event.type === 'PAGE_VIEW') {
             listingBadgeRendered = false;
