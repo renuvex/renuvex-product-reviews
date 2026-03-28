@@ -605,7 +605,6 @@
           if (event && event.type === 'PAGE_VIEW') {
             listingBadgeRendered = false;
             ikrSlugMap = {};
-            renderListingBadges();
           }
         },
       });
