@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     const res = NextResponse.json({ data });
-    res.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    res.headers.set('Cache-Control', 'no-store');
     return withCors(res);
   } catch (error: any) {
     console.error('[ratings-by-slug] ERROR:', error);

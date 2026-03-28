@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     const res = NextResponse.json({
       data: { reviews: formattedReviews, totalCount: formattedReviews.length },
     });
-    res.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    res.headers.set('Cache-Control', 'no-store');
     return withCors(res);
   } catch (error: any) {
     console.error('[GET] Reviews ERROR:', error);
