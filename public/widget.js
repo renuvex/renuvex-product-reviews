@@ -826,7 +826,8 @@
 
         var badge = document.createElement('div');
         badge.setAttribute('data-ikr-listing-badge', '1');
-        badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;';
+        var nameAlign = window.getComputedStyle(nameEl).textAlign;
+        badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;justify-content:' + (nameAlign === 'center' ? 'center' : nameAlign === 'right' ? 'flex-end' : 'flex-start') + ';';
         // [4] starsHTML helper kullanımı
         badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
 
