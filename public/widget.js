@@ -582,6 +582,16 @@
       window.IkasEvents.subscribe({
         id: 'ikas-reviews-widget',
         callback: function (event) {
+          if (event && event.type === 'VIEW_LISTING') {
+            var products = event.data && event.data.productDetails;
+            if (Array.isArray(products)) {
+              products.forEach(function (p) {
+                if (p && p.metaData && p.metaData.slug && p.name) {
+                  ikrSlugMap[p.metaData.slug] = p.name;
+                }
+              });
+            }
+          }
           if (event && event.type === 'PRODUCT_VIEW') {
             var productId = event.data && event.data.productDetail && event.data.productDetail.id;
             var productName = event.data && event.data.productDetail && event.data.productDetail.name;
@@ -594,6 +604,8 @@
           if (event && event.type === 'PAGE_VIEW') {
             listingBadgeRendered = false;
             listingBadgeGen++;
+            // ikrSlugMap temizlenmez: VIEW_LISTING eventleri PAGE_VIEW'dan önce geliyor,
+            // map zaten dolu — render bu map'i kullanır
             renderListingBadges(listingBadgeGen);
           }
         },
@@ -618,35 +630,14 @@
 
   // ── Listing / Category badge ──────────────────────────────────────────────
 
-  var EXCLUDED = ['account', 'pages', 'blog', 'search', 'cart', 'checkout', 'siparis', 'odeme'];
 
   // [7] renderListingBadges cache — aynı sayfa için API tekrar çağrılmasın
   var listingBadgeRendered = false;
   // Generation counter — duplicate PAGE_VIEW event'lerinde eski in-flight render'ı iptal et
   var listingBadgeGen = 0;
 
-  function getSlugNameMap() {
-    var map = {};
-    var scripts = document.querySelectorAll('script[type="application/ld+json"]');
-    for (var i = 0; i < scripts.length; i++) {
-      try {
-        var data = JSON.parse(scripts[i].textContent);
-        if (data['@type'] === 'ItemList' && Array.isArray(data.itemListElement)) {
-          data.itemListElement.forEach(function (item) {
-            var url = (item.item && item.item.offers && item.item.offers.url) || '';
-            if (!url) return;
-            // [5] extractSlug helper kullanımı
-            var path = extractSlug(url);
-            if (path && !EXCLUDED.some(function (e) { return path.startsWith(e); })) {
-              map[path] = (item.item && item.item.name) ? item.item.name.trim() : null;
-            }
-          });
-          if (Object.keys(map).length) return map;
-        }
-      } catch (_) {}
-    }
-    return map;
-  }
+  // VIEW_LISTING event'inden biriktirilen slug→name map
+  var ikrSlugMap = {};
 
   // [3] findNameEl — sadeleştirilmiş, tahmin edilebilir öncelik sırası
   function findNameEl(a, productName) {
@@ -694,61 +685,6 @@
       null;
   }
 
-  function getSlugNameMapFromDOM() {
-    var map = {};
-    var links = document.querySelectorAll('a[href]');
-    links.forEach(function (a) {
-      try {
-        var href = a.getAttribute('href');
-        // Hızlı ön eleme: href yoksa, hash/query only ise, ya da excluded path ise atla
-        if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
-        // [5] extractSlug helper kullanımı
-        var path = extractSlug(a.href);
-        if (!path || EXCLUDED.some(function (e) { return path.startsWith(e); })) return;
-        if (map[path]) return;
-        var hasProductClass = a.querySelector('[class*="product-container"]') ||
-          a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
-          a.querySelector('[class*="productTitle"]') || a.querySelector('[class*="productName"]');
-        var parentIsContainer = a.parentElement && a.parentElement.className &&
-          (a.parentElement.className.indexOf('container') !== -1 || a.parentElement.className.indexOf('product-card') !== -1);
-        // Üst elementin class'ında product-card veya product-list pattern'ı varsa da ürün linki say
-        var ancestorIsProductCard = !hasProductClass && !parentIsContainer && (function() {
-          var el = a.parentElement;
-          for (var i = 0; i < 3; i++) {
-            if (!el) break;
-            if (el.className && typeof el.className === 'string' &&
-              (el.className.indexOf('product-card') !== -1 || el.className.indexOf('product-list') !== -1 || el.className.indexOf('productContainer') !== -1)) return true;
-            el = el.parentElement;
-          }
-          return false;
-        })();
-        var linkText = a.textContent.trim();
-        var looksLikeProduct = linkText.length > 2 && linkText.length < 120 && !a.querySelector('img');
-        if (!hasProductClass && !parentIsContainer && !ancestorIsProductCard && !looksLikeProduct) return;
-        var nameEl = a.querySelector('[class*="productTitle"]') || a.querySelector('[class*="productName"]') ||
-          a.querySelector('[class*="product-name"]') || a.querySelector('[class*="product-title"]') ||
-          a.querySelector('.text-sm.font-semibold') || a.querySelector('h2') || a.querySelector('h3');
-        if (nameEl) {
-          map[path] = nameEl.textContent.trim();
-        } else {
-          // linkText fiyat/indirim badge da içerebilir — productTag class'lı elementleri atla
-          var firstTextEl = null;
-          var allLinkEls = a.querySelectorAll('*');
-          for (var t = 0; t < allLinkEls.length; t++) {
-            var elClass = allLinkEls[t].className || '';
-            if (typeof elClass !== 'string') elClass = '';
-            if (elClass.indexOf('Tag') !== -1 || elClass.indexOf('tag') !== -1 || elClass.indexOf('badge') !== -1 || elClass.indexOf('discount') !== -1) continue;
-            if (allLinkEls[t].children.length === 0 && allLinkEls[t].textContent.trim().length > 2) {
-              firstTextEl = allLinkEls[t];
-              break;
-            }
-          }
-          map[path] = firstTextEl ? firstTextEl.textContent.trim() : (linkText || null);
-        }
-      } catch (_) {}
-    });
-    return map;
-  }
 
   async function renderListingBadges(gen) {
     // [7] Ürün sayfasındaysa listing badge çalışmasın
@@ -767,11 +703,7 @@
     if (gen !== undefined && gen !== listingBadgeGen) return;
     if (!settings) return;
 
-    var slugNameMap = getSlugNameMap();
-    var domMap = getSlugNameMapFromDOM();
-    Object.keys(domMap).forEach(function (slug) {
-      if (!slugNameMap[slug]) slugNameMap[slug] = domMap[slug];
-    });
+    var slugNameMap = ikrSlugMap;
     var slugs = Object.keys(slugNameMap);
     if (!slugs.length) return;
 
