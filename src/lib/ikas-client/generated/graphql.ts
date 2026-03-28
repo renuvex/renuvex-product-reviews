@@ -5,13 +5,14 @@ export enum StorefrontJSScriptContentTypeEnum {
   SCRIPT = "SCRIPT"
 }
 
-export type CreateStorefrontJSScriptInput = {
-  contentType: StorefrontJSScriptContentTypeEnum;
+export type UpdateStorefrontJSScriptInput = {
+  contentType?: StorefrontJSScriptContentTypeEnum;
   fileName?: string;
+  id: string;
   isHighPriority?: boolean;
-  name: string;
-  scriptContent: string;
-  storefrontId: string;
+  name?: string;
+  scriptContent?: string;
+  storefrontId?: string;
 }
 
 export type GetMerchantQueryVariables = {}
@@ -48,39 +49,6 @@ export interface ListStorefrontQuery {
   listStorefront: ListStorefrontQueryData;
 }
 
-export type CreateStorefrontJSScriptMutationVariables = {
-  input: CreateStorefrontJSScriptInput;
-}
-
-export type CreateStorefrontJSScriptMutationData = {
-  id: string;
-  name: string;
-  storefrontId: string;
-  isActive: boolean;
-}
-
-export interface CreateStorefrontJSScriptMutation {
-  createStorefrontJSScript: CreateStorefrontJSScriptMutationData;
-}
-
-export type DeleteStorefrontJSScriptMutationVariables = {}
-
-export type DeleteStorefrontJSScriptMutationData = boolean
-
-export interface DeleteStorefrontJSScriptMutation {
-  deleteStorefrontJSScript: DeleteStorefrontJSScriptMutationData;
-}
-
-export type UpdateStorefrontJSScriptInput = {
-  id: string;
-  contentType?: StorefrontJSScriptContentTypeEnum;
-  fileName?: string;
-  isHighPriority?: boolean;
-  name?: string;
-  scriptContent?: string;
-  storefrontId?: string;
-}
-
 export type UpdateStorefrontJSScriptMutationVariables = {
   input: UpdateStorefrontJSScriptInput;
 }
@@ -94,6 +62,14 @@ export type UpdateStorefrontJSScriptMutationData = {
 
 export interface UpdateStorefrontJSScriptMutation {
   updateStorefrontJSScript: UpdateStorefrontJSScriptMutationData;
+}
+
+export type DeleteStorefrontJSScriptMutationVariables = {}
+
+export type DeleteStorefrontJSScriptMutationData = boolean
+
+export interface DeleteStorefrontJSScriptMutation {
+  deleteStorefrontJSScript: DeleteStorefrontJSScriptMutationData;
 }
 
 export class GeneratedQueries {
@@ -148,29 +124,6 @@ export class GeneratedMutations {
     this.client = client;
   }
 
-  async createStorefrontJSScript(variables: CreateStorefrontJSScriptMutationVariables): Promise<APIResult<Partial<CreateStorefrontJSScriptMutation>>> {
-    const mutation = `
-  mutation createStorefrontJSScript($input: CreateStorefrontJSScriptInput!) {
-    createStorefrontJSScript(input: $input) {
-      id
-      name
-      storefrontId
-      isActive
-    }
-  }
-`;
-    return this.client.mutate<Partial<CreateStorefrontJSScriptMutation>>({ mutation, variables });
-  }
-
-  async deleteStorefrontJSScript(): Promise<APIResult<Partial<DeleteStorefrontJSScriptMutation>>> {
-    const mutation = `
-  mutation deleteStorefrontJSScript {
-    deleteStorefrontJSScript
-  }
-`;
-    return this.client.mutate<Partial<DeleteStorefrontJSScriptMutation>>({ mutation });
-  }
-
   async updateStorefrontJSScript(variables: UpdateStorefrontJSScriptMutationVariables): Promise<APIResult<Partial<UpdateStorefrontJSScriptMutation>>> {
     const mutation = `
   mutation updateStorefrontJSScript($input: UpdateStorefrontJSScriptInput!) {
@@ -183,6 +136,15 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<UpdateStorefrontJSScriptMutation>>({ mutation, variables });
+  }
+
+  async deleteStorefrontJSScript(): Promise<APIResult<Partial<DeleteStorefrontJSScriptMutation>>> {
+    const mutation = `
+  mutation deleteStorefrontJSScript {
+    deleteStorefrontJSScript
+  }
+`;
+    return this.client.mutate<Partial<DeleteStorefrontJSScriptMutation>>({ mutation });
   }
 }
 

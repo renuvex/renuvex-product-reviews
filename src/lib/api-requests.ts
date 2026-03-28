@@ -27,5 +27,6 @@ export async function makeGetRequest<T>({ url, data, token }: { url: string; dat
 export const ApiRequests = {
   ikas: {
     getMerchant: (token: string) => makeGetRequest<GetMerchantApiResponse>({ url: '/api/ikas/get-merchant', token }),
+    injectScripts: (token: string) => makePostRequest<{ success: number; failed: number; total: number }>({ url: '/api/admin/inject-scripts', token }),
   },
 };

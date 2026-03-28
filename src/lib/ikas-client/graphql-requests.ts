@@ -28,9 +28,9 @@ export const LIST_STOREFRONT = gql`
   }
 `;
 
-export const CREATE_STOREFRONT_JS_SCRIPT = gql`
-  mutation createStorefrontJSScript($input: CreateStorefrontJSScriptInput!) {
-    createStorefrontJSScript(input: $input) {
+export const UPDATE_STOREFRONT_JS_SCRIPT = gql`
+  mutation updateStorefrontJSScript($input: UpdateStorefrontJSScriptInput!) {
+    updateStorefrontJSScript(input: $input) {
       id
       name
       storefrontId
