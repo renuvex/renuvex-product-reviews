@@ -25,15 +25,18 @@ export async function GET(req: Request) {
     return setCorsHeaders(NextResponse.json({ error: 'Missing publicApiKey' }, { status: 400 }));
   }
 
-  const settings = await prisma.storeSettings.findUnique({
-    where: { storeId: publicApiKey },
-    select: {
-      widgetColor: true,
-      widgetTitle: true,
-    },
-  });
+  const [settings, token] = await Promise.all([
+    prisma.storeSettings.findUnique({
+      where: { storeId: publicApiKey },
+      select: { widgetColor: true, widgetTitle: true },
+    }),
+    prisma.authToken.findFirst({
+      where: { merchantId: publicApiKey },
+      select: { authorizedAppId: true },
+    }),
+  ]);
 
-  if (!settings) {
+  if (!settings || !token) {
     return setCorsHeaders(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
   }
 
