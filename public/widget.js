@@ -590,12 +590,7 @@
                   ikrSlugMap[p.metaData.slug] = p.name;
                 }
               });
-              // İlk açılışta PAGE_VIEW gelmeyebilir — debounce ile son VIEW_LISTING'den sonra render et
-              clearTimeout(ikrListingDebounce);
-              var capturedGen = listingBadgeGen;
-              ikrListingDebounce = setTimeout(function() {
-                if (capturedGen === listingBadgeGen) renderListingBadges(listingBadgeGen);
-              }, 200);
+              // Sadece map'i doldur — render PAGE_VIEW tarafından tetiklenecek
             }
           }
           if (event && event.type === 'PRODUCT_VIEW') {
@@ -623,6 +618,11 @@
       // Event daha önce tetiklendiyse sayfa verisinden ürün tespiti
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
+      // İlk yükleme: PAGE_VIEW gelmeden önce bir kez render — VIEW_LISTING map'ini bekle
+      var initGen = listingBadgeGen;
+      ikrListingDebounce = setTimeout(function() {
+        if (initGen === listingBadgeGen) renderListingBadges(listingBadgeGen);
+      }, 500);
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
