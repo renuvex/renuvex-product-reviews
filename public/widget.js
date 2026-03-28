@@ -653,6 +653,28 @@
   var ikrSlugMap = {};
   var ikrListingDebounce = null;
 
+  // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
+  // slug→null map döner (isim bilinmiyor, findNameEl class/heading fallback kullanır)
+  function getSlugNameMapFromDOM() {
+    var map = {};
+    var seen = {};
+    document.querySelectorAll('a[href]').forEach(function(a) {
+      try {
+        var href = a.getAttribute('href');
+        if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
+        var path = extractSlug(a.href);
+        if (!path || seen[path]) return;
+        // Ürün sayfası pattern'ı: tek segment, harf/rakam/tire, en az 3 karakter
+        if (!/^[a-z0-9][a-z0-9-]{2,}$/.test(path)) return;
+        // Bilinen sistem path'lerini atla
+        if (/^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/.test(path)) return;
+        seen[path] = true;
+        map[path] = null; // isim bilinmiyor — findNameEl bulacak
+      } catch(_) {}
+    });
+    return map;
+  }
+
   // [3] findNameEl — sadeleştirilmiş, tahmin edilebilir öncelik sırası
   function findNameEl(a, productName) {
     if (productName) {
@@ -718,6 +740,10 @@
     if (!settings) return;
 
     var slugNameMap = ikrSlugMap;
+    // VIEW_LISTING kaçırıldıysa DOM'dan slug topla (fallback)
+    if (!Object.keys(slugNameMap).length) {
+      slugNameMap = getSlugNameMapFromDOM();
+    }
     var slugs = Object.keys(slugNameMap);
     if (!slugs.length) return;
 
