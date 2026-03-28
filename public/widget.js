@@ -17,7 +17,7 @@
   // ── Styles ────────────────────────────────────────────────────────────────
 
   const CLASSIC_CSS = `
-    #ikas-reviews-widget{font-family:-apple-system,sans-serif;color:#111;margin:40px 0;padding:0}
+    #ikas-reviews-widget{color:#111;margin:40px 0;padding:0}
     .ikr-header{border-bottom:2px solid #eee;padding-bottom:15px;margin-bottom:25px}
     .ikr-title{font-size:22px;font-weight:800}
     .ikr-review{padding:25px 0;border-bottom:1px solid #eee}
