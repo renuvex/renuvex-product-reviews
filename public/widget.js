@@ -412,7 +412,17 @@
       for (var j = 0; j < allEls.length; j++) {
         if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) return allEls[j];
       }
-      // 2. Link dışında: ikas productCard / productContainer + textContainer pattern (resmi temalar)
+      // 2. Link dışında: kardeş elementlerde ara (aynı parent içindeki diğer linkler dahil)
+      var parent = a.parentElement;
+      if (parent) {
+        // Kardeş linklerde text eşleştir
+        var siblings = parent.querySelectorAll('*');
+        for (var s = 0; s < siblings.length; s++) {
+          if (siblings[s] === a || a.contains(siblings[s])) continue;
+          if (siblings[s].children.length === 0 && siblings[s].textContent.trim() === productName) return siblings[s];
+        }
+      }
+      // 3. Link dışında: ikas productCard / productContainer + textContainer pattern (resmi temalar)
       var card = a.parentElement && a.parentElement.parentElement;
       if (card && card.className && (card.className.indexOf('productCard') !== -1 || card.className.indexOf('productContainer') !== -1)) {
         var textContainer = card.querySelector('[class*="textContainer"]');
@@ -421,7 +431,6 @@
           for (var k = 0; k < cardEls.length; k++) {
             if (cardEls[k].children.length === 0 && cardEls[k].textContent.trim() === productName) return cardEls[k];
           }
-          // textContainer içinde tam eşleşme yoksa textContainer'ın ilk text child'ını döndür
           return textContainer.firstElementChild || textContainer;
         }
       }
