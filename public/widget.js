@@ -651,6 +651,9 @@
   // [3] findNameEl — sadeleştirilmiş, tahmin edilebilir öncelik sırası
   function findNameEl(a, productName) {
     if (productName) {
+      // 0. Bilinen product title class pattern'ları — öncelikli kontrol
+      var titleByClass = a.querySelector('[class*="productTitle"],[class*="product-title"],[class*="product-name"],[class*="productName"]');
+      if (titleByClass && titleByClass.textContent.trim() === productName) return titleByClass;
       // 1. Link içinde heading eşleştirme
       var headings = a.querySelectorAll('h1,h2,h3,h4,h5,h6');
       for (var i = 0; i < headings.length; i++) {
