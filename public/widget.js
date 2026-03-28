@@ -590,7 +590,8 @@
                   ikrSlugMap[p.metaData.slug] = p.name;
                 }
               });
-              console.log('[ikr][VIEW_LISTING] map size:', Object.keys(ikrSlugMap).length, 'slugs:', Object.keys(ikrSlugMap));
+              // İlk açılışta PAGE_VIEW gelmeyebilir — VIEW_LISTING'den render tetikle
+              renderListingBadges(listingBadgeGen);
             }
           }
           if (event && event.type === 'PRODUCT_VIEW') {
@@ -648,25 +649,16 @@
     if (productName) {
       // 0. Bilinen product title class pattern'ları — öncelikli kontrol
       var titleByClass = a.querySelector('[class*="productTitle"],[class*="product-title"],[class*="product-name"],[class*="productName"]');
-      if (titleByClass && titleByClass.textContent.trim() === productName) {
-        console.log('[ikr][findNameEl] step:0 class match', titleByClass.className, productName);
-        return titleByClass;
-      }
+      if (titleByClass && titleByClass.textContent.trim() === productName) return titleByClass;
       // 1. Link içinde heading eşleştirme
       var headings = a.querySelectorAll('h1,h2,h3,h4,h5,h6');
       for (var i = 0; i < headings.length; i++) {
-        if (headings[i].textContent.trim() === productName) {
-          console.log('[ikr][findNameEl] step:1 heading match', headings[i].tagName, productName);
-          return headings[i];
-        }
+        if (headings[i].textContent.trim() === productName) return headings[i];
       }
       // 2. Link içinde leaf element eşleştirme
       var allEls = a.querySelectorAll('*');
       for (var j = 0; j < allEls.length; j++) {
-        if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) {
-          console.log('[ikr][findNameEl] step:2 leaf match', allEls[j].tagName, allEls[j].className, productName);
-          return allEls[j];
-        }
+        if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) return allEls[j];
       }
       // 3. ikas resmi tema — productCard/productContainer + textContainer pattern
       var card = a.parentElement && a.parentElement.parentElement;
@@ -675,12 +667,8 @@
         if (textContainer) {
           var cardEls = textContainer.querySelectorAll('*');
           for (var k = 0; k < cardEls.length; k++) {
-            if (cardEls[k].children.length === 0 && cardEls[k].textContent.trim() === productName) {
-              console.log('[ikr][findNameEl] step:3a textContainer leaf match', cardEls[k].className, productName);
-              return cardEls[k];
-            }
+            if (cardEls[k].children.length === 0 && cardEls[k].textContent.trim() === productName) return cardEls[k];
           }
-          console.log('[ikr][findNameEl] step:3b textContainer firstChild fallback', textContainer.className, productName);
           return textContainer.firstElementChild || textContainer;
         }
       }
@@ -690,22 +678,16 @@
         var siblings = parent.querySelectorAll('*');
         for (var s = 0; s < siblings.length; s++) {
           if (siblings[s] === a || a.contains(siblings[s])) continue;
-          if (siblings[s].children.length === 0 && siblings[s].textContent.trim() === productName) {
-            console.log('[ikr][findNameEl] step:4 sibling match', siblings[s].className, productName);
-            return siblings[s];
-          }
+          if (siblings[s].children.length === 0 && siblings[s].textContent.trim() === productName) return siblings[s];
         }
       }
-      console.log('[ikr][findNameEl] step:MISS no match found for', productName);
     }
     // 5. Fallback: class bazlı seçiciler
-    var fallback = a.querySelector('[class*="product-name"]') ||
+    return a.querySelector('[class*="product-name"]') ||
       a.querySelector('[class*="product-title"]') ||
       a.querySelector('h2') ||
       a.querySelector('h3') ||
       null;
-    console.log('[ikr][findNameEl] step:5 class fallback', fallback ? fallback.className : 'null', productName);
-    return fallback;
   }
 
 
