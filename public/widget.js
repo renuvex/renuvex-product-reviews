@@ -607,14 +607,12 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
+            // Sayfa değişti — flag ve map'i sıfırla
+            // Render VIEW_LISTING debounce'u tarafından tetiklenecek
             listingBadgeRendered = false;
             listingBadgeGen++;
-            // VIEW_LISTING eventleri bazen PAGE_VIEW'dan sonra gelebiliyor —
-            // kısa delay ile map'in dolmasını bekle
-            var capturedGen = listingBadgeGen;
-            setTimeout(function() {
-              if (capturedGen === listingBadgeGen) renderListingBadges(listingBadgeGen);
-            }, 300);
+            ikrSlugMap = {};
+            clearTimeout(ikrListingDebounce);
           }
         },
       });
