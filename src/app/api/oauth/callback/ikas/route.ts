@@ -8,6 +8,7 @@ import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { AuthToken } from '@/models/auth-token';
 import { AuthTokenManager } from '@/models/auth-token/manager';
+import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
@@ -122,6 +123,13 @@ export async function GET(request: NextRequest) {
 
     // Store the token for future use
     await AuthTokenManager.put(token);
+
+    // Ensure storeSettings record exists for this merchant
+    await prisma.storeSettings.upsert({
+      where: { storeId: merchantId },
+      update: {},
+      create: { storeId: merchantId },
+    });
 
     // Auto-inject widget script into all storefronts
     try {
