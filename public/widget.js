@@ -423,7 +423,10 @@
             el.textContent.trim() === productName &&
             el.tagName !== 'TITLE' &&
             !el.closest('[data-ikr-listing-badge]') &&
-            !el.closest('#ikas-reviews')) {
+            !el.closest('#ikas-reviews') &&
+            !el.closest('nav') &&
+            !el.closest('[class*="breadcrumb"]') &&
+            !el.closest('[aria-label*="breadcrumb"]')) {
           return el;
         }
       }
