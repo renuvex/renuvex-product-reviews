@@ -660,11 +660,13 @@
   // findTitleEl — ürün adı elementini bul
   // Arama kapsamı: önce kart container'ı, yoksa <a>'nın kendisi
   // Doğrulanmış: canlı ikas teması title'ı <a> dışında div.product-card_productTitle içinde render eder
+  var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
+
   function findTitleEl(scope, productName) {
     // 1. class isminde "productTitle" veya "productName" geçen element — CSS module temaları
-    var byClass = scope.querySelector(
-      '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]'
-    );
+    // scope'un kendisi de kontrol edilir (Pattern B: <a class="style_productTitle__xxx">)
+    if (scope.matches && scope.matches(TITLE_CLASS_SELECTOR)) return scope;
+    var byClass = scope.querySelector(TITLE_CLASS_SELECTOR);
     if (byClass) return byClass;
 
     // 2. productName varsa tam text eşleşmesi — styled-components temaları
