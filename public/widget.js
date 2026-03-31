@@ -808,10 +808,31 @@
     }
   }
 
+  // MutationObserver — infinite scroll / lazy load ile gelen yeni ürün kartları için
+  // Debounce: 300ms içinde gelen tüm DOM değişikliklerini tek render'a indirir
+  var mutationDebounceTimer = null;
+  function startMutationObserver() {
+    if (typeof MutationObserver === 'undefined') return;
+    var observer = new MutationObserver(function(mutations) {
+      // Sadece ürün kartı içerebilecek node eklenmelerinde tetikle
+      var hasRelevantMutation = mutations.some(function(m) {
+        return m.addedNodes.length > 0;
+      });
+      if (!hasRelevantMutation) return;
+      // Ürün sayfasındaysa çalışmasın
+      if (document.getElementById('ikas-reviews-anchor')) return;
+      clearTimeout(mutationDebounceTimer);
+      mutationDebounceTimer = setTimeout(function() {
+        listingBadgeRendered = false;
+        renderListingBadges();
+      }, 300);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
   function init() {
     attachEvents();
-    // renderListingBadges burada çağrılmıyor — ikas PAGE_VIEW event'i zaten tetikliyor.
-    // Hem init() hem PAGE_VIEW çağrılırsa duplicate badge oluşuyor.
+    startMutationObserver();
   }
 
   if (document.readyState === 'loading') {
