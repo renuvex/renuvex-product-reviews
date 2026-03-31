@@ -34,5 +34,7 @@ export async function GET(req: Request) {
     return withCors(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
   }
 
-  return withCors(NextResponse.json(settings));
+  const response = withCors(NextResponse.json(settings));
+  response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+  return response;
 }
