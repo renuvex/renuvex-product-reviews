@@ -770,56 +770,67 @@
       if (!rating) return;
       var productName = slugNameMap[slug];
 
-      // Slug ile eşleşen tüm linkleri bul
+      // Slug ile eşleşen tüm linkleri bul ve pattern bazlı badge inject et
       document.querySelectorAll('a[href]').forEach(function (a) {
         if (a.getAttribute('data-ikr-badge')) return;
         var path = extractSlug(a.href);
         if (path !== slug) return;
 
-        // Resim linki: içinde img/picture/svg var ama anlamlı metin yok → skip
-        var hasImage = !!a.querySelector('img, picture, svg');
-        var hasText = a.textContent.trim().length > 0;
-        if (hasImage && !hasText) { a.setAttribute('data-ikr-badge', '1'); return; }
+        // ── Pattern tespiti ──────────────────────────────────────────────────
+        var hasNestedA  = !!a.querySelector('a[href]');
+        var hasImage    = !!a.querySelector('img, picture, svg');
+        var textContent = a.textContent.trim();
+        var hasText     = textContent.length > 0;
 
-        // Wrapper <a> tespiti: içinde başka <a> varsa tüm kart bu link'e wrap edilmiş
-        // Bu durumda iç <a>'ları işaretleyip duplicate'i engelle, title'ı wrapper'dan bul
-        var isWrapper = !!a.querySelector('a[href]');
-        if (isWrapper) {
-          // İç linkleri hemen işaretle — tekrar işlenmelerini engelle
-          a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
+        // Pattern X — Resim linki: img/svg var, metin yok → badge inject etme
+        if (hasImage && !hasText) {
+          a.setAttribute('data-ikr-badge', '1');
+          return;
         }
 
-        // Title element ara — bulunamazsa <a>'nın kendisi inject noktası olur
-        var nameEl = findTitleEl(a, productName);
-        if (nameEl && nameEl.getAttribute('data-ikr-name')) return;
+        // Pattern 1 — Wrapper <a>: tüm kart tek <a> içinde, başlık bir div/span olarak içeride
+        // İç <a>'ları (resim linkleri vb.) hemen işaretle, title'ı wrapper'dan ara
+        if (hasNestedA) {
+          a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
+          var nameEl1 = findTitleEl(a, productName);
+          if (!nameEl1 || nameEl1.getAttribute('data-ikr-name')) { a.setAttribute('data-ikr-badge', '1'); return; }
+          a.setAttribute('data-ikr-badge', '1');
+          nameEl1.setAttribute('data-ikr-name', '1');
+          var align1 = window.getComputedStyle(nameEl1).textAlign;
+          var badge1 = document.createElement('div');
+          badge1.setAttribute('data-ikr-listing-badge', '1');
+          badge1.setAttribute('data-ikr-pattern', '1');
+          badge1.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;justify-content:' + (align1 === 'center' ? 'center' : align1 === 'right' ? 'flex-end' : 'flex-start') + ';';
+          badge1.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
+          nameEl1.tagName === 'A' ? nameEl1.appendChild(badge1) : nameEl1.parentNode.insertBefore(badge1, nameEl1.nextSibling);
+          return;
+        }
 
+        // Pattern 2/3/4 — Bağımsız <a>: resim linki değil, wrapper değil
+        // findTitleEl ile başlık ara; bulamazsa <a>'nın kendisi inject noktası
+        var nameEl = findTitleEl(a, productName);
+        if (nameEl && nameEl.getAttribute('data-ikr-name')) { a.setAttribute('data-ikr-badge', '1'); return; }
         a.setAttribute('data-ikr-badge', '1');
 
         var badge = document.createElement('div');
         badge.setAttribute('data-ikr-listing-badge', '1');
 
         if (nameEl) {
-          // Normal durum: element bulundu, altına ekle
+          // Pattern 2 (ayrı başlık <a>) / Pattern 4 (<a> kendisi productTitle class'lı)
           nameEl.setAttribute('data-ikr-name', '1');
+          var patternNum = nameEl.matches && nameEl.matches('[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]') ? '4' : '2';
+          badge.setAttribute('data-ikr-pattern', patternNum);
           var nameAlign = window.getComputedStyle(nameEl).textAlign;
           badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;justify-content:' + (nameAlign === 'center' ? 'center' : nameAlign === 'right' ? 'flex-end' : 'flex-start') + ';';
           badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
-          if (nameEl.tagName === 'A') {
-            nameEl.appendChild(badge);
-          } else {
-            nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
-          }
+          nameEl.tagName === 'A' ? nameEl.appendChild(badge) : nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
         } else {
-          // Fallback: title <a>'nın direkt text node'u (örn: <a>Ürün Adı<strong>fiyat</strong></a>)
-          // Badge'i <a> içindeki ilk element child'dan önce ekle
+          // Pattern 3 — <a> içinde direkt text node (örn: <a>Ürün Adı<strong>...</strong></a>)
+          badge.setAttribute('data-ikr-pattern', '3');
           badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;';
           badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
           var firstChild = a.firstElementChild;
-          if (firstChild) {
-            a.insertBefore(badge, firstChild);
-          } else {
-            a.appendChild(badge);
-          }
+          firstChild ? a.insertBefore(badge, firstChild) : a.appendChild(badge);
         }
       });
     });
