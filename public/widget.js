@@ -768,10 +768,8 @@
       if (!rating) return;
       var productName = slugNameMap[slug];
 
-      var badgeAdded = false;
       var links = document.querySelectorAll('a[href]');
       links.forEach(function (a) {
-        if (badgeAdded) return;
         if (a.getAttribute('data-ikr-badge')) return;
         // [5] extractSlug helper kullanımı
         var path = extractSlug(a.href);
@@ -783,7 +781,6 @@
 
         a.setAttribute('data-ikr-badge', '1');
         nameEl.setAttribute('data-ikr-name', '1');
-        badgeAdded = true;
 
         var badge = document.createElement('div');
         badge.setAttribute('data-ikr-listing-badge', '1');
