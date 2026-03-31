@@ -777,24 +777,37 @@
         var path = extractSlug(a.href);
         if (path !== slug) return;
 
-        // <a> içinde ara — canlı ikas temasında title <a> > div.container > div.productTitle yapısında
+        // Title element ara — bulunamazsa <a>'nın kendisi inject noktası olur
         var nameEl = findTitleEl(a, productName);
-        if (!nameEl || !nameEl.parentNode) return;
-        if (nameEl.getAttribute('data-ikr-name')) return;
+        if (nameEl && nameEl.getAttribute('data-ikr-name')) return;
 
         a.setAttribute('data-ikr-badge', '1');
-        nameEl.setAttribute('data-ikr-name', '1');
 
         var badge = document.createElement('div');
         badge.setAttribute('data-ikr-listing-badge', '1');
-        var nameAlign = window.getComputedStyle(nameEl).textAlign;
-        badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;justify-content:' + (nameAlign === 'center' ? 'center' : nameAlign === 'right' ? 'flex-end' : 'flex-start') + ';';
-        badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
 
-        if (nameEl.tagName === 'A') {
-          nameEl.appendChild(badge);
+        if (nameEl) {
+          // Normal durum: element bulundu, altına ekle
+          nameEl.setAttribute('data-ikr-name', '1');
+          var nameAlign = window.getComputedStyle(nameEl).textAlign;
+          badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;justify-content:' + (nameAlign === 'center' ? 'center' : nameAlign === 'right' ? 'flex-end' : 'flex-start') + ';';
+          badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
+          if (nameEl.tagName === 'A') {
+            nameEl.appendChild(badge);
+          } else {
+            nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+          }
         } else {
-          nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+          // Fallback: title <a>'nın direkt text node'u (örn: <a>Ürün Adı<strong>fiyat</strong></a>)
+          // Badge'i <a> içindeki ilk element child'dan önce ekle
+          badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;';
+          badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
+          var firstChild = a.firstElementChild;
+          if (firstChild) {
+            a.insertBefore(badge, firstChild);
+          } else {
+            a.appendChild(badge);
+          }
         }
       });
     });
