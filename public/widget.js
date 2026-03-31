@@ -657,50 +657,34 @@
     return map;
   }
 
-  // [3] findNameEl — sadeleştirilmiş, tahmin edilebilir öncelik sırası
+  // findNameEl — ikas tema-bağımsız evrensel yaklaşım
+  // İkas temaları styled-components kullanır: class isimleri rastgele üretilir.
+  // Güvenilir yöntem: productName text eşleşmesi, yoksa <a> içi yapısal tarama.
   function findNameEl(a, productName) {
+    // 1. productName varsa: <a> içinde tam text eşleşen leaf element
     if (productName) {
-      // 0. Bilinen product title class pattern'ları — öncelikli kontrol
-      var titleByClass = a.querySelector('[class*="productTitle"],[class*="product-title"],[class*="product-name"],[class*="productName"]');
-      if (titleByClass && titleByClass.textContent.trim() === productName) return titleByClass;
-      // 1. Link içinde heading eşleştirme
-      var headings = a.querySelectorAll('h1,h2,h3,h4,h5,h6');
-      for (var i = 0; i < headings.length; i++) {
-        if (headings[i].textContent.trim() === productName) return headings[i];
-      }
-      // 2. Link içinde leaf element eşleştirme
       var allEls = a.querySelectorAll('*');
-      for (var j = 0; j < allEls.length; j++) {
-        if (allEls[j].children.length === 0 && allEls[j].textContent.trim() === productName) return allEls[j];
-      }
-      // 3. ikas resmi tema — productCard/productContainer + textContainer pattern
-      var card = a.parentElement && a.parentElement.parentElement;
-      if (card && card.className && (card.className.indexOf('productCard') !== -1 || card.className.indexOf('productContainer') !== -1)) {
-        var textContainer = card.querySelector('[class*="textContainer"]');
-        if (textContainer) {
-          var cardEls = textContainer.querySelectorAll('*');
-          for (var k = 0; k < cardEls.length; k++) {
-            if (cardEls[k].children.length === 0 && cardEls[k].textContent.trim() === productName) return cardEls[k];
-          }
-          return textContainer.firstElementChild || textContainer;
-        }
-      }
-      // 4. Kardeş elementlerde ara
-      var parent = a.parentElement;
-      if (parent) {
-        var siblings = parent.querySelectorAll('*');
-        for (var s = 0; s < siblings.length; s++) {
-          if (siblings[s] === a || a.contains(siblings[s])) continue;
-          if (siblings[s].children.length === 0 && siblings[s].textContent.trim() === productName) return siblings[s];
-        }
+      for (var i = 0; i < allEls.length; i++) {
+        if (allEls[i].children.length === 0 && allEls[i].textContent.trim() === productName) return allEls[i];
       }
     }
-    // 5. Fallback: class bazlı seçiciler
-    return a.querySelector('[class*="product-name"]') ||
-      a.querySelector('[class*="product-title"]') ||
-      a.querySelector('h2') ||
-      a.querySelector('h3') ||
-      null;
+    // 2. productName yoksa veya bulunamadıysa: yapısal tarama
+    // İkas resmi tema: li > a > [figure(resim), p(isim), div(fiyat)]
+    // Kural: <a> içinde resim/fiyat olmayan, anlamlı text içeren ilk p/h*/span
+    var candidates = a.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span');
+    for (var j = 0; j < candidates.length; j++) {
+      var el = candidates[j];
+      var tag = el.tagName;
+      var text = el.textContent.trim();
+      // Fiyat gibi görünen (sadece rakam/para birimi) elementleri atla
+      if (!text || /^[\d\s.,₺$€£%]+$/.test(text)) continue;
+      // Çok kısa veya çok uzun metinleri atla (isim 2-150 karakter arası)
+      if (text.length < 2 || text.length > 150) continue;
+      // <figure> veya <img>/<video> içindeyse atla
+      if (el.closest('figure') || el.closest('picture')) continue;
+      return el;
+    }
+    return null;
   }
 
 
