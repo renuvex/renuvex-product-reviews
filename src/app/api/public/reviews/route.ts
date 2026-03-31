@@ -34,11 +34,11 @@ export async function GET(req: Request) {
       return { ...r, images: parsedImages };
     });
 
-    const res = NextResponse.json({
+    const res = withCors(NextResponse.json({
       data: { reviews: formattedReviews, totalCount: formattedReviews.length },
-    });
-    res.headers.set('Cache-Control', 'no-store');
-    return withCors(res);
+    }));
+    res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    return res;
   } catch (error: any) {
     console.error('[GET] Reviews ERROR:', error);
     return withCors(NextResponse.json({ error: error.message }, { status: 500 }));
