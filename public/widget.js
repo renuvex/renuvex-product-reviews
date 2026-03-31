@@ -776,12 +776,18 @@
         var path = extractSlug(a.href);
         if (path !== slug) return;
 
-        // İçinde başka <a> varsa bu wrapper <a>'dır — skip et (iç linkler ayrıca işlenir)
-        if (a.querySelector('a[href]')) { a.setAttribute('data-ikr-badge', '1'); return; }
         // Resim linki: içinde img/picture/svg var ama anlamlı metin yok → skip
         var hasImage = !!a.querySelector('img, picture, svg');
         var hasText = a.textContent.trim().length > 0;
         if (hasImage && !hasText) { a.setAttribute('data-ikr-badge', '1'); return; }
+
+        // Wrapper <a> tespiti: içinde başka <a> varsa tüm kart bu link'e wrap edilmiş
+        // Bu durumda iç <a>'ları işaretleyip duplicate'i engelle, title'ı wrapper'dan bul
+        var isWrapper = !!a.querySelector('a[href]');
+        if (isWrapper) {
+          // İç linkleri hemen işaretle — tekrar işlenmelerini engelle
+          a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
+        }
 
         // Title element ara — bulunamazsa <a>'nın kendisi inject noktası olur
         var nameEl = findTitleEl(a, productName);
