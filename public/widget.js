@@ -657,40 +657,35 @@
     return map;
   }
 
-  // findNameEl — ikas tema-bağımsız evrensel yaklaşım
-  // Strateji 1: class isminde "title" veya "name" geçen div/p/span — CSS module temaları için stabil
-  // Strateji 2: productName ile tam text eşleşmesi — styled-components temaları için
-  // Strateji 3: yapısal tarama — resim/fiyat olmayan ilk anlamlı text elementi
-  function findNameEl(a, productName) {
-    // 1. class isminde "title" veya "name" içeren leaf element — CSS module temaları
-    // ikas temaları genelde "productTitle", "product-title", "productName" class'ı kullanır
-    var byClass = a.querySelector(
-      '[class*="productTitle"],[class*="product-title"],[class*="productName"],[class*="product-name"],[class*="product_title"],[class*="product_name"]'
+  // findTitleEl — ürün adı elementini bul
+  // Arama kapsamı: önce kart container'ı, yoksa <a>'nın kendisi
+  // Doğrulanmış: canlı ikas teması title'ı <a> dışında div.product-card_productTitle içinde render eder
+  function findTitleEl(scope, productName) {
+    // 1. class isminde "productTitle" veya "productName" geçen element — CSS module temaları
+    var byClass = scope.querySelector(
+      '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]'
     );
     if (byClass) return byClass;
 
-    // 2. productName varsa: <a> içinde tam text eşleşen leaf element — styled-components için
+    // 2. productName varsa tam text eşleşmesi — styled-components temaları
     if (productName) {
-      var allEls = a.querySelectorAll('*');
+      var allEls = scope.querySelectorAll('*');
       for (var i = 0; i < allEls.length; i++) {
-        if (allEls[i].children.length === 0 && allEls[i].textContent.trim() === productName) return allEls[i];
+        var el = allEls[i];
+        if (el.children.length === 0 && el.textContent.trim() === productName) return el;
       }
     }
 
-    // 3. Yapısal tarama: resim/fiyat olmayan, anlamlı text içeren ilk element
-    // div dahil — bazı temalar title'ı div içinde render eder
-    var candidates = a.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div');
+    // 3. Yapısal tarama — resim/fiyat olmayan, anlamlı text içeren ilk leaf element
+    var candidates = scope.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div');
     for (var j = 0; j < candidates.length; j++) {
-      var el = candidates[j];
-      var text = el.textContent.trim();
+      var cel = candidates[j];
+      var text = cel.textContent.trim();
       if (!text || text.length < 2 || text.length > 150) continue;
-      // Fiyat gibi görünen (rakam/para birimi ağırlıklı) elementleri atla
       if (/^[\d\s.,₺$€£%]+$/.test(text)) continue;
-      // Resim container'ı içindeyse atla
-      if (el.closest('figure') || el.closest('picture')) continue;
-      // Alt elementleri olan container'ları atla — leaf veya sadece text içerenleri al
-      if (el.children.length > 2) continue;
-      return el;
+      if (cel.closest('figure') || cel.closest('picture')) continue;
+      if (cel.children.length > 1) continue;
+      return cel;
     }
     return null;
   }
@@ -776,14 +771,14 @@
       if (!rating) return;
       var productName = slugNameMap[slug];
 
-      var links = document.querySelectorAll('a[href]');
-      links.forEach(function (a) {
+      // Slug ile eşleşen tüm linkleri bul
+      document.querySelectorAll('a[href]').forEach(function (a) {
         if (a.getAttribute('data-ikr-badge')) return;
-        // [5] extractSlug helper kullanımı
         var path = extractSlug(a.href);
         if (path !== slug) return;
 
-        var nameEl = findNameEl(a, productName);
+        // <a> içinde ara — canlı ikas temasında title <a> > div.container > div.productTitle yapısında
+        var nameEl = findTitleEl(a, productName);
         if (!nameEl || !nameEl.parentNode) return;
         if (nameEl.getAttribute('data-ikr-name')) return;
 
@@ -794,7 +789,6 @@
         badge.setAttribute('data-ikr-listing-badge', '1');
         var nameAlign = window.getComputedStyle(nameEl).textAlign;
         badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:2px;margin-bottom:2px;font-size:12px;color:#555;pointer-events:none;justify-content:' + (nameAlign === 'center' ? 'center' : nameAlign === 'right' ? 'flex-end' : 'flex-start') + ';';
-        // [4] starsHTML helper kullanımı
         badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
 
         if (nameEl.tagName === 'A') {
