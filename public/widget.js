@@ -658,30 +658,38 @@
   }
 
   // findNameEl — ikas tema-bağımsız evrensel yaklaşım
-  // İkas temaları styled-components kullanır: class isimleri rastgele üretilir.
-  // Güvenilir yöntem: productName text eşleşmesi, yoksa <a> içi yapısal tarama.
+  // Strateji 1: class isminde "title" veya "name" geçen div/p/span — CSS module temaları için stabil
+  // Strateji 2: productName ile tam text eşleşmesi — styled-components temaları için
+  // Strateji 3: yapısal tarama — resim/fiyat olmayan ilk anlamlı text elementi
   function findNameEl(a, productName) {
-    // 1. productName varsa: <a> içinde tam text eşleşen leaf element
+    // 1. class isminde "title" veya "name" içeren leaf element — CSS module temaları
+    // ikas temaları genelde "productTitle", "product-title", "productName" class'ı kullanır
+    var byClass = a.querySelector(
+      '[class*="productTitle"],[class*="product-title"],[class*="productName"],[class*="product-name"],[class*="product_title"],[class*="product_name"]'
+    );
+    if (byClass) return byClass;
+
+    // 2. productName varsa: <a> içinde tam text eşleşen leaf element — styled-components için
     if (productName) {
       var allEls = a.querySelectorAll('*');
       for (var i = 0; i < allEls.length; i++) {
         if (allEls[i].children.length === 0 && allEls[i].textContent.trim() === productName) return allEls[i];
       }
     }
-    // 2. productName yoksa veya bulunamadıysa: yapısal tarama
-    // İkas resmi tema: li > a > [figure(resim), p(isim), div(fiyat)]
-    // Kural: <a> içinde resim/fiyat olmayan, anlamlı text içeren ilk p/h*/span
-    var candidates = a.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span');
+
+    // 3. Yapısal tarama: resim/fiyat olmayan, anlamlı text içeren ilk element
+    // div dahil — bazı temalar title'ı div içinde render eder
+    var candidates = a.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div');
     for (var j = 0; j < candidates.length; j++) {
       var el = candidates[j];
-      var tag = el.tagName;
       var text = el.textContent.trim();
-      // Fiyat gibi görünen (sadece rakam/para birimi) elementleri atla
-      if (!text || /^[\d\s.,₺$€£%]+$/.test(text)) continue;
-      // Çok kısa veya çok uzun metinleri atla (isim 2-150 karakter arası)
-      if (text.length < 2 || text.length > 150) continue;
-      // <figure> veya <img>/<video> içindeyse atla
+      if (!text || text.length < 2 || text.length > 150) continue;
+      // Fiyat gibi görünen (rakam/para birimi ağırlıklı) elementleri atla
+      if (/^[\d\s.,₺$€£%]+$/.test(text)) continue;
+      // Resim container'ı içindeyse atla
       if (el.closest('figure') || el.closest('picture')) continue;
+      // Alt elementleri olan container'ları atla — leaf veya sadece text içerenleri al
+      if (el.children.length > 2) continue;
       return el;
     }
     return null;
