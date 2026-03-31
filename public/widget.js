@@ -823,6 +823,14 @@
       if (document.getElementById('ikas-reviews-anchor')) return;
       clearTimeout(mutationDebounceTimer);
       mutationDebounceTimer = setTimeout(function() {
+        if (document.getElementById('ikas-reviews-anchor')) return;
+        // Sadece henüz badge almamış ürün linki varsa render et
+        var hasUnbadged = Array.from(document.querySelectorAll('a[href]')).some(function(a) {
+          if (a.getAttribute('data-ikr-badge')) return false;
+          var path = extractSlug(a.href);
+          return path && path.length >= 3 && !/^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/.test(path);
+        });
+        if (!hasUnbadged) return;
         listingBadgeRendered = false;
         renderListingBadges();
       }, 300);
