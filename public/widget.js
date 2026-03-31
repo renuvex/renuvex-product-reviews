@@ -785,8 +785,8 @@
         var textContent = a.textContent.trim();
         var hasText     = textContent.length > 0;
 
-        // Pattern X — Resim linki: img/svg var, metin yok → badge inject etme
-        if (hasImage && !hasText) {
+        // Pattern X — Anlamsız link: resim var+metin yok (resim linki) veya ikisi de yok (renk/beden butonu vb.)
+        if (!hasText) {
           a.setAttribute('data-ikr-badge', '1');
           return;
         }
