@@ -745,11 +745,8 @@
     var results = await Promise.all([
       fetchSettings(),
       needRatings ? Promise.all(batches.map(function(batch) {
-        return fetchWithTimeout(API_BASE + '/api/public/ratings-by-slug', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storeId: PUBLIC_API_KEY, slugs: batch }),
-        }).then(function(res) {
+        var url = API_BASE + '/api/public/ratings-by-slug?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&slugs=' + batch.map(encodeURIComponent).join(',');
+        return fetchWithTimeout(url).then(function(res) {
           if (!res.ok) return {};
           return res.json().then(function(json) { return json.data || {}; });
         }).catch(function() { return {}; });

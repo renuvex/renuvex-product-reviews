@@ -7,29 +7,34 @@ export async function OPTIONS() {
 }
 
 /**
- * POST: Slug listesi alır, her slug için onaylı yorum sayısı ve ortalama puanı döner.
- * Body: { storeId: string, slugs: string[] }
- * Response: { data: { [slug]: { avg: number, count: number } } }
+ * GET /api/public/ratings-by-slug?storeId=<id>&slugs=slug1,slug2,...
+ * Returns approved review count and average rating per slug.
  */
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   try {
-    const body = await request.json();
-    const { storeId, slugs } = body;
+    const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get('storeId');
+    const slugsParam = searchParams.get('slugs');
 
-    if (!storeId || typeof storeId !== 'string' || !Array.isArray(slugs) || slugs.length === 0) {
+    if (!storeId || typeof storeId !== 'string' || !slugsParam) {
       return withCors(NextResponse.json({ data: {} }));
     }
 
-    // [C] Max 100 slug — sonsuz sorgu engeli
+    const slugs = slugsParam.split(',').filter(Boolean);
+
+    if (slugs.length === 0) {
+      return withCors(NextResponse.json({ data: {} }));
+    }
+
+    // Max 100 slug — sonsuz sorgu engeli
     const safeSlugs = slugs
-      .filter((s: unknown) => typeof s === 'string' && s.length > 0 && s.length <= 200)
+      .filter((s: string) => typeof s === 'string' && s.length > 0 && s.length <= 200)
       .slice(0, 100);
 
     if (safeSlugs.length === 0) {
       return withCors(NextResponse.json({ data: {} }));
     }
 
-    // Tüm slug'lar için onaylı yorumları tek sorguda çek
     const reviews = await prisma.review.findMany({
       where: {
         storeId,
@@ -39,7 +44,6 @@ export async function POST(request: Request) {
       select: { slug: true, rating: true },
     });
 
-    // slug → { avg, count } map'i oluştur
     const map: Record<string, { sum: number; count: number }> = {};
     for (const r of reviews) {
       if (!r.slug) continue;
@@ -54,9 +58,9 @@ export async function POST(request: Request) {
       data[slug] = { avg: (sum / count).toFixed(1), count };
     }
 
-    const res = NextResponse.json({ data });
-    res.headers.set('Cache-Control', 'no-store');
-    return withCors(res);
+    const res = withCors(NextResponse.json({ data }));
+    res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    return res;
   } catch (error: any) {
     console.error('[ratings-by-slug] ERROR:', error);
     return withCors(NextResponse.json({ data: {} }, { status: 500 }));
