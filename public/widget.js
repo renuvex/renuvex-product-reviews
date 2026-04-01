@@ -790,9 +790,10 @@
         var hasNestedA  = !!a.querySelector('a[href]');
         var hasImage    = !!a.querySelector('img, picture, svg');
         var textContent = a.textContent.trim();
-        var hasText     = textContent.length > 0;
+        // textContent içinde '<' varsa bu literal HTML string — gerçek metin değil (ikas rendering bug)
+        var hasText     = textContent.length > 0 && textContent.indexOf('<') === -1;
 
-        // Pattern X — Anlamsız link: resim var+metin yok (resim linki) veya ikisi de yok (renk/beden butonu vb.)
+        // Pattern X — Anlamsız link: metin yok, literal HTML string, veya sadece resim → skip
         if (!hasText) {
           a.setAttribute('data-ikr-badge', '1');
           return;
