@@ -682,12 +682,14 @@
     }
 
     // 3. Yapısal tarama — resim/fiyat olmayan, anlamlı text içeren ilk leaf element
+    var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
     var candidates = scope.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div');
     for (var j = 0; j < candidates.length; j++) {
       var cel = candidates[j];
       var text = cel.textContent.trim();
       if (!text || text.length < 2 || text.length > 150) continue;
       if (/^[\d\s.,₺$€£%]+$/.test(text)) continue;
+      if (STOCK_LABELS.test(text)) continue;
       if (cel.closest('figure') || cel.closest('picture')) continue;
       if (cel.children.length > 1) continue;
       return cel;
