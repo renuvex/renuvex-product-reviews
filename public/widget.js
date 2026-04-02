@@ -796,12 +796,17 @@
         // ── Pattern tespiti ──────────────────────────────────────────────────
         var hasNestedA  = !!a.querySelector('a[href]');
         var hasImage    = !!a.querySelector('img, picture, svg');
-        var textContent = a.textContent.trim();
-        // textContent içinde '<' varsa bu literal HTML string — gerçek metin değil (ikas rendering bug)
-        var hasText     = textContent.length > 0 && textContent.indexOf('<') === -1;
+        // Gerçek text node içeriği — literal HTML artifact'larını filtrele
+        var realText = Array.from(a.childNodes)
+          .filter(function(n) { return n.nodeType === 3; }) // sadece text node'lar
+          .map(function(n) { return n.textContent.trim(); })
+          .join('').trim();
+        var hasDirectText = realText.length > 0;
+        // findTitleEl ile içeride metin element var mı
+        var hasTitleEl = !!findTitleEl(a, productName);
 
-        // Pattern X — Anlamsız link: metin yok, literal HTML string, veya sadece resim → skip
-        if (!hasText) {
+        // Pattern X — Anlamsız link: ne direkt metin ne title element ne de nested <a> var, sadece resim → skip
+        if (!hasDirectText && !hasTitleEl && !hasNestedA) {
           a.setAttribute('data-ikr-badge', '1');
           return;
         }
