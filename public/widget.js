@@ -720,7 +720,12 @@
       slugNameMap[slug] = ikrSlugMap[slug]; // VIEW_LISTING'den gelen isim DOM'u override eder
     });
     var slugs = Object.keys(slugNameMap);
-    if (!slugs.length) return;
+    if (!slugs.length) {
+      // Slug bulunamadı — DOM henüz hazır değil, tekrar denenebilsin
+      listingBadgeRendered = false;
+      listingRenderInProgress = false;
+      return;
+    }
 
     // settings ve ratings paralel başlat
     var SLUG_BATCH_SIZE = 50;
