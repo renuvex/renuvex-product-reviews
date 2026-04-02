@@ -36,10 +36,12 @@
   }
 
   // Sayfadaki tüm ürün linklerini topla (slug → linkler)
+  // data-ikr-badge='1' olanlar widget tarafından işaretlenmiş (skip edilmiş) — bunları dahil etme
   var slugMap = {};
   document.querySelectorAll('a[href]').forEach(function (a) {
     var href = a.getAttribute('href');
     if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
+    if (a.getAttribute('data-ikr-badge')) return; // widget zaten işledi (skip veya inject)
     var slug = extractSlug(a.href);
     if (!slug || slug.length < 3) return;
     if (/^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/.test(slug)) return;
@@ -63,15 +65,32 @@
     var links = slugMap[slug];
     var injected = [];
     var skipped = [];
+    var slugInjected = false; // widget ile aynı: her slug için sadece 1 inject
 
     links.forEach(function (a, idx) {
       var hasNestedA = !!a.querySelector('a[href]');
-      var hasImage   = !!a.querySelector('img, picture, svg');
-      var hasText    = a.textContent.trim().length > 0;
+      var realText = Array.from(a.childNodes)
+        .filter(function(n) { return n.nodeType === 3; })
+        .map(function(n) { return n.textContent.trim(); })
+        .join('').trim();
+      var hasText = realText.length > 0;
+      var hasTitleEl = !!findTitleEl(a, null);
 
-      // Pattern X — resim linki
-      if (hasImage && !hasText) {
-        skipped.push({ idx: idx, reason: 'Pattern X — resim linki (img var, metin yok)' });
+      // Header/nav içindeki linkler → skip
+      if (a.closest('header') || a.closest('nav')) {
+        skipped.push({ idx: idx, reason: 'Header/nav içinde — navigasyon linki' });
+        return;
+      }
+
+      // Slider klonu: bu slug için zaten inject yapıldı → skip
+      if (slugInjected) {
+        skipped.push({ idx: idx, reason: 'Slider klonu — bu slug için badge zaten inject edildi' });
+        return;
+      }
+
+      // Pattern X — anlamsız link: ne metin ne title el ne nested <a>, sadece resim
+      if (!hasText && !hasTitleEl && !hasNestedA) {
+        skipped.push({ idx: idx, reason: 'Pattern X — anlamsız link (metin/title/nested yok)' });
         return;
       }
 
@@ -92,6 +111,7 @@
           position: 'nameEl\'in hemen altına',
           rect: { top: Math.round(rect1.top + window.scrollY), left: Math.round(rect1.left) },
         });
+        slugInjected = true;
         return;
       }
 
@@ -121,6 +141,7 @@
           rect: { top: Math.round(rect3.top + window.scrollY), left: Math.round(rect3.left) },
         });
       }
+      slugInjected = true;
     });
 
     // Duplicate kontrolü: aynı slug için 1'den fazla inject varsa uyar
