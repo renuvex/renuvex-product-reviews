@@ -278,7 +278,15 @@
               var rev = document.getElementById('ikas-reviews');
               if (rev) rev.scrollIntoView({ behavior: 'smooth' });
             };
-            titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+            // titleEl.parentNode flex container olabilir — badge'i bir üst seviyeye ekle
+            var insertParent = titleEl.parentNode;
+            var insertRef = insertParent.nextSibling;
+            var parentStyle = window.getComputedStyle(insertParent);
+            if (parentStyle.display === 'flex' || parentStyle.display === 'inline-flex') {
+              insertParent = insertParent.parentNode;
+              insertRef = titleEl.parentNode.nextSibling;
+            }
+            insertParent.insertBefore(badge, insertRef);
           }
         }
 
