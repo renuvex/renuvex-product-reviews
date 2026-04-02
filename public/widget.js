@@ -825,7 +825,7 @@
           badge1.setAttribute('data-ikr-pattern', '1');
           badge1.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;justify-content:' + (align1 === 'center' ? 'center' : align1 === 'right' ? 'flex-end' : 'flex-start') + ';';
           badge1.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
-          nameEl1.tagName === 'A' ? nameEl1.appendChild(badge1) : nameEl1.parentNode.insertBefore(badge1, nameEl1.nextSibling);
+          nameEl1.appendChild(badge1);
           slugInjected = true;
           return;
         }
@@ -847,7 +847,7 @@
           var nameAlign = window.getComputedStyle(nameEl).textAlign;
           badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;justify-content:' + (nameAlign === 'center' ? 'center' : nameAlign === 'right' ? 'flex-end' : 'flex-start') + ';';
           badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
-          nameEl.tagName === 'A' ? nameEl.appendChild(badge) : nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+          nameEl.appendChild(badge);
         } else {
           // Pattern 3 — <a> içinde direkt text node (örn: <a>Ürün Adı<strong>...</strong></a>)
           badge.setAttribute('data-ikr-pattern', '3');
