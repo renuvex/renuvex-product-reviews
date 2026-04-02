@@ -42,6 +42,7 @@
     var href = a.getAttribute('href');
     if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
     if (a.getAttribute('data-ikr-badge')) return; // widget zaten işledi (skip veya inject)
+    if (a.closest('header') || a.closest('nav')) return; // navigasyon linkleri — ürün değil
     var slug = extractSlug(a.href);
     if (!slug || slug.length < 3) return;
     if (/^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/.test(slug)) return;
