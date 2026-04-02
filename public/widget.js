@@ -269,7 +269,7 @@
             badge.href = '#ikas-reviews';
             var titleAlign = window.getComputedStyle(titleEl).textAlign;
             var justifyVal = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
-            badge.style.cssText = 'display:flex;align-items:center;gap:5px;text-decoration:none;margin-top:6px;margin-bottom:10px;cursor:pointer;justify-content:' + justifyVal + ';width:100%;';
+            badge.style.cssText = 'display:flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;justify-content:' + justifyVal + ';';
             // [4] starsHTML helper kullanımı
             badge.innerHTML = starsHTML(avgRating, '16px') +
               '<span style="font-size:14px;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
@@ -278,15 +278,7 @@
               var rev = document.getElementById('ikas-reviews');
               if (rev) rev.scrollIntoView({ behavior: 'smooth' });
             };
-            // titleEl.parentNode flex container olabilir — badge'i bir üst seviyeye ekle
-            var insertParent = titleEl.parentNode;
-            var insertRef = insertParent.nextSibling;
-            var parentStyle = window.getComputedStyle(insertParent);
-            if (parentStyle.display === 'flex' || parentStyle.display === 'inline-flex') {
-              insertParent = insertParent.parentNode;
-              insertRef = titleEl.parentNode.nextSibling;
-            }
-            insertParent.insertBefore(badge, insertRef);
+            titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
           }
         }
 
