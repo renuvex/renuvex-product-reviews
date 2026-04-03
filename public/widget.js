@@ -605,10 +605,14 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
-            // Eski badge'leri temizle — yeni sayfada yeniden render edilecek
-            document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(el) { el.remove(); });
+            // Eski badge'leri yeni render tamamlanınca kaldır — görsel titreme önlemi
+            var oldBadges = Array.from(document.querySelectorAll('[data-ikr-listing-badge]'));
             listingBadgeRendered = false;
-            setTimeout(renderListingBadges, 0);
+            setTimeout(function() {
+              renderListingBadges().then(function() {
+                oldBadges.forEach(function(el) { if (el.parentNode) el.remove(); });
+              });
+            }, 0);
           }
         },
       });
