@@ -908,7 +908,8 @@
           return path && path.length >= 3 && !/^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/.test(path);
         });
         if (!hasUnbadged) return;
-        listingBadgeRendered = false;
+        // Render zaten tamamlandıysa MutationObserver tetiklememeli — ikas'ın kendi DOM değişiklikleri
+        if (listingBadgeRendered) return;
         renderListingBadges();
       }, 300);
     });
