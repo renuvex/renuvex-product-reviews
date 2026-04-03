@@ -704,14 +704,15 @@
 
 
   async function renderListingBadges() {
+    console.log('[IKR] renderListingBadges called', new Error().stack.split('\n')[2]);
     // Render devam ediyorsa kuyruğa al — tamamlanınca bir kez daha çalışır
-    if (listingRenderInProgress) { listingRenderQueued = true; return; }
+    if (listingRenderInProgress) { console.log('[IKR] inProgress — queued'); listingRenderQueued = true; return; }
     // Zaten render edildi ve kuyrukta bekleyen yoksa çalışmasın
-    if (listingBadgeRendered) return;
+    if (listingBadgeRendered) { console.log('[IKR] already rendered — skip'); return; }
     listingBadgeRendered = true;
     listingRenderInProgress = true;
     // DOM'da zaten badge varsa render etme (duplicate önlemi)
-    if (document.querySelector('[data-ikr-listing-badge]')) { listingRenderInProgress = false; return; }
+    if (document.querySelector('[data-ikr-listing-badge]')) { console.log('[IKR] badge already in DOM — skip'); listingRenderInProgress = false; return; }
 
     // SPA nav'da eski attribute'ları temizle
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
