@@ -45,6 +45,7 @@ model Review {
   @@index([productId])
   @@index([storeId, productId])
   @@index([storeId, slug])
+  @@index([storeId, slug, status])
   @@index([storeId, status])
   @@index([storeId, status, slug])
 }
