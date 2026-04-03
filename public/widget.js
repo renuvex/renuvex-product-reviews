@@ -257,8 +257,6 @@
           ? (reviews.reduce(function (s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1)
           : null;
         if (avgRating) {
-          // Listing badge'leri temizle (ürün sayfasında gereksiz)
-          document.querySelectorAll('[data-ikr-listing-badge]').forEach(function (b) { b.remove(); });
 
           var titleEl = findProductTitleEl(productName);
           if (titleEl && titleEl.parentNode) {
