@@ -542,31 +542,6 @@
 
   async function bootstrap(productId, productName) {
     if (bootstrapCache[productId]) return;
-
-    // IntersectionObserver — anchor ekrana girince fetch başlat (gereksiz API çağrısı önler)
-    var anchorEl = document.getElementById('ikas-reviews-anchor');
-    if (anchorEl && typeof IntersectionObserver !== 'undefined') {
-      // CLS: anchor görünür olana kadar yer tutar
-      if (!document.getElementById('ikas-reviews')) {
-        var placeholder = document.createElement('div');
-        placeholder.id = 'ikas-reviews';
-        placeholder.style.minHeight = '200px';
-        placeholder.innerHTML = '<p style="text-align:center;padding:40px;color:#999;font-size:14px;">Yorumlar yükleniyor...</p>';
-        anchorEl.appendChild(placeholder);
-      }
-      var io = new IntersectionObserver(function(entries, obs) {
-        if (!entries[0].isIntersecting) return;
-        obs.disconnect();
-        bootstrapFetch(productId, productName);
-      }, { rootMargin: '200px' }); // 200px önceden tetikle — kullanıcı fark etmez
-      io.observe(anchorEl);
-    } else {
-      bootstrapFetch(productId, productName);
-    }
-  }
-
-  async function bootstrapFetch(productId, productName) {
-    if (bootstrapCache[productId]) return;
     bootstrapCache[productId] = true;
     var FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları' };
     try {
