@@ -12,6 +12,22 @@ const redis = new Redis({
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_SEC = 10 * 60; // 10 dakika
 
+// Profanity filtresi — Türkçe ve İngilizce yaygın küfürler
+const PROFANITY_LIST = [
+  'sik', 'orospu', 'göt', 'got', 'amk', 'bok', 'yarrak', 'oç', 'piç', 'pic',
+  'salak', 'aptal', 'gerizekalı', 'mal', 'şerefsiz', 'serefsiz', 'kahpe',
+  'fuck', 'shit', 'bitch', 'ass', 'damn', 'crap', 'bastard',
+];
+
+function containsProfanity(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase().replace(/[^a-züöşçğıi]/g, ' ');
+  return PROFANITY_LIST.some(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'i');
+    return regex.test(lower);
+  });
+}
+
 async function checkRateLimit(ip: string): Promise<boolean> {
   const key = `ikr_rl:${ip}`;
   const count = await redis.incr(key);
@@ -111,6 +127,9 @@ export async function POST(request: Request) {
     }
     if (comment && typeof comment === 'string' && comment.length > 2000) {
       return withCors(NextResponse.json({ error: 'Yorum en fazla 2000 karakter olabilir.' }, { status: 400 }));
+    }
+    if (containsProfanity(comment) || containsProfanity(author)) {
+      return withCors(NextResponse.json({ error: 'Yorumunuz uygunsuz ifadeler içeriyor.' }, { status: 400 }));
     }
 
     const settings = await prisma.storeSettings.findUnique({ where: { storeId } });

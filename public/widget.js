@@ -143,10 +143,12 @@
         if (!anchorEl) return;
         container = document.createElement('div');
         container.id = 'ikas-reviews';
+        // CLS koruması — widget yüklenene kadar yer tutar, sayfa zıplamasını önler
+        container.style.minHeight = '200px';
         anchorEl.appendChild(container);
       }
 
-      container.innerHTML = '<p style="text-align:center;padding:20px;">Yükleniyor...</p>';
+      container.innerHTML = '<p style="text-align:center;padding:40px;color:#999;font-size:14px;">Yorumlar yükleniyor...</p>';
 
       try {
         var data = reviewsData || {};
@@ -282,17 +284,21 @@
         var widgetEl = container.querySelector('#ikas-reviews-widget');
         var form = document.createElement('div');
         form.className = 'ikr-form';
+        form.setAttribute('aria-label', 'Yorum formu');
+        form.setAttribute('role', 'form');
         form.innerHTML = [
-          '<h3 style="font-weight:700;margin-top:0;">Yorum Yapın</h3>',
-          '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız Soyadınız">',
-          '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3"></textarea>',
-          '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;">Puanınız:</label><div id="ikr-stars-input"></div></div>',
+          '<h3 style="font-weight:700;margin-top:0;" id="ikr-form-title">Yorum Yapın</h3>',
+          '<label for="ikr-name" style="font-size:12px;font-weight:600;">Adınız Soyadınız</label>',
+          '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız Soyadınız" aria-label="Adınız Soyadınız" aria-required="true">',
+          '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorumunuz</label>',
+          '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz"></textarea>',
+          '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">Puanınız:</label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
           '<div id="ikr-photo-section">',
-          '  <label class="ikr-photo-btn">📷 Fotoğraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple></label>',
-          '  <div id="ikr-photo-previews" style="margin-top:10px"></div>',
+          '  <label class="ikr-photo-btn" aria-label="Fotoğraf ekle">📷 Fotoğraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Fotoğraf seç"></label>',
+          '  <div id="ikr-photo-previews" style="margin-top:10px" aria-live="polite"></div>',
           '</div>',
-          '<button id="ikr-submit" class="ikr-btn">Yorumu Gönder</button>',
-          '<div id="ikr-msg" style="margin-top:10px;"></div>',
+          '<button id="ikr-submit" class="ikr-btn" aria-label="Yorumu gönder">Yorumu Gönder</button>',
+          '<div id="ikr-msg" style="margin-top:10px;" role="alert" aria-live="assertive"></div>',
         ].join('');
         widgetEl.appendChild(form);
 
@@ -536,6 +542,31 @@
 
   async function bootstrap(productId, productName) {
     if (bootstrapCache[productId]) return;
+
+    // IntersectionObserver — anchor ekrana girince fetch başlat (gereksiz API çağrısı önler)
+    var anchorEl = document.getElementById('ikas-reviews-anchor');
+    if (anchorEl && typeof IntersectionObserver !== 'undefined') {
+      // CLS: anchor görünür olana kadar yer tutar
+      if (!document.getElementById('ikas-reviews')) {
+        var placeholder = document.createElement('div');
+        placeholder.id = 'ikas-reviews';
+        placeholder.style.minHeight = '200px';
+        placeholder.innerHTML = '<p style="text-align:center;padding:40px;color:#999;font-size:14px;">Yorumlar yükleniyor...</p>';
+        anchorEl.appendChild(placeholder);
+      }
+      var io = new IntersectionObserver(function(entries, obs) {
+        if (!entries[0].isIntersecting) return;
+        obs.disconnect();
+        bootstrapFetch(productId, productName);
+      }, { rootMargin: '200px' }); // 200px önceden tetikle — kullanıcı fark etmez
+      io.observe(anchorEl);
+    } else {
+      bootstrapFetch(productId, productName);
+    }
+  }
+
+  async function bootstrapFetch(productId, productName) {
+    if (bootstrapCache[productId]) return;
     bootstrapCache[productId] = true;
     var FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları' };
     try {
@@ -547,7 +578,6 @@
       console.error('[ikr] bootstrap error:', err);
       await render(productId, FALLBACK, null, productName);
     } finally {
-      // SPA navigasyonunda farklı ürüne geçince tekrar çalışabilsin
       delete bootstrapCache[productId];
     }
   }
