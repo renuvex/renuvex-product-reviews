@@ -385,8 +385,11 @@
               }),
             });
             if (r.ok) {
-              msgDiv.innerHTML = '<div style="color:#059669;font-weight:bold;">✓ Teşekkürler! Yorumunuz alındı.</div>';
-              setTimeout(function () { location.reload(); }, 1500);
+              form.style.display = 'none';
+              var thankEl = document.createElement('div');
+              thankEl.style.cssText = 'text-align:center;padding:30px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;margin-top:30px;';
+              thankEl.innerHTML = '<div style="font-size:32px;margin-bottom:12px;">✓</div><div style="font-weight:700;font-size:16px;color:#059669;margin-bottom:8px;">Teşekkürler!</div><div style="color:#555;font-size:14px;">Yorumunuz incelemeye alındı.</div>';
+              widgetEl.appendChild(thankEl);
             } else {
               var err = await r.json().catch(function () { return {}; });
               throw new Error(err.error || 'Yorum kaydedilemedi.');
