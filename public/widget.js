@@ -891,9 +891,10 @@
       var hasRelevantMutation = mutations.some(function(m) {
         return Array.from(m.addedNodes).some(function(node) {
           if (node.nodeType !== 1) return false;
-          // Widget'ın kendi inject ettiği elementleri yoksay
+          // Widget'ın kendi inject ettiği elementleri yoksay — node kendisi veya parent'ı ikr elementi ise skip
           if (node.hasAttribute && (node.hasAttribute('data-ikr-listing-badge') || node.id === 'ikr-rating-badge' || node.id === 'ikr-reviews-widget')) return false;
-          if (node.querySelector && node.querySelector('[data-ikr-listing-badge],[id="ikr-reviews-widget"]')) return false;
+          if (node.closest && (node.closest('[data-ikr-listing-badge]') || node.closest('#ikr-rating-badge') || node.closest('#ikr-reviews-widget'))) return false;
+          if (node.querySelector && node.querySelector('[data-ikr-listing-badge],#ikr-reviews-widget,#ikr-rating-badge')) return false;
           return true;
         });
       });
