@@ -700,8 +700,6 @@
 
 
   async function renderListingBadges() {
-    // Ürün sayfasındaysa çalışmasın
-    if (document.getElementById('ikas-reviews-anchor')) return;
     // Render devam ediyorsa kuyruğa al — tamamlanınca bir kez daha çalışır
     if (listingRenderInProgress) { listingRenderQueued = true; return; }
     // Zaten render edildi ve kuyrukta bekleyen yoksa çalışmasın
@@ -783,11 +781,18 @@
       var productName = slugNameMap[slug];
       var slugInjected = false; // Her slug için sadece 1 kez inject — slider klonları dahil duplicate önlemi
 
+      // Mevcut sayfanın slug'ı — ürün sayfasındaki kendi linki badge almaz
+      var currentSlug = extractSlug(window.location.pathname);
+
       // Slug ile eşleşen tüm linkleri bul ve pattern bazlı badge inject et
       document.querySelectorAll('a[href]').forEach(function (a) {
         if (a.getAttribute('data-ikr-badge')) return;
         var path = extractSlug(a.href);
         if (path !== slug) return;
+
+        // Rating badge linki veya anchor link → skip
+        if (a.id === 'ikr-rating-badge') { a.setAttribute('data-ikr-badge', '1'); return; }
+        if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') { a.setAttribute('data-ikr-badge', '1'); return; }
 
         // Header/nav içindeki linkler — navigasyon menüsü, son gezilen ürünler vb. → skip
         if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
@@ -882,11 +887,8 @@
         return m.addedNodes.length > 0;
       });
       if (!hasRelevantMutation) return;
-      // Ürün sayfasındaysa çalışmasın
-      if (document.getElementById('ikas-reviews-anchor')) return;
       clearTimeout(mutationDebounceTimer);
       mutationDebounceTimer = setTimeout(function() {
-        if (document.getElementById('ikas-reviews-anchor')) return;
         // Sadece henüz badge almamış ürün linki varsa render et
         var hasUnbadged = Array.from(document.querySelectorAll('a[href]')).some(function(a) {
           if (a.getAttribute('data-ikr-badge')) return false;
