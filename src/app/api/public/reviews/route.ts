@@ -1,22 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
+import { Redis } from '@upstash/redis';
 
-// IP bazlı rate limit — aynı IP'den 10 dakikada max 3 yorum
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+// Upstash Redis — tüm Vercel instance'larında ortak rate limit
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+});
+
 const RATE_LIMIT_MAX = 3;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_WINDOW_SEC = 10 * 60; // 10 dakika
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
+async function checkRateLimit(ip: string): Promise<boolean> {
+  const key = `ikr_rl:${ip}`;
+  const count = await redis.incr(key);
+  if (count === 1) await redis.expire(key, RATE_LIMIT_WINDOW_SEC);
+  return count <= RATE_LIMIT_MAX;
 }
 
 export async function OPTIONS() {
@@ -84,7 +84,7 @@ export async function GET(req: Request) {
  */
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
-  if (!checkRateLimit(ip)) {
+  if (!await checkRateLimit(ip)) {
     return withCors(NextResponse.json({ error: 'Çok fazla istek. Lütfen bekleyin.' }, { status: 429 }));
   }
 

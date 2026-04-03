@@ -24,6 +24,7 @@
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/postcss": "^4.1.12",
+    "@upstash/redis": "^1.37.0",
     "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.9.0",
