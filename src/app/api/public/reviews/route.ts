@@ -36,10 +36,21 @@ export async function GET(req: Request) {
       return withCors(NextResponse.json({ error: 'Eksik parametre' }, { status: 400 }));
     }
 
-    const reviews = await prisma.review.findMany({
-      where: { storeId, productId, status: 'approved' },
-      orderBy: { createdAt: 'desc' },
-    });
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+    const limit = 10;
+    const skip = (page - 1) * limit;
+
+    const [reviews, totalCount] = await Promise.all([
+      prisma.review.findMany({
+        where: { storeId, productId, status: 'approved' },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      prisma.review.count({
+        where: { storeId, productId, status: 'approved' },
+      }),
+    ]);
 
     const formattedReviews = reviews.map((r: any) => {
       let parsedImages: string[] = [];
@@ -52,7 +63,13 @@ export async function GET(req: Request) {
     });
 
     const res = withCors(NextResponse.json({
-      data: { reviews: formattedReviews, totalCount: formattedReviews.length },
+      data: {
+        reviews: formattedReviews,
+        totalCount,
+        page,
+        totalPages: Math.ceil(totalCount / limit),
+        hasMore: page * limit < totalCount,
+      },
     }));
     res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
     return res;
