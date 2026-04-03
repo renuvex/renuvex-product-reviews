@@ -884,7 +884,13 @@
     var observer = new MutationObserver(function(mutations) {
       // Sadece ürün kartı içerebilecek node eklenmelerinde tetikle
       var hasRelevantMutation = mutations.some(function(m) {
-        return m.addedNodes.length > 0;
+        return Array.from(m.addedNodes).some(function(node) {
+          if (node.nodeType !== 1) return false;
+          // Widget'ın kendi inject ettiği elementleri yoksay
+          if (node.hasAttribute && (node.hasAttribute('data-ikr-listing-badge') || node.id === 'ikr-rating-badge' || node.id === 'ikr-reviews-widget')) return false;
+          if (node.querySelector && node.querySelector('[data-ikr-listing-badge],[id="ikr-reviews-widget"]')) return false;
+          return true;
+        });
       });
       if (!hasRelevantMutation) return;
       clearTimeout(mutationDebounceTimer);
