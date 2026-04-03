@@ -40,8 +40,6 @@
     .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
   `;
 
-  const CSS_MAP = { classic: CLASSIC_CSS };
-
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   // [15] fetch with timeout — 8sn sonra abort
@@ -69,15 +67,14 @@
     return '<span style="' + style + '">' + filled + empty + '</span>';
   }
 
-  function injectStyles(template, color) {
+  function injectStyles(color) {
     var el = document.getElementById('ikr-styles');
     if (!el) {
       el = document.createElement('style');
       el.id = 'ikr-styles';
       document.head.appendChild(el);
     }
-    var css = CSS_MAP[template] || CSS_MAP.classic;
-    el.textContent = css;
+    el.textContent = CLASSIC_CSS;
     document.documentElement.style.setProperty('--ikr-color', /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#111');
   }
 
@@ -136,9 +133,8 @@
     try {
       var widgetColor = settings.widgetColor;
       var widgetTitle = settings.widgetTitle;
-      var widgetTemplate = settings.widgetTemplate;
 
-      injectStyles(widgetTemplate, widgetColor);
+      injectStyles(widgetColor);
 
       // Find or create container
       var container = document.getElementById('ikas-reviews');
@@ -541,7 +537,7 @@
   async function bootstrap(productId, productName) {
     if (bootstrapCache[productId]) return;
     bootstrapCache[productId] = true;
-    var FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları', widgetTemplate: 'classic' };
+    var FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları' };
     try {
       var settings = await fetchSettings();
       if (!settings) return;
@@ -730,7 +726,8 @@
     // settings ve ratings paralel başlat
     var SLUG_BATCH_SIZE = 50;
     var sortedSlugs = slugs.slice().sort();
-    var ratingsKey = 'ikr_ratings_' + PUBLIC_API_KEY + '_' + sortedSlugs.join(',');
+    // Sabit store bazlı cache key — filtre/sayfa kombinasyonundan bağımsız, tek entry
+    var ratingsKey = 'ikr_ratings_' + PUBLIC_API_KEY;
     var ratings = {};
 
     var ratingsCached = cacheGet(ratingsKey);
@@ -745,13 +742,14 @@
       } catch (_) { cacheSet(ratingsKey, ''); }
     }
 
-    // settings ve ratings-by-slug paralel fetch — ikisi de cache miss ise aynı anda gönder
+    // Cache'de olmayan slug'ları tespit et — sadece eksik olanları fetch et
+    var missingSlugs = sortedSlugs.filter(function(s) { return !ratings[s]; });
     var batches = [];
-    for (var bi = 0; bi < sortedSlugs.length; bi += SLUG_BATCH_SIZE) {
-      batches.push(sortedSlugs.slice(bi, bi + SLUG_BATCH_SIZE));
+    for (var bi = 0; bi < missingSlugs.length; bi += SLUG_BATCH_SIZE) {
+      batches.push(missingSlugs.slice(bi, bi + SLUG_BATCH_SIZE));
     }
 
-    var needRatings = !Object.keys(ratings).length;
+    var needRatings = missingSlugs.length > 0;
     var results = await Promise.all([
       fetchSettings(),
       needRatings ? Promise.all(batches.map(function(batch) {
@@ -770,9 +768,8 @@
       results[1].forEach(function(batchData) {
         Object.keys(batchData).forEach(function(slug) { ratings[slug] = batchData[slug]; });
       });
-      if (Object.keys(ratings).length) {
-        cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
-      }
+      // Mevcut cache ile merge edip kaydet
+      cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
     }
 
     slugs.forEach(function (slug) {
