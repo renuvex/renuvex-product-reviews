@@ -606,6 +606,7 @@
           }
           if (event && event.type === 'PAGE_VIEW') {
             var newPath = event.data && event.data.path ? event.data.path : window.location.pathname;
+            console.log('[IKR] PAGE_VIEW', { newPath: newPath, currentPath: window.location.pathname, listingBadgeRendered: listingBadgeRendered, eventData: event.data });
             // Aynı sayfadaysa (F5 gibi) badge'leri sıfırlama
             if (newPath === window.location.pathname && listingBadgeRendered) return;
             // Eski badge'leri yeni render tamamlanınca kaldır — görsel titreme önlemi
