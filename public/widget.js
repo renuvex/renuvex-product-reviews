@@ -912,8 +912,11 @@
           return path && path.length >= 3 && !/^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/.test(path);
         });
         if (!hasUnbadged) return;
-        // Render zaten tamamlandıysa MutationObserver tetiklememeli — ikas'ın kendi DOM değişiklikleri
-        if (listingBadgeRendered) return;
+        // Badge DOM'dan kalktıysa (ikas re-render) yeniden inject et
+        var badgeInDOM = !!document.querySelector('[data-ikr-listing-badge]');
+        if (listingBadgeRendered && badgeInDOM) return;
+        // Badge kaybolmuşsa sıfırla ve yeniden render et
+        if (!badgeInDOM) listingBadgeRendered = false;
         renderListingBadges();
       }, 300);
     });
