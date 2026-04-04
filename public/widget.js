@@ -947,7 +947,6 @@
       var rating = ratings[slug];
       if (!rating) return;
       var productName = slugNameMap[slug];
-      var slugInjected = false; // Her slug için sadece 1 kez inject — slider klonları dahil duplicate önlemi
 
       // Mevcut sayfanın slug'ı — ürün sayfasındaki kendi linki badge almaz
       var currentSlug = extractSlug(window.location.pathname);
@@ -964,9 +963,6 @@
 
         // Header/nav içindeki linkler — navigasyon menüsü, son gezilen ürünler vb. → skip
         if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
-
-        // Slider klonu veya başka duplicate: bu slug için zaten inject yapıldıysa işaretle ve geç
-        if (slugInjected) { a.setAttribute('data-ikr-badge', '1'); return; }
 
         // ── Pattern tespiti ──────────────────────────────────────────────────
         var hasNestedA  = !!a.querySelector('a[href]');
@@ -1001,7 +997,6 @@
           badge1.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;justify-content:' + (align1 === 'center' ? 'center' : align1 === 'right' ? 'flex-end' : 'flex-start') + ';';
           badge1.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
           nameEl1.appendChild(badge1);
-          slugInjected = true;
           return;
         }
 
