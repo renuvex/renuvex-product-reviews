@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T14:27:15.192Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T17:20:53.604Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -956,15 +956,8 @@
     ls.rendered = true;
     ls.inProgress = true;
     try {
-      if (ls.navCleanup) {
-        ls.navCleanup = false;
-        document.querySelectorAll("[data-ikr-listing-badge]").forEach(function(el) {
-          el.remove();
-        });
-        document.querySelectorAll("[data-ikr-badge]").forEach(function(el) {
-          el.removeAttribute("data-ikr-badge");
-        });
-      }
+      var doCleanup = ls.navCleanup;
+      if (doCleanup) ls.navCleanup = false;
       var slugNameMap = collectSlugs();
       if (!Object.keys(slugNameMap).length) {
         ls.rendered = false;
@@ -977,6 +970,14 @@
         return;
       }
       var ratings = results[1];
+      if (doCleanup) {
+        document.querySelectorAll("[data-ikr-listing-badge]").forEach(function(el) {
+          el.remove();
+        });
+        document.querySelectorAll("[data-ikr-badge]").forEach(function(el) {
+          el.removeAttribute("data-ikr-badge");
+        });
+      }
       injectBadges(slugNameMap, ratings);
     } finally {
       ls.inProgress = false;
