@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T20:20:37.372Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T20:31:38.275Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -981,9 +981,13 @@
     var containers = document.querySelectorAll(THEME_PRODUCT_CONTAINERS);
     var links = [];
     containers.forEach(function(c) {
-      c.querySelectorAll("a[href]").forEach(function(a) {
-        links.push(a);
-      });
+      if (c.tagName === "A" && c.href) {
+        links.push(c);
+      } else {
+        c.querySelectorAll("a[href]").forEach(function(a) {
+          links.push(a);
+        });
+      }
     });
     Object.keys(slugNameMap).forEach(function(slug) {
       var rating = ratings[slug];

@@ -164,7 +164,12 @@ export function injectBadges(slugNameMap, ratings) {
   var containers = document.querySelectorAll(THEME_PRODUCT_CONTAINERS);
   var links = [];
   containers.forEach(function(c) {
-    c.querySelectorAll('a[href]').forEach(function(a) { links.push(a); });
+    // Container'ın kendisi <a> olabilir (örn. product-block-container)
+    if (c.tagName === 'A' && c.href) {
+      links.push(c);
+    } else {
+      c.querySelectorAll('a[href]').forEach(function(a) { links.push(a); });
+    }
   });
   Object.keys(slugNameMap).forEach(function(slug) {
     var rating = ratings[slug];
