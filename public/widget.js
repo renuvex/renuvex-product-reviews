@@ -766,9 +766,6 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
-            var newPath = event.data && event.data.path ? event.data.path : window.location.pathname;
-            // Aynı sayfadaysa (F5 gibi) badge'leri sıfırlama
-            if (newPath === window.location.pathname && ls.rendered) return;
             // Eski badge'leri yeni render tamamlanınca kaldır — görsel titreme önlemi
             var oldBadges = Array.from(document.querySelectorAll('[data-ikr-listing-badge]'));
             ls.navCleanup = true;
@@ -784,9 +781,8 @@
       // Event daha önce tetiklendiyse sayfa verisinden ürün tespiti
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
-      // Subscribe olduktan sonra render — VIEW_LISTING kaçırılmış olabilir, DOM fallback devreye girer
-      // 350ms gecikme: Next.js hydration'ın DOM'u replace etmesini bekler
-      setTimeout(renderListingBadges, 350);
+      // Subscribe olduktan sonra hemen render — VIEW_LISTING kaçırılmış olabilir, DOM fallback devreye girer
+      renderListingBadges();
     } else {
       // Fallback: IkasEvents yüklenene kadar bekle — 50ms aralıklarla dene
       var attempts = 0;
