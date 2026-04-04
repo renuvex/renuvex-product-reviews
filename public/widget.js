@@ -358,13 +358,27 @@
           await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
         };
 
-        // image onclick — event delegation, URL protokol validasyonu ile güvenli
+        // image onclick — lightbox modal
         container.addEventListener('click', function (e) {
           var img = e.target.closest('[data-ikr-img-url]');
-          if (img) {
-            var url = img.getAttribute('data-ikr-img-url');
-            if (url && url.indexOf('https://') === 0) window.open(url, '_blank');
-          }
+          if (!img) return;
+          var url = img.getAttribute('data-ikr-img-url');
+          if (!url || url.indexOf('https://') !== 0) return;
+
+          var overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+          var imgEl = document.createElement('img');
+          imgEl.src = url;
+          imgEl.style.cssText = 'max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);object-fit:contain;';
+          var closeBtn = document.createElement('button');
+          closeBtn.textContent = '✕';
+          closeBtn.style.cssText = 'position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;';
+          closeBtn.onclick = function(ev) { ev.stopPropagation(); document.body.removeChild(overlay); };
+          overlay.appendChild(imgEl);
+          overlay.appendChild(closeBtn);
+          overlay.onclick = function() { document.body.removeChild(overlay); };
+          imgEl.onclick = function(ev) { ev.stopPropagation(); };
+          document.body.appendChild(overlay);
         });
 
         // ── Rating badge (ürün başlığının altına) ─────────────────────────────
