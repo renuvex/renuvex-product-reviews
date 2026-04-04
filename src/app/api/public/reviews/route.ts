@@ -74,18 +74,28 @@ export async function GET(req: Request) {
     // Filtreden bağımsız — bar chart için tüm approved yorumların dağılımı
     const baseWhere = { storeId, productId, status: 'approved' };
 
-    const [reviews, totalCount, allReviews] = await Promise.all([
+    const [reviews, totalCount, ratingGroups] = await Promise.all([
       prisma.review.findMany({ where, orderBy, take: limit, skip }),
       prisma.review.count({ where }),
-      prisma.review.findMany({ where: baseWhere, select: { rating: true } }),
+      prisma.review.groupBy({
+        by: ['rating'],
+        where: baseWhere,
+        _count: { rating: true },
+        _sum: { rating: true },
+      }),
     ]);
 
     const ratingCounts = [0, 0, 0, 0, 0];
     let ratingSum = 0;
-    allReviews.forEach((r: any) => {
-      if (r.rating >= 1 && r.rating <= 5) { ratingCounts[r.rating - 1]++; ratingSum += r.rating; }
+    let allCount = 0;
+    ratingGroups.forEach((g: any) => {
+      if (g.rating >= 1 && g.rating <= 5) {
+        ratingCounts[g.rating - 1] = g._count.rating;
+        ratingSum += g._sum.rating ?? 0;
+        allCount += g._count.rating;
+      }
     });
-    const avgRating = allReviews.length > 0 ? (ratingSum / allReviews.length).toFixed(1) : null;
+    const avgRating = allCount > 0 ? (ratingSum / allCount).toFixed(1) : null;
 
     const formattedReviews = reviews.map((r: any) => {
       let parsedImages: string[] = [];
@@ -101,7 +111,7 @@ export async function GET(req: Request) {
       data: {
         reviews: formattedReviews,
         totalCount,
-        allCount: allReviews.length,
+        allCount,
         page,
         totalPages: Math.ceil(totalCount / limit),
         hasMore: page * limit < totalCount,
