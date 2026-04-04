@@ -984,9 +984,10 @@
       }
       var slugNameMap = collectSlugs();
       if (!Object.keys(slugNameMap).length) { ls.rendered = false; return; }
-      var settings = await fetchSettings();
+      var results = await Promise.all([fetchSettings(), fetchRatings(Object.keys(slugNameMap))]);
+      var settings = results[0];
       if (!settings) { ls.rendered = false; return; }
-      var ratings = await fetchRatings(Object.keys(slugNameMap));
+      var ratings = results[1];
       injectBadges(slugNameMap, ratings);
     } finally {
       ls.inProgress = false;
