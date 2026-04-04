@@ -172,6 +172,44 @@
         header.appendChild(h2);
         widget.appendChild(header);
 
+        // Özet istatistik — ortalama puan + bar chart
+        if (reviews.length > 0) {
+          var ratingCounts = [0, 0, 0, 0, 0]; // index 0 = 1 yıldız, 4 = 5 yıldız
+          reviews.forEach(function(r) { if (r.rating >= 1 && r.rating <= 5) ratingCounts[r.rating - 1]++; });
+          var avgRatingSum = reviews.reduce(function(s, r) { return s + r.rating; }, 0);
+          var avgRatingVal = (avgRatingSum / reviews.length).toFixed(1);
+
+          var summary = document.createElement('div');
+          summary.style.cssText = 'display:flex;align-items:center;gap:24px;padding:20px;background:#f9f9f9;border-radius:12px;margin-bottom:20px;';
+
+          // Sol — büyük ortalama puan
+          var avgBox = document.createElement('div');
+          avgBox.style.cssText = 'text-align:center;min-width:80px;';
+          avgBox.innerHTML = '<div style="font-size:40px;font-weight:700;line-height:1;color:#111;">' + avgRatingVal + '</div>' +
+            '<div style="margin:6px 0 4px;">' + starsHTML(parseFloat(avgRatingVal), null) + '</div>' +
+            '<div style="font-size:12px;color:#888;">' + totalCount + ' yorum</div>';
+          summary.appendChild(avgBox);
+
+          // Sağ — bar chart (5→1 yıldız)
+          var bars = document.createElement('div');
+          bars.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:5px;';
+          for (var si = 5; si >= 1; si--) {
+            var cnt = ratingCounts[si - 1];
+            var pct = reviews.length > 0 ? Math.round((cnt / reviews.length) * 100) : 0;
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#555;';
+            row.innerHTML = '<span style="min-width:16px;text-align:right;">' + si + '</span>' +
+              '<span style="color:#f59e0b;font-size:11px;">★</span>' +
+              '<div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px;">' +
+                '<div style="width:' + pct + '%;background:#f59e0b;border-radius:4px;height:8px;transition:width 0.3s;"></div>' +
+              '</div>' +
+              '<span style="min-width:28px;">' + pct + '%</span>';
+            bars.appendChild(row);
+          }
+          summary.appendChild(bars);
+          widget.appendChild(summary);
+        }
+
         if (reviews.length === 0) {
           var empty = document.createElement('p');
           empty.style.cssText = 'color:#888;text-align:center;padding:30px 0;';
