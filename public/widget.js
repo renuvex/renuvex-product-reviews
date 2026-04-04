@@ -242,19 +242,17 @@
         header.appendChild(sortSelect);
         widget.appendChild(header);
 
-        // Özet istatistik — ortalama puan + bar chart (her zaman göster, totalCount > 0 ise)
+        // Özet istatistik — ortalama puan + bar chart (filtreden bağımsız allCount kullan)
+        var allCount = (data.data && data.data.allCount) || totalCount;
         var allRatingCounts = (data.data && data.data.ratingCounts) || null;
-        if (totalCount > 0 && allRatingCounts) {
-          var ratingCounts = allRatingCounts;
-          var avgRatingVal = (data.data && data.data.avgRating) ? data.data.avgRating : '0.0';
-        } else if (totalCount > 0) {
-          // ratingCounts API'dan gelmiyorsa mevcut sayfadan hesapla (fallback)
-          var ratingCounts = [0, 0, 0, 0, 0];
+        var ratingCounts = allRatingCounts || [0, 0, 0, 0, 0];
+        var avgRatingVal = (data.data && data.data.avgRating) || '0.0';
+        if (!allRatingCounts && reviews.length > 0) {
           reviews.forEach(function(r) { if (r.rating >= 1 && r.rating <= 5) ratingCounts[r.rating - 1]++; });
-          var avgRatingSum = reviews.reduce(function(s, r) { return s + r.rating; }, 0);
-          var avgRatingVal = reviews.length > 0 ? (avgRatingSum / reviews.length).toFixed(1) : '0.0';
+          var s = reviews.reduce(function(a, r) { return a + r.rating; }, 0);
+          avgRatingVal = (s / reviews.length).toFixed(1);
         }
-        if (totalCount > 0) {
+        if (allCount > 0) {
 
           var summary = document.createElement('div');
           summary.style.cssText = 'display:flex;align-items:center;gap:24px;padding:20px;background:#f9f9f9;border-radius:12px;margin-bottom:20px;';
@@ -294,24 +292,24 @@
           }
           summary.appendChild(bars);
           widget.appendChild(summary);
-        }
 
-        // Aktif filtre chip'i — bar chart'tan bağımsız, her zaman aynı konumda
-        if (currentRatingFilter) {
-          var chip = document.createElement('div');
-          chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:20px;font-size:13px;color:#555;margin-bottom:12px;';
-          chip.innerHTML = currentRatingFilter + ' ★ gösteriliyor &nbsp;';
-          var clearBtn = document.createElement('span');
-          clearBtn.textContent = '✕';
-          clearBtn.style.cssText = 'cursor:pointer;font-weight:bold;color:#888;';
-          clearBtn.onclick = async function() {
-            currentRatingFilter = null;
-            currentPage = 1;
-            var allData = await fetchReviews(currentProductId, currentOrderBy, 1, null);
-            await render(currentProductId, currentSettings, allData, currentProductName, currentOrderBy, 1);
-          };
-          chip.appendChild(clearBtn);
-          widget.appendChild(chip);
+          // Aktif filtre chip'i — bar chart'ın hemen altında
+          if (currentRatingFilter) {
+            var chip = document.createElement('div');
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:20px;font-size:13px;color:#555;margin-bottom:12px;';
+            chip.innerHTML = currentRatingFilter + ' ★ gösteriliyor &nbsp;';
+            var clearBtn = document.createElement('span');
+            clearBtn.textContent = '✕';
+            clearBtn.style.cssText = 'cursor:pointer;font-weight:bold;color:#888;';
+            clearBtn.onclick = async function() {
+              currentRatingFilter = null;
+              currentPage = 1;
+              var allData = await fetchReviews(currentProductId, currentOrderBy, 1, null);
+              await render(currentProductId, currentSettings, allData, currentProductName, currentOrderBy, 1);
+            };
+            chip.appendChild(clearBtn);
+            widget.appendChild(chip);
+          }
         }
 
         if (reviews.length === 0) {

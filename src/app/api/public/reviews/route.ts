@@ -101,6 +101,7 @@ export async function GET(req: Request) {
       data: {
         reviews: formattedReviews,
         totalCount,
+        allCount: allReviews.length,
         page,
         totalPages: Math.ceil(totalCount / limit),
         hasMore: page * limit < totalCount,
