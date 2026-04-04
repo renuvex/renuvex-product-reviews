@@ -838,6 +838,9 @@
 
   // Bir kart linki içinde ürün başlığı elementini bulur
   function findTitleEl(scope, productName) {
+    // Tema'ya özel sabit selector — doğrulanmış, H tag değişse de class kalır
+    var byTheme = scope.querySelector('.product-name');
+    if (byTheme) return byTheme;
     if (scope.matches && scope.matches(TITLE_CLASS_SELECTOR)) return scope;
     var byClass = scope.querySelector(TITLE_CLASS_SELECTOR);
     if (byClass) return byClass;
