@@ -30,9 +30,10 @@ export var THEME_BANNER_CONTAINERS = [
 // Badge inject edilebilecek whitelist container'lar
 // Sadece bu container'lar içindeki linklere badge inject edilir
 export var THEME_PRODUCT_CONTAINERS = [
-  '.category-products-main',       // kategori / arama sonuçları grid'i
-  '.products-slider-main',         // ürün slider section
-  '.infinite-scroll-component',    // sonsuz scroll listing
-  '[class*="product-list"]',       // genel ürün listesi pattern'ı
+  '.category-products-main',        // kategori / arama sonuçları grid'i
+  '.products-slider-main',          // ürün slider section
+  '.infinite-scroll-component',     // sonsuz scroll listing
+  '[class*="product-list"]',        // genel ürün listesi pattern'ı
   '.single-product-container-main', // tek ürün section (anasayfa embed)
+  '.product-block-container',       // blog sayfası ürün bloğu
 ].join(',');
