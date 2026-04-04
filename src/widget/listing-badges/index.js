@@ -5,10 +5,8 @@ import { fetchSettings } from '../product-widget/bootstrap.js';
 import { collectSlugs } from './collect.js';
 import { fetchRatings } from './ratings.js';
 import { injectBadges } from './inject.js';
-import { attachModalBadgeListener } from '../events.js';
 
 export async function renderListingBadges() {
-  attachModalBadgeListener();
   if (ls.inProgress) { ls.queued = true; return; }
   if (ls.rendered) return;
   ls.rendered = true;

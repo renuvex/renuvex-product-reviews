@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T14:24:16.794Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T14:27:15.192Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -948,7 +948,6 @@
 
   // src/widget/listing-badges/index.js
   async function renderListingBadges() {
-    attachModalBadgeListener();
     if (ls.inProgress) {
       ls.queued = true;
       return;
@@ -1095,6 +1094,7 @@
   if (PUBLIC_API_KEY) {
     let init = function() {
       attachEvents();
+      attachModalBadgeListener();
       startMutationObserver();
     };
     init2 = init;

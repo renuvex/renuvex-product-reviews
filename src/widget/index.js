@@ -2,13 +2,14 @@
 // ikas tarafından her sayfaya inject edilir: <script src="/widget.js?publicApiKey=...">
 
 import { PUBLIC_API_KEY } from './core/config.js';
-import { attachEvents } from './events.js';
+import { attachEvents, attachModalBadgeListener } from './events.js';
 import { startMutationObserver } from './observer.js';
 
 // Store key yoksa hiçbir şey yapma
 if (PUBLIC_API_KEY) {
   function init() {
     attachEvents();
+    attachModalBadgeListener();
     startMutationObserver();
   }
 
