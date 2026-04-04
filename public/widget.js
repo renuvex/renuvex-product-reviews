@@ -362,7 +362,7 @@
           var author = form.querySelector('#ikr-name').value.trim();
           var comment = form.querySelector('#ikr-comment').value.trim();
           var msgDiv = form.querySelector('#ikr-msg');
-          if (!author) { alert('Lütfen adınızı girin.'); return; }
+          if (!author) { msgDiv.innerHTML = '<div style="color:#dc2626;font-size:14px;margin-top:8px;">Lütfen adınızı girin.</div>'; return; }
           btn.disabled = true;
           btn.textContent = 'Gönderiliyor...';
           msgDiv.innerHTML = '';
@@ -395,7 +395,7 @@
               throw new Error(err.error || 'Yorum kaydedilemedi.');
             }
           } catch (e) {
-            alert('Hata: ' + e.message);
+            msgDiv.innerHTML = '<div style="color:#dc2626;font-size:14px;margin-top:8px;">' + e.message + '</div>';
             btn.disabled = false;
             btn.textContent = 'Yorumu Gönder';
           }
