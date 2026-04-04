@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T18:15:57.683Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T19:15:47.538Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -826,6 +826,16 @@
     '[class*="slider-banner"]',
     '[class*="marquee"]'
   ].join(",");
+  var THEME_PRODUCT_CONTAINERS = [
+    ".category-products-main",
+    // kategori / arama sonuçları grid'i
+    ".products-slider-main",
+    // ürün slider section
+    ".infinite-scroll-component",
+    // sonsuz scroll listing
+    '[class*="product-list"]'
+    // genel ürün listesi pattern'ı
+  ].join(",");
 
   // src/widget/listing-badges/inject.js
   var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
@@ -964,11 +974,18 @@
   }
   function injectBadges(slugNameMap, ratings) {
     var currentSlug = extractSlug(window.location.pathname);
+    var containers = document.querySelectorAll(THEME_PRODUCT_CONTAINERS);
+    var links = [];
+    containers.forEach(function(c) {
+      c.querySelectorAll("a[href]").forEach(function(a) {
+        links.push(a);
+      });
+    });
     Object.keys(slugNameMap).forEach(function(slug) {
       var rating = ratings[slug];
       if (!rating) return;
       var productName = slugNameMap[slug];
-      document.querySelectorAll("a[href]").forEach(function(a) {
+      links.forEach(function(a) {
         if (extractSlug(a.href) !== slug) return;
         injectBadgeOnLink(a, rating, productName, currentSlug);
       });

@@ -9,6 +9,7 @@ import {
   THEME_SINGLE_PRODUCT_CONTAINER,
   THEME_SINGLE_PRODUCT_NAME_LINK,
   THEME_BANNER_CONTAINERS,
+  THEME_PRODUCT_CONTAINERS,
 } from '../themes/ozy/theme.js';
 import { lastClickedSlug } from '../core/state.js'; // events.js tarafından set edilir
 
@@ -156,14 +157,20 @@ function injectModalBadge(slugNameMap, ratings) {
   h1.appendChild(createBadgeEl(ratings[slug], 'flex-start'));
 }
 
-// Tüm slug'lar için sayfadaki eşleşen linklere badge inject eder
+// Tüm slug'lar için sadece whitelist container'lar içindeki linklere badge inject eder
 export function injectBadges(slugNameMap, ratings) {
   var currentSlug = extractSlug(window.location.pathname);
+  // Sadece whitelist container'lar içindeki linkleri tara — dekoratif alanlar otomatik atlanır
+  var containers = document.querySelectorAll(THEME_PRODUCT_CONTAINERS);
+  var links = [];
+  containers.forEach(function(c) {
+    c.querySelectorAll('a[href]').forEach(function(a) { links.push(a); });
+  });
   Object.keys(slugNameMap).forEach(function(slug) {
     var rating = ratings[slug];
     if (!rating) return;
     var productName = slugNameMap[slug];
-    document.querySelectorAll('a[href]').forEach(function(a) {
+    links.forEach(function(a) {
       if (extractSlug(a.href) !== slug) return;
       injectBadgeOnLink(a, rating, productName, currentSlug);
     });
