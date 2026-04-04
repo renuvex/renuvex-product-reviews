@@ -46,7 +46,6 @@ export async function GET(request: Request) {
 
     const map: Record<string, { sum: number; count: number }> = {};
     for (const r of reviews) {
-      if (!r.slug) continue;
       if (!map[r.slug]) map[r.slug] = { sum: 0, count: 0 };
       map[r.slug].sum += r.rating;
       map[r.slug].count += 1;
