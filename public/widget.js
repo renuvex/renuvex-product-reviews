@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T13:08:22.205Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T13:15:52.890Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -976,7 +976,9 @@
       });
       var product = getProductFromPage();
       if (product) bootstrap(product.id, product.name);
-      renderListingBadges();
+      setTimeout(function() {
+        if (!ls.rendered) renderListingBadges();
+      }, 2e3);
     } else {
       let tryAttach2 = function() {
         if (window.IkasEvents) {

@@ -55,7 +55,9 @@ export function attachEvents() {
 
     var product = getProductFromPage();
     if (product) bootstrap(product.id, product.name);
-    renderListingBadges();
+    // PAGE_VIEW her zaman gelir ve renderListingBadges'i tetikler
+    // Fallback: PAGE_VIEW 2sn içinde gelmezse (eski ikas versiyonları) manuel tetikle
+    setTimeout(function() { if (!ls.rendered) renderListingBadges(); }, 2000);
 
   } else {
     // IkasEvents henüz yüklenmedi — 50ms aralıklarla tekrar dene (max 5sn)
