@@ -12,6 +12,7 @@ export function findProductTitleEl(productName) {
           !el.closest('[data-ikr-listing-badge]') &&
           !el.closest('#ikas-reviews') &&
           !el.closest('nav') &&
+          !el.closest('header') &&
           !el.closest('[class*="breadcrumb"]') &&
           !el.closest('[aria-label*="breadcrumb"]')) {
         return el;

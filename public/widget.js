@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T19:15:47.538Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T20:10:53.179Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -346,7 +346,7 @@
       var allEls = document.querySelectorAll("h1,h2,h3,h4,h5,h6,div,span,p");
       for (var i = 0; i < allEls.length; i++) {
         var el = allEls[i];
-        if (el.children.length === 0 && el.textContent.trim() === productName && el.tagName !== "TITLE" && !el.closest("[data-ikr-listing-badge]") && !el.closest("#ikas-reviews") && !el.closest("nav") && !el.closest('[class*="breadcrumb"]') && !el.closest('[aria-label*="breadcrumb"]')) {
+        if (el.children.length === 0 && el.textContent.trim() === productName && el.tagName !== "TITLE" && !el.closest("[data-ikr-listing-badge]") && !el.closest("#ikas-reviews") && !el.closest("nav") && !el.closest("header") && !el.closest('[class*="breadcrumb"]') && !el.closest('[aria-label*="breadcrumb"]')) {
           return el;
         }
       }
