@@ -42,7 +42,7 @@ export function buildReviewForm(widgetEl, productId, productName) {
     fileInput.disabled = true;
     uploadedImages = [];
     previewsDiv.innerHTML = '';
-    var files = Array.from(e.target.files);
+    var files = Array.from(e.target.files).slice(0, 5);
     for (var fi = 0; fi < files.length; fi++) {
       var file = files[fi];
       if (file.size > 5 * 1024 * 1024) {
