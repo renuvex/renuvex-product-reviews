@@ -17,7 +17,6 @@ export async function renderListingBadges() {
       ls.navCleanup = false;
       document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(el) { el.remove(); });
       document.querySelectorAll('[data-ikr-badge]').forEach(function(el) { el.removeAttribute('data-ikr-badge'); });
-      document.querySelectorAll('[data-ikr-name]').forEach(function(el) { el.removeAttribute('data-ikr-name'); });
     }
     var slugNameMap = collectSlugs();
     if (!Object.keys(slugNameMap).length) { ls.rendered = false; return; }

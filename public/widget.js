@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T13:17:45.847Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T13:21:32.217Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -857,16 +857,14 @@
         inner.setAttribute("data-ikr-badge", "1");
       });
       var nameEl = findTitleEl(a, productName);
-      if (!nameEl || nameEl.getAttribute("data-ikr-name")) return;
-      nameEl.setAttribute("data-ikr-name", "1");
+      if (!nameEl || nameEl.querySelector("[data-ikr-listing-badge]")) return;
       var justify = window.getComputedStyle(nameEl).textAlign;
       nameEl.appendChild(createBadgeEl(rating, justify === "center" ? "center" : justify === "right" ? "flex-end" : "flex-start"));
       return;
     }
     var titleEl = findTitleEl(a, productName);
-    if (titleEl && titleEl.getAttribute("data-ikr-name")) return;
+    if (titleEl && titleEl.querySelector("[data-ikr-listing-badge]")) return;
     if (titleEl) {
-      titleEl.setAttribute("data-ikr-name", "1");
       var tAlign = window.getComputedStyle(titleEl).textAlign;
       titleEl.appendChild(createBadgeEl(rating, tAlign === "center" ? "center" : tAlign === "right" ? "flex-end" : "flex-start"));
     } else {
@@ -905,9 +903,6 @@
         });
         document.querySelectorAll("[data-ikr-badge]").forEach(function(el) {
           el.removeAttribute("data-ikr-badge");
-        });
-        document.querySelectorAll("[data-ikr-name]").forEach(function(el) {
-          el.removeAttribute("data-ikr-name");
         });
       }
       var slugNameMap = collectSlugs();

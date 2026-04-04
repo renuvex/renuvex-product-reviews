@@ -72,8 +72,7 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
     // Pattern 1 — Tüm kart tek <a> içinde (slider kartı)
     a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
     var nameEl = findTitleEl(a, productName);
-    if (!nameEl || nameEl.getAttribute('data-ikr-name')) return;
-    nameEl.setAttribute('data-ikr-name', '1');
+    if (!nameEl || nameEl.querySelector('[data-ikr-listing-badge]')) return;
     var justify = window.getComputedStyle(nameEl).textAlign;
     nameEl.appendChild(createBadgeEl(rating, justify === 'center' ? 'center' : justify === 'right' ? 'flex-end' : 'flex-start'));
     return;
@@ -81,10 +80,9 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
 
   // Pattern 2/3/4 — Bağımsız link
   var titleEl = findTitleEl(a, productName);
-  if (titleEl && titleEl.getAttribute('data-ikr-name')) return;
+  if (titleEl && titleEl.querySelector('[data-ikr-listing-badge]')) return;
 
   if (titleEl) {
-    titleEl.setAttribute('data-ikr-name', '1');
     var tAlign = window.getComputedStyle(titleEl).textAlign;
     titleEl.appendChild(createBadgeEl(rating, tAlign === 'center' ? 'center' : tAlign === 'right' ? 'flex-end' : 'flex-start'));
   } else {
