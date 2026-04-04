@@ -56,10 +56,16 @@ export async function GET(req: Request) {
     const limit = 10;
     const skip = (page - 1) * limit;
 
+    const orderByParam = searchParams.get('orderBy') ?? 'newest';
+    const orderBy =
+      orderByParam === 'highest' ? { rating: 'desc' as const } :
+      orderByParam === 'lowest'  ? { rating: 'asc'  as const } :
+                                   { createdAt: 'desc' as const };
+
     const [reviews, totalCount] = await Promise.all([
       prisma.review.findMany({
         where: { storeId, productId, status: 'approved' },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         take: limit,
         skip,
       }),

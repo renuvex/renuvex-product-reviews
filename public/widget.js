@@ -118,17 +118,75 @@
 
   // ── Core render ───────────────────────────────────────────────────────────
 
+  function buildReviewEl(r) {
+    var reviewEl = document.createElement('div');
+    reviewEl.className = 'ikr-review';
+    var meta = document.createElement('div');
+    var authorEl = document.createElement('span');
+    authorEl.className = 'ikr-author';
+    authorEl.textContent = r.author || '';
+    var dateEl = document.createElement('span');
+    dateEl.className = 'ikr-date';
+    dateEl.textContent = formatDate(r.createdAt);
+    meta.appendChild(authorEl);
+    meta.appendChild(dateEl);
+    reviewEl.appendChild(meta);
+    var starsWrapEl = document.createElement('div');
+    starsWrapEl.style.marginTop = '4px';
+    starsWrapEl.innerHTML = starsHTML(r.rating, null);
+    reviewEl.appendChild(starsWrapEl);
+    var body = document.createElement('p');
+    body.className = 'ikr-body';
+    body.textContent = r.comment || '';
+    reviewEl.appendChild(body);
+    if (r.images && Array.isArray(r.images) && r.images.length) {
+      var gallery = document.createElement('div');
+      gallery.className = 'ikr-gallery';
+      r.images.forEach(function(imgUrl) {
+        if (!imgUrl || imgUrl.indexOf('https://') !== 0) return;
+        var imgEl = document.createElement('img');
+        imgEl.src = imgUrl;
+        imgEl.className = 'ikr-img';
+        imgEl.setAttribute('data-ikr-img-url', imgUrl);
+        gallery.appendChild(imgEl);
+      });
+      reviewEl.appendChild(gallery);
+    }
+    if (r.merchantReply) {
+      var replyEl = document.createElement('div');
+      replyEl.className = 'ikr-reply';
+      var replyLabel = document.createElement('strong');
+      replyLabel.textContent = 'Mağaza Yanıtı:';
+      replyEl.appendChild(replyLabel);
+      replyEl.appendChild(document.createElement('br'));
+      replyEl.appendChild(document.createTextNode(r.merchantReply));
+      reviewEl.appendChild(replyEl);
+    }
+    return reviewEl;
+  }
+
+  // Sıralama + pagination state
+  var currentOrderBy = 'newest';
+  var currentPage = 1;
+  var currentProductId = null;
+  var currentSettings = null;
+  var currentProductName = null;
+
   // [2] render() race condition koruması — aynı anda sadece 1 render, pending slot ile istek kaybı önlenir
   var renderInProgress = false;
   var pendingRender = null;
 
-  async function render(productId, settings, reviewsData, productName) {
+  async function render(productId, settings, reviewsData, productName, orderBy, page) {
     if (renderInProgress) {
-      // Render devam ederken gelen isteği slot'a yaz; mevcut render bitince çalışır
-      pendingRender = { productId: productId, settings: settings, reviewsData: reviewsData, productName: productName };
+      pendingRender = { productId: productId, settings: settings, reviewsData: reviewsData, productName: productName, orderBy: orderBy, page: page };
       return;
     }
     renderInProgress = true;
+    currentProductId = productId;
+    currentSettings = settings;
+    currentProductName = productName;
+    if (orderBy) currentOrderBy = orderBy;
+    if (page) currentPage = page;
 
     try {
       var widgetColor = settings.widgetColor;
@@ -163,13 +221,24 @@
         var widget = document.createElement('div');
         widget.id = 'ikas-reviews-widget';
 
-        // Başlık
+        // Başlık + sıralama dropdown
         var header = document.createElement('div');
         header.className = 'ikr-header';
+        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;';
         var h2 = document.createElement('h2');
         h2.className = 'ikr-title';
         h2.textContent = widgetTitle + ' (' + totalCount + ')';
         header.appendChild(h2);
+
+        var sortSelect = document.createElement('select');
+        sortSelect.style.cssText = 'font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;';
+        [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
+          var o = document.createElement('option');
+          o.value = opt[0]; o.textContent = opt[1];
+          sortSelect.appendChild(o);
+        });
+        sortSelect.value = currentOrderBy || 'newest';
+        header.appendChild(sortSelect);
         widget.appendChild(header);
 
         // Özet istatistik — ortalama puan + bar chart
@@ -216,66 +285,45 @@
           empty.textContent = 'Henüz yorum yok.';
           widget.appendChild(empty);
         } else {
-          reviews.forEach(function (r) {
-            var reviewEl = document.createElement('div');
-            reviewEl.className = 'ikr-review';
+          reviews.forEach(function (r) { widget.appendChild(buildReviewEl(r)); });
+        }
 
-            // Yazar + tarih satırı
-            var meta = document.createElement('div');
-            var authorEl = document.createElement('span');
-            authorEl.className = 'ikr-author';
-            authorEl.textContent = r.author || '';
-            var dateEl = document.createElement('span');
-            dateEl.className = 'ikr-date';
-            dateEl.textContent = formatDate(r.createdAt);
-            meta.appendChild(authorEl);
-            meta.appendChild(dateEl);
-            reviewEl.appendChild(meta);
-
-            // Yıldızlar — starsHTML sadece ★☆ unicode + renk, XSS yok
-            var starsWrapEl = document.createElement('div');
-            starsWrapEl.style.marginTop = '4px';
-            starsWrapEl.innerHTML = starsHTML(r.rating, null);
-            reviewEl.appendChild(starsWrapEl);
-
-            // Yorum metni — textContent ile güvenli
-            var body = document.createElement('p');
-            body.className = 'ikr-body';
-            body.textContent = r.comment || '';
-            reviewEl.appendChild(body);
-
-            // Görseller — DOM API ile güvenli src/data attr
-            if (r.images && Array.isArray(r.images) && r.images.length) {
-              var gallery = document.createElement('div');
-              gallery.className = 'ikr-gallery';
-              r.images.forEach(function (imgUrl) {
-                if (!imgUrl || imgUrl.indexOf('https://') !== 0) return; // güvenli olmayan URL'leri atla
-                var imgEl = document.createElement('img');
-                imgEl.src = imgUrl;
-                imgEl.className = 'ikr-img';
-                imgEl.setAttribute('data-ikr-img-url', imgUrl);
-                gallery.appendChild(imgEl);
+        // "Daha Fazla" butonu
+        var hasMore = data.data && data.data.hasMore;
+        if (hasMore) {
+          var loadMoreBtn = document.createElement('button');
+          loadMoreBtn.textContent = 'Daha Fazla Göster';
+          loadMoreBtn.style.cssText = 'display:block;margin:20px auto 0;padding:10px 28px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;font-size:14px;cursor:pointer;';
+          loadMoreBtn.onclick = async function() {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.textContent = 'Yükleniyor...';
+            var nextPage = currentPage + 1;
+            var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage);
+            if (moreData && moreData.data && moreData.data.reviews) {
+              currentPage = nextPage;
+              var moreReviews = moreData.data.reviews;
+              moreReviews.forEach(function(r) {
+                var reviewEl = buildReviewEl(r);
+                widget.insertBefore(reviewEl, loadMoreBtn);
               });
-              reviewEl.appendChild(gallery);
+              if (!moreData.data.hasMore) loadMoreBtn.remove();
+              else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }
+            } else {
+              loadMoreBtn.remove();
             }
-
-            // Mağaza yanıtı — textContent ile güvenli
-            if (r.merchantReply) {
-              var replyEl = document.createElement('div');
-              replyEl.className = 'ikr-reply';
-              var replyLabel = document.createElement('strong');
-              replyLabel.textContent = 'Mağaza Yanıtı:';
-              replyEl.appendChild(replyLabel);
-              replyEl.appendChild(document.createElement('br'));
-              replyEl.appendChild(document.createTextNode(r.merchantReply));
-              reviewEl.appendChild(replyEl);
-            }
-
-            widget.appendChild(reviewEl);
-          });
+          };
+          widget.appendChild(loadMoreBtn);
         }
 
         container.appendChild(widget);
+
+        // Dropdown onChange — sıralama değişince yeniden fetch + render
+        sortSelect.onchange = async function() {
+          currentOrderBy = sortSelect.value;
+          currentPage = 1;
+          var newData = await fetchReviews(currentProductId, currentOrderBy, 1);
+          await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
+        };
 
         // image onclick — event delegation, URL protokol validasyonu ile güvenli
         container.addEventListener('click', function (e) {
@@ -448,7 +496,7 @@
       if (pendingRender) {
         var next = pendingRender;
         pendingRender = null;
-        render(next.productId, next.settings, next.reviewsData, next.productName);
+        render(next.productId, next.settings, next.reviewsData, next.productName, next.orderBy, next.page);
       }
     }
   }
@@ -541,11 +589,13 @@
     }
   }
 
-  // Reviews cache — fetchSettings ile aynı { t, v } TTL pattern'ı
+  // Reviews cache — orderBy + page bazlı key
   var REVIEWS_CACHE_TTL = 1 * 60 * 1000;
 
-  async function fetchReviews(productId) {
-    var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId;
+  async function fetchReviews(productId, orderBy, page) {
+    orderBy = orderBy || 'newest';
+    page = page || 1;
+    var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page;
     var staleReviews = null;
     var cached = cacheGet(key);
     if (cached) {
@@ -553,7 +603,6 @@
         var entry = JSON.parse(cached);
         if (entry && entry.t !== undefined && entry.v) {
           if (Date.now() - entry.t < REVIEWS_CACHE_TTL) return entry.v;
-          // TTL dolmuş ama geçerli veri var — stale-if-error için sakla
           staleReviews = entry.v;
           cacheSet(key, '');
         } else {
@@ -562,11 +611,12 @@
       } catch (_) { cacheSet(key, ''); }
     }
     try {
-      var res = await fetchWithTimeout(API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&productId=' + encodeURIComponent(productId));
-      if (!res.ok) {
-        // Hata — cache'leme; stale-if-error: eski geçerli cache varsa kullan
-        return staleReviews || null;
-      }
+      var url = API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
+        '&productId=' + encodeURIComponent(productId) +
+        '&orderBy=' + encodeURIComponent(orderBy) +
+        '&page=' + encodeURIComponent(page);
+      var res = await fetchWithTimeout(url);
+      if (!res.ok) return staleReviews || null;
       var data = await res.json();
       cacheSet(key, JSON.stringify({ t: Date.now(), v: data }));
       return data;
@@ -586,8 +636,10 @@
     try {
       var settings = await fetchSettings();
       if (!settings) return;
-      var reviewsData = await fetchReviews(productId);
-      await render(productId, settings, reviewsData, productName);
+      currentOrderBy = 'newest';
+      currentPage = 1;
+      var reviewsData = await fetchReviews(productId, 'newest', 1);
+      await render(productId, settings, reviewsData, productName, 'newest', 1);
     } catch (err) {
       console.error('[ikr] bootstrap error:', err);
       await render(productId, FALLBACK, null, productName);
