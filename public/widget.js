@@ -766,6 +766,10 @@
             }
           }
           if (event && event.type === 'PAGE_VIEW') {
+            var now = Date.now();
+            // 800ms içinde gelen ikinci PAGE_VIEW'ı yoksay — ikas ilk girişte çift tetikliyor
+            if (ls.lastPageView && now - ls.lastPageView < 800) return;
+            ls.lastPageView = now;
             // Eski badge'leri yeni render tamamlanınca kaldır — görsel titreme önlemi
             var oldBadges = Array.from(document.querySelectorAll('[data-ikr-listing-badge]'));
             ls.navCleanup = true;
@@ -802,10 +806,11 @@
 
   // Tüm listing badge state'i tek objede — dağınık global boolean'lar yerine
   var ls = {
-    rendered:   false,  // render tamamlandı mı
-    inProgress: false,  // şu an render devam ediyor mu
-    queued:     false,  // render sırasında yeni istek geldi mi
-    navCleanup: false,  // PAGE_VIEW sonrası attribute temizleme gerekiyor mu
+    rendered:     false,  // render tamamlandı mı
+    inProgress:   false,  // şu an render devam ediyor mu
+    queued:       false,  // render sırasında yeni istek geldi mi
+    navCleanup:   false,  // PAGE_VIEW sonrası attribute temizleme gerekiyor mu
+    lastPageView: 0,      // son PAGE_VIEW timestamp — çift tetiklenme koruması
   };
 
   var ikrSlugMap = {};
