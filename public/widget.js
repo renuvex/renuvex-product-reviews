@@ -768,11 +768,11 @@
           if (event && event.type === 'PAGE_VIEW') {
             var newPath = event.data && event.data.path ? event.data.path : window.location.pathname;
             // Aynı sayfadaysa (F5 gibi) badge'leri sıfırlama
-            if (newPath === window.location.pathname && listingBadgeRendered) return;
+            if (newPath === window.location.pathname && ls.rendered) return;
             // Eski badge'leri yeni render tamamlanınca kaldır — görsel titreme önlemi
             var oldBadges = Array.from(document.querySelectorAll('[data-ikr-listing-badge]'));
-            listingNavCleanup = true;
-            listingBadgeRendered = false;
+            ls.navCleanup = true;
+            ls.rendered = false;
             setTimeout(function() {
               renderListingBadges().then(function() {
                 oldBadges.forEach(function(el) { if (el.parentNode) el.remove(); });
@@ -803,57 +803,53 @@
 
   // ── Listing / Category badge ──────────────────────────────────────────────
 
-  var listingBadgeRendered = false;
-  var listingRenderInProgress = false;
-  var listingRenderQueued = false;
-  var listingNavCleanup = false; // true ise bir sonraki render'da attribute'ları temizle (PAGE_VIEW sonrası)
+  // Tüm listing badge state'i tek objede — dağınık global boolean'lar yerine
+  var ls = {
+    rendered:   false,  // render tamamlandı mı
+    inProgress: false,  // şu an render devam ediyor mu
+    queued:     false,  // render sırasında yeni istek geldi mi
+    navCleanup: false,  // PAGE_VIEW sonrası attribute temizleme gerekiyor mu
+  };
+
   var ikrSlugMap = {};
 
-  // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
-  // slug→null map döner (isim bilinmiyor, findNameEl class/heading fallback kullanır)
-  function getSlugNameMapFromDOM() {
+  var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
+  var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
+  var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
+  var BADGE_CSS = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;';
+
+  // Sayfa üzerindeki ürün linklerinden slug→name map oluşturur (VIEW_LISTING kaçırıldığında fallback)
+  function collectSlugs() {
     var map = {};
     var seen = {};
     document.querySelectorAll('a[href]').forEach(function(a) {
       try {
         var href = a.getAttribute('href');
         if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
-        var path = extractSlug(a.href);
-        if (!path || seen[path]) return;
-        // Ürün sayfası pattern'ı: tek segment, harf/rakam/tire, en az 3 karakter
-        if (!/^[a-z0-9][a-z0-9-]{2,}$/.test(path)) return;
-        // Bilinen sistem path'lerini atla
-        if (/^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/.test(path)) return;
-        seen[path] = true;
-        map[path] = null; // isim bilinmiyor — findNameEl bulacak
+        var slug = extractSlug(a.href);
+        if (!slug || seen[slug]) return;
+        if (!/^[a-z0-9][a-z0-9-]{2,}$/.test(slug)) return;
+        if (SYSTEM_SLUGS.test(slug)) return;
+        seen[slug] = true;
+        map[slug] = null;
       } catch(_) {}
     });
+    // VIEW_LISTING'den gelen isimler DOM fallback'i override eder
+    Object.keys(ikrSlugMap).forEach(function(slug) { map[slug] = ikrSlugMap[slug]; });
     return map;
   }
 
-  // findTitleEl — ürün adı elementini bul
-  // Arama kapsamı: önce kart container'ı, yoksa <a>'nın kendisi
-  // Doğrulanmış: canlı ikas teması title'ı <a> dışında div.product-card_productTitle içinde render eder
-  var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
-
+  // Bir kart linki içinde ürün başlığı elementini bulur
   function findTitleEl(scope, productName) {
-    // 1. class isminde "productTitle" veya "productName" geçen element — CSS module temaları
-    // scope'un kendisi de kontrol edilir (Pattern B: <a class="style_productTitle__xxx">)
     if (scope.matches && scope.matches(TITLE_CLASS_SELECTOR)) return scope;
     var byClass = scope.querySelector(TITLE_CLASS_SELECTOR);
     if (byClass) return byClass;
-
-    // 2. productName varsa tam text eşleşmesi — styled-components temaları
     if (productName) {
-      var allEls = scope.querySelectorAll('*');
-      for (var i = 0; i < allEls.length; i++) {
-        var el = allEls[i];
-        if (el.children.length === 0 && el.textContent.trim() === productName) return el;
+      var all = scope.querySelectorAll('*');
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].children.length === 0 && all[i].textContent.trim() === productName) return all[i];
       }
     }
-
-    // 3. Yapısal tarama — resim/fiyat olmayan, anlamlı text içeren ilk leaf element
-    var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
     var candidates = scope.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div');
     for (var j = 0; j < candidates.length; j++) {
       var cel = candidates[j];
@@ -868,176 +864,130 @@
     return null;
   }
 
-
-  async function renderListingBadges() {
-    // Render devam ediyorsa kuyruğa al — tamamlanınca bir kez daha çalışır
-    if (listingRenderInProgress) { listingRenderQueued = true; return; }
-    // Zaten render edildi ve kuyrukta bekleyen yoksa çalışmasın
-    if (listingBadgeRendered) return;
-    listingBadgeRendered = true;
-    listingRenderInProgress = true;
-
-    try {
-    // SPA nav sonrası eski attribute'ları temizle — sadece PAGE_VIEW'dan gelen çağrılarda
-    if (listingNavCleanup) {
-      listingNavCleanup = false;
-      document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
-      document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
-    }
-
-    // DOM her zaman taranır (birincil kaynak) + VIEW_LISTING map'i ek kaynak olarak eklenir
-    var slugNameMap = getSlugNameMapFromDOM();
-    Object.keys(ikrSlugMap).forEach(function(slug) {
-      slugNameMap[slug] = ikrSlugMap[slug]; // VIEW_LISTING'den gelen isim DOM'u override eder
-    });
-    var slugs = Object.keys(slugNameMap);
-    if (!slugs.length) {
-      // Slug bulunamadı — DOM henüz hazır değil, tekrar denenebilsin
-      listingBadgeRendered = false;
-      return;
-    }
-
-    // settings ve ratings paralel başlat
-    var SLUG_BATCH_SIZE = 50;
-    var sortedSlugs = slugs.slice().sort();
-    // Sabit store bazlı cache key — filtre/sayfa kombinasyonundan bağımsız, tek entry
+  // Ratings cache'ini okur, eksik slug'ları API'den çeker, güncel ratings map'ini döner
+  async function fetchRatings(slugs) {
     var ratingsKey = 'ikr_ratings_' + PUBLIC_API_KEY;
     var ratings = {};
-
-    var ratingsCached = cacheGet(ratingsKey);
-    if (ratingsCached) {
+    var cached = cacheGet(ratingsKey);
+    if (cached) {
       try {
-        var ratingsEntry = JSON.parse(ratingsCached);
-        if (ratingsEntry && ratingsEntry.t !== undefined && Date.now() - ratingsEntry.t < 1 * 60 * 1000) {
-          ratings = ratingsEntry.v || {};
+        var entry = JSON.parse(cached);
+        if (entry && entry.t !== undefined && Date.now() - entry.t < 60 * 1000) {
+          ratings = entry.v || {};
         } else {
           cacheSet(ratingsKey, '');
         }
       } catch (_) { cacheSet(ratingsKey, ''); }
     }
-
-    // Cache'de olmayan slug'ları tespit et — sadece eksik olanları fetch et
-    var missingSlugs = sortedSlugs.filter(function(s) { return !ratings[s]; });
+    var missing = slugs.filter(function(s) { return !ratings[s]; });
+    if (!missing.length) return ratings;
+    var BATCH = 50;
     var batches = [];
-    for (var bi = 0; bi < missingSlugs.length; bi += SLUG_BATCH_SIZE) {
-      batches.push(missingSlugs.slice(bi, bi + SLUG_BATCH_SIZE));
+    for (var i = 0; i < missing.length; i += BATCH) { batches.push(missing.slice(i, i + BATCH)); }
+    var batchResults = await Promise.all(batches.map(function(batch) {
+      var url = API_BASE + '/api/public/ratings-by-slug?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&slugs=' + batch.map(encodeURIComponent).join(',');
+      return fetchWithTimeout(url)
+        .then(function(res) { return res.ok ? res.json().then(function(j) { return j.data || {}; }) : {}; })
+        .catch(function() { return {}; });
+    }));
+    batchResults.forEach(function(data) {
+      Object.keys(data).forEach(function(slug) { ratings[slug] = data[slug]; });
+    });
+    cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
+    return ratings;
+  }
+
+  // Badge DOM elementini oluşturur
+  function createBadgeEl(rating, justify) {
+    var el = document.createElement('div');
+    el.setAttribute('data-ikr-listing-badge', '1');
+    el.style.cssText = BADGE_CSS + 'justify-content:' + (justify || 'flex-start') + ';';
+    el.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
+    return el;
+  }
+
+  // Tek bir <a> linkine badge inject eder; zaten işlendiyse skip eder
+  function injectBadgeOnLink(a, rating, productName, currentSlug) {
+    if (a.getAttribute('data-ikr-badge')) return;
+    var slug = extractSlug(a.href);
+
+    if (a.id === 'ikr-rating-badge') { a.setAttribute('data-ikr-badge', '1'); return; }
+    if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') { a.setAttribute('data-ikr-badge', '1'); return; }
+    if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
+
+    var hasNestedA = !!a.querySelector('a[href]');
+    var realText = Array.from(a.childNodes).filter(function(n) { return n.nodeType === 3; }).map(function(n) { return n.textContent.trim(); }).join('').trim();
+    var hasTitleEl = !!findTitleEl(a, productName);
+
+    // Sadece resim içeren anlamsız link → skip
+    if (!realText && !hasTitleEl && !hasNestedA) { a.setAttribute('data-ikr-badge', '1'); return; }
+
+    a.setAttribute('data-ikr-badge', '1');
+
+    if (hasNestedA) {
+      // Pattern 1 — Tüm kart tek <a> içinde (slider kartı)
+      a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
+      var nameEl = findTitleEl(a, productName);
+      if (!nameEl || nameEl.getAttribute('data-ikr-name')) return;
+      nameEl.setAttribute('data-ikr-name', '1');
+      var justify = window.getComputedStyle(nameEl).textAlign;
+      nameEl.appendChild(createBadgeEl(rating, justify === 'center' ? 'center' : justify === 'right' ? 'flex-end' : 'flex-start'));
+      return;
     }
 
-    var needRatings = missingSlugs.length > 0;
-    var results = await Promise.all([
-      fetchSettings(),
-      needRatings ? Promise.all(batches.map(function(batch) {
-        var url = API_BASE + '/api/public/ratings-by-slug?storeId=' + encodeURIComponent(PUBLIC_API_KEY) + '&slugs=' + batch.map(encodeURIComponent).join(',');
-        return fetchWithTimeout(url).then(function(res) {
-          if (!res.ok) return {};
-          return res.json().then(function(json) { return json.data || {}; });
-        }).catch(function() { return {}; });
-      })) : Promise.resolve(null),
-    ]);
+    // Pattern 2/3/4 — Bağımsız link
+    var titleEl = findTitleEl(a, productName);
+    if (titleEl && titleEl.getAttribute('data-ikr-name')) return;
 
-    var settings = results[0];
-    if (!settings) { listingBadgeRendered = false; return; }
-
-    if (needRatings && results[1]) {
-      results[1].forEach(function(batchData) {
-        Object.keys(batchData).forEach(function(slug) { ratings[slug] = batchData[slug]; });
-      });
-      // Mevcut cache ile merge edip kaydet
-      cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
+    if (titleEl) {
+      titleEl.setAttribute('data-ikr-name', '1');
+      var tAlign = window.getComputedStyle(titleEl).textAlign;
+      titleEl.appendChild(createBadgeEl(rating, tAlign === 'center' ? 'center' : tAlign === 'right' ? 'flex-end' : 'flex-start'));
+    } else {
+      // Pattern 3 — direkt text node içeren link
+      var badge = createBadgeEl(rating, 'flex-start');
+      var first = a.firstElementChild;
+      first ? a.insertBefore(badge, first) : a.appendChild(badge);
     }
+  }
 
-    slugs.forEach(function (slug) {
+  // Tüm slug'lar için sayfadaki eşleşen linklere badge inject eder
+  function injectBadges(slugNameMap, ratings) {
+    var currentSlug = extractSlug(window.location.pathname);
+    Object.keys(slugNameMap).forEach(function(slug) {
       var rating = ratings[slug];
       if (!rating) return;
       var productName = slugNameMap[slug];
-
-      // Mevcut sayfanın slug'ı — ürün sayfasındaki kendi linki badge almaz
-      var currentSlug = extractSlug(window.location.pathname);
-
-      // Slug ile eşleşen tüm linkleri bul ve pattern bazlı badge inject et
-      document.querySelectorAll('a[href]').forEach(function (a) {
-        if (a.getAttribute('data-ikr-badge')) return;
-        var path = extractSlug(a.href);
-        if (path !== slug) return;
-
-        // Rating badge linki veya anchor link → skip
-        if (a.id === 'ikr-rating-badge') { a.setAttribute('data-ikr-badge', '1'); return; }
-        if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') { a.setAttribute('data-ikr-badge', '1'); return; }
-
-        // Header/nav içindeki linkler — navigasyon menüsü, son gezilen ürünler vb. → skip
-        if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
-
-        // ── Pattern tespiti ──────────────────────────────────────────────────
-        var hasNestedA  = !!a.querySelector('a[href]');
-        var hasImage    = !!a.querySelector('img, picture, svg');
-        // Gerçek text node içeriği — literal HTML artifact'larını filtrele
-        var realText = Array.from(a.childNodes)
-          .filter(function(n) { return n.nodeType === 3; }) // sadece text node'lar
-          .map(function(n) { return n.textContent.trim(); })
-          .join('').trim();
-        var hasDirectText = realText.length > 0;
-        // findTitleEl ile içeride metin element var mı
-        var hasTitleEl = !!findTitleEl(a, productName);
-
-        // Pattern X — Anlamsız link: ne direkt metin ne title element ne de nested <a> var, sadece resim → skip
-        if (!hasDirectText && !hasTitleEl && !hasNestedA) {
-          a.setAttribute('data-ikr-badge', '1');
-          return;
-        }
-
-        // Pattern 1 — Wrapper <a>: tüm kart tek <a> içinde, başlık bir div/span olarak içeride
-        // İç <a>'ları (resim linkleri vb.) hemen işaretle, title'ı wrapper'dan ara
-        if (hasNestedA) {
-          a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
-          var nameEl1 = findTitleEl(a, productName);
-          if (!nameEl1 || nameEl1.getAttribute('data-ikr-name')) { a.setAttribute('data-ikr-badge', '1'); return; }
-          a.setAttribute('data-ikr-badge', '1');
-          nameEl1.setAttribute('data-ikr-name', '1');
-          var align1 = window.getComputedStyle(nameEl1).textAlign;
-          var badge1 = document.createElement('div');
-          badge1.setAttribute('data-ikr-listing-badge', '1');
-          badge1.setAttribute('data-ikr-pattern', '1');
-          badge1.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;justify-content:' + (align1 === 'center' ? 'center' : align1 === 'right' ? 'flex-end' : 'flex-start') + ';';
-          badge1.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
-          nameEl1.appendChild(badge1);
-          return;
-        }
-
-        // Pattern 2/3/4 — Bağımsız <a>: resim linki değil, wrapper değil
-        // findTitleEl ile başlık ara; bulamazsa <a>'nın kendisi inject noktası
-        var nameEl = findTitleEl(a, productName);
-        if (nameEl && nameEl.getAttribute('data-ikr-name')) { a.setAttribute('data-ikr-badge', '1'); return; }
-        a.setAttribute('data-ikr-badge', '1');
-
-        var badge = document.createElement('div');
-        badge.setAttribute('data-ikr-listing-badge', '1');
-
-        if (nameEl) {
-          // Pattern 2 (ayrı başlık <a>) / Pattern 4 (<a> kendisi productTitle class'lı)
-          nameEl.setAttribute('data-ikr-name', '1');
-          var patternNum = nameEl.matches && nameEl.matches('[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]') ? '4' : '2';
-          badge.setAttribute('data-ikr-pattern', patternNum);
-          var nameAlign = window.getComputedStyle(nameEl).textAlign;
-          badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;justify-content:' + (nameAlign === 'center' ? 'center' : nameAlign === 'right' ? 'flex-end' : 'flex-start') + ';';
-          badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
-          nameEl.appendChild(badge);
-        } else {
-          // Pattern 3 — <a> içinde direkt text node (örn: <a>Ürün Adı<strong>...</strong></a>)
-          badge.setAttribute('data-ikr-pattern', '3');
-          badge.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;';
-          badge.innerHTML = starsHTML(rating.avg, null) + '<span>' + rating.avg + ' (' + rating.count + ')</span>';
-          var firstChild = a.firstElementChild;
-          firstChild ? a.insertBefore(badge, firstChild) : a.appendChild(badge);
-        }
+      document.querySelectorAll('a[href]').forEach(function(a) {
+        if (extractSlug(a.href) !== slug) return;
+        injectBadgeOnLink(a, rating, productName, currentSlug);
       });
     });
+  }
 
+  async function renderListingBadges() {
+    if (ls.inProgress) { ls.queued = true; return; }
+    if (ls.rendered) return;
+    ls.rendered = true;
+    ls.inProgress = true;
+    try {
+      // PAGE_VIEW sonrası eski attribute'ları temizle
+      if (ls.navCleanup) {
+        ls.navCleanup = false;
+        document.querySelectorAll('[data-ikr-badge]').forEach(function(el) { el.removeAttribute('data-ikr-badge'); });
+        document.querySelectorAll('[data-ikr-name]').forEach(function(el) { el.removeAttribute('data-ikr-name'); });
+      }
+      var slugNameMap = collectSlugs();
+      if (!Object.keys(slugNameMap).length) { ls.rendered = false; return; }
+      var settings = await fetchSettings();
+      if (!settings) { ls.rendered = false; return; }
+      var ratings = await fetchRatings(Object.keys(slugNameMap));
+      injectBadges(slugNameMap, ratings);
     } finally {
-      listingRenderInProgress = false;
-      // Kuyrukta bekleyen istek varsa (spam sırasında geldi) bir kez daha çalıştır
-      if (listingRenderQueued) {
-        listingRenderQueued = false;
-        listingBadgeRendered = false;
+      ls.inProgress = false;
+      if (ls.queued) {
+        ls.queued = false;
+        ls.rendered = false;
         renderListingBadges();
       }
     }
@@ -1071,7 +1021,7 @@
         });
         if (!hasUnbadged) return;
         // Unbadged link var — slider geç yüklenmiş olabilir, her zaman yeniden render et
-        listingBadgeRendered = false;
+        ls.rendered = false;
         renderListingBadges();
       }, 300);
     });
