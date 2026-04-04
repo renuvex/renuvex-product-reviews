@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T13:21:32.217Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T13:24:19.682Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -379,7 +379,7 @@
     titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
   }
 
-  // src/widget/themes/default/styles.js
+  // src/widget/themes/ozy/styles.js
   var CLASSIC_CSS = `
   #ikas-reviews-widget{color:#111;margin:40px 0;padding:0}
   .ikr-header{border-bottom:2px solid #eee;padding-bottom:15px;margin-bottom:25px}
@@ -786,7 +786,7 @@
     return ratings;
   }
 
-  // src/widget/themes/default/listing-selector.js
+  // src/widget/themes/ozy/listing-selector.js
   var THEME_LISTING_TITLE_SELECTOR = ".product-name";
 
   // src/widget/listing-badges/inject.js

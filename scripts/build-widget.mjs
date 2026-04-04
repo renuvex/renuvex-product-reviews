@@ -28,8 +28,8 @@ const entryPoint = resolve(ROOT, 'src/widget/index.js');
 
 // Tema selector'ı doğru tema klasöründen al
 const themeAlias = {
-  'themes/default/listing-selector.js': resolve(ROOT, `src/widget/themes/${theme}/listing-selector.js`),
-  'themes/default/styles.js': resolve(ROOT, `src/widget/themes/${theme}/styles.js`),
+  'themes/ozy/listing-selector.js': resolve(ROOT, `src/widget/themes/${theme}/listing-selector.js`),
+  'themes/ozy/styles.js': resolve(ROOT, `src/widget/themes/${theme}/styles.js`),
 };
 
 const banner = `/* ikas Reviews Widget — built ${new Date().toISOString()} | theme: ${theme} */\n;(function(){\'use strict\';`;

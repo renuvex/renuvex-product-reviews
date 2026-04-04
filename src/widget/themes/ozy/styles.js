@@ -1,4 +1,4 @@
-// themes/default/styles.js — Default tema CSS
+// themes/ozy/styles.js — Default tema CSS
 
 export var CLASSIC_CSS = `
   #ikas-reviews-widget{color:#111;margin:40px 0;padding:0}

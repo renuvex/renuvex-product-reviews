@@ -5,7 +5,7 @@ import { fetchReviews } from './bootstrap.js';
 import { buildReviewEl } from './review-item.js';
 import { buildReviewForm } from './review-form.js';
 import { injectRatingBadge } from './rating-badge.js';
-import { CLASSIC_CSS } from '../themes/default/styles.js';
+import { CLASSIC_CSS } from '../themes/ozy/styles.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,

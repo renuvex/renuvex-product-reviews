@@ -1,7 +1,7 @@
 // listing-badges/inject.js — Ürün kartlarına listing badge inject eder
 
 import { extractSlug, starsHTML } from '../core/helpers.js';
-import { THEME_LISTING_TITLE_SELECTOR } from '../themes/default/listing-selector.js';
+import { THEME_LISTING_TITLE_SELECTOR } from '../themes/ozy/listing-selector.js';
 
 var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
 var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
