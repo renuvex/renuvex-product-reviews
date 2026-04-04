@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T14:14:44.204Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T14:19:03.943Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -844,7 +844,7 @@
       a.setAttribute("data-ikr-badge", "1");
       return;
     }
-    if (a.closest(".single-product-container-main")) {
+    if (a.closest(".single-product-container-main") && !a.closest(".single-product-product-name")) {
       a.setAttribute("data-ikr-badge", "1");
       return;
     }
