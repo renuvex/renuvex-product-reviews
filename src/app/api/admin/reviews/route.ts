@@ -60,21 +60,18 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Review ID is required' }, { status: 400 });
     }
 
-    // Verify the review belongs to the authenticated merchant
-    const existingReview = await prisma.review.findUnique({ where: { id } });
-    if (!existingReview || existingReview.storeId !== user.merchantId) {
+    try {
+      const updatedReview = await prisma.review.update({
+        where: { id, storeId: user.merchantId },
+        data: {
+          ...(status !== undefined && { status }),
+          ...(merchantReply !== undefined && { merchantReply }),
+        },
+      });
+      return NextResponse.json({ data: updatedReview });
+    } catch {
       return NextResponse.json({ error: 'Review not found or unauthorized' }, { status: 404 });
     }
-
-    const updatedReview = await prisma.review.update({
-      where: { id },
-      data: {
-        ...(status !== undefined && { status }),
-        ...(merchantReply !== undefined && { merchantReply }),
-      },
-    });
-
-    return NextResponse.json({ data: updatedReview });
   } catch (error) {
     console.error('Error updating review:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

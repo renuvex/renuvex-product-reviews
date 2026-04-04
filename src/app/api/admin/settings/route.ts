@@ -10,14 +10,11 @@ export async function GET(request: Request) {
     const user = getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
 
-    // Eğer ayar kaydı henüz yoksa, varsayılan bir tane oluştur ve gönder
-    let settings = await prisma.storeSettings.findUnique({ where: { storeId: user.merchantId } });
-    
-    if (!settings) {
-      settings = await prisma.storeSettings.create({
-        data: { storeId: user.merchantId }
-      });
-    }
+    const settings = await prisma.storeSettings.upsert({
+      where: { storeId: user.merchantId },
+      update: {},
+      create: { storeId: user.merchantId },
+    });
 
     return NextResponse.json({ data: settings });
   } catch (error) {
