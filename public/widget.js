@@ -379,6 +379,27 @@
           : null;
         if (avgRating) {
 
+          // JSON-LD structured data — Google rich snippet için
+          var oldJsonLd = document.getElementById('ikr-jsonld');
+          if (oldJsonLd) oldJsonLd.remove();
+          var jsonLdEl = document.createElement('script');
+          jsonLdEl.id = 'ikr-jsonld';
+          jsonLdEl.type = 'application/ld+json';
+          jsonLdEl.textContent = JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            'name': productName || document.title,
+            'url': window.location.href,
+            'aggregateRating': {
+              '@type': 'AggregateRating',
+              'ratingValue': avgRating,
+              'reviewCount': totalCount,
+              'bestRating': '5',
+              'worstRating': '1',
+            },
+          });
+          document.head.appendChild(jsonLdEl);
+
           var titleEl = findProductTitleEl(productName);
           if (titleEl && titleEl.parentNode) {
             var badge = document.createElement('a');
