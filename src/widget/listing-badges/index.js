@@ -4,7 +4,8 @@ import { ls } from '../core/state.js';
 import { fetchSettings } from '../product-widget/bootstrap.js';
 import { collectSlugs } from './collect.js';
 import { fetchRatings } from './ratings.js';
-import { injectBadges, attachModalBadgeListener } from './inject.js';
+import { injectBadges } from './inject.js';
+import { attachModalBadgeListener } from '../events.js';
 
 export async function renderListingBadges() {
   attachModalBadgeListener();

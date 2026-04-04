@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T14:19:03.943Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T14:24:16.794Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -55,6 +55,10 @@
     lastPageView: 0
   };
   var ikrSlugMap = {};
+  var lastClickedSlug = null;
+  function setLastClickedSlug(v) {
+    lastClickedSlug = v;
+  }
 
   // src/widget/core/cache.js
   var _memCache = {};
@@ -71,17 +75,6 @@
     } catch (_) {
       _memCache[key] = val;
     }
-  }
-
-  // src/widget/core/fetch.js
-  function fetchWithTimeout(url, options, ms) {
-    var ctrl = new AbortController();
-    var timer = setTimeout(function() {
-      ctrl.abort();
-    }, ms || 8e3);
-    return fetch(url, Object.assign({}, options, { signal: ctrl.signal })).finally(function() {
-      clearTimeout(timer);
-    });
   }
 
   // src/widget/core/helpers.js
@@ -150,6 +143,17 @@
       };
     }
     return wrap;
+  }
+
+  // src/widget/core/fetch.js
+  function fetchWithTimeout(url, options, ms) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function() {
+      ctrl.abort();
+    }, ms || 8e3);
+    return fetch(url, Object.assign({}, options, { signal: ctrl.signal })).finally(function() {
+      clearTimeout(timer);
+    });
   }
 
   // src/widget/product-widget/review-item.js
@@ -881,29 +885,14 @@
       first ? a.insertBefore(badge, first) : a.appendChild(badge);
     }
   }
-  var _lastClickedSlug = null;
-  var _modalBadgeAttached = false;
-  function attachModalBadgeListener() {
-    if (_modalBadgeAttached) return;
-    _modalBadgeAttached = true;
-    document.addEventListener("click", function(e) {
-      var a = e.target.closest("a[href]");
-      if (!a) return;
-      if (a.closest("header") || a.closest("nav")) return;
-      if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) return;
-      var slug = extractSlug(a.href);
-      if (!slug || slug.length < 3) return;
-      _lastClickedSlug = slug;
-    }, true);
-  }
   function injectModalBadge(slugNameMap, ratings) {
     var modal = document.querySelector(".add-to-basket-modal");
     if (!modal) return;
     var h1 = modal.querySelector("h1.product-name");
     if (!h1 || h1.querySelector("[data-ikr-listing-badge]")) return;
     var slug = null;
-    if (_lastClickedSlug && ratings[_lastClickedSlug]) {
-      slug = _lastClickedSlug;
+    if (lastClickedSlug && ratings[lastClickedSlug]) {
+      slug = lastClickedSlug;
     }
     if (!slug) {
       var pageSlug = extractSlug(window.location.pathname);
@@ -1002,6 +991,20 @@
 
   // src/widget/events.js
   var ikasEventsAttached = false;
+  var modalClickAttached = false;
+  function attachModalBadgeListener() {
+    if (modalClickAttached) return;
+    modalClickAttached = true;
+    document.addEventListener("click", function(e) {
+      var a = e.target.closest("a[href]");
+      if (!a) return;
+      if (a.closest("header") || a.closest("nav")) return;
+      if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) return;
+      var slug = extractSlug(a.href);
+      if (!slug || slug.length < 3) return;
+      setLastClickedSlug(slug);
+    }, true);
+  }
   function attachEvents() {
     if (window.IkasEvents) {
       if (ikasEventsAttached) return;

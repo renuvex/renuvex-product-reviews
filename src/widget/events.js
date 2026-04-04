@@ -1,12 +1,28 @@
 // events.js — ikas IkasEvents subscribe + PAGE_VIEW / PRODUCT_VIEW / VIEW_LISTING handlers
 
-import { ls, ikrSlugMap } from './core/state.js';
+import { ls, ikrSlugMap, setLastClickedSlug } from './core/state.js';
 import { cacheSet } from './core/cache.js';
 import { PUBLIC_API_KEY } from './core/config.js';
+import { extractSlug } from './core/helpers.js';
 import { bootstrap, getProductFromPage } from './product-widget/bootstrap.js';
 import { renderListingBadges } from './listing-badges/index.js';
 
 var ikasEventsAttached = false;
+var modalClickAttached = false;
+
+export function attachModalBadgeListener() {
+  if (modalClickAttached) return;
+  modalClickAttached = true;
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    if (a.closest('header') || a.closest('nav')) return;
+    if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) return;
+    var slug = extractSlug(a.href);
+    if (!slug || slug.length < 3) return;
+    setLastClickedSlug(slug);
+  }, true);
+}
 
 export function attachEvents() {
   if (window.IkasEvents) {

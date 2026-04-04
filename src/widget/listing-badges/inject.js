@@ -2,6 +2,7 @@
 
 import { extractSlug, starsHTML } from '../core/helpers.js';
 import { THEME_LISTING_TITLE_SELECTOR } from '../themes/ozy/listing-selector.js';
+import { lastClickedSlug } from '../core/state.js'; // events.js tarafından set edilir
 
 var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
 var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
@@ -95,26 +96,6 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   }
 }
 
-// Quick-view modal badge sistemi — tıklanan kartın slug'ını click anında yakala
-var _lastClickedSlug = null;
-var _modalBadgeAttached = false;
-
-export function attachModalBadgeListener() {
-  if (_modalBadgeAttached) return;
-  _modalBadgeAttached = true;
-  document.addEventListener('click', function(e) {
-    // Tıklanan veya en yakın üst <a href>'i bul
-    var a = e.target.closest('a[href]');
-    if (!a) return;
-    // Basket/cart/header/nav içindeyse yoksay
-    if (a.closest('header') || a.closest('nav')) return;
-    if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) return;
-    var slug = extractSlug(a.href);
-    if (!slug || slug.length < 3) return;
-    _lastClickedSlug = slug;
-  }, true); // capture phase — ikas'ın event'lerinden önce çalışır
-}
-
 // add-to-basket-modal açıldığında slug ile badge inject eder
 function injectModalBadge(slugNameMap, ratings) {
   var modal = document.querySelector('.add-to-basket-modal');
@@ -125,8 +106,8 @@ function injectModalBadge(slugNameMap, ratings) {
   var slug = null;
 
   // 1. Click'ten yakalanan slug (kategori/listing sayfası — <a href> tıklandı)
-  if (_lastClickedSlug && ratings[_lastClickedSlug]) {
-    slug = _lastClickedSlug;
+  if (lastClickedSlug && ratings[lastClickedSlug]) {
+    slug = lastClickedSlug;
   }
 
   // 2. Ürün sayfası slug'ı (ürün sayfasındaki <div> buton tıklandı)
