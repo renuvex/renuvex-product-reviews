@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T14:09:59.405Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T14:14:44.204Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -844,6 +844,10 @@
       a.setAttribute("data-ikr-badge", "1");
       return;
     }
+    if (a.closest(".single-product-container-main")) {
+      a.setAttribute("data-ikr-badge", "1");
+      return;
+    }
     var hasNestedA = !!a.querySelector("a[href]");
     var realText = Array.from(a.childNodes).filter(function(n) {
       return n.nodeType === 3;
@@ -907,21 +911,32 @@
     }
     if (!slug) {
       var h1Text = h1.textContent.trim();
-      Object.keys(slugNameMap).forEach(function(s) {
+      Object.keys(slugNameMap).forEach(function(s2) {
         if (slug) return;
-        var name = slugNameMap[s];
-        if (name && name.trim() === h1Text && ratings[s]) slug = s;
+        var name = slugNameMap[s2];
+        if (name && name.trim() === h1Text && ratings[s2]) slug = s2;
       });
+    }
+    if (!slug) {
+      var spContainer = document.querySelector(".single-product-container-main");
+      if (spContainer) {
+        var spLink = spContainer.querySelector("a[href]");
+        if (spLink) {
+          var s = extractSlug(spLink.href);
+          if (s && ratings[s]) slug = s;
+        }
+      }
     }
     if (!slug) {
       var h1Lower = h1.textContent.trim().toLowerCase();
       document.querySelectorAll("a[href]").forEach(function(a) {
         if (slug) return;
         if (a.closest("header") || a.closest("nav")) return;
+        if (a.closest(".single-product-container-main")) return;
         var aText = a.textContent.trim().toLowerCase();
-        if (aText === h1Lower) {
-          var s = extractSlug(a.href);
-          if (s && ratings[s]) slug = s;
+        if (aText && aText === h1Lower) {
+          var s2 = extractSlug(a.href);
+          if (s2 && ratings[s2]) slug = s2;
         }
       });
     }

@@ -59,6 +59,7 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') { a.setAttribute('data-ikr-badge', '1'); return; }
   if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
   if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (a.closest('.single-product-container-main')) { a.setAttribute('data-ikr-badge', '1'); return; }
 
   var hasNestedA = !!a.querySelector('a[href]');
   var realText = Array.from(a.childNodes).filter(function(n) { return n.nodeType === 3; }).map(function(n) { return n.textContent.trim(); }).join('').trim();
@@ -144,16 +145,29 @@ function injectModalBadge(slugNameMap, ratings) {
     });
   }
 
-  // 4. h1 text'ini sayfadaki <a href> link text'leriyle eşleştir
+  // 4. single-product-container-main içindeki ilk <a href>'den slug al
+  if (!slug) {
+    var spContainer = document.querySelector('.single-product-container-main');
+    if (spContainer) {
+      var spLink = spContainer.querySelector('a[href]');
+      if (spLink) {
+        var s = extractSlug(spLink.href);
+        if (s && ratings[s]) slug = s;
+      }
+    }
+  }
+
+  // 5. h1 text'ini sayfadaki <a href> link text'leriyle eşleştir (genel fallback)
   if (!slug) {
     var h1Lower = h1.textContent.trim().toLowerCase();
     document.querySelectorAll('a[href]').forEach(function(a) {
       if (slug) return;
       if (a.closest('header') || a.closest('nav')) return;
+      if (a.closest('.single-product-container-main')) return;
       var aText = a.textContent.trim().toLowerCase();
-      if (aText === h1Lower) {
-        var s = extractSlug(a.href);
-        if (s && ratings[s]) slug = s;
+      if (aText && aText === h1Lower) {
+        var s2 = extractSlug(a.href);
+        if (s2 && ratings[s2]) slug = s2;
       }
     });
   }
