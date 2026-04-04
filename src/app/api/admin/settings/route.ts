@@ -43,10 +43,10 @@ export async function PUT(request: Request) {
         ...(autoApprove !== undefined && { autoApprove }),
       },
       create: {
-         storeId: user.merchantId,
-         widgetColor: widgetColor || '#000000',
-         widgetTitle: widgetTitle || 'Kullanıcı Yorumları',
-         autoApprove: autoApprove || false,
+        storeId: user.merchantId,
+        ...(widgetColor !== undefined && { widgetColor }),
+        ...(widgetTitle !== undefined && { widgetTitle }),
+        ...(autoApprove !== undefined && { autoApprove }),
       }
     });
 
