@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T18:04:16.059Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T18:15:57.683Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -820,9 +820,11 @@
   var THEME_BANNER_CONTAINERS = [
     ".hero-image-banner-main",
     ".hero-image-main",
+    ".home-slider-main",
     '[class*="hero-"]',
     '[class*="banner-"]',
-    '[class*="slider-banner"]'
+    '[class*="slider-banner"]',
+    '[class*="marquee"]'
   ].join(",");
 
   // src/widget/listing-badges/inject.js

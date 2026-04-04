@@ -21,7 +21,9 @@ export var THEME_SINGLE_PRODUCT_NAME_LINK = '.single-product-product-name';
 export var THEME_BANNER_CONTAINERS = [
   '.hero-image-banner-main',
   '.hero-image-main',
+  '.home-slider-main',
   '[class*="hero-"]',
   '[class*="banner-"]',
   '[class*="slider-banner"]',
+  '[class*="marquee"]',
 ].join(',');
