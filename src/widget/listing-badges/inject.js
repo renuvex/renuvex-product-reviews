@@ -114,14 +114,16 @@ export function attachModalBadgeListener() {
   }, true); // capture phase — ikas'ın event'lerinden önce çalışır
 }
 
-// add-to-basket-modal açıldığında _lastClickedSlug ile badge inject eder
+// add-to-basket-modal açıldığında slug ile badge inject eder
 function injectModalBadge(ratings) {
-  if (!_lastClickedSlug) return;
   var modal = document.querySelector('.add-to-basket-modal');
   if (!modal) return;
   var h1 = modal.querySelector('h1.product-name');
   if (!h1 || h1.querySelector('[data-ikr-listing-badge]')) return;
-  var rating = ratings[_lastClickedSlug];
+  // Önce click'ten yakalanan slug, yoksa mevcut sayfa slug'ı (ürün sayfası)
+  var slug = _lastClickedSlug || extractSlug(window.location.pathname);
+  if (!slug) return;
+  var rating = ratings[slug];
   if (!rating) return;
   h1.appendChild(createBadgeEl(rating, 'flex-start'));
 }

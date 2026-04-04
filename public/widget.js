@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T13:52:24.175Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T14:06:30.297Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -893,12 +893,13 @@
     }, true);
   }
   function injectModalBadge(ratings) {
-    if (!_lastClickedSlug) return;
     var modal = document.querySelector(".add-to-basket-modal");
     if (!modal) return;
     var h1 = modal.querySelector("h1.product-name");
     if (!h1 || h1.querySelector("[data-ikr-listing-badge]")) return;
-    var rating = ratings[_lastClickedSlug];
+    var slug = _lastClickedSlug || extractSlug(window.location.pathname);
+    if (!slug) return;
+    var rating = ratings[slug];
     if (!rating) return;
     h1.appendChild(createBadgeEl(rating, "flex-start"));
   }
