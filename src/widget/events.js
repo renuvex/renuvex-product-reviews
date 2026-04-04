@@ -41,14 +41,9 @@ export function attachEvents() {
           // 800ms içinde gelen ikinci PAGE_VIEW'ı yoksay — ikas ilk girişte çift tetikliyor
           if (ls.lastPageView && now - ls.lastPageView < 800) return;
           ls.lastPageView = now;
-          var oldBadges = Array.from(document.querySelectorAll('[data-ikr-listing-badge]'));
           ls.navCleanup = true;
           ls.rendered = false;
-          setTimeout(function() {
-            renderListingBadges().then(function() {
-              oldBadges.forEach(function(el) { if (el.parentNode) el.remove(); });
-            });
-          }, 0);
+          renderListingBadges();
         }
       },
     });

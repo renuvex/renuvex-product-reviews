@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T13:15:52.890Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T13:17:45.847Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -900,6 +900,9 @@
     try {
       if (ls.navCleanup) {
         ls.navCleanup = false;
+        document.querySelectorAll("[data-ikr-listing-badge]").forEach(function(el) {
+          el.remove();
+        });
         document.querySelectorAll("[data-ikr-badge]").forEach(function(el) {
           el.removeAttribute("data-ikr-badge");
         });
@@ -961,16 +964,9 @@
             var now = Date.now();
             if (ls.lastPageView && now - ls.lastPageView < 800) return;
             ls.lastPageView = now;
-            var oldBadges = Array.from(document.querySelectorAll("[data-ikr-listing-badge]"));
             ls.navCleanup = true;
             ls.rendered = false;
-            setTimeout(function() {
-              renderListingBadges().then(function() {
-                oldBadges.forEach(function(el) {
-                  if (el.parentNode) el.remove();
-                });
-              });
-            }, 0);
+            renderListingBadges();
           }
         }
       });
