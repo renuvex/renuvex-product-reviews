@@ -771,6 +771,7 @@
             if (newPath === window.location.pathname && listingBadgeRendered) return;
             // Eski badge'leri yeni render tamamlanınca kaldır — görsel titreme önlemi
             var oldBadges = Array.from(document.querySelectorAll('[data-ikr-listing-badge]'));
+            listingNavCleanup = true;
             listingBadgeRendered = false;
             setTimeout(function() {
               renderListingBadges().then(function() {
@@ -805,6 +806,7 @@
   var listingBadgeRendered = false;
   var listingRenderInProgress = false;
   var listingRenderQueued = false;
+  var listingNavCleanup = false; // true ise bir sonraki render'da attribute'ları temizle (PAGE_VIEW sonrası)
   var ikrSlugMap = {};
 
   // DOM fallback — VIEW_LISTING kaçırıldığında linklerin slug'larını toplar
@@ -876,9 +878,12 @@
     listingRenderInProgress = true;
 
     try {
-    // SPA nav'da eski attribute'ları temizle
-    document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
-    document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
+    // SPA nav sonrası eski attribute'ları temizle — sadece PAGE_VIEW'dan gelen çağrılarda
+    if (listingNavCleanup) {
+      listingNavCleanup = false;
+      document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
+      document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
+    }
 
     // DOM her zaman taranır (birincil kaynak) + VIEW_LISTING map'i ek kaynak olarak eklenir
     var slugNameMap = getSlugNameMapFromDOM();
