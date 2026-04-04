@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T20:10:53.179Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T20:14:41.639Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -833,8 +833,10 @@
     // ürün slider section
     ".infinite-scroll-component",
     // sonsuz scroll listing
-    '[class*="product-list"]'
+    '[class*="product-list"]',
     // genel ürün listesi pattern'ı
+    ".single-product-container-main"
+    // tek ürün section (anasayfa embed)
   ].join(",");
 
   // src/widget/listing-badges/inject.js

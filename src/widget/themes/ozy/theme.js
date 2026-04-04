@@ -34,4 +34,5 @@ export var THEME_PRODUCT_CONTAINERS = [
   '.products-slider-main',         // ürün slider section
   '.infinite-scroll-component',    // sonsuz scroll listing
   '[class*="product-list"]',       // genel ürün listesi pattern'ı
+  '.single-product-container-main', // tek ürün section (anasayfa embed)
 ].join(',');
