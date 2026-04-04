@@ -29,7 +29,7 @@ model Review {
   id            String   @id @default(uuid())
   storeId       String   // Which ikas store this belongs to (merchantId)
   productId     String   // The product ID in Ikas
-  slug          String?  // Product slug for listing page badge lookup
+  slug          String   // Product slug for listing page badge lookup
   productName   String?  // The product name captured at the time of review
   rating        Int
   comment       String?
@@ -37,17 +37,14 @@ model Review {
   email         String?
   status        String   @default("pending") // pending, approved, rejected
   merchantReply String?  // Store owner's reply to the customer's review
-  images        String?  // JSON stringified array of image URLs
+  images        String?  // JSON stringified array of image URLs — migrate to Json? when table is empty
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@index([storeId])
-  @@index([productId])
-  @@index([storeId, productId])
-  @@index([storeId, slug])
-  @@index([storeId, slug, status])
-  @@index([storeId, status])
-  @@index([storeId, status, slug])
+  @@index([storeId, productId])          // ürün yorumları listesi
+  @@index([storeId, slug])               // listing badge API
+  @@index([storeId, status])             // admin panel pending/approved filtresi
+  @@index([storeId, slug, status])       // approved badge sorgusu (slug + status birlikte)
 }
 
 model StoreSettings {

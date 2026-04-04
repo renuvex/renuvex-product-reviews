@@ -171,7 +171,7 @@ export async function POST(request: Request) {
       data: {
         storeId: String(storeId),
         productId: String(productId),
-        slug: slug ? String(slug) : null,
+        slug: String(slug || ''),
         productName: productName ? String(productName) : null,
         rating: ratingNum,
         comment: comment || '',
