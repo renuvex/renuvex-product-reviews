@@ -62,16 +62,18 @@ export async function GET(req: Request) {
       orderByParam === 'lowest'  ? { rating: 'asc'  as const } :
                                    { createdAt: 'desc' as const };
 
+    const ratingParam = searchParams.get('rating');
+    const ratingFilter = ratingParam ? parseInt(ratingParam, 10) : null;
+    const where = {
+      storeId,
+      productId,
+      status: 'approved',
+      ...(ratingFilter && ratingFilter >= 1 && ratingFilter <= 5 ? { rating: ratingFilter } : {}),
+    };
+
     const [reviews, totalCount] = await Promise.all([
-      prisma.review.findMany({
-        where: { storeId, productId, status: 'approved' },
-        orderBy,
-        take: limit,
-        skip,
-      }),
-      prisma.review.count({
-        where: { storeId, productId, status: 'approved' },
-      }),
+      prisma.review.findMany({ where, orderBy, take: limit, skip }),
+      prisma.review.count({ where }),
     ]);
 
     const formattedReviews = reviews.map((r: any) => {
