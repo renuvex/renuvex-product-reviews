@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T17:27:51.576Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T17:58:39.849Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -79,6 +79,7 @@
 
   // src/widget/core/helpers.js
   var STAR_COLOR = "#f59e0b";
+  var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
   function extractSlug(url) {
     try {
       return new URL(url, window.location.origin).pathname.replace(/^\//, "").split("?")[0].split("/")[0];
@@ -732,7 +733,6 @@
   }
 
   // src/widget/listing-badges/collect.js
-  var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
   function collectSlugs() {
     var map = {};
     var seen = {};
@@ -801,13 +801,26 @@
     return ratings;
   }
 
-  // src/widget/themes/ozy/listing-selector.js
+  // src/widget/core/badge.js
+  var BADGE_CSS = "display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;";
+  function createBadgeEl(rating, justify) {
+    var el = document.createElement("div");
+    el.setAttribute("data-ikr-listing-badge", "1");
+    el.style.cssText = BADGE_CSS + "justify-content:" + (justify || "flex-start") + ";";
+    el.innerHTML = starsHTML(rating.avg, null) + "<span>" + rating.avg + " (" + rating.count + ")</span>";
+    return el;
+  }
+
+  // src/widget/themes/ozy/theme.js
   var THEME_LISTING_TITLE_SELECTOR = ".product-name";
+  var THEME_MODAL_SELECTOR = ".add-to-basket-modal";
+  var THEME_MODAL_TITLE_SELECTOR = "h1.product-name";
+  var THEME_SINGLE_PRODUCT_CONTAINER = ".single-product-container-main";
+  var THEME_SINGLE_PRODUCT_NAME_LINK = ".single-product-product-name";
 
   // src/widget/listing-badges/inject.js
   var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
   var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
-  var BADGE_CSS = "display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;";
   function findTitleEl(scope, productName) {
     var byTheme = scope.querySelector(THEME_LISTING_TITLE_SELECTOR);
     if (byTheme) return byTheme;
@@ -833,13 +846,6 @@
     }
     return null;
   }
-  function createBadgeEl(rating, justify) {
-    var el = document.createElement("div");
-    el.setAttribute("data-ikr-listing-badge", "1");
-    el.style.cssText = BADGE_CSS + "justify-content:" + (justify || "flex-start") + ";";
-    el.innerHTML = starsHTML(rating.avg, null) + "<span>" + rating.avg + " (" + rating.count + ")</span>";
-    return el;
-  }
   function injectBadgeOnLink(a, rating, productName, currentSlug) {
     if (a.getAttribute("data-ikr-badge")) return;
     var slug = extractSlug(a.href);
@@ -859,7 +865,7 @@
       a.setAttribute("data-ikr-badge", "1");
       return;
     }
-    if (a.closest(".single-product-container-main") && !a.closest(".single-product-product-name")) {
+    if (a.closest(THEME_SINGLE_PRODUCT_CONTAINER) && !a.closest(THEME_SINGLE_PRODUCT_NAME_LINK)) {
       a.setAttribute("data-ikr-badge", "1");
       return;
     }
@@ -897,9 +903,9 @@
     }
   }
   function injectModalBadge(slugNameMap, ratings) {
-    var modal = document.querySelector(".add-to-basket-modal");
+    var modal = document.querySelector(THEME_MODAL_SELECTOR);
     if (!modal) return;
-    var h1 = modal.querySelector("h1.product-name");
+    var h1 = modal.querySelector(THEME_MODAL_TITLE_SELECTOR);
     if (!h1 || h1.querySelector("[data-ikr-listing-badge]")) return;
     var slug = null;
     if (lastClickedSlug && ratings[lastClickedSlug]) {
@@ -918,7 +924,7 @@
       });
     }
     if (!slug) {
-      var spContainer = document.querySelector(".single-product-container-main");
+      var spContainer = document.querySelector(THEME_SINGLE_PRODUCT_CONTAINER);
       if (spContainer) {
         var spLink = spContainer.querySelector("a[href]");
         if (spLink) {
@@ -932,7 +938,7 @@
       document.querySelectorAll("a[href]").forEach(function(a) {
         if (slug) return;
         if (a.closest("header") || a.closest("nav")) return;
-        if (a.closest(".single-product-container-main")) return;
+        if (a.closest(THEME_SINGLE_PRODUCT_CONTAINER)) return;
         var aText = a.textContent.trim().toLowerCase();
         if (aText && aText === h1Lower) {
           var s2 = extractSlug(a.href);
@@ -1072,7 +1078,6 @@
   }
 
   // src/widget/observer.js
-  var SYSTEM_SLUGS2 = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
   var mutationDebounceTimer = null;
   function startMutationObserver() {
     if (typeof MutationObserver === "undefined") return;
@@ -1092,7 +1097,7 @@
         var hasUnbadged = Array.from(document.querySelectorAll("a[href]")).some(function(a) {
           if (a.getAttribute("data-ikr-badge")) return false;
           var path = extractSlug(a.href);
-          return path && path.length >= 3 && !SYSTEM_SLUGS2.test(path);
+          return path && path.length >= 3 && !SYSTEM_SLUGS.test(path);
         });
         if (!hasUnbadged) return;
         ls.rendered = false;

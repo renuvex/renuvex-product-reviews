@@ -1,9 +1,7 @@
 // listing-badges/collect.js — Sayfadaki ürün linklerinden slug→name map oluşturur
 
-import { extractSlug } from '../core/helpers.js';
+import { extractSlug, SYSTEM_SLUGS } from '../core/helpers.js';
 import { ikrSlugMap } from '../core/state.js';
-
-var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
 export function collectSlugs() {
   var map = {};

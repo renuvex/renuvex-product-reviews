@@ -2,6 +2,8 @@
 
 export var STAR_COLOR = '#f59e0b';
 
+export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
+
 export function extractSlug(url) {
   try {
     return new URL(url, window.location.origin).pathname.replace(/^\//, '').split('?')[0].split('/')[0];

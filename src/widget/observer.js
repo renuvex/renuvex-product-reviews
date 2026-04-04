@@ -1,10 +1,8 @@
 // observer.js — MutationObserver: slider/infinite scroll ile gelen yeni kartları yakalar
 
-import { extractSlug } from './core/helpers.js';
+import { extractSlug, SYSTEM_SLUGS } from './core/helpers.js';
 import { ls } from './core/state.js';
 import { renderListingBadges } from './listing-badges/index.js';
-
-var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 var mutationDebounceTimer = null;
 
 export function startMutationObserver() {
