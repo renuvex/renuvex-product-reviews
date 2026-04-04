@@ -876,9 +876,6 @@
     listingRenderInProgress = true;
 
     try {
-    // DOM'da zaten badge varsa render etme (duplicate önlemi)
-    if (document.querySelector('[data-ikr-listing-badge]')) { return; }
-
     // SPA nav'da eski attribute'ları temizle
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
     document.querySelectorAll('[data-ikr-name]').forEach(function (el) { el.removeAttribute('data-ikr-name'); });
