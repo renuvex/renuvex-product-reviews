@@ -71,10 +71,21 @@ export async function GET(req: Request) {
       ...(ratingFilter && ratingFilter >= 1 && ratingFilter <= 5 ? { rating: ratingFilter } : {}),
     };
 
-    const [reviews, totalCount] = await Promise.all([
+    // Filtreden bağımsız — bar chart için tüm approved yorumların dağılımı
+    const baseWhere = { storeId, productId, status: 'approved' };
+
+    const [reviews, totalCount, allReviews] = await Promise.all([
       prisma.review.findMany({ where, orderBy, take: limit, skip }),
       prisma.review.count({ where }),
+      prisma.review.findMany({ where: baseWhere, select: { rating: true } }),
     ]);
+
+    const ratingCounts = [0, 0, 0, 0, 0];
+    let ratingSum = 0;
+    allReviews.forEach((r: any) => {
+      if (r.rating >= 1 && r.rating <= 5) { ratingCounts[r.rating - 1]++; ratingSum += r.rating; }
+    });
+    const avgRating = allReviews.length > 0 ? (ratingSum / allReviews.length).toFixed(1) : null;
 
     const formattedReviews = reviews.map((r: any) => {
       let parsedImages: string[] = [];
@@ -93,6 +104,8 @@ export async function GET(req: Request) {
         page,
         totalPages: Math.ceil(totalCount / limit),
         hasMore: page * limit < totalCount,
+        ratingCounts,
+        avgRating,
       },
     }));
     res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
