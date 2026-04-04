@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T17:23:42.633Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T17:25:09.454Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -240,7 +240,7 @@
       fileInput.disabled = true;
       uploadedImages = [];
       previewsDiv.innerHTML = "";
-      var files = Array.from(e.target.files).slice(0, 5);
+      var files = Array.from(e.target.files).slice(0, 3);
       for (var fi = 0; fi < files.length; fi++) {
         var file = files[fi];
         if (file.size > 5 * 1024 * 1024) {
