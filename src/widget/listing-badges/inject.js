@@ -58,6 +58,7 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   if (a.id === 'ikr-rating-badge') { a.setAttribute('data-ikr-badge', '1'); return; }
   if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') { a.setAttribute('data-ikr-badge', '1'); return; }
   if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) { a.setAttribute('data-ikr-badge', '1'); return; }
 
   var hasNestedA = !!a.querySelector('a[href]');
   var realText = Array.from(a.childNodes).filter(function(n) { return n.nodeType === 3; }).map(function(n) { return n.textContent.trim(); }).join('').trim();
