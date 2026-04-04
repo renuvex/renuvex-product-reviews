@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T14:06:30.297Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T14:09:59.405Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -892,16 +892,41 @@
       _lastClickedSlug = slug;
     }, true);
   }
-  function injectModalBadge(ratings) {
+  function injectModalBadge(slugNameMap, ratings) {
     var modal = document.querySelector(".add-to-basket-modal");
     if (!modal) return;
     var h1 = modal.querySelector("h1.product-name");
     if (!h1 || h1.querySelector("[data-ikr-listing-badge]")) return;
-    var slug = _lastClickedSlug || extractSlug(window.location.pathname);
-    if (!slug) return;
-    var rating = ratings[slug];
-    if (!rating) return;
-    h1.appendChild(createBadgeEl(rating, "flex-start"));
+    var slug = null;
+    if (_lastClickedSlug && ratings[_lastClickedSlug]) {
+      slug = _lastClickedSlug;
+    }
+    if (!slug) {
+      var pageSlug = extractSlug(window.location.pathname);
+      if (pageSlug && ratings[pageSlug]) slug = pageSlug;
+    }
+    if (!slug) {
+      var h1Text = h1.textContent.trim();
+      Object.keys(slugNameMap).forEach(function(s) {
+        if (slug) return;
+        var name = slugNameMap[s];
+        if (name && name.trim() === h1Text && ratings[s]) slug = s;
+      });
+    }
+    if (!slug) {
+      var h1Lower = h1.textContent.trim().toLowerCase();
+      document.querySelectorAll("a[href]").forEach(function(a) {
+        if (slug) return;
+        if (a.closest("header") || a.closest("nav")) return;
+        var aText = a.textContent.trim().toLowerCase();
+        if (aText === h1Lower) {
+          var s = extractSlug(a.href);
+          if (s && ratings[s]) slug = s;
+        }
+      });
+    }
+    if (!slug || !ratings[slug]) return;
+    h1.appendChild(createBadgeEl(ratings[slug], "flex-start"));
   }
   function injectBadges(slugNameMap, ratings) {
     var currentSlug = extractSlug(window.location.pathname);
@@ -914,7 +939,7 @@
         injectBadgeOnLink(a, rating, productName, currentSlug);
       });
     });
-    injectModalBadge(ratings);
+    injectModalBadge(slugNameMap, ratings);
   }
 
   // src/widget/listing-badges/index.js

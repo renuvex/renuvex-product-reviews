@@ -115,17 +115,51 @@ export function attachModalBadgeListener() {
 }
 
 // add-to-basket-modal açıldığında slug ile badge inject eder
-function injectModalBadge(ratings) {
+function injectModalBadge(slugNameMap, ratings) {
   var modal = document.querySelector('.add-to-basket-modal');
   if (!modal) return;
   var h1 = modal.querySelector('h1.product-name');
   if (!h1 || h1.querySelector('[data-ikr-listing-badge]')) return;
-  // Önce click'ten yakalanan slug, yoksa mevcut sayfa slug'ı (ürün sayfası)
-  var slug = _lastClickedSlug || extractSlug(window.location.pathname);
-  if (!slug) return;
-  var rating = ratings[slug];
-  if (!rating) return;
-  h1.appendChild(createBadgeEl(rating, 'flex-start'));
+
+  var slug = null;
+
+  // 1. Click'ten yakalanan slug (kategori/listing sayfası — <a href> tıklandı)
+  if (_lastClickedSlug && ratings[_lastClickedSlug]) {
+    slug = _lastClickedSlug;
+  }
+
+  // 2. Ürün sayfası slug'ı (ürün sayfasındaki <div> buton tıklandı)
+  if (!slug) {
+    var pageSlug = extractSlug(window.location.pathname);
+    if (pageSlug && ratings[pageSlug]) slug = pageSlug;
+  }
+
+  // 3. h1 text'ini slugNameMap isimleriyle eşleştir (anasayfa single section)
+  if (!slug) {
+    var h1Text = h1.textContent.trim();
+    Object.keys(slugNameMap).forEach(function(s) {
+      if (slug) return;
+      var name = slugNameMap[s];
+      if (name && name.trim() === h1Text && ratings[s]) slug = s;
+    });
+  }
+
+  // 4. h1 text'ini sayfadaki <a href> link text'leriyle eşleştir
+  if (!slug) {
+    var h1Lower = h1.textContent.trim().toLowerCase();
+    document.querySelectorAll('a[href]').forEach(function(a) {
+      if (slug) return;
+      if (a.closest('header') || a.closest('nav')) return;
+      var aText = a.textContent.trim().toLowerCase();
+      if (aText === h1Lower) {
+        var s = extractSlug(a.href);
+        if (s && ratings[s]) slug = s;
+      }
+    });
+  }
+
+  if (!slug || !ratings[slug]) return;
+  h1.appendChild(createBadgeEl(ratings[slug], 'flex-start'));
 }
 
 // Tüm slug'lar için sayfadaki eşleşen linklere badge inject eder
@@ -140,5 +174,5 @@ export function injectBadges(slugNameMap, ratings) {
       injectBadgeOnLink(a, rating, productName, currentSlug);
     });
   });
-  injectModalBadge(ratings);
+  injectModalBadge(slugNameMap, ratings);
 }
