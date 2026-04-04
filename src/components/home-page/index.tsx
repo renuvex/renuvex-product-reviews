@@ -40,6 +40,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [settings, setSettings] = useState<StoreSettings>({});
   const [loading, setLoading] = useState(true);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Verileri Backend'den (Prisma) Çekme Fonksiyonu
   useEffect(() => {
@@ -166,7 +167,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                                   width={48}
                                   height={48}
                                   className="w-12 h-12 object-cover rounded border border-gray-200 cursor-zoom-in"
-                                  onClick={() => window.open(img, '_blank')}
+                                  onClick={() => setLightboxUrl(img)}
                                 />
                               )) : null;
                             } catch (e) { return null; }
@@ -220,6 +221,12 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   return (
     <div className="max-w-[1200px] mx-auto p-6 bg-background min-h-screen">
+      {lightboxUrl && (
+        <div className="fixed inset-0 bg-black/85 z-[99999] flex items-center justify-center cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
+          <button className="absolute top-4 right-5 text-white text-3xl leading-none bg-transparent border-none cursor-pointer" onClick={() => setLightboxUrl(null)}>✕</button>
+          <img src={lightboxUrl} alt="Görsel" className="max-w-[90vw] max-h-[90vh] rounded-lg object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Değerlendirmeler</h1>
