@@ -296,7 +296,7 @@
           widget.appendChild(summary);
         }
 
-        // Aktif filtre chip'i — bar chart dışında, her zaman göster (filtre aktifse)
+        // Aktif filtre chip'i — bar chart'tan bağımsız, her zaman aynı konumda
         if (currentRatingFilter) {
           var chip = document.createElement('div');
           chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:20px;font-size:13px;color:#555;margin-bottom:12px;';
