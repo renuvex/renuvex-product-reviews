@@ -94,6 +94,38 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   }
 }
 
+// Quick-view modal badge sistemi — tıklanan kartın slug'ını click anında yakala
+var _lastClickedSlug = null;
+var _modalBadgeAttached = false;
+
+export function attachModalBadgeListener() {
+  if (_modalBadgeAttached) return;
+  _modalBadgeAttached = true;
+  document.addEventListener('click', function(e) {
+    // Tıklanan veya en yakın üst <a href>'i bul
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    // Basket/cart/header/nav içindeyse yoksay
+    if (a.closest('header') || a.closest('nav')) return;
+    if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) return;
+    var slug = extractSlug(a.href);
+    if (!slug || slug.length < 3) return;
+    _lastClickedSlug = slug;
+  }, true); // capture phase — ikas'ın event'lerinden önce çalışır
+}
+
+// add-to-basket-modal açıldığında _lastClickedSlug ile badge inject eder
+function injectModalBadge(ratings) {
+  if (!_lastClickedSlug) return;
+  var modal = document.querySelector('.add-to-basket-modal');
+  if (!modal) return;
+  var h1 = modal.querySelector('h1.product-name');
+  if (!h1 || h1.querySelector('[data-ikr-listing-badge]')) return;
+  var rating = ratings[_lastClickedSlug];
+  if (!rating) return;
+  h1.appendChild(createBadgeEl(rating, 'flex-start'));
+}
+
 // Tüm slug'lar için sayfadaki eşleşen linklere badge inject eder
 export function injectBadges(slugNameMap, ratings) {
   var currentSlug = extractSlug(window.location.pathname);
@@ -106,4 +138,5 @@ export function injectBadges(slugNameMap, ratings) {
       injectBadgeOnLink(a, rating, productName, currentSlug);
     });
   });
+  injectModalBadge(ratings);
 }
