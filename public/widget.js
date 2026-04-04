@@ -874,8 +874,10 @@
     if (listingBadgeRendered) return;
     listingBadgeRendered = true;
     listingRenderInProgress = true;
+
+    try {
     // DOM'da zaten badge varsa render etme (duplicate önlemi)
-    if (document.querySelector('[data-ikr-listing-badge]')) { listingRenderInProgress = false; return; }
+    if (document.querySelector('[data-ikr-listing-badge]')) { return; }
 
     // SPA nav'da eski attribute'ları temizle
     document.querySelectorAll('[data-ikr-badge]').forEach(function (el) { el.removeAttribute('data-ikr-badge'); });
@@ -890,7 +892,6 @@
     if (!slugs.length) {
       // Slug bulunamadı — DOM henüz hazır değil, tekrar denenebilsin
       listingBadgeRendered = false;
-      listingRenderInProgress = false;
       return;
     }
 
@@ -933,7 +934,7 @@
     ]);
 
     var settings = results[0];
-    if (!settings) return;
+    if (!settings) { listingBadgeRendered = false; return; }
 
     if (needRatings && results[1]) {
       results[1].forEach(function(batchData) {
@@ -1026,16 +1027,17 @@
           var firstChild = a.firstElementChild;
           firstChild ? a.insertBefore(badge, firstChild) : a.appendChild(badge);
         }
-        slugInjected = true;
       });
     });
 
-    listingRenderInProgress = false;
-    // Kuyrukta bekleyen istek varsa (spam sırasında geldi) bir kez daha çalıştır
-    if (listingRenderQueued) {
-      listingRenderQueued = false;
-      listingBadgeRendered = false;
-      renderListingBadges();
+    } finally {
+      listingRenderInProgress = false;
+      // Kuyrukta bekleyen istek varsa (spam sırasında geldi) bir kez daha çalıştır
+      if (listingRenderQueued) {
+        listingRenderQueued = false;
+        listingBadgeRendered = false;
+        renderListingBadges();
+      }
     }
   }
 
