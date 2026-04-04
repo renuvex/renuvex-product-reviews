@@ -1,0 +1,127 @@
+// product-widget/review-form.js — Yorum formu (dosya upload + submit)
+
+import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
+import { fetchWithTimeout } from '../core/fetch.js';
+import { renderStars } from '../core/helpers.js';
+import { extractSlug } from '../core/helpers.js';
+
+export function buildReviewForm(widgetEl, productId, productName) {
+  var form = document.createElement('div');
+  form.className = 'ikr-form';
+  form.setAttribute('aria-label', 'Yorum formu');
+  form.setAttribute('role', 'form');
+  form.innerHTML = [
+    '<h3 style="font-weight:700;margin-top:0;" id="ikr-form-title">Yorum Yapın</h3>',
+    '<label for="ikr-name" style="font-size:12px;font-weight:600;">Adınız Soyadınız</label>',
+    '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız Soyadınız" aria-label="Adınız Soyadınız" aria-required="true">',
+    '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorumunuz</label>',
+    '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz"></textarea>',
+    '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">Puanınız:</label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
+    '<div id="ikr-photo-section">',
+    '  <label class="ikr-photo-btn" aria-label="Fotoğraf ekle">📷 Fotoğraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Fotoğraf seç"></label>',
+    '  <div id="ikr-photo-previews" style="margin-top:10px" aria-live="polite"></div>',
+    '</div>',
+    '<button id="ikr-submit" class="ikr-btn" aria-label="Yorumu gönder">Yorumu Gönder</button>',
+    '<div id="ikr-msg" style="margin-top:10px;" role="alert" aria-live="assertive"></div>',
+  ].join('');
+  widgetEl.appendChild(form);
+
+  var currentRating = 5;
+  var uploadedImages = [];
+
+  var starsWrap = renderStars(5, true, function(v) { currentRating = v; });
+  form.querySelector('#ikr-stars-input').appendChild(starsWrap);
+
+  var fileInput = form.querySelector('#ikr-file-input');
+  var previewsDiv = form.querySelector('#ikr-photo-previews');
+  var isUploading = false;
+
+  fileInput.onchange = async function(e) {
+    if (isUploading) return;
+    isUploading = true;
+    fileInput.disabled = true;
+    uploadedImages = [];
+    previewsDiv.innerHTML = '';
+    var files = Array.from(e.target.files);
+    for (var fi = 0; fi < files.length; fi++) {
+      var file = files[fi];
+      if (file.size > 5 * 1024 * 1024) {
+        alert(file.name + ' dosyası 5MB sınırını aşıyor. Lütfen daha küçük bir görsel seçin.');
+        continue;
+      }
+      var item = document.createElement('div');
+      item.className = 'ikr-preview-item';
+      item.innerHTML = '<img class="ikr-preview-img" src="' + URL.createObjectURL(file) + '"><div class="ikr-preview-loading">...</div>';
+      previewsDiv.appendChild(item);
+      var loadingEl = item.querySelector('.ikr-preview-loading');
+      try {
+        var signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
+        if (!signRes.ok) throw new Error('sign failed');
+        var sign = await signRes.json();
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('api_key', sign.api_key);
+        fd.append('timestamp', sign.timestamp);
+        fd.append('signature', sign.signature);
+        fd.append('folder', 'review_images');
+        var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
+        var upData = await up.json();
+        if (upData.secure_url) {
+          uploadedImages.push(upData.secure_url);
+          loadingEl.textContent = '✓';
+          loadingEl.style.color = '#059669';
+        }
+      } catch (err) {
+        console.error('[ikr] Image upload failed:', err);
+        loadingEl.textContent = '✗';
+        loadingEl.style.color = '#dc2626';
+      }
+    }
+    isUploading = false;
+    fileInput.disabled = false;
+    fileInput.value = '';
+  };
+
+  form.querySelector('#ikr-submit').onclick = async function() {
+    var btn = this;
+    var author = form.querySelector('#ikr-name').value.trim();
+    var comment = form.querySelector('#ikr-comment').value.trim();
+    var msgDiv = form.querySelector('#ikr-msg');
+    if (!author) { msgDiv.innerHTML = '<div style="color:#dc2626;font-size:14px;margin-top:8px;">Lütfen adınızı girin.</div>'; return; }
+    btn.disabled = true;
+    btn.textContent = 'Gönderiliyor...';
+    msgDiv.innerHTML = '';
+    try {
+      var pageSlug = extractSlug(window.location.href);
+      var submitName = productName || (document.querySelector('h1') ? document.querySelector('h1').innerText.trim() : null);
+      var r = await fetchWithTimeout(API_BASE + '/api/public/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: PUBLIC_API_KEY,
+          productId: productId,
+          slug: pageSlug || null,
+          productName: submitName,
+          author: author,
+          comment: comment,
+          rating: currentRating,
+          images: uploadedImages,
+        }),
+      });
+      if (r.ok) {
+        form.style.display = 'none';
+        var thankEl = document.createElement('div');
+        thankEl.style.cssText = 'text-align:center;padding:30px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;margin-top:30px;';
+        thankEl.innerHTML = '<div style="font-size:32px;margin-bottom:12px;">✓</div><div style="font-weight:700;font-size:16px;color:#059669;margin-bottom:8px;">Teşekkürler!</div><div style="color:#555;font-size:14px;">Yorumunuz incelemeye alındı.</div>';
+        widgetEl.appendChild(thankEl);
+      } else {
+        var err = await r.json().catch(function() { return {}; });
+        throw new Error(err.error || 'Yorum kaydedilemedi.');
+      }
+    } catch(e) {
+      msgDiv.innerHTML = '<div style="color:#dc2626;font-size:14px;margin-top:8px;">' + e.message + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'Yorumu Gönder';
+    }
+  };
+}
