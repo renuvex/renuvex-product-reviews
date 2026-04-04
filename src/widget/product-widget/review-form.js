@@ -36,13 +36,26 @@ export function buildReviewForm(widgetEl, productId, productName) {
   var previewsDiv = form.querySelector('#ikr-photo-previews');
   var isUploading = false;
 
+  var photoLabel = form.querySelector('label.ikr-photo-btn');
+  var MAX_PHOTOS = 3;
+
+  function updatePhotoLabel() {
+    var count = uploadedImages.length;
+    if (count >= MAX_PHOTOS) {
+      fileInput.disabled = true;
+      if (photoLabel) photoLabel.style.opacity = '0.4';
+    } else {
+      fileInput.disabled = false;
+      if (photoLabel) photoLabel.style.opacity = '1';
+    }
+  }
+
   fileInput.onchange = async function(e) {
     if (isUploading) return;
     isUploading = true;
     fileInput.disabled = true;
-    uploadedImages = [];
-    previewsDiv.innerHTML = '';
-    var files = Array.from(e.target.files).slice(0, 3);
+    var remaining = MAX_PHOTOS - uploadedImages.length;
+    var files = Array.from(e.target.files).slice(0, remaining);
     for (var fi = 0; fi < files.length; fi++) {
       var file = files[fi];
       if (file.size > 5 * 1024 * 1024) {
@@ -78,8 +91,8 @@ export function buildReviewForm(widgetEl, productId, productName) {
       }
     }
     isUploading = false;
-    fileInput.disabled = false;
     fileInput.value = '';
+    updatePhotoLabel();
   };
 
   form.querySelector('#ikr-submit').onclick = async function() {
