@@ -8,6 +8,7 @@ import {
   THEME_MODAL_TITLE_SELECTOR,
   THEME_SINGLE_PRODUCT_CONTAINER,
   THEME_SINGLE_PRODUCT_NAME_LINK,
+  THEME_BANNER_CONTAINERS,
 } from '../themes/ozy/theme.js';
 import { lastClickedSlug } from '../core/state.js'; // events.js tarafından set edilir
 
@@ -58,6 +59,7 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
   if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) { a.setAttribute('data-ikr-badge', '1'); return; }
   if (a.closest(THEME_SINGLE_PRODUCT_CONTAINER) && !a.closest(THEME_SINGLE_PRODUCT_NAME_LINK)) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (a.closest(THEME_BANNER_CONTAINERS)) { a.setAttribute('data-ikr-badge', '1'); return; }
 
   var hasNestedA = !!a.querySelector('a[href]');
   var realText = Array.from(a.childNodes).filter(function(n) { return n.nodeType === 3; }).map(function(n) { return n.textContent.trim(); }).join('').trim();

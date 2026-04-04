@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T17:58:39.849Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-04T18:04:16.059Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -817,6 +817,13 @@
   var THEME_MODAL_TITLE_SELECTOR = "h1.product-name";
   var THEME_SINGLE_PRODUCT_CONTAINER = ".single-product-container-main";
   var THEME_SINGLE_PRODUCT_NAME_LINK = ".single-product-product-name";
+  var THEME_BANNER_CONTAINERS = [
+    ".hero-image-banner-main",
+    ".hero-image-main",
+    '[class*="hero-"]',
+    '[class*="banner-"]',
+    '[class*="slider-banner"]'
+  ].join(",");
 
   // src/widget/listing-badges/inject.js
   var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
@@ -866,6 +873,10 @@
       return;
     }
     if (a.closest(THEME_SINGLE_PRODUCT_CONTAINER) && !a.closest(THEME_SINGLE_PRODUCT_NAME_LINK)) {
+      a.setAttribute("data-ikr-badge", "1");
+      return;
+    }
+    if (a.closest(THEME_BANNER_CONTAINERS)) {
       a.setAttribute("data-ikr-badge", "1");
       return;
     }

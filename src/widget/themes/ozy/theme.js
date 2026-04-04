@@ -15,3 +15,13 @@ export var THEME_SINGLE_PRODUCT_CONTAINER = '.single-product-container-main';
 
 // Single product section — sadece ürün adı linkine izin verilen alan
 export var THEME_SINGLE_PRODUCT_NAME_LINK = '.single-product-product-name';
+
+// Badge inject edilmemesi gereken dekoratif/banner alanları
+// Bu container'lar içindeki linkler ürün kartı değil, hero/banner/slider linkleridir
+export var THEME_BANNER_CONTAINERS = [
+  '.hero-image-banner-main',
+  '.hero-image-main',
+  '[class*="hero-"]',
+  '[class*="banner-"]',
+  '[class*="slider-banner"]',
+].join(',');
