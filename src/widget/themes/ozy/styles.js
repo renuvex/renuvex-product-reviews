@@ -28,11 +28,9 @@ export var CLASSIC_CSS = `
   .ikr-write-btn{background:var(--ikr-color,#111);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
   .ikr-write-btn:hover{opacity:.88;}
 
-  /* Filtre chip + sıralama satırı */
-  .ikr-controls-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
-  .ikr-filter-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;background:var(--ikr-color-light);border:1px solid var(--ikr-color);border-radius:20px;font-size:13px;color:#555;}
-  .ikr-chip-clear{cursor:pointer;font-weight:bold;color:#888;margin-left:4px;}
-  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;margin-left:auto;}
+  /* Sıralama satırı */
+  .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
+  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;}
 
   /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid #eee}

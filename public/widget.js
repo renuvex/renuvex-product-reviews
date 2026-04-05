@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T12:26:24.090Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T12:30:07.939Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -433,11 +433,9 @@
   .ikr-write-btn{background:var(--ikr-color,#111);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
   .ikr-write-btn:hover{opacity:.88;}
 
-  /* Filtre chip + s\u0131ralama sat\u0131r\u0131 */
-  .ikr-controls-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
-  .ikr-filter-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;background:var(--ikr-color-light);border:1px solid var(--ikr-color);border-radius:20px;font-size:13px;color:#555;}
-  .ikr-chip-clear{cursor:pointer;font-weight:bold;color:#888;margin-left:4px;}
-  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;margin-left:auto;}
+  /* S\u0131ralama sat\u0131r\u0131 */
+  .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
+  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;}
 
   /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid #eee}
@@ -528,12 +526,14 @@
           summary.appendChild(avgBox);
           var bars = document.createElement("div");
           bars.className = "ikr-bars";
+          var barRows = [];
           for (var si = 5; si >= 1; si--) {
             var cnt = ratingCounts[si - 1];
             var pct = allCount > 0 ? Math.round(cnt / allCount * 100) : 0;
             var isActive = currentRatingFilter === si;
             var row = document.createElement("div");
             row.className = "ikr-bar-row" + (isActive ? " ikr-bar-active" : "");
+            if (currentRatingFilter && !isActive) row.style.opacity = "0.35";
             row.innerHTML = '<span class="ikr-bar-label">' + si + ' \u2605</span><div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div><span class="ikr-bar-count">' + cnt.toLocaleString("tr-TR") + "</span>";
             (function(starVal) {
               row.onclick = async function() {
@@ -544,6 +544,7 @@
               };
             })(si);
             bars.appendChild(row);
+            barRows.push(row);
           }
           summary.appendChild(bars);
           var writeBtn = document.createElement("button");
@@ -557,22 +558,6 @@
           widget.appendChild(summary);
           var controlsRow = document.createElement("div");
           controlsRow.className = "ikr-controls-row";
-          if (currentRatingFilter) {
-            var chip = document.createElement("div");
-            chip.className = "ikr-filter-chip";
-            chip.innerHTML = currentRatingFilter + " \u2605 g\xF6steriliyor";
-            var clearBtn = document.createElement("span");
-            clearBtn.textContent = "\u2715";
-            clearBtn.className = "ikr-chip-clear";
-            clearBtn.onclick = async function() {
-              setCurrentRatingFilter(null);
-              setCurrentPage(1);
-              var allData = await fetchReviews(currentProductId, currentOrderBy, 1, null);
-              await render(currentProductId, currentSettings, allData, currentProductName, currentOrderBy, 1);
-            };
-            chip.appendChild(clearBtn);
-            controlsRow.appendChild(chip);
-          }
           var sortSelect = document.createElement("select");
           sortSelect.className = "ikr-sort-select";
           [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {

@@ -90,12 +90,14 @@ export async function render(productId, settings, reviewsData, productName, orde
         // Orta — bar chart
         var bars = document.createElement('div');
         bars.className = 'ikr-bars';
+        var barRows = [];
         for (var si = 5; si >= 1; si--) {
           var cnt = ratingCounts[si - 1];
           var pct = allCount > 0 ? Math.round((cnt / allCount) * 100) : 0;
           var isActive = currentRatingFilter === si;
           var row = document.createElement('div');
           row.className = 'ikr-bar-row' + (isActive ? ' ikr-bar-active' : '');
+          if (currentRatingFilter && !isActive) row.style.opacity = '0.35';
           row.innerHTML =
             '<span class="ikr-bar-label">' + si + ' ★</span>' +
             '<div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div>' +
@@ -109,6 +111,7 @@ export async function render(productId, settings, reviewsData, productName, orde
             };
           })(si);
           bars.appendChild(row);
+          barRows.push(row);
         }
         summary.appendChild(bars);
 
@@ -124,27 +127,9 @@ export async function render(productId, settings, reviewsData, productName, orde
 
         widget.appendChild(summary);
 
-        // Filtre chip + sıralama satırı
+        // Sıralama satırı
         var controlsRow = document.createElement('div');
         controlsRow.className = 'ikr-controls-row';
-
-        if (currentRatingFilter) {
-          var chip = document.createElement('div');
-          chip.className = 'ikr-filter-chip';
-          chip.innerHTML = currentRatingFilter + ' ★ gösteriliyor';
-          var clearBtn = document.createElement('span');
-          clearBtn.textContent = '✕';
-          clearBtn.className = 'ikr-chip-clear';
-          clearBtn.onclick = async function() {
-            setCurrentRatingFilter(null);
-            setCurrentPage(1);
-            var allData = await fetchReviews(currentProductId, currentOrderBy, 1, null);
-            await render(currentProductId, currentSettings, allData, currentProductName, currentOrderBy, 1);
-          };
-          chip.appendChild(clearBtn);
-          controlsRow.appendChild(chip);
-        }
-
         var sortSelect = document.createElement('select');
         sortSelect.className = 'ikr-sort-select';
         [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
