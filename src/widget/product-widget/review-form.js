@@ -18,7 +18,7 @@ export function buildReviewForm(widgetEl, productId, productName) {
     '<label for="ikr-title" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Başlık <span style="font-weight:400;color:rgba(0,0,0,0.45);">(opsiyonel)</span></label>',
     '<input type="text" id="ikr-title" class="ikr-input" placeholder="Yorumunuzun kısa başlığı" aria-label="Yorum başlığı" maxlength="60">',
     '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorumunuz</label>',
-    '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz"></textarea>',
+    '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz" maxlength="2000"></textarea>',
     '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">Puanınız:</label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
     '<div id="ikr-photo-section">',
     '  <label class="ikr-photo-btn" aria-label="Fotoğraf ekle">📷 Fotoğraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Fotoğraf seç"></label>',
