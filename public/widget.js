@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:29:28.924Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:31:04.023Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -447,12 +447,8 @@
   .ikr-filter-btn-active{background:var(--ikr-color,#000);color:#fff;}
 
   /* Filtre paneli */
-  .ikr-filter-panel{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;background:rgba(0,0,0,0.03);border-radius:12px;margin-bottom:16px;}
-  .ikr-filter-panel-label{font-size:12px;font-weight:700;color:rgba(0,0,0,0.50);text-transform:uppercase;letter-spacing:.5px;}
+  .ikr-filter-panel{display:flex;align-items:center;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:12px;margin-bottom:16px;}
   .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;background:#fff;color:rgba(0,0,0,0.75);cursor:pointer;outline:none;}
-  .ikr-star-btns{display:flex;gap:6px;flex-wrap:wrap;}
-  .ikr-star-btn{padding:5px 12px;border:1px solid rgba(0,0,0,0.15);border-radius:20px;background:#fff;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
-  .ikr-star-btn-active{background:var(--ikr-color,#000);color:#fff;border-color:var(--ikr-color,#000);}
 
   /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
@@ -586,10 +582,6 @@
           var filterPanel = document.createElement("div");
           filterPanel.className = "ikr-filter-panel";
           filterPanel.style.display = "none";
-          var sortLabel = document.createElement("span");
-          sortLabel.className = "ikr-filter-panel-label";
-          sortLabel.textContent = "S\u0131rala";
-          filterPanel.appendChild(sortLabel);
           var sortSelect = document.createElement("select");
           sortSelect.className = "ikr-sort-select";
           [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
@@ -600,25 +592,6 @@
           });
           sortSelect.value = currentOrderBy || "newest";
           filterPanel.appendChild(sortSelect);
-          var starLabel = document.createElement("span");
-          starLabel.className = "ikr-filter-panel-label";
-          starLabel.textContent = "Puana G\xF6re";
-          filterPanel.appendChild(starLabel);
-          var starBtns = document.createElement("div");
-          starBtns.className = "ikr-star-btns";
-          [5, 4, 3, 2, 1].forEach(function(star) {
-            var btn = document.createElement("button");
-            btn.className = "ikr-star-btn" + (currentRatingFilter === star ? " ikr-star-btn-active" : "");
-            btn.textContent = star + " \u2605";
-            btn.onclick = async function() {
-              setCurrentRatingFilter(currentRatingFilter === star ? null : star);
-              setCurrentPage(1);
-              var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
-              await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
-            };
-            starBtns.appendChild(btn);
-          });
-          filterPanel.appendChild(starBtns);
           widget.appendChild(filterPanel);
           filterBtn.onclick = function() {
             var isOpen = filterPanel.style.display !== "none";

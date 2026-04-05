@@ -39,12 +39,8 @@ export var CLASSIC_CSS = `
   .ikr-filter-btn-active{background:var(--ikr-color,#000);color:#fff;}
 
   /* Filtre paneli */
-  .ikr-filter-panel{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;background:rgba(0,0,0,0.03);border-radius:12px;margin-bottom:16px;}
-  .ikr-filter-panel-label{font-size:12px;font-weight:700;color:rgba(0,0,0,0.50);text-transform:uppercase;letter-spacing:.5px;}
+  .ikr-filter-panel{display:flex;align-items:center;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:12px;margin-bottom:16px;}
   .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;background:#fff;color:rgba(0,0,0,0.75);cursor:pointer;outline:none;}
-  .ikr-star-btns{display:flex;gap:6px;flex-wrap:wrap;}
-  .ikr-star-btn{padding:5px 12px;border:1px solid rgba(0,0,0,0.15);border-radius:20px;background:#fff;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
-  .ikr-star-btn-active{background:var(--ikr-color,#000);color:#fff;border-color:var(--ikr-color,#000);}
 
   /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}

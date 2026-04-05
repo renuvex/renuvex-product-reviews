@@ -143,11 +143,6 @@ export async function render(productId, settings, reviewsData, productName, orde
         filterPanel.className = 'ikr-filter-panel';
         filterPanel.style.display = 'none';
 
-        var sortLabel = document.createElement('span');
-        sortLabel.className = 'ikr-filter-panel-label';
-        sortLabel.textContent = 'Sırala';
-        filterPanel.appendChild(sortLabel);
-
         var sortSelect = document.createElement('select');
         sortSelect.className = 'ikr-sort-select';
         [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
@@ -157,27 +152,6 @@ export async function render(productId, settings, reviewsData, productName, orde
         });
         sortSelect.value = currentOrderBy || 'newest';
         filterPanel.appendChild(sortSelect);
-
-        var starLabel = document.createElement('span');
-        starLabel.className = 'ikr-filter-panel-label';
-        starLabel.textContent = 'Puana Göre';
-        filterPanel.appendChild(starLabel);
-
-        var starBtns = document.createElement('div');
-        starBtns.className = 'ikr-star-btns';
-        [5,4,3,2,1].forEach(function(star) {
-          var btn = document.createElement('button');
-          btn.className = 'ikr-star-btn' + (currentRatingFilter === star ? ' ikr-star-btn-active' : '');
-          btn.textContent = star + ' ★';
-          btn.onclick = async function() {
-            setCurrentRatingFilter(currentRatingFilter === star ? null : star);
-            setCurrentPage(1);
-            var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
-            await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
-          };
-          starBtns.appendChild(btn);
-        });
-        filterPanel.appendChild(starBtns);
         widget.appendChild(filterPanel);
 
         filterBtn.onclick = function() {
