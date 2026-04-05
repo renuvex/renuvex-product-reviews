@@ -40,7 +40,7 @@ export function injectStyles(color, css) {
   var validColor = /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#111111';
   document.documentElement.style.setProperty('--ikr-color', validColor);
   var rgb = hexToRgb(validColor);
-  document.documentElement.style.setProperty('--ikr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.12)' : 'rgba(17,17,17,0.12)');
+  document.documentElement.style.setProperty('--ikr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
 }
 
 export function renderStars(rating, interactive, onChange) {

@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T12:16:37.437Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T12:19:33.273Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -114,7 +114,7 @@
     var validColor = /^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#111111";
     document.documentElement.style.setProperty("--ikr-color", validColor);
     var rgb = hexToRgb(validColor);
-    document.documentElement.style.setProperty("--ikr-color-light", rgb ? "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ",0.12)" : "rgba(17,17,17,0.12)");
+    document.documentElement.style.setProperty("--ikr-color-light", rgb ? "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ",0.07)" : "rgba(17,17,17,0.07)");
   }
   function renderStars(rating, interactive, onChange) {
     const wrap = document.createElement("div");
