@@ -48,19 +48,19 @@ export var CLASSIC_CSS = `
   /* Yorumlar */
   .ikr-review{padding:20px 0;border-bottom:1px solid rgba(0,0,0,0.08);}
   .ikr-review-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:22px;}
-  .ikr-review-title{font-weight:700;font-size:18px;color:rgba(0,0,0,1);}
-  .ikr-author{font-size:16px;color:rgba(0,0,0,0.75);margin-top:3px;}
-  .ikr-date{color:rgba(0,0,0,0.40);font-size:16px;white-space:nowrap;flex-shrink:0;}
-  .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:16px;}
+  .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:16px;}
+  .ikr-review-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
+  .ikr-author{font-size:13px;color:rgba(0,0,0,0.75);margin-top:3px;}
+  .ikr-date{color:rgba(0,0,0,0.40);font-size:13px;white-space:nowrap;flex-shrink:0;}
+  .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:14px;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
-  .ikr-read-more{display:block;margin-top:4px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;font-size:14px;}
+  .ikr-read-more{display:block;margin-top:4px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;font-size:13px;}
   .ikr-gallery{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
   .ikr-img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in;}
   .ikr-reply{margin-top:12px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--ikr-color,#000);}
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-  .ikr-reply-label{font-weight:700;font-size:14px;color:rgba(0,0,0,1);}
-  .ikr-reply-text{font-size:14px;color:rgba(0,0,0,0.75);line-height:1.6;}
+  .ikr-reply-label{font-weight:700;font-size:13px;color:rgba(0,0,0,1);}
+  .ikr-reply-text{font-size:13px;color:rgba(0,0,0,0.75);line-height:1.6;}
 
   /* Form */
   .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:12px;margin-top:30px}
@@ -78,5 +78,13 @@ export var CLASSIC_CSS = `
     .ikr-avgbox{flex-direction:row;justify-content:center;gap:12px;flex-wrap:wrap;}
     .ikr-write-btn{width:100%;}
     .ikr-sort-select{margin-left:0;}
+    .ikr-review-top-left{font-size:15px;}
+    .ikr-review-title{font-size:14px;}
+    .ikr-author{font-size:12px;}
+    .ikr-date{font-size:12px;}
+    .ikr-body{font-size:13px;}
+    .ikr-read-more{font-size:12px;}
+    .ikr-reply-label{font-size:12px;}
+    .ikr-reply-text{font-size:12px;}
   }
 `;
