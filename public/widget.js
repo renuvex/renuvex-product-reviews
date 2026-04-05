@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T12:19:33.273Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T12:22:17.584Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -410,18 +410,18 @@
   .ikr-title{font-size:24px;font-weight:800;text-align:center;margin-bottom:24px}
 
   /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
-  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:#f9f9f9;border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:700px;margin-left:auto;margin-right:auto;}
+  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:#f9f9f9;border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
 
   /* Sol \u2014 b\xFCy\xFCk ortalama */
-  .ikr-avgbox{display:flex;flex-direction:column;align-items:center;min-width:90px;gap:4px;}
-  .ikr-avg-star{font-size:40px;color:var(--ikr-color,#111);line-height:1;}
-  .ikr-avg-num{font-size:36px;font-weight:800;line-height:1;color:#111;}
+  .ikr-avgbox{display:flex;flex-direction:column;align-items:center;min-width:120px;gap:4px;}
+  .ikr-avg-star{font-size:48px;color:var(--ikr-color,#111);line-height:1;}
+  .ikr-avg-num{font-size:44px;font-weight:800;line-height:1;color:#111;}
   .ikr-avg-stars{margin:4px 0 2px;}
   .ikr-avg-count{font-size:12px;color:#888;white-space:nowrap;}
 
   /* Orta \u2014 bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:160px;max-width:320px;}
-  .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#555;cursor:pointer;border-radius:6px;padding:3px 6px;}
+  .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:14px;color:#555;cursor:pointer;border-radius:6px;padding:3px 6px;}
   .ikr-bar-row:hover{background:var(--ikr-color-light);}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
   .ikr-bar-label{min-width:28px;text-align:right;white-space:nowrap;}
