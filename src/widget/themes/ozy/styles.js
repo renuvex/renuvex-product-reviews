@@ -8,12 +8,13 @@ export var CLASSIC_CSS = `
   .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:rgba(0,0,0,0.03);border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
 
   /* Sol — büyük ortalama */
-  .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:6px;}
-  .ikr-avg-row1{display:flex;align-items:center;gap:10px;}
-  .ikr-avg-star{font-size:40px;color:var(--ikr-color,#000);line-height:1;}
-  .ikr-avg-num{font-size:40px;font-weight:800;line-height:1;color:rgba(0,0,0,1);}
-  .ikr-avg-row2{display:flex;align-items:center;gap:8px;}
-  .ikr-avg-count{font-size:14px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
+  .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:4px;}
+  .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
+  .ikr-avg-star{font-size:48px;color:var(--ikr-color,#000);line-height:1;}
+  .ikr-avg-num{font-size:38px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
+  .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
+  .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
+  .ikr-avg-count{font-size:13px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
 
   /* Orta — bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:400px;}
