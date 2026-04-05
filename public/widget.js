@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T12:49:43.414Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T12:51:15.798Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -1087,6 +1087,7 @@
         return;
       }
       var ratings = results[1];
+      injectStyles(settings.widgetColor, CLASSIC_CSS);
       if (doCleanup) {
         document.querySelectorAll("[data-ikr-listing-badge]").forEach(function(el) {
           el.remove();
