@@ -8,11 +8,12 @@ export var CLASSIC_CSS = `
   .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:rgba(0,0,0,0.03);border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
 
   /* Sol — büyük ortalama */
-  .ikr-avgbox{display:flex;flex-direction:column;align-items:center;min-width:120px;gap:4px;}
-  .ikr-avg-star{font-size:48px;color:var(--ikr-color,#000);line-height:1;}
-  .ikr-avg-num{font-size:44px;font-weight:800;line-height:1;color:rgba(0,0,0,1);}
-  .ikr-avg-stars{margin:4px 0 2px;font-size:16px;}
-  .ikr-avg-count{font-size:14px;color:rgba(0,0,0,1);white-space:nowrap;font-weight:500;}
+  .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:6px;}
+  .ikr-avg-row1{display:flex;align-items:center;gap:10px;}
+  .ikr-avg-star{font-size:40px;color:var(--ikr-color,#000);line-height:1;}
+  .ikr-avg-num{font-size:40px;font-weight:800;line-height:1;color:rgba(0,0,0,1);}
+  .ikr-avg-row2{display:flex;align-items:center;gap:8px;}
+  .ikr-avg-count{font-size:14px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
 
   /* Orta — bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:400px;}
@@ -28,8 +29,8 @@ export var CLASSIC_CSS = `
   .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
 
   /* Tavsiye yüzdesi */
-  .ikr-recommend{text-align:center;font-size:14px;color:rgba(0,0,0,1);margin:0 0 20px;}
-  .ikr-recommend-pct{font-size:18px;font-weight:800;color:rgba(0,0,0,1);margin-right:5px;}
+  .ikr-recommend{font-size:13px;color:rgba(0,0,0,0.75);margin-top:2px;}
+  .ikr-recommend-pct{font-weight:800;color:rgba(0,0,0,1);margin-right:3px;}
 
   /* Sıralama satırı */
   .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}

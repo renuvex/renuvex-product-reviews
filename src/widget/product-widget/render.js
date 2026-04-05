@@ -80,11 +80,12 @@ export async function render(productId, settings, reviewsData, productName, orde
         // Sol — büyük ortalama puan
         var avgBox = document.createElement('div');
         avgBox.className = 'ikr-avgbox';
+        var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
+        var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
         avgBox.innerHTML =
-          '<div class="ikr-avg-star">★</div>' +
-          '<div class="ikr-avg-num">' + avgRatingVal + '</div>' +
-          '<div class="ikr-avg-stars">' + starsHTML(parseFloat(avgRatingVal), null) + '</div>' +
-          '<div class="ikr-avg-count">' + allCount.toLocaleString('tr-TR') + ' Yorum</div>';
+          '<div class="ikr-avg-row1"><span class="ikr-avg-star">★</span><span class="ikr-avg-num">' + avgRatingVal + '</span></div>' +
+          '<div class="ikr-avg-row2">' + starsHTML(parseFloat(avgRatingVal), null) + '<span class="ikr-avg-count">' + allCount.toLocaleString('tr-TR') + ' Yorum</span></div>' +
+          (recommendPct > 0 ? '<div class="ikr-recommend"><span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor</div>' : '');
         summary.appendChild(avgBox);
 
         // Orta — bar chart
@@ -126,16 +127,6 @@ export async function render(productId, settings, reviewsData, productName, orde
         summary.appendChild(writeBtn);
 
         widget.appendChild(summary);
-
-        // Tavsiye yüzdesi
-        var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
-        var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
-        if (recommendPct > 0) {
-          var recommendEl = document.createElement('div');
-          recommendEl.className = 'ikr-recommend';
-          recommendEl.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
-          widget.appendChild(recommendEl);
-        }
 
         // Sıralama satırı
         var controlsRow = document.createElement('div');
