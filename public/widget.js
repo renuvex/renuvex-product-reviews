@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:22:10.024Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:22:47.034Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -441,7 +441,7 @@
 
   /* S\u0131ralama sat\u0131r\u0131 */
   .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
-  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;background:#fff;color:rgba(0,0,0,1);cursor:pointer;outline:none;}
+  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;background:#fff;color:rgba(0,0,0,0.75);cursor:pointer;outline:none;}
 
   /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
