@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-04T20:31:38.275Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T11:21:15.083Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -494,11 +494,11 @@
           bars.style.cssText = "flex:1;display:flex;flex-direction:column;gap:5px;";
           for (var si = 5; si >= 1; si--) {
             var cnt = ratingCounts[si - 1];
-            var pct = reviews.length > 0 ? Math.round(cnt / reviews.length * 100) : 0;
+            var pct = allCount > 0 ? Math.round(cnt / allCount * 100) : 0;
             var isActive = currentRatingFilter === si;
             var row = document.createElement("div");
             row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;color:#555;cursor:pointer;border-radius:6px;padding:2px 4px;" + (isActive ? "background:#fef9c3;" : "");
-            row.innerHTML = '<span style="min-width:16px;text-align:right;">' + si + '</span><span style="color:#f59e0b;font-size:11px;">\u2605</span><div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px;"><div style="width:' + pct + '%;background:#f59e0b;border-radius:4px;height:8px;transition:width 0.3s;"></div></div><span style="min-width:28px;">' + pct + "%</span>";
+            row.innerHTML = '<span style="min-width:16px;text-align:right;">' + si + '</span><span style="color:#f59e0b;font-size:11px;">\u2605</span><div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px;"><div style="width:' + pct + '%;background:#f59e0b;border-radius:4px;height:8px;"></div></div><span style="min-width:28px;">' + pct + "%</span>";
             (function(starVal) {
               row.onclick = async function() {
                 setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
@@ -598,10 +598,7 @@
           };
           document.body.appendChild(overlay);
         });
-        var avgRating = reviews.length ? (reviews.reduce(function(s2, r) {
-          return s2 + r.rating;
-        }, 0) / reviews.length).toFixed(1) : null;
-        injectRatingBadge(avgRating, totalCount, productName);
+        injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName);
         buildReviewForm(widget, productId, productName);
       } catch (err) {
         console.error("[ikr] render error:", err);
