@@ -130,6 +130,10 @@ export async function render(productId, settings, reviewsData, productName, orde
         // Sıralama satırı
         var controlsRow = document.createElement('div');
         controlsRow.className = 'ikr-controls-row';
+        var reviewCountLabel = document.createElement('span');
+        reviewCountLabel.className = 'ikr-review-count-label';
+        reviewCountLabel.textContent = totalCount.toLocaleString('tr-TR') + ' yorum';
+        controlsRow.appendChild(reviewCountLabel);
         var sortSelect = document.createElement('select');
         sortSelect.className = 'ikr-sort-select';
         [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {

@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T12:30:07.939Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T12:49:43.414Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -78,7 +78,7 @@
   }
 
   // src/widget/core/helpers.js
-  var STAR_COLOR = "#f59e0b";
+  var STAR_COLOR = "var(--ikr-color,#f59e0b)";
   var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
   function extractSlug(url) {
     try {
@@ -434,7 +434,8 @@
   .ikr-write-btn:hover{opacity:.88;}
 
   /* S\u0131ralama sat\u0131r\u0131 */
-  .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
+  .ikr-controls-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .ikr-review-count-label{font-size:14px;color:#888;font-weight:500;}
   .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;}
 
   /* Yorumlar */
@@ -558,6 +559,10 @@
           widget.appendChild(summary);
           var controlsRow = document.createElement("div");
           controlsRow.className = "ikr-controls-row";
+          var reviewCountLabel = document.createElement("span");
+          reviewCountLabel.className = "ikr-review-count-label";
+          reviewCountLabel.textContent = totalCount.toLocaleString("tr-TR") + " yorum";
+          controlsRow.appendChild(reviewCountLabel);
           var sortSelect = document.createElement("select");
           sortSelect.className = "ikr-sort-select";
           [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {

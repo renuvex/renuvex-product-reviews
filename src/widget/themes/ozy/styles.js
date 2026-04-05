@@ -29,7 +29,8 @@ export var CLASSIC_CSS = `
   .ikr-write-btn:hover{opacity:.88;}
 
   /* Sıralama satırı */
-  .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
+  .ikr-controls-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .ikr-review-count-label{font-size:14px;color:#888;font-weight:500;}
   .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;}
 
   /* Yorumlar */

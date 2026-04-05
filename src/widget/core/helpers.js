@@ -1,6 +1,6 @@
 // helpers.js — Genel yardımcı fonksiyonlar
 
-export var STAR_COLOR = '#f59e0b';
+export var STAR_COLOR = 'var(--ikr-color,#f59e0b)';
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
