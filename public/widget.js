@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:47:59.521Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:53:14.324Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -512,12 +512,7 @@
         var reviews = data.data && data.data.reviews || [];
         var totalCount = data.data && data.data.totalCount || 0;
         var fresh = container.cloneNode(false);
-        if (container.parentNode) {
-          container.parentNode.replaceChild(fresh, container);
-        } else {
-          var anchorForFresh = document.getElementById("ikas-reviews-anchor");
-          if (anchorForFresh) anchorForFresh.appendChild(fresh);
-        }
+        container.parentNode.replaceChild(fresh, container);
         container = fresh;
         var widget = document.createElement("div");
         widget.id = "ikas-reviews-widget";
@@ -609,9 +604,14 @@
             filterMenu.style.display = isOpen ? "none" : "block";
             filterBtn.classList.toggle("ikr-filter-btn-active", !isOpen);
           };
-          document.addEventListener("click", function() {
-            filterMenu.style.display = "none";
-            filterBtn.classList.remove("ikr-filter-btn-active");
+          filterWrap.addEventListener("click", function(e) {
+            e.stopPropagation();
+          });
+          widget.addEventListener("click", function(e) {
+            if (!filterWrap.contains(e.target)) {
+              filterMenu.style.display = "none";
+              filterBtn.classList.remove("ikr-filter-btn-active");
+            }
           });
           filterWrap.appendChild(filterBtn);
           filterWrap.appendChild(filterMenu);

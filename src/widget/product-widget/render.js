@@ -48,14 +48,9 @@ export async function render(productId, settings, reviewsData, productName, orde
       var reviews = (data.data && data.data.reviews) || [];
       var totalCount = (data.data && data.data.totalCount) || 0;
 
-      // Önceki listener'ları temizle
+      // Önceki listener'ları temizle — parentNode her zaman var (anchorEl.appendChild ile eklendi)
       var fresh = container.cloneNode(false);
-      if (container.parentNode) {
-        container.parentNode.replaceChild(fresh, container);
-      } else {
-        var anchorForFresh = document.getElementById('ikas-reviews-anchor');
-        if (anchorForFresh) anchorForFresh.appendChild(fresh);
-      }
+      container.parentNode.replaceChild(fresh, container);
       container = fresh;
 
       var widget = document.createElement('div');
@@ -169,9 +164,13 @@ export async function render(productId, settings, reviewsData, productName, orde
           filterBtn.classList.toggle('ikr-filter-btn-active', !isOpen);
         };
 
-        document.addEventListener('click', function() {
-          filterMenu.style.display = 'none';
-          filterBtn.classList.remove('ikr-filter-btn-active');
+        // Dışarı tıklanınca kapat — once:true ile tek seferlik değil, widget'a bağlı
+        filterWrap.addEventListener('click', function(e) { e.stopPropagation(); });
+        widget.addEventListener('click', function(e) {
+          if (!filterWrap.contains(e.target)) {
+            filterMenu.style.display = 'none';
+            filterBtn.classList.remove('ikr-filter-btn-active');
+          }
         });
 
         filterWrap.appendChild(filterBtn);
