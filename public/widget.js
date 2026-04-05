@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:37:30.212Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:43:30.601Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -512,7 +512,12 @@
         var reviews = data.data && data.data.reviews || [];
         var totalCount = data.data && data.data.totalCount || 0;
         var fresh = container.cloneNode(false);
-        container.parentNode.replaceChild(fresh, container);
+        if (container.parentNode) {
+          container.parentNode.replaceChild(fresh, container);
+        } else {
+          var anchorForFresh = document.getElementById("ikas-reviews-anchor");
+          if (anchorForFresh) anchorForFresh.appendChild(fresh);
+        }
         container = fresh;
         var widget = document.createElement("div");
         widget.id = "ikas-reviews-widget";

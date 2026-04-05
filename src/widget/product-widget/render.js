@@ -50,7 +50,12 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       // Önceki listener'ları temizle
       var fresh = container.cloneNode(false);
-      container.parentNode.replaceChild(fresh, container);
+      if (container.parentNode) {
+        container.parentNode.replaceChild(fresh, container);
+      } else {
+        var anchorForFresh = document.getElementById('ikas-reviews-anchor');
+        if (anchorForFresh) anchorForFresh.appendChild(fresh);
+      }
       container = fresh;
 
       var widget = document.createElement('div');
