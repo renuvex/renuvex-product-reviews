@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:20:07.525Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:20:46.686Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -434,7 +434,6 @@
 
   /* Sa\u011F \u2014 Yorum Yaz butonu */
   .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
-  .ikr-write-btn:hover{opacity:.88;}
 
   /* Tavsiye y\xFCzdesi */
   .ikr-recommend{text-align:center;font-size:14px;color:rgba(0,0,0,1);margin:0 0 20px;}
@@ -556,7 +555,7 @@
           summary.appendChild(bars);
           var writeBtn = document.createElement("button");
           writeBtn.className = "ikr-write-btn";
-          writeBtn.textContent = "Yorum Yaz";
+          writeBtn.textContent = "Yorum Yap";
           writeBtn.onclick = function() {
             var form = document.getElementById("ikr-form-section");
             if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });

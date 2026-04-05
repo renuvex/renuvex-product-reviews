@@ -26,7 +26,6 @@ export var CLASSIC_CSS = `
 
   /* Sağ — Yorum Yaz butonu */
   .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
-  .ikr-write-btn:hover{opacity:.88;}
 
   /* Tavsiye yüzdesi */
   .ikr-recommend{text-align:center;font-size:14px;color:rgba(0,0,0,1);margin:0 0 20px;}

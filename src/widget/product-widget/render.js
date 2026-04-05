@@ -118,7 +118,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         // Sağ — Yorum Yaz butonu
         var writeBtn = document.createElement('button');
         writeBtn.className = 'ikr-write-btn';
-        writeBtn.textContent = 'Yorum Yaz';
+        writeBtn.textContent = 'Yorum Yap';
         writeBtn.onclick = function() {
           var form = document.getElementById('ikr-form-section');
           if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
