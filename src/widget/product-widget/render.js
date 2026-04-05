@@ -227,14 +227,6 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       container.appendChild(widget);
 
-      // Sıralama dropdown onChange
-      sortSelect.onchange = async function() {
-        setCurrentOrderBy(sortSelect.value);
-        setCurrentPage(1);
-        var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
-        await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
-      };
-
       // Lightbox modal — resim tıklaması
       container.addEventListener('click', function(e) {
         var img = e.target.closest('[data-ikr-img-url]');

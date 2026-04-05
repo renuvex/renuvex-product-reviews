@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:43:30.601Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:47:59.521Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -665,12 +665,6 @@
           widget.appendChild(loadMoreBtn);
         }
         container.appendChild(widget);
-        sortSelect.onchange = async function() {
-          setCurrentOrderBy(sortSelect.value);
-          setCurrentPage(1);
-          var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
-          await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
-        };
         container.addEventListener("click", function(e) {
           var img = e.target.closest("[data-ikr-img-url]");
           if (!img) return;
