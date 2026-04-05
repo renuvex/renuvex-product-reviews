@@ -32,6 +32,7 @@ model Review {
   slug          String   // Product slug for listing page badge lookup
   productName   String?  // The product name captured at the time of review
   rating        Int
+  title         String?  // Yorum başlığı (opsiyonel)
   comment       String?
   author        String
   email         String?

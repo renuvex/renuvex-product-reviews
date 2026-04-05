@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 }));
     }
 
-    const { storeId, productId, slug, productName, rating, comment, author, email, images } = body;
+    const { storeId, productId, slug, productName, rating, title, comment, author, email, images } = body;
 
     // [9] Validasyon — zorunlu alanlar ve tip/aralık kontrolleri
     if (!storeId || !productId || !author) {
@@ -157,10 +157,13 @@ export async function POST(request: Request) {
     if (typeof author !== 'string' || author.trim().length < 2 || author.trim().length > 100) {
       return withCors(NextResponse.json({ error: 'Ad en az 2, en fazla 100 karakter olmalıdır.' }, { status: 400 }));
     }
+    if (title && typeof title === 'string' && title.trim().length > 150) {
+      return withCors(NextResponse.json({ error: 'Başlık en fazla 150 karakter olabilir.' }, { status: 400 }));
+    }
     if (comment && typeof comment === 'string' && comment.length > 2000) {
       return withCors(NextResponse.json({ error: 'Yorum en fazla 2000 karakter olabilir.' }, { status: 400 }));
     }
-    if (containsProfanity(comment) || containsProfanity(author)) {
+    if (containsProfanity(title) || containsProfanity(comment) || containsProfanity(author)) {
       return withCors(NextResponse.json({ error: 'Yorumunuz uygunsuz ifadeler içeriyor.' }, { status: 400 }));
     }
 
@@ -174,6 +177,7 @@ export async function POST(request: Request) {
         slug: String(slug || ''),
         productName: productName ? String(productName) : null,
         rating: ratingNum,
+        title: title ? String(title).trim() : null,
         comment: comment || '',
         author: String(author).trim(),
         email: email || '',

@@ -15,6 +15,8 @@ export function buildReviewForm(widgetEl, productId, productName) {
     '<h3 style="font-weight:700;margin-top:0;" id="ikr-form-title">Yorum Yapın</h3>',
     '<label for="ikr-name" style="font-size:12px;font-weight:600;">Adınız Soyadınız</label>',
     '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız Soyadınız" aria-label="Adınız Soyadınız" aria-required="true">',
+    '<label for="ikr-title" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Başlık <span style="font-weight:400;color:rgba(0,0,0,0.45);">(opsiyonel)</span></label>',
+    '<input type="text" id="ikr-title" class="ikr-input" placeholder="Yorumunuzun kısa başlığı" aria-label="Yorum başlığı" maxlength="150">',
     '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorumunuz</label>',
     '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz"></textarea>',
     '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">Puanınız:</label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
@@ -99,6 +101,7 @@ export function buildReviewForm(widgetEl, productId, productName) {
   form.querySelector('#ikr-submit').onclick = async function() {
     var btn = this;
     var author = form.querySelector('#ikr-name').value.trim();
+    var title = form.querySelector('#ikr-title').value.trim();
     var comment = form.querySelector('#ikr-comment').value.trim();
     var msgDiv = form.querySelector('#ikr-msg');
     if (!author) { msgDiv.innerHTML = '<div style="color:#dc2626;font-size:14px;margin-top:8px;">Lütfen adınızı girin.</div>'; return; }
@@ -117,6 +120,7 @@ export function buildReviewForm(widgetEl, productId, productName) {
           slug: pageSlug || null,
           productName: submitName,
           author: author,
+          title: title || null,
           comment: comment,
           rating: currentRating,
           images: uploadedImages,
