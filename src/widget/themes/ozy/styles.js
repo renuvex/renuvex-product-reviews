@@ -48,7 +48,7 @@ export var CLASSIC_CSS = `
   /* Yorumlar */
   .ikr-review{padding:20px 0;border-bottom:1px solid rgba(0,0,0,0.08);}
   .ikr-review-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:18px;}
+  .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:20px;}
   .ikr-review-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
   .ikr-author{font-size:13px;color:rgba(0,0,0,0.75);margin-top:3px;}
   .ikr-date{color:rgba(0,0,0,0.40);font-size:13px;white-space:nowrap;flex-shrink:0;}
@@ -78,7 +78,7 @@ export var CLASSIC_CSS = `
     .ikr-avgbox{flex-direction:row;justify-content:center;gap:12px;flex-wrap:wrap;}
     .ikr-write-btn{width:100%;}
     .ikr-sort-select{margin-left:0;}
-    .ikr-review-top-left{font-size:16px;}
+    .ikr-review-top-left{font-size:18px;}
     .ikr-review-title{font-size:14px;}
     .ikr-author{font-size:12px;}
     .ikr-date{font-size:12px;}
