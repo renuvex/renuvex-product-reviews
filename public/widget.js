@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T16:06:00.687Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T16:42:47.618Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -168,6 +168,132 @@
     });
   }
 
+  // src/widget/product-widget/review-modal.js
+  function openReviewModal(r, clickedUrl) {
+    var images = r.images && Array.isArray(r.images) ? r.images.filter(function(u) {
+      return u && u.indexOf("https://") === 0;
+    }) : [];
+    var currentIdx = Math.max(0, images.indexOf(clickedUrl));
+    var overlay = document.createElement("div");
+    overlay.className = "ikr-modal-overlay";
+    var modal = document.createElement("div");
+    modal.className = "ikr-modal";
+    var left = document.createElement("div");
+    left.className = "ikr-modal-left";
+    var mainImg = document.createElement("img");
+    mainImg.className = "ikr-modal-main-img";
+    mainImg.src = images[currentIdx] || "";
+    mainImg.alt = "Yorum foto\u011Fraf\u0131";
+    left.appendChild(mainImg);
+    var thumbEls = [];
+    if (images.length > 1) {
+      var thumbBar = document.createElement("div");
+      thumbBar.className = "ikr-modal-thumbs";
+      images.forEach(function(url, i) {
+        var th = document.createElement("img");
+        th.src = url;
+        th.className = "ikr-modal-thumb" + (i === currentIdx ? " ikr-modal-thumb-active" : "");
+        th.alt = "K\xFC\xE7\xFCk resim " + (i + 1);
+        th.onclick = function() {
+          setActive(i);
+        };
+        thumbBar.appendChild(th);
+        thumbEls.push(th);
+      });
+      left.appendChild(thumbBar);
+      var prevBtn = document.createElement("button");
+      prevBtn.className = "ikr-modal-nav ikr-modal-nav-prev";
+      prevBtn.innerHTML = "&#8249;";
+      prevBtn.setAttribute("aria-label", "\xD6nceki foto\u011Fraf");
+      prevBtn.onclick = function(e) {
+        e.stopPropagation();
+        setActive((currentIdx - 1 + images.length) % images.length);
+      };
+      left.appendChild(prevBtn);
+      var nextBtn = document.createElement("button");
+      nextBtn.className = "ikr-modal-nav ikr-modal-nav-next";
+      nextBtn.innerHTML = "&#8250;";
+      nextBtn.setAttribute("aria-label", "Sonraki foto\u011Fraf");
+      nextBtn.onclick = function(e) {
+        e.stopPropagation();
+        setActive((currentIdx + 1) % images.length);
+      };
+      left.appendChild(nextBtn);
+    }
+    function setActive(idx) {
+      currentIdx = idx;
+      mainImg.src = images[idx];
+      thumbEls.forEach(function(th, i) {
+        th.classList.toggle("ikr-modal-thumb-active", i === idx);
+      });
+    }
+    var right = document.createElement("div");
+    right.className = "ikr-modal-right";
+    var closeBtn = document.createElement("button");
+    closeBtn.className = "ikr-modal-close";
+    closeBtn.textContent = "\u2715";
+    closeBtn.setAttribute("aria-label", "Kapat");
+    closeBtn.onclick = function(e) {
+      e.stopPropagation();
+      document.body.removeChild(overlay);
+    };
+    right.appendChild(closeBtn);
+    var meta = document.createElement("div");
+    meta.className = "ikr-modal-meta";
+    var avatar = document.createElement("div");
+    avatar.className = "ikr-modal-avatar";
+    avatar.innerHTML = "&#128100;";
+    var authorEl = document.createElement("span");
+    authorEl.className = "ikr-modal-author";
+    authorEl.textContent = r.author || "";
+    var dateEl = document.createElement("span");
+    dateEl.className = "ikr-modal-date";
+    dateEl.textContent = formatDate(r.createdAt);
+    meta.appendChild(avatar);
+    meta.appendChild(authorEl);
+    meta.appendChild(dateEl);
+    right.appendChild(meta);
+    var starsEl = document.createElement("div");
+    starsEl.className = "ikr-modal-stars";
+    starsEl.innerHTML = starsHTML(r.rating, null);
+    right.appendChild(starsEl);
+    if (r.title) {
+      var titleEl = document.createElement("div");
+      titleEl.className = "ikr-modal-title";
+      titleEl.textContent = r.title;
+      right.appendChild(titleEl);
+    }
+    if (r.comment && r.comment.trim()) {
+      var bodyEl = document.createElement("div");
+      bodyEl.className = "ikr-modal-body";
+      bodyEl.textContent = r.comment.trim();
+      right.appendChild(bodyEl);
+    }
+    if (r.merchantReply) {
+      var replyEl = document.createElement("div");
+      replyEl.className = "ikr-modal-reply";
+      replyEl.innerHTML = '<div class="ikr-modal-reply-label">Ma\u011Faza Sahibi</div><div class="ikr-modal-reply-text">' + r.merchantReply + "</div>";
+      right.appendChild(replyEl);
+    }
+    modal.appendChild(left);
+    modal.appendChild(right);
+    overlay.appendChild(modal);
+    overlay.onclick = function() {
+      document.body.removeChild(overlay);
+    };
+    modal.onclick = function(e) {
+      e.stopPropagation();
+    };
+    function onKeyDown(e) {
+      if (e.key === "Escape") {
+        document.body.removeChild(overlay);
+        document.removeEventListener("keydown", onKeyDown);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.body.appendChild(overlay);
+  }
+
   // src/widget/product-widget/review-item.js
   function buildReviewEl(r) {
     var reviewEl = document.createElement("div");
@@ -219,6 +345,11 @@
         imgEl.src = imgUrl;
         imgEl.className = "ikr-img";
         imgEl.setAttribute("data-ikr-img-url", imgUrl);
+        (function(url) {
+          imgEl.onclick = function() {
+            openReviewModal(r, url);
+          };
+        })(imgUrl);
         gallery.appendChild(imgEl);
       });
       reviewEl.appendChild(gallery);
@@ -242,9 +373,9 @@
     form.innerHTML = [
       '<h3 style="font-weight:700;margin-top:0;" id="ikr-form-title">Yorum Yap\u0131n</h3>',
       '<label for="ikr-name" style="font-size:12px;font-weight:600;">Ad\u0131n\u0131z Soyad\u0131n\u0131z</label>',
-      '<input type="text" id="ikr-name" class="ikr-input" placeholder="Ad\u0131n\u0131z Soyad\u0131n\u0131z" aria-label="Ad\u0131n\u0131z Soyad\u0131n\u0131z" aria-required="true">',
+      '<input type="text" id="ikr-name" class="ikr-input" placeholder="Ad\u0131n\u0131z Soyad\u0131n\u0131z" aria-label="Ad\u0131n\u0131z Soyad\u0131n\u0131z" aria-required="true" maxlength="40">',
       '<label for="ikr-title" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Ba\u015Fl\u0131k <span style="font-weight:400;color:rgba(0,0,0,0.45);">(opsiyonel)</span></label>',
-      '<input type="text" id="ikr-title" class="ikr-input" placeholder="Yorumunuzun k\u0131sa ba\u015Fl\u0131\u011F\u0131" aria-label="Yorum ba\u015Fl\u0131\u011F\u0131" maxlength="150">',
+      '<input type="text" id="ikr-title" class="ikr-input" placeholder="Yorumunuzun k\u0131sa ba\u015Fl\u0131\u011F\u0131" aria-label="Yorum ba\u015Fl\u0131\u011F\u0131" maxlength="60">',
       '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorumunuz</label>',
       '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz"></textarea>',
       '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">Puan\u0131n\u0131z:</label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
@@ -430,7 +561,7 @@
   // src/widget/themes/ozy/styles.js
   var CLASSIC_CSS = `
   #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px 0;padding:0}
-  .ikr-title{font-size:24px;font-weight:800;text-align:center;margin-bottom:24px}
+  .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
   .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:rgba(0,0,0,0.03);border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
@@ -459,7 +590,7 @@
 
   /* Tavsiye y\xFCzdesi */
   .ikr-recommend{font-size:13px;color:rgba(0,0,0,0.75);margin-top:2px;}
-  .ikr-recommend-pct{font-weight:800;color:rgba(0,0,0,1);margin-right:3px;}
+  .ikr-recommend-pct{font-weight:700;color:rgba(0,0,0,1);margin-right:3px;}
 
   /* Buton grubu */
   .ikr-btn-group{display:flex;align-items:center;gap:8px;align-self:center;}
@@ -500,7 +631,37 @@
   .ikr-preview-img{width:60px;height:60px;object-fit:cover;border-radius:6px}
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
 
+  /* Review Modal */
+  .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:860px;max-height:90vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
+  .ikr-modal-left{flex:0 0 50%;background:#000;position:relative;display:flex;align-items:center;justify-content:center;min-height:320px;}
+  .ikr-modal-main-img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.45);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
+  .ikr-modal-nav-prev{left:10px;}
+  .ikr-modal-nav-next{right:10px;}
+  .ikr-modal-thumbs{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;padding:0 12px;}
+  .ikr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;opacity:0.7;}
+  .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
+  .ikr-modal-right{flex:1;overflow-y:auto;padding:28px 24px;display:flex;flex-direction:column;gap:10px;position:relative;}
+  .ikr-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:rgba(0,0,0,0.45);line-height:1;}
+  .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
+  .ikr-modal-meta{display:flex;align-items:center;gap:10px;}
+  .ikr-modal-avatar{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center;font-size:15px;color:rgba(0,0,0,0.35);flex-shrink:0;}
+  .ikr-modal-author{font-weight:600;font-size:14px;color:rgba(0,0,0,1);}
+  .ikr-modal-date{font-size:12px;color:rgba(0,0,0,0.45);margin-left:auto;}
+  .ikr-modal-stars{font-size:18px;}
+  .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
+  .ikr-modal-body{font-size:14px;line-height:1.7;color:rgba(0,0,0,0.85);}
+  .ikr-modal-reply{margin-top:8px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--ikr-color,#000);}
+  .ikr-modal-reply-label{font-weight:700;font-size:13px;color:rgba(0,0,0,1);margin-bottom:4px;}
+  .ikr-modal-reply-text{font-size:13px;color:rgba(0,0,0,0.75);line-height:1.6;}
+
   /* Responsive */
+  @media(max-width:640px){
+    .ikr-modal{flex-direction:column;max-height:95vh;}
+    .ikr-modal-left{flex:0 0 240px;min-height:200px;}
+    .ikr-modal-right{padding:20px 16px;}
+  }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
     .ikr-avgbox{flex-direction:row;justify-content:center;gap:12px;flex-wrap:wrap;}
@@ -701,33 +862,6 @@
           widget.appendChild(loadMoreBtn);
         }
         container.appendChild(widget);
-        container.addEventListener("click", function(e) {
-          var img = e.target.closest("[data-ikr-img-url]");
-          if (!img) return;
-          var url = img.getAttribute("data-ikr-img-url");
-          if (!url || url.indexOf("https://") !== 0) return;
-          var overlay = document.createElement("div");
-          overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;";
-          var imgEl = document.createElement("img");
-          imgEl.src = url;
-          imgEl.style.cssText = "max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);object-fit:contain;";
-          var closeBtn = document.createElement("button");
-          closeBtn.textContent = "\u2715";
-          closeBtn.style.cssText = "position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;";
-          closeBtn.onclick = function(ev) {
-            ev.stopPropagation();
-            document.body.removeChild(overlay);
-          };
-          overlay.appendChild(imgEl);
-          overlay.appendChild(closeBtn);
-          overlay.onclick = function() {
-            document.body.removeChild(overlay);
-          };
-          imgEl.onclick = function(ev) {
-            ev.stopPropagation();
-          };
-          document.body.appendChild(overlay);
-        });
         injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName);
         buildReviewForm(widget, productId, productName);
       } catch (err) {

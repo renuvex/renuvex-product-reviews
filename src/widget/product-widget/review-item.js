@@ -1,6 +1,7 @@
 // product-widget/review-item.js — Tek bir yorum DOM elementini oluşturur
 
 import { starsHTML, formatDate } from '../core/helpers.js';
+import { openReviewModal } from './review-modal.js';
 
 
 export function buildReviewEl(r) {
@@ -67,6 +68,9 @@ export function buildReviewEl(r) {
       imgEl.src = imgUrl;
       imgEl.className = 'ikr-img';
       imgEl.setAttribute('data-ikr-img-url', imgUrl);
+      (function(url) {
+        imgEl.onclick = function() { openReviewModal(r, url); };
+      })(imgUrl);
       gallery.appendChild(imgEl);
     });
     reviewEl.appendChild(gallery);
