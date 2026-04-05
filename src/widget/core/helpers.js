@@ -23,6 +23,12 @@ export function formatDate(iso) {
   return new Date(iso).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function hexToRgb(hex) {
+  var m = /^#([0-9A-Fa-f]{6})$/.exec(hex);
+  if (!m) return null;
+  return [parseInt(m[1].slice(0,2),16), parseInt(m[1].slice(2,4),16), parseInt(m[1].slice(4,6),16)];
+}
+
 export function injectStyles(color, css) {
   var el = document.getElementById('ikr-styles');
   if (!el) {
@@ -31,7 +37,10 @@ export function injectStyles(color, css) {
     document.head.appendChild(el);
   }
   el.textContent = css;
-  document.documentElement.style.setProperty('--ikr-color', /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#111');
+  var validColor = /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#111111';
+  document.documentElement.style.setProperty('--ikr-color', validColor);
+  var rgb = hexToRgb(validColor);
+  document.documentElement.style.setProperty('--ikr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.12)' : 'rgba(17,17,17,0.12)');
 }
 
 export function renderStars(rating, interactive, onChange) {

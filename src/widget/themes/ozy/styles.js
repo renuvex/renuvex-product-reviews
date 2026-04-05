@@ -17,8 +17,8 @@ export var CLASSIC_CSS = `
   /* Orta — bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:160px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#555;cursor:pointer;border-radius:6px;padding:3px 6px;}
-  .ikr-bar-row:hover{background:#f0f0f0;}
-  .ikr-bar-active{background:#fef9c3!important;}
+  .ikr-bar-row:hover{background:var(--ikr-color-light);}
+  .ikr-bar-active{background:var(--ikr-color-light)!important;}
   .ikr-bar-label{min-width:28px;text-align:right;white-space:nowrap;}
   .ikr-bar-track{flex:1;background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;}
   .ikr-bar-fill{height:8px;background:var(--ikr-color,#111);border-radius:4px;}
@@ -30,7 +30,7 @@ export var CLASSIC_CSS = `
 
   /* Filtre chip + sıralama satırı */
   .ikr-controls-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
-  .ikr-filter-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:20px;font-size:13px;color:#555;}
+  .ikr-filter-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;background:var(--ikr-color-light);border:1px solid var(--ikr-color);border-radius:20px;font-size:13px;color:#555;}
   .ikr-chip-clear{cursor:pointer;font-weight:bold;color:#888;margin-left:4px;}
   .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;margin-left:auto;}
 
