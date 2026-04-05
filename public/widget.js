@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:10:43.014Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:13:04.290Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -438,7 +438,7 @@
 
   /* Tavsiye y\xFCzdesi */
   .ikr-recommend{text-align:center;font-size:14px;color:#555;margin:0 0 20px;}
-  .ikr-recommend-pct{font-size:22px;font-weight:800;color:#111;display:block;margin-bottom:2px;}
+  .ikr-recommend-pct{font-size:18px;font-weight:800;color:#111;margin-right:5px;}
 
   /* S\u0131ralama sat\u0131r\u0131 */
   .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
@@ -568,7 +568,7 @@
           if (recommendPct > 0) {
             var recommendEl = document.createElement("div");
             recommendEl.className = "ikr-recommend";
-            recommendEl.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + "</span>bu \xFCr\xFCn\xFC tavsiye ediyor";
+            recommendEl.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + "</span> bu \xFCr\xFCn\xFC tavsiye ediyor";
             widget.appendChild(recommendEl);
           }
           var controlsRow = document.createElement("div");

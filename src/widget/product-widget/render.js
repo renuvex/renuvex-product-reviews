@@ -133,7 +133,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         if (recommendPct > 0) {
           var recommendEl = document.createElement('div');
           recommendEl.className = 'ikr-recommend';
-          recommendEl.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span>bu ürünü tavsiye ediyor';
+          recommendEl.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
           widget.appendChild(recommendEl);
         }
 
