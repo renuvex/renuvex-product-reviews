@@ -28,6 +28,9 @@ export var CLASSIC_CSS = `
   .ikr-write-btn{background:var(--ikr-color,#111);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
   .ikr-write-btn:hover{opacity:.88;}
 
+  /* Tavsiye yüzdesi */
+  .ikr-recommend{text-align:center;font-size:13px;color:#888;margin:-12px 0 20px;padding:10px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;}
+
   /* Sıralama satırı */
   .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
   .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;}

@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T12:57:33.227Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:02:04.538Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -436,6 +436,9 @@
   .ikr-write-btn{background:var(--ikr-color,#111);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
   .ikr-write-btn:hover{opacity:.88;}
 
+  /* Tavsiye y\xFCzdesi */
+  .ikr-recommend{text-align:center;font-size:13px;color:#888;margin:-12px 0 20px;padding:10px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;}
+
   /* S\u0131ralama sat\u0131r\u0131 */
   .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
   .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;}
@@ -559,6 +562,14 @@
           };
           summary.appendChild(writeBtn);
           widget.appendChild(summary);
+          var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
+          var recommendPct = allCount > 0 ? Math.round(recommendCount / allCount * 100) : 0;
+          if (recommendPct > 0) {
+            var recommendEl = document.createElement("div");
+            recommendEl.className = "ikr-recommend";
+            recommendEl.textContent = "%" + recommendPct + " bu \xFCr\xFCn\xFC tavsiye ediyor";
+            widget.appendChild(recommendEl);
+          }
           var controlsRow = document.createElement("div");
           controlsRow.className = "ikr-controls-row";
           var sortSelect = document.createElement("select");

@@ -127,6 +127,16 @@ export async function render(productId, settings, reviewsData, productName, orde
 
         widget.appendChild(summary);
 
+        // Tavsiye yüzdesi
+        var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
+        var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
+        if (recommendPct > 0) {
+          var recommendEl = document.createElement('div');
+          recommendEl.className = 'ikr-recommend';
+          recommendEl.textContent = '%' + recommendPct + ' bu ürünü tavsiye ediyor';
+          widget.appendChild(recommendEl);
+        }
+
         // Sıralama satırı
         var controlsRow = document.createElement('div');
         controlsRow.className = 'ikr-controls-row';
