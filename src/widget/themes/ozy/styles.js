@@ -1,56 +1,56 @@
 // themes/ozy/styles.js — Default tema CSS
 
 export var CLASSIC_CSS = `
-  #ikas-reviews-widget{color:#111;margin:40px 0;padding:0}
+  #ikas-reviews-widget{color:rgba(0,0,0,0.90);margin:40px 0;padding:0}
   .ikr-title{font-size:24px;font-weight:800;text-align:center;margin-bottom:24px}
 
   /* Summary — 3 sütun: puan | barlar | buton */
-  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:#f9f9f9;border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
+  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:rgba(0,0,0,0.03);border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
 
   /* Sol — büyük ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:center;min-width:120px;gap:4px;}
-  .ikr-avg-star{font-size:48px;color:var(--ikr-color,#111);line-height:1;}
-  .ikr-avg-num{font-size:44px;font-weight:800;line-height:1;color:#111;}
+  .ikr-avg-star{font-size:48px;color:var(--ikr-color,#000);line-height:1;}
+  .ikr-avg-num{font-size:44px;font-weight:800;line-height:1;color:rgba(0,0,0,0.90);}
   .ikr-avg-stars{margin:4px 0 2px;font-size:16px;}
-  .ikr-avg-count{font-size:14px;color:#555;white-space:nowrap;font-weight:500;}
+  .ikr-avg-count{font-size:14px;color:rgba(0,0,0,0.50);white-space:nowrap;font-weight:500;}
 
   /* Orta — bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:400px;}
-  .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:14px;color:#555;cursor:pointer;border-radius:6px;padding:3px 6px;}
+  .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:14px;color:rgba(0,0,0,0.65);cursor:pointer;border-radius:6px;padding:3px 6px;}
   .ikr-bar-row:hover{background:var(--ikr-color-light);}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
   .ikr-bar-label{min-width:28px;text-align:right;white-space:nowrap;}
-  .ikr-bar-track{flex:1;background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;}
-  .ikr-bar-fill{height:8px;background:var(--ikr-color,#111);border-radius:4px;}
-  .ikr-bar-count{min-width:32px;text-align:right;color:#888;}
+  .ikr-bar-track{flex:1;background:rgba(0,0,0,0.10);border-radius:4px;height:8px;overflow:hidden;}
+  .ikr-bar-fill{height:8px;background:var(--ikr-color,#000);border-radius:4px;}
+  .ikr-bar-count{min-width:32px;text-align:right;color:rgba(0,0,0,0.45);}
 
   /* Sağ — Yorum Yaz butonu */
-  .ikr-write-btn{background:var(--ikr-color,#111);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
+  .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
   .ikr-write-btn:hover{opacity:.88;}
 
   /* Tavsiye yüzdesi */
-  .ikr-recommend{text-align:center;font-size:14px;color:#555;margin:0 0 20px;}
-  .ikr-recommend-pct{font-size:18px;font-weight:800;color:#111;margin-right:5px;}
+  .ikr-recommend{text-align:center;font-size:14px;color:rgba(0,0,0,0.50);margin:0 0 20px;}
+  .ikr-recommend-pct{font-size:18px;font-weight:800;color:rgba(0,0,0,0.90);margin-right:5px;}
 
   /* Sıralama satırı */
   .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
-  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;}
+  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;background:#fff;color:rgba(0,0,0,0.65);cursor:pointer;outline:none;}
 
   /* Yorumlar */
-  .ikr-review{padding:25px 0;border-bottom:1px solid #eee}
-  .ikr-author{font-weight:700;font-size:15px}
-  .ikr-date{color:#888;font-size:12px;margin-left:10px}
-  .ikr-body{margin-top:10px;line-height:1.6;color:#333}
+  .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
+  .ikr-author{font-weight:700;font-size:15px;color:rgba(0,0,0,0.90)}
+  .ikr-date{color:rgba(0,0,0,0.40);font-size:12px;margin-left:10px}
+  .ikr-body{margin-top:10px;line-height:1.6;color:rgba(0,0,0,0.75)}
   .ikr-gallery{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap}
-  .ikr-img{width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #ddd;cursor:zoom-in}
-  .ikr-reply{margin-top:15px;padding:15px;background:#f9f9f9;border-radius:8px;border-left:3px solid #111;font-size:14px}
+  .ikr-img{width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in}
+  .ikr-reply{margin-top:15px;padding:15px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid rgba(0,0,0,0.90);font-size:14px;color:rgba(0,0,0,0.75)}
 
   /* Form */
-  .ikr-form{background:#fff;border:1px solid #eee;padding:25px;border-radius:12px;margin-top:30px}
-  .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box}
-  .ikr-btn{background:var(--ikr-color,#111);color:#fff;padding:10px 25px;border-radius:6px;cursor:pointer;border:none;font-weight:600;margin-top:15px}
+  .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:12px;margin-top:30px}
+  .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid rgba(0,0,0,0.15);border-radius:6px;font-size:14px;box-sizing:border-box;color:rgba(0,0,0,0.90)}
+  .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:10px 25px;border-radius:6px;cursor:pointer;border:none;font-weight:600;margin-top:15px}
   .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
-  .ikr-photo-btn{background:#f3f3f3;color:#444;padding:8px 15px;border-radius:6px;cursor:pointer;border:1px dashed #ccc;font-size:13px;display:inline-block;margin-top:10px}
+  .ikr-photo-btn{background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.60);padding:8px 15px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:13px;display:inline-block;margin-top:10px}
   .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
   .ikr-preview-img{width:60px;height:60px;object-fit:cover;border-radius:6px}
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
