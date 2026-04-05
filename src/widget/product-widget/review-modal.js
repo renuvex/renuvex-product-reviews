@@ -70,28 +70,13 @@ export function openReviewModal(r, clickedUrl) {
   var right = document.createElement('div');
   right.className = 'ikr-modal-right';
 
-  // Header: isim | tarih | X (tek satır, çakışmasız)
-  var header = document.createElement('div');
-  header.className = 'ikr-modal-header';
-
-  var authorEl = document.createElement('span');
-  authorEl.className = 'ikr-modal-author';
-  authorEl.textContent = r.author || '';
-
-  var dateEl = document.createElement('span');
-  dateEl.className = 'ikr-modal-date';
-  dateEl.textContent = formatDate(r.createdAt);
-
+  // Kapat butonu
   var closeBtn = document.createElement('button');
   closeBtn.className = 'ikr-modal-close';
   closeBtn.textContent = '✕';
   closeBtn.setAttribute('aria-label', 'Kapat');
   closeBtn.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown); };
-
-  header.appendChild(authorEl);
-  header.appendChild(dateEl);
-  header.appendChild(closeBtn);
-  right.appendChild(header);
+  right.appendChild(closeBtn);
 
   // Yıldızlar
   var starsEl = document.createElement('div');
@@ -106,6 +91,22 @@ export function openReviewModal(r, clickedUrl) {
     titleEl.textContent = r.title;
     right.appendChild(titleEl);
   }
+
+  // Header: isim | tarih
+  var header = document.createElement('div');
+  header.className = 'ikr-modal-header';
+
+  var authorEl = document.createElement('span');
+  authorEl.className = 'ikr-modal-author';
+  authorEl.textContent = r.author || '';
+
+  var dateEl = document.createElement('span');
+  dateEl.className = 'ikr-modal-date';
+  dateEl.textContent = formatDate(r.createdAt);
+
+  header.appendChild(authorEl);
+  header.appendChild(dateEl);
+  right.appendChild(header);
 
   // Yorum metni (tam, clamp yok)
   if (r.comment && r.comment.trim()) {
