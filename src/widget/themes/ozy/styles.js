@@ -2,7 +2,7 @@
 
 export var CLASSIC_CSS = `
   #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px 0;padding:0}
-  .ikr-title{font-size:24px;font-weight:800;text-align:center;margin-bottom:24px}
+  .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary — 3 sütun: puan | barlar | buton */
   .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:rgba(0,0,0,0.03);border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
@@ -31,7 +31,7 @@ export var CLASSIC_CSS = `
 
   /* Tavsiye yüzdesi */
   .ikr-recommend{font-size:13px;color:rgba(0,0,0,0.75);margin-top:2px;}
-  .ikr-recommend-pct{font-weight:800;color:rgba(0,0,0,1);margin-right:3px;}
+  .ikr-recommend-pct{font-weight:700;color:rgba(0,0,0,1);margin-right:3px;}
 
   /* Buton grubu */
   .ikr-btn-group{display:flex;align-items:center;gap:8px;align-self:center;}

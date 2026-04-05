@@ -157,8 +157,8 @@ export async function POST(request: Request) {
     if (typeof author !== 'string' || author.trim().length < 2 || author.trim().length > 100) {
       return withCors(NextResponse.json({ error: 'Ad en az 2, en fazla 100 karakter olmalıdır.' }, { status: 400 }));
     }
-    if (title && typeof title === 'string' && title.trim().length > 150) {
-      return withCors(NextResponse.json({ error: 'Başlık en fazla 150 karakter olabilir.' }, { status: 400 }));
+    if (title && typeof title === 'string' && title.trim().length > 60) {
+      return withCors(NextResponse.json({ error: 'Başlık en fazla 60 karakter olabilir.' }, { status: 400 }));
     }
     if (comment && typeof comment === 'string' && comment.length > 2000) {
       return withCors(NextResponse.json({ error: 'Yorum en fazla 2000 karakter olabilir.' }, { status: 400 }));
