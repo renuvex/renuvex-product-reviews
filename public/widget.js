@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T15:43:48.277Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T15:52:57.311Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -169,7 +169,6 @@
   }
 
   // src/widget/product-widget/review-item.js
-  var MAX_LINES = 4;
   function buildReviewEl(r) {
     var reviewEl = document.createElement("div");
     reviewEl.className = "ikr-review";
@@ -191,28 +190,22 @@
     var comment = (r.comment || "").trim();
     if (comment) {
       var body = document.createElement("div");
-      body.className = "ikr-body";
-      var textNode = document.createElement("span");
-      textNode.textContent = comment;
-      body.appendChild(textNode);
+      body.className = "ikr-body ikr-body-clamped";
+      body.textContent = comment;
+      reviewEl.appendChild(body);
       var readMore = document.createElement("span");
       readMore.className = "ikr-read-more";
-      readMore.textContent = " Devam\u0131n\u0131 oku";
+      readMore.textContent = "Devam\u0131n\u0131 oku";
       readMore.style.display = "none";
-      body.appendChild(readMore);
-      reviewEl.appendChild(body);
+      reviewEl.appendChild(readMore);
       requestAnimationFrame(function() {
-        var lineHeight = parseInt(window.getComputedStyle(body).lineHeight) || 22;
-        var maxHeight = lineHeight * MAX_LINES;
-        if (body.scrollHeight > maxHeight + 4) {
-          body.style.maxHeight = maxHeight + "px";
-          body.style.overflow = "hidden";
+        if (body.scrollHeight > body.clientHeight + 2) {
           readMore.style.display = "inline";
           var expanded = false;
           readMore.onclick = function() {
             expanded = !expanded;
-            body.style.maxHeight = expanded ? "none" : maxHeight + "px";
-            readMore.textContent = expanded ? " Daha az g\xF6ster" : " Devam\u0131n\u0131 oku";
+            body.classList.toggle("ikr-body-clamped", !expanded);
+            readMore.textContent = expanded ? "Daha az g\xF6ster" : "Devam\u0131n\u0131 oku";
           };
         }
       });
@@ -488,7 +481,8 @@
   .ikr-author{font-size:16px;color:rgba(0,0,0,0.75);margin-top:3px;}
   .ikr-date{color:rgba(0,0,0,0.40);font-size:16px;white-space:nowrap;flex-shrink:0;}
   .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:16px;}
-  .ikr-read-more{color:var(--ikr-color,#000);font-weight:600;cursor:pointer;font-size:14px;}
+  .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+  .ikr-read-more{display:block;margin-top:4px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;font-size:14px;}
   .ikr-gallery{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
   .ikr-img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in;}
   .ikr-reply{margin-top:12px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--ikr-color,#000);}

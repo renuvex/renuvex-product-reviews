@@ -2,7 +2,6 @@
 
 import { starsHTML, formatDate } from '../core/helpers.js';
 
-var MAX_LINES = 4; // "Devamını oku" için max satır
 
 export function buildReviewEl(r) {
   var reviewEl = document.createElement('div');
@@ -30,37 +29,29 @@ export function buildReviewEl(r) {
   authorEl.textContent = r.author || '';
   reviewEl.appendChild(authorEl);
 
-  // Yorum metni — uzunsa kısalt
+  // Yorum metni — 4 satırdan uzunsa CSS line-clamp ile kısalt
   var comment = (r.comment || '').trim();
   if (comment) {
     var body = document.createElement('div');
-    body.className = 'ikr-body';
-    var textNode = document.createElement('span');
-    textNode.textContent = comment;
-    body.appendChild(textNode);
-
-    // "Devamını oku" — render sonrası satır sayısı kontrol edilir
-    var readMore = document.createElement('span');
-    readMore.className = 'ikr-read-more';
-    readMore.textContent = ' Devamını oku';
-    readMore.style.display = 'none';
-    body.appendChild(readMore);
-
+    body.className = 'ikr-body ikr-body-clamped';
+    body.textContent = comment;
     reviewEl.appendChild(body);
 
-    // Satır taşması kontrolü
+    var readMore = document.createElement('span');
+    readMore.className = 'ikr-read-more';
+    readMore.textContent = 'Devamını oku';
+    readMore.style.display = 'none';
+    reviewEl.appendChild(readMore);
+
+    // Tarayıcı clamp uyguladı mı kontrol et
     requestAnimationFrame(function() {
-      var lineHeight = parseInt(window.getComputedStyle(body).lineHeight) || 22;
-      var maxHeight = lineHeight * MAX_LINES;
-      if (body.scrollHeight > maxHeight + 4) {
-        body.style.maxHeight = maxHeight + 'px';
-        body.style.overflow = 'hidden';
+      if (body.scrollHeight > body.clientHeight + 2) {
         readMore.style.display = 'inline';
         var expanded = false;
         readMore.onclick = function() {
           expanded = !expanded;
-          body.style.maxHeight = expanded ? 'none' : maxHeight + 'px';
-          readMore.textContent = expanded ? ' Daha az göster' : ' Devamını oku';
+          body.classList.toggle('ikr-body-clamped', !expanded);
+          readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
         };
       }
     });
