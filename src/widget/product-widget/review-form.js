@@ -8,6 +8,7 @@ import { extractSlug } from '../core/helpers.js';
 export function buildReviewForm(widgetEl, productId, productName) {
   var form = document.createElement('div');
   form.className = 'ikr-form';
+  form.id = 'ikr-form-section';
   form.setAttribute('aria-label', 'Yorum formu');
   form.setAttribute('role', 'form');
   form.innerHTML = [

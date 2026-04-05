@@ -56,27 +56,13 @@ export async function render(productId, settings, reviewsData, productName, orde
       var widget = document.createElement('div');
       widget.id = 'ikas-reviews-widget';
 
-      // Başlık + sıralama dropdown
-      var header = document.createElement('div');
-      header.className = 'ikr-header';
-      header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;';
+      // Başlık
       var h2 = document.createElement('h2');
       h2.className = 'ikr-title';
-      h2.textContent = widgetTitle + ' (' + totalCount + ')';
-      header.appendChild(h2);
+      h2.textContent = widgetTitle;
+      widget.appendChild(h2);
 
-      var sortSelect = document.createElement('select');
-      sortSelect.style.cssText = 'font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;';
-      [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
-        var o = document.createElement('option');
-        o.value = opt[0]; o.textContent = opt[1];
-        sortSelect.appendChild(o);
-      });
-      sortSelect.value = currentOrderBy || 'newest';
-      header.appendChild(sortSelect);
-      widget.appendChild(header);
-
-      // Özet istatistik — ortalama puan + bar chart
+      // Özet istatistik — ortalama puan + bar chart + write a review butonu
       var allCount = (data.data && data.data.allCount) || totalCount;
       var allRatingCounts = (data.data && data.data.ratingCounts) || null;
       var ratingCounts = allRatingCounts || [0, 0, 0, 0, 0];
@@ -89,29 +75,31 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       if (allCount > 0) {
         var summary = document.createElement('div');
-        summary.style.cssText = 'display:flex;align-items:center;gap:24px;padding:20px;background:#f9f9f9;border-radius:12px;margin-bottom:20px;';
+        summary.className = 'ikr-summary';
 
+        // Sol — büyük ortalama puan
         var avgBox = document.createElement('div');
-        avgBox.style.cssText = 'text-align:center;min-width:80px;';
-        avgBox.innerHTML = '<div style="font-size:40px;font-weight:700;line-height:1;color:#111;">' + avgRatingVal + '</div>' +
-          '<div style="margin:6px 0 4px;">' + starsHTML(parseFloat(avgRatingVal), null) + '</div>' +
-          '<div style="font-size:12px;color:#888;">' + totalCount + ' yorum</div>';
+        avgBox.className = 'ikr-avgbox';
+        avgBox.innerHTML =
+          '<div class="ikr-avg-star">★</div>' +
+          '<div class="ikr-avg-num">' + avgRatingVal + '</div>' +
+          '<div class="ikr-avg-stars">' + starsHTML(parseFloat(avgRatingVal), null) + '</div>' +
+          '<div class="ikr-avg-count">' + allCount.toLocaleString('tr-TR') + ' Yorum</div>';
         summary.appendChild(avgBox);
 
+        // Orta — bar chart
         var bars = document.createElement('div');
-        bars.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:5px;';
+        bars.className = 'ikr-bars';
         for (var si = 5; si >= 1; si--) {
           var cnt = ratingCounts[si - 1];
           var pct = allCount > 0 ? Math.round((cnt / allCount) * 100) : 0;
           var isActive = currentRatingFilter === si;
           var row = document.createElement('div');
-          row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#555;cursor:pointer;border-radius:6px;padding:2px 4px;' + (isActive ? 'background:#fef9c3;' : '');
-          row.innerHTML = '<span style="min-width:16px;text-align:right;">' + si + '</span>' +
-            '<span style="color:#f59e0b;font-size:11px;">★</span>' +
-            '<div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px;">' +
-              '<div style="width:' + pct + '%;background:#f59e0b;border-radius:4px;height:8px;"></div>' +
-            '</div>' +
-            '<span style="min-width:28px;">' + pct + '%</span>';
+          row.className = 'ikr-bar-row' + (isActive ? ' ikr-bar-active' : '');
+          row.innerHTML =
+            '<span class="ikr-bar-label">' + si + ' ★</span>' +
+            '<div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div>' +
+            '<span class="ikr-bar-count">' + cnt.toLocaleString('tr-TR') + '</span>';
           (function(starVal) {
             row.onclick = async function() {
               setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
@@ -123,15 +111,30 @@ export async function render(productId, settings, reviewsData, productName, orde
           bars.appendChild(row);
         }
         summary.appendChild(bars);
+
+        // Sağ — Yorum Yaz butonu
+        var writeBtn = document.createElement('button');
+        writeBtn.className = 'ikr-write-btn';
+        writeBtn.textContent = 'Yorum Yaz';
+        writeBtn.onclick = function() {
+          var form = document.getElementById('ikr-form-section');
+          if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        summary.appendChild(writeBtn);
+
         widget.appendChild(summary);
+
+        // Filtre chip + sıralama satırı
+        var controlsRow = document.createElement('div');
+        controlsRow.className = 'ikr-controls-row';
 
         if (currentRatingFilter) {
           var chip = document.createElement('div');
-          chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:20px;font-size:13px;color:#555;margin-bottom:12px;';
-          chip.innerHTML = currentRatingFilter + ' ★ gösteriliyor &nbsp;';
+          chip.className = 'ikr-filter-chip';
+          chip.innerHTML = currentRatingFilter + ' ★ gösteriliyor';
           var clearBtn = document.createElement('span');
           clearBtn.textContent = '✕';
-          clearBtn.style.cssText = 'cursor:pointer;font-weight:bold;color:#888;';
+          clearBtn.className = 'ikr-chip-clear';
           clearBtn.onclick = async function() {
             setCurrentRatingFilter(null);
             setCurrentPage(1);
@@ -139,8 +142,38 @@ export async function render(productId, settings, reviewsData, productName, orde
             await render(currentProductId, currentSettings, allData, currentProductName, currentOrderBy, 1);
           };
           chip.appendChild(clearBtn);
-          widget.appendChild(chip);
+          controlsRow.appendChild(chip);
         }
+
+        var sortSelect = document.createElement('select');
+        sortSelect.className = 'ikr-sort-select';
+        [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
+          var o = document.createElement('option');
+          o.value = opt[0]; o.textContent = opt[1];
+          sortSelect.appendChild(o);
+        });
+        sortSelect.value = currentOrderBy || 'newest';
+        controlsRow.appendChild(sortSelect);
+        widget.appendChild(controlsRow);
+      } else {
+        // Yorum yoksa sadece Yorum Yaz butonu göster
+        var emptyWriteBtn = document.createElement('button');
+        emptyWriteBtn.className = 'ikr-write-btn';
+        emptyWriteBtn.textContent = 'İlk Yorumu Yaz';
+        emptyWriteBtn.onclick = function() {
+          var form = document.getElementById('ikr-form-section');
+          if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        widget.appendChild(emptyWriteBtn);
+
+        var sortSelect = document.createElement('select');
+        sortSelect.className = 'ikr-sort-select';
+        [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
+          var o = document.createElement('option');
+          o.value = opt[0]; o.textContent = opt[1];
+          sortSelect.appendChild(o);
+        });
+        sortSelect.value = currentOrderBy || 'newest';
       }
 
       if (reviews.length === 0) {

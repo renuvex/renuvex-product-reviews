@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T11:21:15.083Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T11:58:20.389Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -209,6 +209,7 @@
   function buildReviewForm(widgetEl, productId, productName) {
     var form = document.createElement("div");
     form.className = "ikr-form";
+    form.id = "ikr-form-section";
     form.setAttribute("aria-label", "Yorum formu");
     form.setAttribute("role", "form");
     form.innerHTML = [
@@ -398,8 +399,39 @@
   // src/widget/themes/ozy/styles.js
   var CLASSIC_CSS = `
   #ikas-reviews-widget{color:#111;margin:40px 0;padding:0}
-  .ikr-header{border-bottom:2px solid #eee;padding-bottom:15px;margin-bottom:25px}
-  .ikr-title{font-size:22px;font-weight:800}
+  .ikr-title{font-size:24px;font-weight:800;text-align:center;margin-bottom:24px}
+
+  /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
+  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:#f9f9f9;border-radius:16px;margin-bottom:24px;flex-wrap:wrap;}
+
+  /* Sol \u2014 b\xFCy\xFCk ortalama */
+  .ikr-avgbox{display:flex;flex-direction:column;align-items:center;min-width:90px;gap:4px;}
+  .ikr-avg-star{font-size:40px;color:var(--ikr-color,#111);line-height:1;}
+  .ikr-avg-num{font-size:36px;font-weight:800;line-height:1;color:#111;}
+  .ikr-avg-stars{margin:4px 0 2px;}
+  .ikr-avg-count{font-size:12px;color:#888;white-space:nowrap;}
+
+  /* Orta \u2014 bar chart */
+  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:160px;}
+  .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#555;cursor:pointer;border-radius:6px;padding:3px 6px;}
+  .ikr-bar-row:hover{background:#f0f0f0;}
+  .ikr-bar-active{background:#fef9c3!important;}
+  .ikr-bar-label{min-width:28px;text-align:right;white-space:nowrap;}
+  .ikr-bar-track{flex:1;background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;}
+  .ikr-bar-fill{height:8px;background:var(--ikr-color,#111);border-radius:4px;}
+  .ikr-bar-count{min-width:32px;text-align:right;color:#888;}
+
+  /* Sa\u011F \u2014 Yorum Yaz butonu */
+  .ikr-write-btn{background:var(--ikr-color,#111);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
+  .ikr-write-btn:hover{opacity:.88;}
+
+  /* Filtre chip + s\u0131ralama sat\u0131r\u0131 */
+  .ikr-controls-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .ikr-filter-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:20px;font-size:13px;color:#555;}
+  .ikr-chip-clear{cursor:pointer;font-weight:bold;color:#888;margin-left:4px;}
+  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;margin-left:auto;}
+
+  /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid #eee}
   .ikr-author{font-weight:700;font-size:15px}
   .ikr-date{color:#888;font-size:12px;margin-left:10px}
@@ -407,6 +439,8 @@
   .ikr-gallery{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap}
   .ikr-img{width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #ddd;cursor:zoom-in}
   .ikr-reply{margin-top:15px;padding:15px;background:#f9f9f9;border-radius:8px;border-left:3px solid #111;font-size:14px}
+
+  /* Form */
   .ikr-form{background:#fff;border:1px solid #eee;padding:25px;border-radius:12px;margin-top:30px}
   .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box}
   .ikr-btn{background:var(--ikr-color,#111);color:#fff;padding:10px 25px;border-radius:6px;cursor:pointer;border:none;font-weight:600;margin-top:15px}
@@ -415,6 +449,14 @@
   .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
   .ikr-preview-img{width:60px;height:60px;object-fit:cover;border-radius:6px}
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
+
+  /* Responsive */
+  @media(max-width:600px){
+    .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
+    .ikr-avgbox{flex-direction:row;justify-content:center;gap:12px;flex-wrap:wrap;}
+    .ikr-write-btn{width:100%;}
+    .ikr-sort-select{margin-left:0;}
+  }
 `;
 
   // src/widget/product-widget/render.js
@@ -452,24 +494,10 @@
         container = fresh;
         var widget = document.createElement("div");
         widget.id = "ikas-reviews-widget";
-        var header = document.createElement("div");
-        header.className = "ikr-header";
-        header.style.cssText = "display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;";
         var h2 = document.createElement("h2");
         h2.className = "ikr-title";
-        h2.textContent = widgetTitle + " (" + totalCount + ")";
-        header.appendChild(h2);
-        var sortSelect = document.createElement("select");
-        sortSelect.style.cssText = "font-size:13px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;cursor:pointer;outline:none;";
-        [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
-          var o = document.createElement("option");
-          o.value = opt[0];
-          o.textContent = opt[1];
-          sortSelect.appendChild(o);
-        });
-        sortSelect.value = currentOrderBy || "newest";
-        header.appendChild(sortSelect);
-        widget.appendChild(header);
+        h2.textContent = widgetTitle;
+        widget.appendChild(h2);
         var allCount = data.data && data.data.allCount || totalCount;
         var allRatingCounts = data.data && data.data.ratingCounts || null;
         var ratingCounts = allRatingCounts || [0, 0, 0, 0, 0];
@@ -485,20 +513,20 @@
         }
         if (allCount > 0) {
           var summary = document.createElement("div");
-          summary.style.cssText = "display:flex;align-items:center;gap:24px;padding:20px;background:#f9f9f9;border-radius:12px;margin-bottom:20px;";
+          summary.className = "ikr-summary";
           var avgBox = document.createElement("div");
-          avgBox.style.cssText = "text-align:center;min-width:80px;";
-          avgBox.innerHTML = '<div style="font-size:40px;font-weight:700;line-height:1;color:#111;">' + avgRatingVal + '</div><div style="margin:6px 0 4px;">' + starsHTML(parseFloat(avgRatingVal), null) + '</div><div style="font-size:12px;color:#888;">' + totalCount + " yorum</div>";
+          avgBox.className = "ikr-avgbox";
+          avgBox.innerHTML = '<div class="ikr-avg-star">\u2605</div><div class="ikr-avg-num">' + avgRatingVal + '</div><div class="ikr-avg-stars">' + starsHTML(parseFloat(avgRatingVal), null) + '</div><div class="ikr-avg-count">' + allCount.toLocaleString("tr-TR") + " Yorum</div>";
           summary.appendChild(avgBox);
           var bars = document.createElement("div");
-          bars.style.cssText = "flex:1;display:flex;flex-direction:column;gap:5px;";
+          bars.className = "ikr-bars";
           for (var si = 5; si >= 1; si--) {
             var cnt = ratingCounts[si - 1];
             var pct = allCount > 0 ? Math.round(cnt / allCount * 100) : 0;
             var isActive = currentRatingFilter === si;
             var row = document.createElement("div");
-            row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;color:#555;cursor:pointer;border-radius:6px;padding:2px 4px;" + (isActive ? "background:#fef9c3;" : "");
-            row.innerHTML = '<span style="min-width:16px;text-align:right;">' + si + '</span><span style="color:#f59e0b;font-size:11px;">\u2605</span><div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px;"><div style="width:' + pct + '%;background:#f59e0b;border-radius:4px;height:8px;"></div></div><span style="min-width:28px;">' + pct + "%</span>";
+            row.className = "ikr-bar-row" + (isActive ? " ikr-bar-active" : "");
+            row.innerHTML = '<span class="ikr-bar-label">' + si + ' \u2605</span><div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div><span class="ikr-bar-count">' + cnt.toLocaleString("tr-TR") + "</span>";
             (function(starVal) {
               row.onclick = async function() {
                 setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
@@ -510,14 +538,24 @@
             bars.appendChild(row);
           }
           summary.appendChild(bars);
+          var writeBtn = document.createElement("button");
+          writeBtn.className = "ikr-write-btn";
+          writeBtn.textContent = "Yorum Yaz";
+          writeBtn.onclick = function() {
+            var form = document.getElementById("ikr-form-section");
+            if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
+          };
+          summary.appendChild(writeBtn);
           widget.appendChild(summary);
+          var controlsRow = document.createElement("div");
+          controlsRow.className = "ikr-controls-row";
           if (currentRatingFilter) {
             var chip = document.createElement("div");
-            chip.style.cssText = "display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:20px;font-size:13px;color:#555;margin-bottom:12px;";
-            chip.innerHTML = currentRatingFilter + " \u2605 g\xF6steriliyor &nbsp;";
+            chip.className = "ikr-filter-chip";
+            chip.innerHTML = currentRatingFilter + " \u2605 g\xF6steriliyor";
             var clearBtn = document.createElement("span");
             clearBtn.textContent = "\u2715";
-            clearBtn.style.cssText = "cursor:pointer;font-weight:bold;color:#888;";
+            clearBtn.className = "ikr-chip-clear";
             clearBtn.onclick = async function() {
               setCurrentRatingFilter(null);
               setCurrentPage(1);
@@ -525,8 +563,37 @@
               await render(currentProductId, currentSettings, allData, currentProductName, currentOrderBy, 1);
             };
             chip.appendChild(clearBtn);
-            widget.appendChild(chip);
+            controlsRow.appendChild(chip);
           }
+          var sortSelect = document.createElement("select");
+          sortSelect.className = "ikr-sort-select";
+          [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
+            var o = document.createElement("option");
+            o.value = opt[0];
+            o.textContent = opt[1];
+            sortSelect.appendChild(o);
+          });
+          sortSelect.value = currentOrderBy || "newest";
+          controlsRow.appendChild(sortSelect);
+          widget.appendChild(controlsRow);
+        } else {
+          var emptyWriteBtn = document.createElement("button");
+          emptyWriteBtn.className = "ikr-write-btn";
+          emptyWriteBtn.textContent = "\u0130lk Yorumu Yaz";
+          emptyWriteBtn.onclick = function() {
+            var form = document.getElementById("ikr-form-section");
+            if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
+          };
+          widget.appendChild(emptyWriteBtn);
+          var sortSelect = document.createElement("select");
+          sortSelect.className = "ikr-sort-select";
+          [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
+            var o = document.createElement("option");
+            o.value = opt[0];
+            o.textContent = opt[1];
+            sortSelect.appendChild(o);
+          });
+          sortSelect.value = currentOrderBy || "newest";
         }
         if (reviews.length === 0) {
           var empty = document.createElement("p");
