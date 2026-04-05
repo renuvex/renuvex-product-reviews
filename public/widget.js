@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T12:22:17.584Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T12:26:24.090Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -416,11 +416,11 @@
   .ikr-avgbox{display:flex;flex-direction:column;align-items:center;min-width:120px;gap:4px;}
   .ikr-avg-star{font-size:48px;color:var(--ikr-color,#111);line-height:1;}
   .ikr-avg-num{font-size:44px;font-weight:800;line-height:1;color:#111;}
-  .ikr-avg-stars{margin:4px 0 2px;}
-  .ikr-avg-count{font-size:12px;color:#888;white-space:nowrap;}
+  .ikr-avg-stars{margin:4px 0 2px;font-size:16px;}
+  .ikr-avg-count{font-size:14px;color:#555;white-space:nowrap;font-weight:500;}
 
   /* Orta \u2014 bar chart */
-  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:160px;max-width:320px;}
+  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:400px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:14px;color:#555;cursor:pointer;border-radius:6px;padding:3px 6px;}
   .ikr-bar-row:hover{background:var(--ikr-color-light);}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
