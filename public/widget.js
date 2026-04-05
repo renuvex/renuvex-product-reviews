@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:53:14.324Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T15:28:25.452Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -169,27 +169,54 @@
   }
 
   // src/widget/product-widget/review-item.js
+  var MAX_LINES = 4;
   function buildReviewEl(r) {
     var reviewEl = document.createElement("div");
     reviewEl.className = "ikr-review";
-    var meta = document.createElement("div");
-    var authorEl = document.createElement("span");
-    authorEl.className = "ikr-author";
-    authorEl.textContent = r.author || "";
+    var topRow = document.createElement("div");
+    topRow.className = "ikr-review-top";
+    var leftTop = document.createElement("div");
+    leftTop.className = "ikr-review-top-left";
+    leftTop.innerHTML = starsHTML(r.rating, null) + (r.title ? '<span class="ikr-review-title">' + r.title + "</span>" : "");
     var dateEl = document.createElement("span");
     dateEl.className = "ikr-date";
     dateEl.textContent = formatDate(r.createdAt);
-    meta.appendChild(authorEl);
-    meta.appendChild(dateEl);
-    reviewEl.appendChild(meta);
-    var starsWrapEl = document.createElement("div");
-    starsWrapEl.style.marginTop = "4px";
-    starsWrapEl.innerHTML = starsHTML(r.rating, null);
-    reviewEl.appendChild(starsWrapEl);
-    var body = document.createElement("p");
-    body.className = "ikr-body";
-    body.textContent = r.comment || "";
-    reviewEl.appendChild(body);
+    topRow.appendChild(leftTop);
+    topRow.appendChild(dateEl);
+    reviewEl.appendChild(topRow);
+    var authorEl = document.createElement("div");
+    authorEl.className = "ikr-author";
+    authorEl.textContent = r.author || "";
+    reviewEl.appendChild(authorEl);
+    var comment = (r.comment || "").trim();
+    if (comment) {
+      var body = document.createElement("div");
+      body.className = "ikr-body";
+      var textNode = document.createElement("span");
+      textNode.textContent = comment;
+      body.appendChild(textNode);
+      var readMore = document.createElement("span");
+      readMore.className = "ikr-read-more";
+      readMore.textContent = " Devam\u0131n\u0131 oku";
+      readMore.style.display = "none";
+      body.appendChild(readMore);
+      reviewEl.appendChild(body);
+      requestAnimationFrame(function() {
+        var lineHeight = parseInt(window.getComputedStyle(body).lineHeight) || 22;
+        var maxHeight = lineHeight * MAX_LINES;
+        if (body.scrollHeight > maxHeight + 4) {
+          body.style.maxHeight = maxHeight + "px";
+          body.style.overflow = "hidden";
+          readMore.style.display = "inline";
+          var expanded = false;
+          readMore.onclick = function() {
+            expanded = !expanded;
+            body.style.maxHeight = expanded ? "none" : maxHeight + "px";
+            readMore.textContent = expanded ? " Daha az g\xF6ster" : " Devam\u0131n\u0131 oku";
+          };
+        }
+      });
+    }
     if (r.images && Array.isArray(r.images) && r.images.length) {
       var gallery = document.createElement("div");
       gallery.className = "ikr-gallery";
@@ -206,11 +233,7 @@
     if (r.merchantReply) {
       var replyEl = document.createElement("div");
       replyEl.className = "ikr-reply";
-      var replyLabel = document.createElement("strong");
-      replyLabel.textContent = "Ma\u011Faza Yan\u0131t\u0131:";
-      replyEl.appendChild(replyLabel);
-      replyEl.appendChild(document.createElement("br"));
-      replyEl.appendChild(document.createTextNode(r.merchantReply));
+      replyEl.innerHTML = '<div class="ikr-reply-header"><span class="ikr-reply-label">Ma\u011Faza Sahibi</span></div><div class="ikr-reply-text">' + r.merchantReply + "</div>";
       reviewEl.appendChild(replyEl);
     }
     return reviewEl;
@@ -454,13 +477,20 @@
   .ikr-filter-item-active{font-weight:700;color:var(--ikr-color,#000);}
 
   /* Yorumlar */
-  .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
-  .ikr-author{font-weight:700;font-size:15px;color:rgba(0,0,0,1)}
-  .ikr-date{color:rgba(0,0,0,0.75);font-size:12px;margin-left:10px}
-  .ikr-body{margin-top:10px;line-height:1.6;color:rgba(0,0,0,1)}
-  .ikr-gallery{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap}
-  .ikr-img{width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in}
-  .ikr-reply{margin-top:15px;padding:15px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid rgba(0,0,0,0.90);font-size:14px;color:rgba(0,0,0,0.75)}
+  .ikr-review{padding:20px 0;border-bottom:1px solid rgba(0,0,0,0.08);}
+  .ikr-review-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .ikr-review-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
+  .ikr-author{font-size:13px;color:rgba(0,0,0,0.75);margin-top:3px;}
+  .ikr-date{color:rgba(0,0,0,0.40);font-size:12px;white-space:nowrap;flex-shrink:0;}
+  .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:14px;}
+  .ikr-read-more{color:var(--ikr-color,#000);font-weight:600;cursor:pointer;font-size:13px;}
+  .ikr-gallery{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .ikr-img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in;}
+  .ikr-reply{margin-top:12px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--ikr-color,#000);}
+  .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .ikr-reply-label{font-weight:700;font-size:13px;color:rgba(0,0,0,1);}
+  .ikr-reply-text{font-size:13px;color:rgba(0,0,0,0.75);line-height:1.6;}
 
   /* Form */
   .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:12px;margin-top:30px}

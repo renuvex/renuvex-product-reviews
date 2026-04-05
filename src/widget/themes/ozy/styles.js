@@ -46,13 +46,20 @@ export var CLASSIC_CSS = `
   .ikr-filter-item-active{font-weight:700;color:var(--ikr-color,#000);}
 
   /* Yorumlar */
-  .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
-  .ikr-author{font-weight:700;font-size:15px;color:rgba(0,0,0,1)}
-  .ikr-date{color:rgba(0,0,0,0.75);font-size:12px;margin-left:10px}
-  .ikr-body{margin-top:10px;line-height:1.6;color:rgba(0,0,0,1)}
-  .ikr-gallery{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap}
-  .ikr-img{width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in}
-  .ikr-reply{margin-top:15px;padding:15px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid rgba(0,0,0,0.90);font-size:14px;color:rgba(0,0,0,0.75)}
+  .ikr-review{padding:20px 0;border-bottom:1px solid rgba(0,0,0,0.08);}
+  .ikr-review-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .ikr-review-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
+  .ikr-author{font-size:13px;color:rgba(0,0,0,0.75);margin-top:3px;}
+  .ikr-date{color:rgba(0,0,0,0.40);font-size:12px;white-space:nowrap;flex-shrink:0;}
+  .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:14px;}
+  .ikr-read-more{color:var(--ikr-color,#000);font-weight:600;cursor:pointer;font-size:13px;}
+  .ikr-gallery{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .ikr-img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in;}
+  .ikr-reply{margin-top:12px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--ikr-color,#000);}
+  .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .ikr-reply-label{font-weight:700;font-size:13px;color:rgba(0,0,0,1);}
+  .ikr-reply-text{font-size:13px;color:rgba(0,0,0,0.75);line-height:1.6;}
 
   /* Form */
   .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:12px;margin-top:30px}
