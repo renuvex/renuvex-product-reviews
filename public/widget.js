@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:25:45.422Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:27:16.227Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -440,9 +440,18 @@
   .ikr-recommend{font-size:13px;color:rgba(0,0,0,0.75);margin-top:2px;}
   .ikr-recommend-pct{font-weight:800;color:rgba(0,0,0,1);margin-right:3px;}
 
-  /* S\u0131ralama sat\u0131r\u0131 */
-  .ikr-controls-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:16px;}
+  /* Buton grubu */
+  .ikr-btn-group{display:flex;align-items:center;gap:8px;align-self:center;}
+  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;border:2px solid var(--ikr-color,#000);background:#fff;color:var(--ikr-color,#000);cursor:pointer;}
+  .ikr-filter-btn-active{background:var(--ikr-color,#000);color:#fff;}
+
+  /* Filtre paneli */
+  .ikr-filter-panel{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;background:rgba(0,0,0,0.03);border-radius:12px;margin-bottom:16px;}
+  .ikr-filter-panel-label{font-size:12px;font-weight:700;color:rgba(0,0,0,0.50);text-transform:uppercase;letter-spacing:.5px;}
   .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;background:#fff;color:rgba(0,0,0,0.75);cursor:pointer;outline:none;}
+  .ikr-star-btns{display:flex;gap:6px;flex-wrap:wrap;}
+  .ikr-star-btn{padding:5px 12px;border:1px solid rgba(0,0,0,0.15);border-radius:20px;background:#fff;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
+  .ikr-star-btn-active{background:var(--ikr-color,#000);color:#fff;border-color:var(--ikr-color,#000);}
 
   /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
@@ -556,6 +565,8 @@
             barRows.push(row);
           }
           summary.appendChild(bars);
+          var btnGroup = document.createElement("div");
+          btnGroup.className = "ikr-btn-group";
           var writeBtn = document.createElement("button");
           writeBtn.className = "ikr-write-btn";
           writeBtn.textContent = "Yorum Yap";
@@ -563,10 +574,21 @@
             var form = document.getElementById("ikr-form-section");
             if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
           };
-          summary.appendChild(writeBtn);
+          btnGroup.appendChild(writeBtn);
+          var filterBtn = document.createElement("button");
+          filterBtn.className = "ikr-filter-btn";
+          filterBtn.setAttribute("aria-label", "Filtrele");
+          filterBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>';
+          btnGroup.appendChild(filterBtn);
+          summary.appendChild(btnGroup);
           widget.appendChild(summary);
-          var controlsRow = document.createElement("div");
-          controlsRow.className = "ikr-controls-row";
+          var filterPanel = document.createElement("div");
+          filterPanel.className = "ikr-filter-panel";
+          filterPanel.style.display = "none";
+          var sortLabel = document.createElement("span");
+          sortLabel.className = "ikr-filter-panel-label";
+          sortLabel.textContent = "S\u0131rala";
+          filterPanel.appendChild(sortLabel);
           var sortSelect = document.createElement("select");
           sortSelect.className = "ikr-sort-select";
           [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
@@ -576,8 +598,32 @@
             sortSelect.appendChild(o);
           });
           sortSelect.value = currentOrderBy || "newest";
-          controlsRow.appendChild(sortSelect);
-          widget.appendChild(controlsRow);
+          filterPanel.appendChild(sortSelect);
+          var starLabel = document.createElement("span");
+          starLabel.className = "ikr-filter-panel-label";
+          starLabel.textContent = "Puana G\xF6re";
+          filterPanel.appendChild(starLabel);
+          var starBtns = document.createElement("div");
+          starBtns.className = "ikr-star-btns";
+          [5, 4, 3, 2, 1].forEach(function(star) {
+            var btn = document.createElement("button");
+            btn.className = "ikr-star-btn" + (currentRatingFilter === star ? " ikr-star-btn-active" : "");
+            btn.textContent = star + " \u2605";
+            btn.onclick = async function() {
+              setCurrentRatingFilter(currentRatingFilter === star ? null : star);
+              setCurrentPage(1);
+              var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
+              await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
+            };
+            starBtns.appendChild(btn);
+          });
+          filterPanel.appendChild(starBtns);
+          widget.appendChild(filterPanel);
+          filterBtn.onclick = function() {
+            var isOpen = filterPanel.style.display !== "none";
+            filterPanel.style.display = isOpen ? "none" : "flex";
+            filterBtn.classList.toggle("ikr-filter-btn-active", !isOpen);
+          };
         } else {
           var emptyWriteBtn = document.createElement("button");
           emptyWriteBtn.className = "ikr-write-btn";
@@ -587,15 +633,6 @@
             if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
           };
           widget.appendChild(emptyWriteBtn);
-          var sortSelect = document.createElement("select");
-          sortSelect.className = "ikr-sort-select";
-          [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
-            var o = document.createElement("option");
-            o.value = opt[0];
-            o.textContent = opt[1];
-            sortSelect.appendChild(o);
-          });
-          sortSelect.value = currentOrderBy || "newest";
         }
         if (reviews.length === 0) {
           var empty = document.createElement("p");

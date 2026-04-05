@@ -116,7 +116,10 @@ export async function render(productId, settings, reviewsData, productName, orde
         }
         summary.appendChild(bars);
 
-        // Sağ — Yorum Yaz butonu
+        // Sağ — Yorum Yap + Filtre ikonu
+        var btnGroup = document.createElement('div');
+        btnGroup.className = 'ikr-btn-group';
+
         var writeBtn = document.createElement('button');
         writeBtn.className = 'ikr-write-btn';
         writeBtn.textContent = 'Yorum Yap';
@@ -124,13 +127,27 @@ export async function render(productId, settings, reviewsData, productName, orde
           var form = document.getElementById('ikr-form-section');
           if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
-        summary.appendChild(writeBtn);
+        btnGroup.appendChild(writeBtn);
+
+        var filterBtn = document.createElement('button');
+        filterBtn.className = 'ikr-filter-btn';
+        filterBtn.setAttribute('aria-label', 'Filtrele');
+        filterBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>';
+        btnGroup.appendChild(filterBtn);
+        summary.appendChild(btnGroup);
 
         widget.appendChild(summary);
 
-        // Sıralama satırı
-        var controlsRow = document.createElement('div');
-        controlsRow.className = 'ikr-controls-row';
+        // Filtre paneli — filtre ikonuna basınca açılır/kapanır
+        var filterPanel = document.createElement('div');
+        filterPanel.className = 'ikr-filter-panel';
+        filterPanel.style.display = 'none';
+
+        var sortLabel = document.createElement('span');
+        sortLabel.className = 'ikr-filter-panel-label';
+        sortLabel.textContent = 'Sırala';
+        filterPanel.appendChild(sortLabel);
+
         var sortSelect = document.createElement('select');
         sortSelect.className = 'ikr-sort-select';
         [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
@@ -139,8 +156,35 @@ export async function render(productId, settings, reviewsData, productName, orde
           sortSelect.appendChild(o);
         });
         sortSelect.value = currentOrderBy || 'newest';
-        controlsRow.appendChild(sortSelect);
-        widget.appendChild(controlsRow);
+        filterPanel.appendChild(sortSelect);
+
+        var starLabel = document.createElement('span');
+        starLabel.className = 'ikr-filter-panel-label';
+        starLabel.textContent = 'Puana Göre';
+        filterPanel.appendChild(starLabel);
+
+        var starBtns = document.createElement('div');
+        starBtns.className = 'ikr-star-btns';
+        [5,4,3,2,1].forEach(function(star) {
+          var btn = document.createElement('button');
+          btn.className = 'ikr-star-btn' + (currentRatingFilter === star ? ' ikr-star-btn-active' : '');
+          btn.textContent = star + ' ★';
+          btn.onclick = async function() {
+            setCurrentRatingFilter(currentRatingFilter === star ? null : star);
+            setCurrentPage(1);
+            var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
+            await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
+          };
+          starBtns.appendChild(btn);
+        });
+        filterPanel.appendChild(starBtns);
+        widget.appendChild(filterPanel);
+
+        filterBtn.onclick = function() {
+          var isOpen = filterPanel.style.display !== 'none';
+          filterPanel.style.display = isOpen ? 'none' : 'flex';
+          filterBtn.classList.toggle('ikr-filter-btn-active', !isOpen);
+        };
       } else {
         // Yorum yoksa sadece Yorum Yaz butonu göster
         var emptyWriteBtn = document.createElement('button');
@@ -151,15 +195,6 @@ export async function render(productId, settings, reviewsData, productName, orde
           if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
         widget.appendChild(emptyWriteBtn);
-
-        var sortSelect = document.createElement('select');
-        sortSelect.className = 'ikr-sort-select';
-        [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
-          var o = document.createElement('option');
-          o.value = opt[0]; o.textContent = opt[1];
-          sortSelect.appendChild(o);
-        });
-        sortSelect.value = currentOrderBy || 'newest';
       }
 
       if (reviews.length === 0) {
