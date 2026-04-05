@@ -14,7 +14,7 @@ export function buildReviewForm(widgetEl, productId, productName) {
   form.innerHTML = [
     '<h3 style="font-weight:700;margin-top:0;" id="ikr-form-title">Yorum Yapın</h3>',
     '<label for="ikr-name" style="font-size:12px;font-weight:600;">Adınız Soyadınız</label>',
-    '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız Soyadınız" aria-label="Adınız Soyadınız" aria-required="true">',
+    '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız Soyadınız" aria-label="Adınız Soyadınız" aria-required="true" maxlength="40">',
     '<label for="ikr-title" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Başlık <span style="font-weight:400;color:rgba(0,0,0,0.45);">(opsiyonel)</span></label>',
     '<input type="text" id="ikr-title" class="ikr-input" placeholder="Yorumunuzun kısa başlığı" aria-label="Yorum başlığı" maxlength="60">',
     '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorumunuz</label>',
