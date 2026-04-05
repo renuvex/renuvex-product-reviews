@@ -5,8 +5,7 @@ import { fetchSettings } from '../product-widget/bootstrap.js';
 import { collectSlugs } from './collect.js';
 import { fetchRatings } from './ratings.js';
 import { injectBadges } from './inject.js';
-import { injectStyles } from '../core/helpers.js';
-import { CLASSIC_CSS } from '../themes/ozy/styles.js';
+import { applyWidgetColor } from '../core/helpers.js';
 
 export async function renderListingBadges() {
   if (ls.inProgress) { ls.queued = true; return; }
@@ -25,7 +24,7 @@ export async function renderListingBadges() {
     var ratings = results[1];
 
     // Widget rengini CSS variable olarak set et — listing badge yıldızları için
-    injectStyles(settings.widgetColor, CLASSIC_CSS);
+    applyWidgetColor(settings.widgetColor);
 
     // Fetch tamamlandıktan sonra atomik swap: önce eskileri sil, sonra yenileri inject et
     if (doCleanup) {

@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T12:51:15.798Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T12:53:48.217Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -103,6 +103,12 @@
     if (!m) return null;
     return [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16)];
   }
+  function applyWidgetColor(color) {
+    var validColor = /^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#111111";
+    document.documentElement.style.setProperty("--ikr-color", validColor);
+    var rgb = hexToRgb(validColor);
+    document.documentElement.style.setProperty("--ikr-color-light", rgb ? "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ",0.07)" : "rgba(17,17,17,0.07)");
+  }
   function injectStyles(color, css) {
     var el = document.getElementById("ikr-styles");
     if (!el) {
@@ -111,10 +117,7 @@
       document.head.appendChild(el);
     }
     el.textContent = css;
-    var validColor = /^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#111111";
-    document.documentElement.style.setProperty("--ikr-color", validColor);
-    var rgb = hexToRgb(validColor);
-    document.documentElement.style.setProperty("--ikr-color-light", rgb ? "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ",0.07)" : "rgba(17,17,17,0.07)");
+    applyWidgetColor(color);
   }
   function renderStars(rating, interactive, onChange) {
     const wrap = document.createElement("div");
@@ -1087,7 +1090,7 @@
         return;
       }
       var ratings = results[1];
-      injectStyles(settings.widgetColor, CLASSIC_CSS);
+      applyWidgetColor(settings.widgetColor);
       if (doCleanup) {
         document.querySelectorAll("[data-ikr-listing-badge]").forEach(function(el) {
           el.remove();
