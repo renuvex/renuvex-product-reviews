@@ -83,13 +83,12 @@ export var CLASSIC_CSS = `
   .ikr-modal-thumbs{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;padding:0 12px;}
   .ikr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;opacity:0.7;}
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
-  .ikr-modal-right{flex:1;overflow-y:auto;padding:28px 24px;display:flex;flex-direction:column;gap:10px;position:relative;}
-  .ikr-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:rgba(0,0,0,0.45);line-height:1;}
-  .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
-  .ikr-modal-meta{display:flex;align-items:center;gap:10px;}
-  .ikr-modal-avatar{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center;font-size:15px;color:rgba(0,0,0,0.35);flex-shrink:0;}
+  .ikr-modal-right{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:10px;}
+  .ikr-modal-header{display:flex;align-items:center;gap:8px;}
   .ikr-modal-author{font-weight:600;font-size:14px;color:rgba(0,0,0,1);}
   .ikr-modal-date{font-size:12px;color:rgba(0,0,0,0.45);margin-left:auto;}
+  .ikr-modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:rgba(0,0,0,0.40);line-height:1;flex-shrink:0;padding:0;}
+  .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
   .ikr-modal-stars{font-size:18px;}
   .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
   .ikr-modal-body{font-size:14px;line-height:1.7;color:rgba(0,0,0,0.85);}
@@ -99,9 +98,10 @@ export var CLASSIC_CSS = `
 
   /* Responsive */
   @media(max-width:640px){
-    .ikr-modal{flex-direction:column;max-height:95vh;}
-    .ikr-modal-left{flex:0 0 240px;min-height:200px;}
-    .ikr-modal-right{padding:20px 16px;}
+    .ikr-modal-overlay{padding:0;}
+    .ikr-modal{flex-direction:column;max-height:100vh;height:100%;border-radius:0;}
+    .ikr-modal-left{flex:0 0 45vw;min-height:0;}
+    .ikr-modal-right{padding:16px;}
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}

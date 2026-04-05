@@ -2,6 +2,12 @@
 
 import { starsHTML, formatDate } from '../core/helpers.js';
 
+function closeModal(overlay, onKeyDown) {
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', onKeyDown);
+  if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+}
+
 export function openReviewModal(r, clickedUrl) {
   var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && u.indexOf('https://') === 0; }) : [];
   var currentIdx = Math.max(0, images.indexOf(clickedUrl));
@@ -22,7 +28,6 @@ export function openReviewModal(r, clickedUrl) {
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
 
-  // Thumbnail bar (birden fazla fotoğraf varsa)
   var thumbEls = [];
   if (images.length > 1) {
     var thumbBar = document.createElement('div');
@@ -38,7 +43,6 @@ export function openReviewModal(r, clickedUrl) {
     });
     left.appendChild(thumbBar);
 
-    // Ok butonları
     var prevBtn = document.createElement('button');
     prevBtn.className = 'ikr-modal-nav ikr-modal-nav-prev';
     prevBtn.innerHTML = '&#8249;';
@@ -66,21 +70,9 @@ export function openReviewModal(r, clickedUrl) {
   var right = document.createElement('div');
   right.className = 'ikr-modal-right';
 
-  // Kapat butonu
-  var closeBtn = document.createElement('button');
-  closeBtn.className = 'ikr-modal-close';
-  closeBtn.textContent = '✕';
-  closeBtn.setAttribute('aria-label', 'Kapat');
-  closeBtn.onclick = function(e) { e.stopPropagation(); document.body.removeChild(overlay); };
-  right.appendChild(closeBtn);
-
-  // Meta: avatar + isim + tarih
-  var meta = document.createElement('div');
-  meta.className = 'ikr-modal-meta';
-
-  var avatar = document.createElement('div');
-  avatar.className = 'ikr-modal-avatar';
-  avatar.textContent = (r.author || '?').charAt(0).toUpperCase();
+  // Header: isim | tarih | X (tek satır, çakışmasız)
+  var header = document.createElement('div');
+  header.className = 'ikr-modal-header';
 
   var authorEl = document.createElement('span');
   authorEl.className = 'ikr-modal-author';
@@ -90,10 +82,16 @@ export function openReviewModal(r, clickedUrl) {
   dateEl.className = 'ikr-modal-date';
   dateEl.textContent = formatDate(r.createdAt);
 
-  meta.appendChild(avatar);
-  meta.appendChild(authorEl);
-  meta.appendChild(dateEl);
-  right.appendChild(meta);
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'ikr-modal-close';
+  closeBtn.textContent = '✕';
+  closeBtn.setAttribute('aria-label', 'Kapat');
+  closeBtn.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown); };
+
+  header.appendChild(authorEl);
+  header.appendChild(dateEl);
+  header.appendChild(closeBtn);
+  right.appendChild(header);
 
   // Yıldızlar
   var starsEl = document.createElement('div');
@@ -131,15 +129,17 @@ export function openReviewModal(r, clickedUrl) {
   modal.appendChild(right);
   overlay.appendChild(modal);
 
-  // Overlay'e tıklanınca kapat
-  overlay.onclick = function() { document.body.removeChild(overlay); };
-  modal.onclick = function(e) { e.stopPropagation(); };
-
   // ESC ile kapat
   function onKeyDown(e) {
-    if (e.key === 'Escape') { document.body.removeChild(overlay); document.removeEventListener('keydown', onKeyDown); }
+    if (e.key === 'Escape') closeModal(overlay, onKeyDown);
   }
   document.addEventListener('keydown', onKeyDown);
 
+  // Overlay tıklaması kapat, modal tıklaması geçme
+  overlay.onclick = function() { closeModal(overlay, onKeyDown); };
+  modal.onclick = function(e) { e.stopPropagation(); };
+
+  // Body scroll kilitle
+  document.body.style.overflow = 'hidden';
   document.body.appendChild(overlay);
 }
