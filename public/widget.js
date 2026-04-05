@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T17:04:33.471Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T17:41:57.438Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -190,6 +190,15 @@
     mainImg.src = images[currentIdx] || "";
     mainImg.alt = "Yorum foto\u011Fraf\u0131";
     left.appendChild(mainImg);
+    var closeBtn = document.createElement("button");
+    closeBtn.className = "ikr-modal-close";
+    closeBtn.textContent = "\u2715";
+    closeBtn.setAttribute("aria-label", "Kapat");
+    closeBtn.onclick = function(e) {
+      e.stopPropagation();
+      closeModal(overlay, onKeyDown);
+    };
+    left.appendChild(closeBtn);
     var thumbEls = [];
     if (images.length > 1) {
       var thumbBar = document.createElement("div");
@@ -234,36 +243,27 @@
     }
     var right = document.createElement("div");
     right.className = "ikr-modal-right";
-    var closeBtn = document.createElement("button");
-    closeBtn.className = "ikr-modal-close";
-    closeBtn.textContent = "\u2715";
-    closeBtn.setAttribute("aria-label", "Kapat");
-    closeBtn.onclick = function(e) {
-      e.stopPropagation();
-      closeModal(overlay, onKeyDown);
-    };
-    right.appendChild(closeBtn);
+    var topRow = document.createElement("div");
+    topRow.className = "ikr-modal-top-row";
     var starsEl = document.createElement("div");
     starsEl.className = "ikr-modal-stars";
     starsEl.innerHTML = starsHTML(r.rating, null);
-    right.appendChild(starsEl);
+    var dateEl = document.createElement("span");
+    dateEl.className = "ikr-modal-date";
+    dateEl.textContent = formatDate(r.createdAt);
+    topRow.appendChild(starsEl);
+    topRow.appendChild(dateEl);
+    right.appendChild(topRow);
     if (r.title) {
       var titleEl = document.createElement("div");
       titleEl.className = "ikr-modal-title";
       titleEl.textContent = r.title;
       right.appendChild(titleEl);
     }
-    var header = document.createElement("div");
-    header.className = "ikr-modal-header";
-    var authorEl = document.createElement("span");
+    var authorEl = document.createElement("div");
     authorEl.className = "ikr-modal-author";
     authorEl.textContent = r.author || "";
-    var dateEl = document.createElement("span");
-    dateEl.className = "ikr-modal-date";
-    dateEl.textContent = formatDate(r.createdAt);
-    header.appendChild(authorEl);
-    header.appendChild(dateEl);
-    right.appendChild(header);
+    right.appendChild(authorEl);
     if (r.comment && r.comment.trim()) {
       var bodyEl = document.createElement("div");
       bodyEl.className = "ikr-modal-body";
@@ -633,22 +633,22 @@
   /* Review Modal */
   .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;}
   .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:860px;max-height:90vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
-  .ikr-modal-left{flex:0 0 50%;background:#000;position:relative;display:flex;align-items:center;justify-content:center;min-height:320px;}
+  .ikr-modal-left{flex:0 0 58%;background:#000;position:relative;display:flex;align-items:center;justify-content:center;min-height:320px;}
   .ikr-modal-main-img{width:100%;height:100%;object-fit:contain;display:block;}
+  .ikr-modal-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.50);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2;}
+  .ikr-modal-close:hover{background:rgba(0,0,0,0.75);}
   .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.45);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
   .ikr-modal-nav-prev{left:10px;}
   .ikr-modal-nav-next{right:10px;}
   .ikr-modal-thumbs{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;padding:0 12px;}
   .ikr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;opacity:0.7;}
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
-  .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:10px;position:relative;}
-  .ikr-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:rgba(0,0,0,0.40);line-height:1;padding:0;}
-  .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
-  .ikr-modal-header{display:flex;align-items:center;gap:8px;}
-  .ikr-modal-author{font-size:13px;color:rgba(0,0,0,0.75);}
-  .ikr-modal-date{font-size:13px;color:rgba(0,0,0,0.40);margin-left:auto;}
+  .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:10px;}
+  .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .ikr-modal-stars{font-size:18px;}
+  .ikr-modal-date{font-size:13px;color:rgba(0,0,0,0.40);}
   .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
+  .ikr-modal-author{font-size:13px;color:rgba(0,0,0,0.75);}
   .ikr-modal-body{font-size:14px;line-height:1.65;color:rgba(0,0,0,1);}
   .ikr-modal-reply{margin-top:8px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--ikr-color,#000);}
   .ikr-modal-reply-label{font-weight:700;font-size:13px;color:rgba(0,0,0,1);margin-bottom:4px;}
@@ -658,7 +658,7 @@
   @media(max-width:640px){
     .ikr-modal-overlay{padding:12px;}
     .ikr-modal{flex-direction:column;max-height:92vh;}
-    .ikr-modal-left{flex:0 0 200px;min-height:0;}
+    .ikr-modal-left{flex:0 0 55vw;min-height:0;}
     .ikr-modal-right{padding:16px;}
   }
   @media(max-width:600px){

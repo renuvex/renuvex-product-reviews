@@ -28,6 +28,15 @@ export function openReviewModal(r, clickedUrl) {
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
 
+  // X butonu — fotoğrafın sağ üstünde
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'ikr-modal-close';
+  closeBtn.textContent = '✕';
+  closeBtn.setAttribute('aria-label', 'Kapat');
+  closeBtn.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown); };
+  left.appendChild(closeBtn);
+
+  // Thumbnail + ok butonları (birden fazla fotoğraf varsa)
   var thumbEls = [];
   if (images.length > 1) {
     var thumbBar = document.createElement('div');
@@ -70,19 +79,21 @@ export function openReviewModal(r, clickedUrl) {
   var right = document.createElement('div');
   right.className = 'ikr-modal-right';
 
-  // Kapat butonu
-  var closeBtn = document.createElement('button');
-  closeBtn.className = 'ikr-modal-close';
-  closeBtn.textContent = '✕';
-  closeBtn.setAttribute('aria-label', 'Kapat');
-  closeBtn.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown); };
-  right.appendChild(closeBtn);
+  // Yıldız + tarih yan yana
+  var topRow = document.createElement('div');
+  topRow.className = 'ikr-modal-top-row';
 
-  // Yıldızlar
   var starsEl = document.createElement('div');
   starsEl.className = 'ikr-modal-stars';
   starsEl.innerHTML = starsHTML(r.rating, null);
-  right.appendChild(starsEl);
+
+  var dateEl = document.createElement('span');
+  dateEl.className = 'ikr-modal-date';
+  dateEl.textContent = formatDate(r.createdAt);
+
+  topRow.appendChild(starsEl);
+  topRow.appendChild(dateEl);
+  right.appendChild(topRow);
 
   // Başlık
   if (r.title) {
@@ -92,23 +103,13 @@ export function openReviewModal(r, clickedUrl) {
     right.appendChild(titleEl);
   }
 
-  // Header: isim | tarih
-  var header = document.createElement('div');
-  header.className = 'ikr-modal-header';
-
-  var authorEl = document.createElement('span');
+  // İsim
+  var authorEl = document.createElement('div');
   authorEl.className = 'ikr-modal-author';
   authorEl.textContent = r.author || '';
+  right.appendChild(authorEl);
 
-  var dateEl = document.createElement('span');
-  dateEl.className = 'ikr-modal-date';
-  dateEl.textContent = formatDate(r.createdAt);
-
-  header.appendChild(authorEl);
-  header.appendChild(dateEl);
-  right.appendChild(header);
-
-  // Yorum metni (tam, clamp yok)
+  // Yorum metni
   if (r.comment && r.comment.trim()) {
     var bodyEl = document.createElement('div');
     bodyEl.className = 'ikr-modal-body';
@@ -136,11 +137,9 @@ export function openReviewModal(r, clickedUrl) {
   }
   document.addEventListener('keydown', onKeyDown);
 
-  // Overlay tıklaması kapat, modal tıklaması geçme
   overlay.onclick = function() { closeModal(overlay, onKeyDown); };
   modal.onclick = function(e) { e.stopPropagation(); };
 
-  // Body scroll kilitle
   document.body.style.overflow = 'hidden';
   document.body.appendChild(overlay);
 }
