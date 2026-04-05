@@ -38,9 +38,12 @@ export var CLASSIC_CSS = `
   .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;border:2px solid var(--ikr-color,#000);background:#fff;color:var(--ikr-color,#000);cursor:pointer;}
   .ikr-filter-btn-active{background:var(--ikr-color,#000);color:#fff;}
 
-  /* Filtre paneli */
-  .ikr-filter-panel{display:flex;align-items:center;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:12px;margin-bottom:16px;}
-  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;background:#fff;color:rgba(0,0,0,0.75);cursor:pointer;outline:none;}
+  /* Filtre dropdown */
+  .ikr-filter-wrap{position:relative;}
+  .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:180px;overflow:hidden;z-index:999;}
+  .ikr-filter-item{padding:10px 16px;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
+  .ikr-filter-item:hover{background:rgba(0,0,0,0.04);}
+  .ikr-filter-item-active{font-weight:700;color:var(--ikr-color,#000);}
 
   /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}

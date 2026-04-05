@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:31:04.023Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:34:59.898Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -446,9 +446,12 @@
   .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;border:2px solid var(--ikr-color,#000);background:#fff;color:var(--ikr-color,#000);cursor:pointer;}
   .ikr-filter-btn-active{background:var(--ikr-color,#000);color:#fff;}
 
-  /* Filtre paneli */
-  .ikr-filter-panel{display:flex;align-items:center;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:12px;margin-bottom:16px;}
-  .ikr-sort-select{font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;background:#fff;color:rgba(0,0,0,0.75);cursor:pointer;outline:none;}
+  /* Filtre dropdown */
+  .ikr-filter-wrap{position:relative;}
+  .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:180px;overflow:hidden;z-index:999;}
+  .ikr-filter-item{padding:10px 16px;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
+  .ikr-filter-item:hover{background:rgba(0,0,0,0.04);}
+  .ikr-filter-item-active{font-weight:700;color:var(--ikr-color,#000);}
 
   /* Yorumlar */
   .ikr-review{padding:25px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
@@ -579,25 +582,39 @@
           btnGroup.appendChild(filterBtn);
           summary.appendChild(btnGroup);
           widget.appendChild(summary);
-          var filterPanel = document.createElement("div");
-          filterPanel.className = "ikr-filter-panel";
-          filterPanel.style.display = "none";
-          var sortSelect = document.createElement("select");
-          sortSelect.className = "ikr-sort-select";
-          [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
-            var o = document.createElement("option");
-            o.value = opt[0];
-            o.textContent = opt[1];
-            sortSelect.appendChild(o);
+          var filterMenu = document.createElement("div");
+          filterMenu.className = "ikr-filter-menu";
+          filterMenu.style.display = "none";
+          var sortOptions = [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]];
+          sortOptions.forEach(function(opt) {
+            var item = document.createElement("div");
+            item.className = "ikr-filter-item" + ((currentOrderBy || "newest") === opt[0] ? " ikr-filter-item-active" : "");
+            item.textContent = opt[1];
+            item.onclick = async function() {
+              setCurrentOrderBy(opt[0]);
+              setCurrentPage(1);
+              filterMenu.style.display = "none";
+              filterBtn.classList.remove("ikr-filter-btn-active");
+              var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
+              await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
+            };
+            filterMenu.appendChild(item);
           });
-          sortSelect.value = currentOrderBy || "newest";
-          filterPanel.appendChild(sortSelect);
-          widget.appendChild(filterPanel);
-          filterBtn.onclick = function() {
-            var isOpen = filterPanel.style.display !== "none";
-            filterPanel.style.display = isOpen ? "none" : "flex";
+          var filterWrap = document.createElement("div");
+          filterWrap.className = "ikr-filter-wrap";
+          filterWrap.appendChild(filterBtn);
+          filterWrap.appendChild(filterMenu);
+          btnGroup.replaceChild(filterWrap, filterBtn);
+          filterBtn.onclick = function(e) {
+            e.stopPropagation();
+            var isOpen = filterMenu.style.display !== "none";
+            filterMenu.style.display = isOpen ? "none" : "block";
             filterBtn.classList.toggle("ikr-filter-btn-active", !isOpen);
           };
+          document.addEventListener("click", function closeFilter() {
+            filterMenu.style.display = "none";
+            filterBtn.classList.remove("ikr-filter-btn-active");
+          });
         } else {
           var emptyWriteBtn = document.createElement("button");
           emptyWriteBtn.className = "ikr-write-btn";

@@ -138,27 +138,44 @@ export async function render(productId, settings, reviewsData, productName, orde
 
         widget.appendChild(summary);
 
-        // Filtre paneli — filtre ikonuna basınca açılır/kapanır
-        var filterPanel = document.createElement('div');
-        filterPanel.className = 'ikr-filter-panel';
-        filterPanel.style.display = 'none';
+        // Filtre dropdown menüsü — filtre ikonunun hemen altında açılır
+        var filterMenu = document.createElement('div');
+        filterMenu.className = 'ikr-filter-menu';
+        filterMenu.style.display = 'none';
 
-        var sortSelect = document.createElement('select');
-        sortSelect.className = 'ikr-sort-select';
-        [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
-          var o = document.createElement('option');
-          o.value = opt[0]; o.textContent = opt[1];
-          sortSelect.appendChild(o);
+        var sortOptions = [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']];
+        sortOptions.forEach(function(opt) {
+          var item = document.createElement('div');
+          item.className = 'ikr-filter-item' + ((currentOrderBy || 'newest') === opt[0] ? ' ikr-filter-item-active' : '');
+          item.textContent = opt[1];
+          item.onclick = async function() {
+            setCurrentOrderBy(opt[0]);
+            setCurrentPage(1);
+            filterMenu.style.display = 'none';
+            filterBtn.classList.remove('ikr-filter-btn-active');
+            var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
+            await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
+          };
+          filterMenu.appendChild(item);
         });
-        sortSelect.value = currentOrderBy || 'newest';
-        filterPanel.appendChild(sortSelect);
-        widget.appendChild(filterPanel);
 
-        filterBtn.onclick = function() {
-          var isOpen = filterPanel.style.display !== 'none';
-          filterPanel.style.display = isOpen ? 'none' : 'flex';
+        var filterWrap = document.createElement('div');
+        filterWrap.className = 'ikr-filter-wrap';
+        filterWrap.appendChild(filterBtn);
+        filterWrap.appendChild(filterMenu);
+        btnGroup.replaceChild(filterWrap, filterBtn);
+
+        filterBtn.onclick = function(e) {
+          e.stopPropagation();
+          var isOpen = filterMenu.style.display !== 'none';
+          filterMenu.style.display = isOpen ? 'none' : 'block';
           filterBtn.classList.toggle('ikr-filter-btn-active', !isOpen);
         };
+
+        document.addEventListener('click', function closeFilter() {
+          filterMenu.style.display = 'none';
+          filterBtn.classList.remove('ikr-filter-btn-active');
+        });
       } else {
         // Yorum yoksa sadece Yorum Yaz butonu göster
         var emptyWriteBtn = document.createElement('button');
