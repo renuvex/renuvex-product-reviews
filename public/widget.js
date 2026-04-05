@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T16:42:47.618Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T16:48:49.119Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -242,7 +242,7 @@
     meta.className = "ikr-modal-meta";
     var avatar = document.createElement("div");
     avatar.className = "ikr-modal-avatar";
-    avatar.innerHTML = "&#128100;";
+    avatar.textContent = (r.author || "?").charAt(0).toUpperCase();
     var authorEl = document.createElement("span");
     authorEl.className = "ikr-modal-author";
     authorEl.textContent = r.author || "";
@@ -377,7 +377,7 @@
       '<label for="ikr-title" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Ba\u015Fl\u0131k <span style="font-weight:400;color:rgba(0,0,0,0.45);">(opsiyonel)</span></label>',
       '<input type="text" id="ikr-title" class="ikr-input" placeholder="Yorumunuzun k\u0131sa ba\u015Fl\u0131\u011F\u0131" aria-label="Yorum ba\u015Fl\u0131\u011F\u0131" maxlength="60">',
       '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorumunuz</label>',
-      '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz"></textarea>',
+      '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz" maxlength="2000"></textarea>',
       '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">Puan\u0131n\u0131z:</label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
       '<div id="ikr-photo-section">',
       '  <label class="ikr-photo-btn" aria-label="Foto\u011Fraf ekle">\u{1F4F7} Foto\u011Fraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Foto\u011Fraf se\xE7"></label>',
@@ -635,7 +635,7 @@
   .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;}
   .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:860px;max-height:90vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 50%;background:#000;position:relative;display:flex;align-items:center;justify-content:center;min-height:320px;}
-  .ikr-modal-main-img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ikr-modal-main-img{width:100%;height:100%;object-fit:contain;display:block;}
   .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.45);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
   .ikr-modal-nav-prev{left:10px;}
   .ikr-modal-nav-next{right:10px;}

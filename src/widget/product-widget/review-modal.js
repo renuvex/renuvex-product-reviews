@@ -80,7 +80,7 @@ export function openReviewModal(r, clickedUrl) {
 
   var avatar = document.createElement('div');
   avatar.className = 'ikr-modal-avatar';
-  avatar.innerHTML = '&#128100;';
+  avatar.textContent = (r.author || '?').charAt(0).toUpperCase();
 
   var authorEl = document.createElement('span');
   authorEl.className = 'ikr-modal-author';
