@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-05T13:34:59.898Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-05T13:37:30.212Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -575,18 +575,16 @@
             if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
           };
           btnGroup.appendChild(writeBtn);
+          var filterWrap = document.createElement("div");
+          filterWrap.className = "ikr-filter-wrap";
           var filterBtn = document.createElement("button");
           filterBtn.className = "ikr-filter-btn";
           filterBtn.setAttribute("aria-label", "Filtrele");
           filterBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>';
-          btnGroup.appendChild(filterBtn);
-          summary.appendChild(btnGroup);
-          widget.appendChild(summary);
           var filterMenu = document.createElement("div");
           filterMenu.className = "ikr-filter-menu";
           filterMenu.style.display = "none";
-          var sortOptions = [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]];
-          sortOptions.forEach(function(opt) {
+          [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
             var item = document.createElement("div");
             item.className = "ikr-filter-item" + ((currentOrderBy || "newest") === opt[0] ? " ikr-filter-item-active" : "");
             item.textContent = opt[1];
@@ -600,21 +598,21 @@
             };
             filterMenu.appendChild(item);
           });
-          var filterWrap = document.createElement("div");
-          filterWrap.className = "ikr-filter-wrap";
-          filterWrap.appendChild(filterBtn);
-          filterWrap.appendChild(filterMenu);
-          btnGroup.replaceChild(filterWrap, filterBtn);
           filterBtn.onclick = function(e) {
             e.stopPropagation();
             var isOpen = filterMenu.style.display !== "none";
             filterMenu.style.display = isOpen ? "none" : "block";
             filterBtn.classList.toggle("ikr-filter-btn-active", !isOpen);
           };
-          document.addEventListener("click", function closeFilter() {
+          document.addEventListener("click", function() {
             filterMenu.style.display = "none";
             filterBtn.classList.remove("ikr-filter-btn-active");
           });
+          filterWrap.appendChild(filterBtn);
+          filterWrap.appendChild(filterMenu);
+          btnGroup.appendChild(filterWrap);
+          summary.appendChild(btnGroup);
+          widget.appendChild(summary);
         } else {
           var emptyWriteBtn = document.createElement("button");
           emptyWriteBtn.className = "ikr-write-btn";
