@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T14:36:26.537Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T14:39:23.217Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -257,31 +257,44 @@
         th.classList.toggle("ikr-modal-thumb-active", i === idx);
       });
     }
-    var hasPrev = reviewIdx > 0;
-    var hasNext = reviewIdx < reviewsWithPhotos.length - 1;
+    var hasPrevPhoto = currentPhotoIdx > 0;
+    var hasNextPhoto = currentPhotoIdx < images.length - 1;
+    var hasPrevReview = reviewIdx > 0;
+    var hasNextReview = reviewIdx < reviewsWithPhotos.length - 1;
+    var hasPrev = hasPrevPhoto || hasPrevReview;
+    var hasNext = hasNextPhoto || hasNextReview;
     if (hasPrev || hasNext) {
       var prevBtn = document.createElement("button");
       prevBtn.className = "ikr-modal-nav ikr-modal-nav-prev";
       prevBtn.innerHTML = "&#8249;";
-      prevBtn.setAttribute("aria-label", "\xD6nceki yorum");
+      prevBtn.setAttribute("aria-label", "\xD6nceki");
       prevBtn.style.opacity = hasPrev ? "1" : "0.3";
       prevBtn.onclick = function(e) {
         e.stopPropagation();
-        if (!hasPrev) return;
-        var prevReview = reviewsWithPhotos[reviewIdx - 1];
-        rebuildModal(prevReview, reviewIdx - 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+        if (hasPrevPhoto) {
+          setPhotoActive(currentPhotoIdx - 1);
+        } else if (hasPrevReview) {
+          var prevReview = reviewsWithPhotos[reviewIdx - 1];
+          var prevImages = (prevReview.images || []).filter(function(u) {
+            return u && u.indexOf("https://") === 0;
+          });
+          rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
+        }
       };
       left.appendChild(prevBtn);
       var nextBtn = document.createElement("button");
       nextBtn.className = "ikr-modal-nav ikr-modal-nav-next";
       nextBtn.innerHTML = "&#8250;";
-      nextBtn.setAttribute("aria-label", "Sonraki yorum");
+      nextBtn.setAttribute("aria-label", "Sonraki");
       nextBtn.style.opacity = hasNext ? "1" : "0.3";
       nextBtn.onclick = function(e) {
         e.stopPropagation();
-        if (!hasNext) return;
-        var nextReview = reviewsWithPhotos[reviewIdx + 1];
-        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+        if (hasNextPhoto) {
+          setPhotoActive(currentPhotoIdx + 1);
+        } else if (hasNextReview) {
+          var nextReview = reviewsWithPhotos[reviewIdx + 1];
+          rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+        }
       };
       left.appendChild(nextBtn);
     }

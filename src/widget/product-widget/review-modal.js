@@ -103,34 +103,49 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
     });
   }
 
-  // Ok butonları — yorumlar arası geçiş
-  var hasPrev = reviewIdx > 0;
-  var hasNext = reviewIdx < reviewsWithPhotos.length - 1;
+  // Ok butonları — önce fotoğraflar arası, sonra yorumlar arası
+  var hasPrevPhoto = currentPhotoIdx > 0;
+  var hasNextPhoto = currentPhotoIdx < images.length - 1;
+  var hasPrevReview = reviewIdx > 0;
+  var hasNextReview = reviewIdx < reviewsWithPhotos.length - 1;
+  var hasPrev = hasPrevPhoto || hasPrevReview;
+  var hasNext = hasNextPhoto || hasNextReview;
 
   if (hasPrev || hasNext) {
     var prevBtn = document.createElement('button');
     prevBtn.className = 'ikr-modal-nav ikr-modal-nav-prev';
     prevBtn.innerHTML = '&#8249;';
-    prevBtn.setAttribute('aria-label', 'Önceki yorum');
+    prevBtn.setAttribute('aria-label', 'Önceki');
     prevBtn.style.opacity = hasPrev ? '1' : '0.3';
     prevBtn.onclick = function(e) {
       e.stopPropagation();
-      if (!hasPrev) return;
-      var prevReview = reviewsWithPhotos[reviewIdx - 1];
-      rebuildModal(prevReview, reviewIdx - 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+      if (hasPrevPhoto) {
+        // Aynı yorumda önceki fotoğraf
+        setPhotoActive(currentPhotoIdx - 1);
+      } else if (hasPrevReview) {
+        // Önceki yorumun son fotoğrafına git
+        var prevReview = reviewsWithPhotos[reviewIdx - 1];
+        var prevImages = (prevReview.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
+        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
+      }
     };
     left.appendChild(prevBtn);
 
     var nextBtn = document.createElement('button');
     nextBtn.className = 'ikr-modal-nav ikr-modal-nav-next';
     nextBtn.innerHTML = '&#8250;';
-    nextBtn.setAttribute('aria-label', 'Sonraki yorum');
+    nextBtn.setAttribute('aria-label', 'Sonraki');
     nextBtn.style.opacity = hasNext ? '1' : '0.3';
     nextBtn.onclick = function(e) {
       e.stopPropagation();
-      if (!hasNext) return;
-      var nextReview = reviewsWithPhotos[reviewIdx + 1];
-      rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+      if (hasNextPhoto) {
+        // Aynı yorumda sonraki fotoğraf
+        setPhotoActive(currentPhotoIdx + 1);
+      } else if (hasNextReview) {
+        // Sonraki yorumun ilk fotoğrafına git
+        var nextReview = reviewsWithPhotos[reviewIdx + 1];
+        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+      }
     };
     left.appendChild(nextBtn);
   }
