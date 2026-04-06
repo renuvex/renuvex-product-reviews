@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T20:43:07.354Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T20:47:00.920Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -657,7 +657,7 @@
   .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
 
   /* Orta \u2014 bar chart */
-  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;}
+  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:500px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:16px;color:rgba(0,0,0,0.75);cursor:pointer;border-radius:6px;padding:3px 6px;}
   .ikr-bar-row:hover{background:var(--ikr-color-light);}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
