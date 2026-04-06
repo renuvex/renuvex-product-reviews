@@ -111,11 +111,10 @@ export var CLASSIC_CSS = `
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
   .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;}
   .ikr-modal-sticky-header{position:sticky;top:0;background:#fff;z-index:1;padding:24px 24px 12px;border-bottom:1px solid rgba(0,0,0,0.06);}
-  .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;}
-  .ikr-modal-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px;}
   .ikr-modal-stars{font-size:18px;}
   .ikr-modal-date{font-size:13px;color:rgba(0,0,0,1);white-space:nowrap;flex-shrink:0;}
-  .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
+  .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);margin-bottom:2px;}
   .ikr-modal-author{font-size:13px;color:rgba(0,0,0,1);}
   .ikr-modal-scroll-content{padding:16px 24px 24px;display:flex;flex-direction:column;gap:10px;}
   .ikr-modal-body{font-size:14px;line-height:1.65;color:rgba(0,0,0,1);}

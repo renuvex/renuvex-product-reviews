@@ -14,34 +14,30 @@ function buildRight(r) {
   var right = document.createElement('div');
   right.className = 'ikr-modal-right';
 
+  var stickyHeader = document.createElement('div');
+  stickyHeader.className = 'ikr-modal-sticky-header';
+
   var topRow = document.createElement('div');
   topRow.className = 'ikr-modal-top-row';
-
-  var topLeft = document.createElement('div');
-  topLeft.className = 'ikr-modal-top-left';
 
   var starsEl = document.createElement('div');
   starsEl.className = 'ikr-modal-stars';
   starsEl.innerHTML = starsHTML(r.rating, null);
-  topLeft.appendChild(starsEl);
-
-  if (r.title) {
-    var titleEl = document.createElement('span');
-    titleEl.className = 'ikr-modal-title';
-    titleEl.textContent = r.title;
-    topLeft.appendChild(titleEl);
-  }
 
   var dateEl = document.createElement('span');
   dateEl.className = 'ikr-modal-date';
   dateEl.textContent = formatDate(r.createdAt);
 
-  topRow.appendChild(topLeft);
+  topRow.appendChild(starsEl);
   topRow.appendChild(dateEl);
-
-  var stickyHeader = document.createElement('div');
-  stickyHeader.className = 'ikr-modal-sticky-header';
   stickyHeader.appendChild(topRow);
+
+  if (r.title) {
+    var titleEl = document.createElement('div');
+    titleEl.className = 'ikr-modal-title';
+    titleEl.textContent = r.title;
+    stickyHeader.appendChild(titleEl);
+  }
 
   var authorEl = document.createElement('div');
   authorEl.className = 'ikr-modal-author';
