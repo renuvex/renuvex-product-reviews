@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T18:42:59.214Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T18:47:49.901Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -651,12 +651,12 @@
 
   /* Orta \u2014 bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:400px;}
-  .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:14px;color:rgba(0,0,0,0.75);cursor:pointer;border-radius:6px;padding:3px 6px;}
+  .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:16px;color:rgba(0,0,0,0.75);cursor:pointer;border-radius:6px;padding:3px 6px;}
   .ikr-bar-row:hover{background:var(--ikr-color-light);}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
   .ikr-bar-label{min-width:28px;text-align:right;white-space:nowrap;}
-  .ikr-bar-track{flex:1;background:rgba(0,0,0,0.10);border-radius:4px;height:8px;overflow:hidden;}
-  .ikr-bar-fill{height:8px;background:var(--ikr-color,#000);border-radius:4px;}
+  .ikr-bar-track{flex:1;background:rgba(0,0,0,0.10);border-radius:4px;height:10px;overflow:hidden;}
+  .ikr-bar-fill{height:10px;background:var(--ikr-color,#000);border-radius:4px;}
   .ikr-bar-count{min-width:32px;text-align:right;color:rgba(0,0,0,0.75);}
 
   /* Sa\u011F \u2014 Yorum Yaz butonu */
