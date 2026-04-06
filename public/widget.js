@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T19:25:40.313Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T19:36:07.835Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -654,7 +654,7 @@
   .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
 
   /* Orta \u2014 bar chart */
-  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:400px;}
+  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:16px;color:rgba(0,0,0,0.75);cursor:pointer;border-radius:6px;padding:3px 6px;}
   .ikr-bar-row:hover{background:var(--ikr-color-light);}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
@@ -677,7 +677,6 @@
 
   /* Filtre dropdown */
   .ikr-filter-wrap{position:relative;}
-  .ikr-filter-wrap-list{display:flex;justify-content:flex-end;margin-bottom:8px;}
   .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:180px;overflow:hidden;z-index:999;}
   .ikr-filter-item{padding:10px 16px;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
   .ikr-filter-item:hover{background:rgba(0,0,0,0.04);}
@@ -766,7 +765,7 @@
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
     .ikr-avgbox{flex-direction:column;align-items:center;gap:10px;}
     .ikr-write-btn{flex:1;}
-    .ikr-btn-group{width:100%;}
+    .ikr-btn-group{width:100%;align-self:stretch;}
     .ikr-sort-select{margin-left:0;}
     .ikr-review-top-left{font-size:18px;}
     .ikr-review-title{font-size:14px;}
@@ -873,10 +872,8 @@
             if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
           };
           btnGroup.appendChild(writeBtn);
-          summary.appendChild(btnGroup);
-          widget.appendChild(summary);
           var filterWrap = document.createElement("div");
-          filterWrap.className = "ikr-filter-wrap ikr-filter-wrap-list";
+          filterWrap.className = "ikr-filter-wrap";
           var filterBtn = document.createElement("button");
           filterBtn.className = "ikr-filter-btn";
           filterBtn.setAttribute("aria-label", "Filtrele");
@@ -929,7 +926,9 @@
           });
           filterWrap.appendChild(filterBtn);
           filterWrap.appendChild(filterMenu);
-          widget.appendChild(filterWrap);
+          btnGroup.appendChild(filterWrap);
+          summary.appendChild(btnGroup);
+          widget.appendChild(summary);
         } else {
           var emptyWriteBtn = document.createElement("button");
           emptyWriteBtn.className = "ikr-write-btn";

@@ -129,12 +129,10 @@ export async function render(productId, settings, reviewsData, productName, orde
           if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
         btnGroup.appendChild(writeBtn);
-        summary.appendChild(btnGroup);
-        widget.appendChild(summary);
 
-        // Filtre — yorum listesinin hemen üstünde, sağa hizalı
+        // Filtre — Yorum Yap'ın yanında
         var filterWrap = document.createElement('div');
-        filterWrap.className = 'ikr-filter-wrap ikr-filter-wrap-list';
+        filterWrap.className = 'ikr-filter-wrap';
 
         var filterBtn = document.createElement('button');
         filterBtn.className = 'ikr-filter-btn';
@@ -191,7 +189,9 @@ export async function render(productId, settings, reviewsData, productName, orde
 
         filterWrap.appendChild(filterBtn);
         filterWrap.appendChild(filterMenu);
-        widget.appendChild(filterWrap);
+        btnGroup.appendChild(filterWrap);
+        summary.appendChild(btnGroup);
+        widget.appendChild(summary);
       } else {
         // Yorum yoksa sadece Yorum Yaz butonu göster
         var emptyWriteBtn = document.createElement('button');
