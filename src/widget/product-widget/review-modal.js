@@ -2,8 +2,9 @@
 
 import { starsHTML, formatDate } from '../core/helpers.js';
 
-function closeModal(overlay, onKeyDown) {
+function closeModal(overlay, onKeyDown, onPopState) {
   document.removeEventListener('keydown', onKeyDown);
+  window.removeEventListener('popstate', onPopState);
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
 }
 
@@ -183,15 +184,31 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   var modal = document.createElement('div');
   modal.className = 'ikr-modal';
 
+  var closed = false;
+
+  function onPopState() {
+    if (closed) return;
+    closed = true;
+    closeModal(overlay, onKeyDown, onPopState);
+  }
+
   function onKeyDown(e) {
     if (e.key === 'Escape') requestClose();
   }
 
   function requestClose() {
-    closeModal(overlay, onKeyDown);
+    if (closed) return;
+    closed = true;
+    // Sahte state'i temizle, sonra modalı kapat
+    history.go(-1);
+    closeModal(overlay, onKeyDown, onPopState);
   }
 
   document.addEventListener('keydown', onKeyDown);
+
+  // Sahte geçmiş adımı — swipe-back/geri butonu bu adımı tüketir, popstate tetiklenir
+  history.pushState({ ikrModal: true }, '');
+  window.addEventListener('popstate', onPopState);
 
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };

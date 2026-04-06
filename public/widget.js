@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T18:25:02.273Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T18:29:47.947Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -169,8 +169,9 @@
   }
 
   // src/widget/product-widget/review-modal.js
-  function closeModal(overlay, onKeyDown) {
+  function closeModal(overlay, onKeyDown, onPopState) {
     document.removeEventListener("keydown", onKeyDown);
+    window.removeEventListener("popstate", onPopState);
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
   function buildRight(r, requestClose) {
@@ -337,13 +338,24 @@
     overlay.className = "ikr-modal-overlay";
     var modal = document.createElement("div");
     modal.className = "ikr-modal";
+    var closed = false;
+    function onPopState() {
+      if (closed) return;
+      closed = true;
+      closeModal(overlay, onKeyDown, onPopState);
+    }
     function onKeyDown(e) {
       if (e.key === "Escape") requestClose();
     }
     function requestClose() {
-      closeModal(overlay, onKeyDown);
+      if (closed) return;
+      closed = true;
+      history.go(-1);
+      closeModal(overlay, onKeyDown, onPopState);
     }
     document.addEventListener("keydown", onKeyDown);
+    history.pushState({ ikrModal: true }, "");
+    window.addEventListener("popstate", onPopState);
     overlay.onclick = function() {
       requestClose();
     };
