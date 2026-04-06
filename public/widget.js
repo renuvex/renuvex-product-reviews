@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T16:08:45.142Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T18:25:02.273Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -170,11 +170,10 @@
 
   // src/widget/product-widget/review-modal.js
   function closeModal(overlay, onKeyDown) {
-    document.body.style.overflow = "";
     document.removeEventListener("keydown", onKeyDown);
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
-  function buildRight(r, overlay, onKeyDown) {
+  function buildRight(r, requestClose) {
     var right = document.createElement("div");
     right.className = "ikr-modal-right";
     var topRow = document.createElement("div");
@@ -191,7 +190,7 @@
     closeBtn.setAttribute("aria-label", "Kapat");
     closeBtn.onclick = function(e) {
       e.stopPropagation();
-      closeModal(overlay, onKeyDown);
+      requestClose();
     };
     topRow.appendChild(starsEl);
     topRow.appendChild(dateEl);
@@ -227,7 +226,7 @@
     right.appendChild(scrollContent);
     return right;
   }
-  function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown) {
+  function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose) {
     var images = r.images && Array.isArray(r.images) ? r.images.filter(function(u) {
       return u && u.indexOf("https://") === 0;
     }) : [];
@@ -245,7 +244,7 @@
     mobileClose.setAttribute("aria-label", "Kapat");
     mobileClose.onclick = function(e) {
       e.stopPropagation();
-      closeModal(overlay, onKeyDown);
+      requestClose();
     };
     left.appendChild(mobileClose);
     if (images.length > 1) {
@@ -258,7 +257,7 @@
         th.alt = "K\xFC\xE7\xFCk resim " + (i + 1);
         (function(idx) {
           th.onclick = function() {
-            rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown, true);
+            rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, requestClose, true);
           };
         })(i);
         thumbBar.appendChild(th);
@@ -280,13 +279,13 @@
       prevBtn.onclick = function(e) {
         e.stopPropagation();
         if (hasPrevPhoto) {
-          rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown, true);
+          rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true);
         } else if (hasPrevReview) {
           var prevReview = reviewsWithPhotos[reviewIdx - 1];
           var prevImages = (prevReview.images || []).filter(function(u) {
             return u && u.indexOf("https://") === 0;
           });
-          rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
+          rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose);
         }
       };
       left.appendChild(prevBtn);
@@ -298,23 +297,23 @@
       nextBtn.onclick = function(e) {
         e.stopPropagation();
         if (hasNextPhoto) {
-          rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown, true);
+          rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, requestClose, true);
         } else if (hasNextReview) {
           var nextReview = reviewsWithPhotos[reviewIdx + 1];
-          rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+          rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, requestClose);
         }
       };
       left.appendChild(nextBtn);
     }
     return left;
   }
-  function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown, photoOnly) {
-    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown);
+  function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly) {
+    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
     if (photoOnly) {
       var oldLeft = modal.firstChild;
       modal.replaceChild(newLeft, oldLeft);
     } else {
-      var newRight = buildRight(r, overlay, onKeyDown);
+      var newRight = buildRight(r, requestClose);
       modal.innerHTML = "";
       modal.appendChild(newLeft);
       modal.appendChild(newRight);
@@ -339,19 +338,21 @@
     var modal = document.createElement("div");
     modal.className = "ikr-modal";
     function onKeyDown(e) {
-      if (e.key === "Escape") closeModal(overlay, onKeyDown);
+      if (e.key === "Escape") requestClose();
+    }
+    function requestClose() {
+      closeModal(overlay, onKeyDown);
     }
     document.addEventListener("keydown", onKeyDown);
     overlay.onclick = function() {
-      closeModal(overlay, onKeyDown);
+      requestClose();
     };
     modal.onclick = function(e) {
       e.stopPropagation();
     };
-    modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown));
-    modal.appendChild(buildRight(r, overlay, onKeyDown));
+    modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose));
+    modal.appendChild(buildRight(r, requestClose));
     overlay.appendChild(modal);
-    document.body.style.overflow = "hidden";
     document.body.appendChild(overlay);
   }
 
@@ -630,11 +631,11 @@
   /* Sol \u2014 b\xFCy\xFCk ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:4px;}
   .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
-  .ikr-avg-star{font-size:48px;color:var(--ikr-color,#000);line-height:1;}
+  .ikr-avg-star{font-size:64px;color:var(--ikr-color,#000);line-height:1;}
   .ikr-avg-num{font-size:38px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
   .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
-  .ikr-avg-count{font-size:13px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
+  .ikr-avg-count{font-size:18px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
 
   /* Orta \u2014 bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:400px;}
@@ -650,7 +651,7 @@
   .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:10px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
 
   /* Tavsiye y\xFCzdesi */
-  .ikr-recommend{font-size:13px;color:rgba(0,0,0,0.75);margin-top:2px;}
+  .ikr-recommend{font-size:14px;color:rgba(0,0,0,0.75);margin-top:2px;}
   .ikr-recommend-pct{font-weight:700;color:rgba(0,0,0,1);margin-right:3px;}
 
   /* Buton grubu */
@@ -660,6 +661,7 @@
 
   /* Filtre dropdown */
   .ikr-filter-wrap{position:relative;}
+  .ikr-filter-wrap-list{display:flex;justify-content:flex-end;margin-bottom:8px;}
   .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:180px;overflow:hidden;z-index:999;}
   .ikr-filter-item{padding:10px 16px;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
   .ikr-filter-item:hover{background:rgba(0,0,0,0.04);}
@@ -670,8 +672,8 @@
   .ikr-review-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:20px;}
   .ikr-review-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
-  .ikr-author{font-size:13px;color:rgba(0,0,0,0.75);margin-top:3px;}
-  .ikr-date{color:rgba(0,0,0,0.40);font-size:13px;white-space:nowrap;flex-shrink:0;}
+  .ikr-author{font-size:13px;color:rgba(0,0,0,1);margin-top:3px;}
+  .ikr-date{color:rgba(0,0,0,1);font-size:13px;white-space:nowrap;flex-shrink:0;}
   .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:14px;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
   .ikr-read-more{display:block;margin-top:4px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;font-size:13px;}
@@ -693,7 +695,7 @@
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
 
   /* Review Modal */
-  .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain;}
   .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:780px;height:520px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 45%;background:#222;position:relative;overflow:hidden;}
   .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
@@ -711,9 +713,9 @@
   .ikr-modal-sticky-header{position:sticky;top:0;background:#fff;z-index:1;padding:24px 24px 12px;border-bottom:1px solid rgba(0,0,0,0.06);}
   .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
   .ikr-modal-stars{font-size:18px;}
-  .ikr-modal-date{font-size:13px;color:rgba(0,0,0,0.40);}
+  .ikr-modal-date{font-size:13px;color:rgba(0,0,0,1);}
   .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
-  .ikr-modal-author{font-size:13px;color:rgba(0,0,0,0.75);}
+  .ikr-modal-author{font-size:13px;color:rgba(0,0,0,1);}
   .ikr-modal-scroll-content{padding:16px 24px 24px;display:flex;flex-direction:column;gap:10px;}
   .ikr-modal-body{font-size:14px;line-height:1.65;color:rgba(0,0,0,1);}
   .ikr-modal-reply{margin-top:8px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--ikr-color,#000);}
@@ -805,7 +807,7 @@
           avgBox.className = "ikr-avgbox";
           var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
           var recommendPct = allCount > 0 ? Math.round(recommendCount / allCount * 100) : 0;
-          avgBox.innerHTML = '<div class="ikr-avg-row1"><span class="ikr-avg-star">\u2605</span><span class="ikr-avg-num">' + avgRatingVal + '</span></div><div class="ikr-avg-row2">' + starsHTML(parseFloat(avgRatingVal), null) + '<span class="ikr-avg-count">' + allCount.toLocaleString("tr-TR") + " Yorum</span></div>" + (recommendPct > 0 ? '<div class="ikr-recommend"><span class="ikr-recommend-pct">%' + recommendPct + "</span> bu \xFCr\xFCn\xFC tavsiye ediyor</div>" : "");
+          avgBox.innerHTML = '<div class="ikr-avg-row1"><span class="ikr-avg-star">\u2605</span><span class="ikr-avg-num">' + avgRatingVal + '</span></div><div class="ikr-avg-row2"><span class="ikr-avg-count">' + allCount.toLocaleString("tr-TR") + " Yorum</span></div>" + (recommendPct > 0 ? '<div class="ikr-recommend"><span class="ikr-recommend-pct">%' + recommendPct + "</span> bu \xFCr\xFCn\xFC tavsiye ediyor</div>" : "");
           summary.appendChild(avgBox);
           var bars = document.createElement("div");
           bars.className = "ikr-bars";
@@ -840,8 +842,10 @@
             if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
           };
           btnGroup.appendChild(writeBtn);
+          summary.appendChild(btnGroup);
+          widget.appendChild(summary);
           var filterWrap = document.createElement("div");
-          filterWrap.className = "ikr-filter-wrap";
+          filterWrap.className = "ikr-filter-wrap ikr-filter-wrap-list";
           var filterBtn = document.createElement("button");
           filterBtn.className = "ikr-filter-btn";
           filterBtn.setAttribute("aria-label", "Filtrele");
@@ -880,9 +884,7 @@
           });
           filterWrap.appendChild(filterBtn);
           filterWrap.appendChild(filterMenu);
-          btnGroup.appendChild(filterWrap);
-          summary.appendChild(btnGroup);
-          widget.appendChild(summary);
+          widget.appendChild(filterWrap);
         } else {
           var emptyWriteBtn = document.createElement("button");
           emptyWriteBtn.className = "ikr-write-btn";
