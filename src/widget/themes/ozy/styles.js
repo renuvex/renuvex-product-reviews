@@ -98,7 +98,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-img-enter-left{animation:ikrSlideInLeft 0.2s ease forwards;}
   @keyframes ikrSlideInRight{from{transform:translateX(60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   @keyframes ikrSlideInLeft{from{transform:translateX(-60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
-  .ikr-modal-close{position:absolute;top:-36px;right:-14px;background:#000;border:2px solid #000;color:#fff;font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;z-index:100000;box-shadow:0 2px 8px rgba(0,0,0,0.20);}
+  .ikr-modal-close{position:absolute;top:-42px;right:-18px;background:#000;border:2px solid #000;color:#fff;font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;z-index:100000;box-shadow:0 2px 8px rgba(0,0,0,0.20);}
   .ikr-modal-close:hover{background:#222;border-color:#222;}
   @media(max-width:640px){.ikr-modal-close{display:none;}}
   .ikr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.45);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;align-items:center;justify-content:center;line-height:1;z-index:2;}
