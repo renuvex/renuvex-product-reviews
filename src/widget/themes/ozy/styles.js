@@ -74,7 +74,7 @@ export var CLASSIC_CSS = `
 
   /* Review Modal */
   .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;}
-  .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;align-items:flex-start;width:100%;max-width:780px;max-height:90vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
+  .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:780px;height:80vh;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 45%;background:#222;position:relative;overflow:hidden;aspect-ratio:3/4;align-self:stretch;}
   .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
   .ikr-modal-close{background:none;border:none;color:rgba(0,0,0,0.40);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;}
