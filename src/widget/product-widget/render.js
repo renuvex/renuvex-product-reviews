@@ -84,7 +84,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
         avgBox.innerHTML =
           '<div class="ikr-avg-row1"><span class="ikr-avg-star">★</span><span class="ikr-avg-num">' + avgRatingVal + '</span></div>' +
-          '<div class="ikr-avg-row2">' + starsHTML(parseFloat(avgRatingVal), null) + '<span class="ikr-avg-count">' + allCount.toLocaleString('tr-TR') + ' Yorum</span></div>' +
+          '<div class="ikr-avg-row2"><span class="ikr-avg-count">' + allCount.toLocaleString('tr-TR') + ' Yorum</span></div>' +
           (recommendPct > 0 ? '<div class="ikr-recommend"><span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor</div>' : '');
         summary.appendChild(avgBox);
 
@@ -116,7 +116,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         }
         summary.appendChild(bars);
 
-        // Sağ — Yorum Yap + Filtre ikonu
+        // Sağ — Yorum Yap butonu
         var btnGroup = document.createElement('div');
         btnGroup.className = 'ikr-btn-group';
 
@@ -128,10 +128,12 @@ export async function render(productId, settings, reviewsData, productName, orde
           if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
         btnGroup.appendChild(writeBtn);
+        summary.appendChild(btnGroup);
+        widget.appendChild(summary);
 
-        // Filtre wrap + dropdown
+        // Filtre — yorum listesinin hemen üstünde, sağa hizalı
         var filterWrap = document.createElement('div');
-        filterWrap.className = 'ikr-filter-wrap';
+        filterWrap.className = 'ikr-filter-wrap ikr-filter-wrap-list';
 
         var filterBtn = document.createElement('button');
         filterBtn.className = 'ikr-filter-btn';
@@ -164,7 +166,6 @@ export async function render(productId, settings, reviewsData, productName, orde
           filterBtn.classList.toggle('ikr-filter-btn-active', !isOpen);
         };
 
-        // Dışarı tıklanınca kapat — once:true ile tek seferlik değil, widget'a bağlı
         filterWrap.addEventListener('click', function(e) { e.stopPropagation(); });
         widget.addEventListener('click', function(e) {
           if (!filterWrap.contains(e.target)) {
@@ -175,9 +176,7 @@ export async function render(productId, settings, reviewsData, productName, orde
 
         filterWrap.appendChild(filterBtn);
         filterWrap.appendChild(filterMenu);
-        btnGroup.appendChild(filterWrap);
-        summary.appendChild(btnGroup);
-        widget.appendChild(summary);
+        widget.appendChild(filterWrap);
       } else {
         // Yorum yoksa sadece Yorum Yaz butonu göster
         var emptyWriteBtn = document.createElement('button');
