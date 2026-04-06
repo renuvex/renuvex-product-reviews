@@ -113,7 +113,7 @@ export var CLASSIC_CSS = `
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
-    .ikr-avgbox{flex-direction:row;justify-content:center;gap:12px;flex-wrap:wrap;}
+    .ikr-avgbox{flex-direction:column;align-items:center;gap:4px;}
     .ikr-write-btn{width:100%;}
     .ikr-sort-select{margin-left:0;}
     .ikr-review-top-left{font-size:18px;}

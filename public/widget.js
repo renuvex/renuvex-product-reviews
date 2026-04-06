@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T18:29:47.947Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T18:34:03.400Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -746,7 +746,7 @@
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
-    .ikr-avgbox{flex-direction:row;justify-content:center;gap:12px;flex-wrap:wrap;}
+    .ikr-avgbox{flex-direction:column;align-items:center;gap:4px;}
     .ikr-write-btn{width:100%;}
     .ikr-sort-select{margin-left:0;}
     .ikr-review-top-left{font-size:18px;}
