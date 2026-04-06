@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T13:44:53.855Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T14:32:29.896Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -251,8 +251,17 @@
     var dateEl = document.createElement("span");
     dateEl.className = "ikr-modal-date";
     dateEl.textContent = formatDate(r.createdAt);
+    var closeBtn = document.createElement("button");
+    closeBtn.className = "ikr-modal-close";
+    closeBtn.textContent = "\u2715";
+    closeBtn.setAttribute("aria-label", "Kapat");
+    closeBtn.onclick = function(e) {
+      e.stopPropagation();
+      closeModal(overlay, onKeyDown);
+    };
     topRow.appendChild(starsEl);
     topRow.appendChild(dateEl);
+    topRow.appendChild(closeBtn);
     right.appendChild(topRow);
     if (r.title) {
       var titleEl = document.createElement("div");
@@ -635,8 +644,8 @@
   .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:860px;max-height:90vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 58%;background:#222;position:relative;overflow:hidden;aspect-ratio:3/4;}
   .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
-  .ikr-modal-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.50);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2;}
-  .ikr-modal-close:hover{background:rgba(0,0,0,0.75);}
+  .ikr-modal-close{background:none;border:none;color:rgba(0,0,0,0.40);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;}
+  .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
   .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.45);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
   .ikr-modal-nav-prev{left:10px;}
   .ikr-modal-nav-next{right:10px;}

@@ -79,7 +79,7 @@ export function openReviewModal(r, clickedUrl) {
   var right = document.createElement('div');
   right.className = 'ikr-modal-right';
 
-  // Yıldız + tarih yan yana
+  // Yıldız + tarih + X yan yana
   var topRow = document.createElement('div');
   topRow.className = 'ikr-modal-top-row';
 
@@ -91,8 +91,15 @@ export function openReviewModal(r, clickedUrl) {
   dateEl.className = 'ikr-modal-date';
   dateEl.textContent = formatDate(r.createdAt);
 
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'ikr-modal-close';
+  closeBtn.textContent = '✕';
+  closeBtn.setAttribute('aria-label', 'Kapat');
+  closeBtn.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown); };
+
   topRow.appendChild(starsEl);
   topRow.appendChild(dateEl);
+  topRow.appendChild(closeBtn);
   right.appendChild(topRow);
 
   // Başlık
