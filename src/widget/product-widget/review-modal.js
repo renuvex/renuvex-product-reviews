@@ -209,17 +209,21 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };
 
-  // X butonu — modal sağ üst köşesinde absolute
+  modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose));
+  modal.appendChild(buildRight(r));
+
+  // X butonu — modal wrapper'ına eklenir, modal sağ üst köşesinde görünür
+  var modalWrap = document.createElement('div');
+  modalWrap.className = 'ikr-modal-wrap';
+  modalWrap.appendChild(modal);
+
   var closeBtn = document.createElement('button');
   closeBtn.className = 'ikr-modal-close';
   closeBtn.textContent = '✕';
   closeBtn.setAttribute('aria-label', 'Kapat');
   closeBtn.onclick = function(e) { e.stopPropagation(); requestClose(); };
-
-  modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose));
-  modal.appendChild(buildRight(r));
-  modal.appendChild(closeBtn);
-  overlay.appendChild(modal);
+  modalWrap.appendChild(closeBtn);
+  overlay.appendChild(modalWrap);
 
   document.body.appendChild(overlay);
 }
