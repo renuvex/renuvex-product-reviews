@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T22:13:17.026Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T22:19:22.138Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -185,23 +185,26 @@
     right.className = "ikr-modal-right";
     var topRow = document.createElement("div");
     topRow.className = "ikr-modal-top-row";
+    var topLeft = document.createElement("div");
+    topLeft.className = "ikr-modal-top-left";
     var starsEl = document.createElement("div");
     starsEl.className = "ikr-modal-stars";
     starsEl.innerHTML = starsHTML(r.rating, null);
+    topLeft.appendChild(starsEl);
+    if (r.title) {
+      var titleEl = document.createElement("span");
+      titleEl.className = "ikr-modal-title";
+      titleEl.textContent = r.title;
+      topLeft.appendChild(titleEl);
+    }
     var dateEl = document.createElement("span");
     dateEl.className = "ikr-modal-date";
     dateEl.textContent = formatDate(r.createdAt);
-    topRow.appendChild(starsEl);
+    topRow.appendChild(topLeft);
     topRow.appendChild(dateEl);
     var stickyHeader = document.createElement("div");
     stickyHeader.className = "ikr-modal-sticky-header";
     stickyHeader.appendChild(topRow);
-    if (r.title) {
-      var titleEl = document.createElement("div");
-      titleEl.className = "ikr-modal-title";
-      titleEl.textContent = r.title;
-      stickyHeader.appendChild(titleEl);
-    }
     var authorEl = document.createElement("div");
     authorEl.className = "ikr-modal-author";
     authorEl.textContent = r.author || "";
@@ -757,9 +760,10 @@
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
   .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;}
   .ikr-modal-sticky-header{position:sticky;top:0;background:#fff;z-index:1;padding:24px 24px 12px;border-bottom:1px solid rgba(0,0,0,0.06);}
-  .ikr-modal-top-row{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+  .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;}
+  .ikr-modal-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .ikr-modal-stars{font-size:18px;}
-  .ikr-modal-date{font-size:13px;color:rgba(0,0,0,1);}
+  .ikr-modal-date{font-size:13px;color:rgba(0,0,0,1);white-space:nowrap;flex-shrink:0;}
   .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
   .ikr-modal-author{font-size:13px;color:rgba(0,0,0,1);}
   .ikr-modal-scroll-content{padding:16px 24px 24px;display:flex;flex-direction:column;gap:10px;}
