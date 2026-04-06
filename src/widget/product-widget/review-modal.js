@@ -164,7 +164,7 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
       setTimeout(function() {
         var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
         if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
-      }, 200);
+      }, 150);
     } else {
       var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
       modal.replaceChild(newLeft, oldLeft);

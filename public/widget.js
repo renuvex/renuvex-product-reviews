@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T20:07:00.682Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T20:11:28.110Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -321,7 +321,7 @@
         setTimeout(function() {
           var newLeft2 = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
           if (modal.firstChild) modal.replaceChild(newLeft2, modal.firstChild);
-        }, 200);
+        }, 150);
       } else {
         var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
         modal.replaceChild(newLeft, oldLeft);
@@ -737,7 +737,7 @@
   .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain;}
   .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:780px;height:520px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 45%;background:#222;position:relative;overflow:hidden;}
-  .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;transition:opacity 0.2s ease;}
+  .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;transition:opacity 0.15s ease;}
   .ikr-modal-main-img.ikr-fade{opacity:0;}
   .ikr-modal-close{background:none;border:none;color:rgba(0,0,0,0.40);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;}
   .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
