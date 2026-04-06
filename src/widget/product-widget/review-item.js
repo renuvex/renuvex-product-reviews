@@ -4,7 +4,7 @@ import { starsHTML, formatDate } from '../core/helpers.js';
 import { openReviewModal } from './review-modal.js';
 
 
-export function buildReviewEl(r) {
+export function buildReviewEl(r, allReviews) {
   var reviewEl = document.createElement('div');
   reviewEl.className = 'ikr-review';
 
@@ -69,7 +69,7 @@ export function buildReviewEl(r) {
       imgEl.className = 'ikr-img';
       imgEl.setAttribute('data-ikr-img-url', imgUrl);
       (function(url) {
-        imgEl.onclick = function() { openReviewModal(r, url); };
+        imgEl.onclick = function() { openReviewModal(r, url, allReviews); };
       })(imgUrl);
       gallery.appendChild(imgEl);
     });

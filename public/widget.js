@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T14:32:29.896Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T14:36:26.537Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -174,73 +174,7 @@
     document.removeEventListener("keydown", onKeyDown);
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
-  function openReviewModal(r, clickedUrl) {
-    var images = r.images && Array.isArray(r.images) ? r.images.filter(function(u) {
-      return u && u.indexOf("https://") === 0;
-    }) : [];
-    var currentIdx = Math.max(0, images.indexOf(clickedUrl));
-    var overlay = document.createElement("div");
-    overlay.className = "ikr-modal-overlay";
-    var modal = document.createElement("div");
-    modal.className = "ikr-modal";
-    var left = document.createElement("div");
-    left.className = "ikr-modal-left";
-    var mainImg = document.createElement("img");
-    mainImg.className = "ikr-modal-main-img";
-    mainImg.src = images[currentIdx] || "";
-    mainImg.alt = "Yorum foto\u011Fraf\u0131";
-    left.appendChild(mainImg);
-    var closeBtn = document.createElement("button");
-    closeBtn.className = "ikr-modal-close";
-    closeBtn.textContent = "\u2715";
-    closeBtn.setAttribute("aria-label", "Kapat");
-    closeBtn.onclick = function(e) {
-      e.stopPropagation();
-      closeModal(overlay, onKeyDown);
-    };
-    left.appendChild(closeBtn);
-    var thumbEls = [];
-    if (images.length > 1) {
-      var thumbBar = document.createElement("div");
-      thumbBar.className = "ikr-modal-thumbs";
-      images.forEach(function(url, i) {
-        var th = document.createElement("img");
-        th.src = url;
-        th.className = "ikr-modal-thumb" + (i === currentIdx ? " ikr-modal-thumb-active" : "");
-        th.alt = "K\xFC\xE7\xFCk resim " + (i + 1);
-        th.onclick = function() {
-          setActive(i);
-        };
-        thumbBar.appendChild(th);
-        thumbEls.push(th);
-      });
-      left.appendChild(thumbBar);
-      var prevBtn = document.createElement("button");
-      prevBtn.className = "ikr-modal-nav ikr-modal-nav-prev";
-      prevBtn.innerHTML = "&#8249;";
-      prevBtn.setAttribute("aria-label", "\xD6nceki foto\u011Fraf");
-      prevBtn.onclick = function(e) {
-        e.stopPropagation();
-        setActive((currentIdx - 1 + images.length) % images.length);
-      };
-      left.appendChild(prevBtn);
-      var nextBtn = document.createElement("button");
-      nextBtn.className = "ikr-modal-nav ikr-modal-nav-next";
-      nextBtn.innerHTML = "&#8250;";
-      nextBtn.setAttribute("aria-label", "Sonraki foto\u011Fraf");
-      nextBtn.onclick = function(e) {
-        e.stopPropagation();
-        setActive((currentIdx + 1) % images.length);
-      };
-      left.appendChild(nextBtn);
-    }
-    function setActive(idx) {
-      currentIdx = idx;
-      mainImg.src = images[idx];
-      thumbEls.forEach(function(th, i) {
-        th.classList.toggle("ikr-modal-thumb-active", i === idx);
-      });
-    }
+  function buildRight(r, overlay, onKeyDown) {
     var right = document.createElement("div");
     right.className = "ikr-modal-right";
     var topRow = document.createElement("div");
@@ -285,9 +219,99 @@
       replyEl.innerHTML = '<div class="ikr-modal-reply-label">Ma\u011Faza Sahibi</div><div class="ikr-modal-reply-text">' + r.merchantReply + "</div>";
       right.appendChild(replyEl);
     }
-    modal.appendChild(left);
-    modal.appendChild(right);
-    overlay.appendChild(modal);
+    return right;
+  }
+  function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown) {
+    var images = r.images && Array.isArray(r.images) ? r.images.filter(function(u) {
+      return u && u.indexOf("https://") === 0;
+    }) : [];
+    var currentPhotoIdx = Math.min(photoIdx, images.length - 1);
+    var left = document.createElement("div");
+    left.className = "ikr-modal-left";
+    var mainImg = document.createElement("img");
+    mainImg.className = "ikr-modal-main-img";
+    mainImg.src = images[currentPhotoIdx] || "";
+    mainImg.alt = "Yorum foto\u011Fraf\u0131";
+    left.appendChild(mainImg);
+    var thumbEls = [];
+    if (images.length > 1) {
+      var thumbBar = document.createElement("div");
+      thumbBar.className = "ikr-modal-thumbs";
+      images.forEach(function(url, i) {
+        var th = document.createElement("img");
+        th.src = url;
+        th.className = "ikr-modal-thumb" + (i === currentPhotoIdx ? " ikr-modal-thumb-active" : "");
+        th.alt = "K\xFC\xE7\xFCk resim " + (i + 1);
+        th.onclick = function() {
+          setPhotoActive(i);
+        };
+        thumbBar.appendChild(th);
+        thumbEls.push(th);
+      });
+      left.appendChild(thumbBar);
+    }
+    function setPhotoActive(idx) {
+      currentPhotoIdx = idx;
+      mainImg.src = images[idx];
+      thumbEls.forEach(function(th, i) {
+        th.classList.toggle("ikr-modal-thumb-active", i === idx);
+      });
+    }
+    var hasPrev = reviewIdx > 0;
+    var hasNext = reviewIdx < reviewsWithPhotos.length - 1;
+    if (hasPrev || hasNext) {
+      var prevBtn = document.createElement("button");
+      prevBtn.className = "ikr-modal-nav ikr-modal-nav-prev";
+      prevBtn.innerHTML = "&#8249;";
+      prevBtn.setAttribute("aria-label", "\xD6nceki yorum");
+      prevBtn.style.opacity = hasPrev ? "1" : "0.3";
+      prevBtn.onclick = function(e) {
+        e.stopPropagation();
+        if (!hasPrev) return;
+        var prevReview = reviewsWithPhotos[reviewIdx - 1];
+        rebuildModal(prevReview, reviewIdx - 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+      };
+      left.appendChild(prevBtn);
+      var nextBtn = document.createElement("button");
+      nextBtn.className = "ikr-modal-nav ikr-modal-nav-next";
+      nextBtn.innerHTML = "&#8250;";
+      nextBtn.setAttribute("aria-label", "Sonraki yorum");
+      nextBtn.style.opacity = hasNext ? "1" : "0.3";
+      nextBtn.onclick = function(e) {
+        e.stopPropagation();
+        if (!hasNext) return;
+        var nextReview = reviewsWithPhotos[reviewIdx + 1];
+        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+      };
+      left.appendChild(nextBtn);
+    }
+    return left;
+  }
+  function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown) {
+    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown);
+    var newRight = buildRight(r, overlay, onKeyDown);
+    modal.innerHTML = "";
+    modal.appendChild(newLeft);
+    modal.appendChild(newRight);
+  }
+  function openReviewModal(r, clickedUrl, allReviews) {
+    var reviewsWithPhotos = (allReviews || []).filter(function(rv) {
+      return rv.images && Array.isArray(rv.images) && rv.images.some(function(u) {
+        return u && u.indexOf("https://") === 0;
+      });
+    });
+    var reviewIdx = reviewsWithPhotos.findIndex(function(rv) {
+      return rv === r || rv.id === r.id;
+    });
+    if (reviewIdx === -1) reviewIdx = 0;
+    var images = r.images && Array.isArray(r.images) ? r.images.filter(function(u) {
+      return u && u.indexOf("https://") === 0;
+    }) : [];
+    var photoIdx = Math.max(0, images.indexOf(clickedUrl));
+    var overlay = document.createElement("div");
+    overlay.className = "ikr-modal-overlay";
+    var modal = document.createElement("div");
+    modal.className = "ikr-modal";
     function onKeyDown(e) {
       if (e.key === "Escape") closeModal(overlay, onKeyDown);
     }
@@ -298,12 +322,15 @@
     modal.onclick = function(e) {
       e.stopPropagation();
     };
+    modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown));
+    modal.appendChild(buildRight(r, overlay, onKeyDown));
+    overlay.appendChild(modal);
     document.body.style.overflow = "hidden";
     document.body.appendChild(overlay);
   }
 
   // src/widget/product-widget/review-item.js
-  function buildReviewEl(r) {
+  function buildReviewEl(r, allReviews) {
     var reviewEl = document.createElement("div");
     reviewEl.className = "ikr-review";
     var topRow = document.createElement("div");
@@ -355,7 +382,7 @@
         imgEl.setAttribute("data-ikr-img-url", imgUrl);
         (function(url) {
           imgEl.onclick = function() {
-            openReviewModal(r, url);
+            openReviewModal(r, url, allReviews);
           };
         })(imgUrl);
         gallery.appendChild(imgEl);
@@ -840,7 +867,7 @@
           widget.appendChild(empty);
         } else {
           reviews.forEach(function(r) {
-            widget.appendChild(buildReviewEl(r));
+            widget.appendChild(buildReviewEl(r, reviews));
           });
         }
         var hasMore = data.data && data.data.hasMore;
@@ -856,7 +883,7 @@
             if (moreData && moreData.data && moreData.data.reviews) {
               setCurrentPage(nextPage);
               moreData.data.reviews.forEach(function(r) {
-                widget.insertBefore(buildReviewEl(r), loadMoreBtn);
+                widget.insertBefore(buildReviewEl(r, moreData.data.reviews), loadMoreBtn);
               });
               if (!moreData.data.hasMore) loadMoreBtn.remove();
               else {
