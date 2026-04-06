@@ -75,8 +75,8 @@ export var CLASSIC_CSS = `
   /* Review Modal */
   .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;}
   .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:860px;max-height:90vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
-  .ikr-modal-left{flex:0 0 58%;background:#fff;position:relative;display:flex;align-items:center;justify-content:center;min-height:320px;}
-  .ikr-modal-main-img{width:100%;height:100%;object-fit:scale-down;display:block;}
+  .ikr-modal-left{flex:0 0 58%;background:#222;position:relative;overflow:hidden;aspect-ratio:3/4;}
+  .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
   .ikr-modal-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.50);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2;}
   .ikr-modal-close:hover{background:rgba(0,0,0,0.75);}
   .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.45);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
@@ -100,7 +100,7 @@ export var CLASSIC_CSS = `
   @media(max-width:640px){
     .ikr-modal-overlay{padding:12px;}
     .ikr-modal{flex-direction:column;max-height:92vh;}
-    .ikr-modal-left{flex:0 0 55vw;min-height:0;}
+    .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;}
     .ikr-modal-right{padding:16px;}
   }
   @media(max-width:600px){
