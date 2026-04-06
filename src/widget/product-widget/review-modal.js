@@ -4,6 +4,7 @@ import { starsHTML, formatDate } from '../core/helpers.js';
 
 function closeModal(overlay, onKeyDown, onPopState) {
   document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
   document.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('popstate', onPopState);
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -202,6 +203,8 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   document.addEventListener('keydown', onKeyDown);
 
   // Sahte geçmiş adımı — swipe-back/geri butonu bu adımı tüketir, popstate tetiklenir
+  var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  document.body.style.paddingRight = scrollbarWidth + 'px';
   document.body.style.overflow = 'hidden';
   history.pushState({ ikrModal: true }, '');
   window.addEventListener('popstate', onPopState);
