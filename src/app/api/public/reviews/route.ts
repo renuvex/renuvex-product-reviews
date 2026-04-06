@@ -64,11 +64,14 @@ export async function GET(req: Request) {
 
     const ratingParam = searchParams.get('rating');
     const ratingFilter = ratingParam ? parseInt(ratingParam, 10) : null;
+    const hasImagesFilter = searchParams.get('hasImages') === 'true';
+
     const where = {
       storeId,
       productId,
       status: 'approved',
       ...(ratingFilter && ratingFilter >= 1 && ratingFilter <= 5 ? { rating: ratingFilter } : {}),
+      ...(hasImagesFilter ? { images: { not: null, notIn: ['[]', '[""]'] } } : {}),
     };
 
     // Filtreden bağımsız — bar chart için tüm approved yorumların dağılımı

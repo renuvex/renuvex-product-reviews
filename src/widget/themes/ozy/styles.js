@@ -5,19 +5,19 @@ export var CLASSIC_CSS = `
   .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary — 3 sütun: puan | barlar | buton */
-  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:rgba(0,0,0,0.03);border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
+  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
 
   /* Sol — büyük ortalama */
-  .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:4px;}
+  .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
   .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
   .ikr-avg-star{font-size:48px;color:var(--ikr-color,#000);line-height:1;}
   .ikr-avg-num{font-size:48px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
   .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
-  .ikr-avg-count{font-size:18px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
+  .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
 
   /* Orta — bar chart */
-  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:400px;}
+  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:400px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:16px;color:rgba(0,0,0,0.75);cursor:pointer;border-radius:6px;padding:3px 6px;}
   .ikr-bar-row:hover{background:var(--ikr-color-light);}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
@@ -45,6 +45,16 @@ export var CLASSIC_CSS = `
   .ikr-filter-item{padding:10px 16px;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
   .ikr-filter-item:hover{background:rgba(0,0,0,0.04);}
   .ikr-filter-item-active{font-weight:700;color:var(--ikr-color,#000);}
+
+  /* Fotoğraflı Yorumlar bölümü */
+  .ikr-photo-section{margin-bottom:24px;}
+  .ikr-photo-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .ikr-photo-section-title{font-size:15px;font-weight:700;color:rgba(0,0,0,1);}
+  .ikr-photo-section-all{font-size:13px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;}
+  .ikr-photo-section-all:hover{opacity:0.75;}
+  .ikr-photo-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+  .ikr-photo-strip::-webkit-scrollbar{display:none;}
+  .ikr-photo-strip-thumb{width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:zoom-in;flex-shrink:0;border:1px solid rgba(0,0,0,0.08);}
 
   /* Yorumlar */
   .ikr-review{padding:20px 0;border-bottom:1px solid rgba(0,0,0,0.08);}
@@ -113,8 +123,9 @@ export var CLASSIC_CSS = `
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
-    .ikr-avgbox{flex-direction:column;align-items:flex-start;gap:4px;}
-    .ikr-write-btn{width:100%;}
+    .ikr-avgbox{flex-direction:column;align-items:center;gap:10px;}
+    .ikr-write-btn{flex:1;}
+    .ikr-btn-group{width:100%;}
     .ikr-sort-select{margin-left:0;}
     .ikr-review-top-left{font-size:18px;}
     .ikr-review-title{font-size:14px;}

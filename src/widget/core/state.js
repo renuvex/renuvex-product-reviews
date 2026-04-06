@@ -4,6 +4,7 @@
 export var currentOrderBy = 'newest';
 export var currentPage = 1;
 export var currentRatingFilter = null;
+export var currentHasImages = false;
 export var currentProductId = null;
 export var currentSettings = null;
 export var currentProductName = null;
@@ -11,6 +12,7 @@ export var currentProductName = null;
 export function setCurrentOrderBy(v) { currentOrderBy = v; }
 export function setCurrentPage(v) { currentPage = v; }
 export function setCurrentRatingFilter(v) { currentRatingFilter = v; }
+export function setCurrentHasImages(v) { currentHasImages = v; }
 export function setCurrentProductId(v) { currentProductId = v; }
 export function setCurrentSettings(v) { currentSettings = v; }
 export function setCurrentProductName(v) { currentProductName = v; }

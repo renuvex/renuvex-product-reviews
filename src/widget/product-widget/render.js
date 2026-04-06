@@ -3,14 +3,15 @@
 import { starsHTML, injectStyles } from '../core/helpers.js';
 import { fetchReviews } from './bootstrap.js';
 import { buildReviewEl } from './review-item.js';
+import { openReviewModal } from './review-modal.js';
 import { buildReviewForm } from './review-form.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
-  currentOrderBy, currentPage, currentRatingFilter, currentProductId, currentSettings, currentProductName,
-  setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentProductId, setCurrentSettings, setCurrentProductName,
+  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentProductName,
+  setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages, setCurrentProductId, setCurrentSettings, setCurrentProductName,
 } from '../core/state.js';
 
 export async function render(productId, settings, reviewsData, productName, orderBy, page) {
@@ -107,7 +108,7 @@ export async function render(productId, settings, reviewsData, productName, orde
             row.onclick = async function() {
               setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
               setCurrentPage(1);
-              var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
+              var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
               await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
             };
           })(si);
@@ -144,16 +145,30 @@ export async function render(productId, settings, reviewsData, productName, orde
         filterMenu.className = 'ikr-filter-menu';
         filterMenu.style.display = 'none';
 
-        [['newest','En Yeni'],['highest','En Yüksek Puan'],['lowest','En Düşük Puan']].forEach(function(opt) {
+        var filterOpts = [
+          ['newest', 'En Yeni', false],
+          ['highest', 'En Yüksek Puan', false],
+          ['lowest', 'En Düşük Puan', false],
+          ['photos', 'Fotoğraflı', true],
+        ];
+        filterOpts.forEach(function(opt) {
+          var isPhotos = opt[2];
+          var isActive = isPhotos ? currentHasImages : (!currentHasImages && (currentOrderBy || 'newest') === opt[0]);
           var item = document.createElement('div');
-          item.className = 'ikr-filter-item' + ((currentOrderBy || 'newest') === opt[0] ? ' ikr-filter-item-active' : '');
+          item.className = 'ikr-filter-item' + (isActive ? ' ikr-filter-item-active' : '');
           item.textContent = opt[1];
           item.onclick = async function() {
-            setCurrentOrderBy(opt[0]);
-            setCurrentPage(1);
             filterMenu.style.display = 'none';
             filterBtn.classList.remove('ikr-filter-btn-active');
-            var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
+            setCurrentPage(1);
+            if (isPhotos) {
+              setCurrentHasImages(true);
+              setCurrentOrderBy('newest');
+            } else {
+              setCurrentHasImages(false);
+              setCurrentOrderBy(opt[0]);
+            }
+            var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
             await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
           };
           filterMenu.appendChild(item);
@@ -189,6 +204,58 @@ export async function render(productId, settings, reviewsData, productName, orde
         widget.appendChild(emptyWriteBtn);
       }
 
+      // Fotoğraflı Yorumlar bölümü — sadece filtre aktif değilken göster
+      var allReviewsWithPhotos = reviews.filter(function(r) {
+        return r.images && Array.isArray(r.images) && r.images.some(function(u) { return u && u.indexOf('https://') === 0; });
+      });
+      if (!currentHasImages && allReviewsWithPhotos.length > 0) {
+        var photoSection = document.createElement('div');
+        photoSection.className = 'ikr-photo-section';
+
+        var photoHeader = document.createElement('div');
+        photoHeader.className = 'ikr-photo-section-header';
+
+        var photoTitle = document.createElement('span');
+        photoTitle.className = 'ikr-photo-section-title';
+        photoTitle.textContent = 'Fotoğraflı Yorumlar';
+
+        var photoAll = document.createElement('span');
+        photoAll.className = 'ikr-photo-section-all';
+        photoAll.textContent = 'Tümü ›';
+        photoAll.onclick = function() {
+          setCurrentHasImages(true);
+          setCurrentOrderBy('newest');
+          setCurrentPage(1);
+          fetchReviews(currentProductId, 'newest', 1, currentRatingFilter, true).then(function(d) {
+            render(currentProductId, currentSettings, d, currentProductName, 'newest', 1);
+          });
+        };
+
+        photoHeader.appendChild(photoTitle);
+        photoHeader.appendChild(photoAll);
+        photoSection.appendChild(photoHeader);
+
+        var photoStrip = document.createElement('div');
+        photoStrip.className = 'ikr-photo-strip';
+
+        allReviewsWithPhotos.forEach(function(r) {
+          r.images.forEach(function(imgUrl) {
+            if (!imgUrl || imgUrl.indexOf('https://') !== 0) return;
+            var thumb = document.createElement('img');
+            thumb.src = imgUrl;
+            thumb.className = 'ikr-photo-strip-thumb';
+            thumb.alt = 'Yorum fotoğrafı';
+            (function(url, review) {
+              thumb.onclick = function() { openReviewModal(review, url, reviews); };
+            })(imgUrl, r);
+            photoStrip.appendChild(thumb);
+          });
+        });
+
+        photoSection.appendChild(photoStrip);
+        widget.appendChild(photoSection);
+      }
+
       if (reviews.length === 0) {
         var empty = document.createElement('p');
         empty.style.cssText = 'color:#888;text-align:center;padding:30px 0;';
@@ -208,7 +275,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           loadMoreBtn.disabled = true;
           loadMoreBtn.textContent = 'Yükleniyor...';
           var nextPage = currentPage + 1;
-          var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter);
+          var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentHasImages);
           if (moreData && moreData.data && moreData.data.reviews) {
             setCurrentPage(nextPage);
             moreData.data.reviews.forEach(function(r) {

@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T18:47:49.901Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T19:04:43.098Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -18,6 +18,7 @@
   var currentOrderBy = "newest";
   var currentPage = 1;
   var currentRatingFilter = null;
+  var currentHasImages = false;
   var currentProductId = null;
   var currentSettings = null;
   var currentProductName = null;
@@ -29,6 +30,9 @@
   }
   function setCurrentRatingFilter(v) {
     currentRatingFilter = v;
+  }
+  function setCurrentHasImages(v) {
+    currentHasImages = v;
   }
   function setCurrentProductId(v) {
     currentProductId = v;
@@ -638,19 +642,19 @@
   .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
-  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;background:rgba(0,0,0,0.03);border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
+  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
 
   /* Sol \u2014 b\xFCy\xFCk ortalama */
-  .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:4px;}
+  .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
   .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
   .ikr-avg-star{font-size:48px;color:var(--ikr-color,#000);line-height:1;}
   .ikr-avg-num{font-size:48px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
   .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
-  .ikr-avg-count{font-size:18px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
+  .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
 
   /* Orta \u2014 bar chart */
-  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:400px;}
+  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:400px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;font-size:16px;color:rgba(0,0,0,0.75);cursor:pointer;border-radius:6px;padding:3px 6px;}
   .ikr-bar-row:hover{background:var(--ikr-color-light);}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
@@ -678,6 +682,16 @@
   .ikr-filter-item{padding:10px 16px;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
   .ikr-filter-item:hover{background:rgba(0,0,0,0.04);}
   .ikr-filter-item-active{font-weight:700;color:var(--ikr-color,#000);}
+
+  /* Foto\u011Frafl\u0131 Yorumlar b\xF6l\xFCm\xFC */
+  .ikr-photo-section{margin-bottom:24px;}
+  .ikr-photo-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .ikr-photo-section-title{font-size:15px;font-weight:700;color:rgba(0,0,0,1);}
+  .ikr-photo-section-all{font-size:13px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;}
+  .ikr-photo-section-all:hover{opacity:0.75;}
+  .ikr-photo-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+  .ikr-photo-strip::-webkit-scrollbar{display:none;}
+  .ikr-photo-strip-thumb{width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:zoom-in;flex-shrink:0;border:1px solid rgba(0,0,0,0.08);}
 
   /* Yorumlar */
   .ikr-review{padding:20px 0;border-bottom:1px solid rgba(0,0,0,0.08);}
@@ -746,8 +760,9 @@
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
-    .ikr-avgbox{flex-direction:column;align-items:flex-start;gap:4px;}
-    .ikr-write-btn{width:100%;}
+    .ikr-avgbox{flex-direction:column;align-items:center;gap:10px;}
+    .ikr-write-btn{flex:1;}
+    .ikr-btn-group{width:100%;}
     .ikr-sort-select{margin-left:0;}
     .ikr-review-top-left{font-size:18px;}
     .ikr-review-title{font-size:14px;}
@@ -836,7 +851,7 @@
               row.onclick = async function() {
                 setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
                 setCurrentPage(1);
-                var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
+                var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
                 await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
               };
             })(si);
@@ -865,16 +880,30 @@
           var filterMenu = document.createElement("div");
           filterMenu.className = "ikr-filter-menu";
           filterMenu.style.display = "none";
-          [["newest", "En Yeni"], ["highest", "En Y\xFCksek Puan"], ["lowest", "En D\xFC\u015F\xFCk Puan"]].forEach(function(opt) {
+          var filterOpts = [
+            ["newest", "En Yeni", false],
+            ["highest", "En Y\xFCksek Puan", false],
+            ["lowest", "En D\xFC\u015F\xFCk Puan", false],
+            ["photos", "Foto\u011Frafl\u0131", true]
+          ];
+          filterOpts.forEach(function(opt) {
+            var isPhotos = opt[2];
+            var isActive2 = isPhotos ? currentHasImages : !currentHasImages && (currentOrderBy || "newest") === opt[0];
             var item = document.createElement("div");
-            item.className = "ikr-filter-item" + ((currentOrderBy || "newest") === opt[0] ? " ikr-filter-item-active" : "");
+            item.className = "ikr-filter-item" + (isActive2 ? " ikr-filter-item-active" : "");
             item.textContent = opt[1];
             item.onclick = async function() {
-              setCurrentOrderBy(opt[0]);
-              setCurrentPage(1);
               filterMenu.style.display = "none";
               filterBtn.classList.remove("ikr-filter-btn-active");
-              var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter);
+              setCurrentPage(1);
+              if (isPhotos) {
+                setCurrentHasImages(true);
+                setCurrentOrderBy("newest");
+              } else {
+                setCurrentHasImages(false);
+                setCurrentOrderBy(opt[0]);
+              }
+              var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
               await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
             };
             filterMenu.appendChild(item);
@@ -907,6 +936,53 @@
           };
           widget.appendChild(emptyWriteBtn);
         }
+        var allReviewsWithPhotos = reviews.filter(function(r) {
+          return r.images && Array.isArray(r.images) && r.images.some(function(u) {
+            return u && u.indexOf("https://") === 0;
+          });
+        });
+        if (!currentHasImages && allReviewsWithPhotos.length > 0) {
+          var photoSection = document.createElement("div");
+          photoSection.className = "ikr-photo-section";
+          var photoHeader = document.createElement("div");
+          photoHeader.className = "ikr-photo-section-header";
+          var photoTitle = document.createElement("span");
+          photoTitle.className = "ikr-photo-section-title";
+          photoTitle.textContent = "Foto\u011Frafl\u0131 Yorumlar";
+          var photoAll = document.createElement("span");
+          photoAll.className = "ikr-photo-section-all";
+          photoAll.textContent = "T\xFCm\xFC \u203A";
+          photoAll.onclick = function() {
+            setCurrentHasImages(true);
+            setCurrentOrderBy("newest");
+            setCurrentPage(1);
+            fetchReviews(currentProductId, "newest", 1, currentRatingFilter, true).then(function(d) {
+              render(currentProductId, currentSettings, d, currentProductName, "newest", 1);
+            });
+          };
+          photoHeader.appendChild(photoTitle);
+          photoHeader.appendChild(photoAll);
+          photoSection.appendChild(photoHeader);
+          var photoStrip = document.createElement("div");
+          photoStrip.className = "ikr-photo-strip";
+          allReviewsWithPhotos.forEach(function(r) {
+            r.images.forEach(function(imgUrl) {
+              if (!imgUrl || imgUrl.indexOf("https://") !== 0) return;
+              var thumb = document.createElement("img");
+              thumb.src = imgUrl;
+              thumb.className = "ikr-photo-strip-thumb";
+              thumb.alt = "Yorum foto\u011Fraf\u0131";
+              (function(url, review) {
+                thumb.onclick = function() {
+                  openReviewModal(review, url, reviews);
+                };
+              })(imgUrl, r);
+              photoStrip.appendChild(thumb);
+            });
+          });
+          photoSection.appendChild(photoStrip);
+          widget.appendChild(photoSection);
+        }
         if (reviews.length === 0) {
           var empty = document.createElement("p");
           empty.style.cssText = "color:#888;text-align:center;padding:30px 0;";
@@ -926,7 +1002,7 @@
             loadMoreBtn.disabled = true;
             loadMoreBtn.textContent = "Y\xFCkleniyor...";
             var nextPage = currentPage + 1;
-            var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter);
+            var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentHasImages);
             if (moreData && moreData.data && moreData.data.reviews) {
               setCurrentPage(nextPage);
               moreData.data.reviews.forEach(function(r) {
@@ -1005,10 +1081,10 @@
     }
   }
   var REVIEWS_CACHE_TTL = 60 * 1e3;
-  async function fetchReviews(productId, orderBy, page, ratingFilter) {
+  async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages) {
     orderBy = orderBy || "newest";
     page = page || 1;
-    var key = "ikr_reviews_" + PUBLIC_API_KEY + "_" + productId + "_" + orderBy + "_" + page + "_" + (ratingFilter || "");
+    var key = "ikr_reviews_" + PUBLIC_API_KEY + "_" + productId + "_" + orderBy + "_" + page + "_" + (ratingFilter || "") + "_" + (hasImages ? "1" : "0");
     var staleReviews = null;
     var cached = cacheGet(key);
     if (cached) {
@@ -1026,7 +1102,7 @@
       }
     }
     try {
-      var url = API_BASE + "/api/public/reviews?storeId=" + encodeURIComponent(PUBLIC_API_KEY) + "&productId=" + encodeURIComponent(productId) + "&orderBy=" + encodeURIComponent(orderBy) + "&page=" + encodeURIComponent(page) + (ratingFilter ? "&rating=" + encodeURIComponent(ratingFilter) : "");
+      var url = API_BASE + "/api/public/reviews?storeId=" + encodeURIComponent(PUBLIC_API_KEY) + "&productId=" + encodeURIComponent(productId) + "&orderBy=" + encodeURIComponent(orderBy) + "&page=" + encodeURIComponent(page) + (ratingFilter ? "&rating=" + encodeURIComponent(ratingFilter) : "") + (hasImages ? "&hasImages=true" : "");
       var res = await fetchWithTimeout(url);
       if (!res.ok) return staleReviews || null;
       var data = await res.json();

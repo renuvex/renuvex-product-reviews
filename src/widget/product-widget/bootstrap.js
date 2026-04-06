@@ -58,10 +58,10 @@ export async function fetchSettings() {
 
 var REVIEWS_CACHE_TTL = 60 * 1000; // 1 dakika
 
-export async function fetchReviews(productId, orderBy, page, ratingFilter) {
+export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages) {
   orderBy = orderBy || 'newest';
   page = page || 1;
-  var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '');
+  var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0');
   var staleReviews = null;
   var cached = cacheGet(key);
   if (cached) {
@@ -81,7 +81,8 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter) {
       '&productId=' + encodeURIComponent(productId) +
       '&orderBy=' + encodeURIComponent(orderBy) +
       '&page=' + encodeURIComponent(page) +
-      (ratingFilter ? '&rating=' + encodeURIComponent(ratingFilter) : '');
+      (ratingFilter ? '&rating=' + encodeURIComponent(ratingFilter) : '') +
+      (hasImages ? '&hasImages=true' : '');
     var res = await fetchWithTimeout(url);
     if (!res.ok) return staleReviews || null;
     var data = await res.json();
