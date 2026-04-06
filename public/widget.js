@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T18:34:03.400Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T18:42:59.214Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -643,8 +643,8 @@
   /* Sol \u2014 b\xFCy\xFCk ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:4px;}
   .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
-  .ikr-avg-star{font-size:64px;color:var(--ikr-color,#000);line-height:1;}
-  .ikr-avg-num{font-size:38px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
+  .ikr-avg-star{font-size:48px;color:var(--ikr-color,#000);line-height:1;}
+  .ikr-avg-num{font-size:48px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
   .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
   .ikr-avg-count{font-size:18px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
@@ -746,7 +746,7 @@
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
-    .ikr-avgbox{flex-direction:column;align-items:center;gap:4px;}
+    .ikr-avgbox{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-write-btn{width:100%;}
     .ikr-sort-select{margin-left:0;}
     .ikr-review-top-left{font-size:18px;}
