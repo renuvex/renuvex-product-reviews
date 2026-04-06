@@ -14,8 +14,8 @@ function buildRight(r) {
   var right = document.createElement('div');
   right.className = 'ikr-modal-right';
 
-  var stickyHeader = document.createElement('div');
-  stickyHeader.className = 'ikr-modal-sticky-header';
+  var scrollContent = document.createElement('div');
+  scrollContent.className = 'ikr-modal-scroll-content';
 
   var topRow = document.createElement('div');
   topRow.className = 'ikr-modal-top-row';
@@ -30,24 +30,19 @@ function buildRight(r) {
 
   topRow.appendChild(starsEl);
   topRow.appendChild(dateEl);
-  stickyHeader.appendChild(topRow);
+  scrollContent.appendChild(topRow);
 
   if (r.title) {
     var titleEl = document.createElement('div');
     titleEl.className = 'ikr-modal-title';
     titleEl.textContent = r.title;
-    stickyHeader.appendChild(titleEl);
+    scrollContent.appendChild(titleEl);
   }
 
   var authorEl = document.createElement('div');
   authorEl.className = 'ikr-modal-author';
   authorEl.textContent = r.author || '';
-  stickyHeader.appendChild(authorEl);
-
-  right.appendChild(stickyHeader);
-
-  var scrollContent = document.createElement('div');
-  scrollContent.className = 'ikr-modal-scroll-content';
+  scrollContent.appendChild(authorEl);
 
   if (r.comment && r.comment.trim()) {
     var bodyEl = document.createElement('div');
