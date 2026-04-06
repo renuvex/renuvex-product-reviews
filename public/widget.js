@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T20:36:49.250Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T20:43:07.354Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -645,7 +645,7 @@
   .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
-  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:16px;margin-bottom:24px;flex-wrap:wrap;max-width:780px;margin-left:auto;margin-right:auto;}
+  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:16px;margin-bottom:24px;flex-wrap:wrap;}
 
   /* Sol \u2014 b\xFCy\xFCk ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
