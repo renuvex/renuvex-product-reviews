@@ -9,7 +9,7 @@ function closeModal(overlay, onKeyDown, onPopState) {
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
 }
 
-function buildRight(r, requestClose) {
+function buildRight(r) {
   var right = document.createElement('div');
   right.className = 'ikr-modal-right';
 
@@ -24,15 +24,8 @@ function buildRight(r, requestClose) {
   dateEl.className = 'ikr-modal-date';
   dateEl.textContent = formatDate(r.createdAt);
 
-  var closeBtn = document.createElement('button');
-  closeBtn.className = 'ikr-modal-close';
-  closeBtn.textContent = '✕';
-  closeBtn.setAttribute('aria-label', 'Kapat');
-  closeBtn.onclick = function(e) { e.stopPropagation(); requestClose(); };
-
   topRow.appendChild(starsEl);
   topRow.appendChild(dateEl);
-  topRow.appendChild(closeBtn);
 
   var stickyHeader = document.createElement('div');
   stickyHeader.className = 'ikr-modal-sticky-header';
@@ -162,7 +155,7 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
     if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
   } else {
     var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction);
-    var newRight = buildRight(r, requestClose);
+    var newRight = buildRight(r);
     modal.innerHTML = '';
     modal.appendChild(newLeft);
     modal.appendChild(newRight);
@@ -216,8 +209,16 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };
 
+  // X butonu — modal sağ üst köşesinde absolute
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'ikr-modal-close';
+  closeBtn.textContent = '✕';
+  closeBtn.setAttribute('aria-label', 'Kapat');
+  closeBtn.onclick = function(e) { e.stopPropagation(); requestClose(); };
+
   modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose));
-  modal.appendChild(buildRight(r, requestClose));
+  modal.appendChild(buildRight(r));
+  modal.appendChild(closeBtn);
   overlay.appendChild(modal);
 
   document.body.appendChild(overlay);

@@ -97,8 +97,9 @@ export var CLASSIC_CSS = `
   .ikr-modal-img-enter-left{animation:ikrSlideInLeft 0.2s ease forwards;}
   @keyframes ikrSlideInRight{from{transform:translateX(60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   @keyframes ikrSlideInLeft{from{transform:translateX(-60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
-  .ikr-modal-close{background:none;border:none;color:rgba(0,0,0,0.40);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;}
-  .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
+  .ikr-modal-close{position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.9);border:none;color:rgba(0,0,0,0.60);font-size:16px;cursor:pointer;line-height:1;padding:6px;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;z-index:10;}
+  .ikr-modal-close:hover{background:#fff;color:rgba(0,0,0,0.9);box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+  @media(max-width:640px){.ikr-modal-close{display:none;}}
   .ikr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.45);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;align-items:center;justify-content:center;line-height:1;z-index:2;}
   .ikr-modal-close-mobile:hover{background:rgba(0,0,0,0.70);}
   .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.45);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
@@ -109,7 +110,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
   .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;}
   .ikr-modal-sticky-header{position:sticky;top:0;background:#fff;z-index:1;padding:24px 24px 12px;border-bottom:1px solid rgba(0,0,0,0.06);}
-  .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .ikr-modal-top-row{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
   .ikr-modal-stars{font-size:18px;}
   .ikr-modal-date{font-size:13px;color:rgba(0,0,0,1);}
   .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
