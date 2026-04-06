@@ -124,12 +124,13 @@ export var CLASSIC_CSS = `
   /* Responsive */
   @media(max-width:640px){
     .ikr-modal-overlay{padding:0;}
-    .ikr-modal{flex-direction:column;max-height:100vh;height:100%;border-radius:0;box-shadow:none;}
-    .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;}
-    .ikr-modal-sticky-header{padding:16px 16px 10px;}
-    .ikr-modal-scroll-content{padding:12px 16px 20px;}
+    .ikr-modal{flex-direction:column;height:auto;min-height:100%;border-radius:0;box-shadow:none;overflow:visible;}
+    .ikr-modal-overlay{overflow-y:auto;}
+    .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;overflow:hidden;}
+    .ikr-modal-right{overflow-y:visible;flex:none;width:100%;}
+    .ikr-modal-scroll-content{padding:16px 16px 32px;}
     .ikr-modal-close{display:none;}
-    .ikr-modal-close-mobile{display:flex;}
+    .ikr-modal-close-mobile{display:flex;position:fixed;top:12px;right:12px;}
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
