@@ -123,9 +123,9 @@ export var CLASSIC_CSS = `
 
   /* Responsive */
   @media(max-width:640px){
-    .ikr-modal-overlay{padding:0;}
-    .ikr-modal{flex-direction:column;height:auto;min-height:100%;border-radius:0;box-shadow:none;overflow:visible;}
-    .ikr-modal-overlay{overflow-y:auto;}
+    .ikr-modal-overlay{padding:0;align-items:flex-start;overflow-y:auto;}
+    .ikr-modal-wrap{min-height:100%;}
+    .ikr-modal{flex-direction:column;height:auto;min-height:100vh;border-radius:0;box-shadow:none;overflow:hidden;}
     .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;overflow:hidden;}
     .ikr-modal-right{overflow-y:visible;flex:none;width:100%;}
     .ikr-modal-scroll-content{padding:16px 16px 32px;}
