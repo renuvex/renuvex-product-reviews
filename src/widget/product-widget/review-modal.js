@@ -75,7 +75,7 @@ function buildRight(r, requestClose) {
   return right;
 }
 
-function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose) {
+function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction) {
   var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && u.indexOf('https://') === 0; }) : [];
   var currentPhotoIdx = Math.min(photoIdx, images.length - 1);
 
@@ -83,7 +83,8 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   left.className = 'ikr-modal-left';
 
   var mainImg = document.createElement('img');
-  mainImg.className = 'ikr-modal-main-img';
+  var animClass = direction === 'next' ? 'ikr-modal-img-enter-right' : direction === 'prev' ? 'ikr-modal-img-enter-left' : '';
+  mainImg.className = 'ikr-modal-main-img' + (animClass ? ' ' + animClass : '');
   mainImg.src = images[currentPhotoIdx] || '';
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
@@ -125,11 +126,11 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
     prevBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasPrevPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true);
+        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev');
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
         var prevImages = (prevReview.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
-        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose);
+        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev');
       }
     };
     left.appendChild(prevBtn);
@@ -142,10 +143,10 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
     nextBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasNextPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, requestClose, true);
+        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, requestClose, true, 'next');
       } else if (hasNextReview) {
         var nextReview = reviewsWithPhotos[reviewIdx + 1];
-        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, requestClose);
+        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, requestClose, false, 'next');
       }
     };
     left.appendChild(nextBtn);
@@ -154,23 +155,12 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   return left;
 }
 
-function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly) {
+function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly, direction) {
   if (photoOnly) {
-    // Fade out mevcut görsel, sonra sol paneli güncelle
-    var oldLeft = modal.firstChild;
-    var oldImg = oldLeft && oldLeft.querySelector('.ikr-modal-main-img');
-    if (oldImg) {
-      oldImg.classList.add('ikr-fade');
-      setTimeout(function() {
-        var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
-        if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
-      }, 150);
-    } else {
-      var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
-      modal.replaceChild(newLeft, oldLeft);
-    }
+    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction);
+    if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
   } else {
-    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
+    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction);
     var newRight = buildRight(r, requestClose);
     modal.innerHTML = '';
     modal.appendChild(newLeft);
