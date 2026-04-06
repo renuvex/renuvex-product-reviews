@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T20:52:16.812Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T20:57:28.763Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -641,7 +641,7 @@
 
   // src/widget/themes/ozy/styles.js
   var CLASSIC_CSS = `
-  #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px 0;padding:0}
+  #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px auto;padding:0;max-width:1200px;}
   .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
