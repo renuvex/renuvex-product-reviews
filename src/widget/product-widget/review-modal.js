@@ -3,7 +3,6 @@
 import { starsHTML, formatDate } from '../core/helpers.js';
 
 function closeModal(overlay, onKeyDown) {
-  document.body.style.overflow = '';
   document.removeEventListener('keydown', onKeyDown);
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
 }
@@ -200,6 +199,5 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   modal.appendChild(buildRight(r, overlay, onKeyDown));
   overlay.appendChild(modal);
 
-  document.body.style.overflow = 'hidden';
   document.body.appendChild(overlay);
 }
