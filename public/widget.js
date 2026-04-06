@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T23:35:07.798Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T23:41:33.285Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -769,14 +769,14 @@
 
   /* Responsive */
   @media(max-width:640px){
-    .ikr-modal-overlay{padding:0;align-items:flex-start;overflow-y:auto;}
-    .ikr-modal-wrap{width:100%;}
-    .ikr-modal{flex-direction:column;height:auto;border-radius:0;box-shadow:none;overflow:hidden;}
+    .ikr-modal-overlay{padding:0;background:rgba(0,0,0,0.50);}
+    .ikr-modal-wrap{position:fixed;inset:0;overflow-y:auto;z-index:100000;width:100%;max-width:100%;}
+    .ikr-modal{flex-direction:column;height:auto;border-radius:0;box-shadow:none;overflow:hidden;max-height:none;}
     .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;overflow:hidden;}
     .ikr-modal-right{overflow-y:visible;flex:none;width:100%;}
     .ikr-modal-scroll-content{padding:16px 16px 48px;}
     .ikr-modal-close{display:none;}
-    .ikr-modal-close-mobile{display:flex;position:fixed;top:12px;right:12px;}
+    .ikr-modal-close-mobile{display:flex;position:fixed;top:12px;right:12px;z-index:100001;}
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
