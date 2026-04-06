@@ -79,12 +79,6 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
 
-  var mobileClose = document.createElement('button');
-  mobileClose.className = 'ikr-modal-close-mobile';
-  mobileClose.textContent = '✕';
-  mobileClose.setAttribute('aria-label', 'Kapat');
-  mobileClose.onclick = function(e) { e.stopPropagation(); requestClose(); };
-  left.appendChild(mobileClose);
 
   if (images.length > 1) {
     var thumbBar = document.createElement('div');
@@ -206,6 +200,13 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   }
   history.pushState({ ikrModal: true }, '');
   window.addEventListener('popstate', onPopState);
+
+  var mobileClose = document.createElement('button');
+  mobileClose.className = 'ikr-modal-close-mobile';
+  mobileClose.textContent = '✕';
+  mobileClose.setAttribute('aria-label', 'Kapat');
+  mobileClose.onclick = function(e) { e.stopPropagation(); requestClose(); };
+  overlay.appendChild(mobileClose);
 
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };

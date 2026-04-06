@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T23:41:33.285Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T23:49:56.880Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -234,15 +234,6 @@
     mainImg.src = images[currentPhotoIdx] || "";
     mainImg.alt = "Yorum foto\u011Fraf\u0131";
     left.appendChild(mainImg);
-    var mobileClose = document.createElement("button");
-    mobileClose.className = "ikr-modal-close-mobile";
-    mobileClose.textContent = "\u2715";
-    mobileClose.setAttribute("aria-label", "Kapat");
-    mobileClose.onclick = function(e) {
-      e.stopPropagation();
-      requestClose();
-    };
-    left.appendChild(mobileClose);
     if (images.length > 1) {
       var thumbBar = document.createElement("div");
       thumbBar.className = "ikr-modal-thumbs";
@@ -357,6 +348,15 @@
     }
     history.pushState({ ikrModal: true }, "");
     window.addEventListener("popstate", onPopState);
+    var mobileClose = document.createElement("button");
+    mobileClose.className = "ikr-modal-close-mobile";
+    mobileClose.textContent = "\u2715";
+    mobileClose.setAttribute("aria-label", "Kapat");
+    mobileClose.onclick = function(e) {
+      e.stopPropagation();
+      requestClose();
+    };
+    overlay.appendChild(mobileClose);
     overlay.onclick = function() {
       requestClose();
     };
