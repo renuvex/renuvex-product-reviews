@@ -2,12 +2,13 @@
 
 import { starsHTML, formatDate } from '../core/helpers.js';
 
-function closeModal(overlay, onKeyDown) {
+function closeModal(overlay, onKeyDown, onPopState) {
   document.removeEventListener('keydown', onKeyDown);
+  window.removeEventListener('popstate', onPopState);
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
 }
 
-function buildRight(r, overlay, onKeyDown) {
+function buildRight(r, overlay, onKeyDown, onPopState) {
   var right = document.createElement('div');
   right.className = 'ikr-modal-right';
 
@@ -27,7 +28,7 @@ function buildRight(r, overlay, onKeyDown) {
   closeBtn.className = 'ikr-modal-close';
   closeBtn.textContent = '✕';
   closeBtn.setAttribute('aria-label', 'Kapat');
-  closeBtn.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown); };
+  closeBtn.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown, onPopState); };
 
   topRow.appendChild(starsEl);
   topRow.appendChild(dateEl);
@@ -75,7 +76,7 @@ function buildRight(r, overlay, onKeyDown) {
   return right;
 }
 
-function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown) {
+function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState) {
   var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && u.indexOf('https://') === 0; }) : [];
   var currentPhotoIdx = Math.min(photoIdx, images.length - 1);
 
@@ -93,7 +94,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
   mobileClose.className = 'ikr-modal-close-mobile';
   mobileClose.textContent = '✕';
   mobileClose.setAttribute('aria-label', 'Kapat');
-  mobileClose.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown); };
+  mobileClose.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown, onPopState); };
   left.appendChild(mobileClose);
 
   if (images.length > 1) {
@@ -104,7 +105,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
       th.src = url;
       th.className = 'ikr-modal-thumb' + (i === currentPhotoIdx ? ' ikr-modal-thumb-active' : '');
       th.alt = 'Küçük resim ' + (i + 1);
-      (function(idx) { th.onclick = function() { rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown, true); }; })(i);
+      (function(idx) { th.onclick = function() { rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState, true); }; })(i);
       thumbBar.appendChild(th);
     });
     left.appendChild(thumbBar);
@@ -127,11 +128,11 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
     prevBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasPrevPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown, true);
+        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState, true);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
         var prevImages = (prevReview.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
-        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
+        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState);
       }
     };
     left.appendChild(prevBtn);
@@ -144,10 +145,10 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
     nextBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasNextPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown, true);
+        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState, true);
       } else if (hasNextReview) {
         var nextReview = reviewsWithPhotos[reviewIdx + 1];
-        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
+        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState);
       }
     };
     left.appendChild(nextBtn);
@@ -156,14 +157,14 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
   return left;
 }
 
-function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown, photoOnly) {
-  var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown);
+function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState, photoOnly) {
+  var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState);
   if (photoOnly) {
     // Sadece sol paneli güncelle, sağ panel scroll pozisyonu korunur
     var oldLeft = modal.firstChild;
     modal.replaceChild(newLeft, oldLeft);
   } else {
-    var newRight = buildRight(r, overlay, onKeyDown);
+    var newRight = buildRight(r, overlay, onKeyDown, onPopState);
     modal.innerHTML = '';
     modal.appendChild(newLeft);
     modal.appendChild(newRight);
@@ -187,16 +188,29 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   var modal = document.createElement('div');
   modal.className = 'ikr-modal';
 
-  function onKeyDown(e) {
-    if (e.key === 'Escape') closeModal(overlay, onKeyDown);
+  function onPopState() {
+    // Geri butonu / swipe-back: modalı kapat, sayfayı değiştirme
+    closeModal(overlay, onKeyDown, onPopState);
   }
+
+  function onKeyDown(e) {
+    if (e.key === 'Escape') closeModal(overlay, onKeyDown, onPopState);
+  }
+
   document.addEventListener('keydown', onKeyDown);
 
-  overlay.onclick = function() { closeModal(overlay, onKeyDown); };
+  // Sahte geçmiş adımı — geri gitme modalı kapatır, sayfayı değil
+  history.pushState({ ikrModal: true }, '');
+  window.addEventListener('popstate', onPopState);
+
+  overlay.onclick = function() {
+    // Kullanıcı overlay'e tıkladı — sahte state'i de temizle
+    history.back();
+  };
   modal.onclick = function(e) { e.stopPropagation(); };
 
-  modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown));
-  modal.appendChild(buildRight(r, overlay, onKeyDown));
+  modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown, onPopState));
+  modal.appendChild(buildRight(r, overlay, onKeyDown, onPopState));
   overlay.appendChild(modal);
 
   document.body.appendChild(overlay);
