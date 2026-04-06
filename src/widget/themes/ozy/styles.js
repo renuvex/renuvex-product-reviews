@@ -98,10 +98,10 @@ export var CLASSIC_CSS = `
 
   /* Responsive */
   @media(max-width:640px){
-    .ikr-modal-overlay{padding:12px;}
-    .ikr-modal{flex-direction:column;max-height:92vh;}
+    .ikr-modal-overlay{padding:0;}
+    .ikr-modal{flex-direction:column;max-height:100vh;height:100%;border-radius:0;box-shadow:none;}
     .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;}
-    .ikr-modal-right{padding:16px;}
+    .ikr-modal-right{padding:16px;flex:1;min-height:0;overflow-y:auto;}
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
