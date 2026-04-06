@@ -155,11 +155,22 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
 }
 
 function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly) {
-  var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
   if (photoOnly) {
+    // Fade out mevcut görsel, sonra sol paneli güncelle
     var oldLeft = modal.firstChild;
-    modal.replaceChild(newLeft, oldLeft);
+    var oldImg = oldLeft && oldLeft.querySelector('.ikr-modal-main-img');
+    if (oldImg) {
+      oldImg.classList.add('ikr-fade');
+      setTimeout(function() {
+        var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
+        if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
+      }, 200);
+    } else {
+      var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
+      modal.replaceChild(newLeft, oldLeft);
+    }
   } else {
+    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
     var newRight = buildRight(r, requestClose);
     modal.innerHTML = '';
     modal.appendChild(newLeft);

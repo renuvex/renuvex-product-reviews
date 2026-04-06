@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T19:36:07.835Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T20:07:00.682Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -313,11 +313,21 @@
     return left;
   }
   function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly) {
-    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
     if (photoOnly) {
       var oldLeft = modal.firstChild;
-      modal.replaceChild(newLeft, oldLeft);
+      var oldImg = oldLeft && oldLeft.querySelector(".ikr-modal-main-img");
+      if (oldImg) {
+        oldImg.classList.add("ikr-fade");
+        setTimeout(function() {
+          var newLeft2 = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
+          if (modal.firstChild) modal.replaceChild(newLeft2, modal.firstChild);
+        }, 200);
+      } else {
+        var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
+        modal.replaceChild(newLeft, oldLeft);
+      }
     } else {
+      var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose);
       var newRight = buildRight(r, requestClose);
       modal.innerHTML = "";
       modal.appendChild(newLeft);
@@ -727,7 +737,8 @@
   .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain;}
   .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:780px;height:520px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 45%;background:#222;position:relative;overflow:hidden;}
-  .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
+  .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;transition:opacity 0.2s ease;}
+  .ikr-modal-main-img.ikr-fade{opacity:0;}
   .ikr-modal-close{background:none;border:none;color:rgba(0,0,0,0.40);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;}
   .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
   .ikr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.45);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;align-items:center;justify-content:center;line-height:1;z-index:2;}
