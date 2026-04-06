@@ -85,12 +85,14 @@ export var CLASSIC_CSS = `
   .ikr-modal-thumbs{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;padding:0 12px;}
   .ikr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;opacity:0.7;}
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
-  .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:10px;}
-  .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;background:#fff;z-index:1;padding-bottom:8px;}
+  .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;}
+  .ikr-modal-sticky-header{position:sticky;top:0;background:#fff;z-index:1;padding:24px 24px 12px;border-bottom:1px solid rgba(0,0,0,0.06);}
+  .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
   .ikr-modal-stars{font-size:18px;}
   .ikr-modal-date{font-size:13px;color:rgba(0,0,0,0.40);}
   .ikr-modal-title{font-weight:700;font-size:15px;color:rgba(0,0,0,1);}
   .ikr-modal-author{font-size:13px;color:rgba(0,0,0,0.75);}
+  .ikr-modal-scroll-content{padding:16px 24px 24px;display:flex;flex-direction:column;gap:10px;}
   .ikr-modal-body{font-size:14px;line-height:1.65;color:rgba(0,0,0,1);}
   .ikr-modal-reply{margin-top:8px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--ikr-color,#000);}
   .ikr-modal-reply-label{font-weight:700;font-size:13px;color:rgba(0,0,0,1);margin-bottom:4px;}
@@ -101,7 +103,8 @@ export var CLASSIC_CSS = `
     .ikr-modal-overlay{padding:0;}
     .ikr-modal{flex-direction:column;max-height:100vh;height:100%;border-radius:0;box-shadow:none;}
     .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;}
-    .ikr-modal-right{padding:16px;flex:1;min-height:0;overflow-y:auto;}
+    .ikr-modal-sticky-header{padding:16px 16px 10px;}
+    .ikr-modal-scroll-content{padding:12px 16px 20px;}
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}

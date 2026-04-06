@@ -33,25 +33,33 @@ function buildRight(r, overlay, onKeyDown) {
   topRow.appendChild(starsEl);
   topRow.appendChild(dateEl);
   topRow.appendChild(closeBtn);
-  right.appendChild(topRow);
+
+  var stickyHeader = document.createElement('div');
+  stickyHeader.className = 'ikr-modal-sticky-header';
+  stickyHeader.appendChild(topRow);
 
   if (r.title) {
     var titleEl = document.createElement('div');
     titleEl.className = 'ikr-modal-title';
     titleEl.textContent = r.title;
-    right.appendChild(titleEl);
+    stickyHeader.appendChild(titleEl);
   }
 
   var authorEl = document.createElement('div');
   authorEl.className = 'ikr-modal-author';
   authorEl.textContent = r.author || '';
-  right.appendChild(authorEl);
+  stickyHeader.appendChild(authorEl);
+
+  right.appendChild(stickyHeader);
+
+  var scrollContent = document.createElement('div');
+  scrollContent.className = 'ikr-modal-scroll-content';
 
   if (r.comment && r.comment.trim()) {
     var bodyEl = document.createElement('div');
     bodyEl.className = 'ikr-modal-body';
     bodyEl.textContent = r.comment.trim();
-    right.appendChild(bodyEl);
+    scrollContent.appendChild(bodyEl);
   }
 
   if (r.merchantReply) {
@@ -60,8 +68,10 @@ function buildRight(r, overlay, onKeyDown) {
     replyEl.innerHTML =
       '<div class="ikr-modal-reply-label">Mağaza Sahibi</div>' +
       '<div class="ikr-modal-reply-text">' + r.merchantReply + '</div>';
-    right.appendChild(replyEl);
+    scrollContent.appendChild(replyEl);
   }
+
+  right.appendChild(scrollContent);
 
   return right;
 }
@@ -87,7 +97,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
       th.src = url;
       th.className = 'ikr-modal-thumb' + (i === currentPhotoIdx ? ' ikr-modal-thumb-active' : '');
       th.alt = 'Küçük resim ' + (i + 1);
-      (function(idx) { th.onclick = function() { rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown); }; })(i);
+      (function(idx) { th.onclick = function() { rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown, true); }; })(i);
       thumbBar.appendChild(th);
     });
     left.appendChild(thumbBar);
@@ -110,7 +120,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
     prevBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasPrevPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
+        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown, true);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
         var prevImages = (prevReview.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
@@ -127,7 +137,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
     nextBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasNextPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown);
+        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown, true);
       } else if (hasNextReview) {
         var nextReview = reviewsWithPhotos[reviewIdx + 1];
         rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
@@ -139,12 +149,18 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
   return left;
 }
 
-function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown) {
+function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown, photoOnly) {
   var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown);
-  var newRight = buildRight(r, overlay, onKeyDown);
-  modal.innerHTML = '';
-  modal.appendChild(newLeft);
-  modal.appendChild(newRight);
+  if (photoOnly) {
+    // Sadece sol paneli güncelle, sağ panel scroll pozisyonu korunur
+    var oldLeft = modal.firstChild;
+    modal.replaceChild(newLeft, oldLeft);
+  } else {
+    var newRight = buildRight(r, overlay, onKeyDown);
+    modal.innerHTML = '';
+    modal.appendChild(newLeft);
+    modal.appendChild(newRight);
+  }
 }
 
 export function openReviewModal(r, clickedUrl, allReviews) {
