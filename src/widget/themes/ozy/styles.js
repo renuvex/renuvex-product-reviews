@@ -1,7 +1,7 @@
 // themes/ozy/styles.js — Default tema CSS
 
 export var CLASSIC_CSS = `
-  #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px auto;padding:0;max-width:1200px;}
+  #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px 0;padding:0}
   .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary — 3 sütun: puan | barlar | buton */
