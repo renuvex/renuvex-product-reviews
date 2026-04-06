@@ -219,20 +219,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         photoTitle.className = 'ikr-photo-section-title';
         photoTitle.textContent = 'Fotoğraflı Yorumlar';
 
-        var photoAll = document.createElement('span');
-        photoAll.className = 'ikr-photo-section-all';
-        photoAll.textContent = 'Tümü ›';
-        photoAll.onclick = function() {
-          setCurrentHasImages(true);
-          setCurrentOrderBy('newest');
-          setCurrentPage(1);
-          fetchReviews(currentProductId, 'newest', 1, currentRatingFilter, true).then(function(d) {
-            render(currentProductId, currentSettings, d, currentProductName, 'newest', 1);
-          });
-        };
-
         photoHeader.appendChild(photoTitle);
-        photoHeader.appendChild(photoAll);
         photoSection.appendChild(photoHeader);
 
         var photoStrip = document.createElement('div');

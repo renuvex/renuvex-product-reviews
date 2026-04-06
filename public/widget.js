@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T19:04:43.098Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T19:17:29.886Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -949,19 +949,7 @@
           var photoTitle = document.createElement("span");
           photoTitle.className = "ikr-photo-section-title";
           photoTitle.textContent = "Foto\u011Frafl\u0131 Yorumlar";
-          var photoAll = document.createElement("span");
-          photoAll.className = "ikr-photo-section-all";
-          photoAll.textContent = "T\xFCm\xFC \u203A";
-          photoAll.onclick = function() {
-            setCurrentHasImages(true);
-            setCurrentOrderBy("newest");
-            setCurrentPage(1);
-            fetchReviews(currentProductId, "newest", 1, currentRatingFilter, true).then(function(d) {
-              render(currentProductId, currentSettings, d, currentProductName, "newest", 1);
-            });
-          };
           photoHeader.appendChild(photoTitle);
-          photoHeader.appendChild(photoAll);
           photoSection.appendChild(photoHeader);
           var photoStrip = document.createElement("div");
           photoStrip.className = "ikr-photo-strip";
