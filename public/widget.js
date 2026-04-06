@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T19:17:29.886Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T19:25:40.313Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -689,9 +689,13 @@
   .ikr-photo-section-title{font-size:15px;font-weight:700;color:rgba(0,0,0,1);}
   .ikr-photo-section-all{font-size:13px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;}
   .ikr-photo-section-all:hover{opacity:0.75;}
-  .ikr-photo-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+  .ikr-photo-strip-wrap{position:relative;display:flex;align-items:center;gap:4px;}
+  .ikr-photo-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;flex:1;}
   .ikr-photo-strip::-webkit-scrollbar{display:none;}
   .ikr-photo-strip-thumb{width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:zoom-in;flex-shrink:0;border:1px solid rgba(0,0,0,0.08);}
+  .ikr-photo-strip-arrow{background:rgba(255,255,255,0.9);border:1px solid rgba(0,0,0,0.12);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;flex-shrink:0;color:rgba(0,0,0,0.7);}
+  .ikr-photo-strip-arrow:hover{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.12);}
+  @media(max-width:600px){.ikr-photo-strip-arrow{display:none;}}
 
   /* Yorumlar */
   .ikr-review{padding:20px 0;border-bottom:1px solid rgba(0,0,0,0.08);}
@@ -953,22 +957,45 @@
           photoSection.appendChild(photoHeader);
           var photoStrip = document.createElement("div");
           photoStrip.className = "ikr-photo-strip";
+          var thumbCount = 0;
           allReviewsWithPhotos.forEach(function(r) {
-            r.images.forEach(function(imgUrl) {
-              if (!imgUrl || imgUrl.indexOf("https://") !== 0) return;
-              var thumb = document.createElement("img");
-              thumb.src = imgUrl;
-              thumb.className = "ikr-photo-strip-thumb";
-              thumb.alt = "Yorum foto\u011Fraf\u0131";
-              (function(url, review) {
-                thumb.onclick = function() {
-                  openReviewModal(review, url, reviews);
-                };
-              })(imgUrl, r);
-              photoStrip.appendChild(thumb);
+            if (thumbCount >= 10) return;
+            var firstImg = r.images.find(function(u) {
+              return u && u.indexOf("https://") === 0;
             });
+            if (!firstImg) return;
+            var thumb = document.createElement("img");
+            thumb.src = firstImg;
+            thumb.className = "ikr-photo-strip-thumb";
+            thumb.alt = "Yorum foto\u011Fraf\u0131";
+            (function(url, review) {
+              thumb.onclick = function() {
+                openReviewModal(review, url, reviews);
+              };
+            })(firstImg, r);
+            photoStrip.appendChild(thumb);
+            thumbCount++;
           });
-          photoSection.appendChild(photoStrip);
+          var prevArrow = document.createElement("button");
+          prevArrow.className = "ikr-photo-strip-arrow ikr-photo-strip-arrow-prev";
+          prevArrow.innerHTML = "&#8249;";
+          prevArrow.setAttribute("aria-label", "\xD6nceki");
+          prevArrow.onclick = function() {
+            photoStrip.scrollBy({ left: -200, behavior: "smooth" });
+          };
+          var nextArrow = document.createElement("button");
+          nextArrow.className = "ikr-photo-strip-arrow ikr-photo-strip-arrow-next";
+          nextArrow.innerHTML = "&#8250;";
+          nextArrow.setAttribute("aria-label", "Sonraki");
+          nextArrow.onclick = function() {
+            photoStrip.scrollBy({ left: 200, behavior: "smooth" });
+          };
+          var stripWrap = document.createElement("div");
+          stripWrap.className = "ikr-photo-strip-wrap";
+          stripWrap.appendChild(prevArrow);
+          stripWrap.appendChild(photoStrip);
+          stripWrap.appendChild(nextArrow);
+          photoSection.appendChild(stripWrap);
           widget.appendChild(photoSection);
         }
         if (reviews.length === 0) {

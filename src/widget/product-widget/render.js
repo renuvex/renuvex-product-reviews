@@ -225,21 +225,41 @@ export async function render(productId, settings, reviewsData, productName, orde
         var photoStrip = document.createElement('div');
         photoStrip.className = 'ikr-photo-strip';
 
+        var thumbCount = 0;
         allReviewsWithPhotos.forEach(function(r) {
-          r.images.forEach(function(imgUrl) {
-            if (!imgUrl || imgUrl.indexOf('https://') !== 0) return;
-            var thumb = document.createElement('img');
-            thumb.src = imgUrl;
-            thumb.className = 'ikr-photo-strip-thumb';
-            thumb.alt = 'Yorum fotoğrafı';
-            (function(url, review) {
-              thumb.onclick = function() { openReviewModal(review, url, reviews); };
-            })(imgUrl, r);
-            photoStrip.appendChild(thumb);
-          });
+          if (thumbCount >= 10) return;
+          var firstImg = r.images.find(function(u) { return u && u.indexOf('https://') === 0; });
+          if (!firstImg) return;
+          var thumb = document.createElement('img');
+          thumb.src = firstImg;
+          thumb.className = 'ikr-photo-strip-thumb';
+          thumb.alt = 'Yorum fotoğrafı';
+          (function(url, review) {
+            thumb.onclick = function() { openReviewModal(review, url, reviews); };
+          })(firstImg, r);
+          photoStrip.appendChild(thumb);
+          thumbCount++;
         });
 
-        photoSection.appendChild(photoStrip);
+        // Desktop ok butonları
+        var prevArrow = document.createElement('button');
+        prevArrow.className = 'ikr-photo-strip-arrow ikr-photo-strip-arrow-prev';
+        prevArrow.innerHTML = '&#8249;';
+        prevArrow.setAttribute('aria-label', 'Önceki');
+        prevArrow.onclick = function() { photoStrip.scrollBy({ left: -200, behavior: 'smooth' }); };
+
+        var nextArrow = document.createElement('button');
+        nextArrow.className = 'ikr-photo-strip-arrow ikr-photo-strip-arrow-next';
+        nextArrow.innerHTML = '&#8250;';
+        nextArrow.setAttribute('aria-label', 'Sonraki');
+        nextArrow.onclick = function() { photoStrip.scrollBy({ left: 200, behavior: 'smooth' }); };
+
+        var stripWrap = document.createElement('div');
+        stripWrap.className = 'ikr-photo-strip-wrap';
+        stripWrap.appendChild(prevArrow);
+        stripWrap.appendChild(photoStrip);
+        stripWrap.appendChild(nextArrow);
+        photoSection.appendChild(stripWrap);
         widget.appendChild(photoSection);
       }
 
