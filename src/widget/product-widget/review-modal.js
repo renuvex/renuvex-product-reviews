@@ -215,7 +215,6 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose));
   modal.appendChild(buildRight(r));
 
-  // X butonu — modal wrapper'ına eklenir, modal sağ üst köşesinde görünür
   var modalWrap = document.createElement('div');
   modalWrap.className = 'ikr-modal-wrap';
   modalWrap.appendChild(modal);
