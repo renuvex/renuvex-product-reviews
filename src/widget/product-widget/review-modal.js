@@ -89,6 +89,14 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
 
+  // Mobilde fotoğraf üzerinde X butonu
+  var mobileClose = document.createElement('button');
+  mobileClose.className = 'ikr-modal-close-mobile';
+  mobileClose.textContent = '✕';
+  mobileClose.setAttribute('aria-label', 'Kapat');
+  mobileClose.onclick = function(e) { e.stopPropagation(); closeModal(overlay, onKeyDown); };
+  left.appendChild(mobileClose);
+
   if (images.length > 1) {
     var thumbBar = document.createElement('div');
     thumbBar.className = 'ikr-modal-thumbs';

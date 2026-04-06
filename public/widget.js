@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T15:45:01.392Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T16:08:45.142Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -239,6 +239,15 @@
     mainImg.src = images[currentPhotoIdx] || "";
     mainImg.alt = "Yorum foto\u011Fraf\u0131";
     left.appendChild(mainImg);
+    var mobileClose = document.createElement("button");
+    mobileClose.className = "ikr-modal-close-mobile";
+    mobileClose.textContent = "\u2715";
+    mobileClose.setAttribute("aria-label", "Kapat");
+    mobileClose.onclick = function(e) {
+      e.stopPropagation();
+      closeModal(overlay, onKeyDown);
+    };
+    left.appendChild(mobileClose);
     if (images.length > 1) {
       var thumbBar = document.createElement("div");
       thumbBar.className = "ikr-modal-thumbs";
@@ -690,6 +699,8 @@
   .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
   .ikr-modal-close{background:none;border:none;color:rgba(0,0,0,0.40);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;}
   .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
+  .ikr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.45);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;align-items:center;justify-content:center;line-height:1;z-index:2;}
+  .ikr-modal-close-mobile:hover{background:rgba(0,0,0,0.70);}
   .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.45);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
   .ikr-modal-nav-prev{left:10px;}
   .ikr-modal-nav-next{right:10px;}
@@ -716,6 +727,8 @@
     .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;}
     .ikr-modal-sticky-header{padding:16px 16px 10px;}
     .ikr-modal-scroll-content{padding:12px 16px 20px;}
+    .ikr-modal-close{display:none;}
+    .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
