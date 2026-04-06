@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T14:51:20.570Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T14:57:50.043Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -243,7 +243,7 @@
         th.alt = "K\xFC\xE7\xFCk resim " + (i + 1);
         (function(idx) {
           th.onclick = function() {
-            rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown);
+            rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown, true);
           };
         })(i);
         thumbBar.appendChild(th);
@@ -265,7 +265,7 @@
       prevBtn.onclick = function(e) {
         e.stopPropagation();
         if (hasPrevPhoto) {
-          rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
+          rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown, true);
         } else if (hasPrevReview) {
           var prevReview = reviewsWithPhotos[reviewIdx - 1];
           var prevImages = (prevReview.images || []).filter(function(u) {
@@ -283,7 +283,7 @@
       nextBtn.onclick = function(e) {
         e.stopPropagation();
         if (hasNextPhoto) {
-          rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown);
+          rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown, true);
         } else if (hasNextReview) {
           var nextReview = reviewsWithPhotos[reviewIdx + 1];
           rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
@@ -293,12 +293,17 @@
     }
     return left;
   }
-  function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown) {
+  function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown, photoOnly) {
     var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, onKeyDown);
-    var newRight = buildRight(r, overlay, onKeyDown);
-    modal.innerHTML = "";
-    modal.appendChild(newLeft);
-    modal.appendChild(newRight);
+    if (photoOnly) {
+      var oldLeft = modal.firstChild;
+      modal.replaceChild(newLeft, oldLeft);
+    } else {
+      var newRight = buildRight(r, overlay, onKeyDown);
+      modal.innerHTML = "";
+      modal.appendChild(newLeft);
+      modal.appendChild(newRight);
+    }
   }
   function openReviewModal(r, clickedUrl, allReviews) {
     var reviewsWithPhotos = (allReviews || []).filter(function(rv) {
@@ -674,8 +679,8 @@
 
   /* Review Modal */
   .ikr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;}
-  .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;width:100%;max-width:780px;height:75vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
-  .ikr-modal-left{flex:0 0 45%;background:#222;position:relative;overflow:hidden;aspect-ratio:3/4;}
+  .ikr-modal{background:#fff;border-radius:16px;overflow:hidden;display:flex;align-items:flex-start;width:100%;max-width:780px;max-height:90vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
+  .ikr-modal-left{flex:0 0 45%;background:#222;position:relative;overflow:hidden;aspect-ratio:3/4;align-self:stretch;}
   .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
   .ikr-modal-close{background:none;border:none;color:rgba(0,0,0,0.40);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;}
   .ikr-modal-close:hover{color:rgba(0,0,0,0.85);}
