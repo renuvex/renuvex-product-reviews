@@ -198,9 +198,12 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   document.addEventListener('keydown', onKeyDown);
 
   // Sahte geçmiş adımı — swipe-back/geri butonu bu adımı tüketir, popstate tetiklenir
+  var isMobile = window.innerWidth <= 640;
   var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-  document.body.style.paddingRight = scrollbarWidth + 'px';
-  document.body.style.overflow = 'hidden';
+  if (!isMobile) {
+    document.body.style.paddingRight = scrollbarWidth + 'px';
+    document.body.style.overflow = 'hidden';
+  }
   history.pushState({ ikrModal: true }, '');
   window.addEventListener('popstate', onPopState);
 

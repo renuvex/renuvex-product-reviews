@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T23:28:15.450Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T23:31:57.174Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -349,9 +349,12 @@
       closeModal(overlay, onKeyDown, onPopState);
     }
     document.addEventListener("keydown", onKeyDown);
+    var isMobile = window.innerWidth <= 640;
     var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.paddingRight = scrollbarWidth + "px";
-    document.body.style.overflow = "hidden";
+    if (!isMobile) {
+      document.body.style.paddingRight = scrollbarWidth + "px";
+      document.body.style.overflow = "hidden";
+    }
     history.pushState({ ikrModal: true }, "");
     window.addEventListener("popstate", onPopState);
     overlay.onclick = function() {
