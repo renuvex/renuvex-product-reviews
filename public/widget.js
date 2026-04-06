@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T14:39:23.217Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-06T14:43:29.501Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -233,7 +233,6 @@
     mainImg.src = images[currentPhotoIdx] || "";
     mainImg.alt = "Yorum foto\u011Fraf\u0131";
     left.appendChild(mainImg);
-    var thumbEls = [];
     if (images.length > 1) {
       var thumbBar = document.createElement("div");
       thumbBar.className = "ikr-modal-thumbs";
@@ -242,20 +241,14 @@
         th.src = url;
         th.className = "ikr-modal-thumb" + (i === currentPhotoIdx ? " ikr-modal-thumb-active" : "");
         th.alt = "K\xFC\xE7\xFCk resim " + (i + 1);
-        th.onclick = function() {
-          setPhotoActive(i);
-        };
+        (function(idx) {
+          th.onclick = function() {
+            rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown);
+          };
+        })(i);
         thumbBar.appendChild(th);
-        thumbEls.push(th);
       });
       left.appendChild(thumbBar);
-    }
-    function setPhotoActive(idx) {
-      currentPhotoIdx = idx;
-      mainImg.src = images[idx];
-      thumbEls.forEach(function(th, i) {
-        th.classList.toggle("ikr-modal-thumb-active", i === idx);
-      });
     }
     var hasPrevPhoto = currentPhotoIdx > 0;
     var hasNextPhoto = currentPhotoIdx < images.length - 1;
@@ -272,7 +265,7 @@
       prevBtn.onclick = function(e) {
         e.stopPropagation();
         if (hasPrevPhoto) {
-          setPhotoActive(currentPhotoIdx - 1);
+          rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
         } else if (hasPrevReview) {
           var prevReview = reviewsWithPhotos[reviewIdx - 1];
           var prevImages = (prevReview.images || []).filter(function(u) {
@@ -290,7 +283,7 @@
       nextBtn.onclick = function(e) {
         e.stopPropagation();
         if (hasNextPhoto) {
-          setPhotoActive(currentPhotoIdx + 1);
+          rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown);
         } else if (hasNextReview) {
           var nextReview = reviewsWithPhotos[reviewIdx + 1];
           rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);

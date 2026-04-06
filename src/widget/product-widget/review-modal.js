@@ -79,7 +79,6 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
 
-  var thumbEls = [];
   if (images.length > 1) {
     var thumbBar = document.createElement('div');
     thumbBar.className = 'ikr-modal-thumbs';
@@ -88,19 +87,10 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
       th.src = url;
       th.className = 'ikr-modal-thumb' + (i === currentPhotoIdx ? ' ikr-modal-thumb-active' : '');
       th.alt = 'Küçük resim ' + (i + 1);
-      th.onclick = function() { setPhotoActive(i); };
+      (function(idx) { th.onclick = function() { rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, overlay, onKeyDown); }; })(i);
       thumbBar.appendChild(th);
-      thumbEls.push(th);
     });
     left.appendChild(thumbBar);
-  }
-
-  function setPhotoActive(idx) {
-    currentPhotoIdx = idx;
-    mainImg.src = images[idx];
-    thumbEls.forEach(function(th, i) {
-      th.classList.toggle('ikr-modal-thumb-active', i === idx);
-    });
   }
 
   // Ok butonları — önce fotoğraflar arası, sonra yorumlar arası
@@ -120,10 +110,8 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
     prevBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasPrevPhoto) {
-        // Aynı yorumda önceki fotoğraf
-        setPhotoActive(currentPhotoIdx - 1);
+        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
       } else if (hasPrevReview) {
-        // Önceki yorumun son fotoğrafına git
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
         var prevImages = (prevReview.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
         rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, overlay, onKeyDown);
@@ -139,10 +127,8 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, overlay, on
     nextBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasNextPhoto) {
-        // Aynı yorumda sonraki fotoğraf
-        setPhotoActive(currentPhotoIdx + 1);
+        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, overlay, onKeyDown);
       } else if (hasNextReview) {
-        // Sonraki yorumun ilk fotoğrafına git
         var nextReview = reviewsWithPhotos[reviewIdx + 1];
         rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, overlay, onKeyDown);
       }
