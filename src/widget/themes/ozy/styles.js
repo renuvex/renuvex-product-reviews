@@ -84,10 +84,12 @@ export var CLASSIC_CSS = `
 
   /* Form */
   .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:6px;margin-top:30px}
-  .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid rgba(0,0,0,0.15);border-radius:6px;font-size:14px;box-sizing:border-box;color:rgba(0,0,0,0.90)}
-  .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:10px 25px;border-radius:6px;cursor:pointer;border:none;font-weight:600;margin-top:15px}
+  .ikr-form label{font-size:14px;}
+  .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid rgba(0,0,0,0.20);border-radius:6px;font-size:14px;box-sizing:border-box;color:rgba(0,0,0,0.90)}
+  .ikr-input::placeholder,.ikr-textarea::placeholder{font-size:14px;color:rgba(0,0,0,0.35);}
+  .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;margin-top:15px}
   .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
-  .ikr-photo-btn{background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.60);padding:8px 15px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:13px;display:inline-block;margin-top:10px}
+  .ikr-photo-btn{background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.60);padding:8px 15px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:14px;display:inline-block;margin-top:10px}
   .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
   .ikr-preview-img{width:60px;height:60px;object-fit:cover;border-radius:6px}
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}

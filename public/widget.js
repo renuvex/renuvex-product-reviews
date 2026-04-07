@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T20:38:11.059Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T21:03:50.314Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -138,7 +138,7 @@
       (function(idx) {
         const star = document.createElement("span");
         star.textContent = idx <= rating ? "\u2605" : "\u2606";
-        star.style.cssText = "font-size:20px;color:" + (idx <= rating ? STAR_COLOR : "#ddd") + ";cursor:" + (interactive ? "pointer" : "default") + ";transition:color .15s";
+        star.style.cssText = "font-size:24px;color:" + (idx <= rating ? STAR_COLOR : "#ddd") + ";cursor:" + (interactive ? "pointer" : "default") + ";transition:color .15s";
         if (interactive) {
           star.onmouseover = function() {
             update(idx);
@@ -528,16 +528,15 @@
     form.setAttribute("aria-label", "Yorum formu");
     form.setAttribute("role", "form");
     form.innerHTML = [
-      '<h3 style="font-weight:700;margin-top:0;" id="ikr-form-title">Yorum Yap\u0131n</h3>',
-      '<label for="ikr-name" style="font-size:12px;font-weight:600;">Ad\u0131n\u0131z Soyad\u0131n\u0131z</label>',
-      '<input type="text" id="ikr-name" class="ikr-input" placeholder="Ad\u0131n\u0131z Soyad\u0131n\u0131z" aria-label="Ad\u0131n\u0131z Soyad\u0131n\u0131z" aria-required="true" maxlength="40">',
-      '<label for="ikr-title" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Ba\u015Fl\u0131k <span style="font-weight:400;color:rgba(0,0,0,0.45);">(opsiyonel)</span></label>',
-      '<input type="text" id="ikr-title" class="ikr-input" placeholder="Yorumunuzun k\u0131sa ba\u015Fl\u0131\u011F\u0131" aria-label="Yorum ba\u015Fl\u0131\u011F\u0131" maxlength="60">',
-      '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorumunuz</label>',
-      '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Yorumunuz..." rows="3" aria-label="Yorumunuz" maxlength="2000"></textarea>',
-      '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">Puan\u0131n\u0131z:</label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
+      '<label for="ikr-name" style="font-size:12px;font-weight:600;">Ad <span style="color:#dc2626;">*</span></label>',
+      '<input type="text" id="ikr-name" class="ikr-input" placeholder="Ad\u0131n\u0131z" aria-label="Ad" aria-required="true" maxlength="40">',
+      '<label for="ikr-title" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Ba\u015Fl\u0131k</label>',
+      '<input type="text" id="ikr-title" class="ikr-input" placeholder="K\u0131sa bir ba\u015Fl\u0131k ekleyin" aria-label="Yorum ba\u015Fl\u0131\u011F\u0131" maxlength="60">',
+      '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorum</label>',
+      '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Deneyiminizi payla\u015F\u0131n..." rows="3" aria-label="Yorum" maxlength="2000"></textarea>',
+      '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">De\u011Ferlendirme <span style="color:#dc2626;">*</span></label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
       '<div id="ikr-photo-section">',
-      '  <label class="ikr-photo-btn" aria-label="Foto\u011Fraf ekle">\u{1F4F7} Foto\u011Fraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Foto\u011Fraf se\xE7"></label>',
+      '  <label class="ikr-photo-btn" aria-label="Foto\u011Fraf ekle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Foto\u011Fraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Foto\u011Fraf se\xE7"></label>',
       '  <div id="ikr-photo-previews" style="margin-top:10px" aria-live="polite"></div>',
       "</div>",
       '<button id="ikr-submit" class="ikr-btn" aria-label="Yorumu g\xF6nder">Yorumu G\xF6nder</button>',
@@ -796,10 +795,12 @@
 
   /* Form */
   .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:6px;margin-top:30px}
-  .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid rgba(0,0,0,0.15);border-radius:6px;font-size:14px;box-sizing:border-box;color:rgba(0,0,0,0.90)}
-  .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:10px 25px;border-radius:6px;cursor:pointer;border:none;font-weight:600;margin-top:15px}
+  .ikr-form label{font-size:14px;}
+  .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid rgba(0,0,0,0.20);border-radius:6px;font-size:14px;box-sizing:border-box;color:rgba(0,0,0,0.90)}
+  .ikr-input::placeholder,.ikr-textarea::placeholder{font-size:14px;color:rgba(0,0,0,0.35);}
+  .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;margin-top:15px}
   .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
-  .ikr-photo-btn{background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.60);padding:8px 15px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:13px;display:inline-block;margin-top:10px}
+  .ikr-photo-btn{background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.60);padding:8px 15px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:14px;display:inline-block;margin-top:10px}
   .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
   .ikr-preview-img{width:60px;height:60px;object-fit:cover;border-radius:6px}
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}

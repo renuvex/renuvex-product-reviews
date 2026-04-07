@@ -64,7 +64,7 @@ export function renderStars(rating, interactive, onChange) {
     (function (idx) {
       const star = document.createElement('span');
       star.textContent = idx <= rating ? '★' : '☆';
-      star.style.cssText = 'font-size:20px;color:' + (idx <= rating ? STAR_COLOR : '#ddd') + ';cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s';
+      star.style.cssText = 'font-size:24px;color:' + (idx <= rating ? STAR_COLOR : '#ddd') + ';cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s';
       if (interactive) {
         star.onmouseover = function () { update(idx); };
         star.onclick = function () { wrap.setAttribute('data-rating', idx); onChange && onChange(idx); update(idx); };
