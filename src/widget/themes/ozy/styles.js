@@ -24,7 +24,7 @@ export var CLASSIC_CSS = `
   .ikr-bar-label{min-width:28px;text-align:right;white-space:nowrap;}
   .ikr-bar-track{flex:1;background:rgba(0,0,0,0.10);border-radius:4px;height:10px;overflow:hidden;}
   .ikr-bar-fill{height:10px;background:var(--ikr-color,#000);border-radius:4px;}
-  .ikr-bar-count{min-width:20px;text-align:right;color:rgba(0,0,0,0.75);}
+  .ikr-bar-count{min-width:20px;text-align:right;color:rgba(0,0,0,0.75);font-size:14px;}
 
   /* Sağ — Yorum Yaz butonu */
   .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
