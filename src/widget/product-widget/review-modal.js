@@ -32,37 +32,56 @@ function buildRight(r) {
   topRow.appendChild(dateEl);
   scrollContent.appendChild(topRow);
 
-  if (r.title) {
-    var titleEl = document.createElement('div');
-    titleEl.className = 'ikr-modal-title';
-    titleEl.textContent = r.title;
-    scrollContent.appendChild(titleEl);
-  }
+  var titleEl = document.createElement('div');
+  titleEl.className = 'ikr-modal-title';
+  titleEl.textContent = r.title || '';
+  titleEl.style.display = r.title ? '' : 'none';
+  scrollContent.appendChild(titleEl);
 
   var authorEl = document.createElement('div');
   authorEl.className = 'ikr-modal-author';
   authorEl.textContent = r.author || '';
   scrollContent.appendChild(authorEl);
 
-  if (r.comment && r.comment.trim()) {
-    var bodyEl = document.createElement('div');
-    bodyEl.className = 'ikr-modal-body';
-    bodyEl.textContent = r.comment.trim();
-    scrollContent.appendChild(bodyEl);
-  }
+  var bodyEl = document.createElement('div');
+  bodyEl.className = 'ikr-modal-body';
+  bodyEl.textContent = (r.comment || '').trim();
+  bodyEl.style.display = (r.comment && r.comment.trim()) ? '' : 'none';
+  scrollContent.appendChild(bodyEl);
 
-  if (r.merchantReply) {
-    var replyEl = document.createElement('div');
-    replyEl.className = 'ikr-modal-reply';
-    replyEl.innerHTML =
-      '<div class="ikr-modal-reply-label">Mağaza Sahibi</div>' +
-      '<div class="ikr-modal-reply-text">' + r.merchantReply + '</div>';
-    scrollContent.appendChild(replyEl);
-  }
+  var replyEl = document.createElement('div');
+  replyEl.className = 'ikr-modal-reply';
+  replyEl.innerHTML =
+    '<div class="ikr-modal-reply-label">Mağaza Sahibi</div>' +
+    '<div class="ikr-modal-reply-text">' + (r.merchantReply || '') + '</div>';
+  replyEl.style.display = r.merchantReply ? '' : 'none';
+  scrollContent.appendChild(replyEl);
 
   right.appendChild(scrollContent);
 
   return right;
+}
+
+function updateRight(right, r) {
+  var scrollContent = right.querySelector('.ikr-modal-scroll-content');
+  scrollContent.querySelector('.ikr-modal-stars').innerHTML = starsHTML(r.rating, null);
+  scrollContent.querySelector('.ikr-modal-date').textContent = formatDate(r.createdAt);
+
+  var titleEl = scrollContent.querySelector('.ikr-modal-title');
+  titleEl.textContent = r.title || '';
+  titleEl.style.display = r.title ? '' : 'none';
+
+  scrollContent.querySelector('.ikr-modal-author').textContent = r.author || '';
+
+  var bodyEl = scrollContent.querySelector('.ikr-modal-body');
+  bodyEl.textContent = (r.comment || '').trim();
+  bodyEl.style.display = (r.comment && r.comment.trim()) ? '' : 'none';
+
+  var replyEl = scrollContent.querySelector('.ikr-modal-reply');
+  replyEl.querySelector('.ikr-modal-reply-text').textContent = r.merchantReply || '';
+  replyEl.style.display = r.merchantReply ? '' : 'none';
+
+  right.scrollTop = 0;
 }
 
 function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay) {
@@ -160,10 +179,11 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
     if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
   } else {
     var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay);
-    var newRight = buildRight(r);
-    modal.innerHTML = '';
-    modal.appendChild(newLeft);
-    modal.appendChild(newRight);
+    var existingRight = modal.querySelector('.ikr-modal-right');
+    if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
+    if (existingRight) {
+      updateRight(existingRight, r);
+    }
     // Mobilde scroll container ikr-modal-wrap — yorum değişince en üste al
     var wrap = overlay && overlay.querySelector('.ikr-modal-wrap');
     if (wrap) wrap.scrollTop = 0;
