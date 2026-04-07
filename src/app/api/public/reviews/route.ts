@@ -135,9 +135,6 @@ export async function GET(req: Request) {
  */
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
-  if (!await checkRateLimit(ip)) {
-    return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
-  }
 
   try {
     let body: any;
@@ -149,7 +146,7 @@ export async function POST(request: Request) {
 
     const { storeId, productId, slug, productName, rating, title, comment, author, email, images } = body;
 
-    // [9] Validasyon — zorunlu alanlar ve tip/aralık kontrolleri
+    // Validasyon — zorunlu alanlar ve tip/aralık kontrolleri
     if (!storeId || !productId || !author) {
       return withCors(NextResponse.json({ error: 'Lütfen gerekli tüm alanları doldurun.' }, { status: 400 }));
     }
@@ -168,6 +165,11 @@ export async function POST(request: Request) {
     }
     if (containsProfanity(title) || containsProfanity(comment) || containsProfanity(author)) {
       return withCors(NextResponse.json({ error: 'Yorumunuz uygunsuz ifadeler içeriyor.' }, { status: 400 }));
+    }
+
+    // Rate limit — sadece geçerli istekleri say
+    if (!await checkRateLimit(ip)) {
+      return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
     }
 
     const settings = await prisma.storeSettings.findUnique({ where: { storeId } });
