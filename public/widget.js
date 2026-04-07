@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T00:42:45.152Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T00:49:40.940Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -645,7 +645,7 @@
   // src/widget/themes/ozy/styles.js
   var CLASSIC_CSS = `
   #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px 0;padding:0}
-  .ikr-title{font-size:28px;font-weight:700;text-align:center;margin-bottom:24px}
+  .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
   .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:6px;margin:0 auto 24px;flex-wrap:wrap;max-width:860px;}
@@ -670,7 +670,7 @@
   .ikr-bar-count{min-width:20px;text-align:right;color:rgba(0,0,0,0.75);}
 
   /* Sa\u011F \u2014 Yorum Yaz butonu */
-  .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:16px;white-space:nowrap;align-self:center;}
+  .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
 
   /* Tavsiye y\xFCzdesi */
   .ikr-recommend{font-size:14px;color:rgba(0,0,0,0.75);margin-top:2px;}
