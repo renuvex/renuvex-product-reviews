@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T01:39:52.430Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T01:45:51.279Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -831,7 +831,7 @@
         h2.className = "ikr-title";
         h2.textContent = widgetTitle;
         widget.appendChild(h2);
-        var allCount = data.data && data.data.allCount || totalCount;
+        var allCount = data.data && data.data.allCount || 0;
         var allRatingCounts = data.data && data.data.ratingCounts || null;
         var ratingCounts = allRatingCounts || [0, 0, 0, 0, 0];
         var avgRatingVal = data.data && data.data.avgRating || "0.0";

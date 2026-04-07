@@ -64,7 +64,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       widget.appendChild(h2);
 
       // Özet istatistik — ortalama puan + bar chart + write a review butonu
-      var allCount = (data.data && data.data.allCount) || totalCount;
+      var allCount = (data.data && data.data.allCount) || 0;
       var allRatingCounts = (data.data && data.data.ratingCounts) || null;
       var ratingCounts = allRatingCounts || [0, 0, 0, 0, 0];
       var avgRatingVal = (data.data && data.data.avgRating) || '0.0';
