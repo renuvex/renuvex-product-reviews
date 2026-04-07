@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-06T23:49:56.880Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T00:00:20.126Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -234,6 +234,15 @@
     mainImg.src = images[currentPhotoIdx] || "";
     mainImg.alt = "Yorum foto\u011Fraf\u0131";
     left.appendChild(mainImg);
+    var mobileClose = document.createElement("button");
+    mobileClose.className = "ikr-modal-close-mobile";
+    mobileClose.textContent = "\u2715";
+    mobileClose.setAttribute("aria-label", "Kapat");
+    mobileClose.onclick = function(e) {
+      e.stopPropagation();
+      requestClose();
+    };
+    left.appendChild(mobileClose);
     if (images.length > 1) {
       var thumbBar = document.createElement("div");
       thumbBar.className = "ikr-modal-thumbs";
@@ -340,23 +349,11 @@
       closeModal(overlay, onKeyDown, onPopState);
     }
     document.addEventListener("keydown", onKeyDown);
-    var isMobile = window.innerWidth <= 640;
     var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    if (!isMobile) {
-      document.body.style.paddingRight = scrollbarWidth + "px";
-      document.body.style.overflow = "hidden";
-    }
+    document.body.style.paddingRight = scrollbarWidth + "px";
+    document.body.style.overflow = "hidden";
     history.pushState({ ikrModal: true }, "");
     window.addEventListener("popstate", onPopState);
-    var mobileClose = document.createElement("button");
-    mobileClose.className = "ikr-modal-close-mobile";
-    mobileClose.textContent = "\u2715";
-    mobileClose.setAttribute("aria-label", "Kapat");
-    mobileClose.onclick = function(e) {
-      e.stopPropagation();
-      requestClose();
-    };
-    overlay.appendChild(mobileClose);
     overlay.onclick = function() {
       requestClose();
     };
@@ -770,13 +767,13 @@
   /* Responsive */
   @media(max-width:640px){
     .ikr-modal-overlay{padding:0;background:rgba(0,0,0,0.50);}
-    .ikr-modal-wrap{position:fixed;inset:0;overflow-y:auto;z-index:100000;width:100%;max-width:100%;}
+    .ikr-modal-wrap{position:fixed;inset:0;overflow-y:auto;z-index:100000;width:100%;max-width:100%;overscroll-behavior:contain;}
     .ikr-modal{flex-direction:column;height:auto;border-radius:0;box-shadow:none;overflow:hidden;max-height:none;}
     .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;overflow:hidden;}
     .ikr-modal-right{overflow-y:visible;flex:none;width:100%;}
     .ikr-modal-scroll-content{padding:16px 16px 48px;}
     .ikr-modal-close{display:none;}
-    .ikr-modal-close-mobile{display:flex;position:fixed;top:12px;right:12px;z-index:100001;}
+    .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}

@@ -79,6 +79,12 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
 
+  var mobileClose = document.createElement('button');
+  mobileClose.className = 'ikr-modal-close-mobile';
+  mobileClose.textContent = '✕';
+  mobileClose.setAttribute('aria-label', 'Kapat');
+  mobileClose.onclick = function(e) { e.stopPropagation(); requestClose(); };
+  left.appendChild(mobileClose);
 
   if (images.length > 1) {
     var thumbBar = document.createElement('div');
@@ -192,21 +198,11 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   document.addEventListener('keydown', onKeyDown);
 
   // Sahte geçmiş adımı — swipe-back/geri butonu bu adımı tüketir, popstate tetiklenir
-  var isMobile = window.innerWidth <= 640;
   var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-  if (!isMobile) {
-    document.body.style.paddingRight = scrollbarWidth + 'px';
-    document.body.style.overflow = 'hidden';
-  }
+  document.body.style.paddingRight = scrollbarWidth + 'px';
+  document.body.style.overflow = 'hidden';
   history.pushState({ ikrModal: true }, '');
   window.addEventListener('popstate', onPopState);
-
-  var mobileClose = document.createElement('button');
-  mobileClose.className = 'ikr-modal-close-mobile';
-  mobileClose.textContent = '✕';
-  mobileClose.setAttribute('aria-label', 'Kapat');
-  mobileClose.onclick = function(e) { e.stopPropagation(); requestClose(); };
-  overlay.appendChild(mobileClose);
 
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };
