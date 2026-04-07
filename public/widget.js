@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T21:28:24.988Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T21:30:42.624Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -540,7 +540,7 @@
       '  <label class="ikr-photo-btn" aria-label="Foto\u011Fraf ekle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Foto\u011Fraf se\xE7"></label>',
       '  <div id="ikr-photo-previews" style="margin-top:10px" aria-live="polite"></div>',
       "</div>",
-      '<button id="ikr-submit" class="ikr-btn" aria-label="Yorumu g\xF6nder">Yorumu G\xF6nder</button>',
+      '<button id="ikr-submit" class="ikr-btn" aria-label="G\xF6nder">G\xF6nder</button>',
       '<div id="ikr-msg" style="margin-top:10px;" role="alert" aria-live="assertive"></div>'
     ].join("");
     var currentRating = 5;
@@ -619,7 +619,7 @@
         return;
       }
       btn.disabled = true;
-      btn.textContent = "G\xF6nderiliyor...";
+      btn.textContent = "G\xF6nderiliyor\u2026";
       msgDiv.innerHTML = "";
       try {
         var pageSlug = extractSlug(window.location.href);
@@ -650,7 +650,7 @@
       } catch (e) {
         msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">' + e.message + "</div>";
         btn.disabled = false;
-        btn.textContent = "Yorumu G\xF6nder";
+        btn.textContent = "G\xF6nder";
       }
     };
     return form;

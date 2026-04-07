@@ -24,7 +24,7 @@ export function buildReviewForm(productId, productName) {
     '  <label class="ikr-photo-btn" aria-label="Fotoğraf ekle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Fotoğraf seç"></label>',
     '  <div id="ikr-photo-previews" style="margin-top:10px" aria-live="polite"></div>',
     '</div>',
-    '<button id="ikr-submit" class="ikr-btn" aria-label="Yorumu gönder">Yorumu Gönder</button>',
+    '<button id="ikr-submit" class="ikr-btn" aria-label="Gönder">Gönder</button>',
     '<div id="ikr-msg" style="margin-top:10px;" role="alert" aria-live="assertive"></div>',
   ].join('');
   var currentRating = 5;
@@ -104,7 +104,7 @@ export function buildReviewForm(productId, productName) {
     var msgDiv = form.querySelector('#ikr-msg');
     if (!author) { msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">Lütfen adınızı girin.</div>'; return; }
     btn.disabled = true;
-    btn.textContent = 'Gönderiliyor...';
+    btn.textContent = 'Gönderiliyor…';
     msgDiv.innerHTML = '';
     try {
       var pageSlug = extractSlug(window.location.href);
@@ -133,7 +133,7 @@ export function buildReviewForm(productId, productName) {
     } catch(e) {
       msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">' + e.message + '</div>';
       btn.disabled = false;
-      btn.textContent = 'Yorumu Gönder';
+      btn.textContent = 'Gönder';
     }
   };
 
