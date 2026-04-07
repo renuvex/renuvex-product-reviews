@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T23:24:13.969Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T23:27:10.578Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -216,7 +216,14 @@
     scrollContent.appendChild(bodyEl);
     var replyEl = document.createElement("div");
     replyEl.className = "ikr-modal-reply";
-    replyEl.innerHTML = '<div class="ikr-modal-reply-label">Ma\u011Faza Sahibi</div><div class="ikr-modal-reply-text">' + (r.merchantReply || "") + "</div>";
+    var replyLabel = document.createElement("div");
+    replyLabel.className = "ikr-modal-reply-label";
+    replyLabel.textContent = "Ma\u011Faza Sahibi";
+    var replyText = document.createElement("div");
+    replyText.className = "ikr-modal-reply-text";
+    replyText.textContent = r.merchantReply || "";
+    replyEl.appendChild(replyLabel);
+    replyEl.appendChild(replyText);
     replyEl.style.display = r.merchantReply ? "" : "none";
     scrollContent.appendChild(replyEl);
     right.appendChild(scrollContent);

@@ -51,9 +51,14 @@ function buildRight(r) {
 
   var replyEl = document.createElement('div');
   replyEl.className = 'ikr-modal-reply';
-  replyEl.innerHTML =
-    '<div class="ikr-modal-reply-label">Mağaza Sahibi</div>' +
-    '<div class="ikr-modal-reply-text">' + (r.merchantReply || '') + '</div>';
+  var replyLabel = document.createElement('div');
+  replyLabel.className = 'ikr-modal-reply-label';
+  replyLabel.textContent = 'Mağaza Sahibi';
+  var replyText = document.createElement('div');
+  replyText.className = 'ikr-modal-reply-text';
+  replyText.textContent = r.merchantReply || '';
+  replyEl.appendChild(replyLabel);
+  replyEl.appendChild(replyText);
   replyEl.style.display = r.merchantReply ? '' : 'none';
   scrollContent.appendChild(replyEl);
 
