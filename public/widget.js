@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T21:03:50.314Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T21:09:39.784Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -528,13 +528,13 @@
     form.setAttribute("aria-label", "Yorum formu");
     form.setAttribute("role", "form");
     form.innerHTML = [
-      '<label for="ikr-name" style="font-size:12px;font-weight:600;">Ad <span style="color:#dc2626;">*</span></label>',
+      '<label for="ikr-name" style="font-weight:600;">Ad <span style="color:#dc2626;">*</span></label>',
       '<input type="text" id="ikr-name" class="ikr-input" placeholder="Ad\u0131n\u0131z" aria-label="Ad" aria-required="true" maxlength="40">',
-      '<label for="ikr-title" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Ba\u015Fl\u0131k</label>',
+      '<label for="ikr-title" style="font-weight:600;margin-top:8px;display:block;">Ba\u015Fl\u0131k</label>',
       '<input type="text" id="ikr-title" class="ikr-input" placeholder="K\u0131sa bir ba\u015Fl\u0131k ekleyin" aria-label="Yorum ba\u015Fl\u0131\u011F\u0131" maxlength="60">',
-      '<label for="ikr-comment" style="font-size:12px;font-weight:600;margin-top:8px;display:block;">Yorum</label>',
+      '<label for="ikr-comment" style="font-weight:600;margin-top:8px;display:block;">Yorum</label>',
       '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Deneyiminizi payla\u015F\u0131n..." rows="3" aria-label="Yorum" maxlength="2000"></textarea>',
-      '<div style="margin-top:10px;"><label style="font-size:12px;font-weight:600;" id="ikr-stars-label">De\u011Ferlendirme <span style="color:#dc2626;">*</span></label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
+      '<div style="margin-top:10px;"><label style="font-weight:600;" id="ikr-stars-label">De\u011Ferlendirme <span style="color:#dc2626;">*</span></label><div id="ikr-stars-input" role="group" aria-labelledby="ikr-stars-label"></div></div>',
       '<div id="ikr-photo-section">',
       '  <label class="ikr-photo-btn" aria-label="Foto\u011Fraf ekle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Foto\u011Fraf Ekle <input type="file" id="ikr-file-input" style="display:none" accept="image/*" multiple aria-label="Foto\u011Fraf se\xE7"></label>',
       '  <div id="ikr-photo-previews" style="margin-top:10px" aria-live="polite"></div>',
@@ -614,7 +614,7 @@
       var comment = form.querySelector("#ikr-comment").value.trim();
       var msgDiv = form.querySelector("#ikr-msg");
       if (!author) {
-        msgDiv.innerHTML = '<div style="color:#dc2626;font-size:14px;margin-top:8px;">L\xFCtfen ad\u0131n\u0131z\u0131 girin.</div>';
+        msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">L\xFCtfen ad\u0131n\u0131z\u0131 girin.</div>';
         return;
       }
       btn.disabled = true;
@@ -647,7 +647,7 @@
           throw new Error(err.error || "Yorum kaydedilemedi.");
         }
       } catch (e) {
-        msgDiv.innerHTML = '<div style="color:#dc2626;font-size:14px;margin-top:8px;">' + e.message + "</div>";
+        msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">' + e.message + "</div>";
         btn.disabled = false;
         btn.textContent = "Yorumu G\xF6nder";
       }
