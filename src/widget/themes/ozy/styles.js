@@ -67,7 +67,7 @@ export var CLASSIC_CSS = `
   .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .ikr-review-stars{font-size:24px;}
   .ikr-review-title{font-weight:700;font-size:16px;color:rgba(0,0,0,1);}
-  .ikr-author{font-size:16px;font-weight:600;font-style:italic;color:rgba(0,0,0,1);margin-top:3px;}
+  .ikr-author{font-size:14px;font-weight:600;font-style:italic;color:rgba(0,0,0,1);margin-top:3px;}
   .ikr-date{color:rgba(0,0,0,1);font-size:14px;font-weight:400;white-space:nowrap;flex-shrink:0;}
   .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:14px;font-weight:400;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
@@ -115,7 +115,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-stars{font-size:24px;}
   .ikr-modal-date{font-size:14px;font-weight:400;color:rgba(0,0,0,1);white-space:nowrap;flex-shrink:0;}
   .ikr-modal-title{font-weight:700;font-size:16px;color:rgba(0,0,0,1);margin-bottom:2px;}
-  .ikr-modal-author{font-size:16px;font-weight:600;font-style:italic;color:rgba(0,0,0,1);}
+  .ikr-modal-author{font-size:14px;font-weight:600;font-style:italic;color:rgba(0,0,0,1);}
   .ikr-modal-scroll-content{padding:24px 24px 24px;display:flex;flex-direction:column;gap:10px;}
   .ikr-modal-body{font-size:14px;font-weight:400;line-height:1.65;color:rgba(0,0,0,1);}
   .ikr-modal-reply{margin-top:8px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:6px;border-left:3px solid var(--ikr-color,#000);}
