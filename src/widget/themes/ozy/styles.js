@@ -5,7 +5,7 @@ export var CLASSIC_CSS = `
   .ikr-title{font-size:28px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary — 3 sütun: puan | barlar | buton */
-  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:6px;margin:0 auto 24px;flex-wrap:wrap;max-width:780px;}
+  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:6px;margin:0 auto 24px;flex-wrap:wrap;max-width:860px;}
 
   /* Sol — büyük ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
