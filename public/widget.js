@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T02:41:46.971Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T02:45:16.107Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -735,7 +735,7 @@
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
 
   /* Review Modal */
-  .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain;background:rgba(0,0,0,0.50);}
+  .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);}
   .ikr-modal-wrap{position:relative;width:100%;max-width:813px;}
   .ikr-modal{background:#fff;border-radius:12px;overflow:hidden;display:flex;width:100%;height:584px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 438px;background:#222;position:relative;overflow:hidden;}
