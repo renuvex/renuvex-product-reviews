@@ -82,9 +82,26 @@ export function buildReviewForm(productId, productName) {
         let up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
         let upData = await up.json();
         if (upData.secure_url) {
-          uploadedImages.push(upData.secure_url);
+          let url = upData.secure_url;
+          uploadedImages.push(url);
           loadingEl.innerHTML = '<span class="ikr-upload-check">✓</span>';
-          setTimeout(function() { loadingEl.style.opacity = '0'; loadingEl.style.transition = 'opacity 0.4s'; setTimeout(function() { loadingEl.style.display = 'none'; }, 400); }, 800);
+          setTimeout(function() {
+            loadingEl.style.opacity = '0';
+            loadingEl.style.transition = 'opacity 0.4s';
+            setTimeout(function() {
+              loadingEl.style.display = 'none';
+              let removeBtn = document.createElement('button');
+              removeBtn.className = 'ikr-preview-remove';
+              removeBtn.innerHTML = '&#x2715;';
+              removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
+              removeBtn.onclick = function() {
+                uploadedImages = uploadedImages.filter(function(u) { return u !== url; });
+                item.remove();
+                updatePhotoLabel();
+              };
+              item.appendChild(removeBtn);
+            }, 400);
+          }, 800);
         }
       } catch (err) {
         console.error('[ikr] Image upload failed:', err);

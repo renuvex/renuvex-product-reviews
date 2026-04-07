@@ -90,7 +90,9 @@ export var CLASSIC_CSS = `
   .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;margin-top:15px;width:100%}
   .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
   .ikr-photo-btn{background:rgba(0,0,0,0.03);color:rgba(0,0,0,0.50);width:100%;height:56px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:14px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
-  .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
+  .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px;}
+  .ikr-preview-remove{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,0.15);color:rgba(0,0,0,0.6);font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.12);}
+  @media(hover:hover){.ikr-preview-remove:hover{background:#fee2e2;border-color:#dc2626;color:#dc2626;}}
   .ikr-preview-img{width:60px;height:60px;object-fit:cover;border-radius:6px}
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;border-radius:6px;}
   .ikr-spinner{width:20px;height:20px;border:2px solid rgba(0,0,0,0.12);border-top-color:var(--ikr-color,#000);border-radius:50%;animation:ikrSpin 0.7s linear infinite;}
