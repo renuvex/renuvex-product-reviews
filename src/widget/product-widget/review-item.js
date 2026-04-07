@@ -14,7 +14,7 @@ export function buildReviewEl(r, allReviews) {
 
   var leftTop = document.createElement('div');
   leftTop.className = 'ikr-review-top-left';
-  leftTop.innerHTML = starsHTML(r.rating, null) + (r.title ? '<span class="ikr-review-title">' + r.title + '</span>' : '');
+  leftTop.innerHTML = '<span class="ikr-review-stars">' + starsHTML(r.rating, null) + '</span>' + (r.title ? '<span class="ikr-review-title">' + r.title + '</span>' : '');
 
   var dateEl = document.createElement('span');
   dateEl.className = 'ikr-date';
