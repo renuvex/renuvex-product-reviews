@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T00:39:32.219Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T00:42:45.152Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -667,13 +667,13 @@
   .ikr-bar-label{min-width:28px;text-align:right;white-space:nowrap;}
   .ikr-bar-track{flex:1;background:rgba(0,0,0,0.10);border-radius:4px;height:10px;overflow:hidden;}
   .ikr-bar-fill{height:10px;background:var(--ikr-color,#000);border-radius:4px;}
-  .ikr-bar-count{min-width:32px;text-align:right;color:rgba(0,0,0,0.75);}
+  .ikr-bar-count{min-width:20px;text-align:right;color:rgba(0,0,0,0.75);}
 
   /* Sa\u011F \u2014 Yorum Yaz butonu */
   .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:16px;white-space:nowrap;align-self:center;}
 
   /* Tavsiye y\xFCzdesi */
-  .ikr-recommend{font-size:16px;color:rgba(0,0,0,0.75);margin-top:2px;}
+  .ikr-recommend{font-size:14px;color:rgba(0,0,0,0.75);margin-top:2px;}
   .ikr-recommend-pct{font-weight:700;color:rgba(0,0,0,1);margin-right:3px;}
 
   /* Buton grubu */
