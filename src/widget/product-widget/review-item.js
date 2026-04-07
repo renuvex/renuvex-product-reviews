@@ -14,7 +14,16 @@ export function buildReviewEl(r, allReviews) {
 
   var leftTop = document.createElement('div');
   leftTop.className = 'ikr-review-top-left';
-  leftTop.innerHTML = '<span class="ikr-review-stars">' + starsHTML(r.rating, null) + '</span>' + (r.title ? '<span class="ikr-review-title">' + r.title + '</span>' : '');
+  var starsSpan = document.createElement('span');
+  starsSpan.className = 'ikr-review-stars';
+  starsSpan.innerHTML = starsHTML(r.rating, null);
+  leftTop.appendChild(starsSpan);
+  if (r.title) {
+    var titleSpan = document.createElement('span');
+    titleSpan.className = 'ikr-review-title';
+    titleSpan.textContent = r.title;
+    leftTop.appendChild(titleSpan);
+  }
 
   var dateEl = document.createElement('span');
   dateEl.className = 'ikr-date';
@@ -80,9 +89,17 @@ export function buildReviewEl(r, allReviews) {
   if (r.merchantReply) {
     var replyEl = document.createElement('div');
     replyEl.className = 'ikr-reply';
-    replyEl.innerHTML =
-      '<div class="ikr-reply-header"><span class="ikr-reply-label">Mağaza Sahibi</span></div>' +
-      '<div class="ikr-reply-text">' + r.merchantReply + '</div>';
+    var replyHeader = document.createElement('div');
+    replyHeader.className = 'ikr-reply-header';
+    var replyLabel = document.createElement('span');
+    replyLabel.className = 'ikr-reply-label';
+    replyLabel.textContent = 'Mağaza Sahibi';
+    replyHeader.appendChild(replyLabel);
+    var replyText = document.createElement('div');
+    replyText.className = 'ikr-reply-text';
+    replyText.textContent = r.merchantReply;
+    replyEl.appendChild(replyHeader);
+    replyEl.appendChild(replyText);
     reviewEl.appendChild(replyEl);
   }
 
