@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T22:58:56.800Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T23:03:35.493Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -728,9 +728,9 @@
     badge.innerHTML = starsHTML(avgRating, "16px") + '<span style="font-size:14px;color:#555;">' + avgRating + " (" + totalCount + " yorum)</span>";
     badge.onclick = function(e) {
       e.preventDefault();
-      var rev = document.getElementById("ikas-reviews");
+      var rev = document.getElementById("ikas-reviews-widget") || document.getElementById("ikas-reviews");
       if (!rev) return;
-      var top = rev.getBoundingClientRect().top + window.pageYOffset - 24;
+      var top = rev.getBoundingClientRect().top + window.pageYOffset - 16;
       window.scrollTo({ top, behavior: "smooth" });
     };
     titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
