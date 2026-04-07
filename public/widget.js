@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T00:49:40.940Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T00:53:42.348Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -653,8 +653,8 @@
   /* Sol \u2014 b\xFCy\xFCk ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
   .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
-  .ikr-avg-star{font-size:52px;color:var(--ikr-color,#000);line-height:1;}
-  .ikr-avg-num{font-size:52px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
+  .ikr-avg-star{font-size:46px;color:var(--ikr-color,#000);line-height:1;}
+  .ikr-avg-num{font-size:46px;font-weight:600;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
   .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
   .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
