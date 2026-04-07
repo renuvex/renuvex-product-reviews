@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T22:36:15.156Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T22:40:34.619Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -125,7 +125,7 @@
   }
   function optimizeImageUrl(url) {
     if (!url || url.indexOf("res.cloudinary.com") === -1) return url;
-    return url.replace("/upload/", "/upload/q_auto/f_auto/c_scale,w_800/");
+    return url.replace("/upload/", "/upload/q_auto/f_auto/c_scale,w_1200/");
   }
   function renderStars(rating, interactive, onChange) {
     const wrap = document.createElement("div");
@@ -880,6 +880,7 @@
     .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
+    .ikr-date{font-size:12px;}
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
     .ikr-avgbox{flex-direction:column;align-items:center;gap:10px;}
     .ikr-avg-row1{justify-content:center;}

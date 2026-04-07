@@ -145,6 +145,7 @@ export var CLASSIC_CSS = `
     .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
+    .ikr-date{font-size:12px;}
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
     .ikr-avgbox{flex-direction:column;align-items:center;gap:10px;}
     .ikr-avg-row1{justify-content:center;}

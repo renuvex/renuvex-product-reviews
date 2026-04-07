@@ -49,7 +49,7 @@ export function injectStyles(color, css) {
 
 export function optimizeImageUrl(url) {
   if (!url || url.indexOf('res.cloudinary.com') === -1) return url;
-  return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_800/');
+  return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_1200/');
 }
 
 export function renderStars(rating, interactive, onChange) {
