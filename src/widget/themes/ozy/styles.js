@@ -19,7 +19,7 @@ export var CLASSIC_CSS = `
   /* Orta — bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:500px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;padding:3px 6px;}
-  .ikr-bar-row:hover{background:var(--ikr-color-light);}
+  @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-color-light);}}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
   .ikr-bar-label{min-width:28px;text-align:right;white-space:nowrap;font-size:16px;color:rgba(0,0,0,0.75);}
   .ikr-bar-track{flex:1;background:rgba(0,0,0,0.10);border-radius:4px;height:10px;overflow:hidden;}
