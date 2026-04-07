@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T21:30:42.624Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T21:36:31.333Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -801,7 +801,7 @@
   .ikr-input::placeholder,.ikr-textarea::placeholder{font-size:14px;color:rgba(0,0,0,0.35);}
   .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;margin-top:15px}
   .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
-  .ikr-photo-btn{background:rgba(0,0,0,0.03);color:rgba(0,0,0,0.50);width:56px;height:56px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:14px;display:flex;align-items:center;justify-content:center;}
+  .ikr-photo-btn{background:rgba(0,0,0,0.03);color:rgba(0,0,0,0.50);width:100%;height:56px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:14px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
   .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
   .ikr-preview-img{width:60px;height:60px;object-fit:cover;border-radius:6px}
   .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
@@ -858,6 +858,7 @@
     .ikr-btn-group{width:100%;align-self:stretch;}
     .ikr-sort-select{margin-left:0;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
+    .ikr-btn{width:100%;}
   }
 `;
 
