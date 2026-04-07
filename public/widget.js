@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T20:03:57.981Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T20:05:24.312Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -256,6 +256,32 @@
       requestClose();
     };
     left.appendChild(mobileClose);
+    var touchStartX = 0;
+    left.addEventListener("touchstart", function(e) {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    left.addEventListener("touchend", function(e) {
+      var diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) < 50) return;
+      if (diff > 0) {
+        if (hasNextPhoto) {
+          rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, requestClose, true, "next", overlay);
+        } else if (hasNextReview) {
+          var nextReview = reviewsWithPhotos[reviewIdx + 1];
+          rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, requestClose, false, "next", overlay);
+        }
+      } else {
+        if (hasPrevPhoto) {
+          rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, "prev", overlay);
+        } else if (hasPrevReview) {
+          var prevReview = reviewsWithPhotos[reviewIdx - 1];
+          var prevImages = (prevReview.images || []).filter(function(u) {
+            return u && u.indexOf("https://") === 0;
+          });
+          rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, "prev", overlay);
+        }
+      }
+    }, { passive: true });
     if (images.length > 1) {
       var thumbBar = document.createElement("div");
       thumbBar.className = "ikr-modal-thumbs";
