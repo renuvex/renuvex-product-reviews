@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T23:03:35.493Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T23:06:28.725Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -730,7 +730,7 @@
       e.preventDefault();
       var rev = document.getElementById("ikas-reviews-widget") || document.getElementById("ikas-reviews");
       if (!rev) return;
-      var top = rev.getBoundingClientRect().top + window.pageYOffset - 16;
+      var top = rev.getBoundingClientRect().top + window.pageYOffset - 72;
       window.scrollTo({ top, behavior: "smooth" });
     };
     titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
