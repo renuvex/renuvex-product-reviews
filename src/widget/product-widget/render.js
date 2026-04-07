@@ -196,7 +196,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         // Yorum yoksa sadece Yorum Yap butonu göster
         var emptyWriteBtn = document.createElement('button');
         emptyWriteBtn.className = 'ikr-write-btn';
-        emptyWriteBtn.style.cssText = 'display:block;margin:0 auto;';
+        emptyWriteBtn.style.cssText = 'display:block;margin:16px auto 0;';
         emptyWriteBtn.textContent = 'Yorum Yap';
         emptyWriteBtn.onclick = function() {
           var form = document.getElementById('ikr-form-section');

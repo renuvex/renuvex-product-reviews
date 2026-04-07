@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T01:35:03.136Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T01:39:52.430Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -946,7 +946,7 @@
         } else {
           var emptyWriteBtn = document.createElement("button");
           emptyWriteBtn.className = "ikr-write-btn";
-          emptyWriteBtn.style.cssText = "display:block;margin:0 auto;";
+          emptyWriteBtn.style.cssText = "display:block;margin:16px auto 0;";
           emptyWriteBtn.textContent = "Yorum Yap";
           emptyWriteBtn.onclick = function() {
             var form = document.getElementById("ikr-form-section");
