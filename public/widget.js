@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T00:18:33.645Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T00:34:29.454Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -645,7 +645,7 @@
   // src/widget/themes/ozy/styles.js
   var CLASSIC_CSS = `
   #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px 0;padding:0}
-  .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
+  .ikr-title{font-size:28px;font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
   .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:6px;margin:0 auto 24px;flex-wrap:wrap;max-width:780px;}
@@ -653,8 +653,8 @@
   /* Sol \u2014 b\xFCy\xFCk ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
   .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
-  .ikr-avg-star{font-size:48px;color:var(--ikr-color,#000);line-height:1;}
-  .ikr-avg-num{font-size:48px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
+  .ikr-avg-star{font-size:52px;color:var(--ikr-color,#000);line-height:1;}
+  .ikr-avg-num{font-size:52px;font-weight:700;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
   .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
   .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
@@ -670,10 +670,10 @@
   .ikr-bar-count{min-width:32px;text-align:right;color:rgba(0,0,0,0.75);}
 
   /* Sa\u011F \u2014 Yorum Yaz butonu */
-  .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
+  .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:16px;white-space:nowrap;align-self:center;}
 
   /* Tavsiye y\xFCzdesi */
-  .ikr-recommend{font-size:14px;color:rgba(0,0,0,0.75);margin-top:2px;}
+  .ikr-recommend{font-size:16px;color:rgba(0,0,0,0.75);margin-top:2px;}
   .ikr-recommend-pct{font-weight:700;color:rgba(0,0,0,1);margin-right:3px;}
 
   /* Buton grubu */
@@ -684,7 +684,7 @@
   /* Filtre dropdown */
   .ikr-filter-wrap{position:relative;}
   .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:180px;overflow:hidden;z-index:999;}
-  .ikr-filter-item{padding:10px 16px;font-size:13px;color:rgba(0,0,0,0.75);cursor:pointer;}
+  .ikr-filter-item{padding:10px 16px;font-size:14px;color:rgba(0,0,0,0.75);cursor:pointer;}
   .ikr-filter-item:hover{background:rgba(0,0,0,0.04);}
   .ikr-filter-item-active{font-weight:700;color:var(--ikr-color,#000);}
 
