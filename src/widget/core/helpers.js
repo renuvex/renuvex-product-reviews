@@ -47,6 +47,11 @@ export function injectStyles(color, css) {
   applyWidgetColor(color);
 }
 
+export function optimizeImageUrl(url) {
+  if (!url || url.indexOf('res.cloudinary.com') === -1) return url;
+  return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_800/');
+}
+
 export function renderStars(rating, interactive, onChange) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:flex;gap:4px;';

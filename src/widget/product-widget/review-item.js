@@ -1,6 +1,6 @@
 // product-widget/review-item.js — Tek bir yorum DOM elementini oluşturur
 
-import { starsHTML, formatDate } from '../core/helpers.js';
+import { starsHTML, formatDate, optimizeImageUrl } from '../core/helpers.js';
 import { openReviewModal } from './review-modal.js';
 
 
@@ -74,7 +74,7 @@ export function buildReviewEl(r, allReviews) {
     r.images.forEach(function(imgUrl) {
       if (!imgUrl || imgUrl.indexOf('https://') !== 0) return;
       var imgEl = document.createElement('img');
-      imgEl.src = imgUrl;
+      imgEl.src = optimizeImageUrl(imgUrl);
       imgEl.className = 'ikr-img';
       imgEl.setAttribute('data-ikr-img-url', imgUrl);
       (function(url) {

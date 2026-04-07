@@ -1,6 +1,6 @@
 // product-widget/render.js — Ana widget render fonksiyonu
 
-import { starsHTML, injectStyles } from '../core/helpers.js';
+import { starsHTML, injectStyles, optimizeImageUrl } from '../core/helpers.js';
 import { fetchReviews } from './bootstrap.js';
 import { buildReviewEl } from './review-item.js';
 import { openReviewModal } from './review-modal.js';
@@ -257,7 +257,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           var firstImg = r.images.find(function(u) { return u && u.indexOf('https://') === 0; });
           if (!firstImg) return;
           var thumb = document.createElement('img');
-          thumb.src = firstImg;
+          thumb.src = optimizeImageUrl(firstImg);
           thumb.className = 'ikr-photo-strip-thumb';
           thumb.alt = 'Yorum fotoğrafı';
           (function(url, review) {

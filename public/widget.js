@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T22:15:11.386Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T22:36:15.156Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -123,6 +123,10 @@
     el.textContent = css;
     applyWidgetColor(color);
   }
+  function optimizeImageUrl(url) {
+    if (!url || url.indexOf("res.cloudinary.com") === -1) return url;
+    return url.replace("/upload/", "/upload/q_auto/f_auto/c_scale,w_800/");
+  }
   function renderStars(rating, interactive, onChange) {
     const wrap = document.createElement("div");
     wrap.style.cssText = "display:flex;gap:4px;";
@@ -244,7 +248,7 @@
     var mainImg = document.createElement("img");
     var animClass = direction === "next" ? "ikr-modal-img-enter-right" : direction === "prev" ? "ikr-modal-img-enter-left" : "";
     mainImg.className = "ikr-modal-main-img" + (animClass ? " " + animClass : "");
-    mainImg.src = images[currentPhotoIdx] || "";
+    mainImg.src = optimizeImageUrl(images[currentPhotoIdx] || "");
     mainImg.alt = "Yorum foto\u011Fraf\u0131";
     left.appendChild(mainImg);
     var mobileClose = document.createElement("button");
@@ -287,7 +291,7 @@
       thumbBar.className = "ikr-modal-thumbs";
       images.forEach(function(url, i) {
         var th = document.createElement("img");
-        th.src = url;
+        th.src = optimizeImageUrl(url);
         th.className = "ikr-modal-thumb" + (i === currentPhotoIdx ? " ikr-modal-thumb-active" : "");
         th.alt = "K\xFC\xE7\xFCk resim " + (i + 1);
         (function(idx) {
@@ -349,7 +353,7 @@
       var imgs = (neighbor.images || []).filter(function(u) {
         return u && u.indexOf("https://") === 0;
       });
-      if (imgs[0]) new Image().src = imgs[0];
+      if (imgs[0]) new Image().src = optimizeImageUrl(imgs[0]);
     });
   }
   function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly, direction, overlay) {
@@ -489,7 +493,7 @@
       r.images.forEach(function(imgUrl) {
         if (!imgUrl || imgUrl.indexOf("https://") !== 0) return;
         var imgEl = document.createElement("img");
-        imgEl.src = imgUrl;
+        imgEl.src = optimizeImageUrl(imgUrl);
         imgEl.className = "ikr-img";
         imgEl.setAttribute("data-ikr-img-url", imgUrl);
         (function(url) {
@@ -1105,7 +1109,7 @@
             });
             if (!firstImg) return;
             var thumb = document.createElement("img");
-            thumb.src = firstImg;
+            thumb.src = optimizeImageUrl(firstImg);
             thumb.className = "ikr-photo-strip-thumb";
             thumb.alt = "Yorum foto\u011Fraf\u0131";
             (function(url, review) {

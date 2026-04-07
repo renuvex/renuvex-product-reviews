@@ -1,6 +1,6 @@
 // product-widget/review-modal.js — Fotoğraflı yorum detay modalı
 
-import { starsHTML, formatDate } from '../core/helpers.js';
+import { starsHTML, formatDate, optimizeImageUrl } from '../core/helpers.js';
 
 function closeModal(overlay, onKeyDown, onPopState) {
   document.body.style.overflow = '';
@@ -94,7 +94,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   var mainImg = document.createElement('img');
   var animClass = direction === 'next' ? 'ikr-modal-img-enter-right' : direction === 'prev' ? 'ikr-modal-img-enter-left' : '';
   mainImg.className = 'ikr-modal-main-img' + (animClass ? ' ' + animClass : '');
-  mainImg.src = images[currentPhotoIdx] || '';
+  mainImg.src = optimizeImageUrl(images[currentPhotoIdx] || '');
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
 
@@ -139,7 +139,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
     thumbBar.className = 'ikr-modal-thumbs';
     images.forEach(function(url, i) {
       var th = document.createElement('img');
-      th.src = url;
+      th.src = optimizeImageUrl(url);
       th.className = 'ikr-modal-thumb' + (i === currentPhotoIdx ? ' ikr-modal-thumb-active' : '');
       th.alt = 'Küçük resim ' + (i + 1);
       (function(idx) { th.onclick = function() { rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, requestClose, true, null, overlay); }; })(i);
@@ -198,7 +198,7 @@ function prefetchNeighbors(reviewIdx, reviewsWithPhotos) {
     var neighbor = reviewsWithPhotos[reviewIdx + offset];
     if (!neighbor) return;
     var imgs = (neighbor.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
-    if (imgs[0]) new Image().src = imgs[0];
+    if (imgs[0]) new Image().src = optimizeImageUrl(imgs[0]);
   });
 }
 
