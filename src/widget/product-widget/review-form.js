@@ -142,7 +142,7 @@ export function buildReviewForm(productId, productName) {
         }),
       });
       if (r.ok) {
-        form.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:32px;margin-bottom:12px;color:var(--ikr-color,#000);">✓</div><div style="font-weight:700;font-size:14px;color:var(--ikr-color,#000);">Yorumunuz için teşekkürler!</div></div>';
+        form.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-weight:700;font-size:14px;color:var(--ikr-color,#000);">Yorumunuz için teşekkürler!</div></div>';
       } else {
         var err = await r.json().catch(function() { return {}; });
         throw new Error(err.error || 'Yorum kaydedilemedi.');
