@@ -123,8 +123,17 @@ export async function render(productId, settings, reviewsData, productName, orde
         writeBtn.className = 'ikr-write-btn';
         writeBtn.textContent = 'Yorum Yap';
         writeBtn.onclick = function() {
-          var form = document.getElementById('ikr-form-section');
-          if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          var accordion = document.getElementById('ikr-form-accordion');
+          if (!accordion) return;
+          var isOpen = accordion.style.maxHeight && accordion.style.maxHeight !== '0px';
+          if (isOpen) {
+            accordion.style.maxHeight = '0px';
+            accordion.style.opacity = '0';
+          } else {
+            accordion.style.maxHeight = accordion.scrollHeight + 'px';
+            accordion.style.opacity = '1';
+            setTimeout(function() { accordion.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+          }
         };
         btnGroup.appendChild(writeBtn);
 
@@ -197,11 +206,27 @@ export async function render(productId, settings, reviewsData, productName, orde
         emptyWriteBtn.style.cssText = 'display:block;margin:16px auto 0;';
         emptyWriteBtn.textContent = 'Yorum Yap';
         emptyWriteBtn.onclick = function() {
-          var form = document.getElementById('ikr-form-section');
-          if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          var accordion = document.getElementById('ikr-form-accordion');
+          if (!accordion) return;
+          var isOpen = accordion.style.maxHeight && accordion.style.maxHeight !== '0px';
+          if (isOpen) {
+            accordion.style.maxHeight = '0px';
+            accordion.style.opacity = '0';
+          } else {
+            accordion.style.maxHeight = accordion.scrollHeight + 'px';
+            accordion.style.opacity = '1';
+            setTimeout(function() { accordion.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+          }
         };
         widget.appendChild(emptyWriteBtn);
       }
+
+      // Accordion form — summary altı, yorum listesi üstü
+      var accordion = document.createElement('div');
+      accordion.id = 'ikr-form-accordion';
+      accordion.style.cssText = 'overflow:hidden;max-height:0px;opacity:0;transition:max-height 0.35s ease,opacity 0.25s ease;';
+      accordion.appendChild(buildReviewForm(productId, productName));
+      widget.appendChild(accordion);
 
       // Fotoğraflı Yorumlar bölümü — sadece filtre aktif değilken göster
       var allReviewsWithPhotos = reviews.filter(function(r) {
@@ -301,8 +326,6 @@ export async function render(productId, settings, reviewsData, productName, orde
       // Rating badge + JSON-LD
       injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName);
 
-      // Yorum formu
-      buildReviewForm(widget, productId, productName);
 
     } catch (err) {
       console.error('[ikr] render error:', err);

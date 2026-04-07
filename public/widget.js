@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T20:31:54.703Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T20:38:11.059Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -521,7 +521,7 @@
   }
 
   // src/widget/product-widget/review-form.js
-  function buildReviewForm(widgetEl, productId, productName) {
+  function buildReviewForm(productId, productName) {
     var form = document.createElement("div");
     form.className = "ikr-form";
     form.id = "ikr-form-section";
@@ -543,7 +543,6 @@
       '<button id="ikr-submit" class="ikr-btn" aria-label="Yorumu g\xF6nder">Yorumu G\xF6nder</button>',
       '<div id="ikr-msg" style="margin-top:10px;" role="alert" aria-live="assertive"></div>'
     ].join("");
-    widgetEl.appendChild(form);
     var currentRating = 5;
     var uploadedImages = [];
     var starsWrap = renderStars(5, true, function(v) {
@@ -641,11 +640,7 @@
           })
         });
         if (r.ok) {
-          form.style.display = "none";
-          var thankEl = document.createElement("div");
-          thankEl.style.cssText = "text-align:center;padding:30px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;margin-top:30px;";
-          thankEl.innerHTML = '<div style="font-size:32px;margin-bottom:12px;">\u2713</div><div style="font-weight:700;font-size:16px;color:#059669;margin-bottom:8px;">Te\u015Fekk\xFCrler!</div><div style="color:#555;font-size:14px;">Yorumunuz incelemeye al\u0131nd\u0131.</div>';
-          widgetEl.appendChild(thankEl);
+          form.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:32px;margin-bottom:12px;">\u2713</div><div style="font-weight:700;font-size:16px;color:#059669;margin-bottom:8px;">Te\u015Fekk\xFCrler!</div><div style="color:#555;font-size:14px;">Yorumunuz incelemeye al\u0131nd\u0131.</div></div>';
         } else {
           var err = await r.json().catch(function() {
             return {};
@@ -658,6 +653,7 @@
         btn.textContent = "Yorumu G\xF6nder";
       }
     };
+    return form;
   }
 
   // src/widget/product-widget/title-finder.js
@@ -794,6 +790,9 @@
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .ikr-reply-label{font-weight:600;font-size:14px;color:rgba(0,0,0,1);}
   .ikr-reply-text{font-size:14px;font-weight:400;color:rgba(0,0,0,0.75);line-height:1.6;}
+
+  /* Accordion form wrapper */
+  #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}
 
   /* Form */
   .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:6px;margin-top:30px}
@@ -948,8 +947,19 @@
           writeBtn.className = "ikr-write-btn";
           writeBtn.textContent = "Yorum Yap";
           writeBtn.onclick = function() {
-            var form = document.getElementById("ikr-form-section");
-            if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
+            var accordion2 = document.getElementById("ikr-form-accordion");
+            if (!accordion2) return;
+            var isOpen = accordion2.style.maxHeight && accordion2.style.maxHeight !== "0px";
+            if (isOpen) {
+              accordion2.style.maxHeight = "0px";
+              accordion2.style.opacity = "0";
+            } else {
+              accordion2.style.maxHeight = accordion2.scrollHeight + "px";
+              accordion2.style.opacity = "1";
+              setTimeout(function() {
+                accordion2.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              }, 50);
+            }
           };
           btnGroup.appendChild(writeBtn);
           var filterWrap = document.createElement("div");
@@ -1015,11 +1025,27 @@
           emptyWriteBtn.style.cssText = "display:block;margin:16px auto 0;";
           emptyWriteBtn.textContent = "Yorum Yap";
           emptyWriteBtn.onclick = function() {
-            var form = document.getElementById("ikr-form-section");
-            if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
+            var accordion2 = document.getElementById("ikr-form-accordion");
+            if (!accordion2) return;
+            var isOpen = accordion2.style.maxHeight && accordion2.style.maxHeight !== "0px";
+            if (isOpen) {
+              accordion2.style.maxHeight = "0px";
+              accordion2.style.opacity = "0";
+            } else {
+              accordion2.style.maxHeight = accordion2.scrollHeight + "px";
+              accordion2.style.opacity = "1";
+              setTimeout(function() {
+                accordion2.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              }, 50);
+            }
           };
           widget.appendChild(emptyWriteBtn);
         }
+        var accordion = document.createElement("div");
+        accordion.id = "ikr-form-accordion";
+        accordion.style.cssText = "overflow:hidden;max-height:0px;opacity:0;transition:max-height 0.35s ease,opacity 0.25s ease;";
+        accordion.appendChild(buildReviewForm(productId, productName));
+        widget.appendChild(accordion);
         var allReviewsWithPhotos = reviews.filter(function(r) {
           return r.images && Array.isArray(r.images) && r.images.some(function(u) {
             return u && u.indexOf("https://") === 0;
@@ -1116,7 +1142,6 @@
         }
         container.appendChild(widget);
         injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName);
-        buildReviewForm(widget, productId, productName);
       } catch (err) {
         console.error("[ikr] render error:", err);
         container.innerHTML = '<p style="text-align:center;color:#dc2626;">Yorumlar y\xFCklenirken bir hata olu\u015Ftu.</p>';

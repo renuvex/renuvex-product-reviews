@@ -5,7 +5,7 @@ import { fetchWithTimeout } from '../core/fetch.js';
 import { renderStars } from '../core/helpers.js';
 import { extractSlug } from '../core/helpers.js';
 
-export function buildReviewForm(widgetEl, productId, productName) {
+export function buildReviewForm(productId, productName) {
   var form = document.createElement('div');
   form.className = 'ikr-form';
   form.id = 'ikr-form-section';
@@ -27,8 +27,6 @@ export function buildReviewForm(widgetEl, productId, productName) {
     '<button id="ikr-submit" class="ikr-btn" aria-label="Yorumu gönder">Yorumu Gönder</button>',
     '<div id="ikr-msg" style="margin-top:10px;" role="alert" aria-live="assertive"></div>',
   ].join('');
-  widgetEl.appendChild(form);
-
   var currentRating = 5;
   var uploadedImages = [];
 
@@ -127,11 +125,7 @@ export function buildReviewForm(widgetEl, productId, productName) {
         }),
       });
       if (r.ok) {
-        form.style.display = 'none';
-        var thankEl = document.createElement('div');
-        thankEl.style.cssText = 'text-align:center;padding:30px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;margin-top:30px;';
-        thankEl.innerHTML = '<div style="font-size:32px;margin-bottom:12px;">✓</div><div style="font-weight:700;font-size:16px;color:#059669;margin-bottom:8px;">Teşekkürler!</div><div style="color:#555;font-size:14px;">Yorumunuz incelemeye alındı.</div>';
-        widgetEl.appendChild(thankEl);
+        form.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:32px;margin-bottom:12px;">✓</div><div style="font-weight:700;font-size:16px;color:#059669;margin-bottom:8px;">Teşekkürler!</div><div style="color:#555;font-size:14px;">Yorumunuz incelemeye alındı.</div></div>';
       } else {
         var err = await r.json().catch(function() { return {}; });
         throw new Error(err.error || 'Yorum kaydedilemedi.');
@@ -142,4 +136,6 @@ export function buildReviewForm(widgetEl, productId, productName) {
       btn.textContent = 'Yorumu Gönder';
     }
   };
+
+  return form;
 }

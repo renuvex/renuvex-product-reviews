@@ -79,6 +79,9 @@ export var CLASSIC_CSS = `
   .ikr-reply-label{font-weight:600;font-size:14px;color:rgba(0,0,0,1);}
   .ikr-reply-text{font-size:14px;font-weight:400;color:rgba(0,0,0,0.75);line-height:1.6;}
 
+  /* Accordion form wrapper */
+  #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}
+
   /* Form */
   .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:6px;margin-top:30px}
   .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid rgba(0,0,0,0.15);border-radius:6px;font-size:14px;box-sizing:border-box;color:rgba(0,0,0,0.90)}
