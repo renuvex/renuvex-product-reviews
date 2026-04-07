@@ -276,7 +276,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       if (hasMore) {
         var loadMoreBtn = document.createElement('button');
         loadMoreBtn.textContent = 'Daha Fazla Göster';
-        loadMoreBtn.style.cssText = 'display:block;margin:20px auto 0;padding:10px 28px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#555;font-size:14px;cursor:pointer;';
+        loadMoreBtn.style.cssText = 'display:block;margin:20px auto 0;padding:10px 28px;border:1px solid rgba(0,0,0,0.50);border-radius:6px;background:#fff;color:rgba(0,0,0,0.75);font-size:14px;cursor:pointer;';
         loadMoreBtn.onclick = async function() {
           loadMoreBtn.disabled = true;
           loadMoreBtn.textContent = 'Yükleniyor...';
