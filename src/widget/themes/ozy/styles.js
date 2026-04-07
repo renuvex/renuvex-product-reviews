@@ -13,7 +13,6 @@ export var CLASSIC_CSS = `
   .ikr-avg-star{font-size:46px;color:var(--ikr-color,#000);line-height:1;}
   .ikr-avg-num{font-size:46px;font-weight:600;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
-  .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
   .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:400;}
 
   /* Orta — bar chart */
@@ -49,8 +48,6 @@ export var CLASSIC_CSS = `
   .ikr-photo-section{margin-bottom:24px;}
   .ikr-photo-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .ikr-photo-section-title{font-size:14px;font-weight:600;color:rgba(0,0,0,1);}
-  .ikr-photo-section-all{font-size:13px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;}
-  @media(hover:hover){.ikr-photo-section-all:hover{opacity:0.75;}}
   .ikr-photo-strip-wrap{position:relative;}
   .ikr-photo-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
   .ikr-photo-strip::-webkit-scrollbar{display:none;}
@@ -126,7 +123,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-stars{font-size:24px;}
   .ikr-modal-date{font-size:14px;font-weight:400;color:rgba(0,0,0,1);white-space:nowrap;flex-shrink:0;}
   .ikr-modal-title{font-weight:700;font-size:16px;color:rgba(0,0,0,1);}
-  .ikr-modal-author{font-size:14px;font-weight:600;font-style:italic;color:rgba(0,0,0,1);}
+  .ikr-modal-author{font-size:14px;font-weight:400;font-style:italic;color:rgba(0,0,0,1);}
   .ikr-modal-scroll-content{padding:24px 24px 24px;display:flex;flex-direction:column;gap:6px;}
   .ikr-modal-body{font-size:14px;font-weight:400;line-height:1.65;color:rgba(0,0,0,1);}
   .ikr-modal-reply{margin-top:8px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:6px;border-left:3px solid var(--ikr-color,#000);}
@@ -151,7 +148,6 @@ export var CLASSIC_CSS = `
     .ikr-avg-row1{justify-content:center;}
     .ikr-write-btn{flex:1;}
     .ikr-btn-group{width:100%;align-self:stretch;}
-    .ikr-sort-select{margin-left:0;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
   }
