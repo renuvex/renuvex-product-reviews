@@ -87,7 +87,7 @@ export var CLASSIC_CSS = `
   .ikr-form label{font-size:14px;}
   .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid rgba(0,0,0,0.20);border-radius:6px;font-size:14px;box-sizing:border-box;color:rgba(0,0,0,0.90)}
   .ikr-input::placeholder,.ikr-textarea::placeholder{font-size:14px;color:rgba(0,0,0,0.35);}
-  .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;margin-top:15px}
+  .ikr-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;margin-top:15px;width:100%}
   .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
   .ikr-photo-btn{background:rgba(0,0,0,0.03);color:rgba(0,0,0,0.50);width:100%;height:56px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:14px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
   .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
