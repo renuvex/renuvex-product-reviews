@@ -83,7 +83,7 @@ export var CLASSIC_CSS = `
   #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}
 
   /* Form */
-  .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:6px;margin-top:16px;margin-bottom:16px;}
+  .ikr-form{background:#fff;border:1px solid rgba(0,0,0,0.08);padding:25px;border-radius:6px;margin:16px auto;max-width:860px;}
   .ikr-form label{font-size:14px;}
   .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;border:1px solid rgba(0,0,0,0.20);border-radius:6px;font-size:14px;box-sizing:border-box;color:rgba(0,0,0,0.90)}
   .ikr-input::placeholder,.ikr-textarea::placeholder{font-size:14px;color:rgba(0,0,0,0.35);}
