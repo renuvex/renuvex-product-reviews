@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T21:55:49.910Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T22:03:15.375Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -570,30 +570,30 @@
       fileInput.disabled = true;
       var remaining = MAX_PHOTOS - uploadedImages.length;
       var files = Array.from(e.target.files).slice(0, remaining);
-      for (var fi = 0; fi < files.length; fi++) {
-        var file = files[fi];
+      for (let fi = 0; fi < files.length; fi++) {
+        let file = files[fi];
         if (file.size > 5 * 1024 * 1024) {
           alert(file.name + " dosyas\u0131 5MB s\u0131n\u0131r\u0131n\u0131 a\u015F\u0131yor. L\xFCtfen daha k\xFC\xE7\xFCk bir g\xF6rsel se\xE7in.");
           continue;
         }
-        var item = document.createElement("div");
+        let item = document.createElement("div");
         item.className = "ikr-preview-item";
-        var objUrl = URL.createObjectURL(file);
+        let objUrl = URL.createObjectURL(file);
         item.innerHTML = '<img class="ikr-preview-img" src="' + objUrl + '"><div class="ikr-preview-loading"><div class="ikr-spinner"></div></div>';
         previewsDiv.appendChild(item);
-        var loadingEl = item.querySelector(".ikr-preview-loading");
+        let loadingEl = item.querySelector(".ikr-preview-loading");
         try {
-          var signRes = await fetchWithTimeout(API_BASE + "/api/public/upload/sign", { method: "POST" });
+          let signRes = await fetchWithTimeout(API_BASE + "/api/public/upload/sign", { method: "POST" });
           if (!signRes.ok) throw new Error("sign failed");
-          var sign = await signRes.json();
-          var fd = new FormData();
+          let sign = await signRes.json();
+          let fd = new FormData();
           fd.append("file", file);
           fd.append("api_key", sign.api_key);
           fd.append("timestamp", sign.timestamp);
           fd.append("signature", sign.signature);
           fd.append("folder", "review_images");
-          var up = await fetch("https://api.cloudinary.com/v1_1/" + sign.cloud_name + "/image/upload", { method: "POST", body: fd });
-          var upData = await up.json();
+          let up = await fetch("https://api.cloudinary.com/v1_1/" + sign.cloud_name + "/image/upload", { method: "POST", body: fd });
+          let upData = await up.json();
           if (upData.secure_url) {
             uploadedImages.push(upData.secure_url);
             loadingEl.innerHTML = '<span class="ikr-upload-check">\u2713</span>';

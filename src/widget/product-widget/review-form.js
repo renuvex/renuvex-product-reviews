@@ -57,30 +57,30 @@ export function buildReviewForm(productId, productName) {
     fileInput.disabled = true;
     var remaining = MAX_PHOTOS - uploadedImages.length;
     var files = Array.from(e.target.files).slice(0, remaining);
-    for (var fi = 0; fi < files.length; fi++) {
-      var file = files[fi];
+    for (let fi = 0; fi < files.length; fi++) {
+      let file = files[fi];
       if (file.size > 5 * 1024 * 1024) {
         alert(file.name + ' dosyası 5MB sınırını aşıyor. Lütfen daha küçük bir görsel seçin.');
         continue;
       }
-      var item = document.createElement('div');
+      let item = document.createElement('div');
       item.className = 'ikr-preview-item';
-      var objUrl = URL.createObjectURL(file);
+      let objUrl = URL.createObjectURL(file);
       item.innerHTML = '<img class="ikr-preview-img" src="' + objUrl + '"><div class="ikr-preview-loading"><div class="ikr-spinner"></div></div>';
       previewsDiv.appendChild(item);
-      var loadingEl = item.querySelector('.ikr-preview-loading');
+      let loadingEl = item.querySelector('.ikr-preview-loading');
       try {
-        var signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
+        let signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
         if (!signRes.ok) throw new Error('sign failed');
-        var sign = await signRes.json();
-        var fd = new FormData();
+        let sign = await signRes.json();
+        let fd = new FormData();
         fd.append('file', file);
         fd.append('api_key', sign.api_key);
         fd.append('timestamp', sign.timestamp);
         fd.append('signature', sign.signature);
         fd.append('folder', 'review_images');
-        var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
-        var upData = await up.json();
+        let up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
+        let upData = await up.json();
         if (upData.secure_url) {
           uploadedImages.push(upData.secure_url);
           loadingEl.innerHTML = '<span class="ikr-upload-check">✓</span>';
