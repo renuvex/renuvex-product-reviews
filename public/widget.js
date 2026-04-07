@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T21:39:33.378Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T21:47:14.799Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -960,6 +960,9 @@
               accordion2.style.maxHeight = accordion2.scrollHeight + "px";
               accordion2.style.opacity = "1";
               setTimeout(function() {
+                accordion2.style.maxHeight = "none";
+              }, 360);
+              setTimeout(function() {
                 accordion2.scrollIntoView({ behavior: "smooth", block: "nearest" });
               }, 50);
             }
@@ -1037,6 +1040,9 @@
             } else {
               accordion2.style.maxHeight = accordion2.scrollHeight + "px";
               accordion2.style.opacity = "1";
+              setTimeout(function() {
+                accordion2.style.maxHeight = "none";
+              }, 360);
               setTimeout(function() {
                 accordion2.scrollIntoView({ behavior: "smooth", block: "nearest" });
               }, 50);

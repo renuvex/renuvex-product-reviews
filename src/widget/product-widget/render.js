@@ -132,6 +132,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           } else {
             accordion.style.maxHeight = accordion.scrollHeight + 'px';
             accordion.style.opacity = '1';
+            setTimeout(function() { accordion.style.maxHeight = 'none'; }, 360);
             setTimeout(function() { accordion.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
           }
         };
@@ -215,6 +216,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           } else {
             accordion.style.maxHeight = accordion.scrollHeight + 'px';
             accordion.style.opacity = '1';
+            setTimeout(function() { accordion.style.maxHeight = 'none'; }, 360);
             setTimeout(function() { accordion.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
           }
         };
