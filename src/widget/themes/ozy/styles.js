@@ -14,7 +14,7 @@ export var CLASSIC_CSS = `
   .ikr-avg-num{font-size:46px;font-weight:600;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
   .ikr-avg-stars{margin:4px 0 2px;font-size:15px;}
-  .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:500;}
+  .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:400;}
 
   /* Orta — bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:500px;}
