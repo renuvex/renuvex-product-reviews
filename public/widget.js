@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T02:45:16.107Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T02:50:11.067Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -303,6 +303,16 @@
     }
     return left;
   }
+  function prefetchNeighbors(reviewIdx, reviewsWithPhotos) {
+    [-1, 1].forEach(function(offset) {
+      var neighbor = reviewsWithPhotos[reviewIdx + offset];
+      if (!neighbor) return;
+      var imgs = (neighbor.images || []).filter(function(u) {
+        return u && u.indexOf("https://") === 0;
+      });
+      if (imgs[0]) new Image().src = imgs[0];
+    });
+  }
   function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly, direction, overlay) {
     if (photoOnly) {
       var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay);
@@ -316,6 +326,7 @@
       var wrap = overlay && overlay.querySelector(".ikr-modal-wrap");
       if (wrap) wrap.scrollTop = 0;
     }
+    prefetchNeighbors(reviewIdx, reviewsWithPhotos);
   }
   function openReviewModal(r, clickedUrl, allReviews) {
     var reviewsWithPhotos = (allReviews || []).filter(function(rv) {
@@ -364,6 +375,7 @@
     };
     modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, null, overlay));
     modal.appendChild(buildRight(r));
+    prefetchNeighbors(reviewIdx, reviewsWithPhotos);
     var modalWrap = document.createElement("div");
     modalWrap.className = "ikr-modal-wrap";
     modalWrap.appendChild(modal);

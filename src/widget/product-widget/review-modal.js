@@ -145,6 +145,15 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   return left;
 }
 
+function prefetchNeighbors(reviewIdx, reviewsWithPhotos) {
+  [-1, 1].forEach(function(offset) {
+    var neighbor = reviewsWithPhotos[reviewIdx + offset];
+    if (!neighbor) return;
+    var imgs = (neighbor.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
+    if (imgs[0]) new Image().src = imgs[0];
+  });
+}
+
 function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly, direction, overlay) {
   if (photoOnly) {
     var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay);
@@ -159,6 +168,7 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
     var wrap = overlay && overlay.querySelector('.ikr-modal-wrap');
     if (wrap) wrap.scrollTop = 0;
   }
+  prefetchNeighbors(reviewIdx, reviewsWithPhotos);
 }
 
 export function openReviewModal(r, clickedUrl, allReviews) {
@@ -212,6 +222,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
 
   modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, null, overlay));
   modal.appendChild(buildRight(r));
+  prefetchNeighbors(reviewIdx, reviewsWithPhotos);
 
   var modalWrap = document.createElement('div');
   modalWrap.className = 'ikr-modal-wrap';
