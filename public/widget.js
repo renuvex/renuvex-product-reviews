@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T01:18:28.851Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T01:35:03.136Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -946,7 +946,8 @@
         } else {
           var emptyWriteBtn = document.createElement("button");
           emptyWriteBtn.className = "ikr-write-btn";
-          emptyWriteBtn.textContent = "\u0130lk Yorumu Yaz";
+          emptyWriteBtn.style.cssText = "display:block;margin:0 auto;";
+          emptyWriteBtn.textContent = "Yorum Yap";
           emptyWriteBtn.onclick = function() {
             var form = document.getElementById("ikr-form-section");
             if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });

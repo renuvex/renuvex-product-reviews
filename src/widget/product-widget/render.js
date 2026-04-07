@@ -193,10 +193,11 @@ export async function render(productId, settings, reviewsData, productName, orde
         summary.appendChild(btnGroup);
         widget.appendChild(summary);
       } else {
-        // Yorum yoksa sadece Yorum Yaz butonu göster
+        // Yorum yoksa sadece Yorum Yap butonu göster
         var emptyWriteBtn = document.createElement('button');
         emptyWriteBtn.className = 'ikr-write-btn';
-        emptyWriteBtn.textContent = 'İlk Yorumu Yaz';
+        emptyWriteBtn.style.cssText = 'display:block;margin:0 auto;';
+        emptyWriteBtn.textContent = 'Yorum Yap';
         emptyWriteBtn.onclick = function() {
           var form = document.getElementById('ikr-form-section');
           if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
