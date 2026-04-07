@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T21:54:12.151Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T21:55:49.910Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -578,7 +578,8 @@
         }
         var item = document.createElement("div");
         item.className = "ikr-preview-item";
-        item.innerHTML = '<img class="ikr-preview-img" src="' + URL.createObjectURL(file) + '"><div class="ikr-preview-loading">...</div>';
+        var objUrl = URL.createObjectURL(file);
+        item.innerHTML = '<img class="ikr-preview-img" src="' + objUrl + '"><div class="ikr-preview-loading"><div class="ikr-spinner"></div></div>';
         previewsDiv.appendChild(item);
         var loadingEl = item.querySelector(".ikr-preview-loading");
         try {
@@ -595,13 +596,18 @@
           var upData = await up.json();
           if (upData.secure_url) {
             uploadedImages.push(upData.secure_url);
-            loadingEl.textContent = "\u2713";
-            loadingEl.style.color = "#059669";
+            loadingEl.innerHTML = '<span class="ikr-upload-check">\u2713</span>';
+            setTimeout(function() {
+              loadingEl.style.opacity = "0";
+              loadingEl.style.transition = "opacity 0.4s";
+              setTimeout(function() {
+                loadingEl.style.display = "none";
+              }, 400);
+            }, 800);
           }
         } catch (err) {
           console.error("[ikr] Image upload failed:", err);
-          loadingEl.textContent = "\u2717";
-          loadingEl.style.color = "#dc2626";
+          loadingEl.innerHTML = '<span class="ikr-upload-error">\u2717</span>';
         }
       }
       isUploading = false;
@@ -804,7 +810,11 @@
   .ikr-photo-btn{background:rgba(0,0,0,0.03);color:rgba(0,0,0,0.50);width:100%;height:56px;border-radius:6px;cursor:pointer;border:1px dashed rgba(0,0,0,0.20);font-size:14px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
   .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px}
   .ikr-preview-img{width:60px;height:60px;object-fit:cover;border-radius:6px}
-  .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:6px}
+  .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;border-radius:6px;}
+  .ikr-spinner{width:20px;height:20px;border:2px solid rgba(0,0,0,0.12);border-top-color:var(--ikr-color,#000);border-radius:50%;animation:ikrSpin 0.7s linear infinite;}
+  @keyframes ikrSpin{to{transform:rotate(360deg);}}
+  .ikr-upload-check{font-size:22px;color:#059669;line-height:1;}
+  .ikr-upload-error{font-size:22px;color:#dc2626;line-height:1;}
 
   /* Review Modal */
   .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);}

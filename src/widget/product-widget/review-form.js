@@ -65,7 +65,8 @@ export function buildReviewForm(productId, productName) {
       }
       var item = document.createElement('div');
       item.className = 'ikr-preview-item';
-      item.innerHTML = '<img class="ikr-preview-img" src="' + URL.createObjectURL(file) + '"><div class="ikr-preview-loading">...</div>';
+      var objUrl = URL.createObjectURL(file);
+      item.innerHTML = '<img class="ikr-preview-img" src="' + objUrl + '"><div class="ikr-preview-loading"><div class="ikr-spinner"></div></div>';
       previewsDiv.appendChild(item);
       var loadingEl = item.querySelector('.ikr-preview-loading');
       try {
@@ -82,13 +83,12 @@ export function buildReviewForm(productId, productName) {
         var upData = await up.json();
         if (upData.secure_url) {
           uploadedImages.push(upData.secure_url);
-          loadingEl.textContent = '✓';
-          loadingEl.style.color = '#059669';
+          loadingEl.innerHTML = '<span class="ikr-upload-check">✓</span>';
+          setTimeout(function() { loadingEl.style.opacity = '0'; loadingEl.style.transition = 'opacity 0.4s'; setTimeout(function() { loadingEl.style.display = 'none'; }, 400); }, 800);
         }
       } catch (err) {
         console.error('[ikr] Image upload failed:', err);
-        loadingEl.textContent = '✗';
-        loadingEl.style.color = '#dc2626';
+        loadingEl.innerHTML = '<span class="ikr-upload-error">✗</span>';
       }
     }
     isUploading = false;
