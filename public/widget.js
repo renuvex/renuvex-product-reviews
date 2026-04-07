@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T21:50:30.003Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T21:54:12.151Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -760,7 +760,7 @@
   /* Foto\u011Frafl\u0131 Yorumlar b\xF6l\xFCm\xFC */
   .ikr-photo-section{margin-bottom:24px;}
   .ikr-photo-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-  .ikr-photo-section-title{font-size:14px;font-weight:400;color:rgba(0,0,0,1);}
+  .ikr-photo-section-title{font-size:14px;font-weight:600;color:rgba(0,0,0,1);}
   .ikr-photo-section-all{font-size:13px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;}
   @media(hover:hover){.ikr-photo-section-all:hover{opacity:0.75;}}
   .ikr-photo-strip-wrap{position:relative;}
