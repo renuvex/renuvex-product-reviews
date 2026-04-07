@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T23:30:37.388Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T23:36:53.727Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -763,7 +763,7 @@
   .ikr-avg-star{font-size:46px;color:var(--ikr-color,#000);line-height:1;}
   .ikr-avg-num{font-size:46px;font-weight:600;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
-  .ikr-avg-count{font-size:16px;color:rgba(0,0,0,0.75);white-space:nowrap;font-weight:400;}
+  .ikr-avg-count{font-size:16px;color:rgba(0,0,0,1);white-space:nowrap;font-weight:400;}
 
   /* Orta \u2014 bar chart */
   .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:500px;}
@@ -779,7 +779,7 @@
   .ikr-write-btn{background:var(--ikr-color,#000);color:#fff;padding:12px 24px;border-radius:6px;cursor:pointer;border:none;font-weight:700;font-size:14px;white-space:nowrap;align-self:center;}
 
   /* Tavsiye y\xFCzdesi */
-  .ikr-recommend{font-size:14px;color:rgba(0,0,0,0.75);margin-top:2px;}
+  .ikr-recommend{font-size:14px;color:rgba(0,0,0,1);margin-top:2px;}
   .ikr-recommend-pct{font-weight:700;color:rgba(0,0,0,1);margin-right:3px;}
 
   /* Buton grubu */
