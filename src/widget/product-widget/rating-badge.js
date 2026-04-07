@@ -46,7 +46,9 @@ export function injectRatingBadge(avgRating, totalCount, productName) {
   badge.onclick = function(e) {
     e.preventDefault();
     var rev = document.getElementById('ikas-reviews');
-    if (rev) rev.scrollIntoView({ behavior: 'smooth' });
+    if (!rev) return;
+    var top = rev.getBoundingClientRect().top + window.pageYOffset - 24;
+    window.scrollTo({ top: top, behavior: 'smooth' });
   };
   titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
 }

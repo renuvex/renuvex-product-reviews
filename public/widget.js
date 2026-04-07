@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T22:53:40.809Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T22:58:56.800Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -729,7 +729,9 @@
     badge.onclick = function(e) {
       e.preventDefault();
       var rev = document.getElementById("ikas-reviews");
-      if (rev) rev.scrollIntoView({ behavior: "smooth" });
+      if (!rev) return;
+      var top = rev.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top, behavior: "smooth" });
     };
     titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
   }
