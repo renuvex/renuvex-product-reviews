@@ -48,7 +48,7 @@ export var CLASSIC_CSS = `
   /* Fotoğraflı Yorumlar bölümü */
   .ikr-photo-section{margin-bottom:24px;}
   .ikr-photo-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-  .ikr-photo-section-title{font-size:16px;font-weight:600;color:rgba(0,0,0,1);}
+  .ikr-photo-section-title{font-size:14px;font-weight:400;color:rgba(0,0,0,1);}
   .ikr-photo-section-all{font-size:13px;color:var(--ikr-color,#000);font-weight:600;cursor:pointer;}
   @media(hover:hover){.ikr-photo-section-all:hover{opacity:0.75;}}
   .ikr-photo-strip-wrap{position:relative;}
