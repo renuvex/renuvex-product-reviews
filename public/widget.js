@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T23:27:10.578Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T23:30:37.388Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -678,7 +678,11 @@
           throw new Error(err.error || "Yorum kaydedilemedi.");
         }
       } catch (e) {
-        msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">' + e.message + "</div>";
+        var errDiv = document.createElement("div");
+        errDiv.style.cssText = "color:#dc2626;font-size:12px;margin-top:8px;";
+        errDiv.textContent = e.message;
+        msgDiv.innerHTML = "";
+        msgDiv.appendChild(errDiv);
         btn.disabled = false;
         btn.textContent = "G\xF6nder";
       }

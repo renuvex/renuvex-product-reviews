@@ -148,7 +148,11 @@ export function buildReviewForm(productId, productName) {
         throw new Error(err.error || 'Yorum kaydedilemedi.');
       }
     } catch(e) {
-      msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">' + e.message + '</div>';
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'color:#dc2626;font-size:12px;margin-top:8px;';
+      errDiv.textContent = e.message;
+      msgDiv.innerHTML = '';
+      msgDiv.appendChild(errDiv);
       btn.disabled = false;
       btn.textContent = 'Gönder';
     }
