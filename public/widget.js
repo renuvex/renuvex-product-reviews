@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T23:15:37.752Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T23:22:49.481Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -993,7 +993,10 @@
                 accordion2.style.maxHeight = "none";
               }, 360);
               setTimeout(function() {
-                accordion2.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                var stickyHeader = document.querySelector("header");
+                var headerH = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
+                var top = accordion2.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
+                window.scrollTo({ top, behavior: "smooth" });
               }, 50);
             }
           };
@@ -1074,7 +1077,10 @@
                 accordion2.style.maxHeight = "none";
               }, 360);
               setTimeout(function() {
-                accordion2.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                var stickyHeader = document.querySelector("header");
+                var headerH = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
+                var top = accordion2.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
+                window.scrollTo({ top, behavior: "smooth" });
               }, 50);
             }
           };

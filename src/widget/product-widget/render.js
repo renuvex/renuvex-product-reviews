@@ -133,7 +133,12 @@ export async function render(productId, settings, reviewsData, productName, orde
             accordion.style.maxHeight = accordion.scrollHeight + 'px';
             accordion.style.opacity = '1';
             setTimeout(function() { accordion.style.maxHeight = 'none'; }, 360);
-            setTimeout(function() { accordion.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+            setTimeout(function() {
+              var stickyHeader = document.querySelector('header');
+              var headerH = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
+              var top = accordion.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
+              window.scrollTo({ top: top, behavior: 'smooth' });
+            }, 50);
           }
         };
         btnGroup.appendChild(writeBtn);
@@ -217,7 +222,12 @@ export async function render(productId, settings, reviewsData, productName, orde
             accordion.style.maxHeight = accordion.scrollHeight + 'px';
             accordion.style.opacity = '1';
             setTimeout(function() { accordion.style.maxHeight = 'none'; }, 360);
-            setTimeout(function() { accordion.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+            setTimeout(function() {
+              var stickyHeader = document.querySelector('header');
+              var headerH = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
+              var top = accordion.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
+              window.scrollTo({ top: top, behavior: 'smooth' });
+            }, 50);
           }
         };
         widget.appendChild(emptyWriteBtn);
