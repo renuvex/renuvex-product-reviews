@@ -40,7 +40,7 @@ export var CLASSIC_CSS = `
 
   /* Filtre dropdown */
   .ikr-filter-wrap{position:relative;}
-  .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:180px;overflow:hidden;z-index:999;}
+  .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.08);min-width:180px;overflow:hidden;z-index:999;}
   .ikr-filter-item{padding:10px 16px;font-size:14px;color:rgba(0,0,0,0.75);cursor:pointer;}
   .ikr-filter-item:hover{background:rgba(0,0,0,0.04);}
   .ikr-filter-item-active{font-weight:700;color:var(--ikr-color,#000);}
