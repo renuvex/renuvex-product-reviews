@@ -103,7 +103,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           row.innerHTML =
             '<span class="ikr-bar-label">' + si + ' ★</span>' +
             '<div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div>' +
-            '<span class="ikr-bar-count">' + cnt.toLocaleString('tr-TR') + '</span>';
+            '<span class="ikr-bar-count">(' + cnt.toLocaleString('tr-TR') + ')</span>';
           (function(starVal) {
             row.onclick = async function() {
               setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);

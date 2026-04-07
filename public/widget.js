@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T00:53:42.348Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T00:56:56.520Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -863,7 +863,7 @@
             var row = document.createElement("div");
             row.className = "ikr-bar-row" + (isActive ? " ikr-bar-active" : "");
             if (currentRatingFilter && !isActive) row.style.opacity = "0.35";
-            row.innerHTML = '<span class="ikr-bar-label">' + si + ' \u2605</span><div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div><span class="ikr-bar-count">' + cnt.toLocaleString("tr-TR") + "</span>";
+            row.innerHTML = '<span class="ikr-bar-label">' + si + ' \u2605</span><div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div><span class="ikr-bar-count">(' + cnt.toLocaleString("tr-TR") + ")</span>";
             (function(starVal) {
               row.onclick = async function() {
                 setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
