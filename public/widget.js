@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T03:35:24.270Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T03:37:01.508Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -877,7 +877,6 @@
           summary.appendChild(avgBox);
           var bars = document.createElement("div");
           bars.className = "ikr-bars";
-          var barRows = [];
           for (var si = 5; si >= 1; si--) {
             var cnt = ratingCounts[si - 1];
             var pct = allCount > 0 ? Math.round(cnt / allCount * 100) : 0;
@@ -895,7 +894,6 @@
               };
             })(si);
             bars.appendChild(row);
-            barRows.push(row);
           }
           summary.appendChild(bars);
           var btnGroup = document.createElement("div");

@@ -92,7 +92,6 @@ export async function render(productId, settings, reviewsData, productName, orde
         // Orta — bar chart
         var bars = document.createElement('div');
         bars.className = 'ikr-bars';
-        var barRows = [];
         for (var si = 5; si >= 1; si--) {
           var cnt = ratingCounts[si - 1];
           var pct = allCount > 0 ? Math.round((cnt / allCount) * 100) : 0;
@@ -113,7 +112,6 @@ export async function render(productId, settings, reviewsData, productName, orde
             };
           })(si);
           bars.appendChild(row);
-          barRows.push(row);
         }
         summary.appendChild(bars);
 
