@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-07T22:50:23.608Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-07T22:52:44.883Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -663,7 +663,7 @@
           })
         });
         if (r.ok) {
-          form.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:32px;margin-bottom:12px;">\u2713</div><div style="font-weight:700;font-size:16px;color:#059669;margin-bottom:8px;">Te\u015Fekk\xFCrler!</div><div style="color:#555;font-size:14px;">Yorumunuz incelemeye al\u0131nd\u0131.</div></div>';
+          form.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:32px;margin-bottom:12px;color:var(--ikr-color,#000);">\u2713</div><div style="font-weight:700;font-size:14px;color:var(--ikr-color,#000);">Yorumunuz i\xE7in te\u015Fekk\xFCrler!</div></div>';
         } else {
           var err = await r.json().catch(function() {
             return {};
