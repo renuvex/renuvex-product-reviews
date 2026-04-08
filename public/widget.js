@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T04:40:12.646Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T14:18:41.966Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -535,8 +535,8 @@
       helpfulBtn.className = "ikr-helpful-btn" + (voted ? " ikr-helpful-btn-active" : "");
       helpfulBtn.setAttribute("aria-pressed", voted ? "true" : "false");
       helpfulBtn.setAttribute("aria-label", "Bu yorumu faydal\u0131 bul");
-      var SVG_OUTLINE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
-      var SVG_FILLED = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+      var SVG_OUTLINE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+      var SVG_FILLED = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
       var renderBtnContent = function(c, isActive) {
         helpfulBtn.innerHTML = '<span class="ikr-helpful-icon">' + (isActive ? SVG_FILLED : SVG_OUTLINE) + '</span><span class="ikr-helpful-count">' + (c > 0 ? c : "") + "</span>";
       };
