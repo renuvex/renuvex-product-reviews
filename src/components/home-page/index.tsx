@@ -495,7 +495,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto p-4 bg-background min-h-screen">
+    <div className="w-full p-4 bg-background min-h-screen">
 
       {/* Yanıt Dialog */}
       <ReplyDialog
