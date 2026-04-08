@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T04:10:17.978Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T04:18:46.913Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -550,6 +550,7 @@
           var res = await fetchWithTimeout(API_BASE + "/api/public/reviews/" + r.id + "/helpful", { method });
           if (res.ok) {
             var data = await res.json();
+            console.log("[ikr] helpful response:", data, "prev count:", count);
             count = data.helpfulCount || 0;
             var nowVoted = !isVoted;
             setHelpfulVoted(r.id, nowVoted);
@@ -568,7 +569,8 @@
             helpfulBtn.setAttribute("aria-pressed", "false");
             renderBtnContent(count, false);
           }
-        } catch (_) {
+        } catch (err) {
+          console.error("[ikr] helpful error:", err);
         }
         helpfulBtn.disabled = false;
       };

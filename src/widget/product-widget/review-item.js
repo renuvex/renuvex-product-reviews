@@ -120,6 +120,7 @@ export function buildReviewEl(r, allReviews, showHelpful) {
         var res = await fetchWithTimeout(API_BASE + '/api/public/reviews/' + r.id + '/helpful', { method: method });
         if (res.ok) {
           var data = await res.json();
+          console.log('[ikr] helpful response:', data, 'prev count:', count);
           count = data.helpfulCount || 0;
           var nowVoted = !isVoted;
           setHelpfulVoted(r.id, nowVoted);
@@ -140,7 +141,7 @@ export function buildReviewEl(r, allReviews, showHelpful) {
           helpfulBtn.setAttribute('aria-pressed', 'false');
           renderBtnContent(count, false);
         }
-      } catch (_) {}
+      } catch (err) { console.error('[ikr] helpful error:', err); }
       helpfulBtn.disabled = false;
     };
 
