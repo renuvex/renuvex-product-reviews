@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Review {
   id: string;
@@ -27,8 +29,8 @@ interface Review {
 interface StoreSettings {
   widgetTitle?: string;
   widgetColor?: string;
-  widgetTemplate?: string;
   autoApprove?: boolean;
+  showHelpful?: boolean;
 }
 
 interface HomePageProps {
@@ -41,6 +43,9 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const [settings, setSettings] = useState<StoreSettings>({});
   const [loading, setLoading] = useState(true);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [replyDialog, setReplyDialog] = useState<{ open: boolean; review: Review | null }>({ open: false, review: null });
+  const [replyText, setReplyText] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
 
   // Verileri Backend'den (Prisma) Çekme Fonksiyonu
   useEffect(() => {
@@ -84,6 +89,25 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       console.error("Durum güncellenemedi:", error);
       setReviews(previousReviews);
       alert("Durum güncellenirken bir hata oluştu, lütfen tekrar deneyin.");
+    }
+  };
+
+  // Yanıt gönderme
+  const handleReplySubmit = async () => {
+    if (!replyDialog.review || !replyText.trim()) return;
+    setReplyLoading(true);
+    try {
+      await axios.put('/api/admin/reviews',
+        { id: replyDialog.review.id, merchantReply: replyText.trim() },
+        { headers: { Authorization: `JWT ${token}` } }
+      );
+      setReviews(reviews.map(r => r.id === replyDialog.review!.id ? { ...r, merchantReply: replyText.trim() } : r));
+      setReplyDialog({ open: false, review: null });
+      setReplyText('');
+    } catch {
+      // sessiz fail — buton tekrar aktif olur
+    } finally {
+      setReplyLoading(false);
     }
   };
 
@@ -193,13 +217,10 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                           </Button>
                        )}
                        <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => {
-                          const reply = prompt('Müşteriye cevabınız:');
-                          if (reply) {
-                            axios.put('/api/admin/reviews', { id: review.id, merchantReply: reply }, { headers: { Authorization: `JWT ${token}` } })
-                              .then(() => setReviews(reviews.map(r => r.id === review.id ? { ...r, merchantReply: reply } : r)));
-                          }
+                          setReplyText(review.merchantReply || '');
+                          setReplyDialog({ open: true, review });
                        }}>
-                         <Reply size={14} className="mr-1" /> Cevapla
+                         <Reply size={14} className="mr-1" /> {review.merchantReply ? 'Düzenle' : 'Cevapla'}
                        </Button>
                     </TableCell>
                   </TableRow>
@@ -221,6 +242,38 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   return (
     <div className="max-w-[1200px] mx-auto p-6 bg-background min-h-screen">
+
+      {/* Yanıt Dialog */}
+      <Dialog open={replyDialog.open} onOpenChange={(open) => { if (!open) { setReplyDialog({ open: false, review: null }); setReplyText(''); } }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{replyDialog.review?.merchantReply ? 'Yanıtı Düzenle' : 'Müşteriye Yanıt Ver'}</DialogTitle>
+          </DialogHeader>
+          {replyDialog.review && (
+            <div className="bg-muted rounded-lg p-3 text-sm text-muted-foreground mb-2">
+              <span className="font-medium text-foreground">{replyDialog.review.author}</span>
+              {' — '}
+              {replyDialog.review.comment}
+            </div>
+          )}
+          <Textarea
+            placeholder="Yanıtınızı yazın..."
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            rows={4}
+            className="resize-none"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setReplyDialog({ open: false, review: null }); setReplyText(''); }}>
+              İptal
+            </Button>
+            <Button onClick={handleReplySubmit} disabled={replyLoading || !replyText.trim()}>
+              {replyLoading ? 'Gönderiliyor...' : 'Gönder'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {lightboxUrl && (
         <div className="fixed inset-0 bg-black/85 z-[99999] flex items-center justify-center cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
           <button className="absolute top-4 right-5 text-white text-3xl leading-none bg-transparent border-none cursor-pointer" onClick={() => setLightboxUrl(null)}>✕</button>
@@ -307,16 +360,24 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                   </div>
                 </div>
 
-                <div className="space-y-2 flex flex-col justify-center">
-                  <Label htmlFor="autoApprove" className="flex items-center gap-2 cursor-pointer mt-4">
+                <div className="space-y-3 col-span-2">
+                  <Label className="flex items-center gap-2 cursor-pointer">
                     <input
-                      id="autoApprove"
                       type="checkbox"
                       className="w-4 h-4"
                       checked={settings.autoApprove || false}
                       onChange={(e) => setSettings({ ...settings, autoApprove: e.target.checked })}
                     />
-                    Yeni Yorumları Otomatik Onayla (Beklemeye almaz)
+                    Yeni Yorumları Otomatik Onayla
+                  </Label>
+                  <Label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4"
+                      checked={settings.showHelpful ?? true}
+                      onChange={(e) => setSettings({ ...settings, showHelpful: e.target.checked })}
+                    />
+                    Faydalı Butonu Göster
                   </Label>
                 </div>
               </div>
