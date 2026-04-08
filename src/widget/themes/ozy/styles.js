@@ -69,7 +69,8 @@ export var CLASSIC_CSS = `
   .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:14px;font-weight:400;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
   .ikr-read-more{display:block;margin-top:4px;color:rgba(0,0,0,1);font-weight:600;cursor:pointer;font-size:12px;}
-  .ikr-gallery{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .ikr-media-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:12px;}
+  .ikr-gallery{display:flex;gap:10px;flex-wrap:wrap;flex:1;}
   .ikr-img{width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in;}
   .ikr-reply{margin-top:12px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:6px;border-left:3px solid var(--ikr-color,#000);}
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
@@ -77,7 +78,6 @@ export var CLASSIC_CSS = `
   .ikr-reply-text{font-size:14px;font-weight:400;color:rgba(0,0,0,0.75);line-height:1.6;}
 
   /* Faydalı butonu */
-  .ikr-helpful-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;}
   .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:none;padding:4px 6px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.45);font-weight:400;transition:color 0.15s;line-height:1;min-width:44px;}
   .ikr-helpful-icon{flex-shrink:0;display:flex;align-items:center;transition:color 0.15s;}
   .ikr-helpful-count{display:inline-block;min-width:16px;text-align:left;color:rgba(0,0,0,0.45);}

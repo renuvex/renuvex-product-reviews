@@ -69,7 +69,10 @@ export function buildReviewEl(r, allReviews, showHelpful) {
     });
   }
 
-  // Fotoğraflar
+  // Fotoğraflar + faydalı butonu (aynı satırda, bottom-aligned)
+  var mediaRow = document.createElement('div');
+  mediaRow.className = 'ikr-media-row';
+
   if (r.images && Array.isArray(r.images) && r.images.length) {
     var gallery = document.createElement('div');
     gallery.className = 'ikr-gallery';
@@ -84,7 +87,7 @@ export function buildReviewEl(r, allReviews, showHelpful) {
       })(imgUrl);
       gallery.appendChild(imgEl);
     });
-    reviewEl.appendChild(gallery);
+    mediaRow.appendChild(gallery);
   }
 
   // Mağaza yanıtı
@@ -105,11 +108,8 @@ export function buildReviewEl(r, allReviews, showHelpful) {
     reviewEl.appendChild(replyEl);
   }
 
-  // Faydalı butonu
+  // Faydalı butonu — mediaRow'un sağına, fotoğraflarla aynı hizada
   if (showHelpful !== false) {
-    var helpfulRow = document.createElement('div');
-    helpfulRow.className = 'ikr-helpful-row';
-
     var voted = getHelpfulVoted(r.id);
     // Cache'ten eski helpfulCount gelebilir — kendi oyu varsa en az 1 garantile
     var count = voted ? Math.max(r.helpfulCount || 0, 1) : (r.helpfulCount || 0);
@@ -145,7 +145,6 @@ export function buildReviewEl(r, allReviews, showHelpful) {
           helpfulBtn.setAttribute('aria-pressed', nowVoted ? 'true' : 'false');
           renderBtnContent(count, nowVoted);
         } else if (res.status === 409) {
-          // Farklı cihazda zaten oylanmış — LocalStorage'ı düzelt, butonu aktif göster
           setHelpfulVoted(r.id, true);
           helpfulBtn.classList.add('ikr-helpful-btn-active');
           helpfulBtn.setAttribute('aria-pressed', 'true');
@@ -155,9 +154,10 @@ export function buildReviewEl(r, allReviews, showHelpful) {
       helpfulBtn.disabled = false;
     };
 
-    helpfulRow.appendChild(helpfulBtn);
-    reviewEl.appendChild(helpfulRow);
+    mediaRow.appendChild(helpfulBtn);
   }
+
+  reviewEl.appendChild(mediaRow);
 
   return reviewEl;
 }
