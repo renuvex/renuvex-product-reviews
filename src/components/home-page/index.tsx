@@ -495,7 +495,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto p-6 bg-background min-h-screen">
+    <div className="max-w-[1200px] mx-auto p-4 bg-background min-h-screen">
 
       {/* Yanıt Dialog */}
       <ReplyDialog
@@ -540,27 +540,27 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="pending" orientation="vertical" className="gap-8" onValueChange={handleTabChange}>
-        <TabsList className="h-fit p-2 bg-muted/30 rounded-xl w-64 shrink-0 border border-border/50">
-          <TabsTrigger value="pending" className="py-2.5 px-4 rounded-lg mb-1">
-            <MessageSquare size={16} className="mr-2" />
-            Bekleyen Onaylar
+      <Tabs defaultValue="pending" orientation="vertical" className="gap-4" onValueChange={handleTabChange}>
+        <TabsList className="h-fit p-1.5 bg-muted/30 rounded-xl w-44 shrink-0 border border-border/50">
+          <TabsTrigger value="pending" className="py-2 px-3 rounded-lg mb-1">
+            <MessageSquare size={15} className="mr-1.5 shrink-0" />
+            <span className="truncate">Bekleyen</span>
             {tabData.pending.total > 0 && (
-              <Badge variant="secondary" className="ml-auto" style={{ backgroundColor: colors.primary, color: colors.textWhite, fontSize: typography.fontSize.xs }}>{tabData.pending.total}</Badge>
+              <Badge variant="secondary" className="ml-auto shrink-0" style={{ backgroundColor: colors.primary, color: colors.textWhite, fontSize: typography.fontSize.xs }}>{tabData.pending.total}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="approved" className="py-2.5 px-4 rounded-lg mb-1">
-            <Check size={16} className="mr-2" />
-            Onaylı Yorumlar
+          <TabsTrigger value="approved" className="py-2 px-3 rounded-lg mb-1">
+            <Check size={15} className="mr-1.5 shrink-0" />
+            <span className="truncate">Onaylı</span>
           </TabsTrigger>
-          <TabsTrigger value="rejected" className="py-2.5 px-4 rounded-lg mb-1">
-            <X size={16} className="mr-2" />
-            Reddedilenler
+          <TabsTrigger value="rejected" className="py-2 px-3 rounded-lg mb-1">
+            <X size={15} className="mr-1.5 shrink-0" />
+            <span className="truncate">Reddedilen</span>
           </TabsTrigger>
-          <div className="my-2 border-t border-border/50 w-full" />
-          <TabsTrigger value="settings" className="py-2.5 px-4 rounded-lg">
-            <Settings size={16} className="mr-2" />
-            Widget Ayarları
+          <div className="my-1.5 border-t border-border/50 w-full" />
+          <TabsTrigger value="settings" className="py-2 px-3 rounded-lg">
+            <Settings size={15} className="mr-1.5 shrink-0" />
+            <span className="truncate">Widget Ayarları</span>
           </TabsTrigger>
         </TabsList>
 
