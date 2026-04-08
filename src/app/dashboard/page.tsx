@@ -53,6 +53,5 @@ export default function DashboardPage() {
     initializeDashboard();
   }, [initializeDashboard]);
 
-  // HomePage
-  return <HomePage token={token} storeName={storeName} />;
+  return <HomePage token={token ?? 'dev'} storeName={storeName || 'Test Mağaza'} />;
 }

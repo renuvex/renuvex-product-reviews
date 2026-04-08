@@ -32,7 +32,7 @@ export async function PUT(request: Request) {
     if (!user) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
 
     const body = await request.json();
-    const { widgetColor, widgetTitle, autoApprove } = body;
+    const { widgetColor, widgetTitle, autoApprove, showHelpful } = body;
 
     // Ayarları güncelle, eğer yoksa baştan oluştur
     const updatedSettings = await prisma.storeSettings.upsert({
@@ -41,12 +41,14 @@ export async function PUT(request: Request) {
         ...(widgetColor !== undefined && { widgetColor }),
         ...(widgetTitle !== undefined && { widgetTitle }),
         ...(autoApprove !== undefined && { autoApprove }),
+        ...(showHelpful !== undefined && { showHelpful }),
       },
       create: {
         storeId: user.merchantId,
         ...(widgetColor !== undefined && { widgetColor }),
         ...(widgetTitle !== undefined && { widgetTitle }),
         ...(autoApprove !== undefined && { autoApprove }),
+        ...(showHelpful !== undefined && { showHelpful }),
       }
     });
 

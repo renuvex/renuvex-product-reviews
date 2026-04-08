@@ -7,6 +7,14 @@ import { JwtHelpers } from '../helpers/jwt-helpers';
  * @returns An object containing authorizedAppId and merchantId if the JWT is valid, otherwise null.
  */
 export function getUserFromRequest(request: Request) {
+  // Development ortamında token doğrulamayı bypass et
+  if (process.env.NODE_ENV === 'development' && process.env.DEV_MERCHANT_ID) {
+    return {
+      authorizedAppId: process.env.DEV_AUTHORIZED_APP_ID!,
+      merchantId: process.env.DEV_MERCHANT_ID!,
+    };
+  }
+
   // Get the Authorization header from the request
   const authHeader = request.headers.get('Authorization');
   if (!authHeader) return null;

@@ -45,6 +45,37 @@ export async function GET(request: Request) {
 }
 
 /**
+ * Handle DELETE requests: Delete a review permanently
+ */
+export async function DELETE(request: Request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Review ID is required' }, { status: 400 });
+    }
+
+    try {
+      await prisma.review.delete({
+        where: { id, storeId: user.merchantId },
+      });
+      return NextResponse.json({ message: 'Review deleted' });
+    } catch {
+      return NextResponse.json({ error: 'Review not found or unauthorized' }, { status: 404 });
+    }
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+/**
  * Handle PUT requests: Update status or merchantReply for a review
  */
 export async function PUT(request: Request) {
