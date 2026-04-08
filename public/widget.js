@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T03:39:36.274Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T03:51:24.105Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -546,7 +546,7 @@
       var helpfulRow = document.createElement("div");
       helpfulRow.className = "ikr-helpful-row";
       var voted = getHelpfulVoted(r.id);
-      var count = r.helpfulCount || 0;
+      var count = voted ? Math.max(r.helpfulCount || 0, 1) : r.helpfulCount || 0;
       var helpfulBtn = document.createElement("button");
       helpfulBtn.className = "ikr-helpful-btn" + (voted ? " ikr-helpful-btn-active" : "");
       helpfulBtn.setAttribute("aria-pressed", voted ? "true" : "false");
@@ -886,10 +886,10 @@
 
   /* Faydal\u0131 butonu */
   .ikr-helpful-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;}
-  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:20px;padding:5px 10px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.45);font-weight:400;transition:border-color 0.15s,color 0.15s,background 0.15s;line-height:1;}
+  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:20px;padding:5px 10px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.45);font-weight:400;transition:border-color 0.15s,color 0.15s,background 0.15s;line-height:1;min-width:52px;justify-content:center;}
+  .ikr-helpful-count{display:inline-block;min-width:16px;text-align:left;}
   @media(hover:hover){.ikr-helpful-btn:hover{border-color:var(--ikr-color,#000);color:var(--ikr-color,#000);}}
   .ikr-helpful-btn-active{border-color:var(--ikr-color,#000)!important;color:var(--ikr-color,#000)!important;background:var(--ikr-color-light)!important;}
-  .ikr-helpful-count{font-size:13px;font-weight:400;}
 
   /* Accordion form wrapper */
   #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}

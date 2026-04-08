@@ -111,7 +111,8 @@ export function buildReviewEl(r, allReviews, showHelpful) {
     helpfulRow.className = 'ikr-helpful-row';
 
     var voted = getHelpfulVoted(r.id);
-    var count = r.helpfulCount || 0;
+    // Cache'ten eski helpfulCount gelebilir — kendi oyu varsa en az 1 garantile
+    var count = voted ? Math.max(r.helpfulCount || 0, 1) : (r.helpfulCount || 0);
 
     var helpfulBtn = document.createElement('button');
     helpfulBtn.className = 'ikr-helpful-btn' + (voted ? ' ikr-helpful-btn-active' : '');
