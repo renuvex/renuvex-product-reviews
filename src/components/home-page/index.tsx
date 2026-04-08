@@ -5,9 +5,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, MessageSquare, Settings, Star, Check, X, ChevronDown, ChevronUp, MoreVertical, Trash2, MessageSquareX, Reply } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -16,7 +14,6 @@ import { colors, componentStyles, radii, typography, opacity } from '@/lib/desig
 
 interface Review {
   id: string;
-  storeId: string;
   productId: string;
   productName: string | null;
   rating: number;
@@ -41,12 +38,21 @@ interface HomePageProps {
   storeName?: string;
 }
 
+// Tab tanımları — yeni tab eklemek için buraya satır ekle
+const TABS = [
+  { key: 'pending',  label: 'Onay Bekleyen Yorumlar' },
+  { key: 'approved', label: 'Onaylanan Yorumlar' },
+  { key: 'rejected', label: 'Reddedilen Yorumlar' },
+  { key: 'all',      label: 'Tüm Yorumlar' },
+] as const;
+
+type TabKey = typeof TABS[number]['key'];
+
 const COMMENT_LIMIT = 180;
 
-function ReviewRow({ review, statusFilter, onStatusChange, onReply, onDeleteReply, onDeleteReview, onLightbox, renderStars }: {
+function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDeleteReview, onLightbox, renderStars }: {
   review: Review;
-  statusFilter: string;
-  onStatusChange: (id: string, status: string) => void;
+  onStatusChange: (id: string, status: string) => Promise<void>;
   onReply: (review: Review) => void;
   onDeleteReply: (id: string) => void;
   onDeleteReview: (id: string) => void;
@@ -54,6 +60,7 @@ function ReviewRow({ review, statusFilter, onStatusChange, onReply, onDeleteRepl
   renderStars: (n: number) => React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // 'approved' | 'rejected'
   const comment = review.comment || '';
   const isLong = comment.length > COMMENT_LIMIT;
   const displayedComment = isLong && !expanded ? comment.slice(0, COMMENT_LIMIT) + '…' : comment;
@@ -70,11 +77,11 @@ function ReviewRow({ review, statusFilter, onStatusChange, onReply, onDeleteRepl
           <span style={{ fontSize: typography.fontSize.xs, color: colors.textMuted }}>·</span>
           <span style={{ fontSize: typography.fontSize.xs, color: colors.textMuted }}>{new Date(review.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </div>
-        <div className="truncate mb-2" style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.medium, color: colors.primary }}>{review.productName || review.productId}</div>
+        <div className="truncate mb-2" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.primary }}>{review.productName || review.productId}</div>
         <div className="flex items-center gap-3 mb-2">
           <div className="flex gap-0.5">{renderStars(review.rating)}</div>
           {review.helpfulCount > 0 && (
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textMuted }}>{review.helpfulCount} kişi faydalı buldu</span>
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary }}>{review.helpfulCount} kişi faydalı buldu</span>
           )}
         </div>
 
@@ -110,25 +117,35 @@ function ReviewRow({ review, statusFilter, onStatusChange, onReply, onDeleteRepl
         )}
       </div>
 
-      {/* Sağ: aksiyonlar */}
+      {/* Sağ: aksiyonlar — review.status'a göre buton göster */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {statusFilter !== 'approved' && (
+        {review.status !== 'approved' && (
           <button
-            style={{ ...componentStyles.btnSm, color: colors.primary, borderColor: colors.primary, backgroundColor: 'transparent', display: 'flex', alignItems: 'center', gap: 4 }}
-            onClick={() => onStatusChange(review.id, 'approved')}
+            disabled={actionLoading !== null}
+            style={{ ...componentStyles.btnSm, color: colors.primary, borderColor: colors.primary, backgroundColor: 'transparent', display: 'flex', alignItems: 'center', gap: 4, opacity: actionLoading === 'approved' ? 0.6 : 1, cursor: actionLoading !== null ? 'not-allowed' : 'pointer' }}
+            onClick={async () => {
+              setActionLoading('approved');
+              await onStatusChange(review.id, 'approved');
+              setActionLoading(null);
+            }}
           >
-            <Check size={13} /> Onayla
+            <Check size={13} /> {actionLoading === 'approved' ? '...' : 'Onayla'}
           </button>
         )}
-        {statusFilter !== 'rejected' && (
+        {review.status !== 'rejected' && (
           <button
-            style={{ ...componentStyles.btnSm, color: colors.error, borderColor: colors.error, backgroundColor: colors.bgWhite, display: 'flex', alignItems: 'center', gap: 4 }}
-            onClick={() => onStatusChange(review.id, 'rejected')}
+            disabled={actionLoading !== null}
+            style={{ ...componentStyles.btnSm, color: colors.error, borderColor: colors.error, backgroundColor: colors.bgWhite, display: 'flex', alignItems: 'center', gap: 4, opacity: actionLoading === 'rejected' ? 0.6 : 1, cursor: actionLoading !== null ? 'not-allowed' : 'pointer' }}
+            onClick={async () => {
+              setActionLoading('rejected');
+              await onStatusChange(review.id, 'rejected');
+              setActionLoading(null);
+            }}
           >
-            <X size={13} /> Reddet
+            <X size={13} /> {actionLoading === 'rejected' ? '...' : 'Reddet'}
           </button>
         )}
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button style={{ ...componentStyles.btnSm, padding: '0 8px' }}>
               <MoreVertical size={15} />
@@ -161,7 +178,7 @@ function ReplyDialog({ open, review, onClose, onSubmit }: {
   open: boolean;
   review: Review | null;
   onClose: () => void;
-  onSubmit: (id: string, text: string, status: string) => Promise<void>;
+  onSubmit: (id: string, text: string) => Promise<void>;
 }) {
   const [text, setText] = useState(review?.merchantReply ?? '');
   const [loading, setLoading] = useState(false);
@@ -174,7 +191,7 @@ function ReplyDialog({ open, review, onClose, onSubmit }: {
     if (!review || !text.trim()) return;
     setLoading(true);
     try {
-      await onSubmit(review.id, text.trim(), review.status);
+      await onSubmit(review.id, text.trim());
       onClose();
     } finally {
       setLoading(false);
@@ -200,9 +217,13 @@ function ReplyDialog({ open, review, onClose, onSubmit }: {
             value={text}
             onChange={(e) => setText(e.target.value)}
             className="resize-none h-32 overflow-y-auto focus-visible:ring-0 focus-visible:ring-offset-0"
-    style={{ borderColor: undefined }}
-    onFocus={e => (e.currentTarget.style.borderColor = colors.primary)}
-    onBlur={e => (e.currentTarget.style.borderColor = colors.borderDefault)}
+            style={{ borderColor: undefined }}
+            onFocus={e => {
+              e.currentTarget.style.borderColor = colors.primary;
+              const len = e.currentTarget.value.length;
+              e.currentTarget.setSelectionRange(len, len);
+            }}
+            onBlur={e => (e.currentTarget.style.borderColor = colors.borderDefault)}
           />
         </div>
         <DialogFooter>
@@ -217,20 +238,14 @@ function ReplyDialog({ open, review, onClose, onSubmit }: {
   );
 }
 
-interface PaginatedReviews {
-  data: Review[];
-  total: number;
-  page: number;
-}
-
 export default function HomePage({ token, storeName }: HomePageProps) {
-  const [activeTab, setActiveTab] = useState('pending');
-  const [tabData, setTabData] = useState<Record<string, PaginatedReviews>>({
-    pending: { data: [], total: 0, page: 1 },
-    approved: { data: [], total: 0, page: 1 },
-    rejected: { data: [], total: 0, page: 1 },
-  });
+  const [activeTab, setActiveTab] = useState<TabKey>('pending');
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(20);
+  // Sadece badge sayıları — tab geçişi gerektirmez
+  const [tabCounts, setTabCounts] = useState<Record<TabKey, number>>({ pending: 0, approved: 0, rejected: 0, all: 0 });
   const [settings, setSettings] = useState<StoreSettings>({});
   const [loading, setLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -240,18 +255,21 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const pageSizeRef = React.useRef(pageSize);
   pageSizeRef.current = pageSize;
 
-  const fetchReviews = useCallback(async (status: string, page: number, limit?: number) => {
+  // Aktif tab'ın verisini çek
+  const fetchReviews = useCallback(async (tab: TabKey, p: number, limit?: number) => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await axios.get(`/api/admin/reviews?status=${status}&page=${page}&limit=${limit ?? pageSizeRef.current}`, {
+      const statusParam = tab === 'all' ? '' : `&status=${tab}`;
+      const res = await axios.get(`/api/admin/reviews?page=${p}&limit=${limit ?? pageSizeRef.current}${statusParam}`, {
         headers: { Authorization: `JWT ${token}` },
       });
       if (res.data?.data) {
-        setTabData(prev => ({
-          ...prev,
-          [status]: { data: res.data.data as Review[], total: res.data.pagination.total, page },
-        }));
+        setReviews(res.data.data as Review[]);
+        setTotal(res.data.pagination.total);
+        setPage(p);
+        setTabCounts(prev => ({ ...prev, [tab]: res.data.pagination.total }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
       console.error("Yorumlar çekilirken hata:", error);
@@ -260,7 +278,29 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     }
   }, [token]);
 
-  // İlk yüklemede ayarları ve aktif tab'ı çek
+  // Tüm tab sayılarını tek seferde çek (limit=1, sadece total için)
+  const fetchAllCounts = useCallback(async () => {
+    if (!token) return;
+    const headers = { Authorization: `JWT ${token}` };
+    try {
+      const [pending, approved, rejected, all] = await Promise.all([
+        axios.get('/api/admin/reviews?status=pending&page=1&limit=1', { headers }),
+        axios.get('/api/admin/reviews?status=approved&page=1&limit=1', { headers }),
+        axios.get('/api/admin/reviews?status=rejected&page=1&limit=1', { headers }),
+        axios.get('/api/admin/reviews?page=1&limit=1', { headers }),
+      ]);
+      setTabCounts({
+        pending:  pending.data?.pagination?.total  ?? 0,
+        approved: approved.data?.pagination?.total ?? 0,
+        rejected: rejected.data?.pagination?.total ?? 0,
+        all:      all.data?.pagination?.total      ?? 0,
+      });
+    } catch (error) {
+      console.error("Tab sayıları çekilirken hata:", error);
+    }
+  }, [token]);
+
+  // İlk yükleme
   useEffect(() => {
     if (!token) return;
     const init = async () => {
@@ -269,105 +309,91 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         axios.get('/api/admin/settings', { headers: { Authorization: `JWT ${token}` } }),
       ]);
       if (settingsRes.data?.data) setSettings(settingsRes.data.data as StoreSettings);
+      fetchAllCounts();
     };
     init();
-  }, [token, fetchReviews]);
+  }, [token, fetchReviews, fetchAllCounts]);
 
-  // Tab değişince o tab'ın verisini çek (henüz çekilmediyse)
-  const handleTabChange = (tab: string) => {
+  // Tab geçişi
+  const handleReviewTabChange = (tab: TabKey) => {
     setActiveTab(tab);
-    if (tab !== 'settings' && tabData[tab].data.length === 0) {
-      fetchReviews(tab, 1);
-    }
+    fetchReviews(tab, 1);
   };
 
-  const updateReviewInTab = (status: string, updater: (r: Review) => Review) => {
-    setTabData(prev => ({
-      ...prev,
-      [status]: {
-        ...prev[status],
-        data: prev[status].data.map(updater),
-      },
-    }));
-  };
-
-  const removeReviewFromTab = (status: string, id: string) => {
-    setTabData(prev => ({
-      ...prev,
-      [status]: { ...prev[status], data: prev[status].data.filter(r => r.id !== id), total: prev[status].total - 1 },
-    }));
-  };
-
-  // Yorum Durumunu Güncelleme (Onayla / Reddet)
+  // Yorum durumu güncelle (Onayla / Reddet)
   const handleStatusChange = async (id: string, newStatus: string) => {
-    const currentStatus = activeTab;
-    removeReviewFromTab(currentStatus, id);
+    // Yorumun mevcut status'unu bul (all tab'ında activeTab değil review.status kullan)
+    const targetReview = reviews.find(r => r.id === id);
+    const oldStatus = targetReview?.status;
     try {
-      await axios.put('/api/admin/reviews',
-        { id, status: newStatus },
-        { headers: { Authorization: `JWT ${token}` } }
-      );
+      await axios.put('/api/admin/reviews', { id, status: newStatus }, { headers: { Authorization: `JWT ${token}` } });
       toast.success(newStatus === 'approved' ? 'Yorum onaylandı.' : 'Yorum reddedildi.');
-      // Hedef tab'ı yenile
-      fetchReviews(newStatus, tabData[newStatus].page);
+      await fetchReviews(activeTab, page);
+      // all değişmez — yorum silinmedi, sadece status taşındı
+      if (oldStatus && oldStatus !== newStatus) {
+        setTabCounts(prev => ({
+          ...prev,
+          [oldStatus as TabKey]: Math.max(0, prev[oldStatus as TabKey] - 1),
+          [newStatus as TabKey]: prev[newStatus as TabKey] + 1,
+        }));
+      }
     } catch (error) {
       console.error("Durum güncellenemedi:", error);
-      fetchReviews(currentStatus, tabData[currentStatus].page);
       toast.error("Durum güncellenirken bir hata oluştu, lütfen tekrar deneyin.");
     }
   };
 
-  // Yanıt gönderme
-  const handleReplySubmit = async (id: string, replyText: string, reviewStatus: string) => {
+  // Yanıt gönder / düzenle
+  const handleReplySubmit = async (id: string, replyText: string) => {
     try {
-      await axios.put('/api/admin/reviews',
-        { id, merchantReply: replyText },
-        { headers: { Authorization: `JWT ${token}` } }
-      );
-      updateReviewInTab(reviewStatus, r => r.id === id ? { ...r, merchantReply: replyText } : r);
+      await axios.put('/api/admin/reviews', { id, merchantReply: replyText }, { headers: { Authorization: `JWT ${token}` } });
+      setReviews(prev => prev.map(r => r.id === id ? { ...r, merchantReply: replyText } : r));
       toast.success("Yanıt başarıyla gönderildi.");
     } catch {
       toast.error("Yanıt gönderilirken bir hata oluştu.");
     }
   };
 
-  // Yorum silme
-  const handleDeleteReview = (id: string) => {
-    setDeleteConfirm(id);
-  };
+  // Yorum sil
+  const handleDeleteReview = (id: string) => setDeleteConfirm(id);
 
   const confirmDeleteReview = async () => {
     if (!deleteConfirm) return;
     const id = deleteConfirm;
-    const currentStatus = activeTab;
+    const deletedReview = reviews.find(r => r.id === id);
     setDeleteConfirm(null);
-    removeReviewFromTab(currentStatus, id);
     try {
       await axios.delete(`/api/admin/reviews?id=${id}`, { headers: { Authorization: `JWT ${token}` } });
       toast.success("Yorum silindi.");
+      // Sayfa boşaldıysa bir önceki sayfaya git
+      const targetPage = reviews.length === 1 && page > 1 ? page - 1 : page;
+      await fetchReviews(activeTab, targetPage);
+      // Counts: silinen yorumun status'u ve all azalt
+      if (deletedReview) {
+        setTabCounts(prev => ({
+          ...prev,
+          [deletedReview.status as TabKey]: Math.max(0, prev[deletedReview.status as TabKey] - 1),
+          all: Math.max(0, prev.all - 1),
+        }));
+      }
     } catch {
-      fetchReviews(currentStatus, tabData[currentStatus].page);
+      fetchReviews(activeTab, page);
       toast.error("Yorum silinirken bir hata oluştu.");
     }
   };
 
-  // Yanıt silme
+  // Yanıt sil
   const handleDeleteReply = async (id: string) => {
-    const currentStatus = activeTab;
-    updateReviewInTab(currentStatus, r => r.id === id ? { ...r, merchantReply: null } : r);
     try {
-      await axios.put('/api/admin/reviews',
-        { id, merchantReply: null },
-        { headers: { Authorization: `JWT ${token}` } }
-      );
+      await axios.put('/api/admin/reviews', { id, merchantReply: null }, { headers: { Authorization: `JWT ${token}` } });
+      setReviews(prev => prev.map(r => r.id === id ? { ...r, merchantReply: null } : r));
       toast.success("Yanıt silindi.");
     } catch {
-      fetchReviews(currentStatus, tabData[currentStatus].page);
       toast.error("Yanıt silinirken bir hata oluştu.");
     }
   };
 
-  // Ayarları Kaydetme
+  // Ayarları kaydet
   const saveSettings = async () => {
     try {
       await axios.put('/api/admin/settings', settings, { headers: { Authorization: `JWT ${token}` } });
@@ -388,116 +414,15 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     );
   }
 
-  const renderStars = (count: number) => {
-    return Array(5).fill(0).map((_, i) => (
-      <Star key={i} size={14} className={i < count ? "text-yellow-500 fill-yellow-500" : "text-gray-300"} />
-    ));
-  };
+  const renderStars = (count: number) => Array(5).fill(0).map((_, i) => (
+    <Star key={i} size={14} className={i < count ? "text-yellow-500 fill-yellow-500" : "text-gray-300"} />
+  ));
 
-  const renderTabContent = (statusFilter: string) => {
-    const { data, total, page } = tabData[statusFilter];
-    const totalPages = Math.ceil(total / pageSize);
-    const title = statusFilter === 'pending' ? 'Bekleyen Yorumlar' : statusFilter === 'approved' ? 'Onaylı Yorumlar' : 'Reddedilen Yorumlar';
-
-    return (
-      <>
-      <Card>
-        <CardHeader>
-          <CardTitle style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.medium }}>{title}</CardTitle>
-          <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, marginTop: 4 }}>
-            {loading ? "Yükleniyor..." : `${total} adet yorum bulunuyor.`}
-          </p>
-        </CardHeader>
-        <CardContent className="p-0">
-          {data.length === 0 && !loading ? (
-            <div className="h-24 flex items-center justify-center px-6" style={{ fontSize: typography.fontSize.base, color: colors.textMuted }}>
-              Bu kategoride henüz yorum bulunamadı.
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {data.map((review) => (
-                <ReviewRow
-                  key={review.id}
-                  review={review}
-                  statusFilter={statusFilter}
-                  onStatusChange={handleStatusChange}
-                  onReply={(r) => { setReplyDialog({ open: true, review: r }); }}
-                  onDeleteReply={handleDeleteReply}
-                  onDeleteReview={handleDeleteReview}
-                  onLightbox={setLightboxUrl}
-                  renderStars={renderStars}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      {total > 0 && (
-        <div className="sticky bottom-0 mt-0 flex items-center justify-between px-6 py-3 border border-border bg-white/80 backdrop-blur-sm rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>Satır Adedi:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  const newSize = Number(e.target.value);
-                  setPageSize(newSize);
-                  fetchReviews(statusFilter, 1, newSize);
-                }}
-                style={{ ...componentStyles.select, height: '28px', width: '72px', cursor: 'pointer' }}
-              >
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-            <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>
-              {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} / {total} Yorum
-            </span>
-          </div>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <button disabled={page <= 1 || loading}
-                style={{ background: 'none', border: 'none', outline: 'none', fontSize: typography.fontSize.base, cursor: page <= 1 ? 'not-allowed' : 'pointer', color: page <= 1 ? colors.textMuted : colors.textPrimary, padding: '0 4px' }}
-                onClick={() => fetchReviews(statusFilter, page - 1)}>
-                &lt; Önceki
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                .reduce<(number | '...')[]>((acc, p, i, arr) => {
-                  if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...');
-                  acc.push(p);
-                  return acc;
-                }, [])
-                .map((p, i) => p === '...' ? (
-                  <span key={`ellipsis-${i}`} style={{ padding: '0 4px', fontSize: typography.fontSize.base, color: colors.textMuted }}>…</span>
-                ) : (
-                  <button
-                    key={p}
-                    style={p === page ? componentStyles.paginationBtnActive : componentStyles.paginationBtn}
-                    disabled={loading}
-                    onClick={() => fetchReviews(statusFilter, p as number)}
-                  >
-                    {p}
-                  </button>
-                ))}
-              <button disabled={page >= totalPages || loading}
-                style={{ background: 'none', border: 'none', outline: 'none', fontSize: typography.fontSize.base, cursor: page >= totalPages ? 'not-allowed' : 'pointer', color: page >= totalPages ? colors.textMuted : colors.textPrimary, padding: '0 4px' }}
-                onClick={() => fetchReviews(statusFilter, page + 1)}>
-                Sonraki &gt;
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      </>
-    );
-  };
+  const totalPages = Math.ceil(total / pageSize);
 
   return (
     <div className="w-full p-4 bg-background min-h-screen">
 
-      {/* Yanıt Dialog */}
       <ReplyDialog
         open={replyDialog.open}
         review={replyDialog.review}
@@ -505,7 +430,6 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         onSubmit={handleReplySubmit}
       />
 
-      {/* Yorum Silme Onay Dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
@@ -526,6 +450,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
           <img src={lightboxUrl} alt="Görsel" className="max-w-[90vw] max-h-[90vh] rounded-lg object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
+
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, letterSpacing: '-0.02em' }}>Değerlendirmeler</h1>
@@ -540,38 +465,143 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="pending" orientation="vertical" className="gap-4" onValueChange={handleTabChange}>
+      <Tabs defaultValue="reviews" orientation="vertical" className="gap-4">
         <TabsList className="h-fit p-1.5 bg-muted/30 rounded-xl w-44 shrink-0 border border-border/50">
-          <TabsTrigger value="pending" className="py-2 px-3 rounded-lg mb-1">
+          <TabsTrigger value="reviews" className="py-2 px-3 rounded-lg mb-1" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium }}>
             <MessageSquare size={15} className="mr-1.5 shrink-0" />
-            <span className="truncate">Bekleyen</span>
-            {tabData.pending.total > 0 && (
-              <Badge variant="secondary" className="ml-auto shrink-0" style={{ backgroundColor: colors.primary, color: colors.textWhite, fontSize: typography.fontSize.xs }}>{tabData.pending.total}</Badge>
-            )}
+            <span className="truncate">Yorumlar</span>
           </TabsTrigger>
-          <TabsTrigger value="approved" className="py-2 px-3 rounded-lg mb-1">
-            <Check size={15} className="mr-1.5 shrink-0" />
-            <span className="truncate">Onaylı</span>
-          </TabsTrigger>
-          <TabsTrigger value="rejected" className="py-2 px-3 rounded-lg mb-1">
-            <X size={15} className="mr-1.5 shrink-0" />
-            <span className="truncate">Reddedilen</span>
-          </TabsTrigger>
-          <div className="my-1.5 border-t border-border/50 w-full" />
-          <TabsTrigger value="settings" className="py-2 px-3 rounded-lg">
+          <TabsTrigger value="settings" className="py-2 px-3 rounded-lg" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium }}>
             <Settings size={15} className="mr-1.5 shrink-0" />
             <span className="truncate">Widget Ayarları</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="m-0">
-          {renderTabContent('pending')}
-        </TabsContent>
-        <TabsContent value="approved" className="m-0">
-          {renderTabContent('approved')}
-        </TabsContent>
-        <TabsContent value="rejected" className="m-0">
-          {renderTabContent('rejected')}
+        <TabsContent value="reviews" className="m-0 flex-1 min-w-0">
+          {/* Yatay iç tab bar */}
+          <div style={{ display: 'flex', flexDirection: 'row', borderBottom: `1px solid ${colors.borderDefault}`, marginBottom: 16, gap: 0 }}>
+            {TABS.map(({ key, label }) => {
+              const isActive = activeTab === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleReviewTabChange(key)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: isActive ? `2px solid ${colors.primary}` : '2px solid transparent',
+                    marginBottom: -1,
+                    padding: '10px 16px',
+                    fontSize: typography.fontSize.base,
+                    fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.regular,
+                    color: isActive ? colors.primary : colors.textSecondary,
+                    textShadow: isActive ? `${colors.primary} 0px 0px 0.25px` : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {label}
+                  <span style={{
+                    color: isActive ? colors.primary : colors.textSecondary,
+                    fontSize: typography.fontSize.base,
+                    fontWeight: typography.fontWeight.medium,
+                    textShadow: isActive ? `${colors.primary} 0px 0px 0.25px` : 'none',
+                    visibility: tabCounts[key] > 0 ? 'visible' : 'hidden',
+                  }}>
+                    ({tabCounts[key]})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Yorum listesi */}
+          <Card>
+            <CardContent className="p-0">
+              {reviews.length === 0 && !loading ? (
+                <div className="h-24 flex items-center justify-center px-6" style={{ fontSize: typography.fontSize.base, color: colors.textMuted }}>
+                  Bu kategoride henüz yorum bulunamadı.
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {reviews.map((review) => (
+                    <ReviewRow
+                      key={review.id}
+                      review={review}
+                      onStatusChange={handleStatusChange}
+                      onReply={(r) => setReplyDialog({ open: true, review: r })}
+                      onDeleteReply={handleDeleteReply}
+                      onDeleteReview={handleDeleteReview}
+                      onLightbox={setLightboxUrl}
+                      renderStars={renderStars}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {total > 0 && (
+            <div className="sticky bottom-0 mt-0 flex items-center justify-between px-6 py-3 border border-border bg-white/80 backdrop-blur-sm rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>Satır Adedi:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      const newSize = Number(e.target.value);
+                      setPageSize(newSize);
+                      fetchReviews(activeTab, 1, newSize);
+                    }}
+                    style={{ ...componentStyles.select, height: '28px', width: '72px', cursor: 'pointer' }}
+                  >
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+                <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>
+                  {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} / {total} Yorum
+                </span>
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button disabled={page <= 1 || loading}
+                    style={{ background: 'none', border: 'none', outline: 'none', fontSize: typography.fontSize.base, cursor: page <= 1 ? 'not-allowed' : 'pointer', color: page <= 1 ? colors.textMuted : colors.textPrimary, padding: '0 4px' }}
+                    onClick={() => fetchReviews(activeTab, page - 1)}>
+                    &lt; Önceki
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                    .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                      if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...');
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, i) => p === '...' ? (
+                      <span key={`ellipsis-${i}`} style={{ padding: '0 4px', fontSize: typography.fontSize.base, color: colors.textMuted }}>…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        style={p === page ? componentStyles.paginationBtnActive : componentStyles.paginationBtn}
+                        disabled={loading}
+                        onClick={() => fetchReviews(activeTab, p as number)}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  <button disabled={page >= totalPages || loading}
+                    style={{ background: 'none', border: 'none', outline: 'none', fontSize: typography.fontSize.base, cursor: page >= totalPages ? 'not-allowed' : 'pointer', color: page >= totalPages ? colors.textMuted : colors.textPrimary, padding: '0 4px' }}
+                    onClick={() => fetchReviews(activeTab, page + 1)}>
+                    Sonraki &gt;
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="settings" className="m-0">
