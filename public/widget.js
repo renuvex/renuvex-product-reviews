@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T03:51:24.105Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T03:55:11.564Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -554,8 +554,7 @@
       var SVG_OUTLINE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
       var SVG_FILLED = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
       var renderBtnContent = function(c, isActive) {
-        var svg = isActive ? SVG_FILLED : SVG_OUTLINE;
-        helpfulBtn.innerHTML = svg + (c > 0 ? '<span class="ikr-helpful-count">' + c + "</span>" : "");
+        helpfulBtn.innerHTML = '<span class="ikr-helpful-icon">' + (isActive ? SVG_FILLED : SVG_OUTLINE) + '</span><span class="ikr-helpful-count">' + (c > 0 ? c : "") + "</span>";
       };
       renderBtnContent(count, voted);
       helpfulBtn.onclick = async function() {
@@ -886,10 +885,11 @@
 
   /* Faydal\u0131 butonu */
   .ikr-helpful-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;}
-  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:20px;padding:5px 10px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.45);font-weight:400;transition:border-color 0.15s,color 0.15s,background 0.15s;line-height:1;min-width:52px;justify-content:center;}
-  .ikr-helpful-count{display:inline-block;min-width:16px;text-align:left;}
-  @media(hover:hover){.ikr-helpful-btn:hover{border-color:var(--ikr-color,#000);color:var(--ikr-color,#000);}}
-  .ikr-helpful-btn-active{border-color:var(--ikr-color,#000)!important;color:var(--ikr-color,#000)!important;background:var(--ikr-color-light)!important;}
+  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:none;padding:4px 6px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.45);font-weight:400;transition:color 0.15s;line-height:1;min-width:44px;}
+  .ikr-helpful-icon{flex-shrink:0;display:flex;align-items:center;transition:color 0.15s;}
+  .ikr-helpful-count{display:inline-block;min-width:16px;text-align:left;color:rgba(0,0,0,0.45);}
+  @media(hover:hover){.ikr-helpful-btn:hover .ikr-helpful-icon{color:var(--ikr-color,#000);}}
+  .ikr-helpful-btn-active .ikr-helpful-icon{color:var(--ikr-color,#000)!important;}
 
   /* Accordion form wrapper */
   #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}
