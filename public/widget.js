@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T04:04:30.605Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T04:10:17.978Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -561,6 +561,12 @@
             helpfulBtn.classList.add("ikr-helpful-btn-active");
             helpfulBtn.setAttribute("aria-pressed", "true");
             renderBtnContent(count, true);
+          } else if (res.status === 404 && isVoted) {
+            setHelpfulVoted(r.id, false);
+            count = Math.max(count - 1, 0);
+            helpfulBtn.classList.remove("ikr-helpful-btn-active");
+            helpfulBtn.setAttribute("aria-pressed", "false");
+            renderBtnContent(count, false);
           }
         } catch (_) {
         }

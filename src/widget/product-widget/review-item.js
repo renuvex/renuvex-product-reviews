@@ -127,10 +127,18 @@ export function buildReviewEl(r, allReviews, showHelpful) {
           helpfulBtn.setAttribute('aria-pressed', nowVoted ? 'true' : 'false');
           renderBtnContent(count, nowVoted);
         } else if (res.status === 409) {
+          // Farklı cihazda zaten oylanmış — LocalStorage'ı düzelt
           setHelpfulVoted(r.id, true);
           helpfulBtn.classList.add('ikr-helpful-btn-active');
           helpfulBtn.setAttribute('aria-pressed', 'true');
           renderBtnContent(count, true);
+        } else if (res.status === 404 && isVoted) {
+          // DB'de kayıt yok ama LocalStorage'da var — temizle, pasife al
+          setHelpfulVoted(r.id, false);
+          count = Math.max(count - 1, 0);
+          helpfulBtn.classList.remove('ikr-helpful-btn-active');
+          helpfulBtn.setAttribute('aria-pressed', 'false');
+          renderBtnContent(count, false);
         }
       } catch (_) {}
       helpfulBtn.disabled = false;
