@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T03:31:23.699Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T03:39:36.274Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -551,22 +551,13 @@
       helpfulBtn.className = "ikr-helpful-btn" + (voted ? " ikr-helpful-btn-active" : "");
       helpfulBtn.setAttribute("aria-pressed", voted ? "true" : "false");
       helpfulBtn.setAttribute("aria-label", "Bu yorumu faydal\u0131 bul");
-      var renderBtnContent = function(c) {
-        helpfulBtn.innerHTML = "";
-        var thumb = document.createElement("span");
-        thumb.textContent = "\u{1F44D}";
-        var label = document.createElement("span");
-        label.textContent = "Faydal\u0131";
-        helpfulBtn.appendChild(thumb);
-        helpfulBtn.appendChild(label);
-        if (c > 0) {
-          var countEl = document.createElement("span");
-          countEl.className = "ikr-helpful-count";
-          countEl.textContent = "(" + c + ")";
-          helpfulBtn.appendChild(countEl);
-        }
+      var SVG_OUTLINE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+      var SVG_FILLED = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+      var renderBtnContent = function(c, isActive) {
+        var svg = isActive ? SVG_FILLED : SVG_OUTLINE;
+        helpfulBtn.innerHTML = svg + (c > 0 ? '<span class="ikr-helpful-count">' + c + "</span>" : "");
       };
-      renderBtnContent(count);
+      renderBtnContent(count, voted);
       helpfulBtn.onclick = async function() {
         if (helpfulBtn.disabled) return;
         helpfulBtn.disabled = true;
@@ -581,11 +572,12 @@
             setHelpfulVoted(r.id, nowVoted);
             helpfulBtn.classList.toggle("ikr-helpful-btn-active", nowVoted);
             helpfulBtn.setAttribute("aria-pressed", nowVoted ? "true" : "false");
-            renderBtnContent(count);
+            renderBtnContent(count, nowVoted);
           } else if (res.status === 409) {
             setHelpfulVoted(r.id, true);
             helpfulBtn.classList.add("ikr-helpful-btn-active");
             helpfulBtn.setAttribute("aria-pressed", "true");
+            renderBtnContent(count, true);
           }
         } catch (_) {
         }
@@ -894,10 +886,10 @@
 
   /* Faydal\u0131 butonu */
   .ikr-helpful-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;}
-  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:20px;padding:5px 12px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.55);font-weight:400;transition:border-color 0.15s,color 0.15s,background 0.15s;}
+  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:20px;padding:5px 10px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.45);font-weight:400;transition:border-color 0.15s,color 0.15s,background 0.15s;line-height:1;}
   @media(hover:hover){.ikr-helpful-btn:hover{border-color:var(--ikr-color,#000);color:var(--ikr-color,#000);}}
-  .ikr-helpful-btn-active{border-color:var(--ikr-color,#000)!important;color:var(--ikr-color,#000)!important;background:var(--ikr-color-light)!important;font-weight:600;}
-  .ikr-helpful-count{font-size:13px;}
+  .ikr-helpful-btn-active{border-color:var(--ikr-color,#000)!important;color:var(--ikr-color,#000)!important;background:var(--ikr-color-light)!important;}
+  .ikr-helpful-count{font-size:13px;font-weight:400;}
 
   /* Accordion form wrapper */
   #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}

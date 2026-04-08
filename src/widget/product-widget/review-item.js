@@ -118,23 +118,15 @@ export function buildReviewEl(r, allReviews, showHelpful) {
     helpfulBtn.setAttribute('aria-pressed', voted ? 'true' : 'false');
     helpfulBtn.setAttribute('aria-label', 'Bu yorumu faydalı bul');
 
-    var renderBtnContent = function(c) {
-      helpfulBtn.innerHTML = '';
-      var thumb = document.createElement('span');
-      thumb.textContent = '👍';
-      var label = document.createElement('span');
-      label.textContent = 'Faydalı';
-      helpfulBtn.appendChild(thumb);
-      helpfulBtn.appendChild(label);
-      if (c > 0) {
-        var countEl = document.createElement('span');
-        countEl.className = 'ikr-helpful-count';
-        countEl.textContent = '(' + c + ')';
-        helpfulBtn.appendChild(countEl);
-      }
+    var SVG_OUTLINE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+    var SVG_FILLED = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+
+    var renderBtnContent = function(c, isActive) {
+      var svg = isActive ? SVG_FILLED : SVG_OUTLINE;
+      helpfulBtn.innerHTML = svg + (c > 0 ? '<span class="ikr-helpful-count">' + c + '</span>' : '');
     };
 
-    renderBtnContent(count);
+    renderBtnContent(count, voted);
 
     helpfulBtn.onclick = async function() {
       if (helpfulBtn.disabled) return;
@@ -150,12 +142,13 @@ export function buildReviewEl(r, allReviews, showHelpful) {
           setHelpfulVoted(r.id, nowVoted);
           helpfulBtn.classList.toggle('ikr-helpful-btn-active', nowVoted);
           helpfulBtn.setAttribute('aria-pressed', nowVoted ? 'true' : 'false');
-          renderBtnContent(count);
+          renderBtnContent(count, nowVoted);
         } else if (res.status === 409) {
           // Farklı cihazda zaten oylanmış — LocalStorage'ı düzelt, butonu aktif göster
           setHelpfulVoted(r.id, true);
           helpfulBtn.classList.add('ikr-helpful-btn-active');
           helpfulBtn.setAttribute('aria-pressed', 'true');
+          renderBtnContent(count, true);
         }
       } catch (_) {}
       helpfulBtn.disabled = false;
