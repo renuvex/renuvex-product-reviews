@@ -73,9 +73,9 @@ export function buildReviewEl(r, allReviews, showHelpful) {
   var mediaRow = document.createElement('div');
   mediaRow.className = 'ikr-media-row';
 
+  var gallery = document.createElement('div');
+  gallery.className = 'ikr-gallery';
   if (r.images && Array.isArray(r.images) && r.images.length) {
-    var gallery = document.createElement('div');
-    gallery.className = 'ikr-gallery';
     r.images.forEach(function(imgUrl) {
       if (!imgUrl || imgUrl.indexOf('https://') !== 0) return;
       var imgEl = document.createElement('img');
@@ -87,26 +87,8 @@ export function buildReviewEl(r, allReviews, showHelpful) {
       })(imgUrl);
       gallery.appendChild(imgEl);
     });
-    mediaRow.appendChild(gallery);
   }
-
-  // Mağaza yanıtı
-  if (r.merchantReply) {
-    var replyEl = document.createElement('div');
-    replyEl.className = 'ikr-reply';
-    var replyHeader = document.createElement('div');
-    replyHeader.className = 'ikr-reply-header';
-    var replyLabel = document.createElement('span');
-    replyLabel.className = 'ikr-reply-label';
-    replyLabel.textContent = 'Mağaza Sahibi';
-    replyHeader.appendChild(replyLabel);
-    var replyText = document.createElement('div');
-    replyText.className = 'ikr-reply-text';
-    replyText.textContent = r.merchantReply;
-    replyEl.appendChild(replyHeader);
-    replyEl.appendChild(replyText);
-    reviewEl.appendChild(replyEl);
-  }
+  mediaRow.appendChild(gallery);
 
   // Faydalı butonu — mediaRow'un sağına, fotoğraflarla aynı hizada
   if (showHelpful !== false) {
@@ -158,6 +140,24 @@ export function buildReviewEl(r, allReviews, showHelpful) {
   }
 
   reviewEl.appendChild(mediaRow);
+
+  // Mağaza yanıtı — mediaRow'dan sonra
+  if (r.merchantReply) {
+    var replyEl = document.createElement('div');
+    replyEl.className = 'ikr-reply';
+    var replyHeader = document.createElement('div');
+    replyHeader.className = 'ikr-reply-header';
+    var replyLabel = document.createElement('span');
+    replyLabel.className = 'ikr-reply-label';
+    replyLabel.textContent = 'Mağaza Sahibi';
+    replyHeader.appendChild(replyLabel);
+    var replyText = document.createElement('div');
+    replyText.className = 'ikr-reply-text';
+    replyText.textContent = r.merchantReply;
+    replyEl.appendChild(replyHeader);
+    replyEl.appendChild(replyText);
+    reviewEl.appendChild(replyEl);
+  }
 
   return reviewEl;
 }
