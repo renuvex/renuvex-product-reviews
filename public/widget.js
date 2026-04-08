@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T00:06:40.388Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T00:10:46.486Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -1399,12 +1399,12 @@
   }
 
   // src/widget/core/badge.js
-  var BADGE_CSS = "display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;color:#555;pointer-events:none;";
+  var BADGE_CSS = "display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;font-weight:400;color:#555;pointer-events:none;";
   function createBadgeEl(rating, justify) {
     var el = document.createElement("div");
     el.setAttribute("data-ikr-listing-badge", "1");
     el.style.cssText = BADGE_CSS + "justify-content:" + (justify || "flex-start") + ";";
-    el.innerHTML = starsHTML(rating.avg, null) + "<span>" + rating.avg + " (" + rating.count + ")</span>";
+    el.innerHTML = starsHTML(rating.avg, null) + '<span style="font-weight:400;">' + rating.avg + " (" + rating.count + ")</span>";
     return el;
   }
 
