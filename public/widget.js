@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T14:18:41.966Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T14:25:01.781Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -880,7 +880,7 @@
   .ikr-reply-text{font-size:14px;font-weight:400;color:rgba(0,0,0,0.75);line-height:1.6;}
 
   /* Faydal\u0131 butonu */
-  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:none;padding:4px 6px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.45);font-weight:400;transition:color 0.15s;line-height:1;min-width:44px;}
+  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:none;padding:4px 6px;cursor:pointer;font-size:12px;color:rgba(0,0,0,0.45);font-weight:400;transition:color 0.15s;line-height:1;min-width:44px;}
   .ikr-helpful-icon{flex-shrink:0;display:flex;align-items:center;transition:color 0.15s;}
   .ikr-helpful-count{display:inline-block;min-width:16px;text-align:left;color:rgba(0,0,0,0.45);}
   @media(hover:hover){.ikr-helpful-btn:hover .ikr-helpful-icon{color:var(--ikr-color,#000);}}
