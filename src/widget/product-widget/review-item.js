@@ -120,28 +120,14 @@ export function buildReviewEl(r, allReviews, showHelpful) {
         var res = await fetchWithTimeout(API_BASE + '/api/public/reviews/' + r.id + '/helpful', { method: method });
         if (res.ok) {
           var data = await res.json();
-          console.log('[ikr] helpful response:', data, 'prev count:', count);
           count = data.helpfulCount || 0;
           var nowVoted = !isVoted;
           setHelpfulVoted(r.id, nowVoted);
           helpfulBtn.classList.toggle('ikr-helpful-btn-active', nowVoted);
           helpfulBtn.setAttribute('aria-pressed', nowVoted ? 'true' : 'false');
           renderBtnContent(count, nowVoted);
-        } else if (res.status === 409) {
-          // Farklı cihazda zaten oylanmış — LocalStorage'ı düzelt
-          setHelpfulVoted(r.id, true);
-          helpfulBtn.classList.add('ikr-helpful-btn-active');
-          helpfulBtn.setAttribute('aria-pressed', 'true');
-          renderBtnContent(count, true);
-        } else if (res.status === 404 && isVoted) {
-          // DB'de kayıt yok ama LocalStorage'da var — temizle, pasife al
-          setHelpfulVoted(r.id, false);
-          count = Math.max(count - 1, 0);
-          helpfulBtn.classList.remove('ikr-helpful-btn-active');
-          helpfulBtn.setAttribute('aria-pressed', 'false');
-          renderBtnContent(count, false);
         }
-      } catch (err) { console.error('[ikr] helpful error:', err); }
+      } catch (_) {}
       helpfulBtn.disabled = false;
     };
 

@@ -39,11 +39,9 @@ model Review {
   status        String   @default("pending") // pending, approved, rejected
   merchantReply String?  // Store owner's reply to the customer's review
   images        String?  // JSON stringified array of image URLs — migrate to Json? when table is empty
-  helpfulCount  Int      @default(0)         // denormalized cache — ReviewHelpful sayısı
+  helpfulCount  Int      @default(0)         // kaç kişi faydalı buldu
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-
-  helpfuls      ReviewHelpful[]
 
   @@index([storeId, productId])          // ürün yorumları listesi
   @@index([storeId, slug])               // listing badge API
@@ -51,17 +49,6 @@ model Review {
   @@index([storeId, slug, status])       // approved badge sorgusu (slug + status birlikte)
 }
 
-model ReviewHelpful {
-  id        String   @id @default(cuid())
-  reviewId  String
-  ip        String
-  createdAt DateTime @default(now())
-
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-
-  @@unique([reviewId, ip])  // aynı IP aynı yoruma 1 kez oy
-  @@index([reviewId])
-}
 
 model StoreSettings {
   id               String   @id @default(uuid())
