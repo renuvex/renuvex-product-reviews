@@ -404,9 +404,9 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       <Card>
         <CardHeader>
           <CardTitle style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.medium }}>{title}</CardTitle>
-          <CardDescription>
-            {loading ? "Lütfen Bekleyin..." : `${total} adet yorum bulunuyor.`}
-          </CardDescription>
+          <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, marginTop: 4 }}>
+            {loading ? "Yükleniyor..." : `${total} adet yorum bulunuyor.`}
+          </p>
         </CardHeader>
         <CardContent className="p-0">
           {data.length === 0 && !loading ? (
