@@ -305,7 +305,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         empty.textContent = 'Henüz yorum yok.';
         widget.appendChild(empty);
       } else {
-        reviews.forEach(function(r) { widget.appendChild(buildReviewEl(r, reviews)); });
+        reviews.forEach(function(r) { widget.appendChild(buildReviewEl(r, reviews, currentSettings && currentSettings.showHelpful !== false)); });
       }
 
       // Daha Fazla butonu
@@ -322,7 +322,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           if (moreData && moreData.data && moreData.data.reviews) {
             setCurrentPage(nextPage);
             moreData.data.reviews.forEach(function(r) {
-              widget.insertBefore(buildReviewEl(r, moreData.data.reviews), loadMoreBtn);
+              widget.insertBefore(buildReviewEl(r, moreData.data.reviews, currentSettings && currentSettings.showHelpful !== false), loadMoreBtn);
             });
             if (!moreData.data.hasMore) loadMoreBtn.remove();
             else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }

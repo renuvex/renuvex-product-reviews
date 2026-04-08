@@ -21,7 +21,7 @@ export async function GET(req: Request) {
 
   const settings = await prisma.storeSettings.findUnique({
     where: { storeId: publicApiKey },
-    select: { widgetColor: true, widgetTitle: true },
+    select: { widgetColor: true, widgetTitle: true, showHelpful: true },
   });
 
   if (!settings) {

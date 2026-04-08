@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T00:10:46.486Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T03:31:23.699Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -122,6 +122,20 @@
     }
     el.textContent = css;
     applyWidgetColor(color);
+  }
+  function getHelpfulVoted(reviewId) {
+    try {
+      return localStorage.getItem("ikr_helpful_" + reviewId) === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+  function setHelpfulVoted(reviewId, voted) {
+    try {
+      if (voted) localStorage.setItem("ikr_helpful_" + reviewId, "1");
+      else localStorage.removeItem("ikr_helpful_" + reviewId);
+    } catch (_) {
+    }
   }
   function optimizeImageUrl(url) {
     if (!url || url.indexOf("res.cloudinary.com") === -1) return url;
@@ -444,7 +458,7 @@
   }
 
   // src/widget/product-widget/review-item.js
-  function buildReviewEl(r, allReviews) {
+  function buildReviewEl(r, allReviews, showHelpful) {
     var reviewEl = document.createElement("div");
     reviewEl.className = "ikr-review";
     var topRow = document.createElement("div");
@@ -527,6 +541,58 @@
       replyEl.appendChild(replyHeader);
       replyEl.appendChild(replyText);
       reviewEl.appendChild(replyEl);
+    }
+    if (showHelpful !== false) {
+      var helpfulRow = document.createElement("div");
+      helpfulRow.className = "ikr-helpful-row";
+      var voted = getHelpfulVoted(r.id);
+      var count = r.helpfulCount || 0;
+      var helpfulBtn = document.createElement("button");
+      helpfulBtn.className = "ikr-helpful-btn" + (voted ? " ikr-helpful-btn-active" : "");
+      helpfulBtn.setAttribute("aria-pressed", voted ? "true" : "false");
+      helpfulBtn.setAttribute("aria-label", "Bu yorumu faydal\u0131 bul");
+      var renderBtnContent = function(c) {
+        helpfulBtn.innerHTML = "";
+        var thumb = document.createElement("span");
+        thumb.textContent = "\u{1F44D}";
+        var label = document.createElement("span");
+        label.textContent = "Faydal\u0131";
+        helpfulBtn.appendChild(thumb);
+        helpfulBtn.appendChild(label);
+        if (c > 0) {
+          var countEl = document.createElement("span");
+          countEl.className = "ikr-helpful-count";
+          countEl.textContent = "(" + c + ")";
+          helpfulBtn.appendChild(countEl);
+        }
+      };
+      renderBtnContent(count);
+      helpfulBtn.onclick = async function() {
+        if (helpfulBtn.disabled) return;
+        helpfulBtn.disabled = true;
+        var isVoted = helpfulBtn.classList.contains("ikr-helpful-btn-active");
+        var method = isVoted ? "DELETE" : "POST";
+        try {
+          var res = await fetchWithTimeout(API_BASE + "/api/public/reviews/" + r.id + "/helpful", { method });
+          if (res.ok) {
+            var data = await res.json();
+            count = data.helpfulCount || 0;
+            var nowVoted = !isVoted;
+            setHelpfulVoted(r.id, nowVoted);
+            helpfulBtn.classList.toggle("ikr-helpful-btn-active", nowVoted);
+            helpfulBtn.setAttribute("aria-pressed", nowVoted ? "true" : "false");
+            renderBtnContent(count);
+          } else if (res.status === 409) {
+            setHelpfulVoted(r.id, true);
+            helpfulBtn.classList.add("ikr-helpful-btn-active");
+            helpfulBtn.setAttribute("aria-pressed", "true");
+          }
+        } catch (_) {
+        }
+        helpfulBtn.disabled = false;
+      };
+      helpfulRow.appendChild(helpfulBtn);
+      reviewEl.appendChild(helpfulRow);
     }
     return reviewEl;
   }
@@ -825,6 +891,13 @@
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .ikr-reply-label{font-weight:600;font-size:14px;color:rgba(0,0,0,1);}
   .ikr-reply-text{font-size:14px;font-weight:400;color:rgba(0,0,0,0.75);line-height:1.6;}
+
+  /* Faydal\u0131 butonu */
+  .ikr-helpful-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;}
+  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:20px;padding:5px 12px;cursor:pointer;font-size:13px;color:rgba(0,0,0,0.55);font-weight:400;transition:border-color 0.15s,color 0.15s,background 0.15s;}
+  @media(hover:hover){.ikr-helpful-btn:hover{border-color:var(--ikr-color,#000);color:var(--ikr-color,#000);}}
+  .ikr-helpful-btn-active{border-color:var(--ikr-color,#000)!important;color:var(--ikr-color,#000)!important;background:var(--ikr-color-light)!important;font-weight:600;}
+  .ikr-helpful-count{font-size:13px;}
 
   /* Accordion form wrapper */
   #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}
@@ -1169,7 +1242,7 @@
           widget.appendChild(empty);
         } else {
           reviews.forEach(function(r) {
-            widget.appendChild(buildReviewEl(r, reviews));
+            widget.appendChild(buildReviewEl(r, reviews, currentSettings && currentSettings.showHelpful !== false));
           });
         }
         var hasMore = data.data && data.data.hasMore;
@@ -1185,7 +1258,7 @@
             if (moreData && moreData.data && moreData.data.reviews) {
               setCurrentPage(nextPage);
               moreData.data.reviews.forEach(function(r) {
-                widget.insertBefore(buildReviewEl(r, moreData.data.reviews), loadMoreBtn);
+                widget.insertBefore(buildReviewEl(r, moreData.data.reviews, currentSettings && currentSettings.showHelpful !== false), loadMoreBtn);
               });
               if (!moreData.data.hasMore) loadMoreBtn.remove();
               else {

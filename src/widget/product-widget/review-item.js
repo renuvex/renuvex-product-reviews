@@ -1,10 +1,12 @@
 // product-widget/review-item.js — Tek bir yorum DOM elementini oluşturur
 
-import { starsHTML, formatDate, optimizeImageUrl } from '../core/helpers.js';
+import { starsHTML, formatDate, optimizeImageUrl, getHelpfulVoted, setHelpfulVoted } from '../core/helpers.js';
+import { API_BASE } from '../core/config.js';
+import { fetchWithTimeout } from '../core/fetch.js';
 import { openReviewModal } from './review-modal.js';
 
 
-export function buildReviewEl(r, allReviews) {
+export function buildReviewEl(r, allReviews, showHelpful) {
   var reviewEl = document.createElement('div');
   reviewEl.className = 'ikr-review';
 
@@ -101,6 +103,66 @@ export function buildReviewEl(r, allReviews) {
     replyEl.appendChild(replyHeader);
     replyEl.appendChild(replyText);
     reviewEl.appendChild(replyEl);
+  }
+
+  // Faydalı butonu
+  if (showHelpful !== false) {
+    var helpfulRow = document.createElement('div');
+    helpfulRow.className = 'ikr-helpful-row';
+
+    var voted = getHelpfulVoted(r.id);
+    var count = r.helpfulCount || 0;
+
+    var helpfulBtn = document.createElement('button');
+    helpfulBtn.className = 'ikr-helpful-btn' + (voted ? ' ikr-helpful-btn-active' : '');
+    helpfulBtn.setAttribute('aria-pressed', voted ? 'true' : 'false');
+    helpfulBtn.setAttribute('aria-label', 'Bu yorumu faydalı bul');
+
+    var renderBtnContent = function(c) {
+      helpfulBtn.innerHTML = '';
+      var thumb = document.createElement('span');
+      thumb.textContent = '👍';
+      var label = document.createElement('span');
+      label.textContent = 'Faydalı';
+      helpfulBtn.appendChild(thumb);
+      helpfulBtn.appendChild(label);
+      if (c > 0) {
+        var countEl = document.createElement('span');
+        countEl.className = 'ikr-helpful-count';
+        countEl.textContent = '(' + c + ')';
+        helpfulBtn.appendChild(countEl);
+      }
+    };
+
+    renderBtnContent(count);
+
+    helpfulBtn.onclick = async function() {
+      if (helpfulBtn.disabled) return;
+      helpfulBtn.disabled = true;
+      var isVoted = helpfulBtn.classList.contains('ikr-helpful-btn-active');
+      var method = isVoted ? 'DELETE' : 'POST';
+      try {
+        var res = await fetchWithTimeout(API_BASE + '/api/public/reviews/' + r.id + '/helpful', { method: method });
+        if (res.ok) {
+          var data = await res.json();
+          count = data.helpfulCount || 0;
+          var nowVoted = !isVoted;
+          setHelpfulVoted(r.id, nowVoted);
+          helpfulBtn.classList.toggle('ikr-helpful-btn-active', nowVoted);
+          helpfulBtn.setAttribute('aria-pressed', nowVoted ? 'true' : 'false');
+          renderBtnContent(count);
+        } else if (res.status === 409) {
+          // Farklı cihazda zaten oylanmış — LocalStorage'ı düzelt, butonu aktif göster
+          setHelpfulVoted(r.id, true);
+          helpfulBtn.classList.add('ikr-helpful-btn-active');
+          helpfulBtn.setAttribute('aria-pressed', 'true');
+        }
+      } catch (_) {}
+      helpfulBtn.disabled = false;
+    };
+
+    helpfulRow.appendChild(helpfulBtn);
+    reviewEl.appendChild(helpfulRow);
   }
 
   return reviewEl;
