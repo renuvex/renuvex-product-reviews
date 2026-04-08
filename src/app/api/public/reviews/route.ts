@@ -28,6 +28,13 @@ function containsProfanity(text: string): boolean {
   });
 }
 
+function maskAuthor(name: string): string {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return parts[0] + ' ' + parts[parts.length - 1][0].toLocaleUpperCase('tr-TR') + '.';
+}
+
 async function checkRateLimit(ip: string): Promise<boolean> {
   const key = `ikr_rl:${ip}`;
   const count = await redis.incr(key);
@@ -107,7 +114,7 @@ export async function GET(req: Request) {
       } catch (e) {
         console.error('JSON Parse Error for review images:', r.id, e);
       }
-      return { ...r, images: parsedImages };
+      return { ...r, images: parsedImages, author: maskAuthor(r.author) };
     });
 
     const res = withCors(NextResponse.json({
