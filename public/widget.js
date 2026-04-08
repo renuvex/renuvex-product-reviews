@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T14:25:01.781Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-08T14:48:05.599Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
