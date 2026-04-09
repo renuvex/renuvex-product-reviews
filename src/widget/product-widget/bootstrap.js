@@ -101,15 +101,23 @@ var bootstrapCache = {};
 export async function bootstrap(productId, productName) {
   if (bootstrapCache[productId]) return;
   bootstrapCache[productId] = true;
-  var FALLBACK = { widgetColor: '#111', widgetTitle: 'Müşteri Yorumları' };
+  // Fallback: reviews widget ayarları için varsayılan değerler
+  var FALLBACK = { primaryColor: '#111111', title: 'Müşteri Yorumları', showHelpful: true, enabled: true };
   try {
-    var settings = await fetchSettings();
-    if (!settings) return;
+    var response = await fetchSettings();
+    if (!response) return;
+
+    // API { widgets: { reviews: {...}, badge: {...} } } döndürüyor
+    var reviewsSettings = (response.widgets && response.widgets.reviews) || FALLBACK;
+
+    // Widget devre dışıysa render etme
+    if (reviewsSettings.enabled === false) return;
+
     setCurrentOrderBy('newest');
     setCurrentPage(1);
     setCurrentRatingFilter(null);
     var reviewsData = await fetchReviews(productId, 'newest', 1, null);
-    await render(productId, settings, reviewsData, productName, 'newest', 1);
+    await render(productId, reviewsSettings, reviewsData, productName, 'newest', 1);
   } catch (err) {
     console.error('[ikr] bootstrap error:', err);
     await render(productId, FALLBACK, null, productName);

@@ -19,12 +19,18 @@ export async function renderListingBadges() {
     var slugNameMap = collectSlugs();
     if (!Object.keys(slugNameMap).length) { ls.rendered = false; return; }
     var results = await Promise.all([fetchSettings(), fetchRatings(Object.keys(slugNameMap))]);
-    var settings = results[0];
-    if (!settings) { ls.rendered = false; return; }
+    var response = results[0];
+    if (!response) { ls.rendered = false; return; }
     var ratings = results[1];
 
-    // Widget rengini CSS variable olarak set et — listing badge yıldızları için
-    applyWidgetColor(settings.widgetColor);
+    // Badge rengi: badge.color → reviews.primaryColor → default
+    var widgets = (response && response.widgets) || {};
+    var badgeColor = (widgets.badge && widgets.badge.color) || (widgets.reviews && widgets.reviews.primaryColor) || '#111111';
+
+    // Badge widget devre dışıysa inject etme
+    if (widgets.badge && widgets.badge.enabled === false) { ls.rendered = false; return; }
+
+    applyWidgetColor(badgeColor);
 
     // Fetch tamamlandıktan sonra atomik swap: önce eskileri sil, sonra yenileri inject et
     if (doCleanup) {

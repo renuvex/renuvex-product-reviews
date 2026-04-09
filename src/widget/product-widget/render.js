@@ -27,8 +27,8 @@ export async function render(productId, settings, reviewsData, productName, orde
   if (page) setCurrentPage(page);
 
   try {
-    var widgetColor = settings.widgetColor;
-    var widgetTitle = settings.widgetTitle;
+    var widgetColor = settings.primaryColor || '#111111';
+    var widgetTitle = settings.title || 'Müşteri Yorumları';
 
     injectStyles(widgetColor, CLASSIC_CSS);
 

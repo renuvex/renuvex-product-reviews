@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,53 +9,60 @@ datasource db {
 }
 
 model AuthToken {
-  authorizedAppId String   @id
   merchantId      String
+  authorizedAppId String   @id
   salesChannelId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   accessToken     String
   tokenType       String
   expiresIn       Int
   expireDate      DateTime
   refreshToken    String
   scope           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
 }
 
 model Review {
   id            String   @id @default(uuid())
-  storeId       String   // Which ikas store this belongs to (merchantId)
-  productId     String   // The product ID in Ikas
-  slug          String   // Product slug for listing page badge lookup
-  productName   String?  // The product name captured at the time of review
+  storeId       String
+  productId     String
   rating        Int
-  title         String?  // Yorum başlığı (opsiyonel)
   comment       String?
   author        String
   email         String?
-  status        String   @default("pending") // pending, approved, rejected
-  merchantReply String?  // Store owner's reply to the customer's review
-  images        String?  // JSON stringified array of image URLs — migrate to Json? when table is empty
-  helpfulCount  Int      @default(0)         // kaç kişi faydalı buldu
+  status        String   @default("pending")
+  merchantReply String?
+  images        String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  productName   String?
+  slug          String
+  title         String?
+  helpfulCount  Int      @default(0)
 
-  @@index([storeId, productId])          // ürün yorumları listesi
-  @@index([storeId, slug])               // listing badge API
-  @@index([storeId, status])             // admin panel pending/approved filtresi
-  @@index([storeId, slug, status])       // approved badge sorgusu (slug + status birlikte)
+  @@index([storeId, productId])
+  @@index([storeId, slug])
+  @@index([storeId, status])
+  @@index([storeId, slug, status])
 }
 
-
 model StoreSettings {
-  id               String   @id @default(uuid())
-  storeId          String   @unique
-  widgetColor      String   @default("#000000")
-  widgetTitle      String   @default("Müşteri Yorumları")
-  autoApprove      Boolean  @default(false)
-  showHelpful      Boolean  @default(true)   // "Faydalı" butonunu göster/gizle
-  /// JSON map of storefrontId -> ikas scriptId, used for update-in-place instead of delete+create
+  id                String   @id @default(uuid())
+  storeId           String   @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  /// JSON map of storefrontId -> ikas scriptId
   storefrontScripts Json?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+}
+
+model WidgetSettings {
+  id        String   @id @default(uuid())
+  storeId   String
+  widgetId  String
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, widgetId])
+  @@index([storeId])
 }

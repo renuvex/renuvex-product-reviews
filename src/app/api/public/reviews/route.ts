@@ -179,8 +179,11 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
     }
 
-    const settings = await prisma.storeSettings.findUnique({ where: { storeId } });
-    const initialStatus = settings?.autoApprove ? 'approved' : 'pending';
+    const reviewsWidget = await prisma.widgetSettings.findUnique({
+      where: { storeId_widgetId: { storeId: String(storeId), widgetId: 'reviews' } },
+    });
+    const reviewsConfig = (reviewsWidget?.settings ?? {}) as Record<string, unknown>;
+    const initialStatus = reviewsConfig.autoApprove ? 'approved' : 'pending';
 
     const newReview = await prisma.review.create({
       data: {

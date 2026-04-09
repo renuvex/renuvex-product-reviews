@@ -8,8 +8,8 @@ export async function OPTIONS() {
 
 /**
  * GET /api/public/settings?publicApiKey=<merchantId>
- * Returns widget display settings for the given store.
- * Called by widget.js on every product page load.
+ * Returns all widget settings for widget.js.
+ * Called on every product page load — cached aggressively.
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -19,16 +19,27 @@ export async function GET(req: Request) {
     return withCors(NextResponse.json({ error: 'Missing publicApiKey' }, { status: 400 }));
   }
 
-  const settings = await prisma.storeSettings.findUnique({
+  // StoreSettings'in var olup olmadığını kontrol et (mağaza kayıtlı mı?)
+  const store = await prisma.storeSettings.findUnique({
     where: { storeId: publicApiKey },
-    select: { widgetColor: true, widgetTitle: true, showHelpful: true },
   });
 
-  if (!settings) {
+  if (!store) {
     return withCors(NextResponse.json({ error: 'Store not found' }, { status: 404 }));
   }
 
-  const response = withCors(NextResponse.json(settings));
+  // Tüm widget ayarlarını çek
+  const rows = await prisma.widgetSettings.findMany({
+    where: { storeId: publicApiKey },
+  });
+
+  // { reviews: { enabled: true, color: '#6f55ff', ... }, badge: { ... } }
+  const widgets: Record<string, unknown> = {};
+  for (const row of rows) {
+    widgets[row.widgetId] = row.settings;
+  }
+
+  const response = withCors(NextResponse.json({ widgets }));
   response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
   return response;
 }

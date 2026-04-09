@@ -5,10 +5,10 @@ import { CheckCircle2, MessageSquare, Settings } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
-import { Review, StoreSettings, TabKey } from './types';
+import { Review, WidgetSettingsMap, TabKey } from './types';
 import { ReplyDialog } from './ReplyDialog';
-import { SettingsContainer } from './settings';
 import { ReviewsTab } from './ReviewsTab';
+import { WidgetsContainer } from './widgets';
 
 interface HomePageProps {
   token: string | null;
@@ -22,7 +22,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [tabCounts, setTabCounts] = useState<Record<TabKey, number>>({ pending: 0, approved: 0, rejected: 0, all: 0 });
-  const [settings, setSettings] = useState<StoreSettings>({});
+  const [settings, setSettings] = useState<WidgetSettingsMap>({});
   const [loading, setLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [replyDialog, setReplyDialog] = useState<{ open: boolean; review: Review | null }>({ open: false, review: null });
@@ -81,7 +81,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         fetchReviews('pending', 1),
         axios.get('/api/admin/settings', { headers: { Authorization: `JWT ${token}` } }),
       ]);
-      if (settingsRes.data?.data) setSettings(settingsRes.data.data as StoreSettings);
+      if (settingsRes.data?.data) setSettings(settingsRes.data.data as WidgetSettingsMap);
       fetchAllCounts();
     };
     init();
@@ -157,12 +157,13 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     }
   };
 
-  const saveSettings = async () => {
+  const saveSettings = async (widgetId: string, widgetSettings: Record<string, unknown>) => {
     try {
-      await axios.put('/api/admin/settings', settings, { headers: { Authorization: `JWT ${token}` } });
-      toast.success("Ayarlar başarıyla kaydedildi.");
+      await axios.put('/api/admin/settings', { widgetId, settings: widgetSettings }, { headers: { Authorization: `JWT ${token}` } });
+      toast.success('Ayarlar başarıyla kaydedildi.');
     } catch {
-      toast.error("Ayarlar kaydedilirken bir hata oluştu.");
+      toast.error('Ayarlar kaydedilirken bir hata oluştu.');
+      throw new Error('save_failed');
     }
   };
 
@@ -228,9 +229,9 @@ export default function HomePage({ token, storeName }: HomePageProps) {
             <MessageSquare size={15} className="mr-1.5 shrink-0" />
             <span className="truncate">Yorumlar</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="py-2 px-3 rounded-lg" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium }}>
+          <TabsTrigger value="widgets" className="py-2 px-3 rounded-lg" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium }}>
             <Settings size={15} className="mr-1.5 shrink-0" />
-            <span className="truncate">Widget Ayarları</span>
+            <span className="truncate">Widgetlar</span>
           </TabsTrigger>
         </TabsList>
 
@@ -254,11 +255,13 @@ export default function HomePage({ token, storeName }: HomePageProps) {
           />
         </TabsContent>
 
-        <TabsContent value="settings" className="m-0">
-          <SettingsContainer
+        <TabsContent value="widgets" className="m-0 flex-1 min-w-0">
+          <WidgetsContainer
             settings={settings}
             onChange={setSettings}
-            onSave={saveSettings}
+            onSave={async (widgetId, widgetSettings) => {
+              await saveSettings(widgetId, widgetSettings);
+            }}
           />
         </TabsContent>
       </Tabs>
