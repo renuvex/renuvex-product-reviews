@@ -5,7 +5,6 @@ import { fetchSettings } from '../product-widget/bootstrap.js';
 import { collectSlugs } from './collect.js';
 import { fetchRatings } from './ratings.js';
 import { injectBadges } from './inject.js';
-import { applyWidgetColor } from '../core/helpers.js';
 
 export async function renderListingBadges() {
   if (ls.inProgress) { ls.queued = true; return; }
@@ -30,7 +29,7 @@ export async function renderListingBadges() {
     // Badge widget devre dışıysa inject etme
     if (widgets.badge && widgets.badge.enabled === false) { ls.rendered = false; return; }
 
-    applyWidgetColor(badgeColor);
+    document.documentElement.style.setProperty('--ikr-badge-color', badgeColor);
 
     // Fetch tamamlandıktan sonra atomik swap: önce eskileri sil, sonra yenileri inject et
     if (doCleanup) {

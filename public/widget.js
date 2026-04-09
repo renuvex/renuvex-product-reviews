@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-09T03:24:53.814Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-09T03:32:48.063Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -978,9 +978,9 @@
     if (orderBy) setCurrentOrderBy(orderBy);
     if (page) setCurrentPage(page);
     try {
-      var widgetColor = settings.primaryColor || "#111111";
-      var widgetTitle = settings.title || "M\xFC\u015Fteri Yorumlar\u0131";
-      injectStyles(widgetColor, CLASSIC_CSS);
+      var primaryColor = settings.primaryColor || "#111111";
+      var title = settings.title || "M\xFC\u015Fteri De\u011Ferlendirmeleri";
+      injectStyles(primaryColor, CLASSIC_CSS);
       var container = document.getElementById("ikas-reviews");
       if (!container) {
         var anchorEl = document.getElementById("ikas-reviews-anchor");
@@ -1002,7 +1002,7 @@
         widget.id = "ikas-reviews-widget";
         var h2 = document.createElement("h2");
         h2.className = "ikr-title";
-        h2.textContent = widgetTitle;
+        h2.textContent = title;
         widget.appendChild(h2);
         var allCount = data.data && data.data.allCount || 0;
         var allRatingCounts = data.data && data.data.ratingCounts || null;
@@ -1355,7 +1355,7 @@
   async function bootstrap(productId, productName) {
     if (bootstrapCache[productId]) return;
     bootstrapCache[productId] = true;
-    var FALLBACK = { primaryColor: "#111111", title: "M\xFC\u015Fteri Yorumlar\u0131", showHelpful: true, enabled: true };
+    var FALLBACK = { primaryColor: "#111111", title: "M\xFC\u015Fteri De\u011Ferlendirmeleri", showHelpful: true, enabled: true };
     try {
       var response = await fetchSettings();
       if (!response) return;
@@ -1461,12 +1461,13 @@
   }
 
   // src/widget/core/badge.js
+  var BADGE_STAR_COLOR = "var(--ikr-badge-color,#f59e0b)";
   var BADGE_CSS = "display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;font-weight:400;color:#555;pointer-events:none;";
   function createBadgeEl(rating, justify) {
     var el = document.createElement("div");
     el.setAttribute("data-ikr-listing-badge", "1");
     el.style.cssText = BADGE_CSS + "justify-content:" + (justify || "flex-start") + ";";
-    el.innerHTML = starsHTML(rating.avg, null) + '<span style="font-weight:400;">' + rating.avg + " (" + rating.count + ")</span>";
+    el.innerHTML = '<span style="color:' + BADGE_STAR_COLOR + ';">' + "\u2605".repeat(Math.min(Math.round(parseFloat(rating.avg)) || 0, 5)) + "\u2606".repeat(Math.max(5 - (Math.round(parseFloat(rating.avg)) || 0), 0)) + '</span><span style="font-weight:400;">' + rating.avg + " (" + rating.count + ")</span>";
     return el;
   }
 
@@ -1690,7 +1691,7 @@
         ls.rendered = false;
         return;
       }
-      applyWidgetColor(badgeColor);
+      document.documentElement.style.setProperty("--ikr-badge-color", badgeColor);
       if (doCleanup) {
         document.querySelectorAll("[data-ikr-listing-badge]").forEach(function(el) {
           el.remove();

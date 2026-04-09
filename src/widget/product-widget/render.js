@@ -27,10 +27,10 @@ export async function render(productId, settings, reviewsData, productName, orde
   if (page) setCurrentPage(page);
 
   try {
-    var widgetColor = settings.primaryColor || '#111111';
-    var widgetTitle = settings.title || 'Müşteri Yorumları';
+    var primaryColor = settings.primaryColor || '#111111';
+    var title = settings.title || 'Müşteri Değerlendirmeleri';
 
-    injectStyles(widgetColor, CLASSIC_CSS);
+    injectStyles(primaryColor, CLASSIC_CSS);
 
     var container = document.getElementById('ikas-reviews');
     if (!container) {
@@ -60,7 +60,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       // Başlık
       var h2 = document.createElement('h2');
       h2.className = 'ikr-title';
-      h2.textContent = widgetTitle;
+      h2.textContent = title;
       widget.appendChild(h2);
 
       // Özet istatistik — ortalama puan + bar chart + write a review butonu
