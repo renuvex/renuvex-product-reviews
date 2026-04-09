@@ -2,7 +2,7 @@
 
 import React, { Suspense, lazy, useState, useCallback, useEffect } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
 import { WidgetDef } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
@@ -96,30 +96,28 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
     <>
       {/* Unsaved changes modal */}
       <Dialog open={showUnsavedModal} onOpenChange={(o) => { if (!o) setShowUnsavedModal(false); }}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle style={componentStyles.dialogTitle}>Kaydedilmemiş Değişiklikler</DialogTitle>
           </DialogHeader>
           <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>
             Yaptığınız değişiklikler kaydedilmedi. Ne yapmak istersiniz?
           </p>
-          <DialogFooter style={{ flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button style={componentStyles.btnDefault} onClick={() => setShowUnsavedModal(false)}>
-                Düzenlemeye Devam Et
-              </button>
-              <button style={componentStyles.btnOutlineDanger} onClick={handleDiscardAndExit}>
-                Kaydetmeden Çık
-              </button>
-              <button
-                style={{ ...componentStyles.btnPrimary, opacity: saving ? opacity.disabled : opacity.full }}
-                disabled={saving}
-                onClick={handleSaveAndExit}
-              >
-                {saving ? 'Kaydediliyor...' : 'Kaydet ve Çık'}
-              </button>
-            </div>
-          </DialogFooter>
+          <div style={{ display: 'flex', flexDirection: 'row', gap: 8, justifyContent: 'center', flexWrap: 'nowrap', paddingTop: 8 }}>
+            <button style={componentStyles.btnDefault} onClick={() => setShowUnsavedModal(false)}>
+              Düzenlemeye Devam Et
+            </button>
+            <button style={componentStyles.btnOutlineDanger} onClick={handleDiscardAndExit}>
+              Kaydetmeden Çık
+            </button>
+            <button
+              style={{ ...componentStyles.btnPrimary, opacity: saving ? opacity.disabled : opacity.full }}
+              disabled={saving}
+              onClick={handleSaveAndExit}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet ve Çık'}
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 

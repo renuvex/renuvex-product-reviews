@@ -155,6 +155,7 @@ export const componentStyles = {
     border: `1px solid ${colors.primary}`,
     cursor: 'pointer',
     outline: 'none',
+    whiteSpace: 'nowrap' as const,
   },
   // Doğrulanan: white bg, rgb(227,232,239) border, 4px radius, 44px height, 14px/500
   btnDefault: {
@@ -168,6 +169,7 @@ export const componentStyles = {
     border: `1px solid ${colors.borderDefault}`,
     cursor: 'pointer',
     outline: 'none',
+    whiteSpace: 'nowrap' as const,
   },
   // Küçük button (toolbar, aksiyon alanları) — 32px
   btnSm: {
@@ -207,6 +209,7 @@ export const componentStyles = {
     border: `1px solid ${colors.error}`,
     cursor: 'pointer',
     outline: 'none',
+    whiteSpace: 'nowrap' as const,
   },
   // Doğrulanan: ghost primary — transparent bg, rgb(111,85,255) border+text, 44px height, 14px/500
   btnGhost: {
