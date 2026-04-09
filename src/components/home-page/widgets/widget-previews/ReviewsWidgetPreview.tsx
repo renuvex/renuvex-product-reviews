@@ -16,6 +16,7 @@ const MOCK_REVIEWS = [
     date: '2 gün önce',
     avatarBg: 'rgb(247,245,255)',
     avatarColor: 'rgb(111,85,255)',
+    reply: { name: 'Mağaza Sahibi', text: 'Teşekkür ederiz, memnuniyetiniz bizim için çok değerli!' },
   },
   {
     id: '2',
@@ -26,6 +27,7 @@ const MOCK_REVIEWS = [
     date: '5 gün önce',
     avatarBg: 'rgb(240,253,244)',
     avatarColor: 'rgb(18,183,106)',
+    reply: null,
   },
   {
     id: '3',
@@ -36,6 +38,7 @@ const MOCK_REVIEWS = [
     date: '1 hafta önce',
     avatarBg: 'rgb(255,251,235)',
     avatarColor: 'rgb(245,158,11)',
+    reply: null,
   },
 ];
 
@@ -67,6 +70,11 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
   const title = (settings.title as string) || 'Müşteri Yorumları';
   const showHelpful = (settings.showHelpful as boolean) ?? true;
   const isEnabled = (settings.enabled as boolean) ?? true;
+  const titleSize = (settings.titleSize as number) ?? 24;
+  const reviewTextSize = (settings.reviewTextSize as number) ?? 14;
+  const authorSize = (settings.authorSize as number) ?? 14;
+  const replyNameSize = (settings.replyNameSize as number) ?? 14;
+  const replyTextSize = (settings.replyTextSize as number) ?? 14;
 
   if (!isEnabled) {
     return (
@@ -98,7 +106,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
       <div style={{ padding: '20px 24px', borderBottom: `1px solid ${colors.borderDefault}` }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{
-            fontSize: typography.fontSize.lg,
+            fontSize: titleSize,
             fontWeight: typography.fontWeight.medium,
             color: colors.textPrimary,
             margin: 0,
@@ -144,7 +152,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                    <span style={{ fontSize: authorSize, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
                       {review.author}
                     </span>
                     <Stars rating={review.rating} color={primaryColor} />
@@ -155,7 +163,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
                 </div>
 
                 <p style={{
-                  fontSize: typography.fontSize.base,
+                  fontSize: reviewTextSize,
                   color: colors.textSecondary,
                   lineHeight: '1.6',
                   margin: 0,
@@ -178,6 +186,23 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
                   >
                     👍 Faydalı
                   </button>
+                )}
+
+                {review.reply && (
+                  <div style={{
+                    marginTop: 10,
+                    padding: '10px 14px',
+                    background: 'rgba(0,0,0,0.03)',
+                    borderRadius: radii.default,
+                    borderLeft: `3px solid ${primaryColor}`,
+                  }}>
+                    <div style={{ fontSize: replyNameSize, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: 4 }}>
+                      {review.reply.name}
+                    </div>
+                    <div style={{ fontSize: replyTextSize, color: colors.textSecondary, lineHeight: '1.6' }}>
+                      {review.reply.text}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

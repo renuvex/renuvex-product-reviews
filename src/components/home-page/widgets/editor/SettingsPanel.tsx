@@ -7,6 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Slider } from '@/components/ui/slider';
 import { colors, componentStyles, typography, radii } from '@/lib/design-tokens';
 import { SettingsGroup, SettingField } from '../widgetDefs';
 import { WidgetSettingsDraft } from './WidgetEditor';
@@ -157,6 +158,33 @@ function FieldRenderer({ field, settings, onChange }: {
           </div>
         </div>
       );
+
+    case 'range': {
+      const numVal = Number(value ?? field.default);
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+              {field.label}
+            </label>
+            <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, minWidth: 36, textAlign: 'right' }}>
+              {numVal}px
+            </span>
+          </div>
+          <Slider
+            min={field.min}
+            max={field.max}
+            step={1}
+            value={[numVal]}
+            onValueChange={([v]) => onChange({ ...settings, [field.key]: v })}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 11, color: colors.textMuted }}>{field.min}px</span>
+            <span style={{ fontSize: 11, color: colors.textMuted }}>{field.max}px</span>
+          </div>
+        </div>
+      );
+    }
 
     default:
       return null;

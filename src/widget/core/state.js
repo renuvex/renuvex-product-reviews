@@ -8,6 +8,7 @@ export var currentHasImages = false;
 export var currentProductId = null;
 export var currentSettings = null;
 export var currentProductName = null;
+export var currentReviewsData = null;
 
 export function setCurrentOrderBy(v) { currentOrderBy = v; }
 export function setCurrentPage(v) { currentPage = v; }
@@ -16,6 +17,7 @@ export function setCurrentHasImages(v) { currentHasImages = v; }
 export function setCurrentProductId(v) { currentProductId = v; }
 export function setCurrentSettings(v) { currentSettings = v; }
 export function setCurrentProductName(v) { currentProductName = v; }
+export function setCurrentReviewsData(v) { currentReviewsData = v; }
 
 // render() race condition koruması
 export var renderInProgress = false;

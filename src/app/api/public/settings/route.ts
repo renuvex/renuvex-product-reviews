@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
+import { WIDGETS } from '@/components/home-page/widgets/widgetDefs';
+
+function getWidgetDefaults(widgetId: string): Record<string, unknown> {
+  const widget = WIDGETS.find((w) => w.id === widgetId);
+  if (!widget) return {};
+  const defaults: Record<string, unknown> = {};
+  for (const group of widget.settings) {
+    for (const field of group.fields) {
+      defaults[field.key] = field.default;
+    }
+  }
+  return defaults;
+}
 
 export async function OPTIONS() {
   return corsOptions();
@@ -36,7 +49,7 @@ export async function GET(req: Request) {
   // { reviews: { enabled: true, color: '#6f55ff', ... }, badge: { ... } }
   const widgets: Record<string, unknown> = {};
   for (const row of rows) {
-    widgets[row.widgetId] = row.settings;
+    widgets[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...(row.settings as Record<string, unknown>) };
   }
 
   const response = withCors(NextResponse.json({ widgets }));

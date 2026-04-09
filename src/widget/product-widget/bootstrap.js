@@ -16,6 +16,27 @@ var SETTINGS_CACHE_TTL = 60 * 1000;      // 1 dakika
 var SETTINGS_404_TTL  = 30 * 1000;       // 404 için kısa TTL
 
 export async function fetchSettings() {
+  // Preview modunda sessionStorage'dan ayarları oku — flash olmaz
+  if (window.__ikasPreviewMode) {
+    try {
+      var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
+      var savedSettings = window.__ikasPreviewSettings || sessionStorage.getItem('ikr_preview_settings') || '';
+      var settingsOverride = {};
+      if (savedSettings) {
+        try { settingsOverride = JSON.parse(savedSettings); } catch (_) {}
+      }
+      var previewRes = await fetchWithTimeout(previewBase + '/api/preview/settings');
+      if (previewRes.ok) {
+        var previewData = await previewRes.json();
+        if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
+          previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
+        }
+        return previewData;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   var staleEntry = null;
   var cached = cacheGet(SETTINGS_CACHE_KEY);
   if (cached) {
@@ -59,6 +80,16 @@ export async function fetchSettings() {
 var REVIEWS_CACHE_TTL = 60 * 1000; // 1 dakika
 
 export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages) {
+  // Preview modunda mock endpoint kullan
+  if (window.__ikasPreviewMode) {
+    try {
+      var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
+      var previewRes = await fetchWithTimeout(previewBase + '/api/preview/reviews');
+      if (previewRes.ok) return await previewRes.json();
+    } catch (_) {}
+    return null;
+  }
+
   orderBy = orderBy || 'newest';
   page = page || 1;
   var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0');

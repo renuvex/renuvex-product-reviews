@@ -1,11 +1,20 @@
 'use client';
 
-import React, { Suspense, lazy, useState, useCallback, useEffect } from 'react';
-import { ArrowLeft, Save } from 'lucide-react';
+import React, { Suspense, lazy, useState, useCallback, useEffect, useRef } from 'react';
+import { ArrowLeft, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
 import { WidgetDef } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
+
+// Widgets that support iframe preview (real widget.js)
+const IFRAME_PREVIEW_WIDGETS = ['reviews'];
+
+const VIEWPORT_PRESETS = [
+  { key: 'mobile',  label: 'Mobil',   icon: Smartphone, width: 390  },
+  { key: 'tablet',  label: 'Tablet',  icon: Tablet,     width: 768  },
+  { key: 'desktop', label: 'Masaüstü', icon: Monitor,   width: 1100 },
+] as const;
 
 // widgetDef'teki default değerlerden başlangıç ayarlarını üret,
 // DB'den gelen savedSettings ile override et (eksik key'ler default'tan gelir)
@@ -55,6 +64,9 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   const mergedSaved = mergeWithDefaults(widget, savedSettings);
   const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergedSaved);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const useIframe = IFRAME_PREVIEW_WIDGETS.includes(widget.id);
 
   // Widget değişince (başka widgeta geçilirse) draft sıfırla
   useEffect(() => {
@@ -62,9 +74,25 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widget.id]);
 
+  // Draft değişince iframe'e postMessage gönder
+  useEffect(() => {
+    if (!useIframe || !iframeRef.current?.contentWindow) return;
+    iframeRef.current.contentWindow.postMessage(
+      { type: 'IKR_SETTINGS_UPDATE', settings: draft },
+      '*'
+    );
+  }, [draft, useIframe]);
+
   const dirty = isDirty(draft, mergeWithDefaults(widget, savedSettings));
 
   const PreviewComponent = PREVIEW_MAP[widget.id] ?? null;
+  const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? 1100;
+
+  // iframe src — draft ayarlarını sessionStorage'a yaz, flash önlemek için
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('ikr_preview_settings', JSON.stringify(draft));
+  }
+  const iframeSrc = '/preview';
 
   // Kaydet: draft'ı commit et → parent + DB güncellenir
   const handleSave = useCallback(async () => {
@@ -216,29 +244,80 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
           }}>
             {/* Preview header */}
             <div style={{
-              padding: '12px 20px',
+              padding: '10px 16px',
               borderBottom: `1px solid ${colors.borderDefault}`,
               backgroundColor: colors.bgWhite,
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'space-between',
               gap: 8,
             }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(239,68,68)' }} />
-              <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(245,158,11)' }} />
-              <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(34,197,94)' }} />
-              <span style={{
-                marginLeft: 8,
-                fontSize: typography.fontSize.xs,
-                color: colors.textMuted,
-                fontWeight: typography.fontWeight.medium,
-              }}>
-                Canlı Önizleme
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(239,68,68)' }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(245,158,11)' }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(34,197,94)' }} />
+                <span style={{ marginLeft: 8, fontSize: typography.fontSize.xs, color: colors.textMuted, fontWeight: typography.fontWeight.medium }}>
+                  Canlı Önizleme
+                </span>
+              </div>
+
+              {/* Viewport toolbar — sadece iframe preview için */}
+              {useIframe && (
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {VIEWPORT_PRESETS.map(({ key, label, icon: Icon }) => (
+                    <button
+                      key={key}
+                      title={label}
+                      onClick={() => setViewport(key as typeof viewport)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: 32, height: 32, borderRadius: radii.default, border: 'none',
+                        cursor: 'pointer',
+                        backgroundColor: viewport === key ? colors.primaryBg : 'transparent',
+                        color: viewport === key ? colors.primary : colors.textMuted,
+                      }}
+                    >
+                      <Icon size={16} />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Preview content */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
-              {PreviewComponent ? (
+            <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', backgroundColor: colors.bgPage, padding: useIframe ? 16 : 32 }}>
+              {useIframe ? (
+                <div style={{
+                  width: viewportWidth,
+                  maxWidth: '100%',
+                  transition: 'width 0.25s ease',
+                  border: `1px solid ${colors.borderDefault}`,
+                  borderRadius: radii.lg,
+                  overflow: 'hidden',
+                  backgroundColor: '#fff',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                }}>
+                  <iframe
+                    ref={iframeRef}
+                    src={iframeSrc}
+                    style={{ width: '100%', height: '600px', border: 'none', display: 'block' }}
+                    title="Widget Önizleme"
+                    onLoad={() => {
+                      // Widget initialize olana kadar bekle, sonra draft ayarları gönder
+                      const send = () => {
+                        if (iframeRef.current?.contentWindow) {
+                          iframeRef.current.contentWindow.postMessage(
+                            { type: 'IKR_SETTINGS_UPDATE', settings: draft },
+                            '*'
+                          );
+                        }
+                      };
+                      setTimeout(send, 300);
+                      setTimeout(send, 800);
+                    }}
+                  />
+                </div>
+              ) : PreviewComponent ? (
                 <Suspense fallback={
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: colors.textMuted }}>
                     Yükleniyor...
@@ -248,12 +327,8 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
                 </Suspense>
               ) : (
                 <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '200px',
-                  color: colors.textMuted,
-                  fontSize: typography.fontSize.base,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  height: '200px', color: colors.textMuted, fontSize: typography.fontSize.base,
                 }}>
                   Bu widget için önizleme henüz hazır değil.
                 </div>

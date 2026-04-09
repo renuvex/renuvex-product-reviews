@@ -4,7 +4,8 @@ export type SettingField =
   | { type: 'toggle';  key: string; label: string; default: boolean }
   | { type: 'text';    key: string; label: string; placeholder?: string; default: string }
   | { type: 'color';   key: string; label: string; default: string }
-  | { type: 'select';  key: string; label: string; options: { value: string; label: string }[]; default: string };
+  | { type: 'select';  key: string; label: string; options: { value: string; label: string }[]; default: string }
+  | { type: 'range';   key: string; label: string; min: number; max: number; default: number };
 
 export interface SettingsGroup {
   title: string;
@@ -48,6 +49,16 @@ export const WIDGETS: WidgetDef[] = [
         fields: [
           { type: 'toggle', key: 'autoApprove',  label: 'Yeni Yorumları Otomatik Onayla', default: false },
           { type: 'toggle', key: 'showHelpful',  label: 'Faydalı Butonu Göster',          default: true },
+        ],
+      },
+      {
+        title: 'Boyutlar',
+        fields: [
+          { type: 'range', key: 'titleSize',      label: 'Başlık Boyutu',         min: 16, max: 32, default: 24 },
+          { type: 'range', key: 'reviewTextSize', label: 'Yorum Yazı Boyutu',     min: 12, max: 18, default: 14 },
+          { type: 'range', key: 'authorSize',     label: 'Yazar Adı Boyutu',      min: 12, max: 18, default: 14 },
+          { type: 'range', key: 'replyNameSize',  label: 'Mağaza Adı Boyutu',     min: 12, max: 18, default: 14 },
+          { type: 'range', key: 'replyTextSize',  label: 'Mağaza Yanıtı Boyutu',  min: 12, max: 18, default: 14 },
         ],
       },
     ],

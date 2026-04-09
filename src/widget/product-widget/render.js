@@ -12,6 +12,7 @@ import {
   setRenderInProgress, setPendingRender,
   currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentProductName,
   setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages, setCurrentProductId, setCurrentSettings, setCurrentProductName,
+  setCurrentReviewsData,
 } from '../core/state.js';
 
 export async function render(productId, settings, reviewsData, productName, orderBy, page) {
@@ -25,12 +26,20 @@ export async function render(productId, settings, reviewsData, productName, orde
   setCurrentProductName(productName);
   if (orderBy) setCurrentOrderBy(orderBy);
   if (page) setCurrentPage(page);
+  if (reviewsData !== null && reviewsData !== undefined) setCurrentReviewsData(reviewsData);
 
   try {
     var primaryColor = settings.primaryColor || '#111111';
     var title = settings.title || 'Müşteri Yorumları';
 
     injectStyles(primaryColor, CLASSIC_CSS);
+
+    var root = document.documentElement;
+    root.style.setProperty('--ikr-title-size', (settings.titleSize || 24) + 'px');
+    root.style.setProperty('--ikr-review-text-size', (settings.reviewTextSize || 14) + 'px');
+    root.style.setProperty('--ikr-author-size', (settings.authorSize || 14) + 'px');
+    root.style.setProperty('--ikr-reply-name-size', (settings.replyNameSize || 14) + 'px');
+    root.style.setProperty('--ikr-reply-text-size', (settings.replyTextSize || 14) + 'px');
 
     var container = document.getElementById('ikas-reviews');
     if (!container) {

@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-09T03:34:59.796Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-09T05:03:25.807Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -22,6 +22,7 @@
   var currentProductId = null;
   var currentSettings = null;
   var currentProductName = null;
+  var currentReviewsData = null;
   function setCurrentOrderBy(v) {
     currentOrderBy = v;
   }
@@ -42,6 +43,9 @@
   }
   function setCurrentProductName(v) {
     currentProductName = v;
+  }
+  function setCurrentReviewsData(v) {
+    currentReviewsData = v;
   }
   var renderInProgress = false;
   var pendingRender = null;
@@ -804,7 +808,7 @@
   // src/widget/themes/ozy/styles.js
   var CLASSIC_CSS = `
   #ikas-reviews-widget{color:rgba(0,0,0,1);margin:40px 0;padding:0}
-  .ikr-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:24px}
+  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:24px}
 
   /* Summary \u2014 3 s\xFCtun: puan | barlar | buton */
   .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:6px;margin:0 auto 24px;flex-wrap:wrap;max-width:860px;}
@@ -866,9 +870,9 @@
   .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .ikr-review-stars{font-size:24px;}
   .ikr-review-title{font-weight:700;font-size:16px;color:rgba(0,0,0,1);}
-  .ikr-author{font-size:14px;font-weight:400;font-style:italic;color:rgba(0,0,0,1);margin-top:6px;}
-  .ikr-date{color:rgba(0,0,0,1);font-size:14px;font-weight:400;white-space:nowrap;flex-shrink:0;}
-  .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:14px;font-weight:400;}
+  .ikr-author{font-size:var(--ikr-author-size,14px);font-weight:400;font-style:italic;color:rgba(0,0,0,1);margin-top:6px;}
+  .ikr-date{color:rgba(0,0,0,1);font-size:var(--ikr-review-text-size,14px);font-weight:400;white-space:nowrap;flex-shrink:0;}
+  .ikr-body{margin-top:8px;line-height:1.65;color:rgba(0,0,0,1);font-size:var(--ikr-review-text-size,14px);font-weight:400;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
   .ikr-read-more{display:block;margin-top:4px;color:rgba(0,0,0,1);font-weight:600;cursor:pointer;font-size:12px;}
   .ikr-media-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:12px;}
@@ -876,8 +880,8 @@
   .ikr-img{width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid rgba(0,0,0,0.10);cursor:zoom-in;}
   .ikr-reply{margin-top:12px;padding:12px 16px;background:rgba(0,0,0,0.03);border-radius:6px;border-left:3px solid var(--ikr-color,#000);}
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-  .ikr-reply-label{font-weight:600;font-size:14px;color:rgba(0,0,0,1);}
-  .ikr-reply-text{font-size:14px;font-weight:400;color:rgba(0,0,0,0.75);line-height:1.6;}
+  .ikr-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,14px);color:rgba(0,0,0,1);}
+  .ikr-reply-text{font-size:var(--ikr-reply-text-size,14px);font-weight:400;color:rgba(0,0,0,0.75);line-height:1.6;}
 
   /* Faydal\u0131 butonu */
   .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:none;padding:4px 6px;cursor:pointer;font-size:12px;color:rgba(0,0,0,0.45);font-weight:400;transition:color 0.15s;line-height:1;min-width:44px;}
@@ -977,10 +981,17 @@
     setCurrentProductName(productName);
     if (orderBy) setCurrentOrderBy(orderBy);
     if (page) setCurrentPage(page);
+    if (reviewsData !== null && reviewsData !== void 0) setCurrentReviewsData(reviewsData);
     try {
       var primaryColor = settings.primaryColor || "#111111";
       var title = settings.title || "M\xFC\u015Fteri Yorumlar\u0131";
       injectStyles(primaryColor, CLASSIC_CSS);
+      var root = document.documentElement;
+      root.style.setProperty("--ikr-title-size", (settings.titleSize || 24) + "px");
+      root.style.setProperty("--ikr-review-text-size", (settings.reviewTextSize || 14) + "px");
+      root.style.setProperty("--ikr-author-size", (settings.authorSize || 14) + "px");
+      root.style.setProperty("--ikr-reply-name-size", (settings.replyNameSize || 14) + "px");
+      root.style.setProperty("--ikr-reply-text-size", (settings.replyTextSize || 14) + "px");
       var container = document.getElementById("ikas-reviews");
       if (!container) {
         var anchorEl = document.getElementById("ikas-reviews-anchor");
@@ -1279,6 +1290,29 @@
   var SETTINGS_CACHE_TTL = 60 * 1e3;
   var SETTINGS_404_TTL = 30 * 1e3;
   async function fetchSettings() {
+    if (window.__ikasPreviewMode) {
+      try {
+        var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
+        var savedSettings = window.__ikasPreviewSettings || sessionStorage.getItem("ikr_preview_settings") || "";
+        var settingsOverride = {};
+        if (savedSettings) {
+          try {
+            settingsOverride = JSON.parse(savedSettings);
+          } catch (_) {
+          }
+        }
+        var previewRes = await fetchWithTimeout(previewBase + "/api/preview/settings");
+        if (previewRes.ok) {
+          var previewData = await previewRes.json();
+          if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
+            previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
+          }
+          return previewData;
+        }
+      } catch (_) {
+      }
+      return null;
+    }
     var staleEntry = null;
     var cached = cacheGet(SETTINGS_CACHE_KEY);
     if (cached) {
@@ -1320,6 +1354,15 @@
   }
   var REVIEWS_CACHE_TTL = 60 * 1e3;
   async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages) {
+    if (window.__ikasPreviewMode) {
+      try {
+        var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
+        var previewRes = await fetchWithTimeout(previewBase + "/api/preview/reviews");
+        if (previewRes.ok) return await previewRes.json();
+      } catch (_) {
+      }
+      return null;
+    }
     orderBy = orderBy || "newest";
     page = page || 1;
     var key = "ikr_reviews_" + PUBLIC_API_KEY + "_" + productId + "_" + orderBy + "_" + page + "_" + (ratingFilter || "") + "_" + (hasImages ? "1" : "0");
@@ -1813,7 +1856,26 @@
   }
 
   // src/widget/index.js
-  if (PUBLIC_API_KEY) {
+  var IS_PREVIEW = window.__ikasPreviewMode === true;
+  if (IS_PREVIEW) {
+    let initPreview = function() {
+      bootstrap("mock-product", "\xD6rnek \xDCr\xFCn");
+    };
+    initPreview2 = initPreview;
+    window.addEventListener("message", function(event) {
+      var data = event.data;
+      if (!data || data.type !== "IKR_SETTINGS_UPDATE") return;
+      var s = data.settings;
+      if (!s || !currentSettings) return;
+      var merged = Object.assign({}, currentSettings, s);
+      render(currentProductId, merged, currentReviewsData, currentProductName, currentOrderBy, currentPage);
+    });
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initPreview);
+    } else {
+      initPreview();
+    }
+  } else if (PUBLIC_API_KEY) {
     let init = function() {
       attachEvents();
       attachModalBadgeListener();
@@ -1826,5 +1888,6 @@
       init();
     }
   }
+  var initPreview2;
   var init2;
 })();
