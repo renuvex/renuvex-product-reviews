@@ -28,7 +28,7 @@ export async function render(productId, settings, reviewsData, productName, orde
 
   try {
     var primaryColor = settings.primaryColor || '#111111';
-    var title = settings.title || 'Müşteri Değerlendirmeleri';
+    var title = settings.title || 'Müşteri Yorumları';
 
     injectStyles(primaryColor, CLASSIC_CSS);
 

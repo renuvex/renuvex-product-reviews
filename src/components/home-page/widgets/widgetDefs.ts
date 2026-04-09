@@ -34,7 +34,7 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Genel',
         fields: [
           { type: 'toggle', key: 'enabled',      label: 'Widget Aktif',        default: true },
-          { type: 'text',   key: 'title',         label: 'Widget Başlığı',      placeholder: 'Müşteri Değerlendirmeleri', default: 'Müşteri Değerlendirmeleri' },
+          { type: 'text',   key: 'title',         label: 'Widget Başlığı',      placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları' },
         ],
       },
       {

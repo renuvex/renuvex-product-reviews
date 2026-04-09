@@ -64,7 +64,7 @@ function Stars({ rating, color }: { rating: number; color: string }) {
 
 export function ReviewsWidgetPreview({ settings }: PreviewProps) {
   const primaryColor = (settings.primaryColor as string) ?? '#111111';
-  const title = (settings.title as string) || 'Müşteri Değerlendirmeleri';
+  const title = (settings.title as string) || 'Müşteri Yorumları';
   const showHelpful = (settings.showHelpful as boolean) ?? true;
   const isEnabled = (settings.enabled as boolean) ?? true;
 

@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-09T03:32:48.063Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-09T03:34:59.796Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -979,7 +979,7 @@
     if (page) setCurrentPage(page);
     try {
       var primaryColor = settings.primaryColor || "#111111";
-      var title = settings.title || "M\xFC\u015Fteri De\u011Ferlendirmeleri";
+      var title = settings.title || "M\xFC\u015Fteri Yorumlar\u0131";
       injectStyles(primaryColor, CLASSIC_CSS);
       var container = document.getElementById("ikas-reviews");
       if (!container) {
@@ -1355,7 +1355,7 @@
   async function bootstrap(productId, productName) {
     if (bootstrapCache[productId]) return;
     bootstrapCache[productId] = true;
-    var FALLBACK = { primaryColor: "#111111", title: "M\xFC\u015Fteri De\u011Ferlendirmeleri", showHelpful: true, enabled: true };
+    var FALLBACK = { primaryColor: "#111111", title: "M\xFC\u015Fteri Yorumlar\u0131", showHelpful: true, enabled: true };
     try {
       var response = await fetchSettings();
       if (!response) return;
