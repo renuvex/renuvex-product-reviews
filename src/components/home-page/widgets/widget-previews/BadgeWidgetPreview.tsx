@@ -39,7 +39,7 @@ const SIZE_MAP: Record<string, { icon: number; text: number; padding: string }> 
 export function BadgeWidgetPreview({ settings }: PreviewProps) {
   const isEnabled  = (settings.enabled as boolean) ?? true;
   const iconType   = (settings.icon    as 'star' | 'heart' | 'circle') ?? 'star';
-  const iconColor  = (settings.color   as string) ?? '#6f55ff';
+  const iconColor  = (settings.color   as string) ?? '#f59e0b';
   const sizeKey    = (settings.size    as string) ?? 'medium';
   const sizes      = SIZE_MAP[sizeKey] ?? SIZE_MAP.medium;
 

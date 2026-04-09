@@ -1,10 +1,10 @@
 // ─── Settings field types ────────────────────────────────────────────────────
 
 export type SettingField =
-  | { type: 'toggle';  key: string; label: string }
-  | { type: 'text';    key: string; label: string; placeholder?: string }
-  | { type: 'color';   key: string; label: string }
-  | { type: 'select';  key: string; label: string; options: { value: string; label: string }[] };
+  | { type: 'toggle';  key: string; label: string; default: boolean }
+  | { type: 'text';    key: string; label: string; placeholder?: string; default: string }
+  | { type: 'color';   key: string; label: string; default: string }
+  | { type: 'select';  key: string; label: string; options: { value: string; label: string }[]; default: string };
 
 export interface SettingsGroup {
   title: string;
@@ -33,21 +33,21 @@ export const WIDGETS: WidgetDef[] = [
       {
         title: 'Genel',
         fields: [
-          { type: 'toggle', key: 'enabled',      label: 'Widget Aktif' },
-          { type: 'text',   key: 'title',         label: 'Widget Başlığı', placeholder: 'Müşteri Değerlendirmeleri' },
+          { type: 'toggle', key: 'enabled',      label: 'Widget Aktif',        default: true },
+          { type: 'text',   key: 'title',         label: 'Widget Başlığı',      placeholder: 'Müşteri Değerlendirmeleri', default: 'Müşteri Değerlendirmeleri' },
         ],
       },
       {
         title: 'Görünüm',
         fields: [
-          { type: 'color', key: 'primaryColor', label: 'Ana Tema Rengi' },
+          { type: 'color', key: 'primaryColor', label: 'Ana Tema Rengi', default: '#111111' },
         ],
       },
       {
         title: 'Davranış',
         fields: [
-          { type: 'toggle', key: 'autoApprove',  label: 'Yeni Yorumları Otomatik Onayla' },
-          { type: 'toggle', key: 'showHelpful',  label: 'Faydalı Butonu Göster' },
+          { type: 'toggle', key: 'autoApprove',  label: 'Yeni Yorumları Otomatik Onayla', default: false },
+          { type: 'toggle', key: 'showHelpful',  label: 'Faydalı Butonu Göster',          default: true },
         ],
       },
     ],
@@ -61,7 +61,7 @@ export const WIDGETS: WidgetDef[] = [
       {
         title: 'Genel',
         fields: [
-          { type: 'toggle', key: 'enabled', label: 'Widget Aktif' },
+          { type: 'toggle', key: 'enabled', label: 'Widget Aktif', default: true },
         ],
       },
       {
@@ -71,6 +71,7 @@ export const WIDGETS: WidgetDef[] = [
             type: 'select',
             key: 'icon',
             label: 'Puan İkonu',
+            default: 'star',
             options: [
               { value: 'star',   label: '★ Yıldız' },
               { value: 'heart',  label: '♥ Kalp' },
@@ -81,13 +82,14 @@ export const WIDGETS: WidgetDef[] = [
             type: 'select',
             key: 'size',
             label: 'Rozet Boyutu',
+            default: 'medium',
             options: [
               { value: 'small',  label: 'Küçük' },
               { value: 'medium', label: 'Orta' },
               { value: 'large',  label: 'Büyük' },
             ],
           },
-          { type: 'color', key: 'color', label: 'İkon Rengi' },
+          { type: 'color', key: 'color', label: 'İkon Rengi', default: '#f59e0b' },
         ],
       },
     ],

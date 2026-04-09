@@ -7,6 +7,18 @@ import { colors, componentStyles, radii, typography, opacity } from '@/lib/desig
 import { WidgetDef } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
 
+// widgetDef'teki default değerlerden başlangıç ayarlarını üret,
+// DB'den gelen savedSettings ile override et (eksik key'ler default'tan gelir)
+function mergeWithDefaults(widget: WidgetDef, savedSettings: WidgetSettingsDraft): WidgetSettingsDraft {
+  const defaults: WidgetSettingsDraft = {};
+  for (const group of widget.settings) {
+    for (const field of group.fields) {
+      defaults[field.key] = field.default;
+    }
+  }
+  return { ...defaults, ...savedSettings };
+}
+
 // ─── Lazy preview map ────────────────────────────────────────────────────────
 // Yeni widget eklenince buraya 1 satır ekle, başka hiçbir şeye dokunma.
 
@@ -40,12 +52,12 @@ function isDirty(a: WidgetSettingsDraft, b: WidgetSettingsDraft): boolean {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }: WidgetEditorProps) {
-  const [draft, setDraft] = useState<WidgetSettingsDraft>(() => ({ ...savedSettings }));
+  const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergeWithDefaults(widget, savedSettings));
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
 
   // Widget değişince (başka widgeta geçilirse) draft sıfırla
   useEffect(() => {
-    setDraft({ ...savedSettings });
+    setDraft(mergeWithDefaults(widget, savedSettings));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widget.id]);
 

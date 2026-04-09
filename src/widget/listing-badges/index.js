@@ -25,7 +25,7 @@ export async function renderListingBadges() {
 
     // Badge rengi: badge.color → reviews.primaryColor → default
     var widgets = (response && response.widgets) || {};
-    var badgeColor = (widgets.badge && widgets.badge.color) || (widgets.reviews && widgets.reviews.primaryColor) || '#111111';
+    var badgeColor = (widgets.badge && widgets.badge.color) || '#f59e0b';
 
     // Badge widget devre dışıysa inject etme
     if (widgets.badge && widgets.badge.enabled === false) { ls.rendered = false; return; }
