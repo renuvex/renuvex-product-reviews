@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-08T14:48:05.599Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-09T03:24:53.814Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -978,8 +978,8 @@
     if (orderBy) setCurrentOrderBy(orderBy);
     if (page) setCurrentPage(page);
     try {
-      var widgetColor = settings.widgetColor;
-      var widgetTitle = settings.widgetTitle;
+      var widgetColor = settings.primaryColor || "#111111";
+      var widgetTitle = settings.title || "M\xFC\u015Fteri Yorumlar\u0131";
       injectStyles(widgetColor, CLASSIC_CSS);
       var container = document.getElementById("ikas-reviews");
       if (!container) {
@@ -1355,15 +1355,17 @@
   async function bootstrap(productId, productName) {
     if (bootstrapCache[productId]) return;
     bootstrapCache[productId] = true;
-    var FALLBACK = { widgetColor: "#111", widgetTitle: "M\xFC\u015Fteri Yorumlar\u0131" };
+    var FALLBACK = { primaryColor: "#111111", title: "M\xFC\u015Fteri Yorumlar\u0131", showHelpful: true, enabled: true };
     try {
-      var settings = await fetchSettings();
-      if (!settings) return;
+      var response = await fetchSettings();
+      if (!response) return;
+      var reviewsSettings = response.widgets && response.widgets.reviews || FALLBACK;
+      if (reviewsSettings.enabled === false) return;
       setCurrentOrderBy("newest");
       setCurrentPage(1);
       setCurrentRatingFilter(null);
       var reviewsData = await fetchReviews(productId, "newest", 1, null);
-      await render(productId, settings, reviewsData, productName, "newest", 1);
+      await render(productId, reviewsSettings, reviewsData, productName, "newest", 1);
     } catch (err) {
       console.error("[ikr] bootstrap error:", err);
       await render(productId, FALLBACK, null, productName);
@@ -1676,13 +1678,19 @@
         return;
       }
       var results = await Promise.all([fetchSettings(), fetchRatings(Object.keys(slugNameMap))]);
-      var settings = results[0];
-      if (!settings) {
+      var response = results[0];
+      if (!response) {
         ls.rendered = false;
         return;
       }
       var ratings = results[1];
-      applyWidgetColor(settings.widgetColor);
+      var widgets = response && response.widgets || {};
+      var badgeColor = widgets.badge && widgets.badge.color || "#f59e0b";
+      if (widgets.badge && widgets.badge.enabled === false) {
+        ls.rendered = false;
+        return;
+      }
+      applyWidgetColor(badgeColor);
       if (doCleanup) {
         document.querySelectorAll("[data-ikr-listing-badge]").forEach(function(el) {
           el.remove();
