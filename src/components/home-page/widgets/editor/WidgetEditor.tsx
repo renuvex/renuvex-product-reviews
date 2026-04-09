@@ -52,7 +52,8 @@ function isDirty(a: WidgetSettingsDraft, b: WidgetSettingsDraft): boolean {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }: WidgetEditorProps) {
-  const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergeWithDefaults(widget, savedSettings));
+  const mergedSaved = mergeWithDefaults(widget, savedSettings);
+  const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergedSaved);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
 
   // Widget değişince (başka widgeta geçilirse) draft sıfırla
@@ -61,7 +62,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widget.id]);
 
-  const dirty = isDirty(draft, savedSettings);
+  const dirty = isDirty(draft, mergeWithDefaults(widget, savedSettings));
 
   const PreviewComponent = PREVIEW_MAP[widget.id] ?? null;
 
