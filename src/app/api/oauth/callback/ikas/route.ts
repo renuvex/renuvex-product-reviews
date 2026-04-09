@@ -141,19 +141,27 @@ export async function GET(request: NextRequest) {
         // Load previously saved scriptId map from DB (storefrontId -> ikas scriptId)
         const settings = await prisma.storeSettings.findUnique({ where: { storeId: merchantId } });
         const existingScripts: Record<string, string> = (settings?.storefrontScripts as Record<string, string>) ?? {};
-        const updatedScripts: Record<string, string> = { ...existingScripts };
+        const updatedScripts: Record<string, string> = {};
+
+        // DB boşsa (yeniden kurulum) ikas'taki tüm eski scriptleri temizle
+        const hasNoSavedScripts = Object.keys(existingScripts).length === 0;
+        if (hasNoSavedScripts) {
+          await ikas.mutations.deleteStorefrontJSScript();
+        }
 
         await Promise.all(
           storefrontResponse.data.listStorefront.map(async (storefront) => {
             const storefrontId = storefront.id!;
             const existingScriptId = existingScripts[storefrontId];
 
-            if (existingScriptId) {
+            if (!hasNoSavedScripts && existingScriptId) {
               // Update in-place — does not touch other apps' scripts
               const result = await ikas.mutations.updateStorefrontJSScript({
                 input: { id: existingScriptId, scriptContent },
               });
-              if (!result.isSuccess) {
+              if (result.isSuccess) {
+                updatedScripts[storefrontId] = existingScriptId;
+              } else {
                 // Script may have been deleted externally — fall back to create
                 const created = await ikas.mutations.createStorefrontJSScript({
                   input: {
@@ -169,7 +177,7 @@ export async function GET(request: NextRequest) {
                 }
               }
             } else {
-              // First install for this storefront — create and save the returned ID
+              // Fresh install or DB was reset — create new script
               const created = await ikas.mutations.createStorefrontJSScript({
                 input: {
                   contentType: StorefrontJSScriptContentTypeEnum.SCRIPT,
