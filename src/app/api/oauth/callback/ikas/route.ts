@@ -121,6 +121,9 @@ export async function GET(request: NextRequest) {
       salesChannelId: authorizedAppResponse.data.getAuthorizedApp.salesChannelId || null,
     } as AuthToken;
 
+    // Aynı merchantId'ye ait eski token'ları sil (yeniden kurulumda birikmesin)
+    await prisma.authToken.deleteMany({ where: { merchantId } });
+
     // Store the token for future use
     await AuthTokenManager.put(token);
 
