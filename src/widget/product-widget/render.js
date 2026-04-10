@@ -80,8 +80,8 @@ export async function render(productId, settings, reviewsData, productName, orde
       var widget = document.createElement('div');
       widget.id = 'ikas-reviews-widget';
 
-      // Başlık
-      var h2 = document.createElement('h2');
+      // Başlık — div kullan, h2 mağaza teması tarafından override edilebilir
+      var h2 = document.createElement('div');
       h2.className = 'ikr-title';
       h2.textContent = title;
       widget.appendChild(h2);

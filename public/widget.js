@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-10T21:22:25.588Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-10T23:15:06.057Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -1023,7 +1023,7 @@
         container = fresh;
         var widget = document.createElement("div");
         widget.id = "ikas-reviews-widget";
-        var h2 = document.createElement("h2");
+        var h2 = document.createElement("div");
         h2.className = "ikr-title";
         h2.textContent = title;
         widget.appendChild(h2);
