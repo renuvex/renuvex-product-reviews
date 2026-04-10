@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { colors, componentStyles, typography, radii } from '@/lib/design-tokens';
 import { SettingsGroup, SettingField } from '../widgetDefs';
 import { WidgetSettingsDraft } from './WidgetEditor';
@@ -19,6 +20,8 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
   if (groups.length === 0) {
     return (
       <div style={{ color: colors.textMuted, fontSize: typography.fontSize.base, padding: '16px 0' }}>
@@ -27,21 +30,22 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     );
   }
 
-  const handleReset = () => {
-    if (!window.confirm('Tüm ayarlar ilk günkü fabrika (varsayılan) değerlerine döndürülecektir. Onaylıyor musunuz?')) return;
-    
+  const handleResetClick = () => {
+    setShowConfirm(true);
+  };
+
+  const executeReset = () => {
     const defaults: WidgetSettingsDraft = {};
     groups.forEach(group => {
       group.fields.forEach(field => {
-        // Tanımlı default değeri varsa objemize ekliyoruz
         if (field.default !== undefined) {
           defaults[field.key] = field.default;
         }
       });
     });
     
-    // Eski settings'in üzerine yeni defaultları basıp üst sisteme gönder
     onChange({ ...settings, ...defaults });
+    setShowConfirm(false);
   };
 
   return (
@@ -76,7 +80,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
       {/* Varsayılanlara Sıfırla Butonu */}
       <div style={{ padding: '24px 0', marginTop: 16 }}>
         <button
-          onClick={handleReset}
+          onClick={handleResetClick}
           style={{
             width: '100%',
             padding: '10px',
@@ -103,6 +107,32 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
           Varsayılanlara Sıfırla
         </button>
       </div>
+
+      {/* Sipariş Modal / Dialog */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle style={{ fontSize: typography.fontSize.lg, color: colors.textPrimary }}>Ayarları Sıfırla</DialogTitle>
+          </DialogHeader>
+          <div style={{ padding: '16px 0', color: colors.textSecondary, fontSize: typography.fontSize.base }}>
+            Onaylamanız durumunda tüm geçerli ayarlar silinecek ve ilk günkü fabrika değerlerine dönülecektir. Bu işlem geri alınamaz. Onaylıyor musunuz?
+          </div>
+          <DialogFooter style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 8 }}>
+            <button
+              onClick={() => setShowConfirm(false)}
+              style={{ ...componentStyles.btn, backgroundColor: colors.bgWhite, color: colors.textPrimary, border: \`1px solid \${colors.borderDefault}\` }}
+            >
+              Vazgeç
+            </button>
+            <button
+              onClick={executeReset}
+              style={{ ...componentStyles.btn, backgroundColor: '#dc2626', color: '#fff', border: 'none' }}
+            >
+              Evet, Sıfırla
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
