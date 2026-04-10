@@ -40,8 +40,19 @@ export async function fetchRatings(slugs) {
   }));
 
   batchResults.forEach(function(data) {
-    Object.keys(data).forEach(function(slug) { ratings[slug] = data[slug]; });
+    // missing listesindeki tüm nesnelere önce boş/0 halini set et ki bi daha refetch olmasın
+    missing.forEach(function(slug) {
+      if (!ratings[slug]) {
+        ratings[slug] = { average: 0, count: 0, _empty: true };
+      }
+    });
+
+    Object.keys(data).forEach(function(slug) { 
+      // API'den gelen gerçek data varsa eskisini ez
+      ratings[slug] = data[slug]; 
+    });
   });
+  
   cacheSet(ratingsKey, JSON.stringify({ t: Date.now(), v: ratings }));
   return ratings;
 }

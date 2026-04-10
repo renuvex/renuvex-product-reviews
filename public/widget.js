@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-10T21:15:18.375Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-10T21:20:28.915Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -1507,6 +1507,11 @@
       });
     }));
     batchResults.forEach(function(data) {
+      missing.forEach(function(slug) {
+        if (!ratings[slug]) {
+          ratings[slug] = { average: 0, count: 0, _empty: true };
+        }
+      });
       Object.keys(data).forEach(function(slug) {
         ratings[slug] = data[slug];
       });
