@@ -27,33 +27,83 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     );
   }
 
+  const handleReset = () => {
+    if (!window.confirm('Tüm ayarlar ilk günkü fabrika (varsayılan) değerlerine döndürülecektir. Onaylıyor musunuz?')) return;
+    
+    const defaults: WidgetSettingsDraft = {};
+    groups.forEach(group => {
+      group.fields.forEach(field => {
+        // Tanımlı default değeri varsa objemize ekliyoruz
+        if (field.default !== undefined) {
+          defaults[field.key] = field.default;
+        }
+      });
+    });
+    
+    // Eski settings'in üzerine yeni defaultları basıp üst sisteme gönder
+    onChange({ ...settings, ...defaults });
+  };
+
   return (
-    <Accordion type="multiple" defaultValue={groups.length > 0 ? ['group-0'] : []} className="w-full">
-      {groups.map((group, i) => (
-        <AccordionItem key={group.title} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
-          <AccordionTrigger style={{
-            fontSize: typography.fontSize.base,
+    <>
+      <Accordion type="multiple" defaultValue={groups.length > 0 ? ['group-0'] : []} className="w-full">
+        {groups.map((group, i) => (
+          <AccordionItem key={group.title} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
+            <AccordionTrigger style={{
+              fontSize: typography.fontSize.base,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.textPrimary,
+              padding: '14px 0',
+            }}>
+              {group.title}
+            </AccordionTrigger>
+            <AccordionContent>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
+                {group.fields.map((field) => (
+                  <FieldRenderer
+                    key={field.key}
+                    field={field}
+                    settings={settings}
+                    onChange={onChange}
+                  />
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+
+      {/* Varsayılanlara Sıfırla Butonu */}
+      <div style={{ padding: '24px 0', marginTop: 16 }}>
+        <button
+          onClick={handleReset}
+          style={{
+            width: '100%',
+            padding: '10px',
+            backgroundColor: 'transparent',
+            border: `1px dashed ${colors.borderDefault}`,
+            color: colors.textSecondary,
+            borderRadius: radii.default,
+            cursor: 'pointer',
+            fontSize: typography.fontSize.sm,
             fontWeight: typography.fontWeight.medium,
-            color: colors.textPrimary,
-            padding: '14px 0',
-          }}>
-            {group.title}
-          </AccordionTrigger>
-          <AccordionContent>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
-              {group.fields.map((field) => (
-                <FieldRenderer
-                  key={field.key}
-                  field={field}
-                  settings={settings}
-                  onChange={onChange}
-                />
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#dc2626';
+            e.currentTarget.style.borderColor = '#dc2626';
+            e.currentTarget.style.backgroundColor = '#fef2f2';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = colors.textSecondary;
+            e.currentTarget.style.borderColor = colors.borderDefault;
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          Varsayılanlara Sıfırla
+        </button>
+      </div>
+    </>
   );
 }
 
