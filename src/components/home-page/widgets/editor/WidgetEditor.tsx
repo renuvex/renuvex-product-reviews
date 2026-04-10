@@ -164,7 +164,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
           </p>
           <div style={{ display: 'flex', flexDirection: 'row', gap: 8, justifyContent: 'center', flexWrap: 'nowrap', paddingTop: 8 }}>
             <button style={componentStyles.btnDefault} onClick={() => setShowUnsavedModal(false)}>
-              Düzenlemeye Devam Et
+              Devam Et
             </button>
             <button style={componentStyles.btnOutlineDanger} onClick={handleDiscardAndExit}>
               Kaydetmeden Çık
