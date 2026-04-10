@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-10T21:20:28.915Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-10T21:22:25.588Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -1693,7 +1693,7 @@
         }
       });
     }
-    if (!slug || !ratings[slug]) return;
+    if (!slug || !ratings[slug] || ratings[slug]._empty || ratings[slug].count === 0) return;
     h1.appendChild(createBadgeEl(ratings[slug], "flex-start"));
   }
   function injectBadges(slugNameMap, ratings) {
@@ -1711,7 +1711,7 @@
     });
     Object.keys(slugNameMap).forEach(function(slug) {
       var rating = ratings[slug];
-      if (!rating) return;
+      if (!rating || rating._empty || rating.count === 0) return;
       var productName = slugNameMap[slug];
       links.forEach(function(a) {
         if (extractSlug(a.href) !== slug) return;

@@ -153,7 +153,7 @@ function injectModalBadge(slugNameMap, ratings) {
     });
   }
 
-  if (!slug || !ratings[slug]) return;
+  if (!slug || !ratings[slug] || ratings[slug]._empty || ratings[slug].count === 0) return;
   h1.appendChild(createBadgeEl(ratings[slug], 'flex-start'));
 }
 
@@ -173,7 +173,7 @@ export function injectBadges(slugNameMap, ratings) {
   });
   Object.keys(slugNameMap).forEach(function(slug) {
     var rating = ratings[slug];
-    if (!rating) return;
+    if (!rating || rating._empty || rating.count === 0) return;
     var productName = slugNameMap[slug];
     links.forEach(function(a) {
       if (extractSlug(a.href) !== slug) return;
