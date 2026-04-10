@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-10T20:04:45.493Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-10T21:08:29.874Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -1003,6 +1003,15 @@
         container.id = "ikas-reviews";
         container.style.minHeight = "200px";
         anchorEl.appendChild(container);
+      }
+      if (settings.enabled === false) {
+        container.style.minHeight = "auto";
+        container.innerHTML = '<div style="padding: 40px 20px; margin-top: 24px; text-align: center; color: #666; font-family: Inter, sans-serif; border: 1px dashed #ccc; border-radius: ' + (settings.borderRadius !== void 0 ? settings.borderRadius : 8) + 'px; background: #fafafa; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #999;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg><div style="font-weight: 500; font-size: 15px; color: #111;">Widget \u015Fu anda Pasif durumda.</div><div style="font-size: 13px; color: #777; max-width: 320px;">Canl\u0131 ma\u011Fazan\u0131zda m\xFC\u015Fterileriniz hi\xE7bir yorum alan\u0131 g\xF6rmeyecektir.</div></div>';
+        setRenderInProgress(false);
+        var p = pendingRender;
+        setPendingRender(null);
+        if (p) render(p.productId, p.settings, p.reviewsData, p.productName, p.orderBy, p.page);
+        return;
       }
       container.innerHTML = '<p style="text-align:center;padding:40px;color:#999;font-size:14px;">Yorumlar y\xFCkleniyor...</p>';
       try {
