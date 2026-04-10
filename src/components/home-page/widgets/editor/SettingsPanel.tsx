@@ -82,25 +82,23 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
         <button
           onClick={handleResetClick}
           style={{
+            ...componentStyles.btnDefault,
             width: '100%',
-            padding: '10px',
             backgroundColor: 'transparent',
             border: `1px dashed ${colors.borderDefault}`,
             color: colors.textSecondary,
-            borderRadius: radii.default,
-            cursor: 'pointer',
-            fontSize: typography.fontSize.sm,
-            fontWeight: typography.fontWeight.medium,
             transition: 'all 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#dc2626';
-            e.currentTarget.style.borderColor = '#dc2626';
-            e.currentTarget.style.backgroundColor = '#fef2f2';
+            e.currentTarget.style.color = colors.errorText;          // rgb(255, 0, 0)
+            e.currentTarget.style.borderColor = colors.errorBorder;  // rgb(227, 225, 229)
+            e.currentTarget.style.borderStyle = 'solid';
+            e.currentTarget.style.backgroundColor = colors.bgWhite;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.color = colors.textSecondary;
             e.currentTarget.style.borderColor = colors.borderDefault;
+            e.currentTarget.style.borderStyle = 'dashed';
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
@@ -112,21 +110,21 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle style={{ fontSize: typography.fontSize.lg, color: colors.textPrimary }}>Ayarları Sıfırla</DialogTitle>
+            <DialogTitle style={{ fontSize: typography.fontSize.lg, color: colors.textPrimary }}>Varsayılanlara Sıfırla</DialogTitle>
           </DialogHeader>
           <div style={{ padding: '16px 0', color: colors.textSecondary, fontSize: typography.fontSize.base }}>
-            Onaylamanız durumunda tüm geçerli ayarlar silinecek ve ilk günkü fabrika değerlerine dönülecektir. Bu işlem geri alınamaz. Onaylıyor musunuz?
+            Tüm tasarım değişiklikleriniz silinecek ve widget varsayılan tasarıma dönecektir. Bu işlem geri alınamaz, onaylıyor musunuz?
           </div>
           <DialogFooter style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 8 }}>
             <button
               onClick={() => setShowConfirm(false)}
-              style={{ ...componentStyles.btn, backgroundColor: colors.bgWhite, color: colors.textPrimary, border: `1px solid ${colors.borderDefault}` }}
+              style={componentStyles.btnDefault}
             >
               Vazgeç
             </button>
             <button
               onClick={executeReset}
-              style={{ ...componentStyles.btn, backgroundColor: '#dc2626', color: '#fff', border: 'none' }}
+              style={componentStyles.btnDanger}
             >
               Evet, Sıfırla
             </button>
