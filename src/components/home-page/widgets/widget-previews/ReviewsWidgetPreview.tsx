@@ -75,6 +75,10 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
   const authorSize = (settings.authorSize as number) ?? 14;
   const replyNameSize = (settings.replyNameSize as number) ?? 14;
   const replyTextSize = (settings.replyTextSize as number) ?? 14;
+  
+  // -- Border Radius --
+  const widgetRadius = (settings.borderRadius as number) ?? 8;
+  const innerRadius = Math.max(0, widgetRadius - 4); // Yorum içi öğelerin orantılı ovalliği
 
   if (!isEnabled) {
     return (
@@ -86,7 +90,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
         color: colors.textMuted,
         fontSize: typography.fontSize.base,
         border: `2px dashed ${colors.borderDefault}`,
-        borderRadius: radii.lg,
+        borderRadius: widgetRadius,
       }}>
         Widget devre dışı
       </div>
@@ -97,7 +101,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
     <div style={{
       backgroundColor: colors.bgWhite,
       border: `1px solid ${colors.borderDefault}`,
-      borderRadius: radii.lg,
+      borderRadius: widgetRadius,
       boxShadow: shadows.antCard,
       overflow: 'hidden',
       maxWidth: 600,
@@ -179,7 +183,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
                       color: colors.textMuted,
                       background: 'none',
                       border: `1px solid ${colors.borderLight}`,
-                      borderRadius: radii.default,
+                      borderRadius: innerRadius,
                       padding: '3px 10px',
                       cursor: 'pointer',
                     }}
@@ -193,7 +197,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
                     marginTop: 10,
                     padding: '10px 14px',
                     background: 'rgba(0,0,0,0.03)',
-                    borderRadius: radii.default,
+                    borderRadius: innerRadius,
                     borderLeft: `3px solid ${primaryColor}`,
                   }}>
                     <div style={{ fontSize: replyNameSize, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: 4 }}>

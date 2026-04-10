@@ -113,15 +113,16 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
     return () => clearTimeout(timer);
   }, [draft, useIframe]);
 
+  // draft değişince sessionStorage'a yaz — iframe flash önlemek için (effect içinde, render'da değil)
+  useEffect(() => {
+    sessionStorage.setItem('ikr_preview_settings', JSON.stringify(draft));
+  }, [draft]);
+
   const dirty = isDirty(draft, mergeWithDefaults(widget, savedSettings));
 
   const PreviewComponent = PREVIEW_MAP[widget.id] ?? null;
   const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? 1100;
 
-  // iframe src — draft ayarlarını sessionStorage'a yaz, flash önlemek için
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem('ikr_preview_settings', JSON.stringify(draft));
-  }
   const iframeSrc = '/preview';
 
   // Kaydet: draft'ı commit et → parent + DB güncellenir
@@ -254,7 +255,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
         <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
           {/* Sol — Ayarlar */}
-          <div className="ikr-settings-scroll" style={{ width: '380px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', height: '100%', scrollbarGutter: 'stable' as React.CSSProperties['scrollbarGutter'], paddingRight: 8, paddingLeft: 16 }}>
+          <div className="ikr-settings-scroll" style={{ width: '380px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', height: '100%', paddingRight: 8, paddingLeft: 16 }}>
             <SettingsPanel
               groups={widget.settings}
               settings={draft}

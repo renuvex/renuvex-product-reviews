@@ -28,9 +28,9 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
   }
 
   return (
-    <Accordion type="multiple" defaultValue={[]} className="w-full">
+    <Accordion type="multiple" defaultValue={groups.length > 0 ? ['group-0'] : []} className="w-full">
       {groups.map((group, i) => (
-        <AccordionItem key={i} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
+        <AccordionItem key={group.title} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
           <AccordionTrigger style={{
             fontSize: typography.fontSize.base,
             fontWeight: typography.fontWeight.medium,
@@ -72,7 +72,7 @@ function FieldRenderer({ field, settings, onChange }: {
         <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
           <input
             type="checkbox"
-            checked={Boolean(value ?? true)}
+            checked={Boolean(value ?? field.default ?? true)}
             onChange={(e) => onChange({ ...settings, [field.key]: e.target.checked })}
             style={{ width: 16, height: 16, cursor: 'pointer', accentColor: colors.primary }}
           />

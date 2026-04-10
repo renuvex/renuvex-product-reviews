@@ -65,7 +65,7 @@
   /* controls */
   --border: #eef2f6; /* border */
   --input: #eef2f6;
-  --ring: #2a9ef2; /* blue */
+  --ring: #6f55ff; /* purple (primary) */
   /* charts */
   --chart-1: #dcfb6e; /* neon */
   --chart-2: #2a9ef2; /* blue */
@@ -80,7 +80,7 @@
   --sidebar-accent: #f8fafc;
   --sidebar-accent-foreground: #121926;
   --sidebar-border: #eef2f6;
-  --sidebar-ring: #2a9ef2;
+  --sidebar-ring: #6f55ff;
   /* extras */
   --modal-bg: rgba(19, 19, 24, 0.8);
   --icon: #697586;
@@ -104,7 +104,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
+  --ring: oklch(0.929 0.013 255.508);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -117,7 +117,7 @@
   --sidebar-accent: oklch(0.279 0.041 260.031);
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --sidebar-ring: oklch(0.929 0.013 255.508);
 }
 
 @layer base {
@@ -132,6 +132,7 @@
 /* Widget editor — ince scrollbar (settings paneli) */
 .ikr-settings-scroll {
   scrollbar-width: thin;
+  scrollbar-gutter: stable;
   scrollbar-color: rgb(213 205 255) transparent;
 }
 .ikr-settings-scroll::-webkit-scrollbar {

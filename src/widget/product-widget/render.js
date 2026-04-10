@@ -35,11 +35,14 @@ export async function render(productId, settings, reviewsData, productName, orde
     injectStyles(primaryColor, CLASSIC_CSS);
 
     var root = document.documentElement;
+    var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
     root.style.setProperty('--ikr-title-size', (settings.titleSize || 24) + 'px');
     root.style.setProperty('--ikr-review-text-size', (settings.reviewTextSize || 14) + 'px');
     root.style.setProperty('--ikr-author-size', (settings.authorSize || 14) + 'px');
     root.style.setProperty('--ikr-reply-name-size', (settings.replyNameSize || 14) + 'px');
     root.style.setProperty('--ikr-reply-text-size', (settings.replyTextSize || 14) + 'px');
+    root.style.setProperty('--ikr-radius', radius + 'px');
+    root.style.setProperty('--ikr-radius-sm', Math.max(0, radius - 4) + 'px');
 
     var container = document.getElementById('ikas-reviews');
     if (!container) {
