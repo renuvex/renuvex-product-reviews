@@ -65,13 +65,24 @@ export function WidgetsContainer({ settings, onChange, onSave }: WidgetsContaine
 
   if (editingWidget) {
     return (
-      <WidgetEditor
-        widget={editingWidget}
-        savedSettings={editingWidgetSettings}
-        saving={saving}
-        onCommit={(committed) => handleCommit(editingWidget.id, committed)}
-        onBack={() => setEditingId(null)}
-      />
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        backgroundColor: '#fff',
+        overflowY: 'auto',
+        padding: '24px 32px',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        <WidgetEditor
+          widget={editingWidget}
+          savedSettings={editingWidgetSettings}
+          saving={saving}
+          onCommit={(committed) => handleCommit(editingWidget.id, committed)}
+          onBack={() => setEditingId(null)}
+        />
+      </div>
     );
   }
 

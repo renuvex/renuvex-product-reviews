@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -27,10 +27,8 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     );
   }
 
-  const defaultOpen = groups.map((_, i) => `group-${i}`);
-
   return (
-    <Accordion type="multiple" defaultValue={defaultOpen} className="w-full">
+    <Accordion type="multiple" defaultValue={[]} className="w-full">
       {groups.map((group, i) => (
         <AccordionItem key={i} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
           <AccordionTrigger style={{
@@ -102,33 +100,11 @@ function FieldRenderer({ field, settings, onChange }: {
 
     case 'color':
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-            {field.label}
-          </label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              type="color"
-              value={String(value ?? '#6f55ff')}
-              onChange={(e) => onChange({ ...settings, [field.key]: e.target.value })}
-              style={{
-                width: 44,
-                height: 40,
-                padding: 4,
-                border: `1px solid ${colors.borderDefault}`,
-                borderRadius: radii.default,
-                cursor: 'pointer',
-                backgroundColor: colors.bgWhite,
-              }}
-            />
-            <input
-              type="text"
-              value={String(value ?? '#6f55ff')}
-              onChange={(e) => onChange({ ...settings, [field.key]: e.target.value })}
-              style={{ ...componentStyles.input, flex: 1 }}
-            />
-          </div>
-        </div>
+        <ColorField
+          field={field}
+          value={String(value ?? '#6f55ff')}
+          onCommit={(v) => onChange({ ...settings, [field.key]: v })}
+        />
       );
 
     case 'select':
@@ -189,4 +165,59 @@ function FieldRenderer({ field, settings, onChange }: {
     default:
       return null;
   }
+}
+
+// ─── Color field ─────────────────────────────────────────────────────────────
+// Kompakt: label solda, renk karesi sağda. Kareye tıklayınca native picker açılır.
+// Local state + 120ms debounce — picker sürerken parent re-render olmaz.
+
+function ColorField({ field, value, onCommit }: {
+  field: Extract<SettingField, { type: 'color' }>;
+  value: string;
+  onCommit: (v: string) => void;
+}) {
+  const [local, setLocal] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setLocal(value); }, [value]);
+  useEffect(() => () => { if (commitTimerRef.current) clearTimeout(commitTimerRef.current); }, []);
+
+  const handleChange = (next: string) => {
+    setLocal(next);
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+    commitTimerRef.current = setTimeout(() => onCommit(next), 120);
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <label style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>
+        {field.label}
+      </label>
+      <div style={{ position: 'relative', width: 24, height: 24, flexShrink: 0 }}>
+        {/* Renk önizleme — pointer events yok, sadece görsel */}
+        <div style={{
+          width: 24, height: 24,
+          border: `1px solid ${colors.borderDefault}`,
+          borderRadius: radii.default,
+          backgroundColor: local,
+          pointerEvents: 'none',
+        }} />
+        {/* Native picker tam üstüne bindirildi, opacity 0 ama tıklanabilir */}
+        <input
+          ref={inputRef}
+          type="color"
+          value={local}
+          onChange={(e) => handleChange(e.target.value)}
+          aria-label={`${field.label} seç`}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            opacity: 0, cursor: 'pointer',
+            border: 'none', padding: 0,
+          }}
+        />
+      </div>
+    </div>
+  );
 }

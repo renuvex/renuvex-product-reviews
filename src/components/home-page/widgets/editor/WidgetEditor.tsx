@@ -66,6 +66,8 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const widgetReadyRef = useRef(false);
+  const draftRef = useRef<WidgetSettingsDraft>({});
   const useIframe = IFRAME_PREVIEW_WIDGETS.includes(widget.id);
 
   // Widget değişince (başka widgeta geçilirse) draft sıfırla
@@ -74,13 +76,41 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widget.id]);
 
-  // Draft değişince iframe'e postMessage gönder
+  // draft'ı ref'te tut — ready event geldiğinde stale closure olmasın
   useEffect(() => {
-    if (!useIframe || !iframeRef.current?.contentWindow) return;
-    iframeRef.current.contentWindow.postMessage(
-      { type: 'IKR_SETTINGS_UPDATE', settings: draft },
-      '*'
-    );
+    draftRef.current = draft;
+  }, [draft]);
+
+  // Widget iframe'i hazır olduğunu bildirdiğinde (IKR_WIDGET_READY) mevcut draft'ı gönder
+  useEffect(() => {
+    if (!useIframe) return;
+    function onMessage(event: MessageEvent) {
+      if (event.data?.type !== 'IKR_WIDGET_READY') return;
+      widgetReadyRef.current = true;
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage(
+          { type: 'IKR_SETTINGS_UPDATE', settings: draftRef.current },
+          '*'
+        );
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [useIframe]);
+
+  // Draft değişince iframe'e postMessage gönder — debounced (slider spam koruması)
+  useEffect(() => {
+    if (!useIframe) return;
+    if (!widgetReadyRef.current) return;
+    const timer = setTimeout(() => {
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage(
+          { type: 'IKR_SETTINGS_UPDATE', settings: draft },
+          '*'
+        );
+      }
+    }, 50);
+    return () => clearTimeout(timer);
   }, [draft, useIframe]);
 
   const dirty = isDirty(draft, mergeWithDefaults(widget, savedSettings));
@@ -221,10 +251,10 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
         </div>
 
         {/* Split-pane body */}
-        <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
           {/* Sol — Ayarlar */}
-          <div style={{ width: '380px', flexShrink: 0, overflowY: 'auto' }}>
+          <div className="ikr-settings-scroll" style={{ width: '380px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', height: '100%', scrollbarGutter: 'stable' as React.CSSProperties['scrollbarGutter'], paddingRight: 8, paddingLeft: 16 }}>
             <SettingsPanel
               groups={widget.settings}
               settings={draft}
@@ -303,17 +333,17 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
                     style={{ width: '100%', height: '600px', border: 'none', display: 'block' }}
                     title="Widget Önizleme"
                     onLoad={() => {
-                      // Widget initialize olana kadar bekle, sonra draft ayarları gönder
-                      const send = () => {
+                      widgetReadyRef.current = false;
+                      // IKR_WIDGET_READY zaten geldiyse veya gelmezse 100ms sonra fallback gönder
+                      setTimeout(() => {
                         if (iframeRef.current?.contentWindow) {
+                          widgetReadyRef.current = true;
                           iframeRef.current.contentWindow.postMessage(
-                            { type: 'IKR_SETTINGS_UPDATE', settings: draft },
+                            { type: 'IKR_SETTINGS_UPDATE', settings: draftRef.current },
                             '*'
                           );
                         }
-                      };
-                      setTimeout(send, 300);
-                      setTimeout(send, 800);
+                      }, 100);
                     }}
                   />
                 </div>

@@ -22,8 +22,13 @@ if (IS_PREVIEW) {
     render(currentProductId, merged, currentReviewsData, currentProductName, currentOrderBy, currentPage);
   });
 
+  function notifyReady() {
+    try { window.parent.postMessage({ type: 'IKR_WIDGET_READY' }, '*'); } catch (e) {}
+  }
+
   function initPreview() {
     bootstrap('mock-product', 'Örnek Ürün');
+    notifyReady();
   }
 
   if (document.readyState === 'loading') {
