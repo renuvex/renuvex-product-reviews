@@ -12,7 +12,7 @@ import {
 // ── Settings ─────────────────────────────────────────────────────────────────
 
 var SETTINGS_CACHE_KEY = 'ikr_settings_' + PUBLIC_API_KEY;
-var SETTINGS_CACHE_TTL = 60 * 1000;      // 1 dakika
+var SETTINGS_CACHE_TTL = 5 * 60 * 1000;  // 5 dakika
 var SETTINGS_404_TTL  = 30 * 1000;       // 404 için kısa TTL
 
 export async function fetchSettings() {

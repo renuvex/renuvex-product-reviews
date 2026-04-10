@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-10T23:15:06.057Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-10T23:29:42.124Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -1299,7 +1299,7 @@
 
   // src/widget/product-widget/bootstrap.js
   var SETTINGS_CACHE_KEY = "ikr_settings_" + PUBLIC_API_KEY;
-  var SETTINGS_CACHE_TTL = 60 * 1e3;
+  var SETTINGS_CACHE_TTL = 5 * 60 * 1e3;
   var SETTINGS_404_TTL = 30 * 1e3;
   async function fetchSettings() {
     if (window.__ikasPreviewMode) {
@@ -1470,7 +1470,7 @@
   }
 
   // src/widget/listing-badges/ratings.js
-  var RATINGS_CACHE_TTL = 60 * 1e3;
+  var RATINGS_CACHE_TTL = 5 * 60 * 1e3;
   var RATINGS_BATCH_SIZE = 50;
   async function fetchRatings(slugs) {
     var ratingsKey = "ikr_ratings_" + PUBLIC_API_KEY;

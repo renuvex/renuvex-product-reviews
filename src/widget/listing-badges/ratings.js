@@ -4,7 +4,7 @@ import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
 
-var RATINGS_CACHE_TTL = 60 * 1000; // 1 dakika
+var RATINGS_CACHE_TTL = 5 * 60 * 1000; // 5 dakika
 var RATINGS_BATCH_SIZE = 50;
 
 export async function fetchRatings(slugs) {
