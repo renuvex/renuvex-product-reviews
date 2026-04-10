@@ -120,7 +120,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
           <DialogFooter style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 8 }}>
             <button
               onClick={() => setShowConfirm(false)}
-              style={{ ...componentStyles.btn, backgroundColor: colors.bgWhite, color: colors.textPrimary, border: \`1px solid \${colors.borderDefault}\` }}
+              style={{ ...componentStyles.btn, backgroundColor: colors.bgWhite, color: colors.textPrimary, border: `1px solid ${colors.borderDefault}` }}
             >
               Vazgeç
             </button>
