@@ -63,6 +63,7 @@ export async function POST(request: Request) {
             }
             return { storefrontId, action: 'failed' };
           }
+          updatedScripts[storefrontId] = existingScriptId;
           return { storefrontId, action: 'updated' };
         } else {
           // Bu tema için ilk kez script oluştur

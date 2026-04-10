@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const { code, state, signature } = validation.data;
 
     // Validate code signature
-    if (signature &&!TokenHelpers.validateCodeSignature(code, signature, config.oauth.clientSecret!)) {
+    if (signature && !TokenHelpers.validateCodeSignature(code, signature, config.oauth.clientSecret!)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 

@@ -86,3 +86,5 @@ WARP.md
 config.toml
 opencode.json
 # END Ruler Generated Files
+*.proje-dokuman.md
+.claude/
