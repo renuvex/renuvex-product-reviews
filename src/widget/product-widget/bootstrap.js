@@ -166,24 +166,19 @@ export function getProductFromPage() {
   try {
     var pageProps = window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps;
     if (pageProps && pageProps.pageType === 'PRODUCT' && pageProps.pageSpecificData && pageProps.pageSpecificData.id) {
-      console.debug('[ikr] product detected via __NEXT_DATA__:', pageProps.pageSpecificData.id);
       return { id: pageProps.pageSpecificData.id, name: pageProps.pageSpecificData.name || null };
     }
   } catch (_) {}
   if (window.IkasStorefront && window.IkasStorefront.product && window.IkasStorefront.product.id) {
-    console.debug('[ikr] product detected via IkasStorefront:', window.IkasStorefront.product.id);
     return { id: window.IkasStorefront.product.id, name: window.IkasStorefront.product.name || null };
   }
   var match = window.location.pathname.match(/--([a-f0-9-]{36})(?:\/|$|\?)/);
   if (match) {
-    console.debug('[ikr] product detected via URL regex:', match[1]);
     return { id: match[1], name: null };
   }
   var qp = new URLSearchParams(window.location.search).get('productId');
   if (qp) {
-    console.debug('[ikr] product detected via query param:', qp);
     return { id: qp, name: null };
   }
-  console.debug('[ikr] product not detected — widget will not render');
   return null;
 }

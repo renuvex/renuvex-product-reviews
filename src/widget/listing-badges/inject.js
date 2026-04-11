@@ -98,11 +98,9 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
 
   if (titleEl) {
     var tAlign = window.getComputedStyle(titleEl).textAlign;
-    console.debug('[ikr] inject badge into titleEl:', titleEl, 'for slug:', extractSlug(a.href));
     titleEl.appendChild(createBadgeEl(rating, tAlign === 'center' ? 'center' : tAlign === 'right' ? 'flex-end' : 'flex-start'));
   } else {
     // Pattern 3 — direkt text node içeren link
-    console.debug('[ikr] inject badge into link directly:', a, 'for slug:', extractSlug(a.href));
     var badge = createBadgeEl(rating, 'flex-start');
     var first = a.firstElementChild;
     first ? a.insertBefore(badge, first) : a.appendChild(badge);
