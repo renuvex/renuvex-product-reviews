@@ -80,11 +80,12 @@ export async function fetchSettings() {
 var REVIEWS_CACHE_TTL = 60 * 1000; // 1 dakika
 
 export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages) {
-  // Preview modunda mock endpoint kullan
+  // Preview modunda mock endpoint kullan — page parametresi load more testi için
   if (window.__ikasPreviewMode) {
     try {
       var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
-      var previewRes = await fetchWithTimeout(previewBase + '/api/preview/reviews');
+      var previewUrl = previewBase + '/api/preview/reviews?page=' + encodeURIComponent(page || 1);
+      var previewRes = await fetchWithTimeout(previewUrl);
       if (previewRes.ok) return await previewRes.json();
     } catch (_) {}
     return null;
