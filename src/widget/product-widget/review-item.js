@@ -116,6 +116,20 @@ export function buildReviewEl(r, allReviews, showHelpful) {
       if (helpfulBtn.disabled) return;
       helpfulBtn.disabled = true;
       var isVoted = helpfulBtn.classList.contains('ikr-helpful-btn-active');
+
+      // Preview modunda network çağrısı yok — mock ID'ler prod endpoint'inde
+      // bulunamaz. Client-side simülasyon: count ve aktif durumu lokal toggle.
+      if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
+        var nowVotedPreview = !isVoted;
+        count += nowVotedPreview ? 1 : -1;
+        if (count < 0) count = 0;
+        helpfulBtn.classList.toggle('ikr-helpful-btn-active', nowVotedPreview);
+        helpfulBtn.setAttribute('aria-pressed', nowVotedPreview ? 'true' : 'false');
+        renderBtnContent(count, nowVotedPreview);
+        helpfulBtn.disabled = false;
+        return;
+      }
+
       var method = isVoted ? 'DELETE' : 'POST';
       try {
         var res = await fetchWithTimeout(API_BASE + '/api/public/reviews/' + r.id + '/helpful', { method: method });
