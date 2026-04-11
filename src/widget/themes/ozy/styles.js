@@ -16,9 +16,15 @@
 //   --ikr-input-text  : input yazı rengi
 
 export var CLASSIC_CSS = `
-  /* Widget dış kutu — anchor div'in full genişliğini alır, arka planı temadan
-     gelir. İçerideki bölümler .ikr-inner ile 860px max-width'e ortalanır. */
-  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-bg,transparent);margin:40px 0;padding:40px 16px;box-sizing:border-box;}
+  /* Widget dış kutu — full-bleed: mağaza teması widget'ı padding'li bir
+     section/container içine koymuş olsa bile, viewport genişliğinde yayılır.
+     Teknik: width:100vw + margin-left:calc(-50vw + 50%). Bu kural widget'ı
+     parent container'ın padding'inden "dışarı taşırır". Arka planı temadan
+     gelir, içerideki bölümler > * kuralıyla 860px ortalanır.
+     NOT: 100vw scrollbar'ı hesaba katmaz — scroll varsa margin-left yerine
+     parent.getBoundingClientRect() ile runtime düzeltme de yapılabilir, ama
+     genelde bu kural yeterli. */
+  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-bg,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;}
   /* Doğrudan widget çocukları — inner wrap (860px ortalı). */
   #ikas-reviews-widget > *{max-width:860px;margin-left:auto;margin-right:auto;}
   .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:24px;color:var(--ikr-text,rgba(0,0,0,1));}
