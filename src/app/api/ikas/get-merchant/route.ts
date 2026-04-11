@@ -28,7 +28,7 @@ export async function GET(request: NextRequest,) {
     const authToken = await AuthTokenManager.get(user.authorizedAppId);
     if (!authToken) {
       // Auth token not found for the user
-      return NextResponse.json({ error: { statusCode: 404, message: 'Auth token not found' } }, { status: 404 });
+      return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
     }
 
     // Initialize Ikas API client with the auth token
@@ -43,12 +43,12 @@ export async function GET(request: NextRequest,) {
       return NextResponse.json({ data: { merchantInfo: merchantResponse.data.getMerchant } });
     } else {
       // Merchant not found or API call failed
-      return NextResponse.json({ error: { statusCode: 403, message: 'Merchant not found' } }, { status: 403 });
+      return NextResponse.json({ error: 'Merchant not found' }, { status: 403 });
     }
   } catch (error) {
     // Log the error for debugging
     console.error('Error fetching merchant:', error);
     // Return a generic server error response
-    return NextResponse.json({ error: { statusCode: 500, message: 'Failed to fetch merchant' } }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch merchant' }, { status: 500 });
   }
 }
