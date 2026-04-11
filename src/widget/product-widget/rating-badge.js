@@ -33,6 +33,7 @@ export function injectRatingBadge(avgRating, totalCount, productName) {
   document.head.appendChild(jsonLdEl);
 
   var titleEl = findProductTitleEl(productName);
+  console.debug('[ikr] injectRatingBadge productName:', productName, 'titleEl:', titleEl);
   if (!titleEl || !titleEl.parentNode) return;
 
   var badge = document.createElement('a');
