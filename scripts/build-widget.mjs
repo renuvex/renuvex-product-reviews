@@ -46,7 +46,7 @@ const buildOptions = {
   footer: { js: '' },
   // IIFE wrapper — mevcut widget.js ile aynı ;(function(){ 'use strict'; ... })(); yapısı
   globalName: undefined,
-  minify: false, // okunabilir kalsın, debug kolaylığı için
+  minify: !watchMode, // watch modunda okunabilir, prod build'de minified
   sourcemap: false,
   logLevel: 'info',
   alias: themeArg ? themeAlias : {},
