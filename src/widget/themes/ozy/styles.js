@@ -103,7 +103,7 @@ export var CLASSIC_CSS = `
   .ikr-spinner{width:20px;height:20px;border:2px solid rgba(0,0,0,0.12);border-top-color:var(--ikr-color,#000);border-radius:50%;animation:ikrSpin 0.7s linear infinite;}
   @keyframes ikrSpin{to{transform:rotate(360deg);}}
   .ikr-upload-check{font-size:22px;color:#059669;line-height:1;}
-  .ikr-upload-error{font-size:22px;color:#dc2626;line-height:1;}
+  .ikr-upload-error{font-size:10px;color:#dc2626;line-height:1.3;text-align:center;padding:4px;word-break:break-word;}
 
   /* Review Modal */
   .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);}
