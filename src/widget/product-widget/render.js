@@ -197,7 +197,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       return;
     }
 
-    container.innerHTML = '<p style="text-align:center;padding:40px;color:#999;font-size:14px;">Yorumlar yükleniyor...</p>';
+    container.innerHTML = '<p class="ikr-state-msg ikr-state-loading">Yorumlar yükleniyor...</p>';
 
     try {
       var data = reviewsData || {};
@@ -456,7 +456,7 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       if (reviews.length === 0) {
         var empty = document.createElement('p');
-        empty.style.cssText = 'color:#888;text-align:center;padding:30px 0;';
+        empty.className = 'ikr-state-msg';
         empty.textContent = 'Henüz yorum yok.';
         widget.appendChild(empty);
       } else {
@@ -467,8 +467,8 @@ export async function render(productId, settings, reviewsData, productName, orde
       var hasMore = data.data && data.data.hasMore;
       if (hasMore) {
         var loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'ikr-load-more';
         loadMoreBtn.textContent = 'Daha Fazla Göster';
-        loadMoreBtn.style.cssText = 'display:block;margin:20px auto 0;padding:10px 28px;border:1px solid rgba(0,0,0,0.30);border-radius:6px;background:#fff;color:rgba(0,0,0,0.75);font-size:14px;cursor:pointer;';
         loadMoreBtn.onclick = async function() {
           loadMoreBtn.disabled = true;
           loadMoreBtn.textContent = 'Yükleniyor...';
