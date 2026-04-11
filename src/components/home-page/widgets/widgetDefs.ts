@@ -46,6 +46,34 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
+        title: 'Yıldız Stili',
+        fields: [
+          {
+            type: 'select',
+            key: 'reviewIcon',
+            label: 'Yorum İkonu',
+            default: 'star',
+            options: [
+              { value: 'star',   label: '★ Yıldız' },
+              { value: 'heart',  label: '♥ Kalp' },
+              { value: 'circle', label: '● Daire' },
+            ],
+          },
+          { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
+          {
+            type: 'select',
+            key: 'reviewStarSize',
+            label: 'Yıldız Boyutu',
+            default: 'medium',
+            options: [
+              { value: 'small',  label: 'Küçük' },
+              { value: 'medium', label: 'Orta' },
+              { value: 'large',  label: 'Büyük' },
+            ],
+          },
+        ],
+      },
+      {
         title: 'Davranış',
         fields: [
           { type: 'toggle', key: 'autoApprove',  label: 'Yeni Yorumları Otomatik Onayla', default: false },

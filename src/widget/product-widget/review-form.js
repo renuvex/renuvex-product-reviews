@@ -4,6 +4,7 @@ import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
 import { fetchWithTimeout } from '../core/fetch.js';
 import { renderStars } from '../core/helpers.js';
 import { extractSlug } from '../core/helpers.js';
+import { currentSettings } from '../core/state.js';
 
 export function buildReviewForm(productId, productName) {
   var form = document.createElement('div');
@@ -30,7 +31,7 @@ export function buildReviewForm(productId, productName) {
   var currentRating = 5;
   var uploadedImages = [];
 
-  var starsWrap = renderStars(5, true, function(v) { currentRating = v; });
+  var starsWrap = renderStars(5, true, function(v) { currentRating = v; }, currentSettings);
   form.querySelector('#ikr-stars-input').appendChild(starsWrap);
 
   var fileInput = form.querySelector('#ikr-file-input');

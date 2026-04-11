@@ -1,6 +1,7 @@
 // product-widget/review-modal.js — Fotoğraflı yorum detay modalı
 
 import { starsHTML, formatDate, optimizeImageUrl } from '../core/helpers.js';
+import { currentSettings } from '../core/state.js';
 
 function closeModal(overlay, onKeyDown, onPopState) {
   document.body.style.overflow = '';
@@ -22,7 +23,7 @@ function buildRight(r) {
 
   var starsEl = document.createElement('div');
   starsEl.className = 'ikr-modal-stars';
-  starsEl.innerHTML = starsHTML(r.rating, null);
+  starsEl.innerHTML = starsHTML(r.rating, null, currentSettings);
 
   var dateEl = document.createElement('span');
   dateEl.className = 'ikr-modal-date';
@@ -69,7 +70,7 @@ function buildRight(r) {
 
 function updateRight(right, r) {
   var scrollContent = right.querySelector('.ikr-modal-scroll-content');
-  scrollContent.querySelector('.ikr-modal-stars').innerHTML = starsHTML(r.rating, null);
+  scrollContent.querySelector('.ikr-modal-stars').innerHTML = starsHTML(r.rating, null, currentSettings);
   scrollContent.querySelector('.ikr-modal-date').textContent = formatDate(r.createdAt);
 
   var titleEl = scrollContent.querySelector('.ikr-modal-title');

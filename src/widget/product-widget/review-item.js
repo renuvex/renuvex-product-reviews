@@ -4,6 +4,7 @@ import { starsHTML, formatDate, optimizeImageUrl, getHelpfulVoted, setHelpfulVot
 import { API_BASE } from '../core/config.js';
 import { fetchWithTimeout } from '../core/fetch.js';
 import { openReviewModal } from './review-modal.js';
+import { currentSettings } from '../core/state.js';
 
 
 export function buildReviewEl(r, allReviews, showHelpful) {
@@ -18,7 +19,7 @@ export function buildReviewEl(r, allReviews, showHelpful) {
   leftTop.className = 'ikr-review-top-left';
   var starsSpan = document.createElement('span');
   starsSpan.className = 'ikr-review-stars';
-  starsSpan.innerHTML = starsHTML(r.rating, null);
+  starsSpan.innerHTML = starsHTML(r.rating, null, currentSettings);
   leftTop.appendChild(starsSpan);
   if (r.title) {
     var titleSpan = document.createElement('span');

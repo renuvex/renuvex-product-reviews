@@ -1,6 +1,21 @@
 // helpers.js — Genel yardımcı fonksiyonlar
 
-export var STAR_COLOR = 'var(--ikr-color,#f59e0b)';
+// Review widget içindeki yıldızlar için CSS custom property — reviews widget ayarından beslenir
+export var STAR_COLOR = 'var(--ikr-review-star-color,#f59e0b)';
+
+// Review widget ikon setleri — reviews.reviewIcon ayarı bu karakterleri üretir
+export var REVIEW_ICON_CHARS = {
+  star:   { filled: '★', empty: '☆' },
+  heart:  { filled: '♥', empty: '♡' },
+  circle: { filled: '●', empty: '○' },
+};
+
+// Review widget yıldız boyut map — reviews.reviewStarSize ayarı
+export var REVIEW_SIZE_MAP = {
+  small:  '12px',
+  medium: '14px',
+  large:  '18px',
+};
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
@@ -10,11 +25,16 @@ export function extractSlug(url) {
   } catch (_) { return ''; }
 }
 
-export function starsHTML(rating, size) {
+// starsHTML(rating, sizeOverride, settings) — settings varsa onun icon/color/size'ını kullanır,
+// yoksa fallback (sabit ★, STAR_COLOR, default size)
+export function starsHTML(rating, sizeOverride, settings) {
   var r = Math.round(parseFloat(rating)) || 0;
-  var filled = '★'.repeat(Math.min(r, 5));
-  var empty = '☆'.repeat(Math.max(5 - r, 0));
-  var style = 'color:' + STAR_COLOR + ';' + (size ? 'font-size:' + size + ';' : '');
+  var iconKey = (settings && settings.reviewIcon) || 'star';
+  var chars = REVIEW_ICON_CHARS[iconKey] || REVIEW_ICON_CHARS.star;
+  var filled = chars.filled.repeat(Math.min(r, 5));
+  var empty = chars.empty.repeat(Math.max(5 - r, 0));
+  var fontSize = sizeOverride || (settings && REVIEW_SIZE_MAP[settings.reviewStarSize]) || null;
+  var style = 'color:' + STAR_COLOR + ';' + (fontSize ? 'font-size:' + fontSize + ';' : '');
   return '<span style="' + style + '">' + filled + empty + '</span>';
 }
 
@@ -63,7 +83,12 @@ export function optimizeImageUrl(url) {
   return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_1200/');
 }
 
-export function renderStars(rating, interactive, onChange) {
+// renderStars — form için interaktif seçici.
+// settings.reviewIcon verilirse o ikon set'ini kullanır.
+export function renderStars(rating, interactive, onChange, settings) {
+  var iconKey = (settings && settings.reviewIcon) || 'star';
+  var chars = REVIEW_ICON_CHARS[iconKey] || REVIEW_ICON_CHARS.star;
+
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:flex;gap:4px;';
   wrap.setAttribute('data-rating', rating);
@@ -71,7 +96,7 @@ export function renderStars(rating, interactive, onChange) {
 
   function update(hovered) {
     stars.forEach(function (s, idx) {
-      s.textContent = idx < hovered ? '★' : '☆';
+      s.textContent = idx < hovered ? chars.filled : chars.empty;
       s.style.color = idx < hovered ? STAR_COLOR : '#ddd';
     });
   }
@@ -79,7 +104,7 @@ export function renderStars(rating, interactive, onChange) {
   for (var i = 1; i <= 5; i++) {
     (function (idx) {
       const star = document.createElement('span');
-      star.textContent = idx <= rating ? '★' : '☆';
+      star.textContent = idx <= rating ? chars.filled : chars.empty;
       star.style.cssText = 'font-size:24px;color:' + (idx <= rating ? STAR_COLOR : '#ddd') + ';cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s';
       if (interactive) {
         star.onmouseover = function () { update(idx); };

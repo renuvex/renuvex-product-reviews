@@ -45,6 +45,13 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-radius', radius + 'px');
     root.style.setProperty('--ikr-radius-sm', Math.max(0, radius - 4) + 'px');
 
+    // Review widget yıldız ayarları — badge'den bağımsız
+    var reviewStarColor = /^#[0-9A-Fa-f]{6}$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
+    root.style.setProperty('--ikr-review-star-color', reviewStarColor);
+    var reviewIconKey = settings.reviewIcon || 'star';
+    var reviewIconChars = { star: '★', heart: '♥', circle: '●' };
+    var reviewIconChar = reviewIconChars[reviewIconKey] || '★';
+
     var container = document.getElementById('ikas-reviews');
     if (!container) {
       var anchorEl = document.getElementById('ikas-reviews-anchor');
@@ -108,7 +115,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
         var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
         avgBox.innerHTML =
-          '<div class="ikr-avg-row1"><span class="ikr-avg-star">★</span><span class="ikr-avg-num">' + avgRatingVal + '</span></div>' +
+          '<div class="ikr-avg-row1"><span class="ikr-avg-star">' + reviewIconChar + '</span><span class="ikr-avg-num">' + avgRatingVal + '</span></div>' +
           '<div class="ikr-avg-row2"><span class="ikr-avg-count">' + allCount.toLocaleString('tr-TR') + ' Yorum</span></div>' +
           (recommendPct > 0 ? '<div class="ikr-recommend"><span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor</div>' : '');
         summary.appendChild(avgBox);
@@ -124,7 +131,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           row.className = 'ikr-bar-row' + (isActive ? ' ikr-bar-active' : '');
           if (currentRatingFilter && !isActive) row.style.opacity = '0.35';
           row.innerHTML =
-            '<span class="ikr-bar-label">' + si + ' ★</span>' +
+            '<span class="ikr-bar-label">' + si + ' ' + reviewIconChar + '</span>' +
             '<div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div>' +
             '<span class="ikr-bar-count">(' + cnt.toLocaleString('tr-TR') + ')</span>';
           (function(starVal) {

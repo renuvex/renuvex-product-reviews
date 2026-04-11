@@ -10,7 +10,7 @@ export var CLASSIC_CSS = `
   /* Sol — büyük ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
   .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
-  .ikr-avg-star{font-size:46px;color:var(--ikr-color,#000);line-height:1;}
+  .ikr-avg-star{font-size:46px;color:var(--ikr-review-star-color,#f59e0b);line-height:1;}
   .ikr-avg-num{font-size:46px;font-weight:600;line-height:1;color:rgba(0,0,0,1);}
   .ikr-avg-row2{display:flex;align-items:center;gap:6px;}
   .ikr-avg-count{font-size:16px;color:rgba(0,0,0,1);white-space:nowrap;font-weight:400;}
