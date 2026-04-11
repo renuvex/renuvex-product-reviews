@@ -175,6 +175,7 @@ export function injectBadges(slugNameMap, ratings) {
     var rating = ratings[slug];
     if (!rating || rating._empty || rating.count === 0) return;
     // Mevcut sayfanın ürünü için listing badge inject etme — rating-badge.js halleder
+    console.debug('[ikr] injectBadges slug:', slug, 'currentSlug:', currentSlug, 'skip:', slug === currentSlug);
     if (slug === currentSlug) return;
     var productName = slugNameMap[slug];
     links.forEach(function(a) {
