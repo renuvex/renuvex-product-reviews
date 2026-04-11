@@ -16,11 +16,15 @@
 //   --ikr-input-text  : input yazı rengi
 
 export var CLASSIC_CSS = `
-  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-bg,transparent);margin:40px 0;padding:0}
+  /* Widget dış kutu — anchor div'in full genişliğini alır, arka planı temadan
+     gelir. İçerideki bölümler .ikr-inner ile 860px max-width'e ortalanır. */
+  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-bg,transparent);margin:40px 0;padding:40px 16px;box-sizing:border-box;}
+  /* Doğrudan widget çocukları — inner wrap (860px ortalı). */
+  #ikas-reviews-widget > *{max-width:860px;margin-left:auto;margin-right:auto;}
   .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:24px;color:var(--ikr-text,rgba(0,0,0,1));}
 
-  /* Summary — 3 sütun: puan | barlar | buton */
-  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;flex-wrap:wrap;max-width:860px;}
+  /* Summary — 3 sütun: puan | barlar | buton (max-width widget child kuralından) */
+  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;flex-wrap:wrap;}
 
   /* Sol — büyük ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
@@ -103,7 +107,7 @@ export var CLASSIC_CSS = `
   #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}
 
   /* Form */
-  .ikr-form{background:var(--ikr-surface,#fff);border:1px solid var(--ikr-border,rgba(0,0,0,0.08));padding:25px;border-radius:var(--ikr-radius,6px);margin:16px auto;max-width:860px;color:var(--ikr-text,rgba(0,0,0,1));}
+  .ikr-form{background:var(--ikr-surface,#fff);border:1px solid var(--ikr-border,rgba(0,0,0,0.08));padding:25px;border-radius:var(--ikr-radius,6px);margin:16px auto;color:var(--ikr-text,rgba(0,0,0,1));}
   .ikr-form label{font-size:14px;color:var(--ikr-text,rgba(0,0,0,1));}
   .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;background:var(--ikr-input-bg,#fff);border:1px solid var(--ikr-border,rgba(0,0,0,0.20));border-radius:var(--ikr-radius,6px);font-size:14px;box-sizing:border-box;color:var(--ikr-input-text,rgba(0,0,0,0.90));}
   .ikr-input::placeholder,.ikr-textarea::placeholder{font-size:14px;color:var(--ikr-text-faint,rgba(0,0,0,0.35));}
