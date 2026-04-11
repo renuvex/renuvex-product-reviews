@@ -78,7 +78,7 @@ export function buildReviewEl(r, allReviews, showHelpful) {
   gallery.className = 'ikr-gallery';
   if (r.images && Array.isArray(r.images) && r.images.length) {
     r.images.forEach(function(imgUrl) {
-      if (!imgUrl || imgUrl.indexOf('https://') !== 0) return;
+      if (!imgUrl || (imgUrl.indexOf('https://') !== 0 && imgUrl.indexOf('data:image/') !== 0)) return;
       var imgEl = document.createElement('img');
       imgEl.src = optimizeImageUrl(imgUrl);
       imgEl.className = 'ikr-img';
@@ -102,8 +102,8 @@ export function buildReviewEl(r, allReviews, showHelpful) {
     helpfulBtn.setAttribute('aria-pressed', voted ? 'true' : 'false');
     helpfulBtn.setAttribute('aria-label', 'Bu yorumu faydalı bul');
 
-    var SVG_OUTLINE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
-    var SVG_FILLED = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+    var SVG_OUTLINE = '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+    var SVG_FILLED = '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
 
     var renderBtnContent = function(c, isActive) {
       helpfulBtn.innerHTML = '<span class="ikr-helpful-icon">' + (isActive ? SVG_FILLED : SVG_OUTLINE) + '</span>' +

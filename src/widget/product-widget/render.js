@@ -85,46 +85,37 @@ function resolveAccentColor(primary, bgHex) {
   return lumBg > 0.5 ? '#111111' : '#ffffff';
 }
 
-function applyThemeMode(root, settings) {
-  var mode = settings.themeMode === 'dark' || settings.themeMode === 'custom' ? settings.themeMode : 'light';
-  var vars;
-  var bgHex; // contrast hesabı için saf hex arka plan
-  if (mode === 'custom') {
-    // Özel mod: merchant bgColor + textColor + replyBgColor girdiyse kullan,
-    // girmediyse Açık preset'ten fallback. text-muted/faint ve border/track
-    // textColor'dan türetilir (alpha ile) — böylece koyu bg + sarı yazıda
-    // da tutarlı hiyerarşi oluşur.
-    var bg = isValidHex(settings.bgColor) ? settings.bgColor : '#ffffff';
-    var text = isValidHex(settings.textColor) ? settings.textColor : '#111111';
-    var replyBg = isValidHex(settings.replyBgColor) ? settings.replyBgColor : '#f5f5f5';
-    bgHex = bg;
-    vars = {
-      '--ikr-bg':         bg,
-      '--ikr-surface':    bg,
-      '--ikr-text':       text,
-      '--ikr-text-muted': hexToRgba(text, 0.75),
-      '--ikr-text-faint': hexToRgba(text, 0.45),
-      '--ikr-border':     hexToRgba(text, 0.12),
-      '--ikr-track-bg':   hexToRgba(text, 0.22),
-      '--ikr-reply-bg':   replyBg,
-      '--ikr-input-bg':   bg,
-      '--ikr-input-text': text,
-    };
-  } else {
-    vars = THEME_PRESETS[mode];
-    bgHex = mode === 'dark' ? '#0f0f11' : '#ffffff';
-  }
+// Butonun üzerindeki yazının (primaryColor'a göre) en iyi kontrastla 
+// (siyah veya beyaz) görünmesini sağlar.
+function resolveButtonTextColor(accentHex) {
+  return relLuminance(accentHex) > 0.5 ? '#111111' : '#ffffff';
+}
+
+function applyManualTheme(root, settings) {
+  var bg = settings.bgColor || '#ffffff';
+  var text = settings.textColor || '#111111';
+  var muted = settings.mutedTextColor || '#6b7280';
+  var replyBg = settings.replyBgColor || '#f3f4f6';
+  var inputBg = settings.inputBgColor || '#ffffff';
+
+  var vars = {
+    '--ikr-bg':         bg,
+    '--ikr-surface':    bg,
+    '--ikr-text':       text,
+    '--ikr-text-muted': muted,
+    '--ikr-text-faint': hexToRgba(muted, 0.6),
+    '--ikr-border':     hexToRgba(text, 0.12),
+    '--ikr-track-bg':   hexToRgba(text, 0.22),
+    '--ikr-reply-bg':   replyBg,
+    '--ikr-input-bg':   inputBg,
+    '--ikr-input-text': text,
+  };
+
   Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
 
-  // Preview modunda iframe body'sinin de tema bg'sini alması gerekir,
-  // aksi halde widget siyah bir blok gibi beyaz zemine oturur. Canlı
-  // storefront'ta mağaza teması zaten kendi bg'sini verdiği için body'ye
-  // dokunmuyoruz (else branch boş bırakıldı).
   if (typeof window !== 'undefined' && window.__ikasPreviewMode && document.body) {
-    document.body.style.background = vars['--ikr-bg'];
+    document.body.style.background = bg;
   }
-
-  return bgHex;
 }
 
 export async function render(productId, settings, reviewsData, productName, orderBy, page, badgeSettings) {
@@ -147,31 +138,46 @@ export async function render(productId, settings, reviewsData, productName, orde
 
     var root = document.documentElement;
 
-    // Tema modu (açık / koyu / özel) — tüm yüzey, yazı, border ve yanıt kutusu
-    // renkleri tek blokta CSS değişkenleri olarak yazılır. Loox/Yotpo mantığı:
-    // 3 hazır preset + tam özel override. Bu çağrı aktif bg hex'ini döner;
-    // buton/vurgu rengini bg ile kontrast'a göre düzelteceğiz.
-    var bgHex = applyThemeMode(root, settings);
+    // Başlık ayarı: Eğer kullanıcı boş bıraktıysa null/empty olur, 
+    // varsayılan değeri veriyoruz ama boşsa hiç HTML oluşturmayacağız.
+    var title = settings.title !== undefined ? settings.title : 'Müşteri Yorumları';
 
-    // Kullanıcının seçtiği primaryColor bg ile yeterince kontrasta sahipse
-    // olduğu gibi kullan; değilse görünür bir fallback (koyu temada beyaz vs.)
-    // seç. Admin'deki kayıtlı değere dokunulmaz — sadece runtime CSS var.
-    var primaryColor = resolveAccentColor(userPrimary, bgHex);
+    applyManualTheme(root, settings);
+
+    var primaryColor = settings.primaryColor || '#111111';
+    var primaryTextColor = settings.primaryTextColor || '#ffffff';
 
     injectStyles(primaryColor, CLASSIC_CSS);
 
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
     root.style.setProperty('--ikr-title-size', (settings.titleSize || 24) + 'px');
     root.style.setProperty('--ikr-review-text-size', (settings.reviewTextSize || 14) + 'px');
+    root.style.setProperty('--ikr-review-title-size', (settings.reviewTitleSize || 16) + 'px');
     root.style.setProperty('--ikr-author-size', (settings.authorSize || 14) + 'px');
     root.style.setProperty('--ikr-reply-name-size', (settings.replyNameSize || 14) + 'px');
     root.style.setProperty('--ikr-reply-text-size', (settings.replyTextSize || 14) + 'px');
+    root.style.setProperty('--ikr-color-text', primaryTextColor);
     root.style.setProperty('--ikr-radius', radius + 'px');
     root.style.setProperty('--ikr-radius-sm', Math.max(0, radius - 4) + 'px');
+    root.style.setProperty('--ikr-photo-title-size', (settings.photoTitleSize || 16) + 'px');
+    root.style.setProperty('--ikr-avg-rating-size', (settings.avgRatingSize || 46) + 'px');
+    root.style.setProperty('--ikr-review-count-size', (settings.reviewCountSize || 16) + 'px');
+    root.style.setProperty('--ikr-recommend-size', (settings.recommendSize || 14) + 'px');
+    root.style.setProperty('--ikr-btn-text-size', (settings.btnTextSize || 14) + 'px');
+    root.style.setProperty('--ikr-bar-label-size', (settings.barLabelSize || 16) + 'px');
+    root.style.setProperty('--ikr-bar-count-size', (settings.barCountSize || 14) + 'px');
+    root.style.setProperty('--ikr-review-date-size', (settings.reviewDateSize || 14) + 'px');
+    root.style.setProperty('--ikr-filter-text-size', (settings.filterTextSize || 14) + 'px');
+    root.style.setProperty('--ikr-load-more-size', (settings.loadMoreSize || 14) + 'px');
+    root.style.setProperty('--ikr-read-more-size', (settings.readMoreSize || 12) + 'px');
+    root.style.setProperty('--ikr-helpful-size', (settings.helpfulSize || 12) + 'px');
+    root.style.setProperty('--ikr-thumbnail-size', (settings.reviewThumbnailSize || 90) + 'px');
 
     // Review widget yıldız ayarları — badge'den bağımsız
     var reviewStarColor = /^#[0-9A-Fa-f]{6}$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
+    root.style.setProperty('--ikr-star-size', (settings.reviewStarSize || 20) + 'px');
+    root.style.setProperty('--ikr-avg-star-size', (settings.avgStarSize || (settings.avgRatingSize || 46)) + 'px');
     var reviewIconKey = settings.reviewIcon || 'star';
     var reviewIconChars = { star: '★', heart: '♥', circle: '●' };
     var reviewIconChar = reviewIconChars[reviewIconKey] || '★';
@@ -212,11 +218,13 @@ export async function render(productId, settings, reviewsData, productName, orde
       var widget = document.createElement('div');
       widget.id = 'ikas-reviews-widget';
 
-      // Başlık — div kullan, h2 mağaza teması tarafından override edilebilir
-      var h2 = document.createElement('div');
-      h2.className = 'ikr-title';
-      h2.textContent = title;
-      widget.appendChild(h2);
+      // Başlık — Eğer title varsa oluştur, yoksa (boş bırakıldıysa) hiç ekleme
+      if (title) {
+        var h2 = document.createElement('div');
+        h2.className = 'ikr-title';
+        h2.textContent = title;
+        widget.appendChild(h2);
+      }
 
       // Özet istatistik — ortalama puan + bar chart + write a review butonu
       var allCount = (data.data && data.data.allCount) || 0;
@@ -397,9 +405,9 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       // Fotoğraflı Yorumlar bölümü — sadece filtre aktif değilken göster
       var allReviewsWithPhotos = reviews.filter(function(r) {
-        return r.images && Array.isArray(r.images) && r.images.some(function(u) { return u && u.indexOf('https://') === 0; });
+        return r.images && Array.isArray(r.images) && r.images.some(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
       });
-      if (!currentHasImages && allReviewsWithPhotos.length > 0) {
+      if (settings.showPhotoGallery !== false && !currentHasImages && allReviewsWithPhotos.length > 0) {
         var photoSection = document.createElement('div');
         photoSection.className = 'ikr-photo-section';
 
@@ -419,7 +427,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         var thumbCount = 0;
         allReviewsWithPhotos.forEach(function(r) {
           if (thumbCount >= 10) return;
-          var firstImg = r.images.find(function(u) { return u && u.indexOf('https://') === 0; });
+          var firstImg = r.images.find(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
           if (!firstImg) return;
           var thumb = document.createElement('img');
           thumb.src = optimizeImageUrl(firstImg);

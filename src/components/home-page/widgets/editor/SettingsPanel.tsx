@@ -240,8 +240,8 @@ function FieldRenderer({ field, settings, onChange }: {
             onValueChange={([v]) => onChange({ ...settings, [field.key]: v })}
           />
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: colors.textMuted }}>{field.min}px</span>
-            <span style={{ fontSize: 11, color: colors.textMuted }}>{field.max}px</span>
+            <span style={{ fontSize: 11, color: colors.textSecondary }}>{field.min}px</span>
+            <span style={{ fontSize: 11, color: colors.textSecondary }}>{field.max}px</span>
           </div>
         </div>
       );

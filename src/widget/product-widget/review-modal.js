@@ -91,7 +91,7 @@ function updateRight(right, r) {
 }
 
 function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay) {
-  var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && u.indexOf('https://') === 0; }) : [];
+  var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); }) : [];
   var currentPhotoIdx = Math.min(photoIdx, images.length - 1);
 
   var left = document.createElement('div');
@@ -133,7 +133,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
         rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
-        var prevImages = (prevReview.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
+        var prevImages = (prevReview.images || []).filter(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
         rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay);
       }
     }
@@ -203,7 +203,7 @@ function prefetchNeighbors(reviewIdx, reviewsWithPhotos) {
   [-1, 1].forEach(function(offset) {
     var neighbor = reviewsWithPhotos[reviewIdx + offset];
     if (!neighbor) return;
-    var imgs = (neighbor.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
+    var imgs = (neighbor.images || []).filter(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
     if (imgs[0]) new Image().src = optimizeImageUrl(imgs[0]);
   });
 }
@@ -228,13 +228,13 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
 
 export function openReviewModal(r, clickedUrl, allReviews) {
   var reviewsWithPhotos = (allReviews || []).filter(function(rv) {
-    return rv.images && Array.isArray(rv.images) && rv.images.some(function(u) { return u && u.indexOf('https://') === 0; });
+    return rv.images && Array.isArray(rv.images) && rv.images.some(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
   });
 
   var reviewIdx = reviewsWithPhotos.findIndex(function(rv) { return rv === r || rv.id === r.id; });
   if (reviewIdx === -1) reviewIdx = 0;
 
-  var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && u.indexOf('https://') === 0; }) : [];
+  var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); }) : [];
   var photoIdx = Math.max(0, images.indexOf(clickedUrl));
 
   var overlay = document.createElement('div');

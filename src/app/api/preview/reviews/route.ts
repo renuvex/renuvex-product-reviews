@@ -20,11 +20,14 @@ export async function GET() {
         author: 'Ayşe K.',
         rating: 5,
         title: 'Harika ürün!',
-        comment: 'Ürün gerçekten çok kaliteli, beklentilerimi fazlasıyla karşıladı. Hızlı kargo için de teşekkürler!',
+        comment: 'Ürün gerçekten çok kaliteli, beklentilerimi fazlasıyla karşıladı. Kumaş kalitesi, dikiş detayları ve genel duruşu harika. Ürünü alırken biraz tereddüt etmiştim ama elime ulaştığında ne kadar doğru bir karar verdiğimi anladım. Hızlı kargo ve özenli paketleme için de ayrıca teşekkürler. Kesinlikle tavsiye ediyorum, pişman olmazsınız! Ayrıca ürünün rengi fotoğraftakinden çok daha canlı ve güzel. Uzun süreli kullanımda da gayet dayanıklı duruyor. Temizliği de oldukça kolay, nemli bir bezle silmek yeterli oluyor. Bu fiyata böyle bir kalite bulmak gerçekten zor. Hem kendime hem de hediye olarak arkadaşlarıma aldım, herkes çok memnun kaldı. İkas ekibine bu başarılı ürün ve hizmet için çok teşekkür ederim, favori mağazam haline geldi bile!',
         status: 'approved',
         isVerifiedPurchase: true,
         helpfulCount: 12,
-        images: [],
+        images: [
+          'https://placehold.co/800x800/fee2e2/fee2e2.png',
+          'https://placehold.co/800x800/efe8ff/efe8ff.png'
+        ],
         merchantReply: 'Teşekkür ederiz, memnuniyetiniz bizim için çok değerli!',
         createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       },
@@ -39,7 +42,9 @@ export async function GET() {
         status: 'approved',
         isVerifiedPurchase: false,
         helpfulCount: 3,
-        images: [],
+        images: [
+          'https://placehold.co/800x800/e0f2fe/e0f2fe.png'
+        ],
         merchantReply: null,
         createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       },
@@ -54,7 +59,10 @@ export async function GET() {
         status: 'approved',
         isVerifiedPurchase: true,
         helpfulCount: 7,
-        images: [],
+        images: [
+          'https://placehold.co/800x800/fef2f2/fef2f2.png',
+          'https://placehold.co/800x800/f0fdf4/f0fdf4.png'
+        ],
         merchantReply: null,
         createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       },
