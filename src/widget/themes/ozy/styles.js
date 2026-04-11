@@ -98,7 +98,7 @@ export var CLASSIC_CSS = `
   .ikr-review-stars{font-size:var(--ikr-star-size,20px);}
   .ikr-review-title{font-weight:700;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-text,rgba(0,0,0,1));}
   .ikr-author{font-size:var(--ikr-author-size,14px);font-weight:400;font-style:italic;color:var(--ikr-text,rgba(0,0,0,1));margin-top:6px;}
-  .ikr-date{color:var(--ikr-text,rgba(0,0,0,1));font-size:var(--ikr-review-date-size,14px);font-weight:400;white-space:nowrap;flex-shrink:0;}
+  .ikr-date{color:var(--ikr-text,rgba(0,0,0,1));font-size:var(--ikr-review-date-size,12px);font-weight:400;white-space:nowrap;flex-shrink:0;}
   .ikr-body{margin-top:8px;line-height:1.65;color:var(--ikr-text,rgba(0,0,0,1));font-size:var(--ikr-review-text-size,14px);font-weight:400;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
   .ikr-read-more{display:block;margin-top:4px;color:var(--ikr-text,rgba(0,0,0,1));font-weight:600;cursor:pointer;font-size:var(--ikr-read-more-size,12px);}
@@ -187,7 +187,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;background:var(--ikr-bg,#fff);color:var(--ikr-text,rgba(0,0,0,1));}
   .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
   .ikr-modal-stars{font-size:var(--ikr-star-size,24px);}
-  .ikr-modal-date{font-size:var(--ikr-review-date-size,14px);font-weight:400;color:var(--ikr-text,rgba(0,0,0,1));white-space:nowrap;flex-shrink:0;}
+  .ikr-modal-date{font-size:var(--ikr-review-date-size,12px);font-weight:400;color:var(--ikr-text,rgba(0,0,0,1));white-space:nowrap;flex-shrink:0;}
   .ikr-modal-title{font-weight:700;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-text,rgba(0,0,0,1));}
   .ikr-modal-author{font-size:var(--ikr-author-size,14px);font-weight:400;font-style:italic;color:var(--ikr-text,rgba(0,0,0,1));}
   .ikr-modal-scroll-content{padding:24px 24px 24px;display:flex;flex-direction:column;gap:6px;}
@@ -208,7 +208,6 @@ export var CLASSIC_CSS = `
     .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
-    .ikr-date{font-size:12px;}
     .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
     .ikr-avgbox{flex-direction:column;align-items:center;gap:10px;width:100%;text-align:center;}
     .ikr-avg-row1{justify-content:center;}

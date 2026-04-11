@@ -166,7 +166,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-btn-text-size', (settings.btnTextSize || 14) + 'px');
     root.style.setProperty('--ikr-bar-label-size', (settings.barLabelSize || 16) + 'px');
     root.style.setProperty('--ikr-bar-count-size', (settings.barCountSize || 14) + 'px');
-    root.style.setProperty('--ikr-review-date-size', (settings.reviewDateSize || 14) + 'px');
+    root.style.setProperty('--ikr-review-date-size', (settings.reviewDateSize || 12) + 'px');
     root.style.setProperty('--ikr-filter-text-size', (settings.filterTextSize || 14) + 'px');
     root.style.setProperty('--ikr-load-more-size', (settings.loadMoreSize || 14) + 'px');
     root.style.setProperty('--ikr-read-more-size', (settings.readMoreSize || 12) + 'px');

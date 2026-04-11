@@ -98,7 +98,7 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'range', key: 'btnTextSize',    label: 'Buton Yazı Boyutu',    min: 8, max: 24, default: 14 },
           { type: 'range', key: 'barLabelSize',   label: 'Bar Etiket Boyutu',    min: 8, max: 24, default: 16 },
           { type: 'range', key: 'barCountSize',   label: 'Bar Sayı Boyutu',      min: 8, max: 24, default: 14 },
-          { type: 'range', key: 'reviewDateSize', label: 'Yorum Tarihi Boyutu',  min: 8, max: 24, default: 14 },
+          { type: 'range', key: 'reviewDateSize', label: 'Yorum Tarihi Boyutu',  min: 8, max: 24, default: 12 },
           { type: 'range', key: 'filterTextSize', label: 'Filtre Yazı Boyutu',  min: 8, max: 24, default: 14 },
           { type: 'range', key: 'loadMoreSize',   label: 'Daha Fazla Göster Boyutu', min: 8, max: 24, default: 14 },
           { type: 'range', key: 'readMoreSize',   label: 'Daha Fazla Oku Boyutu', min: 8, max: 24, default: 12 },
