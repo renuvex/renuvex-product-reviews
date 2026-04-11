@@ -25,18 +25,28 @@ export function attachModalBadgeListener() {
 }
 
 // ── History API interception ──────────────────────────────────────────────────
-// SPA navigation (pushState/replaceState/popstate) anında eski rating badge +
-// JSON-LD'yi derhal temizler. PRODUCT_VIEW event'i gecikmeli gelse bile eski
-// badge yeni ürün sayfasında flash etmez. Tema-bağımsız — tüm SPA nav yollarını
-// yakalar (router.push, <Link>, back/forward, programmatic nav dahil).
+// SPA navigation (pushState/replaceState/popstate/hashchange) anında eski rating
+// badge + JSON-LD'yi derhal temizler. PRODUCT_VIEW event'i gecikmeli gelse bile
+// eski badge yeni ürün sayfasında flash etmez. Tema-bağımsız — tüm SPA nav
+// yollarını yakalar (router.push, <Link>, back/forward, programmatic nav dahil).
+//
+// Pathname guard: yalnızca path değiştiğinde temizlik yapılır. Aynı ürün
+// sayfasında varyant/query param değişimi (örn. ?variant=red → ?variant=blue)
+// badge'i silmez — aksi halde bootstrapCache dolu olduğu için re-inject olmaz
+// ve badge tamamen kaybolurdu.
 
 var historyPatched = false;
+var lastPathname = typeof location !== 'undefined' ? location.pathname : '';
 
 function cleanupStaleRatingBadge() {
-  var oldBadge = document.getElementById('ikr-rating-badge');
-  if (oldBadge) oldBadge.remove();
-  var oldJsonLd = document.getElementById('ikr-jsonld');
-  if (oldJsonLd) oldJsonLd.remove();
+  try {
+    if (location.pathname === lastPathname) return;
+    lastPathname = location.pathname;
+    var oldBadge = document.getElementById('ikr-rating-badge');
+    if (oldBadge) oldBadge.remove();
+    var oldJsonLd = document.getElementById('ikr-jsonld');
+    if (oldJsonLd) oldJsonLd.remove();
+  } catch (_) {}
 }
 
 export function attachHistoryListener() {
@@ -57,6 +67,7 @@ export function attachHistoryListener() {
     return ret;
   };
   window.addEventListener('popstate', cleanupStaleRatingBadge);
+  window.addEventListener('hashchange', cleanupStaleRatingBadge);
 }
 
 export function attachEvents() {
