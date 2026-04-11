@@ -41,7 +41,7 @@ export const WIDGETS: WidgetDef[] = [
       {
         title: 'Görünüm',
         fields: [
-          { type: 'color', key: 'primaryColor', label: 'Ana Tema Rengi', default: '#111111' },
+          { type: 'color', key: 'primaryColor', label: 'Buton & Vurgu Rengi', default: '#111111' },
           { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
         ],
       },
