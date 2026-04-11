@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-11T00:33:03.977Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-11T00:34:43.281Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -1456,7 +1456,7 @@
       console.debug("[ikr] product detected via query param:", qp);
       return { id: qp, name: null };
     }
-    console.warn("[ikr] product not detected \u2014 widget will not render");
+    console.debug("[ikr] product not detected \u2014 widget will not render");
     return null;
   }
 

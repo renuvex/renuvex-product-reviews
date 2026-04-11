@@ -179,6 +179,6 @@ export function getProductFromPage() {
     console.debug('[ikr] product detected via query param:', qp);
     return { id: qp, name: null };
   }
-  console.warn('[ikr] product not detected — widget will not render');
+  console.debug('[ikr] product not detected — widget will not render');
   return null;
 }
