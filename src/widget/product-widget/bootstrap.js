@@ -132,6 +132,11 @@ var bootstrapCache = {};
 export async function bootstrap(productId, productName) {
   if (bootstrapCache[productId]) return;
   bootstrapCache[productId] = true;
+  // Yeni ürüne geçilince eski badge'i hemen temizle — stale görünümü önler
+  var oldBadge = document.getElementById('ikr-rating-badge');
+  if (oldBadge) oldBadge.remove();
+  var oldJsonLd = document.getElementById('ikr-jsonld');
+  if (oldJsonLd) oldJsonLd.remove();
   // Fallback: reviews widget ayarları için varsayılan değerler
   var FALLBACK = { primaryColor: '#111111', title: 'Müşteri Yorumları', showHelpful: true, enabled: true };
   try {
