@@ -59,7 +59,18 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') { a.setAttribute('data-ikr-badge', '1'); return; }
   if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
   if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) { a.setAttribute('data-ikr-badge', '1'); return; }
+
+  // Ana ürün container (.single-product-container-main) içindeki ürün adı linki DIŞINDAKİ
+  // tüm linkler (Sepete Ekle, İncele, görsel linki, vb.) listing badge almaz.
+  // Ürün adı linki istisnadır — anasayfadaki single product section'da badge gösterilsin diye.
   if (a.closest(THEME_SINGLE_PRODUCT_CONTAINER) && !a.closest(THEME_SINGLE_PRODUCT_NAME_LINK)) { a.setAttribute('data-ikr-badge', '1'); return; }
+
+  // Mevcut PDP'nin kendi ürün adı linkine listing badge inject etme —
+  // rating-badge.js zaten bu ürün için büyük #ikr-rating-badge'i title altına inject ediyor.
+  // Anasayfa single product section'da slug !== currentSlug olduğu için bu kural tetiklenmez,
+  // oradaki badge çalışmaya devam eder.
+  if (slug === currentSlug && a.closest(THEME_SINGLE_PRODUCT_NAME_LINK)) { a.setAttribute('data-ikr-badge', '1'); return; }
+
   if (a.closest(THEME_BANNER_CONTAINERS)) { a.setAttribute('data-ikr-badge', '1'); return; }
 
   var hasNestedA = !!a.querySelector('a[href]');
@@ -176,9 +187,9 @@ export function injectBadges(slugNameMap, ratings) {
   Object.keys(slugNameMap).forEach(function(slug) {
     var rating = ratings[slug];
     if (!rating || rating._empty || rating.count === 0) return;
-    // Mevcut sayfanın ürünü için listing badge inject etme — rating-badge.js halleder
-    console.debug('[ikr] injectBadges slug:', slug, 'currentSlug:', currentSlug, 'skip:', slug === currentSlug);
-    if (slug === currentSlug) return;
+    // Not: Mevcut slug için de iterate ederiz — slider kartlarında mevcut ürünün kendisi
+    // de (örn. "Çok Satanlar") geçebilir ve bu kartlara badge inject edilmeli.
+    // Ana ürün başlığı için çakışma koruması injectBadgeOnLink içinde yapılır.
     var productName = slugNameMap[slug];
     links.forEach(function(a) {
       if (extractSlug(a.href) !== slug) return;
