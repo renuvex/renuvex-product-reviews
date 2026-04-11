@@ -47,6 +47,7 @@ export function attachEvents() {
           var productId = event.data && event.data.productDetail && event.data.productDetail.id;
           var productName = event.data && event.data.productDetail && event.data.productDetail.name;
           if (productId) {
+            console.debug('[ikr] PRODUCT_VIEW event received:', productId);
             cacheSet('ikr_reviews_' + PUBLIC_API_KEY + '_' + productId, '');
             bootstrap(productId, productName);
           }
@@ -65,7 +66,22 @@ export function attachEvents() {
     });
 
     var product = getProductFromPage();
-    if (product) bootstrap(product.id, product.name);
+    if (product) {
+      bootstrap(product.id, product.name);
+    } else {
+      // __NEXT_DATA__ henüz hazır olmayabilir — kısa polling ile tekrar dene (max 2sn)
+      var pdAttempts = 0;
+      function tryGetProduct() {
+        var p = getProductFromPage();
+        if (p) {
+          bootstrap(p.id, p.name);
+        } else if (pdAttempts < 20) {
+          pdAttempts++;
+          setTimeout(tryGetProduct, 100);
+        }
+      }
+      setTimeout(tryGetProduct, 100);
+    }
     // PAGE_VIEW her zaman gelir ve renderListingBadges'i tetikler
     // Fallback: PAGE_VIEW 2sn içinde gelmezse (eski ikas versiyonları) manuel tetikle
     setTimeout(function() { if (!ls.rendered) renderListingBadges(); }, 2000);
