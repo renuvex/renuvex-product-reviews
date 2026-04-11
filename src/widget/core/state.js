@@ -7,6 +7,7 @@ export var currentRatingFilter = null;
 export var currentHasImages = false;
 export var currentProductId = null;
 export var currentSettings = null;
+export var currentBadgeSettings = null;
 export var currentProductName = null;
 export var currentReviewsData = null;
 
@@ -16,6 +17,7 @@ export function setCurrentRatingFilter(v) { currentRatingFilter = v; }
 export function setCurrentHasImages(v) { currentHasImages = v; }
 export function setCurrentProductId(v) { currentProductId = v; }
 export function setCurrentSettings(v) { currentSettings = v; }
+export function setCurrentBadgeSettings(v) { currentBadgeSettings = v; }
 export function setCurrentProductName(v) { currentProductName = v; }
 export function setCurrentReviewsData(v) { currentReviewsData = v; }
 

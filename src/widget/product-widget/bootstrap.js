@@ -139,12 +139,14 @@ export async function bootstrap(productId, productName) {
   bootstrapCache[productId] = true;
   // Fallback: reviews widget ayarları için varsayılan değerler
   var FALLBACK = { primaryColor: '#111111', title: 'Müşteri Yorumları', showHelpful: true, enabled: true };
+  var BADGE_FALLBACK = { enabled: true, icon: 'star', size: 'medium', color: '#f59e0b' };
   try {
     var response = await fetchSettings();
     if (!response) return;
 
     // API { widgets: { reviews: {...}, badge: {...} } } döndürüyor
     var reviewsSettings = (response.widgets && response.widgets.reviews) || FALLBACK;
+    var badgeSettings = (response.widgets && response.widgets.badge) || BADGE_FALLBACK;
 
     // Widget devre dışıysa render etme
     if (reviewsSettings.enabled === false) return;
@@ -153,10 +155,10 @@ export async function bootstrap(productId, productName) {
     setCurrentPage(1);
     setCurrentRatingFilter(null);
     var reviewsData = await fetchReviews(productId, 'newest', 1, null);
-    await render(productId, reviewsSettings, reviewsData, productName, 'newest', 1);
+    await render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
   } catch (err) {
     console.error('[ikr] bootstrap error:', err);
-    await render(productId, FALLBACK, null, productName);
+    await render(productId, FALLBACK, null, productName, undefined, undefined, BADGE_FALLBACK);
   } finally {
     delete bootstrapCache[productId];
   }

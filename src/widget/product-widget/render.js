@@ -10,19 +10,20 @@ import { CLASSIC_CSS } from '../themes/ozy/styles.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
-  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentProductName,
-  setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages, setCurrentProductId, setCurrentSettings, setCurrentProductName,
+  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentBadgeSettings, currentProductName,
+  setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
   setCurrentReviewsData,
 } from '../core/state.js';
 
-export async function render(productId, settings, reviewsData, productName, orderBy, page) {
+export async function render(productId, settings, reviewsData, productName, orderBy, page, badgeSettings) {
   if (renderInProgress) {
-    setPendingRender({ productId, settings, reviewsData, productName, orderBy, page });
+    setPendingRender({ productId, settings, reviewsData, productName, orderBy, page, badgeSettings });
     return;
   }
   setRenderInProgress(true);
   setCurrentProductId(productId);
   setCurrentSettings(settings);
+  if (badgeSettings !== undefined) setCurrentBadgeSettings(badgeSettings);
   setCurrentProductName(productName);
   if (orderBy) setCurrentOrderBy(orderBy);
   if (page) setCurrentPage(page);
@@ -61,7 +62,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       setRenderInProgress(false);
       var p = pendingRender;
       setPendingRender(null);
-      if (p) render(p.productId, p.settings, p.reviewsData, p.productName, p.orderBy, p.page);
+      if (p) render(p.productId, p.settings, p.reviewsData, p.productName, p.orderBy, p.page, p.badgeSettings);
       return;
     }
 
@@ -358,8 +359,8 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       container.appendChild(widget);
 
-      // Rating badge + JSON-LD
-      injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName);
+      // Rating badge + JSON-LD — admin "Yıldız Rozeti" widget ayarlarından beslenir
+      injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName, currentBadgeSettings);
 
 
     } catch (err) {
@@ -371,7 +372,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     if (pendingRender) {
       var next = pendingRender;
       setPendingRender(null);
-      render(next.productId, next.settings, next.reviewsData, next.productName, next.orderBy, next.page);
+      render(next.productId, next.settings, next.reviewsData, next.productName, next.orderBy, next.page, next.badgeSettings);
     }
   }
 }
