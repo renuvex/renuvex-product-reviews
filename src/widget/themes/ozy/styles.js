@@ -20,13 +20,19 @@ export var CLASSIC_CSS = `
      section/container içine koymuş olsa bile, viewport genişliğinde yayılır.
      Teknik: width:100vw + margin-left:calc(-50vw + 50%). Bu kural widget'ı
      parent container'ın padding'inden "dışarı taşırır". Arka planı temadan
-     gelir, içerideki bölümler > * kuralıyla 860px ortalanır.
+     gelir, içerideki bölümler > * kuralıyla 1200px ortalanır.
      NOT: 100vw scrollbar'ı hesaba katmaz — scroll varsa margin-left yerine
      parent.getBoundingClientRect() ile runtime düzeltme de yapılabilir, ama
      genelde bu kural yeterli. */
   #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-bg,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;}
-  /* Doğrudan widget çocukları — inner wrap (860px ortalı). */
-  #ikas-reviews-widget > *{max-width:860px;margin-left:auto;margin-right:auto;}
+  /* Doğrudan widget çocukları — inner wrap (1200px ortalı). Summary'deki
+     3 sütun (puan + bars + buton) max boyutlarda ancak ~1030px tutuyor,
+     1200px tavan wrap riskini pratik olarak sıfırlar. */
+  #ikas-reviews-widget > *{max-width:1200px;margin-left:auto;margin-right:auto;}
+  /* Yorum metni ve mağaza yanıtı — 70ch ile okunabilir tutulur, inner 1200 olsa
+     bile satırlar 800-900px civarında kalır. Başlık, summary, galeri serbest. */
+  #ikas-reviews-widget .ikr-body,
+  #ikas-reviews-widget .ikr-reply-text{max-width:70ch;}
   .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:24px;color:var(--ikr-text,rgba(0,0,0,1));}
 
   /* Summary — 3 sütun: puan | barlar | buton (max-width widget child kuralından) */
@@ -41,7 +47,7 @@ export var CLASSIC_CSS = `
   .ikr-avg-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-text,rgba(0,0,0,1));white-space:nowrap;font-weight:400;}
 
   /* Orta — bar chart */
-  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:500px;}
+  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:700px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;}
   @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-color-light);}}
   .ikr-bar-active{background:var(--ikr-color-light)!important;}
@@ -212,5 +218,16 @@ export var CLASSIC_CSS = `
     .ikr-btn-group{width:100%;align-self:stretch;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
+    /* Media row — mobilde gallery üstte tam genişlikli yatay scroll,
+       helpful butonu altta sağa yasılı. Aynı satırda sıkıştırmak yerine
+       dikey ayırıyoruz çünkü gallery scroll alanına ihtiyaç duyuyor. */
+    .ikr-media-row{flex-direction:column;align-items:stretch;gap:8px;}
+    .ikr-media-row .ikr-helpful-btn{align-self:flex-end;}
+    /* Gallery — fotoğraflı yorumlar strip'i mantığı: flex-wrap:nowrap +
+       overflow-x:auto, thumb'lar flex-shrink:0 ile orjinal boyutta kalıyor,
+       sığmayanlar yatay scroll'da kaydırılıyor. */
+    .ikr-gallery{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+    .ikr-gallery::-webkit-scrollbar{display:none;}
+    .ikr-img{flex-shrink:0;}
   }
 `;
