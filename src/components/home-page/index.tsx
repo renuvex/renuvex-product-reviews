@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle2, MessageSquare, Settings } from 'lucide-react';
+import { AlertCircle, CheckCircle2, MessageSquare, Settings } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
@@ -191,12 +191,15 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle style={componentStyles.dialogTitle}>Yorumu Sil</DialogTitle>
+            <DialogTitle style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: typography.fontSize.base, fontWeight: 600, color: colors.textPrimary }}>
+              <AlertCircle size={18} color={colors.error} />
+              Yorum Silinecek. Emin misiniz?
+            </DialogTitle>
           </DialogHeader>
-          <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>Bu yorum kalıcı olarak silinecek. Bu işlem geri alınamaz.</p>
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Bu yorum kalıcı olarak silinecektir. Bu işlem geri alınamaz.</p>
           <DialogFooter>
-            <button style={componentStyles.btnDefault} onClick={() => setDeleteConfirm(null)}>İptal</button>
-            <button style={componentStyles.btnDanger} onClick={confirmDeleteReview}>Evet, Sil</button>
+            <button style={componentStyles.btnDefault} onClick={() => setDeleteConfirm(null)}>Vazgeç</button>
+            <button style={componentStyles.btnDanger} onClick={confirmDeleteReview}>Sil</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
