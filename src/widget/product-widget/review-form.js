@@ -111,8 +111,7 @@ export function buildReviewForm(productId, productName) {
         var errMsg = err.message === 'rate_limit'
           ? 'Çok fazla deneme. Lütfen bekleyin.'
           : 'Yükleme başarısız.';
-        loadingEl.innerHTML = '<span class="ikr-upload-error" title="' + errMsg + '">✗</span>';
-        item.title = errMsg;
+        loadingEl.innerHTML = '<span class="ikr-upload-error">✗ ' + errMsg + '</span>';
       }
     }
     isUploading = false;
