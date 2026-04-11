@@ -71,7 +71,10 @@ export function buildReviewForm(productId, productName) {
       let loadingEl = item.querySelector('.ikr-preview-loading');
       try {
         let signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
-        if (!signRes.ok) throw new Error('sign failed');
+        if (!signRes.ok) {
+          if (signRes.status === 429) throw new Error('rate_limit');
+          throw new Error('sign failed');
+        }
         let sign = await signRes.json();
         let fd = new FormData();
         fd.append('file', file);
@@ -105,7 +108,11 @@ export function buildReviewForm(productId, productName) {
         }
       } catch (err) {
         console.error('[ikr] Image upload failed:', err);
-        loadingEl.innerHTML = '<span class="ikr-upload-error">✗</span>';
+        var errMsg = err.message === 'rate_limit'
+          ? 'Çok fazla deneme. Lütfen bekleyin.'
+          : 'Yükleme başarısız.';
+        loadingEl.innerHTML = '<span class="ikr-upload-error" title="' + errMsg + '">✗</span>';
+        item.title = errMsg;
       }
     }
     isUploading = false;

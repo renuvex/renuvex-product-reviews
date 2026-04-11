@@ -1,4 +1,4 @@
-/* ikas Reviews Widget — built 2026-04-10T23:29:42.124Z | theme: default */
+/* ikas Reviews Widget — built 2026-04-11T00:25:26.914Z | theme: default */
 "use strict";
 (() => {
   // src/widget/core/config.js
@@ -651,7 +651,10 @@
         let loadingEl = item.querySelector(".ikr-preview-loading");
         try {
           let signRes = await fetchWithTimeout(API_BASE + "/api/public/upload/sign", { method: "POST" });
-          if (!signRes.ok) throw new Error("sign failed");
+          if (!signRes.ok) {
+            if (signRes.status === 429) throw new Error("rate_limit");
+            throw new Error("sign failed");
+          }
           let sign = await signRes.json();
           let fd = new FormData();
           fd.append("file", file);
@@ -687,7 +690,9 @@
           }
         } catch (err) {
           console.error("[ikr] Image upload failed:", err);
-          loadingEl.innerHTML = '<span class="ikr-upload-error">\u2717</span>';
+          var errMsg = err.message === "rate_limit" ? "\xC7ok fazla deneme. L\xFCtfen bekleyin." : "Y\xFCkleme ba\u015Far\u0131s\u0131z.";
+          loadingEl.innerHTML = '<span class="ikr-upload-error" title="' + errMsg + '">\u2717</span>';
+          item.title = errMsg;
         }
       }
       isUploading = false;
