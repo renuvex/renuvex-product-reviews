@@ -47,8 +47,7 @@ export function attachEvents() {
           var productId = event.data && event.data.productDetail && event.data.productDetail.id;
           var productName = event.data && event.data.productDetail && event.data.productDetail.name;
           if (productId) {
-            console.debug('[ikr] PRODUCT_VIEW event received:', productId);
-            cacheSet('ikr_reviews_' + PUBLIC_API_KEY + '_' + productId, '');
+cacheSet('ikr_reviews_' + PUBLIC_API_KEY + '_' + productId, '');
             bootstrap(productId, productName);
           }
         }
