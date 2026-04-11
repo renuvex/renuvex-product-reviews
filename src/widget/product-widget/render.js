@@ -153,6 +153,18 @@ export async function render(productId, settings, reviewsData, productName, orde
       var widget = document.createElement('div');
       widget.id = 'ikas-reviews-widget';
 
+      // Admin iframe önizlemesinde full-bleed (100vw + margin hack) iframe
+      // viewport'u ile parent genişliği uyuşmadığında yatay scroll yaratıyor.
+      // Preview'de widget'ı parent container'ına teslim ediyoruz — canlı
+      // storefront'ta CSS kuralı aynen geçerli, sadece preview'de inline
+      // override ile bypass ediliyor.
+      if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
+        widget.style.width = '100%';
+        widget.style.maxWidth = '100%';
+        widget.style.marginLeft = '0';
+        widget.style.marginRight = '0';
+      }
+
       // Başlık — Eğer title varsa oluştur, yoksa (boş bırakıldıysa) hiç ekleme
       if (title) {
         var h2 = document.createElement('div');
