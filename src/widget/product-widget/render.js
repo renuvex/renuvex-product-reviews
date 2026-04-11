@@ -1,6 +1,6 @@
 // product-widget/render.js — Ana widget render fonksiyonu
 
-import { starsHTML, injectStyles, optimizeImageUrl } from '../core/helpers.js';
+import { injectStyles, optimizeImageUrl } from '../core/helpers.js';
 import { fetchReviews } from './bootstrap.js';
 import { buildReviewEl } from './review-item.js';
 import { openReviewModal } from './review-modal.js';
@@ -15,80 +15,18 @@ import {
   setCurrentReviewsData,
 } from '../core/state.js';
 
-// ─── Tema modu → CSS değişkenleri ───────────────────────────────────────────
-// Hazır iki preset (Açık / Koyu) ve Özel moduna ait değişken setini
-// document.documentElement üzerine yazar. CSS tarafında tüm yüzey/yazı/border
-// renkleri bu değişkenleri kullanır, böylece styles.js'i tek kaynak olarak
-// bırakıp temayı tamamen burada kontrol ederiz.
-var THEME_PRESETS = {
-  light: {
-    '--ikr-bg':         '#ffffff',
-    '--ikr-surface':    '#ffffff',
-    '--ikr-text':       'rgba(0,0,0,1)',
-    '--ikr-text-muted': 'rgba(0,0,0,0.75)',
-    '--ikr-text-faint': 'rgba(0,0,0,0.45)',
-    '--ikr-border':     'rgba(0,0,0,0.10)',
-    '--ikr-track-bg':   'rgba(0,0,0,0.10)',
-    '--ikr-reply-bg':   'rgba(0,0,0,0.03)',
-    '--ikr-input-bg':   '#ffffff',
-    '--ikr-input-text': 'rgba(0,0,0,0.90)',
-  },
-  dark: {
-    '--ikr-bg':         '#0f0f11',
-    '--ikr-surface':    '#1a1a1f',
-    '--ikr-text':       'rgba(255,255,255,0.95)',
-    '--ikr-text-muted': 'rgba(255,255,255,0.70)',
-    '--ikr-text-faint': 'rgba(255,255,255,0.45)',
-    '--ikr-border':     'rgba(255,255,255,0.12)',
-    // Koyu temada bar track'in görünür olması için border'dan daha belirgin.
-    '--ikr-track-bg':   'rgba(255,255,255,0.22)',
-    '--ikr-reply-bg':   'rgba(255,255,255,0.06)',
-    '--ikr-input-bg':   '#1a1a1f',
-    '--ikr-input-text': 'rgba(255,255,255,0.92)',
-  },
-};
+// ─── Tema → CSS değişkenleri ────────────────────────────────────────────────
+// Admin'den gelen 7 renk ayarı (bg, text, muted, reply, input + primaryColor
+// ve primaryTextColor render() içinde) CSS değişkenlerine yazılır. styles.js
+// tüm yüzey/yazı/border renklerini bu değişkenler üzerinden okur.
 
-function isValidHex(v) {
-  return typeof v === 'string' && /^#[0-9A-Fa-f]{6}$/.test(v);
-}
-
-// Yardımcı: hex → rgba string (alpha verilerek)
+// Yardımcı: hex → rgba string (alpha verilerek). text-faint, border ve
+// track-bg gibi türev renkleri ana renklerden alpha ile üretmek için.
 function hexToRgba(hex, alpha) {
   var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/.exec(hex);
   if (!m) return 'rgba(0,0,0,' + alpha + ')';
   var r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
   return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-}
-
-// Hex rengin luminance'ını döner (0 = siyah, 1 = beyaz). WCAG relative luminance.
-function relLuminance(hex) {
-  var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/.exec(hex || '');
-  if (!m) return 1;
-  var rs = parseInt(m[1], 16) / 255, gs = parseInt(m[2], 16) / 255, bs = parseInt(m[3], 16) / 255;
-  function ch(v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
-  return 0.2126 * ch(rs) + 0.7152 * ch(gs) + 0.0722 * ch(bs);
-}
-
-// primaryColor arka plan rengiyle çatışırsa (düşük kontrast) görünür bir
-// alternatif döner. Admin'in kaydettiği değeri değiştirmez; sadece runtime
-// vurgu rengini geçici olarak override eder. Koyu tema + siyah primary gibi
-// "neden hiçbir şey görünmüyor" durumlarını önler.
-function resolveAccentColor(primary, bgHex) {
-  var lumBg = relLuminance(bgHex);
-  var lumFg = relLuminance(primary);
-  // WCAG contrast ratio
-  var hi = Math.max(lumBg, lumFg) + 0.05;
-  var lo = Math.min(lumBg, lumFg) + 0.05;
-  var ratio = hi / lo;
-  if (ratio >= 2.5) return primary; // yeterince kontrast
-  // Kontrast düşük → bg'ye göre zıt kutup
-  return lumBg > 0.5 ? '#111111' : '#ffffff';
-}
-
-// Butonun üzerindeki yazının (primaryColor'a göre) en iyi kontrastla 
-// (siyah veya beyaz) görünmesini sağlar.
-function resolveButtonTextColor(accentHex) {
-  return relLuminance(accentHex) > 0.5 ? '#111111' : '#ffffff';
 }
 
 function applyManualTheme(root, settings) {
@@ -133,14 +71,11 @@ export async function render(productId, settings, reviewsData, productName, orde
   if (reviewsData !== null && reviewsData !== undefined) setCurrentReviewsData(reviewsData);
 
   try {
-    var userPrimary = settings.primaryColor || '#111111';
-    var title = settings.title || 'Müşteri Yorumları';
-
-    var root = document.documentElement;
-
-    // Başlık ayarı: Eğer kullanıcı boş bıraktıysa null/empty olur, 
+    // Başlık ayarı: Eğer kullanıcı boş bıraktıysa null/empty olur,
     // varsayılan değeri veriyoruz ama boşsa hiç HTML oluşturmayacağız.
     var title = settings.title !== undefined ? settings.title : 'Müşteri Yorumları';
+
+    var root = document.documentElement;
 
     applyManualTheme(root, settings);
 
