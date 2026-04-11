@@ -24,7 +24,45 @@ export function attachModalBadgeListener() {
   }, true);
 }
 
+// ── History API interception ──────────────────────────────────────────────────
+// SPA navigation (pushState/replaceState/popstate) anında eski rating badge +
+// JSON-LD'yi derhal temizler. PRODUCT_VIEW event'i gecikmeli gelse bile eski
+// badge yeni ürün sayfasında flash etmez. Tema-bağımsız — tüm SPA nav yollarını
+// yakalar (router.push, <Link>, back/forward, programmatic nav dahil).
+
+var historyPatched = false;
+
+function cleanupStaleRatingBadge() {
+  var oldBadge = document.getElementById('ikr-rating-badge');
+  if (oldBadge) oldBadge.remove();
+  var oldJsonLd = document.getElementById('ikr-jsonld');
+  if (oldJsonLd) oldJsonLd.remove();
+}
+
+export function attachHistoryListener() {
+  if (historyPatched) return;
+  historyPatched = true;
+
+  var origPush = history.pushState;
+  var origReplace = history.replaceState;
+
+  history.pushState = function() {
+    var ret = origPush.apply(this, arguments);
+    cleanupStaleRatingBadge();
+    return ret;
+  };
+  history.replaceState = function() {
+    var ret = origReplace.apply(this, arguments);
+    cleanupStaleRatingBadge();
+    return ret;
+  };
+  window.addEventListener('popstate', cleanupStaleRatingBadge);
+}
+
 export function attachEvents() {
+  // History API patch — SPA nav'da eski badge'i anında temizle (IkasEvents'ten bağımsız)
+  attachHistoryListener();
+
   if (window.IkasEvents) {
     if (ikasEventsAttached) return;
     ikasEventsAttached = true;
