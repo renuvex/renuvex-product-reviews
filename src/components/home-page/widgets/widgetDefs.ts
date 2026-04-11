@@ -1,11 +1,15 @@
 // ─── Settings field types ────────────────────────────────────────────────────
 
+// Bir alanın belirli bir ayara bağlı olarak görünüp görünmeyeceğini tanımlar.
+// Örn: { key: 'themeMode', equals: 'custom' } → sadece themeMode === 'custom' ise görünür.
+export type ShowWhen = { key: string; equals: string | number | boolean };
+
 export type SettingField =
-  | { type: 'toggle';  key: string; label: string; default: boolean }
-  | { type: 'text';    key: string; label: string; placeholder?: string; default: string }
-  | { type: 'color';   key: string; label: string; default: string }
-  | { type: 'select';  key: string; label: string; options: { value: string; label: string }[]; default: string }
-  | { type: 'range';   key: string; label: string; min: number; max: number; default: number };
+  | { type: 'toggle';  key: string; label: string; default: boolean;  showWhen?: ShowWhen }
+  | { type: 'text';    key: string; label: string; placeholder?: string; default: string; showWhen?: ShowWhen }
+  | { type: 'color';   key: string; label: string; default: string; showWhen?: ShowWhen }
+  | { type: 'select';  key: string; label: string; options: { value: string; label: string }[]; default: string; showWhen?: ShowWhen }
+  | { type: 'range';   key: string; label: string; min: number; max: number; default: number; showWhen?: ShowWhen };
 
 export interface SettingsGroup {
   title: string;
@@ -43,6 +47,20 @@ export const WIDGETS: WidgetDef[] = [
         fields: [
           { type: 'color', key: 'primaryColor', label: 'Buton & Vurgu Rengi', default: '#111111' },
           { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
+          {
+            type: 'select',
+            key: 'themeMode',
+            label: 'Tema Modu',
+            default: 'light',
+            options: [
+              { value: 'light',  label: 'Açık' },
+              { value: 'dark',   label: 'Koyu' },
+              { value: 'custom', label: 'Özel' },
+            ],
+          },
+          { type: 'color', key: 'bgColor',      label: 'Arka Plan Rengi',         default: '#ffffff', showWhen: { key: 'themeMode', equals: 'custom' } },
+          { type: 'color', key: 'textColor',    label: 'Yazı Rengi',              default: '#111111', showWhen: { key: 'themeMode', equals: 'custom' } },
+          { type: 'color', key: 'replyBgColor', label: 'Yanıt Kutusu Arka Planı', default: '#f5f5f5', showWhen: { key: 'themeMode', equals: 'custom' } },
         ],
       },
       {

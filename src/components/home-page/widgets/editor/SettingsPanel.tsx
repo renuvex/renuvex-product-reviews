@@ -63,14 +63,21 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
             </AccordionTrigger>
             <AccordionContent>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
-                {group.fields.map((field) => (
-                  <FieldRenderer
-                    key={field.key}
-                    field={field}
-                    settings={settings}
-                    onChange={onChange}
-                  />
-                ))}
+                {group.fields.map((field) => {
+                  // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
+                  if (field.showWhen) {
+                    const dep = settings[field.showWhen.key];
+                    if (dep !== field.showWhen.equals) return null;
+                  }
+                  return (
+                    <FieldRenderer
+                      key={field.key}
+                      field={field}
+                      settings={settings}
+                      onChange={onChange}
+                    />
+                  );
+                })}
               </div>
             </AccordionContent>
           </AccordionItem>

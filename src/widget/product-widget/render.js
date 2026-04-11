@@ -15,6 +15,118 @@ import {
   setCurrentReviewsData,
 } from '../core/state.js';
 
+// ─── Tema modu → CSS değişkenleri ───────────────────────────────────────────
+// Hazır iki preset (Açık / Koyu) ve Özel moduna ait değişken setini
+// document.documentElement üzerine yazar. CSS tarafında tüm yüzey/yazı/border
+// renkleri bu değişkenleri kullanır, böylece styles.js'i tek kaynak olarak
+// bırakıp temayı tamamen burada kontrol ederiz.
+var THEME_PRESETS = {
+  light: {
+    '--ikr-bg':         '#ffffff',
+    '--ikr-surface':    '#ffffff',
+    '--ikr-text':       'rgba(0,0,0,1)',
+    '--ikr-text-muted': 'rgba(0,0,0,0.75)',
+    '--ikr-text-faint': 'rgba(0,0,0,0.45)',
+    '--ikr-border':     'rgba(0,0,0,0.10)',
+    '--ikr-track-bg':   'rgba(0,0,0,0.10)',
+    '--ikr-reply-bg':   'rgba(0,0,0,0.03)',
+    '--ikr-input-bg':   '#ffffff',
+    '--ikr-input-text': 'rgba(0,0,0,0.90)',
+  },
+  dark: {
+    '--ikr-bg':         '#0f0f11',
+    '--ikr-surface':    '#1a1a1f',
+    '--ikr-text':       'rgba(255,255,255,0.95)',
+    '--ikr-text-muted': 'rgba(255,255,255,0.70)',
+    '--ikr-text-faint': 'rgba(255,255,255,0.45)',
+    '--ikr-border':     'rgba(255,255,255,0.12)',
+    // Koyu temada bar track'in görünür olması için border'dan daha belirgin.
+    '--ikr-track-bg':   'rgba(255,255,255,0.22)',
+    '--ikr-reply-bg':   'rgba(255,255,255,0.06)',
+    '--ikr-input-bg':   '#1a1a1f',
+    '--ikr-input-text': 'rgba(255,255,255,0.92)',
+  },
+};
+
+function isValidHex(v) {
+  return typeof v === 'string' && /^#[0-9A-Fa-f]{6}$/.test(v);
+}
+
+// Yardımcı: hex → rgba string (alpha verilerek)
+function hexToRgba(hex, alpha) {
+  var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/.exec(hex);
+  if (!m) return 'rgba(0,0,0,' + alpha + ')';
+  var r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+// Hex rengin luminance'ını döner (0 = siyah, 1 = beyaz). WCAG relative luminance.
+function relLuminance(hex) {
+  var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/.exec(hex || '');
+  if (!m) return 1;
+  var rs = parseInt(m[1], 16) / 255, gs = parseInt(m[2], 16) / 255, bs = parseInt(m[3], 16) / 255;
+  function ch(v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  return 0.2126 * ch(rs) + 0.7152 * ch(gs) + 0.0722 * ch(bs);
+}
+
+// primaryColor arka plan rengiyle çatışırsa (düşük kontrast) görünür bir
+// alternatif döner. Admin'in kaydettiği değeri değiştirmez; sadece runtime
+// vurgu rengini geçici olarak override eder. Koyu tema + siyah primary gibi
+// "neden hiçbir şey görünmüyor" durumlarını önler.
+function resolveAccentColor(primary, bgHex) {
+  var lumBg = relLuminance(bgHex);
+  var lumFg = relLuminance(primary);
+  // WCAG contrast ratio
+  var hi = Math.max(lumBg, lumFg) + 0.05;
+  var lo = Math.min(lumBg, lumFg) + 0.05;
+  var ratio = hi / lo;
+  if (ratio >= 2.5) return primary; // yeterince kontrast
+  // Kontrast düşük → bg'ye göre zıt kutup
+  return lumBg > 0.5 ? '#111111' : '#ffffff';
+}
+
+function applyThemeMode(root, settings) {
+  var mode = settings.themeMode === 'dark' || settings.themeMode === 'custom' ? settings.themeMode : 'light';
+  var vars;
+  var bgHex; // contrast hesabı için saf hex arka plan
+  if (mode === 'custom') {
+    // Özel mod: merchant bgColor + textColor + replyBgColor girdiyse kullan,
+    // girmediyse Açık preset'ten fallback. text-muted/faint ve border/track
+    // textColor'dan türetilir (alpha ile) — böylece koyu bg + sarı yazıda
+    // da tutarlı hiyerarşi oluşur.
+    var bg = isValidHex(settings.bgColor) ? settings.bgColor : '#ffffff';
+    var text = isValidHex(settings.textColor) ? settings.textColor : '#111111';
+    var replyBg = isValidHex(settings.replyBgColor) ? settings.replyBgColor : '#f5f5f5';
+    bgHex = bg;
+    vars = {
+      '--ikr-bg':         bg,
+      '--ikr-surface':    bg,
+      '--ikr-text':       text,
+      '--ikr-text-muted': hexToRgba(text, 0.75),
+      '--ikr-text-faint': hexToRgba(text, 0.45),
+      '--ikr-border':     hexToRgba(text, 0.12),
+      '--ikr-track-bg':   hexToRgba(text, 0.22),
+      '--ikr-reply-bg':   replyBg,
+      '--ikr-input-bg':   bg,
+      '--ikr-input-text': text,
+    };
+  } else {
+    vars = THEME_PRESETS[mode];
+    bgHex = mode === 'dark' ? '#0f0f11' : '#ffffff';
+  }
+  Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
+
+  // Preview modunda iframe body'sinin de tema bg'sini alması gerekir,
+  // aksi halde widget siyah bir blok gibi beyaz zemine oturur. Canlı
+  // storefront'ta mağaza teması zaten kendi bg'sini verdiği için body'ye
+  // dokunmuyoruz (else branch boş bırakıldı).
+  if (typeof window !== 'undefined' && window.__ikasPreviewMode && document.body) {
+    document.body.style.background = vars['--ikr-bg'];
+  }
+
+  return bgHex;
+}
+
 export async function render(productId, settings, reviewsData, productName, orderBy, page, badgeSettings) {
   if (renderInProgress) {
     setPendingRender({ productId, settings, reviewsData, productName, orderBy, page, badgeSettings });
@@ -30,12 +142,24 @@ export async function render(productId, settings, reviewsData, productName, orde
   if (reviewsData !== null && reviewsData !== undefined) setCurrentReviewsData(reviewsData);
 
   try {
-    var primaryColor = settings.primaryColor || '#111111';
+    var userPrimary = settings.primaryColor || '#111111';
     var title = settings.title || 'Müşteri Yorumları';
+
+    var root = document.documentElement;
+
+    // Tema modu (açık / koyu / özel) — tüm yüzey, yazı, border ve yanıt kutusu
+    // renkleri tek blokta CSS değişkenleri olarak yazılır. Loox/Yotpo mantığı:
+    // 3 hazır preset + tam özel override. Bu çağrı aktif bg hex'ini döner;
+    // buton/vurgu rengini bg ile kontrast'a göre düzelteceğiz.
+    var bgHex = applyThemeMode(root, settings);
+
+    // Kullanıcının seçtiği primaryColor bg ile yeterince kontrasta sahipse
+    // olduğu gibi kullan; değilse görünür bir fallback (koyu temada beyaz vs.)
+    // seç. Admin'deki kayıtlı değere dokunulmaz — sadece runtime CSS var.
+    var primaryColor = resolveAccentColor(userPrimary, bgHex);
 
     injectStyles(primaryColor, CLASSIC_CSS);
 
-    var root = document.documentElement;
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
     root.style.setProperty('--ikr-title-size', (settings.titleSize || 24) + 'px');
     root.style.setProperty('--ikr-review-text-size', (settings.reviewTextSize || 14) + 'px');
