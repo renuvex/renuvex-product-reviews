@@ -47,7 +47,7 @@ export var CLASSIC_CSS = `
   .ikr-avg-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));white-space:nowrap;font-weight:400;}
 
   /* Orta — bar chart */
-  .ikr-bars{display:flex;flex-direction:column;gap:10px;width:100%;}
+  .ikr-bars{display:flex;flex-direction:column;gap:10px;width:100%;max-width:400px;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;}
   @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-bar-hover-bg,var(--ikr-color-light));}}
   .ikr-bar-active{background:var(--ikr-bar-hover-bg,var(--ikr-color-light))!important;}
