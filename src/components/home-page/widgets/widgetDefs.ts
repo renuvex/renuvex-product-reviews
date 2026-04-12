@@ -1,4 +1,4 @@
-import { getIconOptions, getStyleOptions } from '@/widget/icons.js';
+import { getIconOptions } from '@/widget/icons.js';
 
 // ─── Settings field types ────────────────────────────────────────────────────
 
@@ -197,15 +197,6 @@ export const WIDGETS: WidgetDef[] = [
             // yeni ikon eklenince otomatik burada görünür.
             options: getIconOptions(),
           },
-          {
-            type: 'select',
-            key: 'reviewIconStyle',
-            label: 'İkon Stili',
-            default: 'classic',
-            // Seçili ikon tipine göre farklı stil seçenekleri
-            // (star: 3 varyant, heart: 2, circle: 2)
-            options: (settings) => getStyleOptions(String(settings.reviewIcon || 'star')),
-          },
         ],
       },
       {
@@ -266,13 +257,6 @@ export const WIDGETS: WidgetDef[] = [
             label: 'Puan İkonu',
             default: 'star',
             options: getIconOptions(),
-          },
-          {
-            type: 'select',
-            key: 'iconStyle',
-            label: 'İkon Stili',
-            default: 'classic',
-            options: (settings) => getStyleOptions(String(settings.icon || 'star')),
           },
           {
             type: 'select',
