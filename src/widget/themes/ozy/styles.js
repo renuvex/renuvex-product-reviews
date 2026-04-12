@@ -35,46 +35,61 @@ export var CLASSIC_CSS = `
   #ikas-reviews-widget .ikr-reply-text{max-width:70ch;}
   .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:24px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
 
-  /* Summary — alt alta ortada hizalı: puan özeti | bar chart | butonlar */
-  .ikr-summary{display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px 28px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;}
+  /* ─── SUMMARY LAYOUT ────────────────────────────────────────────────
+     Her blok bağımsız — sıra/gizleme CSS ile kolayca değiştirilebilir.
+     Kolon genişlikleri CSS variable ile paylaşılır (label/count sütunları).
+     Bu sayede bar-row ve actions-row aynı hizada kalır. */
+  .ikr-summary{
+    --ikr-col-label:104px;
+    --ikr-col-count:36px;
+    --ikr-col-gap:8px;
+    --ikr-summary-max:400px;
+    display:flex;flex-direction:column;align-items:center;gap:16px;
+    padding:24px 28px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;
+  }
+  .ikr-summary-block{display:flex;flex-direction:column;align-items:center;width:100%;max-width:var(--ikr-summary-max);}
 
-  /* Puan özeti — ortada */
-  .ikr-avgbox{display:flex;flex-direction:column;align-items:center;min-width:120px;gap:6px;}
-  .ikr-avg-row1{display:flex;align-items:center;gap:8px;}
+  /* Blok: Ortalama puan (büyük) */
+  .ikr-summary-avg{flex-direction:row;gap:8px;max-width:none;width:auto;}
   .ikr-avg-star{font-size:var(--ikr-avg-star-size,46px);color:var(--ikr-review-star-color,#f59e0b);line-height:1;}
   .ikr-avg-num{font-size:var(--ikr-avg-rating-size,46px);font-weight:600;line-height:1;color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));}
-  .ikr-avg-row2{display:flex;align-items:center;gap:6px;justify-content:center;}
-  .ikr-avg-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));white-space:nowrap;font-weight:400;}
 
-  /* Orta — bar chart */
-  .ikr-bars-wrap{display:flex;flex-direction:column;gap:12px;width:100%;max-width:400px;}
-  .ikr-bars{display:flex;flex-direction:column;gap:10px;width:100%;}
-  .ikr-bar-row{display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;}
+  /* Blok: Toplam yorum sayısı */
+  .ikr-summary-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));white-space:nowrap;font-weight:400;max-width:none;width:auto;}
+
+  /* Blok: Tavsiye yüzdesi */
+  .ikr-summary-recommend{font-size:var(--ikr-recommend-size,14px);color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));text-align:center;max-width:none;width:auto;}
+  .ikr-recommend-pct{font-weight:700;color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));margin-right:3px;}
+
+  /* Blok: Bar chart — her satır 3 kolon (label | track | count) */
+  .ikr-summary-bars{gap:10px;}
+  .ikr-bar-row{
+    display:flex;align-items:center;gap:var(--ikr-col-gap);width:100%;
+    cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;
+    box-sizing:border-box;
+  }
   @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-bar-hover-bg,var(--ikr-color-light));}}
   .ikr-bar-active{background:var(--ikr-bar-hover-bg,var(--ikr-color-light))!important;}
-  .ikr-bar-label{min-width:80px;text-align:right;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:var(--ikr-bar-label,var(--ikr-text,rgba(0,0,0,1)));}
+  .ikr-bar-label{flex:0 0 var(--ikr-col-label);text-align:left;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:var(--ikr-bar-label,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-bar-star{font-size:var(--ikr-bar-label-size,16px);}
   .ikr-bar-star-filled{color:var(--ikr-review-star-color,#f59e0b);}
   .ikr-bar-star-empty{color:var(--ikr-bar-track,#e5e7eb);}
-  .ikr-bar-track{flex:1;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
+  .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
   .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
-  .ikr-bar-count{min-width:20px;text-align:right;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
+  .ikr-bar-count{flex:0 0 var(--ikr-col-count);text-align:right;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
 
-  /* Yorum Yaz butonu */
-  .ikr-write-btn{flex:1;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:12px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:700;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
-
-  /* Tavsiye yüzdesi */
-  .ikr-recommend{font-size:var(--ikr-recommend-size,14px);color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));margin-top:2px;text-align:center;}
-  .ikr-recommend-pct{font-weight:700;color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));margin-right:3px;}
-
-  /* Buton grubu — bar chart row ile aynı layout hizası */
-  .ikr-btn-group{display:flex;align-items:center;gap:8px;width:100%;padding:3px 6px;box-sizing:border-box;margin-top:4px;}
-  .ikr-btn-group-spacer{min-width:80px;flex-shrink:0;}
-  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;min-width:20px;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,var(--ikr-color,#000));color:var(--ikr-filter-btn-text,var(--ikr-color-text,#fff));cursor:pointer;flex-shrink:0;}
+  /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row ile aynı kolon hizası */
+  .ikr-summary-actions{
+    display:flex;flex-direction:row;align-items:center;gap:var(--ikr-col-gap);
+    padding:3px 6px;box-sizing:border-box;
+  }
+  .ikr-actions-spacer{flex:0 0 var(--ikr-col-label);}
+  .ikr-write-btn{flex:1 1 auto;min-width:0;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:12px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:700;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
+  .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-end;}
+  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,var(--ikr-color,#000));color:var(--ikr-filter-btn-text,var(--ikr-color-text,#fff));cursor:pointer;}
   .ikr-filter-btn-active{opacity:0.85;}
 
-  /* Filtre dropdown */
-  .ikr-filter-wrap{position:relative;}
+  /* Filtre dropdown (wrap yukarıda tanımlandı) */
   .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--ikr-filter-menu-bg,var(--ikr-surface,#fff));border:1px solid var(--ikr-filter-menu-border,var(--ikr-border,rgba(0,0,0,0.12)));border-radius:var(--ikr-radius,6px);box-shadow:0 4px 16px rgba(0,0,0,0.08);min-width:180px;overflow:hidden;z-index:999;}
   .ikr-filter-item{padding:10px 16px;font-size:var(--ikr-filter-text-size,14px);color:var(--ikr-filter-item-text,var(--ikr-text,rgba(0,0,0,1)));cursor:pointer;}
   @media(hover:hover){.ikr-filter-item:hover{background:var(--ikr-filter-item-hover-bg,var(--ikr-color-light));}}
@@ -207,9 +222,7 @@ export var CLASSIC_CSS = `
     .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
-    .ikr-summary{padding:16px;gap:16px;}
-    .ikr-write-btn{flex:1;}
-    .ikr-btn-group{width:100%;}
+    .ikr-summary{padding:16px;gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
     /* Media row — mobilde gallery üstte tam genişlikli yatay scroll,

@@ -387,20 +387,34 @@ export async function render(productId, settings, reviewsData, productName, orde
         var summary = document.createElement('div');
         summary.className = 'ikr-summary';
 
-        // Sol — büyük ortalama puan
-        var avgBox = document.createElement('div');
-        avgBox.className = 'ikr-avgbox';
         var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
         var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
-        avgBox.innerHTML =
-          '<div class="ikr-avg-row1"><span class="ikr-avg-star">' + reviewIconChar + '</span><span class="ikr-avg-num">' + avgRatingVal + '</span></div>' +
-          '<div class="ikr-avg-row2"><span class="ikr-avg-count">' + allCount.toLocaleString('tr-TR') + ' Yorum</span></div>' +
-          (recommendPct > 0 ? '<div class="ikr-recommend"><span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor</div>' : '');
-        summary.appendChild(avgBox);
 
-        // Orta — bar chart
-        var bars = document.createElement('div');
-        bars.className = 'ikr-bars';
+        // Blok: Ortalama puan
+        var avgBlock = document.createElement('div');
+        avgBlock.className = 'ikr-summary-block ikr-summary-avg';
+        avgBlock.innerHTML =
+          '<span class="ikr-avg-star">' + reviewIconChar + '</span>' +
+          '<span class="ikr-avg-num">' + avgRatingVal + '</span>';
+        summary.appendChild(avgBlock);
+
+        // Blok: Toplam yorum sayısı
+        var countBlock = document.createElement('div');
+        countBlock.className = 'ikr-summary-block ikr-summary-count';
+        countBlock.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
+        summary.appendChild(countBlock);
+
+        // Blok: Tavsiye yüzdesi
+        if (recommendPct > 0) {
+          var recBlock = document.createElement('div');
+          recBlock.className = 'ikr-summary-block ikr-summary-recommend';
+          recBlock.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
+          summary.appendChild(recBlock);
+        }
+
+        // Blok: Bar chart
+        var barsBlock = document.createElement('div');
+        barsBlock.className = 'ikr-summary-block ikr-summary-bars';
         for (var si = 5; si >= 1; si--) {
           var cnt = ratingCounts[si - 1];
           var pct = allCount > 0 ? Math.round((cnt / allCount) * 100) : 0;
@@ -424,19 +438,17 @@ export async function render(productId, settings, reviewsData, productName, orde
               await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
             };
           })(si);
-          bars.appendChild(row);
+          barsBlock.appendChild(row);
         }
-        var barsWrap = document.createElement('div');
-        barsWrap.className = 'ikr-bars-wrap';
-        barsWrap.appendChild(bars);
+        summary.appendChild(barsBlock);
 
-        // Sağ — Yorum Yap butonu
-        var btnGroup = document.createElement('div');
-        btnGroup.className = 'ikr-btn-group';
+        // Blok: Aksiyon satırı (Yorum Yap + filtre) — bar row ile hizalı
+        var actionsBlock = document.createElement('div');
+        actionsBlock.className = 'ikr-summary-block ikr-summary-actions';
 
-        var btnSpacer = document.createElement('span');
-        btnSpacer.className = 'ikr-btn-group-spacer';
-        btnGroup.appendChild(btnSpacer);
+        var actionsSpacer = document.createElement('span');
+        actionsSpacer.className = 'ikr-actions-spacer';
+        actionsBlock.appendChild(actionsSpacer);
 
         var writeBtn = document.createElement('button');
         writeBtn.className = 'ikr-write-btn';
@@ -460,7 +472,7 @@ export async function render(productId, settings, reviewsData, productName, orde
             }, 50);
           }
         };
-        btnGroup.appendChild(writeBtn);
+        actionsBlock.appendChild(writeBtn);
 
         // Filtre — Yorum Yap'ın yanında
         var filterWrap = document.createElement('div');
@@ -521,9 +533,8 @@ export async function render(productId, settings, reviewsData, productName, orde
 
         filterWrap.appendChild(filterBtn);
         filterWrap.appendChild(filterMenu);
-        btnGroup.appendChild(filterWrap);
-        barsWrap.appendChild(btnGroup);
-        summary.appendChild(barsWrap);
+        actionsBlock.appendChild(filterWrap);
+        summary.appendChild(actionsBlock);
         widget.appendChild(summary);
       } else {
         // Yorum yoksa sadece Yorum Yap butonu göster
