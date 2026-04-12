@@ -65,17 +65,22 @@ function Stars({ rating, color }: { rating: number; color: string }) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+const SIZE_PRESETS = {
+  small:  { titleSize: 20, reviewTextSize: 12, authorSize: 12, replyNameSize: 12, replyTextSize: 12 },
+  medium: { titleSize: 24, reviewTextSize: 14, authorSize: 14, replyNameSize: 14, replyTextSize: 14 },
+  large:  { titleSize: 28, reviewTextSize: 16, authorSize: 16, replyNameSize: 16, replyTextSize: 16 },
+};
+
 export function ReviewsWidgetPreview({ settings }: PreviewProps) {
   const primaryColor = (settings.primaryColor as string) ?? '#111111';
   const title = (settings.title as string) || 'Müşteri Yorumları';
   const showHelpful = (settings.showHelpful as boolean) ?? true;
   const isEnabled = (settings.enabled as boolean) ?? true;
-  const titleSize = (settings.titleSize as number) ?? 24;
-  const reviewTextSize = (settings.reviewTextSize as number) ?? 14;
-  const authorSize = (settings.authorSize as number) ?? 14;
-  const replyNameSize = (settings.replyNameSize as number) ?? 14;
-  const replyTextSize = (settings.replyTextSize as number) ?? 14;
-  
+
+  const sizeKey = (settings.size as string) ?? 'medium';
+  const sz = SIZE_PRESETS[sizeKey as keyof typeof SIZE_PRESETS] ?? SIZE_PRESETS.medium;
+  const { titleSize, reviewTextSize, authorSize, replyNameSize, replyTextSize } = sz;
+
   // -- Border Radius --
   const widgetRadius = (settings.borderRadius as number) ?? 8;
   const innerRadius = Math.max(0, widgetRadius - 4); // Yorum içi öğelerin orantılı ovalliği

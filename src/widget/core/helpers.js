@@ -10,13 +10,6 @@ export var REVIEW_ICON_CHARS = {
   circle: { filled: '●', empty: '○' },
 };
 
-// Review widget yıldız boyut map — reviews.reviewStarSize ayarı
-export var REVIEW_SIZE_MAP = {
-  small:  '12px',
-  medium: '14px',
-  large:  '18px',
-};
-
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
 export function extractSlug(url) {
@@ -33,7 +26,7 @@ export function starsHTML(rating, sizeOverride, settings) {
   var chars = REVIEW_ICON_CHARS[iconKey] || REVIEW_ICON_CHARS.star;
   var filled = chars.filled.repeat(Math.min(r, 5));
   var empty = chars.empty.repeat(Math.max(5 - r, 0));
-  var fontSize = sizeOverride || (settings && REVIEW_SIZE_MAP[settings.reviewStarSize]) || null;
+  var fontSize = sizeOverride || null;
   var style = 'color:' + STAR_COLOR + ';' + (fontSize ? 'font-size:' + fontSize + ';' : '');
   return '<span style="' + style + '">' + filled + empty + '</span>';
 }
