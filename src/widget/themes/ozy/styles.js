@@ -65,8 +65,8 @@ export var CLASSIC_CSS = `
 
   /* Buton grubu */
   .ikr-btn-group{display:flex;align-items:center;gap:8px;align-self:center;}
-  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-color,#000);background:var(--ikr-surface,#fff);color:var(--ikr-color,#000);cursor:pointer;}
-  .ikr-filter-btn-active{background:var(--ikr-color,#000);color:var(--ikr-color-text,#fff);}
+  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-color,#000);background:var(--ikr-color,#000);color:var(--ikr-color-text,#fff);cursor:pointer;}
+  .ikr-filter-btn-active{opacity:0.85;}
 
   /* Filtre dropdown */
   .ikr-filter-wrap{position:relative;}
