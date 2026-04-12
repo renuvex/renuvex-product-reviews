@@ -37,7 +37,7 @@ var SIZE_PRESETS = {
   small: {
     titleSize: 20, reviewTextSize: 12, reviewTitleSize: 12, authorSize: 12,
     replyNameSize: 12, replyTextSize: 12, photoTitleSize: 14,
-    avgRatingSize: 36, avgStarSize: 36, reviewCountSize: 14, recommendSize: 12,
+    avgRatingSize: 36, avgStarSize: 42, reviewCountSize: 14, recommendSize: 12,
     btnTextSize: 12, barLabelSize: 16, barCountSize: 12,
     reviewDateSize: 10, filterTextSize: 12, loadMoreSize: 12,
     readMoreSize: 10, helpfulSize: 10, reviewStarSize: 16,
@@ -45,7 +45,7 @@ var SIZE_PRESETS = {
   medium: {
     titleSize: 24, reviewTextSize: 14, reviewTitleSize: 14, authorSize: 14,
     replyNameSize: 14, replyTextSize: 14, photoTitleSize: 16,
-    avgRatingSize: 46, avgStarSize: 46, reviewCountSize: 16, recommendSize: 14,
+    avgRatingSize: 46, avgStarSize: 52, reviewCountSize: 16, recommendSize: 14,
     btnTextSize: 14, barLabelSize: 20, barCountSize: 14,
     reviewDateSize: 12, filterTextSize: 14, loadMoreSize: 14,
     readMoreSize: 12, helpfulSize: 12, reviewStarSize: 20,
@@ -53,7 +53,7 @@ var SIZE_PRESETS = {
   large: {
     titleSize: 28, reviewTextSize: 16, reviewTitleSize: 16, authorSize: 16,
     replyNameSize: 16, replyTextSize: 16, photoTitleSize: 18,
-    avgRatingSize: 56, avgStarSize: 56, reviewCountSize: 18, recommendSize: 16,
+    avgRatingSize: 56, avgStarSize: 62, reviewCountSize: 18, recommendSize: 16,
     btnTextSize: 16, barLabelSize: 24, barCountSize: 16,
     reviewDateSize: 14, filterTextSize: 16, loadMoreSize: 16,
     readMoreSize: 14, helpfulSize: 14, reviewStarSize: 24,

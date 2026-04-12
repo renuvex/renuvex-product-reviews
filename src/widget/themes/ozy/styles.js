@@ -52,7 +52,7 @@ export var CLASSIC_CSS = `
   /* Blok: Ortalama puan (büyük) */
   .ikr-summary-avg{flex-direction:row;gap:8px;max-width:none;width:auto;}
   .ikr-avg-star{font-size:var(--ikr-avg-star-size,46px);color:var(--ikr-review-star-color,#f59e0b);line-height:1;}
-  .ikr-avg-num{font-size:var(--ikr-avg-rating-size,46px);font-weight:600;line-height:1;color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));}
+  .ikr-avg-num{font-size:var(--ikr-avg-rating-size,46px);font-weight:400;line-height:1;color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));}
 
   /* Blok: Toplam yorum sayısı */
   .ikr-summary-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));white-space:nowrap;font-weight:400;max-width:none;width:auto;}
