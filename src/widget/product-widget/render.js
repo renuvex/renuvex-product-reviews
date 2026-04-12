@@ -432,6 +432,10 @@ export async function render(productId, settings, reviewsData, productName, orde
         var btnGroup = document.createElement('div');
         btnGroup.className = 'ikr-btn-group';
 
+        var btnSpacer = document.createElement('span');
+        btnSpacer.className = 'ikr-btn-group-spacer';
+        btnGroup.appendChild(btnSpacer);
+
         var writeBtn = document.createElement('button');
         writeBtn.className = 'ikr-write-btn';
         writeBtn.textContent = 'Yorum Yap';

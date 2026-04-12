@@ -59,16 +59,17 @@ export var CLASSIC_CSS = `
   .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
   .ikr-bar-count{min-width:20px;text-align:right;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
 
-  /* Sağ — Yorum Yaz butonu */
-  .ikr-write-btn{background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:12px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:700;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;align-self:center;}
+  /* Yorum Yaz butonu */
+  .ikr-write-btn{flex:1;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:12px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:700;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
 
   /* Tavsiye yüzdesi */
   .ikr-recommend{font-size:var(--ikr-recommend-size,14px);color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));margin-top:2px;text-align:center;}
   .ikr-recommend-pct{font-weight:700;color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));margin-right:3px;}
 
-  /* Buton grubu */
-  .ikr-btn-group{display:flex;align-items:center;gap:8px;}
-  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,var(--ikr-color,#000));color:var(--ikr-filter-btn-text,var(--ikr-color-text,#fff));cursor:pointer;}
+  /* Buton grubu — bar chart row ile aynı layout hizası */
+  .ikr-btn-group{display:flex;align-items:center;gap:8px;width:100%;padding:3px 6px;box-sizing:border-box;}
+  .ikr-btn-group-spacer{min-width:80px;flex-shrink:0;}
+  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;min-width:20px;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,var(--ikr-color,#000));color:var(--ikr-filter-btn-text,var(--ikr-color-text,#fff));cursor:pointer;flex-shrink:0;}
   .ikr-filter-btn-active{opacity:0.85;}
 
   /* Filtre dropdown */
