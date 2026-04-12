@@ -35,8 +35,8 @@ export var CLASSIC_CSS = `
   #ikas-reviews-widget .ikr-reply-text{max-width:70ch;}
   .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:24px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
 
-  /* Summary — 3 sütun: puan | barlar | buton (max-width widget child kuralından) */
-  .ikr-summary{display:flex;align-items:center;gap:32px;padding:24px 28px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;flex-wrap:wrap;}
+  /* Summary — alt alta: puan özeti | bar chart | butonlar */
+  .ikr-summary{display:flex;flex-direction:column;align-items:stretch;gap:20px;padding:24px 28px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;}
 
   /* Sol — büyük ortalama */
   .ikr-avgbox{display:flex;flex-direction:column;align-items:flex-start;min-width:120px;gap:10px;}
@@ -47,7 +47,7 @@ export var CLASSIC_CSS = `
   .ikr-avg-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));white-space:nowrap;font-weight:400;}
 
   /* Orta — bar chart */
-  .ikr-bars{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;max-width:700px;}
+  .ikr-bars{display:flex;flex-direction:column;gap:10px;width:100%;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;}
   @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-bar-hover-bg,var(--ikr-color-light));}}
   .ikr-bar-active{background:var(--ikr-bar-hover-bg,var(--ikr-color-light))!important;}
@@ -64,7 +64,7 @@ export var CLASSIC_CSS = `
   .ikr-recommend-pct{font-weight:700;color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));margin-right:3px;}
 
   /* Buton grubu */
-  .ikr-btn-group{display:flex;align-items:center;gap:8px;align-self:center;}
+  .ikr-btn-group{display:flex;align-items:center;gap:8px;align-self:flex-start;}
   .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,var(--ikr-color,#000));color:var(--ikr-filter-btn-text,var(--ikr-color-text,#fff));cursor:pointer;}
   .ikr-filter-btn-active{opacity:0.85;}
 
@@ -202,11 +202,7 @@ export var CLASSIC_CSS = `
     .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
-    .ikr-summary{flex-direction:column;align-items:stretch;gap:16px;padding:16px;}
-    .ikr-avgbox{flex-direction:column;align-items:center;gap:10px;width:100%;text-align:center;}
-    .ikr-avg-row1{justify-content:center;}
-    .ikr-avg-row2{justify-content:center;}
-    .ikr-recommend{text-align:center;}
+    .ikr-summary{padding:16px;gap:16px;}
     .ikr-write-btn{flex:1;}
     .ikr-btn-group{width:100%;align-self:stretch;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
