@@ -131,7 +131,6 @@ export var CLASSIC_CSS = `
   /* Daha Fazla Göster butonu — tema uyumlu, outline stil */
   .ikr-load-more{display:block;margin:20px auto 0;padding:10px 28px;border:1px solid var(--ikr-border,rgba(0,0,0,0.30));border-radius:var(--ikr-radius,6px);background:var(--ikr-surface,#fff);color:var(--ikr-text-muted,rgba(0,0,0,0.75));font-size:var(--ikr-load-more-size,14px);cursor:pointer;}
   .ikr-load-more:disabled{opacity:.6;cursor:not-allowed;}
-  @media(hover:hover){.ikr-load-more:hover{background:var(--ikr-reply-bg,rgba(0,0,0,0.04));}}
 
   /* Yükleniyor / boş durum mesajları — tema uyumlu */
   .ikr-state-msg{text-align:center;color:var(--ikr-text-faint,rgba(0,0,0,0.45));font-size:14px;padding:30px 0;}
@@ -168,8 +167,8 @@ export var CLASSIC_CSS = `
   .ikr-modal-img-enter-left{animation:ikrSlideInLeft 0.2s ease forwards;}
   @keyframes ikrSlideInRight{from{transform:translateX(60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   @keyframes ikrSlideInLeft{from{transform:translateX(-60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
-  .ikr-modal-close{position:absolute;top:-42px;right:0;background:#000;border:2px solid #000;color:var(--ikr-color-text,#fff);font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:var(--ikr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;z-index:100000;box-shadow:0 2px 8px rgba(0,0,0,0.20);}
-  @media(hover:hover){.ikr-modal-close:hover{background:#222;border-color:#222;}}
+  .ikr-modal-close{position:absolute;top:-42px;right:0;background:var(--ikr-color,#000);border:2px solid var(--ikr-color,#000);color:var(--ikr-color-text,#fff);font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:var(--ikr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;z-index:100000;box-shadow:0 2px 8px rgba(0,0,0,0.20);}
+  @media(hover:hover){.ikr-modal-close:hover{opacity:0.85;}}
   @media(max-width:640px){.ikr-modal-close{display:none;}}
   .ikr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.45);border:none;color:#fff;width:32px;height:32px;border-radius:var(--ikr-radius,6px);font-size:15px;cursor:pointer;align-items:center;justify-content:center;line-height:1;z-index:2;}
   @media(hover:hover){.ikr-modal-close-mobile:hover{background:rgba(0,0,0,0.70);}}
