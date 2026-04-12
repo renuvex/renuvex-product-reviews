@@ -47,7 +47,8 @@ export var CLASSIC_CSS = `
   .ikr-avg-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));white-space:nowrap;font-weight:400;}
 
   /* Orta — bar chart */
-  .ikr-bars{display:flex;flex-direction:column;gap:10px;width:100%;max-width:400px;}
+  .ikr-bars-wrap{display:flex;flex-direction:column;gap:12px;width:100%;max-width:400px;}
+  .ikr-bars{display:flex;flex-direction:column;gap:10px;width:100%;}
   .ikr-bar-row{display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;}
   @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-bar-hover-bg,var(--ikr-color-light));}}
   .ikr-bar-active{background:var(--ikr-bar-hover-bg,var(--ikr-color-light))!important;}
@@ -67,7 +68,7 @@ export var CLASSIC_CSS = `
   .ikr-recommend-pct{font-weight:700;color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));margin-right:3px;}
 
   /* Buton grubu — bar chart row ile aynı layout hizası */
-  .ikr-btn-group{display:flex;align-items:center;gap:8px;width:100%;padding:3px 6px;box-sizing:border-box;}
+  .ikr-btn-group{display:flex;align-items:center;gap:8px;width:100%;padding:3px 6px;box-sizing:border-box;margin-top:4px;}
   .ikr-btn-group-spacer{min-width:80px;flex-shrink:0;}
   .ikr-filter-btn{display:flex;align-items:center;justify-content:center;min-width:20px;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,var(--ikr-color,#000));color:var(--ikr-filter-btn-text,var(--ikr-color-text,#fff));cursor:pointer;flex-shrink:0;}
   .ikr-filter-btn-active{opacity:0.85;}

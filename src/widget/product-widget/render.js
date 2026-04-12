@@ -426,7 +426,9 @@ export async function render(productId, settings, reviewsData, productName, orde
           })(si);
           bars.appendChild(row);
         }
-        summary.appendChild(bars);
+        var barsWrap = document.createElement('div');
+        barsWrap.className = 'ikr-bars-wrap';
+        barsWrap.appendChild(bars);
 
         // Sağ — Yorum Yap butonu
         var btnGroup = document.createElement('div');
@@ -520,7 +522,8 @@ export async function render(productId, settings, reviewsData, productName, orde
         filterWrap.appendChild(filterBtn);
         filterWrap.appendChild(filterMenu);
         btnGroup.appendChild(filterWrap);
-        summary.appendChild(btnGroup);
+        barsWrap.appendChild(btnGroup);
+        summary.appendChild(barsWrap);
         widget.appendChild(summary);
       } else {
         // Yorum yoksa sadece Yorum Yap butonu göster
