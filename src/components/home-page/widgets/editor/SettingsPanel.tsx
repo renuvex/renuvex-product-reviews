@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { colors, componentStyles, typography, radii } from '@/lib/design-tokens';
 import { SettingsGroup, SettingField } from '../widgetDefs';
 import { WidgetSettingsDraft } from './WidgetEditor';
+import { IconSelect } from './IconSelect';
 
 interface SettingsPanelProps {
   groups: SettingsGroup[];
@@ -262,6 +263,16 @@ function FieldRenderer({ field, settings, onChange }: {
           field={field}
           value={String(value ?? '#6f55ff')}
           onCommit={(v) => onChange({ ...settings, [field.key]: v })}
+        />
+      );
+
+    case 'iconSelect':
+      return (
+        <IconSelect
+          label={field.label}
+          value={String(value ?? field.default)}
+          options={field.options}
+          onChange={(v) => onChange({ ...settings, [field.key]: v })}
         />
       );
 

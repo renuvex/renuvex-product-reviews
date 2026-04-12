@@ -19,7 +19,7 @@ export function buildReviewEl(r, allReviews, showHelpful) {
   leftTop.className = 'ikr-review-top-left';
   var starsSpan = document.createElement('span');
   starsSpan.className = 'ikr-review-stars';
-  starsSpan.innerHTML = starsHTML(r.rating, null, currentSettings);
+  starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
   leftTop.appendChild(starsSpan);
   if (r.title) {
     var titleSpan = document.createElement('span');

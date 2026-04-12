@@ -15,11 +15,14 @@ export type SelectOptionsSource =
   | ((settings: Record<string, unknown>) => SelectOption[]);
 
 export type SettingField =
-  | { type: 'toggle';  key: string; label: string; default: boolean;  showWhen?: ShowWhen }
-  | { type: 'text';    key: string; label: string; placeholder?: string; default: string; showWhen?: ShowWhen }
-  | { type: 'color';   key: string; label: string; default: string; showWhen?: ShowWhen }
-  | { type: 'select';  key: string; label: string; options: SelectOptionsSource; default: string; showWhen?: ShowWhen }
-  | { type: 'range';   key: string; label: string; min: number; max: number; default: number; showWhen?: ShowWhen };
+  | { type: 'toggle';     key: string; label: string; default: boolean;  showWhen?: ShowWhen }
+  | { type: 'text';       key: string; label: string; placeholder?: string; default: string; showWhen?: ShowWhen }
+  | { type: 'color';      key: string; label: string; default: string; showWhen?: ShowWhen }
+  | { type: 'select';     key: string; label: string; options: SelectOptionsSource; default: string; showWhen?: ShowWhen }
+  | { type: 'range';      key: string; label: string; min: number; max: number; default: number; showWhen?: ShowWhen }
+  // iconSelect — ikonların SVG grid popover'ında görüntülendiği özel seçici.
+  // options sadece { value, label } — SVG preview ICONS registry'sinden alınır.
+  | { type: 'iconSelect'; key: string; label: string; options: SelectOption[]; default: string; showWhen?: ShowWhen };
 
 export interface SettingsGroup {
   title: string;
@@ -186,7 +189,7 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Yıldız Stili',
         fields: [
           {
-            type: 'select',
+            type: 'iconSelect',
             key: 'reviewIcon',
             label: 'Yorum İkonu',
             default: 'star',
@@ -258,7 +261,7 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Görünüm',
         fields: [
           {
-            type: 'select',
+            type: 'iconSelect',
             key: 'icon',
             label: 'Puan İkonu',
             default: 'star',

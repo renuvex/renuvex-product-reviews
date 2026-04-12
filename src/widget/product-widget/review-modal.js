@@ -23,7 +23,7 @@ function buildRight(r) {
 
   var starsEl = document.createElement('div');
   starsEl.className = 'ikr-modal-stars';
-  starsEl.innerHTML = starsHTML(r.rating, null, currentSettings);
+  starsEl.innerHTML = starsHTML(r.rating, currentSettings);
 
   var dateEl = document.createElement('span');
   dateEl.className = 'ikr-modal-date';
@@ -70,7 +70,7 @@ function buildRight(r) {
 
 function updateRight(right, r) {
   var scrollContent = right.querySelector('.ikr-modal-scroll-content');
-  scrollContent.querySelector('.ikr-modal-stars').innerHTML = starsHTML(r.rating, null, currentSettings);
+  scrollContent.querySelector('.ikr-modal-stars').innerHTML = starsHTML(r.rating, currentSettings);
   scrollContent.querySelector('.ikr-modal-date').textContent = formatDate(r.createdAt);
 
   var titleEl = scrollContent.querySelector('.ikr-modal-title');

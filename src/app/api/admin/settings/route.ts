@@ -39,6 +39,12 @@ function validateSettings(widgetId: string, settings: Record<string, unknown>): 
           return `${field.key} şu değerlerden biri olmalı: ${valid.join(', ')}`;
         }
       }
+      if (field.type === 'iconSelect') {
+        const valid = field.options.map((o) => o.value);
+        if (!valid.includes(value as string)) {
+          return `${field.key} şu değerlerden biri olmalı: ${valid.join(', ')}`;
+        }
+      }
       if (field.type === 'range') {
         const num = Number(value);
         if (typeof value !== 'number' || isNaN(num) || num < field.min || num > field.max) {

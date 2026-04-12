@@ -13,19 +13,13 @@ export function extractSlug(url) {
   } catch (_) { return ''; }
 }
 
-// starsHTML(rating, sizeOverride, settings) — SVG yıldız satırı üretir.
+// starsHTML(rating, settings) — SVG yıldız satırı üretir.
 // settings'teki reviewIcon + reviewIconStyle'a göre ICONS registry'sinden SVG alır.
-// sizeOverride: '20px' gibi CSS size veya null (CSS variable default kullanılır)
-export function starsHTML(rating, sizeOverride, settings) {
-  var sizePx = null;
-  if (sizeOverride) {
-    // '20px' -> 20
-    var m = /(\d+)/.exec(String(sizeOverride));
-    if (m) sizePx = parseInt(m[1], 10);
-  }
+// Boyut parent CSS (.ikr-review-stars, .ikr-modal-stars vb.) tarafından verilir.
+export function starsHTML(rating, settings) {
   var wrapStyle = 'color:' + STAR_COLOR + ';display:inline-flex;gap:2px;align-items:center;';
   return '<span class="ikr-stars" style="' + wrapStyle + '">' +
-    renderStarRow(rating, settings, { sizePx: sizePx }) +
+    renderStarRow(rating, settings) +
     '</span>';
 }
 
