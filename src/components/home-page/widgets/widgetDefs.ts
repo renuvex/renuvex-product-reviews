@@ -173,16 +173,6 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        title: 'Görünüm',
-        isColor: true,
-        fields: [
-          { type: 'color', key: 'primaryColor', label: 'Buton & Vurgu Rengi', default: '#111111' },
-          { type: 'color', key: 'primaryTextColor', label: 'Buton Yazı Rengi', default: '#ffffff' },
-          { type: 'color', key: 'bgColor',      label: 'Arka Plan Rengi',     default: '#ffffff' },
-          { type: 'color', key: 'textColor',    label: 'Ana Renk',            default: '#111111' },
-        ],
-      },
-      {
         title: 'Yıldız Stili',
         fields: [
           {
