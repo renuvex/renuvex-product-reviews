@@ -13,6 +13,7 @@ export type SettingField =
 
 export interface SettingsGroup {
   title: string;
+  isColor?: boolean; // true → "Renkler" kategorisi altında listelenir, false/undefined → ana panelde
   fields: SettingField[];
 }
 
@@ -44,6 +45,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Widget Kutusu',
+        isColor: true,
         fields: [
           { type: 'range', key: 'borderRadius',       label: 'Köşe Ovalliği',        min: 0, max: 24, default: 8 },
           { type: 'color', key: 'widgetBgColor',      label: 'Widget Arka Plan',     default: '#ffffff' },
@@ -53,6 +55,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Başlık & Özet',
+        isColor: true,
         fields: [
           { type: 'color', key: 'headerTitleColor',     label: 'Widget Başlığı',     default: '#111111' },
           { type: 'color', key: 'headerAvgColor',       label: 'Ortalama Puan',      default: '#111111' },
@@ -62,6 +65,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Bar Chart',
+        isColor: true,
         fields: [
           { type: 'color', key: 'barLabelColor',   label: 'Etiket Rengi',        default: '#111111' },
           { type: 'color', key: 'barFillColor',    label: 'Dolgu Rengi',         default: '#111111' },
@@ -72,6 +76,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Butonlar',
+        isColor: true,
         fields: [
           { type: 'color', key: 'btnBgColor',          label: 'Yorum Yaz / Gönder Arka Plan',  default: '#111111' },
           { type: 'color', key: 'btnTextColor',        label: 'Yorum Yaz / Gönder Yazı',       default: '#ffffff' },
@@ -83,6 +88,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Filtre Menüsü',
+        isColor: true,
         fields: [
           { type: 'color', key: 'filterMenuBgColor',      label: 'Menü Arka Planı',       default: '#ffffff' },
           { type: 'color', key: 'filterMenuBorderColor',  label: 'Menü Border',            default: '#e5e7eb' },
@@ -93,6 +99,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Yorum Kartı',
+        isColor: true,
         fields: [
           { type: 'color', key: 'reviewTitleColor',  label: 'Başlık Rengi',       default: '#111111' },
           { type: 'color', key: 'reviewAuthorColor', label: 'Yazar Rengi',         default: '#111111' },
@@ -104,6 +111,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Mağaza Yanıtı',
+        isColor: true,
         fields: [
           { type: 'color', key: 'replyBgColor',     label: 'Arka Plan Rengi',  default: '#f3f4f6' },
           { type: 'color', key: 'replyBorderColor', label: 'Sol Çizgi Rengi',  default: '#111111' },
@@ -113,6 +121,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Faydalı Butonu',
+        isColor: true,
         fields: [
           { type: 'color', key: 'helpfulColor',       label: 'Normal Rengi',  default: '#9ca3af' },
           { type: 'color', key: 'helpfulActiveColor', label: 'Aktif Rengi',   default: '#111111' },
@@ -120,6 +129,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Fotoğraf Galerisi',
+        isColor: true,
         fields: [
           { type: 'color', key: 'photoBgColor',     label: 'Arka Plan Rengi',   default: '#f3f4f6' },
           { type: 'color', key: 'photoBorderColor', label: 'Border Rengi',      default: '#e5e7eb' },
@@ -128,6 +138,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Form',
+        isColor: true,
         fields: [
           { type: 'color', key: 'formBgColor',       label: 'Form Arka Planı',        default: '#ffffff' },
           { type: 'color', key: 'formBorderColor',   label: 'Form Border',            default: '#e5e7eb' },
@@ -139,6 +150,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Daha Fazla Göster',
+        isColor: true,
         fields: [
           { type: 'color', key: 'loadMoreBgColor',     label: 'Arka Plan Rengi', default: '#ffffff' },
           { type: 'color', key: 'loadMoreTextColor',   label: 'Yazı Rengi',      default: '#111111' },
@@ -147,6 +159,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Modal',
+        isColor: true,
         fields: [
           { type: 'color', key: 'modalBgColor',          label: 'Modal Arka Planı',       default: '#ffffff' },
           { type: 'color', key: 'modalTextColor',        label: 'Modal Yazı Rengi',       default: '#111111' },
@@ -161,6 +174,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         title: 'Görünüm',
+        isColor: true,
         fields: [
           { type: 'color', key: 'primaryColor', label: 'Buton & Vurgu Rengi', default: '#111111' },
           { type: 'color', key: 'primaryTextColor', label: 'Buton Yazı Rengi', default: '#ffffff' },

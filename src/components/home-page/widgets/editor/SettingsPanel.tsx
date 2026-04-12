@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ChevronRight, Palette } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -19,8 +20,12 @@ interface SettingsPanelProps {
   onChange: (s: WidgetSettingsDraft) => void;
 }
 
+// View modes: ana panel ya da "Renkler" alt paneli.
+type PanelView = 'main' | 'colors';
+
 export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps) {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [view, setView] = useState<PanelView>('main');
 
   if (groups.length === 0) {
     return (
@@ -29,6 +34,11 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
       </div>
     );
   }
+
+  // Grupları ayır: isColor=true olanlar "Renkler" alt menüsüne, diğerleri ana panele.
+  const colorGroups = groups.filter((g) => g.isColor);
+  const mainGroups = groups.filter((g) => !g.isColor);
+  const hasColorGroups = colorGroups.length > 0;
 
   const handleResetClick = () => {
     setShowConfirm(true);
@@ -43,75 +53,138 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
         }
       });
     });
-    
+
     onChange({ ...settings, ...defaults });
     setShowConfirm(false);
   };
 
+  // Render edilen akordiyon listesi — hem ana hem renk view'ları için tek helper.
+  const renderAccordion = (list: SettingsGroup[]) => (
+    <Accordion type="multiple" defaultValue={list.length > 0 ? ['group-0'] : []} className="w-full">
+      {list.map((group, i) => (
+        <AccordionItem key={`group-${i}`} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
+          <AccordionTrigger style={{
+            fontSize: typography.fontSize.base,
+            fontWeight: typography.fontWeight.medium,
+            color: colors.textPrimary,
+            padding: '14px 0',
+          }}>
+            {group.title}
+          </AccordionTrigger>
+          <AccordionContent>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
+              {group.fields.map((field) => {
+                // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
+                if (field.showWhen) {
+                  const dep = settings[field.showWhen.key];
+                  if (dep !== field.showWhen.equals) return null;
+                }
+                return (
+                  <FieldRenderer
+                    key={field.key}
+                    field={field}
+                    settings={settings}
+                    onChange={onChange}
+                  />
+                );
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+
   return (
     <>
-      <Accordion type="multiple" defaultValue={groups.length > 0 ? ['group-0'] : []} className="w-full">
-        {groups.map((group, i) => (
-          <AccordionItem key={`group-${i}`} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
-            <AccordionTrigger style={{
+      {view === 'main' ? (
+        <>
+          {renderAccordion(mainGroups)}
+
+          {/* "Renkler" kategori butonu — alt panele geçiş */}
+          {hasColorGroups && (
+            <button
+              onClick={() => setView('colors')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                padding: '14px 0',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: `1px solid ${colors.borderDefault}`,
+                cursor: 'pointer',
+                fontSize: typography.fontSize.base,
+                fontWeight: typography.fontWeight.medium,
+                color: colors.textPrimary,
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Palette size={16} style={{ color: colors.textSecondary }} />
+                Renkler
+              </span>
+              <ChevronRight size={16} style={{ color: colors.textMuted }} />
+            </button>
+          )}
+
+          {/* Varsayılanlara Sıfırla Butonu */}
+          <div style={{ padding: '24px 0', marginTop: 16 }}>
+            <button
+              onClick={handleResetClick}
+              style={{
+                ...componentStyles.btnDefault,
+                width: '100%',
+                backgroundColor: 'transparent',
+                border: `1px dashed ${colors.borderDefault}`,
+                color: colors.textSecondary,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = colors.errorText;
+                e.currentTarget.style.borderColor = colors.errorBorder;
+                e.currentTarget.style.borderStyle = 'solid';
+                e.currentTarget.style.backgroundColor = colors.bgWhite;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = colors.textSecondary;
+                e.currentTarget.style.borderColor = colors.borderDefault;
+                e.currentTarget.style.borderStyle = 'dashed';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              Varsayılanlara Sıfırla
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Renk alt paneli başlığı — geri butonu + "Renkler" */}
+          <button
+            onClick={() => setView('main')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '14px 0',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: `1px solid ${colors.borderDefault}`,
+              cursor: 'pointer',
               fontSize: typography.fontSize.base,
               fontWeight: typography.fontWeight.medium,
               color: colors.textPrimary,
-              padding: '14px 0',
-            }}>
-              {group.title}
-            </AccordionTrigger>
-            <AccordionContent>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
-                {group.fields.map((field) => {
-                  // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
-                  if (field.showWhen) {
-                    const dep = settings[field.showWhen.key];
-                    if (dep !== field.showWhen.equals) return null;
-                  }
-                  return (
-                    <FieldRenderer
-                      key={field.key}
-                      field={field}
-                      settings={settings}
-                      onChange={onChange}
-                    />
-                  );
-                })}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+              width: '100%',
+              textAlign: 'left',
+            }}
+          >
+            <ArrowLeft size={16} style={{ color: colors.textSecondary }} />
+            <span>Renkler</span>
+          </button>
 
-      {/* Varsayılanlara Sıfırla Butonu */}
-      <div style={{ padding: '24px 0', marginTop: 16 }}>
-        <button
-          onClick={handleResetClick}
-          style={{
-            ...componentStyles.btnDefault,
-            width: '100%',
-            backgroundColor: 'transparent',
-            border: `1px dashed ${colors.borderDefault}`,
-            color: colors.textSecondary,
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = colors.errorText;          // rgb(255, 0, 0)
-            e.currentTarget.style.borderColor = colors.errorBorder;  // rgb(227, 225, 229)
-            e.currentTarget.style.borderStyle = 'solid';
-            e.currentTarget.style.backgroundColor = colors.bgWhite;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = colors.textSecondary;
-            e.currentTarget.style.borderColor = colors.borderDefault;
-            e.currentTarget.style.borderStyle = 'dashed';
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          Varsayılanlara Sıfırla
-        </button>
-      </div>
+          {renderAccordion(colorGroups)}
+        </>
+      )}
 
       {/* Sipariş Modal / Dialog */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
