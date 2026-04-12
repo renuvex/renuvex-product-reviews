@@ -18,11 +18,8 @@ export async function GET() {
       primaryColor: '#111111',
       autoApprove: false,
       showHelpful: true,
-      titleSize: 24,
-      reviewTextSize: 14,
-      authorSize: 14,
-      replyNameSize: 14,
-      replyTextSize: 14,
+      size: 'medium',
+      thumbnailSize: 'medium',
     },
     badge: {
       enabled: true,

@@ -29,6 +29,39 @@ function hexToRgba(hex, alpha) {
   return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 }
 
+// ─── Boyut Preset'leri ─────────────────────────────────────────────────────
+// Küçük / Orta / Büyük — tüm font ve ikon boyutlarını tek seçimle belirler.
+// Thumbnail boyutu ayrı preset (thumbnailSize).
+
+var SIZE_PRESETS = {
+  small: {
+    titleSize: 20, reviewTextSize: 12, reviewTitleSize: 12, authorSize: 12,
+    replyNameSize: 12, replyTextSize: 12, photoTitleSize: 14,
+    avgRatingSize: 36, avgStarSize: 36, reviewCountSize: 14, recommendSize: 12,
+    btnTextSize: 12, barLabelSize: 12, barCountSize: 12,
+    reviewDateSize: 10, filterTextSize: 12, loadMoreSize: 12,
+    readMoreSize: 10, helpfulSize: 10, reviewStarSize: 16,
+  },
+  medium: {
+    titleSize: 24, reviewTextSize: 14, reviewTitleSize: 14, authorSize: 14,
+    replyNameSize: 14, replyTextSize: 14, photoTitleSize: 16,
+    avgRatingSize: 46, avgStarSize: 46, reviewCountSize: 16, recommendSize: 14,
+    btnTextSize: 14, barLabelSize: 14, barCountSize: 14,
+    reviewDateSize: 12, filterTextSize: 14, loadMoreSize: 14,
+    readMoreSize: 12, helpfulSize: 12, reviewStarSize: 20,
+  },
+  large: {
+    titleSize: 28, reviewTextSize: 16, reviewTitleSize: 16, authorSize: 16,
+    replyNameSize: 16, replyTextSize: 16, photoTitleSize: 18,
+    avgRatingSize: 56, avgStarSize: 56, reviewCountSize: 18, recommendSize: 16,
+    btnTextSize: 16, barLabelSize: 16, barCountSize: 16,
+    reviewDateSize: 14, filterTextSize: 16, loadMoreSize: 16,
+    readMoreSize: 14, helpfulSize: 14, reviewStarSize: 24,
+  },
+};
+
+var THUMBNAIL_PRESETS = { small: 60, medium: 90, large: 120 };
+
 function applyManualTheme(root, settings) {
   var bg = settings.bgColor || '#ffffff';
   var text = settings.textColor || '#111111';
@@ -85,34 +118,39 @@ export async function render(productId, settings, reviewsData, productName, orde
     injectStyles(primaryColor, CLASSIC_CSS);
 
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
-    root.style.setProperty('--ikr-title-size', (settings.titleSize || 24) + 'px');
-    root.style.setProperty('--ikr-review-text-size', (settings.reviewTextSize || 14) + 'px');
-    root.style.setProperty('--ikr-review-title-size', (settings.reviewTitleSize || 14) + 'px');
-    root.style.setProperty('--ikr-author-size', (settings.authorSize || 14) + 'px');
-    root.style.setProperty('--ikr-reply-name-size', (settings.replyNameSize || 14) + 'px');
-    root.style.setProperty('--ikr-reply-text-size', (settings.replyTextSize || 14) + 'px');
+
+    // Boyut preset'inden değerleri oku
+    var sz = SIZE_PRESETS[settings.size] || SIZE_PRESETS.medium;
+    var thumbPx = THUMBNAIL_PRESETS[settings.thumbnailSize] || THUMBNAIL_PRESETS.medium;
+
+    root.style.setProperty('--ikr-title-size', sz.titleSize + 'px');
+    root.style.setProperty('--ikr-review-text-size', sz.reviewTextSize + 'px');
+    root.style.setProperty('--ikr-review-title-size', sz.reviewTitleSize + 'px');
+    root.style.setProperty('--ikr-author-size', sz.authorSize + 'px');
+    root.style.setProperty('--ikr-reply-name-size', sz.replyNameSize + 'px');
+    root.style.setProperty('--ikr-reply-text-size', sz.replyTextSize + 'px');
     root.style.setProperty('--ikr-color-text', primaryTextColor);
     root.style.setProperty('--ikr-radius', radius + 'px');
     root.style.setProperty('--ikr-radius-sm', Math.max(0, radius - 4) + 'px');
-    root.style.setProperty('--ikr-photo-title-size', (settings.photoTitleSize || 16) + 'px');
-    root.style.setProperty('--ikr-avg-rating-size', (settings.avgRatingSize || 46) + 'px');
-    root.style.setProperty('--ikr-review-count-size', (settings.reviewCountSize || 16) + 'px');
-    root.style.setProperty('--ikr-recommend-size', (settings.recommendSize || 14) + 'px');
-    root.style.setProperty('--ikr-btn-text-size', (settings.btnTextSize || 14) + 'px');
-    root.style.setProperty('--ikr-bar-label-size', (settings.barLabelSize || 14) + 'px');
-    root.style.setProperty('--ikr-bar-count-size', (settings.barCountSize || 14) + 'px');
-    root.style.setProperty('--ikr-review-date-size', (settings.reviewDateSize || 12) + 'px');
-    root.style.setProperty('--ikr-filter-text-size', (settings.filterTextSize || 14) + 'px');
-    root.style.setProperty('--ikr-load-more-size', (settings.loadMoreSize || 14) + 'px');
-    root.style.setProperty('--ikr-read-more-size', (settings.readMoreSize || 12) + 'px');
-    root.style.setProperty('--ikr-helpful-size', (settings.helpfulSize || 12) + 'px');
-    root.style.setProperty('--ikr-thumbnail-size', (settings.reviewThumbnailSize || 90) + 'px');
+    root.style.setProperty('--ikr-photo-title-size', sz.photoTitleSize + 'px');
+    root.style.setProperty('--ikr-avg-rating-size', sz.avgRatingSize + 'px');
+    root.style.setProperty('--ikr-review-count-size', sz.reviewCountSize + 'px');
+    root.style.setProperty('--ikr-recommend-size', sz.recommendSize + 'px');
+    root.style.setProperty('--ikr-btn-text-size', sz.btnTextSize + 'px');
+    root.style.setProperty('--ikr-bar-label-size', sz.barLabelSize + 'px');
+    root.style.setProperty('--ikr-bar-count-size', sz.barCountSize + 'px');
+    root.style.setProperty('--ikr-review-date-size', sz.reviewDateSize + 'px');
+    root.style.setProperty('--ikr-filter-text-size', sz.filterTextSize + 'px');
+    root.style.setProperty('--ikr-load-more-size', sz.loadMoreSize + 'px');
+    root.style.setProperty('--ikr-read-more-size', sz.readMoreSize + 'px');
+    root.style.setProperty('--ikr-helpful-size', sz.helpfulSize + 'px');
+    root.style.setProperty('--ikr-thumbnail-size', thumbPx + 'px');
 
     // Review widget yıldız ayarları — badge'den bağımsız
     var reviewStarColor = /^#[0-9A-Fa-f]{6}$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
-    root.style.setProperty('--ikr-star-size', (settings.reviewStarSize || 20) + 'px');
-    root.style.setProperty('--ikr-avg-star-size', (settings.avgStarSize || (settings.avgRatingSize || 46)) + 'px');
+    root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
+    root.style.setProperty('--ikr-avg-star-size', sz.avgStarSize + 'px');
     var reviewIconKey = settings.reviewIcon || 'star';
     var reviewIconChars = { star: '★', heart: '♥', circle: '●' };
     var reviewIconChar = reviewIconChars[reviewIconKey] || '★';
