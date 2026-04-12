@@ -65,16 +65,177 @@ var THUMBNAIL_PRESETS = { small: 60, medium: 90, large: 120 };
 function applyManualTheme(root, settings) {
   var bg = settings.bgColor || '#ffffff';
   var text = settings.textColor || '#111111';
-  var muted = settings.mutedTextColor || '#6b7280';
   var replyBg = settings.replyBgColor || '#f3f4f6';
   var inputBg = settings.inputBgColor || '#ffffff';
 
+  // Grup 1 — Genel
+  var widgetBg      = settings.widgetBgColor     || bg;
+  var widgetBorder  = settings.widgetBorderColor || 'transparent';
+  var separator     = settings.separatorColor    || hexToRgba(text, 0.08);
+
+  // Grup 2 — Başlık & Özet
+  var headerTitle     = settings.headerTitleColor     || text;
+  var headerAvg       = settings.headerAvgColor       || text;
+  var headerCount     = settings.headerCountColor     || text;
+  var headerRecommend = settings.headerRecommendColor || text;
+
+  // Grup 3 — Bar Chart
+  var barLabel  = settings.barLabelColor  || text;
+  var barFill   = settings.barFillColor   || text;
+  var barTrack  = settings.barTrackColor  || hexToRgba(text, 0.10);
+  var barCount  = settings.barCountColor  || text;
+  var barHoverBg = settings.barHoverBgColor || hexToRgba(text, 0.05);
+
+  // Grup 4 — Butonlar
+  var primary      = settings.primaryColor     || '#111111';
+  var primaryText  = settings.primaryTextColor || '#ffffff';
+  var btnBg        = settings.btnBgColor        || primary;
+  var btnText      = settings.btnTextColor      || primaryText;
+  var btnBorder    = settings.btnBorderColor    || primary;
+  var filterBg     = settings.filterBtnBgColor     || primary;
+  var filterText   = settings.filterBtnTextColor   || primaryText;
+  var filterBorder = settings.filterBtnBorderColor || primary;
+
+  // Grup 5 — Filtre Menüsü
+  var filterMenuBg      = settings.filterMenuBgColor      || bg;
+  var filterMenuBorder  = settings.filterMenuBorderColor  || hexToRgba(text, 0.12);
+  var filterItemText    = settings.filterItemTextColor    || text;
+  var filterItemHoverBg = settings.filterItemHoverBgColor || hexToRgba(primary, 0.07);
+  var filterItemActive  = settings.filterItemActiveColor  || primary;
+
+  // Grup 6 — Yorum Kartı
+  var reviewTitleColor = settings.reviewTitleColor || text;
+  var reviewAuthorColor = settings.reviewAuthorColor || text;
+  var reviewDateColor  = settings.reviewDateColor  || text;
+  var reviewBodyColor  = settings.reviewBodyColor  || text;
+  var reviewBorderColor = settings.reviewBorderColor || hexToRgba(text, 0.08);
+  var reviewStarColor  = settings.reviewStarColor  || '#f59e0b';
+
+  // Grup 7 — Mağaza Yanıtı
+  var replyBgVar      = settings.replyBgColor      || replyBg;
+  var replyBorderVar  = settings.replyBorderColor  || primary;
+  var replyLabelColor = settings.replyLabelColor   || text;
+  var replyTextVar    = settings.replyTextColor    || text;
+
+  // Grup 8 — Faydalı Butonu
+  var helpfulColor      = settings.helpfulColor      || hexToRgba(text, 0.45);
+  var helpfulActiveColor = settings.helpfulActiveColor || primary;
+
+  // Grup 9 — Fotoğraf Galerisi
+  var photoBg     = settings.photoBgColor     || hexToRgba(text, 0.03);
+  var photoBorder = settings.photoBorderColor || hexToRgba(text, 0.10);
+  var photoTitle  = settings.photoTitleColor  || text;
+
+  // Grup 10 — Form
+  var formBg      = settings.formBgColor    || bg;
+  var formBorder  = settings.formBorderColor || hexToRgba(text, 0.08);
+  var inputBgVar  = settings.inputBgColor   || inputBg;
+  var inputTextVar = settings.inputTextColor || text;
+  var inputBorderVar = settings.inputBorderColor || hexToRgba(text, 0.20);
+  var placeholderColor = settings.placeholderColor || hexToRgba(text, 0.35);
+
+  // Grup 11 — Daha Fazla Göster
+  var loadMoreBg     = settings.loadMoreBgColor     || bg;
+  var loadMoreText   = settings.loadMoreTextColor   || text;
+  var loadMoreBorder = settings.loadMoreBorderColor || hexToRgba(text, 0.30);
+
+  // Grup 12 — Modal
+  var modalBg          = settings.modalBgColor          || bg;
+  var modalText        = settings.modalTextColor        || text;
+  var modalCloseBg     = settings.modalCloseBgColor     || primary;
+  var modalCloseText   = settings.modalCloseTextColor   || primaryText;
+  var modalCloseBorder = settings.modalCloseBorderColor || primary;
+  var modalNavBg       = settings.modalNavBgColor       || 'rgba(0,0,0,0.45)';
+  var modalNavText     = settings.modalNavTextColor     || '#ffffff';
+  var modalReplyBg     = settings.modalReplyBgColor     || replyBg;
+  var modalReplyBorder = settings.modalReplyBorderColor || primary;
+
   var vars = {
+    // Grup 1 — Genel
+    '--ikr-widget-bg':     widgetBg,
+    '--ikr-widget-border': widgetBorder,
+    '--ikr-separator':     separator,
+
+    // Grup 2 — Başlık & Özet
+    '--ikr-header-title':     headerTitle,
+    '--ikr-header-avg':       headerAvg,
+    '--ikr-header-count':     headerCount,
+    '--ikr-header-recommend': headerRecommend,
+
+    // Grup 3 — Bar Chart
+    '--ikr-bar-label':    barLabel,
+    '--ikr-bar-fill':     barFill,
+    '--ikr-bar-track':    barTrack,
+    '--ikr-bar-count':    barCount,
+    '--ikr-bar-hover-bg': barHoverBg,
+
+    // Grup 4 — Butonlar
+    '--ikr-btn-bg':           btnBg,
+    '--ikr-btn-text':         btnText,
+    '--ikr-btn-border':       btnBorder,
+    '--ikr-filter-btn-bg':    filterBg,
+    '--ikr-filter-btn-text':  filterText,
+    '--ikr-filter-btn-border':filterBorder,
+
+    // Grup 5 — Filtre Menüsü
+    '--ikr-filter-menu-bg':       filterMenuBg,
+    '--ikr-filter-menu-border':   filterMenuBorder,
+    '--ikr-filter-item-text':     filterItemText,
+    '--ikr-filter-item-hover-bg': filterItemHoverBg,
+    '--ikr-filter-item-active':   filterItemActive,
+
+    // Grup 6 — Yorum Kartı
+    '--ikr-review-title':        reviewTitleColor,
+    '--ikr-review-author':       reviewAuthorColor,
+    '--ikr-review-date':         reviewDateColor,
+    '--ikr-review-body':         reviewBodyColor,
+    '--ikr-review-border':       reviewBorderColor,
+    '--ikr-review-star-color':   reviewStarColor,
+
+    // Grup 7 — Mağaza Yanıtı
+    '--ikr-reply-bg-color':    replyBgVar,
+    '--ikr-reply-border':      replyBorderVar,
+    '--ikr-reply-label':       replyLabelColor,
+    '--ikr-reply-text':        replyTextVar,
+
+    // Grup 8 — Faydalı Butonu
+    '--ikr-helpful-color':        helpfulColor,
+    '--ikr-helpful-active-color': helpfulActiveColor,
+
+    // Grup 9 — Fotoğraf Galerisi
+    '--ikr-photo-bg':     photoBg,
+    '--ikr-photo-border': photoBorder,
+    '--ikr-photo-title':  photoTitle,
+
+    // Grup 10 — Form
+    '--ikr-form-bg':          formBg,
+    '--ikr-form-border':      formBorder,
+    '--ikr-input-bg-color':   inputBgVar,
+    '--ikr-input-text-color': inputTextVar,
+    '--ikr-input-border':     inputBorderVar,
+    '--ikr-placeholder':      placeholderColor,
+
+    // Grup 11 — Daha Fazla Göster
+    '--ikr-load-more-bg':     loadMoreBg,
+    '--ikr-load-more-text':   loadMoreText,
+    '--ikr-load-more-border': loadMoreBorder,
+
+    // Grup 12 — Modal
+    '--ikr-modal-bg':           modalBg,
+    '--ikr-modal-text':         modalText,
+    '--ikr-modal-close-bg':     modalCloseBg,
+    '--ikr-modal-close-text':   modalCloseText,
+    '--ikr-modal-close-border': modalCloseBorder,
+    '--ikr-modal-nav-bg':       modalNavBg,
+    '--ikr-modal-nav-text':     modalNavText,
+    '--ikr-modal-reply-bg':     modalReplyBg,
+    '--ikr-modal-reply-border': modalReplyBorder,
+
+    // Legacy (grup grup kaldırılacak)
     '--ikr-bg':         bg,
     '--ikr-surface':    bg,
     '--ikr-text':       text,
-    '--ikr-text-muted': muted,
-    '--ikr-text-faint': hexToRgba(muted, 0.6),
+    '--ikr-text-faint': hexToRgba(text, 0.45),
     '--ikr-border':     hexToRgba(text, 0.12),
     '--ikr-track-bg':   hexToRgba(text, 0.22),
     '--ikr-reply-bg':   replyBg,

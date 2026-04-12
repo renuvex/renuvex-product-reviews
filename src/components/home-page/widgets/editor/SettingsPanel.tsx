@@ -52,7 +52,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     <>
       <Accordion type="multiple" defaultValue={groups.length > 0 ? ['group-0'] : []} className="w-full">
         {groups.map((group, i) => (
-          <AccordionItem key={group.title} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
+          <AccordionItem key={`group-${i}`} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}` }}>
             <AccordionTrigger style={{
               fontSize: typography.fontSize.base,
               fontWeight: typography.fontWeight.medium,

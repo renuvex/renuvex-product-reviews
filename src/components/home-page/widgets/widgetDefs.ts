@@ -38,8 +38,125 @@ export const WIDGETS: WidgetDef[] = [
       {
         title: 'Genel',
         fields: [
-          { type: 'toggle', key: 'enabled',      label: 'Widget Aktif',        default: true },
-          { type: 'text',   key: 'title',         label: 'Widget Başlığı',      placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları' },
+          { type: 'toggle', key: 'enabled', label: 'Widget Aktif',   default: true },
+          { type: 'text',   key: 'title',    label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları' },
+        ],
+      },
+      {
+        title: 'Widget Kutusu',
+        fields: [
+          { type: 'range', key: 'borderRadius',       label: 'Köşe Ovalliği',        min: 0, max: 24, default: 8 },
+          { type: 'color', key: 'widgetBgColor',      label: 'Widget Arka Plan',     default: '#ffffff' },
+          { type: 'color', key: 'widgetBorderColor',  label: 'Widget Border',        default: '#ffffff' },
+          { type: 'color', key: 'separatorColor',     label: 'Ayırıcı Çizgi Rengi',  default: '#e5e7eb' },
+        ],
+      },
+      {
+        title: 'Başlık & Özet',
+        fields: [
+          { type: 'color', key: 'headerTitleColor',     label: 'Widget Başlığı',     default: '#111111' },
+          { type: 'color', key: 'headerAvgColor',       label: 'Ortalama Puan',      default: '#111111' },
+          { type: 'color', key: 'headerCountColor',     label: 'Yorum Sayısı',       default: '#111111' },
+          { type: 'color', key: 'headerRecommendColor', label: 'Tavsiye Yüzdesi',    default: '#111111' },
+        ],
+      },
+      {
+        title: 'Bar Chart',
+        fields: [
+          { type: 'color', key: 'barLabelColor',   label: 'Etiket Rengi',        default: '#111111' },
+          { type: 'color', key: 'barFillColor',    label: 'Dolgu Rengi',         default: '#111111' },
+          { type: 'color', key: 'barTrackColor',   label: 'Arka Plan Rengi',     default: '#e5e7eb' },
+          { type: 'color', key: 'barCountColor',   label: 'Sayı Rengi',          default: '#111111' },
+          { type: 'color', key: 'barHoverBgColor', label: 'Hover Arka Planı',    default: '#f3f4f6' },
+        ],
+      },
+      {
+        title: 'Butonlar',
+        fields: [
+          { type: 'color', key: 'btnBgColor',          label: 'Yorum Yaz / Gönder Arka Plan',  default: '#111111' },
+          { type: 'color', key: 'btnTextColor',        label: 'Yorum Yaz / Gönder Yazı',       default: '#ffffff' },
+          { type: 'color', key: 'btnBorderColor',      label: 'Yorum Yaz / Gönder Border',     default: '#111111' },
+          { type: 'color', key: 'filterBtnBgColor',    label: 'Filtre Butonu Arka Plan',       default: '#111111' },
+          { type: 'color', key: 'filterBtnTextColor',  label: 'Filtre Butonu Yazı',            default: '#ffffff' },
+          { type: 'color', key: 'filterBtnBorderColor',label: 'Filtre Butonu Border',          default: '#111111' },
+        ],
+      },
+      {
+        title: 'Filtre Menüsü',
+        fields: [
+          { type: 'color', key: 'filterMenuBgColor',      label: 'Menü Arka Planı',       default: '#ffffff' },
+          { type: 'color', key: 'filterMenuBorderColor',  label: 'Menü Border',            default: '#e5e7eb' },
+          { type: 'color', key: 'filterItemTextColor',    label: 'Öğe Yazı Rengi',         default: '#111111' },
+          { type: 'color', key: 'filterItemHoverBgColor', label: 'Öğe Hover Arka Planı',   default: '#f3f4f6' },
+          { type: 'color', key: 'filterItemActiveColor',  label: 'Aktif Öğe Rengi',        default: '#111111' },
+        ],
+      },
+      {
+        title: 'Yorum Kartı',
+        fields: [
+          { type: 'color', key: 'reviewTitleColor',  label: 'Başlık Rengi',       default: '#111111' },
+          { type: 'color', key: 'reviewAuthorColor', label: 'Yazar Rengi',         default: '#111111' },
+          { type: 'color', key: 'reviewDateColor',   label: 'Tarih Rengi',         default: '#111111' },
+          { type: 'color', key: 'reviewBodyColor',   label: 'Yorum Metni Rengi',   default: '#111111' },
+          { type: 'color', key: 'reviewBorderColor', label: 'Ayırıcı Çizgi Rengi', default: '#e5e7eb' },
+          { type: 'color', key: 'reviewStarColor',   label: 'Yıldız Rengi',        default: '#f59e0b' },
+        ],
+      },
+      {
+        title: 'Mağaza Yanıtı',
+        fields: [
+          { type: 'color', key: 'replyBgColor',     label: 'Arka Plan Rengi',  default: '#f3f4f6' },
+          { type: 'color', key: 'replyBorderColor', label: 'Sol Çizgi Rengi',  default: '#111111' },
+          { type: 'color', key: 'replyLabelColor',  label: 'Etiket Rengi',     default: '#111111' },
+          { type: 'color', key: 'replyTextColor',   label: 'Metin Rengi',      default: '#111111' },
+        ],
+      },
+      {
+        title: 'Faydalı Butonu',
+        fields: [
+          { type: 'color', key: 'helpfulColor',       label: 'Normal Rengi',  default: '#9ca3af' },
+          { type: 'color', key: 'helpfulActiveColor', label: 'Aktif Rengi',   default: '#111111' },
+        ],
+      },
+      {
+        title: 'Fotoğraf Galerisi',
+        fields: [
+          { type: 'color', key: 'photoBgColor',     label: 'Arka Plan Rengi',   default: '#f3f4f6' },
+          { type: 'color', key: 'photoBorderColor', label: 'Border Rengi',      default: '#e5e7eb' },
+          { type: 'color', key: 'photoTitleColor',  label: 'Başlık Rengi',      default: '#111111' },
+        ],
+      },
+      {
+        title: 'Form',
+        fields: [
+          { type: 'color', key: 'formBgColor',       label: 'Form Arka Planı',        default: '#ffffff' },
+          { type: 'color', key: 'formBorderColor',   label: 'Form Border',            default: '#e5e7eb' },
+          { type: 'color', key: 'inputBgColor',      label: 'Alan Arka Planı',        default: '#ffffff' },
+          { type: 'color', key: 'inputTextColor',    label: 'Alan Yazı Rengi',        default: '#111111' },
+          { type: 'color', key: 'inputBorderColor',  label: 'Alan Border Rengi',      default: '#d1d5db' },
+          { type: 'color', key: 'placeholderColor',  label: 'Placeholder Rengi',      default: '#9ca3af' },
+        ],
+      },
+      {
+        title: 'Daha Fazla Göster',
+        fields: [
+          { type: 'color', key: 'loadMoreBgColor',     label: 'Arka Plan Rengi', default: '#ffffff' },
+          { type: 'color', key: 'loadMoreTextColor',   label: 'Yazı Rengi',      default: '#111111' },
+          { type: 'color', key: 'loadMoreBorderColor', label: 'Border Rengi',    default: '#d1d5db' },
+        ],
+      },
+      {
+        title: 'Modal',
+        fields: [
+          { type: 'color', key: 'modalBgColor',          label: 'Modal Arka Planı',       default: '#ffffff' },
+          { type: 'color', key: 'modalTextColor',        label: 'Modal Yazı Rengi',       default: '#111111' },
+          { type: 'color', key: 'modalCloseBgColor',     label: 'Kapat Butonu Arka Plan', default: '#111111' },
+          { type: 'color', key: 'modalCloseTextColor',   label: 'Kapat Butonu Yazı',     default: '#ffffff' },
+          { type: 'color', key: 'modalCloseBorderColor', label: 'Kapat Butonu Border',   default: '#111111' },
+          { type: 'color', key: 'modalNavBgColor',       label: 'Ok Butonu Arka Plan',   default: '#111111' },
+          { type: 'color', key: 'modalNavTextColor',     label: 'Ok Butonu Yazı',        default: '#ffffff' },
+          { type: 'color', key: 'modalReplyBgColor',     label: 'Yanıt Arka Planı',      default: '#f3f4f6' },
+          { type: 'color', key: 'modalReplyBorderColor', label: 'Yanıt Sol Çizgisi',     default: '#111111' },
         ],
       },
       {
@@ -47,12 +164,8 @@ export const WIDGETS: WidgetDef[] = [
         fields: [
           { type: 'color', key: 'primaryColor', label: 'Buton & Vurgu Rengi', default: '#111111' },
           { type: 'color', key: 'primaryTextColor', label: 'Buton Yazı Rengi', default: '#ffffff' },
-          { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
-          { type: 'color', key: 'bgColor', label: 'Arka Plan Rengi', default: '#ffffff' },
-          { type: 'color', key: 'textColor', label: 'Ana Renk', default: '#111111' },
-          { type: 'color', key: 'mutedTextColor', label: 'İkincil Yazı Rengi', default: '#6b7280' },
-          { type: 'color', key: 'replyBgColor', label: 'Mağaza Yanıtı Arka Planı', default: '#f3f4f6' },
-          { type: 'color', key: 'inputBgColor', label: 'Giriş Alanları Arka Planı', default: '#ffffff' },
+          { type: 'color', key: 'bgColor',      label: 'Arka Plan Rengi',     default: '#ffffff' },
+          { type: 'color', key: 'textColor',    label: 'Ana Renk',            default: '#111111' },
         ],
       },
       {
@@ -69,7 +182,6 @@ export const WIDGETS: WidgetDef[] = [
               { value: 'circle', label: '● Daire' },
             ],
           },
-          { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
         ],
       },
       {
