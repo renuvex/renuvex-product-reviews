@@ -49,7 +49,7 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'color', key: 'primaryTextColor', label: 'Buton Yazı Rengi', default: '#ffffff' },
           { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
           { type: 'color', key: 'bgColor', label: 'Arka Plan Rengi', default: '#ffffff' },
-          { type: 'color', key: 'textColor', label: 'Ana Yazı Rengi', default: '#111111' },
+          { type: 'color', key: 'textColor', label: 'Ana Renk', default: '#111111' },
           { type: 'color', key: 'mutedTextColor', label: 'İkincil Yazı Rengi', default: '#6b7280' },
           { type: 'color', key: 'replyBgColor', label: 'Mağaza Yanıtı Arka Planı', default: '#f3f4f6' },
           { type: 'color', key: 'inputBgColor', label: 'Giriş Alanları Arka Planı', default: '#ffffff' },
