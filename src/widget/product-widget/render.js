@@ -408,8 +408,12 @@ export async function render(productId, settings, reviewsData, productName, orde
           var row = document.createElement('div');
           row.className = 'ikr-bar-row' + (isActive ? ' ikr-bar-active' : '');
           if (currentRatingFilter && !isActive) row.style.opacity = '0.35';
+          var starsHtml = '';
+          for (var s = 1; s <= 5; s++) {
+            starsHtml += '<span class="ikr-bar-star' + (s <= si ? ' ikr-bar-star-filled' : ' ikr-bar-star-empty') + '">' + reviewIconChar + '</span>';
+          }
           row.innerHTML =
-            '<span class="ikr-bar-label">' + si + ' ' + reviewIconChar + '</span>' +
+            '<span class="ikr-bar-label">' + starsHtml + '</span>' +
             '<div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div>' +
             '<span class="ikr-bar-count">(' + cnt.toLocaleString('tr-TR') + ')</span>';
           (function(starVal) {
