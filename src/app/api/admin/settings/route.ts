@@ -32,7 +32,9 @@ function validateSettings(widgetId: string, settings: Record<string, unknown>): 
         return `${field.key} geçerli bir hex renk olmalı (#rrggbb)`;
       }
       if (field.type === 'select') {
-        const valid = field.options.map((o) => o.value);
+        // Options statik dizi veya settings'e bağlı fonksiyon olabilir — ikisini de destekle
+        const opts = typeof field.options === 'function' ? field.options(settings) : field.options;
+        const valid = opts.map((o) => o.value);
         if (!valid.includes(value as string)) {
           return `${field.key} şu değerlerden biri olmalı: ${valid.join(', ')}`;
         }

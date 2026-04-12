@@ -7,6 +7,7 @@ import { openReviewModal } from './review-modal.js';
 import { buildReviewForm } from './review-form.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
+import { getIconFromSettings } from '../icons.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -312,9 +313,8 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
     root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
     root.style.setProperty('--ikr-avg-star-size', sz.avgStarSize + 'px');
-    var reviewIconKey = settings.reviewIcon || 'star';
-    var reviewIconChars = { star: '★', heart: '♥', circle: '●' };
-    var reviewIconChar = reviewIconChars[reviewIconKey] || '★';
+    // İkon + stil seçimine göre SVG çifti (filled/empty) al — ICONS registry'sinden
+    var iconPair = getIconFromSettings(settings);
 
     var container = document.getElementById('ikas-reviews');
     if (!container) {
@@ -394,7 +394,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         var avgBlock = document.createElement('div');
         avgBlock.className = 'ikr-summary-block ikr-summary-avg';
         avgBlock.innerHTML =
-          '<span class="ikr-avg-star">' + reviewIconChar + '</span>' +
+          '<span class="ikr-avg-star ikr-icon">' + iconPair.filled + '</span>' +
           '<span class="ikr-avg-num">' + avgRatingVal + '</span>';
         summary.appendChild(avgBlock);
 
@@ -424,7 +424,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           if (currentRatingFilter && !isActive) row.style.opacity = '0.35';
           var starsHtml = '';
           for (var s = 1; s <= 5; s++) {
-            starsHtml += '<span class="ikr-bar-star' + (s <= si ? ' ikr-bar-star-filled' : ' ikr-bar-star-empty') + '">' + reviewIconChar + '</span>';
+            starsHtml += '<span class="ikr-bar-star ikr-icon ' + (s <= si ? 'ikr-bar-star-filled' : 'ikr-bar-star-empty') + '">' + (s <= si ? iconPair.filled : iconPair.empty) + '</span>';
           }
           row.innerHTML =
             '<span class="ikr-bar-label">' + starsHtml + '</span>' +

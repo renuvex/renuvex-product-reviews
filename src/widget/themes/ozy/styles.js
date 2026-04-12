@@ -35,6 +35,13 @@ export var CLASSIC_CSS = `
   #ikas-reviews-widget .ikr-reply-text{max-width:70ch;}
   .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:24px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
 
+  /* ─── SVG ICON WRAPPER ───────────────────────────────────────────────
+     .ikr-icon span'ı SVG'yi sarar. Boyut parent'tan (em veya inline style) gelir,
+     SVG de ona göre ölçeklenir. color → fill (currentColor) — yani renk
+     .ikr-icon'a veya parent'ına verildiğinde SVG o rengi alır. */
+  .ikr-icon{display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;}
+  .ikr-icon > svg{width:100%;height:100%;display:block;}
+
   /* ─── SUMMARY LAYOUT ────────────────────────────────────────────────
      Her blok bağımsız — sıra/gizleme CSS ile kolayca değiştirilebilir.
      Kolon genişlikleri CSS variable ile paylaşılır (label/count sütunları).
@@ -51,7 +58,7 @@ export var CLASSIC_CSS = `
 
   /* Blok: Ortalama puan (büyük) */
   .ikr-summary-avg{flex-direction:row;gap:8px;max-width:none;width:auto;}
-  .ikr-avg-star{font-size:var(--ikr-avg-star-size,46px);color:var(--ikr-review-star-color,#f59e0b);line-height:1;}
+  .ikr-avg-star{width:var(--ikr-avg-star-size,52px);height:var(--ikr-avg-star-size,52px);color:var(--ikr-review-star-color,#f59e0b);line-height:1;}
   .ikr-avg-num{font-size:var(--ikr-avg-rating-size,46px);font-weight:400;line-height:1;color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));}
 
   /* Blok: Toplam yorum sayısı */
@@ -70,8 +77,8 @@ export var CLASSIC_CSS = `
   }
   @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-bar-hover-bg,var(--ikr-color-light));}}
   .ikr-bar-active{background:var(--ikr-bar-hover-bg,var(--ikr-color-light))!important;}
-  .ikr-bar-label{flex:0 0 var(--ikr-col-label);text-align:left;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:var(--ikr-bar-label,var(--ikr-text,rgba(0,0,0,1)));}
-  .ikr-bar-star{font-size:var(--ikr-bar-label-size,16px);}
+  .ikr-bar-label{flex:0 0 var(--ikr-col-label);display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:var(--ikr-bar-label,var(--ikr-text,rgba(0,0,0,1)));}
+  .ikr-bar-star{width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);}
   .ikr-bar-star-filled{color:var(--ikr-review-star-color,#f59e0b);}
   .ikr-bar-star-empty{color:var(--ikr-bar-track,#e5e7eb);}
   .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
@@ -114,7 +121,8 @@ export var CLASSIC_CSS = `
   .ikr-review{padding:20px 0;border-bottom:1px solid var(--ikr-review-border,var(--ikr-separator,rgba(0,0,0,0.08)));}
   .ikr-review-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
   .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .ikr-review-stars{font-size:var(--ikr-star-size,20px);}
+  .ikr-review-stars{display:inline-flex;gap:2px;align-items:center;}
+  .ikr-review-stars .ikr-icon{width:var(--ikr-star-size,20px);height:var(--ikr-star-size,20px);}
   .ikr-review-title{font-weight:700;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-author{font-size:var(--ikr-author-size,14px);font-weight:400;font-style:italic;color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));margin-top:6px;}
   .ikr-date{color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-date-size,12px);font-weight:400;white-space:nowrap;flex-shrink:0;}
@@ -199,7 +207,8 @@ export var CLASSIC_CSS = `
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
   .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;background:var(--ikr-modal-bg,var(--ikr-bg,#fff));color:var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-  .ikr-modal-stars{font-size:var(--ikr-star-size,24px);}
+  .ikr-modal-stars{display:inline-flex;gap:2px;align-items:center;}
+  .ikr-modal-stars .ikr-icon{width:var(--ikr-star-size,24px);height:var(--ikr-star-size,24px);}
   .ikr-modal-date{font-size:var(--ikr-review-date-size,12px);font-weight:400;color:var(--ikr-review-date,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));white-space:nowrap;flex-shrink:0;}
   .ikr-modal-title{font-weight:700;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));}
   .ikr-modal-author{font-size:var(--ikr-author-size,14px);font-weight:400;font-style:italic;color:var(--ikr-review-author,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));}

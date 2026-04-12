@@ -2,27 +2,27 @@
 
 import { findProductTitleEl } from './title-finder.js';
 import { PUBLIC_API_KEY } from '../core/config.js';
+import { getIconStyle } from '../icons.js';
 
-// İkon map — badge widget ayarındaki "icon" değeri bu karakterleri üretir
-var ICON_CHARS = {
-  star:   { filled: '★', empty: '☆' },
-  heart:  { filled: '♥', empty: '♡' },
-  circle: { filled: '●', empty: '○' },
-};
-
-// Boyut map — badge widget ayarındaki "size" değeri bu font-size değerlerini üretir
+// Boyut map — badge widget ayarındaki "size" değeri bu piksel değerlerini üretir
 var SIZE_MAP = {
-  small:  { icon: '14px', text: '12px' },
-  medium: { icon: '16px', text: '14px' },
-  large:  { icon: '20px', text: '16px' },
+  small:  { icon: 14, text: '12px' },
+  medium: { icon: 16, text: '14px' },
+  large:  { icon: 20, text: '16px' },
 };
 
-function buildStars(rating, iconKey, color, size) {
-  var chars = ICON_CHARS[iconKey] || ICON_CHARS.star;
+// SVG yıldız dizisi — rating'e göre 5 ikonluk dolu/boş sıra
+function buildStars(rating, iconKey, styleKey, color, iconSize) {
+  var pair = getIconStyle(iconKey, styleKey);
   var r = Math.round(parseFloat(rating)) || 0;
-  var filled = chars.filled.repeat(Math.min(r, 5));
-  var empty = chars.empty.repeat(Math.max(5 - r, 0));
-  return '<span style="color:' + color + ';font-size:' + size + ';line-height:1;">' + filled + empty + '</span>';
+  var html = '';
+  for (var i = 1; i <= 5; i++) {
+    var isFilled = i <= r;
+    html += '<span class="ikr-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;display:inline-flex;">' +
+            (isFilled ? pair.filled : pair.empty) +
+            '</span>';
+  }
+  return '<span style="color:' + color + ';display:inline-flex;gap:2px;align-items:center;line-height:1;">' + html + '</span>';
 }
 
 export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings) {
@@ -62,6 +62,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   // Badge ayarları — admin "Yıldız Rozeti" widget'ından
   var iconKey = (badgeSettings && badgeSettings.icon) || 'star';
+  var styleKey = (badgeSettings && badgeSettings.iconStyle) || 'classic';
   var sizeKey = (badgeSettings && badgeSettings.size) || 'medium';
   var color = (badgeSettings && badgeSettings.color) || '#f59e0b';
   var sizes = SIZE_MAP[sizeKey] || SIZE_MAP.medium;
@@ -72,7 +73,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   var titleAlign = window.getComputedStyle(titleEl).textAlign;
   var justifyVal = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
   badge.style.cssText = 'display:flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;font-weight:400;justify-content:' + justifyVal + ';';
-  badge.innerHTML = buildStars(avgRating, iconKey, color, sizes.icon) +
+  badge.innerHTML = buildStars(avgRating, iconKey, styleKey, color, sizes.icon) +
     '<span style="font-size:' + sizes.text + ';font-weight:400;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
   badge.onclick = function(e) {
     e.preventDefault();

@@ -1,14 +1,24 @@
+import { getIconOptions, getStyleOptions } from '@/widget/icons.js';
+
 // ─── Settings field types ────────────────────────────────────────────────────
 
 // Bir alanın belirli bir ayara bağlı olarak görünüp görünmeyeceğini tanımlar.
 // Örn: { key: 'themeMode', equals: 'custom' } → sadece themeMode === 'custom' ise görünür.
 export type ShowWhen = { key: string; equals: string | number | boolean };
 
+export type SelectOption = { value: string; label: string };
+
+// Select options — statik dizi veya başka ayar değerlerine bağlı dinamik fonksiyon olabilir.
+// Örn: reviewIcon === 'star' ise 3 stil, 'heart' ise 2 stil seçeneği göster.
+export type SelectOptionsSource =
+  | SelectOption[]
+  | ((settings: Record<string, unknown>) => SelectOption[]);
+
 export type SettingField =
   | { type: 'toggle';  key: string; label: string; default: boolean;  showWhen?: ShowWhen }
   | { type: 'text';    key: string; label: string; placeholder?: string; default: string; showWhen?: ShowWhen }
   | { type: 'color';   key: string; label: string; default: string; showWhen?: ShowWhen }
-  | { type: 'select';  key: string; label: string; options: { value: string; label: string }[]; default: string; showWhen?: ShowWhen }
+  | { type: 'select';  key: string; label: string; options: SelectOptionsSource; default: string; showWhen?: ShowWhen }
   | { type: 'range';   key: string; label: string; min: number; max: number; default: number; showWhen?: ShowWhen };
 
 export interface SettingsGroup {
@@ -180,11 +190,18 @@ export const WIDGETS: WidgetDef[] = [
             key: 'reviewIcon',
             label: 'Yorum İkonu',
             default: 'star',
-            options: [
-              { value: 'star',   label: '★ Yıldız' },
-              { value: 'heart',  label: '♥ Kalp' },
-              { value: 'circle', label: '● Daire' },
-            ],
+            // İkon listesi icons.js ICONS registry'sinden dinamik gelir —
+            // yeni ikon eklenince otomatik burada görünür.
+            options: getIconOptions(),
+          },
+          {
+            type: 'select',
+            key: 'reviewIconStyle',
+            label: 'İkon Stili',
+            default: 'classic',
+            // Seçili ikon tipine göre farklı stil seçenekleri
+            // (star: 3 varyant, heart: 2, circle: 2)
+            options: (settings) => getStyleOptions(String(settings.reviewIcon || 'star')),
           },
         ],
       },
@@ -245,11 +262,14 @@ export const WIDGETS: WidgetDef[] = [
             key: 'icon',
             label: 'Puan İkonu',
             default: 'star',
-            options: [
-              { value: 'star',   label: '★ Yıldız' },
-              { value: 'heart',  label: '♥ Kalp' },
-              { value: 'circle', label: '● Daire' },
-            ],
+            options: getIconOptions(),
+          },
+          {
+            type: 'select',
+            key: 'iconStyle',
+            label: 'İkon Stili',
+            default: 'classic',
+            options: (settings) => getStyleOptions(String(settings.icon || 'star')),
           },
           {
             type: 'select',

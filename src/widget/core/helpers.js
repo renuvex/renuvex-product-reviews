@@ -1,14 +1,9 @@
 // helpers.js — Genel yardımcı fonksiyonlar
 
+import { renderStarRow, getIconFromSettings } from '../icons.js';
+
 // Review widget içindeki yıldızlar için CSS custom property — reviews widget ayarından beslenir
 export var STAR_COLOR = 'var(--ikr-review-star-color,#f59e0b)';
-
-// Review widget ikon setleri — reviews.reviewIcon ayarı bu karakterleri üretir
-export var REVIEW_ICON_CHARS = {
-  star:   { filled: '★', empty: '☆' },
-  heart:  { filled: '♥', empty: '♡' },
-  circle: { filled: '●', empty: '○' },
-};
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
@@ -18,17 +13,20 @@ export function extractSlug(url) {
   } catch (_) { return ''; }
 }
 
-// starsHTML(rating, sizeOverride, settings) — settings varsa onun icon/color/size'ını kullanır,
-// yoksa fallback (sabit ★, STAR_COLOR, default size)
+// starsHTML(rating, sizeOverride, settings) — SVG yıldız satırı üretir.
+// settings'teki reviewIcon + reviewIconStyle'a göre ICONS registry'sinden SVG alır.
+// sizeOverride: '20px' gibi CSS size veya null (CSS variable default kullanılır)
 export function starsHTML(rating, sizeOverride, settings) {
-  var r = Math.round(parseFloat(rating)) || 0;
-  var iconKey = (settings && settings.reviewIcon) || 'star';
-  var chars = REVIEW_ICON_CHARS[iconKey] || REVIEW_ICON_CHARS.star;
-  var filled = chars.filled.repeat(Math.min(r, 5));
-  var empty = chars.empty.repeat(Math.max(5 - r, 0));
-  var fontSize = sizeOverride || null;
-  var style = 'color:' + STAR_COLOR + ';' + (fontSize ? 'font-size:' + fontSize + ';' : '');
-  return '<span style="' + style + '">' + filled + empty + '</span>';
+  var sizePx = null;
+  if (sizeOverride) {
+    // '20px' -> 20
+    var m = /(\d+)/.exec(String(sizeOverride));
+    if (m) sizePx = parseInt(m[1], 10);
+  }
+  var wrapStyle = 'color:' + STAR_COLOR + ';display:inline-flex;gap:2px;align-items:center;';
+  return '<span class="ikr-stars" style="' + wrapStyle + '">' +
+    renderStarRow(rating, settings, { sizePx: sizePx }) +
+    '</span>';
 }
 
 export function formatDate(iso) {
@@ -76,29 +74,33 @@ export function optimizeImageUrl(url) {
   return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_1200/');
 }
 
-// renderStars — form için interaktif seçici.
-// settings.reviewIcon verilirse o ikon set'ini kullanır.
+// renderStars — form için interaktif SVG yıldız seçici.
+// settings'teki reviewIcon + reviewIconStyle ikon çiftini kullanır.
 export function renderStars(rating, interactive, onChange, settings) {
-  var iconKey = (settings && settings.reviewIcon) || 'star';
-  var chars = REVIEW_ICON_CHARS[iconKey] || REVIEW_ICON_CHARS.star;
+  var pair = getIconFromSettings(settings);
 
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'display:flex;gap:4px;';
+  wrap.style.cssText = 'display:inline-flex;gap:4px;align-items:center;';
   wrap.setAttribute('data-rating', rating);
   const stars = [];
 
+  function setState(el, isFilled) {
+    el.innerHTML = isFilled ? pair.filled : pair.empty;
+    el.style.color = isFilled ? STAR_COLOR : '#ddd';
+  }
+
   function update(hovered) {
     stars.forEach(function (s, idx) {
-      s.textContent = idx < hovered ? chars.filled : chars.empty;
-      s.style.color = idx < hovered ? STAR_COLOR : '#ddd';
+      setState(s, idx < hovered);
     });
   }
 
   for (var i = 1; i <= 5; i++) {
     (function (idx) {
       const star = document.createElement('span');
-      star.textContent = idx <= rating ? chars.filled : chars.empty;
-      star.style.cssText = 'font-size:24px;color:' + (idx <= rating ? STAR_COLOR : '#ddd') + ';cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s';
+      star.className = 'ikr-icon';
+      star.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s';
+      setState(star, idx <= rating);
       if (interactive) {
         star.onmouseover = function () { update(idx); };
         star.onclick = function () { wrap.setAttribute('data-rating', idx); onChange && onChange(idx); update(idx); };

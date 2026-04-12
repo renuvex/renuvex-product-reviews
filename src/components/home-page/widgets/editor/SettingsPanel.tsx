@@ -265,15 +265,17 @@ function FieldRenderer({ field, settings, onChange }: {
         />
       );
 
-    case 'select':
+    case 'select': {
+      // Options ya statik dizi ya da settings'e bağlı bir fonksiyon olabilir
+      const opts = typeof field.options === 'function' ? field.options(settings) : field.options;
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
             {field.label}
           </label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {field.options.map((opt) => {
-              const isSelected = (value ?? field.options[0]?.value) === opt.value;
+            {opts.map((opt) => {
+              const isSelected = (value ?? opts[0]?.value) === opt.value;
               return (
                 <button
                   key={opt.value}
@@ -292,6 +294,7 @@ function FieldRenderer({ field, settings, onChange }: {
           </div>
         </div>
       );
+    }
 
     case 'range': {
       const numVal = Number(value ?? field.default);
