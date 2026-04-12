@@ -446,10 +446,6 @@ export async function render(productId, settings, reviewsData, productName, orde
         var actionsBlock = document.createElement('div');
         actionsBlock.className = 'ikr-summary-block ikr-summary-actions';
 
-        var actionsSpacer = document.createElement('span');
-        actionsSpacer.className = 'ikr-actions-spacer';
-        actionsBlock.appendChild(actionsSpacer);
-
         var writeBtn = document.createElement('button');
         writeBtn.className = 'ikr-write-btn';
         writeBtn.textContent = 'Yorum Yap';
