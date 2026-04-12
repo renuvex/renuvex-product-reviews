@@ -41,9 +41,9 @@ export var CLASSIC_CSS = `
      Bu sayede bar-row ve actions-row aynı hizada kalır. */
   .ikr-summary{
     --ikr-col-label:104px;
-    --ikr-col-count:36px;
+    --ikr-col-count:104px;
     --ikr-col-gap:8px;
-    --ikr-summary-max:400px;
+    --ikr-summary-max:440px;
     display:flex;flex-direction:column;align-items:center;gap:16px;
     padding:24px 28px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;
   }
@@ -221,7 +221,7 @@ export var CLASSIC_CSS = `
     .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
-    .ikr-summary{padding:16px;gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
+    .ikr-summary{padding:16px;gap:14px;--ikr-col-label:92px;--ikr-col-count:92px;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
     /* Media row — mobilde gallery üstte tam genişlikli yatay scroll,
