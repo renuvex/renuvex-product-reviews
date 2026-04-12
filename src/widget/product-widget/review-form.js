@@ -70,6 +70,31 @@ export function buildReviewForm(productId, productName) {
       item.innerHTML = '<img class="ikr-preview-img" src="' + objUrl + '"><div class="ikr-preview-loading"><div class="ikr-spinner"></div></div>';
       previewsDiv.appendChild(item);
       let loadingEl = item.querySelector('.ikr-preview-loading');
+
+      // Preview modunda upload simüle et — gerçek Cloudinary isteği yok
+      if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
+        uploadedImages.push(objUrl);
+        loadingEl.innerHTML = '<span class="ikr-upload-check">✓</span>';
+        setTimeout(function() {
+          loadingEl.style.opacity = '0';
+          loadingEl.style.transition = 'opacity 0.4s';
+          setTimeout(function() {
+            loadingEl.style.display = 'none';
+            let removeBtn = document.createElement('button');
+            removeBtn.className = 'ikr-preview-remove';
+            removeBtn.innerHTML = '&#x2715;';
+            removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
+            removeBtn.onclick = function() {
+              uploadedImages = uploadedImages.filter(function(u) { return u !== objUrl; });
+              item.remove();
+              updatePhotoLabel();
+            };
+            item.appendChild(removeBtn);
+          }, 400);
+        }, 800);
+        continue;
+      }
+
       try {
         let signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
         if (!signRes.ok) {
@@ -130,6 +155,14 @@ export function buildReviewForm(productId, productName) {
     btn.disabled = true;
     btn.textContent = 'Gönderiliyor…';
     msgDiv.innerHTML = '';
+
+    // Preview modunda submit simüle et — gerçek DB isteği yok
+    if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
+      setTimeout(function() {
+        form.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-weight:700;font-size:14px;color:var(--ikr-color,#000);">Yorumunuz için teşekkürler!</div></div>';
+      }, 600);
+      return;
+    }
     try {
       var pageSlug = extractSlug(window.location.href);
       var submitName = productName || (document.querySelector('h1') ? document.querySelector('h1').innerText.trim() : null);

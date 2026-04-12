@@ -87,7 +87,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
     root.style.setProperty('--ikr-title-size', (settings.titleSize || 24) + 'px');
     root.style.setProperty('--ikr-review-text-size', (settings.reviewTextSize || 14) + 'px');
-    root.style.setProperty('--ikr-review-title-size', (settings.reviewTitleSize || 16) + 'px');
+    root.style.setProperty('--ikr-review-title-size', (settings.reviewTitleSize || 14) + 'px');
     root.style.setProperty('--ikr-author-size', (settings.authorSize || 14) + 'px');
     root.style.setProperty('--ikr-reply-name-size', (settings.replyNameSize || 14) + 'px');
     root.style.setProperty('--ikr-reply-text-size', (settings.replyTextSize || 14) + 'px');
@@ -99,7 +99,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-review-count-size', (settings.reviewCountSize || 16) + 'px');
     root.style.setProperty('--ikr-recommend-size', (settings.recommendSize || 14) + 'px');
     root.style.setProperty('--ikr-btn-text-size', (settings.btnTextSize || 14) + 'px');
-    root.style.setProperty('--ikr-bar-label-size', (settings.barLabelSize || 16) + 'px');
+    root.style.setProperty('--ikr-bar-label-size', (settings.barLabelSize || 14) + 'px');
     root.style.setProperty('--ikr-bar-count-size', (settings.barCountSize || 14) + 'px');
     root.style.setProperty('--ikr-review-date-size', (settings.reviewDateSize || 12) + 'px');
     root.style.setProperty('--ikr-filter-text-size', (settings.filterTextSize || 14) + 'px');
