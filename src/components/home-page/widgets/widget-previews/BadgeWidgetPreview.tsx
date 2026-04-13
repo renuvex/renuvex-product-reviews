@@ -3,6 +3,7 @@
 import React from 'react';
 import { colors, radii, shadows, typography } from '@/lib/design-tokens';
 import { PreviewProps } from '../editor/WidgetEditor';
+import { PreviewIcon } from './icon-preview';
 
 // ─── Mock products ───────────────────────────────────────────────────────────
 
@@ -11,20 +12,6 @@ const MOCK_PRODUCTS = [
   { id: '2', name: 'Başka Bir Ürün', price: '₺149,00', rating: 5.0, count: 12, imageBg: 'rgb(240,253,244)' },
   { id: '3', name: 'Üçüncü Ürün',   price: '₺89,90',  rating: 3.8, count: 7,  imageBg: 'rgb(255,251,235)' },
 ];
-
-// ─── Icon renderers ──────────────────────────────────────────────────────────
-
-function RatingIcon({ type, filled, color, size }: {
-  type: 'star' | 'heart' | 'circle';
-  filled: boolean;
-  color: string;
-  size: number;
-}) {
-  const style = { fontSize: size, color: filled ? color : colors.borderDefault, lineHeight: 1 };
-  if (type === 'heart')  return <span style={style}>♥</span>;
-  if (type === 'circle') return <span style={style}>●</span>;
-  return <span style={style}>★</span>;
-}
 
 // ─── Size map ────────────────────────────────────────────────────────────────
 
@@ -38,7 +25,7 @@ const SIZE_MAP: Record<string, { icon: number; text: number; padding: string }> 
 
 export function BadgeWidgetPreview({ settings }: PreviewProps) {
   const isEnabled  = (settings.enabled as boolean) ?? true;
-  const iconType   = (settings.icon    as 'star' | 'heart' | 'circle') ?? 'star';
+  const iconType   = (settings.icon    as string) ?? 'star';
   const iconColor  = (settings.color   as string) ?? '#f59e0b';
   const sizeKey    = (settings.size    as string) ?? 'medium';
   const sizes      = SIZE_MAP[sizeKey] ?? SIZE_MAP.medium;
@@ -113,9 +100,9 @@ export function BadgeWidgetPreview({ settings }: PreviewProps) {
             }}>
               <div style={{ display: 'flex', gap: 1 }}>
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <RatingIcon
+                  <PreviewIcon
                     key={i}
-                    type={iconType}
+                    iconValue={iconType}
                     filled={i <= Math.round(product.rating)}
                     color={iconColor}
                     size={sizes.icon}

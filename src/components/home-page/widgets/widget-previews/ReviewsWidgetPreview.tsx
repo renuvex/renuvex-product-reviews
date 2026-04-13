@@ -3,6 +3,7 @@
 import React from 'react';
 import { colors, radii, shadows, typography } from '@/lib/design-tokens';
 import { PreviewProps } from '../editor/WidgetEditor';
+import { PreviewStars } from './icon-preview';
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 
@@ -42,27 +43,6 @@ const MOCK_REVIEWS = [
   },
 ];
 
-// ─── Star component ──────────────────────────────────────────────────────────
-
-function Stars({ rating, color }: { rating: number; color: string }) {
-  return (
-    <div style={{ display: 'flex', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span
-          key={i}
-          style={{
-            fontSize: 14,
-            color: i <= rating ? color : colors.borderDefault,
-            lineHeight: 1,
-          }}
-        >
-          ★
-        </span>
-      ))}
-    </div>
-  );
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const SIZE_PRESETS = {
@@ -76,6 +56,8 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
   const title = (settings.title as string) || 'Müşteri Yorumları';
   const showHelpful = (settings.showHelpful as boolean) ?? true;
   const isEnabled = (settings.enabled as boolean) ?? true;
+  const reviewIcon = (settings.reviewIcon as string) ?? 'star';
+  const starColor = (settings.reviewStarColor as string) ?? '#f59e0b';
 
   const sizeKey = (settings.size as string) ?? 'medium';
   const sz = SIZE_PRESETS[sizeKey as keyof typeof SIZE_PRESETS] ?? SIZE_PRESETS.medium;
@@ -123,7 +105,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
             {title}
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Stars rating={4} color={primaryColor} />
+            <PreviewStars rating={4} iconValue={reviewIcon} color={starColor} />
             <span style={{ fontSize: typography.fontSize.sm, color: colors.textMuted }}>4.7 (128)</span>
           </div>
         </div>
@@ -164,7 +146,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
                     <span style={{ fontSize: authorSize, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
                       {review.author}
                     </span>
-                    <Stars rating={review.rating} color={primaryColor} />
+                    <PreviewStars rating={review.rating} iconValue={reviewIcon} color={starColor} />
                   </div>
                   <span style={{ fontSize: typography.fontSize.xs, color: colors.textMuted, flexShrink: 0 }}>
                     {review.date}
