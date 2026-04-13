@@ -28,10 +28,11 @@ export function buildReviewForm(productId, productName) {
     '<button id="ikr-submit" class="ikr-btn" aria-label="Gönder">Gönder</button>',
     '<div id="ikr-msg" style="margin-top:10px;" role="alert" aria-live="assertive"></div>',
   ].join('');
-  var currentRating = 5;
+  var currentRating = null;
   var uploadedImages = [];
 
-  var starsWrap = renderStars(5, true, function(v) { currentRating = v; }, currentSettings);
+  // 0 → hiçbir yıldız başlangıçta seçili değil, kullanıcı bilinçli seçim yapmalı.
+  var starsWrap = renderStars(0, true, function(v) { currentRating = v; }, currentSettings);
   form.querySelector('#ikr-stars-input').appendChild(starsWrap);
 
   var fileInput = form.querySelector('#ikr-file-input');
@@ -151,6 +152,7 @@ export function buildReviewForm(productId, productName) {
     var title = form.querySelector('#ikr-title').value.trim();
     var comment = form.querySelector('#ikr-comment').value.trim();
     var msgDiv = form.querySelector('#ikr-msg');
+    if (!currentRating) { msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">Lütfen bir yıldız seçin.</div>'; return; }
     if (!author) { msgDiv.innerHTML = '<div style="color:#dc2626;font-size:12px;margin-top:8px;">Lütfen adınızı girin.</div>'; return; }
     btn.disabled = true;
     btn.textContent = 'Gönderiliyor…';
