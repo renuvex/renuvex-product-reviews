@@ -21,18 +21,21 @@
 //   // Tek bir ikon SVG'si al (belirli durum için)
 //   var svg = getIconSvg('star', 'classic', 'filled');
 
-// Temel SVG sarıcı — tüm ikonlar 256x256 viewBox, currentColor ile renklenir
-function svg(path) {
-  return '<svg viewBox="0 0 256 256" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + path + '"/></svg>';
+// Temel SVG sarıcı — varsayılan 256x256 viewBox (Phosphor), currentColor ile renklenir
+function svg(path, viewBox) {
+  return '<svg viewBox="' + (viewBox || '0 0 256 256') + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + path + '"/></svg>';
 }
 
 // İki path'li SVG (duotone/outlined — filled + outline aynı anda)
-function svg2(bgPath, fgPath, bgOpacity) {
-  return '<svg viewBox="0 0 256 256" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+function svg2(bgPath, fgPath, bgOpacity, viewBox) {
+  return '<svg viewBox="' + (viewBox || '0 0 256 256') + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
     '<path opacity="' + (bgOpacity || '0.2') + '" d="' + bgPath + '"/>' +
     '<path d="' + fgPath + '"/>' +
     '</svg>';
 }
+
+// Material Symbols viewBox — "0 -960 960 960" grid
+var MS_VB = '0 -960 960 960';
 
 // Phosphor Icons path'leri (v2.x, 256x256 grid, MIT lisansı)
 var P = {
@@ -47,6 +50,12 @@ var P = {
   // ─── Daire ────────────────────────────────────────────────
   circleFill:    'M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Z',
   circleRegular: 'M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z',
+
+  // ─── Material Symbols Yıldız (test varyantları) ───────────
+  // Google Fonts Icons — Apache 2.0, viewBox "0 -960 960 960"
+  starMatSharpFill:    'm233-120 65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Z',
+  starMatRoundedFill:  'M480-269 314-169q-11 7-23 6t-21-8q-9-7-14-17.5t-2-23.5l44-189-147-127q-10-9-12.5-20.5T140-571q4-11 12-18t22-9l194-17 75-178q5-12 15.5-18t21.5-6q11 0 21.5 6t15.5 18l75 178 194 17q14 2 22 9t12 18q4 11 1.5 22.5T809-528L662-401l44 189q3 13-2 23.5T690-171q-9 7-21 8t-23-6L480-269Z',
+  starMatOutlined:     'm354-287 126-76 126 77-33-144 111-96-146-13-58-136-58 135-146 13 111 97-33 143ZM233-120l65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Zm247-350Z',
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -73,6 +82,24 @@ export var ICONS = {
         label: 'Çizgi',
         filled: svg(P.starRegular),
         empty:  svg(P.starRegular),
+      },
+      // Material Symbols — Sharp (keskin, dolu)
+      matSharp: {
+        label: 'Material Keskin',
+        filled: svg(P.starMatSharpFill, MS_VB),
+        empty:  svg(P.starMatOutlined,  MS_VB),
+      },
+      // Material Symbols — Rounded (tombul, dolu) ← tombul köşe testi
+      matRounded: {
+        label: 'Material Tombul',
+        filled: svg(P.starMatRoundedFill, MS_VB),
+        empty:  svg(P.starMatOutlined,    MS_VB),
+      },
+      // Material Symbols — Outlined (içi boş)
+      matOutlined: {
+        label: 'Material Çizgi',
+        filled: svg(P.starMatOutlined, MS_VB),
+        empty:  svg(P.starMatOutlined, MS_VB),
       },
     },
   },
