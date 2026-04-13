@@ -68,73 +68,97 @@ export function optimizeImageUrl(url) {
   return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_1200/');
 }
 
-// renderStars — form için interaktif SVG yıldız seçici.
-// settings'teki reviewIcon + reviewIconStyle ikon çiftini kullanır.
+// renderStars — form için radio-input tabanlı erişilebilir yıldız seçici.
+// Endüstri standardı pattern: hidden `<input type="radio">` + `<label>` + CSS :checked/:hover.
+// Avantaj: native click/touch/keyboard, screen reader, form validation — JS event handling yok.
+// Yıldızlar TERS sırayla render edilir (5→1), böylece CSS ~ selector "seçilenin/hover'ın solundaki
+// tüm kardeşler dolu" kuralı çalışır (DOM sırası sağ→sol, flex-direction:row-reverse ile görünüm düzelir).
 export function renderStars(rating, interactive, onChange, settings) {
   var pair = getIconFromSettings(settings);
+  var name = 'ikr-rating-' + Math.random().toString(36).slice(2, 9);
 
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'display:inline-flex;gap:4px;align-items:center;';
-  wrap.setAttribute('data-rating', rating);
-  const stars = [];
+  var wrap = document.createElement('div');
+  wrap.className = 'ikr-rating' + (interactive ? ' ikr-rating-interactive' : '');
+  // row-reverse ile DOM 5,4,3,2,1 → görsel 1,2,3,4,5.
+  wrap.style.cssText = 'display:inline-flex;flex-direction:row-reverse;justify-content:flex-end;gap:4px;';
 
-  function setState(el, isFilled) {
-    el.innerHTML = isFilled ? pair.filled : pair.empty;
-    el.style.color = isFilled ? STAR_COLOR : '#ddd';
-  }
-
-  function update(hovered) {
-    stars.forEach(function (s, idx) {
-      setState(s, idx < hovered);
-    });
-  }
-
-  // Touch kaydırma tespiti — parmak basılı hareket ederse tap iptal.
-  var touchStartX = 0;
-  var touchStartY = 0;
-  var touchMoved = false;
-
-  for (var i = 1; i <= 5; i++) {
-    (function (idx) {
-      const star = document.createElement('span');
+  if (!interactive) {
+    // Read-only: basitçe dolu/boş yıldızları göster, input yok.
+    wrap.style.flexDirection = 'row';
+    for (var j = 1; j <= 5; j++) {
+      var star = document.createElement('span');
       star.className = 'ikr-icon';
-      star.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;';
-      // SVG iç element'leri pointer eventlerini absorbe etmesin
-      star.style.pointerEvents = 'auto';
-      setState(star, idx <= rating);
-      if (interactive) {
-        // Hover preview sadece gerçek mouse için (desktop).
-        star.addEventListener('mouseenter', function () { update(idx); });
-        // Mobilde touchmove varsa tap iptal, yoksa touchend'de commit.
-        star.addEventListener('touchstart', function (e) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-          touchMoved = false;
-        }, { passive: true });
-        star.addEventListener('touchmove', function (e) {
-          var dx = Math.abs(e.touches[0].clientX - touchStartX);
-          var dy = Math.abs(e.touches[0].clientY - touchStartY);
-          if (dx > 8 || dy > 8) touchMoved = true;
-        }, { passive: true });
-        // click: desktop tıklama + mobil dokunup kaldırma. touchMoved ile drag filtrelenir.
-        star.addEventListener('click', function (e) {
-          if (touchMoved) { touchMoved = false; return; }
-          e.preventDefault();
-          wrap.setAttribute('data-rating', idx);
-          onChange && onChange(idx);
-          update(idx);
-        });
-      }
-      stars.push(star);
+      star.style.cssText = 'width:24px;height:24px;display:inline-flex;color:' + (j <= rating ? STAR_COLOR : '#ddd') + ';';
+      star.innerHTML = j <= rating ? pair.filled : pair.empty;
       wrap.appendChild(star);
+    }
+    return wrap;
+  }
+
+  // Interactive: radio inputs, 5'ten 1'e doğru (row-reverse ile görsel 1→5).
+  for (var i = 5; i >= 1; i--) {
+    (function (idx) {
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = name;
+      input.value = String(idx);
+      input.id = name + '-' + idx;
+      input.className = 'ikr-rating-input';
+      if (idx === rating) input.checked = true;
+      // Görsel olarak gizle ama erişilebilir kalsın (screen reader + klavye çalışır).
+      input.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+      input.addEventListener('change', function () {
+        onChange && onChange(idx);
+      });
+
+      var label = document.createElement('label');
+      label.htmlFor = input.id;
+      label.className = 'ikr-rating-label';
+      label.setAttribute('aria-label', idx + ' yıldız');
+      label.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:pointer;transition:color .15s;';
+      // İki SVG üst üste — filled altta, empty üstte. CSS ile hover/checked'e göre empty
+      // saklanır ve dolu yıldız görünür. Şekiller farklı olsa bile doğru render olur.
+      label.innerHTML =
+        '<span class="ikr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';opacity:0;">' + pair.filled + '</span>' +
+        '<span class="ikr-rating-empty" style="position:relative;width:24px;height:24px;color:#ddd;">' + pair.empty + '</span>';
+      label.style.position = 'relative';
+
+      wrap.appendChild(input);
+      wrap.appendChild(label);
     })(i);
   }
 
-  if (interactive) {
-    // Mouse dışarı çıkınca son commit'li değere geri dön (hover preview temizleme).
-    wrap.addEventListener('mouseleave', function () {
-      update(parseInt(wrap.getAttribute('data-rating') || '0'));
-    });
-  }
+  ensureStarStyles();
   return wrap;
+}
+
+// CSS kurallarını bir kez <style> olarak ekle (hover/checked görünümü).
+var starStylesInjected = false;
+function ensureStarStyles() {
+  if (starStylesInjected) return;
+  starStylesInjected = true;
+  var css =
+    // DOM sırası 5,4,3,2,1 — row-reverse ile görsel 1,2,3,4,5.
+    // Hover varsayılanı: hover edilen + DOM'daki sonrası (görselde solu) filled açık, empty kapalı.
+    '.ikr-rating-interactive .ikr-rating-label:hover .ikr-rating-filled,' +
+    '.ikr-rating-interactive .ikr-rating-label:hover ~ .ikr-rating-label .ikr-rating-filled{opacity:1;}' +
+    '.ikr-rating-interactive .ikr-rating-label:hover .ikr-rating-empty,' +
+    '.ikr-rating-interactive .ikr-rating-label:hover ~ .ikr-rating-label .ikr-rating-empty{opacity:0;}' +
+    // Checked state: seçili radio + sonraki label'lar filled.
+    '.ikr-rating-interactive .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-filled{opacity:1;}' +
+    '.ikr-rating-interactive .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-empty{opacity:0;}' +
+    // Hover sırasında önceki checked görünümü bastır (preview checked'i ezsin).
+    '.ikr-rating-interactive:hover .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-filled{opacity:0;}' +
+    '.ikr-rating-interactive:hover .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-empty{opacity:1;}' +
+    // Sonra hover'ı tekrar uygula (cascade'de sonraki kural kazanır).
+    '.ikr-rating-interactive:hover .ikr-rating-label:hover .ikr-rating-filled,' +
+    '.ikr-rating-interactive:hover .ikr-rating-label:hover ~ .ikr-rating-label .ikr-rating-filled{opacity:1;}' +
+    '.ikr-rating-interactive:hover .ikr-rating-label:hover .ikr-rating-empty,' +
+    '.ikr-rating-interactive:hover .ikr-rating-label:hover ~ .ikr-rating-label .ikr-rating-empty{opacity:0;}' +
+    // Klavye focus görünümü
+    '.ikr-rating-interactive .ikr-rating-input:focus-visible + .ikr-rating-label{outline:2px solid ' + STAR_COLOR + ';outline-offset:2px;border-radius:4px;}';
+  var style = document.createElement('style');
+  style.setAttribute('data-ikr', 'rating');
+  style.textContent = css;
+  document.head.appendChild(style);
 }
