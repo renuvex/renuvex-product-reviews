@@ -89,30 +89,40 @@ export function renderStars(rating, interactive, onChange, settings) {
     });
   }
 
-  // Pointer aşağı indiği yıldız — kaldırıldığında aynıysa commit.
-  var downIdx = null;
+  // Touch kaydırma tespiti — parmak basılı hareket ederse tap iptal.
+  var touchStartX = 0;
+  var touchStartY = 0;
+  var touchMoved = false;
 
   for (var i = 1; i <= 5; i++) {
     (function (idx) {
       const star = document.createElement('span');
       star.className = 'ikr-icon';
       star.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;';
+      // SVG iç element'leri pointer eventlerini absorbe etmesin
+      star.style.pointerEvents = 'auto';
       setState(star, idx <= rating);
       if (interactive) {
-        // Hover preview sadece gerçek mouse için — touch/pen'de preview yok.
-        star.addEventListener('pointerover', function (e) {
-          if (e.pointerType === 'mouse') update(idx);
-        });
-        star.addEventListener('pointerdown', function () { downIdx = idx; });
-        // Tap/click yerine pointerup: sadece down ile aynı yıldızda kalktıysa commit.
-        // Böylece mobilde kaydırınca başka yıldızda biten drag, yanlış seçim yapmaz.
-        star.addEventListener('pointerup', function () {
-          if (downIdx === idx) {
-            wrap.setAttribute('data-rating', idx);
-            onChange && onChange(idx);
-            update(idx);
-          }
-          downIdx = null;
+        // Hover preview sadece gerçek mouse için (desktop).
+        star.addEventListener('mouseenter', function () { update(idx); });
+        // Mobilde touchmove varsa tap iptal, yoksa touchend'de commit.
+        star.addEventListener('touchstart', function (e) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          touchMoved = false;
+        }, { passive: true });
+        star.addEventListener('touchmove', function (e) {
+          var dx = Math.abs(e.touches[0].clientX - touchStartX);
+          var dy = Math.abs(e.touches[0].clientY - touchStartY);
+          if (dx > 8 || dy > 8) touchMoved = true;
+        }, { passive: true });
+        // click: desktop tıklama + mobil dokunup kaldırma. touchMoved ile drag filtrelenir.
+        star.addEventListener('click', function (e) {
+          if (touchMoved) { touchMoved = false; return; }
+          e.preventDefault();
+          wrap.setAttribute('data-rating', idx);
+          onChange && onChange(idx);
+          update(idx);
         });
       }
       stars.push(star);
@@ -121,15 +131,9 @@ export function renderStars(rating, interactive, onChange, settings) {
   }
 
   if (interactive) {
-    wrap.addEventListener('pointercancel', function () { downIdx = null; });
-    wrap.addEventListener('pointerleave', function (e) {
-      if (e.pointerType === 'mouse') {
-        // Mouse dışarı çıkınca son commit'li değere geri dön (hover preview temizleme).
-        update(parseInt(wrap.getAttribute('data-rating') || '0'));
-      } else {
-        // Touch/pen wrapper dışına kayarsa commit'i iptal et.
-        downIdx = null;
-      }
+    // Mouse dışarı çıkınca son commit'li değere geri dön (hover preview temizleme).
+    wrap.addEventListener('mouseleave', function () {
+      update(parseInt(wrap.getAttribute('data-rating') || '0'));
     });
   }
   return wrap;
