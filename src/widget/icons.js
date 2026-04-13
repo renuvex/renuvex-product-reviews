@@ -137,6 +137,15 @@ export var ICONS = {
 
 // ─── Helpers ───────────────────────────────────────────────
 
+// "star:matRounded" → { type: 'star', style: 'matRounded' }
+// "star" → { type: 'star', style: 'classic' }  (geriye uyum)
+export function parseIconValue(value) {
+  var v = String(value || 'star');
+  var i = v.indexOf(':');
+  if (i === -1) return { type: v, style: null };
+  return { type: v.slice(0, i), style: v.slice(i + 1) };
+}
+
 // Bir ikon-stil kombinasyonunun { filled, empty } SVG'lerini döndür
 export function getIconStyle(iconType, styleName) {
   var icon = ICONS[iconType] || ICONS.star;
@@ -151,10 +160,12 @@ export function getIconSvg(iconType, styleName, state) {
 }
 
 // settings'ten okuyup { filled, empty } döndür
+// reviewIcon "star" | "star:matRounded" | "heart" formatında olabilir.
 export function getIconFromSettings(settings) {
-  var iconType = (settings && settings.reviewIcon) || 'star';
-  var styleName = (settings && settings.reviewIconStyle) || 'classic';
-  return getIconStyle(iconType, styleName);
+  var raw = (settings && settings.reviewIcon) || 'star';
+  var parsed = parseIconValue(raw);
+  var styleName = parsed.style || (settings && settings.reviewIconStyle) || 'classic';
+  return getIconStyle(parsed.type, styleName);
 }
 
 // 5'li yıldız dizisini HTML olarak üret
@@ -185,9 +196,23 @@ export function getStyleOptions(iconType) {
   });
 }
 
-// Settings panelde "İkon" dropdown'u için seçenekler
+// Settings panelde "İkon" dropdown'u için seçenekler.
+// Sadece `star` için her stil ayrı bir seçenek olarak expand edilir —
+// diğer ikonlar (heart, circle) tek satır kalır.
 export function getIconOptions() {
-  return Object.keys(ICONS).map(function (key) {
-    return { value: key, label: ICONS[key].label };
+  var out = [];
+  Object.keys(ICONS).forEach(function (key) {
+    var icon = ICONS[key];
+    if (key === 'star') {
+      Object.keys(icon.styles).forEach(function (styleKey) {
+        var style = icon.styles[styleKey];
+        // İlk stil (classic) "star" — bare value, geriye uyum
+        var value = styleKey === 'classic' ? 'star' : 'star:' + styleKey;
+        out.push({ value: value, label: icon.label + ' — ' + style.label });
+      });
+    } else {
+      out.push({ value: key, label: icon.label });
+    }
   });
+  return out;
 }

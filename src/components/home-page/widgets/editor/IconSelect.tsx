@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { colors, typography, radii } from '@/lib/design-tokens';
-import { ICONS } from '@/widget/icons.js';
+import { ICONS, parseIconValue } from '@/widget/icons.js';
 
 type Option = { value: string; label: string };
 
@@ -13,21 +13,23 @@ interface IconSelectProps {
   onChange: (v: string) => void;
 }
 
-// ICONS[type].styles[firstStyle].filled — preview için ilk stilin dolu SVG'sini kullan
-function getPreviewSvg(iconType: string): string {
-  const icon = (ICONS as Record<string, { styles: Record<string, { filled: string }> }>)[iconType];
+// value "star" | "star:matRounded" | "heart" formatında olabilir.
+// Preview için o stilin dolu SVG'sini kullan (yoksa ilk stil).
+function getPreviewSvg(value: string): string {
+  const { type, style } = parseIconValue(value);
+  const icon = (ICONS as Record<string, { styles: Record<string, { filled: string }> }>)[type];
   if (!icon) return '';
-  const firstStyleKey = Object.keys(icon.styles)[0];
-  return icon.styles[firstStyleKey]?.filled ?? '';
+  const key = (style && icon.styles[style]) ? style : Object.keys(icon.styles)[0];
+  return icon.styles[key]?.filled ?? '';
 }
 
 function IconCell({
-  iconType,
+  iconValue,
   label,
   selected,
   onClick,
 }: {
-  iconType: string;
+  iconValue: string;
   label: string;
   selected: boolean;
   onClick: () => void;
@@ -59,7 +61,7 @@ function IconCell({
     >
       <span
         style={{ width: 22, height: 22, display: 'inline-flex' }}
-        dangerouslySetInnerHTML={{ __html: getPreviewSvg(iconType) }}
+        dangerouslySetInnerHTML={{ __html: getPreviewSvg(iconValue) }}
       />
     </button>
   );
@@ -83,7 +85,7 @@ export function IconSelect({ label, value, options, onChange }: IconSelectProps)
         {options.map((opt) => (
           <IconCell
             key={opt.value}
-            iconType={opt.value}
+            iconValue={opt.value}
             label={opt.label}
             selected={value === opt.value}
             onClick={() => onChange(opt.value)}
