@@ -89,15 +89,31 @@ export function renderStars(rating, interactive, onChange, settings) {
     });
   }
 
+  // Pointer aşağı indiği yıldız — kaldırıldığında aynıysa commit.
+  var downIdx = null;
+
   for (var i = 1; i <= 5; i++) {
     (function (idx) {
       const star = document.createElement('span');
       star.className = 'ikr-icon';
-      star.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s';
+      star.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:' + (interactive ? 'pointer' : 'default') + ';transition:color .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;';
       setState(star, idx <= rating);
       if (interactive) {
-        star.onmouseover = function () { update(idx); };
-        star.onclick = function () { wrap.setAttribute('data-rating', idx); onChange && onChange(idx); update(idx); };
+        // Hover preview sadece gerçek mouse için — touch/pen'de preview yok.
+        star.addEventListener('pointerover', function (e) {
+          if (e.pointerType === 'mouse') update(idx);
+        });
+        star.addEventListener('pointerdown', function () { downIdx = idx; });
+        // Tap/click yerine pointerup: sadece down ile aynı yıldızda kalktıysa commit.
+        // Böylece mobilde kaydırınca başka yıldızda biten drag, yanlış seçim yapmaz.
+        star.addEventListener('pointerup', function () {
+          if (downIdx === idx) {
+            wrap.setAttribute('data-rating', idx);
+            onChange && onChange(idx);
+            update(idx);
+          }
+          downIdx = null;
+        });
       }
       stars.push(star);
       wrap.appendChild(star);
@@ -105,7 +121,16 @@ export function renderStars(rating, interactive, onChange, settings) {
   }
 
   if (interactive) {
-    wrap.onmouseleave = function () { update(parseInt(wrap.getAttribute('data-rating') || '0')); };
+    wrap.addEventListener('pointercancel', function () { downIdx = null; });
+    wrap.addEventListener('pointerleave', function (e) {
+      if (e.pointerType === 'mouse') {
+        // Mouse dışarı çıkınca son commit'li değere geri dön (hover preview temizleme).
+        update(parseInt(wrap.getAttribute('data-rating') || '0'));
+      } else {
+        // Touch/pen wrapper dışına kayarsa commit'i iptal et.
+        downIdx = null;
+      }
+    });
   }
   return wrap;
 }
