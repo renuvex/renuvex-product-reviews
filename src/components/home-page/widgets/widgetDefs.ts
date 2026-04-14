@@ -192,7 +192,7 @@ export const WIDGETS: WidgetDef[] = [
             type: 'iconSelect',
             key: 'reviewIcon',
             label: 'Yorum İkonu',
-            default: 'star',
+            default: 'star:rounded',
             // İkon listesi icons.js ICONS registry'sinden dinamik gelir —
             // yeni ikon eklenince otomatik burada görünür.
             options: getIconOptions(),
