@@ -404,8 +404,8 @@ export async function render(productId, settings, reviewsData, productName, orde
         countBlock.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
         summary.appendChild(countBlock);
 
-        // Blok: Tavsiye yüzdesi
-        if (recommendPct > 0) {
+        // Blok: Tavsiye yüzdesi (Ayar açıksa ve tavsiye varsa göster)
+        if ((settings.showRecommendation !== false) && recommendPct > 0) {
           var recBlock = document.createElement('div');
           recBlock.className = 'ikr-summary-block ikr-summary-recommend';
           recBlock.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';

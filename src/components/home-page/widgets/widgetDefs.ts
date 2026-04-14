@@ -202,9 +202,10 @@ export const WIDGETS: WidgetDef[] = [
       {
         title: 'Davranış',
         fields: [
-          { type: 'toggle', key: 'autoApprove',      label: 'Yeni Yorumları Otomatik Onayla', default: false },
-          { type: 'toggle', key: 'showHelpful',      label: 'Faydalı Butonu Göster',          default: true },
-          { type: 'toggle', key: 'showPhotoGallery', label: 'Fotoğraf Galerisini Göster',    default: true },
+          { type: 'toggle', key: 'autoApprove',        label: 'Yeni Yorumları Otomatik Onayla', default: false },
+          { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster',       default: true },
+          { type: 'toggle', key: 'showHelpful',        label: 'Faydalı Butonu Göster',          default: true },
+          { type: 'toggle', key: 'showPhotoGallery',   label: 'Fotoğraf Galerisini Göster',    default: true },
         ],
       },
       {
