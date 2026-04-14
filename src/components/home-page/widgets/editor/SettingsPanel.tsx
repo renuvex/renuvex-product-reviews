@@ -167,7 +167,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
               alignItems: 'center',
               gap: 8,
               padding: '14px 0',
-              background: 'transparent',
+              backgroundColor: colors.bgWhite || '#ffffff', // Alttaki içerik görünmesin diye arka plan şart
               border: 'none',
               borderBottom: `1px solid ${colors.borderDefault}`,
               cursor: 'pointer',
@@ -176,6 +176,9 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
               color: colors.textPrimary,
               width: '100%',
               textAlign: 'left',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
             }}
           >
             <ArrowLeft size={16} style={{ color: colors.textSecondary }} />
