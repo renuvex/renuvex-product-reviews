@@ -150,34 +150,8 @@ var starStylesInjected = false;
 function ensureStarStyles() {
   if (starStylesInjected) return;
   starStylesInjected = true;
-  var css =
-    // Varsayılan görünüm: Dolu yıldızlar gizli (opacity 0)
-    '.ikr-rating-interactive .ikr-rating-filled{opacity:0; transition:opacity .15s;}' +
-    '.ikr-rating-interactive .ikr-rating-empty{opacity:1; transition:opacity .15s;}' +
-    
-    // Hover varsayılanı
-    '.ikr-rating-interactive .ikr-rating-label:hover .ikr-rating-filled,' +
-    '.ikr-rating-interactive .ikr-rating-label:hover ~ .ikr-rating-label .ikr-rating-filled{opacity:1 !important;}' +
-    '.ikr-rating-interactive .ikr-rating-label:hover .ikr-rating-empty,' +
-    '.ikr-rating-interactive .ikr-rating-label:hover ~ .ikr-rating-label .ikr-rating-empty{opacity:0 !important;}' +
-    
-    // Checked state: seçili radio + sonraki label'lar filled
-    '.ikr-rating-interactive .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-filled{opacity:1 !important;}' +
-    '.ikr-rating-interactive .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-empty{opacity:0 !important;}' +
-    
-    // Hover sırasında önceki checked görünümü geçici bastır
-    '.ikr-rating-interactive:hover .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-filled{opacity:0 !important;}' +
-    '.ikr-rating-interactive:hover .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-empty{opacity:1 !important;}' +
-    
-    // Sonra hover'ı tekrar uygula
-    '.ikr-rating-interactive:hover .ikr-rating-label:hover .ikr-rating-filled,' +
-    '.ikr-rating-interactive:hover .ikr-rating-label:hover ~ .ikr-rating-label .ikr-rating-filled{opacity:1 !important;}' +
-    '.ikr-rating-interactive:hover .ikr-rating-label:hover .ikr-rating-empty,' +
-    '.ikr-rating-interactive:hover .ikr-rating-label:hover ~ .ikr-rating-label .ikr-rating-empty{opacity:0 !important;}' +
-    
-    // Klavye focus görünümü
-    '.ikr-rating-interactive .ikr-rating-input:focus-visible + .ikr-rating-label{outline:2px solid ' + STAR_COLOR + ';outline-offset:2px;border-radius:4px;}';
-  
+  var css = '.ikr-rating-interactive .ikr-rating-filled{opacity:0; transition:opacity .15s;}' + '.ikr-rating-interactive .ikr-rating-empty{opacity:1; transition:opacity .15s;}' + '.ikr-rating-interactive .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-filled{opacity:1 !important;}' + '.ikr-rating-interactive .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-empty{opacity:0 !important;}' + '.ikr-rating-interactive .ikr-rating-input:focus-visible + .ikr-rating-label{outline:2px solid ' + STAR_COLOR + ';outline-offset:2px;border-radius:4px;}';
+
   var style = document.createElement('style');
   style.setAttribute('data-ikr', 'rating');
   style.textContent = css;
