@@ -121,8 +121,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
                 color: colors.textPrimary,
               }}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Palette size={16} style={{ color: colors.textSecondary }} />
+              <span style={{ display: 'flex', alignItems: 'center' }}>
                 Renkler
               </span>
               <ChevronRight size={16} style={{ color: colors.textMuted }} />
