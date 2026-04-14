@@ -43,8 +43,8 @@ export var ICONS = {
     styles: {
       rounded: {
         label: 'Yuvarlak (Google)',
-        filled: svg(P.heartRounded),
-        empty:  svg(P.heartRounded),
+        filled: '<svg viewBox="' + MS_VB + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(48, -48) scale(0.9)"><path d="' + P.heartRounded + '"/></g></svg>',
+        empty:  '<svg viewBox="' + MS_VB + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(48, -48) scale(0.9)"><path d="' + P.heartRounded + '"/></g></svg>',
       },
     },
   },
