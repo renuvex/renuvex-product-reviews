@@ -11,6 +11,7 @@ var MS_VB = '0 -960 960 960';
 var P = {
   starFill:    'm233-120 65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Z',
   starRounded: 'M480-269 314-169q-11 7-23 6t-21-8q-9-7-14-17.5t-2-23.5l44-189-147-127q-10-9-12.5-20.5T140-571q4-11 12-18t22-9l194-17 75-178q5-12 15.5-18t21.5-6q11 0 21.5 6t15.5 18l75 178 194 17q14 2 22 9t12 18q4 11 1.5 22.5T809-528L662-401l44 189q3 13-2 23.5T690-171q-9 7-21 8t-23-6L480-269Z',
+  heartRounded: 'M480-120q-12 0-25-4.5t-23-16.5L156-391q-81-74-118.5-152T0-503q0-131 88.5-219.5T308-811q67 0 125 31.5T520-692q30-56 88-87.5T736-811q131 0 219.5 88.5T1044-503q0 82-37.5 160T888-391L612-141q-10 12-23 16.5t-25 4.5Z',
 };
 
 // Temel SVG sarıcı — currentColor ile renklenir
@@ -34,6 +35,16 @@ export var ICONS = {
         label: 'Tombul (Google)',
         filled: svg(P.starRounded),
         empty:  svg(P.starRounded), // Boş hali de dolu ikon, renk ile ayırt edilecek
+      },
+    },
+  },
+  favorite: {
+    label: 'Kalp',
+    styles: {
+      rounded: {
+        label: 'Yuvarlak (Google)',
+        filled: svg(P.heartRounded),
+        empty:  svg(P.heartRounded),
       },
     },
   },
