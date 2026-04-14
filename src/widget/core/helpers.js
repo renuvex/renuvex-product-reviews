@@ -119,8 +119,8 @@ export function renderStars(rating, interactive, onChange, settings) {
       // İki SVG üst üste — filled altta, empty üstte. CSS ile hover/checked'e göre empty
       // saklanır ve dolu yıldız görünür. Şekiller farklı olsa bile doğru render olur.
       label.innerHTML =
-        '<span class="ikr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';opacity:0;">' + pair.filled + '</span>' +
-        '<span class="ikr-rating-empty" style="position:relative;width:24px;height:24px;color:#ddd;">' + pair.empty + '</span>';
+        '<span class="ikr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';opacity:0;pointer-events:none;">' + pair.filled + '</span>' +
+        '<span class="ikr-rating-empty" style="position:relative;width:24px;height:24px;color:#ddd;pointer-events:none;">' + pair.empty + '</span>';
       label.style.position = 'relative';
 
       wrap.appendChild(input);
