@@ -28,11 +28,11 @@ export function buildReviewForm(productId, productName) {
     '<button id="ikr-submit" class="ikr-btn" aria-label="Gönder">Gönder</button>',
     '<div id="ikr-msg" style="margin-top:10px;" role="alert" aria-live="assertive"></div>',
   ].join('');
-  var currentRating = null;
+  var currentRating = 5; // Varsayılan olarak 5 kabul ediyoruz
   var uploadedImages = [];
 
-  // 0 → hiçbir yıldız başlangıçta seçili değil, kullanıcı bilinçli seçim yapmalı.
-  var starsWrap = renderStars(0, true, function(v) { currentRating = v; }, currentSettings);
+  // Müşteri deneyimini hızlandırmak ve yüksek puan vermek için 5 yıldızla başlatıyoruz
+  var starsWrap = renderStars(5, true, function(v) { currentRating = v; }, currentSettings);
   form.querySelector('#ikr-stars-input').appendChild(starsWrap);
 
   var fileInput = form.querySelector('#ikr-file-input');
