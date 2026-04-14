@@ -33,7 +33,7 @@ export var CLASSIC_CSS = `
      bile satırlar 800-900px civarında kalır. Başlık, summary, galeri serbest. */
   #ikas-reviews-widget .ikr-body,
   #ikas-reviews-widget .ikr-reply-text{max-width:70ch;}
-  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:24px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
+  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:12px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
 
   /* ─── SVG ICON WRAPPER ───────────────────────────────────────────────
      .ikr-icon span'ı SVG'yi sarar. Boyut parent'tan (em veya inline style) gelir,
@@ -51,8 +51,8 @@ export var CLASSIC_CSS = `
     --ikr-col-count:36px;
     --ikr-col-gap:8px;
     --ikr-summary-max:400px;
-    display:flex;flex-direction:column;align-items:center;gap:16px;
-    padding:24px 28px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    padding:16px 28px 24px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;
   }
   .ikr-summary-block{display:flex;flex-direction:column;align-items:center;width:100%;max-width:var(--ikr-summary-max);}
 
