@@ -116,6 +116,15 @@ export function renderStars(rating, interactive, onChange, settings) {
       label.className = 'ikr-rating-label';
       label.setAttribute('aria-label', idx + ' yıldız');
       label.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:pointer;transition:color .15s;';
+      
+      // Zorunlu JS tetiği: Bazı tarayıcılarda (veya shadow durumlarda) label'ın kendi 'for' bağı başarısız olabilir.
+      label.addEventListener('click', function(e) {
+        if (!input.checked) {
+          input.checked = true;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+
       // İki SVG üst üste — filled altta, empty üstte. CSS ile hover/checked'e göre empty
       // saklanır ve dolu yıldız görünür. Şekiller farklı olsa bile doğru render olur.
       label.innerHTML =
