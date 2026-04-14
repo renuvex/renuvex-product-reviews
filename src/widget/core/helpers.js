@@ -117,19 +117,19 @@ export function renderStars(rating, interactive, onChange, settings) {
       label.setAttribute('aria-label', idx + ' yıldız');
       label.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:pointer;transition:color .15s;';
       
-      // Zorunlu JS tetiği: Bazı tarayıcılarda (veya shadow durumlarda) label'ın kendi 'for' bağı başarısız olabilir.
+      // React ile çakışmayı önleyen, tamamen kendi içinde ("bubbling" yapmayan) izole bir tıklama yöntemi:
       label.addEventListener('click', function(e) {
         if (!input.checked) {
+          e.preventDefault();
           input.checked = true;
-          input.dispatchEvent(new Event('change', { bubbles: true }));
+          if (onChange) onChange(idx);
         }
       });
-
-      // İki SVG üst üste — filled altta, empty üstte. CSS ile hover/checked'e göre empty
+      // İki SVG üst üste...
       // saklanır ve dolu yıldız görünür. Şekiller farklı olsa bile doğru render olur.
       label.innerHTML =
-        '<span class="ikr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';opacity:0;pointer-events:none;">' + pair.filled + '</span>' +
-        '<span class="ikr-rating-empty" style="position:relative;width:24px;height:24px;color:#ddd;pointer-events:none;">' + pair.empty + '</span>';
+        '<span class="ikr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';opacity:0;">' + pair.filled + '</span>' +
+        '<span class="ikr-rating-empty" style="position:relative;width:24px;height:24px;color:#ddd;">' + pair.empty + '</span>';
       label.style.position = 'relative';
 
       wrap.appendChild(input);
