@@ -48,7 +48,6 @@ export var CLASSIC_CSS = `
      Bu sayede bar-row ve actions-row aynı hizada kalır. */
   .ikr-summary{
     --ikr-col-label:104px;
-    --ikr-col-count:auto;
     --ikr-col-gap:4px;
     --ikr-summary-max:400px;
     display:flex;flex-direction:column;align-items:center;gap:12px;
@@ -71,7 +70,7 @@ export var CLASSIC_CSS = `
   /* Blok: Bar chart — her satır 3 kolon (label | track | count) */
   .ikr-summary-bars{gap:10px;}
   .ikr-bar-row{
-    display:flex;align-items:center;gap:var(--ikr-col-gap);width:100%;
+    display:flex;align-items:center;justify-content:flex-start;gap:var(--ikr-col-gap);width:100%;
     cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;
     box-sizing:border-box;
   }
@@ -81,9 +80,9 @@ export var CLASSIC_CSS = `
   .ikr-bar-star{width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);}
   .ikr-bar-star-filled{color:var(--ikr-review-star-color,#f59e0b);}
   .ikr-bar-star-empty{color:var(--ikr-bar-track,#e5e7eb);}
-  .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
+  .ikr-bar-track{flex:0 0 160px;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
   .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
-  .ikr-bar-count{flex:0 0 var(--ikr-col-count);text-align:left;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);min-width:30px;}
+  .ikr-bar-count{text-align:left;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
 
   /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında */
   .ikr-summary-actions{
