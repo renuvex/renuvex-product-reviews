@@ -48,7 +48,7 @@ export var CLASSIC_CSS = `
      Bu sayede bar-row ve actions-row aynı hizada kalır. */
   .ikr-summary{
     --ikr-col-label:104px;
-    --ikr-col-count:36px;
+    --ikr-col-count:52px;
     --ikr-col-gap:8px;
     --ikr-summary-max:400px;
     display:flex;flex-direction:column;align-items:center;gap:12px;
