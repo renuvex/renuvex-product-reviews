@@ -48,8 +48,8 @@ export var CLASSIC_CSS = `
      Bu sayede bar-row ve actions-row aynı hizada kalır. */
   .ikr-summary{
     --ikr-col-label:104px;
-    --ikr-col-count:52px;
-    --ikr-col-gap:8px;
+    --ikr-col-count:auto;
+    --ikr-col-gap:4px;
     --ikr-summary-max:400px;
     display:flex;flex-direction:column;align-items:center;gap:12px;
     padding:16px 28px 24px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;
@@ -83,7 +83,7 @@ export var CLASSIC_CSS = `
   .ikr-bar-star-empty{color:var(--ikr-bar-track,#e5e7eb);}
   .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
   .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
-  .ikr-bar-count{flex:0 0 var(--ikr-col-count);text-align:right;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
+  .ikr-bar-count{flex:0 0 var(--ikr-col-count);text-align:left;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);min-width:30px;}
 
   /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında */
   .ikr-summary-actions{
