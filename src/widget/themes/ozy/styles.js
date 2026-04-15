@@ -48,6 +48,7 @@ export var CLASSIC_CSS = `
      Bu sayede bar-row ve actions-row aynı hizada kalır. */
   .ikr-summary{
     --ikr-col-label:104px;
+    --ikr-col-count:80px;
     --ikr-col-gap:4px;
     --ikr-summary-max:400px;
     display:flex;flex-direction:column;align-items:center;gap:12px;
@@ -80,9 +81,9 @@ export var CLASSIC_CSS = `
   .ikr-bar-star{width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);}
   .ikr-bar-star-filled{color:var(--ikr-review-star-color,#f59e0b);}
   .ikr-bar-star-empty{color:var(--ikr-bar-track,#e5e7eb);}
-  .ikr-bar-track{flex:0 0 160px;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
+  .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
   .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
-  .ikr-bar-count{text-align:left;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
+  .ikr-bar-count{flex:0 0 var(--ikr-col-count);text-align:left;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
 
   /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında */
   .ikr-summary-actions{
@@ -90,7 +91,7 @@ export var CLASSIC_CSS = `
     padding:3px 6px;box-sizing:border-box;
   }
   .ikr-write-btn{flex:1 1 auto;min-width:0;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:12px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:700;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
-  .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-end;}
+  .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-start;}
   .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,var(--ikr-color,#000));color:var(--ikr-filter-btn-text,var(--ikr-color-text,#fff));cursor:pointer;}
   .ikr-filter-btn-active{opacity:0.85;}
 
