@@ -17,7 +17,6 @@ export async function GET() {
       title: 'Müşteri Yorumları',
       primaryColor: '#111111',
       autoApprove: false,
-      showHelpful: true,
       size: 'medium',
       thumbnailSize: 'medium',
     },

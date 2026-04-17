@@ -22,7 +22,6 @@ const PAGE_1_REVIEWS = [
     comment: 'Ürün gerçekten çok kaliteli, beklentilerimi fazlasıyla karşıladı. Kumaş kalitesi, dikiş detayları ve genel duruşu harika. Ürünü alırken biraz tereddüt etmiştim ama elime ulaştığında ne kadar doğru bir karar verdiğimi anladım. Hızlı kargo ve özenli paketleme için de ayrıca teşekkürler. Kesinlikle tavsiye ediyorum, pişman olmazsınız! Ayrıca ürünün rengi fotoğraftakinden çok daha canlı ve güzel. Uzun süreli kullanımda da gayet dayanıklı duruyor. Temizliği de oldukça kolay, nemli bir bezle silmek yeterli oluyor. Bu fiyata böyle bir kalite bulmak gerçekten zor. Hem kendime hem de hediye olarak arkadaşlarıma aldım, herkes çok memnun kaldı. İkas ekibine bu başarılı ürün ve hizmet için çok teşekkür ederim, favori mağazam haline geldi bile!',
     status: 'approved',
     isVerifiedPurchase: true,
-    helpfulCount: 12,
     images: [
       'https://placehold.co/800x800/fee2e2/fee2e2.png',
       'https://placehold.co/800x800/efe8ff/efe8ff.png'
@@ -40,7 +39,6 @@ const PAGE_1_REVIEWS = [
     comment: 'Genel olarak memnunum, sadece ambalaj biraz hasarlı gelmişti ama ürün sağlamdı.',
     status: 'approved',
     isVerifiedPurchase: false,
-    helpfulCount: 3,
     images: [
       'https://placehold.co/800x800/e0f2fe/e0f2fe.png'
     ],
@@ -57,7 +55,6 @@ const PAGE_1_REVIEWS = [
     comment: 'Tam aradığım ürün. Kesinlikle tavsiye ederim.',
     status: 'approved',
     isVerifiedPurchase: true,
-    helpfulCount: 7,
     images: [
       'https://placehold.co/800x800/fef2f2/fef2f2.png',
       'https://placehold.co/800x800/f0fdf4/f0fdf4.png'
@@ -75,7 +72,6 @@ const PAGE_1_REVIEWS = [
     comment: 'Beklentimin çok üstünde bir ürün çıktı. Fiyat/performans olarak çok iyi, kalitesi de tartışmasız.',
     status: 'approved',
     isVerifiedPurchase: true,
-    helpfulCount: 5,
     images: [],
     merchantReply: 'Memnun kaldığınıza sevindik, teşekkürler!',
     createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
@@ -90,7 +86,6 @@ const PAGE_1_REVIEWS = [
     comment: 'Ürün iyi ama küçük bazı detaylar daha iyi olabilirdi. Yine de tavsiye ederim.',
     status: 'approved',
     isVerifiedPurchase: false,
-    helpfulCount: 2,
     images: [],
     merchantReply: null,
     createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
@@ -108,7 +103,6 @@ const PAGE_2_REVIEWS = [
     comment: 'Süper bir ürün, hızlı teslimat, güzel paketleme. Herkese tavsiye ederim.',
     status: 'approved',
     isVerifiedPurchase: true,
-    helpfulCount: 4,
     images: [],
     merchantReply: null,
     createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
@@ -123,7 +117,6 @@ const PAGE_2_REVIEWS = [
     comment: 'Ortalama bir ürün. Beklentimi tam karşılamadı ama kötü de değil.',
     status: 'approved',
     isVerifiedPurchase: false,
-    helpfulCount: 1,
     images: [],
     merchantReply: 'Geri bildiriminiz için teşekkürler, gelişmeye devam ediyoruz.',
     createdAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
@@ -138,7 +131,6 @@ const PAGE_2_REVIEWS = [
     comment: 'Kesinlikle tavsiye ederim, uzun süredir kullanıyorum ve hiçbir sorun yaşamadım.',
     status: 'approved',
     isVerifiedPurchase: true,
-    helpfulCount: 6,
     images: [
       'https://placehold.co/800x800/fef3c7/fef3c7.png'
     ],

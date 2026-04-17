@@ -54,7 +54,6 @@ const SIZE_PRESETS = {
 export function ReviewsWidgetPreview({ settings }: PreviewProps) {
   const primaryColor = (settings.primaryColor as string) ?? '#111111';
   const title = (settings.title as string) || 'Müşteri Yorumları';
-  const showHelpful = (settings.showHelpful as boolean) ?? true;
   const isEnabled = (settings.enabled as boolean) ?? true;
   const reviewIcon = (settings.reviewIcon as string) ?? 'star';
   const starColor = (settings.reviewStarColor as string) ?? '#f59e0b';
@@ -161,23 +160,6 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
                 }}>
                   {review.comment}
                 </p>
-
-                {showHelpful && (
-                  <button
-                    style={{
-                      marginTop: 8,
-                      fontSize: typography.fontSize.xs,
-                      color: colors.textMuted,
-                      background: 'none',
-                      border: `1px solid ${colors.borderLight}`,
-                      borderRadius: innerRadius,
-                      padding: '3px 10px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    👍 Faydalı
-                  </button>
-                )}
 
                 {review.reply && (
                   <div style={{

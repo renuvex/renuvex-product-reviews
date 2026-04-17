@@ -1,13 +1,11 @@
 // product-widget/review-item.js — Tek bir yorum DOM elementini oluşturur
 
-import { starsHTML, formatDate, optimizeImageUrl, getHelpfulVoted, setHelpfulVoted } from '../core/helpers.js';
-import { API_BASE } from '../core/config.js';
-import { fetchWithTimeout } from '../core/fetch.js';
+import { starsHTML, formatDate, optimizeImageUrl } from '../core/helpers.js';
 import { openReviewModal } from './review-modal.js';
 import { currentSettings } from '../core/state.js';
 
 
-export function buildReviewEl(r, allReviews, showHelpful) {
+export function buildReviewEl(r, allReviews) {
   var reviewEl = document.createElement('div');
   reviewEl.className = 'ikr-review';
 
@@ -70,13 +68,10 @@ export function buildReviewEl(r, allReviews, showHelpful) {
     });
   }
 
-  // Fotoğraflar + faydalı butonu (aynı satırda, bottom-aligned)
-  var mediaRow = document.createElement('div');
-  mediaRow.className = 'ikr-media-row';
-
-  var gallery = document.createElement('div');
-  gallery.className = 'ikr-gallery';
+  // Fotoğraflar
   if (r.images && Array.isArray(r.images) && r.images.length) {
+    var gallery = document.createElement('div');
+    gallery.className = 'ikr-gallery';
     r.images.forEach(function(imgUrl) {
       if (!imgUrl || (imgUrl.indexOf('https://') !== 0 && imgUrl.indexOf('data:image/') !== 0)) return;
       var imgEl = document.createElement('img');
@@ -88,68 +83,8 @@ export function buildReviewEl(r, allReviews, showHelpful) {
       })(imgUrl);
       gallery.appendChild(imgEl);
     });
+    reviewEl.appendChild(gallery);
   }
-  mediaRow.appendChild(gallery);
-
-  // Faydalı butonu — mediaRow'un sağına, fotoğraflarla aynı hizada
-  if (showHelpful !== false) {
-    var voted = getHelpfulVoted(r.id);
-    // Cache'ten eski helpfulCount gelebilir — kendi oyu varsa en az 1 garantile
-    var count = voted ? Math.max(r.helpfulCount || 0, 1) : (r.helpfulCount || 0);
-
-    var helpfulBtn = document.createElement('button');
-    helpfulBtn.className = 'ikr-helpful-btn' + (voted ? ' ikr-helpful-btn-active' : '');
-    helpfulBtn.setAttribute('aria-pressed', voted ? 'true' : 'false');
-    helpfulBtn.setAttribute('aria-label', 'Bu yorumu faydalı bul');
-
-    var SVG_OUTLINE = '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
-    var SVG_FILLED = '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
-
-    var renderBtnContent = function(c, isActive) {
-      helpfulBtn.innerHTML = '<span class="ikr-helpful-icon">' + (isActive ? SVG_FILLED : SVG_OUTLINE) + '</span>' +
-        '<span class="ikr-helpful-count">' + (c > 0 ? c : '') + '</span>';
-    };
-
-    renderBtnContent(count, voted);
-
-    helpfulBtn.onclick = async function() {
-      if (helpfulBtn.disabled) return;
-      helpfulBtn.disabled = true;
-      var isVoted = helpfulBtn.classList.contains('ikr-helpful-btn-active');
-
-      // Preview modunda network çağrısı yok — mock ID'ler prod endpoint'inde
-      // bulunamaz. Client-side simülasyon: count ve aktif durumu lokal toggle.
-      if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
-        var nowVotedPreview = !isVoted;
-        count += nowVotedPreview ? 1 : -1;
-        if (count < 0) count = 0;
-        helpfulBtn.classList.toggle('ikr-helpful-btn-active', nowVotedPreview);
-        helpfulBtn.setAttribute('aria-pressed', nowVotedPreview ? 'true' : 'false');
-        renderBtnContent(count, nowVotedPreview);
-        helpfulBtn.disabled = false;
-        return;
-      }
-
-      var method = isVoted ? 'DELETE' : 'POST';
-      try {
-        var res = await fetchWithTimeout(API_BASE + '/api/public/reviews/' + r.id + '/helpful', { method: method });
-        if (res.ok) {
-          var data = await res.json();
-          count = data.helpfulCount || 0;
-          var nowVoted = !isVoted;
-          setHelpfulVoted(r.id, nowVoted);
-          helpfulBtn.classList.toggle('ikr-helpful-btn-active', nowVoted);
-          helpfulBtn.setAttribute('aria-pressed', nowVoted ? 'true' : 'false');
-          renderBtnContent(count, nowVoted);
-        }
-      } catch (_) {}
-      helpfulBtn.disabled = false;
-    };
-
-    mediaRow.appendChild(helpfulBtn);
-  }
-
-  reviewEl.appendChild(mediaRow);
 
   // Mağaza yanıtı — mediaRow'dan sonra
   if (r.merchantReply) {

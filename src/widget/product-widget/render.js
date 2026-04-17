@@ -41,7 +41,7 @@ var SIZE_PRESETS = {
     avgRatingSize: 36, avgStarSize: 48, reviewCountSize: 14, recommendSize: 12,
     btnTextSize: 12, barLabelSize: 18, barCountSize: 12,
     reviewDateSize: 10, filterTextSize: 12, loadMoreSize: 12,
-    readMoreSize: 10, helpfulSize: 10, reviewStarSize: 18,
+    readMoreSize: 10, reviewStarSize: 18,
   },
   medium: {
     titleSize: 24, reviewTextSize: 14, reviewTitleSize: 14, authorSize: 14,
@@ -49,7 +49,7 @@ var SIZE_PRESETS = {
     avgRatingSize: 46, avgStarSize: 58, reviewCountSize: 16, recommendSize: 14,
     btnTextSize: 14, barLabelSize: 22, barCountSize: 14,
     reviewDateSize: 12, filterTextSize: 14, loadMoreSize: 14,
-    readMoreSize: 12, helpfulSize: 12, reviewStarSize: 22,
+    readMoreSize: 12, reviewStarSize: 22,
   },
   large: {
     titleSize: 28, reviewTextSize: 16, reviewTitleSize: 16, authorSize: 16,
@@ -57,7 +57,7 @@ var SIZE_PRESETS = {
     avgRatingSize: 56, avgStarSize: 68, reviewCountSize: 18, recommendSize: 16,
     btnTextSize: 16, barLabelSize: 26, barCountSize: 16,
     reviewDateSize: 14, filterTextSize: 16, loadMoreSize: 16,
-    readMoreSize: 14, helpfulSize: 14, reviewStarSize: 26,
+    readMoreSize: 14, reviewStarSize: 26,
   },
 };
 
@@ -117,10 +117,6 @@ function applyManualTheme(root, settings) {
   var replyBorderVar  = settings.replyBorderColor  || primary;
   var replyLabelColor = settings.replyLabelColor   || text;
   var replyTextVar    = settings.replyTextColor    || text;
-
-  // Grup 8 — Faydalı Butonu
-  var helpfulColor      = settings.helpfulColor      || hexToRgba(text, 0.45);
-  var helpfulActiveColor = settings.helpfulActiveColor || primary;
 
   // Grup 9 — Fotoğraf Galerisi
   var photoBg     = settings.photoBgColor     || hexToRgba(text, 0.03);
@@ -198,10 +194,6 @@ function applyManualTheme(root, settings) {
     '--ikr-reply-border':      replyBorderVar,
     '--ikr-reply-label':       replyLabelColor,
     '--ikr-reply-text':        replyTextVar,
-
-    // Grup 8 — Faydalı Butonu
-    '--ikr-helpful-color':        helpfulColor,
-    '--ikr-helpful-active-color': helpfulActiveColor,
 
     // Grup 9 — Fotoğraf Galerisi
     '--ikr-photo-bg':     photoBg,
@@ -305,7 +297,6 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-filter-text-size', sz.filterTextSize + 'px');
     root.style.setProperty('--ikr-load-more-size', sz.loadMoreSize + 'px');
     root.style.setProperty('--ikr-read-more-size', sz.readMoreSize + 'px');
-    root.style.setProperty('--ikr-helpful-size', sz.helpfulSize + 'px');
     root.style.setProperty('--ikr-thumbnail-size', thumbPx + 'px');
 
     // Review widget yıldız ayarları — badge'den bağımsız
@@ -632,7 +623,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         empty.textContent = 'Henüz yorum yok.';
         widget.appendChild(empty);
       } else {
-        reviews.forEach(function(r) { widget.appendChild(buildReviewEl(r, reviews, currentSettings && currentSettings.showHelpful !== false)); });
+        reviews.forEach(function(r) { widget.appendChild(buildReviewEl(r, reviews)); });
       }
 
       // Daha Fazla butonu
@@ -649,7 +640,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           if (moreData && moreData.data && moreData.data.reviews) {
             setCurrentPage(nextPage);
             moreData.data.reviews.forEach(function(r) {
-              widget.insertBefore(buildReviewEl(r, moreData.data.reviews, currentSettings && currentSettings.showHelpful !== false), loadMoreBtn);
+              widget.insertBefore(buildReviewEl(r, moreData.data.reviews), loadMoreBtn);
             });
             if (!moreData.data.hasMore) loadMoreBtn.remove();
             else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }

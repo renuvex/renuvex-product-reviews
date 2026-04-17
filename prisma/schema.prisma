@@ -38,7 +38,6 @@ model Review {
   productName   String?
   slug          String
   title         String?
-  helpfulCount  Int      @default(0)
 
   @@index([storeId, productId])
   @@index([storeId, slug])

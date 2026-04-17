@@ -6,7 +6,7 @@
 //   --ikr-bg          : widget arka planı
 //   --ikr-text        : birincil yazı rengi
 //   --ikr-text-muted  : ikincil yazı rengi (tarih, sayaç)
-//   --ikr-text-faint  : çok soluk yazı rengi (helpful sayaç vb.)
+//   --ikr-text-faint  : çok soluk yazı rengi (placeholder vb.)
 //   --ikr-border      : ayırıcı çizgi/border rengi
 //   --ikr-track-bg    : bar chart track arka planı (border'dan ayrı — koyu
 //                       temada track'in görünmesi için daha yüksek kontrast)
@@ -129,20 +129,12 @@ export var CLASSIC_CSS = `
   .ikr-body{margin-top:8px;line-height:1.65;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);font-weight:400;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
   .ikr-read-more{display:block;margin-top:4px;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-weight:600;cursor:pointer;font-size:var(--ikr-read-more-size,12px);}
-  .ikr-media-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:12px;}
-  .ikr-gallery{display:flex;gap:10px;flex-wrap:wrap;flex:1;}
+  .ikr-gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
   .ikr-img{width:var(--ikr-thumbnail-size,90px);height:var(--ikr-thumbnail-size,90px);object-fit:cover;border-radius:var(--ikr-radius,6px);border:1px solid var(--ikr-photo-border,var(--ikr-border,rgba(0,0,0,0.10)));cursor:zoom-in;}
   .ikr-reply{margin-top:12px;padding:12px 16px;background:var(--ikr-reply-bg-color,var(--ikr-reply-bg,rgba(0,0,0,0.03)));border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-reply-border,var(--ikr-color,#000));}
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .ikr-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,14px);color:var(--ikr-reply-label,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-reply-text{font-size:var(--ikr-reply-text-size,14px);font-weight:400;color:var(--ikr-reply-text,var(--ikr-text,rgba(0,0,0,1)));line-height:1.6;}
-
-  /* Faydalı butonu */
-  .ikr-helpful-btn{display:flex;align-items:center;gap:5px;background:none;border:none;padding:4px 6px;cursor:pointer;font-size:var(--ikr-helpful-size,12px);color:var(--ikr-helpful-color,var(--ikr-text-faint,rgba(0,0,0,0.45)));font-weight:400;transition:color 0.15s;line-height:1;min-width:44px;}
-  .ikr-helpful-icon{flex-shrink:0;display:flex;align-items:center;transition:color 0.15s;}
-  .ikr-helpful-count{display:inline-block;min-width:16px;text-align:left;color:var(--ikr-helpful-color,var(--ikr-text-faint,rgba(0,0,0,0.45)));}
-  @media(hover:hover){.ikr-helpful-btn:hover .ikr-helpful-icon{color:var(--ikr-helpful-active-color,var(--ikr-color,#000));}}
-  .ikr-helpful-btn-active .ikr-helpful-icon{color:var(--ikr-helpful-active-color,var(--ikr-color,#000))!important;}
 
   /* Accordion form wrapper */
   #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}
@@ -233,11 +225,6 @@ export var CLASSIC_CSS = `
     .ikr-summary{padding:16px;gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
-    /* Media row — mobilde gallery üstte tam genişlikli yatay scroll,
-       helpful butonu altta sağa yasılı. Aynı satırda sıkıştırmak yerine
-       dikey ayırıyoruz çünkü gallery scroll alanına ihtiyaç duyuyor. */
-    .ikr-media-row{flex-direction:column;align-items:stretch;gap:8px;}
-    .ikr-media-row .ikr-helpful-btn{align-self:flex-end;}
     /* Gallery — fotoğraflı yorumlar strip'i mantığı: flex-wrap:nowrap +
        overflow-x:auto, thumb'lar flex-shrink:0 ile orjinal boyutta kalıyor,
        sığmayanlar yatay scroll'da kaydırılıyor. */

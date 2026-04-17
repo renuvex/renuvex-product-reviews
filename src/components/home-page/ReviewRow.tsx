@@ -38,9 +38,6 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
         <div className="truncate mb-2" style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.primary }}>{review.productName || review.productId}</div>
         <div className="flex items-center gap-3 mb-2">
           <div className="flex gap-0.5">{renderStars(review.rating)}</div>
-          {review.helpfulCount > 0 && (
-            <span style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary }}>{review.helpfulCount} kişi faydalı buldu</span>
-          )}
         </div>
 
         {comment && (

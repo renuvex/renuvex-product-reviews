@@ -9,7 +9,6 @@ export interface Review {
   merchantReply: string | null;
   images: string | null;
   createdAt: string;
-  helpfulCount: number;
 }
 
 // Per-widget settings — JSON'dan gelen veri
@@ -17,7 +16,6 @@ export interface ReviewsSettings {
   enabled?: boolean;
   title?: string;
   primaryColor?: string;
-  showHelpful?: boolean;
   autoApprove?: boolean;
 }
 

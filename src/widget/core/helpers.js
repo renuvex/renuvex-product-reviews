@@ -52,17 +52,6 @@ export function injectStyles(color, css) {
   applyWidgetColor(color);
 }
 
-export function getHelpfulVoted(reviewId) {
-  try { return localStorage.getItem('ikr_helpful_' + reviewId) === '1'; } catch (_) { return false; }
-}
-
-export function setHelpfulVoted(reviewId, voted) {
-  try {
-    if (voted) localStorage.setItem('ikr_helpful_' + reviewId, '1');
-    else localStorage.removeItem('ikr_helpful_' + reviewId);
-  } catch (_) {}
-}
-
 export function optimizeImageUrl(url) {
   if (!url || url.indexOf('res.cloudinary.com') === -1) return url;
   return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_1200/');
