@@ -72,11 +72,11 @@ export var CLASSIC_CSS = `
   .ikr-summary-bars{gap:10px;}
   .ikr-bar-row{
     display:flex;align-items:center;justify-content:flex-start;gap:var(--ikr-col-gap);width:100%;
-    cursor:pointer;padding:3px 0;box-sizing:border-box;
+    cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;
+    box-sizing:border-box;
   }
-  @media(hover:hover){.ikr-bar-row:hover .ikr-bar-fill{opacity:0.75;}}
-  .ikr-bar-active .ikr-bar-label{font-weight:700;}
-  .ikr-bar-active .ikr-bar-fill{opacity:0.75;}
+  @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-bar-hover-bg,var(--ikr-color-light));}}
+  .ikr-bar-active{background:var(--ikr-bar-hover-bg,var(--ikr-color-light))!important;}
   .ikr-bar-label{flex:0 0 var(--ikr-col-label);display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:var(--ikr-bar-label,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-bar-star{width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);}
   .ikr-bar-star-filled{color:var(--ikr-review-star-color,#f59e0b);}
@@ -88,7 +88,7 @@ export var CLASSIC_CSS = `
   /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında */
   .ikr-summary-actions{
     display:flex;flex-direction:row;align-items:center;gap:var(--ikr-col-gap);
-    padding:3px 0;box-sizing:border-box;
+    padding:3px 6px;box-sizing:border-box;
   }
   .ikr-write-btn{flex:1 1 auto;min-width:0;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:12px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:700;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
   .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-start;}
