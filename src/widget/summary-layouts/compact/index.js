@@ -64,16 +64,15 @@ export function render(opts) {
     onSortChange: onSortChange,
   });
 
-  // Filter wrap — header'da (trigger ile aynı satırda, sağda)
+  // Header sağında actions slot — desktop'ta hem write hem filter, mobile'da sadece filter
   var filterWrap = actions.querySelector('.ikr-filter-wrap');
   var writeBtn = actions.querySelector('.ikr-write-btn');
 
-  if (filterWrap) {
-    var filterSlot = document.createElement('div');
-    filterSlot.className = 'ikr-compact-filter-slot';
-    filterSlot.appendChild(filterWrap);
-    header.appendChild(filterSlot);
-  }
+  var actionsSlot = document.createElement('div');
+  actionsSlot.className = 'ikr-compact-actions-slot';
+  if (writeBtn) actionsSlot.appendChild(writeBtn);
+  if (filterWrap) actionsSlot.appendChild(filterWrap);
+  header.appendChild(actionsSlot);
 
   summary.appendChild(header);
 
@@ -104,11 +103,15 @@ export function render(opts) {
   panel.appendChild(panelInner);
   summary.appendChild(panel);
 
-  // Write button — en altta tek satır (mobilde de desktop'ta da full-width)
+  // Mobile-only write satırı — header'daki butonun ikinci kopyası, CSS ile sadece mobile'da gözükür
   if (writeBtn) {
+    var writeBtnMobile = document.createElement('button');
+    writeBtnMobile.className = 'ikr-write-btn';
+    writeBtnMobile.textContent = 'Yorum Yap';
+    writeBtnMobile.onclick = toggleWriteAccordion;
     var writeRow = document.createElement('div');
     writeRow.className = 'ikr-compact-write-row';
-    writeRow.appendChild(writeBtn);
+    writeRow.appendChild(writeBtnMobile);
     summary.appendChild(writeRow);
   }
 

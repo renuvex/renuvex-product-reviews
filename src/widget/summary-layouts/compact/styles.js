@@ -1,7 +1,8 @@
 // summary-layouts/compact/styles.js
 // Loox-style compact layout — header bar (her zaman görünür) + collapsible panel.
-// Header: trigger (yıldız + sayı + chevron) solda, filtre sağda; Yorum Yap altta tek satır.
-// Panel açılınca büyük ortalama puan + bar chart (full panel genişliği).
+// Desktop: header → [trigger ......... write-btn + filter] tek satır.
+// Mobile: header → [trigger ........ filter], altında write-btn full-width.
+// Panel: ortalama puan + bar chart (340px max, ortalanmış).
 
 export var COMPACT_CSS = `
   .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;}
@@ -33,19 +34,15 @@ export var COMPACT_CSS = `
   }
   .ikr-compact-trigger[aria-expanded="true"] .ikr-compact-chevron{transform:rotate(180deg);}
 
-  .ikr-compact-filter-slot{
-    flex:0 0 auto;display:flex;align-items:center;
+  .ikr-compact-actions-slot{
+    flex:0 0 auto;display:flex;align-items:center;gap:var(--ikr-col-gap,8px);
   }
-  .ikr-compact-filter-slot .ikr-filter-wrap{flex:0 0 auto;}
+  .ikr-compact-actions-slot .ikr-filter-wrap{flex:0 0 auto;}
+  .ikr-compact-actions-slot .ikr-write-btn{flex:0 0 auto;}
 
-  /* Yorum Yap satırı — desktop'ta header'a absolute taşımak yerine
-     full-width tek satır olarak panel altında durur. Mobile'da da aynı. */
-  .ikr-compact-write-row{
-    display:flex;width:100%;
-  }
-  .ikr-compact-write-row .ikr-write-btn{
-    flex:1 1 auto;justify-content:center;
-  }
+  /* Mobile-only write satırı — desktop'ta gizli, mobile'da görünür ve full-width */
+  .ikr-compact-write-row{display:none;}
+  .ikr-compact-write-row .ikr-write-btn{flex:1 1 auto;justify-content:center;}
 
   .ikr-compact-panel{
     overflow:hidden;max-height:0;opacity:0;
@@ -68,11 +65,16 @@ export var COMPACT_CSS = `
   .ikr-compact-avg .ikr-icon{
     width:32px;height:32px;color:var(--ikr-review-star-color,#f59e0b);
   }
-  /* Panel içindeki bar chart full panel genişliğini kullansın — Loox orijinal format */
-  .ikr-compact-panel-inner .ikr-summary-bars{max-width:100%;width:100%;}
+  /* Bar chart orijinal boyutta — 340px max, ortalanmış (hem desktop hem mobile) */
+  .ikr-compact-panel-inner .ikr-summary-bars{
+    max-width:var(--ikr-summary-max,340px);width:100%;margin:0 auto;
+  }
 
   @media(max-width:600px){
     .ikr-compact-header{gap:8px;}
     .ikr-compact-panel-inner{padding:16px;}
+    /* Mobile: write butonunu header'dan çıkar, alttaki satırda göster */
+    .ikr-compact-actions-slot .ikr-write-btn{display:none;}
+    .ikr-compact-write-row{display:flex;width:100%;}
   }
 `;
