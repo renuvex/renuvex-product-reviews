@@ -403,16 +403,14 @@ export async function render(productId, settings, reviewsData, productName, orde
           summary.appendChild(recBlock);
         }
 
-        // Blok: Bar chart (table — Loox pattern: kolonlar tüm satırlarda otomatik hizalanır)
-        var barsBlock = document.createElement('table');
+        // Blok: Bar chart
+        var barsBlock = document.createElement('div');
         barsBlock.className = 'ikr-summary-block ikr-summary-bars';
-        var barsBody = document.createElement('tbody');
-        barsBlock.appendChild(barsBody);
         for (var si = 5; si >= 1; si--) {
           var cnt = ratingCounts[si - 1];
           var pct = allCount > 0 ? Math.round((cnt / allCount) * 100) : 0;
           var isActive = currentRatingFilter === si;
-          var row = document.createElement('tr');
+          var row = document.createElement('div');
           row.className = 'ikr-bar-row' + (isActive ? ' ikr-bar-active' : '');
           if (currentRatingFilter && !isActive) row.style.opacity = '0.35';
           var starsHtml = '';
@@ -420,9 +418,9 @@ export async function render(productId, settings, reviewsData, productName, orde
             starsHtml += '<span class="ikr-bar-star ikr-icon ' + (s <= si ? 'ikr-bar-star-filled' : 'ikr-bar-star-empty') + '">' + (s <= si ? iconPair.filled : iconPair.empty) + '</span>';
           }
           row.innerHTML =
-            '<td class="ikr-bar-label-cell"><span class="ikr-bar-label">' + starsHtml + '</span></td>' +
-            '<td class="ikr-bar-track-cell"><div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div></td>' +
-            '<td class="ikr-bar-count-cell"><span class="ikr-bar-count">(' + cnt.toLocaleString('tr-TR') + ')</span></td>';
+            '<span class="ikr-bar-label">' + starsHtml + '</span>' +
+            '<div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div>' +
+            '<span class="ikr-bar-count">(' + cnt.toLocaleString('tr-TR') + ')</span>';
           (function(starVal) {
             row.onclick = async function() {
               setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
@@ -431,7 +429,7 @@ export async function render(productId, settings, reviewsData, productName, orde
               await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
             };
           })(si);
-          barsBody.appendChild(row);
+          barsBlock.appendChild(row);
         }
         summary.appendChild(barsBlock);
 
