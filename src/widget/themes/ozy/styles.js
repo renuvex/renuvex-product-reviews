@@ -83,7 +83,7 @@ export var CLASSIC_CSS = `
   .ikr-bar-star-empty{color:var(--ikr-bar-track,#e5e7eb);}
   .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
   .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
-  .ikr-bar-count{flex:0 0 auto;text-align:left;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
+  .ikr-bar-count{flex:0 0 auto;text-align:right;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
 
   /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında */
   .ikr-summary-actions{
