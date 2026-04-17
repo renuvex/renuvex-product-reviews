@@ -61,8 +61,8 @@ export var COMPACT_CSS = `
   .ikr-compact-panel{
     position:absolute;top:calc(100% + 8px);left:0;
     z-index:1000;
-    width:max-content;max-width:calc(var(--ikr-summary-max,340px) + 56px);
-    min-width:280px;
+    /* Bar chart 340px + panel-inner padding (28*2) + border (2) = 398px sabit */
+    width:calc(var(--ikr-summary-max,340px) + 58px);
     opacity:0;visibility:hidden;pointer-events:none;
     transform:translateY(-6px);
     transition:opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
@@ -97,12 +97,29 @@ export var COMPACT_CSS = `
 
   @media(max-width:600px){
     .ikr-compact-header{gap:8px;}
-    .ikr-compact-panel-inner{padding:16px;}
     .ikr-compact-actions-slot .ikr-write-btn{display:none;}
     .ikr-compact-write-row{display:flex;width:100%;}
-    /* Mobile'da popover viewport'u taşmasın — sol-sağ kenara yapışmasın */
+
+    /* Mobile: popover değil, ACCORDION — sayfayı iter, header'ın altında akış içinde durur.
+       trigger-wrap position:relative kalsa da panel position:static ile flow'a girer. */
+    .ikr-compact-trigger-wrap{
+      position:static;display:block;width:100%;
+    }
     .ikr-compact-panel{
-      max-width:calc(100vw - 32px);
+      position:static;
+      width:100%;max-width:100%;min-width:0;
+      transform:none;visibility:visible;pointer-events:auto;
+      /* Accordion animasyonu */
+      max-height:0;overflow:hidden;
+      transition:max-height 280ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease;
+    }
+    .ikr-compact-panel.ikr-open{
+      max-height:600px;transform:none;
+    }
+    .ikr-compact-panel-inner{
+      padding:16px;
+      box-shadow:none;
+      margin-top:8px;
     }
   }
 `;
