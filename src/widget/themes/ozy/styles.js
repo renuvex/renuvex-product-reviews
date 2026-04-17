@@ -50,7 +50,7 @@ export var CLASSIC_CSS = `
     --ikr-col-label:104px;
     --ikr-col-count:60px;
     --ikr-col-gap:4px;
-    --ikr-summary-max:400px;
+    --ikr-summary-max:320px;
     display:flex;flex-direction:column;align-items:center;gap:12px;
     padding:16px 28px 24px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;
   }
