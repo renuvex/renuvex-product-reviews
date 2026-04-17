@@ -48,15 +48,20 @@ export var COMPACT_CSS = `
     overflow:hidden;max-height:0;opacity:0;
     transition:max-height 280ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease, margin-top 200ms ease;
     margin-top:0;
+    /* Panel ortalanmış ve dar — bar chart 340px etrafında nefes alır,
+       container full-width olsa bile panel orta blok gibi durur (Loox) */
+    max-width:calc(var(--ikr-summary-max,340px) + 56px);
+    margin-left:auto;margin-right:auto;width:100%;
   }
   .ikr-compact-panel.ikr-open{opacity:1;margin-top:4px;}
 
   .ikr-compact-panel-inner{
-    display:flex;flex-direction:column;align-items:stretch;gap:16px;
-    padding:20px;border:1px solid var(--ikr-widget-border,var(--ikr-border,rgba(0,0,0,0.08)));
+    display:flex;flex-direction:column;align-items:center;gap:16px;
+    padding:16px 28px 24px;
+    border:1px solid var(--ikr-widget-border,var(--ikr-border,rgba(0,0,0,0.08)));
     border-radius:var(--ikr-radius,6px);
     background:var(--ikr-widget-bg,transparent);
-    max-width:420px;margin:0 auto;width:100%;
+    width:100%;box-sizing:border-box;
   }
   .ikr-compact-avg{
     display:flex;align-items:center;justify-content:center;gap:8px;
