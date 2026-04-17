@@ -72,18 +72,17 @@ export var CLASSIC_CSS = `
   .ikr-summary-bars{gap:10px;}
   .ikr-bar-row{
     display:flex;align-items:center;justify-content:flex-start;gap:var(--ikr-col-gap);width:100%;
-    padding:3px 0;box-sizing:border-box;
+    cursor:pointer;padding:3px 0;box-sizing:border-box;
   }
-  .ikr-bar-label,.ikr-bar-fill,.ikr-bar-count{cursor:pointer;}
+  @media(hover:hover){.ikr-bar-row:hover .ikr-bar-fill{opacity:0.75;}}
   .ikr-bar-active .ikr-bar-label{font-weight:700;}
   .ikr-bar-active .ikr-bar-fill{opacity:0.75;}
   .ikr-bar-label{flex:0 0 var(--ikr-col-label);display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:var(--ikr-bar-label,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-bar-star{width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);}
   .ikr-bar-star-filled{color:var(--ikr-review-star-color,#f59e0b);}
   .ikr-bar-star-empty{color:var(--ikr-bar-track,#e5e7eb);}
-  .ikr-bar-track{flex:1 1 auto;min-width:0;background:transparent;height:10px;display:flex;}
-  .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);transition:opacity .15s;}
-  @media(hover:hover){.ikr-bar-fill:hover{opacity:0.75;cursor:pointer;}}
+  .ikr-bar-track{flex:1 1 auto;min-width:0;background:transparent;height:10px;overflow:hidden;}
+  .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
   .ikr-bar-count{flex:0 0 auto;min-width:var(--ikr-col-count);text-align:left;white-space:nowrap;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
 
   /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında */
