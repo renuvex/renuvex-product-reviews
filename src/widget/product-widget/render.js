@@ -357,9 +357,12 @@ export async function render(productId, settings, reviewsData, productName, orde
       }
 
       // Başlık — Eğer title varsa oluştur, yoksa (boş bırakıldıysa) hiç ekleme
+      // Layout id class'ı ekleniyor (ör. ikr-title-compact) ki layout'lar
+      // başlık hizasını kendi CSS'lerinde override edebilsin.
       if (title) {
         var h2 = document.createElement('div');
-        h2.className = 'ikr-title';
+        var layoutId = settings.summaryLayout || 'classic';
+        h2.className = 'ikr-title ikr-title-' + layoutId;
         h2.textContent = title;
         widget.appendChild(h2);
       }

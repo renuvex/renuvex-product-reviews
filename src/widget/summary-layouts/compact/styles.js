@@ -5,6 +5,9 @@
 // Panel: ortalama puan + bar chart (340px max, ortalanmış).
 
 export var COMPACT_CSS = `
+  /* Compact layout başlığı sola hizalı — kendi tasarım dilimiz */
+  .ikr-title-compact{text-align:left;}
+
   .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;}
 
   .ikr-compact-header{
