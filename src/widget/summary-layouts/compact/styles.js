@@ -1,25 +1,30 @@
 // summary-layouts/compact/styles.js
-// Loox-style compact layout — header bar (her zaman görünür) + collapsible panel.
-// Desktop: header → [trigger ......... write-btn + filter] tek satır.
+// Loox-style compact layout — header bar her zaman görünür; trigger'a tıklayınca
+// POPOVER (overlay) olarak panel açılır — sayfayı itmez, içeriğin üstüne çıkar.
+// Desktop: header → [trigger ........ write-btn + filter] tek satır.
 // Mobile: header → [trigger ........ filter], altında write-btn full-width.
-// Panel: ortalama puan + bar chart (340px max, ortalanmış).
 
 export var COMPACT_CSS = `
-  /* Compact layout başlığı sola hizalı — kendi tasarım dilimiz */
+  /* Compact layout başlığı sola hizalı */
   .ikr-title-compact{text-align:left;}
 
-  /* Compact'te ana .ikr-summary padding'ini sıfırla — header kendi padding'ini yönetir;
-     yıldızlar widget sol kenarına başlık ile aynı hizada hizalansın. */
+  /* Compact'te ana .ikr-summary padding'ini sıfırla — yıldızlar başlık ile aynı sol kenar */
   .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding:0;}
 
   .ikr-compact-header{
     display:flex;align-items:center;gap:12px;
     width:100%;padding:8px 0;
   }
+
+  /* Trigger wrap — popover anchor'ı (position:relative parent) */
+  .ikr-compact-trigger-wrap{
+    position:relative;flex:1 1 auto;min-width:0;display:flex;align-items:center;
+  }
+
   .ikr-compact-trigger{
     display:flex;align-items:center;gap:10px;
     background:transparent;border:0;padding:8px 0;cursor:pointer;
-    font-family:inherit;color:inherit;flex:1 1 auto;min-width:0;
+    font-family:inherit;color:inherit;flex:0 0 auto;
   }
   .ikr-compact-trigger-stars{display:inline-flex;gap:2px;flex-shrink:0;}
   .ikr-compact-trigger-stars .ikr-icon{
@@ -45,27 +50,36 @@ export var COMPACT_CSS = `
   .ikr-compact-actions-slot .ikr-filter-wrap{flex:0 0 auto;}
   .ikr-compact-actions-slot .ikr-write-btn{flex:0 0 auto;}
 
-  /* Mobile-only write satırı — desktop'ta gizli, mobile'da görünür ve full-width */
+  /* Mobile-only write satırı */
   .ikr-compact-write-row{display:none;}
   .ikr-compact-write-row .ikr-write-btn{flex:1 1 auto;justify-content:center;}
 
+  /* ─── POPOVER ─────────────────────────────────────────────────
+     position:absolute; trigger'ın altına anchor; sayfayı itmez.
+     visibility:hidden + opacity:0 → animation için interactive değil
+     iken de yer açar (transform için). */
   .ikr-compact-panel{
-    overflow:hidden;max-height:0;opacity:0;
-    transition:max-height 280ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease, margin-top 200ms ease;
-    margin-top:0;
-    /* Panel ortalanmış ve dar — bar chart 340px etrafında nefes alır,
-       container full-width olsa bile panel orta blok gibi durur (Loox) */
-    max-width:calc(var(--ikr-summary-max,340px) + 56px);
-    margin-left:auto;margin-right:auto;width:100%;
+    position:absolute;top:calc(100% + 8px);left:0;
+    z-index:1000;
+    width:max-content;max-width:calc(var(--ikr-summary-max,340px) + 56px);
+    min-width:280px;
+    opacity:0;visibility:hidden;pointer-events:none;
+    transform:translateY(-6px);
+    transition:opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
   }
-  .ikr-compact-panel.ikr-open{opacity:1;margin-top:4px;}
+  .ikr-compact-panel.ikr-open{
+    opacity:1;visibility:visible;pointer-events:auto;
+    transform:translateY(0);
+    transition:opacity 180ms ease, transform 180ms ease, visibility 0s linear 0s;
+  }
 
   .ikr-compact-panel-inner{
     display:flex;flex-direction:column;align-items:center;gap:16px;
     padding:16px 28px 24px;
-    border:1px solid var(--ikr-widget-border,var(--ikr-border,rgba(0,0,0,0.08)));
+    border:1px solid var(--ikr-widget-border,var(--ikr-border,rgba(0,0,0,0.10)));
     border-radius:var(--ikr-radius,6px);
-    background:var(--ikr-widget-bg,transparent);
+    background:var(--ikr-widget-bg,var(--ikr-surface,#fff));
+    box-shadow:0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
     width:100%;box-sizing:border-box;
   }
   .ikr-compact-avg{
@@ -76,7 +90,7 @@ export var COMPACT_CSS = `
   .ikr-compact-avg .ikr-icon{
     width:32px;height:32px;color:var(--ikr-review-star-color,#f59e0b);
   }
-  /* Bar chart orijinal boyutta — 340px max, ortalanmış (hem desktop hem mobile) */
+  /* Bar chart 340px max, ortalanmış */
   .ikr-compact-panel-inner .ikr-summary-bars{
     max-width:var(--ikr-summary-max,340px);width:100%;margin:0 auto;
   }
@@ -84,8 +98,11 @@ export var COMPACT_CSS = `
   @media(max-width:600px){
     .ikr-compact-header{gap:8px;}
     .ikr-compact-panel-inner{padding:16px;}
-    /* Mobile: write butonunu header'dan çıkar, alttaki satırda göster */
     .ikr-compact-actions-slot .ikr-write-btn{display:none;}
     .ikr-compact-write-row{display:flex;width:100%;}
+    /* Mobile'da popover viewport'u taşmasın — sol-sağ kenara yapışmasın */
+    .ikr-compact-panel{
+      max-width:calc(100vw - 32px);
+    }
   }
 `;

@@ -1,6 +1,6 @@
 // summary-layouts/compact/index.js
 // Loox-style compact layout — header (yıldız + sayı + chevron) her zaman görünür,
-// dropdown panel ortalama puan + bar chart içerir, tıklayınca açılır.
+// trigger'a tıklayınca POPOVER (overlay) olarak panel açılır — sayfayı itmez.
 // Yorum Yap + filtre butonu header'da kalır.
 
 import { buildBarChart } from '../shared/bar-chart.js';
@@ -35,7 +35,11 @@ export function render(opts) {
   var header = document.createElement('div');
   header.className = 'ikr-compact-header';
 
-  // Trigger: yıldız + sayı + chevron — tıklanınca panel toggle
+  // Trigger wrap — popover'ı anchor edebilmek için position:relative parent
+  var triggerWrap = document.createElement('div');
+  triggerWrap.className = 'ikr-compact-trigger-wrap';
+
+  // Trigger: yıldız + sayı + chevron — tıklanınca popover toggle
   var trigger = document.createElement('button');
   trigger.className = 'ikr-compact-trigger';
   trigger.type = 'button';
@@ -53,7 +57,8 @@ export function render(opts) {
         '<path d="M7.11 5.16L2.16 0.21L0.75 1.62L7.11 7.98L13.48 1.62L12.06 0.21L7.11 5.16Z" fill="currentColor"/>' +
       '</svg>' +
     '</span>';
-  header.appendChild(trigger);
+  triggerWrap.appendChild(trigger);
+  header.appendChild(triggerWrap);
 
   // Actions (Yorum Yap + filtre) — buildActionsBlock döndürür: [write-btn, filter-wrap]
   var actions = buildActionsBlock({
@@ -76,9 +81,11 @@ export function render(opts) {
 
   summary.appendChild(header);
 
-  // ─── Panel (collapsed default) ──────────────────────────────
+  // ─── Popover Panel (trigger'a anchor, overlay) ──────────────
   var panel = document.createElement('div');
   panel.className = 'ikr-compact-panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-hidden', 'true');
 
   var panelInner = document.createElement('div');
   panelInner.className = 'ikr-compact-panel-inner';
@@ -101,7 +108,8 @@ export function render(opts) {
   }));
 
   panel.appendChild(panelInner);
-  summary.appendChild(panel);
+  // Panel triggerWrap içine — trigger'a anchor (position:absolute relative parent)
+  triggerWrap.appendChild(panel);
 
   // Mobile-only write satırı — header'daki butonun ikinci kopyası, CSS ile sadece mobile'da gözükür
   if (writeBtn) {
@@ -115,19 +123,34 @@ export function render(opts) {
     summary.appendChild(writeRow);
   }
 
-  // ─── Toggle davranışı ───────────────────────────────────────
-  trigger.onclick = function() {
-    var isOpen = panel.classList.contains('ikr-open');
-    if (isOpen) {
-      panel.style.maxHeight = '0px';
-      panel.classList.remove('ikr-open');
-      trigger.setAttribute('aria-expanded', 'false');
-    } else {
-      panel.style.maxHeight = panelInner.scrollHeight + 32 + 'px';
-      panel.classList.add('ikr-open');
-      trigger.setAttribute('aria-expanded', 'true');
-    }
+  // ─── Popover toggle davranışı ───────────────────────────────
+  function closePanel() {
+    panel.classList.remove('ikr-open');
+    panel.setAttribute('aria-hidden', 'true');
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+  function openPanel() {
+    panel.classList.add('ikr-open');
+    panel.setAttribute('aria-hidden', 'false');
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+  trigger.onclick = function(e) {
+    e.stopPropagation();
+    if (panel.classList.contains('ikr-open')) closePanel();
+    else openPanel();
   };
+  // Panel içine tıklama popover'ı kapatmasın (filter satırları çalışsın)
+  panel.addEventListener('click', function(e) { e.stopPropagation(); });
+  // Dış tıklama → kapat
+  if (widget) {
+    widget.addEventListener('click', function(e) {
+      if (!triggerWrap.contains(e.target)) closePanel();
+    });
+  }
+  // ESC ile kapat
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && panel.classList.contains('ikr-open')) closePanel();
+  });
 
   // showRecommendation hâlâ destekli — panel altında küçük metin
   if ((settings.showRecommendation !== false)) {
