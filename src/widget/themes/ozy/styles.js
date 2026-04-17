@@ -33,7 +33,7 @@ export var CLASSIC_CSS = `
      bile satırlar 800-900px civarında kalır. Başlık, summary, galeri serbest. */
   #ikas-reviews-widget .ikr-body,
   #ikas-reviews-widget .ikr-reply-text{max-width:70ch;}
-  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:center;margin-bottom:12px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
+  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:700;text-align:left;margin-bottom:12px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
 
   /* ─── SVG ICON WRAPPER ───────────────────────────────────────────────
      .ikr-icon span'ı SVG'yi sarar. Boyut parent'tan (em veya inline style) gelir,
