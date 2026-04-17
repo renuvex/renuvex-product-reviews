@@ -56,6 +56,7 @@ export var COMPACT_CSS = `
     padding:20px;border:1px solid var(--ikr-widget-border,var(--ikr-border,rgba(0,0,0,0.08)));
     border-radius:var(--ikr-radius,6px);
     background:var(--ikr-widget-bg,transparent);
+    max-width:420px;margin:0 auto;width:100%;
   }
   .ikr-compact-avg{
     display:flex;align-items:center;justify-content:center;gap:8px;
