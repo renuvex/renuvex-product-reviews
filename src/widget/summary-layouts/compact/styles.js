@@ -8,7 +8,9 @@ export var COMPACT_CSS = `
   /* Compact layout başlığı sola hizalı — kendi tasarım dilimiz */
   .ikr-title-compact{text-align:left;}
 
-  .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;}
+  /* Compact'te ana .ikr-summary padding'ini sıfırla — header kendi padding'ini yönetir;
+     yıldızlar widget sol kenarına başlık ile aynı hizada hizalansın. */
+  .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding:0;}
 
   .ikr-compact-header{
     display:flex;align-items:center;gap:12px;
