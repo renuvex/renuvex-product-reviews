@@ -55,9 +55,7 @@ export function render(opts) {
     '</span>';
   header.appendChild(trigger);
 
-  // Actions (Yorum Yap + filtre) — header'ın sağında
-  var actionsWrap = document.createElement('div');
-  actionsWrap.className = 'ikr-compact-actions';
+  // Actions (Yorum Yap + filtre) — buildActionsBlock döndürür: [write-btn, filter-wrap]
   var actions = buildActionsBlock({
     widget: widget,
     currentOrderBy: currentOrderBy,
@@ -65,10 +63,17 @@ export function render(opts) {
     onWriteClick: toggleWriteAccordion,
     onSortChange: onSortChange,
   });
-  // actions zaten ikr-summary-block ikr-summary-actions class'larını taşıyor;
-  // kendi flex container'ını kullanmak yerine içeriğini header'a taşıyoruz.
-  while (actions.firstChild) actionsWrap.appendChild(actions.firstChild);
-  header.appendChild(actionsWrap);
+
+  // Filter wrap — header'da (trigger ile aynı satırda, sağda)
+  var filterWrap = actions.querySelector('.ikr-filter-wrap');
+  var writeBtn = actions.querySelector('.ikr-write-btn');
+
+  if (filterWrap) {
+    var filterSlot = document.createElement('div');
+    filterSlot.className = 'ikr-compact-filter-slot';
+    filterSlot.appendChild(filterWrap);
+    header.appendChild(filterSlot);
+  }
 
   summary.appendChild(header);
 
@@ -98,6 +103,14 @@ export function render(opts) {
 
   panel.appendChild(panelInner);
   summary.appendChild(panel);
+
+  // Write button — en altta tek satır (mobilde de desktop'ta da full-width)
+  if (writeBtn) {
+    var writeRow = document.createElement('div');
+    writeRow.className = 'ikr-compact-write-row';
+    writeRow.appendChild(writeBtn);
+    summary.appendChild(writeRow);
+  }
 
   // ─── Toggle davranışı ───────────────────────────────────────
   trigger.onclick = function() {
