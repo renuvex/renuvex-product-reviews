@@ -8,7 +8,7 @@ import { buildReviewForm } from './review-form.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
 import { getIconFromSettings } from '../icons.js';
-import { getLayout } from '../summary-layouts/index.js';
+import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -270,7 +270,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     var primaryColor = settings.primaryColor || '#111111';
     var primaryTextColor = settings.primaryTextColor || '#ffffff';
 
-    injectStyles(primaryColor, CLASSIC_CSS);
+    injectStyles(primaryColor, CLASSIC_CSS + getLayoutsCSS());
 
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
 

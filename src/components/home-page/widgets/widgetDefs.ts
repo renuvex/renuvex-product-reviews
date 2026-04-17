@@ -57,6 +57,21 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
+        title: 'Tasarım',
+        fields: [
+          {
+            type: 'select',
+            key: 'summaryLayout',
+            label: 'Özet Tasarımı',
+            options: [
+              { value: 'classic', label: 'Klasik (Açık)' },
+              { value: 'compact', label: 'Kompakt (Açılır)' },
+            ],
+            default: 'classic',
+          },
+        ],
+      },
+      {
         title: 'Widget Kutusu',
         isColor: true,
         fields: [
