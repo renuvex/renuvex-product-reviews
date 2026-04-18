@@ -115,8 +115,13 @@ export var COMPACT_CSS = `
       transform:none;visibility:visible;pointer-events:auto;
       max-height:0;overflow:hidden;opacity:1;
       transition:max-height 280ms cubic-bezier(0.4,0,0.2,1);
+      z-index:1;
     }
     .ikr-compact-panel.ikr-open{max-height:600px;}
+
+    /* Filter menü panel'in üstünde kalsın — header z-index panel'den yüksek */
+    .ikr-compact-header{position:relative;z-index:2;}
+    .ikr-compact-actions-slot{position:relative;z-index:3;}
 
     .ikr-compact-panel-inner{
       padding:16px;
