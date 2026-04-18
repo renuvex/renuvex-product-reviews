@@ -108,16 +108,28 @@ export function render(opts) {
   }));
 
   panel.appendChild(panelInner);
-  // Mobile (<600): panel summary'nin direkt çocuğu olsun → flow'da accordion full-width.
+  // Mobile (<600): panel summary'nin direkt çocuğu → flow'da accordion full-width.
   // Desktop: panel triggerWrap'a anchor → popover overlay.
-  // Media query yerine matchMedia ile bir kerelik konumlandırma yapıyoruz; mount-time karar yeterli.
-  var isMobile = typeof window !== 'undefined' && window.matchMedia
-    ? window.matchMedia('(max-width:600px)').matches
-    : false;
-  if (isMobile) {
-    summary.appendChild(panel);
-  } else {
-    triggerWrap.appendChild(panel);
+  // matchMedia.change event'i ile resize/orientation/devtools değişimine adapte olur.
+  var mql = typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(max-width:600px)')
+    : null;
+  function placePanel(isMobile) {
+    var targetParent = isMobile ? summary : triggerWrap;
+    if (panel.parentNode === targetParent) return;
+    // Eşik geçişinde state karışmasın — açıksa kapat (CSS değişiyor)
+    if (panel.classList.contains('ikr-open')) {
+      panel.classList.remove('ikr-open');
+      panel.setAttribute('aria-hidden', 'true');
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+    targetParent.appendChild(panel);
+  }
+  placePanel(mql ? mql.matches : false);
+  if (mql) {
+    var onMqlChange = function(e) { placePanel(e.matches); };
+    if (mql.addEventListener) mql.addEventListener('change', onMqlChange);
+    else if (mql.addListener) mql.addListener(onMqlChange); // Safari <14 fallback
   }
 
   // Mobile-only write satırı — header'daki butonun ikinci kopyası, CSS ile sadece mobile'da gözükür
