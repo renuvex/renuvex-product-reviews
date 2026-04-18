@@ -96,15 +96,21 @@ export var COMPACT_CSS = `
   }
 
   @media(max-width:600px){
-    .ikr-compact-header{gap:8px;}
+    /* Header'da filter butonu trigger satırına sabitlensin — panel açılınca
+       trigger-wrap büyüse de filter kaymasın. Bunun için header satırını
+       flex-start hizala ve trigger satırını sadece kendi yüksekliğinde tut. */
+    .ikr-compact-header{gap:8px;align-items:flex-start;}
+    .ikr-compact-actions-slot{align-self:flex-start;padding-top:8px;}
     .ikr-compact-actions-slot .ikr-write-btn{display:none;}
     .ikr-compact-write-row{display:flex;width:100%;}
 
-    /* Mobile: popover değil, ACCORDION — sayfayı iter, header'ın altında akış içinde durur.
-       trigger-wrap position:relative kalsa da panel position:static ile flow'a girer. */
+    /* Mobile: popover değil, ACCORDION — trigger-wrap panel'i flow'da içerir,
+       trigger satırı kendi yüksekliğinde kalır, filter değişmez. */
     .ikr-compact-trigger-wrap{
-      position:static;display:block;width:100%;
+      position:static;display:flex;flex-direction:column;
+      flex:1 1 auto;min-width:0;
     }
+    .ikr-compact-trigger{align-self:flex-start;}
     .ikr-compact-panel{
       position:static;
       width:100%;max-width:100%;min-width:0;
