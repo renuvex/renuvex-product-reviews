@@ -108,8 +108,17 @@ export function render(opts) {
   }));
 
   panel.appendChild(panelInner);
-  // Panel triggerWrap içine — trigger'a anchor (position:absolute relative parent)
-  triggerWrap.appendChild(panel);
+  // Mobile (<600): panel summary'nin direkt çocuğu olsun → flow'da accordion full-width.
+  // Desktop: panel triggerWrap'a anchor → popover overlay.
+  // Media query yerine matchMedia ile bir kerelik konumlandırma yapıyoruz; mount-time karar yeterli.
+  var isMobile = typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(max-width:600px)').matches
+    : false;
+  if (isMobile) {
+    summary.appendChild(panel);
+  } else {
+    triggerWrap.appendChild(panel);
+  }
 
   // Mobile-only write satırı — header'daki butonun ikinci kopyası, CSS ile sadece mobile'da gözükür
   if (writeBtn) {
