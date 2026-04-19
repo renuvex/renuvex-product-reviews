@@ -19,7 +19,7 @@ export var MINIMAL_CSS = `
   .ikr-minimal-avg{
     font-size:var(--ikr-minimal-avg-size,22px);
     color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));
-    font-weight:500;line-height:1;
+    font-weight:400;line-height:1;
   }
   .ikr-minimal-stars{
     display:inline-flex;gap:2px;
