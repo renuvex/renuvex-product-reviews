@@ -66,6 +66,7 @@ export const WIDGETS: WidgetDef[] = [
             options: [
               { value: 'classic', label: 'Klasik (Açık)' },
               { value: 'compact', label: 'Kompakt (Açılır)' },
+              { value: 'split', label: 'Yatay Bölünmüş' },
             ],
             default: 'classic',
           },

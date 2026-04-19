@@ -4,10 +4,12 @@
 
 import * as classic from './classic/index.js';
 import * as compact from './compact/index.js';
+import * as split from './split/index.js';
 
 export var LAYOUTS = {
   classic: classic,
   compact: compact,
+  split: split,
 };
 
 export function getLayout(id) {
