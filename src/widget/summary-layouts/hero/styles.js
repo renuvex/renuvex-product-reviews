@@ -20,7 +20,7 @@ export var HERO_CSS = `
     font-weight:700;line-height:1;letter-spacing:-1px;
   }
   .ikr-hero-meta{
-    display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;
+    display:flex;flex-direction:row;align-items:center;gap:12px;min-width:0;
   }
   .ikr-hero-stars{
     display:inline-flex;gap:2px;
@@ -32,7 +32,7 @@ export var HERO_CSS = `
   .ikr-hero-count{
     font-size:var(--ikr-recommend-size,14px);
     color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));
-    font-weight:400;line-height:1.2;
+    font-weight:400;line-height:1.2;white-space:nowrap;
   }
 
   .ikr-hero-actions{
@@ -45,6 +45,7 @@ export var HERO_CSS = `
     }
     .ikr-hero-info{flex:1 1 auto;gap:12px;}
     .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,64px) * 0.75);}
+    .ikr-hero-meta{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-hero-actions{flex:0 0 auto;}
     .ikr-hero-actions .ikr-write-btn{display:none;}
     .ikr-hero-write-row{display:flex;width:100%;}
