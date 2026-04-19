@@ -44,6 +44,7 @@ var SIZE_PRESETS = {
     reviewDateSize: 10, filterTextSize: 12, loadMoreSize: 12,
     readMoreSize: 10, reviewStarSize: 18,
     minimalAvgSize: 18,
+    heroAvgSize: 52,
   },
   medium: {
     titleSize: 24, reviewTextSize: 14, reviewTitleSize: 14, authorSize: 14,
@@ -53,6 +54,7 @@ var SIZE_PRESETS = {
     reviewDateSize: 12, filterTextSize: 14, loadMoreSize: 14,
     readMoreSize: 12, reviewStarSize: 22,
     minimalAvgSize: 22,
+    heroAvgSize: 64,
   },
   large: {
     titleSize: 28, reviewTextSize: 16, reviewTitleSize: 16, authorSize: 16,
@@ -62,6 +64,7 @@ var SIZE_PRESETS = {
     reviewDateSize: 14, filterTextSize: 16, loadMoreSize: 16,
     readMoreSize: 14, reviewStarSize: 26,
     minimalAvgSize: 26,
+    heroAvgSize: 76,
   },
 };
 
@@ -297,6 +300,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-btn-text-size', sz.btnTextSize + 'px');
     root.style.setProperty('--ikr-bar-label-size', sz.barLabelSize + 'px');
     root.style.setProperty('--ikr-minimal-avg-size', sz.minimalAvgSize + 'px');
+    root.style.setProperty('--ikr-hero-avg-size', sz.heroAvgSize + 'px');
     root.style.setProperty('--ikr-bar-count-size', sz.barCountSize + 'px');
     root.style.setProperty('--ikr-review-date-size', sz.reviewDateSize + 'px');
     root.style.setProperty('--ikr-filter-text-size', sz.filterTextSize + 'px');

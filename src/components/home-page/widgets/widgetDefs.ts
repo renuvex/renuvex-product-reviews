@@ -68,6 +68,7 @@ export const WIDGETS: WidgetDef[] = [
               { value: 'compact', label: 'Kompakt (Açılır)' },
               { value: 'split', label: 'Yatay Bölünmüş' },
               { value: 'minimal', label: 'Minimal (Yalın)' },
+              { value: 'hero', label: 'Vurgulu (Büyük Puan)' },
             ],
             default: 'classic',
           },
