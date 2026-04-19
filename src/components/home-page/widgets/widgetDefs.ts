@@ -81,6 +81,7 @@ export const WIDGETS: WidgetDef[] = [
             label: 'Yorum Tasarımı',
             options: [
               { value: 'card', label: 'Kart (Varsayılan)' },
+              { value: 'list', label: 'Liste' },
             ],
             default: 'card',
           },

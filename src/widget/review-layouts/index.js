@@ -10,9 +10,11 @@
 //   → DOM elementi döner.
 
 import * as card from './card/index.js';
+import * as list from './list/index.js';
 
 export var LAYOUTS = {
   card: card,
+  list: list,
 };
 
 export function getReviewLayout(id) {
