@@ -55,22 +55,23 @@ export var COMPACT_CSS = `
   .ikr-compact-write-row .ikr-write-btn{flex:1 1 auto;justify-content:center;}
 
   /* ─── POPOVER ─────────────────────────────────────────────────
-     position:absolute; trigger'ın altına anchor; sayfayı itmez.
-     visibility:hidden + opacity:0 → animation için interactive değil
-     iken de yer açar (transform için). */
+     Loox-style: scale(0.7) translateY(-20px) → scale(1), opacity 0 → 1.
+     200ms ease-in-out, forwards (son state'te kalır). */
+  @keyframes ikr-grow-out {
+    0%   { opacity: 0; transform: scale(0.7) translateY(-20px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
   .ikr-compact-panel{
     position:absolute;top:calc(100% + 8px);left:0;
     z-index:1000;
     /* Bar chart 340px + panel-inner padding (28*2) + border (2) = 398px sabit */
     width:calc(var(--ikr-summary-max,340px) + 58px);
     opacity:0;visibility:hidden;pointer-events:none;
-    transform:translateY(-6px);
-    transition:opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
+    transform-origin:top left;
   }
   .ikr-compact-panel.ikr-open{
-    opacity:1;visibility:visible;pointer-events:auto;
-    transform:translateY(0);
-    transition:opacity 180ms ease, transform 180ms ease, visibility 0s linear 0s;
+    visibility:visible;pointer-events:auto;
+    animation:ikr-grow-out 200ms ease-in-out forwards;
   }
 
   .ikr-compact-panel-inner{

@@ -30,7 +30,6 @@ export function buildActionsBlock(opts) {
 
   var filterMenu = document.createElement('div');
   filterMenu.className = 'ikr-filter-menu';
-  filterMenu.style.display = 'none';
 
   var filterOpts = [
     ['newest', 'En Yeni', false],
@@ -39,12 +38,12 @@ export function buildActionsBlock(opts) {
     ['photos', 'Fotoğraflı', true],
   ];
   function closeFilter() {
-    filterMenu.style.display = 'none';
+    filterMenu.classList.remove('ikr-open');
     filterBtn.classList.remove('ikr-filter-btn-active');
   }
   function openFilter() {
-    notifyOpening(filterRegistration); // diğer popover'ları kapat
-    filterMenu.style.display = 'block';
+    notifyOpening(filterRegistration);
+    filterMenu.classList.add('ikr-open');
     filterBtn.classList.add('ikr-filter-btn-active');
   }
 
@@ -62,8 +61,8 @@ export function buildActionsBlock(opts) {
   });
 
   filterBtn.onclick = function() {
-    var isOpen = filterMenu.style.display !== 'none';
-    if (isOpen) closeFilter(); else openFilter();
+    if (filterMenu.classList.contains('ikr-open')) closeFilter();
+    else openFilter();
   };
 
   // Filter her zaman popover (overlay) — desktop ve mobile'da light dismiss.
