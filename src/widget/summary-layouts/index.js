@@ -5,11 +5,13 @@
 import * as classic from './classic/index.js';
 import * as compact from './compact/index.js';
 import * as split from './split/index.js';
+import * as minimal from './minimal/index.js';
 
 export var LAYOUTS = {
   classic: classic,
   compact: compact,
   split: split,
+  minimal: minimal,
 };
 
 export function getLayout(id) {
