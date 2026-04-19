@@ -85,11 +85,12 @@ export var COMPACT_CSS = `
   }
   .ikr-compact-avg{
     display:flex;align-items:center;justify-content:center;gap:8px;
-    font-size:32px;line-height:1;
+    font-size:var(--ikr-avg-rating-size,46px);line-height:1;
     color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));font-weight:500;
   }
   .ikr-compact-avg .ikr-icon{
-    width:32px;height:32px;color:var(--ikr-review-star-color,#f59e0b);
+    width:var(--ikr-avg-star-size,58px);height:var(--ikr-avg-star-size,58px);
+    color:var(--ikr-review-star-color,#f59e0b);
   }
   /* Bar chart 340px max, ortalanmış */
   .ikr-compact-panel-inner .ikr-summary-bars{
