@@ -71,6 +71,15 @@ export const WIDGETS: WidgetDef[] = [
             ],
             default: 'classic',
           },
+          {
+            type: 'select',
+            key: 'reviewLayout',
+            label: 'Yorum Tasarımı',
+            options: [
+              { value: 'card', label: 'Kart (Varsayılan)' },
+            ],
+            default: 'card',
+          },
         ],
       },
       {

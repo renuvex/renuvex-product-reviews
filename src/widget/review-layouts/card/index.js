@@ -1,13 +1,24 @@
-// product-widget/review-item.js — Tek bir yorum DOM elementini oluşturur
+// review-layouts/card/index.js
+// Varsayılan "Kart" tasarımı — eski review-item.js içeriği bu layout'a taşındı.
+// DOM yapısı: yıldız+başlık | tarih → yazar → metin (clamp) → fotoğraf → mağaza yanıtı.
+// CSS .ikr-review* sınıfları base styles.js'te; layout-spesifik override yok.
 
-import { starsHTML, formatDate, optimizeImageUrl } from '../core/helpers.js';
-import { openReviewModal } from './review-modal.js';
-import { currentSettings } from '../core/state.js';
+import { starsHTML, formatDate, optimizeImageUrl } from '../../core/helpers.js';
+import { openReviewModal } from '../../product-widget/review-modal.js';
+import { currentSettings } from '../../core/state.js';
 
+export var meta = {
+  id: 'card',
+  name: 'Kart (Varsayılan)',
+};
 
-export function buildReviewEl(r, allReviews) {
+// Layout-spesifik CSS yok — base styles.js (.ikr-review*) zaten card tasarımını veriyor.
+// İleride card için override gerekirse styles.js eklenir ve burada export edilir.
+export var css = '';
+
+export function render(r, allReviews) {
   var reviewEl = document.createElement('div');
-  reviewEl.className = 'ikr-review';
+  reviewEl.className = 'ikr-review ikr-review-card';
 
   // Satır 1: yıldız + başlık | tarih (sağda)
   var topRow = document.createElement('div');
@@ -86,7 +97,7 @@ export function buildReviewEl(r, allReviews) {
     reviewEl.appendChild(gallery);
   }
 
-  // Mağaza yanıtı — mediaRow'dan sonra
+  // Mağaza yanıtı — gallery'den sonra
   if (r.merchantReply) {
     var replyEl = document.createElement('div');
     replyEl.className = 'ikr-reply';

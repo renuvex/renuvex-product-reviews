@@ -2,13 +2,13 @@
 
 import { injectStyles, optimizeImageUrl } from '../core/helpers.js';
 import { fetchReviews } from './bootstrap.js';
-import { buildReviewEl } from './review-item.js';
 import { openReviewModal } from './review-modal.js';
 import { buildReviewForm } from './review-form.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
 import { getIconFromSettings } from '../icons.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
+import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -270,7 +270,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     var primaryColor = settings.primaryColor || '#111111';
     var primaryTextColor = settings.primaryTextColor || '#ffffff';
 
-    injectStyles(primaryColor, CLASSIC_CSS + getLayoutsCSS());
+    injectStyles(primaryColor, CLASSIC_CSS + getLayoutsCSS() + getReviewLayoutsCSS());
 
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
 
@@ -511,7 +511,8 @@ export async function render(productId, settings, reviewsData, productName, orde
         empty.textContent = 'Henüz yorum yok.';
         widget.appendChild(empty);
       } else {
-        reviews.forEach(function(r) { widget.appendChild(buildReviewEl(r, reviews)); });
+        var reviewLayout = getReviewLayout(settings.reviewLayout);
+        reviews.forEach(function(r) { widget.appendChild(reviewLayout.render(r, reviews)); });
       }
 
       // Daha Fazla butonu
@@ -527,8 +528,9 @@ export async function render(productId, settings, reviewsData, productName, orde
           var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentHasImages);
           if (moreData && moreData.data && moreData.data.reviews) {
             setCurrentPage(nextPage);
+            var moreReviewLayout = getReviewLayout(currentSettings.reviewLayout);
             moreData.data.reviews.forEach(function(r) {
-              widget.insertBefore(buildReviewEl(r, moreData.data.reviews), loadMoreBtn);
+              widget.insertBefore(moreReviewLayout.render(r, moreData.data.reviews), loadMoreBtn);
             });
             if (!moreData.data.hasMore) loadMoreBtn.remove();
             else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }
