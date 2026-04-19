@@ -17,7 +17,7 @@ export var MINIMAL_CSS = `
     display:flex;align-items:center;gap:8px;
   }
   .ikr-minimal-avg{
-    font-size:var(--ikr-review-count-size,16px);
+    font-size:var(--ikr-minimal-avg-size,22px);
     color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));
     font-weight:500;line-height:1;
   }
