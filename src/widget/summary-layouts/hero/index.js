@@ -9,6 +9,7 @@ import { HERO_CSS } from './styles.js';
 export var meta = {
   id: 'hero',
   name: 'Vurgulu (Büyük Puan)',
+  defaultTitle: '',
 };
 
 export var css = HERO_CSS;

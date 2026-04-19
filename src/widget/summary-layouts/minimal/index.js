@@ -11,6 +11,7 @@ import { MINIMAL_CSS } from './styles.js';
 export var meta = {
   id: 'minimal',
   name: 'Minimal (Yalın)',
+  defaultTitle: '',
 };
 
 export var css = MINIMAL_CSS;
