@@ -2,6 +2,7 @@
 // Tüm widgetlar (listing, carousel, popup, modal) bu fonksiyonu kullanır.
 
 import { getIconStyle } from '../icons.js';
+import { partialStarsHTML } from './helpers.js';
 
 var BADGE_STAR_COLOR = 'var(--ikr-badge-color,#f59e0b)';
 var BADGE_ICON_SIZE = 13; // px
@@ -9,17 +10,12 @@ var BADGE_ICON_SIZE = 13; // px
 var BADGE_CSS = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;font-size:13px;font-weight:400;color:#555;pointer-events:none;';
 
 function buildBadgeStars(rating) {
-  // Listing badge — sabit olarak varsayılan star/classic kullanır
+  // Listing badge — sabit olarak varsayılan star/classic + yarım yıldız desteği
   var pair = getIconStyle('star', 'classic');
-  var r = Math.round(parseFloat(rating)) || 0;
-  var html = '';
-  for (var i = 1; i <= 5; i++) {
-    var isFilled = i <= Math.min(r, 5);
-    html += '<span class="ikr-icon" style="width:' + BADGE_ICON_SIZE + 'px;height:' + BADGE_ICON_SIZE + 'px;display:inline-flex;">' +
-            (isFilled ? pair.filled : pair.empty) +
-            '</span>';
-  }
-  return '<span style="color:' + BADGE_STAR_COLOR + ';display:inline-flex;gap:1px;align-items:center;">' + html + '</span>';
+  var sizeStyle = 'width:' + BADGE_ICON_SIZE + 'px;height:' + BADGE_ICON_SIZE + 'px;';
+  return '<span style="color:' + BADGE_STAR_COLOR + ';display:inline-flex;align-items:center;">' +
+           partialStarsHTML(rating, pair, { sizeStyle: sizeStyle }) +
+         '</span>';
 }
 
 /**

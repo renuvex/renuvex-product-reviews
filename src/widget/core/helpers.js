@@ -23,6 +23,29 @@ export function starsHTML(rating, settings) {
     '</span>';
 }
 
+// partialStarsHTML(rating, iconPair, opts) — Ortalama puan için yarım yıldız desteği.
+// 5 boş yıldız üstüne 5 dolu yıldız bindirir, dolu katmanı %(rating/5*100) genişlikte clipler.
+// Loox/Yotpo/Material UI Rating standardı (overlay clip tekniği).
+//
+//   rating   : float (ör 4.3, 4.5, 5.0)
+//   iconPair : { filled, empty } — getIconFromSettings'ten gelen SVG çifti
+//   opts     : { sizeStyle? } — inline 'width:Xpx;height:Xpx;' (opsiyonel, normalde CSS'ten gelir)
+export function partialStarsHTML(rating, iconPair, opts) {
+  var r = Math.max(0, Math.min(5, parseFloat(rating) || 0));
+  var pct = (r / 5) * 100;
+  var sizeStyle = (opts && opts.sizeStyle) || '';
+  var emptyHtml = '';
+  var filledHtml = '';
+  for (var i = 0; i < 5; i++) {
+    emptyHtml  += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.empty  + '</span>';
+    filledHtml += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.filled + '</span>';
+  }
+  return '<span class="ikr-stars-partial">' +
+           '<span class="ikr-stars-partial-empty">' + emptyHtml + '</span>' +
+           '<span class="ikr-stars-partial-fill" style="width:' + pct + '%;">' + filledHtml + '</span>' +
+         '</span>';
+}
+
 export function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });

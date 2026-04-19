@@ -8,6 +8,7 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { toggleWriteAccordion } from '../shared/write-toggle.js';
+import { partialStarsHTML } from '../../core/helpers.js';
 import { SPLIT_CSS } from './styles.js';
 
 export var meta = {
@@ -37,13 +38,9 @@ export function render(opts) {
   var left = document.createElement('div');
   left.className = 'ikr-split-col ikr-split-left';
 
-  var starsHtml = '';
-  for (var s = 1; s <= 5; s++) {
-    starsHtml += '<span class="ikr-icon">' + iconPair.filled + '</span>';
-  }
   var stars = document.createElement('div');
   stars.className = 'ikr-split-left-stars';
-  stars.innerHTML = starsHtml;
+  stars.innerHTML = partialStarsHTML(avgRatingVal, iconPair);
   left.appendChild(stars);
 
   var avg = document.createElement('div');

@@ -42,6 +42,19 @@ export var CLASSIC_CSS = `
   .ikr-icon{display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;}
   .ikr-icon > svg{width:100%;height:100%;display:block;}
 
+  /* ─── PARTIAL STARS (yarım yıldız overlay) ───────────────────────────
+     Empty katman tabanda, filled katman üstte clip ile %X kadar gösterilir.
+     Loox/Yotpo/Material UI Rating standardı. Boyut yine .ikr-icon parent'ından
+     gelir (.ikr-hero-stars .ikr-icon { width:22px } gibi).
+     gap parent'tan (.ikr-stars-partial-empty/fill inline-flex) miras alınmaz —
+     overlay aynı yapıyı tekrar ettiği için iki katman birebir üst üste oturur. */
+  .ikr-stars-partial{position:relative;display:inline-flex;line-height:1;}
+  .ikr-stars-partial-empty,.ikr-stars-partial-fill{display:inline-flex;gap:2px;align-items:center;}
+  .ikr-stars-partial-fill{
+    position:absolute;left:0;top:0;height:100%;
+    overflow:hidden;pointer-events:none;
+  }
+
   /* ─── SUMMARY LAYOUT ────────────────────────────────────────────────
      Her blok bağımsız — sıra/gizleme CSS ile kolayca değiştirilebilir.
      Kolon genişlikleri CSS variable ile paylaşılır (label/count sütunları).

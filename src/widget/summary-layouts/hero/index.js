@@ -4,6 +4,7 @@
 
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { toggleWriteAccordion } from '../shared/write-toggle.js';
+import { partialStarsHTML } from '../../core/helpers.js';
 import { HERO_CSS } from './styles.js';
 
 export var meta = {
@@ -40,11 +41,7 @@ export function render(opts) {
 
   var stars = document.createElement('span');
   stars.className = 'ikr-hero-stars';
-  var starsHtml = '';
-  for (var s = 1; s <= 5; s++) {
-    starsHtml += '<span class="ikr-icon">' + iconPair.filled + '</span>';
-  }
-  stars.innerHTML = starsHtml;
+  stars.innerHTML = partialStarsHTML(avgRatingVal, iconPair);
   metaCol.appendChild(stars);
 
   var count = document.createElement('div');

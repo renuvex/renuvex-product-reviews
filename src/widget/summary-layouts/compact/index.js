@@ -7,6 +7,7 @@ import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { toggleWriteAccordion } from '../shared/write-toggle.js';
 import { registerPopover, notifyOpening } from '../shared/popover-registry.js';
+import { partialStarsHTML } from '../../core/helpers.js';
 import { COMPACT_CSS } from './styles.js';
 
 export var meta = {
@@ -46,12 +47,8 @@ export function render(opts) {
   trigger.type = 'button';
   trigger.setAttribute('aria-expanded', 'false');
 
-  var starsHtml = '';
-  for (var s = 1; s <= 5; s++) {
-    starsHtml += '<span class="ikr-icon">' + iconPair.filled + '</span>';
-  }
   trigger.innerHTML =
-    '<span class="ikr-compact-trigger-stars">' + starsHtml + '</span>' +
+    '<span class="ikr-compact-trigger-stars">' + partialStarsHTML(avgRatingVal, iconPair) + '</span>' +
     '<span class="ikr-compact-trigger-text">' + allCount.toLocaleString('tr-TR') + ' Yorum</span>' +
     '<span class="ikr-compact-chevron">' +
       '<svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
@@ -91,7 +88,8 @@ export function render(opts) {
   var panelInner = document.createElement('div');
   panelInner.className = 'ikr-compact-panel-inner';
 
-  // Büyük ortalama puan
+  // Büyük ortalama puan — tek dolu yıldız + sayı (classic'e benzer pattern,
+  // panel zaten avg'ı vurgulu gösteriyor; partial stars trigger'da var)
   var avg = document.createElement('div');
   avg.className = 'ikr-compact-avg';
   avg.innerHTML =

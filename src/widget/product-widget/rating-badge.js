@@ -3,6 +3,7 @@
 import { findProductTitleEl } from './title-finder.js';
 import { PUBLIC_API_KEY } from '../core/config.js';
 import { getIconStyle } from '../icons.js';
+import { partialStarsHTML } from '../core/helpers.js';
 
 // Boyut map — badge widget ayarındaki "size" değeri bu piksel değerlerini üretir
 var SIZE_MAP = {
@@ -11,18 +12,13 @@ var SIZE_MAP = {
   large:  { icon: 20, text: '16px' },
 };
 
-// SVG yıldız dizisi — rating'e göre 5 ikonluk dolu/boş sıra
+// SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği)
 function buildStars(rating, iconKey, styleKey, color, iconSize) {
   var pair = getIconStyle(iconKey, styleKey);
-  var r = Math.round(parseFloat(rating)) || 0;
-  var html = '';
-  for (var i = 1; i <= 5; i++) {
-    var isFilled = i <= r;
-    html += '<span class="ikr-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;display:inline-flex;">' +
-            (isFilled ? pair.filled : pair.empty) +
-            '</span>';
-  }
-  return '<span style="color:' + color + ';display:inline-flex;gap:2px;align-items:center;line-height:1;">' + html + '</span>';
+  var sizeStyle = 'width:' + iconSize + 'px;height:' + iconSize + 'px;';
+  return '<span style="color:' + color + ';display:inline-flex;align-items:center;line-height:1;">' +
+           partialStarsHTML(rating, pair, { sizeStyle: sizeStyle }) +
+         '</span>';
 }
 
 export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings) {
