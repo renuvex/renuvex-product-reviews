@@ -32,7 +32,13 @@ export function starsHTML(rating, settings) {
 //   opts     : { sizeStyle? } — inline 'width:Xpx;height:Xpx;' (opsiyonel, normalde CSS'ten gelir)
 export function partialStarsHTML(rating, iconPair, opts) {
   var r = Math.max(0, Math.min(5, parseFloat(rating) || 0));
-  var pct = (r / 5) * 100;
+  // 0.25/0.75 snap — endüstri standardı (Material UI, Judge.me, Stamped):
+  // her yıldız için kesir < 0.25 → boş, 0.25-0.74 → yarım, ≥ 0.75 → dolu.
+  // %10 gibi belirsiz dolguları temizler, görsel netlik sağlar.
+  var whole = Math.floor(r);
+  var frac = r - whole;
+  var snapped = frac < 0.25 ? whole : (frac < 0.75 ? whole + 0.5 : whole + 1);
+  var pct = (snapped / 5) * 100;
   var sizeStyle = (opts && opts.sizeStyle) || '';
   var emptyHtml = '';
   var filledHtml = '';
