@@ -5,10 +5,20 @@ import { AlertCircle, CheckCircle2, MessageSquare, Settings } from 'lucide-react
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
+import { TokenHelpers } from '@/helpers/token-helpers';
 import { Review, WidgetSettingsMap, TabKey } from './types';
 import { ReplyDialog } from './ReplyDialog';
 import { ReviewsTab } from './ReviewsTab';
 import { WidgetsContainer } from './widgets';
+
+// Her admin API çağrısından önce taze JWT token al — uzun açık kalan
+// sayfada eski token expire olduğunda 401 alıp "kaydedilemedi" hatası
+// vermesini önler. TokenHelpers cache'li, expired token'ı atıp AppBridge'den
+// yenisini çeker.
+async function freshAuthHeader(fallbackToken: string | null): Promise<{ Authorization: string }> {
+  const fresh = await TokenHelpers.getTokenForIframeApp();
+  return { Authorization: `JWT ${fresh || fallbackToken || ''}` };
+}
 
 interface HomePageProps {
   token: string | null;
@@ -37,7 +47,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     try {
       const statusParam = tab === 'all' ? '' : `&status=${tab}`;
       const res = await axios.get(`/api/admin/reviews?page=${p}&limit=${limit ?? pageSizeRef.current}${statusParam}`, {
-        headers: { Authorization: `JWT ${token}` },
+        headers: await freshAuthHeader(token),
       });
       if (res.data?.data) {
         setReviews(res.data.data as Review[]);
@@ -55,7 +65,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   const fetchAllCounts = useCallback(async () => {
     if (!token) return;
-    const headers = { Authorization: `JWT ${token}` };
+    const headers = await freshAuthHeader(token);
     try {
       const [pending, approved, rejected, all] = await Promise.all([
         axios.get('/api/admin/reviews?status=pending&page=1&limit=1', { headers }),
@@ -79,7 +89,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     const init = async () => {
       const [, settingsRes] = await Promise.all([
         fetchReviews('pending', 1),
-        axios.get('/api/admin/settings', { headers: { Authorization: `JWT ${token}` } }),
+        axios.get('/api/admin/settings', { headers: await freshAuthHeader(token) }),
       ]);
       if (settingsRes.data?.data) setSettings(settingsRes.data.data as WidgetSettingsMap);
       fetchAllCounts();
@@ -96,7 +106,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     const targetReview = reviews.find(r => r.id === id);
     const oldStatus = targetReview?.status;
     try {
-      await axios.put('/api/admin/reviews', { id, status: newStatus }, { headers: { Authorization: `JWT ${token}` } });
+      await axios.put('/api/admin/reviews', { id, status: newStatus }, { headers: await freshAuthHeader(token) });
       toast.success(newStatus === 'approved' ? 'Yorum onaylandı.' : 'Yorum reddedildi.');
       await fetchReviews(activeTab, page);
       if (oldStatus && oldStatus !== newStatus) {
@@ -114,7 +124,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   const handleReplySubmit = async (id: string, replyText: string) => {
     try {
-      await axios.put('/api/admin/reviews', { id, merchantReply: replyText }, { headers: { Authorization: `JWT ${token}` } });
+      await axios.put('/api/admin/reviews', { id, merchantReply: replyText }, { headers: await freshAuthHeader(token) });
       setReviews(prev => prev.map(r => r.id === id ? { ...r, merchantReply: replyText } : r));
       toast.success("Yanıt başarıyla gönderildi.");
     } catch {
@@ -130,7 +140,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     const deletedReview = reviews.find(r => r.id === id);
     setDeleteConfirm(null);
     try {
-      await axios.delete(`/api/admin/reviews?id=${id}`, { headers: { Authorization: `JWT ${token}` } });
+      await axios.delete(`/api/admin/reviews?id=${id}`, { headers: await freshAuthHeader(token) });
       toast.success("Yorum silindi.");
       const targetPage = reviews.length === 1 && page > 1 ? page - 1 : page;
       await fetchReviews(activeTab, targetPage);
@@ -149,7 +159,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   const handleDeleteReply = async (id: string) => {
     try {
-      await axios.put('/api/admin/reviews', { id, merchantReply: null }, { headers: { Authorization: `JWT ${token}` } });
+      await axios.put('/api/admin/reviews', { id, merchantReply: null }, { headers: await freshAuthHeader(token) });
       setReviews(prev => prev.map(r => r.id === id ? { ...r, merchantReply: null } : r));
       toast.success("Yanıt silindi.");
     } catch {
@@ -159,7 +169,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
 
   const saveSettings = async (widgetId: string, widgetSettings: Record<string, unknown>) => {
     try {
-      await axios.put('/api/admin/settings', { widgetId, settings: widgetSettings }, { headers: { Authorization: `JWT ${token}` } });
+      await axios.put('/api/admin/settings', { widgetId, settings: widgetSettings }, { headers: await freshAuthHeader(token) });
       toast.success('Ayarlar başarıyla kaydedildi.');
     } catch {
       toast.error('Ayarlar kaydedilirken bir hata oluştu.');

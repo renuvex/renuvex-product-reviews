@@ -168,6 +168,7 @@ export function buildReviewForm(productId, productName) {
     try {
       var pageSlug = extractSlug(window.location.href);
       var submitName = productName || (document.querySelector('h1') ? document.querySelector('h1').innerText.trim() : null);
+      // Submit timeout 15sn — Vercel cold start + Prisma + ikas validation için yeter
       var r = await fetchWithTimeout(API_BASE + '/api/public/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -182,7 +183,7 @@ export function buildReviewForm(productId, productName) {
           rating: currentRating,
           images: uploadedImages,
         }),
-      });
+      }, 15000);
       if (r.ok) {
         form.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-weight:700;font-size:14px;color:var(--ikr-color,#000);">Yorumunuz için teşekkürler!</div></div>';
       } else {
@@ -190,9 +191,14 @@ export function buildReviewForm(productId, productName) {
         throw new Error(err.error || 'Yorum kaydedilemedi.');
       }
     } catch(e) {
+      // Abort hatası → kullanıcıya "yavaş bağlantı" mesajı
+      var isAbort = e && (e.name === 'AbortError' || /signal/i.test(e.message || ''));
+      var msgText = isAbort
+        ? 'Bağlantı yavaş, lütfen tekrar deneyin.'
+        : (e.message || 'Yorum gönderilemedi.');
       var errDiv = document.createElement('div');
       errDiv.style.cssText = 'color:#dc2626;font-size:12px;margin-top:8px;';
-      errDiv.textContent = e.message;
+      errDiv.textContent = msgText;
       msgDiv.innerHTML = '';
       msgDiv.appendChild(errDiv);
       btn.disabled = false;
