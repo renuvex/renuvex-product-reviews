@@ -2,6 +2,8 @@
 // Actions row — Yorum Yap butonu + filtre dropdown.
 // Tüm summary layout'ları bu shared parçayı kullanır.
 
+import { registerPopover, notifyOpening } from './popover-registry.js';
+
 export function buildActionsBlock(opts) {
   var widget = opts.widget;
   var currentOrderBy = opts.currentOrderBy;
@@ -36,6 +38,16 @@ export function buildActionsBlock(opts) {
     ['lowest', 'En Düşük Puan', false],
     ['photos', 'Fotoğraflı', true],
   ];
+  function closeFilter() {
+    filterMenu.style.display = 'none';
+    filterBtn.classList.remove('ikr-filter-btn-active');
+  }
+  function openFilter() {
+    notifyOpening(filterRegistration); // diğer popover'ları kapat
+    filterMenu.style.display = 'block';
+    filterBtn.classList.add('ikr-filter-btn-active');
+  }
+
   filterOpts.forEach(function(opt) {
     var isPhotos = opt[2];
     var isActive = isPhotos ? currentHasImages : (!currentHasImages && (currentOrderBy || 'newest') === opt[0]);
@@ -43,29 +55,23 @@ export function buildActionsBlock(opts) {
     item.className = 'ikr-filter-item' + (isActive ? ' ikr-filter-item-active' : '');
     item.textContent = opt[1];
     item.onclick = function() {
-      filterMenu.style.display = 'none';
-      filterBtn.classList.remove('ikr-filter-btn-active');
+      closeFilter();
       onSortChange(opt[0], isPhotos);
     };
     filterMenu.appendChild(item);
   });
 
-  filterBtn.onclick = function(e) {
-    e.stopPropagation();
+  filterBtn.onclick = function() {
     var isOpen = filterMenu.style.display !== 'none';
-    filterMenu.style.display = isOpen ? 'none' : 'block';
-    filterBtn.classList.toggle('ikr-filter-btn-active', !isOpen);
+    if (isOpen) closeFilter(); else openFilter();
   };
 
-  filterWrap.addEventListener('click', function(e) { e.stopPropagation(); });
-  if (widget) {
-    widget.addEventListener('click', function(e) {
-      if (!filterWrap.contains(e.target)) {
-        filterMenu.style.display = 'none';
-        filterBtn.classList.remove('ikr-filter-btn-active');
-      }
-    });
-  }
+  // Filter her zaman popover (overlay) — desktop ve mobile'da light dismiss.
+  var filterRegistration = registerPopover({
+    trigger: filterWrap,
+    element: filterMenu,
+    close: closeFilter,
+  });
 
   filterWrap.appendChild(filterBtn);
   filterWrap.appendChild(filterMenu);

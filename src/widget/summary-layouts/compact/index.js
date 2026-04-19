@@ -6,6 +6,7 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { toggleWriteAccordion } from '../shared/write-toggle.js';
+import { registerPopover, notifyOpening } from '../shared/popover-registry.js';
 import { COMPACT_CSS } from './styles.js';
 
 export var meta = {
@@ -144,34 +145,45 @@ export function render(opts) {
     summary.appendChild(writeRow);
   }
 
-  // ─── Popover toggle davranışı ───────────────────────────────
+  // ─── Toggle davranışı ───────────────────────────────────────
   function closePanel() {
     panel.classList.remove('ikr-open');
     panel.setAttribute('aria-hidden', 'true');
     trigger.setAttribute('aria-expanded', 'false');
   }
   function openPanel() {
+    // Desktop popover'da: diğer açık popover'ları kapat (one-at-a-time).
+    // Mobile accordion'da kayıt yapılmadığı için no-op gibi davranır.
+    notifyOpening(panelRegistration);
     panel.classList.add('ikr-open');
     panel.setAttribute('aria-hidden', 'false');
     trigger.setAttribute('aria-expanded', 'true');
   }
-  trigger.onclick = function(e) {
-    e.stopPropagation();
+  trigger.onclick = function() {
     if (panel.classList.contains('ikr-open')) closePanel();
     else openPanel();
   };
-  // Panel içine tıklama popover'ı kapatmasın (filter satırları çalışsın)
-  panel.addEventListener('click', function(e) { e.stopPropagation(); });
-  // Dış tıklama → kapat
-  if (widget) {
-    widget.addEventListener('click', function(e) {
-      if (!triggerWrap.contains(e.target)) closePanel();
-    });
+
+  // Desktop popover ise registry'e kaydol — light dismiss + ESC + one-at-a-time.
+  // Mobile accordion ise registry'e KAYDOLMAZ — flow içeriği gibi davranır,
+  // sadece chevron ile manuel toggle (Loox/Yotpo standardı).
+  var panelRegistration = null;
+  function syncRegistration(isMobile) {
+    if (panelRegistration) { panelRegistration(); panelRegistration = null; }
+    if (!isMobile) {
+      panelRegistration = registerPopover({
+        trigger: triggerWrap,
+        element: panel,
+        close: closePanel,
+      });
+    }
   }
-  // ESC ile kapat
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && panel.classList.contains('ikr-open')) closePanel();
-  });
+  syncRegistration(mql ? mql.matches : false);
+  if (mql) {
+    var onSyncChange = function(e) { syncRegistration(e.matches); };
+    if (mql.addEventListener) mql.addEventListener('change', onSyncChange);
+    else if (mql.addListener) mql.addListener(onSyncChange);
+  }
 
   // showRecommendation hâlâ destekli — panel altında küçük metin
   if ((settings.showRecommendation !== false)) {
