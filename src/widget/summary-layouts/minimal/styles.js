@@ -11,7 +11,7 @@ export var MINIMAL_CSS = `
   }
 
   .ikr-minimal-info{
-    display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;
+    display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;
   }
   .ikr-minimal-row{
     display:flex;align-items:center;gap:8px;
