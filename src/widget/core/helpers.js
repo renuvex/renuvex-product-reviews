@@ -40,10 +40,13 @@ export function partialStarsHTML(rating, iconPair, opts) {
   var snapped = frac < 0.25 ? whole : (frac < 0.75 ? whole + 0.5 : whole + 1);
   var pct = (snapped / 5) * 100;
   var sizeStyle = (opts && opts.sizeStyle) || '';
+  // Boş katman da `filled` path'i kullanır — opaklık ile soldurulur.
+  // Outline path'lerin filled path'lerle birebir hizalanmaması sorununu (overlay
+  // sapması) ortadan kaldırır. Yotpo/Stamped/Material UI Rating standardı.
   var emptyHtml = '';
   var filledHtml = '';
   for (var i = 0; i < 5; i++) {
-    emptyHtml  += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.empty  + '</span>';
+    emptyHtml  += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.filled + '</span>';
     filledHtml += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.filled + '</span>';
   }
   return '<span class="ikr-stars-partial">' +

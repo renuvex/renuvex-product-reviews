@@ -50,6 +50,7 @@ export var CLASSIC_CSS = `
      overlay aynı yapıyı tekrar ettiği için iki katman birebir üst üste oturur. */
   .ikr-stars-partial{position:relative;display:inline-flex;line-height:1;}
   .ikr-stars-partial-empty,.ikr-stars-partial-fill{display:inline-flex;gap:2px;align-items:center;}
+  .ikr-stars-partial-empty{opacity:0.22;}
   .ikr-stars-partial-fill{
     position:absolute;left:0;top:0;height:100%;
     overflow:hidden;pointer-events:none;
