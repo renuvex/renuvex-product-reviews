@@ -78,7 +78,11 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
                 // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
                 if (field.showWhen) {
                   const dep = settings[field.showWhen.key];
-                  if (dep !== field.showWhen.equals) return null;
+                  if ('equals' in field.showWhen) {
+                    if (dep !== field.showWhen.equals) return null;
+                  } else if ('notIn' in field.showWhen) {
+                    if (field.showWhen.notIn.includes(dep as string | number | boolean)) return null;
+                  }
                 }
                 return (
                   <FieldRenderer

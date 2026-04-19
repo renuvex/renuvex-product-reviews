@@ -4,7 +4,10 @@ import { getIconOptions } from '@/widget/icons.js';
 
 // Bir alanın belirli bir ayara bağlı olarak görünüp görünmeyeceğini tanımlar.
 // Örn: { key: 'themeMode', equals: 'custom' } → sadece themeMode === 'custom' ise görünür.
-export type ShowWhen = { key: string; equals: string | number | boolean };
+// Örn: { key: 'summaryLayout', notIn: ['hero','minimal'] } → bu değerlerden biriyse gizlenir.
+export type ShowWhen =
+  | { key: string; equals: string | number | boolean }
+  | { key: string; notIn: Array<string | number | boolean> };
 
 export type SelectOption = { value: string; label: string };
 
@@ -53,7 +56,7 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Genel',
         fields: [
           { type: 'toggle', key: 'enabled', label: 'Widget Aktif',   default: true },
-          { type: 'text',   key: 'title',    label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları' },
+          { type: 'text',   key: 'title',    label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', showWhen: { key: 'summaryLayout', notIn: ['hero', 'minimal'] } },
         ],
       },
       {

@@ -265,13 +265,16 @@ export async function render(productId, settings, reviewsData, productName, orde
   if (reviewsData !== null && reviewsData !== undefined) setCurrentReviewsData(reviewsData);
 
   try {
-    // Başlık ayarı: Layout meta'sındaki defaultTitle varsayılan olarak kullanılır
-    // (hero/minimal gibi layoutlar boş default ister). Admin yazarsa override eder.
+    // Başlık ayarı: Layout meta'sında defaultTitle === '' ise (hero/minimal),
+    // admin'deki eski değer ne olursa olsun başlık gösterilmez. Diğer layoutlarda
+    // admin değeri varsa o, yoksa fallback 'Müşteri Yorumları' kullanılır.
     var titleLayout = getLayout(settings.summaryLayout);
-    var defaultTitle = titleLayout.meta && titleLayout.meta.defaultTitle !== undefined
+    var layoutDefaultTitle = titleLayout.meta && titleLayout.meta.defaultTitle !== undefined
       ? titleLayout.meta.defaultTitle
       : 'Müşteri Yorumları';
-    var title = settings.title !== undefined ? settings.title : defaultTitle;
+    var title = layoutDefaultTitle === ''
+      ? ''
+      : (settings.title !== undefined ? settings.title : layoutDefaultTitle);
 
     var root = document.documentElement;
 
