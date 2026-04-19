@@ -11,10 +11,12 @@
 
 import * as card from './card/index.js';
 import * as list from './list/index.js';
+import * as gallery from './gallery/index.js';
 
 export var LAYOUTS = {
   card: card,
   list: list,
+  gallery: gallery,
 };
 
 export function getReviewLayout(id) {
