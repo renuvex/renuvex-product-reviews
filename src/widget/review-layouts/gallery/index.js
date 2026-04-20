@@ -27,23 +27,18 @@ export function render(r, allReviews) {
   var content = document.createElement('div');
   content.className = 'ikr-review-gallery-content';
 
-  // Yazar
-  var authorEl = document.createElement('div');
-  authorEl.className = 'ikr-review-gallery-author';
-  authorEl.textContent = r.author || '';
-  content.appendChild(authorEl);
-
-  // Tarih
-  var dateEl = document.createElement('div');
-  dateEl.className = 'ikr-review-gallery-date';
-  dateEl.textContent = formatDate(r.createdAt);
-  content.appendChild(dateEl);
-
-  // Yıldız
+  // Üst satır: yıldız (sol) + tarih (sağ)
+  var headRow = document.createElement('div');
+  headRow.className = 'ikr-review-gallery-head';
   var starsSpan = document.createElement('span');
   starsSpan.className = 'ikr-review-stars';
   starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
-  content.appendChild(starsSpan);
+  headRow.appendChild(starsSpan);
+  var dateEl = document.createElement('span');
+  dateEl.className = 'ikr-review-gallery-date';
+  dateEl.textContent = formatDate(r.createdAt);
+  headRow.appendChild(dateEl);
+  content.appendChild(headRow);
 
   // Başlık
   if (r.title) {
@@ -52,6 +47,12 @@ export function render(r, allReviews) {
     titleEl.textContent = r.title;
     content.appendChild(titleEl);
   }
+
+  // Yazar (başlığın altında)
+  var authorEl = document.createElement('div');
+  authorEl.className = 'ikr-review-gallery-author';
+  authorEl.textContent = r.author || '';
+  content.appendChild(authorEl);
 
   // Metin (clamp + devamını oku)
   var comment = (r.comment || '').trim();
