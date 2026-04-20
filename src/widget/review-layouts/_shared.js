@@ -3,9 +3,13 @@
 // Tek yerden yönetilir, layout dosyaları sadece append eder.
 
 // Mağaza yanıtı bloğunu oluşturur (clamp + "Devamını oku" davranışı dahil).
-// Yorum metnindeki body-clamp pattern'inin reply versiyonu (3 satır, body 4 satırdan az).
+// Yorum metnindeki body-clamp pattern'inin reply versiyonu.
 // Reply DOM'u layout'lar arası tutarlı; sadece eklendiği yer (parent) farklı.
-export function buildReplyEl(merchantReply) {
+//
+// onReadMore (opsiyonel): "Devamını oku" tıklamasında çağrılır. Verilirse
+// inline expand yerine bu callback çalışır (galeri'de modal açmak için).
+// Verilmezse eski inline toggle davranışı (card/list).
+export function buildReplyEl(merchantReply, onReadMore) {
   if (!merchantReply) return null;
 
   var replyEl = document.createElement('div');
@@ -35,12 +39,16 @@ export function buildReplyEl(merchantReply) {
   requestAnimationFrame(function() {
     if (replyText.scrollHeight > replyText.clientHeight + 2) {
       readMore.style.display = 'inline';
-      var expanded = false;
-      readMore.onclick = function() {
-        expanded = !expanded;
-        replyText.classList.toggle('ikr-reply-text-clamped', !expanded);
-        readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
-      };
+      if (typeof onReadMore === 'function') {
+        readMore.onclick = onReadMore;
+      } else {
+        var expanded = false;
+        readMore.onclick = function() {
+          expanded = !expanded;
+          replyText.classList.toggle('ikr-reply-text-clamped', !expanded);
+          readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
+        };
+      }
     }
   });
 

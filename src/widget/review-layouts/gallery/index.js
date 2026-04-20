@@ -105,7 +105,12 @@ export function render(r, allReviews) {
 
   // Mağaza yanıtı — full-width, foto+metin altında ayrı satırda.
   // Sol kolonda (340px body) sıkışıyordu, sağda da foto altı boş kalıyordu.
-  var replyEl = buildReplyEl(r.merchantReply);
+  // "Devamını oku" → modal açar (müşteri yorumuyla tutarlı; galeri'de inline
+  // expand masonry kolon dengesini bozar).
+  var replyEl = buildReplyEl(r.merchantReply, function() {
+    var firstImg = (r.images && Array.isArray(r.images) && r.images.length) ? r.images[0] : null;
+    openReviewModal(r, firstImg, allReviews);
+  });
   if (replyEl) {
     replyEl.classList.add('ikr-review-gallery-reply');
     reviewEl.appendChild(replyEl);
