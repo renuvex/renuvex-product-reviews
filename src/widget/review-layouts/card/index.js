@@ -1,6 +1,7 @@
 // review-layouts/card/index.js
 // Varsayılan "Kart" tasarımı — eski review-item.js içeriği bu layout'a taşındı.
-// DOM yapısı: yıldız+başlık | tarih → yazar → metin (clamp) → fotoğraf → mağaza yanıtı.
+// DOM yapısı: yıldız | tarih → başlık → yazar → metin (clamp) → fotoğraf → mağaza yanıtı.
+// Sıralama gallery layout'u ile aynı (endüstri standardı: rating → title → author → body).
 // CSS .ikr-review* sınıfları base styles.js'te; layout-spesifik override yok.
 
 import { starsHTML, formatDate, optimizeImageUrl } from '../../core/helpers.js';
@@ -20,7 +21,7 @@ export function render(r, allReviews) {
   var reviewEl = document.createElement('div');
   reviewEl.className = 'ikr-review ikr-review-card';
 
-  // Satır 1: yıldız + başlık | tarih (sağda)
+  // Satır 1: yıldız | tarih (sağda)
   var topRow = document.createElement('div');
   topRow.className = 'ikr-review-top';
 
@@ -30,12 +31,6 @@ export function render(r, allReviews) {
   starsSpan.className = 'ikr-review-stars';
   starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
   leftTop.appendChild(starsSpan);
-  if (r.title) {
-    var titleSpan = document.createElement('span');
-    titleSpan.className = 'ikr-review-title';
-    titleSpan.textContent = r.title;
-    leftTop.appendChild(titleSpan);
-  }
 
   var dateEl = document.createElement('span');
   dateEl.className = 'ikr-date';
@@ -45,7 +40,15 @@ export function render(r, allReviews) {
   topRow.appendChild(dateEl);
   reviewEl.appendChild(topRow);
 
-  // Satır 2: yazar adı
+  // Satır 2: başlık (kendi satırında — gallery ile aynı sıralama)
+  if (r.title) {
+    var titleEl = document.createElement('div');
+    titleEl.className = 'ikr-review-title';
+    titleEl.textContent = r.title;
+    reviewEl.appendChild(titleEl);
+  }
+
+  // Satır 3: yazar adı
   var authorEl = document.createElement('div');
   authorEl.className = 'ikr-author';
   authorEl.textContent = r.author || '';

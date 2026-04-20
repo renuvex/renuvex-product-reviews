@@ -55,7 +55,7 @@ export var GALLERY_CSS = '\
     display:flex;align-items:center;justify-content:space-between;gap:8px;\
   }\
   .ikr-review-gallery-author{\
-    font-weight:700;\
+    font-weight:600;\
     font-size:var(--ikr-author-size,14px);\
     color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));\
   }\
@@ -65,7 +65,7 @@ export var GALLERY_CSS = '\
     white-space:nowrap;flex-shrink:0;\
   }\
   .ikr-review-gallery-title{\
-    font-weight:700;\
+    font-weight:600;\
     font-size:var(--ikr-review-title-size,15px);\
     color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));\
     margin:2px 0 0 0;\

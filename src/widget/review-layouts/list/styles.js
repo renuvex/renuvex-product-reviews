@@ -23,7 +23,7 @@ export var LIST_CSS = '\
   .ikr-review-list-content{display:flex;flex-direction:column;gap:8px;min-width:0;}\
   .ikr-review-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}\
   .ikr-review-list-head-left{display:flex;align-items:center;gap:10px;}\
-  .ikr-review-list-title{font-weight:700;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin:0;}\
+  .ikr-review-list-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin:0;}\
   .ikr-review-list-body{margin-top:0;line-height:1.6;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);}\
   .ikr-review-list-media{display:flex;justify-content:flex-end;}\
   .ikr-review-list-media img{\
