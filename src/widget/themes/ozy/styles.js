@@ -57,10 +57,11 @@ export var CLASSIC_CSS = `
      3 sütun (puan + bars + buton) max boyutlarda ancak ~1030px tutuyor,
      1200px tavan wrap riskini pratik olarak sıfırlar. */
   #ikas-reviews-widget > *{max-width:1200px;margin-left:auto;margin-right:auto;}
-  /* Yorum metni ve mağaza yanıtı — 70ch ile okunabilir tutulur, inner 1200 olsa
-     bile satırlar 800-900px civarında kalır. Başlık, summary, galeri serbest. */
-  #ikas-reviews-widget .ikr-body,
-  #ikas-reviews-widget .ikr-reply-text{max-width:70ch;}
+  /* NOT: Eskiden burada .ikr-body ve .ikr-reply-text için max-width:70ch vardı
+     (okunabilirlik). Card layout'ta "Devamını oku" sonrası body 70ch'de kesiliyor,
+     parent genişliğini kullanmıyordu — kaldırıldı. Satır uzunluğu artık layout
+     container'ına bağlı. Uzun-kelime taşma koruması overflow-wrap:anywhere ile
+     ayrı kuralda (aşağıda), o davranış değişmedi. */
   /* Kullanıcı içeriği taşma koruması — uzun boşluksuz string (URL, "aaaa...",
      ürün kodu) container'ı zorlamasın diye yumuşak kırma. Sadece text class'larına
      uygulanır, buton/UI tipografisine dokunulmaz. Gallery masonry için kritik:
