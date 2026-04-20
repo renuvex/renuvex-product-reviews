@@ -320,6 +320,20 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
     root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
     root.style.setProperty('--ikr-avg-star-size', sz.avgStarSize + 'px');
+
+    // Layout-spesifik boyut override'ları (opsiyonel).
+    // Bir layout'un meta.sizeOverrides[size] objesi varsa, oradaki CSS değişkenleri
+    // global SIZE_PRESETS değerlerinin üzerine yazılır. Sözleşme: { '--ikr-xxx': '14px', ... }.
+    // Layout'lar bu alanı export etmek zorunda değil — yoksa global preset aynen geçerli kalır.
+    function applyLayoutSizeOverrides(layout, sizeKey) {
+      if (!layout || !layout.meta || !layout.meta.sizeOverrides) return;
+      var ov = layout.meta.sizeOverrides[sizeKey];
+      if (!ov) return;
+      Object.keys(ov).forEach(function(k) { root.style.setProperty(k, ov[k]); });
+    }
+    applyLayoutSizeOverrides(getLayout(settings.summaryLayout), settings.size);
+    applyLayoutSizeOverrides(getReviewLayout(settings.reviewLayout), settings.size);
+
     // İkon + stil seçimine göre SVG çifti (filled/empty) al — ICONS registry'sinden
     var iconPair = getIconFromSettings(settings);
 
