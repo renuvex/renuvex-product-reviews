@@ -18,6 +18,7 @@ export function buildReviewForm(productId, productName) {
     '<input type="text" id="ikr-title" class="ikr-input" placeholder="Kısa bir başlık ekleyin" aria-label="Yorum başlığı" maxlength="60">',
     '<label for="ikr-comment" style="font-weight:600;margin-top:16px;display:block;">Yorum</label>',
     '<textarea id="ikr-comment" class="ikr-textarea" placeholder="Deneyiminizi paylaşın..." rows="5" aria-label="Yorum" maxlength="2000"></textarea>',
+    '<div id="ikr-comment-counter" class="ikr-char-counter" aria-live="polite">0/2000</div>',
     '<label for="ikr-name" style="font-weight:600;margin-top:16px;display:block;">Ad <span style="color:#dc2626;">*</span></label>',
     '<input type="text" id="ikr-name" class="ikr-input" placeholder="Adınız" aria-label="Ad" aria-required="true" maxlength="40">',
     '<div id="ikr-photo-section" style="margin-top:16px;">',
@@ -30,6 +31,16 @@ export function buildReviewForm(productId, productName) {
   ].join('');
   var currentRating = 0; // Varsayılan olarak puan seçilmemiş başlar
   var uploadedImages = [];
+
+  // Yorum karakter sayacı — limite yaklaşırken kullanıcı görsün, sessiz blok olmasın.
+  var commentEl = form.querySelector('#ikr-comment');
+  var counterEl = form.querySelector('#ikr-comment-counter');
+  function updateCommentCounter() {
+    var len = commentEl.value.length;
+    counterEl.textContent = len + '/2000';
+    counterEl.classList.toggle('ikr-char-counter--max', len >= 2000);
+  }
+  commentEl.addEventListener('input', updateCommentCounter);
   
   // Endüstri standardı olarak yıldızları boş (0) başlatıyoruz
   var starsWrap = renderStars(0, true, function(v) { currentRating = v; }, currentSettings);

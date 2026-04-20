@@ -27,7 +27,7 @@ model Review {
   storeId       String
   productId     String
   rating        Int
-  comment       String?
+  comment       String?  @db.VarChar(2000)
   author        String
   email         String?
   status        String   @default("pending")
