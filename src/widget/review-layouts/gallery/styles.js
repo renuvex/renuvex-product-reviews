@@ -24,7 +24,7 @@ export var GALLERY_CSS = '\
     margin-left:auto;\
     margin-right:auto;\
     column-count:2;\
-    column-gap:20px;\
+    column-gap:32px;\
   }\
   /* Non-review elemanlar kolon dışına çıkar — summary, başlık, form, foto strip vs. */\
   #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-title,\
@@ -43,8 +43,8 @@ export var GALLERY_CSS = '\
     -webkit-column-break-inside:avoid;\
     page-break-inside:avoid;\
     display:grid;\
-    grid-template-columns:1fr 120px;\
-    gap:14px;\
+    grid-template-columns:1fr 100px;\
+    gap:32px;\
     align-items:start;\
     padding:18px 0;\
     margin:0;\
@@ -84,6 +84,7 @@ export var GALLERY_CSS = '\
     color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));\
     font-size:var(--ikr-review-text-size,14px);\
     margin-top:var(--ikr-gap-normal);\
+    max-width:340px;\
   }\
   /* Mobile tap highlight kaldirildi — modal acilirken gorunur kaliyordu */\
   .ikr-review-gallery .ikr-read-more{\
