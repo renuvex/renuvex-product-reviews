@@ -45,7 +45,7 @@ export var GALLERY_CSS = '\
     display:grid;\
     grid-template-columns:1fr 120px;\
     column-gap:32px;\
-    row-gap:16px;\
+    row-gap:8px;\
     align-items:start;\
     padding:18px 0;\
     margin:0;\
