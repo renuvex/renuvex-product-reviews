@@ -5,9 +5,16 @@ import { getIconOptions } from '@/widget/icons.js';
 // Bir alanın belirli bir ayara bağlı olarak görünüp görünmeyeceğini tanımlar.
 // Örn: { key: 'themeMode', equals: 'custom' } → sadece themeMode === 'custom' ise görünür.
 // Örn: { key: 'summaryLayout', notIn: ['hero','minimal'] } → bu değerlerden biriyse gizlenir.
+//
+// Layout-aware varyant (TERCİH EDİLEN):
+// Örn: { layoutKey: 'reviewLayout', supports: 'thumbnailSize' }
+//   → aktif review layout'un meta.supports.thumbnailSize === false ise alan gizlenir.
+// Yeni layout eklenince UI dosyasını düzenlemek gerekmez — kaynak doğrusu layout meta'sıdır.
+// Bkz: src/widget/{summary,review}-layouts/index.js — supports sözleşmesi.
 export type ShowWhen =
   | { key: string; equals: string | number | boolean }
-  | { key: string; notIn: Array<string | number | boolean> };
+  | { key: string; notIn: Array<string | number | boolean> }
+  | { layoutKey: 'summaryLayout' | 'reviewLayout'; supports: string };
 
 export type SelectOption = { value: string; label: string };
 
@@ -56,7 +63,7 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Genel',
         fields: [
           { type: 'toggle', key: 'enabled', label: 'Widget Aktif',   default: true },
-          { type: 'text',   key: 'title',    label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', showWhen: { key: 'summaryLayout', notIn: ['hero', 'minimal'] } },
+          { type: 'text',   key: 'title',    label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
         ],
       },
       {
@@ -227,7 +234,7 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Davranış',
         fields: [
           { type: 'toggle', key: 'autoApprove',        label: 'Yeni Yorumları Otomatik Onayla', default: false },
-          { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster',       default: true },
+          { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster',       default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
           { type: 'toggle', key: 'showPhotoGallery',   label: 'Fotoğraf Galerisini Göster',    default: true },
         ],
       },
@@ -255,6 +262,7 @@ export const WIDGETS: WidgetDef[] = [
               { value: 'medium', label: 'Orta' },
               { value: 'large',  label: 'Büyük' },
             ],
+            showWhen: { layoutKey: 'reviewLayout', supports: 'thumbnailSize' },
           },
         ],
       },

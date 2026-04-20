@@ -12,6 +12,8 @@ import { GALLERY_CSS } from './styles.js';
 export var meta = {
   id: 'gallery',
   name: 'Galeri',
+  // Bkz: review-layouts/index.js — supports sözleşmesi.
+  supports: { thumbnailSize: false },
 };
 
 export var css = GALLERY_CSS;

@@ -14,6 +14,24 @@ import { colors, componentStyles, typography, radii } from '@/lib/design-tokens'
 import { SettingsGroup, SettingField } from '../widgetDefs';
 import { WidgetSettingsDraft } from './WidgetEditor';
 import { IconSelect } from './IconSelect';
+// Layout registry'leri — meta.supports okumak için.
+// Bkz: src/widget/{summary,review}-layouts/index.js (supports sözleşmesi).
+import { LAYOUTS as SUMMARY_LAYOUTS } from '@/widget/summary-layouts/index.js';
+import { LAYOUTS as REVIEW_LAYOUTS } from '@/widget/review-layouts/index.js';
+
+type LayoutMeta = { supports?: Record<string, boolean> };
+type LayoutModule = { meta?: LayoutMeta };
+const LAYOUT_REGISTRIES: Record<'summaryLayout' | 'reviewLayout', Record<string, LayoutModule>> = {
+  summaryLayout: SUMMARY_LAYOUTS as Record<string, LayoutModule>,
+  reviewLayout: REVIEW_LAYOUTS as Record<string, LayoutModule>,
+};
+function layoutSupports(layoutKey: 'summaryLayout' | 'reviewLayout', activeId: unknown, capability: string): boolean {
+  const registry = LAYOUT_REGISTRIES[layoutKey];
+  const layout = registry[String(activeId)];
+  const supports = layout?.meta?.supports;
+  // Varsayılan: layout deklare etmediyse destekliyor say.
+  return supports?.[capability] !== false;
+}
 
 interface SettingsPanelProps {
   groups: SettingsGroup[];
@@ -77,11 +95,17 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
               {group.fields.map((field) => {
                 // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
                 if (field.showWhen) {
-                  const dep = settings[field.showWhen.key];
-                  if ('equals' in field.showWhen) {
-                    if (dep !== field.showWhen.equals) return null;
-                  } else if ('notIn' in field.showWhen) {
-                    if (field.showWhen.notIn.includes(dep as string | number | boolean)) return null;
+                  if ('layoutKey' in field.showWhen) {
+                    // Layout-aware: aktif layout'un meta.supports'ını oku.
+                    const activeId = settings[field.showWhen.layoutKey];
+                    if (!layoutSupports(field.showWhen.layoutKey, activeId, field.showWhen.supports)) return null;
+                  } else {
+                    const dep = settings[field.showWhen.key];
+                    if ('equals' in field.showWhen) {
+                      if (dep !== field.showWhen.equals) return null;
+                    } else if ('notIn' in field.showWhen) {
+                      if (field.showWhen.notIn.includes(dep as string | number | boolean)) return null;
+                    }
                   }
                 }
                 return (

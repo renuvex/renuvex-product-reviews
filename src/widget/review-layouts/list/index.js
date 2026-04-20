@@ -11,6 +11,8 @@ import { LIST_CSS } from './styles.js';
 export var meta = {
   id: 'list',
   name: 'Liste',
+  // Bkz: review-layouts/index.js — supports sözleşmesi.
+  supports: { thumbnailSize: false },
 };
 
 export var css = LIST_CSS;

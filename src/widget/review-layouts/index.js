@@ -8,6 +8,22 @@
 //   - r            : tek bir yorum nesnesi (rating, title, comment, images, merchantReply, ...)
 //   - allReviews   : aktif sayfada görünen tüm yorumlar (modal navigation için gerekli)
 //   → DOM elementi döner.
+//
+// ─── meta.supports sözleşmesi (admin paneli alan-gizleme) ──────────────────
+// Layout, davranışsal olarak DESTEKLEMEDİĞİ ayarları meta.supports'ta false
+// olarak deklare eder. Admin paneli (widgetDefs.ts → SettingsPanel.tsx) bu
+// bilgiyi okuyup ilgili alanı OTOMATİK gizler — UI tarafında elle if/else
+// listesi tutulmaz. Tek doğruluk kaynağı layout dosyasıdır.
+//
+// Mevcut review supports anahtarları:
+//   - thumbnailSize: false  → "Küçük Resim Boyutu" select'i gizlenir
+//                              (list/gallery tek görsel + sabit boyut kullanır)
+//
+// Yeni layout eklerken: render fonksiyonun hangi ayarları kullanmadığını
+// kontrol et ve karşılığını supports'ta false olarak işaretle. Eklenecek yeni
+// supports anahtarı varsa: önce widgetDefs.ts'deki ilgili alana
+// `showWhen: { layoutKey: 'reviewLayout', supports: '<anahtar>' }` ekle,
+// sonra burada ve summary-layouts/index.js'te listele.
 
 import * as card from './card/index.js';
 import * as list from './list/index.js';
