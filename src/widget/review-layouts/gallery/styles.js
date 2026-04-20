@@ -43,7 +43,7 @@ export var GALLERY_CSS = '\
     -webkit-column-break-inside:avoid;\
     page-break-inside:avoid;\
     display:grid;\
-    grid-template-columns:1fr 100px;\
+    grid-template-columns:1fr 120px;\
     gap:32px;\
     align-items:start;\
     padding:18px 0;\
