@@ -57,8 +57,11 @@ export var LIST_CSS = '\
     .ikr-review-list-author{order:3;flex-direction:row;align-items:center;gap:8px;}\
     .ikr-review-list-head .ikr-date{order:4;}\
     .ikr-review-list-body{order:5;margin-top:0;}\
-    .ikr-review-list-media{order:6;justify-content:flex-start;}\
-    .ikr-reply{order:7;}\
+    /* body sonrasi read-more body ile ayni bloga ait, hemen altinda kalir.\
+       Order verilmezse default 0 olur ve listenin en basina cikar. */\
+    .ikr-review-list-content > .ikr-read-more{order:6;}\
+    .ikr-review-list-media{order:7;justify-content:flex-start;}\
+    .ikr-reply{order:8;}\
     .ikr-review-list-media img{max-width:160px;aspect-ratio:1/1;}\
   }\
 ';
