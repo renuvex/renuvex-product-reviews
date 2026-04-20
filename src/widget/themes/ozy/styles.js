@@ -238,7 +238,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-thumbs{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;padding:0 12px;}
   .ikr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid transparent;opacity:0.7;}
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
-  .ikr-modal-right{flex:1;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;background:var(--ikr-modal-bg,var(--ikr-bg,#fff));color:var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1)));}
+  .ikr-modal-right{flex:1;min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0;display:flex;flex-direction:column;background:var(--ikr-modal-bg,var(--ikr-bg,#fff));color:var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
   .ikr-modal-stars{display:inline-flex;gap:2px;align-items:center;}
   .ikr-modal-stars .ikr-icon{width:var(--ikr-star-size,24px);height:var(--ikr-star-size,24px);}
