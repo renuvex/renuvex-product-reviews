@@ -1,5 +1,7 @@
 // review-layouts/gallery/index.js — Loox tarzı 2-kolon galeri.
-// Item içi sol-sağ split: solda yazar/tarih/yıldız/başlık/metin, sağda foto.
+// Item içi sol-sağ split: solda içerik, sağda foto.
+// Sol kolon dikey sıra: yazar → tarih → yıldız → title → metin → reply.
+// (Card'dan farklı: yıldız üstte değil, kişi-meta öncelikli — galeri kart hissi.)
 // Foto yoksa sol kolon tüm genişliği kullanır (no-media modifier).
 // Mobile'da da aynı split korunur — foto asla metnin üstüne çıkmaz.
 // Masonry için CSS columns parent'a (#ikas-reviews-widget) :has() ile uygulanır.
@@ -30,32 +32,31 @@ export function render(r, allReviews) {
   var content = document.createElement('div');
   content.className = 'ikr-review-gallery-content';
 
-  // Üst satır: yıldız (sol) + tarih (sağ)
-  var headRow = document.createElement('div');
-  headRow.className = 'ikr-review-gallery-head';
-  var starsSpan = document.createElement('span');
-  starsSpan.className = 'ikr-review-stars';
-  starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
-  headRow.appendChild(starsSpan);
-  var dateEl = document.createElement('span');
+  // 1) Yazar
+  var authorEl = document.createElement('div');
+  authorEl.className = 'ikr-review-gallery-author';
+  authorEl.textContent = r.author || '';
+  content.appendChild(authorEl);
+
+  // 2) Tarih
+  var dateEl = document.createElement('div');
   dateEl.className = 'ikr-review-gallery-date';
   dateEl.textContent = formatDate(r.createdAt);
-  headRow.appendChild(dateEl);
-  content.appendChild(headRow);
+  content.appendChild(dateEl);
 
-  // Başlık
+  // 3) Yıldız
+  var starsSpan = document.createElement('span');
+  starsSpan.className = 'ikr-review-stars ikr-review-gallery-stars';
+  starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
+  content.appendChild(starsSpan);
+
+  // 4) Başlık
   if (r.title) {
     var titleEl = document.createElement('div');
     titleEl.className = 'ikr-review-gallery-title';
     titleEl.textContent = r.title;
     content.appendChild(titleEl);
   }
-
-  // Yazar (başlığın altında)
-  var authorEl = document.createElement('div');
-  authorEl.className = 'ikr-review-gallery-author';
-  authorEl.textContent = r.author || '';
-  content.appendChild(authorEl);
 
   // Metin (clamp + devamını oku)
   var comment = (r.comment || '').trim();
