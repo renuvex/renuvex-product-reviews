@@ -33,6 +33,24 @@ export var CLASSIC_CSS = `
      bile satırlar 800-900px civarında kalır. Başlık, summary, galeri serbest. */
   #ikas-reviews-widget .ikr-body,
   #ikas-reviews-widget .ikr-reply-text{max-width:70ch;}
+  /* Kullanıcı içeriği taşma koruması — uzun boşluksuz string (URL, "aaaa...",
+     ürün kodu) container'ı zorlamasın diye yumuşak kırma. Sadece text class'larına
+     uygulanır, buton/UI tipografisine dokunulmaz. Gallery masonry için kritik:
+     tek bir uzun string break-inside:avoid'a rağmen kolon dengesini bozardı. */
+  #ikas-reviews-widget .ikr-body,
+  #ikas-reviews-widget .ikr-author,
+  #ikas-reviews-widget .ikr-review-title,
+  #ikas-reviews-widget .ikr-review-list-body,
+  #ikas-reviews-widget .ikr-review-list-title,
+  #ikas-reviews-widget .ikr-review-list-author-name,
+  #ikas-reviews-widget .ikr-review-gallery-body,
+  #ikas-reviews-widget .ikr-review-gallery-title,
+  #ikas-reviews-widget .ikr-review-gallery-author,
+  #ikas-reviews-widget .ikr-modal-body,
+  #ikas-reviews-widget .ikr-modal-title,
+  #ikas-reviews-widget .ikr-modal-author,
+  #ikas-reviews-widget .ikr-reply-text,
+  #ikas-reviews-widget .ikr-modal-reply-text{overflow-wrap:anywhere;}
   .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:500;text-align:center;margin-bottom:12px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
 
   /* ─── SVG ICON WRAPPER ───────────────────────────────────────────────
@@ -227,7 +245,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-date{font-size:var(--ikr-review-date-size,12px);font-weight:400;color:var(--ikr-review-date,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));white-space:nowrap;flex-shrink:0;}
   .ikr-modal-title{font-weight:700;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));}
   .ikr-modal-author{font-size:var(--ikr-author-size,14px);font-weight:400;font-style:italic;color:var(--ikr-review-author,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));}
-  .ikr-modal-scroll-content{padding:24px 24px 24px;display:flex;flex-direction:column;gap:6px;}
+  .ikr-modal-scroll-content{padding:24px 24px 24px;display:flex;flex-direction:column;gap:6px;min-width:0;}
   .ikr-modal-body{font-size:var(--ikr-review-text-size,14px);font-weight:400;line-height:1.65;color:var(--ikr-review-body,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));}
   .ikr-modal-reply{margin-top:8px;padding:12px 16px;background:var(--ikr-modal-reply-bg,var(--ikr-reply-bg-color,var(--ikr-reply-bg,rgba(0,0,0,0.03))));border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-modal-reply-border,var(--ikr-reply-border,var(--ikr-color,#000)));}
   .ikr-modal-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,14px);color:var(--ikr-reply-label,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));margin-bottom:4px;}
