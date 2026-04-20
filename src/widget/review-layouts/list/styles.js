@@ -55,7 +55,8 @@ export var LIST_CSS = '\
     .ikr-review-list-head-left{order:1;}\
     .ikr-review-list-title{order:2;margin-top:0;}\
     .ikr-review-list-author{order:3;flex-direction:row;align-items:center;gap:8px;}\
-    .ikr-review-list-head .ikr-date{order:4;}\
+    /* yazar->tarih ayni imza grubu, galeri ile tutarli kompakt 4px (gap 8 - margin -4) */\
+    .ikr-review-list-head .ikr-date{order:4;margin-top:-4px;}\
     .ikr-review-list-body{order:5;margin-top:0;}\
     /* body sonrasi read-more body ile ayni bloga ait, hemen altinda kalir.\
        Order verilmezse default 0 olur ve listenin en basina cikar. */\
