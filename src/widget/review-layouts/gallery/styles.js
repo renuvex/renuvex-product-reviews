@@ -8,6 +8,11 @@
 // Foto yoksa metin tüm genişliği kullanır.
 // Mobile (<600px): tek kolon, yine sol=metin sağ=foto (foto sırası asla
 // metnin önüne geçmez — referans tutarlılığı).
+//
+// Dikey gap: content kolonu uniform gap kullanmaz, her child kendi
+// margin-top'unu token ile alır (--ikr-gap-tight/normal/loose). Sözleşme:
+// themes/ozy/styles.js üst yorum bloğu. Yeni satır eklerken magic number
+// yazma — ilişki tipine göre token seç.
 
 export var GALLERY_CSS = '\
   /* Galeri seçiliyken widget full-bleed yerine 1200px ile sınırlı —\
@@ -49,32 +54,34 @@ export var GALLERY_CSS = '\
     grid-template-columns:1fr;\
   }\
   .ikr-review-gallery-content{\
-    display:flex;flex-direction:column;gap:6px;min-width:0;\
+    display:flex;flex-direction:column;min-width:0;\
   }\
   .ikr-review-gallery-head{\
     display:flex;align-items:center;justify-content:space-between;gap:8px;\
+  }\
+  /* head→title (normal), title→author (tight), author→body (normal). */\
+  .ikr-review-gallery-title{\
+    font-weight:600;\
+    font-size:var(--ikr-review-title-size,15px);\
+    color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));\
+    margin:var(--ikr-gap-normal) 0 0 0;\
   }\
   .ikr-review-gallery-author{\
     font-weight:600;\
     font-size:var(--ikr-author-size,14px);\
     color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));\
+    margin-top:var(--ikr-gap-tight);\
   }\
   .ikr-review-gallery-date{\
     font-size:var(--ikr-review-date-size,12px);\
     color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,0.6)));\
     white-space:nowrap;flex-shrink:0;\
   }\
-  .ikr-review-gallery-title{\
-    font-weight:600;\
-    font-size:var(--ikr-review-title-size,15px);\
-    color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));\
-    margin:2px 0 0 0;\
-  }\
   .ikr-review-gallery-body{\
     line-height:1.55;\
     color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));\
     font-size:var(--ikr-review-text-size,14px);\
-    margin-top:2px;\
+    margin-top:var(--ikr-gap-normal);\
   }\
   /* Mobile tap highlight kaldirildi — modal acilirken gorunur kaliyordu */\
   .ikr-review-gallery .ikr-read-more{\

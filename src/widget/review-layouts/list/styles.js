@@ -2,6 +2,11 @@
 // Sol: yazar | Orta: yıldız+başlık+metin | Sağ: foto (varsa).
 // Foto yoksa orta kolon foto kolonunu da kapsar.
 // Mobile: dikey diziliş (yazar → içerik → foto).
+//
+// Dikey gap: orta kolon uniform gap kullanmaz, her child kendi margin-top'unu
+// token ile alır (--ikr-gap-tight/normal/loose). Sözleşme: themes/ozy/styles.js
+// üst yorum bloğu. Yeni satır eklerken magic number yazma — ilişki tipine göre
+// token seç.
 
 export var LIST_CSS = '\
   .ikr-review-list{\
@@ -20,11 +25,13 @@ export var LIST_CSS = '\
     color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));\
   }\
   .ikr-review-list-author-name{font-weight:600;font-style:normal;}\
-  .ikr-review-list-content{display:flex;flex-direction:column;gap:8px;min-width:0;}\
+  .ikr-review-list-content{display:flex;flex-direction:column;min-width:0;}\
   .ikr-review-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}\
   .ikr-review-list-head-left{display:flex;align-items:center;gap:10px;}\
-  .ikr-review-list-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin:0;}\
-  .ikr-review-list-body{margin-top:0;line-height:1.6;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);}\
+  /* head->title (normal), title->body (normal). Author sol kolonda olduğu için\
+     orta kolon akışında author satırı yok. body->reply (.ikr-reply zaten loose). */\
+  .ikr-review-list-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin:var(--ikr-gap-normal) 0 0 0;}\
+  .ikr-review-list-body{margin-top:var(--ikr-gap-normal);line-height:1.6;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);}\
   .ikr-review-list-media{display:flex;justify-content:flex-end;}\
   .ikr-review-list-media img{\
     width:100%;max-width:200px;aspect-ratio:3/4;object-fit:cover;\

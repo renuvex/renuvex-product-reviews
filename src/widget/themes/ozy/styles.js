@@ -14,6 +14,34 @@
 //   --ikr-surface     : form/kart üst yüzeyi (bg'den biraz farklı)
 //   --ikr-input-bg    : input arka planı
 //   --ikr-input-text  : input yazı rengi
+//
+// ─── Yorum item dikey gap sözleşmesi (review typography spacing) ──────────
+// Tek bir yorum item'ı içindeki dikey aralıklar (margin-top'lar) AŞAĞIDAKİ
+// 4 token üzerinden yönetilir. Magic number yerine ilişki tipine göre token:
+//   --ikr-gap-tight    (4px)  : aynı imzaya ait şeyler — title↔author,
+//                                ileride author↔badge / author↔doğrulanmış
+//                                rozeti gibi "aynı kişiye ait meta" geçişleri.
+//   --ikr-gap-normal   (8px)  : aynı blokta tip değişimi — stars↔title,
+//                                author↔body, body↔read-more.
+//   --ikr-gap-loose    (16px) : bağımsız bloklar — body↔reply, body↔gallery,
+//                                reply↔ileride eklenecek "yorum yararlı mı"
+//                                aksiyon barı gibi ayrı bileşenler.
+//   --ikr-gap-section  (24px) : büyük bölüm ayrımı — review item kendi
+//                                içinde değil, dış padding/border-spacing için.
+//
+// Kapsam: SADECE review item içi dikey akış (card / list / gallery / modal).
+// Token DIŞINDA kalanlar (bilinçli sınır):
+//   • Widget dış padding/margin (40px) — sayfaya göre, kendi mantığı var.
+//   • Summary header iç gap'leri (--ikr-col-gap) — bar chart'a özel.
+//   • Form/button gap'leri — form ayrı dünya, kendi rule'ları.
+//   • Photo strip / gallery image gap'leri (10-12px) — görsel ritm, tipografi
+//     değil.
+//   • Modal foto↔meta layout — modal'ın kendi spacing sistemi.
+//
+// Yeni layout / bileşen eklerken: yeni magic number yazma. Önce yukarıdaki
+// 4 ilişki tipinden hangisine girdiğine karar ver, ilgili token'ı çağır.
+// Yeni bir ilişki tipi gerçekten farklıysa (ör. "yarı-bağlı" 12px) önce
+// burada token tanımla, sonra kullan. Tek doğruluk kaynağı bu yorum bloğudur.
 
 export var CLASSIC_CSS = `
   /* Widget dış kutu — full-bleed: mağaza teması widget'ı padding'li bir
@@ -24,7 +52,7 @@ export var CLASSIC_CSS = `
      NOT: 100vw scrollbar'ı hesaba katmaz — scroll varsa margin-left yerine
      parent.getBoundingClientRect() ile runtime düzeltme de yapılabilir, ama
      genelde bu kural yeterli. */
-  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-widget-bg,var(--ikr-bg,transparent));border:1px solid var(--ikr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;}
+  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-widget-bg,var(--ikr-bg,transparent));border:1px solid var(--ikr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;}
   /* Doğrudan widget çocukları — inner wrap (1200px ortalı). Summary'deki
      3 sütun (puan + bars + buton) max boyutlarda ancak ~1030px tutuyor,
      1200px tavan wrap riskini pratik olarak sıfırlar. */
@@ -165,15 +193,17 @@ export var CLASSIC_CSS = `
   .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .ikr-review-stars{display:inline-flex;gap:2px;align-items:center;}
   .ikr-review-stars .ikr-icon{width:var(--ikr-star-size,20px);height:var(--ikr-star-size,20px);}
-  .ikr-review-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin-top:8px;}
-  .ikr-author{font-size:var(--ikr-author-size,14px);font-weight:600;font-style:normal;color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));margin-top:4px;}
+  /* Yorum item dikey ritm: stars→title (normal), title→author (tight),
+     author→body (normal), body→reply (loose). Bkz: gap sözleşmesi (üst yorum). */
+  .ikr-review-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin-top:var(--ikr-gap-normal);}
+  .ikr-author{font-size:var(--ikr-author-size,14px);font-weight:600;font-style:normal;color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));margin-top:var(--ikr-gap-tight);}
   .ikr-date{color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-date-size,12px);font-weight:400;white-space:nowrap;flex-shrink:0;}
-  .ikr-body{margin-top:8px;line-height:1.65;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);font-weight:400;}
+  .ikr-body{margin-top:var(--ikr-gap-normal);line-height:1.65;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);font-weight:400;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
-  .ikr-read-more{display:block;margin-top:4px;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-weight:600;cursor:pointer;font-size:var(--ikr-read-more-size,12px);}
-  .ikr-gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+  .ikr-read-more{display:block;margin-top:var(--ikr-gap-tight);color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-weight:600;cursor:pointer;font-size:var(--ikr-read-more-size,12px);}
+  .ikr-gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--ikr-gap-loose);}
   .ikr-img{width:var(--ikr-thumbnail-size,90px);height:var(--ikr-thumbnail-size,90px);object-fit:cover;border-radius:var(--ikr-radius,6px);border:1px solid var(--ikr-photo-border,var(--ikr-border,rgba(0,0,0,0.10)));cursor:zoom-in;}
-  .ikr-reply{margin-top:12px;padding:12px 16px;background:var(--ikr-reply-bg-color,var(--ikr-reply-bg,rgba(0,0,0,0.03)));border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-reply-border,var(--ikr-color,#000));}
+  .ikr-reply{margin-top:var(--ikr-gap-loose);padding:12px 16px;background:var(--ikr-reply-bg-color,var(--ikr-reply-bg,rgba(0,0,0,0.03)));border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-reply-border,var(--ikr-color,#000));}
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .ikr-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,14px);color:var(--ikr-reply-label,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-reply-text{font-size:var(--ikr-reply-text-size,14px);font-weight:400;color:var(--ikr-reply-text,var(--ikr-text,rgba(0,0,0,1)));line-height:1.6;}
@@ -208,7 +238,11 @@ export var CLASSIC_CSS = `
   .ikr-upload-error{font-size:10px;color:#dc2626;line-height:1.3;text-align:center;padding:4px;word-break:break-word;}
 
   /* Review Modal */
-  .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);}
+  /* Modal document.body'ye portal'lanır → widget root scope'undan ÇIKAR.
+     Yorum item gap token'ları (--ikr-gap-*) burada da yeniden tanımlanır
+     ki modal-* selektörleri base ile aynı dili konuşsun. Tek doğruluk
+     kaynağı yine üstteki sözleşme yorumudur. */
+  .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;}
   .ikr-modal-wrap{position:relative;width:100%;max-width:813px;}
   .ikr-photo-section{margin:24px 0 32px;padding:0 4px;display:block;}
   .ikr-photo-section-header{margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
@@ -248,11 +282,13 @@ export var CLASSIC_CSS = `
   .ikr-modal-stars{display:inline-flex;gap:2px;align-items:center;}
   .ikr-modal-stars .ikr-icon{width:var(--ikr-star-size,24px);height:var(--ikr-star-size,24px);}
   .ikr-modal-date{font-size:var(--ikr-review-date-size,12px);font-weight:400;color:var(--ikr-review-date,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));white-space:nowrap;flex-shrink:0;}
-  .ikr-modal-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));}
-  .ikr-modal-author{font-size:var(--ikr-author-size,14px);font-weight:600;font-style:normal;color:var(--ikr-review-author,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));}
-  .ikr-modal-scroll-content{padding:24px 24px 24px;display:flex;flex-direction:column;gap:6px;min-width:0;}
-  .ikr-modal-body{font-size:var(--ikr-review-text-size,14px);font-weight:400;line-height:1.65;color:var(--ikr-review-body,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));}
-  .ikr-modal-reply{margin-top:8px;padding:12px 16px;background:var(--ikr-modal-reply-bg,var(--ikr-reply-bg-color,var(--ikr-reply-bg,rgba(0,0,0,0.03))));border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-modal-reply-border,var(--ikr-reply-border,var(--ikr-color,#000)));}
+  /* Modal yorum item dikey ritm — base ile aynı sözleşme. scroll-content
+     uniform gap kullanmaz, her child kendi margin-top'unu token ile alır. */
+  .ikr-modal-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));margin-top:var(--ikr-gap-normal);}
+  .ikr-modal-author{font-size:var(--ikr-author-size,14px);font-weight:600;font-style:normal;color:var(--ikr-review-author,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));margin-top:var(--ikr-gap-tight);}
+  .ikr-modal-scroll-content{padding:24px 24px 24px;display:flex;flex-direction:column;min-width:0;}
+  .ikr-modal-body{font-size:var(--ikr-review-text-size,14px);font-weight:400;line-height:1.65;color:var(--ikr-review-body,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));margin-top:var(--ikr-gap-normal);}
+  .ikr-modal-reply{margin-top:var(--ikr-gap-loose);padding:12px 16px;background:var(--ikr-modal-reply-bg,var(--ikr-reply-bg-color,var(--ikr-reply-bg,rgba(0,0,0,0.03))));border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-modal-reply-border,var(--ikr-reply-border,var(--ikr-color,#000)));}
   .ikr-modal-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,14px);color:var(--ikr-reply-label,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));margin-bottom:4px;}
   .ikr-modal-reply-text{font-size:var(--ikr-reply-text-size,14px);font-weight:400;color:var(--ikr-reply-text,var(--ikr-modal-text,var(--ikr-text,rgba(0,0,0,1))));line-height:1.6;}
 
