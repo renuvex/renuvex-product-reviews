@@ -208,10 +208,10 @@ export var CLASSIC_CSS = `
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .ikr-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,13px);color:var(--ikr-reply-label,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-reply-text{font-size:var(--ikr-reply-text-size,13px);font-weight:400;color:var(--ikr-reply-text,var(--ikr-text,rgba(0,0,0,1)));line-height:1.6;}
-  /* Reply clamp: yorum metni (.ikr-body-clamped) 4 satır; reply 3 satır
-     (subordinate). "Devamını oku" sadece clamp devreye girdiyse görünür —
-     buildReplyEl helper'ı runtime kontrol eder. */
-  .ikr-reply-text-clamped{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  /* Reply clamp: yorum metni (.ikr-body-clamped) 4 satır; reply 2 satır
+     (subordinate, müşteri yorumundan kısa kalır). "Devamını oku" sadece
+     clamp devreye girdiyse görünür — buildReplyEl helper'ı runtime kontrol eder. */
+  .ikr-reply-text-clamped{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .ikr-reply-read-more{margin-top:var(--ikr-gap-tight);}
 
   /* Accordion form wrapper */
