@@ -32,35 +32,33 @@ export function render(r, allReviews) {
   var reviewEl = document.createElement('div');
   reviewEl.className = 'ikr-review-list' + (hasMedia ? '' : ' ikr-review-list--no-media');
 
-  // ─── Sol kolon: yazar ───
+  // ─── Sol kolon: imza grubu (yıldız → yazar → tarih) ───
+  // Yazar tek başına sol kolonda izole görünüyordu; yıldız + tarih ile
+  // birlikte gruplanınca "kim, kaç yıldız, ne zaman" tek bakışta okunur.
+  // Endüstri standardı: Trustpilot, Yotpo, Amazon, Çiçeksepeti.
   var authorCol = document.createElement('div');
   authorCol.className = 'ikr-review-list-author';
+
+  var starsSpan = document.createElement('span');
+  starsSpan.className = 'ikr-review-stars ikr-review-list-author-stars';
+  starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
+  authorCol.appendChild(starsSpan);
+
   var authorName = document.createElement('span');
   authorName.className = 'ikr-review-list-author-name';
   authorName.textContent = r.author || '';
   authorCol.appendChild(authorName);
-  reviewEl.appendChild(authorCol);
-
-  // ─── Orta kolon: içerik ───
-  var contentCol = document.createElement('div');
-  contentCol.className = 'ikr-review-list-content';
-
-  var head = document.createElement('div');
-  head.className = 'ikr-review-list-head';
-
-  var headLeft = document.createElement('div');
-  headLeft.className = 'ikr-review-list-head-left';
-  var starsSpan = document.createElement('span');
-  starsSpan.className = 'ikr-review-stars';
-  starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
-  headLeft.appendChild(starsSpan);
-  head.appendChild(headLeft);
 
   var dateEl = document.createElement('span');
-  dateEl.className = 'ikr-date';
+  dateEl.className = 'ikr-date ikr-review-list-author-date';
   dateEl.textContent = formatDate(r.createdAt);
-  head.appendChild(dateEl);
-  contentCol.appendChild(head);
+  authorCol.appendChild(dateEl);
+
+  reviewEl.appendChild(authorCol);
+
+  // ─── Orta kolon: içerik (title → body → reply) ───
+  var contentCol = document.createElement('div');
+  contentCol.className = 'ikr-review-list-content';
 
   if (r.title) {
     var titleEl = document.createElement('div');
