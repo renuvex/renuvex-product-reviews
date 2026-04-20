@@ -59,7 +59,7 @@ export var GALLERY_CSS = '\
   .ikr-review-gallery-head{\
     display:flex;align-items:center;justify-content:space-between;gap:8px;\
   }\
-  /* head→title (normal), title→author (tight), author→body (normal). */\
+  /* head→title (normal), title→author (normal), author→body (normal). */\
   .ikr-review-gallery-title{\
     font-weight:600;\
     font-size:var(--ikr-review-title-size,15px);\
@@ -70,7 +70,7 @@ export var GALLERY_CSS = '\
     font-weight:600;\
     font-size:var(--ikr-author-size,14px);\
     color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));\
-    margin-top:var(--ikr-gap-tight);\
+    margin-top:var(--ikr-gap-normal);\
   }\
   .ikr-review-gallery-date{\
     font-size:var(--ikr-review-date-size,12px);\
