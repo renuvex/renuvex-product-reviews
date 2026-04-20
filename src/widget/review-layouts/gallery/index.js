@@ -17,6 +17,14 @@ export var meta = {
   name: 'Galeri',
   // Bkz: review-layouts/index.js — supports sözleşmesi.
   supports: { thumbnailSize: false },
+  // Foto kolonu genel size ayarıyla orantılı büyüsün — küçük yazıda foto
+  // patlamasın, büyük yazıda foto sönük kalmasın. Card'ın bağımsız thumbnail
+  // ayarı var; list/gallery için tek genel size kontrolü yeter.
+  sizeOverrides: {
+    small:  { '--ikr-gallery-photo-w': '90px' },
+    medium: { '--ikr-gallery-photo-w': '120px' },
+    large:  { '--ikr-gallery-photo-w': '160px' },
+  },
 };
 
 export var css = GALLERY_CSS;

@@ -14,6 +14,14 @@ export var meta = {
   name: 'Liste',
   // Bkz: review-layouts/index.js — supports sözleşmesi.
   supports: { thumbnailSize: false },
+  // Foto kolonu genel size ayarıyla orantılı büyüsün — küçük yazıda büyük foto
+  // patlamasın, büyük yazıda foto sönük kalmasın. Card'ın bağımsız thumbnail
+  // ayarı var; list/gallery için tek genel size kontrolü yeter.
+  sizeOverrides: {
+    small:  { '--ikr-list-photo-w': '140px' },
+    medium: { '--ikr-list-photo-w': '200px' },
+    large:  { '--ikr-list-photo-w': '260px' },
+  },
 };
 
 export var css = LIST_CSS;

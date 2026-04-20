@@ -43,7 +43,7 @@ export var GALLERY_CSS = '\
     -webkit-column-break-inside:avoid;\
     page-break-inside:avoid;\
     display:grid;\
-    grid-template-columns:1fr 120px;\
+    grid-template-columns:1fr var(--ikr-gallery-photo-w,120px);\
     column-gap:32px;\
     row-gap:8px;\
     align-items:start;\
