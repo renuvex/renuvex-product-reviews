@@ -87,10 +87,6 @@ export function render(r, allReviews) {
     });
   }
 
-  // Mağaza yanıtı
-  var replyEl = buildReplyEl(r.merchantReply);
-  if (replyEl) content.appendChild(replyEl);
-
   reviewEl.appendChild(content);
 
   // ─── Sağ: foto (ilk görsel) ───
@@ -105,6 +101,14 @@ export function render(r, allReviews) {
     imgEl.onclick = function() { openReviewModal(r, firstImg, allReviews); };
     mediaWrap.appendChild(imgEl);
     reviewEl.appendChild(mediaWrap);
+  }
+
+  // Mağaza yanıtı — full-width, foto+metin altında ayrı satırda.
+  // Sol kolonda (340px body) sıkışıyordu, sağda da foto altı boş kalıyordu.
+  var replyEl = buildReplyEl(r.merchantReply);
+  if (replyEl) {
+    replyEl.classList.add('ikr-review-gallery-reply');
+    reviewEl.appendChild(replyEl);
   }
 
   return reviewEl;

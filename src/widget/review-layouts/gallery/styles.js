@@ -95,6 +95,10 @@ export var GALLERY_CSS = '\
   .ikr-review-gallery-media{\
     cursor:zoom-in;\
   }\
+  /* Reply full-width: foto+metin altında her iki kolona yayılır */\
+  .ikr-review-gallery-reply{\
+    grid-column:1 / -1;\
+  }\
   .ikr-review-gallery-media img{\
     display:block;width:100%;height:auto;\
     aspect-ratio:3/4;object-fit:cover;\
