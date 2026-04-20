@@ -59,7 +59,7 @@ export var LIST_CSS = '\
     .ikr-review-list-body{order:5;margin-top:0;}\
     /* body sonrasi read-more body ile ayni bloga ait, hemen altinda kalir.\
        Order verilmezse default 0 olur ve listenin en basina cikar. */\
-    .ikr-review-list-content > .ikr-read-more{order:6;}\
+    .ikr-review-list-content > .ikr-read-more{order:6;margin-top:0;}\
     .ikr-review-list-media{order:7;justify-content:flex-start;}\
     .ikr-reply{order:8;}\
     .ikr-review-list-media img{max-width:160px;aspect-ratio:1/1;}\
