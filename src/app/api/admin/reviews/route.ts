@@ -91,6 +91,15 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Review ID is required' }, { status: 400 });
     }
 
+    // Mağaza yanıtı uzunluk sınırı — DB schema'da @db.VarChar(2000) ile ikinci
+    // savunma katmanı var, ama API'da erken hata daha temiz mesaj verir.
+    if (typeof merchantReply === 'string' && merchantReply.length > 2000) {
+      return NextResponse.json(
+        { error: 'Mağaza yanıtı 2000 karakteri aşamaz' },
+        { status: 400 }
+      );
+    }
+
     try {
       const updatedReview = await prisma.review.update({
         where: { id, storeId: user.merchantId },

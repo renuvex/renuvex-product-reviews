@@ -48,6 +48,7 @@ export function ReplyDialog({ open, review, onClose, onSubmit }: ReplyDialogProp
             placeholder="Yanıtınızı yazın..."
             value={text}
             onChange={(e) => setText(e.target.value)}
+            maxLength={2000}
             className="resize-none h-32 overflow-y-auto focus-visible:ring-0 focus-visible:ring-offset-0"
             style={{ borderColor: undefined }}
             onFocus={e => {
@@ -57,6 +58,9 @@ export function ReplyDialog({ open, review, onClose, onSubmit }: ReplyDialogProp
             }}
             onBlur={e => (e.currentTarget.style.borderColor = colors.borderDefault)}
           />
+          <div className="text-right" style={{ fontSize: typography.fontSize.sm, color: text.length >= 2000 ? colors.error : colors.textSecondary }}>
+            {text.length}/2000
+          </div>
         </div>
         <DialogFooter>
           <button style={componentStyles.btnDefault} onClick={onClose}>İptal</button>
