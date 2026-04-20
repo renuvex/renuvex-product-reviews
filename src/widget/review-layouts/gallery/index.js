@@ -61,21 +61,23 @@ export function render(r, allReviews) {
     body.textContent = comment;
     content.appendChild(body);
 
+    // Galeri'de inline expand masonry kolon dengesini bozar — onun yerine
+    // tıklayınca review modal açılır (foto + tam metin + diğer fotolar + yanıt).
+    // Loox/Judge.me/Yotpo standardı.
     var readMore = document.createElement('span');
     readMore.className = 'ikr-read-more';
     readMore.textContent = 'Devamını oku';
     readMore.style.display = 'none';
+    readMore.style.cursor = 'pointer';
+    readMore.onclick = function() {
+      var firstImg = (r.images && Array.isArray(r.images) && r.images.length) ? r.images[0] : null;
+      openReviewModal(r, firstImg, allReviews);
+    };
     content.appendChild(readMore);
 
     requestAnimationFrame(function() {
       if (body.scrollHeight > body.clientHeight + 2) {
         readMore.style.display = 'inline';
-        var expanded = false;
-        readMore.onclick = function() {
-          expanded = !expanded;
-          body.classList.toggle('ikr-body-clamped', !expanded);
-          readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
-        };
       }
     });
   }
