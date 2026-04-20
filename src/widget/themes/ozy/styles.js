@@ -46,11 +46,12 @@ export var CLASSIC_CSS = `
   #ikas-reviews-widget .ikr-review-gallery-body,
   #ikas-reviews-widget .ikr-review-gallery-title,
   #ikas-reviews-widget .ikr-review-gallery-author,
-  #ikas-reviews-widget .ikr-modal-body,
-  #ikas-reviews-widget .ikr-modal-title,
-  #ikas-reviews-widget .ikr-modal-author,
-  #ikas-reviews-widget .ikr-reply-text,
-  #ikas-reviews-widget .ikr-modal-reply-text{overflow-wrap:anywhere;}
+  #ikas-reviews-widget .ikr-reply-text{overflow-wrap:anywhere;}
+  /* Modal document.body'ye portal'lanır → widget scope'undan ÇIKAR. Global kural şart. */
+  .ikr-modal-body,
+  .ikr-modal-title,
+  .ikr-modal-author,
+  .ikr-modal-reply-text{overflow-wrap:anywhere;}
   .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:500;text-align:center;margin-bottom:12px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
 
   /* ─── SVG ICON WRAPPER ───────────────────────────────────────────────
