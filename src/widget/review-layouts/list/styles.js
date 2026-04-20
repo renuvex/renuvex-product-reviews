@@ -40,14 +40,25 @@ export var LIST_CSS = '\
     cursor:zoom-in;\
   }\
   @media (max-width:600px){\
+    /* Mobile sira: yildiz -> title -> yazar -> tarih -> body -> foto -> reply.\
+       reviewEl flex column olur; icindeki author/content/media grid item\
+       olmaktan cikip flex item olur. Content display:contents ile seffaflasinca\
+       head/title/body/reply child elemanlari da flex item olur -> tek seviyede\
+       order ile siralanir. DOM dokunulmaz. */\
     .ikr-review-list,\
     .ikr-review-list.ikr-review-list--no-media{\
-      grid-template-columns:1fr;\
-      gap:12px;padding:16px 0;\
+      display:flex;flex-direction:column;gap:8px;padding:16px 0;\
     }\
-    .ikr-review-list-author{flex-direction:row;align-items:center;gap:8px;}\
-    .ikr-review-list-head{flex-direction:column;align-items:flex-start;gap:6px;}\
-    .ikr-review-list-media{justify-content:flex-start;}\
+    .ikr-review-list-content{display:contents;}\
+    /* head de display:contents -> yildiz ve tarih ayri flex item olur, order alir */\
+    .ikr-review-list-head{display:contents;}\
+    .ikr-review-list-head-left{order:1;}\
+    .ikr-review-list-title{order:2;margin-top:0;}\
+    .ikr-review-list-author{order:3;flex-direction:row;align-items:center;gap:8px;}\
+    .ikr-review-list-head .ikr-date{order:4;}\
+    .ikr-review-list-body{order:5;margin-top:0;}\
+    .ikr-review-list-media{order:6;justify-content:flex-start;}\
+    .ikr-reply{order:7;}\
     .ikr-review-list-media img{max-width:160px;aspect-ratio:1/1;}\
   }\
 ';
