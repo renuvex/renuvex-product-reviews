@@ -44,7 +44,8 @@ export var GALLERY_CSS = '\
     page-break-inside:avoid;\
     display:grid;\
     grid-template-columns:1fr 120px;\
-    gap:32px;\
+    column-gap:32px;\
+    row-gap:16px;\
     align-items:start;\
     padding:18px 0;\
     margin:0;\
@@ -112,7 +113,7 @@ export var GALLERY_CSS = '\
     }\
     .ikr-review-gallery{\
       grid-template-columns:1fr 100px;\
-      gap:12px;padding:16px 0;\
+      column-gap:12px;row-gap:12px;padding:16px 0;\
     }\
     .ikr-review-gallery.ikr-review-gallery--no-media{\
       grid-template-columns:1fr;\
