@@ -76,6 +76,12 @@ export var GALLERY_CSS = '\
     font-size:var(--ikr-review-text-size,14px);\
     margin-top:2px;\
   }\
+  /* Mobile tap highlight'ı kaldır — modal açılırken görünür kalıyordu */\
+  .ikr-review-gallery .ikr-read-more{\
+    -webkit-tap-highlight-color:transparent;\
+    tap-highlight-color:transparent;\
+    user-select:none;-webkit-user-select:none;\
+  }\
   .ikr-review-gallery-media{\
     cursor:zoom-in;\
   }\
