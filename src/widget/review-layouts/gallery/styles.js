@@ -56,27 +56,28 @@ export var GALLERY_CSS = '\
   .ikr-review-gallery-content{\
     display:flex;flex-direction:column;min-width:0;\
   }\
-  /* Galeri dikey sıra: author → date → stars → title → body → reply.\
-     author→date (tight, aynı imza grubu); date→stars (normal, meta→rating);\
-     stars→title (normal); title→body (normal — bkz: gap sözleşmesi). */\
-  .ikr-review-gallery-author{\
-    font-weight:600;\
-    font-size:var(--ikr-author-size,14px);\
-    color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));\
-  }\
-  .ikr-review-gallery-date{\
-    font-size:var(--ikr-review-date-size,12px);\
-    color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,0.6)));\
-    margin-top:var(--ikr-gap-tight);\
-  }\
+  /* Galeri dikey sıra: stars → title → author → date → body → reply.\
+     stars→title (normal); title→author (normal); author→date (tight, aynı imza\
+     grubu); date→body (normal). Bkz: gap sözleşmesi. */\
   .ikr-review-gallery-stars{\
-    margin-top:var(--ikr-gap-normal);\
+    /* en üstte; margin yok */\
   }\
   .ikr-review-gallery-title{\
     font-weight:600;\
     font-size:var(--ikr-review-title-size,15px);\
     color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));\
     margin:var(--ikr-gap-normal) 0 0 0;\
+  }\
+  .ikr-review-gallery-author{\
+    font-weight:600;\
+    font-size:var(--ikr-author-size,14px);\
+    color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));\
+    margin-top:var(--ikr-gap-normal);\
+  }\
+  .ikr-review-gallery-date{\
+    font-size:var(--ikr-review-date-size,12px);\
+    color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,0.6)));\
+    margin-top:var(--ikr-gap-tight);\
   }\
   .ikr-review-gallery-body{\
     line-height:1.55;\

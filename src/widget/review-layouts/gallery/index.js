@@ -1,7 +1,7 @@
 // review-layouts/gallery/index.js — Loox tarzı 2-kolon galeri.
 // Item içi sol-sağ split: solda içerik, sağda foto.
-// Sol kolon dikey sıra: yazar → tarih → yıldız → title → metin → reply.
-// (Card'dan farklı: yıldız üstte değil, kişi-meta öncelikli — galeri kart hissi.)
+// Sol kolon dikey sıra: yıldız → title → yazar → tarih → metin → reply.
+// (Card ile aynı sıralama — sadece görsel layout farklı: 2-kolon masonry + sağ foto.)
 // Foto yoksa sol kolon tüm genişliği kullanır (no-media modifier).
 // Mobile'da da aynı split korunur — foto asla metnin üstüne çıkmaz.
 // Masonry için CSS columns parent'a (#ikas-reviews-widget) :has() ile uygulanır.
@@ -32,31 +32,31 @@ export function render(r, allReviews) {
   var content = document.createElement('div');
   content.className = 'ikr-review-gallery-content';
 
-  // 1) Yazar
-  var authorEl = document.createElement('div');
-  authorEl.className = 'ikr-review-gallery-author';
-  authorEl.textContent = r.author || '';
-  content.appendChild(authorEl);
-
-  // 2) Tarih
-  var dateEl = document.createElement('div');
-  dateEl.className = 'ikr-review-gallery-date';
-  dateEl.textContent = formatDate(r.createdAt);
-  content.appendChild(dateEl);
-
-  // 3) Yıldız
+  // 1) Yıldız
   var starsSpan = document.createElement('span');
   starsSpan.className = 'ikr-review-stars ikr-review-gallery-stars';
   starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
   content.appendChild(starsSpan);
 
-  // 4) Başlık
+  // 2) Başlık
   if (r.title) {
     var titleEl = document.createElement('div');
     titleEl.className = 'ikr-review-gallery-title';
     titleEl.textContent = r.title;
     content.appendChild(titleEl);
   }
+
+  // 3) Yazar
+  var authorEl = document.createElement('div');
+  authorEl.className = 'ikr-review-gallery-author';
+  authorEl.textContent = r.author || '';
+  content.appendChild(authorEl);
+
+  // 4) Tarih
+  var dateEl = document.createElement('div');
+  dateEl.className = 'ikr-review-gallery-date';
+  dateEl.textContent = formatDate(r.createdAt);
+  content.appendChild(dateEl);
 
   // Metin (clamp + devamını oku)
   var comment = (r.comment || '').trim();
