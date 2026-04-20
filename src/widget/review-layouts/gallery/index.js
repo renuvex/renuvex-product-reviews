@@ -8,6 +8,7 @@ import { starsHTML, formatDate, optimizeImageUrl } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { GALLERY_CSS } from './styles.js';
+import { buildReplyEl } from '../_shared.js';
 
 export var meta = {
   id: 'gallery',
@@ -86,22 +87,8 @@ export function render(r, allReviews) {
   }
 
   // Mağaza yanıtı
-  if (r.merchantReply) {
-    var replyEl = document.createElement('div');
-    replyEl.className = 'ikr-reply';
-    var replyHeader = document.createElement('div');
-    replyHeader.className = 'ikr-reply-header';
-    var replyLabel = document.createElement('span');
-    replyLabel.className = 'ikr-reply-label';
-    replyLabel.textContent = 'Mağaza Sahibi';
-    replyHeader.appendChild(replyLabel);
-    var replyText = document.createElement('div');
-    replyText.className = 'ikr-reply-text';
-    replyText.textContent = r.merchantReply;
-    replyEl.appendChild(replyHeader);
-    replyEl.appendChild(replyText);
-    content.appendChild(replyEl);
-  }
+  var replyEl = buildReplyEl(r.merchantReply);
+  if (replyEl) content.appendChild(replyEl);
 
   reviewEl.appendChild(content);
 
