@@ -10,7 +10,14 @@
 // metnin önüne geçmez — referans tutarlılığı).
 
 export var GALLERY_CSS = '\
+  /* Galeri seçiliyken widget full-bleed yerine 1200px ile sınırlı —\
+     CSS columns parent genişliğine yayıldığı için widget kendisi sınırlanmalı.\
+     Diğer layoutlar (card/list) full-bleed olarak kalır. */\
   #ikas-reviews-widget:has(.ikr-review-gallery){\
+    width:auto;\
+    max-width:1200px;\
+    margin-left:auto;\
+    margin-right:auto;\
     column-count:2;\
     column-gap:20px;\
   }\
