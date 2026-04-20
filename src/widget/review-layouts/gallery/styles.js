@@ -59,12 +59,12 @@ export var GALLERY_CSS = '\
   .ikr-review-gallery-head{\
     display:flex;align-items:center;justify-content:space-between;gap:8px;\
   }\
-  /* head→title (normal), title→author (normal), author→body (normal). */\
+  /* head→title (medium), title→author (normal), author→body (normal). */\
   .ikr-review-gallery-title{\
     font-weight:600;\
     font-size:var(--ikr-review-title-size,15px);\
     color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));\
-    margin:var(--ikr-gap-normal) 0 0 0;\
+    margin:var(--ikr-gap-medium) 0 0 0;\
   }\
   .ikr-review-gallery-author{\
     font-weight:600;\
