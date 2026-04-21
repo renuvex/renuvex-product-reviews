@@ -93,10 +93,6 @@ export function render(r, allReviews) {
     });
   }
 
-  // Mağaza yanıtı orta kolonun altında
-  var replyEl = buildReplyEl(r.merchantReply);
-  if (replyEl) contentCol.appendChild(replyEl);
-
   reviewEl.appendChild(contentCol);
 
   // ─── Sağ kolon: foto (ilk görsel) ───
@@ -112,6 +108,19 @@ export function render(r, allReviews) {
       mediaCol.appendChild(imgEl);
     }
     reviewEl.appendChild(mediaCol);
+  }
+
+  // Mağaza yanıtı — full-width, tüm satırın altında ayrı satırda.
+  // Orta kolonda kalınca media/no-media arası genişlik tutarsız oluyordu;
+  // grid-column:1/-1 ile her zaman tam satır geneline yayılır. Galeri ile
+  // tutarlı. "Devamını oku" -> modal (inline expand grid'i bozar).
+  var replyEl = buildReplyEl(r.merchantReply, function() {
+    var firstImg = (r.images && Array.isArray(r.images) && r.images.length) ? r.images[0] : null;
+    openReviewModal(r, firstImg, allReviews);
+  });
+  if (replyEl) {
+    replyEl.classList.add('ikr-review-list-reply');
+    reviewEl.appendChild(replyEl);
   }
 
   return reviewEl;
