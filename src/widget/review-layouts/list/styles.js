@@ -34,9 +34,6 @@ export var LIST_CSS = '\
   .ikr-review-list-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin:0;}\
   .ikr-review-list-body{margin-top:var(--ikr-gap-normal);line-height:1.6;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);}\
   .ikr-review-list-media{display:flex;justify-content:flex-end;}\
-  /* Reply full-width: grid satirinin altinda her iki/uc kolona yayilir.\
-     Boylece media olsun olmasin, reply hep ayni genislikte goksun. */\
-  .ikr-review-list-reply{grid-column:1 / -1;}\
   .ikr-review-list-media img{\
     width:100%;max-width:var(--ikr-list-photo-w,200px);aspect-ratio:3/4;object-fit:cover;\
     border-radius:var(--ikr-radius,6px);\
