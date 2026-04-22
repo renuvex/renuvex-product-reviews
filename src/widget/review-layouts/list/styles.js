@@ -62,7 +62,7 @@ export var LIST_CSS = '\
        reviewEl 8px gap sonrasi net 4px kalmasi icin -4px (galeri/card uyumu) */\
     .ikr-review-list-content > .ikr-read-more{order:6;margin-top:-4px;}\
     .ikr-review-list-media{order:7;justify-content:flex-start;}\
-    .ikr-reply{order:8;}\
+    .ikr-reply{order:8;width:100%;}\
     .ikr-review-list-media img{max-width:160px;aspect-ratio:1/1;}\
   }\
 ';
