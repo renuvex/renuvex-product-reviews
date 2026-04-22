@@ -148,3 +148,9 @@
 .ikr-settings-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgb(160 140 255);
 }
+
+/* Sonner toast — çok satırlı metinde ikon üste (ilk satır) hizalı kalır */
+[data-sonner-toast] [data-icon] {
+  align-self: flex-start;
+  margin-top: 2px;
+}
