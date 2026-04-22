@@ -68,7 +68,7 @@ var SIZE_PRESETS = {
   },
 };
 
-var THUMBNAIL_PRESETS = { small: 60, medium: 90, large: 120 };
+var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
 
 function applyManualTheme(root, settings) {
   var bg = settings.bgColor || '#ffffff';

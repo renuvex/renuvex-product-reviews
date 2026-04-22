@@ -15,9 +15,9 @@ export var meta = {
   // Kart içi fotoğraflar genel boyut ayarıyla orantılı büyür (--ikr-card-photo-w).
   // Thumbnail boyutu kontrolü yalnızca fotoğraf şeridini (photo strip) etkiler.
   sizeOverrides: {
-    small:  { '--ikr-card-photo-w': '60px' },
-    medium: { '--ikr-card-photo-w': '90px' },
-    large:  { '--ikr-card-photo-w': '120px' },
+    small:  { '--ikr-card-photo-w': '80px' },
+    medium: { '--ikr-card-photo-w': '110px' },
+    large:  { '--ikr-card-photo-w': '140px' },
   },
 };
 
