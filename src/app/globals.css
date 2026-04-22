@@ -156,4 +156,5 @@
 }
 [data-sonner-toast] [data-icon] {
   margin-top: 4px; /* 14px font (20px line-height) ile optik merkezleme */
+  margin-right: 0 !important; /* Sonner'ın varsayılan +4px'liğini sıfırla, sade 6px gap kalsın */
 }
