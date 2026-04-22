@@ -153,6 +153,7 @@
    Hem ikon hem metin content alanının üstünden başlar. */
 [data-sonner-toast] {
   align-items: flex-start !important;
+  gap: 4px !important;
 }
 [data-sonner-toast] [data-icon] {
   margin-top: 4px;
