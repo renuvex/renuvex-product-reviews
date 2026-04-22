@@ -155,8 +155,8 @@
   align-items: flex-start !important;
 }
 [data-sonner-toast] [data-icon] {
-  margin-top: 4px; /* 14px font (20px line-height) ile optik merkezleme */
-  margin-right: 0 !important; /* Sonner'ın varsayılan +4px'liğini sıfırla, sade 6px gap kalsın */
-  width: 18px !important;
-  height: 18px !important;
+  margin-top: 4px;
+  margin-right: 0 !important;
+  width: 14px !important;
+  height: 14px !important;
 }
