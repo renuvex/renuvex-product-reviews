@@ -170,7 +170,10 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const saveSettings = async (widgetId: string, widgetSettings: Record<string, unknown>) => {
     try {
       await axios.put('/api/admin/settings', { widgetId, settings: widgetSettings }, { headers: await freshAuthHeader(token) });
-      toast.success('Ayarlar başarıyla kaydedildi.');
+      toast.success('Kaydetme başarılı! Değişiklikleriniz sitenize birkaç dakika içinde yansıtılacaktır.', {
+        style: { background: '#16a34a', color: '#fff' },
+        iconTheme: { primary: '#fff', secondary: '#16a34a' },
+      });
     } catch {
       toast.error('Ayarlar kaydedilirken bir hata oluştu.');
       throw new Error('save_failed');
