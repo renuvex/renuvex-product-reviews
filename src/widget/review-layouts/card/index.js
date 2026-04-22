@@ -12,9 +12,8 @@ import { buildReplyEl } from '../_shared.js';
 export var meta = {
   id: 'card',
   name: 'Kart (Varsayılan)',
-  // Kart içi fotoğraflar genel boyut ayarıyla orantılı büyür.
-  // Thumbnail boyutu kontrolü fotoğraf şeridine (photo strip) ayrıldı.
-  supports: { thumbnailSize: false },
+  // Kart içi fotoğraflar genel boyut ayarıyla orantılı büyür (--ikr-card-photo-w).
+  // Thumbnail boyutu kontrolü yalnızca fotoğraf şeridini (photo strip) etkiler.
   sizeOverrides: {
     small:  { '--ikr-card-photo-w': '60px' },
     medium: { '--ikr-card-photo-w': '90px' },
