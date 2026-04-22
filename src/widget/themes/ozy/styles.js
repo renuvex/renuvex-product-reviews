@@ -174,8 +174,6 @@ export var CLASSIC_CSS = `
 
   /* Fotoğraflı Yorumlar bölümü */
   .ikr-photo-section{margin-bottom:24px;}
-  .ikr-photo-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-  .ikr-photo-section-title{font-size:14px;font-weight:600;color:var(--ikr-photo-title,var(--ikr-text,rgba(0,0,0,1)));}
   .ikr-photo-strip-wrap{position:relative;}
   .ikr-photo-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
   .ikr-photo-strip::-webkit-scrollbar{display:none;}
@@ -255,8 +253,6 @@ export var CLASSIC_CSS = `
   .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;}
   .ikr-modal-wrap{position:relative;width:100%;max-width:813px;}
   .ikr-photo-section{margin:24px 0 32px;padding:0 4px;display:block;}
-  .ikr-photo-section-header{margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
-  .ikr-photo-section-title{font-size:var(--ikr-photo-title-size,16px);font-weight:600;color:var(--ikr-text,#121926);}
   .ikr-photo-strip-container{position:relative;margin:0 -4px;}
   .ikr-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .ikr-photo-strip::-webkit-scrollbar{display:none;}
