@@ -171,8 +171,8 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     try {
       await axios.put('/api/admin/settings', { widgetId, settings: widgetSettings }, { headers: await freshAuthHeader(token) });
       toast.success('Kaydetme başarılı! Değişiklikleriniz sitenize birkaç dakika içinde yansıtılacaktır.', {
-        style: { background: '#16a34a', color: '#fff' },
-        iconTheme: { primary: '#fff', secondary: '#16a34a' },
+        style: { background: '#12B76A', color: '#fff' },
+        iconTheme: { primary: '#fff', secondary: '#12B76A' },
       });
     } catch {
       toast.error('Ayarlar kaydedilirken bir hata oluştu.');
