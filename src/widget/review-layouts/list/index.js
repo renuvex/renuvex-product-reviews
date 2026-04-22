@@ -13,7 +13,7 @@ export var meta = {
   id: 'list',
   name: 'Liste',
   // Bkz: review-layouts/index.js — supports sözleşmesi.
-  supports: { thumbnailSize: false },
+  supports: {},
   // Foto kolonu genel size ayarıyla orantılı büyüsün — küçük yazıda büyük foto
   // patlamasın, büyük yazıda foto sönük kalmasın. Card'ın bağımsız thumbnail
   // ayarı var; list/gallery için tek genel size kontrolü yeter.
