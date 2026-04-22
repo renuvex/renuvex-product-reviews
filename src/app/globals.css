@@ -155,5 +155,5 @@
   align-items: flex-start !important;
 }
 [data-sonner-toast] [data-icon] {
-  margin-top: 2px; /* 16px ikon ile 20px line-height optik hizalama */
+  margin-top: 4px; /* 14px font (20px line-height) ile optik merkezleme */
 }
