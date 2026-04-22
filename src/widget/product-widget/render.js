@@ -483,16 +483,6 @@ export async function render(productId, settings, reviewsData, productName, orde
         var photoSection = document.createElement('div');
         photoSection.className = 'ikr-photo-section';
 
-        var photoHeader = document.createElement('div');
-        photoHeader.className = 'ikr-photo-section-header';
-
-        var photoTitle = document.createElement('span');
-        photoTitle.className = 'ikr-photo-section-title';
-        photoTitle.textContent = 'Fotoğraflı Yorumlar';
-
-        photoHeader.appendChild(photoTitle);
-        photoSection.appendChild(photoHeader);
-
         var photoStrip = document.createElement('div');
         photoStrip.className = 'ikr-photo-strip';
 
