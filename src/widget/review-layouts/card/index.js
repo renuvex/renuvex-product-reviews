@@ -12,6 +12,14 @@ import { buildReplyEl } from '../_shared.js';
 export var meta = {
   id: 'card',
   name: 'Kart (Varsayılan)',
+  // Kart içi fotoğraflar genel boyut ayarıyla orantılı büyür.
+  // Thumbnail boyutu kontrolü fotoğraf şeridine (photo strip) ayrıldı.
+  supports: { thumbnailSize: false },
+  sizeOverrides: {
+    small:  { '--ikr-card-photo-w': '60px' },
+    medium: { '--ikr-card-photo-w': '90px' },
+    large:  { '--ikr-card-photo-w': '120px' },
+  },
 };
 
 // Layout-spesifik CSS yok — base styles.js (.ikr-review*) zaten card tasarımını veriyor.
