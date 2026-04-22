@@ -18,9 +18,9 @@ export var meta = {
   // patlamasın, büyük yazıda foto sönük kalmasın. Card'ın bağımsız thumbnail
   // ayarı var; list/gallery için tek genel size kontrolü yeter.
   sizeOverrides: {
-    small:  { '--ikr-list-photo-w': '140px' },
-    medium: { '--ikr-list-photo-w': '200px' },
-    large:  { '--ikr-list-photo-w': '260px' },
+    small:  { '--ikr-list-photo-w': '100px' },
+    medium: { '--ikr-list-photo-w': '140px' },
+    large:  { '--ikr-list-photo-w': '180px' },
   },
 };
 
