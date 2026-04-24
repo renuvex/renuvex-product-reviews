@@ -79,8 +79,8 @@ export function render(opts) {
 
   var right = document.createElement('div');
   right.className = 'ikr-split-col ikr-split-right';
-  if (filterWrap) right.appendChild(filterWrap);
   if (writeBtn) right.appendChild(writeBtn);
+  if (filterWrap) right.appendChild(filterWrap);
   summary.appendChild(right);
 
   // Tavsiye yüzdesi (opsiyonel) — sol kolonun altına eklensin

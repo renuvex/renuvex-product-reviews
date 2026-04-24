@@ -42,13 +42,22 @@ export var SPLIT_CSS = `
   .ikr-split-right .ikr-filter-wrap{align-self:auto;}
 
   @media(max-width:768px){
-    /* Mobile: 3 kolon alt alta */
+    /* Mobile: split'i tamamen classic davranisina dondur. Base .ikr-summary
+       zaten flex column + center; split-spesifik override'lari sifirlariz.
+       Boylece mobile'da split = classic gorunum (sol blok center, bar chart
+       center, actions classic-style). */
     .ikr-summary-split{
-      flex-direction:column;align-items:center;gap:16px;padding:12px 0;
+      flex-direction:column;align-items:center;justify-content:flex-start;
+      gap:0;padding:0;
     }
-    .ikr-split-col{width:100%;}
-    .ikr-split-mid .ikr-summary-bars{max-width:100%;}
-    .ikr-split-right{min-width:0;}
-    .ikr-split-right .ikr-filter-wrap{align-self:flex-end;}
+    .ikr-split-col{width:auto;align-items:center;}
+    /* Sol blok center hizalama (sol hizalamayi mobile'da kaldir) */
+    .ikr-split-left{text-align:center;align-items:center;}
+    .ikr-split-left .ikr-split-left-avg-block{align-self:center;}
+    /* Orta bar chart center */
+    .ikr-split-mid{align-items:center;}
+    .ikr-split-mid .ikr-summary-bars{max-width:var(--ikr-summary-max,340px);margin:0 auto;}
+    /* Sag classic-style: yatay write + filter (zaten yatay), tam genislik */
+    .ikr-split-right{width:100%;justify-content:center;}
   }
 `;
