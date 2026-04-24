@@ -47,7 +47,10 @@ export var GALLERY_CSS = `
     column-gap:32px;
     row-gap:8px;
     align-items:start;
-    padding:18px 0;
+    /* Yan padding theme mobile bloğundan gelir (--ikr-pad-review-mobile).
+       Shorthand yan padding'i 0'a resetleyip theme kuralını ezmesin diye
+       top/bottom ayrı set. */
+    padding-top:18px;padding-bottom:18px;
     margin:0;
     border-top:1px solid var(--ikr-review-border,var(--ikr-separator,rgba(0,0,0,0.08)));
   }

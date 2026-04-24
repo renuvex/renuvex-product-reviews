@@ -190,7 +190,10 @@ export var CLASSIC_CSS = `
   @media(max-width:600px){.ikr-photo-strip-arrow{display:none;}}
 
   /* Yorumlar */
-  .ikr-review{padding:20px 0;border-bottom:1px solid var(--ikr-review-border,var(--ikr-separator,rgba(0,0,0,0.08)));}
+  /* Card review item — yan padding mobile'da --ikr-pad-review-mobile uzerinden
+     (mobile bloğunda set edilir). Burada sadece top/bottom; shorthand yerine
+     ayrı property ki mobile yan override'ı specificity savaşında kaybetmesin. */
+  .ikr-review{padding-top:20px;padding-bottom:20px;border-bottom:1px solid var(--ikr-review-border,var(--ikr-separator,rgba(0,0,0,0.08)));}
   .ikr-review-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
   .ikr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .ikr-review-stars{display:inline-flex;gap:2px;align-items:center;}

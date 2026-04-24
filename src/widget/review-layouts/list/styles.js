@@ -14,7 +14,10 @@ export var LIST_CSS = `
     grid-template-columns:140px 1fr var(--ikr-list-photo-w,200px);
     gap:24px;
     align-items:start;
-    padding:24px 0;
+    /* Yan padding theme mobile bloğundan gelir (--ikr-pad-review-mobile).
+       Shorthand padding:24px 0 yan padding'i 0'a resetler ve theme kuralını
+       specifity savaşında ezer. Sadece top/bottom ayrı set. */
+    padding-top:24px;padding-bottom:24px;
     border-top:1px solid var(--ikr-review-border,var(--ikr-separator,rgba(0,0,0,0.08)));
     border-bottom:none;
   }
