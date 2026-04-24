@@ -51,11 +51,10 @@ export var SPLIT_CSS = `
     /* Orta: bar chart sola hizali. align-items:stretch sart -
        flex-start ile child width:auto'ya duser ve track'ler buzusur. */
     .ikr-split-mid{flex:1 1 auto;align-items:stretch;}
-    /* Split desktop'ta bar chart classic'teki 340px sınırının üzerine çıkar;
-       split'in 3 kolon düzeninde mid kolon geniş alana yayıldığı için
-       340px dar kalıyor, 480px okunabilirliği bozmadan sağı doldurur. */
+    /* Split desktop'ta bar chart mid kolonun tamamını kullanir - test.
+       Classic'teki 340px siniri yok, .ikr-summary-block max-width'i ezilir. */
     .ikr-split-mid .ikr-summary-bars{
-      max-width:480px;width:100%;margin:0;
+      max-width:none;width:100%;margin:0;
     }
 
     /* Sag: write + filter yan yana */
