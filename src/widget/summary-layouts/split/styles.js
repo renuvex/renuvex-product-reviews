@@ -32,7 +32,7 @@ export var SPLIT_CSS = `
     }
 
     /* Sol: avg (buyuk yildiz + sayi) -> sayi -> tavsiye, sol hizali */
-    .ikr-split-left{flex:0 0 auto;gap:6px;text-align:left;align-items:flex-start;}
+    .ikr-split-left{flex:0 0 auto;gap:12px;text-align:left;align-items:flex-start;}
     .ikr-split-left .ikr-split-left-avg-block{align-self:flex-start;margin:0;}
     .ikr-split-left-count{
       font-size:var(--ikr-review-count-size,16px);
