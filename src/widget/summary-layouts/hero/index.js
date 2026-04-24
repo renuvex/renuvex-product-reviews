@@ -10,7 +10,6 @@ import { HERO_CSS } from './styles.js';
 export var meta = {
   id: 'hero',
   name: 'Vurgulu (Büyük Puan)',
-  defaultTitle: '',
   // Bkz: review-layouts/index.js ve summary-layouts/index.js — supports sözleşmesi.
   supports: { recommendation: false, barChart: false },
 };

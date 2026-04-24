@@ -12,7 +12,6 @@ import { MINIMAL_CSS } from './styles.js';
 export var meta = {
   id: 'minimal',
   name: 'Minimal (Yalın)',
-  defaultTitle: '',
   // Bkz: review-layouts/index.js ve summary-layouts/index.js — supports sözleşmesi.
   supports: { recommendation: false, barChart: false },
 };
