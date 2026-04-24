@@ -40,8 +40,9 @@ export var SPLIT_CSS = `
       font-weight:400;
     }
 
-    /* Orta: bar chart sola hizali */
-    .ikr-split-mid{flex:1 1 auto;align-items:flex-start;}
+    /* Orta: bar chart sola hizali. align-items:stretch sart -
+       flex-start ile child width:auto'ya duser ve track'ler buzusur. */
+    .ikr-split-mid{flex:1 1 auto;align-items:stretch;}
     .ikr-split-mid .ikr-summary-bars{
       max-width:var(--ikr-summary-max,340px);width:100%;margin:0;
     }
