@@ -52,7 +52,7 @@ export var CLASSIC_CSS = `
      NOT: 100vw scrollbar'ı hesaba katmaz — scroll varsa margin-left yerine
      parent.getBoundingClientRect() ile runtime düzeltme de yapılabilir, ama
      genelde bu kural yeterli. */
-  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-widget-bg,var(--ikr-bg,transparent));border:1px solid var(--ikr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;}
+  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-widget-bg,var(--ikr-bg,transparent));border:1px solid var(--ikr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;--ikr-pad-summary-mobile:4px;--ikr-pad-review-mobile:8px;}
   /* Doğrudan widget çocukları — inner wrap (1200px ortalı). Summary'deki
      3 sütun (puan + bars + buton) max boyutlarda ancak ~1030px tutuyor,
      1200px tavan wrap riskini pratik olarak sıfırlar. */
@@ -310,10 +310,22 @@ export var CLASSIC_CSS = `
     .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
-    /* Mobile'da yan padding 16->8: viewport'a daha yakin tam-ekran his
-       (Loox/Yotpo standardi). Top/bottom 40px korunur, flow boslugu degismez. */
-    #ikas-reviews-widget{padding-left:8px;padding-right:8px;}
-    .ikr-summary{padding:16px;gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
+    /* Mobile'da yan padding bagimsiz: summary ve review listesi ayri
+       CSS degiskenleri uzerinden. Root frame padding 0 olur, her blok
+       kendi yan bosluklarini verir.
+       --ikr-pad-summary-mobile: summary bloklari (classic/split/compact/hero/minimal)
+       --ikr-pad-review-mobile:  yorum listesi container'i (#ikas-reviews)
+       Ileride admin panelinden degistirmek icin: settings -> CSS variable. */
+    #ikas-reviews-widget{padding-left:0;padding-right:0;}
+    /* Summary yan padding'i .ikr-summary mobile bloguna eklendi (--ikr-pad-summary-mobile) */
+    /* Review listesi container yan padding'i: */
+    #ikas-reviews{
+      padding-left:var(--ikr-pad-review-mobile);
+      padding-right:var(--ikr-pad-review-mobile);
+      box-sizing:border-box;
+    }
+    /* Yan padding --ikr-pad-summary-mobile uzerinden; top/bottom 16px sabit */
+    .ikr-summary{padding:16px var(--ikr-pad-summary-mobile);gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
     /* Gallery — fotoğraflı yorumlar strip'i mantığı: flex-wrap:nowrap +
