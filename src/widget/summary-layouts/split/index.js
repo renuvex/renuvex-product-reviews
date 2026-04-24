@@ -8,7 +8,6 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { toggleWriteAccordion } from '../shared/write-toggle.js';
-import { partialStarsHTML } from '../../core/helpers.js';
 import { SPLIT_CSS } from './styles.js';
 
 export var meta = {
@@ -34,19 +33,17 @@ export function render(opts) {
   var summary = document.createElement('div');
   summary.className = 'ikr-summary ikr-summary-split';
 
-  // ─── SOL: yıldızlar + ortalama + toplam ───────────────────────
+  // ─── SOL: tek büyük yıldız + avg yan yana, altında sayı + tavsiye ───
+  // Classic layout ile aynı avg pattern (büyük dolu yıldız + büyük puan).
   var left = document.createElement('div');
   left.className = 'ikr-split-col ikr-split-left';
 
-  var stars = document.createElement('div');
-  stars.className = 'ikr-split-left-stars';
-  stars.innerHTML = partialStarsHTML(avgRatingVal, iconPair);
-  left.appendChild(stars);
-
-  var avg = document.createElement('div');
-  avg.className = 'ikr-split-left-avg';
-  avg.textContent = avgRatingVal + ' / 5';
-  left.appendChild(avg);
+  var avgBlock = document.createElement('div');
+  avgBlock.className = 'ikr-summary-block ikr-summary-avg ikr-split-left-avg-block';
+  avgBlock.innerHTML =
+    '<span class="ikr-avg-star ikr-icon">' + iconPair.filled + '</span>' +
+    '<span class="ikr-avg-num">' + avgRatingVal + '</span>';
+  left.appendChild(avgBlock);
 
   var count = document.createElement('div');
   count.className = 'ikr-split-left-count';

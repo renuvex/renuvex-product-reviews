@@ -16,20 +16,10 @@ export var SPLIT_CSS = `
     min-width:0;
   }
 
-  /* Sol: yildiz -> avg -> sayi -> tavsiye, sol hizali alt alta */
+  /* Sol: avg (buyuk yildiz + sayi yan yana) -> sayi -> tavsiye, sol hizali */
   .ikr-split-left{flex:0 0 auto;gap:6px;text-align:left;align-items:flex-start;}
-  .ikr-split-left-stars{
-    display:inline-flex;gap:2px;
-    color:var(--ikr-review-star-color,#f59e0b);
-  }
-  .ikr-split-left-stars .ikr-icon{
-    width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);
-  }
-  .ikr-split-left-avg{
-    font-size:var(--ikr-review-count-size,16px);
-    color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));
-    font-weight:500;
-  }
+  /* Sol blok icindeyken avg-block soldan baslasin (base center'i ezer) */
+  .ikr-split-left .ikr-split-left-avg-block{align-self:flex-start;margin:0;}
   .ikr-split-left-count{
     font-size:var(--ikr-review-count-size,16px);
     color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));
