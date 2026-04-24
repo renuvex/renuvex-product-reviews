@@ -1,9 +1,9 @@
 // summary-layouts/split/styles.js
 // Desktop-first override: split-spesifik tum CSS sadece >=769px'te aktif.
-// Mobile (<=768px) hicbir override almaz -> base .ikr-summary (classic) gorunum
-// otomatik gecerli olur. Bu yuzden split mobile = classic mobile, birebir ayni.
-// Tek istisna: .ikr-split-col wrapper'lari mobile'da display:contents ile
-// seffaflasir, cocuklar dogrudan summary'nin grid item'i gibi davranir.
+// Mobile (<=768px) split-col wrapper'lari display:contents ile seffaflasir
+// -> base .ikr-summary (classic) gorunum otomatik gecerli olur.
+// KRITIK: display:contents kurali MUTLAKA medya sorgusu icinde olmali; aksi
+// halde desktop'ta da uygulanir ve flex:1 1 auto cocuklarini bozar.
 
 export var SPLIT_CSS = `
   .ikr-title-split{text-align:center;}
@@ -12,10 +12,12 @@ export var SPLIT_CSS = `
      (cocuklar dogrudan summary'nin child'i olur). Sag wrapper kalir ve
      classic'in .ikr-summary-actions wrapper'iyla ayni davranisi alir
      (flex row + width 100%) — write-btn yan yana filter ile durur. */
-  .ikr-split-left,.ikr-split-mid{display:contents;}
-  .ikr-split-right{
-    display:flex;flex-direction:row;align-items:center;
-    gap:var(--ikr-col-gap,8px);width:100%;padding:3px 6px;box-sizing:border-box;
+  @media(max-width:768px){
+    .ikr-split-left,.ikr-split-mid{display:contents;}
+    .ikr-split-right{
+      display:flex;flex-direction:row;align-items:center;
+      gap:var(--ikr-col-gap,8px);width:100%;padding:3px 6px;box-sizing:border-box;
+    }
   }
 
   /* Desktop-only: split'in 3-kolon yatay tasarimi sadece >=769px'te aktif.
