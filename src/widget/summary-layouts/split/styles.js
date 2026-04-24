@@ -36,11 +36,9 @@ export var SPLIT_CSS = `
     /* Sol: avg (buyuk yildiz + sayi) -> sayi -> tavsiye, sol hizali */
     .ikr-split-left{flex:0 0 auto;gap:12px;text-align:left;align-items:flex-start;}
     .ikr-split-left .ikr-split-left-avg-block{align-self:flex-start;margin:0;}
-    .ikr-split-left-count{
-      font-size:var(--ikr-review-count-size,16px);
-      color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));
-      font-weight:400;
-    }
+    /* Count classic .ikr-summary-count kullanir (font-size/weight/color
+       oradan gelir). Burada sadece sola yaslama override. */
+    .ikr-split-left .ikr-split-left-count{align-self:flex-start;text-align:left;}
 
     /* Orta: bar chart sola hizali. align-items:stretch sart -
        flex-start ile child width:auto'ya duser ve track'ler buzusur. */

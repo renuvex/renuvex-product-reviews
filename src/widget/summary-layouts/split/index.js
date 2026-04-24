@@ -46,7 +46,9 @@ export function render(opts) {
   left.appendChild(avgBlock);
 
   var count = document.createElement('div');
-  count.className = 'ikr-split-left-count';
+  // Classic ile birebir ayni tipografi icin .ikr-summary-count kullanilir.
+  // Boyut/renk/weight degisiklikleri otomatik split'e de yansir — tek kaynak.
+  count.className = 'ikr-summary-block ikr-summary-count ikr-split-left-count';
   count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
   left.appendChild(count);
 
