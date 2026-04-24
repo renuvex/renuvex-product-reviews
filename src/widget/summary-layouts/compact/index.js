@@ -13,6 +13,12 @@ import { COMPACT_CSS } from './styles.js';
 export var meta = {
   id: 'compact',
   name: 'Kompakt (Açılır)',
+  // Trigger yıldızı global size ayarına bağlı, bar-label-size'den bağımsız.
+  sizeOverrides: {
+    small:  { '--ikr-compact-star-size': '20px' },
+    medium: { '--ikr-compact-star-size': '24px' },
+    large:  { '--ikr-compact-star-size': '28px' },
+  },
 };
 
 export var css = COMPACT_CSS;
