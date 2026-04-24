@@ -310,9 +310,9 @@ export var CLASSIC_CSS = `
     .ikr-modal-close-mobile{display:flex;}
   }
   @media(max-width:600px){
-    /* Mobile'da yan padding 16->8: viewport'a daha yakin tam-ekran his
+    /* Mobile'da yan padding 16->12: viewport'a daha yakin tam-ekran his
        (Loox/Yotpo standardi). Top/bottom 40px korunur, flow boslugu degismez. */
-    #ikas-reviews-widget{padding-left:8px;padding-right:8px;}
+    #ikas-reviews-widget{padding-left:12px;padding-right:12px;}
     .ikr-summary{padding:16px;gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
