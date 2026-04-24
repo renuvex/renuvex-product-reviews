@@ -48,10 +48,16 @@ export var SPLIT_CSS = `
        child'i gibi davranir. Padding/gap/hizalama base .ikr-summary'den gelir. */
     .ikr-summary-split{display:flex;flex-direction:column;align-items:center;
       justify-content:flex-start;gap:0;padding:0;max-width:none;width:100%;}
-    .ikr-split-col{display:contents;}
-    /* Sol-blok ozel hizalama override'lari mobile'da sifirla — base center alsin */
+    /* Sol ve orta wrapper'lari seffaflastir; sag wrapper kalir cunku
+       write-btn (flex:1 1 auto) + filter-wrap (flex:0 0 col-count) icin
+       bir flex-row container'a ihtiyac var. Aksi halde write-btn icerik
+       kadar buzusur ve filter alta duser. */
+    .ikr-split-left,.ikr-split-mid{display:contents;}
+    .ikr-split-right{
+      display:flex;flex-direction:row;align-items:center;
+      gap:var(--ikr-col-gap,8px);width:100%;padding:3px 6px;box-sizing:border-box;
+    }
     .ikr-split-left-avg-block{align-self:center;margin:0 auto;}
-    /* Bar chart classic gibi center */
     .ikr-summary-split .ikr-summary-bars{max-width:var(--ikr-summary-max,340px);margin:0 auto;}
   }
 `;
