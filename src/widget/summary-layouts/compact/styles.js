@@ -50,7 +50,8 @@ export var COMPACT_CSS = `
   .ikr-compact-actions-slot{
     flex:0 0 auto;display:flex;align-items:center;gap:var(--ikr-col-gap,8px);
   }
-  .ikr-compact-actions-slot .ikr-filter-wrap{flex:0 0 auto;}
+  /* filter-wrap basis'i (--ikr-col-count, 60px) global tanimli — diger summary
+     layoutlariyla ayni buton arasi gorsel gap icin override'i kaldirdik. */
   .ikr-compact-actions-slot .ikr-write-btn{flex:0 0 auto;}
 
   /* Mobile-only write satırı */
