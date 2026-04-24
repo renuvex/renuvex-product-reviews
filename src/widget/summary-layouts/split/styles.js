@@ -16,8 +16,8 @@ export var SPLIT_CSS = `
     min-width:0;
   }
 
-  /* Sol: ortalama puan + yıldızlar + toplam yorum */
-  .ikr-split-left{flex:0 0 auto;gap:6px;text-align:center;}
+  /* Sol: yildiz -> avg -> sayi -> tavsiye, sol hizali alt alta */
+  .ikr-split-left{flex:0 0 auto;gap:6px;text-align:left;align-items:flex-start;}
   .ikr-split-left-stars{
     display:inline-flex;gap:2px;
     color:var(--ikr-review-star-color,#f59e0b);
@@ -36,24 +36,20 @@ export var SPLIT_CSS = `
     font-weight:400;
   }
 
-  /* Orta: bar chart — kendi max-width'i (340px) korunur */
+  /* Orta: bar chart — sola hizali (margin:0 auto kaldirildi) */
   .ikr-split-mid{
-    flex:1 1 auto;align-items:stretch;
+    flex:1 1 auto;align-items:flex-start;
   }
   .ikr-split-mid .ikr-summary-bars{
-    max-width:var(--ikr-summary-max,340px);width:100%;margin:0 auto;
+    max-width:var(--ikr-summary-max,340px);width:100%;margin:0;
   }
 
-  /* Sağ: filter + write dikey */
+  /* Sag: filter + write yan yana */
   .ikr-split-right{
-    flex:0 0 auto;gap:8px;align-items:stretch;min-width:160px;
+    flex:0 0 auto;flex-direction:row;align-items:center;gap:8px;
   }
-  .ikr-split-right .ikr-write-btn{
-    width:100%;flex:0 0 auto;
-  }
-  .ikr-split-right .ikr-filter-wrap{
-    align-self:flex-end;
-  }
+  .ikr-split-right .ikr-write-btn{flex:0 0 auto;}
+  .ikr-split-right .ikr-filter-wrap{align-self:auto;}
 
   @media(max-width:768px){
     /* Mobile: 3 kolon alt alta */
