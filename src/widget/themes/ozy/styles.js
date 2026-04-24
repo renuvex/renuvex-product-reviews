@@ -150,10 +150,13 @@ export var CLASSIC_CSS = `
   .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
   .ikr-bar-count{flex:0 0 var(--ikr-col-count);white-space:nowrap;text-align:right;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
 
-  /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında */
+  /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında.
+     Padding yok ki wrapper tam 340px kullansin; bar chart ile kenar hizasi
+     tutsun. Bar row'un kendi 3px 6px padding'i hover alani icin, actions'in
+     buna ihtiyaci yok. */
   .ikr-summary-actions{
     display:flex;flex-direction:row;align-items:center;gap:var(--ikr-col-gap);
-    padding:3px 6px;box-sizing:border-box;
+    box-sizing:border-box;
   }
   .ikr-write-btn{flex:1 1 auto;min-width:0;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:12px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:400;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
   .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-end;}
