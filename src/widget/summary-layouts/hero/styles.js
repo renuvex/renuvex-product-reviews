@@ -43,13 +43,18 @@ export var HERO_CSS = `
     .ikr-summary-hero{
       flex-wrap:wrap;gap:16px;
     }
-    .ikr-hero-info{flex:1 1 auto;gap:12px;}
+    .ikr-hero-info{flex:1 1 100%;gap:12px;}
     .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,64px) * 0.75);}
     .ikr-hero-meta{flex-direction:column;align-items:flex-start;gap:4px;}
-    .ikr-hero-actions{flex:0 0 auto;}
-    .ikr-hero-actions .ikr-write-btn{display:none;}
-    .ikr-hero-write-row{display:flex;width:100%;}
-    .ikr-hero-write-row .ikr-write-btn{flex:1 1 auto;justify-content:center;}
+    /* Write + filter tek satirda alt satira dusar, write full-genislik buyur,
+       filter sagda ikon kutusu olarak kalir. Minimal ile ayni pattern. */
+    .ikr-hero-actions{
+      flex:1 1 100%;width:100%;
+    }
+    .ikr-hero-actions .ikr-write-btn{flex:1 1 auto;justify-content:center;}
+    .ikr-hero-actions .ikr-filter-wrap{flex:0 0 auto;}
+    /* Eski mobile write-row artik gerekmez — actions zaten tam satirda */
+    .ikr-hero-write-row{display:none;}
   }
   @media(min-width:601px){
     .ikr-hero-write-row{display:none;}
