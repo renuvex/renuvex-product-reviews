@@ -51,7 +51,7 @@ export function render(opts) {
 
   var count = document.createElement('div');
   count.className = 'ikr-minimal-count';
-  count.textContent = allCount.toLocaleString('tr-TR') + ' yorum üzerinden';
+  count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
   info.appendChild(count);
 
   summary.appendChild(info);

@@ -47,7 +47,7 @@ export function render(opts) {
 
   var count = document.createElement('div');
   count.className = 'ikr-hero-count';
-  count.textContent = allCount.toLocaleString('tr-TR') + ' yorum üzerinden';
+  count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
   metaCol.appendChild(count);
 
   info.appendChild(metaCol);
