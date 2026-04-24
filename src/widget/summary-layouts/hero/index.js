@@ -12,7 +12,7 @@ export var meta = {
   name: 'Vurgulu (Büyük Puan)',
   defaultTitle: '',
   // Bkz: review-layouts/index.js ve summary-layouts/index.js — supports sözleşmesi.
-  supports: { title: false, recommendation: false, barChart: false },
+  supports: { title: true, recommendation: false, barChart: false },
 };
 
 export var css = HERO_CSS;
