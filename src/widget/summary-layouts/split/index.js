@@ -90,7 +90,6 @@ export function render(opts) {
     if (recommendPct > 0) {
       var rec = document.createElement('div');
       rec.className = 'ikr-summary-block ikr-summary-recommend';
-      rec.style.marginTop = '4px';
       rec.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
       left.appendChild(rec);
     }
