@@ -133,7 +133,7 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'color', key: 'btnBgColor',          label: 'Yorum Yaz / Gönder Arka Plan',  default: '#111111' },
           { type: 'color', key: 'btnTextColor',        label: 'Yorum Yaz / Gönder Yazı',       default: '#ffffff' },
           { type: 'color', key: 'btnBorderColor',      label: 'Yorum Yaz / Gönder Border',     default: '#111111' },
-          { type: 'color', key: 'filterBtnBgColor',    label: 'Filtre Butonu Arka Plan',       default: '#00000000' },
+          { type: 'color', key: 'filterBtnBgColor',    label: 'Filtre Butonu Arka Plan',       default: '#ffffff' },
           { type: 'color', key: 'filterBtnTextColor',  label: 'Filtre Butonu Yazı',            default: '#111111' },
           { type: 'color', key: 'filterBtnBorderColor',label: 'Filtre Butonu Border',          default: '#111111' },
         ],
