@@ -24,8 +24,14 @@ import {
 
 // Yardımcı: hex → rgba string (alpha verilerek). text-faint, border ve
 // track-bg gibi türev renkleri ana renklerden alpha ile üretmek için.
+// 6-char (#rrggbb) ve 8-char (#rrggbbaa) hex destekler.
+// 8-char gelirse son byte alpha'sı vardır ama bu fonksiyon CALLER'ın verdigi
+// alpha'yı kullanir — kullanim senaryosu "temel renk opak alinip azaltilmis
+// saydamlikla bir yere uygulanmak" (ör. hover bg, border %8 opacity). Yani
+// kullanici hex'inin kendi alpha'si yoksayilir, caller alpha'si hakim.
+// rgba(...) dondurur cunku CSS alpha desteklesin diye.
 function hexToRgba(hex, alpha) {
-  var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/.exec(hex);
+  var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})?$/.exec(hex);
   if (!m) return 'rgba(0,0,0,' + alpha + ')';
   var r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
   return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
