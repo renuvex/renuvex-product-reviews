@@ -100,7 +100,8 @@ export var COMPACT_CSS = `
   @media(max-width:600px){
     /* Header: trigger sola, filter sağa; panel JS ile summary'nin direkt
        çocuğu olarak header'ın altına eklendi → flow'da accordion. */
-    .ikr-compact-header{gap:8px;align-items:center;}
+    /* Mobile: trigger ve filter arasi gap acilir, yapisik gorunmesin */
+    .ikr-compact-header{gap:16px;align-items:center;}
     .ikr-compact-actions-slot .ikr-write-btn{display:none;}
     .ikr-compact-write-row{display:flex;width:100%;}
 
