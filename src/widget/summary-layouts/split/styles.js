@@ -8,11 +8,15 @@
 export var SPLIT_CSS = `
   .ikr-title-split{text-align:center;}
 
-  /* Mobile (<=768): split-col wrapper'lari seffaflastir. Boylece avg-block,
-     count, recommend, bars, write-btn, filter-wrap dogrudan .ikr-summary'nin
-     child'i gibi gorunur ve classic davranisi otomatik gelir. Sag wrapper da
-     seffaf — actions-block.js'in DOM yapisi degil, classic'in dogal akisi calisir. */
-  .ikr-split-col{display:contents;}
+  /* Mobile (<=768): split = classic. Sol ve orta wrapper'lar seffaf
+     (cocuklar dogrudan summary'nin child'i olur). Sag wrapper kalir ve
+     classic'in .ikr-summary-actions wrapper'iyla ayni davranisi alir
+     (flex row + width 100%) — write-btn yan yana filter ile durur. */
+  .ikr-split-left,.ikr-split-mid{display:contents;}
+  .ikr-split-right{
+    display:flex;flex-direction:row;align-items:center;
+    gap:var(--ikr-col-gap,8px);width:100%;padding:3px 6px;box-sizing:border-box;
+  }
 
   /* Desktop-only: split'in 3-kolon yatay tasarimi sadece >=769px'te aktif.
      Mobile'da hicbiri uygulanmaz -> base classic gorunum. */
