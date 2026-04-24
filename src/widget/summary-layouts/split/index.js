@@ -47,7 +47,7 @@ export function render(opts) {
 
   var count = document.createElement('div');
   count.className = 'ikr-split-left-count';
-  count.textContent = allCount.toLocaleString('tr-TR') + ' yorum';
+  count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
   left.appendChild(count);
 
   summary.appendChild(left);
