@@ -42,25 +42,16 @@ export var SPLIT_CSS = `
   .ikr-split-right .ikr-filter-wrap{align-self:auto;}
 
   @media(max-width:768px){
-    /* Mobile: split'i tamamen classic davranisina dondur. Base .ikr-summary
-       zaten flex column + center; split-spesifik override'lari sifirlariz.
-       Boylece mobile'da split = classic gorunum (sol blok center, bar chart
-       center, actions classic-style). */
-    .ikr-summary-split{
-      flex-direction:column;align-items:center;justify-content:flex-start;
-      gap:0;padding:0;
-    }
-    /* Mid kolon icin width:100% sart - bar chart tam genislik almazsa
-       .ikr-bar-track flex:1 1 auto'ya yer kalmaz, baralar gorunmez. */
-    .ikr-split-col{width:auto;align-items:center;}
-    .ikr-split-mid{width:100%;}
-    /* Sol blok center hizalama (sol hizalamayi mobile'da kaldir) */
-    .ikr-split-left{text-align:center;align-items:center;}
-    .ikr-split-left .ikr-split-left-avg-block{align-self:center;}
-    /* Orta bar chart center */
-    .ikr-split-mid{align-items:center;}
-    .ikr-split-mid .ikr-summary-bars{max-width:var(--ikr-summary-max,340px);margin:0 auto;}
-    /* Sag classic-style: yatay write + filter (zaten yatay), tam genislik */
-    .ikr-split-right{width:100%;justify-content:center;}
+    /* Mobile'da split = classic. Split-spesifik tum wrapper'lari
+       display:contents ile seffaflastir; child'lar (avg-block, count, recommend,
+       bars, write-btn, filter-wrap) dogrudan .ikr-summary'nin (base classic)
+       child'i gibi davranir. Padding/gap/hizalama base .ikr-summary'den gelir. */
+    .ikr-summary-split{display:flex;flex-direction:column;align-items:center;
+      justify-content:flex-start;gap:0;padding:0;max-width:none;width:100%;}
+    .ikr-split-col{display:contents;}
+    /* Sol-blok ozel hizalama override'lari mobile'da sifirla — base center alsin */
+    .ikr-split-left-avg-block{align-self:center;margin:0 auto;}
+    /* Bar chart classic gibi center */
+    .ikr-summary-split .ikr-summary-bars{max-width:var(--ikr-summary-max,340px);margin:0 auto;}
   }
 `;
