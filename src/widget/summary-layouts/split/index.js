@@ -91,7 +91,7 @@ export function render(opts) {
       var rec = document.createElement('div');
       rec.className = 'ikr-summary-block ikr-summary-recommend';
       rec.style.marginTop = '4px';
-      rec.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> tavsiye ediyor';
+      rec.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
       left.appendChild(rec);
     }
   }

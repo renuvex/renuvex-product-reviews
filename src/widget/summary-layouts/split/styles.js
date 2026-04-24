@@ -50,7 +50,10 @@ export var SPLIT_CSS = `
       flex-direction:column;align-items:center;justify-content:flex-start;
       gap:0;padding:0;
     }
+    /* Mid kolon icin width:100% sart - bar chart tam genislik almazsa
+       .ikr-bar-track flex:1 1 auto'ya yer kalmaz, baralar gorunmez. */
     .ikr-split-col{width:auto;align-items:center;}
+    .ikr-split-mid{width:100%;}
     /* Sol blok center hizalama (sol hizalamayi mobile'da kaldir) */
     .ikr-split-left{text-align:center;align-items:center;}
     .ikr-split-left .ikr-split-left-avg-block{align-self:center;}
