@@ -331,10 +331,10 @@ export var CLASSIC_CSS = `
     }
     /* Yan padding --ikr-pad-summary-mobile uzerinden; top/bottom 16px sabit */
     .ikr-summary{padding:16px var(--ikr-pad-summary-mobile);gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
-    /* Mobile: bar chart max-width sinirini kaldir -> buton ile ayni genislikte
-       yayilsin. Loox/Yotpo standardi. Genis telefonlarda (414px+) buton bar'dan
-       genis gorunmesini engeller. */
-    .ikr-summary .ikr-summary-bars{max-width:none;}
+    /* Mobile: bar chart ve actions wrap max-width sinirini kaldir -> ikisi de
+       summary genisligine yayilir. Loox/Yotpo standardi. */
+    .ikr-summary .ikr-summary-bars,
+    .ikr-summary .ikr-summary-actions{max-width:none;}
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
     /* Gallery — fotoğraflı yorumlar strip'i mantığı: flex-wrap:nowrap +
