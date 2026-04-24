@@ -318,8 +318,13 @@ export var CLASSIC_CSS = `
        Ileride admin panelinden degistirmek icin: settings -> CSS variable. */
     #ikas-reviews-widget{padding-left:0;padding-right:0;}
     /* Summary yan padding'i .ikr-summary mobile bloguna eklendi (--ikr-pad-summary-mobile) */
-    /* Review listesi container yan padding'i: */
-    #ikas-reviews{
+    /* Review layoutlari widget direct child — her item kendi yan padding'ini
+       --ikr-pad-review-mobile uzerinden alir. #ikas-reviews container'ina
+       padding vermek yerine item class'larina vermek gerek cunku review'lar
+       widget'in child'i, #ikas-reviews icinde degil. */
+    .ikr-review-card,
+    .ikr-review-list,
+    .ikr-review-gallery{
       padding-left:var(--ikr-pad-review-mobile);
       padding-right:var(--ikr-pad-review-mobile);
       box-sizing:border-box;
