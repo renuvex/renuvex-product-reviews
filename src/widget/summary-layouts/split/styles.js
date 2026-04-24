@@ -14,9 +14,15 @@ export var SPLIT_CSS = `
      (flex row + width 100%) — write-btn yan yana filter ile durur. */
   @media(max-width:600px){
     .ikr-split-left,.ikr-split-mid{display:contents;}
+    /* .ikr-split-right classic'in .ikr-summary-actions pattern'ini taklit
+       eder: max-width:340 ortali, bar chart ile ayni genislikte. Width:100%
+       + tam genislige yayilmasini onler. */
     .ikr-split-right{
       display:flex;flex-direction:row;align-items:center;
-      gap:var(--ikr-col-gap,8px);width:100%;padding:3px 6px;box-sizing:border-box;
+      gap:var(--ikr-col-gap,8px);
+      width:100%;max-width:var(--ikr-summary-max,340px);
+      margin-left:auto;margin-right:auto;
+      box-sizing:border-box;
     }
     /* Split mobile = classic mobile birebir: bar ve actions classic'teki
        max-width:340 sinirinden gelir (override yok). */
