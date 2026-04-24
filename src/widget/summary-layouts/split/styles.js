@@ -12,7 +12,7 @@ export var SPLIT_CSS = `
      (cocuklar dogrudan summary'nin child'i olur). Sag wrapper kalir ve
      classic'in .ikr-summary-actions wrapper'iyla ayni davranisi alir
      (flex row + width 100%) — write-btn yan yana filter ile durur. */
-  @media(max-width:768px){
+  @media(max-width:600px){
     .ikr-split-left,.ikr-split-mid{display:contents;}
     .ikr-split-right{
       display:flex;flex-direction:row;align-items:center;
@@ -22,7 +22,7 @@ export var SPLIT_CSS = `
 
   /* Desktop-only: split'in 3-kolon yatay tasarimi sadece >=769px'te aktif.
      Mobile'da hicbiri uygulanmaz -> base classic gorunum. */
-  @media(min-width:769px){
+  @media(min-width:601px){
     .ikr-split-col{
       display:flex;flex-direction:column;align-items:center;justify-content:center;
       min-width:0;
