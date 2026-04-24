@@ -6,7 +6,9 @@
 // halde desktop'ta da uygulanir ve flex:1 1 auto cocuklarini bozar.
 
 export var SPLIT_CSS = `
-  .ikr-title-split{text-align:center;}
+  /* Başlık sola hizali (sol blok üstüne) — avg+sayı+tavsiye ile bütünluk kazanir.
+     Loox/Yotpo standardi, merkez başlık bar chart üstüne düsüyordu. */
+  .ikr-title-split{text-align:left;}
 
   /* Mobile (<=768): split = classic. Sol ve orta wrapper'lar seffaf
      (cocuklar dogrudan summary'nin child'i olur). Sag wrapper kalir ve
@@ -51,11 +53,15 @@ export var SPLIT_CSS = `
     /* Orta: bar chart sola hizali. align-items:stretch sart -
        flex-start ile child width:auto'ya duser ve track'ler buzusur. */
     .ikr-split-mid{flex:1 1 auto;align-items:stretch;}
-    /* Split desktop'ta bar chart mid kolonun tamamını kullanir - test.
-       Classic'teki 340px siniri yok, .ikr-summary-block max-width'i ezilir. */
+    /* Split desktop'ta bar chart okunabilir genislikte: 500px max.
+       Full genislik okuma mesafesini uzatiyordu, 500 dengeli. */
     .ikr-split-mid .ikr-summary-bars{
-      max-width:none;width:100%;margin:0;
+      max-width:500px;width:100%;margin:0;
     }
+    /* Bar row sikilastir: satirlar arasi ve satir ici padding daralir.
+       Loox/Yotpo tarzi kompakt his. */
+    .ikr-split-mid .ikr-summary-bars{gap:2px;}
+    .ikr-split-mid .ikr-bar-row{padding:2px 4px;}
 
     /* Sag: write + filter yan yana */
     .ikr-split-right{
