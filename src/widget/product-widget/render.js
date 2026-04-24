@@ -324,7 +324,8 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-thumbnail-size', thumbPx + 'px');
 
     // Review widget yıldız ayarları — badge'den bağımsız
-    var reviewStarColor = /^#[0-9A-Fa-f]{6}$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
+    // 6-char veya 8-char hex (alpha dahil) kabul — react-colorful alpha slider uretebilir.
+    var reviewStarColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
     root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
     root.style.setProperty('--ikr-avg-star-size', sz.avgStarSize + 'px');

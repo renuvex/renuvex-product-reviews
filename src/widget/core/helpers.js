@@ -60,14 +60,17 @@ export function formatDate(iso) {
   return new Date(iso).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+// 6-char (#rrggbb) veya 8-char (#rrggbbaa) hex. 8-char gelirse alpha yoksayilir
+// (bu fonksiyon sadece RGB kanallari lazim — caller opacity uygulayacak).
 function hexToRgb(hex) {
-  var m = /^#([0-9A-Fa-f]{6})$/.exec(hex);
+  var m = /^#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/.exec(hex);
   if (!m) return null;
   return [parseInt(m[1].slice(0,2),16), parseInt(m[1].slice(2,4),16), parseInt(m[1].slice(4,6),16)];
 }
 
 export function applyWidgetColor(color) {
-  var validColor = /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#111111';
+  // react-colorful 8-char hex (#rrggbbaa) gonderebilir — kabul et.
+  var validColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(color) ? color : '#111111';
   document.documentElement.style.setProperty('--ikr-color', validColor);
   var rgb = hexToRgb(validColor);
   document.documentElement.style.setProperty('--ikr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
