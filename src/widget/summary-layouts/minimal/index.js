@@ -47,12 +47,13 @@ export function render(opts) {
   stars.innerHTML = partialStarsHTML(avgRatingVal, iconPair);
   topRow.appendChild(stars);
 
-  info.appendChild(topRow);
-
-  var count = document.createElement('div');
+  // Count artik avg+stars ile ayni satirda — "4.5 ★★★★★ 8 Yorum"
+  var count = document.createElement('span');
   count.className = 'ikr-minimal-count';
   count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
-  info.appendChild(count);
+  topRow.appendChild(count);
+
+  info.appendChild(topRow);
 
   summary.appendChild(info);
 
