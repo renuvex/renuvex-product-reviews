@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, ChevronRight, Palette } from 'lucide-react';
 import { HexAlphaColorPicker, HexColorInput } from 'react-colorful';
 import {
@@ -385,12 +386,35 @@ function ColorField({ field, value, onCommit }: {
 }) {
   const [local, setLocal] = useState(value);
   const [open, setOpen] = useState(false);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setLocal(value); }, [value]);
   useEffect(() => () => { if (commitTimerRef.current) clearTimeout(commitTimerRef.current); }, []);
+
+  // Popover portal olarak body'ye render edilir; accordion/dialog parent'larının
+  // overflow/stacking context'inden etkilenmesin. Trigger rect'ine göre konum
+  // fixed olarak hesaplanır — scroll veya resize'da yeniden hesaplanmaz çünkü
+  // popover açıkken kullanıcı scroll etmeyi bırakır (kısa etkileşim).
+  useEffect(() => {
+    if (!open) { setPopoverPos(null); return; }
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const popoverWidth = 220;
+    const popoverHeight = 230;
+    // Sağa hizali (trigger right ile popover right aynı noktada). Viewport'un
+    // sol kenarına taşarsa sola kaydır. Viewport altına taşarsa trigger'ın
+    // üstünde aç.
+    let left = r.right - popoverWidth;
+    if (left < 8) left = 8;
+    let top = r.bottom + 6;
+    if (top + popoverHeight > window.innerHeight - 8) {
+      top = Math.max(8, r.top - popoverHeight - 6);
+    }
+    setPopoverPos({ top, left });
+  }, [open]);
 
   // Popover dışı tıklama → kapat
   useEffect(() => {
@@ -445,13 +469,13 @@ function ColorField({ field, value, onCommit }: {
           />
         </button>
 
-        {open && (
+        {open && popoverPos && typeof window !== 'undefined' && createPortal(
           <div
             ref={popoverRef}
             style={{
-              position: 'absolute',
-              top: 'calc(100% + 6px)',
-              right: 0,
+              position: 'fixed',
+              top: popoverPos.top,
+              left: popoverPos.left,
               zIndex: 10000,
               padding: 12,
               background: colors.bgWhite,
@@ -482,7 +506,8 @@ function ColorField({ field, value, onCommit }: {
                 textTransform: 'uppercase',
               }}
             />
-          </div>
+          </div>,
+          document.body,
         )}
       </div>
     </div>
