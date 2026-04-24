@@ -331,6 +331,17 @@ export var CLASSIC_CSS = `
     }
     /* Yan padding --ikr-pad-summary-mobile uzerinden; top/bottom 16px sabit */
     .ikr-summary{padding:16px var(--ikr-pad-summary-mobile);gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
+    /* Review item yan padding'i mobile'da --ikr-pad-review-mobile. Card
+       (.ikr-review), list (.ikr-review-list) ve gallery (.ikr-review-gallery)
+       kendi top/bottom padding'lerini koruyarak yan padding'i variable'dan alir.
+       Shorthand kullanilmadigi icin her layout'un kendi kuralini ezmez. */
+    .ikr-review,
+    .ikr-review-list,
+    .ikr-review-list.ikr-review-list--no-media,
+    .ikr-review-gallery{
+      padding-left:var(--ikr-pad-review-mobile);
+      padding-right:var(--ikr-pad-review-mobile);
+    }
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-btn{width:100%;}
     /* Gallery — fotoğraflı yorumlar strip'i mantığı: flex-wrap:nowrap +

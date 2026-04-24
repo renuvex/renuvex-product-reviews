@@ -48,7 +48,9 @@ export var LIST_CSS = `
        ayrı flex item olur. Tek seviyede order ile sıralanır. DOM dokunulmaz. */
     .ikr-review-list,
     .ikr-review-list.ikr-review-list--no-media{
-      display:flex;flex-direction:column;gap:8px;padding:16px 0;
+      /* Yan padding theme mobile bloguna tasindi (--ikr-pad-review-mobile).
+         Burada sadece top/bottom set edilir ki theme kuralini ezmesin. */
+      display:flex;flex-direction:column;gap:8px;padding-top:16px;padding-bottom:16px;
     }
     .ikr-review-list-author{display:contents;}
     .ikr-review-list-content{display:contents;}
