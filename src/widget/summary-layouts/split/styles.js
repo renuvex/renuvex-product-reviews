@@ -18,11 +18,8 @@ export var SPLIT_CSS = `
       display:flex;flex-direction:row;align-items:center;
       gap:var(--ikr-col-gap,8px);width:100%;padding:3px 6px;box-sizing:border-box;
     }
-    /* Split mobile'da classic gibi davranir ama bar ve button'i tam genislik
-       istiyoruz (Loox/Yotpo standardi). Diger summary layoutlari (classic,
-       compact, hero, minimal) kendi varsayilan davranisini korur. */
-    .ikr-summary-split .ikr-summary-bars,
-    .ikr-summary-split .ikr-summary-actions{max-width:none;}
+    /* Split mobile = classic mobile birebir: bar ve actions classic'teki
+       max-width:340 sinirinden gelir (override yok). */
   }
 
   /* Desktop-only: split'in 3-kolon yatay tasarimi sadece >=769px'te aktif.
