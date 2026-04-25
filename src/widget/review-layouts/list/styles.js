@@ -68,6 +68,11 @@ export var LIST_CSS = `
     .ikr-review-list-content > .ikr-read-more{order:6;margin-top:-4px;}
     .ikr-review-list-media{order:7;justify-content:flex-start;}
     .ikr-reply{order:8;width:100%;}
-    .ikr-review-list-media img{max-width:160px;aspect-ratio:1/1;}
+    /* Mobile foto: 3:4 portre, size'a göre genişlik (--ikr-list-photo-w-mobile).
+       Fallback 100px (medium). Yükseklik aspect-ratio ile otomatik. */
+    .ikr-review-list-media img{
+      max-width:var(--ikr-list-photo-w-mobile,100px);
+      aspect-ratio:3/4;
+    }
   }
 `;
