@@ -25,7 +25,7 @@ export var meta = {
   sizeOverrides: {
     small:  { '--ikr-gallery-photo-w':  '90px', '--ikr-gallery-photo-w-mobile':  '80px' },
     medium: { '--ikr-gallery-photo-w': '120px', '--ikr-gallery-photo-w-mobile': '100px' },
-    large:  { '--ikr-gallery-photo-w': '160px', '--ikr-gallery-photo-w-mobile': '120px' },
+    large:  { '--ikr-gallery-photo-w': '140px', '--ikr-gallery-photo-w-mobile': '110px' },
   },
 };
 

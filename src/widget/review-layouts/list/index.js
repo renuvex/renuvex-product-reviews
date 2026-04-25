@@ -22,7 +22,7 @@ export var meta = {
   sizeOverrides: {
     small:  { '--ikr-list-photo-w':  '90px', '--ikr-list-photo-w-mobile':  '80px' },
     medium: { '--ikr-list-photo-w': '120px', '--ikr-list-photo-w-mobile': '100px' },
-    large:  { '--ikr-list-photo-w': '160px', '--ikr-list-photo-w-mobile': '120px' },
+    large:  { '--ikr-list-photo-w': '140px', '--ikr-list-photo-w-mobile': '110px' },
   },
 };
 
