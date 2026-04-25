@@ -83,13 +83,13 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
   const renderAccordion = (list: SettingsGroup[]) => (
     <Accordion type="multiple" defaultValue={list.length > 0 ? ['group-0'] : []} className="w-full">
       {list.map((group, i) => (
-        <AccordionItem key={`group-${i}`} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}`, marginBottom: sp[1] }}>
+        <AccordionItem key={`group-${i}`} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}`, marginBottom: sp[2] }}>
           <AccordionTrigger style={{
             fontSize: typography.fontSize.base,
             fontWeight: typography.fontWeight.medium,
             color: colors.textPrimary,
-            // ikas pattern'ine yakın trigger yükseklik (12 dikey + 12 yan)
-            padding: `${sp[3]}px ${sp[3]}px`,
+            // 16 dikey + 12 yan — ferah trigger; ikas'tan biraz daha açık
+            padding: `${sp[4]}px ${sp[3]}px`,
           }}>
             {group.title}
           </AccordionTrigger>
