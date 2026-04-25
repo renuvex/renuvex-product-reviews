@@ -62,7 +62,6 @@ export const WIDGETS: WidgetDef[] = [
       {
         title: 'Genel',
         fields: [
-          { type: 'toggle', key: 'enabled', label: 'Widget Aktif',   default: true },
           { type: 'text',   key: 'title',    label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
         ],
       },
@@ -235,14 +234,6 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        title: 'Davranış',
-        fields: [
-          { type: 'toggle', key: 'autoApprove',        label: 'Yeni Yorumları Otomatik Onayla', default: false },
-          { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster',       default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
-          { type: 'toggle', key: 'showPhotoGallery',   label: 'Fotoğraf Galerisini Göster',    default: true },
-        ],
-      },
-      {
         title: 'Boyutlar',
         fields: [
           {
@@ -268,6 +259,17 @@ export const WIDGETS: WidgetDef[] = [
             ],
             showWhen: { layoutKey: 'reviewLayout', supports: 'thumbnailSize' },
           },
+        ],
+      },
+      {
+        // Widget davranışı toggle'ları — en sona, kullanıcı genelde önce
+        // tasarımı yapar, sonra "neyi göster/gizle, otomatik onayla mı" karar verir.
+        title: 'Ayarlar',
+        fields: [
+          { type: 'toggle', key: 'enabled',            label: 'Widget Aktif',                   default: true },
+          { type: 'toggle', key: 'autoApprove',        label: 'Yeni Yorumları Otomatik Onayla', default: false },
+          { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster',       default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
+          { type: 'toggle', key: 'showPhotoGallery',   label: 'Fotoğraf Galerisini Göster',     default: true },
         ],
       },
     ],
