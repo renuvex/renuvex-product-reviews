@@ -115,7 +115,7 @@ export var GALLERY_CSS = `
       column-gap:0;
     }
     .ikr-review-gallery{
-      grid-template-columns:1fr 100px;
+      grid-template-columns:1fr var(--ikr-gallery-photo-w-mobile,100px);
       column-gap:12px;row-gap:12px;
       /* Yan padding theme mobile bloguna tasindi (--ikr-pad-review-mobile).
          Burada sadece top/bottom set edilir ki theme kuralini ezmesin. */

@@ -20,10 +20,12 @@ export var meta = {
   // Foto kolonu genel size ayarıyla orantılı büyüsün — küçük yazıda foto
   // patlamasın, büyük yazıda foto sönük kalmasın. Card'ın bağımsız thumbnail
   // ayarı var; list/gallery için tek genel size kontrolü yeter.
+  // --ikr-gallery-photo-w        : desktop foto kolonu genişliği (3:4 portre)
+  // --ikr-gallery-photo-w-mobile : mobile foto kolonu genişliği (3:4 portre)
   sizeOverrides: {
-    small:  { '--ikr-gallery-photo-w': '90px' },
-    medium: { '--ikr-gallery-photo-w': '120px' },
-    large:  { '--ikr-gallery-photo-w': '160px' },
+    small:  { '--ikr-gallery-photo-w':  '90px', '--ikr-gallery-photo-w-mobile':  '80px' },
+    medium: { '--ikr-gallery-photo-w': '120px', '--ikr-gallery-photo-w-mobile': '100px' },
+    large:  { '--ikr-gallery-photo-w': '160px', '--ikr-gallery-photo-w-mobile': '120px' },
   },
 };
 
