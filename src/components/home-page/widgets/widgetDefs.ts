@@ -121,10 +121,10 @@ export const WIDGETS: WidgetDef[] = [
             ],
             showWhen: { layoutKey: 'reviewLayout', supports: 'thumbnailSize' },
           },
-          // Görsel galeri (Fotoğraflı Yorumlar strip'i) gösterimi tasarım kararı.
-          // Eskiden "Ayarlar" altında davranış toggle'ıydı, tasarım panelinde
-          // "boyut + göster" kararları birlikte verilsin diye buraya taşındı.
-          { type: 'toggle', key: 'showPhotoGallery', label: 'Görsel Galerisini Göster', default: true },
+          // Göster/gizle toggle'ları tasarım kararı (görsel öğe seçimi).
+          // Ayarlar = sistem davranışı, Tasarım = görünüm — net ayrım.
+          { type: 'toggle', key: 'showPhotoGallery',   label: 'Görsel Galerisini Göster', default: true },
+          { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
         ],
       },
       {
@@ -268,9 +268,8 @@ export const WIDGETS: WidgetDef[] = [
         // tasarımı yapar, sonra "neyi göster/gizle, otomatik onayla mı" karar verir.
         title: 'Ayarlar',
         fields: [
-          { type: 'toggle', key: 'enabled',            label: 'Widget Aktif',                   default: true },
-          { type: 'toggle', key: 'autoApprove',        label: 'Yeni Yorumları Otomatik Onayla', default: false },
-          { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster',       default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
+          { type: 'toggle', key: 'enabled',     label: 'Widget Aktif',                   default: true },
+          { type: 'toggle', key: 'autoApprove', label: 'Yeni Yorumları Otomatik Onayla', default: false },
         ],
       },
     ],
