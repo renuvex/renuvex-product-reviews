@@ -31,7 +31,11 @@ export async function GET(request: NextRequest) {
     window.__ikasPreviewBaseUrl = '${baseUrl}';
     window.__ikasPreviewSettings = sessionStorage.getItem('ikr_preview_settings') || '';
   </script>
-  <script src="${baseUrl}/widget.js?publicApiKey=preview" async></script>
+  <!-- v= timestamp -> her preview acılısında widget.js bypass cache; admin
+       degisiklik yapınca anında güncel goruntu (sadece preview, prod widget'a
+       dokunulmaz). Endustri pratigi: Shopify themes ?v={{now|date}}, Loox/Yotpo
+       benzer pattern. -->
+  <script src="${baseUrl}/widget.js?publicApiKey=preview&v=${Date.now()}" async></script>
 </body>
 </html>`;
 
