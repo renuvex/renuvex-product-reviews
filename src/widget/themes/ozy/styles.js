@@ -158,7 +158,10 @@ export var CLASSIC_CSS = `
     display:flex;flex-direction:row;align-items:center;gap:var(--ikr-col-gap);
     box-sizing:border-box;
   }
-  .ikr-write-btn{flex:1 1 auto;min-width:0;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:10px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:600;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
+  /* min-height:36px — filter butonu (36×36 sabit) ile ayni yukseklikte tutar.
+     Font small/medium'da yukseklik 36'ya kilitlenir; large font'ta padding
+     katkisi ile bir miktar buyur ama filter'la dengeli kalir. */
+  .ikr-write-btn{flex:1 1 auto;min-width:0;min-height:36px;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:10px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:600;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
   .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-end;}
   /* Filter butonu default outline (bg transparent, text ikr-color).
      Primary action (.ikr-write-btn) dolu, filter secondary -> gorsel hiyerarsi net.
