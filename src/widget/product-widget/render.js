@@ -490,6 +490,12 @@ export async function render(productId, settings, reviewsData, productName, orde
         var photoSection = document.createElement('div');
         photoSection.className = 'ikr-photo-section';
 
+        // Thumbnail aspect ratio review layout'a göre otomatik:
+        // card review fotoları 1:1 → strip de kare; list/gallery review fotoları
+        // 3:4 portre → strip de portre. Tutarlı görsel akış.
+        var thumbAspect = settings.reviewLayout === 'card' ? '1/1' : '3/4';
+        root.style.setProperty('--ikr-photo-thumb-aspect', thumbAspect);
+
         var photoStrip = document.createElement('div');
         photoStrip.className = 'ikr-photo-strip';
 

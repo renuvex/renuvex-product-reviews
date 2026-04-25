@@ -181,10 +181,9 @@ export var CLASSIC_CSS = `
   /* Fotoğraflı Yorumlar bölümü */
   .ikr-photo-section{margin-bottom:24px;}
   .ikr-photo-strip-wrap{position:relative;}
-  .ikr-photo-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
-  .ikr-photo-strip::-webkit-scrollbar{display:none;}
-  .ikr-photo-thumb{width:var(--ikr-thumbnail-size,90px);height:var(--ikr-thumbnail-size,90px);object-fit:cover;border-radius:var(--ikr-radius,6px);cursor:pointer;border:1px solid var(--ikr-photo-border,var(--ikr-border,rgba(0,0,0,0.10)));transition:transform 0.2s,border-color 0.2s;flex-shrink:0;}
-  @media(hover:hover){.ikr-photo-thumb:hover{transform:scale(1.03);border-color:var(--ikr-color,#000);}}
+  /* .ikr-photo-strip ve .ikr-photo-strip-thumb asıl tanımları aşağıda
+     (satır 266 ve 268). Bu ölü duplicate kurallar temizlendi.
+     .ikr-photo-thumb hiçbir DOM tarafından kullanılmıyordu — silindi. */
 
   .ikr-photo-strip-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:var(--ikr-photo-bg,var(--ikr-surface,rgba(255,255,255,0.95)));border:1px solid var(--ikr-photo-border,var(--ikr-border,rgba(0,0,0,0.12)));border-radius:var(--ikr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--ikr-photo-title,var(--ikr-text,rgba(0,0,0,1)));box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s ease;}
   @media(hover:hover){.ikr-photo-strip-arrow:hover{background:var(--ikr-photo-bg,var(--ikr-surface,#fff));transform:translateY(-50%) scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,0.12);}}
@@ -265,7 +264,11 @@ export var CLASSIC_CSS = `
   .ikr-photo-strip-container{position:relative;margin:0 -4px;}
   .ikr-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .ikr-photo-strip::-webkit-scrollbar{display:none;}
-  .ikr-photo-strip-thumb{flex:0 0 var(--ikr-thumbnail-size,90px);width:var(--ikr-thumbnail-size,90px);height:var(--ikr-thumbnail-size,90px);border-radius:var(--ikr-radius,8px);object-fit:cover;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;border:1px solid rgba(0,0,0,0.05);}
+  /* Thumbnail genişliği sabit (--ikr-thumbnail-size); yüksekliği aspect-ratio
+     ile gelir. --ikr-photo-thumb-aspect render.js'de review layout'a göre set
+     edilir: card -> 1/1 (kare), list & gallery -> 3/4 (portre, item fotolarıyla
+     tutarlı). Fallback 1/1, eski davranış. */
+  .ikr-photo-strip-thumb{flex:0 0 var(--ikr-thumbnail-size,90px);width:var(--ikr-thumbnail-size,90px);height:auto;aspect-ratio:var(--ikr-photo-thumb-aspect,1/1);border-radius:var(--ikr-radius,8px);object-fit:cover;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;border:1px solid rgba(0,0,0,0.05);}
   @media(hover:hover){.ikr-photo-strip-thumb:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,0.12);}}
 
   .ikr-photo-strip-wrap{position:relative;display:block;}
