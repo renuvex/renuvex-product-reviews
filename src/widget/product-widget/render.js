@@ -106,10 +106,8 @@ function applyManualTheme(root, settings) {
   var btnBg        = settings.btnBgColor        || primary;
   var btnText      = settings.btnTextColor      || primaryText;
   var btnBorder    = settings.btnBorderColor    || primary;
-  /* Filter default outline: admin set etmezse bg transparent, text/border primary.
-     Yorum Yap primary action (dolu), filter secondary (outline) — gorsel hiyerarsi. */
-  var filterBg     = settings.filterBtnBgColor     || 'transparent';
-  var filterText   = settings.filterBtnTextColor   || primary;
+  var filterBg     = settings.filterBtnBgColor     || primary;
+  var filterText   = settings.filterBtnTextColor   || primaryText;
   var filterBorder = settings.filterBtnBorderColor || primary;
 
   // Grup 5 — Filtre Menüsü
