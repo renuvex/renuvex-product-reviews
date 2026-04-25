@@ -12,17 +12,7 @@ import {
 } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { colors, componentStyles, typography, radii, spacing } from '@/lib/design-tokens';
-
-// Spacing tokenları number'a parse — inline style sayı bekliyor (px string değil).
-const sp = {
-  1: parseInt(spacing[1]),  //  4
-  2: parseInt(spacing[2]),  //  8
-  3: parseInt(spacing[3]),  // 12
-  4: parseInt(spacing[4]),  // 16
-  5: parseInt(spacing[5]),  // 20
-  6: parseInt(spacing[6]),  // 24
-} as const;
+import { colors, componentStyles, typography, radii, sp } from '@/lib/design-tokens';
 import { SettingsGroup, SettingField } from '../widgetDefs';
 import { WidgetSettingsDraft } from './WidgetEditor';
 import { IconSelect } from './IconSelect';

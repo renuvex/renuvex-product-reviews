@@ -118,6 +118,25 @@ export const spacing = {
   12: '48px',
 } as const;
 
+/**
+ * Spacing tokenlarının number versiyonu — React inline style sayı bekler
+ * (gap: 16 gibi), spacing px string döndürür. Yeni widget editörlerinde
+ * bu sabiti import et: `import { sp } from '@/lib/design-tokens'`.
+ * Tek noktada değiştirilir, tüm tüketenlere yansır.
+ */
+export const sp = {
+  0: parseInt(spacing[0]),   //  0
+  1: parseInt(spacing[1]),   //  4
+  2: parseInt(spacing[2]),   //  8
+  3: parseInt(spacing[3]),   // 12
+  4: parseInt(spacing[4]),   // 16
+  5: parseInt(spacing[5]),   // 20
+  6: parseInt(spacing[6]),   // 24
+  8: parseInt(spacing[8]),   // 32
+  10: parseInt(spacing[10]), // 40
+  12: parseInt(spacing[12]), // 48
+} as const;
+
 export const opacity = {
   full: 1,
   disabled: 0.5,
