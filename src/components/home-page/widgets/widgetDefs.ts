@@ -95,6 +95,32 @@ export const WIDGETS: WidgetDef[] = [
           // Köşe ovalliği renk değil — şekil. Tasarım grubunda ana panelde
           // diğer tasarım kararlarıyla (layout seçimleri) birlikte durur.
           { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
+          // Boyut ayarları da tasarım kararı — eskiden ayrı "Boyutlar" accordion'undaydı,
+          // tek tasarım panelinde toplandı. 'size' tüm widget tipografisi+ikon boyutu;
+          // 'thumbnailSize' fotoğraflı yorumlar strip'inin thumbnail boyutu.
+          {
+            type: 'select',
+            key: 'size',
+            label: 'Widget Boyutu',
+            default: 'medium',
+            options: [
+              { value: 'small',  label: 'Küçük' },
+              { value: 'medium', label: 'Orta' },
+              { value: 'large',  label: 'Büyük' },
+            ],
+          },
+          {
+            type: 'select',
+            key: 'thumbnailSize',
+            label: 'Görsel Galeri Boyutu',
+            default: 'medium',
+            options: [
+              { value: 'small',  label: 'Küçük' },
+              { value: 'medium', label: 'Orta' },
+              { value: 'large',  label: 'Büyük' },
+            ],
+            showWhen: { layoutKey: 'reviewLayout', supports: 'thumbnailSize' },
+          },
         ],
       },
       {
@@ -231,34 +257,6 @@ export const WIDGETS: WidgetDef[] = [
             options: getIconOptions(),
           },
           { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
-        ],
-      },
-      {
-        title: 'Boyutlar',
-        fields: [
-          {
-            type: 'select',
-            key: 'size',
-            label: 'Yazı Boyutu',
-            default: 'medium',
-            options: [
-              { value: 'small',  label: 'Küçük' },
-              { value: 'medium', label: 'Orta' },
-              { value: 'large',  label: 'Büyük' },
-            ],
-          },
-          {
-            type: 'select',
-            key: 'thumbnailSize',
-            label: 'Küçük Resim Boyutu',
-            default: 'medium',
-            options: [
-              { value: 'small',  label: 'Küçük' },
-              { value: 'medium', label: 'Orta' },
-              { value: 'large',  label: 'Büyük' },
-            ],
-            showWhen: { layoutKey: 'reviewLayout', supports: 'thumbnailSize' },
-          },
         ],
       },
       {
