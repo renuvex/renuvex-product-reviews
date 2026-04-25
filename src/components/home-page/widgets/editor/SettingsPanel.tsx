@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ChevronRight, Palette } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { HexAlphaColorPicker, HexColorInput } from 'react-colorful';
 import {
   Accordion,
@@ -88,7 +88,8 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
             fontSize: typography.fontSize.base,
             fontWeight: typography.fontWeight.medium,
             color: colors.textPrimary,
-            padding: '14px 0',
+            // ikas pattern'i — kompakt dikey + yan padding
+            padding: `${sp[2]}px ${sp[3]}px`,
           }}>
             {group.title}
           </AccordionTrigger>
