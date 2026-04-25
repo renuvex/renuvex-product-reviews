@@ -12,7 +12,17 @@ import {
 } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { colors, componentStyles, typography, radii } from '@/lib/design-tokens';
+import { colors, componentStyles, typography, radii, spacing } from '@/lib/design-tokens';
+
+// Spacing tokenları number'a parse — inline style sayı bekliyor (px string değil).
+const sp = {
+  1: parseInt(spacing[1]),  //  4
+  2: parseInt(spacing[2]),  //  8
+  3: parseInt(spacing[3]),  // 12
+  4: parseInt(spacing[4]),  // 16
+  5: parseInt(spacing[5]),  // 20
+  6: parseInt(spacing[6]),  // 24
+} as const;
 import { SettingsGroup, SettingField } from '../widgetDefs';
 import { WidgetSettingsDraft } from './WidgetEditor';
 import { IconSelect } from './IconSelect';
@@ -50,7 +60,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
 
   if (groups.length === 0) {
     return (
-      <div style={{ color: colors.textMuted, fontSize: typography.fontSize.base, padding: '16px 0' }}>
+      <div style={{ color: colors.textMuted, fontSize: typography.fontSize.base, padding: `${sp[4]}px 0` }}>
         Bu widget için henüz ayar tanımlanmamış.
       </div>
     );
@@ -93,7 +103,9 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
             {group.title}
           </AccordionTrigger>
           <AccordionContent>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
+            {/* Accordion içi field gap'i: 16 -> 20 (spacing[5]) — alanlar daha
+                ferah ayrılır. paddingBottom'da spacing[4] ile uyumlu kalır. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: sp[5], paddingBottom: sp[4] }}>
               {group.fields.map((field) => {
                 // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
                 if (field.showWhen) {
@@ -159,7 +171,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
           )}
 
           {/* Varsayılanlara Sıfırla Butonu */}
-          <div style={{ padding: '24px 0', marginTop: 16 }}>
+          <div style={{ padding: `${sp[6]}px 0`, marginTop: sp[4] }}>
             <button
               onClick={handleResetClick}
               style={{
@@ -195,7 +207,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: sp[2],
               padding: '14px 0',
               backgroundColor: colors.bgWhite || '#ffffff', // Alttaki içerik görünmesin diye arka plan şart
               border: 'none',
@@ -225,10 +237,10 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
           <DialogHeader>
             <DialogTitle style={{ fontSize: typography.fontSize.lg, color: colors.textPrimary }}>Varsayılanlara Sıfırla</DialogTitle>
           </DialogHeader>
-          <div style={{ padding: '16px 0', color: colors.textSecondary, fontSize: typography.fontSize.base }}>
+          <div style={{ padding: `${sp[4]}px 0`, color: colors.textSecondary, fontSize: typography.fontSize.base }}>
             Tüm tasarım değişiklikleriniz silinecek ve widget varsayılan tasarıma dönecektir. Bu işlem geri alınamaz, onaylıyor musunuz?
           </div>
-          <DialogFooter style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 8 }}>
+          <DialogFooter style={{ display: 'flex', gap: sp[2], justifyContent: 'flex-end', paddingTop: sp[2] }}>
             <button
               onClick={() => setShowConfirm(false)}
               style={componentStyles.btnDefault}
@@ -260,7 +272,7 @@ function FieldRenderer({ field, settings, onChange }: {
   switch (field.type) {
     case 'toggle':
       return (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: sp[3], cursor: 'pointer' }}>
           <input
             type="checkbox"
             checked={Boolean(value ?? field.default ?? true)}
@@ -275,7 +287,7 @@ function FieldRenderer({ field, settings, onChange }: {
 
     case 'text':
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
           <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
             {field.label}
           </label>
@@ -312,11 +324,11 @@ function FieldRenderer({ field, settings, onChange }: {
       // Options ya statik dizi ya da settings'e bağlı bir fonksiyon olabilir
       const opts = typeof field.options === 'function' ? field.options(settings) : field.options;
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
           <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
             {field.label}
           </label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: sp[2], flexWrap: 'wrap' }}>
             {opts.map((opt) => {
               const isSelected = (value ?? opts[0]?.value) === opt.value;
               return (
@@ -342,7 +354,7 @@ function FieldRenderer({ field, settings, onChange }: {
     case 'range': {
       const numVal = Number(value ?? field.default);
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: sp[2] }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
               {field.label}
@@ -436,7 +448,7 @@ function ColorField({ field, value, onCommit }: {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: sp[3] }}>
       <label style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>
         {field.label}
       </label>
@@ -477,14 +489,14 @@ function ColorField({ field, value, onCommit }: {
               top: popoverPos.top,
               left: popoverPos.left,
               zIndex: 10000,
-              padding: 12,
+              padding: sp[3],
               background: colors.bgWhite,
               border: `1px solid ${colors.borderDefault}`,
               borderRadius: radii.default,
               boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 10,
+              gap: sp[3],
               width: 220,
             }}
           >
