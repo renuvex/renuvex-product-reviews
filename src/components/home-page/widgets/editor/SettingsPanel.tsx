@@ -95,8 +95,9 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
           </AccordionTrigger>
           <AccordionContent>
             {/* Accordion içi field gap'i: 16 -> 20 (spacing[5]) — alanlar daha
-                ferah ayrılır. paddingBottom'da spacing[4] ile uyumlu kalır. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: sp[5], paddingBottom: sp[4] }}>
+                ferah ayrılır. paddingTop trigger ile content arasını açar
+                (trigger asimetrik kalmasın), paddingBottom alt nefes. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: sp[5], paddingTop: sp[2], paddingBottom: sp[4] }}>
               {group.fields.map((field) => {
                 // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
                 if (field.showWhen) {
