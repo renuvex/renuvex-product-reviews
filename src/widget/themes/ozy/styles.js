@@ -346,6 +346,12 @@ export var CLASSIC_CSS = `
     }
     /* Yan padding --ikr-pad-summary-mobile uzerinden; top/bottom 16px sabit */
     .ikr-summary{padding:16px var(--ikr-pad-summary-mobile);gap:14px;--ikr-col-label:92px;--ikr-col-count:32px;}
+    /* Widget basligi summary'nin disinda, widget direct child — kendi yan
+       padding'ini ayni variable'dan alir (summary ile hizali kalsin). */
+    .ikr-title{
+      padding-left:var(--ikr-pad-summary-mobile);
+      padding-right:var(--ikr-pad-summary-mobile);
+    }
     /* Review item yan padding'i mobile'da --ikr-pad-review-mobile. Card
        (.ikr-review), list (.ikr-review-list) ve gallery (.ikr-review-gallery)
        kendi top/bottom padding'lerini koruyarak yan padding'i variable'dan alir.
