@@ -6,7 +6,15 @@
 
 export var COMPACT_CSS = `
   /* Compact layout başlığı sola hizalı */
+  /* Başlık trigger ile aynı sol kenardan başlasın — base .ikr-summary
+     padding-left:28px yıldız satırını içeride başlatıyor; başlık (.ikr-title
+     widget direct child) varsayılan 0 yan padding aldığı için kenarda
+     kalıyordu. 28px ile hizalan. Mobile theme'de --ikr-pad-summary-mobile
+     uygulanıyor zaten — bu desktop-only override. */
   .ikr-title-compact{text-align:left;}
+  @media(min-width:601px){
+    .ikr-title-compact{padding-left:28px;}
+  }
 
   /* Compact'te ana .ikr-summary padding'ini sıfırla — yıldızlar başlık ile aynı sol kenar */
   /* padding-top/bottom 0; yan padding base .ikr-summary mobile bloğundan gelir
