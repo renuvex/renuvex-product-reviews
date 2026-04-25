@@ -11,7 +11,7 @@ export var meta = {
   id: 'hero',
   name: 'Vurgulu (Büyük Puan)',
   // Bkz: review-layouts/index.js ve summary-layouts/index.js — supports sözleşmesi.
-  supports: { recommendation: false, barChart: false },
+  supports: { recommendation: false },
 };
 
 export var css = HERO_CSS;
