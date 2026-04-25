@@ -216,8 +216,9 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
+        // İkon ve rengi birlikte — yıldız konusu tek başlık altında ana panelde.
+        // Renk eskiden "Yorum Kartı" altındaydı, kullanıcı yıldız arıyordu.
         title: 'Yıldız Stili',
-        // İkon seçimi tasarım kararı — ana panelde kalır.
         fields: [
           {
             type: 'iconSelect',
@@ -228,15 +229,6 @@ export const WIDGETS: WidgetDef[] = [
             // yeni ikon eklenince otomatik burada görünür.
             options: getIconOptions(),
           },
-        ],
-      },
-      {
-        // "Yıldız Stili" grubuyla aynı konu, ama renk olduğu için Renkler
-        // sekmesinde görünmesi gerek (isColor:true). Eskiden "Yorum Kartı"
-        // altındaydı, kullanıcı yıldız arıyordu — buraya taşındı.
-        title: 'Yıldız',
-        isColor: true,
-        fields: [
           { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
         ],
       },
