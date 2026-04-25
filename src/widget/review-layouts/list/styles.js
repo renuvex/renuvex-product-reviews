@@ -44,8 +44,12 @@ export var LIST_CSS = `
     cursor:zoom-in;
   }
   /* Desktop: sadece ilk foto görünür (sağ kolonda tek delil görseli). DOM'da
-     tüm fotolar var, modal için kullanılır; mobile'da CSS bu kuralı ezer. */
-  .ikr-review-list-media img:not(:first-child){display:none;}
+     tüm fotolar var, modal için kullanılır. Mobile'da kuralın aktif olmaması
+     için min-width:601 media query içinde tanımlandı — böylece mobile strip
+     tüm fotoları göstermeye engel olmaz. */
+  @media (min-width:601px){
+    .ikr-review-list-media img:not(:first-child){display:none;}
+  }
   @media (max-width:600px){
     /* Mobile sıra: yıldız → title → yazar → tarih → body → foto → reply.
        Sol kolondaki author bloğu DOM'da yıldız+yazar+tarih sırasındadır.
