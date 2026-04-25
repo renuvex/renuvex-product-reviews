@@ -93,13 +93,15 @@ export const WIDGETS: WidgetDef[] = [
             ],
             default: 'card',
           },
+          // Köşe ovalliği renk değil — şekil. Tasarım grubunda ana panelde
+          // diğer tasarım kararlarıyla (layout seçimleri) birlikte durur.
+          { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
         ],
       },
       {
         title: 'Widget Kutusu',
         isColor: true,
         fields: [
-          { type: 'range', key: 'borderRadius',       label: 'Köşe Ovalliği',        min: 0, max: 24, default: 8 },
           { type: 'color', key: 'widgetBgColor',      label: 'Widget Arka Plan',     default: '#ffffff' },
           { type: 'color', key: 'widgetBorderColor',  label: 'Widget Border',        default: '#ffffff' },
           { type: 'color', key: 'separatorColor',     label: 'Ayırıcı Çizgi Rengi',  default: '#e5e7eb' },
