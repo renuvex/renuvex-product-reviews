@@ -490,6 +490,15 @@ export async function render(productId, settings, reviewsData, productName, orde
         var photoSection = document.createElement('div');
         photoSection.className = 'ikr-photo-section';
 
+        // Strip üstündeki başlık (Loox/Yotpo standardı: "Customer Photos").
+        // Boyut --ikr-photo-title-size, renk --ikr-photo-title CSS variable
+        // üzerinden — admin paneldeki "Fotoğraf Galerisi → Başlık Rengi" ve
+        // SIZE_PRESETS.photoTitleSize bu öğeyi kontrol eder.
+        var photoTitle = document.createElement('div');
+        photoTitle.className = 'ikr-photo-title';
+        photoTitle.textContent = 'Fotoğraflı Yorumlar';
+        photoSection.appendChild(photoTitle);
+
         // Thumbnail aspect ratio review layout'a göre otomatik:
         // card review fotoları 1:1 → strip de kare; list/gallery review fotoları
         // 3:4 portre → strip de portre. Tutarlı görsel akış.

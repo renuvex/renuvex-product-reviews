@@ -183,6 +183,15 @@ export var CLASSIC_CSS = `
 
   /* Fotoğraflı Yorumlar bölümü */
   .ikr-photo-section{margin-bottom:24px;}
+  /* Strip üstündeki bölüm başlığı (Loox/Yotpo: "Customer Photos") —
+     admin "Fotoğraf Galerisi → Başlık Rengi" ve SIZE_PRESETS.photoTitleSize
+     bu öğeyi kontrol eder. */
+  .ikr-photo-title{
+    font-size:var(--ikr-photo-title-size,16px);
+    font-weight:600;
+    color:var(--ikr-photo-title,var(--ikr-text,rgba(0,0,0,1)));
+    margin-bottom:12px;
+  }
   .ikr-photo-strip-wrap{position:relative;}
   /* .ikr-photo-strip ve .ikr-photo-strip-thumb asıl tanımları aşağıda
      (satır 266 ve 268). Bu ölü duplicate kurallar temizlendi.
