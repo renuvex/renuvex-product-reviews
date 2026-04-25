@@ -9,7 +9,9 @@ export var COMPACT_CSS = `
   .ikr-title-compact{text-align:left;}
 
   /* Compact'te ana .ikr-summary padding'ini sıfırla — yıldızlar başlık ile aynı sol kenar */
-  .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding:0;}
+  /* padding-top/bottom 0; yan padding base .ikr-summary mobile bloğundan gelir
+     (--ikr-pad-summary-mobile). Diğer layoutlarla aynı yan boşluk. */
+  .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding-top:0;padding-bottom:0;}
 
   .ikr-compact-header{
     display:flex;align-items:center;gap:12px;

@@ -42,16 +42,13 @@ export var MINIMAL_CSS = `
     .ikr-summary-minimal{
       flex-wrap:wrap;gap:12px;
     }
-    .ikr-minimal-info{flex:1 1 100%;}
-    /* Write + filter tek satirda alt satira dusar, write full-genislik buyur,
-       filter sagda ikon kutusu olarak kalir. */
-    .ikr-minimal-actions{
-      flex:1 1 100%;width:100%;justify-content:stretch;
-    }
-    .ikr-minimal-actions .ikr-write-btn{flex:1 1 auto;justify-content:center;}
-    .ikr-minimal-actions .ikr-filter-wrap{flex:0 0 auto;}
-    /* Eski mobile write-row artik gerekmez — actions zaten tam satirda */
-    .ikr-minimal-write-row{display:none;}
+    .ikr-minimal-info{flex:1 1 auto;}
+    .ikr-minimal-actions{flex:0 0 auto;}
+    /* Filter info'nun yaninda kalir (sag ust kose), Yorum Yap full-genislik
+       alta tek basina duser. Hero ve minimal'in kompakt karakterine uygun. */
+    .ikr-minimal-actions .ikr-write-btn{display:none;}
+    .ikr-minimal-write-row{display:flex;width:100%;}
+    .ikr-minimal-write-row .ikr-write-btn{flex:1 1 auto;justify-content:center;}
   }
   @media(min-width:601px){
     .ikr-minimal-write-row{display:none;}
