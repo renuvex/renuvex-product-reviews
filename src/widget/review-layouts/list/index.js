@@ -20,9 +20,9 @@ export var meta = {
   // --ikr-list-photo-w        : desktop sağ kolon foto genişliği (3:4 portre)
   // --ikr-list-photo-w-mobile : mobile, metin altına düşen foto genişliği (3:4 portre)
   sizeOverrides: {
-    small:  { '--ikr-list-photo-w': '110px', '--ikr-list-photo-w-mobile':  '80px' },
-    medium: { '--ikr-list-photo-w': '154px', '--ikr-list-photo-w-mobile': '100px' },
-    large:  { '--ikr-list-photo-w': '198px', '--ikr-list-photo-w-mobile': '120px' },
+    small:  { '--ikr-list-photo-w':  '90px', '--ikr-list-photo-w-mobile':  '80px' },
+    medium: { '--ikr-list-photo-w': '120px', '--ikr-list-photo-w-mobile': '100px' },
+    large:  { '--ikr-list-photo-w': '160px', '--ikr-list-photo-w-mobile': '120px' },
   },
 };
 

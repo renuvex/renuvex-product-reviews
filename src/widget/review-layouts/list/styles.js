@@ -11,7 +11,7 @@
 export var LIST_CSS = `
   .ikr-review-list{
     display:grid;
-    grid-template-columns:140px 1fr var(--ikr-list-photo-w,200px);
+    grid-template-columns:140px 1fr var(--ikr-list-photo-w,120px);
     gap:24px;
     align-items:start;
     /* Yan padding theme mobile bloğundan gelir (--ikr-pad-review-mobile).
@@ -38,7 +38,7 @@ export var LIST_CSS = `
   .ikr-review-list-body{margin-top:var(--ikr-gap-normal);line-height:1.6;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);}
   .ikr-review-list-media{display:flex;justify-content:flex-end;}
   .ikr-review-list-media img{
-    width:100%;max-width:var(--ikr-list-photo-w,200px);aspect-ratio:3/4;object-fit:cover;
+    width:100%;max-width:var(--ikr-list-photo-w,120px);aspect-ratio:3/4;object-fit:cover;
     border-radius:var(--ikr-radius,6px);
     border:1px solid var(--ikr-photo-border,var(--ikr-border,rgba(0,0,0,0.10)));
     cursor:zoom-in;
