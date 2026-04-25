@@ -101,18 +101,24 @@ export function render(r, allReviews) {
 
   reviewEl.appendChild(contentCol);
 
-  // ─── Sağ kolon: foto (ilk görsel) ───
+  // ─── Sağ kolon: foto ───
+  // Desktop: sadece ilk foto (sağ kolon, sabit kare layout).
+  // Mobile: tüm fotolar yatay strip (CSS overflow-x:auto). DOM'a tüm
+  // fotoları koyup mobile'da görünür kılıyoruz; desktop'ta CSS ilk fotodan
+  // sonrakileri gizliyor (display:none).
   if (hasMedia) {
     var mediaCol = document.createElement('div');
     mediaCol.className = 'ikr-review-list-media';
-    var firstImg = r.images[0];
-    if (firstImg && (firstImg.indexOf('https://') === 0 || firstImg.indexOf('data:image/') === 0)) {
+    r.images.forEach(function(imgUrl) {
+      if (!imgUrl || (imgUrl.indexOf('https://') !== 0 && imgUrl.indexOf('data:image/') !== 0)) return;
       var imgEl = document.createElement('img');
-      imgEl.src = optimizeImageUrl(firstImg);
-      imgEl.setAttribute('data-ikr-img-url', firstImg);
-      imgEl.onclick = function() { openReviewModal(r, firstImg, allReviews); };
+      imgEl.src = optimizeImageUrl(imgUrl);
+      imgEl.setAttribute('data-ikr-img-url', imgUrl);
+      (function(url) {
+        imgEl.onclick = function() { openReviewModal(r, url, allReviews); };
+      })(imgUrl);
       mediaCol.appendChild(imgEl);
-    }
+    });
     reviewEl.appendChild(mediaCol);
   }
 

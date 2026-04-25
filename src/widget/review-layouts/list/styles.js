@@ -43,6 +43,9 @@ export var LIST_CSS = `
     border:1px solid var(--ikr-photo-border,var(--ikr-border,rgba(0,0,0,0.10)));
     cursor:zoom-in;
   }
+  /* Desktop: sadece ilk foto görünür (sağ kolonda tek delil görseli). DOM'da
+     tüm fotolar var, modal için kullanılır; mobile'da CSS bu kuralı ezer. */
+  .ikr-review-list-media img:not(:first-child){display:none;}
   @media (max-width:600px){
     /* Mobile sıra: yıldız → title → yazar → tarih → body → foto → reply.
        Sol kolondaki author bloğu DOM'da yıldız+yazar+tarih sırasındadır.
@@ -68,11 +71,20 @@ export var LIST_CSS = `
     .ikr-review-list-content > .ikr-read-more{order:6;margin-top:-4px;}
     .ikr-review-list-media{order:7;justify-content:flex-start;}
     .ikr-reply{order:8;width:100%;}
-    /* Mobile foto: 3:4 portre, size'a göre genişlik (--ikr-list-photo-w-mobile).
-       Fallback 100px (medium). Yükseklik aspect-ratio ile otomatik. */
+    /* Mobile media: tüm fotolar yatay strip (overflow-x:auto). flex-shrink:0
+       ile fotolar küçülmez, sığmayanlar yatay scroll. Desktop'taki "sadece ilk
+       foto" kuralı burada ezilir. Scroll bar gizli, parmakla kaydırma. */
+    .ikr-review-list-media{
+      flex-wrap:nowrap;overflow-x:auto;gap:8px;
+      padding-bottom:4px;scrollbar-width:none;
+      justify-content:flex-start;
+    }
+    .ikr-review-list-media::-webkit-scrollbar{display:none;}
     .ikr-review-list-media img{
+      flex-shrink:0;
       max-width:var(--ikr-list-photo-w-mobile,100px);
       aspect-ratio:3/4;
+      display:block;
     }
   }
 `;
