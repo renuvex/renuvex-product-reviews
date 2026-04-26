@@ -169,7 +169,6 @@ export var CLASSIC_CSS = `
   .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,transparent);color:var(--ikr-filter-btn-text,var(--ikr-color,#000));cursor:pointer;}
   /* Material Symbols viewBox 0 -960 960 960 — buton içine sığması için 16x16 */
   .ikr-filter-btn svg{width:16px;height:16px;flex-shrink:0;}
-  .ikr-filter-btn-active{opacity:0.85;}
 
   /* Filtre dropdown (wrap yukarıda tanımlandı) */
   /* Filter dropdown — Loox-style growOut animasyonu (200ms ease-in-out) */
