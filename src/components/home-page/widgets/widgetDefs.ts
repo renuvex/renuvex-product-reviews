@@ -29,10 +29,7 @@ export type SettingField =
   | { type: 'text';       key: string; label: string; placeholder?: string; default: string; hideLabel?: boolean; showWhen?: ShowWhen }
   | { type: 'color';      key: string; label: string; default: string; showWhen?: ShowWhen }
   | { type: 'select';     key: string; label: string; options: SelectOptionsSource; default: string; showWhen?: ShowWhen }
-  // radioGroup — vertical radio list (Loox/Yotpo standardı). Uzun label'lı ya da
-  // önemli kararlar için: tüm seçenekler aynı anda görünür, tek tıkla seçilir.
-  | { type: 'radioGroup'; key: string; label: string; options: SelectOption[]; default: string; showWhen?: ShowWhen }
-  // dropdown — native <select>; yer kazandıran kompakt UI. Yine select tipinde
+  // dropdown — native <select>; yer kazandıran kompakt UI. Mevcut select tipinde
   // farklı UI varyantı (kart-button) olduğu için ayrı tip.
   | { type: 'dropdown';   key: string; label: string; options: SelectOption[]; default: string; showWhen?: ShowWhen }
   | { type: 'range';      key: string; label: string; min: number; max: number; default: number; showWhen?: ShowWhen }
