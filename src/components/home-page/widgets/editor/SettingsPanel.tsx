@@ -418,6 +418,29 @@ function FieldRenderer({ field, settings, onChange }: {
       );
     }
 
+    case 'dropdown': {
+      // Native <select> — yer kazandıran kompakt UI. Mobile'da sistemin kendi
+      // picker'ını açar; desktop'ta basit liste. Stil componentStyles.select.
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
+          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+            {field.label}
+          </label>
+          <select
+            value={String(value ?? field.default ?? '')}
+            onChange={(e) => onChange({ ...settings, [field.key]: e.target.value })}
+            style={{ ...componentStyles.select, width: '100%' }}
+          >
+            {field.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
     case 'range': {
       const numVal = Number(value ?? field.default);
       return (

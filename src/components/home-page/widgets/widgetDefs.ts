@@ -32,6 +32,9 @@ export type SettingField =
   // radioGroup — vertical radio list (Loox/Yotpo standardı). Uzun label'lı ya da
   // önemli kararlar için: tüm seçenekler aynı anda görünür, tek tıkla seçilir.
   | { type: 'radioGroup'; key: string; label: string; options: SelectOption[]; default: string; showWhen?: ShowWhen }
+  // dropdown — native <select>; yer kazandıran kompakt UI. Yine select tipinde
+  // farklı UI varyantı (kart-button) olduğu için ayrı tip.
+  | { type: 'dropdown';   key: string; label: string; options: SelectOption[]; default: string; showWhen?: ShowWhen }
   | { type: 'range';      key: string; label: string; min: number; max: number; default: number; showWhen?: ShowWhen }
   // iconSelect — ikonların SVG grid popover'ında görüntülendiği özel seçici.
   // options sadece { value, label } — SVG preview ICONS registry'sinden alınır.
@@ -299,7 +302,7 @@ export const WIDGETS: WidgetDef[] = [
           // submit endpoint'i (/api/public/reviews) yorum yıldızını bu değere
           // göre değerlendirip status'u 'approved' veya 'pending' olarak yazar.
           {
-            type: 'radioGroup',
+            type: 'dropdown',
             key: 'autoApprove',
             label: 'Yorum Onayı',
             default: 'manual',
