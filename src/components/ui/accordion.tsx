@@ -35,7 +35,10 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "flex flex-1 items-start justify-between gap-4 rounded-md py-4 px-2 text-left text-sm font-medium transition-all outline-none hover:bg-[rgb(247,245,255)] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
+          // py-4 px-3 = sp[4] sp[3] (16/12) — design-tokens spacing scale.
+          // Content iç div'i de px-3 kullanır → trigger metni ve content alanı
+          // aynı sol kenardan başlar.
+          "flex flex-1 items-start justify-between gap-4 rounded-md py-4 px-3 text-left text-sm font-medium transition-all outline-none hover:bg-[rgb(247,245,255)] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
           className
         )}
         {...props}
@@ -58,7 +61,9 @@ function AccordionContent({
       className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
       {...props}
     >
-      <div className={cn("pt-0 pb-4", className)}>{children}</div>
+      {/* pt-4 pb-6 px-3 = sp[4]/sp[6]/sp[3] (16/24/12). Content trigger ile
+          aynı sol kenardan başlar (px-3); üst/alt nefes ferah. */}
+      <div className={cn("pt-4 pb-6 px-3", className)}>{children}</div>
     </AccordionPrimitive.Content>
   )
 }

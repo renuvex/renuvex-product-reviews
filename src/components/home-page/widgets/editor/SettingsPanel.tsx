@@ -88,15 +88,13 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
             fontSize: typography.fontSize.base,
             fontWeight: typography.fontWeight.medium,
             color: colors.textPrimary,
-            // 16 dikey + 12 yan — ferah trigger; ikas'tan biraz daha açık
-            padding: `${sp[4]}px ${sp[3]}px`,
           }}>
             {group.title}
           </AccordionTrigger>
           <AccordionContent>
-            {/* Accordion içi: trigger->ilk field 16, field'lar arası 24,
-                son field->alt sınır 24 — ferah ve nefes alan içerik akışı. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: sp[6], paddingTop: sp[4], paddingBottom: sp[6] }}>
+            {/* Tüm padding'ler accordion.tsx default'undan gelir (pt-4 pb-6 px-3).
+                Burada sadece field'lar arası iç gap. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: sp[6] }}>
               {group.fields.map((field) => {
                 // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
                 if (field.showWhen) {
@@ -144,7 +142,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 width: '100%',
-                padding: '14px 0',
+                padding: `${sp[4]}px ${sp[3]}px`,
                 background: 'transparent',
                 border: 'none',
                 borderBottom: `1px solid ${colors.borderDefault}`,
