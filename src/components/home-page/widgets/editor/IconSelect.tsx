@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { colors, typography, radii } from '@/lib/design-tokens';
-import { ICONS, parseIconValue } from '@/widget/icons.js';
+import { ICONS, FILTER_ICONS, parseIconValue } from '@/widget/icons.js';
 
 type Option = { value: string; label: string };
 
@@ -13,9 +13,16 @@ interface IconSelectProps {
   onChange: (v: string) => void;
 }
 
-// value "star" | "star:matRounded" | "heart" formatında olabilir.
-// Preview için o stilin dolu SVG'sini kullan (yoksa ilk stil).
+// value formatları:
+//   - Yıldız ikonları (ICONS): "star" | "star:rounded" | "heart" — filled+empty çiftli
+//   - Filtre ikonları (FILTER_ICONS): "lines" | "sliders" | "funnel" — tek SVG
+// Önce FILTER_ICONS direct lookup, yoksa ICONS yıldız parse'ı.
 function getPreviewSvg(value: string): string {
+  // Filter ikonu mu? (single-state registry)
+  const filterIcon = (FILTER_ICONS as Record<string, { svg: string }>)[value];
+  if (filterIcon) return filterIcon.svg;
+
+  // Yıldız ikonu (filled+empty çiftli)
   const { type, style } = parseIconValue(value);
   const icon = (ICONS as Record<string, { styles: Record<string, { filled: string }> }>)[type];
   if (!icon) return '';
