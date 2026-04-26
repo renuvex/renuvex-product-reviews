@@ -134,17 +134,26 @@ export function getIconOptions() {
 // ═══════════════════════════════════════════════════════════
 var FP = {
   // filter_list — yatay çizgiler (mevcut hardcoded ikon)
-  lines:   'M120-240v-80h720v80H120Zm120-200v-80h480v80H240Zm120-200v-80h240v80H360Z',
+  lines:        'M120-240v-80h720v80H120Zm120-200v-80h480v80H240Zm120-200v-80h240v80H360Z',
+  // filter_list_alt — alternatif çizgili stil (3 farklı uzunlukta)
+  linesAlt:     'M440-160v-160h80v40h360v80H520v40h-80Zm-360-80v-80h280v80H80Zm200-160v-80H80v-80h200v-80h80v240h-80Zm160-80v-80h440v80H440Zm160-160v-160h80v40h120v80H680v40h-80Zm-520-80v-80h440v80H80Z',
   // tune — slider'lar
-  sliders: 'M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z',
-  // filter_alt — huni
-  funnel:  'M440-160q-17 0-28.5-11.5T400-200v-240L168-736q-15-20-4.5-42t36.5-22h560q26 0 36.5 22t-4.5 42L560-440v240q0 17-11.5 28.5T520-160h-80Z',
+  sliders:      'M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z',
+  // filter_alt — huni outline
+  funnel:       'M440-160q-17 0-28.5-11.5T400-200v-240L168-736q-15-20-4.5-42t36.5-22h560q26 0 36.5 22t-4.5 42L560-440v240q0 17-11.5 28.5T520-160h-80Z',
+  // filter — solid funnel (filter_alt'ın daha kalın hissi için path olarak aynı, görsel olarak benzer)
+  funnelSolid:  'M400-160v-280L120-760h720L560-440v200q0 17-11.5 28.5T520-200h-80q-17 0-28.5-11.5T400-240v80Zm80-280Z',
+  // density_small — minimal 4 çizgi
+  dense:        'M120-160v-80h720v80H120Zm0-160v-80h720v80H120Zm0-160v-80h720v80H120Zm0-160v-80h720v80H120Z',
 };
 
 export var FILTER_ICONS = {
-  lines:   { label: 'Çizgili',  svg: svg(FP.lines) },
-  sliders: { label: 'Slider',   svg: svg(FP.sliders) },
-  funnel:  { label: 'Huni',     svg: svg(FP.funnel) },
+  lines:       { label: 'Çizgili',          svg: svg(FP.lines) },
+  linesAlt:    { label: 'Çizgili (Alt)',    svg: svg(FP.linesAlt) },
+  sliders:     { label: 'Slider',           svg: svg(FP.sliders) },
+  funnel:      { label: 'Huni',             svg: svg(FP.funnel) },
+  funnelSolid: { label: 'Huni (Dolu)',      svg: svg(FP.funnelSolid) },
+  dense:       { label: 'Yoğun Çizgili',    svg: svg(FP.dense) },
 };
 
 // Filter butonu SVG'si — settings.filterIcon değerini al
