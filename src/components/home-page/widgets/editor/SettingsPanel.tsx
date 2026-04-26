@@ -270,7 +270,7 @@ function FieldRenderer({ field, settings, onChange }: {
             onChange={(e) => onChange({ ...settings, [field.key]: e.target.checked })}
             style={{ width: 16, height: 16, cursor: 'pointer', accentColor: colors.primary }}
           />
-          <span style={{ fontSize: typography.fontSize.base, color: colors.textPrimary }}>
+          <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>
             {field.label}
           </span>
         </label>
@@ -279,7 +279,7 @@ function FieldRenderer({ field, settings, onChange }: {
     case 'text':
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
-          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
             {field.label}
           </label>
           <input
@@ -316,7 +316,7 @@ function FieldRenderer({ field, settings, onChange }: {
       const opts = typeof field.options === 'function' ? field.options(settings) : field.options;
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
-          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
             {field.label}
           </label>
           <div style={{ display: 'flex', gap: sp[2], flexWrap: 'wrap' }}>
@@ -347,7 +347,7 @@ function FieldRenderer({ field, settings, onChange }: {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[2] }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+            <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
               {field.label}
             </label>
             <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, minWidth: 36, textAlign: 'right' }}>
