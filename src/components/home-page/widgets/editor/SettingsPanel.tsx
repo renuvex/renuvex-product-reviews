@@ -286,8 +286,9 @@ function FieldRenderer({ field, settings, onChange }: {
           )}
           <input
             type="text"
-            value={String(value ?? '')}
-            placeholder={field.placeholder}
+            // value yoksa default'u göster — kullanıcı boş input + gri placeholder
+            // yerine doğrudan gerçek metni görür (Shopify pattern'i).
+            value={String(value ?? field.default ?? '')}
             aria-label={field.label}
             onChange={(e) => onChange({ ...settings, [field.key]: e.target.value })}
             style={componentStyles.input}
