@@ -12,11 +12,18 @@ export interface Review {
 }
 
 // Per-widget settings — JSON'dan gelen veri
+// Otomatik onay eşiği — yeni yorumlar bu değere göre status alır.
+//   manual = hiç otomatik onaylama (admin elle onaylar)
+//   4plus  = 4 yıldız ve üzeri otomatik onaylanır
+//   5stars = sadece 5 yıldız otomatik onaylanır
+//   all    = tüm yorumlar otomatik onaylanır
+export type AutoApproveMode = 'manual' | '4plus' | '5stars' | 'all';
+
 export interface ReviewsSettings {
   enabled?: boolean;
   title?: string;
   primaryColor?: string;
-  autoApprove?: boolean;
+  autoApprove?: AutoApproveMode;
 }
 
 export interface BadgeSettings {

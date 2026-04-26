@@ -16,7 +16,7 @@ export async function GET() {
       enabled: true,
       title: 'Müşteri Yorumları',
       primaryColor: '#111111',
-      autoApprove: false,
+      autoApprove: 'manual',
       size: 'medium',
       thumbnailSize: 'medium',
     },

@@ -183,7 +183,23 @@ export async function POST(request: Request) {
       where: { storeId_widgetId: { storeId: String(storeId), widgetId: 'reviews' } },
     });
     const reviewsConfig = (reviewsWidget?.settings ?? {}) as Record<string, unknown>;
-    const initialStatus = reviewsConfig.autoApprove ? 'approved' : 'pending';
+
+    // Otomatik onay eşiği — yıldıza göre status belirle.
+    //   'manual' (default), '4plus', '5stars', 'all'
+    // Eski boolean değer için geri uyumluluk: true → 'all', false → 'manual'.
+    const rawAutoApprove = reviewsConfig.autoApprove;
+    const autoApproveMode: string =
+      rawAutoApprove === true ? 'all' :
+      rawAutoApprove === false ? 'manual' :
+      typeof rawAutoApprove === 'string' ? rawAutoApprove : 'manual';
+
+    const shouldAutoApprove =
+      autoApproveMode === 'all' ? true :
+      autoApproveMode === '5stars' ? ratingNum === 5 :
+      autoApproveMode === '4plus' ? ratingNum >= 4 :
+      false;
+
+    const initialStatus = shouldAutoApprove ? 'approved' : 'pending';
 
     const newReview = await prisma.review.create({
       data: {

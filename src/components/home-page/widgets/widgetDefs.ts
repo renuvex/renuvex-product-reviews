@@ -292,7 +292,21 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Ayarlar',
         fields: [
           { type: 'toggle', key: 'enabled',     label: 'Widget Aktif',                   default: true },
-          { type: 'toggle', key: 'autoApprove', label: 'Yeni Yorumları Otomatik Onayla', default: false },
+          // Otomatik onay eşiği — Loox/Yotpo standardı 4 seviyeli select.
+          // submit endpoint'i (/api/public/reviews) yorum yıldızını bu değere
+          // göre değerlendirip status'u 'approved' veya 'pending' olarak yazar.
+          {
+            type: 'select',
+            key: 'autoApprove',
+            label: 'Otomatik Onay',
+            default: 'manual',
+            options: [
+              { value: 'manual', label: 'Manuel Onaylama' },
+              { value: '4plus',  label: '4 yıldız ve üzeri otomatik onayla' },
+              { value: '5stars', label: '5 yıldız otomatik onayla' },
+              { value: 'all',    label: 'Tümünü otomatik onayla' },
+            ],
+          },
         ],
       },
     ],
