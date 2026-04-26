@@ -56,9 +56,13 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     );
   }
 
-  // Grupları ayır: isColor=true olanlar "Renkler" alt menüsüne, diğerleri ana panele.
+  // Grupları ayır:
+  //   - isColor=true → "Renkler" alt menüsü
+  //   - title === 'Ayarlar' → ana panelin EN SONUNA, "Renkler" geçişinden sonra
+  //   - diğerleri → ana panelin başında
   const colorGroups = groups.filter((g) => g.isColor);
-  const mainGroups = groups.filter((g) => !g.isColor);
+  const settingsGroup = groups.find((g) => !g.isColor && g.title === 'Ayarlar');
+  const mainGroups = groups.filter((g) => !g.isColor && g.title !== 'Ayarlar');
   const hasColorGroups = colorGroups.length > 0;
 
   const handleResetClick = () => {
@@ -80,8 +84,9 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
   };
 
   // Render edilen akordiyon listesi — hem ana hem renk view'ları için tek helper.
+  // defaultValue=[] — hiçbir accordion otomatik açık değil, kullanıcı seçer.
   const renderAccordion = (list: SettingsGroup[]) => (
-    <Accordion type="multiple" defaultValue={list.length > 0 ? ['group-0'] : []} className="w-full">
+    <Accordion type="multiple" defaultValue={[]} className="w-full">
       {list.map((group, i) => (
         <AccordionItem key={`group-${i}`} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}`, marginBottom: sp[2] }}>
           <AccordionTrigger style={{
@@ -158,6 +163,9 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
               <ChevronRight size={16} style={{ color: colors.textMuted }} />
             </button>
           )}
+
+          {/* Ayarlar accordion — Renkler'den sonra, en sonda */}
+          {settingsGroup && renderAccordion([settingsGroup])}
 
           {/* Varsayılanlara Sıfırla Butonu */}
           <div style={{ padding: `${sp[6]}px 0`, marginTop: sp[4] }}>
