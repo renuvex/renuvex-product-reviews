@@ -189,7 +189,7 @@ export var CLASSIC_CSS = `
      bu öğeyi kontrol eder. */
   .ikr-photo-title{
     font-size:var(--ikr-photo-title-size,16px);
-    font-weight:600;
+    font-weight:500;
     color:var(--ikr-photo-title,var(--ikr-text,rgba(0,0,0,1)));
     margin-bottom:12px;
   }
