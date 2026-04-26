@@ -133,8 +133,8 @@ export function getIconOptions() {
 //  Google Material Symbols, Apache 2.0
 // ═══════════════════════════════════════════════════════════
 var FP = {
-  // filter_list — yatay çizgiler (mevcut hardcoded ikon)
-  lines:        'M120-240v-80h720v80H120Zm120-200v-80h480v80H240Zm120-200v-80h240v80H360Z',
+  // filter_list — yatay çizgiler, klasik filtre sembolü (uzun→kısa, üstten aşağı)
+  lines:        'M400-240v-80h160v80H400ZM240-440v-80h480v80H240ZM120-640v-80h720v80H120Z',
   // filter_list_alt — alternatif çizgili stil (3 farklı uzunlukta)
   linesAlt:     'M440-160v-160h80v40h360v80H520v40h-80Zm-360-80v-80h280v80H80Zm200-160v-80H80v-80h200v-80h80v240h-80Zm160-80v-80h440v80H440Zm160-160v-160h80v40h120v80H680v40h-80Zm-520-80v-80h440v80H80Z',
   // filter_alt — huni outline
