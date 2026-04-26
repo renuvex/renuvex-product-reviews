@@ -277,13 +277,18 @@ function FieldRenderer({ field, settings, onChange }: {
     case 'text':
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
-          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
-            {field.label}
-          </label>
+          {/* hideLabel: önündeki bir toggle bağlamı veriyorsa label tekrarına
+              gerek yok (ör. showTitle + title input). */}
+          {!field.hideLabel && (
+            <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+              {field.label}
+            </label>
+          )}
           <input
             type="text"
             value={String(value ?? '')}
             placeholder={field.placeholder}
+            aria-label={field.label}
             onChange={(e) => onChange({ ...settings, [field.key]: e.target.value })}
             style={componentStyles.input}
           />
