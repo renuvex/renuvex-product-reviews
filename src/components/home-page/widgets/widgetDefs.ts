@@ -29,6 +29,9 @@ export type SettingField =
   | { type: 'text';       key: string; label: string; placeholder?: string; default: string; hideLabel?: boolean; showWhen?: ShowWhen }
   | { type: 'color';      key: string; label: string; default: string; showWhen?: ShowWhen }
   | { type: 'select';     key: string; label: string; options: SelectOptionsSource; default: string; showWhen?: ShowWhen }
+  // radioGroup — vertical radio list (Loox/Yotpo standardı). Uzun label'lı ya da
+  // önemli kararlar için: tüm seçenekler aynı anda görünür, tek tıkla seçilir.
+  | { type: 'radioGroup'; key: string; label: string; options: SelectOption[]; default: string; showWhen?: ShowWhen }
   | { type: 'range';      key: string; label: string; min: number; max: number; default: number; showWhen?: ShowWhen }
   // iconSelect — ikonların SVG grid popover'ında görüntülendiği özel seçici.
   // options sadece { value, label } — SVG preview ICONS registry'sinden alınır.
@@ -292,19 +295,19 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Ayarlar',
         fields: [
           { type: 'toggle', key: 'enabled',     label: 'Widget Aktif',                   default: true },
-          // Otomatik onay eşiği — Loox/Yotpo standardı 4 seviyeli select.
+          // Otomatik onay eşiği — Loox/Yotpo standardı 4 seviyeli radio.
           // submit endpoint'i (/api/public/reviews) yorum yıldızını bu değere
           // göre değerlendirip status'u 'approved' veya 'pending' olarak yazar.
           {
-            type: 'select',
+            type: 'radioGroup',
             key: 'autoApprove',
-            label: 'Otomatik Onay',
+            label: 'Yorum Onayı',
             default: 'manual',
             options: [
-              { value: 'manual', label: 'Manuel Onaylama' },
-              { value: '4plus',  label: '4 yıldız ve üzeri otomatik onayla' },
-              { value: '5stars', label: '5 yıldız otomatik onayla' },
-              { value: 'all',    label: 'Tümünü otomatik onayla' },
+              { value: 'manual', label: 'Manuel onay' },
+              { value: '4plus',  label: '4 yıldız ve üzeri' },
+              { value: '5stars', label: 'Sadece 5 yıldız' },
+              { value: 'all',    label: 'Tümünü onayla' },
             ],
           },
         ],

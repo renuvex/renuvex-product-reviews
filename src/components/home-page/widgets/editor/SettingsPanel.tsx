@@ -357,6 +357,67 @@ function FieldRenderer({ field, settings, onChange }: {
       );
     }
 
+    case 'radioGroup': {
+      // Vertical radio list — Loox/Yotpo pattern. Tüm seçenekler aynı anda
+      // görünür, kullanıcı tek tıkla seçer. Tüm satır clickable (sadece nokta değil).
+      const current = (value ?? field.default) as string;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
+          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+            {field.label}
+          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }} role="radiogroup">
+            {field.options.map((opt) => {
+              const isSelected = current === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => onChange({ ...settings, [field.key]: opt.value })}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: sp[3],
+                    padding: `${sp[2]}px ${sp[3]}px`,
+                    border: `1px solid ${isSelected ? colors.primary : colors.borderDefault}`,
+                    borderRadius: radii.default,
+                    background: isSelected ? colors.primaryBg : colors.bgWhite,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontSize: typography.fontSize.base,
+                    fontWeight: typography.fontWeight.regular,
+                    color: isSelected ? colors.primary : colors.textPrimary,
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      border: `2px solid ${isSelected ? colors.primary : colors.borderDefault}`,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isSelected && (
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: colors.primary }} />
+                    )}
+                  </span>
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
     case 'range': {
       const numVal = Number(value ?? field.default);
       return (
