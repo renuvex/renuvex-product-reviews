@@ -260,10 +260,10 @@ function FieldRenderer({ field, settings, onChange }: {
 
   switch (field.type) {
     case 'toggle':
+      // inline-flex + width:fit-content — label sadece checkbox + metin kadar
+      // yer kaplar; aksi halde label parent genişliğine uzar ve sağdaki boş
+      // alana tıklamak da toggle'ı tetiklerdi.
       return (
-        {/* width:fit-content — label sadece checkbox + metin kadar yer kaplar.
-            display:flex (block) olsa parent genişliğine uzanır, sağdaki boş alana
-            tıklamak da toggle'ı tetiklerdi. */}
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: sp[3], cursor: 'pointer', width: 'fit-content' }}>
           <input
             type="checkbox"
