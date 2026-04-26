@@ -307,7 +307,7 @@ export const WIDGETS: WidgetDef[] = [
               { value: 'manual', label: 'Manuel onay' },
               { value: '4plus',  label: '4 yıldız ve üzeri' },
               { value: '5stars', label: 'Sadece 5 yıldız' },
-              { value: 'all',    label: 'Tümünü onayla' },
+              { value: 'all',    label: 'Otomatik onayla' },
             ],
           },
         ],
