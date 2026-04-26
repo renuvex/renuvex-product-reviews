@@ -68,6 +68,10 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'toggle', key: 'showTitle', label: 'Widget Başlığını Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
           // Toggle metni zaten bağlamı veriyor, ekstra label tekrar olur — hideLabel ile gizlenir.
           { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, showWhen: { key: 'showTitle', equals: true } },
+          // Görsel galeri (Fotoğraflı Yorumlar strip) başlığı — Widget Başlığı pattern'inin aynısı.
+          // Tasarım'daki showPhotoGallery strip'i tamamen gizler, bu sadece başlığı.
+          { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Görsel Galeri Başlığını Göster', default: true },
+          { type: 'text',   key: 'photoGalleryTitle',    label: 'Görsel Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
         ],
       },
       {
