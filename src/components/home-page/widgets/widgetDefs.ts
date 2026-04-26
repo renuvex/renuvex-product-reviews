@@ -62,7 +62,11 @@ export const WIDGETS: WidgetDef[] = [
       {
         title: 'Genel',
         fields: [
-          { type: 'text',   key: 'title',    label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
+          // showTitle = layout-aware "title destekliyor mu" + kullanıcı tercihi.
+          // Layout title'ı desteklemiyorsa toggle hiç görünmez. Açıksa input
+          // görünür; input boşsa render.js placeholder'ı (default) gösterir.
+          { type: 'toggle', key: 'showTitle', label: 'Widget Başlığını Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
+          { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', showWhen: { key: 'showTitle', equals: true } },
         ],
       },
       {
