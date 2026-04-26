@@ -261,7 +261,10 @@ function FieldRenderer({ field, settings, onChange }: {
   switch (field.type) {
     case 'toggle':
       return (
-        <label style={{ display: 'flex', alignItems: 'center', gap: sp[3], cursor: 'pointer' }}>
+        {/* width:fit-content — label sadece checkbox + metin kadar yer kaplar.
+            display:flex (block) olsa parent genişliğine uzanır, sağdaki boş alana
+            tıklamak da toggle'ı tetiklerdi. */}
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: sp[3], cursor: 'pointer', width: 'fit-content' }}>
           <input
             type="checkbox"
             checked={Boolean(value ?? field.default ?? true)}
