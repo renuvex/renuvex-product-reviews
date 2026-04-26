@@ -3,6 +3,8 @@
 // Tüm summary layout'ları bu shared parçayı kullanır.
 
 import { registerPopover, notifyOpening } from './popover-registry.js';
+import { getFilterIconSvg } from '../../icons.js';
+import { currentSettings } from '../../core/state.js';
 
 export function buildActionsBlock(opts) {
   var widget = opts.widget;
@@ -26,7 +28,9 @@ export function buildActionsBlock(opts) {
   var filterBtn = document.createElement('button');
   filterBtn.className = 'ikr-filter-btn';
   filterBtn.setAttribute('aria-label', 'Filtrele');
-  filterBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>';
+  // İkon admin panelinden seçili (settings.filterIcon); fallback "lines".
+  var filterIconKey = (currentSettings && currentSettings.filterIcon) || 'lines';
+  filterBtn.innerHTML = getFilterIconSvg(filterIconKey);
 
   var filterMenu = document.createElement('div');
   filterMenu.className = 'ikr-filter-menu';

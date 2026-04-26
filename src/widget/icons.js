@@ -127,3 +127,35 @@ export function getIconOptions() {
   });
   return out;
 }
+
+// ═══════════════════════════════════════════════════════════
+//  Filtre butonu ikon kütüphanesi (tek state — filled/empty yok)
+//  Google Material Symbols, Apache 2.0
+// ═══════════════════════════════════════════════════════════
+var FP = {
+  // filter_list — yatay çizgiler (mevcut hardcoded ikon)
+  lines:   'M120-240v-80h720v80H120Zm120-200v-80h480v80H240Zm120-200v-80h240v80H360Z',
+  // tune — slider'lar
+  sliders: 'M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z',
+  // filter_alt — huni
+  funnel:  'M440-160q-17 0-28.5-11.5T400-200v-240L168-736q-15-20-4.5-42t36.5-22h560q26 0 36.5 22t-4.5 42L560-440v240q0 17-11.5 28.5T520-160h-80Z',
+};
+
+export var FILTER_ICONS = {
+  lines:   { label: 'Çizgili',  svg: svg(FP.lines) },
+  sliders: { label: 'Slider',   svg: svg(FP.sliders) },
+  funnel:  { label: 'Huni',     svg: svg(FP.funnel) },
+};
+
+// Filter butonu SVG'si — settings.filterIcon değerini al
+export function getFilterIconSvg(value) {
+  var icon = FILTER_ICONS[value] || FILTER_ICONS.lines;
+  return icon.svg;
+}
+
+// Settings panelde "Filtre İkonu" dropdown'u için seçenekler
+export function getFilterIconOptions() {
+  return Object.keys(FILTER_ICONS).map(function (key) {
+    return { value: key, label: FILTER_ICONS[key].label };
+  });
+}

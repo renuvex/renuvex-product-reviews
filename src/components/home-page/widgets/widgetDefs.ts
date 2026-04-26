@@ -1,4 +1,4 @@
-import { getIconOptions } from '@/widget/icons.js';
+import { getIconOptions, getFilterIconOptions } from '@/widget/icons.js';
 
 // ─── Settings field types ────────────────────────────────────────────────────
 
@@ -266,6 +266,20 @@ export const WIDGETS: WidgetDef[] = [
             options: getIconOptions(),
           },
           { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
+        ],
+      },
+      {
+        // Filtre butonu ikonu — Yıldız Stili pattern'iyle aynı, ana panelde.
+        // Renkler "Filtre Menüsü" + "Butonlar" gruplarında Renkler sekmesinde kalır.
+        title: 'Filtre Stili',
+        fields: [
+          {
+            type: 'iconSelect',
+            key: 'filterIcon',
+            label: 'Filtre İkonu',
+            default: 'lines',
+            options: getFilterIconOptions(),
+          },
         ],
       },
       {
