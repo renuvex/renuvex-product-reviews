@@ -25,7 +25,7 @@ export var FWIZARD_CSS = `
     opacity:1;
   }
 
-  /* Modal kutusu — Loox oranlı, %10 daha kompakt (720×612, max 85vh) */
+  /* Modal kutusu — 720×612, max 85vh */
   .ikr-fwizard{
     position:relative;
     width:100%;
