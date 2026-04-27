@@ -121,6 +121,107 @@ export var FWIZARD_CSS = `
     line-height:1.3;
   }
 
+  /* Step alt başlığı — başlığın hemen altında, daha sönük */
+  .ikr-fwizard-step-subtitle{
+    margin-top:-20px;
+    font-size:14px;
+    font-weight:400;
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.55));
+    line-height:1.4;
+  }
+
+  /* ─── Step 2: Foto kartı ─── */
+  .ikr-fwizard-photo-card{
+    width:100%;
+    max-width:420px;
+    border:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.12));
+    border-radius:12px;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:16px;
+    box-sizing:border-box;
+  }
+  .ikr-fwizard-photo-add{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    width:100%;
+    padding:14px 20px;
+    background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
+    color:var(--ikr-fwizard-cta-text, #ffffff);
+    border-radius:8px;
+    font-size:15px;
+    font-weight:500;
+    cursor:pointer;
+    user-select:none;
+    transition:opacity 0.15s;
+  }
+  .ikr-fwizard-photo-add:hover{
+    opacity:0.92;
+  }
+  .ikr-fwizard-photo-add--disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+    pointer-events:none;
+  }
+  .ikr-fwizard-photo-add svg{
+    flex-shrink:0;
+  }
+  .ikr-fwizard-photo-previews{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .ikr-fwizard-photo-previews:empty{
+    display:none;
+  }
+  .ikr-fwizard-photo-thumb{
+    position:relative;
+    width:88px;
+    height:88px;
+    border-radius:8px;
+    overflow:hidden;
+    border:1px solid rgba(0,0,0,0.06);
+  }
+  .ikr-fwizard-photo-thumb img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .ikr-fwizard-photo-loading{
+    position:absolute;
+    top:0;left:0;
+    width:100%;height:100%;
+    background:rgba(255,255,255,0.75);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:8px;
+  }
+  .ikr-fwizard-photo-remove{
+    position:absolute;
+    top:-6px;
+    right:-6px;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    background:#fff;
+    border:1px solid rgba(0,0,0,0.15);
+    color:rgba(0,0,0,0.65);
+    font-size:11px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 1px 4px rgba(0,0,0,0.12);
+    padding:0;
+  }
+
   /* ─── Step 1: Yıldız satırı ───
      İkon ve renk admin "Yıldız Stili"nden gelir:
        - SVG: getIconFromSettings (icons.js, currentSettings.reviewIcon)
@@ -157,15 +258,27 @@ export var FWIZARD_CSS = `
     color:var(--ikr-review-star-color, #f59e0b);
   }
 
-  /* ─── Footer + Progress bar ─── */
+  /* ─── Footer: [Geri]  [progress]  [Atla] ─── */
   .ikr-fwizard-footer{
     flex:0 0 auto;
     padding:16px 24px;
     border-top:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.08));
+    display:grid;
+    grid-template-columns:1fr 2fr 1fr;
+    align-items:center;
+    gap:16px;
+  }
+  .ikr-fwizard-footer-back{
+    justify-self:start;
+  }
+  .ikr-fwizard-footer-progress{
     display:flex;
     align-items:center;
     justify-content:center;
     gap:6px;
+  }
+  .ikr-fwizard-footer-skip{
+    justify-self:end;
   }
   .ikr-fwizard-progress-seg{
     flex:1 1 auto;
@@ -176,6 +289,25 @@ export var FWIZARD_CSS = `
   }
   .ikr-fwizard-progress-seg-active{
     background:var(--ikr-fwizard-progress-active, rgb(17,17,17));
+  }
+  .ikr-fwizard-nav-btn{
+    background:transparent;
+    border:none;
+    padding:6px 4px;
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.60));
+    font-size:14px;
+    font-weight:500;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    border-radius:6px;
+  }
+  .ikr-fwizard-nav-btn:hover{
+    color:var(--ikr-fwizard-text, rgb(17,17,17));
+  }
+  .ikr-fwizard-nav-btn[hidden]{
+    display:none;
   }
 
   /* Mobile düzenlemeleri */

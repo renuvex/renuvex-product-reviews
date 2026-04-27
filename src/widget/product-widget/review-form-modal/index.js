@@ -11,6 +11,7 @@ import { FWIZARD_CSS } from './styles.js';
 import { createWizardState, TOTAL_STEPS } from './wizard-state.js';
 import { createProgressBar } from './progress-bar.js';
 import { createStepRating } from './steps/step-rating.js';
+import { createStepPhotos } from './steps/step-photos.js';
 
 // ─── CSS bir kez inject ─────
 var stylesInjected = false;
@@ -26,7 +27,8 @@ function ensureStyles() {
 // Step factory — currentStep'e göre uygun step'i döndürür
 function renderStep(stepNum, state) {
   if (stepNum === 1) return createStepRating(state);
-  // Step 2 ve 3 — Faz 3'te yazılacak. Şimdilik basit placeholder.
+  if (stepNum === 2) return createStepPhotos(state);
+  // Step 3 — sonraki fazda yazılacak. Şimdilik placeholder.
   var ph = document.createElement('div');
   ph.className = 'ikr-fwizard-step ikr-fwizard-step-placeholder';
   ph.innerHTML =
@@ -56,8 +58,11 @@ export function openReviewFormModal(opts) {
   var stepWrap = document.createElement('div');
   stepWrap.className = 'ikr-fwizard-step-wrap';
 
-  var progress = createProgressBar();
-  progress.el.classList.add('ikr-fwizard-footer');
+  var progress = createProgressBar({
+    skippableSteps: [2],
+    onBack: function () { state.goBack(); },
+    onSkip: function () { state.goNext(); },
+  });
 
   // Wizard layout container — content + footer dikey
   var layout = document.createElement('div');
