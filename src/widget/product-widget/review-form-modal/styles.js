@@ -25,13 +25,13 @@ export var FWIZARD_CSS = `
     opacity:1;
   }
 
-  /* Modal kutusu — görsel modal ile aynı boyut (813×584, max 80vh) */
+  /* Modal kutusu — Loox UGC form referansı (800×680, max 85vh) */
   .ikr-fwizard{
     position:relative;
     width:100%;
-    max-width:813px;
-    height:584px;
-    max-height:80vh;
+    max-width:800px;
+    height:680px;
+    max-height:85vh;
     background:var(--ikr-fwizard-bg, #ffffff);
     color:var(--ikr-fwizard-text, rgb(17,17,17));
     border:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.08));
