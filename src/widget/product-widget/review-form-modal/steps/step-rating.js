@@ -3,6 +3,15 @@
 // Loox standardı: hover'da yıldızlar dolar, tıklayınca seçili kalır,
 // tıklamadan sonra otomatik bir sonraki step'e geçer (auto-advance).
 // "Sonraki" butonu yok.
+//
+// İkon ve renk admin panelden gelir:
+//   - getIconFromSettings(currentSettings) → { filled, empty } SVG çifti
+//     (Yıldız Stili → Yorum İkonu seçimi: star/heart/box vb.)
+//   - --ikr-review-star-color → dolu yıldız rengi
+// Bu sayede modal review yıldızlarıyla tutarlı görünür.
+
+import { getIconFromSettings } from '../../../icons.js';
+import { currentSettings } from '../../../core/state.js';
 
 export function createStepRating(state) {
   var root = document.createElement('div');
@@ -20,16 +29,18 @@ export function createStepRating(state) {
   starsRow.setAttribute('role', 'radiogroup');
   starsRow.setAttribute('aria-label', 'Yıldız puanı');
 
+  // İkon çifti admin'deki "Yıldız Stili → Yorum İkonu"ndan gelir.
+  // Renk --ikr-review-star-color (admin "Yıldız Rengi") via .ikr-fwizard-star-active.
+  var iconPair = getIconFromSettings(currentSettings || {});
+
   var stars = [];
-  var hoverIndex = 0;
 
   function applyVisual(activeCount) {
     stars.forEach(function (btn, idx) {
-      if (idx < activeCount) {
-        btn.classList.add('ikr-fwizard-star-active');
-      } else {
-        btn.classList.remove('ikr-fwizard-star-active');
-      }
+      var isActive = idx < activeCount;
+      btn.classList.toggle('ikr-fwizard-star-active', isActive);
+      // SVG'yi state'e göre filled/empty olarak değiştir — review item ile tutarlı.
+      btn.innerHTML = isActive ? iconPair.filled : iconPair.empty;
     });
   }
 
@@ -40,17 +51,13 @@ export function createStepRating(state) {
       btn.className = 'ikr-fwizard-star';
       btn.setAttribute('role', 'radio');
       btn.setAttribute('aria-label', value + ' yıldız');
-      btn.innerHTML =
-        '<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-        '<path d="M12 2.5l2.9 6.55 7.1.62-5.4 4.7L18.2 21.5 12 17.77 5.8 21.5l1.6-7.13L2 9.67l7.1-.62L12 2.5z"/>' +
-        '</svg>';
+      // Başlangıçta empty — applyVisual ilk çağrıda doğru SVG'yi yerleştirir.
+      btn.innerHTML = iconPair.empty;
 
       btn.addEventListener('mouseenter', function () {
-        hoverIndex = value;
         applyVisual(value);
       });
       btn.addEventListener('mouseleave', function () {
-        hoverIndex = 0;
         applyVisual(state.get().rating);
       });
       btn.addEventListener('click', function () {

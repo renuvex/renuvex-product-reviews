@@ -120,7 +120,12 @@ export var FWIZARD_CSS = `
     line-height:1.3;
   }
 
-  /* ─── Step 1: Yıldız satırı ─── */
+  /* ─── Step 1: Yıldız satırı ───
+     İkon ve renk admin "Yıldız Stili"nden gelir:
+       - SVG: getIconFromSettings (icons.js, currentSettings.reviewIcon)
+       - Renk: --ikr-review-star-color (admin "Yıldız Rengi")
+     Boş hali için ayrı bir variable yok; review widget pattern'iyle aynı:
+     empty SVG'nin currentColor'ı CSS'ten okunur. */
   .ikr-fwizard-stars{
     display:inline-flex;
     gap:8px;
@@ -133,7 +138,7 @@ export var FWIZARD_CSS = `
     border:none;
     background:transparent;
     cursor:pointer;
-    color:var(--ikr-fwizard-star-empty, rgba(0,0,0,0.18));
+    color:var(--ikr-bar-track, rgba(0,0,0,0.18));
     transition:color 0.15s, transform 0.1s;
     display:inline-flex;
     align-items:center;
@@ -148,7 +153,7 @@ export var FWIZARD_CSS = `
     transform:scale(1.05);
   }
   .ikr-fwizard-star-active{
-    color:var(--ikr-fwizard-star-color, #f59e0b);
+    color:var(--ikr-review-star-color, #f59e0b);
   }
 
   /* ─── Footer + Progress bar ─── */
