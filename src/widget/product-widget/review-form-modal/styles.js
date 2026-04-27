@@ -116,7 +116,7 @@ export var FWIZARD_CSS = `
   /* Step başlığı */
   .ikr-fwizard-step-title{
     font-size:18px;
-    font-weight:600;
+    font-weight:400;
     color:var(--ikr-fwizard-text, rgb(17,17,17));
     line-height:1.3;
   }
