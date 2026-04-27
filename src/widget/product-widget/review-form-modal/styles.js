@@ -263,6 +263,90 @@ export var FWIZARD_CSS = `
     color:#dc2626;
   }
 
+  /* ─── Step 4: Hakkınızda (Ad + E-posta + Submit) ─── */
+  .ikr-fwizard-author-form{
+    width:100%;
+    max-width:520px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    text-align:left;
+  }
+  .ikr-fwizard-field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .ikr-fwizard-label{
+    font-size:13px;
+    font-weight:500;
+    color:var(--ikr-fwizard-text, rgb(17,17,17));
+  }
+  .ikr-fwizard-required{
+    color:#dc2626;
+    margin-left:2px;
+  }
+  .ikr-fwizard-notice{
+    font-size:12px;
+    line-height:1.5;
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.55));
+    text-align:center;
+    padding:4px 8px;
+  }
+  .ikr-fwizard-msg{
+    min-height:20px;
+  }
+  .ikr-fwizard-msg-error{
+    color:#dc2626;
+    font-size:13px;
+  }
+  .ikr-fwizard-submit-btn{
+    background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
+    color:var(--ikr-fwizard-cta-text, #ffffff);
+    border:none;
+    border-radius:8px;
+    padding:14px 24px;
+    font-size:15px;
+    font-weight:500;
+    cursor:pointer;
+    transition:opacity 0.15s, background 0.15s;
+    font-family:inherit;
+    margin-top:4px;
+  }
+  .ikr-fwizard-submit-btn:hover:not(:disabled){
+    opacity:0.92;
+  }
+  .ikr-fwizard-submit-btn--disabled,
+  .ikr-fwizard-submit-btn:disabled{
+    background:var(--ikr-fwizard-cta-disabled-bg, rgba(0,0,0,0.18));
+    color:var(--ikr-fwizard-cta-disabled-text, rgba(255,255,255,0.85));
+    cursor:not-allowed;
+  }
+
+  /* ─── Teşekkür ekranı (submit sonrası) ─── */
+  .ikr-fwizard-thanks{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    padding:32px 16px;
+    text-align:center;
+  }
+  .ikr-fwizard-thanks-icon{
+    color:var(--ikr-review-star-color, #f59e0b);
+    line-height:0;
+  }
+  .ikr-fwizard-thanks-title{
+    font-size:18px;
+    font-weight:500;
+    color:var(--ikr-fwizard-text, rgb(17,17,17));
+  }
+  .ikr-fwizard-thanks-text{
+    font-size:14px;
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.55));
+  }
+
   /* ─── Step 1: Yıldız satırı ───
      İkon ve renk admin "Yıldız Stili"nden gelir:
        - SVG: getIconFromSettings (icons.js, currentSettings.reviewIcon)
