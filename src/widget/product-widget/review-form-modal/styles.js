@@ -25,12 +25,13 @@ export var FWIZARD_CSS = `
     opacity:1;
   }
 
-  /* Modal kutusu — desktop'ta max 480px, mobile'da viewport'a sığar */
+  /* Modal kutusu — görsel modal ile aynı boyut (813×584, max 80vh) */
   .ikr-fwizard{
     position:relative;
     width:100%;
-    max-width:480px;
-    max-height:90vh;
+    max-width:813px;
+    height:584px;
+    max-height:80vh;
     background:var(--ikr-fwizard-bg, #ffffff);
     color:var(--ikr-fwizard-text, rgb(17,17,17));
     border:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.08));
@@ -178,12 +179,13 @@ export var FWIZARD_CSS = `
   }
 
   /* Mobile düzenlemeleri */
-  @media(max-width:600px){
+  @media(max-width:640px){
     .ikr-fwizard-overlay{
       padding:8px;
     }
     .ikr-fwizard{
       max-width:none;
+      height:auto;
       max-height:95vh;
     }
     .ikr-fwizard-step-wrap{
