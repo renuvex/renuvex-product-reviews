@@ -73,21 +73,103 @@ export var FWIZARD_CSS = `
     }
   }
 
-  /* İçerik konteyneri — step'ler buraya gelecek (Faz 2+).
-     Şimdilik boş placeholder. Scroll içeriği taşarsa burada olur. */
+  /* İçerik konteyneri — wizard layout (step + footer) burada. */
   .ikr-fwizard-content{
-    padding:32px 24px;
-    overflow-y:auto;
+    padding:0;
+    overflow:hidden;
     flex:1 1 auto;
-    min-height:200px;
+    display:flex;
+    flex-direction:column;
+    min-height:320px;
   }
 
-  /* Faz 1 placeholder — geçici görünüm. Faz 2'de step layout'u alır. */
-  .ikr-fwizard-placeholder{
+  /* Wizard layout — step içeriği + alttaki progress bar dikey */
+  .ikr-fwizard-layout{
+    display:flex;
+    flex-direction:column;
+    flex:1 1 auto;
+    min-height:0;
+  }
+
+  /* Step içeriği konteyneri — scroll burada */
+  .ikr-fwizard-step-wrap{
+    flex:1 1 auto;
+    overflow-y:auto;
+    padding:48px 24px 32px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
     text-align:center;
-    color:var(--ikr-fwizard-text-muted, rgba(0,0,0,0.55));
-    padding:40px 0;
-    font-size:14px;
+  }
+
+  /* Step kart — her adımın temel layout'u */
+  .ikr-fwizard-step{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:32px;
+  }
+
+  /* Step başlığı */
+  .ikr-fwizard-step-title{
+    font-size:18px;
+    font-weight:600;
+    color:var(--ikr-fwizard-text, rgb(17,17,17));
+    line-height:1.3;
+  }
+
+  /* ─── Step 1: Yıldız satırı ─── */
+  .ikr-fwizard-stars{
+    display:inline-flex;
+    gap:8px;
+    align-items:center;
+  }
+  .ikr-fwizard-star{
+    width:44px;
+    height:44px;
+    padding:0;
+    border:none;
+    background:transparent;
+    cursor:pointer;
+    color:var(--ikr-fwizard-star-empty, rgba(0,0,0,0.18));
+    transition:color 0.15s, transform 0.1s;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .ikr-fwizard-star svg{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .ikr-fwizard-star:hover{
+    transform:scale(1.05);
+  }
+  .ikr-fwizard-star-active{
+    color:var(--ikr-fwizard-star-color, #f59e0b);
+  }
+
+  /* ─── Footer + Progress bar ─── */
+  .ikr-fwizard-footer{
+    flex:0 0 auto;
+    padding:16px 24px;
+    border-top:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.08));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  .ikr-fwizard-progress-seg{
+    flex:1 1 auto;
+    height:4px;
+    border-radius:2px;
+    background:var(--ikr-fwizard-progress-bg, rgba(0,0,0,0.10));
+    transition:background 0.2s;
+  }
+  .ikr-fwizard-progress-seg-active{
+    background:var(--ikr-fwizard-progress-active, rgb(17,17,17));
   }
 
   /* Mobile düzenlemeleri */
@@ -99,8 +181,21 @@ export var FWIZARD_CSS = `
       max-width:none;
       max-height:95vh;
     }
-    .ikr-fwizard-content{
-      padding:28px 20px;
+    .ikr-fwizard-step-wrap{
+      padding:36px 20px 28px;
+    }
+    .ikr-fwizard-step{
+      gap:24px;
+    }
+    .ikr-fwizard-star{
+      width:40px;
+      height:40px;
+    }
+    .ikr-fwizard-stars{
+      gap:6px;
+    }
+    .ikr-fwizard-footer{
+      padding:12px 20px;
     }
   }
 `;

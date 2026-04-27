@@ -1,7 +1,13 @@
 // summary-layouts/shared/write-toggle.js
-// "Yorum Yap" butonunun ortak click handler'ı — form accordion'unu açar/kapatır.
+// "Yorum Yap" butonunun ortak click handler'ı.
+// Admin'deki settings.reviewFormStyle'a göre iki davranış:
+//   'accordion' (default) → mevcut form accordion'unu açar/kapatır
+//   'modal'               → openReviewFormModal() ile wizard modal açar
 
-export function toggleWriteAccordion() {
+import { currentSettings, currentProductId, currentProductName } from '../../core/state.js';
+import { openReviewFormModal } from '../../product-widget/review-form-modal/index.js';
+
+function openAccordion() {
   var accordion = document.getElementById('ikr-form-accordion');
   if (!accordion) return;
   var isOpen = accordion.style.maxHeight && accordion.style.maxHeight !== '0px';
@@ -19,4 +25,16 @@ export function toggleWriteAccordion() {
       window.scrollTo({ top: top, behavior: 'smooth' });
     }, 50);
   }
+}
+
+export function toggleWriteAccordion() {
+  var style = (currentSettings && currentSettings.reviewFormStyle) || 'accordion';
+  if (style === 'modal') {
+    openReviewFormModal({
+      productId: currentProductId || '',
+      productName: currentProductName || '',
+    });
+    return;
+  }
+  openAccordion();
 }

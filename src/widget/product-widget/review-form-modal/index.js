@@ -1,15 +1,18 @@
 // product-widget/review-form-modal/index.js
-// Yorum yazma wizard modal'ı — public API.
-// Faz 1 iskeleti: modal açılır/kapanır, içerik boş placeholder.
-// Faz 2+: step'ler (rating → photos → content → author) buraya entegre olacak.
+// Yorum yazma wizard modal'ı — public API + step orchestrator.
+// Step sırası: rating → content+author → photos.
+// Faz 2: sadece Step 1 (rating) çalışır, Step 2/3 placeholder.
 //
-// Bağımsızlık sözleşmesi: Mevcut review-modal'a, review-form'a hiçbir
-// bağımlılık yok. CSS, state, DOM tamamen ayrı.
+// Bağımsızlık sözleşmesi: review-modal ve review-form ile hiçbir
+// import / class / variable çakışması yok.
 
 import { createWizardShell } from './modal-shell.js';
 import { FWIZARD_CSS } from './styles.js';
+import { createWizardState, TOTAL_STEPS } from './wizard-state.js';
+import { createProgressBar } from './progress-bar.js';
+import { createStepRating } from './steps/step-rating.js';
 
-// ─── CSS bir kez inject (open her çağrıldığında eklemekten kaçın) ─────
+// ─── CSS bir kez inject ─────
 var stylesInjected = false;
 function ensureStyles() {
   if (stylesInjected) return;
@@ -20,38 +23,73 @@ function ensureStyles() {
   stylesInjected = true;
 }
 
+// Step factory — currentStep'e göre uygun step'i döndürür
+function renderStep(stepNum, state) {
+  if (stepNum === 1) return createStepRating(state);
+  // Step 2 ve 3 — Faz 3'te yazılacak. Şimdilik basit placeholder.
+  var ph = document.createElement('div');
+  ph.className = 'ikr-fwizard-step ikr-fwizard-step-placeholder';
+  ph.innerHTML =
+    '<div class="ikr-fwizard-step-title">Adım ' + stepNum + '</div>' +
+    '<div style="margin-top:16px;color:rgba(0,0,0,0.55);font-size:14px;">Bu adım yakında eklenecek.</div>';
+  return { el: ph, destroy: function () {} };
+}
+
 /**
  * Yorum yazma wizard modal'ını aç.
- * @param {Object} opts
- * @param {string} opts.productId
- * @param {string} [opts.productName]
- * @param {Function} [opts.onSubmit] - Submit success callback (Faz 2+)
- * @param {Function} [opts.onClose] - Modal kapanınca çağrılır
- * @returns {{ close: Function }} - Kontrol API'si
  */
 export function openReviewFormModal(opts) {
   opts = opts || {};
   ensureStyles();
 
-  var shell = createWizardShell({
-    onClose: opts.onClose,
-    allowOutsideClose: true, // Faz 2'de step bazlı değişecek
+  var state = createWizardState({
+    productId: opts.productId,
+    productName: opts.productName,
   });
 
-  // ─── Faz 1 placeholder ─────────────────────────────────────────────
-  // Faz 2+'da burada wizard-state + step renderer çalışacak.
-  // Şimdilik sadece "iskelet aktif" göstergesi.
-  var placeholder = document.createElement('div');
-  placeholder.className = 'ikr-fwizard-placeholder';
-  placeholder.innerHTML = [
-    '<div style="font-size:18px;font-weight:600;margin-bottom:8px;color:inherit;">',
-    '  Yorum Yazma Modal\'ı',
-    '</div>',
-    '<div>Faz 1 iskelet — Step\'ler buraya gelecek.</div>',
-    opts.productId ? '<div style="margin-top:16px;font-size:12px;opacity:0.6;">Ürün: ' + String(opts.productId) + '</div>' : '',
-  ].join('');
+  var shell = createWizardShell({
+    onClose: opts.onClose,
+    allowOutsideClose: true,
+  });
 
-  shell.open(placeholder);
+  // ─── Modal layout: stepWrap (içerik) + progressBar (alt) ───
+  var stepWrap = document.createElement('div');
+  stepWrap.className = 'ikr-fwizard-step-wrap';
+
+  var progress = createProgressBar();
+  progress.el.classList.add('ikr-fwizard-footer');
+
+  // Wizard layout container — content + footer dikey
+  var layout = document.createElement('div');
+  layout.className = 'ikr-fwizard-layout';
+  layout.appendChild(stepWrap);
+  layout.appendChild(progress.el);
+
+  var currentStepInstance = null;
+
+  function rerenderStep() {
+    if (currentStepInstance && currentStepInstance.destroy) {
+      currentStepInstance.destroy();
+    }
+    stepWrap.innerHTML = '';
+    currentStepInstance = renderStep(state.get().currentStep, state);
+    stepWrap.appendChild(currentStepInstance.el);
+    progress.update(state.get().currentStep);
+  }
+
+  // İlk render
+  rerenderStep();
+
+  // State değişimlerinde yeniden çiz (sadece step değişince)
+  var lastStep = state.get().currentStep;
+  state.onChange(function (s) {
+    if (s.currentStep !== lastStep) {
+      lastStep = s.currentStep;
+      rerenderStep();
+    }
+  });
+
+  shell.open(layout);
 
   return {
     close: shell.close,
