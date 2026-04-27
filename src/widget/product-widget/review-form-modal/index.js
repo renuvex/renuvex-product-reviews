@@ -94,10 +94,61 @@ export function openReviewFormModal(opts) {
 
   var currentStepInstance = null;
 
+  // ─── Step geçiş state machine ──────────────────────────────────────
+  // 'idle'    → animasyon yok, geçişe hazır
+  // 'exiting' → mevcut step exit animasyonu oynuyor
+  // 'entering'→ yeni step enter animasyonu oynuyor
+  // pendingStep: animasyon sırasında talep edilen yeni step (kuyruk)
+  // suppressNextEnterAnim: ilk render için (modal açılış scale animasyonu
+  // zaten kabuk düzeyinde var, içeriğin de animate olmasına gerek yok)
+  var animPhase = 'idle';
+  var pendingStep = null;
+  var suppressNextEnterAnim = true;
+
+  // Step instance'ını mount et — ilk render veya geçiş enter'ı
+  function mountStep(stepNum, withEnterAnim) {
+    var inst = renderStep(stepNum, state, {
+      onValidityChange: function (valid) {
+        progress.setNextDisabled(!valid);
+      },
+      onSuccess: showThanks,
+    });
+    currentStepInstance = inst;
+
+    if (withEnterAnim) {
+      animPhase = 'entering';
+      inst.el.classList.add('ikr-fwizard-step--enter');
+      var onEnd = function () {
+        inst.el.removeEventListener('animationend', onEnd);
+        // Enter sınıfını çıkar ki bir sonraki sefer yeniden tetiklenebilsin
+        inst.el.classList.remove('ikr-fwizard-step--enter');
+        animPhase = 'idle';
+        // Kuyrukta bekleyen yeni hedef varsa şimdi işle
+        if (pendingStep !== null && pendingStep !== state.get().currentStep) {
+          pendingStep = null;
+          rerenderStep();
+        } else {
+          pendingStep = null;
+        }
+      };
+      inst.el.addEventListener('animationend', onEnd);
+    } else {
+      animPhase = 'idle';
+    }
+
+    stepWrap.appendChild(inst.el);
+    progress.update(stepNum);
+    // "Sonraki" butonunun başlangıç state'i: validity bildirilene kadar disabled
+    if (stepNum === 3) progress.setNextDisabled(true);
+  }
+
   function showThanks() {
     if (currentStepInstance && currentStepInstance.destroy) {
       currentStepInstance.destroy();
     }
+    currentStepInstance = null;
+    animPhase = 'idle';
+    pendingStep = null;
     stepWrap.innerHTML = '';
     stepWrap.appendChild(buildThanksScreen());
     // Footer'ı gizle — gönderim sonrası gezinti yok
@@ -105,21 +156,43 @@ export function openReviewFormModal(opts) {
   }
 
   function rerenderStep() {
-    if (currentStepInstance && currentStepInstance.destroy) {
-      currentStepInstance.destroy();
+    var targetStep = state.get().currentStep;
+
+    // Animasyon devam ediyorsa hedefi kuyruğa al
+    if (animPhase !== 'idle') {
+      pendingStep = targetStep;
+      return;
     }
-    stepWrap.innerHTML = '';
-    var stepNum = state.get().currentStep;
-    currentStepInstance = renderStep(stepNum, state, {
-      onValidityChange: function (valid) {
-        progress.setNextDisabled(!valid);
-      },
-      onSuccess: showThanks,
-    });
-    stepWrap.appendChild(currentStepInstance.el);
-    progress.update(stepNum);
-    // "Sonraki" butonunun başlangıç state'i: validity bildirilene kadar disabled
-    if (stepNum === 3) progress.setNextDisabled(true);
+
+    // İlk render — exit yok, ilk açılışta enter da yok (modal kabuk
+    // animasyonu yeterli). Sonraki geçişlerde enter aktif.
+    if (!currentStepInstance) {
+      var firstWithAnim = !suppressNextEnterAnim;
+      suppressNextEnterAnim = false;
+      mountStep(targetStep, firstWithAnim);
+      return;
+    }
+
+    // Normal geçiş: exit → unmount → mount with enter
+    var leaving = currentStepInstance;
+    animPhase = 'exiting';
+    leaving.el.classList.add('ikr-fwizard-step--exit');
+    var onExitEnd = function () {
+      leaving.el.removeEventListener('animationend', onExitEnd);
+      if (leaving.destroy) {
+        try { leaving.destroy(); } catch (e) { /* sessiz */ }
+      }
+      // Eğer bu sırada modal kapatıldıysa veya teşekkür ekranına geçildiyse
+      // currentStepInstance null olur — o zaman yeni mount yapma.
+      if (currentStepInstance !== leaving) return;
+      stepWrap.innerHTML = '';
+      currentStepInstance = null;
+      // En güncel hedefi kullan (kuyrukta beklemiş olabilir)
+      var next = pendingStep !== null ? pendingStep : state.get().currentStep;
+      pendingStep = null;
+      mountStep(next, true);
+    };
+    leaving.el.addEventListener('animationend', onExitEnd);
   }
 
   // İlk render

@@ -113,6 +113,33 @@ export var FWIZARD_CSS = `
     gap:32px;
   }
 
+  /* Step geçiş animasyonları — scale + fade + ufak translateY.
+     animation-end ile orchestrator senkronize. prefers-reduced-motion
+     altında süreler 0.01ms'ye düşer (görsel olarak anlık) ama
+     animationend yine atılır → orchestrator çalışmaya devam eder. */
+  .ikr-fwizard-step--enter{
+    animation:ikrStepIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change:transform, opacity;
+  }
+  .ikr-fwizard-step--exit{
+    animation:ikrStepOut 0.16s ease-in forwards;
+    will-change:transform, opacity;
+  }
+  @keyframes ikrStepIn{
+    0%   { opacity:0; transform:scale(0.96) translateY(8px); }
+    100% { opacity:1; transform:scale(1)    translateY(0);   }
+  }
+  @keyframes ikrStepOut{
+    0%   { opacity:1; transform:scale(1)    translateY(0);    }
+    100% { opacity:0; transform:scale(0.98) translateY(-4px); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ikr-fwizard-step--enter,
+    .ikr-fwizard-step--exit{
+      animation-duration:0.01ms;
+    }
+  }
+
   /* Step başlığı */
   .ikr-fwizard-step-title{
     font-size:18px;
