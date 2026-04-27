@@ -222,6 +222,47 @@ export var FWIZARD_CSS = `
     padding:0;
   }
 
+  /* ─── Step 3: İçerik formu (başlık + textarea) ─── */
+  .ikr-fwizard-content-form{
+    width:100%;
+    max-width:520px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    text-align:left;
+  }
+  .ikr-fwizard-input,
+  .ikr-fwizard-textarea{
+    width:100%;
+    padding:12px 14px;
+    background:var(--ikr-fwizard-input-bg, #ffffff);
+    border:1px solid var(--ikr-fwizard-input-border, rgba(0,0,0,0.15));
+    border-radius:8px;
+    font-size:14px;
+    font-family:inherit;
+    color:var(--ikr-fwizard-text, rgb(17,17,17));
+    box-sizing:border-box;
+    transition:border-color 0.15s;
+  }
+  .ikr-fwizard-input:focus,
+  .ikr-fwizard-textarea:focus{
+    outline:none;
+    border-color:var(--ikr-fwizard-input-focus, rgba(0,0,0,0.55));
+  }
+  .ikr-fwizard-textarea{
+    resize:vertical;
+    min-height:140px;
+    line-height:1.5;
+  }
+  .ikr-fwizard-char-counter{
+    font-size:12px;
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.50));
+    text-align:right;
+  }
+  .ikr-fwizard-char-counter--max{
+    color:#dc2626;
+  }
+
   /* ─── Step 1: Yıldız satırı ───
      İkon ve renk admin "Yıldız Stili"nden gelir:
        - SVG: getIconFromSettings (icons.js, currentSettings.reviewIcon)
@@ -277,8 +318,38 @@ export var FWIZARD_CSS = `
     justify-content:center;
     gap:6px;
   }
+  .ikr-fwizard-footer-right{
+    justify-self:end;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
   .ikr-fwizard-footer-skip{
     justify-self:end;
+  }
+  .ikr-fwizard-cta-btn{
+    background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
+    color:var(--ikr-fwizard-cta-text, #ffffff);
+    border:none;
+    border-radius:8px;
+    padding:10px 22px;
+    font-size:14px;
+    font-weight:500;
+    cursor:pointer;
+    transition:opacity 0.15s, background 0.15s;
+    font-family:inherit;
+  }
+  .ikr-fwizard-cta-btn:hover:not(:disabled){
+    opacity:0.92;
+  }
+  .ikr-fwizard-cta-btn--disabled,
+  .ikr-fwizard-cta-btn:disabled{
+    background:var(--ikr-fwizard-cta-disabled-bg, rgba(0,0,0,0.18));
+    color:var(--ikr-fwizard-cta-disabled-text, rgba(255,255,255,0.85));
+    cursor:not-allowed;
+  }
+  .ikr-fwizard-cta-btn[hidden]{
+    display:none;
   }
   .ikr-fwizard-progress-seg{
     flex:1 1 auto;

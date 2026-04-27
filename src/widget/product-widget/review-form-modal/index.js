@@ -1,7 +1,7 @@
 // product-widget/review-form-modal/index.js
 // Yorum yazma wizard modal'ı — public API + step orchestrator.
-// Step sırası: rating → content+author → photos.
-// Faz 2: sadece Step 1 (rating) çalışır, Step 2/3 placeholder.
+// Step sırası: rating → photos → content (title+comment) → author.
+// Faz: step 1-3 çalışır; step 4 (author) bir sonraki fazda eklenecek.
 //
 // Bağımsızlık sözleşmesi: review-modal ve review-form ile hiçbir
 // import / class / variable çakışması yok.
@@ -12,6 +12,7 @@ import { createWizardState, TOTAL_STEPS } from './wizard-state.js';
 import { createProgressBar } from './progress-bar.js';
 import { createStepRating } from './steps/step-rating.js';
 import { createStepPhotos } from './steps/step-photos.js';
+import { createStepContent } from './steps/step-content.js';
 
 // ─── CSS bir kez inject ─────
 var stylesInjected = false;
@@ -24,11 +25,16 @@ function ensureStyles() {
   stylesInjected = true;
 }
 
-// Step factory — currentStep'e göre uygun step'i döndürür
-function renderStep(stepNum, state) {
+// Step factory — currentStep'e göre uygun step'i döndürür.
+// stepOpts: step-specific callback'ler (örn. step 3 için onValidityChange)
+function renderStep(stepNum, state, stepOpts) {
+  stepOpts = stepOpts || {};
   if (stepNum === 1) return createStepRating(state);
   if (stepNum === 2) return createStepPhotos(state);
-  // Step 3 — sonraki fazda yazılacak. Şimdilik placeholder.
+  if (stepNum === 3) return createStepContent(state, {
+    onValidityChange: stepOpts.onValidityChange,
+  });
+  // Step 4 — sonraki fazda yazılacak. Şimdilik placeholder.
   var ph = document.createElement('div');
   ph.className = 'ikr-fwizard-step ikr-fwizard-step-placeholder';
   ph.innerHTML =
@@ -60,8 +66,10 @@ export function openReviewFormModal(opts) {
 
   var progress = createProgressBar({
     skippableSteps: [2],
+    nextableSteps: [3],
     onBack: function () { state.goBack(); },
     onSkip: function () { state.goNext(); },
+    onNext: function () { state.goNext(); },
   });
 
   // Wizard layout container — content + footer dikey
@@ -77,9 +85,16 @@ export function openReviewFormModal(opts) {
       currentStepInstance.destroy();
     }
     stepWrap.innerHTML = '';
-    currentStepInstance = renderStep(state.get().currentStep, state);
+    var stepNum = state.get().currentStep;
+    currentStepInstance = renderStep(stepNum, state, {
+      onValidityChange: function (valid) {
+        progress.setNextDisabled(!valid);
+      },
+    });
     stepWrap.appendChild(currentStepInstance.el);
-    progress.update(state.get().currentStep);
+    progress.update(stepNum);
+    // "Sonraki" butonunun başlangıç state'i: validity bildirilene kadar disabled
+    if (stepNum === 3) progress.setNextDisabled(true);
   }
 
   // İlk render

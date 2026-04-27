@@ -3,11 +3,11 @@
 // state burada, görsel adımlarda. Bir step input alır, state'e yazar,
 // goNext()'le bir sonraki adıma geçer.
 //
-// Toplam step: 3 (rating → content+author → photos). Sıra TASARIM kararı,
+// Toplam step: 4 (rating → photos → content → author). Sıra TASARIM kararı,
 // ileride değişebilir → renderer'lar `state.currentStep` üzerinden tepki
 // vermek yerine kendi sıralarını bilir, switch state.js'de.
 
-export var TOTAL_STEPS = 3;
+export var TOTAL_STEPS = 4;
 
 export function createWizardState(opts) {
   opts = opts || {};

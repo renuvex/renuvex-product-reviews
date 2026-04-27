@@ -1,15 +1,21 @@
 // product-widget/review-form-modal/progress-bar.js
-// Modal alt footer'ı: [Geri] [progress segments] [Atla]
-// Geri butonu sadece step > 1 iken; Atla butonu sadece opsiyonel adımlarda
-// (adım numarası `skippableSteps` listesindeyse) görünür.
+// Modal alt footer'ı: [Geri] [progress segments] [Atla | Sonraki]
+//
+// Geri butonu sadece step > 1 iken görünür.
+// Atla butonu sadece opsiyonel adımlarda (skippableSteps) görünür.
+// Sonraki butonu sadece "next gerektiren" adımlarda (nextableSteps) görünür;
+// disabled state validity'ye bağlı (setNextDisabled ile dışarıdan kontrol).
+// Atla ve Sonraki aynı anda gösterilmez — Atla opsiyonel, Sonraki zorunlu.
 
 import { TOTAL_STEPS } from './wizard-state.js';
 
 export function createProgressBar(opts) {
   opts = opts || {};
   var skippableSteps = opts.skippableSteps || [];
+  var nextableSteps = opts.nextableSteps || [];
   var onBack = opts.onBack || function () {};
   var onSkip = opts.onSkip || function () {};
+  var onNext = opts.onNext || function () {};
 
   var wrap = document.createElement('div');
   wrap.className = 'ikr-fwizard-footer';
@@ -39,7 +45,10 @@ export function createProgressBar(opts) {
   }
   wrap.appendChild(progressWrap);
 
-  // Sağ: Atla
+  // Sağ: Atla (text-link) ve Sonraki (CTA) — biri ya da diğeri görünür
+  var rightSlot = document.createElement('div');
+  rightSlot.className = 'ikr-fwizard-footer-right';
+
   var skipBtn = document.createElement('button');
   skipBtn.type = 'button';
   skipBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
@@ -50,7 +59,19 @@ export function createProgressBar(opts) {
     '<polyline points="9 18 15 12 9 6"/>' +
     '</svg>';
   skipBtn.onclick = function () { onSkip(); };
-  wrap.appendChild(skipBtn);
+
+  var nextBtn = document.createElement('button');
+  nextBtn.type = 'button';
+  nextBtn.className = 'ikr-fwizard-cta-btn';
+  nextBtn.textContent = 'Sonraki';
+  nextBtn.onclick = function () {
+    if (nextBtn.disabled) return;
+    onNext();
+  };
+
+  rightSlot.appendChild(skipBtn);
+  rightSlot.appendChild(nextBtn);
+  wrap.appendChild(rightSlot);
 
   return {
     el: wrap,
@@ -63,7 +84,14 @@ export function createProgressBar(opts) {
         }
       });
       backBtn.hidden = currentStep <= 1;
-      skipBtn.hidden = skippableSteps.indexOf(currentStep) === -1;
+      var isSkippable = skippableSteps.indexOf(currentStep) !== -1;
+      var hasNext = nextableSteps.indexOf(currentStep) !== -1;
+      skipBtn.hidden = !isSkippable;
+      nextBtn.hidden = !hasNext;
+    },
+    setNextDisabled: function (disabled) {
+      nextBtn.disabled = !!disabled;
+      nextBtn.classList.toggle('ikr-fwizard-cta-btn--disabled', !!disabled);
     },
   };
 }
