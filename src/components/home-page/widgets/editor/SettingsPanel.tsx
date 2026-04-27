@@ -366,7 +366,6 @@ function FieldRenderer({ field, settings, onChange }: {
             {field.label}
           </label>
           <select
-            className="ikr-admin-dropdown"
             value={String(value ?? field.default ?? '')}
             onChange={(e) => onChange({ ...settings, [field.key]: e.target.value })}
             style={{ ...componentStyles.select, width: '100%' }}
