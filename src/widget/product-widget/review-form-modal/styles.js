@@ -25,12 +25,12 @@ export var FWIZARD_CSS = `
     opacity:1;
   }
 
-  /* Modal kutusu — 720×612, max 85vh */
+  /* Modal kutusu — 680×600, max 85vh */
   .ikr-fwizard{
     position:relative;
     width:100%;
-    max-width:720px;
-    height:612px;
+    max-width:680px;
+    height:600px;
     max-height:85vh;
     background:var(--ikr-fwizard-bg, #ffffff);
     color:var(--ikr-fwizard-text, rgb(17,17,17));
