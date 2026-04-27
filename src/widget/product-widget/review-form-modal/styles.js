@@ -436,10 +436,11 @@ export var FWIZARD_CSS = `
     display:none;
   }
   .ikr-fwizard-progress-seg{
-    flex:1 1 auto;
-    height:4px;
-    border-radius:2px;
-    background:var(--ikr-fwizard-progress-bg, rgba(0,0,0,0.10));
+    flex:0 0 auto;
+    width:80px;
+    height:8px;
+    border-radius:16px;
+    background:var(--ikr-fwizard-progress-bg, rgba(0,0,0,0.08));
     transition:background 0.2s;
   }
   .ikr-fwizard-progress-seg-active{
