@@ -7,6 +7,12 @@ import { startMutationObserver } from './observer.js';
 import { bootstrap } from './product-widget/bootstrap.js';
 import { render } from './product-widget/render.js';
 import { currentSettings, currentProductId, currentProductName, currentOrderBy, currentPage, currentReviewsData } from './core/state.js';
+import { openReviewFormModal } from './product-widget/review-form-modal/index.js';
+
+// ─── GEÇİCİ test girişi (Faz 1) ────────────────────────────────────────────
+// Console'dan: window.__ikrOpenFormModal({ productId: 'test', productName: 'Demo' });
+// Faz 2 sonunda kaldırılacak — gerçek "Yorum Yap" butonu API'yi çağıracak.
+window.__ikrOpenFormModal = openReviewFormModal;
 
 var IS_PREVIEW = window.__ikasPreviewMode === true;
 
