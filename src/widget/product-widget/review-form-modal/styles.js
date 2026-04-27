@@ -25,12 +25,12 @@ export var FWIZARD_CSS = `
     opacity:1;
   }
 
-  /* Modal kutusu — Loox UGC form referansı (800×680, max 85vh) */
+  /* Modal kutusu — Loox oranlı, %10 daha kompakt (720×612, max 85vh) */
   .ikr-fwizard{
     position:relative;
     width:100%;
-    max-width:800px;
-    height:680px;
+    max-width:720px;
+    height:612px;
     max-height:85vh;
     background:var(--ikr-fwizard-bg, #ffffff);
     color:var(--ikr-fwizard-text, rgb(17,17,17));
