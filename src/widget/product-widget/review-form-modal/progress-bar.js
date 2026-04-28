@@ -83,11 +83,21 @@ export function createProgressBar(opts) {
           seg.classList.remove('ikr-fwizard-progress-seg-active');
         }
       });
-      backBtn.hidden = currentStep <= 1;
+      // visibility:hidden — buton görünmez ama yer kaplar; böylece footer'ın
+      // 3-kolon grid'i her step'te aynı kalır, progress segment'leri kaymaz.
+      var hideBack = currentStep <= 1;
       var isSkippable = skippableSteps.indexOf(currentStep) !== -1;
       var hasNext = nextableSteps.indexOf(currentStep) !== -1;
-      skipBtn.hidden = !isSkippable;
-      nextBtn.hidden = !hasNext;
+      backBtn.style.visibility = hideBack ? 'hidden' : '';
+      skipBtn.style.visibility = isSkippable ? '' : 'hidden';
+      nextBtn.style.visibility = hasNext ? '' : 'hidden';
+      // Hidden olanlar tıklanmasın
+      backBtn.style.pointerEvents = hideBack ? 'none' : '';
+      skipBtn.style.pointerEvents = isSkippable ? '' : 'none';
+      nextBtn.style.pointerEvents = hasNext ? '' : 'none';
+      backBtn.tabIndex = hideBack ? -1 : 0;
+      skipBtn.tabIndex = isSkippable ? 0 : -1;
+      nextBtn.tabIndex = hasNext ? 0 : -1;
     },
     setNextDisabled: function (disabled) {
       nextBtn.disabled = !!disabled;
