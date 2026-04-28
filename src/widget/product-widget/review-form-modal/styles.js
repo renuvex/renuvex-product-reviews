@@ -118,11 +118,11 @@ export var FWIZARD_CSS = `
      altında süreler 0.01ms'ye düşer (görsel olarak anlık) ama
      animationend yine atılır → orchestrator çalışmaya devam eder. */
   .ikr-fwizard-step--enter{
-    animation:ikrStepIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation:ikrStepIn 0.30s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     will-change:transform, opacity;
   }
   .ikr-fwizard-step--exit{
-    animation:ikrStepOut 0.16s ease-in forwards;
+    animation:ikrStepOut 0.20s ease-in forwards;
     will-change:transform, opacity;
   }
   @keyframes ikrStepIn{
