@@ -83,20 +83,30 @@ export function createProgressBar(opts) {
           seg.classList.remove('ikr-fwizard-progress-seg-active');
         }
       });
-      // visibility:hidden — buton görünmez ama yer kaplar; böylece footer'ın
-      // 3-kolon grid'i her step'te aynı kalır, progress segment'leri kaymaz.
+      // Buton görünürlüğü:
+      //  - SOL slot (Geri): visibility:hidden → grid kolonu yer kaplar,
+      //    yan kolon genişliği step 1 ile diğerleri arasında sabit kalır.
+      //    Layout shift olmaz, ama buton görünmez.
+      //  - SAĞ slot (Atla VE Sonraki): bunlar aynı slot içinde yan yana
+      //    duran iki ayrı element. Görünmez olanı DOM akışından
+      //    çıkarmak (display:none) gerekiyor; aksi halde görünen buton
+      //    slot'un yanlış ucunda kalıyor (örn. step 2'de Atla görünür
+      //    ama yanında Sonraki yer kaplıyor → Atla "ortaya" kayıyor).
+      //    Sağ slot'un kendisi grid'in 120px'lik kolonunda
+      //    justify-self:end ile sabit duruyor; tek görünür buton
+      //    slot'un sağ ucuna yaslı kalıyor → her step aynı X.
       var hideBack = currentStep <= 1;
       var isSkippable = skippableSteps.indexOf(currentStep) !== -1;
       var hasNext = nextableSteps.indexOf(currentStep) !== -1;
+
       backBtn.style.visibility = hideBack ? 'hidden' : '';
-      skipBtn.style.visibility = isSkippable ? '' : 'hidden';
-      nextBtn.style.visibility = hasNext ? '' : 'hidden';
-      // Hidden olanlar tıklanmasın
       backBtn.style.pointerEvents = hideBack ? 'none' : '';
-      skipBtn.style.pointerEvents = isSkippable ? '' : 'none';
-      nextBtn.style.pointerEvents = hasNext ? '' : 'none';
       backBtn.tabIndex = hideBack ? -1 : 0;
+
+      skipBtn.style.display = isSkippable ? '' : 'none';
       skipBtn.tabIndex = isSkippable ? 0 : -1;
+
+      nextBtn.style.display = hasNext ? '' : 'none';
       nextBtn.tabIndex = hasNext ? 0 : -1;
     },
     setNextDisabled: function (disabled) {
