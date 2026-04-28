@@ -465,9 +465,9 @@ export var FWIZARD_CSS = `
     align-items:center;
     gap:8px;
   }
-  /* CTA ve nav butonları — Loox pattern: sabit width × height kutu,
-     içerik flex center ile ortalanır. Step'ten step'e buton şekli
-     birebir aynı kalır, görsel hizasızlık olmaz. */
+  /* CTA ve nav butonları — sabit width × height kutu, içerik flex
+     center ile ortalanır. Step'ten step'e buton şekli birebir aynı
+     kalır. Hiyerarşi: CTA dolu siyah, nav transparent. */
   .ikr-fwizard-cta-btn{
     background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
     color:var(--ikr-fwizard-cta-text, #ffffff);
@@ -476,7 +476,7 @@ export var FWIZARD_CSS = `
     width:108px;
     height:40px;
     padding:0;
-    font-size:14px;
+    font-size:15px;
     font-weight:600;
     line-height:1;
     cursor:pointer;
@@ -512,7 +512,10 @@ export var FWIZARD_CSS = `
   }
   /* Nav butonları (Geri / Atla) — CTA ile aynı kutu (108×40), sadece
      arkaplan transparent. Hiyerarşi fill vs transparent ile, boyut
-     ile değil. Her step'te aynı bounding box → konum garanti sabit. */
+     ile değil. Hover: sadece renk değişikliği — background hover
+     asimetrik gözüktüğü için kaldırıldı (ok+metin kutuda farklı
+     X koordinatlarında, hover bg buton kutusu büyüklüğünde olunca
+     metnin ortasında değil, kutunun ortasında görünür). */
   .ikr-fwizard-nav-btn{
     background:transparent;
     border:none;
@@ -520,21 +523,20 @@ export var FWIZARD_CSS = `
     height:40px;
     padding:0;
     color:var(--ikr-fwizard-muted, rgba(0,0,0,0.60));
-    font-size:14px;
-    font-weight:500;
+    font-size:15px;
+    font-weight:600;
     line-height:1;
     cursor:pointer;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    gap:4px;
+    gap:6px;
     border-radius:8px;
     font-family:inherit;
     box-sizing:border-box;
   }
   .ikr-fwizard-nav-btn:hover{
     color:var(--ikr-fwizard-text, rgb(17,17,17));
-    background:rgba(0,0,0,0.04);
   }
   .ikr-fwizard-nav-btn[hidden]{
     display:none;

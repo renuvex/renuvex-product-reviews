@@ -1,13 +1,23 @@
 // product-widget/review-form-modal/progress-bar.js
 // Modal alt footer'ı: [Geri] [progress segments] [Atla | Sonraki]
 //
-// Geri butonu sadece step > 1 iken görünür.
-// Atla butonu sadece opsiyonel adımlarda (skippableSteps) görünür.
-// Sonraki butonu sadece "next gerektiren" adımlarda (nextableSteps) görünür;
-// disabled state validity'ye bağlı (setNextDisabled ile dışarıdan kontrol).
-// Atla ve Sonraki aynı anda gösterilmez — Atla opsiyonel, Sonraki zorunlu.
+// Mimari: footer'ın yan slot'larında her zaman TEK buton elementi var.
+// Step'e göre className/textContent/onclick yeniden ayarlanır; bu sayede
+// DOM'da ekstra element / display:none toggle hilesi yok, buton konumu
+// her step'te %100 sabit. Loox UGC form footer'ı da aynı yaklaşımla
+// çalışır.
 
 import { TOTAL_STEPS } from './wizard-state.js';
+
+// SVG ok yardımcıları — innerHTML olarak buton içine konur.
+var ARROW_LEFT_SVG =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<polyline points="15 18 9 12 15 6"/>' +
+  '</svg>';
+var ARROW_RIGHT_SVG =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<polyline points="9 18 15 12 9 6"/>' +
+  '</svg>';
 
 export function createProgressBar(opts) {
   opts = opts || {};
@@ -20,20 +30,18 @@ export function createProgressBar(opts) {
   var wrap = document.createElement('div');
   wrap.className = 'ikr-fwizard-footer';
 
-  // Sol: Geri
-  var backBtn = document.createElement('button');
-  backBtn.type = 'button';
-  backBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-back';
-  backBtn.setAttribute('aria-label', 'Geri');
-  backBtn.innerHTML =
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<polyline points="15 18 9 12 15 6"/>' +
-    '</svg>' +
-    '<span>Geri</span>';
-  backBtn.onclick = function () { onBack(); };
-  wrap.appendChild(backBtn);
+  // ─── Sol slot: tek buton (Geri) ──────────────────────────────────
+  // Geri sadece step > 1 iken aktif olur; aksi halde visibility:hidden
+  // ile yer korur (grid kolonu sabit 120px zaten).
+  var leftBtn = document.createElement('button');
+  leftBtn.type = 'button';
+  leftBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-back';
+  leftBtn.setAttribute('aria-label', 'Geri');
+  leftBtn.innerHTML = ARROW_LEFT_SVG + '<span>Geri</span>';
+  leftBtn.addEventListener('click', function () { onBack(); });
+  wrap.appendChild(leftBtn);
 
-  // Orta: progress segments
+  // ─── Orta: progress segments ─────────────────────────────────────
   var progressWrap = document.createElement('div');
   progressWrap.className = 'ikr-fwizard-footer-progress';
   var segments = [];
@@ -45,37 +53,69 @@ export function createProgressBar(opts) {
   }
   wrap.appendChild(progressWrap);
 
-  // Sağ: Atla (text-link) ve Sonraki (CTA) — biri ya da diğeri görünür
-  var rightSlot = document.createElement('div');
-  rightSlot.className = 'ikr-fwizard-footer-right';
+  // ─── Sağ slot: tek buton, step'e göre rol değişir ────────────────
+  // Step 2 (skippable) → "Atla" (nav-btn, text-link tarzı, onSkip)
+  // Step 3 (nextable)  → "Sonraki" (cta-btn, dolu siyah, onNext)
+  // Step 1, 4 (none)   → buton visibility:hidden (yer korur)
+  //
+  // Tek bir <button> var; configureRightBtn() her update'te
+  // className/innerHTML/handler'ı yeniden kurar. Aynı element
+  // olduğu için konum/şekil step değişiminde değişmez.
+  var rightBtn = document.createElement('button');
+  rightBtn.type = 'button';
+  // Mevcut click handler'ı temiz yönetmek için tekil değişken
+  var rightHandler = null;
+  function setRightHandler(fn) {
+    if (rightHandler) rightBtn.removeEventListener('click', rightHandler);
+    rightHandler = fn;
+    if (fn) rightBtn.addEventListener('click', fn);
+  }
+  wrap.appendChild(rightBtn);
 
-  var skipBtn = document.createElement('button');
-  skipBtn.type = 'button';
-  skipBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
-  skipBtn.setAttribute('aria-label', 'Atla');
-  skipBtn.innerHTML =
-    '<span>Atla</span>' +
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<polyline points="9 18 15 12 9 6"/>' +
-    '</svg>';
-  skipBtn.onclick = function () { onSkip(); };
+  function configureRightBtn(currentStep) {
+    var isSkippable = skippableSteps.indexOf(currentStep) !== -1;
+    var hasNext = nextableSteps.indexOf(currentStep) !== -1;
 
-  var nextBtn = document.createElement('button');
-  nextBtn.type = 'button';
-  nextBtn.className = 'ikr-fwizard-cta-btn';
-  nextBtn.textContent = 'Sonraki';
-  nextBtn.onclick = function () {
-    if (nextBtn.disabled) return;
-    onNext();
-  };
-
-  rightSlot.appendChild(skipBtn);
-  rightSlot.appendChild(nextBtn);
-  wrap.appendChild(rightSlot);
+    if (isSkippable) {
+      // Atla — text-link tarzı, sağa bakan ok
+      rightBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
+      rightBtn.setAttribute('aria-label', 'Atla');
+      rightBtn.innerHTML = '<span>Atla</span>' + ARROW_RIGHT_SVG;
+      rightBtn.disabled = false;
+      rightBtn.classList.remove('ikr-fwizard-cta-btn--disabled');
+      rightBtn.style.visibility = '';
+      rightBtn.tabIndex = 0;
+      setRightHandler(function () { onSkip(); });
+    } else if (hasNext) {
+      // Sonraki — CTA, dolu siyah
+      rightBtn.className = 'ikr-fwizard-cta-btn ikr-fwizard-footer-next';
+      rightBtn.setAttribute('aria-label', 'Sonraki');
+      rightBtn.innerHTML = 'Sonraki';
+      rightBtn.style.visibility = '';
+      rightBtn.tabIndex = 0;
+      setRightHandler(function () {
+        if (rightBtn.disabled) return;
+        onNext();
+      });
+      // Disabled durumu setNextDisabled ile dışarıdan ayarlanır;
+      // burada default olarak (yeni mount) eski state korunmaz —
+      // orchestrator step 3'e girer girmez setNextDisabled(true)
+      // çağırıp validity'yi yeniden bildirir.
+    } else {
+      // Hiç buton yok — slot görünmez ama yer korur
+      rightBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
+      rightBtn.innerHTML = '';
+      rightBtn.style.visibility = 'hidden';
+      rightBtn.tabIndex = -1;
+      rightBtn.disabled = true;
+      setRightHandler(null);
+    }
+  }
 
   return {
     el: wrap,
     update: function (currentStep) {
+      // Progress segment'leri
       segments.forEach(function (seg, idx) {
         if (idx + 1 <= currentStep) {
           seg.classList.add('ikr-fwizard-progress-seg-active');
@@ -83,35 +123,25 @@ export function createProgressBar(opts) {
           seg.classList.remove('ikr-fwizard-progress-seg-active');
         }
       });
-      // Buton görünürlüğü:
-      //  - SOL slot (Geri): visibility:hidden → grid kolonu yer kaplar,
-      //    yan kolon genişliği step 1 ile diğerleri arasında sabit kalır.
-      //    Layout shift olmaz, ama buton görünmez.
-      //  - SAĞ slot (Atla VE Sonraki): bunlar aynı slot içinde yan yana
-      //    duran iki ayrı element. Görünmez olanı DOM akışından
-      //    çıkarmak (display:none) gerekiyor; aksi halde görünen buton
-      //    slot'un yanlış ucunda kalıyor (örn. step 2'de Atla görünür
-      //    ama yanında Sonraki yer kaplıyor → Atla "ortaya" kayıyor).
-      //    Sağ slot'un kendisi grid'in 120px'lik kolonunda
-      //    justify-self:end ile sabit duruyor; tek görünür buton
-      //    slot'un sağ ucuna yaslı kalıyor → her step aynı X.
+
+      // Sol: Geri sadece step > 1 iken görünür (visibility:hidden ile
+      // yer korur — sol slot tek buton olduğu için flow sorun değil).
       var hideBack = currentStep <= 1;
-      var isSkippable = skippableSteps.indexOf(currentStep) !== -1;
-      var hasNext = nextableSteps.indexOf(currentStep) !== -1;
+      leftBtn.style.visibility = hideBack ? 'hidden' : '';
+      leftBtn.style.pointerEvents = hideBack ? 'none' : '';
+      leftBtn.tabIndex = hideBack ? -1 : 0;
 
-      backBtn.style.visibility = hideBack ? 'hidden' : '';
-      backBtn.style.pointerEvents = hideBack ? 'none' : '';
-      backBtn.tabIndex = hideBack ? -1 : 0;
-
-      skipBtn.style.display = isSkippable ? '' : 'none';
-      skipBtn.tabIndex = isSkippable ? 0 : -1;
-
-      nextBtn.style.display = hasNext ? '' : 'none';
-      nextBtn.tabIndex = hasNext ? 0 : -1;
+      // Sağ: tek buton, step'e göre rol değişir
+      configureRightBtn(currentStep);
     },
     setNextDisabled: function (disabled) {
-      nextBtn.disabled = !!disabled;
-      nextBtn.classList.toggle('ikr-fwizard-cta-btn--disabled', !!disabled);
+      // Sadece "Sonraki" CTA aktifken anlamlı; Atla/no-button
+      // durumlarında zaten farklı className. Class'a bakarak
+      // güvenli toggle yapıyoruz.
+      if (rightBtn.classList.contains('ikr-fwizard-cta-btn')) {
+        rightBtn.disabled = !!disabled;
+        rightBtn.classList.toggle('ikr-fwizard-cta-btn--disabled', !!disabled);
+      }
     },
   };
 }
