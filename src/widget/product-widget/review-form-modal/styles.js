@@ -440,6 +440,11 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-footer{
     flex:0 0 auto;
     padding:16px 24px;
+    /* min-height: butonların en yükseği (CTA ~34px) + dikey padding,
+       step 2 (kompakt Atla) ile step 3 (kalın Sonraki) arasında footer
+       yüksekliği değişip progress'in dikey kaymasını engeller. */
+    min-height:66px;
+    box-sizing:border-box;
     border-top:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.08));
     display:grid;
     grid-template-columns:120px 1fr 120px;
