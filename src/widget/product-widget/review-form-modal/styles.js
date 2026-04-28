@@ -465,6 +465,7 @@ export var FWIZARD_CSS = `
     padding:10px 22px;
     font-size:14px;
     font-weight:500;
+    line-height:1;
     cursor:pointer;
     transition:opacity 0.15s, background 0.15s;
     font-family:inherit;
@@ -492,21 +493,28 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-progress-seg-active{
     background:var(--ikr-fwizard-progress-active, rgb(17,17,17));
   }
+  /* Nav butonları (Geri / Atla) — CTA ile aynı bounding box yüksekliği
+     için aynı dikey padding ve font-size'ı kullanır. Görsel hiyerarşi
+     transparent arkaplan + muted renkle korunur (text-link hissi).
+     Dikey hizalama footer'ın grid align-items:center ile sorunsuz olur. */
   .ikr-fwizard-nav-btn{
     background:transparent;
     border:none;
-    padding:6px 4px;
+    padding:10px 12px;
     color:var(--ikr-fwizard-muted, rgba(0,0,0,0.60));
     font-size:14px;
     font-weight:500;
+    line-height:1;
     cursor:pointer;
     display:inline-flex;
     align-items:center;
-    gap:4px;
-    border-radius:6px;
+    gap:6px;
+    border-radius:8px;
+    font-family:inherit;
   }
   .ikr-fwizard-nav-btn:hover{
     color:var(--ikr-fwizard-text, rgb(17,17,17));
+    background:rgba(0,0,0,0.04);
   }
   .ikr-fwizard-nav-btn[hidden]{
     display:none;
