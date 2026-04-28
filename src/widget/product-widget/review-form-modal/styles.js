@@ -117,21 +117,40 @@ export var FWIZARD_CSS = `
      animation-end ile orchestrator senkronize. prefers-reduced-motion
      altında süreler 0.01ms'ye düşer (görsel olarak anlık) ama
      animationend yine atılır → orchestrator çalışmaya devam eder. */
+  /* Desktop varsayılanı — büyük ekranda küçük hareket gözden kaçtığı
+     için daha uzun süre + daha büyük translateY/scale. Mobile aşağıda
+     ayrı keyframe'ler kullanır (küçük ekranda hareket göze büyük gelir). */
   .ikr-fwizard-step--enter{
-    animation:ikrStepIn 0.30s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation:ikrStepInDesktop 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     will-change:transform, opacity;
   }
   .ikr-fwizard-step--exit{
-    animation:ikrStepOut 0.20s ease-in forwards;
+    animation:ikrStepOutDesktop 0.24s ease-in forwards;
     will-change:transform, opacity;
   }
-  @keyframes ikrStepIn{
+  @keyframes ikrStepInDesktop{
+    0%   { opacity:0; transform:scale(0.94) translateY(18px); }
+    100% { opacity:1; transform:scale(1)    translateY(0);    }
+  }
+  @keyframes ikrStepOutDesktop{
+    0%   { opacity:1; transform:scale(1)    translateY(0);     }
+    100% { opacity:0; transform:scale(0.97) translateY(-10px); }
+  }
+  @keyframes ikrStepInMobile{
     0%   { opacity:0; transform:scale(0.96) translateY(8px); }
     100% { opacity:1; transform:scale(1)    translateY(0);   }
   }
-  @keyframes ikrStepOut{
+  @keyframes ikrStepOutMobile{
     0%   { opacity:1; transform:scale(1)    translateY(0);    }
     100% { opacity:0; transform:scale(0.98) translateY(-4px); }
+  }
+  @media(max-width:640px){
+    .ikr-fwizard-step--enter{
+      animation:ikrStepInMobile 0.30s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .ikr-fwizard-step--exit{
+      animation:ikrStepOutMobile 0.20s ease-in forwards;
+    }
   }
   @media (prefers-reduced-motion: reduce){
     .ikr-fwizard-step--enter,
