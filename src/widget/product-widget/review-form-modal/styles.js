@@ -430,46 +430,36 @@ export var FWIZARD_CSS = `
   }
 
   /* ─── Footer: [Geri]  [progress]  [Atla|Sonraki] ─────────────────
-     Layout stratejisi:
-       - Footer flex space-between: sol/sağ butonlar uçlara sabitlenir,
-         içerik değişse bile (Geri var/yok, Atla/Sonraki/Gönder) konum
-         aynı kalır.
-       - Butonlar visibility:hidden ile kayıp olabilir ama yer kaplar.
-       - Progress bar absolute centered: footer'ın gerçek yatay
-         merkezinde sabit, butonların boyutundan bağımsız. Step ne
-         olursa olsun pill'ler aynı yerde duruyor. */
+     3-kolon grid: yan kolonlar 120px sabit, orta esnek.
+       - Yan kolon genişliği step'ten bağımsız (her step'te aynı).
+       - Buton içerikleri justify-self ile kolon kenarlarına yaslı:
+         Geri → start, Atla/Sonraki → end. Böylece buton genişliği
+         küçük olsa da konum sabit; her step'te aynı X koordinatı.
+       - Orta kolon 1fr → progress pills doğal olarak ortalanır,
+         absolute hile yok, butonların üstüne binmez. */
   .ikr-fwizard-footer{
-    position:relative;
     flex:0 0 auto;
     padding:16px 24px;
     border-top:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.08));
-    display:flex;
+    display:grid;
+    grid-template-columns:120px 1fr 120px;
     align-items:center;
-    justify-content:space-between;
     gap:16px;
   }
+  .ikr-fwizard-footer-back{
+    justify-self:start;
+  }
   .ikr-fwizard-footer-progress{
-    position:absolute;
-    left:50%;
-    top:50%;
-    transform:translate(-50%, -50%);
+    justify-self:center;
     display:flex;
     align-items:center;
-    justify-content:center;
     gap:6px;
-    pointer-events:none; /* progress bar tıklama hedefi değil */
-  }
-  .ikr-fwizard-footer-back{
-    flex:0 0 auto;
   }
   .ikr-fwizard-footer-right{
-    flex:0 0 auto;
+    justify-self:end;
     display:flex;
     align-items:center;
     gap:8px;
-  }
-  .ikr-fwizard-footer-skip{
-    flex:0 0 auto;
   }
   .ikr-fwizard-cta-btn{
     background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
@@ -477,14 +467,12 @@ export var FWIZARD_CSS = `
     border:none;
     border-radius:8px;
     padding:10px 22px;
-    min-width:108px;
     font-size:14px;
     font-weight:500;
     line-height:1;
     cursor:pointer;
     transition:opacity 0.15s, background 0.15s;
     font-family:inherit;
-    box-sizing:border-box;
   }
   .ikr-fwizard-cta-btn:hover:not(:disabled){
     opacity:0.92;
@@ -509,17 +497,14 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-progress-seg-active{
     background:var(--ikr-fwizard-progress-active, rgb(17,17,17));
   }
-  /* Nav butonları (Geri / Atla) — CTA ile aynı bounding box (yükseklik
-     ve min-width) sayesinde her step'te aynı pozisyonda durur. Görsel
-     hiyerarşi sadece arkaplan/renk farkıyla korunur: nav transparent +
-     muted, CTA dolu siyah. Atla içeriği sağa, Geri içeriği sola yaslı
-     (justify-content) — böylece buton genişliği değişmese bile metin
-     uçları her step'te aynı X koordinatına oturur. */
+  /* Nav butonları (Geri / Atla) — text-link tarzı, doğal ufak boyut.
+     Konum sabitliği footer grid'in yan kolonları (120px) ve
+     justify-self:start/end ile sağlanır; butonun kendi genişliği
+     karışmaz. Hiyerarşi: transparent + muted (CTA dolu siyah). */
   .ikr-fwizard-nav-btn{
     background:transparent;
     border:none;
-    padding:10px 12px;
-    min-width:108px;
+    padding:6px 8px;
     color:var(--ikr-fwizard-muted, rgba(0,0,0,0.60));
     font-size:14px;
     font-weight:500;
@@ -527,16 +512,9 @@ export var FWIZARD_CSS = `
     cursor:pointer;
     display:inline-flex;
     align-items:center;
-    gap:6px;
-    border-radius:8px;
+    gap:4px;
+    border-radius:6px;
     font-family:inherit;
-    box-sizing:border-box;
-  }
-  .ikr-fwizard-footer-back{
-    justify-content:flex-start;
-  }
-  .ikr-fwizard-footer-skip{
-    justify-content:flex-end;
   }
   .ikr-fwizard-nav-btn:hover{
     color:var(--ikr-fwizard-text, rgb(17,17,17));
