@@ -440,10 +440,9 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-footer{
     flex:0 0 auto;
     padding:16px 24px;
-    /* min-height: butonların en yükseği (CTA ~34px) + dikey padding,
-       step 2 (kompakt Atla) ile step 3 (kalın Sonraki) arasında footer
-       yüksekliği değişip progress'in dikey kaymasını engeller. */
-    min-height:66px;
+    /* min-height: butonlar artık sabit 40px kutu, dikey padding 16px*2.
+       Footer toplam 72px sabit → progress hiçbir step'te dikey kaymaz. */
+    min-height:72px;
     box-sizing:border-box;
     border-top:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.08));
     display:grid;
@@ -466,18 +465,27 @@ export var FWIZARD_CSS = `
     align-items:center;
     gap:8px;
   }
+  /* CTA ve nav butonları — Loox pattern: sabit width × height kutu,
+     içerik flex center ile ortalanır. Step'ten step'e buton şekli
+     birebir aynı kalır, görsel hizasızlık olmaz. */
   .ikr-fwizard-cta-btn{
     background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
     color:var(--ikr-fwizard-cta-text, #ffffff);
     border:none;
     border-radius:8px;
-    padding:10px 22px;
+    width:108px;
+    height:40px;
+    padding:0;
     font-size:14px;
-    font-weight:500;
+    font-weight:600;
     line-height:1;
     cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     transition:opacity 0.15s, background 0.15s;
     font-family:inherit;
+    box-sizing:border-box;
   }
   .ikr-fwizard-cta-btn:hover:not(:disabled){
     opacity:0.92;
@@ -502,14 +510,15 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-progress-seg-active{
     background:var(--ikr-fwizard-progress-active, rgb(17,17,17));
   }
-  /* Nav butonları (Geri / Atla) — text-link tarzı, doğal ufak boyut.
-     Konum sabitliği footer grid'in yan kolonları (120px) ve
-     justify-self:start/end ile sağlanır; butonun kendi genişliği
-     karışmaz. Hiyerarşi: transparent + muted (CTA dolu siyah). */
+  /* Nav butonları (Geri / Atla) — CTA ile aynı kutu (108×40), sadece
+     arkaplan transparent. Hiyerarşi fill vs transparent ile, boyut
+     ile değil. Her step'te aynı bounding box → konum garanti sabit. */
   .ikr-fwizard-nav-btn{
     background:transparent;
     border:none;
-    padding:6px 8px;
+    width:108px;
+    height:40px;
+    padding:0;
     color:var(--ikr-fwizard-muted, rgba(0,0,0,0.60));
     font-size:14px;
     font-weight:500;
@@ -517,9 +526,11 @@ export var FWIZARD_CSS = `
     cursor:pointer;
     display:inline-flex;
     align-items:center;
+    justify-content:center;
     gap:4px;
-    border-radius:6px;
+    border-radius:8px;
     font-family:inherit;
+    box-sizing:border-box;
   }
   .ikr-fwizard-nav-btn:hover{
     color:var(--ikr-fwizard-text, rgb(17,17,17));
