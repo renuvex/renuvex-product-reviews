@@ -61,6 +61,7 @@ export function createStepPhotos(state, opts) {
   root.appendChild(card);
 
   var blobMap = opts.blobMap || {}; // cloudUrl -> localBlobUrl haritalaması (flaş etkisini önlemek için)
+  var urlToFinger = {}; // blobUrl veya cloudUrl -> parmak izi (silme anında fingerprint kaldırmak için)
 
   // State'teki tüm görselleri (bitenler ve yüklenmekte olanlar) tam reaktif olarak DOM'a yansıtır
   function syncUI() {
@@ -69,7 +70,7 @@ export function createStepPhotos(state, opts) {
     var completed = state.get().images || [];
     var pending = state.get().pendingImages || [];
     var all = completed.map(function (u) { return { url: u, isPending: false }; })
-      .concat(pending.map(function (p) { return { url: p.url, isPending: true, error: p.error } }));
+      .concat(pending.map(function (p) { return { url: p.url, file: p.file, isPending: true, error: p.error }; }));
 
     // Tam temizlik ve yeniden çizim — Index kaymalarını ve kırık ikonları kökten çözer.
     // blobMap sayesinde "flash" etkisi oluşmaz.
@@ -120,7 +121,9 @@ export function createStepPhotos(state, opts) {
 
     var removeBtn = node.querySelector('.ikr-fwizard-photo-remove');
     removeBtn.onclick = function () {
-      var finger = item.file ? (item.file.name + '_' + item.file.size) : null;
+      // urlToFinger haritasından bak (hem blob hem cloud URL'ler kayıtlı)
+      // item.file fallback olarak kalır (ekstra güvence)
+      var finger = urlToFinger[item.url] || (item.file ? (item.file.name + '_' + item.file.size) : null);
       if (item.url.startsWith('blob:')) {
         URL.revokeObjectURL(item.url);
       }
@@ -212,6 +215,7 @@ export function createStepPhotos(state, opts) {
         continue;
       }
       var objUrl = URL.createObjectURL(file);
+      urlToFinger[objUrl] = finger; // blob URL → parmak izi (silme anında fingerprint kaldırabilmek için)
       newPending.push({ url: objUrl, file: file, error: null });
       filesToUpload.push({ url: objUrl, file: file });
       // Hemen parmak izini global hafızaya ekle
@@ -266,6 +270,7 @@ export function createStepPhotos(state, opts) {
 
             // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir
             blobMap[upData.secure_url] = objUrl;
+            urlToFinger[upData.secure_url] = urlToFinger[objUrl]; // cloud URL → aynı parmak izi
 
             var p2 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
             var c2 = (state.get().images || []).slice();
