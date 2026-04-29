@@ -429,12 +429,12 @@ export var FWIZARD_CSS = `
      empty SVG'nin currentColor'ı CSS'ten okunur. */
   .ikr-fwizard-stars{
     display:inline-flex;
-    gap:8px;
+    gap:12px;
     align-items:center;
   }
   .ikr-fwizard-star{
-    width:44px;
-    height:44px;
+    width:48px;
+    height:48px;
     padding:0;
     border:none;
     background:transparent;
