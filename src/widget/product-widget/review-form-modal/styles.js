@@ -248,6 +248,9 @@ export var FWIZARD_CSS = `
     height:100%;
     object-fit:cover;
     display:block;
+    pointer-events:none;
+    -webkit-user-drag:none;
+    user-select:none;
   }
   .ikr-fwizard-photo-loading{
     position:absolute;
