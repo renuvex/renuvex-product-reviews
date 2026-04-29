@@ -65,8 +65,6 @@ export function openReviewFormModal(opts) {
   opts = opts || {};
   ensureStyles();
 
-  var lastActiveElement = document.activeElement;
-
   var state = createWizardState({
     productId: opts.productId,
     productName: opts.productName,
@@ -129,30 +127,6 @@ export function openReviewFormModal(opts) {
   layout.appendChild(stepWrap);
   layout.appendChild(progress.el);
 
-  // ─── Odak Hapsi (Focus Trap) ──────────────────────────────────────
-  function handleFocusTrap(e) {
-    if (e.key !== 'Tab') return;
-    
-    var focusables = shell.el.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex="0"]');
-    if (focusables.length === 0) return;
-
-    var first = focusables[0];
-    var last = focusables[focusables.length - 1];
-
-    if (e.shiftKey) { // Back tab
-      if (document.activeElement === first) {
-        last.focus();
-        e.preventDefault();
-      }
-    } else { // Normal tab
-      if (document.activeElement === last) {
-        first.focus();
-        e.preventDefault();
-      }
-    }
-  }
-  document.addEventListener('keydown', handleFocusTrap);
-
   var currentStepInstance = null;
 
   // ─── Step geçiş state machine ──────────────────────────────────────
@@ -210,22 +184,6 @@ export function openReviewFormModal(opts) {
 
     if (shell.setStepAttr) shell.setStepAttr(stepNum);
     if (stepNum === 3) progress.setNextDisabled(true);
-
-    // Erişilebilirlik: Yeni adım geldiğinde ilk input/textarea'ya odaklan
-    // Mikro-delay animasyon başlangıcıyla çakışmaması için
-    setTimeout(function() {
-      var firstInput = inst.el.querySelector('input:not([type="hidden"]), textarea, [tabindex="0"]');
-      if (firstInput) {
-        firstInput.focus();
-      } else {
-        // Input yoksa (Step 1 gibi) başlığa odaklan (başlığa tabindex eklenmeli)
-        var title = inst.el.querySelector('.ikr-fwizard-step-title');
-        if (title) {
-          title.setAttribute('tabindex', '-1');
-          title.focus();
-        }
-      }
-    }, 100);
   }
 
   var isThanksShowing = false;
@@ -329,14 +287,7 @@ export function openReviewFormModal(opts) {
     }
   });
 
-  var originalClose = shell.close;
-  shell.close = function() {
-    document.removeEventListener('keydown', handleFocusTrap);
-    originalClose();
-    if (lastActiveElement && typeof lastActiveElement.focus === 'function') {
-      lastActiveElement.focus();
-    }
-  };
+  shell.open(layout);
 
   return {
     close: shell.close,
