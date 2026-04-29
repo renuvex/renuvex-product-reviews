@@ -41,22 +41,26 @@ export function createWizardShell(opts) {
   var isClosed = false;
   var prevBodyOverflow = '';
   var prevBodyPaddingRight = '';
+  var prevHtmlPaddingRight = '';
 
   function lockBodyScroll() {
-    // Scroll bar genişliği — kaybolan scrollbar viewport'u kaydırmasın diye
-    // padding-right ile kompanse et.
     var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     prevBodyOverflow = document.body.style.overflow;
     prevBodyPaddingRight = document.body.style.paddingRight;
+    prevHtmlPaddingRight = document.documentElement.style.paddingRight;
     document.body.style.overflow = 'hidden';
     if (scrollbarWidth > 0) {
+      // Hem body hem html'e uygula — Next.js/İkas'ta fixed elementler
+      // html/viewport'a göre konumlanır, sadece body yetmez.
       document.body.style.paddingRight = scrollbarWidth + 'px';
+      document.documentElement.style.paddingRight = scrollbarWidth + 'px';
     }
   }
 
   function unlockBodyScroll() {
     document.body.style.overflow = prevBodyOverflow;
     document.body.style.paddingRight = prevBodyPaddingRight;
+    document.documentElement.style.paddingRight = prevHtmlPaddingRight;
   }
 
   function close() {

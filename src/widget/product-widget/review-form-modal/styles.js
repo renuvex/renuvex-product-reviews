@@ -40,12 +40,7 @@ export var FWIZARD_CSS = `
     display:flex;
     flex-direction:column;
     overflow:hidden;
-    /* Açılış scale animasyonu */
-    transform:scale(0.96);
-    transition:transform 0.2s ease;
-  }
-  .ikr-fwizard-overlay.ikr-fwizard-open .ikr-fwizard{
-    transform:scale(1);
+    /* Scale kaldırıldı — sayfa içeriğinde sub-pixel kayma yaratıyordu */
   }
 
   /* Close (X) butonu — sağ üst köşe */
