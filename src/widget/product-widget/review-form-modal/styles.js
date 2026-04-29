@@ -348,7 +348,7 @@ export var FWIZARD_CSS = `
     /* Aktiflik efekti kaldırıldı, border rengi sabit kalır */
   }
   .ikr-fwizard-textarea{
-    resize:vertical;
+    resize:none;
     min-height:140px;
     line-height:1.5;
   }
