@@ -176,64 +176,73 @@ export function createStepPhotos(state, opts) {
     if (newPending.length === 0) return;
 
     var allPending = (state.get().pendingImages || []).concat(newPending);
-    state.set({ pendingImages: allPending });
+
+    // Yükleme fonksiyonu (Döngüyü buraya alıyoruz ki erteleyebilelim)
+    var runUploads = async function () {
+      for (var i = 0; i < filesToUpload.length; i++) {
+        var item = filesToUpload[i];
+        var f = item.file;
+        var objUrl = item.url;
+
+        if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
+          var p1 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
+          var c1 = (state.get().images || []).slice();
+          c1.push(objUrl);
+          state.set({ pendingImages: p1, images: c1 });
+          continue;
+        }
+
+        try {
+          var signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
+          if (!signRes.ok) {
+            if (signRes.status === 429) throw new Error('rate_limit');
+            throw new Error('sign failed');
+          }
+          var sign = await signRes.json();
+          var fd = new FormData();
+          fd.append('file', f);
+          fd.append('api_key', sign.api_key);
+          fd.append('timestamp', sign.timestamp);
+          fd.append('signature', sign.signature);
+          fd.append('folder', 'review_images');
+
+          var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
+          var upData = await up.json();
+
+          if (upData.secure_url) {
+            var p2 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
+            var c2 = (state.get().images || []).slice();
+            c2.push(upData.secure_url);
+            state.set({ pendingImages: p2, images: c2 });
+          }
+        } catch (err) {
+          console.error('[ikr] Image upload failed:', err);
+          var errMsg = err.message === 'rate_limit' ? 'Çok fazla deneme. Bekleyin.' : 'Yükleme başarısız.';
+          var pErr = (state.get().pendingImages || []).map(function (p) {
+            if (p.url === objUrl) {
+              return { url: p.url, file: p.file, error: errMsg };
+            }
+            return p;
+          });
+          state.set({ pendingImages: pErr });
+        }
+      }
+    };
 
     // HIZLI GEÇİŞ: Sadece ilk kez fotoğraf seçildiğinde anında sonraki adıma geç
     if (preUploadCount === 0) {
       var canNav = !opts.canNavigate || opts.canNavigate();
       if (canNav) state.goNext();
-    }
 
-    // Yükleme İşlemleri
-    for (var i = 0; i < filesToUpload.length; i++) {
-      var item = filesToUpload[i];
-      var f = item.file;
-      var objUrl = item.url;
-
-      if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
-        // Önizleme modu simülasyonu
-        var p1 = (state.get().pendingImages || []).filter(function(p) { return p.url !== objUrl; });
-        var c1 = (state.get().images || []).slice();
-        c1.push(objUrl);
-        state.set({ pendingImages: p1, images: c1 });
-        continue;
-      }
-
-      try {
-        var signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
-        if (!signRes.ok) {
-          if (signRes.status === 429) throw new Error('rate_limit');
-          throw new Error('sign failed');
-        }
-        var sign = await signRes.json();
-        var fd = new FormData();
-        fd.append('file', f);
-        fd.append('api_key', sign.api_key);
-        fd.append('timestamp', sign.timestamp);
-        fd.append('signature', sign.signature);
-        fd.append('folder', 'review_images');
-        
-        var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
-        var upData = await up.json();
-        
-        if (upData.secure_url) {
-          var p2 = (state.get().pendingImages || []).filter(function(p) { return p.url !== objUrl; });
-          var c2 = (state.get().images || []).slice();
-          c2.push(upData.secure_url);
-          state.set({ pendingImages: p2, images: c2 });
-        }
-      } catch (err) {
-        console.error('[ikr] Image upload failed:', err);
-        var errMsg = err.message === 'rate_limit' ? 'Çok fazla deneme. Bekleyin.' : 'Yükleme başarısız.';
-        // Hata durumunu state'e yaz
-        var pErr = (state.get().pendingImages || []).map(function(p) {
-          if (p.url === objUrl) {
-            return { url: p.url, file: p.file, error: errMsg };
-          }
-          return p;
-        });
-        state.set({ pendingImages: pErr });
-      }
+      // UI sıçramasını engellemek için state güncellemesini ve yüklemeyi 80ms ertele.
+      // Bu sayede sayfa "temiz" (eski) haliyle gitmeye başlar.
+      setTimeout(function () {
+        state.set({ pendingImages: allPending });
+        runUploads();
+      }, 80);
+    } else {
+      state.set({ pendingImages: allPending });
+      runUploads();
     }
 
     fileInput.value = '';
