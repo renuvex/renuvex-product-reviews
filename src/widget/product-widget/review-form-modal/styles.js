@@ -68,6 +68,18 @@ export var FWIZARD_CSS = `
     z-index:1;
     transition:background 0.15s;
   }
+
+  /* X Butonu Görünürlük Kuralları (Desktop + Mobile) */
+  .ikr-fwizard[data-step="1"] .ikr-fwizard-close,
+  .ikr-fwizard[data-step="thanks"] .ikr-fwizard-close{
+    display:flex;
+  }
+  .ikr-fwizard[data-step="2"] .ikr-fwizard-close,
+  .ikr-fwizard[data-step="3"] .ikr-fwizard-close,
+  .ikr-fwizard[data-step="4"] .ikr-fwizard-close{
+    display:none;
+  }
+
   @media(hover:hover){
     .ikr-fwizard-close:hover{
       background:var(--ikr-fwizard-close-bg-hover, rgba(0,0,0,0.10));
@@ -585,15 +597,8 @@ export var FWIZARD_CSS = `
       border:none;
     }
 
-    /* X butonu — step 1'de görünür, diğer step'lerde gizli */
-    .ikr-fwizard[data-step="1"] .ikr-fwizard-close{
-      display:flex;
-    }
-    .ikr-fwizard[data-step="2"] .ikr-fwizard-close,
-    .ikr-fwizard[data-step="3"] .ikr-fwizard-close,
-    .ikr-fwizard[data-step="4"] .ikr-fwizard-close{
-      display:none;
-    }
+    /* X butonu ve Progress bar kuralları global kısımda ve data-step ile yönetiliyor */
+
 
     /* Progress bar üst kenara absolute — sadece step 2-4'te görünür */
     .ikr-fwizard-content{

@@ -176,6 +176,7 @@ export function openReviewFormModal(opts) {
     pendingStep = null;
     stepWrap.innerHTML = '';
     stepWrap.appendChild(buildThanksScreen());
+    shell.setStepAttr('thanks');
     // Footer'ı güncelle — sadece "Devam Et" butonu göster
     progress.setThanksState(shell.close);
   }
