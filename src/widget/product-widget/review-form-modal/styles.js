@@ -154,7 +154,7 @@ export var FWIZARD_CSS = `
     margin-top:-20px;
     font-size:16px;
     font-weight:400;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.55));
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.75));
     line-height:1.4;
   }
 
@@ -355,7 +355,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-notice{
     font-size:12px;
     line-height:1.5;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.55));
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.75));
     text-align:center;
     padding:4px 8px;
   }
@@ -410,7 +410,7 @@ export var FWIZARD_CSS = `
   }
   .ikr-fwizard-thanks-text{
     font-size:14px;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.55));
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.75));
   }
 
   /* ─── Step 1: Yıldız satırı ───
