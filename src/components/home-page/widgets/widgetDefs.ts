@@ -107,15 +107,14 @@ export const WIDGETS: WidgetDef[] = [
           // Köşe ovalliği renk değil — şekil. Tasarım grubunda ana panelde
           // diğer tasarım kararlarıyla (layout seçimleri) birlikte durur.
           { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
-          // Yorum yazma UI'ı — varsayılan accordion (mevcut), modal Loox tarzı wizard.
           {
             type: 'dropdown',
             key: 'reviewFormStyle',
             label: 'Yorum Yazma Stili',
-            default: 'accordion',
+            default: 'modal',
             options: [
-              { value: 'accordion', label: 'Varsayılan' },
-              { value: 'modal',     label: 'Modal' },
+              { value: 'modal',     label: 'Varsayılan (Modal)' },
+              { value: 'accordion', label: 'Akordeon (Eski)' },
             ],
           },
           // Boyut ayarları da tasarım kararı — eskiden ayrı "Boyutlar" accordion'undaydı,
