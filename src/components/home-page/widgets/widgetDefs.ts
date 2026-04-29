@@ -113,8 +113,8 @@ export const WIDGETS: WidgetDef[] = [
             label: 'Yorum Yazma Stili',
             default: 'modal',
             options: [
-              { value: 'modal',     label: 'Adımlı Modal (Varsayılan)' },
-              { value: 'accordion', label: 'Sayfa İçi Form' },
+              { value: 'modal',     label: 'Varsayılan' },
+              { value: 'accordion', label: 'Sayfa Form' },
             ],
           },
           // Boyut ayarları da tasarım kararı — eskiden ayrı "Boyutlar" accordion'undaydı,
