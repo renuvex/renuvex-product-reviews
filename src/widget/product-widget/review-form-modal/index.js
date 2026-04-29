@@ -53,7 +53,7 @@ function buildThanksScreen() {
   var wrap = document.createElement('div');
   wrap.className = 'ikr-fwizard-step';
   wrap.innerHTML =
-    '<div class="ikr-fwizard-step-title">Teşekkürler</div>' +
+    '<div class="ikr-fwizard-step-title ikr-fwizard-step-title--lg">Teşekkürler</div>' +
     '<div class="ikr-fwizard-step-subtitle">Değerlendirmeniz alındı.</div>';
   return wrap;
 }
