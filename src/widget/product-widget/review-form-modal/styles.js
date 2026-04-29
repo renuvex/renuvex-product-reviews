@@ -186,48 +186,49 @@ export var FWIZARD_CSS = `
 
   /* ─── Step 2: Foto kartı ─── */
   .ikr-fwizard-photo-card{
-    width:100%;
-    max-width:420px;
-    border:1px solid var(--ikr-fwizard-border, rgb(119,119,119));
+    background:#ffffff;
+    border:1px solid rgb(119, 119, 119);
     border-radius:12px;
     padding:12px;
+    margin-bottom:24px;
     display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    gap:16px;
-    box-sizing:border-box;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
   }
   .ikr-fwizard-photo-add{
+    flex:0 0 auto;
+    width:88px;
+    height:88px;
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:10px;
-    width:100%;
-    padding:14px 20px;
-    background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
-    color:var(--ikr-fwizard-cta-text, #ffffff);
+    background:#f5f5f5;
+    color:#000000;
+    border:1px solid #000000;
     border-radius:8px;
-    font-size:15px;
-    font-weight:500;
     cursor:pointer;
-    user-select:none;
-    transition:opacity 0.15s;
+    transition:all 0.2s;
+    order:10; /* Her zaman fotoğrafların sonunda görünsün */
   }
   .ikr-fwizard-photo-add:hover{
-    opacity:0.92;
+    background:#ebebeb;
+    transform:scale(0.98);
+  }
+  .ikr-fwizard-photo-add svg{
+    width:24px;
+    height:24px;
+  }
+  .ikr-fwizard-photo-add span{
+    display:none; /* Metni gizle */
   }
   .ikr-fwizard-photo-add--disabled{
     opacity:0.4;
     cursor:not-allowed;
     pointer-events:none;
   }
-  .ikr-fwizard-photo-add svg{
-    flex-shrink:0;
-  }
   .ikr-fwizard-photo-previews{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
+    display:contents; /* Container'ı yok sayarak item'ların kartın flex'ine dahil olmasını sağlar */
   }
   .ikr-fwizard-photo-previews:empty{
     display:none;
