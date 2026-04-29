@@ -604,9 +604,13 @@ export var FWIZARD_CSS = `
     }
 
     /* Footer butonları altta, doğal yerde. Geri = sadece "Geri" yazısı,
-       ok ikonu gizli. Atla zaten yazı+ok (desktop ile aynı). */
+       ok ikonu gizli. Atla zaten yazı+ok (desktop ile aynı).
+       Grid kolonları mobile'da auto/1fr/auto: yan kolonlar buton kadar,
+       orta esnek. Bu sayede butonlar viewport kenarına yapışır
+       (padding kadar uzaklıkta), ortada kaymaz. */
     .ikr-fwizard-footer{
       padding:12px 20px;
+      grid-template-columns:auto 1fr auto;
     }
     .ikr-fwizard-footer-back > svg{
       display:none;
