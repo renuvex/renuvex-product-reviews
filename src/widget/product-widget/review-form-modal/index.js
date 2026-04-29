@@ -187,17 +187,39 @@ export function openReviewFormModal(opts) {
   }
 
   function showThanks() {
-    if (currentStepInstance && currentStepInstance.destroy) {
-      currentStepInstance.destroy();
+    if (!currentStepInstance) {
+      stepWrap.innerHTML = '';
+      var thanksEl = buildThanksScreen();
+      thanksEl.classList.add('ikr-fwizard-step--enter');
+      stepWrap.appendChild(thanksEl);
+      shell.setStepAttr('thanks');
+      progress.setThanksState(shell.close);
+      return;
     }
-    currentStepInstance = null;
-    animPhase = 'idle';
-    pendingStep = null;
-    stepWrap.innerHTML = '';
-    stepWrap.appendChild(buildThanksScreen());
-    shell.setStepAttr('thanks');
-    // Footer'ı güncelle — sadece "Devam Et" butonu göster
-    progress.setThanksState(shell.close);
+
+    var leaving = currentStepInstance;
+    animPhase = 'exiting';
+    leaving.el.classList.add('ikr-fwizard-step--exit');
+
+    var onExitEnd = function () {
+      leaving.el.removeEventListener('animationend', onExitEnd);
+      if (leaving.destroy) {
+        try { leaving.destroy(); } catch (e) { /* sessiz */ }
+      }
+      if (currentStepInstance === leaving) currentStepInstance = null;
+      
+      stepWrap.innerHTML = '';
+      var thanksEl = buildThanksScreen();
+      thanksEl.classList.add('ikr-fwizard-step--enter');
+      stepWrap.appendChild(thanksEl);
+      
+      shell.setStepAttr('thanks');
+      progress.setThanksState(shell.close);
+      animPhase = 'idle';
+    };
+
+    leaving.el.addEventListener('animationend', onExitEnd);
+    setTimeout(onExitEnd, 400);
   }
 
   function rerenderStep() {
