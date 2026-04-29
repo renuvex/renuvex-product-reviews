@@ -139,6 +139,7 @@ export function openReviewFormModal(opts) {
   var animPhase = 'idle';
   var pendingStep = null;
   var suppressNextEnterAnim = true;
+  var timeoutId = null;
 
   // Step instance'ını mount et — ilk render veya geçiş enter'ı
   function mountStep(stepNum, withEnterAnim) {
@@ -205,7 +206,6 @@ export function openReviewFormModal(opts) {
     animPhase = 'exiting';
     leaving.el.classList.add('ikr-fwizard-step--exit');
 
-    var timeoutId = null;
     var onExitEnd = function () {
       if (timeoutId) clearTimeout(timeoutId);
       leaving.el.removeEventListener('animationend', onExitEnd);
@@ -250,7 +250,6 @@ export function openReviewFormModal(opts) {
     animPhase = 'exiting';
     leaving.el.classList.add('ikr-fwizard-step--exit');
 
-    var timeoutId = null;
     var onExitEnd = function () {
       if (timeoutId) clearTimeout(timeoutId);
       leaving.el.removeEventListener('animationend', onExitEnd);
@@ -277,7 +276,7 @@ export function openReviewFormModal(opts) {
 
   // State değişimlerinde yeniden çiz (sadece step değişince)
   var lastStep = state.get().currentStep;
-  state.onChange(function (s) {
+  var unsubscribeState = state.onChange(function (s) {
     if (s.currentStep !== lastStep) {
       lastStep = s.currentStep;
       rerenderStep();
@@ -286,6 +285,14 @@ export function openReviewFormModal(opts) {
       progress.update(s.currentStep, s);
     }
   });
+
+  var originalClose = shell.close;
+  shell.close = function() {
+    if (unsubscribeState) unsubscribeState();
+    // Varsa asılı kalmış animasyon timeout'larını temizle
+    if (typeof timeoutId !== 'undefined' && timeoutId) clearTimeout(timeoutId);
+    originalClose();
+  };
 
   shell.open(layout);
 
