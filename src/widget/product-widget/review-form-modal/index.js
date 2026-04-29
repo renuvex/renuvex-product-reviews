@@ -81,7 +81,7 @@ export function openReviewFormModal(opts) {
       });
       if (opts.onClose) opts.onClose();
     },
-    allowOutsideClose: true,
+    allowOutsideClose: false,
   });
 
   // ─── Modal layout: stepWrap (içerik) + progressBar (alt) ───
