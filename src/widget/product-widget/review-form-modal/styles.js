@@ -177,7 +177,7 @@ export var FWIZARD_CSS = `
     line-height:1.1;
   }
   .ikr-fwizard-thanks-subtitle{
-    font-size:18px !important;
+    font-size:16px !important;
     margin-top:0 !important;
     font-weight:400;
   }
