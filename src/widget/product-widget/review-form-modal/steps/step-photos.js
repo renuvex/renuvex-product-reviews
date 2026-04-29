@@ -60,7 +60,7 @@ export function createStepPhotos(state, opts) {
 
   root.appendChild(card);
 
-  var blobMap = {}; // cloudUrl -> localBlobUrl haritalaması (flaş etkisini önlemek için)
+  var blobMap = opts.blobMap || {}; // cloudUrl -> localBlobUrl haritalaması (flaş etkisini önlemek için)
 
   // State'teki tüm görselleri (bitenler ve yüklenmekte olanlar) tam reaktif olarak DOM'a yansıtır
   function syncUI() {

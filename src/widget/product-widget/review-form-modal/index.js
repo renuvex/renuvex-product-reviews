@@ -26,7 +26,6 @@ function ensureStyles() {
   stylesInjected = true;
 }
 
-// Step factory — currentStep'e göre uygun step'i döndürür.
 // stepOpts: step-specific callback'ler (validity, success).
 function renderStep(stepNum, state, stepOpts) {
   stepOpts = stepOpts || {};
@@ -35,6 +34,7 @@ function renderStep(stepNum, state, stepOpts) {
   });
   if (stepNum === 2) return createStepPhotos(state, {
     canNavigate: stepOpts.canNavigate,
+    blobMap: stepOpts.blobMap,
   });
   if (stepNum === 3) return createStepContent(state, {
     onValidityChange: stepOpts.onValidityChange,
@@ -73,8 +73,17 @@ export function openReviewFormModal(opts) {
     productName: opts.productName,
   });
 
+  var persistentBlobMap = {};
+
   var shell = createWizardShell({
-    onClose: opts.onClose,
+    onClose: function () {
+      // Bellek temizliği: Tüm blob URL'lerini serbest bırak
+      Object.keys(persistentBlobMap).forEach(function (k) {
+        var b = persistentBlobMap[k];
+        if (b && b.startsWith('blob:')) URL.revokeObjectURL(b);
+      });
+      if (opts.onClose) opts.onClose();
+    },
     allowOutsideClose: true,
   });
 
@@ -122,6 +131,7 @@ export function openReviewFormModal(opts) {
 
     var inst = renderStep(stepNum, state, {
       canNavigate: function () { return animPhase === 'idle'; },
+      blobMap: persistentBlobMap,
       onValidityChange: function (valid) {
         progress.setNextDisabled(!valid);
       },
