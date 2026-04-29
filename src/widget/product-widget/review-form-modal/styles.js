@@ -300,15 +300,16 @@ export var FWIZARD_CSS = `
     height:20px;
     border-radius:50%;
     background:#fff;
-    border:1px solid rgba(0,0,0,0.15);
-    color:rgba(0,0,0,0.65);
-    font-size:11px;
+    border:none;
+    color:#000;
+    font-size:12px;
+    font-weight:bold;
     line-height:1;
     cursor:pointer;
     display:flex;
     align-items:center;
     justify-content:center;
-    box-shadow:0 1px 4px rgba(0,0,0,0.12);
+    box-shadow:none;
     padding:0;
   }
 
