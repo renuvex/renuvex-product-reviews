@@ -30,8 +30,12 @@ function ensureStyles() {
 // stepOpts: step-specific callback'ler (validity, success).
 function renderStep(stepNum, state, stepOpts) {
   stepOpts = stepOpts || {};
-  if (stepNum === 1) return createStepRating(state);
-  if (stepNum === 2) return createStepPhotos(state);
+  if (stepNum === 1) return createStepRating(state, {
+    canNavigate: stepOpts.canNavigate,
+  });
+  if (stepNum === 2) return createStepPhotos(state, {
+    canNavigate: stepOpts.canNavigate,
+  });
   if (stepNum === 3) return createStepContent(state, {
     onValidityChange: stepOpts.onValidityChange,
   });
@@ -117,6 +121,7 @@ export function openReviewFormModal(opts) {
     stepWrap.innerHTML = '';
 
     var inst = renderStep(stepNum, state, {
+      canNavigate: function () { return animPhase === 'idle'; },
       onValidityChange: function (valid) {
         progress.setNextDisabled(!valid);
       },

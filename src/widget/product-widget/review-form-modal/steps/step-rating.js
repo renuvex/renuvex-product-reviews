@@ -13,7 +13,8 @@
 import { getIconFromSettings } from '../../../icons.js';
 import { currentSettings } from '../../../core/state.js';
 
-export function createStepRating(state) {
+export function createStepRating(state, opts) {
+  opts = opts || {};
   var root = document.createElement('div');
   root.className = 'ikr-fwizard-step ikr-fwizard-step-rating';
 
@@ -65,7 +66,8 @@ export function createStepRating(state) {
         applyVisual(value);
         // Auto-advance — Loox pattern. Küçük gecikme: kullanıcı seçimini görsün.
         setTimeout(function () {
-          state.goNext();
+          var canNav = !opts.canNavigate || opts.canNavigate();
+          if (canNav) state.goNext();
         }, 280);
       });
 

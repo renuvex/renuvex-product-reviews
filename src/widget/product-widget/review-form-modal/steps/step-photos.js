@@ -10,7 +10,8 @@ import { fetchWithTimeout } from '../../../core/fetch.js';
 var MAX_PHOTOS = 3;
 var MAX_BYTES = 5 * 1024 * 1024;
 
-export function createStepPhotos(state) {
+export function createStepPhotos(state, opts) {
+  opts = opts || {};
   var root = document.createElement('div');
   root.className = 'ikr-fwizard-step ikr-fwizard-step-photos';
 
@@ -179,7 +180,8 @@ export function createStepPhotos(state) {
 
     // HIZLI GEÇİŞ: Sadece ilk kez fotoğraf seçildiğinde anında sonraki adıma geç
     if (preUploadCount === 0) {
-      state.goNext();
+      var canNav = !opts.canNavigate || opts.canNavigate();
+      if (canNav) state.goNext();
     }
 
     // Yükleme İşlemleri
