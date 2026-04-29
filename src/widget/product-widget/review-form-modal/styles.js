@@ -296,13 +296,13 @@ export var FWIZARD_CSS = `
     position:absolute;
     top:-6px;
     right:-6px;
-    width:20px;
-    height:20px;
+    width:24px;
+    height:24px;
     border-radius:50%;
     background:#fff;
     border:none;
     color:#000;
-    font-size:12px;
+    font-size:14px;
     font-weight:bold;
     line-height:1;
     cursor:pointer;
