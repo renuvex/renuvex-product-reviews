@@ -205,7 +205,9 @@ export function openReviewFormModal(opts) {
     animPhase = 'exiting';
     leaving.el.classList.add('ikr-fwizard-step--exit');
 
+    var timeoutId = null;
     var onExitEnd = function () {
+      if (timeoutId) clearTimeout(timeoutId);
       leaving.el.removeEventListener('animationend', onExitEnd);
       if (leaving.destroy) {
         try { leaving.destroy(); } catch (e) { /* sessiz */ }
@@ -223,7 +225,7 @@ export function openReviewFormModal(opts) {
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);
-    setTimeout(onExitEnd, 200);
+    timeoutId = setTimeout(onExitEnd, 200);
   }
 
   function rerenderStep() {
