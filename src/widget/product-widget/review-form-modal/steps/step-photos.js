@@ -123,32 +123,26 @@ export function createStepPhotos(state, opts) {
     }
     item.innerHTML = html;
 
-    if (!isPending) {
-      var removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'ikr-fwizard-photo-remove';
-      removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
-      removeBtn.innerHTML = '&#x2715;';
-      removeBtn.onclick = function () {
-        var imgs = (state.get().images || []).filter(function (u) { return u !== url; });
-        state.set({ images: imgs });
-      };
-      item.appendChild(removeBtn);
-    } else if (errorMsg) {
-      // Hata varsa çarpı çıkar ki silebilsin
-      var removeErrBtn = document.createElement('button');
-      removeErrBtn.type = 'button';
-      removeErrBtn.className = 'ikr-fwizard-photo-remove';
-      removeErrBtn.innerHTML = '&#x2715;';
-      removeErrBtn.onclick = function () {
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
+    // Silme butonu (Her durumda göster — Optimistic UI)
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'ikr-fwizard-photo-remove';
+    removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
+    removeBtn.innerHTML = '&#x2715;';
+    removeBtn.onclick = function () {
+      // Bellek temizliği (blob ise)
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+      if (isPending) {
         var pending = (state.get().pendingImages || []).filter(function (p) { return p.url !== url; });
         state.set({ pendingImages: pending });
-      };
-      item.appendChild(removeErrBtn);
-    }
+      } else {
+        var imgs = (state.get().images || []).filter(function (u) { return u !== url; });
+        state.set({ images: imgs });
+      }
+    };
+    item.appendChild(removeBtn);
 
     previews.appendChild(item);
   }
