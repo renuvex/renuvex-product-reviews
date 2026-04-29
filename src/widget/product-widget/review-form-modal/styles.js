@@ -290,7 +290,7 @@ export var FWIZARD_CSS = `
     width:100%;
     padding:12px 14px;
     background:var(--ikr-fwizard-input-bg, #ffffff);
-    border:1px solid var(--ikr-fwizard-input-border, rgba(0,0,0,0.15));
+    border:1px solid var(--ikr-fwizard-input-border, rgb(119,119,119));
     border-radius:8px;
     font-size:14px;
     font-family:inherit;
@@ -301,7 +301,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-input:focus,
   .ikr-fwizard-textarea:focus{
     outline:none;
-    border-color:var(--ikr-fwizard-input-focus, rgba(0,0,0,0.55));
+    border-color:var(--ikr-fwizard-input-focus, rgb(119,119,119));
   }
   .ikr-fwizard-textarea{
     resize:vertical;
