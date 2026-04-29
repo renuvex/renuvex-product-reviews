@@ -110,11 +110,11 @@ export var FWIZARD_CSS = `
     position: relative;
     flex:1 1 auto;
     overflow-y:auto;
-    padding:48px 24px 32px;
+    padding:60px 24px 32px; /* Dikeyde sabit hizalama için padding-top artırıldı */
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
+    /* justify-content: center kaldırıldı çünkü farklı yüksekliklerde zıplamaya neden oluyor */
     text-align:center;
   }
 
@@ -132,15 +132,17 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-step--enter{
     animation:ikrStepEnter 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     will-change:transform, opacity;
+    backface-visibility: hidden; /* Yazı titremesini/bulanıklığını önler */
   }
   .ikr-fwizard-step--exit{
     position: absolute;
-    top: 48px; 
+    top: 60px; /* Padding-top ile aynı olmalı */
     left: 24px;
     right: 24px;
     animation:ikrStepExit 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
     will-change:transform, opacity;
     pointer-events: none;
+    backface-visibility: hidden;
   }
   @keyframes ikrStepEnter{
     0%   { opacity:0; transform:translateY(30px) scale(0.95); }
