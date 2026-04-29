@@ -309,9 +309,7 @@ export var FWIZARD_CSS = `
     line-height:1.5;
   }
   .ikr-fwizard-char-counter{
-    font-size:12px;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.50));
-    text-align:right;
+    display:none;
   }
   .ikr-fwizard-char-counter--max{
     color:#dc2626;
@@ -333,7 +331,7 @@ export var FWIZARD_CSS = `
   }
   .ikr-fwizard-label{
     font-size:13px;
-    font-weight:500;
+    font-weight:400;
     color:var(--ikr-fwizard-text, rgb(17,17,17));
   }
   .ikr-fwizard-required{
@@ -633,7 +631,7 @@ export var FWIZARD_CSS = `
     }
     /* Büyük başlık varyantı mobile'da küçülür: 26 → 18, weight korunur */
     .ikr-fwizard-step-title--lg{
-      font-size:18px;
+      font-size:20px;
     }
     .ikr-fwizard-star{
       width:40px;
