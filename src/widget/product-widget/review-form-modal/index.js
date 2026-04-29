@@ -137,7 +137,7 @@ export function openReviewFormModal(opts) {
     }
 
     stepWrap.appendChild(inst.el);
-    progress.update(stepNum);
+    progress.update(stepNum, state.get());
     // Modal kabuğuna step attribute'u — CSS step-bazlı kurallar için
     // (mobile'da step 1: X görünür, progress gizli; step 2-4: tersi).
     if (shell.setStepAttr) shell.setStepAttr(stepNum);
@@ -208,6 +208,8 @@ export function openReviewFormModal(opts) {
       lastStep = s.currentStep;
       rerenderStep();
     }
+    // Veri değiştiğinde (örn: foto eklendiğinde) footer'ı güncelle
+    progress.update(s.currentStep, s);
   });
 
   shell.open(layout);

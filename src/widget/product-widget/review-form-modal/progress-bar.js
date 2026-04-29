@@ -68,20 +68,29 @@ export function createProgressBar(opts) {
   }
   wrap.appendChild(rightBtn);
 
-  function configureRightBtn(currentStep) {
+  function configureRightBtn(currentStep, stateData) {
     var isSkippable = skippableSteps.indexOf(currentStep) !== -1;
     var hasNext = nextableSteps.indexOf(currentStep) !== -1;
+    var hasPhotos = stateData && stateData.images && stateData.images.length > 0;
 
     if (isSkippable) {
-      // Atla — text-link tarzı, sadece yazı (ok ikonu yok)
-      rightBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
-      rightBtn.setAttribute('aria-label', 'Atla');
-      rightBtn.innerHTML = '<span>Atla</span>';
+      if (currentStep === 2 && hasPhotos) {
+        // Fotoğraf var → "Devam Et" (Siyah Buton - CTA)
+        rightBtn.className = 'ikr-fwizard-cta-btn ikr-fwizard-footer-next';
+        rightBtn.setAttribute('aria-label', 'Devam Et');
+        rightBtn.innerHTML = 'Devam Et';
+        setRightHandler(function () { onNext(); });
+      } else {
+        // Fotoğraf yok → "Atla" (Şeffaf Buton - Nav)
+        rightBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
+        rightBtn.setAttribute('aria-label', 'Atla');
+        rightBtn.innerHTML = '<span>Atla</span>';
+        setRightHandler(function () { onSkip(); });
+      }
       rightBtn.disabled = false;
       rightBtn.classList.remove('ikr-fwizard-cta-btn--disabled');
       rightBtn.style.visibility = '';
       rightBtn.tabIndex = 0;
-      setRightHandler(function () { onSkip(); });
     } else if (hasNext) {
       // Sonraki — CTA, dolu siyah
       rightBtn.className = 'ikr-fwizard-cta-btn ikr-fwizard-footer-next';
@@ -93,10 +102,6 @@ export function createProgressBar(opts) {
         if (rightBtn.disabled) return;
         onNext();
       });
-      // Disabled durumu setNextDisabled ile dışarıdan ayarlanır;
-      // burada default olarak (yeni mount) eski state korunmaz —
-      // orchestrator step 3'e girer girmez setNextDisabled(true)
-      // çağırıp validity'yi yeniden bildirir.
     } else {
       // Hiç buton yok — slot görünmez ama yer korur
       rightBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
@@ -110,7 +115,7 @@ export function createProgressBar(opts) {
 
   return {
     el: wrap,
-    update: function (currentStep) {
+    update: function (currentStep, stateData) {
       // Progress segment'leri
       segments.forEach(function (seg, idx) {
         if (idx + 1 <= currentStep) {
@@ -120,15 +125,14 @@ export function createProgressBar(opts) {
         }
       });
 
-      // Sol: Geri sadece step > 1 iken görünür (visibility:hidden ile
-      // yer korur — sol slot tek buton olduğu için flow sorun değil).
+      // Sol: Geri sadece step > 1 iken görünür
       var hideBack = currentStep <= 1;
       leftBtn.style.visibility = hideBack ? 'hidden' : '';
       leftBtn.style.pointerEvents = hideBack ? 'none' : '';
       leftBtn.tabIndex = hideBack ? -1 : 0;
 
-      // Sağ: tek buton, step'e göre rol değişir
-      configureRightBtn(currentStep);
+      // Sağ: tek buton, step ve state'e göre rol değişir
+      configureRightBtn(currentStep, stateData);
     },
     setNextDisabled: function (disabled) {
       // Sadece "Sonraki" CTA aktifken anlamlı; Atla/no-button
