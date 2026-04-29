@@ -22,6 +22,7 @@ export function createWizardState(opts) {
     email: '',
     images: [],
     pendingImages: [],
+    fingerprints: [], // Persistence için: 'name_size' formatında parmak izleri
     productId: opts.productId || '',
     productName: opts.productName || '',
   };

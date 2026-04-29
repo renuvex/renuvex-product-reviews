@@ -13,7 +13,6 @@ var MAX_BYTES = 5 * 1024 * 1024;
 export function createStepPhotos(state, opts) {
   opts = opts || {};
   var isExiting = false; // Geçiş başladığında UI güncellemesini durdurmak için bayrak
-  var sessionFingerprints = (state.get().images || []).map(function() { return ''; }); // İlk yüklenenler için placeholder
   var root = document.createElement('div');
   root.className = 'ikr-fwizard-step ikr-fwizard-step-photos';
 
@@ -121,9 +120,17 @@ export function createStepPhotos(state, opts) {
 
     var removeBtn = node.querySelector('.ikr-fwizard-photo-remove');
     removeBtn.onclick = function () {
+      var finger = item.file ? (item.file.name + '_' + item.file.size) : null;
       if (item.url.startsWith('blob:')) {
         URL.revokeObjectURL(item.url);
       }
+      
+      // Parmak izini silsin (persistence hafızadan çıkar)
+      if (finger) {
+        var fings = (state.get().fingerprints || []).filter(function(f) { return f !== finger; });
+        state.set({ fingerprints: fings });
+      }
+
       if (item.isPending) {
         var p = (state.get().pendingImages || []).filter(function (x) { return x.url !== item.url; });
         state.set({ pendingImages: p });
@@ -190,10 +197,9 @@ export function createStepPhotos(state, opts) {
       
       // DUPLICATE KONTROLÜ: 
       // 1. Bekleyenler (pendingImages) içinde var mı?
-      // 2. Bitmiş olanlar (sessionFingerprints) içinde var mı?
+      // 2. Hafızadaki parmak izleri (fingerprints) içinde var mı?
       // 3. Şu an seçilen yeni grupta (newPending) zaten eklendi mi?
-      var isDup = pendingFiles.some(function(p) { return p.file && (p.file.name + '_' + p.file.size) === finger; }) ||
-                  sessionFingerprints.some(function(f) { return f === finger; }) ||
+      var isDup = (state.get().fingerprints || []).some(function(f) { return f === finger; }) ||
                   newPending.some(function(n) { return (n.file.name + '_' + n.file.size) === finger; });
       
       if (isDup) {
@@ -208,8 +214,10 @@ export function createStepPhotos(state, opts) {
       var objUrl = URL.createObjectURL(file);
       newPending.push({ url: objUrl, file: file, error: null });
       filesToUpload.push({ url: objUrl, file: file });
-      // Hemen parmak izini takip listesine ekle ki bir sonraki seçimde yakalansın
-      sessionFingerprints.push(finger);
+      // Hemen parmak izini global hafızaya ekle
+      var currentFings = (state.get().fingerprints || []).slice();
+      currentFings.push(finger);
+      state.set({ fingerprints: currentFings });
     }
 
     if (newPending.length === 0) return;
@@ -258,8 +266,6 @@ export function createStepPhotos(state, opts) {
 
             // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir
             blobMap[upData.secure_url] = objUrl;
-            // sessionFingerprints'e zaten ekleme anında (onchange) ekledik, burada tekrar gerek yok
-            // ama listeyi güncel tutmak için yine de kalabilir.
 
             var p2 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
             var c2 = (state.get().images || []).slice();
