@@ -56,7 +56,6 @@ export function createStepAuthor(state, opts) {
   var emailInput = document.createElement('input');
   emailInput.type = 'email';
   emailInput.className = 'ikr-fwizard-input';
-  emailInput.placeholder = 'ornek@email.com';
   emailInput.setAttribute('autocomplete', 'email');
   emailInput.value = state.get().email || '';
   emailWrap.appendChild(emailLabel);
