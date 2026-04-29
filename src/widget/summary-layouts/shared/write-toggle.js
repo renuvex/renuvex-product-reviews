@@ -28,7 +28,7 @@ function openAccordion() {
 }
 
 export function toggleWriteAccordion() {
-  var style = (currentSettings && currentSettings.reviewFormStyle) || 'accordion';
+  var style = (currentSettings && currentSettings.reviewFormStyle) || 'modal';
   if (style === 'modal') {
     openReviewFormModal({
       productId: currentProductId || '',
