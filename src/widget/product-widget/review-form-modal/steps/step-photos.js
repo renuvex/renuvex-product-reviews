@@ -111,9 +111,13 @@ export function createStepPhotos(state, opts) {
     }
 
     var overlay = node.querySelector('.ikr-fwizard-photo-loading');
-    if (item.isPending && item.error) {
+    if (item.isPending) {
       overlay.style.display = 'flex';
-      overlay.innerHTML = '<span class="ikr-upload-error">✗ ' + item.error + '</span>';
+      if (item.error) {
+        overlay.innerHTML = '<span class="ikr-upload-error">✗ ' + item.error + '</span>';
+      } else {
+        overlay.innerHTML = '<div class="ikr-fwizard-photo-spinner"></div><span style="font-size:10px; color:white; font-weight:600; margin-top:4px;">Yükleniyor</span>';
+      }
     } else {
       overlay.style.display = 'none';
     }
@@ -225,6 +229,13 @@ export function createStepPhotos(state, opts) {
           var upData = await up.json();
 
           if (upData.secure_url) {
+            // KRİTİK KONTROL: Kullanıcı bu yükleme sürerken görseli silmiş mi?
+            var stillPending = (state.get().pendingImages || []).some(function(p) { return p.url === objUrl; });
+            if (!stillPending) {
+              console.log('[ikr] Upload finished but image was already deleted by user. Aborting state update.');
+              return; 
+            }
+
             // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir
             blobMap[upData.secure_url] = objUrl;
 

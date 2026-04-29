@@ -286,11 +286,24 @@ export var FWIZARD_CSS = `
     position:absolute;
     top:0;left:0;
     width:100%;height:100%;
-    background:rgba(255,255,255,0.75);
+    background:rgba(0,0,0,0.45);
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
     border-radius:8px;
+    z-index:1;
+  }
+  .ikr-fwizard-photo-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: ikr-spin 0.8s linear infinite;
+  }
+  @keyframes ikr-spin {
+    to { transform: rotate(360deg); }
   }
   .ikr-upload-error {
     color: #ff3333;
