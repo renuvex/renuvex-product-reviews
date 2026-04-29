@@ -26,7 +26,11 @@ export function createWizardShell(opts) {
   closeBtn.className = 'ikr-fwizard-close';
   closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', 'Kapat');
-  closeBtn.innerHTML = '✕'; // ✕
+  closeBtn.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<line x1="18" y1="6" x2="6" y2="18"></line>' +
+    '<line x1="6" y1="6" x2="18" y2="18"></line>' +
+    '</svg>';
   modal.appendChild(closeBtn);
 
   var content = document.createElement('div');

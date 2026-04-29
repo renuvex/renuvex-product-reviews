@@ -56,7 +56,7 @@ export var FWIZARD_CSS = `
     width:32px;
     height:32px;
     border-radius:8px;
-    border:1px solid var(--ikr-fwizard-border, #AFAFAF);
+    border:none;
     background:transparent;
     color:var(--ikr-fwizard-close-text, rgba(0,0,0,0.6));
     cursor:pointer;
