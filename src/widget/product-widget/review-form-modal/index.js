@@ -81,9 +81,15 @@ export function openReviewFormModal(opts) {
   var progress = createProgressBar({
     skippableSteps: [2],
     nextableSteps: [3],
-    onBack: function () { state.goBack(); },
-    onSkip: function () { state.goNext(); },
-    onNext: function () { state.goNext(); },
+    onBack: function () {
+      if (animPhase === 'idle') state.goBack();
+    },
+    onSkip: function () {
+      if (animPhase === 'idle') state.goNext();
+    },
+    onNext: function () {
+      if (animPhase === 'idle') state.goNext();
+    },
   });
 
   // Wizard layout container — content + footer dikey
