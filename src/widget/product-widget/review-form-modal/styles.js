@@ -285,6 +285,20 @@ export var FWIZARD_CSS = `
     justify-content:center;
     border-radius:8px;
   }
+  .ikr-upload-check {
+    color: #00ba00; /* İkas yeşili tonlarında bir onay rengi */
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+  .ikr-upload-error {
+    color: #ff3333;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    padding: 0 4px;
+  }
   .ikr-fwizard-photo-remove{
     position:absolute;
     top:-6px;
