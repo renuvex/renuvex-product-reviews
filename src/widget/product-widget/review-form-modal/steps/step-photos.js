@@ -186,10 +186,15 @@ export function createStepPhotos(state, opts) {
     
     for (var fi = 0; fi < files.length; fi++) {
       var file = files[fi];
+      var finger = file.name + '_' + file.size;
       
-      // DUPLICATE KONTROLÜ: İsim ve boyut aynı mı?
-      var isDup = pendingFiles.some(function(p) { return p.file && p.file.name === file.name && p.file.size === file.size; }) ||
-                  sessionFingerprints.some(function(f) { return f === (file.name + '_' + file.size); });
+      // DUPLICATE KONTROLÜ: 
+      // 1. Bekleyenler (pendingImages) içinde var mı?
+      // 2. Bitmiş olanlar (sessionFingerprints) içinde var mı?
+      // 3. Şu an seçilen yeni grupta (newPending) zaten eklendi mi?
+      var isDup = pendingFiles.some(function(p) { return p.file && (p.file.name + '_' + p.file.size) === finger; }) ||
+                  sessionFingerprints.some(function(f) { return f === finger; }) ||
+                  newPending.some(function(n) { return (n.file.name + '_' + n.file.size) === finger; });
       
       if (isDup) {
         console.log('[ikr] Duplicate file detected, skipping:', file.name);
@@ -203,6 +208,8 @@ export function createStepPhotos(state, opts) {
       var objUrl = URL.createObjectURL(file);
       newPending.push({ url: objUrl, file: file, error: null });
       filesToUpload.push({ url: objUrl, file: file });
+      // Hemen parmak izini takip listesine ekle ki bir sonraki seçimde yakalansın
+      sessionFingerprints.push(finger);
     }
 
     if (newPending.length === 0) return;
@@ -251,7 +258,8 @@ export function createStepPhotos(state, opts) {
 
             // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir
             blobMap[upData.secure_url] = objUrl;
-            sessionFingerprints.push(f.name + '_' + f.size);
+            // sessionFingerprints'e zaten ekleme anında (onchange) ekledik, burada tekrar gerek yok
+            // ama listeyi güncel tutmak için yine de kalabilir.
 
             var p2 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
             var c2 = (state.get().images || []).slice();
