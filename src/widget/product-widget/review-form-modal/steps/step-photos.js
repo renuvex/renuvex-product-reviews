@@ -60,22 +60,88 @@ export function createStepPhotos(state, opts) {
 
   root.appendChild(card);
 
+  var blobMap = {}; // cloudUrl -> localBlobUrl haritalaması (flaş etkisini önlemek için)
+
   // State'teki tüm görselleri (bitenler ve yüklenmekte olanlar) tam reaktif olarak DOM'a yansıtır
   function syncUI() {
-    if (isExiting) return; // Sayfa gitmek üzereyse DOM'u dondur (flaş etkisini önler)
-    previews.innerHTML = ''; // Eski her şeyi temizle, state'e göre baştan kur
+    if (isExiting) return;
 
     var completed = state.get().images || [];
-    completed.forEach(function (url) {
-      addThumb(url, false);
-    });
-
     var pending = state.get().pendingImages || [];
-    pending.forEach(function (obj) {
-      addThumb(obj.url, true, obj.error);
+    var all = completed.map(function (u) { return { url: u, isPending: false }; })
+      .concat(pending.map(function (p) { return { url: p.url, isPending: true, error: p.error } }));
+
+    var children = Array.from(previews.children);
+
+    // Fazla olanları sil
+    while (children.length > all.length) {
+      var last = children.pop();
+      previews.removeChild(last);
+    }
+
+    // Mevcutları güncelle veya yeni ekle
+    all.forEach(function (item, i) {
+      // Eğer bu bulut URL'si için yerel bir blob adresimiz varsa onu kullan (flaşsız geçiş)
+      var displayUrl = blobMap[item.url] || item.url;
+      
+      if (children[i]) {
+        updateThumbNode(children[i], item, displayUrl);
+      } else {
+        var node = createThumbNode(item, displayUrl);
+        previews.appendChild(node);
+      }
     });
 
     updateAddButton();
+  }
+
+  function createThumbNode(item, displayUrl) {
+    var node = document.createElement('div');
+    node.className = 'ikr-fwizard-photo-thumb';
+    node.innerHTML = '<img src="' + displayUrl + '" alt="" style="width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; -webkit-user-drag:none; user-select:none;">';
+    
+    var overlay = document.createElement('div');
+    overlay.className = 'ikr-fwizard-photo-loading';
+    overlay.style.display = 'none';
+    node.appendChild(overlay);
+
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'ikr-fwizard-photo-remove';
+    removeBtn.innerHTML = '&#x2715;';
+    node.appendChild(removeBtn);
+
+    updateThumbNode(node, item, displayUrl);
+    return node;
+  }
+
+  function updateThumbNode(node, item, displayUrl) {
+    var img = node.querySelector('img');
+    if (img.src !== displayUrl) {
+      img.src = displayUrl;
+    }
+
+    var overlay = node.querySelector('.ikr-fwizard-photo-loading');
+    if (item.isPending && item.error) {
+      overlay.style.display = 'flex';
+      overlay.innerHTML = '<span class="ikr-upload-error">✗ ' + item.error + '</span>';
+    } else {
+      overlay.style.display = 'none';
+    }
+
+    var removeBtn = node.querySelector('.ikr-fwizard-photo-remove');
+    removeBtn.onclick = function () {
+      if (item.url.startsWith('blob:')) {
+        URL.revokeObjectURL(item.url);
+      }
+      if (item.isPending) {
+        var p = (state.get().pendingImages || []).filter(function (x) { return x.url !== item.url; });
+        state.set({ pendingImages: p });
+      } else {
+        var imgs = (state.get().images || []).filter(function (x) { return x !== item.url; });
+        state.set({ images: imgs });
+      }
+    };
   }
 
   var PHOTO_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
@@ -105,46 +171,6 @@ export function createStepPhotos(state, opts) {
       uploadLabel.classList.toggle('ikr-fwizard-photo-add--disabled', isUploading);
       uploadLabel.appendChild(fileInput);
     }
-  }
-
-  function addThumb(url, isPending, errorMsg) {
-    var item = document.createElement('div');
-    item.className = 'ikr-fwizard-photo-thumb';
-    
-    var html = '<img src="' + url + '" alt="">';
-    
-    if (isPending) {
-      if (errorMsg) {
-        html += '<div class="ikr-fwizard-photo-loading"><span class="ikr-upload-error">✗ ' + errorMsg + '</span></div>';
-      } else {
-        // Optimistic UI: Yükleme ikonunu kaldırdık, görsel direkt "hazır" gibi görünür.
-        // İstenirse buraya çok hafif bir opacity (0.8) verilebilir.
-      }
-    }
-    item.innerHTML = html;
-
-    // Silme butonu (Her durumda göster — Optimistic UI)
-    var removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'ikr-fwizard-photo-remove';
-    removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
-    removeBtn.innerHTML = '&#x2715;';
-    removeBtn.onclick = function () {
-      // Bellek temizliği (blob ise)
-      if (url.startsWith('blob:')) {
-        URL.revokeObjectURL(url);
-      }
-      if (isPending) {
-        var pending = (state.get().pendingImages || []).filter(function (p) { return p.url !== url; });
-        state.set({ pendingImages: pending });
-      } else {
-        var imgs = (state.get().images || []).filter(function (u) { return u !== url; });
-        state.set({ images: imgs });
-      }
-    };
-    item.appendChild(removeBtn);
-
-    previews.appendChild(item);
   }
 
   fileInput.onchange = async function (e) {
@@ -210,10 +236,8 @@ export function createStepPhotos(state, opts) {
           var upData = await up.json();
 
           if (upData.secure_url) {
-            // Bellek temizliği: Blob URL'ini serbest bırak (sadece yerel önizleme için kullanılmıştı)
-            if (objUrl.startsWith('blob:')) {
-              URL.revokeObjectURL(objUrl);
-            }
+            // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir
+            blobMap[upData.secure_url] = objUrl;
 
             var p2 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
             var c2 = (state.get().images || []).slice();
