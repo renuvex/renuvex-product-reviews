@@ -124,6 +124,13 @@ export function createStepAuthor(state, opts) {
     var s = state.get();
     var author = (s.author || '').trim();
     var comment = (s.comment || '').trim();
+
+    // E-posta format kontrolü (Tarayıcı native uyarısını tetikler)
+    if (emailInput.value.trim() && !emailInput.checkValidity()) {
+      emailInput.reportValidity();
+      return;
+    }
+
     if (!author) {
       msg.innerHTML = '<div class="ikr-fwizard-msg-error">Lütfen adınızı girin.</div>';
       return;
