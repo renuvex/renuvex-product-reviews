@@ -190,7 +190,7 @@ export var FWIZARD_CSS = `
     max-width:420px;
     border:1px solid var(--ikr-fwizard-border, rgb(119,119,119));
     border-radius:12px;
-    padding:20px;
+    padding:12px;
     display:flex;
     flex-direction:column;
     align-items:stretch;
