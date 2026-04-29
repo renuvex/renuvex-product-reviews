@@ -15,7 +15,7 @@ export function createStepContent(state, opts) {
 
   // Başlık
   var heading = document.createElement('div');
-  heading.className = 'ikr-fwizard-step-title';
+  heading.className = 'ikr-fwizard-step-title ikr-fwizard-step-title--lg';
   heading.textContent = 'Deneyiminizi anlatın';
   root.appendChild(heading);
 

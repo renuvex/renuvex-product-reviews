@@ -16,7 +16,7 @@ export function createStepPhotos(state) {
 
   // Başlık
   var title = document.createElement('div');
-  title.className = 'ikr-fwizard-step-title';
+  title.className = 'ikr-fwizard-step-title ikr-fwizard-step-title--lg';
   title.textContent = 'Fotoğraflı değerlendirme';
   root.appendChild(title);
 

@@ -23,7 +23,7 @@ export function createStepAuthor(state, opts) {
 
   // Başlık
   var title = document.createElement('div');
-  title.className = 'ikr-fwizard-step-title';
+  title.className = 'ikr-fwizard-step-title ikr-fwizard-step-title--lg';
   title.textContent = 'Hakkınızda';
   root.appendChild(title);
 

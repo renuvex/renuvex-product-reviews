@@ -159,7 +159,7 @@ export var FWIZARD_CSS = `
     }
   }
 
-  /* Step başlığı */
+  /* Step başlığı — varsayılan (step 1: yıldız) */
   .ikr-fwizard-step-title{
     font-size:18px;
     font-weight:400;
@@ -167,10 +167,18 @@ export var FWIZARD_CSS = `
     line-height:1.3;
   }
 
+  /* Büyük başlık varyantı — step 2/3/4 başlıkları daha güçlü
+     görünüm gerektirir. Mobile'da @media içinde 18px/700'e iner. */
+  .ikr-fwizard-step-title--lg{
+    font-size:26px;
+    font-weight:700;
+    line-height:1.25;
+  }
+
   /* Step alt başlığı — başlığın hemen altında, daha sönük */
   .ikr-fwizard-step-subtitle{
     margin-top:-20px;
-    font-size:14px;
+    font-size:16px;
     font-weight:400;
     color:var(--ikr-fwizard-muted, rgba(0,0,0,0.55));
     line-height:1.4;
@@ -622,6 +630,10 @@ export var FWIZARD_CSS = `
     }
     .ikr-fwizard-step{
       gap:24px;
+    }
+    /* Büyük başlık varyantı mobile'da küçülür: 26 → 18, weight korunur */
+    .ikr-fwizard-step-title--lg{
+      font-size:18px;
     }
     .ikr-fwizard-star{
       width:40px;
