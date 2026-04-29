@@ -543,13 +543,16 @@ export var FWIZARD_CSS = `
   }
 
   /* ─── Mobile düzenlemeleri ────────────────────────────────────────
-     Mobil tasarım:
+     Mobil yapı:
        - Modal tam ekran (100dvh × 100vw)
-       - Progress bar üst kenara taşınır (footer içinden ayrılıp
-         absolute ile modal'ın top:0'ına yapışır)
-       - Footer (butonlar) doğal yerinde kalır — altta, sol/sağ uçlarda
-       - Geri butonu sadece ok ikonu (yazı gizli)
-     DOM dokunulmaz, sadece CSS reposition. */
+       - Step 1: sağ-üstte X butonu, progress gizli (üst boş)
+       - Step 2-4: X gizli, progress üst kenara absolute
+       - Butonlar her zaman altta (footer doğal yeri):
+           sol: "Geri" yazısı (ok ikonu gizli, sadece text)
+           sağ: "Atla" / "Sonraki" — desktop ile aynı
+       - İçerik dikey ortada, header ve footer arasına padded
+     DOM dokunulmaz, step state'i shell.setStepAttr ile data-step
+     attribute'u olarak modal kutusuna işlenir. */
   @media(max-width:640px){
     .ikr-fwizard-overlay{
       padding:0;
@@ -558,25 +561,28 @@ export var FWIZARD_CSS = `
       width:100vw;
       max-width:none;
       height:100vh;       /* fallback */
-      height:100dvh;      /* dynamic viewport (modern) */
+      height:100dvh;      /* dynamic viewport */
       max-height:none;
       border-radius:0;
       border:none;
     }
 
-    /* Modal X butonu mobilde gizli (Geri ile aynı işlevi görür) */
-    .ikr-fwizard-close{
+    /* X butonu — step 1'de görünür, diğer step'lerde gizli */
+    .ikr-fwizard[data-step="1"] .ikr-fwizard-close{
+      display:flex;
+    }
+    .ikr-fwizard[data-step="2"] .ikr-fwizard-close,
+    .ikr-fwizard[data-step="3"] .ikr-fwizard-close,
+    .ikr-fwizard[data-step="4"] .ikr-fwizard-close{
       display:none;
     }
 
-    /* Content relative parent — progress bar absolute olarak üste yapışır */
+    /* Progress bar üst kenara absolute — sadece step 2-4'te görünür */
     .ikr-fwizard-content{
       position:relative;
-      padding-top:32px;   /* progress için yer */
+      padding-top:32px;
       box-sizing:border-box;
     }
-
-    /* Progress bar üst kenara sabit (modal'ın top'unda header gibi) */
     .ikr-fwizard-footer-progress{
       position:absolute;
       top:16px;
@@ -588,16 +594,21 @@ export var FWIZARD_CSS = `
       transform:none;
       z-index:2;
     }
+    /* Step 1: progress gizli (X üstte yer kaplıyor zaten) */
+    .ikr-fwizard[data-step="1"] .ikr-fwizard-footer-progress{
+      display:none;
+    }
+    /* Step 1'de üst padding'e gerek yok — X kendi position:absolute */
+    .ikr-fwizard[data-step="1"] .ikr-fwizard-content{
+      padding-top:0;
+    }
 
-    /* Footer doğal yerinde kalır — altta, sol/sağ uçlarda butonlar.
-       Grid kolonları desktop ile aynı (120px 1fr 120px), progress
-       artık absolute olduğu için orta kolon boş kalır. */
+    /* Footer butonları altta, doğal yerde. Geri = sadece "Geri" yazısı,
+       ok ikonu gizli. Atla zaten yazı+ok (desktop ile aynı). */
     .ikr-fwizard-footer{
       padding:12px 20px;
     }
-
-    /* Geri butonu mobilde sadece ok — "Geri" yazısı gizli */
-    .ikr-fwizard-footer-back > span{
+    .ikr-fwizard-footer-back > svg{
       display:none;
     }
 

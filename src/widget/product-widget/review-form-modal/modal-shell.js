@@ -103,5 +103,11 @@ export function createWizardShell(opts) {
     content: content,
     // Outside-click davranışını dışarıdan değiştirmek için (Faz 2+: step 2'de kapatma)
     setAllowOutsideClose: function (v) { allowOutsideClose = !!v; },
+    // CSS'in step'e göre koşullu kural yazabilmesi için modal kutusuna
+    // data-step attribute'u koyar. Mobil layout'ta step 1'de X butonu
+    // ve progress bar görünürlüğü buna göre değişir.
+    setStepAttr: function (stepNum) {
+      modal.setAttribute('data-step', String(stepNum));
+    },
   };
 }

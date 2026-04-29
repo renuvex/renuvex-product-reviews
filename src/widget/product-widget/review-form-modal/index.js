@@ -138,6 +138,9 @@ export function openReviewFormModal(opts) {
 
     stepWrap.appendChild(inst.el);
     progress.update(stepNum);
+    // Modal kabuğuna step attribute'u — CSS step-bazlı kurallar için
+    // (mobile'da step 1: X görünür, progress gizli; step 2-4: tersi).
+    if (shell.setStepAttr) shell.setStepAttr(stepNum);
     // "Sonraki" butonunun başlangıç state'i: validity bildirilene kadar disabled
     if (stepNum === 3) progress.setNextDisabled(true);
   }
