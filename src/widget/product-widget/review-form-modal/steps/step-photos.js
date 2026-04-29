@@ -172,6 +172,14 @@ export function createStepPhotos(state) {
     isUploading = false;
     fileInput.value = '';
     updateAddButton();
+
+    // Auto-advance: Yükleme bittiyse ve en az bir foto varsa otomatik geç
+    var finalImages = state.get().images || [];
+    if (finalImages.length > 0) {
+      setTimeout(function() {
+        state.goNext();
+      }, 1000); // 1 sn bekle ki "tik" işaretini görsün
+    }
   };
 
   function finalizeThumb(item, loadingEl, finalUrl) {
