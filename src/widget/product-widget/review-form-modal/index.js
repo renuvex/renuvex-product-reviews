@@ -186,7 +186,11 @@ export function openReviewFormModal(opts) {
     if (stepNum === 3) progress.setNextDisabled(true);
   }
 
+  var isThanksShowing = false;
   function showThanks() {
+    if (isThanksShowing) return;
+    isThanksShowing = true;
+
     if (!currentStepInstance) {
       stepWrap.innerHTML = '';
       var thanksEl = buildThanksScreen();
