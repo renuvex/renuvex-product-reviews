@@ -71,25 +71,14 @@ export function createStepPhotos(state, opts) {
     var all = completed.map(function (u) { return { url: u, isPending: false }; })
       .concat(pending.map(function (p) { return { url: p.url, isPending: true, error: p.error } }));
 
-    var children = Array.from(previews.children);
-
-    // Fazla olanları sil
-    while (children.length > all.length) {
-      var last = children.pop();
-      previews.removeChild(last);
-    }
-
-    // Mevcutları güncelle veya yeni ekle
-    all.forEach(function (item, i) {
-      // Eğer bu bulut URL'si için yerel bir blob adresimiz varsa onu kullan (flaşsız geçiş)
+    // Tam temizlik ve yeniden çizim — Index kaymalarını ve kırık ikonları kökten çözer.
+    // blobMap sayesinde "flash" etkisi oluşmaz.
+    previews.innerHTML = '';
+    
+    all.forEach(function (item) {
       var displayUrl = blobMap[item.url] || item.url;
-      
-      if (children[i]) {
-        updateThumbNode(children[i], item, displayUrl);
-      } else {
-        var node = createThumbNode(item, displayUrl);
-        previews.appendChild(node);
-      }
+      var node = createThumbNode(item, displayUrl);
+      previews.appendChild(node);
     });
 
     updateAddButton();
