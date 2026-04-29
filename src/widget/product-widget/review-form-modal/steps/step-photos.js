@@ -177,10 +177,10 @@ export function createStepPhotos(state, opts) {
       return ''; // Sadece URL olanlar için şimdilik boş, aşağıda geliştirilecek.
     });
     
-    // Daha sağlam: state'teki pending listesini ve yerel bir session takibini kontrol et
     var pendingFiles = (state.get().pendingImages || []);
+    var files = Array.from(e.target.files).slice(0, remaining);
 
-    // Hemen Blob objelerini oluştur ve pending state'e ekle
+    if (files.length === 0) return;
     var newPending = [];
     var filesToUpload = [];
     
