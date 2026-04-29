@@ -107,6 +107,7 @@ export var FWIZARD_CSS = `
 
   /* Step içeriği konteyneri — scroll burada */
   .ikr-fwizard-step-wrap{
+    position: relative;
     flex:1 1 auto;
     overflow-y:auto;
     padding:48px 24px 32px;
@@ -133,8 +134,13 @@ export var FWIZARD_CSS = `
     will-change:transform, opacity;
   }
   .ikr-fwizard-step--exit{
+    position: absolute;
+    top: 48px; 
+    left: 24px;
+    right: 24px;
     animation:ikrStepExit 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
     will-change:transform, opacity;
+    pointer-events: none;
   }
   @keyframes ikrStepEnter{
     0%   { opacity:0; transform:translateY(30px) scale(0.95); }
