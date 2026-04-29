@@ -74,6 +74,13 @@ export function openReviewFormModal(opts) {
 
   var shell = createWizardShell({
     onClose: function () {
+      window.removeEventListener('popstate', onPopState);
+      // Eğer X butonuyla veya ESC ile kapandıysa (back button değilse), 
+      // eklediğimiz history state'i temizle.
+      if (window.history.state && window.history.state.ikrReviewModal) {
+        window.history.back();
+      }
+
       // Bellek temizliği: Tüm blob URL'lerini serbest bırak
       Object.keys(persistentBlobMap).forEach(function (k) {
         var b = persistentBlobMap[k];
@@ -83,6 +90,18 @@ export function openReviewFormModal(opts) {
     },
     allowOutsideClose: false,
   });
+
+  // ─── History Management (Mobil Geri Tuşu Desteği) ───
+  var modalHistoryState = { ikrReviewModal: true };
+  window.history.pushState(modalHistoryState, null, '');
+
+  var onPopState = function (e) {
+    // Tarayıcı geri tuşuna basıldığında modalı kapat
+    if (shell && shell.close) {
+      shell.close();
+    }
+  };
+  window.addEventListener('popstate', onPopState);
 
   // ─── Modal layout: stepWrap (içerik) + progressBar (alt) ───
   var stepWrap = document.createElement('div');
