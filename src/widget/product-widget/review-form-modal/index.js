@@ -107,6 +107,9 @@ export function openReviewFormModal(opts) {
 
   // Step instance'ını mount et — ilk render veya geçiş enter'ı
   function mountStep(stepNum, withEnterAnim) {
+    // Garantili temizlik: her ihtimale karşı alanı boşalt
+    stepWrap.innerHTML = '';
+
     var inst = renderStep(stepNum, state, {
       onValidityChange: function (valid) {
         progress.setNextDisabled(!valid);
@@ -115,33 +118,34 @@ export function openReviewFormModal(opts) {
     });
     currentStepInstance = inst;
 
+    // Progress bar'ı içerikle tam eşzamanlı güncelle (Desync koruması)
+    progress.update(stepNum, state.get());
+
     if (withEnterAnim) {
       animPhase = 'entering';
       inst.el.classList.add('ikr-fwizard-step--enter');
+
+      var timeoutId = null;
       var onEnd = function () {
+        if (timeoutId) clearTimeout(timeoutId);
         inst.el.removeEventListener('animationend', onEnd);
-        // Enter sınıfını çıkar ki bir sonraki sefer yeniden tetiklenebilsin
         inst.el.classList.remove('ikr-fwizard-step--enter');
         animPhase = 'idle';
         // Kuyrukta bekleyen yeni hedef varsa şimdi işle
-        if (pendingStep !== null && pendingStep !== state.get().currentStep) {
-          pendingStep = null;
+        if (pendingStep !== null) {
           rerenderStep();
-        } else {
-          pendingStep = null;
         }
       };
       inst.el.addEventListener('animationend', onEnd);
+      // Emniyet kilidi: Animasyon event'i kaçarsa 550ms sonra zorla bitir
+      timeoutId = setTimeout(onEnd, 550);
     } else {
       animPhase = 'idle';
     }
 
     stepWrap.appendChild(inst.el);
-    progress.update(stepNum, state.get());
-    // Modal kabuğuna step attribute'u — CSS step-bazlı kurallar için
-    // (mobile'da step 1: X görünür, progress gizli; step 2-4: tersi).
+
     if (shell.setStepAttr) shell.setStepAttr(stepNum);
-    // "Sonraki" butonunun başlangıç state'i: validity bildirilene kadar disabled
     if (stepNum === 3) progress.setNextDisabled(true);
   }
 
@@ -161,14 +165,13 @@ export function openReviewFormModal(opts) {
   function rerenderStep() {
     var targetStep = state.get().currentStep;
 
-    // Animasyon devam ediyorsa hedefi kuyruğa al
+    // Animasyon devam ediyorsa hedefi kuyruğa al ve dur
     if (animPhase !== 'idle') {
       pendingStep = targetStep;
       return;
     }
 
-    // İlk render — exit yok, ilk açılışta enter da yok (modal kabuk
-    // animasyonu yeterli). Sonraki geçişlerde enter aktif.
+    // İlk render
     if (!currentStepInstance) {
       var firstWithAnim = !suppressNextEnterAnim;
       suppressNextEnterAnim = false;
@@ -176,26 +179,31 @@ export function openReviewFormModal(opts) {
       return;
     }
 
-    // Normal geçiş: exit → unmount → mount with enter
+    // Normal geçiş: exit → mount
     var leaving = currentStepInstance;
     animPhase = 'exiting';
     leaving.el.classList.add('ikr-fwizard-step--exit');
+
+    var timeoutId = null;
     var onExitEnd = function () {
+      if (timeoutId) clearTimeout(timeoutId);
       leaving.el.removeEventListener('animationend', onExitEnd);
       if (leaving.destroy) {
         try { leaving.destroy(); } catch (e) { /* sessiz */ }
       }
-      // Eğer bu sırada modal kapatıldıysa veya teşekkür ekranına geçildiyse
-      // currentStepInstance null olur — o zaman yeni mount yapma.
       if (currentStepInstance !== leaving) return;
+
       stepWrap.innerHTML = '';
       currentStepInstance = null;
-      // En güncel hedefi kullan (kuyrukta beklemiş olabilir)
+
       var next = pendingStep !== null ? pendingStep : state.get().currentStep;
       pendingStep = null;
       mountStep(next, true);
     };
+
     leaving.el.addEventListener('animationend', onExitEnd);
+    // Emniyet kilidi: Exit animasyonu için 450ms (350ms + 100ms buffer)
+    timeoutId = setTimeout(onExitEnd, 450);
   }
 
   // İlk render
@@ -207,9 +215,10 @@ export function openReviewFormModal(opts) {
     if (s.currentStep !== lastStep) {
       lastStep = s.currentStep;
       rerenderStep();
+    } else {
+      // Step değişmediyse ama veri değiştiyse (foto vb.) footer'ı güncelle
+      progress.update(s.currentStep, s);
     }
-    // Veri değiştiğinde (örn: foto eklendiğinde) footer'ı güncelle
-    progress.update(s.currentStep, s);
   });
 
   shell.open(layout);
