@@ -606,14 +606,24 @@ export var FWIZARD_CSS = `
     /* Footer butonları altta, doğal yerde. Geri = sadece "Geri" yazısı,
        ok ikonu gizli. Atla zaten yazı+ok (desktop ile aynı).
        Grid kolonları mobile'da auto/1fr/auto: yan kolonlar buton kadar,
-       orta esnek. Bu sayede butonlar viewport kenarına yapışır
-       (padding kadar uzaklıkta), ortada kaymaz. */
+       orta esnek. */
     .ikr-fwizard-footer{
       padding:12px 20px;
       grid-template-columns:auto 1fr auto;
     }
     .ikr-fwizard-footer-back > svg{
       display:none;
+    }
+    /* Sağ slot butonu (Atla / Sonraki) grid item olarak kolonun sağ
+       ucuna yaslı dursun. margin-left:auto grid/flex item'ı parent
+       kolonun sağ kenarına iter; refactor sonrası eski .footer-right
+       div'i kalktığı için justify-self ataması yapılmamıştı, buton
+       kolon içinde stretch ediliyordu. Bu kuralla buton padding
+       (20px) kadar viewport sağ kenarına yapışır. */
+    .ikr-fwizard-footer-skip,
+    .ikr-fwizard-footer-next{
+      margin-left:auto;
+      justify-self:end;
     }
 
     .ikr-fwizard-step-wrap{
