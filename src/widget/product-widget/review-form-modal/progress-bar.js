@@ -9,14 +9,10 @@
 
 import { TOTAL_STEPS } from './wizard-state.js';
 
-// SVG ok yardımcıları — innerHTML olarak buton içine konur.
+// SVG ok ikonu — sadece "Geri" butonunda kullanılır.
 var ARROW_LEFT_SVG =
   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
   '<polyline points="15 18 9 12 15 6"/>' +
-  '</svg>';
-var ARROW_RIGHT_SVG =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-  '<polyline points="9 18 15 12 9 6"/>' +
   '</svg>';
 
 export function createProgressBar(opts) {
@@ -77,10 +73,10 @@ export function createProgressBar(opts) {
     var hasNext = nextableSteps.indexOf(currentStep) !== -1;
 
     if (isSkippable) {
-      // Atla — text-link tarzı, sağa bakan ok
+      // Atla — text-link tarzı, sadece yazı (ok ikonu yok)
       rightBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
       rightBtn.setAttribute('aria-label', 'Atla');
-      rightBtn.innerHTML = '<span>Atla</span>' + ARROW_RIGHT_SVG;
+      rightBtn.innerHTML = '<span>Atla</span>';
       rightBtn.disabled = false;
       rightBtn.classList.remove('ikr-fwizard-cta-btn--disabled');
       rightBtn.style.visibility = '';
