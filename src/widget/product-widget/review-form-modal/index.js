@@ -338,6 +338,8 @@ export function openReviewFormModal(opts) {
     }
   };
 
+  shell.open(layout);
+
   return {
     close: shell.close,
   };
