@@ -654,11 +654,11 @@ export var FWIZARD_CSS = `
       font-size:20px;
     }
     .ikr-fwizard-star{
-      width:40px;
-      height:40px;
+      width:48px;
+      height:48px;
     }
     .ikr-fwizard-stars{
-      gap:6px;
+      gap:8px;
     }
   }
 `;
