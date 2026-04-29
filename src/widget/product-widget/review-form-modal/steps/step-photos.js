@@ -117,7 +117,8 @@ export function createStepPhotos(state, opts) {
       if (errorMsg) {
         html += '<div class="ikr-fwizard-photo-loading"><span class="ikr-upload-error">✗ ' + errorMsg + '</span></div>';
       } else {
-        html += '<div class="ikr-fwizard-photo-loading"><div class="ikr-spinner"></div></div>';
+        // Optimistic UI: Yükleme ikonunu kaldırdık, görsel direkt "hazır" gibi görünür.
+        // İstenirse buraya çok hafif bir opacity (0.8) verilebilir.
       }
     }
     item.innerHTML = html;
