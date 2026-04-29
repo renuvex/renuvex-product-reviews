@@ -140,6 +140,9 @@ export function createStepPhotos(state, opts) {
       removeErrBtn.className = 'ikr-fwizard-photo-remove';
       removeErrBtn.innerHTML = '&#x2715;';
       removeErrBtn.onclick = function () {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
         var pending = (state.get().pendingImages || []).filter(function (p) { return p.url !== url; });
         state.set({ pendingImages: pending });
       };
@@ -212,6 +215,11 @@ export function createStepPhotos(state, opts) {
           var upData = await up.json();
 
           if (upData.secure_url) {
+            // Bellek temizliği: Blob URL'ini serbest bırak (sadece yerel önizleme için kullanılmıştı)
+            if (objUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(objUrl);
+            }
+
             var p2 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
             var c2 = (state.get().images || []).slice();
             c2.push(upData.secure_url);
@@ -220,6 +228,10 @@ export function createStepPhotos(state, opts) {
         } catch (err) {
           console.error('[ikr] Image upload failed:', err);
           var errMsg = err.message === 'rate_limit' ? 'Çok fazla deneme. Bekleyin.' : 'Yükleme başarısız.';
+          
+          // Hata durumunda da eğer blob ise temizle (isteğe bağlı, ama genelde kalması zarar vermez)
+          // Ancak burada kullanıcı hala "X" basıp silebilir, o yüzden silme anında temizlemek daha güvenli.
+
           var pErr = (state.get().pendingImages || []).map(function (p) {
             if (p.url === objUrl) {
               return { url: p.url, file: p.file, error: errMsg };
