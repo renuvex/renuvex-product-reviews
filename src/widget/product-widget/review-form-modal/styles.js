@@ -188,7 +188,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-photo-card{
     width:100%;
     max-width:420px;
-    border:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.12));
+    border:1px solid var(--ikr-fwizard-border, rgb(119,119,119));
     border-radius:12px;
     padding:20px;
     display:flex;
