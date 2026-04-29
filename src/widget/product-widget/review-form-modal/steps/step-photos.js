@@ -111,13 +111,9 @@ export function createStepPhotos(state, opts) {
     }
 
     var overlay = node.querySelector('.ikr-fwizard-photo-loading');
-    if (item.isPending) {
+    if (item.isPending && item.error) {
       overlay.style.display = 'flex';
-      if (item.error) {
-        overlay.innerHTML = '<span class="ikr-upload-error">✗ ' + item.error + '</span>';
-      } else {
-        overlay.innerHTML = '<div class="ikr-fwizard-photo-spinner"></div><span style="font-size:10px; color:white; font-weight:600; margin-top:4px;">Yükleniyor</span>';
-      }
+      overlay.innerHTML = '<span class="ikr-upload-error">✗ ' + item.error + '</span>';
     } else {
       overlay.style.display = 'none';
     }
