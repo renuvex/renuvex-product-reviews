@@ -92,13 +92,13 @@ export function openReviewFormModal(opts) {
     skippableSteps: [2],
     nextableSteps: [3],
     onBack: function () {
-      if (animPhase === 'idle') state.goBack();
+      state.goBack();
     },
     onSkip: function () {
-      if (animPhase === 'idle') state.goNext();
+      state.goNext();
     },
     onNext: function () {
-      if (animPhase === 'idle') state.goNext();
+      state.goNext();
     },
   });
 
