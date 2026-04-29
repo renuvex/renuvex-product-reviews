@@ -131,12 +131,7 @@ export var FWIZARD_CSS = `
     0%   { opacity:1; transform:translateY(0) scale(1); }
     100% { opacity:0; transform:translateY(-20px) scale(0.98); }
   }
-  @media (prefers-reduced-motion: reduce){
-    .ikr-fwizard-step--enter,
-    .ikr-fwizard-step--exit{
-      animation-duration:0.01ms;
-    }
-  }
+
 
   /* Step başlığı — varsayılan (step 1: yıldız) */
   .ikr-fwizard-step-title{
