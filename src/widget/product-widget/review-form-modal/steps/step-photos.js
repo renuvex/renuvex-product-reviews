@@ -13,6 +13,7 @@ var MAX_BYTES = 5 * 1024 * 1024;
 export function createStepPhotos(state, opts) {
   opts = opts || {};
   var isExiting = false; // Geçiş başladığında UI güncellemesini durdurmak için bayrak
+  var sessionFingerprints = (state.get().images || []).map(function() { return ''; }); // İlk yüklenenler için placeholder
   var root = document.createElement('div');
   root.className = 'ikr-fwizard-step ikr-fwizard-step-photos';
 
@@ -169,9 +170,15 @@ export function createStepPhotos(state, opts) {
     var current = state.get().images || [];
     var preUploadCount = current.length;
     var remaining = MAX_PHOTOS - current.length;
-    var files = Array.from(e.target.files).slice(0, remaining);
-
-    if (files.length === 0) return;
+    // Mevcut parmak izlerini (isim+boyut) topla (hem pending hem bitmiş olanlar)
+    var existingFingerprints = (state.get().images || []).map(function(url) {
+      // images array'i sadece URL tuttuğu için burada meta veriye ihtiyacımız var.
+      // Basitlik için pending listesindeki File objelerinden kontrol edeceğiz.
+      return ''; // Sadece URL olanlar için şimdilik boş, aşağıda geliştirilecek.
+    });
+    
+    // Daha sağlam: state'teki pending listesini ve yerel bir session takibini kontrol et
+    var pendingFiles = (state.get().pendingImages || []);
 
     // Hemen Blob objelerini oluştur ve pending state'e ekle
     var newPending = [];
@@ -179,6 +186,16 @@ export function createStepPhotos(state, opts) {
     
     for (var fi = 0; fi < files.length; fi++) {
       var file = files[fi];
+      
+      // DUPLICATE KONTROLÜ: İsim ve boyut aynı mı?
+      var isDup = pendingFiles.some(function(p) { return p.file && p.file.name === file.name && p.file.size === file.size; }) ||
+                  sessionFingerprints.some(function(f) { return f === (file.name + '_' + file.size); });
+      
+      if (isDup) {
+        console.log('[ikr] Duplicate file detected, skipping:', file.name);
+        continue; 
+      }
+
       if (file.size > MAX_BYTES) {
         alert(file.name + ' dosyası 5MB sınırını aşıyor. Lütfen daha küçük bir görsel seçin.');
         continue;
@@ -234,6 +251,7 @@ export function createStepPhotos(state, opts) {
 
             // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir
             blobMap[upData.secure_url] = objUrl;
+            sessionFingerprints.push(f.name + '_' + f.size);
 
             var p2 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
             var c2 = (state.get().images || []).slice();
