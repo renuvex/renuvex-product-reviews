@@ -116,6 +116,7 @@ export function createStepPhotos(state) {
       var imgs = (state.get().images || []).filter(function (u) { return u !== url; });
       state.set({ images: imgs });
       item.remove();
+      renderedUrls = renderedUrls.filter(function(u) { return u !== url; });
       updateAddButton();
     };
     item.appendChild(removeBtn);
@@ -164,6 +165,7 @@ export function createStepPhotos(state) {
       if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
         var imgs = (state.get().images || []).slice();
         imgs.push(objUrl);
+        if (renderedUrls.indexOf(objUrl) === -1) renderedUrls.push(objUrl);
         state.set({ images: imgs });
         finalizeThumb(item, loadingEl, objUrl);
         continue;
@@ -188,6 +190,7 @@ export function createStepPhotos(state) {
           var url = upData.secure_url;
           var imgs2 = (state.get().images || []).slice();
           imgs2.push(url);
+          if (renderedUrls.indexOf(url) === -1) renderedUrls.push(url);
           state.set({ images: imgs2 });
           finalizeThumb(item, loadingEl, url);
         }
@@ -222,6 +225,7 @@ export function createStepPhotos(state) {
           var imgs = (state.get().images || []).filter(function (u) { return u !== finalUrl; });
           state.set({ images: imgs });
           item.remove();
+          renderedUrls = renderedUrls.filter(function(u) { return u !== finalUrl; });
           updateAddButton();
         };
         item.appendChild(removeBtn);
