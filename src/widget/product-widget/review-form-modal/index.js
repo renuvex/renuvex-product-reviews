@@ -223,7 +223,7 @@ export function openReviewFormModal(opts) {
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);
-    setTimeout(onExitEnd, 400);
+    setTimeout(onExitEnd, 200);
   }
 
   function rerenderStep() {
@@ -266,8 +266,8 @@ export function openReviewFormModal(opts) {
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);
-    // Emniyet kilidi: 400ms
-    timeoutId = setTimeout(onExitEnd, 400);
+    // Emniyet kilidi: 200ms
+    timeoutId = setTimeout(onExitEnd, 200);
   }
 
   // İlk render
