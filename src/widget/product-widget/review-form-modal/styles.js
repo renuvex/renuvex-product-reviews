@@ -459,12 +459,6 @@ export var FWIZARD_CSS = `
     align-items:center;
     gap:6px;
   }
-  .ikr-fwizard-footer-right{
-    justify-self:end;
-    display:flex;
-    align-items:center;
-    gap:8px;
-  }
   /* CTA ve nav butonları — sabit width × height kutu, içerik flex
      center ile ortalanır. Step'ten step'e buton şekli birebir aynı
      kalır. Hiyerarşi: CTA dolu siyah, nav transparent. */
@@ -615,14 +609,11 @@ export var FWIZARD_CSS = `
       display:none;
     }
     /* Sağ slot butonu (Atla / Sonraki) grid item olarak kolonun sağ
-       ucuna yaslı dursun. margin-left:auto grid/flex item'ı parent
-       kolonun sağ kenarına iter; refactor sonrası eski .footer-right
-       div'i kalktığı için justify-self ataması yapılmamıştı, buton
-       kolon içinde stretch ediliyordu. Bu kuralla buton padding
-       (20px) kadar viewport sağ kenarına yapışır. */
+       ucuna yaslı dursun. Refactor sonrası eski .footer-right wrapper
+       div'i kalktı, buton doğrudan footer grid item — justify-self
+       ataması burada yapılır. */
     .ikr-fwizard-footer-skip,
     .ikr-fwizard-footer-next{
-      margin-left:auto;
       justify-self:end;
     }
 
