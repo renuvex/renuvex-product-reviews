@@ -113,44 +113,23 @@ export var FWIZARD_CSS = `
     gap:32px;
   }
 
-  /* Step geçiş animasyonları — scale + fade + ufak translateY.
-     animation-end ile orchestrator senkronize. prefers-reduced-motion
-     altında süreler 0.01ms'ye düşer (görsel olarak anlık) ama
-     animationend yine atılır → orchestrator çalışmaya devam eder. */
-  /* Desktop varsayılanı — büyük ekranda küçük hareket gözden kaçtığı
-     için daha uzun süre + daha büyük translateY/scale. Mobile aşağıda
-     ayrı keyframe'ler kullanır (küçük ekranda hareket göze büyük gelir). */
+  /* Step geçiş animasyonları — Standart, belirgin ve süreyi optimize eden "Deep Fade & Slide" tasarımı.
+     Hem masaüstü hem mobil için standart. Arka plan işlemlerine (upload vb.) zaman kazandırır. */
   .ikr-fwizard-step--enter{
-    animation:ikrStepInDesktop 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation:ikrStepEnter 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     will-change:transform, opacity;
   }
   .ikr-fwizard-step--exit{
-    animation:ikrStepOutDesktop 0.24s ease-in forwards;
+    animation:ikrStepExit 0.35s cubic-bezier(0.4, 0, 1, 1) forwards;
     will-change:transform, opacity;
   }
-  @keyframes ikrStepInDesktop{
-    0%   { opacity:0; transform:scale(0.94) translateY(18px); }
-    100% { opacity:1; transform:scale(1)    translateY(0);    }
+  @keyframes ikrStepEnter{
+    0%   { opacity:0; transform:translateY(30px) scale(0.95); }
+    100% { opacity:1; transform:translateY(0) scale(1); }
   }
-  @keyframes ikrStepOutDesktop{
-    0%   { opacity:1; transform:scale(1)    translateY(0);     }
-    100% { opacity:0; transform:scale(0.97) translateY(-10px); }
-  }
-  @keyframes ikrStepInMobile{
-    0%   { opacity:0; transform:scale(0.96) translateY(8px); }
-    100% { opacity:1; transform:scale(1)    translateY(0);   }
-  }
-  @keyframes ikrStepOutMobile{
-    0%   { opacity:1; transform:scale(1)    translateY(0);    }
-    100% { opacity:0; transform:scale(0.98) translateY(-4px); }
-  }
-  @media(max-width:640px){
-    .ikr-fwizard-step--enter{
-      animation:ikrStepInMobile 0.30s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    .ikr-fwizard-step--exit{
-      animation:ikrStepOutMobile 0.20s ease-in forwards;
-    }
+  @keyframes ikrStepExit{
+    0%   { opacity:1; transform:translateY(0) scale(1); }
+    100% { opacity:0; transform:translateY(-20px) scale(0.98); }
   }
   @media (prefers-reduced-motion: reduce){
     .ikr-fwizard-step--enter,
