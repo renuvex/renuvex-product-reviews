@@ -506,8 +506,8 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-progress-seg{
     flex:0 0 auto;
     width:80px;
-    height:4px;
-    border-radius:4px;
+    height:6px;
+    border-radius:6px;
     background:var(--ikr-fwizard-progress-bg, rgba(0,0,0,0.08));
     transition:background 0.2s;
   }
