@@ -210,27 +210,20 @@ export function createStepPhotos(state) {
   };
 
   function finalizeThumb(item, loadingEl, finalUrl) {
-    loadingEl.innerHTML = '<span class="ikr-upload-check">✓</span>';
-    setTimeout(function () {
-      loadingEl.style.opacity = '0';
-      loadingEl.style.transition = 'opacity 0.4s';
-      setTimeout(function () {
-        loadingEl.style.display = 'none';
-        var removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'ikr-fwizard-photo-remove';
-        removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
-        removeBtn.innerHTML = '&#x2715;';
-        removeBtn.onclick = function () {
-          var imgs = (state.get().images || []).filter(function (u) { return u !== finalUrl; });
-          state.set({ images: imgs });
-          item.remove();
-          renderedUrls = renderedUrls.filter(function(u) { return u !== finalUrl; });
-          updateAddButton();
-        };
-        item.appendChild(removeBtn);
-      }, 400);
-    }, 600);
+    loadingEl.style.display = 'none';
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'ikr-fwizard-photo-remove';
+    removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
+    removeBtn.innerHTML = '&#x2715;';
+    removeBtn.onclick = function () {
+      var imgs = (state.get().images || []).filter(function (u) { return u !== finalUrl; });
+      state.set({ images: imgs });
+      item.remove();
+      renderedUrls = renderedUrls.filter(function(u) { return u !== finalUrl; });
+      updateAddButton();
+    };
+    item.appendChild(removeBtn);
     updateAddButton();
   }
 
