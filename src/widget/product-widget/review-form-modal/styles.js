@@ -51,10 +51,10 @@ export var FWIZARD_CSS = `
   /* Close (X) butonu — sağ üst köşe */
   .ikr-fwizard-close{
     position:absolute;
-    top:12px;
-    right:12px;
-    width:32px;
-    height:32px;
+    top:8px;
+    right:8px;
+    width:44px;
+    height:44px;
     border-radius:8px;
     border:none;
     background:transparent;
