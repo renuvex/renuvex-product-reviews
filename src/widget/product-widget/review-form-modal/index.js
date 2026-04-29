@@ -35,6 +35,7 @@ function renderStep(stepNum, state, stepOpts) {
   if (stepNum === 2) return createStepPhotos(state, {
     canNavigate: stepOpts.canNavigate,
     blobMap: stepOpts.blobMap,
+    urlToFinger: stepOpts.urlToFinger,
   });
   if (stepNum === 3) return createStepContent(state, {
     onValidityChange: stepOpts.onValidityChange,
