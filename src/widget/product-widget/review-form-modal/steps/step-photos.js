@@ -116,6 +116,7 @@ export function createStepPhotos(state) {
     fileInput.disabled = true;
 
     var current = state.get().images || [];
+    var preUploadCount = current.length;
     var remaining = MAX_PHOTOS - current.length;
     var files = Array.from(e.target.files).slice(0, remaining);
 
@@ -173,12 +174,12 @@ export function createStepPhotos(state) {
     fileInput.value = '';
     updateAddButton();
 
-    // Auto-advance: Yükleme bittiyse ve en az bir foto varsa otomatik geç
     var finalImages = state.get().images || [];
-    if (finalImages.length > 0) {
+    // Sadece ilk kez fotoğraf yüklendiğinde otomatik geç (önceden hiç foto yoksa)
+    if (preUploadCount === 0 && finalImages.length > 0) {
       setTimeout(function() {
         state.goNext();
-      }, 1000); // 1 sn bekle ki "tik" işaretini görsün
+      }, 1000);
     }
   };
 
