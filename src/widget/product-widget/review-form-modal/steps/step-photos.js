@@ -112,13 +112,21 @@ export function createStepPhotos(state) {
 
   fileInput.onchange = async function (e) {
     if (isUploading) return;
-    isUploading = true;
-    fileInput.disabled = true;
 
     var current = state.get().images || [];
     var preUploadCount = current.length;
     var remaining = MAX_PHOTOS - current.length;
     var files = Array.from(e.target.files).slice(0, remaining);
+
+    if (files.length === 0) return;
+
+    // HIZLI GEÇİŞ: Sadece ilk kez fotoğraf seçildiğinde anında sonraki adıma geç
+    if (preUploadCount === 0) {
+      state.goNext();
+    }
+
+    isUploading = true;
+    fileInput.disabled = true;
 
     for (var fi = 0; fi < files.length; fi++) {
       var file = files[fi];
@@ -174,13 +182,6 @@ export function createStepPhotos(state) {
     fileInput.value = '';
     updateAddButton();
 
-    var finalImages = state.get().images || [];
-    // Sadece ilk kez fotoğraf yüklendiğinde otomatik geç (önceden hiç foto yoksa)
-    if (preUploadCount === 0 && finalImages.length > 0) {
-      setTimeout(function() {
-        state.goNext();
-      }, 1000);
-    }
   };
 
   function finalizeThumb(item, loadingEl, finalUrl) {
