@@ -212,19 +212,20 @@ export function openReviewFormModal(opts) {
       if (leaving.destroy) {
         try { leaving.destroy(); } catch (e) { /* sessiz */ }
       }
-      leaving.el.remove();
+      if (currentStepInstance === leaving) currentStepInstance = null;
+      
+      stepWrap.innerHTML = '';
+      var thanksEl = buildThanksScreen();
+      thanksEl.classList.add('ikr-fwizard-step--enter');
+      stepWrap.appendChild(thanksEl);
+      
+      shell.setStepAttr('thanks');
+      progress.setThanksState(shell.close);
       animPhase = 'idle';
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);
     timeoutId = setTimeout(onExitEnd, 300);
-
-    var thanksEl = buildThanksScreen();
-    thanksEl.classList.add('ikr-fwizard-step--enter');
-    stepWrap.appendChild(thanksEl);
-    
-    shell.setStepAttr('thanks');
-    progress.setThanksState(shell.close);
   }
 
   function rerenderStep() {
@@ -244,7 +245,7 @@ export function openReviewFormModal(opts) {
       return;
     }
 
-    // Normal geçiş: exit → mount (Double Buffering)
+    // Normal geçiş: exit → mount
     var leaving = currentStepInstance;
     animPhase = 'exiting';
     leaving.el.classList.add('ikr-fwizard-step--exit');
@@ -255,20 +256,19 @@ export function openReviewFormModal(opts) {
       if (leaving.destroy) {
         try { leaving.destroy(); } catch (e) { /* sessiz */ }
       }
-      leaving.el.remove();
-      animPhase = 'idle';
+      if (currentStepInstance !== leaving) return;
 
-      if (pendingStep) {
-        var s = pendingStep;
-        pendingStep = null;
-        rerenderStep(s);
-      }
+      stepWrap.innerHTML = '';
+      currentStepInstance = null;
+
+      var next = pendingStep !== null ? pendingStep : state.get().currentStep;
+      pendingStep = null;
+      mountStep(next, true);
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);
+    // Emniyet kilidi: 300ms
     timeoutId = setTimeout(onExitEnd, 300);
-
-    mountStep(targetStep, true);
   }
 
   // İlk render
