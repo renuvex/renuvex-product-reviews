@@ -12,6 +12,7 @@ var MAX_BYTES = 5 * 1024 * 1024;
 
 export function createStepPhotos(state, opts) {
   opts = opts || {};
+  var isExiting = false; // Geçiş başladığında UI güncellemesini durdurmak için bayrak
   var root = document.createElement('div');
   root.className = 'ikr-fwizard-step ikr-fwizard-step-photos';
 
@@ -61,6 +62,7 @@ export function createStepPhotos(state, opts) {
 
   // State'teki tüm görselleri (bitenler ve yüklenmekte olanlar) tam reaktif olarak DOM'a yansıtır
   function syncUI() {
+    if (isExiting) return; // Sayfa gitmek üzereyse DOM'u dondur (flaş etkisini önler)
     previews.innerHTML = ''; // Eski her şeyi temizle, state'e göre baştan kur
 
     var completed = state.get().images || [];
@@ -231,19 +233,14 @@ export function createStepPhotos(state, opts) {
 
     // HIZLI GEÇİŞ: Sadece ilk kez fotoğraf seçildiğinde anında sonraki adıma geç
     if (preUploadCount === 0) {
+      isExiting = true; // DONDUR: Sayfa gidiyor, DOM değişimini yasakla
       var canNav = !opts.canNavigate || opts.canNavigate();
       if (canNav) state.goNext();
-
-      // UI sıçramasını engellemek için state güncellemesini ve yüklemeyi 80ms ertele.
-      // Bu sayede sayfa "temiz" (eski) haliyle gitmeye başlar.
-      setTimeout(function () {
-        state.set({ pendingImages: allPending });
-        runUploads();
-      }, 80);
-    } else {
-      state.set({ pendingImages: allPending });
-      runUploads();
     }
+
+    // Veri güncellemesini hemen yap (arka planda yükleme başlasın)
+    state.set({ pendingImages: allPending });
+    runUploads();
 
     fileInput.value = '';
   };
@@ -254,6 +251,7 @@ export function createStepPhotos(state, opts) {
   return {
     el: root,
     destroy: function () {
+      isExiting = true; // Modal kapanırsa veya destroy olursa da koru
       fileInput.onchange = null;
       if (unsubscribe) unsubscribe();
     },
