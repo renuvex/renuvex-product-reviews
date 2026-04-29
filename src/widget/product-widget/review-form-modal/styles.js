@@ -162,7 +162,7 @@ export var FWIZARD_CSS = `
   /* Step başlığı — varsayılan (step 1: yıldız) */
   .ikr-fwizard-step-title{
     font-size:18px;
-    font-weight:400;
+    font-weight:500;
     color:var(--ikr-fwizard-text, rgb(17,17,17));
     line-height:1.3;
   }
