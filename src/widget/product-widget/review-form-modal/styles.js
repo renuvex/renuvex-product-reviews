@@ -469,6 +469,10 @@ export var FWIZARD_CSS = `
     align-items:center;
     gap:6px;
   }
+  /* Step 1'de progress bar'ı gizle (Desktop & Mobile) */
+  .ikr-fwizard[data-step="1"] .ikr-fwizard-footer-progress{
+    display:none;
+  }
   /* CTA ve nav butonları — sabit width × height kutu, içerik flex
      center ile ortalanır. Step'ten step'e buton şekli birebir aynı
      kalır. Hiyerarşi: CTA dolu siyah, nav transparent. */
@@ -598,10 +602,6 @@ export var FWIZARD_CSS = `
       justify-content:center;
       transform:none;
       z-index:2;
-    }
-    /* Step 1: progress gizli (X üstte yer kaplıyor zaten) */
-    .ikr-fwizard[data-step="1"] .ikr-fwizard-footer-progress{
-      display:none;
     }
     /* Step 1'de üst padding'e gerek yok — X kendi position:absolute */
     .ikr-fwizard[data-step="1"] .ikr-fwizard-content{
