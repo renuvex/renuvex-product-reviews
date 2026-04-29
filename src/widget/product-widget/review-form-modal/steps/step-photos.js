@@ -35,9 +35,10 @@ export function createStepPhotos(state) {
   uploadLabel.className = 'ikr-fwizard-photo-add';
   uploadLabel.setAttribute('aria-label', 'Fotoğraf ekle');
   uploadLabel.innerHTML =
-    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<line x1="12" y1="5" x2="12" y2="19"></line>' +
-    '<line x1="5" y1="12" x2="19" y2="12"></line>' +
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>' +
+    '<circle cx="8.5" cy="8.5" r="1.5"/>' +
+    '<polyline points="21 15 16 10 5 21"/>' +
     '</svg>' +
     '<span>Fotoğraf Ekle</span>';
 
