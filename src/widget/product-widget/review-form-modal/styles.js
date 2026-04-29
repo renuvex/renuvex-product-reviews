@@ -522,7 +522,7 @@ export var FWIZARD_CSS = `
     width:108px;
     height:40px;
     padding:0;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.60));
+    color:#000000;
     font-size:15px;
     font-weight:600;
     line-height:1;
@@ -534,9 +534,10 @@ export var FWIZARD_CSS = `
     border-radius:8px;
     font-family:inherit;
     box-sizing:border-box;
+    transition:background 0.15s;
   }
   .ikr-fwizard-nav-btn:hover{
-    color:var(--ikr-fwizard-text, rgb(17,17,17));
+    background:rgba(0,0,0,0.06);
   }
   .ikr-fwizard-nav-btn[hidden]{
     display:none;
