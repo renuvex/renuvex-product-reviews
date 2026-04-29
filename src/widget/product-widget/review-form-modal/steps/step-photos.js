@@ -60,11 +60,16 @@ export function createStepPhotos(state) {
 
   var isUploading = false;
 
-  // State'te zaten foto varsa (geri-ileri gezintide) yeniden render et
-  function rehydrate() {
+  var renderedUrls = [];
+
+  // State'teki güncel onaylanmış resimleri DOM'a yansıtır
+  function syncUI() {
     var existing = state.get().images || [];
     existing.forEach(function (url) {
-      addThumb(url);
+      if (renderedUrls.indexOf(url) === -1) {
+        addThumb(url);
+        renderedUrls.push(url);
+      }
     });
     updateAddButton();
   }
@@ -225,12 +230,14 @@ export function createStepPhotos(state) {
     updateAddButton();
   }
 
-  rehydrate();
+  var unsubscribe = state.onChange(syncUI);
+  syncUI();
 
   return {
     el: root,
     destroy: function () {
       fileInput.onchange = null;
+      if (unsubscribe) unsubscribe();
     },
   };
 }
