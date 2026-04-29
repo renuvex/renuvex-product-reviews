@@ -196,6 +196,14 @@ export var FWIZARD_CSS = `
     align-items:stretch;
     gap:16px;
     box-sizing:border-box;
+    transition:all 0.3s ease;
+  }
+  /* Kompakt mod: Fotoğraflar yan yana, buton kare */
+  .ikr-fwizard-photo-card--compact{
+    flex-direction:row;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
   }
   .ikr-fwizard-photo-add{
     display:flex;
@@ -211,10 +219,26 @@ export var FWIZARD_CSS = `
     font-weight:500;
     cursor:pointer;
     user-select:none;
-    transition:opacity 0.15s;
+    transition:all 0.2s;
+    box-sizing:border-box;
+    border:1px solid transparent;
+  }
+  /* Kompakt buton tasarımı */
+  .ikr-fwizard-photo-card--compact .ikr-fwizard-photo-add{
+    width:88px;
+    height:88px;
+    padding:0;
+    background:#f9f9f9;
+    color:#000000;
+    border:1px solid #000000;
+    order:10; /* Listenin sonuna atar */
   }
   .ikr-fwizard-photo-add:hover{
     opacity:0.92;
+  }
+  .ikr-fwizard-photo-card--compact .ikr-fwizard-photo-add:hover{
+    background:#f0f0f0;
+    opacity:1;
   }
   .ikr-fwizard-photo-add--disabled{
     opacity:0.4;
@@ -223,6 +247,11 @@ export var FWIZARD_CSS = `
   }
   .ikr-fwizard-photo-add svg{
     flex-shrink:0;
+    width:20px;
+    height:20px;
+  }
+  .ikr-fwizard-photo-card--compact .ikr-fwizard-photo-add span{
+    display:none;
   }
   .ikr-fwizard-photo-previews{
     display:flex;

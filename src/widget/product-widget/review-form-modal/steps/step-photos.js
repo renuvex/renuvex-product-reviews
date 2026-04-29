@@ -71,12 +71,22 @@ export function createStepPhotos(state) {
 
   function updateAddButton() {
     var count = (state.get().images || []).length;
-    if (count >= MAX_PHOTOS) {
-      fileInput.disabled = true;
-      uploadLabel.classList.add('ikr-fwizard-photo-add--disabled');
+    var isFull = count >= MAX_PHOTOS;
+
+    // Fotoğraf varsa kompakt mod (kare buton yan yana), yoksa normal mod (büyük buton üstte)
+    if (count > 0) {
+      card.classList.add('ikr-fwizard-photo-card--compact');
     } else {
-      fileInput.disabled = false;
-      uploadLabel.classList.remove('ikr-fwizard-photo-add--disabled');
+      card.classList.remove('ikr-fwizard-photo-card--compact');
+    }
+
+    if (isFull) {
+      uploadLabel.style.display = 'none';
+      fileInput.disabled = true;
+    } else {
+      uploadLabel.style.display = 'flex';
+      fileInput.disabled = isUploading;
+      uploadLabel.classList.toggle('ikr-fwizard-photo-add--disabled', isUploading);
     }
   }
 
