@@ -129,20 +129,20 @@ export var FWIZARD_CSS = `
   /* Step geçiş animasyonları — Standart, belirgin ve süreyi optimize eden "Deep Fade & Slide" tasarımı.
      Hem masaüstü hem mobil için standart. Arka plan işlemlerine (upload vb.) zaman kazandırır. */
   .ikr-fwizard-step--enter{
-    animation:ikrStepEnter 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    will-change:transform, opacity;
+    animation:ikrStepEnter 0.3s ease forwards;
+    will-change:opacity;
   }
   .ikr-fwizard-step--exit{
-    animation:ikrStepExit 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
-    will-change:transform, opacity;
+    animation:ikrStepExit 0.2s ease forwards;
+    will-change:opacity;
   }
   @keyframes ikrStepEnter{
-    0%   { opacity:0; transform:translateY(20px); }
-    100% { opacity:1; transform:translateY(0); }
+    0%   { opacity:0; }
+    100% { opacity:1; }
   }
   @keyframes ikrStepExit{
-    0%   { opacity:1; transform:translateY(0); }
-    100% { opacity:0; transform:translateY(-16px); }
+    0%   { opacity:1; }
+    100% { opacity:0; }
   }
 
 
