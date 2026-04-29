@@ -1,6 +1,6 @@
 // product-widget/review-form-modal/steps/step-rating.js
 // Step 1 — Yıldız seçimi.
-// Loox standardı: hover'da yıldızlar dolar, tıklayınca seçili kalır,
+// Hover'da yıldızlar dolar, tıklayınca seçili kalır,
 // tıklamadan sonra otomatik bir sonraki step'e geçer (auto-advance).
 // "Sonraki" butonu yok.
 //
@@ -64,7 +64,7 @@ export function createStepRating(state, opts) {
       btn.addEventListener('click', function () {
         state.set({ rating: value });
         applyVisual(value);
-        // Auto-advance — Loox pattern. Küçük gecikme: kullanıcı seçimini görsün.
+        // Auto-advance — Küçük gecikme: kullanıcı seçimini görsün.
         setTimeout(function () {
           var canNav = !opts.canNavigate || opts.canNavigate();
           if (canNav) state.goNext();

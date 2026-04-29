@@ -1,6 +1,6 @@
 // product-widget/review-form-modal/steps/step-author.js
 // Step 4 — Hakkınızda: Ad (zorunlu) + E-posta (opsiyonel) + Gönder.
-// Loox tarzı: input'lar üstte, KVKK metni ortada, büyük submit alta gizli
+// input'lar üstte, KVKK metni ortada, büyük submit alta gizli
 // (footer'daki "Sonraki" yerine submit-CTA kullanılır).
 //
 // TODO faz 2: email backend'e gönderilmiyor, sadece state'te tutuluyor.
@@ -15,8 +15,8 @@ var NAME_MAX = 40;
 
 export function createStepAuthor(state, opts) {
   opts = opts || {};
-  var onValidityChange = opts.onValidityChange || function () {};
-  var onSuccess = opts.onSuccess || function () {};
+  var onValidityChange = opts.onValidityChange || function () { };
+  var onSuccess = opts.onSuccess || function () { };
 
   var root = document.createElement('div');
   root.className = 'ikr-fwizard-step ikr-fwizard-step-author';

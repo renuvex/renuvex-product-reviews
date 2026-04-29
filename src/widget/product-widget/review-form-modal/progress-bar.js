@@ -4,7 +4,7 @@
 // Mimari: footer'ın yan slot'larında her zaman TEK buton elementi var.
 // Step'e göre className/textContent/onclick yeniden ayarlanır; bu sayede
 // DOM'da ekstra element / display:none toggle hilesi yok, buton konumu
-// her step'te %100 sabit. Loox UGC form footer'ı da aynı yaklaşımla
+// her step'te %100 sabit.
 // çalışır.
 
 import { TOTAL_STEPS } from './wizard-state.js';
@@ -19,9 +19,9 @@ export function createProgressBar(opts) {
   opts = opts || {};
   var skippableSteps = opts.skippableSteps || [];
   var nextableSteps = opts.nextableSteps || [];
-  var onBack = opts.onBack || function () {};
-  var onSkip = opts.onSkip || function () {};
-  var onNext = opts.onNext || function () {};
+  var onBack = opts.onBack || function () { };
+  var onSkip = opts.onSkip || function () { };
+  var onNext = opts.onNext || function () { };
 
   var wrap = document.createElement('div');
   wrap.className = 'ikr-fwizard-footer';

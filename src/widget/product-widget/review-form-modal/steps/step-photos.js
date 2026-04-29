@@ -1,6 +1,6 @@
 // product-widget/review-form-modal/steps/step-photos.js
 // Step 2 — Fotoğraf yükleme (opsiyonel).
-// Loox tarzı: başlık + alt başlık + çerçeveli kart + büyük "Fotoğraf Ekle"
+// Başlık + alt başlık + çerçeveli kart + büyük "Fotoğraf Ekle"
 // butonu + thumbnail önizleme. Cloudinary upload akışı review-form.js'deki
 // mantıkla aynı; sadece UI wizard'a uygun.
 
@@ -75,7 +75,7 @@ export function createStepPhotos(state, opts) {
     // Tam temizlik ve yeniden çizim — Index kaymalarını ve kırık ikonları kökten çözer.
     // blobMap sayesinde "flash" etkisi oluşmaz.
     previews.innerHTML = '';
-    
+
     all.forEach(function (item) {
       var displayUrl = blobMap[item.url] || item.url;
       var node = createThumbNode(item, displayUrl);
@@ -89,7 +89,7 @@ export function createStepPhotos(state, opts) {
     var node = document.createElement('div');
     node.className = 'ikr-fwizard-photo-thumb';
     node.innerHTML = '<img src="' + displayUrl + '" alt="" style="width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; -webkit-user-drag:none; user-select:none;">';
-    
+
     var overlay = document.createElement('div');
     overlay.className = 'ikr-fwizard-photo-loading';
     overlay.style.display = 'none';
@@ -127,10 +127,10 @@ export function createStepPhotos(state, opts) {
       if (item.url.startsWith('blob:')) {
         URL.revokeObjectURL(item.url);
       }
-      
+
       // Parmak izini silsin (persistence hafızadan çıkar)
       if (finger) {
-        var fings = (state.get().fingerprints || []).filter(function(f) { return f !== finger; });
+        var fings = (state.get().fingerprints || []).filter(function (f) { return f !== finger; });
         state.set({ fingerprints: fings });
       }
 
@@ -181,33 +181,33 @@ export function createStepPhotos(state, opts) {
     var preUploadCount = current.length;
     var remaining = MAX_PHOTOS - current.length;
     // Mevcut parmak izlerini (isim+boyut) topla (hem pending hem bitmiş olanlar)
-    var existingFingerprints = (state.get().images || []).map(function(url) {
+    var existingFingerprints = (state.get().images || []).map(function (url) {
       // images array'i sadece URL tuttuğu için burada meta veriye ihtiyacımız var.
       // Basitlik için pending listesindeki File objelerinden kontrol edeceğiz.
       return ''; // Sadece URL olanlar için şimdilik boş, aşağıda geliştirilecek.
     });
-    
+
     var pendingFiles = (state.get().pendingImages || []);
     var files = Array.from(e.target.files).slice(0, remaining);
 
     if (files.length === 0) return;
     var newPending = [];
     var filesToUpload = [];
-    
+
     for (var fi = 0; fi < files.length; fi++) {
       var file = files[fi];
       var finger = file.name + '_' + file.size;
-      
+
       // DUPLICATE KONTROLÜ: 
       // 1. Bekleyenler (pendingImages) içinde var mı?
       // 2. Hafızadaki parmak izleri (fingerprints) içinde var mı?
       // 3. Şu an seçilen yeni grupta (newPending) zaten eklendi mi?
-      var isDup = (state.get().fingerprints || []).some(function(f) { return f === finger; }) ||
-                  newPending.some(function(n) { return (n.file.name + '_' + n.file.size) === finger; });
-      
+      var isDup = (state.get().fingerprints || []).some(function (f) { return f === finger; }) ||
+        newPending.some(function (n) { return (n.file.name + '_' + n.file.size) === finger; });
+
       if (isDup) {
         console.log('[ikr] Duplicate file detected, skipping:', file.name);
-        continue; 
+        continue;
       }
 
       if (file.size > MAX_BYTES) {
@@ -262,10 +262,10 @@ export function createStepPhotos(state, opts) {
 
           if (upData.secure_url) {
             // KRİTİK KONTROL: Kullanıcı bu yükleme sürerken görseli silmiş mi?
-            var stillPending = (state.get().pendingImages || []).some(function(p) { return p.url === objUrl; });
+            var stillPending = (state.get().pendingImages || []).some(function (p) { return p.url === objUrl; });
             if (!stillPending) {
               console.log('[ikr] Upload finished but image was already deleted by user. Aborting state update.');
-              return; 
+              return;
             }
 
             // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir
@@ -280,7 +280,7 @@ export function createStepPhotos(state, opts) {
         } catch (err) {
           console.error('[ikr] Image upload failed:', err);
           var errMsg = err.message === 'rate_limit' ? 'Çok fazla deneme. Bekleyin.' : 'Yükleme başarısız.';
-          
+
           // Hata durumunda da eğer blob ise temizle (isteğe bağlı, ama genelde kalması zarar vermez)
           // Ancak burada kullanıcı hala "X" basıp silebilir, o yüzden silme anında temizlemek daha güvenli.
 

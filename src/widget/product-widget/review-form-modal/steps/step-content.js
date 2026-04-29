@@ -1,6 +1,6 @@
 // product-widget/review-form-modal/steps/step-content.js
 // Step 3 — Yorum içeriği: opsiyonel başlık + zorunlu textarea.
-// Loox tarzı: tek odak (textarea), başlık küçük bir input olarak üstte.
+// Tek odak (textarea), başlık küçük bir input olarak üstte.
 // Sonraki butonu yorum boşken disabled — footer üzerinden kontrol edilir.
 
 var COMMENT_MAX = 2000;
@@ -8,7 +8,7 @@ var TITLE_MAX = 60;
 
 export function createStepContent(state, opts) {
   opts = opts || {};
-  var onValidityChange = opts.onValidityChange || function () {};
+  var onValidityChange = opts.onValidityChange || function () { };
 
   var root = document.createElement('div');
   root.className = 'ikr-fwizard-step ikr-fwizard-step-content';
