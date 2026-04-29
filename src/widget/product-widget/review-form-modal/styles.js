@@ -346,7 +346,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-label{
     font-size:14px;
     font-weight:600;
-    color:var(--ikr-fwizard-text, rgb(17,17,17));
+    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.75));
   }
   .ikr-fwizard-required{
     color:#dc2626;
