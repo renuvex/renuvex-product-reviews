@@ -56,9 +56,9 @@ export var FWIZARD_CSS = `
     width:32px;
     height:32px;
     border-radius:8px;
-    border:none;
-    background:var(--ikr-fwizard-close-bg, rgba(0,0,0,0.06));
-    color:var(--ikr-fwizard-close-text, rgb(17,17,17));
+    border:1px solid var(--ikr-fwizard-border, #AFAFAF);
+    background:transparent;
+    color:var(--ikr-fwizard-close-text, rgba(0,0,0,0.6));
     cursor:pointer;
     font-size:18px;
     line-height:1;
@@ -82,7 +82,8 @@ export var FWIZARD_CSS = `
 
   @media(hover:hover){
     .ikr-fwizard-close:hover{
-      background:var(--ikr-fwizard-close-bg-hover, rgba(0,0,0,0.10));
+      background:rgba(0,0,0,0.05);
+      color:rgb(17,17,17);
     }
   }
 
