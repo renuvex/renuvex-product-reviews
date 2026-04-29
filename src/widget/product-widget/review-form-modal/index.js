@@ -178,8 +178,8 @@ export function openReviewFormModal(opts) {
         }
       };
       inst.el.addEventListener('animationend', onEnd);
-      // Emniyet kilidi: Animasyon event'i kaçarsa 400ms sonra zorla bitir
-      timeoutId = setTimeout(onEnd, 400);
+      // Emniyet kilidi: Animasyon event'i kaçarsa 700ms sonra zorla bitir
+      timeoutId = setTimeout(onEnd, 700);
     } else {
       animPhase = 'idle';
     }
