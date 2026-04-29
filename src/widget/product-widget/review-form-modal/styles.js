@@ -331,7 +331,7 @@ export var FWIZARD_CSS = `
     background:var(--ikr-fwizard-input-bg, #ffffff);
     border:1px solid var(--ikr-fwizard-border, #AFAFAF);
     border-radius:8px;
-    font-size:14px;
+    font-size:16px; /* iOS zoom bug'ını önlemek için min 16px olmalı */
     font-family:inherit;
     color:var(--ikr-fwizard-text, rgb(17,17,17));
     box-sizing:border-box;

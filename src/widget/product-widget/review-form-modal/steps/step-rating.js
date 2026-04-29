@@ -18,6 +18,8 @@ export function createStepRating(state, opts) {
   var root = document.createElement('div');
   root.className = 'ikr-fwizard-step ikr-fwizard-step-rating';
 
+  var isAdvancing = false;
+
   // Başlık
   var title = document.createElement('div');
   title.className = 'ikr-fwizard-step-title';
@@ -62,12 +64,16 @@ export function createStepRating(state, opts) {
         applyVisual(state.get().rating);
       });
       btn.addEventListener('click', function () {
+        if (isAdvancing) return;
+        isAdvancing = true;
         state.set({ rating: value });
         applyVisual(value);
         // Auto-advance — Küçük gecikme: kullanıcı seçimini görsün.
         setTimeout(function () {
           var canNav = !opts.canNavigate || opts.canNavigate();
           if (canNav) state.goNext();
+          // isAdvancing'i sıfırlamıyoruz çünkü zaten step kapanıp destroy edilecek.
+          // Geri dönülürse step baştan render edilir.
         }, 280);
       });
 
