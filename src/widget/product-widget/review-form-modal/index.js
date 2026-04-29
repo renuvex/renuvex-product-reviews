@@ -264,11 +264,12 @@ export function openReviewFormModal(opts) {
       var next = pendingStep !== null ? pendingStep : state.get().currentStep;
       pendingStep = null;
       mountStep(next, true);
+      animPhase = 'idle'; // Geçiş tamamlandı, yeni geçişlere izin ver
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);
-    // Emniyet kilidi: 300ms
-    timeoutId = setTimeout(onExitEnd, 300);
+    // Emniyet kilidi: exit animasyon süresinden biraz fazla (350ms > 300ms)
+    timeoutId = setTimeout(onExitEnd, 350);
   }
 
   // İlk render
