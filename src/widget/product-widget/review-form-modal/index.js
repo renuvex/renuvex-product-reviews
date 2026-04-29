@@ -51,13 +51,10 @@ function renderStep(stepNum, state, stepOpts) {
 
 function buildThanksScreen() {
   var wrap = document.createElement('div');
-  wrap.className = 'ikr-fwizard-thanks';
+  wrap.className = 'ikr-fwizard-step';
   wrap.innerHTML =
-    '<div class="ikr-fwizard-thanks-icon" aria-hidden="true">' +
-    '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
-    '</div>' +
-    '<div class="ikr-fwizard-thanks-title">Yorumunuz için teşekkürler!</div>' +
-    '<div class="ikr-fwizard-thanks-text">Değerlendirmeniz alındı.</div>';
+    '<div class="ikr-fwizard-step-title">Teşekkürler</div>' +
+    '<div class="ikr-fwizard-step-subtitle">Değerlendirmeniz alındı.</div>';
   return wrap;
 }
 
@@ -179,8 +176,8 @@ export function openReviewFormModal(opts) {
     pendingStep = null;
     stepWrap.innerHTML = '';
     stepWrap.appendChild(buildThanksScreen());
-    // Footer'ı gizle — gönderim sonrası gezinti yok
-    progress.el.style.display = 'none';
+    // Footer'ı güncelle — sadece "Devam Et" butonu göster
+    progress.setThanksState(shell.close);
   }
 
   function rerenderStep() {

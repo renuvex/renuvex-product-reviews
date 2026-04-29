@@ -143,5 +143,19 @@ export function createProgressBar(opts) {
         rightBtn.classList.toggle('ikr-fwizard-cta-btn--disabled', !!disabled);
       }
     },
+    setThanksState: function (onContinue) {
+      // Sol ve orta alanı gizle
+      leftBtn.style.visibility = 'hidden';
+      progressWrap.style.visibility = 'hidden';
+
+      // Sağ kolonu "Devam Et" yap (Siyah CTA butonu)
+      rightBtn.className = 'ikr-fwizard-cta-btn ikr-fwizard-footer-next';
+      rightBtn.setAttribute('aria-label', 'Devam Et');
+      rightBtn.innerHTML = 'Devam Et';
+      rightBtn.style.visibility = '';
+      rightBtn.disabled = false;
+      rightBtn.classList.remove('ikr-fwizard-cta-btn--disabled');
+      setRightHandler(onContinue);
+    },
   };
 }

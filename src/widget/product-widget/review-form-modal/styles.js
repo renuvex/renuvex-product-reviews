@@ -389,29 +389,7 @@ export var FWIZARD_CSS = `
     cursor:not-allowed;
   }
 
-  /* ─── Teşekkür ekranı (submit sonrası) ─── */
-  .ikr-fwizard-thanks{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:12px;
-    padding:32px 16px;
-    text-align:center;
-  }
-  .ikr-fwizard-thanks-icon{
-    color:var(--ikr-review-star-color, #f59e0b);
-    line-height:0;
-  }
-  .ikr-fwizard-thanks-title{
-    font-size:18px;
-    font-weight:500;
-    color:var(--ikr-fwizard-text, rgb(17,17,17));
-  }
-  .ikr-fwizard-thanks-text{
-    font-size:14px;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.75));
-  }
+
 
   /* ─── Step 1: Yıldız satırı ───
      İkon ve renk admin "Yıldız Stili"nden gelir:
