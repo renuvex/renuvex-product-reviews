@@ -445,19 +445,23 @@ export var FWIZARD_CSS = `
          absolute hile yok, butonların üstüne binmez. */
   .ikr-fwizard-footer{
     flex:0 0 auto;
-    padding:16px 24px;
+    padding:16px 12px;
     /* min-height: butonlar artık sabit 40px kutu, dikey padding 16px*2.
        Footer toplam 72px sabit → progress hiçbir step'te dikey kaymaz. */
     min-height:72px;
     box-sizing:border-box;
     border-top:1px solid var(--ikr-fwizard-border, rgba(0,0,0,0.08));
     display:grid;
-    grid-template-columns:120px 1fr 120px;
+    grid-template-columns:auto 1fr auto;
     align-items:center;
     gap:16px;
   }
   .ikr-fwizard-footer-back{
     justify-self:start;
+  }
+  .ikr-fwizard-footer-next,
+  .ikr-fwizard-footer-skip{
+    justify-self:end;
   }
   .ikr-fwizard-footer-progress{
     justify-self:center;
