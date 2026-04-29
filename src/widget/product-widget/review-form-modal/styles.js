@@ -34,7 +34,7 @@ export var FWIZARD_CSS = `
     max-height:85vh;
     background:var(--ikr-fwizard-bg, #ffffff);
     color:var(--ikr-fwizard-text, rgb(17,17,17));
-    border:1px solid var(--ikr-fwizard-border, #eeeeee);
+    border:1px solid var(--ikr-fwizard-border, #dddddd);
     border-radius:12px;
     box-shadow:0 16px 48px rgba(0,0,0,0.25);
     display:flex;
@@ -162,7 +162,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-photo-card{
     width:100%;
     max-width:420px;
-    border:1px solid var(--ikr-fwizard-border, #eeeeee);
+    border:1px solid var(--ikr-fwizard-border, #dddddd);
     border-radius:12px;
     padding:12px;
     display:flex;
@@ -204,7 +204,7 @@ export var FWIZARD_CSS = `
     padding:0;
     background:#f9f9f9;
     color:#000000;
-    border:1px solid var(--ikr-fwizard-border, #eeeeee);
+    border:1px solid var(--ikr-fwizard-border, #dddddd);
     order:10; /* Listenin sonuna atar */
   }
   .ikr-fwizard-photo-add:hover{
@@ -241,7 +241,7 @@ export var FWIZARD_CSS = `
     height:88px;
     border-radius:8px;
     overflow:hidden;
-    border:1px solid var(--ikr-fwizard-border, #eeeeee);
+    border:1px solid var(--ikr-fwizard-border, #dddddd);
   }
   .ikr-fwizard-photo-thumb img{
     width:100%;
@@ -304,7 +304,7 @@ export var FWIZARD_CSS = `
     width:100%;
     padding:12px 14px;
     background:var(--ikr-fwizard-input-bg, #ffffff);
-    border:1px solid var(--ikr-fwizard-border, #eeeeee);
+    border:1px solid var(--ikr-fwizard-border, #dddddd);
     border-radius:8px;
     font-size:14px;
     font-family:inherit;
