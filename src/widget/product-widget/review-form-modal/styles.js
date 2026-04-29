@@ -344,8 +344,8 @@ export var FWIZARD_CSS = `
     gap:6px;
   }
   .ikr-fwizard-label{
-    font-size:13px;
-    font-weight:400;
+    font-size:14px;
+    font-weight:600;
     color:var(--ikr-fwizard-text, rgb(17,17,17));
   }
   .ikr-fwizard-required{
