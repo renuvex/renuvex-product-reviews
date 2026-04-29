@@ -92,13 +92,13 @@ export function openReviewFormModal(opts) {
     skippableSteps: [2],
     nextableSteps: [3],
     onBack: function () {
-      state.goBack();
+      if (animPhase === 'idle') state.goBack();
     },
     onSkip: function () {
-      state.goNext();
+      if (animPhase === 'idle') state.goNext();
     },
     onNext: function () {
-      state.goNext();
+      if (animPhase === 'idle') state.goNext();
     },
   });
 
@@ -155,8 +155,8 @@ export function openReviewFormModal(opts) {
         }
       };
       inst.el.addEventListener('animationend', onEnd);
-      // Emniyet kilidi: Animasyon event'i kaçarsa 550ms sonra zorla bitir
-      timeoutId = setTimeout(onEnd, 550);
+      // Emniyet kilidi: Animasyon event'i kaçarsa 400ms sonra zorla bitir
+      timeoutId = setTimeout(onEnd, 400);
     } else {
       animPhase = 'idle';
     }
@@ -221,8 +221,8 @@ export function openReviewFormModal(opts) {
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);
-    // Emniyet kilidi: Exit animasyonu için 450ms (350ms + 100ms buffer)
-    timeoutId = setTimeout(onExitEnd, 450);
+    // Emniyet kilidi: 400ms
+    timeoutId = setTimeout(onExitEnd, 400);
   }
 
   // İlk render
