@@ -71,6 +71,7 @@ export function openReviewFormModal(opts) {
   });
 
   var persistentBlobMap = {};
+  var persistentUrlToFinger = {};
 
   var shell = createWizardShell({
     onClose: function () {
@@ -149,6 +150,7 @@ export function openReviewFormModal(opts) {
     var inst = renderStep(stepNum, state, {
       canNavigate: function () { return animPhase === 'idle'; },
       blobMap: persistentBlobMap,
+      urlToFinger: persistentUrlToFinger,
       onValidityChange: function (valid) {
         progress.setNextDisabled(!valid);
       },
