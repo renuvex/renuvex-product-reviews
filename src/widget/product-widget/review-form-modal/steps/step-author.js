@@ -91,8 +91,18 @@ export function createStepAuthor(state, opts) {
 
   function applySubmitDisabled() {
     var disabled = !isValid();
-    submitBtn.disabled = disabled;
-    submitBtn.classList.toggle('ikr-fwizard-submit-btn--disabled', disabled);
+    var pendingCount = (state.get().pendingImages || []).length;
+    var isUploading = pendingCount > 0;
+
+    if (isUploading) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add('ikr-fwizard-submit-btn--disabled');
+      submitBtn.textContent = 'Fotoğraflar Yükleniyor...';
+    } else {
+      submitBtn.disabled = disabled;
+      submitBtn.classList.toggle('ikr-fwizard-submit-btn--disabled', disabled);
+      submitBtn.textContent = 'Gönder';
+    }
   }
 
   nameInput.addEventListener('input', function () {
@@ -172,10 +182,13 @@ export function createStepAuthor(state, opts) {
     }
   };
 
+  var unsubscribe = state.onChange(applySubmitDisabled);
+
   return {
     el: root,
     destroy: function () {
       submitBtn.onclick = null;
+      if (unsubscribe) unsubscribe();
     },
   };
 }

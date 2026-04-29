@@ -21,6 +21,7 @@ export function createWizardState(opts) {
     author: '',
     email: '',
     images: [],
+    pendingImages: [],
     productId: opts.productId || '',
     productName: opts.productName || '',
   };

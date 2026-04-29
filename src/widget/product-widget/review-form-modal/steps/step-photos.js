@@ -58,19 +58,20 @@ export function createStepPhotos(state) {
 
   root.appendChild(card);
 
-  var isUploading = false;
-
-  var renderedUrls = [];
-
-  // State'teki güncel onaylanmış resimleri DOM'a yansıtır
+  // State'teki tüm görselleri (bitenler ve yüklenmekte olanlar) tam reaktif olarak DOM'a yansıtır
   function syncUI() {
-    var existing = state.get().images || [];
-    existing.forEach(function (url) {
-      if (renderedUrls.indexOf(url) === -1) {
-        addThumb(url);
-        renderedUrls.push(url);
-      }
+    previews.innerHTML = ''; // Eski her şeyi temizle, state'e göre baştan kur
+
+    var completed = state.get().images || [];
+    completed.forEach(function (url) {
+      addThumb(url, false);
     });
+
+    var pending = state.get().pendingImages || [];
+    pending.forEach(function (obj) {
+      addThumb(obj.url, true, obj.error);
+    });
+
     updateAddButton();
   }
 
@@ -78,11 +79,13 @@ export function createStepPhotos(state) {
   var PLUS_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
 
   function updateAddButton() {
-    var count = (state.get().images || []).length;
-    var isFull = count >= MAX_PHOTOS;
+    var completedCount = (state.get().images || []).length;
+    var pendingCount = (state.get().pendingImages || []).length;
+    var totalCount = completedCount + pendingCount;
+    var isFull = totalCount >= MAX_PHOTOS;
+    var isUploading = pendingCount > 0;
 
-    // Fotoğraf varsa kompakt mod (kare buton yan yana), yoksa normal mod (büyük buton üstte)
-    if (count > 0) {
+    if (totalCount > 0) {
       card.classList.add('ikr-fwizard-photo-card--compact');
       uploadLabel.innerHTML = PLUS_ICON;
     } else {
@@ -97,44 +100,55 @@ export function createStepPhotos(state) {
       uploadLabel.style.display = 'flex';
       fileInput.disabled = isUploading;
       uploadLabel.classList.toggle('ikr-fwizard-photo-add--disabled', isUploading);
-      // Input'u butona tekrar ekle (innerHTML değişince siliniyor)
       uploadLabel.appendChild(fileInput);
     }
   }
 
-  function addThumb(url) {
+  function addThumb(url, isPending, errorMsg) {
     var item = document.createElement('div');
     item.className = 'ikr-fwizard-photo-thumb';
-    item.innerHTML = '<img src="' + url + '" alt="">';
+    
+    var html = '<img src="' + url + '" alt="">';
+    
+    if (isPending) {
+      if (errorMsg) {
+        html += '<div class="ikr-fwizard-photo-loading"><span class="ikr-upload-error">✗ ' + errorMsg + '</span></div>';
+      } else {
+        html += '<div class="ikr-fwizard-photo-loading"><div class="ikr-spinner"></div></div>';
+      }
+    }
+    item.innerHTML = html;
 
-    var removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'ikr-fwizard-photo-remove';
-    removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
-    removeBtn.innerHTML = '&#x2715;';
-    removeBtn.onclick = function () {
-      var imgs = (state.get().images || []).filter(function (u) { return u !== url; });
-      state.set({ images: imgs });
-      item.remove();
-      renderedUrls = renderedUrls.filter(function(u) { return u !== url; });
-      updateAddButton();
-    };
-    item.appendChild(removeBtn);
-    previews.appendChild(item);
-  }
+    if (!isPending) {
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'ikr-fwizard-photo-remove';
+      removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
+      removeBtn.innerHTML = '&#x2715;';
+      removeBtn.onclick = function () {
+        var imgs = (state.get().images || []).filter(function (u) { return u !== url; });
+        state.set({ images: imgs });
+      };
+      item.appendChild(removeBtn);
+    } else if (errorMsg) {
+      // Hata varsa çarpı çıkar ki silebilsin
+      var removeErrBtn = document.createElement('button');
+      removeErrBtn.type = 'button';
+      removeErrBtn.className = 'ikr-fwizard-photo-remove';
+      removeErrBtn.innerHTML = '&#x2715;';
+      removeErrBtn.onclick = function () {
+        var pending = (state.get().pendingImages || []).filter(function (p) { return p.url !== url; });
+        state.set({ pendingImages: pending });
+      };
+      item.appendChild(removeErrBtn);
+    }
 
-  function addPendingThumb(objUrl) {
-    var item = document.createElement('div');
-    item.className = 'ikr-fwizard-photo-thumb';
-    item.innerHTML =
-      '<img src="' + objUrl + '" alt="">' +
-      '<div class="ikr-fwizard-photo-loading"><div class="ikr-spinner"></div></div>';
     previews.appendChild(item);
-    return item;
   }
 
   fileInput.onchange = async function (e) {
-    if (isUploading) return;
+    var pendingCount = (state.get().pendingImages || []).length;
+    if (pendingCount > 0) return;
 
     var current = state.get().images || [];
     var preUploadCount = current.length;
@@ -143,14 +157,10 @@ export function createStepPhotos(state) {
 
     if (files.length === 0) return;
 
-    // HIZLI GEÇİŞ: Sadece ilk kez fotoğraf seçildiğinde anında sonraki adıma geç
-    if (preUploadCount === 0) {
-      state.goNext();
-    }
-
-    isUploading = true;
-    fileInput.disabled = true;
-
+    // Hemen Blob objelerini oluştur ve pending state'e ekle
+    var newPending = [];
+    var filesToUpload = [];
+    
     for (var fi = 0; fi < files.length; fi++) {
       var file = files[fi];
       if (file.size > MAX_BYTES) {
@@ -158,16 +168,32 @@ export function createStepPhotos(state) {
         continue;
       }
       var objUrl = URL.createObjectURL(file);
-      var item = addPendingThumb(objUrl);
-      var loadingEl = item.querySelector('.ikr-fwizard-photo-loading');
+      newPending.push({ url: objUrl, file: file, error: null });
+      filesToUpload.push({ url: objUrl, file: file });
+    }
 
-      // Preview modunda upload simüle et — gerçek Cloudinary isteği yok
+    if (newPending.length === 0) return;
+
+    var allPending = (state.get().pendingImages || []).concat(newPending);
+    state.set({ pendingImages: allPending });
+
+    // HIZLI GEÇİŞ: Sadece ilk kez fotoğraf seçildiğinde anında sonraki adıma geç
+    if (preUploadCount === 0) {
+      state.goNext();
+    }
+
+    // Yükleme İşlemleri
+    for (var i = 0; i < filesToUpload.length; i++) {
+      var item = filesToUpload[i];
+      var f = item.file;
+      var objUrl = item.url;
+
       if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
-        var imgs = (state.get().images || []).slice();
-        imgs.push(objUrl);
-        if (renderedUrls.indexOf(objUrl) === -1) renderedUrls.push(objUrl);
-        state.set({ images: imgs });
-        finalizeThumb(item, loadingEl, objUrl);
+        // Önizleme modu simülasyonu
+        var p1 = (state.get().pendingImages || []).filter(function(p) { return p.url !== objUrl; });
+        var c1 = (state.get().images || []).slice();
+        c1.push(objUrl);
+        state.set({ pendingImages: p1, images: c1 });
         continue;
       }
 
@@ -179,53 +205,37 @@ export function createStepPhotos(state) {
         }
         var sign = await signRes.json();
         var fd = new FormData();
-        fd.append('file', file);
+        fd.append('file', f);
         fd.append('api_key', sign.api_key);
         fd.append('timestamp', sign.timestamp);
         fd.append('signature', sign.signature);
         fd.append('folder', 'review_images');
+        
         var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
         var upData = await up.json();
+        
         if (upData.secure_url) {
-          var url = upData.secure_url;
-          var imgs2 = (state.get().images || []).slice();
-          imgs2.push(url);
-          if (renderedUrls.indexOf(url) === -1) renderedUrls.push(url);
-          state.set({ images: imgs2 });
-          finalizeThumb(item, loadingEl, url);
+          var p2 = (state.get().pendingImages || []).filter(function(p) { return p.url !== objUrl; });
+          var c2 = (state.get().images || []).slice();
+          c2.push(upData.secure_url);
+          state.set({ pendingImages: p2, images: c2 });
         }
       } catch (err) {
         console.error('[ikr] Image upload failed:', err);
-        var errMsg = err.message === 'rate_limit'
-          ? 'Çok fazla deneme. Lütfen bekleyin.'
-          : 'Yükleme başarısız.';
-        loadingEl.innerHTML = '<span class="ikr-upload-error">✗ ' + errMsg + '</span>';
+        var errMsg = err.message === 'rate_limit' ? 'Çok fazla deneme. Bekleyin.' : 'Yükleme başarısız.';
+        // Hata durumunu state'e yaz
+        var pErr = (state.get().pendingImages || []).map(function(p) {
+          if (p.url === objUrl) {
+            return { url: p.url, file: p.file, error: errMsg };
+          }
+          return p;
+        });
+        state.set({ pendingImages: pErr });
       }
     }
 
-    isUploading = false;
     fileInput.value = '';
-    updateAddButton();
-
   };
-
-  function finalizeThumb(item, loadingEl, finalUrl) {
-    loadingEl.style.display = 'none';
-    var removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'ikr-fwizard-photo-remove';
-    removeBtn.setAttribute('aria-label', 'Fotoğrafı kaldır');
-    removeBtn.innerHTML = '&#x2715;';
-    removeBtn.onclick = function () {
-      var imgs = (state.get().images || []).filter(function (u) { return u !== finalUrl; });
-      state.set({ images: imgs });
-      item.remove();
-      renderedUrls = renderedUrls.filter(function(u) { return u !== finalUrl; });
-      updateAddButton();
-    };
-    item.appendChild(removeBtn);
-    updateAddButton();
-  }
 
   var unsubscribe = state.onChange(syncUI);
   syncUI();
