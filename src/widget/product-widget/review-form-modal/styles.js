@@ -158,6 +158,23 @@ export var FWIZARD_CSS = `
     line-height:1.4;
   }
 
+  /* Teşekkür Ekranı Özel (Extra Large) */
+  .ikr-fwizard-thanks-title{
+    font-size:42px !important;
+    font-weight:700 !important;
+    line-height:1.1;
+    margin-bottom:8px;
+  }
+  .ikr-fwizard-thanks-subtitle{
+    font-size:20px !important;
+    margin-top:0 !important;
+    font-weight:400;
+  }
+  .ikr-fwizard-step-thanks{
+    justify-content:center;
+    padding-bottom:40px;
+  }
+
   /* ─── Step 2: Foto kartı ─── */
   .ikr-fwizard-photo-card{
     width:100%;

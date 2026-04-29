@@ -51,10 +51,10 @@ function renderStep(stepNum, state, stepOpts) {
 
 function buildThanksScreen() {
   var wrap = document.createElement('div');
-  wrap.className = 'ikr-fwizard-step';
+  wrap.className = 'ikr-fwizard-step ikr-fwizard-step-thanks';
   wrap.innerHTML =
-    '<div class="ikr-fwizard-step-title ikr-fwizard-step-title--lg">Teşekkürler</div>' +
-    '<div class="ikr-fwizard-step-subtitle">Değerlendirmeniz alındı.</div>';
+    '<div class="ikr-fwizard-step-title ikr-fwizard-thanks-title">Teşekkürler</div>' +
+    '<div class="ikr-fwizard-step-subtitle ikr-fwizard-thanks-subtitle">Değerlendirmeniz alındı.</div>';
   return wrap;
 }
 
