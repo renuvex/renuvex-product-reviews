@@ -2,6 +2,7 @@
 // Step 3 — Yorum içeriği: opsiyonel başlık + zorunlu textarea.
 // Tek odak (textarea), başlık küçük bir input olarak üstte.
 // Sonraki butonu yorum boşken disabled — footer üzerinden kontrol edilir.
+import { validateStep } from '../wizard-state.js';
 
 var COMMENT_MAX = 2000;
 var TITLE_MAX = 60;
@@ -59,7 +60,7 @@ export function createStepContent(state, opts) {
   }
 
   function isValid() {
-    return textarea.value.trim().length > 0;
+    return validateStep(3, state.get());
   }
 
   textarea.addEventListener('input', function () {

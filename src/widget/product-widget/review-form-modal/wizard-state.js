@@ -9,6 +9,32 @@
 
 export var TOTAL_STEPS = 4;
 
+/**
+ * Step bazlı merkezi validasyon kuralları.
+ * Hem footer (buton) hem de step bileşenleri buraya bakar.
+ * Tek merkezden yönetildiği için tutarsızlık (flash vb.) oluşmaz.
+ */
+export function validateStep(step, state) {
+  if (!state) return false;
+
+  switch (step) {
+    case 1:
+      // Rating zorunlu.
+      return state.rating > 0;
+    case 2:
+      // Fotoğraflar opsiyonel.
+      return true;
+    case 3:
+      // Yorum içeriği zorunlu.
+      return !!(state.comment && state.comment.trim().length > 0);
+    case 4:
+      // İsim (author) zorunlu.
+      return !!(state.author && state.author.trim().length > 0);
+    default:
+      return true;
+  }
+}
+
 export function createWizardState(opts) {
   opts = opts || {};
   var listeners = [];

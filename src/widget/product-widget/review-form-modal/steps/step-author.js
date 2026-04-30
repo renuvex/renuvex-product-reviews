@@ -10,6 +10,7 @@
 import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';
 import { extractSlug } from '../../../core/helpers.js';
+import { validateStep } from '../wizard-state.js';
 
 var NAME_MAX = 40;
 
@@ -86,7 +87,7 @@ export function createStepAuthor(state, opts) {
   root.appendChild(form);
 
   function isValid() {
-    return nameInput.value.trim().length > 0;
+    return validateStep(4, state.get());
   }
 
   function applySubmitDisabled() {

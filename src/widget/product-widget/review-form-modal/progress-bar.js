@@ -7,7 +7,7 @@
 // her step'te %100 sabit.
 // çalışır.
 
-import { TOTAL_STEPS } from './wizard-state.js';
+import { TOTAL_STEPS, validateStep } from './wizard-state.js';
 
 // SVG ok ikonu — sadece "Geri" butonunda kullanılır.
 var ARROW_LEFT_SVG =
@@ -100,13 +100,8 @@ export function createProgressBar(opts) {
       rightBtn.tabIndex = 0;
 
       // SENKRON VALİDASYON: Flash ve desync koruması.
-      // Bileşenden haber beklemek yerine doğrudan merkezi state'e bakıyoruz.
-      var isValid = true;
-      if (currentStep === 3) {
-        isValid = !!(stateData && stateData.comment && stateData.comment.trim().length > 0);
-      } else if (currentStep === 4) {
-        isValid = !!(stateData && stateData.author && stateData.author.trim().length > 0);
-      }
+      // Merkezi kural setine (validateStep) soruyoruz.
+      var isValid = validateStep(currentStep, stateData);
       rightBtn.disabled = !isValid;
       rightBtn.classList.toggle('ikr-fwizard-cta-btn--disabled', !isValid);
 
