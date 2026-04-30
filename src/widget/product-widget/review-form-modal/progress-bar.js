@@ -98,6 +98,18 @@ export function createProgressBar(opts) {
       rightBtn.innerHTML = 'Sonraki';
       rightBtn.style.visibility = '';
       rightBtn.tabIndex = 0;
+
+      // SENKRON VALİDASYON: Flash ve desync koruması.
+      // Bileşenden haber beklemek yerine doğrudan merkezi state'e bakıyoruz.
+      var isValid = true;
+      if (currentStep === 3) {
+        isValid = !!(stateData && stateData.comment && stateData.comment.trim().length > 0);
+      } else if (currentStep === 4) {
+        isValid = !!(stateData && stateData.author && stateData.author.trim().length > 0);
+      }
+      rightBtn.disabled = !isValid;
+      rightBtn.classList.toggle('ikr-fwizard-cta-btn--disabled', !isValid);
+
       setRightHandler(function () {
         if (rightBtn.disabled) return;
         onNext();
