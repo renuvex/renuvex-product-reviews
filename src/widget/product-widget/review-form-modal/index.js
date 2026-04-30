@@ -161,6 +161,9 @@ export function openReviewFormModal(opts) {
 
     // Progress bar'ı içerikle tam eşzamanlı güncelle (Desync koruması)
     progress.update(stepNum, state.get());
+    if (typeof inst.isValidInitial !== 'undefined') {
+      progress.setNextDisabled(!inst.isValidInitial);
+    }
 
     if (withEnterAnim) {
       animPhase = 'entering';

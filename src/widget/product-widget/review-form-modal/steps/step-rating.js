@@ -89,6 +89,7 @@ export function createStepRating(state, opts) {
 
   return {
     el: root,
+    isValidInitial: true,
     // Step manager step değişiminde temizleme yapsın diye opsiyonel destroy
     destroy: function () {
       // hover listener'lar btn ile birlikte DOM'dan çıkınca otomatik kalkar
