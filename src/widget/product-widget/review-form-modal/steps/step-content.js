@@ -72,12 +72,13 @@ export function createStepContent(state, opts) {
 
   // İlk değerlendirme — geri-ileri gezintide hidrate olduktan sonra
   updateCounter();
-  // Validasyon durumu artık orchestrator tarafından mount anında okunuyor.
-  // Ek listener'lar input anında tetiklenecek.
+  // Mikro-defer: footer mount edildikten sonra valid state'i bildir
+  setTimeout(function () {
+    onValidityChange(isValid());
+  }, 0);
 
   return {
     el: root,
-    isValidInitial: isValid(),
     destroy: function () {
       // listener'lar DOM'dan çıkınca otomatik kalkar
     },

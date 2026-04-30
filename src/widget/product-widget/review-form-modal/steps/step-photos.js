@@ -314,7 +314,6 @@ export function createStepPhotos(state, opts) {
 
   return {
     el: root,
-    isValidInitial: true,
     destroy: function () {
       isExiting = true; // Modal kapanırsa veya destroy olursa da koru
       fileInput.onchange = null;

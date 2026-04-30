@@ -116,7 +116,8 @@ export function createStepAuthor(state, opts) {
   });
 
   applySubmitDisabled();
-  // Validasyon durumu artık orchestrator tarafından mount anında okunuyor.
+  // Mikro-defer: footer mount edildikten sonra validity'yi bildir
+  setTimeout(function () { onValidityChange(isValid()); }, 0);
 
   submitBtn.onclick = async function () {
     if (submitBtn.disabled) return;
@@ -192,7 +193,6 @@ export function createStepAuthor(state, opts) {
 
   return {
     el: root,
-    isValidInitial: isValid(),
     destroy: function () {
       submitBtn.onclick = null;
       if (unsubscribe) unsubscribe();
