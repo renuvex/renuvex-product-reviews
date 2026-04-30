@@ -36,7 +36,6 @@ export var FWIZARD_CSS = `
     color:var(--ikr-fwizard-text, rgb(17,17,17));
     border:1px solid var(--ikr-fwizard-border, #AFAFAF);
     border-radius:12px;
-    box-shadow:0 16px 48px rgba(0,0,0,0.25);
     display:flex;
     flex-direction:column;
     overflow:hidden;
