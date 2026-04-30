@@ -462,7 +462,7 @@ export var FWIZARD_CSS = `
          absolute hile yok, butonların üstüne binmez. */
   .ikr-fwizard-footer{
     flex:0 0 auto;
-    padding:16px 12px;
+    padding:16px;
     /* min-height: butonlar artık sabit 40px kutu, dikey padding 16px*2.
        Footer toplam 72px sabit → progress hiçbir step'te dikey kaymaz. */
     min-height:72px;
@@ -623,7 +623,8 @@ export var FWIZARD_CSS = `
        Grid kolonları mobile'da auto/1fr/auto: yan kolonlar buton kadar,
        orta esnek. */
     .ikr-fwizard-footer{
-      padding:12px 20px;
+      padding:20px;
+      min-height:80px;
       grid-template-columns:auto 1fr auto;
     }
     .ikr-fwizard-footer-back > svg{
