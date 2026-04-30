@@ -9,6 +9,7 @@ import { CLASSIC_CSS } from '../themes/ozy/styles.js';
 import { getIconFromSettings } from '../icons.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
+import { toggleWriteAccordion } from '../summary-layouts/shared/write-toggle.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -453,34 +454,20 @@ export async function render(productId, settings, reviewsData, productName, orde
         emptyWriteBtn.className = 'ikr-write-btn';
         emptyWriteBtn.style.cssText = 'display:block;margin:16px auto 0;';
         emptyWriteBtn.textContent = 'Yorum Yap';
-        emptyWriteBtn.onclick = function() {
-          var accordion = document.getElementById('ikr-form-accordion');
-          if (!accordion) return;
-          var isOpen = accordion.style.maxHeight && accordion.style.maxHeight !== '0px';
-          if (isOpen) {
-            accordion.style.maxHeight = '0px';
-            accordion.style.opacity = '0';
-          } else {
-            accordion.style.maxHeight = accordion.scrollHeight + 'px';
-            accordion.style.opacity = '1';
-            setTimeout(function() { accordion.style.maxHeight = 'none'; }, 360);
-            setTimeout(function() {
-              var stickyHeader = document.querySelector('header');
-              var headerH = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
-              var top = accordion.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
-              window.scrollTo({ top: top, behavior: 'smooth' });
-            }, 50);
-          }
-        };
+        emptyWriteBtn.onclick = toggleWriteAccordion;
         widget.appendChild(emptyWriteBtn);
       }
 
-      // Accordion form — summary altı, yorum listesi üstü
-      var accordion = document.createElement('div');
-      accordion.id = 'ikr-form-accordion';
-      accordion.style.cssText = 'overflow:hidden;max-height:0px;opacity:0;transition:max-height 0.35s ease,opacity 0.25s ease;';
-      accordion.appendChild(buildReviewForm(productId, productName));
-      widget.appendChild(accordion);
+
+      // Accordion form — summary altı, yorum listesi üstü.
+      // Sadece admin tercihi 'accordion' ise DOM'a ekle (Kusursuzluk/Performans).
+      if (settings.reviewFormStyle !== 'modal') {
+        var accordion = document.createElement('div');
+        accordion.id = 'ikr-form-accordion';
+        accordion.style.cssText = 'overflow:hidden;max-height:0px;opacity:0;transition:max-height 0.35s ease,opacity 0.25s ease;';
+        accordion.appendChild(buildReviewForm(productId, productName));
+        widget.appendChild(accordion);
+      }
 
       // Fotoğraflı Yorumlar bölümü — sadece filtre aktif değilken göster
       var allReviewsWithPhotos = reviews.filter(function(r) {
