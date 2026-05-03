@@ -249,7 +249,7 @@ export var CLASSIC_CSS = `
   .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
 
   /* Daha Fazla Göster butonu — tema uyumlu, outline stil */
-  .ikr-load-more{display:block;margin:20px auto 0;padding:10px 28px;border:1px solid var(--ikr-load-more-border,var(--ikr-border,rgba(0,0,0,0.30)));border-radius:var(--ikr-radius,6px);background:var(--ikr-load-more-bg,var(--ikr-surface,#fff));color:var(--ikr-load-more-text,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-load-more-size,14px);cursor:pointer;}
+  .ikr-load-more{display:block;margin:20px auto 0;padding:10px 28px;border:2px solid var(--ikr-load-more-border,var(--ikr-border,rgba(0,0,0,0.30)));border-radius:var(--ikr-radius,6px);background:var(--ikr-load-more-bg,var(--ikr-surface,#fff));color:var(--ikr-load-more-text,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-load-more-size,14px);cursor:pointer;}
   .ikr-load-more:disabled{opacity:.6;cursor:not-allowed;}
 
   /* Yükleniyor / boş durum mesajları — tema uyumlu */
