@@ -300,7 +300,7 @@ export var CLASSIC_CSS = `
      Hardcoded #fff ve rgba siyah yerine --ikr-modal-close-text ve
      --ikr-modal-close-bg → admin "Modal Kapat Butonu" ayarları her iki
      breakpoint'te aynı görünümü verir. */
-  .ikr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;background:var(--ikr-modal-close-bg,var(--ikr-color,#000));border:none;color:var(--ikr-modal-close-text,var(--ikr-color-text,#fff));width:32px;height:32px;border-radius:var(--ikr-radius,6px);font-size:15px;cursor:pointer;align-items:center;justify-content:center;line-height:1;z-index:2;}
+  .ikr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;background:var(--ikr-modal-close-bg,var(--ikr-color,#000));border:2px solid var(--ikr-modal-close-border,var(--ikr-color,#000));color:var(--ikr-modal-close-text,var(--ikr-color-text,#fff));width:32px;height:32px;border-radius:var(--ikr-radius,6px);font-size:15px;cursor:pointer;align-items:center;justify-content:center;line-height:1;z-index:2;}
   @media(hover:hover){.ikr-modal-close-mobile:hover{opacity:0.85;}}
   .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:var(--ikr-modal-nav-bg,rgba(0,0,0,0.45));border:none;color:var(--ikr-modal-nav-text,#fff);width:36px;height:36px;border-radius:var(--ikr-radius,6px);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
   .ikr-modal-nav-prev{left:10px;}
