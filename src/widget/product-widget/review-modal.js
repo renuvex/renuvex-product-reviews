@@ -161,12 +161,11 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   var hasPrev = hasPrevPhoto || hasPrevReview;
   var hasNext = hasNextPhoto || hasNextReview;
 
-  if (hasPrev || hasNext) {
+  if (hasPrev) {
     var prevBtn = document.createElement('button');
     prevBtn.className = 'ikr-modal-nav ikr-modal-nav-prev';
     prevBtn.innerHTML = '&#8249;';
     prevBtn.setAttribute('aria-label', 'Önceki');
-    prevBtn.style.opacity = hasPrev ? '1' : '0.3';
     prevBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasPrevPhoto) {
@@ -178,12 +177,13 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
       }
     };
     left.appendChild(prevBtn);
+  }
 
+  if (hasNext) {
     var nextBtn = document.createElement('button');
     nextBtn.className = 'ikr-modal-nav ikr-modal-nav-next';
     nextBtn.innerHTML = '&#8250;';
     nextBtn.setAttribute('aria-label', 'Sonraki');
-    nextBtn.style.opacity = hasNext ? '1' : '0.3';
     nextBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasNextPhoto) {

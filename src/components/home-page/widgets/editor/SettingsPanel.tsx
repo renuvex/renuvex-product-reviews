@@ -83,54 +83,61 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     setShowConfirm(false);
   };
 
+  const isFieldVisible = (field: SettingField) => {
+    if (!field.showWhen) return true;
+
+    if ('layoutKey' in field.showWhen) {
+      const activeId = settings[field.showWhen.layoutKey];
+      return layoutSupports(field.showWhen.layoutKey, activeId, field.showWhen.supports);
+    }
+
+    const dep = settings[field.showWhen.key];
+    if ('equals' in field.showWhen) {
+      return dep === field.showWhen.equals;
+    }
+
+    return !field.showWhen.notIn.includes(dep as string | number | boolean);
+  };
+
   // Render edilen akordiyon listesi — hem ana hem renk view'ları için tek helper.
   // defaultValue=[] — hiçbir accordion otomatik açık değil, kullanıcı seçer.
-  const renderAccordion = (list: SettingsGroup[]) => (
-    <Accordion type="multiple" defaultValue={[]} className="w-full">
-      {list.map((group, i) => (
-        <AccordionItem key={`group-${i}`} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}`, marginBottom: sp[2] }}>
-          <AccordionTrigger style={{
-            fontSize: typography.fontSize.base,
-            fontWeight: typography.fontWeight.medium,
-            color: colors.textPrimary,
-          }}>
-            {group.title}
-          </AccordionTrigger>
-          <AccordionContent>
-            {/* Tüm padding'ler accordion.tsx default'undan gelir (pt-4 pb-6 px-3).
-                Burada sadece field'lar arası iç gap. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: sp[6] }}>
-              {group.fields.map((field) => {
-                // Conditional field: showWhen kuralı varsa, bağlı ayar eşleşmediğinde gizle.
-                if (field.showWhen) {
-                  if ('layoutKey' in field.showWhen) {
-                    // Layout-aware: aktif layout'un meta.supports'ını oku.
-                    const activeId = settings[field.showWhen.layoutKey];
-                    if (!layoutSupports(field.showWhen.layoutKey, activeId, field.showWhen.supports)) return null;
-                  } else {
-                    const dep = settings[field.showWhen.key];
-                    if ('equals' in field.showWhen) {
-                      if (dep !== field.showWhen.equals) return null;
-                    } else if ('notIn' in field.showWhen) {
-                      if (field.showWhen.notIn.includes(dep as string | number | boolean)) return null;
-                    }
-                  }
-                }
-                return (
+  const renderAccordion = (list: SettingsGroup[]) => {
+    const visibleGroups = list
+      .map(group => ({ ...group, fields: group.fields.filter(isFieldVisible) }))
+      .filter(group => group.fields.length > 0);
+
+    if (visibleGroups.length === 0) return null;
+
+    return (
+      <Accordion type="multiple" defaultValue={[]} className="w-full">
+        {visibleGroups.map((group, i) => (
+          <AccordionItem key={`group-${i}`} value={`group-${i}`} style={{ borderBottom: `1px solid ${colors.borderDefault}`, marginBottom: sp[2] }}>
+            <AccordionTrigger style={{
+              fontSize: typography.fontSize.base,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.textPrimary,
+            }}>
+              {group.title}
+            </AccordionTrigger>
+            <AccordionContent>
+              {/* Tüm padding'ler accordion.tsx default'undan gelir (pt-4 pb-6 px-3).
+                  Burada sadece field'lar arası iç gap. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: sp[6] }}>
+                {group.fields.map((field) => (
                   <FieldRenderer
                     key={field.key}
                     field={field}
                     settings={settings}
                     onChange={onChange}
                   />
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
-  );
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    );
+  };
 
   return (
     <>

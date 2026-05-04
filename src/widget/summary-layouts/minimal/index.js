@@ -13,7 +13,7 @@ export var meta = {
   id: 'minimal',
   name: 'Minimal (Yalın)',
   // Bkz: review-layouts/index.js ve summary-layouts/index.js — supports sözleşmesi.
-  supports: { recommendation: false },
+  supports: { recommendation: false, barChart: false },
 };
 
 export var css = MINIMAL_CSS;

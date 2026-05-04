@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { WIDGETS } from '@/components/home-page/widgets/widgetDefs';
@@ -13,6 +14,28 @@ function getWidgetDefaults(widgetId: string): Record<string, unknown> {
     }
   }
   return defaults;
+}
+
+function getWidgetFieldKeys(widgetId: string): Set<string> | null {
+  const widget = WIDGETS.find((w) => w.id === widgetId);
+  if (!widget) return null;
+
+  const keys = new Set<string>();
+  for (const group of widget.settings) {
+    for (const field of group.fields) {
+      keys.add(field.key);
+    }
+  }
+  return keys;
+}
+
+function sanitizeSettings(widgetId: string, settings: Record<string, unknown>): Record<string, unknown> {
+  const allowedKeys = getWidgetFieldKeys(widgetId);
+  if (!allowedKeys) return settings;
+
+  return Object.fromEntries(
+    Object.entries(settings).filter(([key]) => allowedKeys.has(key))
+  );
 }
 
 function validateSettings(widgetId: string, settings: Record<string, unknown>): string | null {
@@ -74,7 +97,8 @@ export async function GET(request: Request) {
     // { reviews: { enabled: true, ... }, badge: { ... } } — defaults ile merge edilmiş
     const data: Record<string, unknown> = {};
     for (const row of rows) {
-      data[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...(row.settings as Record<string, unknown>) };
+      const savedSettings = sanitizeSettings(row.widgetId, row.settings as Record<string, unknown>);
+      data[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
     }
 
     return NextResponse.json({ data });
@@ -105,15 +129,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'settings gerekli' }, { status: 400 });
     }
 
-    const validationError = validateSettings(widgetId, settings as Record<string, unknown>);
+    const cleanSettings = sanitizeSettings(widgetId, settings as Record<string, unknown>);
+    const validationError = validateSettings(widgetId, cleanSettings);
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
+    const jsonSettings = cleanSettings as Prisma.InputJsonObject;
     const updated = await prisma.widgetSettings.upsert({
       where: { storeId_widgetId: { storeId: user.merchantId, widgetId } },
-      update: { settings },
-      create: { storeId: user.merchantId, widgetId, settings },
+      update: { settings: jsonSettings },
+      create: { storeId: user.merchantId, widgetId, settings: jsonSettings },
     });
 
     return NextResponse.json({ data: updated });

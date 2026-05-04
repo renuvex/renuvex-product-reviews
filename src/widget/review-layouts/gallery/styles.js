@@ -52,7 +52,7 @@ export var GALLERY_CSS = `
        top/bottom ayrı set. */
     padding-top:18px;padding-bottom:18px;
     margin:0;
-    border-top:1px solid var(--ikr-review-border,var(--ikr-separator,rgba(0,0,0,0.08)));
+    border-top:1px solid var(--ikr-review-border,#e5e7eb);
   }
   .ikr-review-gallery.ikr-review-gallery--no-media{
     grid-template-columns:1fr;
@@ -107,7 +107,7 @@ export var GALLERY_CSS = `
     display:block;width:100%;height:auto;
     aspect-ratio:3/4;object-fit:cover;
     border-radius:var(--ikr-radius,6px);
-    border:1px solid var(--ikr-photo-border,var(--ikr-border,rgba(0,0,0,0.10)));
+    border:1px solid var(--ikr-photo-image-border,rgba(0,0,0,0.05));
   }
   @media (max-width:600px){
     #ikas-reviews-widget:has(.ikr-review-gallery){

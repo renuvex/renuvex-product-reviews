@@ -4,6 +4,10 @@
 // izole. CSS variable'ları da kendi seti (--ikr-fwizard-*) → tema güncellenince
 // review modal'a yansır ama form wizard etkilenmez.
 //
+// Color contract:
+// render.js maps the shared review form admin fields to --ikr-fwizard-*.
+// Overlay color is not part of that contract and stays fixed by default.
+//
 // Kullanım: index.js bu CSS'i ilk açılışta document'a inject eder.
 
 export var FWIZARD_CSS = `
@@ -34,7 +38,7 @@ export var FWIZARD_CSS = `
     max-height:85vh;
     background:var(--ikr-fwizard-bg, #ffffff);
     color:var(--ikr-fwizard-text, rgb(17,17,17));
-    border:1px solid var(--ikr-fwizard-border, #AFAFAF);
+    border:none;
     border-radius:12px;
     display:flex;
     flex-direction:column;
@@ -60,7 +64,7 @@ export var FWIZARD_CSS = `
     align-items:center;
     justify-content:center;
     z-index:1;
-    transition:background 0.15s;
+    transition:background 0.15s, color 0.15s;
   }
 
   /* X Butonu Görünürlük Kuralları (Desktop + Mobile) */
@@ -76,8 +80,8 @@ export var FWIZARD_CSS = `
 
   @media(hover:hover){
     .ikr-fwizard-close:hover{
-      background:rgba(0,0,0,0.05);
-      color:rgb(17,17,17);
+      background:var(--ikr-fwizard-close-hover-bg, rgba(0,0,0,0.05));
+      color:var(--ikr-fwizard-text, rgb(17,17,17));
     }
   }
 
@@ -186,7 +190,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-photo-card{
     width:100%;
     max-width:420px;
-    border:1px solid var(--ikr-fwizard-border, #AFAFAF);
+    border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
     border-radius:12px;
     padding:12px;
     display:flex;
@@ -226,17 +230,16 @@ export var FWIZARD_CSS = `
     width:88px;
     height:88px;
     padding:0;
-    background:#f9f9f9;
-    color:#000000;
-    border:1px solid var(--ikr-fwizard-border, #AFAFAF);
+    background:var(--ikr-fwizard-input-bg, #f9f9f9);
+    color:var(--ikr-fwizard-input-text, var(--ikr-fwizard-text, #000000));
+    border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
     order:10; /* Listenin sonuna atar */
   }
   .ikr-fwizard-photo-add:hover{
     opacity:0.92;
   }
   .ikr-fwizard-photo-card--compact .ikr-fwizard-photo-add:hover{
-    background:#f0f0f0;
-    opacity:1;
+    opacity:0.92;
   }
   .ikr-fwizard-photo-add--disabled{
     opacity:0.4;
@@ -265,7 +268,7 @@ export var FWIZARD_CSS = `
     height:88px;
     border-radius:8px;
     overflow:hidden;
-    border:1px solid var(--ikr-fwizard-border, #AFAFAF);
+    border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
   }
   .ikr-fwizard-photo-thumb img{
     width:100%;
@@ -328,11 +331,11 @@ export var FWIZARD_CSS = `
     width:100%;
     padding:12px 14px;
     background:var(--ikr-fwizard-input-bg, #ffffff);
-    border:1px solid var(--ikr-fwizard-border, #AFAFAF);
+    border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
     border-radius:8px;
     font-size:16px; /* iOS zoom bug'ını önlemek için min 16px olmalı */
     font-family:inherit;
-    color:var(--ikr-fwizard-text, rgb(17,17,17));
+    color:var(--ikr-fwizard-input-text, var(--ikr-fwizard-text, rgb(17,17,17)));
     box-sizing:border-box;
     transition:border-color 0.15s;
   }
@@ -340,6 +343,10 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-textarea:focus{
     outline:none;
     /* Aktiflik efekti kaldırıldı, border rengi sabit kalır */
+  }
+  .ikr-fwizard-input::placeholder,
+  .ikr-fwizard-textarea::placeholder{
+    color:var(--ikr-fwizard-placeholder, rgba(0,0,0,0.35));
   }
   .ikr-fwizard-textarea{
     resize:none;
@@ -393,7 +400,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-submit-btn{
     background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
     color:var(--ikr-fwizard-cta-text, #ffffff);
-    border:none;
+    border:1px solid var(--ikr-fwizard-cta-border, rgb(17,17,17));
     border-radius:8px;
     padding:14px 24px;
     font-size:15px;
@@ -410,6 +417,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-submit-btn:disabled{
     background:var(--ikr-fwizard-cta-disabled-bg, rgba(0,0,0,0.18));
     color:var(--ikr-fwizard-cta-disabled-text, rgba(255,255,255,0.85));
+    border-color:var(--ikr-fwizard-cta-disabled-border, transparent);
     cursor:not-allowed;
   }
 
@@ -419,8 +427,7 @@ export var FWIZARD_CSS = `
      İkon ve renk admin "Yıldız Stili"nden gelir:
        - SVG: getIconFromSettings (icons.js, currentSettings.reviewIcon)
        - Renk: --ikr-review-star-color (admin "Yıldız Rengi")
-     Boş hali için ayrı bir variable yok; review widget pattern'iyle aynı:
-     empty SVG'nin currentColor'ı CSS'ten okunur. */
+     Empty color uses --ikr-star-empty-color, shared with review and bar stars. */
   .ikr-fwizard-stars{
     display:inline-flex;
     gap:8px;
@@ -433,7 +440,7 @@ export var FWIZARD_CSS = `
     border:none;
     background:transparent;
     cursor:pointer;
-    color:var(--ikr-bar-track, rgba(0,0,0,0.18));
+    color:var(--ikr-star-empty-color, #e5e7eb);
     transition:color 0.15s, transform 0.1s;
     display:inline-flex;
     align-items:center;
@@ -495,7 +502,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-cta-btn{
     background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
     color:var(--ikr-fwizard-cta-text, #ffffff);
-    border:none;
+    border:1px solid var(--ikr-fwizard-cta-border, rgb(17,17,17));
     border-radius:8px;
     width:108px;
     height:40px;
@@ -518,6 +525,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-cta-btn:disabled{
     background:var(--ikr-fwizard-cta-disabled-bg, rgba(0,0,0,0.18));
     color:var(--ikr-fwizard-cta-disabled-text, rgba(255,255,255,0.85));
+    border-color:var(--ikr-fwizard-cta-disabled-border, transparent);
     cursor:not-allowed;
   }
   .ikr-fwizard-cta-btn[hidden]{
@@ -546,7 +554,7 @@ export var FWIZARD_CSS = `
     width:108px;
     height:40px;
     padding:0;
-    color:#000000;
+    color:var(--ikr-fwizard-nav-text, rgb(17,17,17));
     font-size:15px;
     font-weight:600;
     line-height:1;
@@ -561,7 +569,7 @@ export var FWIZARD_CSS = `
     transition:background 0.15s;
   }
   .ikr-fwizard-nav-btn:hover{
-    background:rgba(0,0,0,0.06);
+    background:var(--ikr-fwizard-nav-hover-bg, rgba(17,17,17,0.06));
   }
   .ikr-fwizard-nav-btn[hidden]{
     display:none;

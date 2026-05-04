@@ -4,6 +4,7 @@ import { renderStarRow, getIconFromSettings } from '../icons.js';
 
 // Review widget içindeki yıldızlar için CSS custom property — reviews widget ayarından beslenir
 export var STAR_COLOR = 'var(--ikr-review-star-color,#f59e0b)';
+export var STAR_EMPTY_COLOR = 'var(--ikr-star-empty-color,#e5e7eb)';
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
@@ -112,7 +113,7 @@ export function renderStars(rating, interactive, onChange, settings) {
     for (var j = 1; j <= 5; j++) {
       var star = document.createElement('span');
       star.className = 'ikr-icon';
-      star.style.cssText = 'width:24px;height:24px;display:inline-flex;color:' + (j <= rating ? STAR_COLOR : '#ddd') + ';';
+      star.style.cssText = 'width:24px;height:24px;display:inline-flex;color:' + (j <= rating ? STAR_COLOR : STAR_EMPTY_COLOR) + ';';
       star.innerHTML = j <= rating ? pair.filled : pair.empty;
       wrap.appendChild(star);
     }
@@ -157,7 +158,7 @@ export function renderStars(rating, interactive, onChange, settings) {
       // Inline opacity:0 yerine class yapısı kullanarak stil ezilmesini de kaldırıyoruz
       label.innerHTML =
         '<span class="ikr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';pointer-events:none;">' + pair.filled + '</span>' +
-        '<span class="ikr-rating-empty" style="position:relative;width:24px;height:24px;color:#ddd;pointer-events:none;">' + pair.empty + '</span>';
+        '<span class="ikr-rating-empty" style="position:relative;width:24px;height:24px;color:' + STAR_EMPTY_COLOR + ';pointer-events:none;">' + pair.empty + '</span>';
       label.style.position = 'relative';
 
       wrap.appendChild(input);

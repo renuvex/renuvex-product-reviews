@@ -18,7 +18,7 @@ export var LIST_CSS = `
        Shorthand padding:24px 0 yan padding'i 0'a resetler ve theme kuralını
        specifity savaşında ezer. Sadece top/bottom ayrı set. */
     padding-top:24px;padding-bottom:24px;
-    border-top:1px solid var(--ikr-review-border,var(--ikr-separator,rgba(0,0,0,0.08)));
+    border-top:1px solid var(--ikr-review-border,#e5e7eb);
     border-bottom:none;
   }
   .ikr-review-list.ikr-review-list--no-media{grid-template-columns:140px 1fr;}
@@ -40,7 +40,7 @@ export var LIST_CSS = `
   .ikr-review-list-media img{
     width:100%;max-width:var(--ikr-list-photo-w,120px);aspect-ratio:3/4;object-fit:cover;
     border-radius:var(--ikr-radius,6px);
-    border:1px solid var(--ikr-photo-border,var(--ikr-border,rgba(0,0,0,0.10)));
+    border:1px solid var(--ikr-photo-image-border,rgba(0,0,0,0.05));
     cursor:zoom-in;
   }
   /* Desktop: sadece ilk foto görünür (sağ kolonda tek delil görseli). DOM'da
