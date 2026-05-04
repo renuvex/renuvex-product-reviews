@@ -61,8 +61,7 @@ function isDirty(a: WidgetSettingsDraft, b: WidgetSettingsDraft): boolean {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }: WidgetEditorProps) {
-  const mergedSaved = mergeWithDefaults(widget, savedSettings);
-  const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergedSaved);
+  const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergeWithDefaults(widget, savedSettings));
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const iframeRef = useRef<HTMLIFrameElement>(null);
