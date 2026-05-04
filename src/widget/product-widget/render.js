@@ -150,6 +150,7 @@ function applyManualTheme(root, settings) {
   var inputTextVar = settings.inputTextColor  || formText;
   var inputBorderVar = settings.inputBorderColor || hexToRgba(formText, 0.20);
   var placeholderColor = settings.placeholderColor || hexToRgba(formText, 0.42);
+  var formStepBarColor = settings.formStepBarColor || btnBg;
   var formSubtleBg = hexToRgba(formText, 0.06);
 
   // Grup 11 — Daha Fazla Göster
@@ -243,7 +244,7 @@ function applyManualTheme(root, settings) {
     '--ikr-fwizard-close-text': formMuted,
     '--ikr-fwizard-close-hover-bg': formSubtleBg,
     '--ikr-fwizard-progress-bg': formSubtleBg,
-    '--ikr-fwizard-progress-active': btnBg,
+    '--ikr-fwizard-progress-active': formStepBarColor,
 
     // Grup 11 — Daha Fazla Göster
     '--ikr-load-more-bg':     loadMoreBg,

@@ -241,6 +241,7 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'color', key: 'inputTextColor',    label: 'Alan Yazı Rengi',        default: '#111111' },
           { type: 'color', key: 'inputBorderColor',  label: 'Alan Kenarlık Rengi',    default: '#d1d5db' },
           { type: 'color', key: 'placeholderColor',  label: 'Placeholder Rengi',      default: '#9ca3af' },
+          { type: 'color', key: 'formStepBarColor',  label: 'Adım Çubuğu Rengi',      default: '#111111' },
         ],
       },
       {
