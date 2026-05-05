@@ -9,6 +9,7 @@ tags:
   - ikas-cli
   - ruler
   - existing-rules
+  - wiki-discipline
 related:
   - "[[Index]]"
   - "[[Claude_Code_Rules]]"
@@ -129,6 +130,15 @@ Examples (from existing rules):
 - `fix(auth): prevent token refresh loop`
 - `docs(readme): update installation guide`
 
+### Wiki update logging (added 2026-05-05 — under "Project Memory / Obsidian Wiki Rules" in AGENTS.md)
+- Log wiki updates **only when genuinely useful for long-term project memory** — not for every tweak.
+- When a meaningful change (code, architecture, DB, API, widget, ikas integration, bug, feature, status) triggers a wiki edit, **bump the page's frontmatter `updated: YYYY-MM-DD`**.
+- For changes important enough to remember as historical memory, also add a short entry under a `## Change Log` (or `## Update History`) section at the bottom of the affected page. Create the section if missing.
+- Each changelog entry should include: date, short summary, related source files (if any), related ADR/bug/feature note (if any).
+- Skip changelog entries for tiny visual-only edits, copy tweaks, formatting-only changes, or low-impact refactors that don't affect architecture / behavior / features / API / DB / widgets / ikas integration / bugs / project status.
+- Keep entries short, factual, accurate. Don't fabricate history.
+- If unsure whether a wiki update is needed, explain the judgment in the response — don't update unnecessary files.
+
 ---
 
 ## MCP servers configured (canonical)
@@ -203,3 +213,6 @@ Use to **list** available GraphQL operations and **introspect** their shapes bef
 - [[Ikas_API_Notes]]
 - [[ADR_0004_Ikas_Integration_Strategy]]
 - [[Open_Questions]]
+
+## Change Log
+- **2026-05-05** — Added "Wiki update logging" subsection mirroring the new rule in `/AGENTS.md` (under "Project Memory / Obsidian Wiki Rules"). Rule requires bumping `updated:` frontmatter on meaningful wiki edits and adding `## Change Log` entries when an edit is worth preserving as long-term memory. Source: `/AGENTS.md`. Related: [[Claude_Code_Rules]], [[Documentation_Update_Prompt]], [[Master_Project_Prompt]].

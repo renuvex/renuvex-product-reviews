@@ -53,6 +53,13 @@ For every `.md` under `docs/wiki/` (except `Index.md`, which has a different sha
 - [ ] `02_Codebase_Map/Important_Files.md` — are listed files still present?
 - [ ] `04_Decisions/*.md` — any decisions that the code now contradicts? Should they be marked superseded with a new ADR?
 
+### Wiki update logging discipline
+- [ ] Pages that have been substantively edited since the last lint pass should have their frontmatter `updated: YYYY-MM-DD` reflect that.
+- [ ] Pages with major behavior / architecture / feature changes since their last `## Change Log` entry should have a new entry capturing what changed.
+- [ ] Conversely: no `## Change Log` entries that look fabricated, padded with trivia, or duplicated. Each entry should have date + short summary + (optional) related source files / ADR / bug / feature.
+- [ ] No `## Change Log` entries from copy / formatting / visual-only tweaks.
+- [ ] Pages that ship without a `## Change Log` are fine — only require one once a meaningful update happens.
+
 ### Source-file references
 - [ ] Architecture and codebase-map pages cite real source files (paths exist).
 - [ ] Migration filenames cited in pages still exist in `prisma/migrations/`.
@@ -73,3 +80,8 @@ Report grouped as:
 - [[Open_Questions]]
 - [[Decision_Index]]
 - [[Bug_Index]]
+- [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]
+- [[Claude_Code_Rules]]
+
+## Change Log
+- **2026-05-05** — Added "Wiki update logging discipline" check-list mirroring the new canonical rule in `/AGENTS.md`. The lint workflow now verifies `updated:` frontmatter freshness and the presence/absence of `## Change Log` entries proportional to actual changes. Related: [[Claude_Code_Rules]], [[Existing_AI_Rules_And_Ikas_CLI_Instructions]].

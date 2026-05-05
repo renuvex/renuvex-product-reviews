@@ -36,6 +36,15 @@ Always read the wiki first:
 - Status changed → update `01_Project/Current_Status.md`
 - New uncertainty → entry in `01_Project/Open_Questions.md`
 
+## Wiki update logging
+For each wiki page you edit because of a meaningful change:
+- **Bump the frontmatter `updated: YYYY-MM-DD`** to today's date.
+- If the change is important enough to preserve as historical memory (architecture / behavior / features / API / DB / widgets / ikas integration / bugs / status), add a short entry under a `## Change Log` section at the bottom of the page. Create the section if it's missing.
+- Entry includes: date, short summary, related source files (if any), related ADR / bug / feature note (if any).
+- Skip changelog entries for tiny visual-only edits, copy tweaks, formatting-only changes, or low-impact refactors.
+- Keep entries short and factual. Don't fabricate history.
+- If unsure whether a wiki update is needed, explain the judgment in the response — don't update unnecessary files.
+
 ## Don't
 - Touch `public/widget.js` by hand
 - Forget `pnpm build:widget` after `src/widget/*` changes
@@ -70,3 +79,7 @@ Conventional Commits — `<type>(<scope>): <summary>` (max 72 chars, imperative)
 - [[Master_Project_Prompt]]
 - [[Codex_Rules]]
 - [[Documentation_Update_Prompt]]
+- [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]
+
+## Change Log
+- **2026-05-05** — Added "Wiki update logging" section requiring `updated: YYYY-MM-DD` frontmatter bump on meaningful wiki edits and `## Change Log` entries for memory-worthy changes. Mirrors the canonical rule in `/AGENTS.md`. Related: [[Existing_AI_Rules_And_Ikas_CLI_Instructions]], [[Documentation_Update_Prompt]].

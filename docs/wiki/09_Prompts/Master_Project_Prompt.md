@@ -43,6 +43,7 @@ Hard rules (canonical rules from `/CLAUDE.md` + wiki additions):
 - Never log secrets. Don't write env values to the wiki.
 - Use **Conventional Commits**: `<type>(<scope>): <summary>` (max 72 chars, imperative).
 - After meaningful code changes, **update the wiki** — that's the deal.
+- When you edit a wiki page because of a meaningful change, **bump the frontmatter `updated: YYYY-MM-DD`** and (if the change is worth remembering) add a short `## Change Log` entry at the bottom. Skip the log for trivial edits. See [[Claude_Code_Rules]] and the canonical block in [[Existing_AI_Rules_And_Ikas_CLI_Instructions]].
 
 Project-specific gotchas (top 3):
 - The OAuth callback uses `deleteStorefrontJSScript()` (no args) on fresh install — this is a blanket delete that may affect other apps' scripts.
@@ -58,3 +59,7 @@ Source-code conventions:
 - [[Claude_Code_Rules]]
 - [[Codex_Rules]]
 - [[Documentation_Update_Prompt]]
+- [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]
+
+## Change Log
+- **2026-05-05** — Added a one-line reminder about the new "Wiki update logging" rule (frontmatter `updated:` bump + `## Change Log` entries for memory-worthy edits). Full rule lives in `/AGENTS.md` and [[Claude_Code_Rules]].
