@@ -37,10 +37,9 @@ src/widget/
 │
 ├─ product-widget/
 │  ├─ bootstrap.js                # Mount widget into product detail anchor
-│  ├─ render.js                   # Top-level render orchestrator (summary + list + form CTA)
+│  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA)
 │  ├─ rating-badge.js             # Star+count badge above product title
 │  ├─ title-finder.js             # Heuristic to locate product title in any theme
-│  ├─ review-form.js              # Inline review form (legacy / fallback)
 │  ├─ review-modal.js             # Open the multi-step review modal
 │  └─ review-form-modal/
 │     ├─ index.js                 # Modal entry
@@ -106,6 +105,7 @@ src/widget/
 
 ## Notes
 - `core/state.js` holds module-level mutable state (`currentSettings`, `currentProductId`, `currentReviewsData`, ...). Acceptable because the widget is a single-page-singleton. When refactoring, treat these as the runtime state — re-renders must consume them.
+- Review submission is modal-only. The legacy inline/page form was removed from `src/widget/product-widget/`; all write CTAs open `review-form-modal/`.
 - Always test changes both in `/preview` AND on a real ikas storefront — preview mode skips the mutation observer and theme integrations.
 - The widget is **plain JS**. No TS, no React. Don't introduce a framework without rationale (bundle size + cold-start hit).
 
@@ -122,3 +122,6 @@ src/widget/
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
+
+## Change Log
+- 2026-05-05: Removed the legacy inline/page review form from the widget source map. Review submission is now modal-only via [review-form-modal/](src/widget/product-widget/review-form-modal/). Related source: [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).

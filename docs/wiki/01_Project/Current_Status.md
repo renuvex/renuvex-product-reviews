@@ -22,8 +22,8 @@ Active development. Core feature set is functional end-to-end: OAuth install, wi
 - OAuth install flow for ikas merchants — code-signature validation, token exchange, JWT issuance, session cookie
 - Auto-injection of widget script into every merchant storefront on install
 - Manual re-injection via `/api/admin/inject-scripts` (button in admin)
-- Storefront widget bundle (`/public/widget.js`, ~165 KB) with:
-  - Product review widget (form + listing) with multiple review-layouts (card, gallery, list) and summary-layouts (classic, compact, hero, minimal, split)
+- Storefront widget bundle (`/public/widget.js`, ~150 KB) with:
+  - Product review widget (modal submission + listing) with multiple review-layouts (card, gallery, list) and summary-layouts (classic, compact, hero, minimal, split)
   - Product rating badge (small inline star+count)
   - Listing-page rating badges (auto-discovers product cards on collection pages)
   - Mutation observer for SPA-style theme navigation

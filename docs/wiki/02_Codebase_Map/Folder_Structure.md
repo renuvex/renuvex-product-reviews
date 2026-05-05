@@ -126,7 +126,6 @@ yorum-paneli/
 │     │  ├─ bootstrap.js
 │     │  ├─ rating-badge.js
 │     │  ├─ render.js
-│     │  ├─ review-form.js
 │     │  ├─ review-form-modal/   # Multi-step submission wizard
 │     │  ├─ review-modal.js
 │     │  └─ title-finder.js      # Heuristic: locate product title in arbitrary themes
@@ -152,3 +151,6 @@ yorum-paneli/
 - [[Frontend_Map]]
 - [[Backend_API_Map]]
 - [[Widget_Files_Map]]
+
+## Change Log
+- 2026-05-05: Removed the legacy `src/widget/product-widget/review-form.js` entry from the structure map because review submission is now modal-only.

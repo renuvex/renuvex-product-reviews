@@ -93,6 +93,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - **Renaming a field**: harder — write a one-time migration to copy `oldKey` → `newKey` in JSON, or add a back-compat shim in `sanitizeSettings`.
 - **Changing a field's `default`**: only affects rows that don't have the key. Existing rows keep their saved value.
 - **Changing a field's `type`**: dangerous — old saved values may not match the new type; consider migration.
+- **Removed field**: `reviewFormStyle` was removed when the legacy inline/page review form was deleted. Admin no longer exposes a form-style switch; saved JSON rows are cleaned by migration and unknown keys are stripped by `sanitizeSettings`.
 
 ## Notes
 - The schema is the contract between admin, server, and widget. Keep it in one place.
@@ -116,6 +117,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 
 ## Change Log
 - 2026-05-05: Adjusted desktop admin preview sizing so the iframe fills the available preview viewport without a device-frame shadow instead of using a fixed 1100x600 frame. Related source: [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx).
+- 2026-05-05: Removed the `reviewFormStyle` setting and made storefront review submission modal-only. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
 - 2026-05-05: Changed the admin color picker to emit opaque `#rrggbb` values only while preserving backend/runtime support for alpha defaults and legacy `#rrggbbaa` settings. Related source: [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx).
 - 2026-05-05: Removed storefront widget container background/border color controls from the settings schema and documented the local-only admin preview background. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx), [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [render.js](src/widget/product-widget/render.js).
 - 2026-05-05: Documented the admin settings navigation model where top-level groups open in detail panels instead of expanding inline. Related source: [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).

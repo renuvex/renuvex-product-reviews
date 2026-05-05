@@ -24,7 +24,7 @@ Source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).
 Recurring categories:
 - General — show/hide widget title, photo gallery title, etc.
 - Layout — `summaryLayout` (`classic` / `compact` / `hero` / `minimal` / `split`) and `reviewLayout` (`card` / `gallery` / `list`)
-- Form — auto-approve mode, fields shown
+- Form — modal wizard fields/colors and auto-approve mode
 - Colors (basic + advanced tier)
 - Icons — review icon (star / heart), filter icon (Sliders / Funnel)
 - Ranges — sizes, gaps
@@ -41,6 +41,7 @@ Recurring categories:
 - Steps managed in [product-widget/review-form-modal/wizard-state.js](src/widget/product-widget/review-form-modal/wizard-state.js).
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary.
 - On submit → `POST /api/public/reviews` → status set by auto-approve mode.
+- The legacy inline/page form was removed; all review CTAs open the multi-step modal.
 
 ## Pagination, filtering, sorting
 - Pagination: 10 per page (server-side).
@@ -61,3 +62,6 @@ Recurring categories:
 - [[Widget_Customization]]
 - [[Product_Rating_Badge]]
 - [[Listing_Rating_Widget]]
+
+## Change Log
+- 2026-05-05: Documented modal-only review submission after removing the legacy inline/page form and `reviewFormStyle` setting.

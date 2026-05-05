@@ -39,7 +39,7 @@ A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront pa
 | [observer.js](src/widget/observer.js) | MutationObserver to re-bootstrap on SPA theme nav. |
 | [events.js](src/widget/events.js) | Document-level click handlers (review CTA, modal triggers). |
 | [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Decide whether current page is a product page; mount widget. |
-| [product-widget/render.js](src/widget/product-widget/render.js) | Compose summary + reviews + form CTA based on settings. |
+| [product-widget/render.js](src/widget/product-widget/render.js) | Compose summary + reviews + modal CTA based on settings. |
 | [product-widget/title-finder.js](src/widget/product-widget/title-finder.js) | Heuristic to find product title element across themes. |
 | [product-widget/review-form-modal/](src/widget/product-widget/review-form-modal/) | Multi-step submission wizard (steps + progress + state machine). |
 | [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, slug discovery, bulk fetch, injection. |
@@ -101,6 +101,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - Don't introduce a framework (React, Preact, Lit) without an explicit ADR. The vanilla approach is a deliberate trade-off — see [[ADR_0002_Widget_Injection_Strategy]].
 - DOM identification (product id, slug, title) uses heuristics — themes vary. When fixing a "widget doesn't show on theme X" issue, the heuristics in `bootstrap.js` and `title-finder.js` are the usual culprits.
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
+- Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
 
 ## Related Source Files
 - [src/widget/](src/widget/)
@@ -115,3 +116,6 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[Ikas_Widget_Injection_Notes]]
+
+## Change Log
+- 2026-05-05: Updated the widget architecture note after removing the legacy inline/page review form. Review submission is now modal-only.
