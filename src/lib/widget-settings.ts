@@ -51,8 +51,8 @@ export function validateSettings(widgetId: string, settings: Record<string, unkn
       if (field.type === 'text' && typeof value !== 'string') {
         return `${field.key} string olmalı`;
       }
-      // Hex renk: 6-char (#rrggbb, tam opak) veya 8-char (#rrggbbaa, alpha dahil).
-      // react-colorful alpha picker 8-char üretir; CSS her iki formatı da anlar.
+      // Hex color: admin edits emit opaque #rrggbb. Keep #rrggbbaa valid for
+      // schema defaults and legacy saved settings that intentionally use alpha.
       if (field.type === 'color' && (typeof value !== 'string' || !/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(value))) {
         return `${field.key} geçerli bir hex renk olmalı (#rrggbb veya #rrggbbaa)`;
       }

@@ -18,7 +18,7 @@ const VIEWPORT_PRESETS = [
 ] as const;
 
 const DEFAULT_PREVIEW_BG = '#FFFFFF';
-const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
+const OPAQUE_HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
 
 function PreviewBackgroundInfo() {
   const [open, setOpen] = useState(false);
@@ -65,7 +65,7 @@ function PreviewBackgroundInfo() {
             borderRadius: radii.default,
             border: '1px solid #111111',
             backgroundColor: '#111111',
-            color: colors.textWhite,
+            color: 'rgba(255, 255, 255, 0.92)',
             fontSize: typography.fontSize.xs,
             lineHeight: typography.lineHeight.normal,
             fontWeight: typography.fontWeight.regular,
@@ -187,7 +187,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
 
   const PreviewComponent = PREVIEW_MAP[widget.id] ?? null;
   const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? 1100;
-  const previewBackground = HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
+  const previewBackground = OPAQUE_HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
 
   const iframeSrc = '/preview';
 
@@ -344,11 +344,14 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
               padding: '10px 16px',
               borderBottom: `1px solid ${colors.borderDefault}`,
               backgroundColor: colors.bgWhite,
+              boxShadow: '0 3px 8px rgba(18, 25, 38, 0.10)',
               display: 'grid',
               gridTemplateColumns: useIframe ? '1fr auto 1fr' : '1fr',
               alignItems: 'center',
               gap: 12,
               minHeight: 48,
+              position: 'relative',
+              zIndex: 2,
             }}>
               {useIframe && (
                 <>
@@ -359,12 +362,13 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
                     onCommit={(value) => setPreviewBgColor(value)}
                     labelAddon={<PreviewBackgroundInfo />}
                     showValue
-                    rowStyle={{ minWidth: 300 }}
+                    rowStyle={{ minWidth: 286, gap: 6 }}
                     labelStyle={{
                       fontSize: 14,
                       fontWeight: typography.fontWeight.medium,
                       color: colors.textPrimary,
                     }}
+                    valueBoxStyle={{ borderColor: colors.textMuted }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                     {VIEWPORT_PRESETS.map(({ key, label, icon: Icon }) => (
@@ -380,7 +384,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
                           color: viewport === key ? colors.primary : colors.textMuted,
                         }}
                       >
-                        <Icon size={15} />
+                        <Icon size={18} />
                       </button>
                     ))}
                   </div>
@@ -395,7 +399,6 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
                   width: viewportWidth,
                   maxWidth: '100%',
                   transition: 'width 0.25s ease',
-                  border: `1px solid ${colors.borderDefault}`,
                   borderRadius: radii.lg,
                   overflow: 'hidden',
                   backgroundColor: previewBackground,

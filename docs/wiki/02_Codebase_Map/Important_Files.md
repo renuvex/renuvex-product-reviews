@@ -30,8 +30,8 @@ related:
 
 ### [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
 - **What:** Shared admin color picker used by schema-driven widget color fields and local-only preview controls.
-- **Why it matters:** Keeps color picker UX consistent across the settings panel and preview toolbar. Supports alpha hex values, checker preview, popover editing, and debounced commits.
-- **Be careful:** Preview-only controls can use this component without writing to `WidgetSettings`; keep DB persistence decisions in the caller.
+- **Why it matters:** Keeps color picker UX consistent across the settings panel and preview toolbar. Admin edits emit opaque `#rrggbb` values, while backend/runtime still tolerate alpha defaults and legacy saved `#rrggbbaa` values.
+- **Be careful:** Preview-only controls can use this component without writing to `WidgetSettings`; keep DB persistence decisions in the caller. Do not re-enable user-facing alpha unless the UX for transparent defaults is redesigned.
 
 ### [prisma/schema.prisma](prisma/schema.prisma)
 - **What:** 4 models — `AuthToken`, `Review`, `StoreSettings`, `WidgetSettings`.

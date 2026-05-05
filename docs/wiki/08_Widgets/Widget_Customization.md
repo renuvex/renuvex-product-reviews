@@ -26,13 +26,13 @@ Per-merchant widget settings, schema-driven from a single source of truth in [wi
 - **Design tokens**: [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 
 ## Field types
-- `toggle` — boolean
-- `text` — string with optional placeholder
-- `color` — hex string `#rrggbb` or `#rrggbbaa` (alpha) — react-colorful in admin
-- `select` — radio-card UI; static or dynamic options (function of current settings)
-- `dropdown` — native `<select>` (compact)
-- `range` — numeric range slider
-- `iconSelect` — SVG grid popover
+- `toggle` - boolean
+- `text` - string with optional placeholder
+- `color` - admin picker emits opaque hex `#rrggbb`. The backend/runtime still accept `#rrggbbaa` for schema defaults, legacy saved settings, and runtime-only translucent design tokens.
+- `select` - radio-card UI; static or dynamic options (function of current settings)
+- `dropdown` - native `<select>` (compact)
+- `range` - numeric range slider
+- `iconSelect` - SVG grid popover
 
 ## Conditional visibility (`showWhen`)
 Three forms:
@@ -83,6 +83,7 @@ admin UI changes a field
 - Inside iframe, [src/widget/index.js](src/widget/index.js) (preview branch) merges and re-renders.
 - Iframe acks via `IKR_WIDGET_READY` once mounted.
 - Preview background color is local editor state in [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx). It changes only the admin preview surface and is not saved to `WidgetSettings`.
+- Preview background uses the same opaque admin color picker as widget colors. Transparent/alpha values are intentionally not user-selectable in the admin UI.
 
 This pattern means the preview is **pixel-identical** to production — same `widget.js` runs in both contexts.
 
@@ -98,6 +99,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - When you add a setting, decide which layouts support it (`showWhen.layoutKey`).
 - Color settings churn has been frequent (visible in migrations). Prefer soft-removing keys via `sanitizeSettings` over a DB migration.
 - The storefront widget container background is intentionally transparent. Store themes own the page background; admin preview background is only a testing surface.
+- Alpha hex values are still valid internally for defaults such as translucent modal controls and borders, but merchants choose opaque colors in the admin picker. If a merchant changes one of those fields manually, the saved value becomes `#rrggbb`; resetting restores the schema default, including alpha where defined.
 
 ## Related Source Files
 - [src/components/home-page/widgets/](src/components/home-page/widgets/)
@@ -112,5 +114,6 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-05-05: Changed the admin color picker to emit opaque `#rrggbb` values only while preserving backend/runtime support for alpha defaults and legacy `#rrggbbaa` settings. Related source: [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx).
 - 2026-05-05: Removed storefront widget container background/border color controls from the settings schema and documented the local-only admin preview background. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx), [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [render.js](src/widget/product-widget/render.js).
 - 2026-05-05: Documented the admin settings navigation model where top-level groups open in detail panels instead of expanding inline. Related source: [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).

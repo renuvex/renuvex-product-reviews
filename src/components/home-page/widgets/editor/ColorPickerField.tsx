@@ -2,7 +2,7 @@
 
 import { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { HexAlphaColorPicker, HexColorInput } from 'react-colorful';
+import { HexColorInput, HexColorPicker } from 'react-colorful';
 import { colors, componentStyles, radii, sp, typography } from '@/lib/design-tokens';
 
 const CHECKER_BG =
@@ -16,6 +16,7 @@ interface ColorPickerFieldProps {
   showValue?: boolean;
   rowStyle?: CSSProperties;
   labelStyle?: CSSProperties;
+  valueBoxStyle?: CSSProperties;
 }
 
 export function ColorPickerField({
@@ -26,6 +27,7 @@ export function ColorPickerField({
   showValue = false,
   rowStyle,
   labelStyle,
+  valueBoxStyle,
 }: ColorPickerFieldProps) {
   const [local, setLocal] = useState(value);
   const [open, setOpen] = useState(false);
@@ -85,6 +87,7 @@ export function ColorPickerField({
         borderRadius: radii.default,
         backgroundColor: showValue ? colors.bgPage : 'transparent',
         overflow: showValue ? 'hidden' : 'visible',
+        ...valueBoxStyle,
       }}>
         <button
           ref={triggerRef}
@@ -92,13 +95,13 @@ export function ColorPickerField({
           onClick={() => setOpen((o) => !o)}
           aria-label={`${label} seç`}
           style={{
-            width: 24,
-            height: 24,
+            width: showValue ? 32 : 24,
+            height: showValue ? 30 : 24,
             border: showValue ? 'none' : `1px solid ${colors.borderDefault}`,
-            borderRight: showValue ? `1px solid ${colors.borderDefault}` : undefined,
+            borderRight: showValue ? `1px solid ${colors.textMuted}` : undefined,
             borderRadius: showValue ? 0 : radii.default,
-            background: CHECKER_BG,
-            padding: 0,
+            background: showValue ? colors.bgPage : CHECKER_BG,
+            padding: showValue ? 6 : 0,
             cursor: 'pointer',
             position: 'relative',
           }}
@@ -107,8 +110,8 @@ export function ColorPickerField({
             aria-hidden
             style={{
               position: 'absolute',
-              inset: 0,
-              borderRadius: showValue ? 0 : radii.default,
+              inset: showValue ? 6 : 0,
+              borderRadius: radii.sm,
               backgroundColor: local,
             }}
           />
@@ -155,7 +158,7 @@ export function ColorPickerField({
               width: 220,
             }}
           >
-            <HexAlphaColorPicker
+            <HexColorPicker
               color={local}
               onChange={handleChange}
               style={{ width: '100%', height: 160 }}
@@ -164,7 +167,6 @@ export function ColorPickerField({
               color={local}
               onChange={handleChange}
               prefixed
-              alpha
               aria-label={`${label} hex kodu`}
               style={{
                 ...componentStyles.input,
