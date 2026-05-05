@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-06
 tags:
   - frontend
   - react
@@ -73,7 +73,6 @@ src/components/
 │     ├─ index.tsx                # Widgets tab grid
 │     ├─ WidgetCard.tsx           # Per-widget card → opens editor
 │     ├─ widgetDefs.ts            # 🟡 SCHEMA SOURCE OF TRUTH
-│     ├─ colorMappings.ts         # Brand color presets (e.g. orange/purple/teal)
 │     ├─ editor/
 │     │  ├─ WidgetEditor.tsx      # Settings panel + iframe preview side-by-side
 │     │  ├─ SettingsPanel.tsx     # Renders fields from widgetDefs

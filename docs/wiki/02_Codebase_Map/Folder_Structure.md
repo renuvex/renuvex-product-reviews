@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-06
 tags:
   - structure
 related:
@@ -74,7 +74,6 @@ yorum-paneli/
 │  │  │  └─ widgets/
 │  │  │     ├─ WidgetCard.tsx
 │  │  │     ├─ widgetDefs.ts     # 🟡 Settings schema source-of-truth
-│  │  │     ├─ colorMappings.ts  # Brand color presets
 │  │  │     ├─ editor/           # SettingsPanel + WidgetEditor + IconSelect
 │  │  │     ├─ previews/         # Static admin-side previews
 │  │  │     └─ widget-previews/  # Iframe-driven live previews

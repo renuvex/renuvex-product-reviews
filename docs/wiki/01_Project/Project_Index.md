@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-06
 tags:
   - quick-reference
 related:
@@ -71,7 +71,6 @@ related:
 ## Settings schema (single source of truth)
 - WidgetDefs (settings UI + validation contract) → [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
 - Server-side helpers (defaults, sanitize, validate) → [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
-- Color presets → [src/components/home-page/widgets/colorMappings.ts](src/components/home-page/widgets/colorMappings.ts)
 - Design tokens → [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 
 ## Admin UI (React)

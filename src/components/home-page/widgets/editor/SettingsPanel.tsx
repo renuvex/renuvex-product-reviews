@@ -12,7 +12,6 @@ import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { colors, componentStyles, typography, sp } from '@/lib/design-tokens';
 import { SettingsGroup, SettingField } from '../widgetDefs';
-import { applyBasicColorChange } from '../colorMappings';
 import { WidgetSettingsDraft } from './WidgetEditor';
 import { IconSelect } from './IconSelect';
 import { ColorPickerField } from './ColorPickerField';
@@ -63,8 +62,6 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
   //   - title === 'Ayarlar' → ana panelin EN SONUNA, "Renkler" geçişinden sonra
   //   - diğerleri → ana panelin başında
   const colorGroups = groups.filter((g) => g.isColor);
-  const basicColorGroups = colorGroups.filter((g) => g.colorTier === 'basic');
-  const advancedColorGroups = colorGroups.filter((g) => g.colorTier !== 'basic');
   const settingsGroup = groups.find((g) => !g.isColor && g.title === 'Ayarlar');
   const mainGroups = groups.filter((g) => !g.isColor && g.title !== 'Ayarlar');
   const hasColorGroups = colorGroups.length > 0;
@@ -147,29 +144,6 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
             </AccordionContent>
           </AccordionItem>
         ))}
-      </Accordion>
-    );
-  };
-
-  const renderAdvancedColorAccordion = (list: SettingsGroup[]) => {
-    const visibleGroups = getVisibleGroups(list);
-
-    if (visibleGroups.length === 0) return null;
-
-    return (
-      <Accordion type="multiple" defaultValue={[]} className="w-full">
-        <AccordionItem value="advanced-colors" style={{ borderBottom: `1px solid ${colors.borderDefault}`, marginBottom: sp[2] }}>
-          <AccordionTrigger style={{
-            fontSize: typography.fontSize.base,
-            fontWeight: typography.fontWeight.medium,
-            color: colors.textPrimary,
-          }}>
-            Gelişmiş Renkler
-          </AccordionTrigger>
-          <AccordionContent className="p-0">
-            {renderAccordion(visibleGroups)}
-          </AccordionContent>
-        </AccordionItem>
       </Accordion>
     );
   };
@@ -290,8 +264,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
       ) : (
         <>
           {renderBackHeader('Renkler')}
-          {renderAccordion(basicColorGroups)}
-          {renderAdvancedColorAccordion(advancedColorGroups)}
+          {renderAccordion(colorGroups)}
         </>
       )}
 
@@ -379,7 +352,7 @@ function FieldRenderer({ field, settings, onChange }: {
         <ColorPickerField
           label={field.label}
           value={String(value ?? field.default ?? '#6f55ff')}
-          onCommit={(v) => onChange(applyBasicColorChange(settings, field.key, v))}
+          onCommit={(v) => onChange({ ...settings, [field.key]: v })}
         />
       );
 

@@ -21,7 +21,6 @@ Per-merchant widget settings, schema-driven from a single source of truth in [wi
 ## Source of truth
 - **Schema**: [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
 - **Server helpers** (defaults, sanitize, validate): [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
-- **Color presets**: [src/components/home-page/widgets/colorMappings.ts](src/components/home-page/widgets/colorMappings.ts)
 - **Admin color picker**: [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
 - **Design tokens**: [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 
@@ -42,18 +41,11 @@ Three forms:
 
 The third reads `meta.supports.<key>` from the active layout's registry entry. Adding a new layout means adding `supports` keys for everything — otherwise admin shows fields the layout silently ignores.
 
-## Tier system (basic vs advanced)
-`SettingsGroup.colorTier?: 'basic' | 'advanced'` flags color groups for packaging:
-- `basic` → Start tier
-- `advanced` → Pro tier
-
-The current code shows both tiers; gating logic is reserved for future packaging implementation.
-
 ## Admin settings navigation
 The admin customization panel uses a two-level navigation model in [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx):
 - The main panel lists top-level setting groups as navigation rows.
 - Selecting a group opens a dedicated detail panel with a sticky back header.
-- `Renkler` remains a dedicated color panel; inside it, color groups can still use nested accordions for basic and advanced color sections.
+- `Renkler` is a dedicated color panel; tapping it shows every color group (Buton, Filtre, Yorum, Mağaza Yanıtı, Form, …) directly as accordions, with no further nesting. Each group exposes its own per-field colors — there is no shared `Marka Kimliği` cascade or basic/advanced split.
 
 This keeps the main customization screen shallow and avoids opening large groups inline.
 
@@ -122,3 +114,4 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - 2026-05-05: Removed storefront widget container background/border color controls from the settings schema and documented the local-only admin preview background. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx), [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [render.js](src/widget/product-widget/render.js).
 - 2026-05-05: Documented the admin settings navigation model where top-level groups open in detail panels instead of expanding inline. Related source: [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).
 - 2026-05-06: Dropped six alpha-default color settings (`photoImageBorderColor`, `photoArrowBorderColor`, `modalCloseBgColor`, `modalCloseBorderColor`, `modalNavBgColor`, `modalNavBorderColor`) from the schema and hardcoded them as structural translucency tokens in render.js. Switched `loadMoreBgColor` default from `#ffffff00` to opaque `#ffffff` so the merchant-facing picker stays consistent with its opaque-only emit. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js).
+- 2026-05-06: Removed the `Marka Kimliği` color group, the `colorTier` field on `SettingsGroup`, and the `colorMappings.ts` cascade helper. The five basic keys (`basicBrandColor`, `basicTextColor`, `basicStarColor`, `basicStarEmptyColor`, `basicBarTrackColor`) were dropped from the schema; they used to silently broadcast onto 12-16 advanced fields and overwrite manual edits. The `Gelişmiş Renkler` accordion wrapper is gone too — the `Renkler` panel now lists every color group directly. Existing DB rows keep no functional residue: `sanitizeSettings` already strips unknown keys at every read; physical JSON payloads will be cleaned up the next time admin saves a setting. No data migration written. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).
