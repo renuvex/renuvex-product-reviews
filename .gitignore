@@ -88,3 +88,6 @@ opencode.json
 # END Ruler Generated Files
 *.proje-dokuman.md
 .claude/
+
+# Local Obsidian vault folder (not the wiki — the wiki lives in docs/wiki/)
+İkas App/
