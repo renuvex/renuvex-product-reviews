@@ -4,7 +4,7 @@
 
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
-import { toggleWriteAccordion } from '../shared/write-toggle.js';
+import { openWriteForm } from '../shared/write-action.js';
 
 export var meta = {
   id: 'classic',
@@ -67,7 +67,7 @@ export function render(opts) {
     widget: widget,
     currentOrderBy: currentOrderBy,
     currentHasImages: currentHasImages,
-    onWriteClick: toggleWriteAccordion,
+    onWriteClick: openWriteForm,
     onSortChange: onSortChange,
   }));
 

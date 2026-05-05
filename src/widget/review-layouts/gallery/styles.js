@@ -1,6 +1,6 @@
 // review-layouts/gallery/styles.js — Loox tarzı 2-kolon galeri tasarımı.
 // CSS columns ile JS'siz masonry. Parent (#ikas-reviews-widget) :has() ile
-// hedeflenir; non-review elemanlar (summary, başlık, accordion, photo-section,
+// hedeflenir; non-review elemanlar (summary, başlık, photo-section,
 // load-more, state-msg) column-span:all ile kolon dışına alınır — sözleşme
 // dokunulmaz, render.js değişmez.
 //
@@ -26,10 +26,9 @@ export var GALLERY_CSS = `
     column-count:2;
     column-gap:32px;
   }
-  /* Non-review elemanlar kolon dışına çıkar — summary, başlık, form, foto strip vs. */
+  /* Non-review elemanlar kolon dışına çıkar — summary, başlık, foto strip vs. */
   #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-title,
   #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-summary,
-  #ikas-reviews-widget:has(.ikr-review-gallery) > #ikr-form-accordion,
   #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-photo-section,
   #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-write-btn,
   #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-load-more,

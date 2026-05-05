@@ -3,13 +3,12 @@
 import { injectStyles, optimizeImageUrl } from '../core/helpers.js';
 import { fetchReviews } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
-import { buildReviewForm } from './review-form.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
 import { getIconFromSettings } from '../icons.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
-import { toggleWriteAccordion } from '../summary-layouts/shared/write-toggle.js';
+import { openWriteForm } from '../summary-layouts/shared/write-action.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -81,7 +80,6 @@ function applyManualTheme(root, settings) {
   var bg = settings.bgColor || '#ffffff';
   var text = settings.textColor || '#111111';
   var replyBg = settings.replyBgColor || '#f9fafb';
-  var inputBg = settings.inputBgColor || '#ffffff';
 
   // Grup 1 — Genel
   // Grup 2 — Başlık & Özet
@@ -138,12 +136,12 @@ function applyManualTheme(root, settings) {
   var photoArrowBorder  = settings.photoArrowBorderColor || hexToRgba(text, 0.12);
 
   // Group 10 - Review form
-  // Shared form tokens drive both inline accordion form and wizard modal form.
+  // Form tokens drive the modal review wizard.
   // The overlay color is intentionally not mapped here; it stays fixed.
   var formBg      = settings.formBgColor      || bg;
   var formText    = settings.formTextColor    || text;
   var formMuted   = hexToRgba(formText, 0.72);
-  var inputBgVar  = settings.inputBgColor     || inputBg;
+  var inputBgVar  = settings.inputBgColor     || '#ffffff';
   var inputTextVar = settings.inputTextColor  || formText;
   var inputBorderVar = settings.inputBorderColor || hexToRgba(formText, 0.20);
   var placeholderColor = settings.placeholderColor || hexToRgba(formText, 0.42);
@@ -223,14 +221,7 @@ function applyManualTheme(root, settings) {
     '--ikr-photo-arrow-text':   photoArrowText,
     '--ikr-photo-arrow-border': photoArrowBorder,
 
-    // Grup 10 — Form
-    '--ikr-form-bg':          formBg,
-    '--ikr-form-text':        formText,
-    '--ikr-form-muted':       formMuted,
-    '--ikr-input-bg-color':   inputBgVar,
-    '--ikr-input-text-color': inputTextVar,
-    '--ikr-input-border':     inputBorderVar,
-    '--ikr-placeholder':      placeholderColor,
+    // Grup 10 — Form wizard
     '--ikr-fwizard-bg':       formBg,
     '--ikr-fwizard-text':     formText,
     '--ikr-fwizard-muted':    formMuted,
@@ -265,8 +256,6 @@ function applyManualTheme(root, settings) {
     '--ikr-border':     hexToRgba(text, 0.12),
     '--ikr-track-bg':   hexToRgba(text, 0.22),
     '--ikr-reply-bg':   replyBg,
-    '--ikr-input-bg':   inputBg,
-    '--ikr-input-text': text,
   };
 
   Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
@@ -343,7 +332,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-thumbnail-size', thumbPx + 'px');
 
     // Review widget yıldız ayarları — badge'den bağımsız
-    // 6-char veya 8-char hex (alpha dahil) kabul — react-colorful alpha slider uretebilir.
+    // Runtime 6-char veya 8-char hex kabul eder; admin picker sadece opak hex yazar.
     var reviewStarColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
     root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
@@ -474,19 +463,8 @@ export async function render(productId, settings, reviewsData, productName, orde
         emptyWriteBtn.className = 'ikr-write-btn';
         emptyWriteBtn.style.cssText = 'display:block;margin:16px auto 0;';
         emptyWriteBtn.textContent = 'Yorum Yap';
-        emptyWriteBtn.onclick = toggleWriteAccordion;
+        emptyWriteBtn.onclick = openWriteForm;
         widget.appendChild(emptyWriteBtn);
-      }
-
-
-      // Accordion form — summary altı, yorum listesi üstü.
-      // Sadece admin tercihi 'accordion' ise DOM'a ekle (Kusursuzluk/Performans).
-      if (settings.reviewFormStyle !== 'modal') {
-        var accordion = document.createElement('div');
-        accordion.id = 'ikr-form-accordion';
-        accordion.style.cssText = 'overflow:hidden;max-height:0px;opacity:0;transition:max-height 0.35s ease,opacity 0.25s ease;';
-        accordion.appendChild(buildReviewForm(productId, productName));
-        widget.appendChild(accordion);
       }
 
       // Fotoğraflı Yorumlar bölümü — sadece filtre aktif değilken göster

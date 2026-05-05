@@ -11,9 +11,7 @@
 //   --ikr-track-bg    : bar chart track arka planı (border'dan ayrı — koyu
 //                       temada track'in görünmesi için daha yüksek kontrast)
 //   --ikr-reply-bg    : mağaza yanıtı kutusu arka planı
-//   --ikr-surface     : form/kart üst yüzeyi (bg'den biraz farklı)
-//   --ikr-input-bg    : input arka planı
-//   --ikr-input-text  : input yazı rengi
+//   --ikr-surface     : menü/kart üst yüzeyi (bg'den biraz farklı)
 //
 // ─── Yorum item dikey gap sözleşmesi (review typography spacing) ──────────
 // Tek bir yorum item'ı içindeki dikey aralıklar (margin-top'lar) AŞAĞIDAKİ
@@ -235,21 +233,6 @@ export var CLASSIC_CSS = `
   .ikr-reply-text-clamped{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .ikr-reply-read-more{margin-top:var(--ikr-gap-tight);}
 
-  /* Accordion form wrapper */
-  #ikr-form-accordion{overflow:hidden;transition:max-height 0.35s ease,opacity 0.25s ease;}
-
-  /* Form */
-  .ikr-form{background:var(--ikr-form-bg,var(--ikr-surface,#fff));border:none;padding:25px;border-radius:var(--ikr-radius,6px);margin:16px auto;color:var(--ikr-form-text,var(--ikr-text,rgba(0,0,0,1)));}
-  .ikr-form label{font-size:14px;color:var(--ikr-form-text,var(--ikr-text,rgba(0,0,0,1)));}
-  .ikr-input,.ikr-textarea{width:100%;padding:10px;margin-top:8px;background:var(--ikr-input-bg-color,var(--ikr-input-bg,#fff));border:1px solid var(--ikr-input-border,var(--ikr-border,rgba(0,0,0,0.20)));border-radius:var(--ikr-radius,6px);font-size:14px;box-sizing:border-box;color:var(--ikr-input-text-color,var(--ikr-input-text,rgba(0,0,0,0.90)));}
-  /* Karakter sayacı — textarea altı, sağa hizalı, soluk renk. Limit doluyken
-     kırmızı (max modifier). aria-live="polite" ekran okuyucu desteği için. */
-  .ikr-char-counter{font-size:12px;color:var(--ikr-form-muted,rgba(0,0,0,0.55));text-align:right;margin-top:4px;}
-  .ikr-char-counter--max{color:#dc2626;}
-  .ikr-input::placeholder,.ikr-textarea::placeholder{font-size:14px;color:var(--ikr-placeholder,var(--ikr-text-faint,rgba(0,0,0,0.35)));}
-  .ikr-btn{background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:12px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:700;font-size:14px;margin-top:15px;width:100%}
-  .ikr-btn:disabled{opacity:.6;cursor:not-allowed}
-
   /* Daha Fazla Göster butonu — tema uyumlu, outline stil */
   .ikr-load-more{display:block;margin:20px auto 0;padding:10px 28px;border:1px solid var(--ikr-load-more-border,var(--ikr-border,rgba(0,0,0,0.30)));border-radius:var(--ikr-radius,6px);background:var(--ikr-load-more-bg,var(--ikr-surface,#fff));color:var(--ikr-load-more-text,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-load-more-size,14px);cursor:pointer;}
   .ikr-load-more:disabled{opacity:.6;cursor:not-allowed;}
@@ -257,16 +240,6 @@ export var CLASSIC_CSS = `
   /* Yükleniyor / boş durum mesajları — tema uyumlu */
   .ikr-state-msg{text-align:center;color:var(--ikr-text-faint,rgba(0,0,0,0.45));font-size:14px;padding:30px 0;}
   .ikr-state-loading{padding:40px;}
-  .ikr-photo-btn{background:var(--ikr-input-bg-color,var(--ikr-input-bg,#fff));color:var(--ikr-form-muted,rgba(0,0,0,0.50));width:100%;height:56px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:1px dashed var(--ikr-input-border,var(--ikr-border,rgba(0,0,0,0.20)));font-size:14px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
-  .ikr-preview-item{position:relative;display:inline-block;margin-right:8px;margin-top:8px;}
-  .ikr-preview-remove{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,0.15);color:rgba(0,0,0,0.6);font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.12);}
-  @media(hover:hover){.ikr-preview-remove:hover{background:#fee2e2;border-color:#dc2626;color:#dc2626;}}
-  .ikr-preview-img{width:90px;height:90px;object-fit:cover;border-radius:var(--ikr-radius,6px)}
-  .ikr-preview-loading{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;border-radius:var(--ikr-radius,6px);}
-  .ikr-spinner{width:20px;height:20px;border:2px solid rgba(0,0,0,0.12);border-top-color:var(--ikr-color,#000);border-radius:50%;animation:ikrSpin 0.7s linear infinite;}
-  @keyframes ikrSpin{to{transform:rotate(360deg);}}
-  .ikr-upload-check{font-size:22px;color:#059669;line-height:1;}
-  .ikr-upload-error{font-size:10px;color:#dc2626;line-height:1.3;text-align:center;padding:4px;word-break:break-word;}
 
   /* Review Modal */
   /* Modal document.body'ye portal'lanır → widget root scope'undan ÇIKAR.
@@ -380,7 +353,6 @@ export var CLASSIC_CSS = `
       padding-right:var(--ikr-pad-review-mobile);
     }
     .ikr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
-    .ikr-btn{width:100%;}
     /* Gallery — fotoğraflı yorumlar strip'i mantığı: flex-wrap:nowrap +
        overflow-x:auto, thumb'lar flex-shrink:0 ile orjinal boyutta kalıyor,
        sığmayanlar yatay scroll'da kaydırılıyor. */

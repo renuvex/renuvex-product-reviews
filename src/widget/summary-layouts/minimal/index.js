@@ -5,7 +5,7 @@
 // kullanıcı sadece sıralama ve fotoğraf filtresini (filter dropdown) kullanabilir.
 
 import { buildActionsBlock } from '../shared/actions-block.js';
-import { toggleWriteAccordion } from '../shared/write-toggle.js';
+import { openWriteForm } from '../shared/write-action.js';
 import { partialStarsHTML } from '../../core/helpers.js';
 import { MINIMAL_CSS } from './styles.js';
 
@@ -62,7 +62,7 @@ export function render(opts) {
     widget: widget,
     currentOrderBy: currentOrderBy,
     currentHasImages: currentHasImages,
-    onWriteClick: toggleWriteAccordion,
+    onWriteClick: openWriteForm,
     onSortChange: onSortChange,
   });
   var filterWrap = actions.querySelector('.ikr-filter-wrap');
@@ -79,7 +79,7 @@ export function render(opts) {
     var writeBtnMobile = document.createElement('button');
     writeBtnMobile.className = 'ikr-write-btn';
     writeBtnMobile.textContent = 'Yorum Yap';
-    writeBtnMobile.onclick = toggleWriteAccordion;
+    writeBtnMobile.onclick = openWriteForm;
     var writeRow = document.createElement('div');
     writeRow.className = 'ikr-minimal-write-row';
     writeRow.appendChild(writeBtnMobile);

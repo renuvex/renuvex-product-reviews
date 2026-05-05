@@ -108,16 +108,6 @@ export const WIDGETS: WidgetDef[] = [
           // Köşe ovalliği renk değil — şekil. Tasarım grubunda ana panelde
           // diğer tasarım kararlarıyla (layout seçimleri) birlikte durur.
           { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
-          {
-            type: 'dropdown',
-            key: 'reviewFormStyle',
-            label: 'Yorum Yazma Stili',
-            default: 'modal',
-            options: [
-              { value: 'modal',     label: 'Varsayılan' },
-              { value: 'accordion', label: 'Sayfa Form' },
-            ],
-          },
           // Boyut ayarları da tasarım kararı — eskiden ayrı "Boyutlar" accordion'undaydı,
           // tek tasarım panelinde toplandı. 'size' tüm widget tipografisi+ikon boyutu;
           // 'thumbnailSize' fotoğraflı yorumlar strip'inin thumbnail boyutu.

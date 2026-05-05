@@ -1,8 +1,7 @@
 // product-widget/review-form-modal/steps/step-photos.js
 // Step 2 — Fotoğraf yükleme (opsiyonel).
 // Başlık + alt başlık + çerçeveli kart + büyük "Fotoğraf Ekle"
-// butonu + thumbnail önizleme. Cloudinary upload akışı review-form.js'deki
-// mantıkla aynı; sadece UI wizard'a uygun.
+// butonu + thumbnail önizleme. Cloudinary upload akışı wizard içinde izole.
 
 import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';

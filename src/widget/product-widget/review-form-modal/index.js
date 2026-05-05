@@ -3,8 +3,7 @@
 // Step sırası: rating → photos → content (title+comment) → author.
 // Step 4 submit işini step-author yapar; başarı sonrası teşekkür ekranı.
 //
-// Bağımsızlık sözleşmesi: review-modal ve review-form ile hiçbir
-// import / class / variable çakışması yok.
+// Bağımsızlık sözleşmesi: review-modal ile import / class / variable çakışması yok.
 
 import { createWizardShell } from './modal-shell.js';
 import { FWIZARD_CSS } from './styles.js';

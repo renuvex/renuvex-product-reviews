@@ -7,7 +7,7 @@
 
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
-import { toggleWriteAccordion } from '../shared/write-toggle.js';
+import { openWriteForm } from '../shared/write-action.js';
 import { SPLIT_CSS } from './styles.js';
 
 export var meta = {
@@ -73,7 +73,7 @@ export function render(opts) {
     widget: widget,
     currentOrderBy: currentOrderBy,
     currentHasImages: currentHasImages,
-    onWriteClick: toggleWriteAccordion,
+    onWriteClick: openWriteForm,
     onSortChange: onSortChange,
   });
   var filterWrap = actions.querySelector('.ikr-filter-wrap');
