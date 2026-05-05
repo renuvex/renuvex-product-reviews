@@ -227,10 +227,8 @@ export const WIDGETS: WidgetDef[] = [
         colorTier: 'advanced',
         fields: [
           { type: 'color', key: 'photoTitleColor',        label: 'Başlık Rengi',          default: '#111111' },
-          { type: 'color', key: 'photoImageBorderColor',  label: 'Görsel Kenarlık Rengi', default: '#0000000d' },
           { type: 'color', key: 'photoArrowBgColor',      label: 'Ok Arka Plan Rengi',    default: '#ffffff' },
           { type: 'color', key: 'photoArrowTextColor',    label: 'Ok Rengi',              default: '#111111' },
-          { type: 'color', key: 'photoArrowBorderColor',  label: 'Ok Kenarlık Rengi',     default: '#0000001f' },
         ],
       },
       {
@@ -252,7 +250,7 @@ export const WIDGETS: WidgetDef[] = [
         isColor: true,
         colorTier: 'advanced',
         fields: [
-          { type: 'color', key: 'loadMoreBgColor',     label: 'Arka Plan Rengi', default: '#ffffff00' },
+          { type: 'color', key: 'loadMoreBgColor',     label: 'Arka Plan Rengi', default: '#ffffff' },
           { type: 'color', key: 'loadMoreTextColor',   label: 'Yazı Rengi',      default: '#111111' },
           { type: 'color', key: 'loadMoreBorderColor', label: 'Kenarlık Rengi',  default: '#111111' },
         ],
@@ -263,12 +261,8 @@ export const WIDGETS: WidgetDef[] = [
         colorTier: 'advanced',
         fields: [
           { type: 'color', key: 'modalBgColor',          label: 'Arka Plan Rengi',        default: '#ffffff' },
-          { type: 'color', key: 'modalCloseBgColor',     label: 'Kapat Arka Plan Rengi',  default: '#00000080' },
           { type: 'color', key: 'modalCloseTextColor',   label: 'Kapat İkon Rengi',      default: '#ffffff' },
-          { type: 'color', key: 'modalCloseBorderColor', label: 'Kapat Kenarlık Rengi',  default: '#ffffff33' },
-          { type: 'color', key: 'modalNavBgColor',       label: 'Ok Arka Plan Rengi',    default: '#00000059' },
           { type: 'color', key: 'modalNavTextColor',     label: 'Ok Rengi',              default: '#ffffff' },
-          { type: 'color', key: 'modalNavBorderColor',   label: 'Ok Kenarlık Rengi',     default: '#ffffff33' },
         ],
       },
       {

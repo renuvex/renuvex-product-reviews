@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-06
 tags:
   - widget
   - customization
@@ -121,3 +121,4 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - 2026-05-05: Changed the admin color picker to emit opaque `#rrggbb` values only while preserving backend/runtime support for alpha defaults and legacy `#rrggbbaa` settings. Related source: [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx).
 - 2026-05-05: Removed storefront widget container background/border color controls from the settings schema and documented the local-only admin preview background. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx), [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [render.js](src/widget/product-widget/render.js).
 - 2026-05-05: Documented the admin settings navigation model where top-level groups open in detail panels instead of expanding inline. Related source: [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).
+- 2026-05-06: Dropped six alpha-default color settings (`photoImageBorderColor`, `photoArrowBorderColor`, `modalCloseBgColor`, `modalCloseBorderColor`, `modalNavBgColor`, `modalNavBorderColor`) from the schema and hardcoded them as structural translucency tokens in render.js. Switched `loadMoreBgColor` default from `#ffffff00` to opaque `#ffffff` so the merchant-facing picker stays consistent with its opaque-only emit. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js).

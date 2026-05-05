@@ -130,10 +130,10 @@ function applyManualTheme(root, settings) {
 
   // Grup 9 — Fotoğraf Galerisi
   var photoTitle        = settings.photoTitleColor       || text;
-  var photoImageBorder  = settings.photoImageBorderColor || hexToRgba(text, 0.05);
+  var photoImageBorder  = hexToRgba(text, 0.05);
   var photoArrowBg      = settings.photoArrowBgColor     || '#ffffff';
   var photoArrowText    = settings.photoArrowTextColor   || text;
-  var photoArrowBorder  = settings.photoArrowBorderColor || hexToRgba(text, 0.12);
+  var photoArrowBorder  = hexToRgba(text, 0.12);
 
   // Group 10 - Review form
   // Form tokens drive the modal review wizard.
@@ -149,18 +149,18 @@ function applyManualTheme(root, settings) {
   var formSubtleBg = hexToRgba(formText, 0.06);
 
   // Grup 11 — Daha Fazla Göster
-  var loadMoreBg     = settings.loadMoreBgColor     || '#ffffff00';
+  var loadMoreBg     = settings.loadMoreBgColor     || '#ffffff';
   var loadMoreText   = settings.loadMoreTextColor   || text;
   var loadMoreBorder = settings.loadMoreBorderColor || text;
 
   // Grup 12 — Modal
   var modalBg          = settings.modalBgColor          || bg;
-  var modalCloseBg     = settings.modalCloseBgColor     || '#00000080';
+  var modalCloseBg     = '#00000080';
   var modalCloseText   = settings.modalCloseTextColor   || primaryText;
-  var modalCloseBorder = settings.modalCloseBorderColor || '#ffffff33';
-  var modalNavBg       = settings.modalNavBgColor       || '#00000059';
+  var modalCloseBorder = '#ffffff33';
+  var modalNavBg       = '#00000059';
   var modalNavText     = settings.modalNavTextColor     || '#ffffff';
-  var modalNavBorder   = settings.modalNavBorderColor   || '#ffffff33';
+  var modalNavBorder   = '#ffffff33';
 
   var vars = {
     // Grup 1 — Genel
