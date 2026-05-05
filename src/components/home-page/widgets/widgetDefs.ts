@@ -163,15 +163,6 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        title: 'Widget Alanı',
-        isColor: true,
-        colorTier: 'advanced',
-        fields: [
-          { type: 'color', key: 'widgetBgColor',     label: 'Arka Plan Rengi', default: '#ffffff00' },
-          { type: 'color', key: 'widgetBorderColor', label: 'Kenarlık Rengi',  default: '#ffffff00' },
-        ],
-      },
-      {
         title: 'Başlık ve Özet',
         isColor: true,
         colorTier: 'advanced',

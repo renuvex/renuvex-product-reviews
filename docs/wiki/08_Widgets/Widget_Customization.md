@@ -22,6 +22,7 @@ Per-merchant widget settings, schema-driven from a single source of truth in [wi
 - **Schema**: [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
 - **Server helpers** (defaults, sanitize, validate): [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - **Color presets**: [src/components/home-page/widgets/colorMappings.ts](src/components/home-page/widgets/colorMappings.ts)
+- **Admin color picker**: [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
 - **Design tokens**: [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 
 ## Field types
@@ -81,6 +82,7 @@ admin UI changes a field
 - On any setting change → `postMessage({ type: 'IKR_SETTINGS_UPDATE', settings })` to iframe.
 - Inside iframe, [src/widget/index.js](src/widget/index.js) (preview branch) merges and re-renders.
 - Iframe acks via `IKR_WIDGET_READY` once mounted.
+- Preview background color is local editor state in [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx). It changes only the admin preview surface and is not saved to `WidgetSettings`.
 
 This pattern means the preview is **pixel-identical** to production — same `widget.js` runs in both contexts.
 
@@ -95,6 +97,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - Don't bypass `validateSettings` on the server — bad data on a public endpoint is the cost.
 - When you add a setting, decide which layouts support it (`showWhen.layoutKey`).
 - Color settings churn has been frequent (visible in migrations). Prefer soft-removing keys via `sanitizeSettings` over a DB migration.
+- The storefront widget container background is intentionally transparent. Store themes own the page background; admin preview background is only a testing surface.
 
 ## Related Source Files
 - [src/components/home-page/widgets/](src/components/home-page/widgets/)
@@ -109,4 +112,5 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-05-05: Removed storefront widget container background/border color controls from the settings schema and documented the local-only admin preview background. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx), [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [render.js](src/widget/product-widget/render.js).
 - 2026-05-05: Documented the admin settings navigation model where top-level groups open in detail panels instead of expanding inline. Related source: [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).

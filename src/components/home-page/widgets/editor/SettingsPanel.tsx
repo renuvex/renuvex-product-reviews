@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { HexAlphaColorPicker, HexColorInput } from 'react-colorful';
 import {
   Accordion,
   AccordionContent,
@@ -12,11 +10,12 @@ import {
 } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { colors, componentStyles, typography, radii, sp } from '@/lib/design-tokens';
+import { colors, componentStyles, typography, sp } from '@/lib/design-tokens';
 import { SettingsGroup, SettingField } from '../widgetDefs';
 import { applyBasicColorChange } from '../colorMappings';
 import { WidgetSettingsDraft } from './WidgetEditor';
 import { IconSelect } from './IconSelect';
+import { ColorPickerField } from './ColorPickerField';
 // Layout registry'leri — meta.supports okumak için.
 // Bkz: src/widget/{summary,review}-layouts/index.js (supports sözleşmesi).
 import { LAYOUTS as SUMMARY_LAYOUTS } from '@/widget/summary-layouts/index.js';
@@ -377,8 +376,8 @@ function FieldRenderer({ field, settings, onChange }: {
 
     case 'color':
       return (
-        <ColorField
-          field={field}
+        <ColorPickerField
+          label={field.label}
           value={String(value ?? field.default ?? '#6f55ff')}
           onCommit={(v) => onChange(applyBasicColorChange(settings, field.key, v))}
         />
@@ -480,145 +479,3 @@ function FieldRenderer({ field, settings, onChange }: {
   }
 }
 
-// ─── Color field ─────────────────────────────────────────────────────────────
-// Kompakt: label solda, renk karesi sağda. Kareye tıklayınca native picker açılır.
-// Local state + 120ms debounce — picker sürerken parent re-render olmaz.
-
-// Saydam rengi görsel ifade eden checker (dama tahtası) arka plan
-const CHECKER_BG =
-  'repeating-conic-gradient(#d1d5db 0% 25%, #ffffff 0% 50%) 50% / 10px 10px';
-
-function ColorField({ field, value, onCommit }: {
-  field: Extract<SettingField, { type: 'color' }>;
-  value: string;
-  onCommit: (v: string) => void;
-}) {
-  const [local, setLocal] = useState(value);
-  const [open, setOpen] = useState(false);
-  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => { setLocal(value); }, [value]);
-  useEffect(() => () => { if (commitTimerRef.current) clearTimeout(commitTimerRef.current); }, []);
-
-  // Popover portal olarak body'ye render edilir; accordion/dialog parent'larının
-  // overflow/stacking context'inden etkilenmesin. Trigger rect'ine göre konum
-  // fixed olarak hesaplanır — scroll veya resize'da yeniden hesaplanmaz çünkü
-  // popover açıkken kullanıcı scroll etmeyi bırakır (kısa etkileşim).
-  useEffect(() => {
-    if (!open) { setPopoverPos(null); return; }
-    const r = triggerRef.current?.getBoundingClientRect();
-    if (!r) return;
-    const popoverWidth = 220;
-    const popoverHeight = 230;
-    // Sağa hizali (trigger right ile popover right aynı noktada). Viewport'un
-    // sol kenarına taşarsa sola kaydır. Viewport altına taşarsa trigger'ın
-    // üstünde aç.
-    let left = r.right - popoverWidth;
-    if (left < 8) left = 8;
-    let top = r.bottom + 6;
-    if (top + popoverHeight > window.innerHeight - 8) {
-      top = Math.max(8, r.top - popoverHeight - 6);
-    }
-    setPopoverPos({ top, left });
-  }, [open]);
-
-  // Popover dışı tıklama → kapat
-  useEffect(() => {
-    if (!open) return;
-    const onDocClick = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (popoverRef.current?.contains(t)) return;
-      if (triggerRef.current?.contains(t)) return;
-      setOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [open]);
-
-  const handleChange = (next: string) => {
-    setLocal(next);
-    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
-    commitTimerRef.current = setTimeout(() => onCommit(next), 120);
-  };
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: sp[3] }}>
-      <label style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>
-        {field.label}
-      </label>
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        {/* Renk önizleme butonu — tıklanınca popover açılır.
-            Checker (dama) arka plan üstüne seçili renk bindirilir; alpha < 1
-            olduğunda altaki checker görünür → kullanıcı saydamlığı anlar. */}
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-label={`${field.label} seç`}
-          style={{
-            width: 24, height: 24,
-            border: `1px solid ${colors.borderDefault}`,
-            borderRadius: radii.default,
-            background: CHECKER_BG,
-            padding: 0,
-            cursor: 'pointer',
-            position: 'relative',
-          }}
-        >
-          <span
-            aria-hidden
-            style={{
-              position: 'absolute', inset: 0,
-              borderRadius: radii.default,
-              backgroundColor: local,
-            }}
-          />
-        </button>
-
-        {open && popoverPos && typeof window !== 'undefined' && createPortal(
-          <div
-            ref={popoverRef}
-            style={{
-              position: 'fixed',
-              top: popoverPos.top,
-              left: popoverPos.left,
-              zIndex: 10000,
-              padding: sp[3],
-              background: colors.bgWhite,
-              border: `1px solid ${colors.borderDefault}`,
-              borderRadius: radii.default,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: sp[3],
-              width: 220,
-            }}
-          >
-            <HexAlphaColorPicker
-              color={local}
-              onChange={handleChange}
-              style={{ width: '100%', height: 160 }}
-            />
-            <HexColorInput
-              color={local}
-              onChange={handleChange}
-              prefixed
-              alpha
-              aria-label={`${field.label} hex kodu`}
-              style={{
-                ...componentStyles.input,
-                width: '100%',
-                fontSize: typography.fontSize.base,
-                textTransform: 'uppercase',
-              }}
-            />
-          </div>,
-          document.body,
-        )}
-      </div>
-    </div>
-  );
-}

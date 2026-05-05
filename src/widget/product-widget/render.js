@@ -84,9 +84,6 @@ function applyManualTheme(root, settings) {
   var inputBg = settings.inputBgColor || '#ffffff';
 
   // Grup 1 — Genel
-  var widgetBg      = settings.widgetBgColor     || '#ffffff00';
-  var widgetBorder  = settings.widgetBorderColor || '#ffffff00';
-
   // Grup 2 — Başlık & Özet
   var headerTitle     = settings.headerTitleColor     || text;
   var headerAvg       = settings.headerAvgColor       || text;
@@ -169,8 +166,8 @@ function applyManualTheme(root, settings) {
 
   var vars = {
     // Grup 1 — Genel
-    '--ikr-widget-bg':     widgetBg,
-    '--ikr-widget-border': widgetBorder,
+    '--ikr-widget-bg':     '#ffffff00',
+    '--ikr-widget-border': '#ffffff00',
 
     // Grup 2 — Başlık & Özet
     '--ikr-header-title':     headerTitle,
@@ -275,7 +272,8 @@ function applyManualTheme(root, settings) {
   Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
 
   if (typeof window !== 'undefined' && window.__ikasPreviewMode && document.body) {
-    document.body.style.background = bg;
+    document.body.style.background = 'transparent';
+    document.documentElement.style.background = 'transparent';
   }
 }
 

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { Suspense, lazy, useState, useCallback, useEffect, useRef } from 'react';
-import { ArrowLeft, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
+import { ArrowLeft, Save, Smartphone, Tablet, Monitor, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
+import { colors, componentStyles, radii, typography, opacity, shadows } from '@/lib/design-tokens';
 import { WidgetDef } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
+import { ColorPickerField } from './ColorPickerField';
 
 // Widgets that support iframe preview (real widget.js)
 const IFRAME_PREVIEW_WIDGETS = ['reviews'];
@@ -15,6 +16,70 @@ const VIEWPORT_PRESETS = [
   { key: 'tablet',  label: 'Tablet',  icon: Tablet,     width: 768  },
   { key: 'desktop', label: 'Masaüstü', icon: Monitor,   width: 1100 },
 ] as const;
+
+const DEFAULT_PREVIEW_BG = '#FFFFFF';
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
+
+function PreviewBackgroundInfo() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-label="Önizleme arka planı hakkında bilgi"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 18,
+          height: 18,
+          padding: 0,
+          border: `1.5px solid ${colors.primaryBorder}`,
+          borderRadius: radii.full,
+          backgroundColor: colors.primaryBg,
+          color: colors.primary,
+          cursor: 'pointer',
+          outline: 'none',
+        }}
+      >
+        <Info size={16} />
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 20,
+            width: 260,
+            padding: '8px 10px',
+            borderRadius: radii.default,
+            border: '1px solid #111111',
+            backgroundColor: '#111111',
+            color: colors.textWhite,
+            fontSize: typography.fontSize.xs,
+            lineHeight: typography.lineHeight.normal,
+            fontWeight: typography.fontWeight.regular,
+            boxShadow: 'none',
+            pointerEvents: 'none',
+            whiteSpace: 'normal',
+          }}
+        >
+          Bu renk sadece admin önizleme zeminini değiştirir. Mağazadaki widget arka planı şeffaf kalır.
+        </span>
+      )}
+    </span>
+  );
+}
 
 // widgetDef'teki default değerlerden başlangıç ayarlarını üret,
 // DB'den gelen savedSettings ile override et (eksik key'ler default'tan gelir)
@@ -64,6 +129,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergeWithDefaults(widget, savedSettings));
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const [previewBgColor, setPreviewBgColor] = useState(DEFAULT_PREVIEW_BG);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const widgetReadyRef = useRef(false);
   const draftRef = useRef<WidgetSettingsDraft>({});
@@ -121,6 +187,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
 
   const PreviewComponent = PREVIEW_MAP[widget.id] ?? null;
   const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? 1100;
+  const previewBackground = HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
 
   const iframeSrc = '/preview';
 
@@ -277,45 +344,52 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
               padding: '10px 16px',
               borderBottom: `1px solid ${colors.borderDefault}`,
               backgroundColor: colors.bgWhite,
-              display: 'flex',
+              display: 'grid',
+              gridTemplateColumns: useIframe ? '1fr auto 1fr' : '1fr',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
+              gap: 12,
+              minHeight: 48,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(239,68,68)' }} />
-                <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(245,158,11)' }} />
-                <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: 'rgb(34,197,94)' }} />
-                <span style={{ marginLeft: 8, fontSize: typography.fontSize.xs, color: colors.textMuted, fontWeight: typography.fontWeight.medium }}>
-                  Canlı Önizleme
-                </span>
-              </div>
-
-              {/* Viewport toolbar — sadece iframe preview için */}
               {useIframe && (
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {VIEWPORT_PRESETS.map(({ key, label, icon: Icon }) => (
-                    <button
-                      key={key}
-                      title={label}
-                      onClick={() => setViewport(key as typeof viewport)}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        width: 32, height: 32, borderRadius: radii.default, border: 'none',
-                        cursor: 'pointer',
-                        backgroundColor: viewport === key ? colors.primaryBg : 'transparent',
-                        color: viewport === key ? colors.primary : colors.textMuted,
-                      }}
-                    >
-                      <Icon size={16} />
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div aria-hidden />
+                  <ColorPickerField
+                    label="Önizleme Arka Planı"
+                    value={previewBgColor}
+                    onCommit={(value) => setPreviewBgColor(value)}
+                    labelAddon={<PreviewBackgroundInfo />}
+                    showValue
+                    rowStyle={{ minWidth: 300 }}
+                    labelStyle={{
+                      fontSize: 14,
+                      fontWeight: typography.fontWeight.medium,
+                      color: colors.textPrimary,
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                    {VIEWPORT_PRESETS.map(({ key, label, icon: Icon }) => (
+                      <button
+                        key={key}
+                        title={label}
+                        onClick={() => setViewport(key as typeof viewport)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 28, height: 28, borderRadius: radii.default, border: 'none',
+                          cursor: 'pointer',
+                          backgroundColor: viewport === key ? colors.primaryBg : 'transparent',
+                          color: viewport === key ? colors.primary : colors.textMuted,
+                        }}
+                      >
+                        <Icon size={15} />
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
             {/* Preview content */}
-            <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', backgroundColor: colors.bgPage, padding: useIframe ? 16 : 32 }}>
+            <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', backgroundColor: useIframe ? previewBackground : colors.bgPage, padding: useIframe ? 16 : 32 }}>
               {useIframe ? (
                 <div style={{
                   width: viewportWidth,
@@ -324,13 +398,13 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
                   border: `1px solid ${colors.borderDefault}`,
                   borderRadius: radii.lg,
                   overflow: 'hidden',
-                  backgroundColor: '#fff',
+                  backgroundColor: previewBackground,
                   boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
                 }}>
                   <iframe
                     ref={iframeRef}
                     src={iframeSrc}
-                    style={{ width: '100%', height: '600px', border: 'none', display: 'block' }}
+                    style={{ width: '100%', height: '600px', border: 'none', display: 'block', backgroundColor: 'transparent' }}
                     title="Widget Önizleme"
                     onLoad={() => {
                       widgetReadyRef.current = false;

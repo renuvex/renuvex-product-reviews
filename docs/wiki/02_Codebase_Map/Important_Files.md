@@ -26,6 +26,13 @@ related:
   - If you remove a field, remember it may still exist in some merchants' saved JSON. `sanitizeSettings` filters unknown keys at read time, but you may want a migration to clean DB rows.
   - The `showWhen.layoutKey + supports` pattern reads layout meta from `src/widget/{summary,review}-layouts/index.js`. New layouts must declare their `supports` map.
 
+## Admin widget editor
+
+### [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
+- **What:** Shared admin color picker used by schema-driven widget color fields and local-only preview controls.
+- **Why it matters:** Keeps color picker UX consistent across the settings panel and preview toolbar. Supports alpha hex values, checker preview, popover editing, and debounced commits.
+- **Be careful:** Preview-only controls can use this component without writing to `WidgetSettings`; keep DB persistence decisions in the caller.
+
 ### [prisma/schema.prisma](prisma/schema.prisma)
 - **What:** 4 models — `AuthToken`, `Review`, `StoreSettings`, `WidgetSettings`.
 - **Why it matters:** Touched by every feature. `Review` has tuned indexes for common widget query shapes (`storeId+status+slug`, `storeId+productId`).
