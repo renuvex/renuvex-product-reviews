@@ -42,12 +42,14 @@ interface SettingsPanelProps {
   onChange: (s: WidgetSettingsDraft) => void;
 }
 
-// View modes: ana panel ya da "Renkler" alt paneli.
-type PanelView = 'main' | 'colors';
+type PanelView =
+  | { type: 'main' }
+  | { type: 'group'; title: string; groups: SettingsGroup[] }
+  | { type: 'colors' };
 
 export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps) {
   const [showConfirm, setShowConfirm] = useState(false);
-  const [view, setView] = useState<PanelView>('main');
+  const [view, setView] = useState<PanelView>({ type: 'main' });
 
   if (groups.length === 0) {
     return (
@@ -102,12 +104,31 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     return !field.showWhen.notIn.includes(dep as string | number | boolean);
   };
 
-  // Render edilen akordiyon listesi — hem ana hem renk view'ları için tek helper.
-  // defaultValue=[] — hiçbir accordion otomatik açık değil, kullanıcı seçer.
-  const renderAccordion = (list: SettingsGroup[]) => {
-    const visibleGroups = list
+  const getVisibleGroups = (list: SettingsGroup[]) =>
+    list
       .map(group => ({ ...group, fields: group.fields.filter(isFieldVisible) }))
       .filter(group => group.fields.length > 0);
+
+  const renderFields = (group: SettingsGroup, padded = false) => (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: sp[6],
+      ...(padded ? { padding: `${sp[6]}px ${sp[3]}px` } : {}),
+    }}>
+      {group.fields.map((field) => (
+        <FieldRenderer
+          key={field.key}
+          field={field}
+          settings={settings}
+          onChange={onChange}
+        />
+      ))}
+    </div>
+  );
+
+  const renderAccordion = (list: SettingsGroup[]) => {
+    const visibleGroups = getVisibleGroups(list);
 
     if (visibleGroups.length === 0) return null;
 
@@ -123,18 +144,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
               {group.title}
             </AccordionTrigger>
             <AccordionContent>
-              {/* Tüm padding'ler accordion.tsx default'undan gelir (pt-4 pb-6 px-3).
-                  Burada sadece field'lar arası iç gap. */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: sp[6] }}>
-                {group.fields.map((field) => (
-                  <FieldRenderer
-                    key={field.key}
-                    field={field}
-                    settings={settings}
-                    onChange={onChange}
-                  />
-                ))}
-              </div>
+              {renderFields(group)}
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -143,9 +153,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
   };
 
   const renderAdvancedColorAccordion = (list: SettingsGroup[]) => {
-    const visibleGroups = list
-      .map(group => ({ ...group, fields: group.fields.filter(isFieldVisible) }))
-      .filter(group => group.fields.length > 0);
+    const visibleGroups = getVisibleGroups(list);
 
     if (visibleGroups.length === 0) return null;
 
@@ -159,7 +167,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
           }}>
             Gelişmiş Renkler
           </AccordionTrigger>
-          <AccordionContent>
+          <AccordionContent className="p-0">
             {renderAccordion(visibleGroups)}
           </AccordionContent>
         </AccordionItem>
@@ -167,40 +175,79 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     );
   };
 
+  const visibleMainGroups = getVisibleGroups(mainGroups);
+  const visibleSettingsGroups = settingsGroup ? getVisibleGroups([settingsGroup]) : [];
+
+  const renderNavButton = (title: string, onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        padding: `${sp[4]}px ${sp[3]}px`,
+        background: 'transparent',
+        border: 'none',
+        borderBottom: `1px solid ${colors.borderDefault}`,
+        cursor: 'pointer',
+        fontSize: typography.fontSize.base,
+        fontWeight: typography.fontWeight.medium,
+        color: colors.textPrimary,
+      }}
+    >
+      <span style={{ display: 'flex', alignItems: 'center' }}>
+        {title}
+      </span>
+      <ChevronRight size={16} style={{ color: colors.textMuted }} />
+    </button>
+  );
+
+  const renderBackHeader = (title: string) => (
+    <button
+      type="button"
+      onClick={() => setView({ type: 'main' })}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: sp[2],
+        padding: '14px 0',
+        backgroundColor: colors.bgWhite || '#ffffff',
+        border: 'none',
+        borderBottom: `1px solid ${colors.borderDefault}`,
+        cursor: 'pointer',
+        fontSize: typography.fontSize.base,
+        fontWeight: typography.fontWeight.medium,
+        color: colors.textPrimary,
+        width: '100%',
+        textAlign: 'left',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+      }}
+    >
+      <ArrowLeft size={16} style={{ color: colors.textSecondary }} />
+      <span>{title}</span>
+    </button>
+  );
+
+  const renderGroupNavRows = (list: SettingsGroup[]) =>
+    list.map((group) => (
+      <div key={group.title}>
+        {renderNavButton(group.title, () => setView({ type: 'group', title: group.title, groups: [group] }))}
+      </div>
+    ));
+
   return (
     <>
-      {view === 'main' ? (
+      {view.type === 'main' ? (
         <>
-          {renderAccordion(mainGroups)}
+          {renderGroupNavRows(visibleMainGroups)}
 
-          {/* "Renkler" kategori butonu — alt panele geçiş */}
-          {hasColorGroups && (
-            <button
-              onClick={() => setView('colors')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                padding: `${sp[4]}px ${sp[3]}px`,
-                background: 'transparent',
-                border: 'none',
-                borderBottom: `1px solid ${colors.borderDefault}`,
-                cursor: 'pointer',
-                fontSize: typography.fontSize.base,
-                fontWeight: typography.fontWeight.medium,
-                color: colors.textPrimary,
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center' }}>
-                Renkler
-              </span>
-              <ChevronRight size={16} style={{ color: colors.textMuted }} />
-            </button>
-          )}
+          {hasColorGroups && renderNavButton('Renkler', () => setView({ type: 'colors' }))}
 
-          {/* Ayarlar accordion — Renkler'den sonra, en sonda */}
-          {settingsGroup && renderAccordion([settingsGroup])}
+          {renderGroupNavRows(visibleSettingsGroups)}
 
           {/* Varsayılanlara Sıfırla Butonu */}
           <div style={{ padding: `${sp[6]}px 0`, marginTop: sp[4] }}>
@@ -231,34 +278,19 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
             </button>
           </div>
         </>
+      ) : view.type === 'group' ? (
+        <>
+          {renderBackHeader(view.title)}
+
+          {getVisibleGroups(view.groups).map((group) => (
+            <div key={group.title}>
+              {renderFields(group, true)}
+            </div>
+          ))}
+        </>
       ) : (
         <>
-          {/* Renk alt paneli başlığı — geri butonu + "Renkler" */}
-          <button
-            onClick={() => setView('main')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: sp[2],
-              padding: '14px 0',
-              backgroundColor: colors.bgWhite || '#ffffff', // Alttaki içerik görünmesin diye arka plan şart
-              border: 'none',
-              borderBottom: `1px solid ${colors.borderDefault}`,
-              cursor: 'pointer',
-              fontSize: typography.fontSize.base,
-              fontWeight: typography.fontWeight.medium,
-              color: colors.textPrimary,
-              width: '100%',
-              textAlign: 'left',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10,
-            }}
-          >
-            <ArrowLeft size={16} style={{ color: colors.textSecondary }} />
-            <span>Renkler</span>
-          </button>
-
+          {renderBackHeader('Renkler')}
           {renderAccordion(basicColorGroups)}
           {renderAdvancedColorAccordion(advancedColorGroups)}
         </>

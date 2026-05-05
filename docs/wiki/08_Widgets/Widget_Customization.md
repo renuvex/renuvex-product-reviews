@@ -48,6 +48,14 @@ The third reads `meta.supports.<key>` from the active layout's registry entry. A
 
 The current code shows both tiers; gating logic is reserved for future packaging implementation.
 
+## Admin settings navigation
+The admin customization panel uses a two-level navigation model in [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx):
+- The main panel lists top-level setting groups as navigation rows.
+- Selecting a group opens a dedicated detail panel with a sticky back header.
+- `Renkler` remains a dedicated color panel; inside it, color groups can still use nested accordions for basic and advanced color sections.
+
+This keeps the main customization screen shallow and avoids opening large groups inline.
+
 ## Read path (client / admin / widget)
 ```
 DB row.settings:Json
@@ -99,3 +107,6 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Frontend_Map]]
 - [[Storefront_Widget_Overview]]
 - [[Database_Schema]]
+
+## Change Log
+- 2026-05-05: Documented the admin settings navigation model where top-level groups open in detail panels instead of expanding inline. Related source: [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).
