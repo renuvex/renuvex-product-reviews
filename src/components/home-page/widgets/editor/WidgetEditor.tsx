@@ -14,7 +14,7 @@ const IFRAME_PREVIEW_WIDGETS = ['reviews'];
 const VIEWPORT_PRESETS = [
   { key: 'mobile',  label: 'Mobil',   icon: Smartphone, width: 390  },
   { key: 'tablet',  label: 'Tablet',  icon: Tablet,     width: 768  },
-  { key: 'desktop', label: 'Masaüstü', icon: Monitor,   width: 1100 },
+  { key: 'desktop', label: 'Masaüstü', icon: Monitor,   width: '100%' },
 ] as const;
 
 const DEFAULT_PREVIEW_BG = '#FFFFFF';
@@ -186,7 +186,8 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   const dirty = isDirty(draft, mergeWithDefaults(widget, savedSettings));
 
   const PreviewComponent = PREVIEW_MAP[widget.id] ?? null;
-  const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? 1100;
+  const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? '100%';
+  const isDesktopPreview = viewport === 'desktop';
   const previewBackground = OPAQUE_HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
 
   const iframeSrc = '/preview';
@@ -393,21 +394,23 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
             </div>
 
             {/* Preview content */}
-            <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', backgroundColor: useIframe ? previewBackground : colors.bgPage, padding: useIframe ? 16 : 32 }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: 'flex', justifyContent: 'center', backgroundColor: useIframe ? previewBackground : colors.bgPage, padding: useIframe ? (isDesktopPreview ? 0 : 16) : 32 }}>
               {useIframe ? (
                 <div style={{
                   width: viewportWidth,
                   maxWidth: '100%',
+                  height: '100%',
+                  minHeight: 0,
                   transition: 'width 0.25s ease',
-                  borderRadius: radii.lg,
+                  borderRadius: isDesktopPreview ? 0 : radii.lg,
                   overflow: 'hidden',
                   backgroundColor: previewBackground,
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                  boxShadow: isDesktopPreview ? 'none' : '0 2px 12px rgba(0,0,0,0.08)',
                 }}>
                   <iframe
                     ref={iframeRef}
                     src={iframeSrc}
-                    style={{ width: '100%', height: '600px', border: 'none', display: 'block', backgroundColor: 'transparent' }}
+                    style={{ width: '100%', height: '100%', border: 'none', display: 'block', backgroundColor: 'transparent' }}
                     title="Widget Önizleme"
                     onLoad={() => {
                       widgetReadyRef.current = false;
