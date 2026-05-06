@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-06
 tags:
   - status
 related:
@@ -42,9 +42,7 @@ Active development. Core feature set is functional end-to-end: OAuth install, wi
 - Theme variant build: `pnpm build:widget --theme=new-theme` produces a separate bundle (`widget-new-theme.js`)
 
 ## In Progress
-- Widget color settings refinement — basic vs advanced tiers, brand presets (recent commits 346dd3e, 2e18390, 724fa2a)
-- Form-step bar color (commit 55db39c)
-- Load-more button border consistency (commit 9e03713)
+- Legacy theme token cleanup — removed `bgColor`/`textColor`/`primaryColor`/`primaryTextColor` cascade from widget bundle; flattened CSS fallback chains in `styles.js` (commit aebbbbe)
 
 ## Known Issues / Gaps
 - No structured-data (JSON-LD) injection yet — see [[Structured_Data_And_Rich_Snippets]] and [[Open_Questions]]

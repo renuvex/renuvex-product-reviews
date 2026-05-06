@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-06
 tags:
   - widget
   - architecture
@@ -119,3 +119,4 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 
 ## Change Log
 - 2026-05-05: Updated the widget architecture note after removing the legacy inline/page review form. Review submission is now modal-only.
+- 2026-05-06: Removed legacy generic theme tokens (`bgColor`, `textColor`, `primaryColor`, `primaryTextColor`) from the widget runtime. The widget no longer relies on cascading generic CSS variables (`--ikr-bg`, `--ikr-text`, `--ikr-surface`, etc.); every colour surface now uses its own specific variable with a hardcoded default. This eliminates the "zombie code" pattern where `settings.bgColor`/`settings.textColor` were referenced in `render.js` despite not existing in the admin schema. `styles.js` fallback chains flattened from double-var to single-layer. Related source: [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).
