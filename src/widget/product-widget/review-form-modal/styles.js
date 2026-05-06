@@ -56,7 +56,7 @@ export var FWIZARD_CSS = `
     border-radius:8px;
     border:none;
     background:transparent;
-    color:var(--ikr-fwizard-close-text, rgba(0,0,0,0.6));
+    color:var(--ikr-fwizard-close-text, #6b7280);
     cursor:pointer;
     font-size:18px;
     line-height:1;
@@ -81,7 +81,7 @@ export var FWIZARD_CSS = `
   @media(hover:hover){
     .ikr-fwizard-close:hover{
       background:var(--ikr-fwizard-close-hover-bg, rgba(0,0,0,0.05));
-      color:var(--ikr-fwizard-text, rgb(17,17,17));
+      color:var(--ikr-fwizard-text, #111111);
     }
   }
 
@@ -165,7 +165,7 @@ export var FWIZARD_CSS = `
     margin-top:-20px;
     font-size:16px;
     font-weight:400;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.75));
+    color:var(--ikr-fwizard-secondary-text, #6b7280);
     line-height:1.4;
   }
 
@@ -377,7 +377,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-label{
     font-size:14px;
     font-weight:600;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.75));
+    color:var(--ikr-fwizard-secondary-text, #6b7280);
   }
   .ikr-fwizard-required{
     color:#dc2626;
@@ -386,7 +386,7 @@ export var FWIZARD_CSS = `
   .ikr-fwizard-notice{
     font-size:12px;
     line-height:1.5;
-    color:var(--ikr-fwizard-muted, rgba(0,0,0,0.75));
+    color:var(--ikr-fwizard-secondary-text, #6b7280);
     text-align:center;
     padding:4px 8px;
   }

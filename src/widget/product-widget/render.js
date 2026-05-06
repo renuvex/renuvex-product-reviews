@@ -129,20 +129,22 @@ function applyManualTheme(root, settings) {
   // Group 10 - Review form
   // Form tokens drive the modal review wizard.
   // The overlay color is intentionally not mapped here; it stays fixed.
+  // Primary / secondary split: primary = titles, inputs; secondary = subtitles,
+  // labels, notice, placeholder. Both opaque — no alpha derivatives.
   var formBg      = settings.formBgColor      || '#ffffff';
-  var formText    = settings.formTextColor    || '#111111';
-  var formMuted   = hexToRgba(formText, 0.72);
+  var formPrimary = settings.formPrimaryTextColor  || '#111111';
+  var formSecondary = settings.formSecondaryTextColor || '#6b7280';
   var inputBgVar  = settings.inputBgColor     || '#ffffff';
-  var inputTextVar = settings.inputTextColor  || formText;
-  var inputBorderVar = settings.inputBorderColor || hexToRgba(formText, 0.20);
-  var placeholderColor = settings.placeholderColor || hexToRgba(formText, 0.42);
+  var inputTextVar = settings.inputTextColor  || formPrimary;
+  var inputBorderVar = settings.inputBorderColor || '#d1d5db';
+  var placeholderColor = settings.placeholderColor || '#9ca3af';
   var formStepBarColor = settings.formStepBarColor || '#111111';
   var formCtaBg     = settings.formCtaBgColor     || '#111111';
   var formCtaText   = settings.formCtaTextColor   || '#ffffff';
   var formCtaBorder = settings.formCtaBorderColor || '#111111';
   var formNavText   = settings.formNavTextColor   || '#111111';
   var formNavHoverBg = hexToRgba(formNavText, 0.06);
-  var formSubtleBg = hexToRgba(formText, 0.06);
+  var formSubtleBg = hexToRgba(formPrimary, 0.06);
 
   // Grup 11 — Daha Fazla Göster
   var loadMoreBg     = settings.loadMoreBgColor     || '#ffffff';
@@ -214,13 +216,13 @@ function applyManualTheme(root, settings) {
 
     // Grup 10 — Form wizard
     '--ikr-fwizard-bg':       formBg,
-    '--ikr-fwizard-text':     formText,
-    '--ikr-fwizard-muted':    formMuted,
+    '--ikr-fwizard-text':     formPrimary,
+    '--ikr-fwizard-secondary-text': formSecondary,
     '--ikr-fwizard-input-bg': inputBgVar,
     '--ikr-fwizard-input-text': inputTextVar,
     '--ikr-fwizard-input-border': inputBorderVar,
     '--ikr-fwizard-placeholder': placeholderColor,
-    '--ikr-fwizard-close-text': formMuted,
+    '--ikr-fwizard-close-text': formSecondary,
     '--ikr-fwizard-close-hover-bg': formSubtleBg,
     '--ikr-fwizard-progress-bg': formSubtleBg,
     '--ikr-fwizard-progress-active': formStepBarColor,
