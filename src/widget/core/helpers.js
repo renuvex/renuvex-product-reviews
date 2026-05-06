@@ -77,7 +77,7 @@ export function applyWidgetColor(color) {
   document.documentElement.style.setProperty('--ikr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
 }
 
-export function injectStyles(color, css) {
+export function injectStyles(_color, css) {
   var el = document.getElementById('ikr-styles');
   if (!el) {
     el = document.createElement('style');
@@ -85,7 +85,8 @@ export function injectStyles(color, css) {
     document.head.appendChild(el);
   }
   el.textContent = css;
-  applyWidgetColor(color);
+  // applyWidgetColor removed — --ikr-color and --ikr-color-light are no longer
+  // used by styles.js. All color surfaces now use their own specific variables.
 }
 
 export function optimizeImageUrl(url) {

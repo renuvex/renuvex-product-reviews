@@ -1,17 +1,11 @@
-// themes/ozy/styles.js — Default tema CSS
+// themes/ozy/styles.js — Widget CSS
 //
-// Tema (açık/koyu/özel) tüm widget görünümünü şu CSS değişkenleri üzerinden
-// kontrol eder. render.js themeMode'a göre bu değişkenleri document root'a
-// yazar — CSS default'ları sadece fallback olarak kullanılır:
-//   --ikr-bg          : widget arka planı
-//   --ikr-text        : birincil yazı rengi
-//   --ikr-text-muted  : ikincil yazı rengi (tarih, sayaç)
-//   --ikr-text-faint  : çok soluk yazı rengi (placeholder vb.)
-//   --ikr-border      : ayırıcı çizgi/border rengi
-//   --ikr-track-bg    : bar chart track arka planı (border'dan ayrı — koyu
-//                       temada track'in görünmesi için daha yüksek kontrast)
-//   --ikr-reply-bg    : mağaza yanıtı kutusu arka planı
-//   --ikr-surface     : menü/kart üst yüzeyi (bg'den biraz farklı)
+// Her UI elemanı kendi spesifik CSS değişkeniyle renklendirilir.
+// Fallback'ler sabit hex/rgba default'larına (#111111, #ffffff, #e5e7eb vb.)
+// düştüğü için çiftli fallback zincirlerine ihtiyaç kalmadı.
+//
+// render.js her eleman için kendi değişkenini set eder; buradaki
+// default'lar sadece emniyet filesidir.
 //
 // ─── Yorum item dikey gap sözleşmesi (review typography spacing) ──────────
 // Tek bir yorum item'ı içindeki dikey aralıklar (margin-top'lar) AŞAĞIDAKİ
@@ -50,7 +44,7 @@ export var CLASSIC_CSS = `
      NOT: 100vw scrollbar'ı hesaba katmaz — scroll varsa margin-left yerine
      parent.getBoundingClientRect() ile runtime düzeltme de yapılabilir, ama
      genelde bu kural yeterli. */
-  #ikas-reviews-widget{color:var(--ikr-text,rgba(0,0,0,1));background:var(--ikr-widget-bg,var(--ikr-bg,transparent));border:1px solid var(--ikr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;--ikr-pad-summary-mobile:8px;--ikr-pad-review-mobile:10px;}
+  #ikas-reviews-widget{color:#111111;background:transparent;border:1px solid var(--ikr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;--ikr-pad-summary-mobile:8px;--ikr-pad-review-mobile:10px;}
   /* Doğrudan widget çocukları — inner wrap (1200px ortalı). Summary'deki
      3 sütun (puan + bars + buton) max boyutlarda ancak ~1030px tutuyor,
      1200px tavan wrap riskini pratik olarak sıfırlar. */
@@ -79,7 +73,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-title,
   .ikr-modal-author,
   .ikr-modal-reply-text{overflow-wrap:anywhere;}
-  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:500;text-align:center;margin-bottom:12px;color:var(--ikr-header-title,var(--ikr-text,rgba(0,0,0,1)));}
+  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:500;text-align:center;margin-bottom:12px;color:var(--ikr-header-title,#111111);}
 
   /* ─── SVG ICON WRAPPER ───────────────────────────────────────────────
      .ikr-icon span'ı SVG'yi sarar. Boyut parent'tan (em veya inline style) gelir,
@@ -121,14 +115,14 @@ export var CLASSIC_CSS = `
   /* Blok: Ortalama puan (büyük) */
   .ikr-summary-avg{flex-direction:row;gap:8px;max-width:none;width:auto;}
   .ikr-avg-star{width:var(--ikr-avg-star-size,52px);height:var(--ikr-avg-star-size,52px);color:var(--ikr-review-star-color,#f59e0b);line-height:1;}
-  .ikr-avg-num{font-size:var(--ikr-avg-rating-size,46px);font-weight:500;line-height:1;color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));}
+  .ikr-avg-num{font-size:var(--ikr-avg-rating-size,46px);font-weight:500;line-height:1;color:var(--ikr-header-avg,#111111);}
 
   /* Blok: Toplam yorum sayısı */
-  .ikr-summary-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));white-space:nowrap;font-weight:400;max-width:none;width:auto;}
+  .ikr-summary-count{font-size:var(--ikr-review-count-size,16px);color:var(--ikr-header-count,#111111);white-space:nowrap;font-weight:400;max-width:none;width:auto;}
 
   /* Blok: Tavsiye yüzdesi */
-  .ikr-summary-recommend{display:block;font-size:var(--ikr-recommend-size,14px);color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));text-align:center;max-width:none;width:auto;}
-  .ikr-recommend-pct{font-weight:700;color:var(--ikr-header-recommend,var(--ikr-text,rgba(0,0,0,1)));margin-right:3px;}
+  .ikr-summary-recommend{display:block;font-size:var(--ikr-recommend-size,14px);color:var(--ikr-header-recommend,#111111);text-align:center;max-width:none;width:auto;}
+  .ikr-recommend-pct{font-weight:700;color:var(--ikr-header-recommend,#111111);margin-right:3px;}
 
   /* Blok: Bar chart — her satır 3 kolon (label | track | count) */
   /* Bar chart — flex layout. Track her satırda sabit genişlik (label+count
@@ -140,15 +134,15 @@ export var CLASSIC_CSS = `
     cursor:pointer;border-radius:var(--ikr-radius,6px);padding:3px 6px;
     box-sizing:border-box;position:relative;
   }
-  @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-bar-hover-bg,var(--ikr-color-light));}}
-  .ikr-bar-active{background:var(--ikr-bar-hover-bg,var(--ikr-color-light))!important;}
-  .ikr-bar-label{flex:0 0 var(--ikr-col-label);display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:var(--ikr-text,rgba(0,0,0,1));}
+  @media(hover:hover){.ikr-bar-row:hover{background:var(--ikr-bar-hover-bg,rgba(17,17,17,0.07));}}
+  .ikr-bar-active{background:var(--ikr-bar-hover-bg,rgba(17,17,17,0.07))!important;}
+  .ikr-bar-label{flex:0 0 var(--ikr-col-label);display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:#111111;}
   .ikr-bar-star{width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);}
   .ikr-bar-star-filled{color:var(--ikr-review-star-color,#f59e0b);}
   .ikr-bar-star-empty{color:var(--ikr-star-empty-color,#e5e7eb);}
-  .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,var(--ikr-track-bg,rgba(0,0,0,0.10)));border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
-  .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,var(--ikr-text,rgba(0,0,0,1)));border-radius:var(--ikr-radius-sm,4px);}
-  .ikr-bar-count{flex:0 0 var(--ikr-col-count);white-space:nowrap;text-align:right;color:var(--ikr-bar-count,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-bar-count-size,14px);}
+  .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,#e5e7eb);border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
+  .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,#111111);border-radius:var(--ikr-radius-sm,4px);}
+  .ikr-bar-count{flex:0 0 var(--ikr-col-count);white-space:nowrap;text-align:right;color:var(--ikr-bar-count,#111111);font-size:var(--ikr-bar-count-size,14px);}
 
   /* Blok: Aksiyon satırı (yorum yap + filtre) — bar row sol kenarından başlar, filtre count hizasında.
      Padding yok ki wrapper tam 340px kullansin; bar chart ile kenar hizasi
@@ -161,10 +155,10 @@ export var CLASSIC_CSS = `
   /* min-height:36px — filter butonu (36×36 sabit) ile ayni yukseklikte tutar.
      Font small/medium'da yukseklik 36'ya kilitlenir; large font'ta padding
      katkisi ile bir miktar buyur ama filter'la dengeli kalir. */
-  .ikr-write-btn{flex:1 1 auto;min-width:0;min-height:36px;background:var(--ikr-btn-bg,var(--ikr-color,#000));color:var(--ikr-btn-text,var(--ikr-color-text,#fff));padding:10px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,var(--ikr-color,#000));font-weight:600;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
+  .ikr-write-btn{flex:1 1 auto;min-width:0;min-height:36px;background:var(--ikr-btn-bg,#111111);color:var(--ikr-btn-text,#ffffff);padding:10px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,#111111);font-weight:600;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
   .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-end;}
   /* Filter button colors come from the Filtre color group in admin. */
-  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,var(--ikr-color,#000));background:var(--ikr-filter-btn-bg,transparent);color:var(--ikr-filter-btn-text,var(--ikr-color,#000));cursor:pointer;}
+  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,#111111);background:var(--ikr-filter-btn-bg,transparent);color:var(--ikr-filter-btn-text,#111111);cursor:pointer;}
   /* Material Symbols viewBox 0 -960 960 960 — buton içine sığması için 16x16 */
   .ikr-filter-btn svg{width:16px;height:16px;flex-shrink:0;}
 
@@ -174,11 +168,11 @@ export var CLASSIC_CSS = `
     0%   { opacity: 0; transform: scale(0.7) translateY(-20px); }
     100% { opacity: 1; transform: scale(1) translateY(0); }
   }
-  .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--ikr-filter-menu-bg,var(--ikr-surface,#fff));border:1px solid var(--ikr-filter-menu-border,var(--ikr-border,rgba(0,0,0,0.12)));border-radius:var(--ikr-radius,6px);box-shadow:0 4px 16px rgba(0,0,0,0.08);min-width:180px;overflow:hidden;z-index:999;visibility:hidden;opacity:0;pointer-events:none;transform-origin:top right;}
+  .ikr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--ikr-filter-menu-bg,#ffffff);border:1px solid var(--ikr-filter-menu-border,#e5e7eb);border-radius:var(--ikr-radius,6px);box-shadow:0 4px 16px rgba(0,0,0,0.08);min-width:180px;overflow:hidden;z-index:999;visibility:hidden;opacity:0;pointer-events:none;transform-origin:top right;}
   .ikr-filter-menu.ikr-open{visibility:visible;pointer-events:auto;animation:ikr-grow-out 200ms ease-in-out forwards;}
-  .ikr-filter-item{padding:10px 16px;font-size:var(--ikr-filter-text-size,14px);color:var(--ikr-filter-item-text,var(--ikr-text,rgba(0,0,0,1)));cursor:pointer;}
-  @media(hover:hover){.ikr-filter-item:hover{background:var(--ikr-filter-item-hover-bg,var(--ikr-color-light));}}
-  .ikr-filter-item-active{font-weight:700;color:var(--ikr-filter-item-active,var(--ikr-color,#000));}
+  .ikr-filter-item{padding:10px 16px;font-size:var(--ikr-filter-text-size,14px);color:var(--ikr-filter-item-text,#111111);cursor:pointer;}
+  @media(hover:hover){.ikr-filter-item:hover{background:var(--ikr-filter-item-hover-bg,rgba(17,17,17,0.07));}}
+  .ikr-filter-item-active{font-weight:700;color:var(--ikr-filter-item-active,#111111);}
 
   /* Fotoğraflı Yorumlar bölümü */
   .ikr-photo-section{margin-bottom:24px;}
@@ -188,7 +182,7 @@ export var CLASSIC_CSS = `
   .ikr-photo-title{
     font-size:var(--ikr-photo-title-size,16px);
     font-weight:500;
-    color:var(--ikr-photo-title,var(--ikr-text,rgba(0,0,0,1)));
+    color:var(--ikr-photo-title,#111111);
     margin-bottom:12px;
   }
   .ikr-photo-strip-wrap{position:relative;}
@@ -196,7 +190,7 @@ export var CLASSIC_CSS = `
      (satır 266 ve 268). Bu ölü duplicate kurallar temizlendi.
      .ikr-photo-thumb hiçbir DOM tarafından kullanılmıyordu — silindi. */
 
-  .ikr-photo-strip-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:var(--ikr-photo-arrow-bg,#fff);border:1px solid var(--ikr-photo-arrow-border,rgba(0,0,0,0.12));border-radius:var(--ikr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--ikr-photo-arrow-text,var(--ikr-text,rgba(0,0,0,1)));box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s ease;}
+  .ikr-photo-strip-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:var(--ikr-photo-arrow-bg,#fff);border:1px solid var(--ikr-photo-arrow-border,rgba(0,0,0,0.12));border-radius:var(--ikr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--ikr-photo-arrow-text,#111111);box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s ease;}
   @media(hover:hover){.ikr-photo-strip-arrow:hover{background:var(--ikr-photo-arrow-bg,#fff);transform:translateY(-50%) scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,0.12);}}
   .ikr-photo-strip-arrow-prev{left:-16px;}
   .ikr-photo-strip-arrow-next{right:-16px;}
@@ -215,18 +209,18 @@ export var CLASSIC_CSS = `
   .ikr-stars .ikr-icon-empty{color:var(--ikr-star-empty-color,#e5e7eb);}
   /* Yorum item dikey ritm: stars→title (normal), title→author (normal),
      author→body (normal), body→reply (loose). Bkz: gap sözleşmesi (üst yorum). */
-  .ikr-review-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin-top:var(--ikr-gap-normal);}
-  .ikr-author{font-size:var(--ikr-author-size,14px);font-weight:600;font-style:normal;color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));margin-top:var(--ikr-gap-normal);}
-  .ikr-date{color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-date-size,12px);font-weight:400;white-space:nowrap;flex-shrink:0;}
-  .ikr-body{margin-top:var(--ikr-gap-normal);line-height:1.65;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);font-weight:400;}
+  .ikr-review-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,#111111);margin-top:var(--ikr-gap-normal);}
+  .ikr-author{font-size:var(--ikr-author-size,14px);font-weight:600;font-style:normal;color:var(--ikr-review-author,#111111);margin-top:var(--ikr-gap-normal);}
+  .ikr-date{color:var(--ikr-review-date,#111111);font-size:var(--ikr-review-date-size,12px);font-weight:400;white-space:nowrap;flex-shrink:0;}
+  .ikr-body{margin-top:var(--ikr-gap-normal);line-height:1.65;color:var(--ikr-review-body,#111111);font-size:var(--ikr-review-text-size,14px);font-weight:400;}
   .ikr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
-  .ikr-read-more{display:block;margin-top:var(--ikr-gap-tight);color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-weight:600;cursor:pointer;font-size:var(--ikr-read-more-size,12px);}
+  .ikr-read-more{display:block;margin-top:var(--ikr-gap-tight);color:var(--ikr-review-body,#111111);font-weight:600;cursor:pointer;font-size:var(--ikr-read-more-size,12px);}
   .ikr-gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--ikr-gap-loose);}
   .ikr-img{width:var(--ikr-card-photo-w,var(--ikr-thumbnail-size,90px));height:var(--ikr-card-photo-w,var(--ikr-thumbnail-size,90px));object-fit:cover;border-radius:var(--ikr-radius,6px);border:1px solid var(--ikr-photo-image-border,rgba(0,0,0,0.05));cursor:zoom-in;}
-  .ikr-reply{margin-top:var(--ikr-gap-loose);padding:12px 16px;background:var(--ikr-reply-bg-color,var(--ikr-reply-bg,rgba(0,0,0,0.03)));border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-reply-border,var(--ikr-color,#000));}
+  .ikr-reply{margin-top:var(--ikr-gap-loose);padding:12px 16px;background:var(--ikr-reply-bg-color,#f9fafb);border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-reply-border,#747474);}
   .ikr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-  .ikr-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,13px);color:var(--ikr-reply-label,var(--ikr-text,rgba(0,0,0,1)));}
-  .ikr-reply-text{font-size:var(--ikr-reply-text-size,13px);font-weight:400;color:var(--ikr-reply-text,var(--ikr-text,rgba(0,0,0,1)));line-height:1.6;}
+  .ikr-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,13px);color:var(--ikr-reply-label,#111111);}
+  .ikr-reply-text{font-size:var(--ikr-reply-text-size,13px);font-weight:400;color:var(--ikr-reply-text,#111111);line-height:1.6;}
   /* Reply clamp: yorum metni (.ikr-body-clamped) 4 satır; reply 2 satır
      (subordinate, müşteri yorumundan kısa kalır). "Devamını oku" sadece
      clamp devreye girdiyse görünür — buildReplyEl helper'ı runtime kontrol eder. */
@@ -234,11 +228,11 @@ export var CLASSIC_CSS = `
   .ikr-reply-read-more{margin-top:var(--ikr-gap-tight);}
 
   /* Daha Fazla Göster butonu — tema uyumlu, outline stil */
-  .ikr-load-more{display:block;margin:20px auto 0;padding:10px 28px;border:1px solid var(--ikr-load-more-border,var(--ikr-border,rgba(0,0,0,0.30)));border-radius:var(--ikr-radius,6px);background:var(--ikr-load-more-bg,var(--ikr-surface,#fff));color:var(--ikr-load-more-text,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-load-more-size,14px);cursor:pointer;}
+  .ikr-load-more{display:block;margin:20px auto 0;padding:10px 28px;border:1px solid var(--ikr-load-more-border,#111111);border-radius:var(--ikr-radius,6px);background:var(--ikr-load-more-bg,#ffffff);color:var(--ikr-load-more-text,#111111);font-size:var(--ikr-load-more-size,14px);cursor:pointer;}
   .ikr-load-more:disabled{opacity:.6;cursor:not-allowed;}
 
   /* Yükleniyor / boş durum mesajları — tema uyumlu */
-  .ikr-state-msg{text-align:center;color:var(--ikr-text-faint,rgba(0,0,0,0.45));font-size:14px;padding:30px 0;}
+  .ikr-state-msg{text-align:center;color:rgba(17,17,17,0.45);font-size:14px;padding:30px 0;}
   .ikr-state-loading{padding:40px;}
 
   /* Review Modal */
@@ -261,7 +255,7 @@ export var CLASSIC_CSS = `
 
   .ikr-photo-strip-wrap{position:relative;display:block;}
 
-  .ikr-modal{background:var(--ikr-modal-bg,var(--ikr-bg,#fff));color:var(--ikr-text,rgba(0,0,0,1));border-radius:calc(var(--ikr-radius, 8px) * 1.5);overflow:hidden;display:flex;width:100%;height:584px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
+  .ikr-modal{background:var(--ikr-modal-bg,#ffffff);color:#111111;border-radius:calc(var(--ikr-radius, 8px) * 1.5);overflow:hidden;display:flex;width:100%;height:584px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 438px;background:#222;position:relative;overflow:hidden;}
   .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
   .ikr-modal-img-enter-right{animation:ikrSlideInRight 0.2s ease forwards;}
@@ -269,7 +263,7 @@ export var CLASSIC_CSS = `
   @keyframes ikrSlideInRight{from{transform:translateX(60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   @keyframes ikrSlideInLeft{from{transform:translateX(-60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   .ikr-modal-close,
-  .ikr-modal-close-mobile{background:var(--ikr-modal-close-bg,#00000080);border:1px solid var(--ikr-modal-close-border,#ffffff33);box-sizing:border-box;color:var(--ikr-modal-close-text,var(--ikr-color-text,#fff));font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:var(--ikr-radius,6px);width:32px;height:32px;align-items:center;justify-content:center;}
+  .ikr-modal-close-mobile{background:var(--ikr-modal-close-bg,#00000080);border:1px solid var(--ikr-modal-close-border,#ffffff33);box-sizing:border-box;color:var(--ikr-modal-close-text,#ffffff);font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:var(--ikr-radius,6px);width:32px;height:32px;align-items:center;justify-content:center;}
   .ikr-modal-close{position:absolute;top:-42px;right:0;display:flex;z-index:100000;}
   @media(hover:hover){.ikr-modal-close:hover{opacity:0.85;}}
   @media(max-width:640px){.ikr-modal-close{display:none;}}
@@ -283,7 +277,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-thumbs{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;padding:0 12px;}
   .ikr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid transparent;opacity:0.7;}
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
-  .ikr-modal-right{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;background:var(--ikr-modal-bg,var(--ikr-bg,#fff));color:var(--ikr-text,rgba(0,0,0,1));}
+  .ikr-modal-right{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;background:var(--ikr-modal-bg,#ffffff);color:#111111;}
   /* Flex zincirinde her seviye min-width:0 olmazsa unbreakable string parent'ı zorlar.
      scroll-content de flex column → child'ları (modal-body vs.) shrink edebilsin diye
      burada da min-width:0 zorunlu. overflow-wrap:anywhere ancak shrink mümkünse iş görür. */
@@ -291,16 +285,16 @@ export var CLASSIC_CSS = `
   .ikr-modal-top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
   .ikr-modal-stars{display:inline-flex;gap:2px;align-items:center;}
   .ikr-modal-stars .ikr-icon{width:var(--ikr-star-size,24px);height:var(--ikr-star-size,24px);}
-  .ikr-modal-date{font-size:var(--ikr-review-date-size,12px);font-weight:400;color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,1)));white-space:nowrap;flex-shrink:0;}
+  .ikr-modal-date{font-size:var(--ikr-review-date-size,12px);font-weight:400;color:var(--ikr-review-date,#111111);white-space:nowrap;flex-shrink:0;}
   /* Modal yorum item dikey ritm — base ile aynı sözleşme. scroll-content
      uniform gap kullanmaz, her child kendi margin-top'unu token ile alır. */
-  .ikr-modal-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin-top:var(--ikr-gap-normal);}
-  .ikr-modal-author{font-size:var(--ikr-author-size,14px);font-weight:600;font-style:normal;color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));margin-top:var(--ikr-gap-normal);}
+  .ikr-modal-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,#111111);margin-top:var(--ikr-gap-normal);}
+  .ikr-modal-author{font-size:var(--ikr-author-size,14px);font-weight:600;font-style:normal;color:var(--ikr-review-author,#111111);margin-top:var(--ikr-gap-normal);}
   .ikr-modal-scroll-content{padding:24px 24px 24px;display:flex;flex-direction:column;min-width:0;}
-  .ikr-modal-body{font-size:var(--ikr-review-text-size,14px);font-weight:400;line-height:1.65;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));margin-top:var(--ikr-gap-normal);}
-  .ikr-modal-reply{margin-top:var(--ikr-gap-loose);padding:12px 16px;background:var(--ikr-reply-bg-color,var(--ikr-reply-bg,rgba(0,0,0,0.03)));border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-reply-border,var(--ikr-color,#000));}
-  .ikr-modal-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,13px);color:var(--ikr-reply-label,var(--ikr-text,rgba(0,0,0,1)));margin-bottom:4px;}
-  .ikr-modal-reply-text{font-size:var(--ikr-reply-text-size,13px);font-weight:400;color:var(--ikr-reply-text,var(--ikr-text,rgba(0,0,0,1)));line-height:1.6;}
+  .ikr-modal-body{font-size:var(--ikr-review-text-size,14px);font-weight:400;line-height:1.65;color:var(--ikr-review-body,#111111);margin-top:var(--ikr-gap-normal);}
+  .ikr-modal-reply{margin-top:var(--ikr-gap-loose);padding:12px 16px;background:var(--ikr-reply-bg-color,#f9fafb);border-radius:var(--ikr-radius,6px);border-left:3px solid var(--ikr-reply-border,#747474);}
+  .ikr-modal-reply-label{font-weight:600;font-size:var(--ikr-reply-name-size,13px);color:var(--ikr-reply-label,#111111);margin-bottom:4px;}
+  .ikr-modal-reply-text{font-size:var(--ikr-reply-text-size,13px);font-weight:400;color:var(--ikr-reply-text,#111111);line-height:1.6;}
 
   /* Responsive */
   @media(max-width:640px){

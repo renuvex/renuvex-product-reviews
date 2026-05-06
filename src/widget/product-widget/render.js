@@ -74,13 +74,6 @@ var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
 function applyManualTheme(root, settings) {
   // Grup 1 — Genel
   // Widget container background/border always transparent (store theme owns it).
-  //
-  // Legacy generic theme tokens (bg, text, replyBg) are kept as fixed fallbacks
-  // so that styles.js double-var chains continue to work. They are never set
-  // from the admin schema — they always resolve to their hardcoded defaults.
-  var bg = settings.bgColor || '#ffffff';
-  var text = settings.textColor || '#111111';
-  var replyBg = settings.replyBgColor || '#f9fafb';
 
   // Grup 2 — Başlık & Özet
   var headerTitle     = settings.headerTitleColor     || '#111111';
@@ -250,17 +243,6 @@ function applyManualTheme(root, settings) {
     '--ikr-modal-nav-bg':       modalNavBg,
     '--ikr-modal-nav-text':     modalNavText,
     '--ikr-modal-nav-border':   modalNavBorder,
-
-    // Legacy generic tokens — kept as fixed fallbacks for styles.js chains.
-    // These are never exposed in the admin schema; they always resolve to
-    // their hardcoded defaults. Removing them breaks 38 CSS fallback chains.
-    '--ikr-bg':         bg,
-    '--ikr-surface':    bg,
-    '--ikr-text':       text,
-    '--ikr-text-faint': hexToRgba(text, 0.45),
-    '--ikr-border':     hexToRgba(text, 0.12),
-    '--ikr-track-bg':   hexToRgba(text, 0.22),
-    '--ikr-reply-bg':   replyBg,
   };
 
   Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
