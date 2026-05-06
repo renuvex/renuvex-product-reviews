@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-06
+updated: 2026-05-07
 tags:
   - widget
   - customization
@@ -120,3 +120,4 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - 2026-05-06: Fully removed legacy CSS variables (`--ikr-bg`, `--ikr-text`, `--ikr-surface`, `--ikr-border`, `--ikr-track-bg`, `--ikr-reply-bg`, `--ikr-text-faint`, `--ikr-color`, `--ikr-color-light`) from both `render.js` and `styles.js`. `styles.js` double-var fallback chains flattened to single-layer hardcoded defaults. `applyWidgetColor` helper in `helpers.js` no longer called. Every UI element now uses its own specific CSS variable with a hardcoded fallback — no cascading generic tokens remain. Related source: [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js), [helpers.js](src/widget/core/helpers.js).
 - 2026-05-06: Split `formTextColor` into `formPrimaryTextColor` and `formSecondaryTextColor` in the `Yorum Formu` color group. Primary controls titles and input text; secondary controls subtitles, labels, notice text, and close button. Both use opaque defaults (`#111111` and `#6b7280`) — the old alpha-derived `formMuted` (`hexToRgba(formText, 0.72)`) is removed. Placeholder, input border, and close hover bg now use their own independent opaque defaults instead of alpha derivatives from `formText`. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/product-widget/review-form-modal/styles.js).
 - 2026-05-06: Removed the `Fotoğraf Önizleme` color accordion from the admin schema. Modal colors (background, close button, nav arrows) are now hardcoded in `styles.js` with standard gallery defaults (`#ffffff` bg, `#ffffff` icons on semi-transparent black buttons). This reduces admin panel complexity without sacrificing UX — photo gallery modals are universally expected to have a neutral shell. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).
+- 2026-05-07: Renamed color group titles for clarity: `Başlık ve Özet` → `Widget Başlığı`, `Puan Dağılımı` → `Yorum Özeti`. No settings keys changed — purely UI label updates. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).

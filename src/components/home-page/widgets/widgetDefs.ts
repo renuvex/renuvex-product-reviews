@@ -140,7 +140,7 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        title: 'Başlık ve Özet',
+        title: 'Widget Başlığı',
         isColor: true,
         fields: [
           { type: 'color', key: 'headerTitleColor',     label: 'Başlık Rengi',          default: '#111111', showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
@@ -150,7 +150,7 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        title: 'Puan Dağılımı',
+        title: 'Yorum Özeti',
         isColor: true,
         fields: [
           { type: 'color', key: 'barFillColor',    label: 'Dolu Bar Rengi',    default: '#111111', showWhen: { layoutKey: 'summaryLayout', supports: 'barChart' } },

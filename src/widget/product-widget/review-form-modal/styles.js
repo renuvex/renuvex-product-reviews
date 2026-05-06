@@ -39,7 +39,7 @@ export var FWIZARD_CSS = `
     background:var(--ikr-fwizard-bg, #ffffff);
     color:var(--ikr-fwizard-text, rgb(17,17,17));
     border:none;
-    border-radius:12px;
+    border-radius:var(--ikr-radius,12px);
     display:flex;
     flex-direction:column;
     overflow:hidden;
@@ -53,7 +53,7 @@ export var FWIZARD_CSS = `
     right:8px;
     width:44px;
     height:44px;
-    border-radius:8px;
+    border-radius:var(--ikr-radius-sm,8px);
     border:none;
     background:transparent;
     color:var(--ikr-fwizard-close-text, #6b7280);
@@ -191,7 +191,7 @@ export var FWIZARD_CSS = `
     width:100%;
     max-width:420px;
     border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
-    border-radius:12px;
+    border-radius:var(--ikr-radius,12px);
     padding:12px;
     display:flex;
     flex-direction:column;
@@ -216,7 +216,7 @@ export var FWIZARD_CSS = `
     padding:14px 20px;
     background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
     color:var(--ikr-fwizard-cta-text, #ffffff);
-    border-radius:8px;
+    border-radius:var(--ikr-radius-sm,8px);
     font-size:15px;
     font-weight:500;
     cursor:pointer;
@@ -266,7 +266,7 @@ export var FWIZARD_CSS = `
     position:relative;
     width:88px;
     height:88px;
-    border-radius:8px;
+    border-radius:var(--ikr-radius-sm,8px);
     overflow:hidden;
     border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
   }
@@ -287,7 +287,7 @@ export var FWIZARD_CSS = `
     display:flex;
     align-items:center;
     justify-content:center;
-    border-radius:8px;
+    border-radius:var(--ikr-radius-sm,8px);
   }
   .ikr-upload-error {
     color: #ff3333;
@@ -332,7 +332,7 @@ export var FWIZARD_CSS = `
     padding:12px 14px;
     background:var(--ikr-fwizard-input-bg, #ffffff);
     border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
-    border-radius:8px;
+    border-radius:var(--ikr-radius-sm,8px);
     font-size:16px; /* iOS zoom bug'ını önlemek için min 16px olmalı */
     font-family:inherit;
     color:var(--ikr-fwizard-input-text, var(--ikr-fwizard-text, rgb(17,17,17)));
@@ -401,7 +401,7 @@ export var FWIZARD_CSS = `
     background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
     color:var(--ikr-fwizard-cta-text, #ffffff);
     border:1px solid var(--ikr-fwizard-cta-border, rgb(17,17,17));
-    border-radius:8px;
+    border-radius:var(--ikr-radius-sm,8px);
     padding:14px 24px;
     font-size:15px;
     font-weight:500;
@@ -503,7 +503,7 @@ export var FWIZARD_CSS = `
     background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
     color:var(--ikr-fwizard-cta-text, #ffffff);
     border:1px solid var(--ikr-fwizard-cta-border, rgb(17,17,17));
-    border-radius:8px;
+    border-radius:var(--ikr-radius-sm,8px);
     width:108px;
     height:40px;
     padding:0;
@@ -535,7 +535,7 @@ export var FWIZARD_CSS = `
     flex:0 0 auto;
     width:80px;
     height:8px;
-    border-radius:16px;
+    border-radius:var(--ikr-radius-sm,8px);
     background:var(--ikr-fwizard-progress-bg, rgba(0,0,0,0.08));
     transition:background 0.2s;
   }
@@ -563,7 +563,7 @@ export var FWIZARD_CSS = `
     align-items:center;
     justify-content:center;
     gap:6px;
-    border-radius:8px;
+    border-radius:var(--ikr-radius-sm,8px);
     font-family:inherit;
     box-sizing:border-box;
     transition:background 0.15s;
