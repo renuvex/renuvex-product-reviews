@@ -151,15 +151,6 @@ function applyManualTheme(root, settings) {
   var loadMoreText   = settings.loadMoreTextColor   || '#111111';
   var loadMoreBorder = settings.loadMoreBorderColor || '#111111';
 
-  // Grup 12 — Modal
-  var modalBg          = settings.modalBgColor          || '#ffffff';
-  var modalCloseBg     = '#00000080';
-  var modalCloseText   = settings.modalCloseTextColor   || '#ffffff';
-  var modalCloseBorder = '#ffffff33';
-  var modalNavBg       = '#00000059';
-  var modalNavText     = settings.modalNavTextColor     || '#ffffff';
-  var modalNavBorder   = '#ffffff33';
-
   var vars = {
     // Grup 1 — Genel
     '--ikr-widget-bg':     '#ffffff00',
@@ -236,15 +227,6 @@ function applyManualTheme(root, settings) {
     '--ikr-load-more-bg':     loadMoreBg,
     '--ikr-load-more-text':   loadMoreText,
     '--ikr-load-more-border': loadMoreBorder,
-
-    // Grup 12 — Modal
-    '--ikr-modal-bg':           modalBg,
-    '--ikr-modal-close-bg':     modalCloseBg,
-    '--ikr-modal-close-text':   modalCloseText,
-    '--ikr-modal-close-border': modalCloseBorder,
-    '--ikr-modal-nav-bg':       modalNavBg,
-    '--ikr-modal-nav-text':     modalNavText,
-    '--ikr-modal-nav-border':   modalNavBorder,
   };
 
   Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });

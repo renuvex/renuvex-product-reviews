@@ -255,7 +255,7 @@ export var CLASSIC_CSS = `
 
   .ikr-photo-strip-wrap{position:relative;display:block;}
 
-  .ikr-modal{background:var(--ikr-modal-bg,#ffffff);color:#111111;border-radius:calc(var(--ikr-radius, 8px) * 1.5);overflow:hidden;display:flex;width:100%;height:584px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
+  .ikr-modal{background:#ffffff;color:#111111;border-radius:calc(var(--ikr-radius, 8px) * 1.5);overflow:hidden;display:flex;width:100%;height:584px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .ikr-modal-left{flex:0 0 438px;background:#222;position:relative;overflow:hidden;}
   .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
   .ikr-modal-img-enter-right{animation:ikrSlideInRight 0.2s ease forwards;}
@@ -263,21 +263,20 @@ export var CLASSIC_CSS = `
   @keyframes ikrSlideInRight{from{transform:translateX(60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   @keyframes ikrSlideInLeft{from{transform:translateX(-60px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   .ikr-modal-close,
-  .ikr-modal-close-mobile{background:var(--ikr-modal-close-bg,#00000080);border:1px solid var(--ikr-modal-close-border,#ffffff33);box-sizing:border-box;color:var(--ikr-modal-close-text,#ffffff);font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:var(--ikr-radius,6px);width:32px;height:32px;align-items:center;justify-content:center;}
+  .ikr-modal-close-mobile{background:#00000080;border:1px solid #ffffff33;box-sizing:border-box;color:#ffffff;font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:var(--ikr-radius,6px);width:32px;height:32px;align-items:center;justify-content:center;}
   .ikr-modal-close{position:absolute;top:-42px;right:0;display:flex;z-index:100000;}
   @media(hover:hover){.ikr-modal-close:hover{opacity:0.85;}}
   @media(max-width:640px){.ikr-modal-close{display:none;}}
-  /* Mobile and desktop close buttons share the same color variables. */
   .ikr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;z-index:2;}
   @media(hover:hover){.ikr-modal-close-mobile:hover{opacity:0.85;}}
-  .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:var(--ikr-modal-nav-bg,#00000059);border:1px solid var(--ikr-modal-nav-border,#ffffff33);box-sizing:border-box;color:var(--ikr-modal-nav-text,#fff);width:36px;height:36px;border-radius:var(--ikr-radius,6px);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
+  .ikr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:#00000059;border:1px solid #ffffff33;box-sizing:border-box;color:#ffffff;width:36px;height:36px;border-radius:var(--ikr-radius,6px);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
   @media(hover:hover){.ikr-modal-nav:hover{opacity:0.85;}}
   .ikr-modal-nav-prev{left:10px;}
   .ikr-modal-nav-next{right:10px;}
   .ikr-modal-thumbs{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;padding:0 12px;}
   .ikr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid transparent;opacity:0.7;}
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
-  .ikr-modal-right{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;background:var(--ikr-modal-bg,#ffffff);color:#111111;}
+  .ikr-modal-right{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;background:#ffffff;color:#111111;}
   /* Flex zincirinde her seviye min-width:0 olmazsa unbreakable string parent'ı zorlar.
      scroll-content de flex column → child'ları (modal-body vs.) shrink edebilsin diye
      burada da min-width:0 zorunlu. overflow-wrap:anywhere ancak shrink mümkünse iş görür. */

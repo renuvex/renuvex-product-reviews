@@ -239,15 +239,6 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        title: 'Fotoğraf Önizleme',
-        isColor: true,
-        fields: [
-          { type: 'color', key: 'modalBgColor',          label: 'Arka Plan Rengi',        default: '#ffffff' },
-          { type: 'color', key: 'modalCloseTextColor',   label: 'Kapat İkon Rengi',      default: '#ffffff' },
-          { type: 'color', key: 'modalNavTextColor',     label: 'Ok Rengi',              default: '#ffffff' },
-        ],
-      },
-      {
         // İkon ve rengi birlikte — yıldız konusu tek başlık altında ana panelde.
         // Renk eskiden "Yorum Kartı" altındaydı, kullanıcı yıldız arıyordu.
         title: 'Yıldız Stili',
