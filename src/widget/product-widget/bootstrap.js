@@ -139,7 +139,7 @@ export async function bootstrap(productId, productName) {
   if (bootstrapCache[productId]) return;
   bootstrapCache[productId] = true;
   // Fallback: reviews widget ayarları için varsayılan değerler
-  var FALLBACK = { primaryColor: '#111111', title: 'Müşteri Yorumları', enabled: true };
+  var FALLBACK = { title: 'Müşteri Yorumları', enabled: true };
   var BADGE_FALLBACK = { enabled: true, icon: 'star', size: 'medium', color: '#f59e0b' };
   try {
     var response = await fetchSettings();

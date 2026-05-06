@@ -22,7 +22,7 @@ export async function renderListingBadges() {
     if (!response) { ls.rendered = false; return; }
     var ratings = results[1];
 
-    // Badge rengi: badge.color → reviews.primaryColor → default
+    // Badge rengi: badge.color → default
     var widgets = (response && response.widgets) || {};
     var badgeColor = (widgets.badge && widgets.badge.color) || '#f59e0b';
 

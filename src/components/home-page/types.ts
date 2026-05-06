@@ -22,7 +22,6 @@ export type AutoApproveMode = 'manual' | '4plus' | '5stars' | 'all';
 export interface ReviewsSettings {
   enabled?: boolean;
   title?: string;
-  primaryColor?: string;
   autoApprove?: AutoApproveMode;
 }
 

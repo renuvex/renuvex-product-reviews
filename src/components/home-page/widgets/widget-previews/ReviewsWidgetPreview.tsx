@@ -52,7 +52,7 @@ const SIZE_PRESETS = {
 };
 
 export function ReviewsWidgetPreview({ settings }: PreviewProps) {
-  const primaryColor = (settings.primaryColor as string) ?? '#111111';
+  const replyBorderColor = (settings.replyBorderColor as string) ?? '#747474';
   const title = (settings.title as string) || 'Müşteri Yorumları';
   const isEnabled = (settings.enabled as boolean) ?? true;
   const reviewIcon = (settings.reviewIcon as string) ?? 'star';
@@ -167,7 +167,7 @@ export function ReviewsWidgetPreview({ settings }: PreviewProps) {
                     padding: '10px 14px',
                     background: 'rgba(0,0,0,0.03)',
                     borderRadius: innerRadius,
-                    borderLeft: `3px solid ${primaryColor}`,
+                    borderLeft: `3px solid ${replyBorderColor}`,
                   }}>
                     <div style={{ fontSize: replyNameSize, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: 4 }}>
                       {review.reply.name}

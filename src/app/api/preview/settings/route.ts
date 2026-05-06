@@ -15,7 +15,6 @@ export async function GET() {
     reviews: {
       enabled: true,
       title: 'Müşteri Yorumları',
-      primaryColor: '#111111',
       autoApprove: 'manual',
       size: 'medium',
       thumbnailSize: 'medium',

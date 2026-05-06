@@ -17,19 +17,14 @@ import {
   setCurrentReviewsData,
 } from '../core/state.js';
 
-// ─── Tema → CSS değişkenleri ────────────────────────────────────────────────
-// Admin'den gelen 7 renk ayarı (bg, text, muted, reply, input + primaryColor
-// ve primaryTextColor render() içinde) CSS değişkenlerine yazılır. styles.js
-// tüm yüzey/yazı/border renklerini bu değişkenler üzerinden okur.
+// ─── CSS değişkenleri ────────────────────────────────────────────────────────
+// Her UI elemanı kendi spesifik CSS değişkeniyle renklendirilir. Eski genel
+// tema token'ları (--ikr-bg, --ikr-text vb.) kaldırıldı; her renk doğrudan
+// schema'daki karşılığından veya sabit default'tan gelir.
 
-// Yardımcı: hex → rgba string (alpha verilerek). text-faint, border ve
-// track-bg gibi türev renkleri ana renklerden alpha ile üretmek için.
+// Yardımcı: hex → rgba string (alpha verilerek). Structural translucency
+// (hover bg, border, track) türevleri için kullanılır.
 // 6-char (#rrggbb) ve 8-char (#rrggbbaa) hex destekler.
-// 8-char gelirse son byte alpha'sı vardır ama bu fonksiyon CALLER'ın verdigi
-// alpha'yı kullanir — kullanim senaryosu "temel renk opak alinip azaltilmis
-// saydamlikla bir yere uygulanmak" (ör. hover bg, border %8 opacity). Yani
-// kullanici hex'inin kendi alpha'si yoksayilir, caller alpha'si hakim.
-// rgba(...) dondurur cunku CSS alpha desteklesin diye.
 function hexToRgba(hex, alpha) {
   var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})?$/.exec(hex);
   if (!m) return 'rgba(0,0,0,' + alpha + ')';
@@ -77,32 +72,28 @@ var SIZE_PRESETS = {
 var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
 
 function applyManualTheme(root, settings) {
-  var bg = settings.bgColor || '#ffffff';
-  var text = settings.textColor || '#111111';
-  var replyBg = settings.replyBgColor || '#f9fafb';
-
   // Grup 1 — Genel
+  // Widget container background/border always transparent (store theme owns it).
+
   // Grup 2 — Başlık & Özet
-  var headerTitle     = settings.headerTitleColor     || text;
-  var headerAvg       = settings.headerAvgColor       || text;
-  var headerCount     = settings.headerCountColor     || text;
-  var headerRecommend = settings.headerRecommendColor || text;
+  var headerTitle     = settings.headerTitleColor     || '#111111';
+  var headerAvg       = settings.headerAvgColor       || '#111111';
+  var headerCount     = settings.headerCountColor     || '#111111';
+  var headerRecommend = settings.headerRecommendColor || '#111111';
 
   // Grup 3 — Puan Dağılımı
-  var barFill   = settings.barFillColor   || text;
+  var barFill   = settings.barFillColor   || '#111111';
   var barTrack  = settings.barTrackColor  || '#e5e7eb';
   // Empty stars are shared by review items, rating inputs, and distribution stars.
   // Bar track stays independent so chart contrast can be tuned separately.
   var starEmpty = settings.starEmptyColor || '#e5e7eb';
-  var barCount  = settings.barCountColor  || text;
+  var barCount  = settings.barCountColor  || '#111111';
   var barHoverBg = hexToRgba(barFill, 0.06);
 
   // Grup 4 — Butonlar
-  var primary      = settings.primaryColor     || '#111111';
-  var primaryText  = settings.primaryTextColor || '#ffffff';
-  var btnBg        = settings.btnBgColor        || primary;
-  var btnText      = settings.btnTextColor      || primaryText;
-  var btnBorder    = settings.btnBorderColor    || primary;
+  var btnBg        = settings.btnBgColor        || '#111111';
+  var btnText      = settings.btnTextColor      || '#ffffff';
+  var btnBorder    = settings.btnBorderColor    || '#111111';
   var filterBg     = settings.filterBtnBgColor     || '#111111';
   var filterText   = settings.filterBtnTextColor   || '#ffffff';
   var filterBorder = settings.filterBtnBorderColor || '#111111';
@@ -110,36 +101,36 @@ function applyManualTheme(root, settings) {
   // Grup 5 — Filtre Menüsü
   var filterMenuBg      = settings.filterMenuBgColor      || '#ffffff';
   var filterMenuBorder  = settings.filterMenuBorderColor  || '#e5e7eb';
-  var filterItemText    = settings.filterItemTextColor    || text;
+  var filterItemText    = settings.filterItemTextColor    || '#111111';
   var filterItemHoverBg = settings.filterItemHoverBgColor || '#f3f4f6';
   var filterItemActive  = settings.filterItemActiveColor  || '#111111';
 
   // Grup 6 — Yorum Kartı
-  var reviewTitleColor = settings.reviewTitleColor || text;
-  var reviewAuthorColor = settings.reviewAuthorColor || text;
-  var reviewDateColor  = settings.reviewDateColor  || text;
-  var reviewBodyColor  = settings.reviewBodyColor  || text;
+  var reviewTitleColor = settings.reviewTitleColor || '#111111';
+  var reviewAuthorColor = settings.reviewAuthorColor || '#111111';
+  var reviewDateColor  = settings.reviewDateColor  || '#111111';
+  var reviewBodyColor  = settings.reviewBodyColor  || '#111111';
   var reviewBorderColor = settings.reviewBorderColor || '#e5e7eb';
   var reviewStarColor  = settings.reviewStarColor  || '#f59e0b';
 
   // Grup 7 — Mağaza Yanıtı
-  var replyBgVar      = settings.replyBgColor      || replyBg;
+  var replyBgVar      = settings.replyBgColor      || '#f9fafb';
   var replyBorderVar  = settings.replyBorderColor  || '#747474';
-  var replyLabelColor = settings.replyLabelColor   || text;
-  var replyTextVar    = settings.replyTextColor    || text;
+  var replyLabelColor = settings.replyLabelColor   || '#111111';
+  var replyTextVar    = settings.replyTextColor    || '#111111';
 
   // Grup 9 — Fotoğraf Galerisi
-  var photoTitle        = settings.photoTitleColor       || text;
-  var photoImageBorder  = hexToRgba(text, 0.05);
+  var photoTitle        = settings.photoTitleColor       || '#111111';
+  var photoImageBorder  = hexToRgba('#111111', 0.05);
   var photoArrowBg      = settings.photoArrowBgColor     || '#ffffff';
-  var photoArrowText    = settings.photoArrowTextColor   || text;
-  var photoArrowBorder  = hexToRgba(text, 0.12);
+  var photoArrowText    = settings.photoArrowTextColor   || '#111111';
+  var photoArrowBorder  = hexToRgba('#111111', 0.12);
 
   // Group 10 - Review form
   // Form tokens drive the modal review wizard.
   // The overlay color is intentionally not mapped here; it stays fixed.
-  var formBg      = settings.formBgColor      || bg;
-  var formText    = settings.formTextColor    || text;
+  var formBg      = settings.formBgColor      || '#ffffff';
+  var formText    = settings.formTextColor    || '#111111';
   var formMuted   = hexToRgba(formText, 0.72);
   var inputBgVar  = settings.inputBgColor     || '#ffffff';
   var inputTextVar = settings.inputTextColor  || formText;
@@ -155,13 +146,13 @@ function applyManualTheme(root, settings) {
 
   // Grup 11 — Daha Fazla Göster
   var loadMoreBg     = settings.loadMoreBgColor     || '#ffffff';
-  var loadMoreText   = settings.loadMoreTextColor   || text;
-  var loadMoreBorder = settings.loadMoreBorderColor || text;
+  var loadMoreText   = settings.loadMoreTextColor   || '#111111';
+  var loadMoreBorder = settings.loadMoreBorderColor || '#111111';
 
   // Grup 12 — Modal
-  var modalBg          = settings.modalBgColor          || bg;
+  var modalBg          = settings.modalBgColor          || '#ffffff';
   var modalCloseBg     = '#00000080';
-  var modalCloseText   = settings.modalCloseTextColor   || primaryText;
+  var modalCloseText   = settings.modalCloseTextColor   || '#ffffff';
   var modalCloseBorder = '#ffffff33';
   var modalNavBg       = '#00000059';
   var modalNavText     = settings.modalNavTextColor     || '#ffffff';
@@ -252,15 +243,6 @@ function applyManualTheme(root, settings) {
     '--ikr-modal-nav-bg':       modalNavBg,
     '--ikr-modal-nav-text':     modalNavText,
     '--ikr-modal-nav-border':   modalNavBorder,
-
-    // Legacy (grup grup kaldırılacak)
-    '--ikr-bg':         bg,
-    '--ikr-surface':    bg,
-    '--ikr-text':       text,
-    '--ikr-text-faint': hexToRgba(text, 0.45),
-    '--ikr-border':     hexToRgba(text, 0.12),
-    '--ikr-track-bg':   hexToRgba(text, 0.22),
-    '--ikr-reply-bg':   replyBg,
   };
 
   Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
@@ -270,6 +252,7 @@ function applyManualTheme(root, settings) {
     document.documentElement.style.background = 'transparent';
   }
 }
+
 
 export async function render(productId, settings, reviewsData, productName, orderBy, page, badgeSettings) {
   if (renderInProgress) {
@@ -301,10 +284,11 @@ export async function render(productId, settings, reviewsData, productName, orde
 
     applyManualTheme(root, settings);
 
-    var primaryColor = settings.primaryColor || '#111111';
-    var primaryTextColor = settings.primaryTextColor || '#ffffff';
-
-    injectStyles(primaryColor, CLASSIC_CSS + getLayoutsCSS() + getReviewLayoutsCSS());
+    // injectStyles CSS'i enjekte eder; renk parametresi --ikr-color ve
+    // --ikr-color-light için kullanılır. Bu token'lar artık kullanılmıyor
+    // (tüm renkler spesifik var'lar üzerinden gidiyor), ama injectStyles
+    // hâlâ CSS <style> elementini oluşturup/güncelliyor.
+    injectStyles('#111111', CLASSIC_CSS + getLayoutsCSS() + getReviewLayoutsCSS());
 
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
 
@@ -318,7 +302,6 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-author-size', sz.authorSize + 'px');
     root.style.setProperty('--ikr-reply-name-size', sz.replyNameSize + 'px');
     root.style.setProperty('--ikr-reply-text-size', sz.replyTextSize + 'px');
-    root.style.setProperty('--ikr-color-text', primaryTextColor);
     root.style.setProperty('--ikr-radius', radius + 'px');
     root.style.setProperty('--ikr-radius-sm', Math.max(0, radius - 4) + 'px');
     root.style.setProperty('--ikr-photo-title-size', sz.photoTitleSize + 'px');
