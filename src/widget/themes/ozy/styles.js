@@ -155,7 +155,8 @@ export var CLASSIC_CSS = `
   /* min-height:36px — filter butonu (36×36 sabit) ile ayni yukseklikte tutar.
      Font small/medium'da yukseklik 36'ya kilitlenir; large font'ta padding
      katkisi ile bir miktar buyur ama filter'la dengeli kalir. */
-  .ikr-write-btn{flex:1 1 auto;min-width:0;min-height:36px;background:var(--ikr-btn-bg,#111111);color:var(--ikr-btn-text,#ffffff);padding:10px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,#111111);font-weight:600;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;}
+  .ikr-write-btn{flex:1 1 auto;min-width:0;min-height:36px;background:var(--ikr-btn-bg,#111111);color:var(--ikr-btn-text,#ffffff);padding:10px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid var(--ikr-btn-border,#111111);font-weight:600;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;transition:opacity 0.15s;}
+  @media(hover:hover){.ikr-write-btn:hover{opacity:0.85;}}
   .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-end;}
   /* Filter button colors come from the Filtre color group in admin. */
   .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--ikr-radius,6px);border:2px solid var(--ikr-filter-btn-border,#111111);background:var(--ikr-filter-btn-bg,transparent);color:var(--ikr-filter-btn-text,#111111);cursor:pointer;}
