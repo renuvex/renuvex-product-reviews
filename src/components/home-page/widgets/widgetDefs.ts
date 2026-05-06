@@ -159,7 +159,7 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        title: 'Butonlar',
+        title: 'Yorum Butonu',
         isColor: true,
         fields: [
           { type: 'color', key: 'btnBgColor',     label: 'Arka Plan Rengi', default: '#111111' },
