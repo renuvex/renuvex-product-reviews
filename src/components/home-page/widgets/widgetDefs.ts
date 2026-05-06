@@ -222,6 +222,10 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'color', key: 'inputBorderColor',  label: 'Alan Kenarlık Rengi',    default: '#d1d5db' },
           { type: 'color', key: 'placeholderColor',  label: 'Placeholder Rengi',      default: '#9ca3af' },
           { type: 'color', key: 'formStepBarColor',  label: 'Adım Çubuğu Rengi',      default: '#111111' },
+          { type: 'color', key: 'formCtaBgColor',     label: 'Devam Butonu Arka Plan', default: '#111111' },
+          { type: 'color', key: 'formCtaTextColor',   label: 'Devam Butonu Yazı',      default: '#ffffff' },
+          { type: 'color', key: 'formCtaBorderColor', label: 'Devam Butonu Kenarlık',  default: '#111111' },
+          { type: 'color', key: 'formNavTextColor',   label: 'Geri/İleri Yazı',         default: '#111111' },
         ],
       },
       {
