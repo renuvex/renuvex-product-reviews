@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-06
+updated: 2026-05-07
 tags:
   - status
 related:
@@ -16,7 +16,7 @@ related:
 # Current Status — ikas Review App
 
 ## Current Phase
-Active development. Core feature set is functional end-to-end: OAuth install, widget injection, public review submission with moderation, admin dashboard, widget customization with live preview. Recent work has focused on **widget customization controls** — color settings (basic/advanced tiers), brand presets, layout-aware setting visibility, form step bar color. See recent commits.
+Active development. Core feature set is functional end-to-end. Recent work has focused on **UI/UX Polish and Visual Consistency**: synchronized button behaviors (align-items: stretch), standardized 20px vertical spacing (ferahlık), and refined tablet breakpoints (768px for Split layout). Most premium design details from competitors (Loox/Yotpo) have been integrated into the Ozy theme. See recent commits.
 
 ## Working Features
 - OAuth install flow for ikas merchants — code-signature validation, token exchange, JWT issuance, session cookie

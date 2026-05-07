@@ -70,6 +70,7 @@ related:
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[ADR_0003_Review_Data_Model]]
 - [[ADR_0004_Ikas_Integration_Strategy]]
+- [[ADR_0005_Summary_Layout_Visual_Consistency_Strategy]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]

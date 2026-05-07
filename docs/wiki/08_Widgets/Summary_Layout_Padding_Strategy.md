@@ -41,15 +41,15 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 | `minimal` | `8px` | — | sol | 2026-05-07: yan padding `0` -> `16px` -> `8px` |
 | `split` | `16px 8px` | — | sol | 2026-05-07: yan padding `0` -> `16px` -> `8px` |
 
-### Mobile (<= 600px)
+### Mobile (<= 600px / 768px)
 
-| Layout | `.ikr-summary` Padding | Baslik Hizasi |
-|---|---|---|
-| `classic` | `16px 16px` | ortada |
-| `compact` | `16px 16px` | sol |
-| `hero` | `16px 16px` | sol |
-| `minimal` | `16px 16px` | sol |
-| `split` | `16px 16px` | sol |
+| Layout | `.ikr-summary` Padding | Baslik Hizasi | Gap (Vertical) |
+|---|---|---|---|
+| `classic` | `16px 16px` | ortada | `20px` |
+| `compact` | `16px 16px` | sol | `20px` (header-to-panel) |
+| `hero` | `16px 16px` | sol | `12px` |
+| `minimal` | `16px 16px` | sol | `12px` |
+| `split` | `16px 16px` | sol | `20px` |
 
 ## CSS Variables
 
@@ -57,8 +57,9 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 |---|---|---|
 | `--ikr-pad-summary-mobile` | `16px` | Tum summary layout'larin mobile yan padding'i |
 | `--ikr-pad-review-mobile` | `16px` | Review item'larin (card/list/gallery) mobile yan padding'i |
+| `--ikr-col-gap` | `20px` | Summary block'lar arasi dikey bosluk (Classic/Split Mobile) |
 
-Tanim yeri: [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) (satir 47).
+Tanim yeri: [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js).
 
 ## Baslik Hizalama
 
@@ -86,31 +87,32 @@ Layout-spesifik baslik override'lari (hepsi `text-align: left`):
 
 ## Breakpoint
 
-Tek breakpoint: `600px`
+Sistemde iki ana breakpoint yaklasimi vardir:
+
+1. **Genel Breakpoint (`600px`)**: Coğu layout (Classic, Hero, Minimal, Compact) 600px'de mobile gecer.
+2. **Split Layout Breakpoint (`768px`)**: Split layout, tabletleri de mobil dikey dizilimde tutmak icin 768px breakpoint'ini kullanir.
 
 ```css
-@media(max-width:600px) { /* mobile */ }
-@media(min-width:601px)  { /* desktop */ }
+@media(max-width:600px) { /* Standart mobile */ }
+@media(max-width:768px) { /* Split layout mobile/tablet */ }
 ```
-
-Eski `768px` referansi (split yorumlarinda) 2026-05-07'de `600px`'ye cekildi.
 
 ## Source Files
 
 - [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — base `.ikr-summary`, `.ikr-title`, mobile block
-- [src/widget/summary-layouts/classic/index.js](src/widget/summary-layouts/classic/index.js) — classic render (base padding burada tanimli degil, base'den gelir)
+- [src/widget/summary-layouts/classic/index.js](src/widget/summary-layouts/classic/index.js) — classic render
 - [src/widget/summary-layouts/compact/styles.js](src/widget/summary-layouts/compact/styles.js) — compact header + panel padding
 - [src/widget/summary-layouts/hero/styles.js](src/widget/summary-layouts/hero/styles.js) — hero padding
 - [src/widget/summary-layouts/minimal/styles.js](src/widget/summary-layouts/minimal/styles.js) — minimal padding
-- [src/widget/summary-layouts/split/styles.js](src/widget/summary-layouts/split/styles.js) — split padding + breakpoint
+- [src/widget/summary-layouts/split/styles.js](src/widget/summary-layouts/split/styles.js) — split padding + 768px breakpoint
 
 ## Change Log
 
-- **2026-05-07**: Desktop yan padding birligi saglandi. `hero`, `minimal`, `split` layout'larina `8px` yan padding eklendi (once `0`'di, sonra `16px` oldu, son olarak `8px` ile mobile ile tutarli hale getirildi). Related source: [hero/styles.js](src/widget/summary-layouts/hero/styles.js), [minimal/styles.js](src/widget/summary-layouts/minimal/styles.js), [split/styles.js](src/widget/summary-layouts/split/styles.js).
-- **2026-05-07**: Baslik hizalama birligi saglandi. Base `.ikr-title` `text-align: center` -> `left`. Mobile'da `text-align: center` kalir. Tum layout-spesifik baslik override'lari guncellendi. Related source: [styles.js](src/widget/themes/ozy/styles.js), [compact/styles.js](src/widget/summary-layouts/compact/styles.js), [split/styles.js](src/widget/summary-layouts/split/styles.js).
-- **2026-05-07**: Split layout yorum/kod uyuşmazligi duzeltildi. Yorumda `768px` -> `600px`, mobile baslik `center` -> `left`. Related source: [split/styles.js](src/widget/summary-layouts/split/styles.js).
-- **2026-05-07**: Split layout mobile baslik hizasi duzeltildi. `.ikr-title-split` mobile `text-align: center` -> `left`. Related source: [split/styles.js](src/widget/summary-layouts/split/styles.js).
-- **2026-05-07**: Compact header fazla padding duzeltildi. `.ikr-compact-header` `padding: 8px 0` -> `0`, `.ikr-compact-trigger` `padding: 8px 0` -> `0`. Related source: [compact/styles.js](src/widget/summary-layouts/compact/styles.js).
-- **2026-05-07**: Compact summary yan padding duzeltildi. `.ikr-summary-compact` `padding-top:0; padding-bottom:0` -> `padding:0 16px`. Base `.ikr-summary` rule'inin `28px` yan padding'ini devraliyordu; diger layout'larla (`hero`/`minimal`/`split`) tutarli `16px` yapildi. Related source: [compact/styles.js](src/widget/summary-layouts/compact/styles.js).
-- **2026-05-07**: Compact mobile padding kritik duzeltme. `.ikr-summary-compact { padding:0 }` media query disindaydi; mobile'da base `.ikr-summary { padding:16px var(--ikr-pad-summary-mobile) }`'i eziyordu. Kural `@media(min-width:601px)` icine tasindi. Artik mobile'da compact de `16px` yan padding aliyor. Related source: [compact/styles.js](src/widget/summary-layouts/compact/styles.js).
-- **2026-05-07**: Ikas temasi padding analizi yapildi. Ikas temasi `16px` yan padding kullaniyor. Widget CSS variable'lari ikas ile tutarli hale getirildi: `--ikr-pad-summary-mobile` `8px` -> `16px`, `--ikr-pad-review-mobile` `10px` -> `16px`. Related source: [styles.js](src/widget/themes/ozy/styles.js).
+- **2026-05-07**: Spacing ve Hizalama Guncellemesi.
+  - Summary block'lar arasi dikey bosluk (gap) `12px` -> `20px` yapildi (Classic ve Split Mobile).
+  - Split layout tablet breakpoint'i `601px` -> `769px` yapildi (Tablette dikey dizilim icin).
+  - Compact layout mobil sızıntısı giderildi, panel ici bosluk `20px` yapildi.
+  - Filtre butonu "Yorum Yap" butonu ile dikeyde esitlendi (`align-items: stretch`).
+- **2026-05-07**: Desktop yan padding birligi saglandi. `hero`, `minimal`, `split` layout'larina `8px` yan padding eklendi.
+- **2026-05-07**: Baslik hizalama birligi saglandi. Base `.ikr-title` `text-align: center` -> `left`. 
+- **2026-05-07**: Ikas temasi padding analizi yapildi. `--ikr-pad-summary-mobile` `16px`, `--ikr-pad-review-mobile` `16px` yapildi.

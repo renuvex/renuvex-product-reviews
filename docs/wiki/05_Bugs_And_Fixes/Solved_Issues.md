@@ -22,6 +22,14 @@ related:
 
 ## Log
 
+### 2026-05-07
+- UI/UX — Button Height Sync — Implemented `align-items: stretch` in `classic` and `split` layouts to ensure "Write Review" and "Filter" buttons always match in height.
+- Layout — Standardized Spacing — Increased vertical gap between summary blocks to 20px (ferahlık) for premium aesthetic.
+- Bug — Split Layout Shift — Fixed bar chart jumping when recommendation percentage was hidden by using a placeholder element.
+- Bug — Split Mobile Gap — Fixed massive blank gap in split mobile view caused by hidden recommendation placeholders.
+- Responsive — Split Tablet Breakpoint — Changed split layout breakpoint to 768px to ensure tablets use the optimized mobile view.
+- Layout — Compact Spacing Leak — Fixed 20px gap leak in compact mobile layout and synchronized its internal dropdown panel to 20px.
+
 ### 2026-05-05
 - Wiki seeded — no fixes recorded yet.
 
