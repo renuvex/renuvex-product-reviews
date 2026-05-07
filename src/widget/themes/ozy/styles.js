@@ -129,7 +129,7 @@ export var CLASSIC_CSS = `
     --ikr-col-count:60px;
     --ikr-col-gap:4px;
     --ikr-summary-max:340px;
-    display:flex;flex-direction:column;align-items:center;gap:12px;
+    display:flex;flex-direction:column;align-items:center;gap:20px;
     padding:16px 28px 24px;border-radius:var(--ikr-radius,6px);margin:0 auto 24px;
   }
   .ikr-summary-block{display:flex;flex-direction:column;align-items:center;width:100%;max-width:var(--ikr-summary-max);}
