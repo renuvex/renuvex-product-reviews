@@ -107,9 +107,9 @@ Arastirma uc kaynaktan beslendi:
 
 | Layout | Yan Padding | Degisken | Degerlendirme |
 |---|---|---|---|
-| **card** | `var(--ikr-pad-review-mobile)` | `10px` | ✅ Uygun |
-| **list** | `var(--ikr-pad-review-mobile)` | `10px` | ✅ Uygun |
-| **gallery** | `var(--ikr-pad-review-mobile)` | `10px` | ✅ Uygun |
+| **card** | `var(--ikr-pad-review-mobile)` | `16px` | ✅ Uygun |
+| **list** | `var(--ikr-pad-review-mobile)` | `16px` | ✅ Uygun |
+| **gallery** | `var(--ikr-pad-review-mobile)` | `16px` | ✅ Uygun |
 
 ### 3.3 Diger Parametreler
 
@@ -118,19 +118,20 @@ Arastirma uc kaynaktan beslendi:
 | Review item top/bottom padding (card) | `20px` | 16-24px | ✅ Uygun |
 | Review item top/bottom padding (list) | `24px` | 16-24px | ✅ Uygun |
 | Review item top/bottom padding (gallery) | `18px` | 16-24px | ✅ Uygun |
-| Mobile summary padding | `8px` | 8-16px | ✅ Uygun |
+| Mobile summary padding | `16px` | 8-16px | ✅ Uygun |
 | Touch target (filter btn) | `36×36px` | Min 24px, oneri 44px | ⚠️ Sınırda |
 | Touch target (write btn) | `min-height:36px` | Min 24px, oneri 44px | ⚠️ Sınırda |
 
 ## 4. Sorunlar ve Riskler
 
-### 4.1 Desktop Yan Padding Eksikligi
+### 4.1 Desktop Yan Padding — Mevcut Durum Kabul Edilebilir
 
-**Sorun**: Hicbir review layout'u desktop'ta yan padding tanimlamiyor. `#ikas-reviews-widget > * { max-width:1200px; margin:auto }` ile ortalaniyor ama icerik dogrudan container kenarina yapisik duruyor.
+**Guncelleme (2026-05-07)**: Desktop testlerinde (`#ikas-reviews-widget > * { max-width:1200px; margin:auto }`) icerik zaten dengeli ve kenara yapismiyor. Review layout'lara ek desktop yan padding gerekli **degil**.
 
-**Risk**: Dar ekranlarda veya farkli tema container padding'lerinde icerik kenara yapisik gorunebilir. Okunabilirlik ve estetik etkilenir.
-
-**Ornek**: 13" laptop (1280px) + 1200px max-width widget = her iki tarafta 40px bosluk. Ama bu bosluk widget container'a ait; review item'in kendi ic padding'i yok.
+**Mevcut Durum**:
+- Widget container: `max-width:1200px; margin:auto` ✅
+- Review item'lar: container sinirlari icinde dengeli ✅
+- Gorsel test: classic/card layout'larda hizalama sorunsuz ✅
 
 ### 4.2 Gallery Masonry Etkisi
 
@@ -198,18 +199,18 @@ Mevcut durum **uygundur**:
 
 ### Desktop
 
-**Duzeltme gerekir**:
-- `0px` yan padding → `8px` yan padding
-- Summary layout'larla (`8px`) tutarli hale getirilmeli
-- Gallery ve list layout hesaplamalari uygun (risk yok)
+**Duzeltme gerekmez**:
+- Widget container `max-width:1200px; margin:auto` icerigi zaten dengeli tutuyor
+- Desktop testlerinde kenara yapismadigi gozlendi
+- Mevcut `0px` yan padding kabul edilebilir
 
-## 7. Karsilastirma Tablosu (Onerilen Son Durum)
+## 7. Karsilastirma Tablosu (Guncel Son Durum)
 
 | Layout | Desktop Yan Padding | Mobile Yan Padding | Top/Bottom | Touch Target |
 |---|---|---|---|---|
-| **card** | `8px` | `10px` | `20px` | `36px` (mevcut) |
-| **list** | `8px` | `10px` | `24px` | `36px` (mevcut) |
-| **gallery** | `8px` | `10px` | `18px` | `36px` (mevcut) |
+| **card** | `0` (container) | `16px` | `20px` | `36px` (mevcut) |
+| **list** | `0` (container) | `16px` | `24px` | `36px` (mevcut) |
+| **gallery** | `0` (container) | `16px` | `18px` | `36px` (mevcut) |
 
 ## 8. Source Files
 
@@ -226,4 +227,7 @@ Mevcut durum **uygundur**:
 
 ## Change Log
 
-- **2026-05-07**: Rapor olusturuldu. Endustri standartlari (WCAG 2.2, Apple HIG, Material Design), rakip uygulamalar (Loox, Yotpo, Okendo, Judge.me) ve mevcut durum analizi yapildi. Desktop icin `8px` yan padding onerisi getirildi.
+- **2026-05-07**: Rapor olusturuldu. Endustri standartlari (WCAG 2.2, Apple HIG, Material Design), rakip uygulamalar (Loox, Yotpo, Okendo, Judge.me) ve mevcut durum analizi yapildi.
+- **2026-05-07**: Desktop padding onerisi revize edildi. Gorsel testler sonucunda desktop'ta review layout'lara ek yan padding gerekli olmadigi tespit edildi. Widget container `max-width:1200px; margin:auto` icerigi zaten dengeli tutuyor.
+- **2026-05-07**: Mobile padding token'lari ikas temasi ile senkronize edildi. `--ikr-pad-review-mobile` `10px` -> `16px`. Foto galeri section ve strip padding'leri review token'ina baglandi.
+- **2026-05-07**: Foto galeri negatif margin sorunu duzeltildi. `.ikr-photo-strip-container` negatif margin sadece desktop'a (`@media(min-width:601px)`) sinirlandirildi. Mobile'da negatif margin kalkti, thumbnail'lar padding ile hizali kaldi.

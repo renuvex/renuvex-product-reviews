@@ -14,7 +14,7 @@ export var SPLIT_CSS = `
      classic'in .ikr-summary-actions wrapper'iyla ayni davranisi alir
      (flex row + width 100%) — write-btn yan yana filter ile durur. */
   @media(max-width:600px){
-    /* Mobile'da split classic gibi davranir -> baslik ortali (classic pattern). */
+    /* Mobile'da split classic gibi davranir -> baslik ortali. */
     .ikr-title-split{text-align:center;}
     .ikr-split-left,.ikr-split-mid{display:contents;}
     /* .ikr-split-right classic'in .ikr-summary-actions pattern'ini taklit
