@@ -82,21 +82,41 @@ export var CLASSIC_CSS = `
   .ikr-icon{display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;}
   .ikr-icon > svg{width:100%;height:100%;display:block;}
 
-  /* ─── PARTIAL STARS (yarım yıldız overlay) ───────────────────────────
-     Empty katman tabanda, filled katman üstte clip ile %X kadar gösterilir.
-     Loox/Yotpo/Material UI Rating standardı. Boyut yine .ikr-icon parent'ından
-     gelir (.ikr-hero-stars .ikr-icon { width:22px } gibi).
-     gap parent'tan (.ikr-stars-partial-empty/fill inline-flex) miras alınmaz —
-     overlay aynı yapıyı tekrar ettiği için iki katman birebir üst üste oturur. */
-  .ikr-stars-partial{position:relative;display:inline-flex;line-height:1;}
-  .ikr-stars-partial-empty,.ikr-stars-partial-fill{display:inline-flex;gap:2px;align-items:center;}
-  .ikr-stars-partial-empty{color:var(--ikr-star-empty-color,#e5e7eb);}
-  .ikr-stars-partial .ikr-stars-partial-empty .ikr-icon{color:var(--ikr-star-empty-color,#e5e7eb);}
-  .ikr-stars-partial .ikr-stars-partial-fill .ikr-icon{color:var(--ikr-review-star-color,#f59e0b);}
-  .ikr-stars-partial-fill{
-    position:absolute;left:0;top:0;height:100%;
-    overflow:hidden;pointer-events:none;
+  /* ─── PARTIAL STARS (bireysel star + clip-path) ───────────────────────
+     Her yıldız bağımsız .ikr-star kapsayıcısında. Half state'te tek filled
+     geometri iki katmanda: alt katman boş-renk full, üst katman dolu-renk
+     + clip-path:inset(0 50% 0 0) ile sol %50. Tek SVG path kullanıldığı
+     için kare/kalp ikonlarında bile geometri uyumsuzluğu fiziksel olarak
+     imkânsız. Material UI Rating decimal mode + react-stars pattern. */
+  .ikr-stars-partial{display:inline-flex;gap:2px;align-items:center;line-height:1;}
+  .ikr-star{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    line-height:1;
   }
+  .ikr-star > svg{width:100%;height:100%;display:block;}
+  .ikr-star-full  { color: var(--ikr-review-star-color, #f59e0b); }
+  .ikr-star-empty { color: var(--ikr-star-empty-color,  #e5e7eb); }
+  /* Half: iki katman, üst katman clip ile sol %50. */
+  .ikr-star-half-bg,
+  .ikr-star-half-fg{
+    position:absolute;
+    inset:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .ikr-star-half-bg{ color: var(--ikr-star-empty-color, #e5e7eb); }
+  .ikr-star-half-fg{
+    color: var(--ikr-review-star-color, #f59e0b);
+    -webkit-clip-path: inset(0 50% 0 0);
+            clip-path: inset(0 50% 0 0);
+  }
+  .ikr-star-half-bg > svg,
+  .ikr-star-half-fg > svg{width:100%;height:100%;display:block;}
 
   /* ─── SUMMARY LAYOUT ────────────────────────────────────────────────
      Her blok bağımsız — sıra/gizleme CSS ile kolayca değiştirilebilir.

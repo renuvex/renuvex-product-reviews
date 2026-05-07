@@ -25,8 +25,11 @@ export function starsHTML(rating, settings) {
 }
 
 // partialStarsHTML(rating, iconPair, opts) — Ortalama puan için yarım yıldız desteği.
-// 5 boş yıldız üstüne 5 dolu yıldız bindirir, dolu katmanı %(rating/5*100) genişlikte clipler.
-// Loox/Yotpo/Material UI Rating standardı (overlay clip tekniği).
+// Bireysel yıldız + clip-path mimarisi. Her yıldız bağımsız .ikr-star kapsayıcısı.
+// Half state'inde tek filled SVG iki katmanda kullanılır (alt boş-renk, üst dolu-renk
+// + clip-path:inset(0 50% 0 0) ile sol yarı). Tek path → geometri uyumsuzluğu
+// fiziksel olarak imkânsız (kare/kalp ikonlarında bile tam ortadan simetrik bölünür).
+// Material UI Rating decimal mode + react-stars + Yotpo pattern.
 //
 //   rating   : float (ör 4.3, 4.5, 5.0)
 //   iconPair : { filled, empty } — getIconFromSettings'ten gelen SVG çifti
@@ -39,21 +42,34 @@ export function partialStarsHTML(rating, iconPair, opts) {
   var whole = Math.floor(r);
   var frac = r - whole;
   var snapped = frac < 0.25 ? whole : (frac < 0.75 ? whole + 0.5 : whole + 1);
-  var pct = (snapped / 5) * 100;
   var sizeStyle = (opts && opts.sizeStyle) || '';
-  // Boş katman da `filled` path'i kullanır — opaklık ile soldurulur.
-  // Outline path'lerin filled path'lerle birebir hizalanmaması sorununu (overlay
-  // sapması) ortadan kaldırır. Yotpo/Stamped/Material UI Rating standardı.
-  var emptyHtml = '';
-  var filledHtml = '';
-  for (var i = 0; i < 5; i++) {
-    emptyHtml  += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.empty + '</span>';
-    filledHtml += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.filled + '</span>';
+
+  var html = '';
+  for (var i = 1; i <= 5; i++) {
+    var state =
+      i <= snapped              ? 'full'
+      : (i - 0.5 === snapped)   ? 'half'
+                                : 'empty';
+
+    if (state === 'full') {
+      html += '<span class="ikr-star ikr-star-full" style="' + sizeStyle + '">'
+            +   iconPair.filled
+            + '</span>';
+    } else if (state === 'empty') {
+      // Tam-state empty: outline mimarisi korunuyor (filled+gri değil, outline SVG).
+      html += '<span class="ikr-star ikr-star-empty" style="' + sizeStyle + '">'
+            +   iconPair.empty
+            + '</span>';
+    } else { // half
+      // Tek geometri (filled) iki katmanda: alt boş-renk full, üst dolu-renk + clip sol %50.
+      html += '<span class="ikr-star ikr-star-half" style="' + sizeStyle + '">'
+            +   '<span class="ikr-star-half-bg">' + iconPair.filled + '</span>'
+            +   '<span class="ikr-star-half-fg">' + iconPair.filled + '</span>'
+            + '</span>';
+    }
   }
-  return '<span class="ikr-stars-partial">' +
-           '<span class="ikr-stars-partial-empty">' + emptyHtml + '</span>' +
-           '<span class="ikr-stars-partial-fill" style="width:' + pct + '%;">' + filledHtml + '</span>' +
-         '</span>';
+
+  return '<span class="ikr-stars-partial">' + html + '</span>';
 }
 
 export function formatDate(iso) {
