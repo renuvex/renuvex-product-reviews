@@ -231,7 +231,7 @@ export var FWIZARD_CSS = `
     height:88px;
     padding:0;
     background:var(--ikr-fwizard-bg, #f9f9f9);
-    color:var(--ikr-fwizard-input-text, var(--ikr-fwizard-text, #000000));
+    color:var(--ikr-fwizard-text, #000000);
     border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
     order:10; /* Listenin sonuna atar */
   }
