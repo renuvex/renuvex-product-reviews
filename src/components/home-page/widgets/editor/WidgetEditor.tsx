@@ -1,7 +1,8 @@
 'use client';
 
 import React, { Suspense, lazy, useState, useCallback, useEffect, useRef } from 'react';
-import { ArrowLeft, Save, Smartphone, Tablet, Monitor, Info } from 'lucide-react';
+import { ArrowLeft, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
+import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity, shadows } from '@/lib/design-tokens';
 import { WidgetDef } from '../widgetDefs';
@@ -21,63 +22,11 @@ const DEFAULT_PREVIEW_BG = '#FFFFFF';
 const OPAQUE_HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
 
 function PreviewBackgroundInfo() {
-  const [open, setOpen] = useState(false);
-
   return (
-    <span
-      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
-    >
-      <button
-        type="button"
-        aria-label="Önizleme arka planı hakkında bilgi"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 18,
-          height: 18,
-          padding: 0,
-          border: `1.5px solid ${colors.primaryBorder}`,
-          borderRadius: radii.full,
-          backgroundColor: colors.primaryBg,
-          color: colors.primary,
-          cursor: 'pointer',
-          outline: 'none',
-        }}
-      >
-        <Info size={16} />
-      </button>
-      {open && (
-        <span
-          role="tooltip"
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 20,
-            width: 260,
-            padding: '8px 10px',
-            borderRadius: radii.default,
-            border: '1px solid #111111',
-            backgroundColor: '#111111',
-            color: 'rgba(255, 255, 255, 0.92)',
-            fontSize: typography.fontSize.xs,
-            lineHeight: typography.lineHeight.normal,
-            fontWeight: typography.fontWeight.regular,
-            boxShadow: 'none',
-            pointerEvents: 'none',
-            whiteSpace: 'normal',
-          }}
-        >
-          Bu renk sadece admin önizleme zeminini değiştirir. Mağazadaki widget arka planı şeffaf kalır.
-        </span>
-      )}
-    </span>
+    <InfoTooltip
+      label="Önizleme arka planı"
+      message="Bu renk sadece admin önizleme zeminini değiştirir. Mağazadaki widget arka planı şeffaf kalır."
+    />
   );
 }
 

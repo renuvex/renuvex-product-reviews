@@ -10,11 +10,12 @@ import {
 } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { colors, componentStyles, typography, sp } from '@/lib/design-tokens';
+import { colors, componentStyles, radii, typography, sp } from '@/lib/design-tokens';
 import { SettingsGroup, SettingField } from '../widgetDefs';
 import { WidgetSettingsDraft } from './WidgetEditor';
 import { IconSelect } from './IconSelect';
 import { ColorPickerField } from './ColorPickerField';
+import { InfoTooltip } from './InfoTooltip';
 // Layout registry'leri — meta.supports okumak için.
 // Bkz: src/widget/{summary,review}-layouts/index.js (supports sözleşmesi).
 import { LAYOUTS as SUMMARY_LAYOUTS } from '@/widget/summary-layouts/index.js';
@@ -422,11 +423,18 @@ function FieldRenderer({ field, settings, onChange }: {
 
     case 'range': {
       const numVal = Number(value ?? field.default);
+      const isBorderRadius = field.key === 'borderRadius';
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[2] }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: sp[1], fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
               {field.label}
+              {isBorderRadius && (
+                <InfoTooltip
+                  label="Köşe ovalliği"
+                  message="Tüm kart, buton ve görsellerin köşe yuvarlaklığını ayarlar."
+                />
+              )}
             </label>
             <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, minWidth: 36, textAlign: 'right' }}>
               {numVal}px
