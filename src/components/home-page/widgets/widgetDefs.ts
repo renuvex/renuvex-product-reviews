@@ -73,8 +73,8 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, showWhen: { key: 'showTitle', equals: true } },
           // Görsel galeri (Fotoğraflı Yorumlar strip) başlığı — Widget Başlığı pattern'inin aynısı.
           // Tasarım'daki showPhotoGallery strip'i tamamen gizler, bu sadece başlığı.
-          { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Görsel Galeri Başlığını Göster', default: true },
-          { type: 'text',   key: 'photoGalleryTitle',    label: 'Görsel Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
+          { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Fotoğraf Galeri Başlığını Göster', default: true },
+          { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
         ],
       },
       {
@@ -124,7 +124,7 @@ export const WIDGETS: WidgetDef[] = [
           {
             type: 'select',
             key: 'thumbnailSize',
-            label: 'Görsel Galeri Boyutu',
+            label: 'Fotoğraf Galeri Boyutu',
             default: 'medium',
             options: [
               { value: 'small',  label: 'Küçük' },
@@ -135,7 +135,7 @@ export const WIDGETS: WidgetDef[] = [
           },
           // Göster/gizle toggle'ları tasarım kararı (görsel öğe seçimi).
           // Ayarlar = sistem davranışı, Tasarım = görünüm — net ayrım.
-          { type: 'toggle', key: 'showPhotoGallery',   label: 'Görsel Galerisini Göster', default: true },
+          { type: 'toggle', key: 'showPhotoGallery',   label: 'Fotoğraf Galerisini Göster', default: true },
           { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
         ],
       },
