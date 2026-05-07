@@ -93,7 +93,7 @@ export var COMPACT_CSS = `
     padding:16px 28px 24px;
     border:1px solid var(--ikr-widget-border,var(--ikr-border,rgba(0,0,0,0.10)));
     border-radius:var(--ikr-radius,6px);
-    background:var(--ikr-widget-bg,var(--ikr-surface,#fff));
+    background:#ffffff;
     box-shadow:0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
     width:100%;box-sizing:border-box;
   }
