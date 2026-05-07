@@ -70,5 +70,15 @@ export var SPLIT_CSS = `
     }
     .ikr-split-right .ikr-write-btn{flex:0 0 auto;}
     .ikr-split-right .ikr-filter-wrap{align-self:auto;}
+    
+    /* Gizli tavsiye yuzdesi desktop'ta yer kaplar (sol kolonu cokertmemek icin) */
+    .ikr-split-rec-hidden { visibility: hidden; }
+  }
+
+  @media(max-width:600px){
+    /* Mobilde split = classic stack. Eger tavsiye yuzdesi kapaliysa,
+       yer kaplamasina gerek yok cunku yan yana kolon dengesi diye bir sey yok.
+       Bu sayede mobildeki devasa boslugu onleriz. */
+    .ikr-split-rec-hidden { display: none !important; }
   }
 `;

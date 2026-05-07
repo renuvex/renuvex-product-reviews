@@ -95,7 +95,7 @@ export function render(opts) {
   rec.className = 'ikr-summary-block ikr-summary-recommend';
   rec.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
   var hideRec = (settings.showRecommendation === false) || (recommendPct === 0);
-  if (hideRec) { rec.style.visibility = 'hidden'; }
+  if (hideRec) { rec.classList.add('ikr-split-rec-hidden'); }
   left.appendChild(rec);
 
   return summary;
