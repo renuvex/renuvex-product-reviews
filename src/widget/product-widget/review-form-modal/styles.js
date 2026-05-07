@@ -214,8 +214,8 @@ export var FWIZARD_CSS = `
     gap:10px;
     width:100%;
     padding:14px 20px;
-    background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
-    color:var(--ikr-fwizard-cta-text, #ffffff);
+    background:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--ikr-fwizard-btn-text, #ffffff);
     border-radius:var(--ikr-radius-sm,8px);
     font-size:15px;
     font-weight:500;
@@ -398,9 +398,9 @@ export var FWIZARD_CSS = `
     font-size:13px;
   }
   .ikr-fwizard-submit-btn{
-    background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
-    color:var(--ikr-fwizard-cta-text, #ffffff);
-    border:1px solid var(--ikr-fwizard-cta-border, rgb(17,17,17));
+    background:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--ikr-fwizard-btn-text, #ffffff);
+    border:1px solid var(--ikr-fwizard-btn-border, rgb(17,17,17));
     border-radius:var(--ikr-radius-sm,8px);
     padding:14px 24px;
     font-size:15px;
@@ -415,9 +415,9 @@ export var FWIZARD_CSS = `
   }
   .ikr-fwizard-submit-btn--disabled,
   .ikr-fwizard-submit-btn:disabled{
-    background:var(--ikr-fwizard-cta-disabled-bg, rgba(0,0,0,0.18));
-    color:var(--ikr-fwizard-cta-disabled-text, rgba(255,255,255,0.85));
-    border-color:var(--ikr-fwizard-cta-disabled-border, transparent);
+    background:var(--ikr-fwizard-btn-disabled-bg, rgba(0,0,0,0.18));
+    color:var(--ikr-fwizard-btn-disabled-text, rgba(255,255,255,0.85));
+    border-color:var(--ikr-fwizard-btn-disabled-border, transparent);
     cursor:not-allowed;
   }
 
@@ -500,9 +500,9 @@ export var FWIZARD_CSS = `
      center ile ortalanır. Step'ten step'e buton şekli birebir aynı
      kalır. Hiyerarşi: CTA dolu siyah, nav transparent. */
   .ikr-fwizard-cta-btn{
-    background:var(--ikr-fwizard-cta-bg, rgb(17,17,17));
-    color:var(--ikr-fwizard-cta-text, #ffffff);
-    border:1px solid var(--ikr-fwizard-cta-border, rgb(17,17,17));
+    background:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--ikr-fwizard-btn-text, #ffffff);
+    border:1px solid var(--ikr-fwizard-btn-border, rgb(17,17,17));
     border-radius:var(--ikr-radius-sm,8px);
     width:108px;
     height:40px;
@@ -523,9 +523,9 @@ export var FWIZARD_CSS = `
   }
   .ikr-fwizard-cta-btn--disabled,
   .ikr-fwizard-cta-btn:disabled{
-    background:var(--ikr-fwizard-cta-disabled-bg, rgba(0,0,0,0.18));
-    color:var(--ikr-fwizard-cta-disabled-text, rgba(255,255,255,0.85));
-    border-color:var(--ikr-fwizard-cta-disabled-border, transparent);
+    background:var(--ikr-fwizard-btn-disabled-bg, rgba(0,0,0,0.18));
+    color:var(--ikr-fwizard-btn-disabled-text, rgba(255,255,255,0.85));
+    border-color:var(--ikr-fwizard-btn-disabled-border, transparent);
     cursor:not-allowed;
   }
   .ikr-fwizard-cta-btn[hidden]{
@@ -554,7 +554,7 @@ export var FWIZARD_CSS = `
     width:108px;
     height:40px;
     padding:0;
-    color:var(--ikr-fwizard-nav-text, rgb(17,17,17));
+    color:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
     font-size:15px;
     font-weight:600;
     line-height:1;

@@ -139,11 +139,12 @@ function applyManualTheme(root, settings) {
   var inputBorderVar = settings.inputBorderColor || '#d1d5db';
   var placeholderColor = settings.placeholderColor || '#9ca3af';
   var formStepBarColor = settings.formStepBarColor || '#111111';
-  var formCtaBg     = settings.formCtaBgColor     || '#111111';
-  var formCtaText   = settings.formCtaTextColor   || '#ffffff';
-  var formCtaBorder = settings.formCtaBorderColor || '#111111';
-  var formNavText   = settings.formNavTextColor   || '#111111';
-  var formNavHoverBg = hexToRgba(formNavText, 0.06);
+  var formBtnBg     = settings.formBtnBgColor     || '#111111';
+  var formBtnText   = settings.formBtnTextColor   || '#ffffff';
+  var formBtnBorder = settings.formBtnBorderColor || '#111111';
+  var formNavHoverBg = hexToRgba(formBtnBg, 0.06);
+  var formBtnDisabledBg = hexToRgba(formBtnBg, 0.18);
+  var formBtnDisabledText = hexToRgba(formBtnText, 0.85);
   var formSubtleBg = hexToRgba(formPrimary, 0.06);
 
   // Grup 11 — Daha Fazla Göster
@@ -217,10 +218,11 @@ function applyManualTheme(root, settings) {
     '--ikr-fwizard-close-hover-bg': formSubtleBg,
     '--ikr-fwizard-progress-bg': formSubtleBg,
     '--ikr-fwizard-progress-active': formStepBarColor,
-    '--ikr-fwizard-cta-bg':       formCtaBg,
-    '--ikr-fwizard-cta-text':     formCtaText,
-    '--ikr-fwizard-cta-border':   formCtaBorder,
-    '--ikr-fwizard-nav-text':     formNavText,
+    '--ikr-fwizard-btn-bg':       formBtnBg,
+    '--ikr-fwizard-btn-text':     formBtnText,
+    '--ikr-fwizard-btn-border':   formBtnBorder,
+    '--ikr-fwizard-btn-disabled-bg':   formBtnDisabledBg,
+    '--ikr-fwizard-btn-disabled-text': formBtnDisabledText,
     '--ikr-fwizard-nav-hover-bg': formNavHoverBg,
 
     // Grup 11 — Daha Fazla Göster
