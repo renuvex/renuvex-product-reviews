@@ -133,8 +133,7 @@ function applyManualTheme(root, settings) {
   // labels, notice, placeholder. Both opaque — no alpha derivatives.
   var formBg      = settings.formBgColor      || '#ffffff';
   var formPrimary = settings.formPrimaryTextColor  || '#111111';
-  var formSecondary = settings.formSecondaryTextColor || '#6b7280';
-  var inputBgVar  = settings.inputBgColor     || '#ffffff';
+  var formSecondary = settings.formSecondaryTextColor || '#3b3b3b';
   var inputTextVar = settings.inputTextColor  || formPrimary;
   var inputBorderVar = settings.inputBorderColor || '#d1d5db';
   var placeholderColor = settings.placeholderColor || '#9ca3af';
@@ -210,11 +209,11 @@ function applyManualTheme(root, settings) {
     '--ikr-fwizard-bg':       formBg,
     '--ikr-fwizard-text':     formPrimary,
     '--ikr-fwizard-secondary-text': formSecondary,
-    '--ikr-fwizard-input-bg': inputBgVar,
+    '--ikr-fwizard-input-bg': formBg,
     '--ikr-fwizard-input-text': inputTextVar,
     '--ikr-fwizard-input-border': inputBorderVar,
     '--ikr-fwizard-placeholder': placeholderColor,
-    '--ikr-fwizard-close-text': formSecondary,
+    '--ikr-fwizard-close-text': formPrimary,
     '--ikr-fwizard-close-hover-bg': formSubtleBg,
     '--ikr-fwizard-progress-bg': formSubtleBg,
     '--ikr-fwizard-progress-active': formStepBarColor,

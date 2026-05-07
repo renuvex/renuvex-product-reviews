@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 import { colors, radii, typography } from '@/lib/design-tokens';
 
@@ -11,16 +12,29 @@ interface InfoTooltipProps {
 
 export function InfoTooltip({ label, message }: InfoTooltipProps) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) { setPos(null); return; }
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (!r) return;
+    setPos({
+      top: r.bottom + window.scrollY + 8,
+      left: r.left + window.scrollX + r.width / 2,
+    });
+  }, [open]);
 
   return (
     <span
-      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      style={{ display: 'inline-flex', alignItems: 'center' }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
       onBlur={() => setOpen(false)}
     >
       <button
+        ref={triggerRef}
         type="button"
         aria-label={`${label} hakkında bilgi`}
         style={{
@@ -40,15 +54,15 @@ export function InfoTooltip({ label, message }: InfoTooltipProps) {
       >
         <Info size={16} />
       </button>
-      {open && (
+      {open && pos && typeof window !== 'undefined' && createPortal(
         <span
           role="tooltip"
           style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            left: '50%',
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
             transform: 'translateX(-50%)',
-            zIndex: 20,
+            zIndex: 99999,
             width: 260,
             padding: '8px 10px',
             borderRadius: radii.default,
@@ -64,7 +78,8 @@ export function InfoTooltip({ label, message }: InfoTooltipProps) {
           }}
         >
           {message}
-        </span>
+        </span>,
+        document.body
       )}
     </span>
   );

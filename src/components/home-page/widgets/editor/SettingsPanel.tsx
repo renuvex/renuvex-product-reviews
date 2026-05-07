@@ -348,14 +348,30 @@ function FieldRenderer({ field, settings, onChange }: {
         </div>
       );
 
-    case 'color':
+    case 'color': {
+      const isInputText = field.key === 'inputTextColor';
+      const isPlaceholder = field.key === 'placeholderColor';
       return (
         <ColorPickerField
           label={field.label}
           value={String(value ?? field.default ?? '#6f55ff')}
           onCommit={(v) => onChange({ ...settings, [field.key]: v })}
+          labelAddon={
+            isInputText ? (
+              <InfoTooltip
+                label="Alan yazı rengi"
+                message="Müşterinin form alanlarına yazdığı metin rengi."
+              />
+            ) : isPlaceholder ? (
+              <InfoTooltip
+                label="Placeholder rengi"
+                message="Boş alanlarda görünen örnek metin rengi."
+              />
+            ) : undefined
+          }
         />
       );
+    }
 
     case 'iconSelect':
       return (
