@@ -84,11 +84,15 @@ function applyManualTheme(root, settings) {
   // Grup 3 — Puan Dağılımı
   var barFill   = settings.barFillColor   || '#111111';
   var barTrack  = settings.barTrackColor  || '#e5e7eb';
-  // Empty stars are shared by review items, rating inputs, and distribution stars.
   // Bar track stays independent so chart contrast can be tuned separately.
-  var starEmpty = settings.starEmptyColor || '#e5e7eb';
   var barCount  = settings.barCountColor  || '#111111';
   var barHoverBg = hexToRgba(barFill, 0.06);
+
+  // Grup 6 — Yorum Kartı (reviewStarColor önce tanımlanmalı)
+  var reviewStarColor  = settings.reviewStarColor  || '#f59e0b';
+
+  // Empty stars derive from reviewStarColor with structural opacity.
+  var starEmpty = hexToRgba(reviewStarColor, 0.25);
 
   // Grup 4 — Butonlar
   var btnBg        = settings.btnBgColor        || '#111111';
@@ -105,13 +109,7 @@ function applyManualTheme(root, settings) {
   var filterItemHoverBg = settings.filterItemHoverBgColor || '#f3f4f6';
   var filterItemActive  = settings.filterItemActiveColor  || '#111111';
 
-  // Grup 6 — Yorum Kartı
-  var reviewTitleColor = settings.reviewTitleColor || '#111111';
-  var reviewAuthorColor = settings.reviewAuthorColor || '#111111';
-  var reviewDateColor  = settings.reviewDateColor  || '#111111';
-  var reviewBodyColor  = settings.reviewBodyColor  || '#111111';
-  var reviewBorderColor = settings.reviewBorderColor || '#e5e7eb';
-  var reviewStarColor  = settings.reviewStarColor  || '#f59e0b';
+  // Grup 6 — Yorum Kartı (reviewStarColor yukarıda Grup 3'te tanımlandı)
 
   // Grup 7 — Mağaza Yanıtı
   var replyBgVar      = settings.replyBgColor      || '#f9fafb';
@@ -308,6 +306,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     // Runtime 6-char veya 8-char hex kabul eder; admin picker sadece opak hex yazar.
     var reviewStarColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
+    root.style.setProperty('--ikr-star-empty-color', hexToRgba(reviewStarColor, 0.25));
     root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
     root.style.setProperty('--ikr-avg-star-size', sz.avgStarSize + 'px');
 

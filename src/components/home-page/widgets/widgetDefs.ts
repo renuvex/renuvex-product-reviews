@@ -251,7 +251,6 @@ export const WIDGETS: WidgetDef[] = [
             options: getIconOptions(),
           },
           { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
-          { type: 'color', key: 'starEmptyColor',  label: 'Boş Yıldız Rengi', default: '#e5e7eb' },
         ],
       },
       {

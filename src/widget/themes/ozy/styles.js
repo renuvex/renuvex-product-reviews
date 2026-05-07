@@ -90,7 +90,7 @@ export var CLASSIC_CSS = `
      overlay aynı yapıyı tekrar ettiği için iki katman birebir üst üste oturur. */
   .ikr-stars-partial{position:relative;display:inline-flex;line-height:1;}
   .ikr-stars-partial-empty,.ikr-stars-partial-fill{display:inline-flex;gap:2px;align-items:center;}
-  .ikr-stars-partial-empty{color:var(--ikr-star-empty-color,#e5e7eb);opacity:0.35;}
+  .ikr-stars-partial-empty{color:var(--ikr-star-empty-color,#e5e7eb);}
   .ikr-stars-partial .ikr-stars-partial-empty .ikr-icon{color:var(--ikr-star-empty-color,#e5e7eb);}
   .ikr-stars-partial .ikr-stars-partial-fill .ikr-icon{color:var(--ikr-review-star-color,#f59e0b);}
   .ikr-stars-partial-fill{
