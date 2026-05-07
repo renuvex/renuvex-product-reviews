@@ -1,6 +1,6 @@
 // summary-layouts/hero/index.js
 // Vurgulu (Hero) layout — dev avg puan + yanında yıldız ve sayı + sağda actions.
-// Loox/Glow Recipe stili — markaya güven duygusu için "puan" ön planda.
+// Modern stil — markaya güven duygusu için "puan" ön planda.
 
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';

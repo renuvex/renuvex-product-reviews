@@ -20,7 +20,7 @@ related:
 Active
 
 ## Context
-Widget summary layouts (Classic, Split, Compact) were using inconsistent vertical spacing (12px to 16px) and button height behaviors. Merchants complained that the "Filter" button often looked misaligned with the "Write Review" button when font sizes were adjusted. Competitors like Loox and Yotpo use a more spacious "ferah" look with perfectly synchronized primary and secondary actions.
+Widget summary layouts (Classic, Split, Compact) were using inconsistent vertical spacing (12px to 16px) and button height behaviors. Merchants complained that the "Filter" button often looked misaligned with the "Write Review" button when font sizes were adjusted. Industry leaders use a more spacious "ferah" look with perfectly synchronized primary and secondary actions.
 
 ## Decision
 1. **Vertical Spacing**: Standardize the vertical gap (`--ikr-col-gap`) between major summary blocks to **20px** for the Ozy theme. This provides a more premium, spacious feel.

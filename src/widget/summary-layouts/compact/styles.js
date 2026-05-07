@@ -1,5 +1,5 @@
 // summary-layouts/compact/styles.js
-// Loox-style compact layout — header bar her zaman görünür; trigger'a tıklayınca
+// Premium compact layout — header bar her zaman görünür; trigger'a tıklayınca
 // POPOVER (overlay) olarak panel açılır — sayfayı itmez, içeriğin üstüne çıkar.
 // Desktop: header → [trigger ........ write-btn + filter] tek satır.
 // Mobile: header → [trigger ........ filter], altında write-btn full-width.
@@ -57,7 +57,7 @@ export var COMPACT_CSS = `
   .ikr-compact-write-row .ikr-write-btn{flex:1 1 auto;justify-content:center;}
 
   /* ─── POPOVER ─────────────────────────────────────────────────
-     Loox-style: scale(0.7) translateY(-20px) → scale(1), opacity 0 → 1.
+     Premium tarzda: scale(0.7) translateY(-20px) → scale(1), opacity 0 → 1.
      200ms ease-in-out, forwards (son state'te kalır). */
   @keyframes ikr-grow-out {
     0%   { opacity: 0; transform: scale(0.7) translateY(-20px); }

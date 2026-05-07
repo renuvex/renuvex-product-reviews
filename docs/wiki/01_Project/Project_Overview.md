@@ -20,7 +20,7 @@ related:
 Yorum Paneli is a SaaS-style review and rating app for ikas e-commerce merchants. It provides a merchant admin panel for moderating reviews, a customizable storefront widget that collects and displays reviews on product pages, and listing-level rating badges. The repo started from `ikas-app-starter-template` and has been extended with a review domain on top of the OAuth + Prisma + GraphQL foundation.
 
 ## Product Goal
-Compete with global review apps (Loox, Judge.me, Yotpo, Okendo) within the ikas ecosystem. See [[Competitor_Feature_Matrix]] and [[Competitor_Insights]] for positioning.
+Compete with global review apps within the ikas ecosystem. See [[Competitor_Feature_Matrix]] and [[Competitor_Insights]] for positioning.
 
 ## Who It's For
 - ikas merchants who want product reviews on their storefront

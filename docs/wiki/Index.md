@@ -79,10 +79,7 @@ related:
 - [[Debugging_Notes]]
 
 ## Competitors
-- [[Loox]]
 - [[Judge_Me]]
-- [[Yotpo]]
-- [[Okendo]]
 - [[Competitor_Feature_Matrix]]
 - [[Competitor_Insights]]
 

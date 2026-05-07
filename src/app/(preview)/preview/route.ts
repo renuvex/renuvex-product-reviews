@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   </script>
   <!-- v= timestamp -> her preview acılısında widget.js bypass cache; admin
        degisiklik yapınca anında güncel goruntu (sadece preview, prod widget'a
-       dokunulmaz). Endustri pratigi: Shopify themes ?v={{now|date}}, Loox/Yotpo
+       dokunulmaz). Endustri pratigi: Shopify themes ?v={{now|date}}, Industry standard
        benzer pattern. -->
   <script src="${baseUrl}/widget.js?publicApiKey=preview&v=${Date.now()}" async></script>
 </body>

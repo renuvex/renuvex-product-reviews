@@ -186,7 +186,7 @@ export var CLASSIC_CSS = `
   .ikr-filter-btn svg{width:16px;height:16px;flex-shrink:0;}
 
   /* Filtre dropdown (wrap yukarıda tanımlandı) */
-  /* Filter dropdown — Loox-style growOut animasyonu (200ms ease-in-out) */
+  /* Filter dropdown — Premium growOut animasyonu (200ms ease-in-out) */
   @keyframes ikr-grow-out {
     0%   { opacity: 0; transform: scale(0.7) translateY(-20px); }
     100% { opacity: 1; transform: scale(1) translateY(0); }
@@ -199,7 +199,7 @@ export var CLASSIC_CSS = `
 
   /* Fotoğraflı Yorumlar bölümü */
   .ikr-photo-section{margin-bottom:24px;padding:0 var(--ikr-pad-review-mobile);}
-  /* Strip üstündeki bölüm başlığı (Loox/Yotpo: "Customer Photos") —
+  /* Strip üstündeki bölüm başlığı (Endüstri standardı: "Customer Photos") —
      admin "Fotoğraf Galerisi → Başlık Rengi" ve SIZE_PRESETS.photoTitleSize
      bu öğeyi kontrol eder. */
   .ikr-photo-title{

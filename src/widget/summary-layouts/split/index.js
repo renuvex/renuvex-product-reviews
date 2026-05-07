@@ -1,5 +1,5 @@
 // summary-layouts/split/index.js
-// Yatay 3 kolon layout (Allbirds/Loox stili):
+// Yatay 3 kolon layout (Premium stil):
 // SOL: yıldızlar + ortalama "X out of 5" + toplam yorum sayısı
 // ORTA: bar chart
 // SAĞ: filter butonu + write butonu (dikey)

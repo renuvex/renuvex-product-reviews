@@ -1,4 +1,4 @@
-// review-layouts/list/index.js — Liste tasarımı (Okendo/Yotpo magazine tarzı).
+// review-layouts/list/index.js — Liste tasarımı (Modern magazine tarzı).
 // 3-kolon grid: yazar | yıldız+başlık+metin+tarih | foto.
 // Fotoğraf yoksa orta kolon foto kolonunu kapsar (no-media modifier).
 // Mobile (<600px) dikey diziliş — styles.js'te tanımlı.
@@ -37,7 +37,7 @@ export function render(r, allReviews) {
   // ─── Sol kolon: imza grubu (yıldız → yazar → tarih) ───
   // Yazar tek başına sol kolonda izole görünüyordu; yıldız + tarih ile
   // birlikte gruplanınca "kim, kaç yıldız, ne zaman" tek bakışta okunur.
-  // Endüstri standardı: Trustpilot, Yotpo, Amazon, Çiçeksepeti.
+  // Endüstri standardı: Trustpilot, Amazon, Çiçeksepeti.
   var authorCol = document.createElement('div');
   authorCol.className = 'ikr-review-list-author';
 

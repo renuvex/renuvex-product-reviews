@@ -273,7 +273,7 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Ayarlar',
         fields: [
           { type: 'toggle', key: 'enabled',     label: 'Widget Aktif',                   default: true },
-          // Otomatik onay eşiği — Loox/Yotpo standardı 4 seviyeli radio.
+          // Otomatik onay eşiği — Endüstri standardı 4 seviyeli radio.
           // submit endpoint'i (/api/public/reviews) yorum yıldızını bu değere
           // göre değerlendirip status'u 'approved' veya 'pending' olarak yazar.
           {

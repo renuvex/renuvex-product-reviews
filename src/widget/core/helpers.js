@@ -29,7 +29,7 @@ export function starsHTML(rating, settings) {
 // Half state'inde tek filled SVG iki katmanda kullanılır (alt boş-renk, üst dolu-renk
 // + clip-path:inset(0 50% 0 0) ile sol yarı). Tek path → geometri uyumsuzluğu
 // fiziksel olarak imkânsız (kare/kalp ikonlarında bile tam ortadan simetrik bölünür).
-// Material UI Rating decimal mode + react-stars + Yotpo pattern.
+// Material UI Rating decimal mode + react-stars + Industry pattern.
 //
 //   rating   : float (ör 4.3, 4.5, 5.0)
 //   iconPair : { filled, empty } — getIconFromSettings'ten gelen SVG çifti

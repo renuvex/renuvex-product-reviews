@@ -60,7 +60,7 @@ export var SPLIT_CSS = `
       max-width:400px;width:100%;margin:0;
     }
     /* Bar row sikilastir: satirlar arasi ve satir ici padding daralir.
-       Loox/Yotpo tarzi kompakt his. */
+       Premium tarzda kompakt his. */
     .ikr-split-mid .ikr-summary-bars{gap:2px;}
     .ikr-split-mid .ikr-bar-row{padding:2px 4px;}
 

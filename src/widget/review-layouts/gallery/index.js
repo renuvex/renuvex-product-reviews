@@ -1,4 +1,4 @@
-// review-layouts/gallery/index.js — Loox tarzı 2-kolon galeri.
+// review-layouts/gallery/index.js — Premium tarzda 2-kolon galeri.
 // Item içi sol-sağ split: solda içerik, sağda foto.
 // Sol kolon dikey sıra: yıldız → title → yazar → tarih → metin → reply.
 // (Card ile aynı sıralama — sadece görsel layout farklı: 2-kolon masonry + sağ foto.)
@@ -78,7 +78,7 @@ export function render(r, allReviews) {
 
     // Galeri'de inline expand masonry kolon dengesini bozar — onun yerine
     // tıklayınca review modal açılır (foto + tam metin + diğer fotolar + yanıt).
-    // Loox/Judge.me/Yotpo standardı.
+    // Endüstri standardı.
     var readMore = document.createElement('span');
     readMore.className = 'ikr-read-more';
     readMore.textContent = 'Devamını oku';

@@ -16,7 +16,7 @@ related:
 # Current Status — ikas Review App
 
 ## Current Phase
-Active development. Core feature set is functional end-to-end. Recent work has focused on **UI/UX Polish and Visual Consistency**: synchronized button behaviors (align-items: stretch), standardized 20px vertical spacing (ferahlık), and refined tablet breakpoints (768px for Split layout). Most premium design details from competitors (Loox/Yotpo) have been integrated into the Ozy theme. See recent commits.
+Active development. Core feature set is functional end-to-end. Recent work has focused on **UI/UX Polish and Visual Consistency**: synchronized button behaviors (align-items: stretch), standardized 20px vertical spacing (ferahlık), and refined tablet breakpoints (768px for Split layout). Most premium design details from industry leaders have been integrated into the Ozy theme. See recent commits.
 
 ## Working Features
 - OAuth install flow for ikas merchants — code-signature validation, token exchange, JWT issuance, session cookie

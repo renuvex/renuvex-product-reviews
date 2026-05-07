@@ -1,4 +1,4 @@
-// review-layouts/gallery/styles.js — Loox tarzı 2-kolon galeri tasarımı.
+// review-layouts/gallery/styles.js — Premium tarzda 2-kolon galeri tasarımı.
 // CSS columns ile JS'siz masonry. Parent (#ikas-reviews-widget) :has() ile
 // hedeflenir; non-review elemanlar (summary, başlık, photo-section,
 // load-more, state-msg) column-span:all ile kolon dışına alınır — sözleşme

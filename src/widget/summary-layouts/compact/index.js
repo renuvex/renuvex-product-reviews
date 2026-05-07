@@ -1,5 +1,5 @@
 // summary-layouts/compact/index.js
-// Loox-style compact layout — header (yıldız + sayı + chevron) her zaman görünür,
+// Premium compact layout — header (yıldız + sayı + chevron) her zaman görünür,
 // trigger'a tıklayınca POPOVER (overlay) olarak panel açılır — sayfayı itmez.
 // Yorum Yap + filtre butonu header'da kalır.
 
@@ -170,7 +170,7 @@ export function render(opts) {
 
   // Desktop popover ise registry'e kaydol — light dismiss + ESC + one-at-a-time.
   // Mobile accordion ise registry'e KAYDOLMAZ — flow içeriği gibi davranır,
-  // sadece chevron ile manuel toggle (Loox/Yotpo standardı).
+  // sadece chevron ile manuel toggle (Endüstri standardı).
   var panelRegistration = null;
   function syncRegistration(isMobile) {
     if (panelRegistration) { panelRegistration(); panelRegistration = null; }
