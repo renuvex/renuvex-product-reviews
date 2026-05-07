@@ -21,7 +21,7 @@ export var SPLIT_CSS = `
        eder: max-width:340 ortali, bar chart ile ayni genislikte. Width:100%
        + tam genislige yayilmasini onler. */
     .ikr-split-right{
-      display:flex;flex-direction:row;align-items:center;
+      display:flex;flex-direction:row;align-items:stretch;
       gap:var(--ikr-col-gap,8px);
       width:100%;max-width:var(--ikr-summary-max,340px);
       margin-left:auto;margin-right:auto;
