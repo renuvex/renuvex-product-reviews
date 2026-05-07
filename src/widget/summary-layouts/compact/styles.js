@@ -8,11 +8,6 @@ export var COMPACT_CSS = `
   /* Compact layout başlığı sola hizalı — tüm layout'larda tutarlı */
   .ikr-title-compact{text-align:left;}
 
-  /* Compact'te ana .ikr-summary padding'ini sıfırla — yıldızlar başlık ile aynı sol kenar */
-  /* padding-top/bottom 0; yan padding base .ikr-summary mobile bloğundan gelir
-     (--ikr-pad-summary-mobile). Diğer layoutlarla aynı yan boşluk. */
-  .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding:0;}
-
   .ikr-compact-header{
     display:flex;align-items:center;gap:12px;
     width:100%;padding:0;
@@ -102,6 +97,11 @@ export var COMPACT_CSS = `
   /* Bar chart 340px max, ortalanmış */
   .ikr-compact-panel-inner .ikr-summary-bars{
     max-width:var(--ikr-summary-max,340px);width:100%;margin:0 auto;
+  }
+
+  /* Desktop: summary padding sıfır — trigger sola yaslı */
+  @media(min-width:601px){
+    .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding:0;}
   }
 
   @media(max-width:600px){
