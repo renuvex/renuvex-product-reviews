@@ -110,6 +110,11 @@ function applyManualTheme(root, settings) {
   var filterItemActive  = settings.filterItemActiveColor  || '#111111';
 
   // Grup 6 — Yorum Kartı (reviewStarColor yukarıda Grup 3'te tanımlandı)
+  var reviewTitleColor  = settings.reviewTitleColor  || '#111111';
+  var reviewAuthorColor = settings.reviewAuthorColor || '#111111';
+  var reviewDateColor   = settings.reviewDateColor   || '#111111';
+  var reviewBodyColor   = settings.reviewBodyColor   || '#111111';
+  var reviewBorderColor = settings.reviewBorderColor || '#e5e7eb';
 
   // Grup 7 — Mağaza Yanıtı
   var replyBgVar      = settings.replyBgColor      || '#f9fafb';
