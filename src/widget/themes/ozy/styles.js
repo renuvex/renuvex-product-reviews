@@ -271,7 +271,7 @@ export var CLASSIC_CSS = `
   @media(min-width:601px){
     .ikr-photo-strip-container{margin:0 calc(-1 * var(--ikr-pad-review-mobile));}
   }
-  .ikr-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px var(--ikr-pad-review-mobile);scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .ikr-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px 0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .ikr-photo-strip::-webkit-scrollbar{display:none;}
   /* Thumbnail genişliği sabit (--ikr-thumbnail-size); yüksekliği aspect-ratio
      ile gelir. --ikr-photo-thumb-aspect render.js'de review layout'a göre set
