@@ -64,7 +64,7 @@ export var ICONS = {
       rounded: {
         label: 'Yuvarlak (Google)',
         filled: '<svg viewBox="' + MS_VB + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(24, -24) scale(0.95)"><path d="' + P.heartRounded + '"/></g></svg>',
-        empty:  '<svg viewBox="' + MS_VB + '" fill="none" stroke="currentColor" stroke-width="72" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(24, -24) scale(0.95)"><path d="' + P.heartRounded + '"/></g></svg>',
+        empty:  '<svg viewBox="' + MS_VB + '" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="2" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(24, -24) scale(0.95)"><path d="' + P.heartRounded + '"/></g></svg>',
       },
     },
   },
