@@ -13,7 +13,7 @@ export var SPLIT_CSS = `
      (cocuklar dogrudan summary'nin child'i olur). Sag wrapper kalir ve
      classic'in .ikr-summary-actions wrapper'iyla ayni davranisi alir
      (flex row + width 100%) — write-btn yan yana filter ile durur. */
-  @media(max-width:600px){
+  @media(max-width:768px){
     /* Mobile'da split classic gibi davranir -> baslik ortali. */
     .ikr-title-split{text-align:center;}
     .ikr-split-left,.ikr-split-mid{display:contents;}
@@ -33,7 +33,7 @@ export var SPLIT_CSS = `
 
   /* Desktop-only: split'in 3-kolon yatay tasarimi sadece >=601px'te aktif.
      Mobile'da hicbiri uygulanmaz -> base classic gorunum. */
-  @media(min-width:601px){
+  @media(min-width:769px){
     .ikr-split-col{
       display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
       min-width:0;
@@ -75,7 +75,7 @@ export var SPLIT_CSS = `
     .ikr-split-rec-hidden { visibility: hidden; }
   }
 
-  @media(max-width:600px){
+  @media(max-width:768px){
     /* Mobilde split = classic stack. Eger tavsiye yuzdesi kapaliysa,
        yer kaplamasina gerek yok cunku yan yana kolon dengesi diye bir sey yok.
        Bu sayede mobildeki devasa boslugu onleriz. */
