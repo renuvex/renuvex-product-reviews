@@ -33,7 +33,7 @@ export var COMPACT_CSS = `
     color:var(--ikr-review-star-color,#f59e0b);line-height:1;
   }
   .ikr-compact-trigger-text{
-    font-size:var(--ikr-review-count-size,16px);
+    font-size:var(--ikr-compact-count-size,16px);
     color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));
     font-weight:500;white-space:nowrap;
   }

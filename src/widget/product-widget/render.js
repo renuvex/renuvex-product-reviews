@@ -40,7 +40,8 @@ var SIZE_PRESETS = {
   small: {
     titleSize: 20, reviewTextSize: 12, reviewTitleSize: 14, authorSize: 12,
     replyNameSize: 12, replyTextSize: 12, photoTitleSize: 14,
-    avgRatingSize: 36, avgStarSize: 48, reviewCountSize: 14, recommendSize: 12,
+    avgRatingSize: 36, avgStarSize: 48, reviewCountSize: 16, recommendSize: 12,
+    compactCountSize: 14,
     btnTextSize: 12, barLabelSize: 18, barCountSize: 12,
     reviewDateSize: 10, filterTextSize: 12, loadMoreSize: 12,
     readMoreSize: 10, reviewStarSize: 18,
@@ -50,7 +51,8 @@ var SIZE_PRESETS = {
   medium: {
     titleSize: 24, reviewTextSize: 14, reviewTitleSize: 16, authorSize: 14,
     replyNameSize: 13, replyTextSize: 13, photoTitleSize: 16,
-    avgRatingSize: 46, avgStarSize: 58, reviewCountSize: 16, recommendSize: 14,
+    avgRatingSize: 46, avgStarSize: 58, reviewCountSize: 20, recommendSize: 14,
+    compactCountSize: 16,
     btnTextSize: 14, barLabelSize: 22, barCountSize: 14,
     reviewDateSize: 12, filterTextSize: 14, loadMoreSize: 14,
     readMoreSize: 12, reviewStarSize: 22,
@@ -60,7 +62,8 @@ var SIZE_PRESETS = {
   large: {
     titleSize: 28, reviewTextSize: 16, reviewTitleSize: 18, authorSize: 16,
     replyNameSize: 15, replyTextSize: 15, photoTitleSize: 18,
-    avgRatingSize: 56, avgStarSize: 68, reviewCountSize: 18, recommendSize: 16,
+    avgRatingSize: 56, avgStarSize: 68, reviewCountSize: 22, recommendSize: 16,
+    compactCountSize: 18,
     btnTextSize: 16, barLabelSize: 26, barCountSize: 16,
     reviewDateSize: 14, filterTextSize: 16, loadMoreSize: 16,
     readMoreSize: 14, reviewStarSize: 26,
@@ -296,6 +299,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-photo-title-size', sz.photoTitleSize + 'px');
     root.style.setProperty('--ikr-avg-rating-size', sz.avgRatingSize + 'px');
     root.style.setProperty('--ikr-review-count-size', sz.reviewCountSize + 'px');
+    root.style.setProperty('--ikr-compact-count-size', sz.compactCountSize + 'px');
     root.style.setProperty('--ikr-recommend-size', sz.recommendSize + 'px');
     root.style.setProperty('--ikr-btn-text-size', sz.btnTextSize + 'px');
     root.style.setProperty('--ikr-bar-label-size', sz.barLabelSize + 'px');

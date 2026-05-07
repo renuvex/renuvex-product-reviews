@@ -85,16 +85,18 @@ export function render(opts) {
   if (filterWrap) right.appendChild(filterWrap);
   summary.appendChild(right);
 
-  // Tavsiye yüzdesi (opsiyonel) — sol kolonun altına eklensin
+  // Tavsiye yüzdesi — sol kolonun altina eklenir.
+  // recommendPct === 0 ise visibility:hidden ile gizlenir ama height KORUNUR.
+  // height:0 yüksekliği sıfırlar → sol kolon küçülür → bar chart kayar (BUG).
+  // Görünmez + yer kaplayan element sol kolonun boyutunu sabit tutar.
   if ((settings.showRecommendation !== false)) {
     var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
     var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
-    if (recommendPct > 0) {
-      var rec = document.createElement('div');
-      rec.className = 'ikr-summary-block ikr-summary-recommend';
-      rec.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
-      left.appendChild(rec);
-    }
+    var rec = document.createElement('div');
+    rec.className = 'ikr-summary-block ikr-summary-recommend';
+    rec.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
+    if (recommendPct === 0) { rec.style.visibility = 'hidden'; }
+    left.appendChild(rec);
   }
 
   return summary;

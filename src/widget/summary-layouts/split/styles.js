@@ -35,21 +35,21 @@ export var SPLIT_CSS = `
      Mobile'da hicbiri uygulanmaz -> base classic gorunum. */
   @media(min-width:601px){
     .ikr-split-col{
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
       min-width:0;
     }
 
     .ikr-summary-split{
-      display:flex;flex-direction:row;align-items:center;justify-content:space-between;
+      display:flex;flex-direction:row;align-items:flex-start;justify-content:space-between;
       gap:24px;width:100%;max-width:none;padding:16px 8px;
     }
 
     /* Sol: avg (buyuk yildiz + sayi) -> sayi -> tavsiye, sol hizali */
-    .ikr-split-left{flex:0 0 auto;gap:12px;text-align:left;align-items:flex-start;}
+    .ikr-split-left{flex:0 0 auto;gap:12px;text-align:left;align-items:flex-start;align-self:flex-start;}
     .ikr-split-left .ikr-split-left-avg-block{align-self:flex-start;margin:0;}
-    /* Count classic .ikr-summary-count kullanir (font-size/weight/color
-       oradan gelir). Burada sadece sola yaslama override. */
-    .ikr-split-left .ikr-split-left-count{align-self:flex-start;text-align:left;}
+    /* Count ve tavsiye ortalama puanin altinda, center hizali */
+    .ikr-split-left .ikr-split-left-count{align-self:center;text-align:center;}
+    .ikr-split-left .ikr-summary-recommend{align-self:center;text-align:center;}
 
     /* Orta: bar chart sola hizali. align-items:stretch sart -
        flex-start ile child width:auto'ya duser ve track'ler buzusur. */
@@ -57,7 +57,7 @@ export var SPLIT_CSS = `
     /* Split desktop'ta bar chart okunabilir genislikte: 500px max.
        Full genislik okuma mesafesini uzatiyordu, 500 dengeli. */
     .ikr-split-mid .ikr-summary-bars{
-      max-width:500px;width:100%;margin:0;
+      max-width:400px;width:100%;margin:0;
     }
     /* Bar row sikilastir: satirlar arasi ve satir ici padding daralir.
        Loox/Yotpo tarzi kompakt his. */
