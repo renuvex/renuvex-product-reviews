@@ -77,7 +77,7 @@ export var COMPACT_CSS = `
   }
 
   .ikr-compact-panel-inner{
-    display:flex;flex-direction:column;align-items:center;gap:16px;
+    display:flex;flex-direction:column;align-items:center;gap:20px;
     padding:16px 28px 24px;
     border:1px solid var(--ikr-widget-border,var(--ikr-border,rgba(0,0,0,0.10)));
     border-radius:var(--ikr-radius,6px);
@@ -136,7 +136,6 @@ export var COMPACT_CSS = `
     .ikr-compact-panel-inner{
       padding:16px;
       box-shadow:none;
-      margin-top:8px;
     }
   }
 `;
