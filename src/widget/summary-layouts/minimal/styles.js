@@ -25,7 +25,8 @@ export var MINIMAL_CSS = `
     display:inline-flex;gap:2px;
     color:var(--ikr-review-star-color,#f59e0b);
   }
-  .ikr-minimal-stars .ikr-icon{
+  .ikr-minimal-stars .ikr-icon,
+  .ikr-minimal-stars .ikr-star{
     width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);
   }
   .ikr-minimal-count{

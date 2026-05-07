@@ -26,7 +26,8 @@ export var HERO_CSS = `
     display:inline-flex;gap:2px;
     color:var(--ikr-review-star-color,#f59e0b);
   }
-  .ikr-hero-stars .ikr-icon{
+  .ikr-hero-stars .ikr-icon,
+  .ikr-hero-stars .ikr-star{
     width:var(--ikr-bar-label-size,22px);height:var(--ikr-bar-label-size,22px);
   }
   .ikr-hero-count{

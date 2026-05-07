@@ -39,7 +39,8 @@ export var COMPACT_CSS = `
   .ikr-compact-trigger-stars{display:inline-flex;gap:2px;flex-shrink:0;}
   /* Compact trigger yildizlari kendi degiskeni; global bar-label-size'i etkilemez.
      Fallback bar-label-size, eski davranista geri donus icin. */
-  .ikr-compact-trigger-stars .ikr-icon{
+  .ikr-compact-trigger-stars .ikr-icon,
+  .ikr-compact-trigger-stars .ikr-star{
     width:var(--ikr-compact-star-size,var(--ikr-bar-label-size,20px));
     height:var(--ikr-compact-star-size,var(--ikr-bar-label-size,20px));
     color:var(--ikr-review-star-color,#f59e0b);line-height:1;
