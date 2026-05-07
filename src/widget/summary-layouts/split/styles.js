@@ -66,7 +66,7 @@ export var SPLIT_CSS = `
 
     /* Sag: write + filter yan yana, dikey ortali */
     .ikr-split-right{
-      flex:0 0 auto;flex-direction:row;align-items:center;gap:8px;align-self:center;
+      flex:0 0 auto;flex-direction:row;align-items:stretch;gap:8px;align-self:center;
     }
     .ikr-split-right .ikr-write-btn{flex:0 0 auto;}
     .ikr-split-right .ikr-filter-wrap{align-self:auto;}

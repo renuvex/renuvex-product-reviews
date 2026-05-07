@@ -171,7 +171,7 @@ export var CLASSIC_CSS = `
      tutsun. Bar row'un kendi 3px 6px padding'i hover alani icin, actions'in
      buna ihtiyaci yok. */
   .ikr-summary-actions{
-    display:flex;flex-direction:row;align-items:center;gap:var(--ikr-col-gap);
+    display:flex;flex-direction:row;align-items:stretch;gap:var(--ikr-col-gap);
     box-sizing:border-box;
   }
   /* min-height:36px — filter butonu (36×36 sabit) ile ayni yukseklikte tutar.
@@ -179,9 +179,9 @@ export var CLASSIC_CSS = `
      katkisi ile bir miktar buyur ama filter'la dengeli kalir. */
   .ikr-write-btn{flex:1 1 auto;min-width:0;min-height:36px;background:var(--ikr-btn-bg,#111111);color:var(--ikr-btn-text,#ffffff);padding:10px 24px;border-radius:var(--ikr-radius,6px);cursor:pointer;border:1px solid var(--ikr-btn-border,#111111);font-weight:600;font-size:var(--ikr-btn-text-size,14px);white-space:nowrap;transition:opacity 0.15s;}
   @media(hover:hover){.ikr-write-btn:hover{opacity:0.92;}}
-  .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-end;}
+  .ikr-filter-wrap{flex:0 0 var(--ikr-col-count);position:relative;display:flex;justify-content:flex-end;align-items:stretch;}
   /* Filter button colors come from the Filtre color group in admin. */
-  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--ikr-radius,6px);border:1px solid var(--ikr-filter-btn-border,#111111);background:var(--ikr-filter-btn-bg,transparent);color:var(--ikr-filter-btn-text,#111111);cursor:pointer;}
+  .ikr-filter-btn{display:flex;align-items:center;justify-content:center;width:36px;min-height:36px;height:auto;border-radius:var(--ikr-radius,6px);border:1px solid var(--ikr-filter-btn-border,#111111);background:var(--ikr-filter-btn-bg,transparent);color:var(--ikr-filter-btn-text,#111111);cursor:pointer;}
   /* Material Symbols viewBox 0 -960 960 960 — buton içine sığması için 16x16 */
   .ikr-filter-btn svg{width:16px;height:16px;flex-shrink:0;}
 
