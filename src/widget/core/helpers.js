@@ -63,7 +63,7 @@ export function partialStarsHTML(rating, iconPair, opts) {
     } else { // half
       // Tek geometri (filled) iki katmanda: alt boş-renk full, üst dolu-renk + clip sol %50.
       html += '<span class="ikr-star ikr-star-half" style="' + sizeStyle + '">'
-            +   '<span class="ikr-star-half-bg">' + iconPair.filled + '</span>'
+            +   '<span class="ikr-star-half-bg">' + iconPair.empty + '</span>'
             +   '<span class="ikr-star-half-fg">' + iconPair.filled + '</span>'
             + '</span>';
     }
