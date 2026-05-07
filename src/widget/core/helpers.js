@@ -47,7 +47,7 @@ export function partialStarsHTML(rating, iconPair, opts) {
   var emptyHtml = '';
   var filledHtml = '';
   for (var i = 0; i < 5; i++) {
-    emptyHtml  += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.filled + '</span>';
+    emptyHtml  += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.empty + '</span>';
     filledHtml += '<span class="ikr-icon" style="' + sizeStyle + '">' + iconPair.filled + '</span>';
   }
   return '<span class="ikr-stars-partial">' +

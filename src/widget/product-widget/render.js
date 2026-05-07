@@ -76,74 +76,74 @@ function applyManualTheme(root, settings) {
   // Widget container background/border always transparent (store theme owns it).
 
   // Grup 2 — Başlık & Özet
-  var headerTitle     = settings.headerTitleColor     || '#111111';
-  var headerAvg       = settings.headerAvgColor       || '#111111';
-  var headerCount     = settings.headerCountColor     || '#111111';
+  var headerTitle = settings.headerTitleColor || '#111111';
+  var headerAvg = settings.headerAvgColor || '#111111';
+  var headerCount = settings.headerCountColor || '#111111';
   var headerRecommend = settings.headerRecommendColor || '#111111';
 
   // Grup 3 — Puan Dağılımı
-  var barFill   = settings.barFillColor   || '#111111';
-  var barTrack  = settings.barTrackColor  || '#e5e7eb';
+  var barFill = settings.barFillColor || '#111111';
+  var barTrack = settings.barTrackColor || '#e5e7eb';
   // Bar track stays independent so chart contrast can be tuned separately.
-  var barCount  = settings.barCountColor  || '#111111';
+  var barCount = settings.barCountColor || '#111111';
   var barHoverBg = hexToRgba(barFill, 0.06);
 
   // Grup 6 — Yorum Kartı (reviewStarColor önce tanımlanmalı)
-  var reviewStarColor  = settings.reviewStarColor  || '#f59e0b';
+  var reviewStarColor = settings.reviewStarColor || '#f59e0b';
 
-  // Boş yıldız rengi: sabit nötr gri (Loox/Okendo/sektör standardı).
-  // Türetilmiş rgba(starColor, 0.25) beyaz arka planda neredeyse görünmez.
-  var starEmpty = '#e5e7eb';
+  // Boş yıldız rengi: Outline mimarisine geçildiği için direkt yıldız rengini kullanıyoruz.
+  // Bu sayede tam opak (net) bir çerçeve (border) elde ediliyor.
+  var starEmpty = reviewStarColor;
 
   // Grup 4 — Butonlar
-  var btnBg        = settings.btnBgColor        || '#111111';
-  var btnText      = settings.btnTextColor      || '#ffffff';
-  var btnBorder    = settings.btnBorderColor    || '#111111';
-  var filterBg     = settings.filterBtnBgColor     || '#111111';
-  var filterText   = settings.filterBtnTextColor   || '#ffffff';
+  var btnBg = settings.btnBgColor || '#111111';
+  var btnText = settings.btnTextColor || '#ffffff';
+  var btnBorder = settings.btnBorderColor || '#111111';
+  var filterBg = settings.filterBtnBgColor || '#111111';
+  var filterText = settings.filterBtnTextColor || '#ffffff';
   var filterBorder = settings.filterBtnBorderColor || '#111111';
 
   // Grup 5 — Filtre Menüsü
-  var filterMenuBg      = settings.filterMenuBgColor      || '#ffffff';
-  var filterMenuBorder  = settings.filterMenuBorderColor  || '#e5e7eb';
-  var filterItemText    = settings.filterItemTextColor    || '#111111';
+  var filterMenuBg = settings.filterMenuBgColor || '#ffffff';
+  var filterMenuBorder = settings.filterMenuBorderColor || '#e5e7eb';
+  var filterItemText = settings.filterItemTextColor || '#111111';
   var filterItemHoverBg = settings.filterItemHoverBgColor || '#f3f4f6';
-  var filterItemActive  = settings.filterItemActiveColor  || '#111111';
+  var filterItemActive = settings.filterItemActiveColor || '#111111';
 
   // Grup 6 — Yorum Kartı (reviewStarColor yukarıda Grup 3'te tanımlandı)
-  var reviewTitleColor  = settings.reviewTitleColor  || '#111111';
+  var reviewTitleColor = settings.reviewTitleColor || '#111111';
   var reviewAuthorColor = settings.reviewAuthorColor || '#111111';
-  var reviewDateColor   = settings.reviewDateColor   || '#111111';
-  var reviewBodyColor   = settings.reviewBodyColor   || '#111111';
+  var reviewDateColor = settings.reviewDateColor || '#111111';
+  var reviewBodyColor = settings.reviewBodyColor || '#111111';
   var reviewBorderColor = settings.reviewBorderColor || '#e5e7eb';
 
   // Grup 7 — Mağaza Yanıtı
-  var replyBgVar      = settings.replyBgColor      || '#f9fafb';
-  var replyBorderVar  = settings.replyBorderColor  || '#747474';
-  var replyLabelColor = settings.replyLabelColor   || '#111111';
-  var replyTextVar    = settings.replyTextColor    || '#111111';
+  var replyBgVar = settings.replyBgColor || '#f9fafb';
+  var replyBorderVar = settings.replyBorderColor || '#747474';
+  var replyLabelColor = settings.replyLabelColor || '#111111';
+  var replyTextVar = settings.replyTextColor || '#111111';
 
   // Grup 9 — Fotoğraf Galerisi
-  var photoTitle        = settings.photoTitleColor       || '#111111';
-  var photoImageBorder  = hexToRgba('#111111', 0.05);
-  var photoArrowBg      = settings.photoArrowBgColor     || '#ffffff';
-  var photoArrowText    = settings.photoArrowTextColor   || '#111111';
-  var photoArrowBorder  = hexToRgba('#111111', 0.12);
+  var photoTitle = settings.photoTitleColor || '#111111';
+  var photoImageBorder = hexToRgba('#111111', 0.05);
+  var photoArrowBg = settings.photoArrowBgColor || '#ffffff';
+  var photoArrowText = settings.photoArrowTextColor || '#111111';
+  var photoArrowBorder = hexToRgba('#111111', 0.12);
 
   // Group 10 - Review form
   // Form tokens drive the modal review wizard.
   // The overlay color is intentionally not mapped here; it stays fixed.
   // Primary / secondary split: primary = titles, inputs; secondary = subtitles,
   // labels, notice, placeholder. Both opaque — no alpha derivatives.
-  var formBg      = settings.formBgColor      || '#ffffff';
-  var formPrimary = settings.formPrimaryTextColor  || '#111111';
+  var formBg = settings.formBgColor || '#ffffff';
+  var formPrimary = settings.formPrimaryTextColor || '#111111';
   var formSecondary = settings.formSecondaryTextColor || '#3b3b3b';
-  var inputTextVar = settings.inputTextColor  || formPrimary;
+  var inputTextVar = settings.inputTextColor || formPrimary;
   var inputBorderVar = settings.inputBorderColor || '#d1d5db';
   var placeholderColor = settings.placeholderColor || '#9ca3af';
   var formStepBarColor = settings.formStepBarColor || '#111111';
-  var formBtnBg     = settings.formBtnBgColor     || '#111111';
-  var formBtnText   = settings.formBtnTextColor   || '#ffffff';
+  var formBtnBg = settings.formBtnBgColor || '#111111';
+  var formBtnText = settings.formBtnTextColor || '#ffffff';
   var formBtnBorder = settings.formBtnBorderColor || '#111111';
   var formNavHoverBg = hexToRgba(formBtnBg, 0.06);
   var formBtnDisabledBg = hexToRgba(formBtnBg, 0.18);
@@ -151,67 +151,67 @@ function applyManualTheme(root, settings) {
   var formSubtleBg = hexToRgba(formPrimary, 0.06);
 
   // Grup 11 — Daha Fazla Göster
-  var loadMoreBg     = settings.loadMoreBgColor     || '#ffffff';
-  var loadMoreText   = settings.loadMoreTextColor   || '#111111';
+  var loadMoreBg = settings.loadMoreBgColor || '#ffffff';
+  var loadMoreText = settings.loadMoreTextColor || '#111111';
   var loadMoreBorder = settings.loadMoreBorderColor || '#111111';
 
   var vars = {
     // Grup 1 — Genel
-    '--ikr-widget-bg':     '#ffffff00',
+    '--ikr-widget-bg': '#ffffff00',
     '--ikr-widget-border': '#ffffff00',
 
     // Grup 2 — Başlık & Özet
-    '--ikr-header-title':     headerTitle,
-    '--ikr-header-avg':       headerAvg,
-    '--ikr-header-count':     headerCount,
+    '--ikr-header-title': headerTitle,
+    '--ikr-header-avg': headerAvg,
+    '--ikr-header-count': headerCount,
     '--ikr-header-recommend': headerRecommend,
 
     // Grup 3 — Puan Dağılımı
-    '--ikr-bar-fill':     barFill,
-    '--ikr-bar-track':    barTrack,
+    '--ikr-bar-fill': barFill,
+    '--ikr-bar-track': barTrack,
     '--ikr-star-empty-color': starEmpty,
-    '--ikr-bar-count':    barCount,
+    '--ikr-bar-count': barCount,
     '--ikr-bar-hover-bg': barHoverBg,
 
     // Grup 4 — Butonlar
-    '--ikr-btn-bg':           btnBg,
-    '--ikr-btn-text':         btnText,
-    '--ikr-btn-border':       btnBorder,
-    '--ikr-filter-btn-bg':    filterBg,
-    '--ikr-filter-btn-text':  filterText,
-    '--ikr-filter-btn-border':filterBorder,
+    '--ikr-btn-bg': btnBg,
+    '--ikr-btn-text': btnText,
+    '--ikr-btn-border': btnBorder,
+    '--ikr-filter-btn-bg': filterBg,
+    '--ikr-filter-btn-text': filterText,
+    '--ikr-filter-btn-border': filterBorder,
 
     // Grup 5 — Filtre Menüsü
-    '--ikr-filter-menu-bg':       filterMenuBg,
-    '--ikr-filter-menu-border':   filterMenuBorder,
-    '--ikr-filter-item-text':     filterItemText,
+    '--ikr-filter-menu-bg': filterMenuBg,
+    '--ikr-filter-menu-border': filterMenuBorder,
+    '--ikr-filter-item-text': filterItemText,
     '--ikr-filter-item-hover-bg': filterItemHoverBg,
-    '--ikr-filter-item-active':   filterItemActive,
+    '--ikr-filter-item-active': filterItemActive,
 
     // Grup 6 — Yorum Kartı
-    '--ikr-review-title':        reviewTitleColor,
-    '--ikr-review-author':       reviewAuthorColor,
-    '--ikr-review-date':         reviewDateColor,
-    '--ikr-review-body':         reviewBodyColor,
-    '--ikr-review-border':       reviewBorderColor,
-    '--ikr-review-star-color':   reviewStarColor,
+    '--ikr-review-title': reviewTitleColor,
+    '--ikr-review-author': reviewAuthorColor,
+    '--ikr-review-date': reviewDateColor,
+    '--ikr-review-body': reviewBodyColor,
+    '--ikr-review-border': reviewBorderColor,
+    '--ikr-review-star-color': reviewStarColor,
 
     // Grup 7 — Mağaza Yanıtı
-    '--ikr-reply-bg-color':    replyBgVar,
-    '--ikr-reply-border':      replyBorderVar,
-    '--ikr-reply-label':       replyLabelColor,
-    '--ikr-reply-text':        replyTextVar,
+    '--ikr-reply-bg-color': replyBgVar,
+    '--ikr-reply-border': replyBorderVar,
+    '--ikr-reply-label': replyLabelColor,
+    '--ikr-reply-text': replyTextVar,
 
     // Grup 9 — Fotoğraf Galerisi
-    '--ikr-photo-title':        photoTitle,
+    '--ikr-photo-title': photoTitle,
     '--ikr-photo-image-border': photoImageBorder,
-    '--ikr-photo-arrow-bg':     photoArrowBg,
-    '--ikr-photo-arrow-text':   photoArrowText,
+    '--ikr-photo-arrow-bg': photoArrowBg,
+    '--ikr-photo-arrow-text': photoArrowText,
     '--ikr-photo-arrow-border': photoArrowBorder,
 
     // Grup 10 — Form wizard
-    '--ikr-fwizard-bg':       formBg,
-    '--ikr-fwizard-text':     formPrimary,
+    '--ikr-fwizard-bg': formBg,
+    '--ikr-fwizard-text': formPrimary,
     '--ikr-fwizard-secondary-text': formSecondary,
     '--ikr-fwizard-input-bg': formBg,
     '--ikr-fwizard-input-text': inputTextVar,
@@ -221,20 +221,20 @@ function applyManualTheme(root, settings) {
     '--ikr-fwizard-close-hover-bg': formSubtleBg,
     '--ikr-fwizard-progress-bg': formSubtleBg,
     '--ikr-fwizard-progress-active': formStepBarColor,
-    '--ikr-fwizard-btn-bg':       formBtnBg,
-    '--ikr-fwizard-btn-text':     formBtnText,
-    '--ikr-fwizard-btn-border':   formBtnBorder,
-    '--ikr-fwizard-btn-disabled-bg':   formBtnDisabledBg,
+    '--ikr-fwizard-btn-bg': formBtnBg,
+    '--ikr-fwizard-btn-text': formBtnText,
+    '--ikr-fwizard-btn-border': formBtnBorder,
+    '--ikr-fwizard-btn-disabled-bg': formBtnDisabledBg,
     '--ikr-fwizard-btn-disabled-text': formBtnDisabledText,
     '--ikr-fwizard-nav-hover-bg': formNavHoverBg,
 
     // Grup 11 — Daha Fazla Göster
-    '--ikr-load-more-bg':     loadMoreBg,
-    '--ikr-load-more-text':   loadMoreText,
+    '--ikr-load-more-bg': loadMoreBg,
+    '--ikr-load-more-text': loadMoreText,
     '--ikr-load-more-border': loadMoreBorder,
   };
 
-  Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
+  Object.keys(vars).forEach(function (k) { root.style.setProperty(k, vars[k]); });
 
   if (typeof window !== 'undefined' && window.__ikasPreviewMode && document.body) {
     document.body.style.background = 'transparent';
@@ -312,7 +312,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     // Runtime 6-char veya 8-char hex kabul eder; admin picker sadece opak hex yazar.
     var reviewStarColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
-    root.style.setProperty('--ikr-star-empty-color', '#e5e7eb');
+    root.style.setProperty('--ikr-star-empty-color', reviewStarColor);
     root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
     root.style.setProperty('--ikr-avg-star-size', sz.avgStarSize + 'px');
 
@@ -324,7 +324,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       if (!layout || !layout.meta || !layout.meta.sizeOverrides) return;
       var ov = layout.meta.sizeOverrides[sizeKey];
       if (!ov) return;
-      Object.keys(ov).forEach(function(k) { root.style.setProperty(k, ov[k]); });
+      Object.keys(ov).forEach(function (k) { root.style.setProperty(k, ov[k]); });
     }
     applyLayoutSizeOverrides(getLayout(settings.summaryLayout), settings.size);
     applyLayoutSizeOverrides(getReviewLayout(settings.reviewLayout), settings.size);
@@ -345,7 +345,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     if (settings.enabled === false) {
       container.style.minHeight = 'auto';
       container.innerHTML = '<div style="padding: 40px 20px; margin-top: 24px; text-align: center; color: #6e6d7a; font-family: Inter, sans-serif; border: 1px dashed #e3e1e5; border-radius: ' + (settings.borderRadius !== undefined ? settings.borderRadius : 8) + 'px; background: #fafafa; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6e6d7a; margin-bottom: 4px;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg><div style="font-weight: 500; font-size: 18px; color: #1a191a; letter-spacing: -0.01em;">Widget şu anda Pasif durumda</div><div style="font-size: 16px; color: #6e6d7a; max-width: 380px; line-height: 1.5;">Canlı mağazanızda müşterileriniz hiçbir yorum alanı görmeyecektir.</div></div>';
-      
+
       setRenderInProgress(false);
       var p = pendingRender;
       setPendingRender(null);
@@ -397,8 +397,8 @@ export async function render(productId, settings, reviewsData, productName, orde
       var ratingCounts = allRatingCounts || [0, 0, 0, 0, 0];
       var avgRatingVal = (data.data && data.data.avgRating) || '0.0';
       if (!allRatingCounts && reviews.length > 0) {
-        reviews.forEach(function(r) { if (r.rating >= 1 && r.rating <= 5) ratingCounts[r.rating - 1]++; });
-        var s = reviews.reduce(function(a, r) { return a + r.rating; }, 0);
+        reviews.forEach(function (r) { if (r.rating >= 1 && r.rating <= 5) ratingCounts[r.rating - 1]++; });
+        var s = reviews.reduce(function (a, r) { return a + r.rating; }, 0);
         avgRatingVal = (s / reviews.length).toFixed(1);
       }
 
@@ -415,13 +415,13 @@ export async function render(productId, settings, reviewsData, productName, orde
           currentRatingFilter: currentRatingFilter,
           currentOrderBy: currentOrderBy,
           currentHasImages: currentHasImages,
-          onFilterChange: async function(starVal) {
+          onFilterChange: async function (starVal) {
             setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
             setCurrentPage(1);
             var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
             await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
           },
-          onSortChange: async function(orderBy, isPhotos) {
+          onSortChange: async function (orderBy, isPhotos) {
             setCurrentPage(1);
             if (isPhotos) {
               setCurrentHasImages(true);
@@ -446,8 +446,8 @@ export async function render(productId, settings, reviewsData, productName, orde
       }
 
       // Fotoğraflı Yorumlar bölümü — sadece filtre aktif değilken göster
-      var allReviewsWithPhotos = reviews.filter(function(r) {
-        return r.images && Array.isArray(r.images) && r.images.some(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
+      var allReviewsWithPhotos = reviews.filter(function (r) {
+        return r.images && Array.isArray(r.images) && r.images.some(function (u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
       });
       if (settings.showPhotoGallery !== false && !currentHasImages && allReviewsWithPhotos.length > 0) {
         var photoSection = document.createElement('div');
@@ -474,16 +474,16 @@ export async function render(productId, settings, reviewsData, productName, orde
         photoStrip.className = 'ikr-photo-strip';
 
         var thumbCount = 0;
-        allReviewsWithPhotos.forEach(function(r) {
+        allReviewsWithPhotos.forEach(function (r) {
           if (thumbCount >= 10) return;
-          var firstImg = r.images.find(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
+          var firstImg = r.images.find(function (u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
           if (!firstImg) return;
           var thumb = document.createElement('img');
           thumb.src = optimizeImageUrl(firstImg);
           thumb.className = 'ikr-photo-strip-thumb';
           thumb.alt = 'Yorum fotoğrafı';
-          (function(url, review) {
-            thumb.onclick = function() { openReviewModal(review, url, reviews); };
+          (function (url, review) {
+            thumb.onclick = function () { openReviewModal(review, url, reviews); };
           })(firstImg, r);
           photoStrip.appendChild(thumb);
           thumbCount++;
@@ -494,13 +494,13 @@ export async function render(productId, settings, reviewsData, productName, orde
         prevArrow.className = 'ikr-photo-strip-arrow ikr-photo-strip-arrow-prev';
         prevArrow.innerHTML = '&#8249;';
         prevArrow.setAttribute('aria-label', 'Önceki');
-        prevArrow.onclick = function() { photoStrip.scrollBy({ left: -200, behavior: 'smooth' }); };
+        prevArrow.onclick = function () { photoStrip.scrollBy({ left: -200, behavior: 'smooth' }); };
 
         var nextArrow = document.createElement('button');
         nextArrow.className = 'ikr-photo-strip-arrow ikr-photo-strip-arrow-next';
         nextArrow.innerHTML = '&#8250;';
         nextArrow.setAttribute('aria-label', 'Sonraki');
-        nextArrow.onclick = function() { photoStrip.scrollBy({ left: 200, behavior: 'smooth' }); };
+        nextArrow.onclick = function () { photoStrip.scrollBy({ left: 200, behavior: 'smooth' }); };
 
         var stripWrap = document.createElement('div');
         stripWrap.className = 'ikr-photo-strip-wrap';
@@ -518,7 +518,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         widget.appendChild(empty);
       } else {
         var reviewLayout = getReviewLayout(settings.reviewLayout);
-        reviews.forEach(function(r) { widget.appendChild(reviewLayout.render(r, reviews)); });
+        reviews.forEach(function (r) { widget.appendChild(reviewLayout.render(r, reviews)); });
       }
 
       // Daha Fazla butonu
@@ -527,7 +527,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         var loadMoreBtn = document.createElement('button');
         loadMoreBtn.className = 'ikr-load-more';
         loadMoreBtn.textContent = 'Daha Fazla Göster';
-        loadMoreBtn.onclick = async function() {
+        loadMoreBtn.onclick = async function () {
           loadMoreBtn.disabled = true;
           loadMoreBtn.textContent = 'Yükleniyor...';
           var nextPage = currentPage + 1;
@@ -535,7 +535,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           if (moreData && moreData.data && moreData.data.reviews) {
             setCurrentPage(nextPage);
             var moreReviewLayout = getReviewLayout(currentSettings.reviewLayout);
-            moreData.data.reviews.forEach(function(r) {
+            moreData.data.reviews.forEach(function (r) {
               widget.insertBefore(moreReviewLayout.render(r, moreData.data.reviews), loadMoreBtn);
             });
             if (!moreData.data.hasMore) loadMoreBtn.remove();
