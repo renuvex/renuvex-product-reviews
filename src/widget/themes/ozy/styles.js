@@ -266,7 +266,11 @@ export var CLASSIC_CSS = `
   .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;}
   .ikr-modal-wrap{position:relative;width:100%;max-width:813px;}
   .ikr-photo-section{margin:24px 0 32px;padding:0 var(--ikr-pad-review-mobile);display:block;}
-  .ikr-photo-strip-container{position:relative;margin:0 calc(-1 * var(--ikr-pad-review-mobile));}
+  .ikr-photo-strip-container{position:relative;}
+  /* Desktop: ok'lar icin negatif margin. Mobile'da ok yok, margin gerekmez. */
+  @media(min-width:601px){
+    .ikr-photo-strip-container{margin:0 calc(-1 * var(--ikr-pad-review-mobile));}
+  }
   .ikr-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px var(--ikr-pad-review-mobile);scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .ikr-photo-strip::-webkit-scrollbar{display:none;}
   /* Thumbnail genişliği sabit (--ikr-thumbnail-size); yüksekliği aspect-ratio
