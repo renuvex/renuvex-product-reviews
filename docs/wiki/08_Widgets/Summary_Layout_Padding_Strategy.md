@@ -45,18 +45,18 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 
 | Layout | `.ikr-summary` Padding | Baslik Hizasi |
 |---|---|---|
-| `classic` | `16px var(--ikr-pad-summary-mobile)` | sol |
-| `compact` | `16px var(--ikr-pad-summary-mobile)` | sol |
-| `hero` | `16px var(--ikr-pad-summary-mobile)` | sol |
-| `minimal` | `16px var(--ikr-pad-summary-mobile)` | sol |
-| `split` | `16px var(--ikr-pad-summary-mobile)` | sol |
+| `classic` | `16px 16px` | ortada |
+| `compact` | `16px 16px` | sol |
+| `hero` | `16px 16px` | sol |
+| `minimal` | `16px 16px` | sol |
+| `split` | `16px 16px` | sol |
 
 ## CSS Variables
 
 | Variable | Default | Kullanim Yeri |
 |---|---|---|
-| `--ikr-pad-summary-mobile` | `8px` | Tum summary layout'larin mobile yan padding'i |
-| `--ikr-pad-review-mobile` | `10px` | Review item'larin (card/list/gallery) mobile yan padding'i |
+| `--ikr-pad-summary-mobile` | `16px` | Tum summary layout'larin mobile yan padding'i |
+| `--ikr-pad-review-mobile` | `16px` | Review item'larin (card/list/gallery) mobile yan padding'i |
 
 Tanim yeri: [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) (satir 47).
 
@@ -111,4 +111,5 @@ Eski `768px` referansi (split yorumlarinda) 2026-05-07'de `600px`'ye cekildi.
 - **2026-05-07**: Split layout yorum/kod uyuşmazligi duzeltildi. Yorumda `768px` -> `600px`, mobile baslik `center` -> `left`. Related source: [split/styles.js](src/widget/summary-layouts/split/styles.js).
 - **2026-05-07**: Compact header fazla padding duzeltildi. `.ikr-compact-header` `padding: 8px 0` -> `0`, `.ikr-compact-trigger` `padding: 8px 0` -> `0`. Related source: [compact/styles.js](src/widget/summary-layouts/compact/styles.js).
 - **2026-05-07**: Compact summary yan padding duzeltildi. `.ikr-summary-compact` `padding-top:0; padding-bottom:0` -> `padding:0 16px`. Base `.ikr-summary` rule'inin `28px` yan padding'ini devraliyordu; diger layout'larla (`hero`/`minimal`/`split`) tutarli `16px` yapildi. Related source: [compact/styles.js](src/widget/summary-layouts/compact/styles.js).
-- **2026-05-07**: Compact mobile padding kritik duzeltme. `.ikr-summary-compact { padding:0 }` media query disindaydi; mobile'da base `.ikr-summary { padding:16px var(--ikr-pad-summary-mobile) }`'i eziyordu. Kural `@media(min-width:601px)` icine tasindi. Artik mobile'da compact de `8px` yan padding aliyor. Related source: [compact/styles.js](src/widget/summary-layouts/compact/styles.js).
+- **2026-05-07**: Compact mobile padding kritik duzeltme. `.ikr-summary-compact { padding:0 }` media query disindaydi; mobile'da base `.ikr-summary { padding:16px var(--ikr-pad-summary-mobile) }`'i eziyordu. Kural `@media(min-width:601px)` icine tasindi. Artik mobile'da compact de `16px` yan padding aliyor. Related source: [compact/styles.js](src/widget/summary-layouts/compact/styles.js).
+- **2026-05-07**: Ikas temasi padding analizi yapildi. Ikas temasi `16px` yan padding kullaniyor. Widget CSS variable'lari ikas ile tutarli hale getirildi: `--ikr-pad-summary-mobile` `8px` -> `16px`, `--ikr-pad-review-mobile` `10px` -> `16px`. Related source: [styles.js](src/widget/themes/ozy/styles.js).
