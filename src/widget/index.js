@@ -19,6 +19,7 @@ if (IS_PREVIEW) {
     // Mevcut settings ile merge edip yeniden render et
     var merged = Object.assign({}, currentSettings, s);
     render(currentProductId, merged, currentReviewsData, currentProductName, currentOrderBy, currentPage);
+    window.dispatchEvent(new CustomEvent('IKR_SETTINGS_UPDATED_PREVIEW'));
   });
 
   function notifyReady() {

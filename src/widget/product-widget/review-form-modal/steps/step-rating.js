@@ -85,12 +85,20 @@ export function createStepRating(state, opts) {
   // İlk render: state'te zaten rating varsa onu göster (geri-ileri gezintiyle gelirse)
   applyVisual(state.get().rating);
 
+  // Preview modunda ikon değişikliğini modal açıkken yansıt
+  var onSettingsUpdate = function() {
+    iconPair = getIconFromSettings(currentSettings || {});
+    applyVisual(state.get().rating);
+  };
+  window.addEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
+
   root.appendChild(starsRow);
 
   return {
     el: root,
     // Step manager step değişiminde temizleme yapsın diye opsiyonel destroy
     destroy: function () {
+      window.removeEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
       // hover listener'lar btn ile birlikte DOM'dan çıkınca otomatik kalkar
     },
   };
