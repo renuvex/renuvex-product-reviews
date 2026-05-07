@@ -54,7 +54,7 @@ export var ICONS = {
       boxed: {
         label: 'Kare (Google)',
         filled: '<svg viewBox="' + MS_VB + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + P.boxSquare + '"/><g transform="translate(120, -120) scale(0.75)" fill="white"><path d="' + P.starFill + '"/></g></svg>',
-        empty:  '<svg viewBox="' + MS_VB + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + P.boxSquareOutline + '"/><g transform="translate(120, -120) scale(0.75)"><path d="' + P.starOutline + '"/></g></svg>',
+        empty:  '<svg viewBox="' + MS_VB + '" fill="currentColor" opacity="0.35" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + P.boxSquare + '"/><g transform="translate(120, -120) scale(0.75)" fill="white"><path d="' + P.starFill + '"/></g></svg>',
       },
     },
   },
