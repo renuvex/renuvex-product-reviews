@@ -7,7 +7,7 @@ export var MINIMAL_CSS = `
 
   .ikr-summary-minimal{
     display:flex;flex-direction:row;align-items:center;justify-content:space-between;
-    gap:16px;width:100%;max-width:none;padding:8px 0;
+    gap:16px;width:100%;max-width:none;padding:8px;
   }
 
   .ikr-minimal-info{

@@ -73,7 +73,9 @@ export var CLASSIC_CSS = `
   .ikr-modal-title,
   .ikr-modal-author,
   .ikr-modal-reply-text{overflow-wrap:anywhere;}
-  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:500;text-align:center;margin-bottom:12px;color:var(--ikr-header-title,#111111);}
+  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:500;text-align:left;margin-bottom:12px;color:var(--ikr-header-title,#111111);}
+  /* Classic layout basligi ortali — classic disindaki layout'lar sola yasli */
+  .ikr-title-classic{text-align:center;}
 
   /* ─── SVG ICON WRAPPER ───────────────────────────────────────────────
      .ikr-icon span'ı SVG'yi sarar. Boyut parent'tan (em veya inline style) gelir,
@@ -354,6 +356,7 @@ export var CLASSIC_CSS = `
     .ikr-title{
       padding-left:var(--ikr-pad-summary-mobile);
       padding-right:var(--ikr-pad-summary-mobile);
+      text-align:center;
     }
     /* Review item yan padding'i mobile'da --ikr-pad-review-mobile. Card
        (.ikr-review), list (.ikr-review-list) ve gallery (.ikr-review-gallery)

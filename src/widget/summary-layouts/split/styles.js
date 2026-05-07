@@ -6,16 +6,15 @@
 // halde desktop'ta da uygulanir ve flex:1 1 auto cocuklarini bozar.
 
 export var SPLIT_CSS = `
-  /* Başlık sola hizali (sol blok üstüne) — avg+sayı+tavsiye ile bütünluk kazanir.
-     Loox/Yotpo standardi, merkez başlık bar chart üstüne düsüyordu. */
+  /* Başlık sola hizali — tüm layout'larda tutarlı */
   .ikr-title-split{text-align:left;}
 
-  /* Mobile (<=768): split = classic. Sol ve orta wrapper'lar seffaf
+  /* Mobile (<=600): split = classic. Sol ve orta wrapper'lar seffaf
      (cocuklar dogrudan summary'nin child'i olur). Sag wrapper kalir ve
      classic'in .ikr-summary-actions wrapper'iyla ayni davranisi alir
      (flex row + width 100%) — write-btn yan yana filter ile durur. */
   @media(max-width:600px){
-    /* Mobile'da split classic gibi davranir -> baslik da classic gibi ortada. */
+    /* Mobile'da split classic gibi davranir -> baslik ortali (classic pattern). */
     .ikr-title-split{text-align:center;}
     .ikr-split-left,.ikr-split-mid{display:contents;}
     /* .ikr-split-right classic'in .ikr-summary-actions pattern'ini taklit
@@ -32,7 +31,7 @@ export var SPLIT_CSS = `
        max-width:340 sinirinden gelir (override yok). */
   }
 
-  /* Desktop-only: split'in 3-kolon yatay tasarimi sadece >=769px'te aktif.
+  /* Desktop-only: split'in 3-kolon yatay tasarimi sadece >=601px'te aktif.
      Mobile'da hicbiri uygulanmaz -> base classic gorunum. */
   @media(min-width:601px){
     .ikr-split-col{
@@ -42,7 +41,7 @@ export var SPLIT_CSS = `
 
     .ikr-summary-split{
       display:flex;flex-direction:row;align-items:center;justify-content:space-between;
-      gap:24px;width:100%;max-width:none;padding:16px 0;
+      gap:24px;width:100%;max-width:none;padding:16px 8px;
     }
 
     /* Sol: avg (buyuk yildiz + sayi) -> sayi -> tavsiye, sol hizali */

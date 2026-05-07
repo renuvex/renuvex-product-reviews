@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-07
 tags:
   - index
   - ikas
@@ -60,6 +60,7 @@ related:
 - [[Product_Review_Widget]]
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
+- [[Summary_Layout_Padding_Strategy]]
 - [[Widget_Performance]]
 - [[Structured_Data_And_Rich_Snippets]]
 

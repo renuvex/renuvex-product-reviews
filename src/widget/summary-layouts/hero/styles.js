@@ -8,7 +8,7 @@ export var HERO_CSS = `
 
   .ikr-summary-hero{
     display:flex;flex-direction:row;align-items:center;justify-content:space-between;
-    gap:24px;width:100%;max-width:none;padding:12px 0;
+    gap:24px;width:100%;max-width:none;padding:12px 8px;
   }
 
   .ikr-hero-info{

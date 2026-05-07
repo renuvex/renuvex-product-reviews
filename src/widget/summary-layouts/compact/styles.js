@@ -5,25 +5,17 @@
 // Mobile: header → [trigger ........ filter], altında write-btn full-width.
 
 export var COMPACT_CSS = `
-  /* Compact layout başlığı sola hizalı */
-  /* Başlık trigger ile aynı sol kenardan başlasın — base .ikr-summary
-     padding-left:28px yıldız satırını içeride başlatıyor; başlık (.ikr-title
-     widget direct child) varsayılan 0 yan padding aldığı için kenarda
-     kalıyordu. 28px ile hizalan. Mobile theme'de --ikr-pad-summary-mobile
-     uygulanıyor zaten — bu desktop-only override. */
+  /* Compact layout başlığı sola hizalı — tüm layout'larda tutarlı */
   .ikr-title-compact{text-align:left;}
-  @media(min-width:601px){
-    .ikr-title-compact{padding-left:28px;}
-  }
 
   /* Compact'te ana .ikr-summary padding'ini sıfırla — yıldızlar başlık ile aynı sol kenar */
   /* padding-top/bottom 0; yan padding base .ikr-summary mobile bloğundan gelir
      (--ikr-pad-summary-mobile). Diğer layoutlarla aynı yan boşluk. */
-  .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding-top:0;padding-bottom:0;}
+  .ikr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding:0;}
 
   .ikr-compact-header{
     display:flex;align-items:center;gap:12px;
-    width:100%;padding:8px 0;
+    width:100%;padding:0;
   }
 
   /* Trigger wrap — popover anchor'ı (position:relative parent) */
@@ -33,7 +25,7 @@ export var COMPACT_CSS = `
 
   .ikr-compact-trigger{
     display:flex;align-items:center;gap:10px;
-    background:transparent;border:0;padding:8px 0;cursor:pointer;
+    background:transparent;border:0;padding:0;cursor:pointer;
     font-family:inherit;color:inherit;flex:0 0 auto;
   }
   .ikr-compact-trigger-stars{display:inline-flex;gap:2px;flex-shrink:0;}
