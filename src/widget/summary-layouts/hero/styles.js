@@ -48,10 +48,10 @@ export var HERO_CSS = `
     .ikr-summary-hero{
       flex-wrap:wrap;gap:16px;
     }
-    .ikr-hero-info{gap:24px;justify-content:center;width:100%;}
-    .ikr-hero-rating-col{flex-direction:column;align-items:center;gap:4px;}
+    .ikr-hero-info{display:grid;grid-template-columns:1fr 1fr 1fr;width:100%;align-items:center;}
+    .ikr-hero-rating-col{grid-column:1;display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
     .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,90px) * 0.75);letter-spacing:-1px;}
-    .ikr-hero-meta{text-align:center;}
+    .ikr-hero-meta{grid-column:2;text-align:center;}
     .ikr-hero-count{max-width:none;}
     
     .ikr-desktop-only{display:none !important;}
