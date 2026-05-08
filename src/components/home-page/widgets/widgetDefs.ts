@@ -75,6 +75,11 @@ export const WIDGETS: WidgetDef[] = [
           // Tasarım'daki showPhotoGallery strip'i tamamen gizler, bu sadece başlığı.
           { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Fotoğraf Galeri Başlığını Göster', default: true },
           { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
+          // Yorum Yap butonu metni — toggle yok, çünkü buton mağazanın yorum
+          // toplama "kapısı": gizlenmemeli. Boş bırakılırsa render tarafında
+          // 'Yorum Yap' fallback'i kullanılır. Tüm summary layout'ları + empty
+          // state + mobile alt-row aynı key'i okur.
+          { type: 'text',   key: 'writeButtonText',      label: 'Yorum Yap Butonu Metni', placeholder: 'Yorum Yap', default: 'Yorum Yap' },
         ],
       },
       {

@@ -7,6 +7,7 @@
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
 import { partialStarsHTML } from '../../core/helpers.js';
+import { currentSettings } from '../../core/state.js';
 import { MINIMAL_CSS } from './styles.js';
 
 export var meta = {
@@ -78,7 +79,7 @@ export function render(opts) {
   if (writeBtn) {
     var writeBtnMobile = document.createElement('button');
     writeBtnMobile.className = 'ikr-write-btn';
-    writeBtnMobile.textContent = 'Yorum Yap';
+    writeBtnMobile.textContent = (currentSettings && currentSettings.writeButtonText) || 'Yorum Yap';
     writeBtnMobile.onclick = openWriteForm;
     var writeRow = document.createElement('div');
     writeRow.className = 'ikr-minimal-write-row';

@@ -444,7 +444,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         var emptyWriteBtn = document.createElement('button');
         emptyWriteBtn.className = 'ikr-write-btn';
         emptyWriteBtn.style.cssText = 'display:block;margin:16px auto 0;';
-        emptyWriteBtn.textContent = 'Yorum Yap';
+        emptyWriteBtn.textContent = settings.writeButtonText || 'Yorum Yap';
         emptyWriteBtn.onclick = openWriteForm;
         widget.appendChild(emptyWriteBtn);
       }

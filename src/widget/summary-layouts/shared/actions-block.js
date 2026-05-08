@@ -18,7 +18,8 @@ export function buildActionsBlock(opts) {
 
   var writeBtn = document.createElement('button');
   writeBtn.className = 'ikr-write-btn';
-  writeBtn.textContent = 'Yorum Yap';
+  // Buton metni admin "Yorum Yap Butonu Metni" alanından gelir; boşsa fallback.
+  writeBtn.textContent = (currentSettings && currentSettings.writeButtonText) || 'Yorum Yap';
   writeBtn.onclick = onWriteClick;
   actionsBlock.appendChild(writeBtn);
 
