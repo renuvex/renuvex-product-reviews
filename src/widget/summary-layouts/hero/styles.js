@@ -48,7 +48,7 @@ export var HERO_CSS = `
     .ikr-summary-hero{
       flex-wrap:wrap;gap:16px;
     }
-    .ikr-hero-info{gap:12px;justify-content:center;width:100%;}
+    .ikr-hero-info{gap:12px;justify-content:flex-start;width:100%;}
     .ikr-hero-rating-col{flex-direction:row;align-items:center;gap:16px;}
     .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,90px) * 0.65);letter-spacing:-1px;}
     .ikr-hero-meta-row{width:auto;gap:8px;}
