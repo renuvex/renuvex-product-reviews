@@ -77,7 +77,7 @@ function IconCell({
 export function IconSelect({ label, value, options, onChange }: IconSelectProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+      <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary }}>
         {label}
       </label>
 

@@ -74,7 +74,7 @@ export function ColorPickerField({
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: sp[3], ...rowStyle }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: sp[1], fontSize: typography.fontSize.base, color: colors.textSecondary, ...labelStyle }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: sp[1], fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary, ...labelStyle }}>
         {label}
         {labelAddon}
       </label>

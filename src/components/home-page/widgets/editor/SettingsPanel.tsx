@@ -149,13 +149,9 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
   const renderGroup = (fields: SettingField[], groupIdx: number) => {
     return (
       <div key={`field-group-${groupIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: sp[2] }}>
-        {fields.map((field, idx) => {
-          const isDependent = idx > 0; // Gruptaki ilk öğe dışındakiler bağımlı kabul edilir
+        {fields.map((field) => {
           return (
-            <div 
-              key={field.key} 
-              style={isDependent ? { paddingLeft: 28, opacity: 0.95 } : undefined}
-            >
+            <div key={field.key}>
               <FieldRenderer
                 field={field}
                 settings={settings}
@@ -261,10 +257,16 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     <>
       {view.type === 'main' ? (
         <>
-          {renderGroupNavRows(visibleMainGroups)}
+          {/* Tasarım ve İkon Stilleri */}
+          {renderGroupNavRows(visibleMainGroups.filter(g => g.title !== 'Metin'))}
 
+          {/* Renkler Geçişi */}
           {hasColorGroups && renderNavButton('Renkler', () => setView({ type: 'colors' }))}
 
+          {/* Metin Grubu */}
+          {renderGroupNavRows(visibleMainGroups.filter(g => g.title === 'Metin'))}
+
+          {/* Ayarlar Grubu */}
           {renderGroupNavRows(visibleSettingsGroups)}
 
           {/* Varsayılanlara Sıfırla Butonu */}
@@ -364,7 +366,7 @@ function FieldRenderer({ field, settings, onChange }: {
             onChange={(e) => onChange({ ...settings, [field.key]: e.target.checked })}
             style={{ width: 16, height: 16, cursor: 'pointer', accentColor: colors.primary }}
           />
-          <span style={{ fontSize: typography.fontSize.base, color: colors.textSecondary }}>
+          <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary }}>
             {field.label}
           </span>
         </label>
@@ -376,7 +378,7 @@ function FieldRenderer({ field, settings, onChange }: {
           {/* hideLabel: önündeki bir toggle bağlamı veriyorsa label tekrarına
               gerek yok (ör. showTitle + title input). */}
           {!field.hideLabel && (
-            <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+            <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary }}>
               {field.label}
             </label>
           )}
@@ -435,7 +437,7 @@ function FieldRenderer({ field, settings, onChange }: {
       const opts = typeof field.options === 'function' ? field.options(settings) : field.options;
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
-          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary }}>
             {field.label}
           </label>
           <div style={{ display: 'flex', gap: sp[2], flexWrap: 'wrap' }}>
@@ -466,7 +468,7 @@ function FieldRenderer({ field, settings, onChange }: {
       // picker'ını açar; desktop'ta basit liste. Stil componentStyles.select.
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
-          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+          <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary }}>
             {field.label}
           </label>
           <select
@@ -490,7 +492,7 @@ function FieldRenderer({ field, settings, onChange }: {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[2] }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: sp[1], fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: sp[1], fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary }}>
               {field.label}
               {isBorderRadius && (
                 <InfoTooltip

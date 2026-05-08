@@ -63,26 +63,6 @@ export const WIDGETS: WidgetDef[] = [
     previewBg: 'rgba(111, 85, 255, 0.08)',
     settings: [
       {
-        title: 'Genel',
-        fields: [
-          // showTitle = layout-aware "title destekliyor mu" + kullanıcı tercihi.
-          // Layout title'ı desteklemiyorsa toggle hiç görünmez. Açıksa input
-          // görünür; input boşsa render.js placeholder'ı (default) gösterir.
-          { type: 'toggle', key: 'showTitle', label: 'Widget Başlığını Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
-          // Toggle metni zaten bağlamı veriyor, ekstra label tekrar olur — hideLabel ile gizlenir.
-          { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, maxLength: 30, showWhen: { key: 'showTitle', equals: true } },
-          // Görsel galeri (Fotoğraflı Yorumlar strip) başlığı — Widget Başlığı pattern'inin aynısı.
-          // Tasarım'daki showPhotoGallery strip'i tamamen gizler, bu sadece başlığı.
-          { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Fotoğraf Galeri Başlığını Göster', default: true },
-          { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, maxLength: 30, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
-          // Yorum Yap butonu metni — toggle yok, çünkü buton mağazanın yorum
-          // toplama "kapısı": gizlenmemeli. Boş bırakılırsa render tarafında
-          // 'Yorum Yap' fallback'i kullanılır. Tüm summary layout'ları + empty
-          // state + mobile alt-row aynı key'i okur.
-          { type: 'text',   key: 'writeButtonText',      label: 'Yorum Yap Butonu Metni', placeholder: 'Yorum Yap', default: 'Yorum Yap', maxLength: 30 },
-        ],
-      },
-      {
         title: 'Tasarım',
         fields: [
           {
@@ -142,6 +122,27 @@ export const WIDGETS: WidgetDef[] = [
           // Ayarlar = sistem davranışı, Tasarım = görünüm — net ayrım.
           { type: 'toggle', key: 'showPhotoGallery',   label: 'Fotoğraf Galerisini Göster', default: true },
           { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
+        ],
+      },
+      {
+        // İkon ve rengi birlikte — yıldız ve filtre ikonları tek başlık altında.
+        title: 'İkon Stilleri',
+        fields: [
+          {
+            type: 'iconSelect',
+            key: 'reviewIcon',
+            label: 'Yorum İkonu',
+            default: 'star:rounded',
+            options: getIconOptions(),
+          },
+          { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
+          {
+            type: 'iconSelect',
+            key: 'filterIcon',
+            label: 'Filtre İkonu',
+            default: 'lines',
+            options: getFilterIconOptions(),
+          },
         ],
       },
       {
@@ -242,34 +243,23 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        // İkon ve rengi birlikte — yıldız konusu tek başlık altında ana panelde.
-        // Renk eskiden "Yorum Kartı" altındaydı, kullanıcı yıldız arıyordu.
-        title: 'Yıldız Stili',
+        title: 'Metin',
         fields: [
-          {
-            type: 'iconSelect',
-            key: 'reviewIcon',
-            label: 'Yorum İkonu',
-            default: 'star:rounded',
-            // İkon listesi icons.js ICONS registry'sinden dinamik gelir —
-            // yeni ikon eklenince otomatik burada görünür.
-            options: getIconOptions(),
-          },
-          { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
-        ],
-      },
-      {
-        // Filtre butonu ikonu — Yıldız Stili pattern'iyle aynı, ana panelde.
-        // Renkler "Filtre Menüsü" + "Butonlar" gruplarında Renkler sekmesinde kalır.
-        title: 'Filtre Stili',
-        fields: [
-          {
-            type: 'iconSelect',
-            key: 'filterIcon',
-            label: 'Filtre İkonu',
-            default: 'lines',
-            options: getFilterIconOptions(),
-          },
+          // showTitle = layout-aware "title destekliyor mu" + kullanıcı tercihi.
+          // Layout title'ı desteklemiyorsa toggle hiç görünmez. Açıksa input
+          // görünür; input boşsa render.js placeholder'ı (default) gösterir.
+          { type: 'toggle', key: 'showTitle', label: 'Widget Başlığını Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
+          // Toggle metni zaten bağlamı veriyor, ekstra label tekrar olur — hideLabel ile gizlenir.
+          { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, maxLength: 30, showWhen: { key: 'showTitle', equals: true } },
+          // Görsel galeri (Fotoğraflı Yorumlar strip) başlığı — Widget Başlığı pattern'inin aynısı.
+          // Tasarım'daki showPhotoGallery strip'i tamamen gizler, bu sadece başlığı.
+          { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Fotoğraf Galeri Başlığını Göster', default: true },
+          { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, maxLength: 30, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
+          // Yorum Yap butonu metni — toggle yok, çünkü buton mağazanın yorum
+          // toplama "kapısı": gizlenmemeli. Boş bırakılırsa render tarafında
+          // 'Yorum Yap' fallback'i kullanılır. Tüm summary layout'ları + empty
+          // state + mobile alt-row same key'i okur.
+          { type: 'text',   key: 'writeButtonText',      label: 'Yorum Yap Butonu Metni', placeholder: 'Yorum Yap', default: 'Yorum Yap', maxLength: 30 },
         ],
       },
       {
