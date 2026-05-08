@@ -48,8 +48,13 @@ export function validateSettings(widgetId: string, settings: Record<string, unkn
       if (field.type === 'toggle' && typeof value !== 'boolean') {
         return `${field.key} boolean olmalı`;
       }
-      if (field.type === 'text' && typeof value !== 'string') {
-        return `${field.key} string olmalı`;
+      if (field.type === 'text') {
+        if (typeof value !== 'string') {
+          return `${field.key} string olmalı`;
+        }
+        if (field.maxLength && value.length > field.maxLength) {
+          return `${field.key} en fazla ${field.maxLength} karakter olmalı`;
+        }
       }
       // Hex color: admin edits emit opaque #rrggbb. Keep #rrggbbaa valid for
       // schema defaults and legacy saved settings that intentionally use alpha.

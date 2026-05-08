@@ -26,7 +26,7 @@ export type SelectOptionsSource =
 
 export type SettingField =
   | { type: 'toggle';     key: string; label: string; default: boolean;  showWhen?: ShowWhen }
-  | { type: 'text';       key: string; label: string; placeholder?: string; default: string; hideLabel?: boolean; showWhen?: ShowWhen }
+  | { type: 'text';       key: string; label: string; placeholder?: string; default: string; hideLabel?: boolean; maxLength?: number; showWhen?: ShowWhen }
   | { type: 'color';      key: string; label: string; default: string; showWhen?: ShowWhen }
   | { type: 'select';     key: string; label: string; options: SelectOptionsSource; default: string; showWhen?: ShowWhen }
   // dropdown — native <select>; yer kazandıran kompakt UI. Mevcut select tipinde
@@ -70,16 +70,16 @@ export const WIDGETS: WidgetDef[] = [
           // görünür; input boşsa render.js placeholder'ı (default) gösterir.
           { type: 'toggle', key: 'showTitle', label: 'Widget Başlığını Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
           // Toggle metni zaten bağlamı veriyor, ekstra label tekrar olur — hideLabel ile gizlenir.
-          { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, showWhen: { key: 'showTitle', equals: true } },
+          { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, maxLength: 50, showWhen: { key: 'showTitle', equals: true } },
           // Görsel galeri (Fotoğraflı Yorumlar strip) başlığı — Widget Başlığı pattern'inin aynısı.
           // Tasarım'daki showPhotoGallery strip'i tamamen gizler, bu sadece başlığı.
           { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Fotoğraf Galeri Başlığını Göster', default: true },
-          { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
+          { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, maxLength: 50, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
           // Yorum Yap butonu metni — toggle yok, çünkü buton mağazanın yorum
           // toplama "kapısı": gizlenmemeli. Boş bırakılırsa render tarafında
           // 'Yorum Yap' fallback'i kullanılır. Tüm summary layout'ları + empty
           // state + mobile alt-row aynı key'i okur.
-          { type: 'text',   key: 'writeButtonText',      label: 'Yorum Yap Butonu Metni', placeholder: 'Yorum Yap', default: 'Yorum Yap' },
+          { type: 'text',   key: 'writeButtonText',      label: 'Yorum Yap Butonu Metni', placeholder: 'Yorum Yap', default: 'Yorum Yap', maxLength: 30 },
         ],
       },
       {

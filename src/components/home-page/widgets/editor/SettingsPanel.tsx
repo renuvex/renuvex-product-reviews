@@ -342,6 +342,9 @@ function FieldRenderer({ field, settings, onChange }: {
             // yerine doğrudan gerçek metni görür (Shopify pattern'i).
             value={String(value ?? field.default ?? '')}
             aria-label={field.label}
+            // HTML maxLength kullanıcıyı yazarken durdurur; server tarafı validateSettings
+            // ile aynı limit'i tekrarlar (savunmada katman sayısı = güvenlik).
+            maxLength={field.maxLength}
             onChange={(e) => onChange({ ...settings, [field.key]: e.target.value })}
             style={componentStyles.input}
           />
