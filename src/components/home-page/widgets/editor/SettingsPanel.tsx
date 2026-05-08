@@ -16,6 +16,7 @@ import { WidgetSettingsDraft } from './WidgetEditor';
 import { IconSelect } from './IconSelect';
 import { ColorPickerField } from './ColorPickerField';
 import { InfoTooltip } from './InfoTooltip';
+import { VisualSelectGrid, hasVisualSelectPreview } from './VisualSelectGrid';
 // Layout registry'leri — meta.supports okumak için.
 // Bkz: src/widget/{summary,review}-layouts/index.js (supports sözleşmesi).
 import { LAYOUTS as SUMMARY_LAYOUTS } from '@/widget/summary-layouts/index.js';
@@ -435,30 +436,41 @@ function FieldRenderer({ field, settings, onChange }: {
     case 'select': {
       // Options ya statik dizi ya da settings'e bağlı bir fonksiyon olabilir
       const opts = typeof field.options === 'function' ? field.options(settings) : field.options;
+      const selectedValue = String(value ?? field.default ?? opts[0]?.value ?? '');
+      const hasPreview = hasVisualSelectPreview(opts);
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: sp[1] + 2 }}>
           <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary }}>
             {field.label}
           </label>
-          <div style={{ display: 'flex', gap: sp[2], flexWrap: 'wrap' }}>
-            {opts.map((opt) => {
-              const isSelected = (value ?? opts[0]?.value) === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => onChange({ ...settings, [field.key]: opt.value })}
-                  style={{
-                    ...componentStyles.btnSm,
-                    backgroundColor: isSelected ? colors.primaryBg : colors.bgWhite,
-                    borderColor: isSelected ? colors.primary : colors.borderDefault,
-                    color: isSelected ? colors.primary : colors.textPrimary,
-                  }}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
+          {hasPreview ? (
+            <VisualSelectGrid
+              options={opts}
+              value={selectedValue}
+              onChange={(nextValue) => onChange({ ...settings, [field.key]: nextValue })}
+            />
+          ) : (
+            <div style={{ display: 'flex', gap: sp[2], flexWrap: 'wrap' }}>
+              {opts.map((opt) => {
+                const isSelected = selectedValue === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => onChange({ ...settings, [field.key]: opt.value })}
+                    style={{
+                      ...componentStyles.btnSm,
+                      backgroundColor: isSelected ? colors.primaryBg : colors.bgWhite,
+                      borderColor: isSelected ? colors.primary : colors.borderDefault,
+                      color: isSelected ? colors.primary : colors.textPrimary,
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       );
     }

@@ -16,7 +16,17 @@ export type ShowWhen =
   | { key: string; notIn: Array<string | number | boolean> }
   | { layoutKey: 'summaryLayout' | 'reviewLayout'; supports: string };
 
-export type SelectOption = { value: string; label: string };
+export type SelectPreviewKey =
+  | 'summary-classic'
+  | 'summary-split'
+  | 'summary-compact'
+  | 'summary-minimal'
+  | 'summary-hero'
+  | 'review-card'
+  | 'review-list'
+  | 'review-gallery';
+
+export type SelectOption = { value: string; label: string; preview?: SelectPreviewKey };
 
 // Select options — statik dizi veya başka ayar değerlerine bağlı dinamik fonksiyon olabilir.
 // Örn: reviewIcon === 'star' ise 3 stil, 'heart' ise 2 stil seçeneği göster.
@@ -70,11 +80,11 @@ export const WIDGETS: WidgetDef[] = [
             key: 'summaryLayout',
             label: 'Özet Tasarımı',
             options: [
-              { value: 'classic', label: 'Klasik' },
-              { value: 'split',   label: 'Yatay' },
-              { value: 'compact', label: 'Kompakt' },
-              { value: 'minimal', label: 'Minimal' },
-              { value: 'hero',    label: 'Hero' },
+              { value: 'classic', label: 'Klasik', preview: 'summary-classic' },
+              { value: 'split',   label: 'Yatay',  preview: 'summary-split' },
+              { value: 'compact', label: 'Kompakt', preview: 'summary-compact' },
+              { value: 'minimal', label: 'Minimal', preview: 'summary-minimal' },
+              { value: 'hero',    label: 'Hero',    preview: 'summary-hero' },
             ],
             default: 'classic',
           },
@@ -83,9 +93,9 @@ export const WIDGETS: WidgetDef[] = [
             key: 'reviewLayout',
             label: 'Yorum Tasarımı',
             options: [
-              { value: 'card',    label: 'Kart' },
-              { value: 'list',    label: 'Liste' },
-              { value: 'gallery', label: 'Galeri' },
+              { value: 'card',    label: 'Kart',   preview: 'review-card' },
+              { value: 'list',    label: 'Liste',  preview: 'review-list' },
+              { value: 'gallery', label: 'Galeri', preview: 'review-gallery' },
             ],
             default: 'card',
           },

@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-06
+updated: 2026-05-08
 tags:
   - frontend
   - react
@@ -76,7 +76,8 @@ src/components/
 │     ├─ editor/
 │     │  ├─ WidgetEditor.tsx      # Settings panel + iframe preview side-by-side
 │     │  ├─ SettingsPanel.tsx     # Renders fields from widgetDefs
-│     │  └─ IconSelect.tsx        # SVG grid icon picker
+│     │  ├─ IconSelect.tsx        # SVG grid icon picker
+│     │  └─ VisualSelectGrid.tsx  # Visual choice cards for layout select fields
 │     ├─ previews/                # Static admin-side previews (BadgePreview, ReviewsPreview)
 │     └─ widget-previews/         # Iframe-driven live previews (BadgeWidgetPreview, ReviewsWidgetPreview)
 └─ ui/                            # shadcn/ui primitives (button, card, dialog, input, label,
@@ -117,3 +118,6 @@ The storefront widget is an entirely different runtime — vanilla JS, IIFE, IE1
 - [[Widget_Files_Map]]
 - [[Widget_Customization]]
 - [[System_Architecture]]
+
+## Change Log
+- 2026-05-08: Added [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) to the admin editor map. It renders schema-driven visual choice cards for layout select fields without changing stored widget setting values.

@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-07
+updated: 2026-05-08
 tags:
   - widget
   - customization
@@ -22,13 +22,14 @@ Per-merchant widget settings, schema-driven from a single source of truth in [wi
 - **Schema**: [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
 - **Server helpers** (defaults, sanitize, validate): [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - **Admin color picker**: [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
+- **Visual select cards**: [src/components/home-page/widgets/editor/VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx)
 - **Design tokens**: [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 
 ## Field types
 - `toggle` - boolean
 - `text` - string with optional placeholder
 - `color` - admin picker emits opaque hex `#rrggbb`. The backend/runtime still accept `#rrggbbaa` for schema defaults, legacy saved settings, and runtime-only translucent design tokens.
-- `select` - radio-card UI; static or dynamic options (function of current settings)
+- `select` - radio-card UI; static or dynamic options (function of current settings). Options can declare a `preview` key for image-like visual choice cards in the admin panel; saved values stay plain strings.
 - `dropdown` - native `<select>` (compact)
 - `range` - numeric range slider
 - `iconSelect` - SVG grid popover
@@ -109,6 +110,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-05-08: Added optional visual choice cards for `select` fields. `summaryLayout` and `reviewLayout` now declare preview metadata in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), while [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) renders the admin-only mini layout sketches. Stored setting values are unchanged.
 - 2026-05-05: Removed the `reviewFormStyle` setting and made storefront review submission modal-only. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
 - 2026-05-05: Changed the admin color picker to emit opaque `#rrggbb` values only while preserving backend/runtime support for alpha defaults and legacy `#rrggbbaa` settings. Related source: [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx).
 - 2026-05-05: Removed storefront widget container background/border color controls from the settings schema and documented the local-only admin preview background. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx), [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [render.js](src/widget/product-widget/render.js).

@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-08
 tags:
   - critical-files
 related:
@@ -27,6 +27,16 @@ related:
   - The `showWhen.layoutKey + supports` pattern reads layout meta from `src/widget/{summary,review}-layouts/index.js`. New layouts must declare their `supports` map.
 
 ## Admin widget editor
+
+### [src/components/home-page/widgets/editor/SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx)
+- **What:** Schema-driven admin settings renderer. Converts every `SettingField` from [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) into the correct control.
+- **Why it matters:** It is the bridge between schema metadata and merchant-facing customization UX.
+- **Be careful:** Keep stored setting values stable. UI-only rendering changes, such as visual select cards, should not rename setting keys or option values.
+
+### [src/components/home-page/widgets/editor/VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx)
+- **What:** Admin-only visual choice card renderer for `select` options that declare `preview` metadata.
+- **Why it matters:** Lets layout choices show mini visual sketches while preserving simple string values in `WidgetSettings`.
+- **Be careful:** Do not move storefront rendering logic here. These previews are explanatory admin sketches, not production widget components.
 
 ### [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
 - **What:** Shared admin color picker used by schema-driven widget color fields and local-only preview controls.
@@ -117,3 +127,6 @@ related:
 - [[Database_Schema]]
 - [[Widget_Architecture]]
 - [[Security_And_Rate_Limits]]
+
+## Change Log
+- 2026-05-08: Added [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx) and [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) to the admin widget editor hot-list after introducing schema-driven visual choice cards.
