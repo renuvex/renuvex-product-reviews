@@ -12,7 +12,7 @@ export var LIST_CSS = `
   .ikr-review-list{
     display:grid;
     grid-template-columns:140px 1fr var(--ikr-list-photo-w,120px);
-    gap:24px;
+    gap:60px;
     align-items:start;
     /* Yan padding theme mobile bloğundan gelir (--ikr-pad-review-mobile).
        Shorthand padding:24px 0 yan padding'i 0'a resetler ve theme kuralını
