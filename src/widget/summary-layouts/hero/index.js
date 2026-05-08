@@ -69,22 +69,27 @@ export function render(opts) {
   var writeBtn = actions.querySelector('.ikr-write-btn');
 
   var actionsSlot = document.createElement('div');
-  actionsSlot.className = 'ikr-hero-actions';
+  actionsSlot.className = 'ikr-hero-actions ikr-desktop-only';
   if (writeBtn) actionsSlot.appendChild(writeBtn);
   if (filterWrap) actionsSlot.appendChild(filterWrap);
   summary.appendChild(actionsSlot);
 
-  // ─── Mobile-only write satırı ─────────────────────────────────
-  if (writeBtn) {
-    var writeBtnMobile = document.createElement('button');
-    writeBtnMobile.className = 'ikr-write-btn';
-    writeBtnMobile.textContent = 'Yorum Yap';
-    writeBtnMobile.onclick = openWriteForm;
-    var writeRow = document.createElement('div');
-    writeRow.className = 'ikr-hero-write-row';
-    writeRow.appendChild(writeBtnMobile);
-    summary.appendChild(writeRow);
-  }
+  // ─── Mobile-only write + filter satırı ─────────────────────────
+  var mobileActions = buildActionsBlock({
+    widget: widget,
+    currentOrderBy: currentOrderBy,
+    currentHasImages: currentHasImages,
+    onWriteClick: openWriteForm,
+    onSortChange: onSortChange,
+  });
+  var mFilter = mobileActions.querySelector('.ikr-filter-wrap');
+  var mWrite = mobileActions.querySelector('.ikr-write-btn');
+  
+  var writeRow = document.createElement('div');
+  writeRow.className = 'ikr-hero-write-row';
+  if (mWrite) writeRow.appendChild(mWrite);
+  if (mFilter) writeRow.appendChild(mFilter);
+  summary.appendChild(writeRow);
 
   return summary;
 }

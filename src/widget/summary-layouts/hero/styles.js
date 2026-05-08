@@ -42,6 +42,7 @@ export var HERO_CSS = `
   .ikr-hero-actions{
     display:flex;align-items:center;gap:var(--ikr-col-gap,8px);flex:0 0 auto;
   }
+  .ikr-desktop-only{display:flex;}
 
   @media(max-width:600px){
     .ikr-summary-hero{
@@ -52,12 +53,14 @@ export var HERO_CSS = `
     .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,90px) * 0.75);letter-spacing:-1px;}
     .ikr-hero-meta{margin-left:auto;text-align:right;}
     .ikr-hero-count{max-width:90px;}
-    .ikr-hero-actions{flex:0 0 auto;}
-    /* Filter info'nun yaninda kalir (sag ust kose), Yorum Yap full-genislik
-       alta tek basina duser. Minimal ile ayni pattern. */
-    .ikr-hero-actions .ikr-write-btn{display:none;}
-    .ikr-hero-write-row{display:flex;width:100%;}
-    .ikr-hero-write-row .ikr-write-btn{flex:1 1 auto;justify-content:center;}
+    
+    .ikr-desktop-only{display:none !important;}
+
+    /* Filter ve Yorum Yap butonu yan yana (Öneri 2) */
+    .ikr-hero-write-row{display:flex;width:100%;gap:8px;align-items:stretch;}
+    .ikr-hero-write-row .ikr-write-btn{flex:1;justify-content:center;}
+    .ikr-hero-write-row .ikr-filter-wrap{flex:0 0 auto;display:flex;}
+    .ikr-hero-write-row .ikr-filter-btn{height:100%;aspect-ratio:1/1;}
   }
   @media(min-width:601px){
     .ikr-hero-write-row{display:none;}
