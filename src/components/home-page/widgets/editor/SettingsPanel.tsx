@@ -106,23 +106,67 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
       .map(group => ({ ...group, fields: group.fields.filter(isFieldVisible) }))
       .filter(group => group.fields.length > 0);
 
-  const renderFields = (group: SettingsGroup, padded = false) => (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: sp[6],
-      ...(padded ? { padding: `${sp[6]}px ${sp[3]}px` } : {}),
-    }}>
-      {group.fields.map((field) => (
-        <FieldRenderer
-          key={field.key}
-          field={field}
-          settings={settings}
-          onChange={onChange}
-        />
-      ))}
-    </div>
-  );
+  const renderFields = (group: SettingsGroup, padded = false) => {
+    const fields = group.fields;
+    const groupedElements: React.ReactNode[] = [];
+    let currentGroup: SettingField[] = [];
+
+    fields.forEach((field, idx) => {
+      const prevField = idx > 0 ? fields[idx - 1] : null;
+      
+      // İlişki tespiti: hideLabel true ise veya showWhen bir önceki alana bakıyorsa "related" sayılır.
+      const isRelatedToPrev = prevField && (
+        field.hideLabel === true || 
+        (field.showWhen && 'key' in field.showWhen && field.showWhen.key === prevField.key)
+      );
+
+      if (isRelatedToPrev) {
+        currentGroup.push(field);
+      } else {
+        if (currentGroup.length > 0) {
+          groupedElements.push(renderGroup(currentGroup, groupedElements.length));
+        }
+        currentGroup = [field];
+      }
+    });
+
+    if (currentGroup.length > 0) {
+      groupedElements.push(renderGroup(currentGroup, groupedElements.length));
+    }
+
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: sp[6], // Macro Gap: Bağımsız gruplar arası
+        ...(padded ? { padding: `${sp[6]}px ${sp[3]}px` } : {}),
+      }}>
+        {groupedElements}
+      </div>
+    );
+  };
+
+  const renderGroup = (fields: SettingField[], groupIdx: number) => {
+    return (
+      <div key={`field-group-${groupIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: sp[2] }}>
+        {fields.map((field, idx) => {
+          const isDependent = idx > 0; // Gruptaki ilk öğe dışındakiler bağımlı kabul edilir
+          return (
+            <div 
+              key={field.key} 
+              style={isDependent ? { paddingLeft: 28, opacity: 0.95 } : undefined}
+            >
+              <FieldRenderer
+                field={field}
+                settings={settings}
+                onChange={onChange}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderAccordion = (list: SettingsGroup[]) => {
     const visibleGroups = getVisibleGroups(list);
