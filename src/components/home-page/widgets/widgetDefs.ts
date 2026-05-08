@@ -70,11 +70,11 @@ export const WIDGETS: WidgetDef[] = [
           // görünür; input boşsa render.js placeholder'ı (default) gösterir.
           { type: 'toggle', key: 'showTitle', label: 'Widget Başlığını Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
           // Toggle metni zaten bağlamı veriyor, ekstra label tekrar olur — hideLabel ile gizlenir.
-          { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, maxLength: 50, showWhen: { key: 'showTitle', equals: true } },
+          { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, maxLength: 30, showWhen: { key: 'showTitle', equals: true } },
           // Görsel galeri (Fotoğraflı Yorumlar strip) başlığı — Widget Başlığı pattern'inin aynısı.
           // Tasarım'daki showPhotoGallery strip'i tamamen gizler, bu sadece başlığı.
           { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Fotoğraf Galeri Başlığını Göster', default: true },
-          { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, maxLength: 50, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
+          { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, maxLength: 30, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
           // Yorum Yap butonu metni — toggle yok, çünkü buton mağazanın yorum
           // toplama "kapısı": gizlenmemeli. Boş bırakılırsa render tarafında
           // 'Yorum Yap' fallback'i kullanılır. Tüm summary layout'ları + empty
