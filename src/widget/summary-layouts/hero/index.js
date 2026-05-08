@@ -32,25 +32,29 @@ export function render(opts) {
   var info = document.createElement('div');
   info.className = 'ikr-hero-info';
 
+  var ratingCol = document.createElement('div');
+  ratingCol.className = 'ikr-hero-rating-col';
+  
   var avg = document.createElement('span');
   avg.className = 'ikr-hero-avg';
   avg.textContent = avgRatingVal;
-  info.appendChild(avg);
-
-  var metaCol = document.createElement('div');
-  metaCol.className = 'ikr-hero-meta';
+  ratingCol.appendChild(avg);
 
   var stars = document.createElement('span');
   stars.className = 'ikr-hero-stars';
   stars.innerHTML = partialStarsHTML(avgRatingVal, iconPair);
-  metaCol.appendChild(stars);
+  ratingCol.appendChild(stars);
+  info.appendChild(ratingCol);
+
+  var countCol = document.createElement('div');
+  countCol.className = 'ikr-hero-meta'; // Sınıf ismini koruyoruz ki CSS kırılmasın ama yapı değişti
 
   var count = document.createElement('div');
   count.className = 'ikr-hero-count';
   count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
-  metaCol.appendChild(count);
+  countCol.appendChild(count);
 
-  info.appendChild(metaCol);
+  info.appendChild(countCol);
   summary.appendChild(info);
 
   // ─── SAĞ: filter + write (desktop) ─────────────────────────────

@@ -12,15 +12,15 @@ export var HERO_CSS = `
   }
 
   .ikr-hero-info{
-    display:flex;flex-direction:row;align-items:center;gap:16px;min-width:0;
+    display:flex;flex-direction:row;align-items:center;gap:24px;min-width:0;flex:1;
+  }
+  .ikr-hero-rating-col{
+    display:flex;flex-direction:row;align-items:center;gap:16px;
   }
   .ikr-hero-avg{
-    font-size:var(--ikr-hero-avg-size,64px);
+    font-size:var(--ikr-hero-avg-size,90px);
     color:var(--ikr-header-avg,var(--ikr-text,rgba(0,0,0,1)));
-    font-weight:700;line-height:1;letter-spacing:-1px;
-  }
-  .ikr-hero-meta{
-    display:flex;flex-direction:row;align-items:center;gap:12px;min-width:0;
+    font-weight:700;line-height:1;letter-spacing:-2px;
   }
   .ikr-hero-stars{
     display:inline-flex;gap:2px;
@@ -30,10 +30,13 @@ export var HERO_CSS = `
   .ikr-hero-stars .ikr-star{
     width:var(--ikr-bar-label-size,22px);height:var(--ikr-bar-label-size,22px);
   }
+  .ikr-hero-meta{
+    display:flex;flex-direction:column;min-width:0;
+  }
   .ikr-hero-count{
     font-size:var(--ikr-recommend-size,14px);
-    color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,1)));
-    font-weight:400;line-height:1.2;white-space:nowrap;
+    color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,0.6)));
+    font-weight:400;line-height:1.4;
   }
 
   .ikr-hero-actions{
@@ -44,9 +47,11 @@ export var HERO_CSS = `
     .ikr-summary-hero{
       flex-wrap:wrap;gap:16px;
     }
-    .ikr-hero-info{flex:1 1 auto;gap:12px;}
-    .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,64px) * 0.75);}
-    .ikr-hero-meta{flex-direction:column;align-items:flex-start;gap:4px;}
+    .ikr-hero-info{gap:12px;}
+    .ikr-hero-rating-col{flex-direction:column;align-items:flex-start;gap:4px;}
+    .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,90px) * 0.75);letter-spacing:-1px;}
+    .ikr-hero-meta{margin-left:auto;text-align:right;}
+    .ikr-hero-count{max-width:90px;}
     .ikr-hero-actions{flex:0 0 auto;}
     /* Filter info'nun yaninda kalir (sag ust kose), Yorum Yap full-genislik
        alta tek basina duser. Minimal ile ayni pattern. */
