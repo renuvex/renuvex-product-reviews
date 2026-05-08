@@ -15,7 +15,10 @@ export var HERO_CSS = `
     display:flex;flex-direction:row;align-items:center;gap:24px;min-width:0;flex:1;
   }
   .ikr-hero-rating-col{
-    display:flex;flex-direction:row;align-items:center;gap:16px;
+    display:flex;flex-direction:row;align-items:center;gap:20px;
+  }
+  .ikr-hero-meta-row{
+    display:flex;flex-direction:row;align-items:center;gap:8px;
   }
   .ikr-hero-avg{
     font-size:var(--ikr-hero-avg-size,90px);
@@ -30,13 +33,10 @@ export var HERO_CSS = `
   .ikr-hero-stars .ikr-star{
     width:var(--ikr-bar-label-size,22px);height:var(--ikr-bar-label-size,22px);
   }
-  .ikr-hero-meta{
-    display:flex;flex-direction:column;min-width:0;
-  }
   .ikr-hero-count{
     font-size:var(--ikr-recommend-size,14px);
     color:var(--ikr-header-count,var(--ikr-text,rgba(0,0,0,0.6)));
-    font-weight:400;line-height:1.4;
+    font-weight:400;line-height:1;
   }
 
   .ikr-hero-actions{
@@ -48,15 +48,14 @@ export var HERO_CSS = `
     .ikr-summary-hero{
       flex-wrap:wrap;gap:16px;
     }
-    .ikr-hero-info{display:grid;grid-template-columns:1fr 1fr 1fr;width:100%;align-items:center;}
-    .ikr-hero-rating-col{grid-column:1;display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
+    .ikr-hero-info{gap:12px;justify-content:flex-start;}
+    .ikr-hero-rating-col{flex-direction:column;align-items:flex-start;gap:8px;}
     .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,90px) * 0.75);letter-spacing:-1px;}
-    .ikr-hero-meta{grid-column:2;text-align:center;}
-    .ikr-hero-count{max-width:none;}
+    .ikr-hero-meta-row{width:100%;}
     
     .ikr-desktop-only{display:none !important;}
 
-    /* Filter ve Yorum Yap butonu yan yana (Öneri 2) */
+    /* Filter ve Yorum Yap butonu yan yana (Öneri 2 aktif) */
     .ikr-hero-write-row{display:flex;width:100%;gap:8px;align-items:stretch;}
     .ikr-hero-write-row .ikr-write-btn{flex:1;justify-content:center;}
     .ikr-hero-write-row .ikr-filter-wrap{flex:0 0 auto;display:flex;}
