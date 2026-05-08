@@ -116,7 +116,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
       
       // İlişki tespiti: hideLabel true ise veya showWhen bir önceki alana bakıyorsa "related" sayılır.
       const isRelatedToPrev = prevField && (
-        field.hideLabel === true || 
+        (field.type === 'text' && field.hideLabel === true) || 
         (field.showWhen && 'key' in field.showWhen && field.showWhen.key === prevField.key)
       );
 
