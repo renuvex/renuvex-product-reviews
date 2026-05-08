@@ -48,14 +48,14 @@ export var HERO_CSS = `
     .ikr-summary-hero{
       flex-wrap:wrap;gap:16px;
     }
-    .ikr-hero-info{gap:12px;justify-content:flex-start;}
-    .ikr-hero-rating-col{flex-direction:column;align-items:flex-start;gap:8px;}
-    .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,90px) * 0.75);letter-spacing:-1px;}
-    .ikr-hero-meta-row{width:100%;}
+    .ikr-hero-info{gap:12px;justify-content:center;width:100%;}
+    .ikr-hero-rating-col{flex-direction:row;align-items:center;gap:16px;}
+    .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,90px) * 0.65);letter-spacing:-1px;}
+    .ikr-hero-meta-row{width:auto;gap:8px;}
     
     .ikr-desktop-only{display:none !important;}
 
-    /* Filter ve Yorum Yap butonu yan yana (Öneri 2 aktif) */
+    /* Filter ve Yorum Yap butonu yan yana */
     .ikr-hero-write-row{display:flex;width:100%;gap:8px;align-items:stretch;}
     .ikr-hero-write-row .ikr-write-btn{flex:1;justify-content:center;}
     .ikr-hero-write-row .ikr-filter-wrap{flex:0 0 auto;display:flex;}
