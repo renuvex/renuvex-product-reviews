@@ -37,7 +37,10 @@ export const colors = {
   bgHover: 'rgb(249, 250, 251)',         // satır hover arka planı (gözlemsel)
 
   // Border
-  borderDefault: 'rgb(227, 232, 239)',   // button, input, select, card border
+  borderDefault: 'rgb(227, 232, 239)',   // button, card, divider, accordion border (soft)
+  borderInput:   'rgb(209, 213, 219)',   // text input / select / textarea — kullanıcının
+                                         // doldurduğu alanlarda ayrım için daha belirgin.
+                                         // Tailwind gray-300 / Shopify Polaris input border seviyesi.
   borderLight: 'rgb(238, 242, 246)',     // pagination btn, ayırıcı çizgi
   borderFocus: 'rgb(111, 85, 255)',      // focus ring rengi (primary)
 
@@ -245,28 +248,28 @@ export const componentStyles = {
   },
 
   // ─── Input / Select ─────────────────────────────────────────────────────────
+  // Border: borderInput (borderDefault'tan daha belirgin) — kullanıcı yazılabilir
+  // alanların kapsayıcı sınırı net olsun diye. Card/buton soft borderDefault'ta kalır.
 
-  // Doğrulanan: rgb(227,232,239) border, 4px radius, 14px/400
   input: {
     color: colors.textPrimary,
     backgroundColor: colors.bgWhite,
     borderRadius: radii.default,
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.regular,
-    border: `1px solid ${colors.borderDefault}`,
+    border: `1px solid ${colors.borderInput}`,
     padding: '0 12px',
     height: '40px',
     outline: 'none',
     width: '100%',
   },
-  // Doğrulanan: aynı input stili
   select: {
     color: colors.textPrimary,
     backgroundColor: colors.bgWhite,
     borderRadius: radii.default,
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.regular,
-    border: `1px solid ${colors.borderDefault}`,
+    border: `1px solid ${colors.borderInput}`,
     padding: '0 8px',
     height: '40px',
     outline: 'none',
@@ -277,7 +280,7 @@ export const componentStyles = {
     borderRadius: radii.default,
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.regular,
-    border: `1px solid ${colors.borderDefault}`,
+    border: `1px solid ${colors.borderInput}`,
     padding: '8px 12px',
     outline: 'none',
     width: '100%',

@@ -83,7 +83,7 @@ export function ColorPickerField({
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        border: showValue ? `1px solid ${colors.borderDefault}` : 'none',
+        border: showValue ? `1px solid ${colors.borderInput}` : 'none',
         borderRadius: radii.default,
         backgroundColor: showValue ? colors.bgPage : 'transparent',
         overflow: showValue ? 'hidden' : 'visible',
@@ -97,7 +97,7 @@ export function ColorPickerField({
           style={{
             width: showValue ? 32 : 24,
             height: showValue ? 30 : 24,
-            border: showValue ? 'none' : `1px solid ${colors.borderDefault}`,
+            border: showValue ? 'none' : `1px solid ${colors.borderInput}`,
             borderRight: showValue ? `1px solid ${colors.textMuted}` : undefined,
             borderRadius: showValue ? 0 : radii.default,
             background: showValue ? colors.bgPage : CHECKER_BG,
