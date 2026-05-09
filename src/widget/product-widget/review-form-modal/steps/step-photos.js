@@ -173,6 +173,11 @@ export function createStepPhotos(state, opts) {
   }
 
   fileInput.onchange = async function (e) {
+    // Her seçimden sonra input'u temizle — aynı dosyanın tekrar seçilmesini sağlar.
+    // Aksi halde max MB aşımı veya duplicate reddi sonrası aynı dosya
+    // tekrar seçildiğinde onchange tetiklenmez (value değişmemiş gibi görünür).
+    fileInput.value = '';
+
     var pendingCount = (state.get().pendingImages || []).length;
     if (pendingCount > 0) return;
 
@@ -310,8 +315,6 @@ export function createStepPhotos(state, opts) {
     // Veri güncellemesini hemen yap (arka planda yükleme başlasın)
     state.set({ pendingImages: allPending });
     runUploads();
-
-    fileInput.value = '';
   };
 
   var unsubscribe = state.onChange(syncUI);
