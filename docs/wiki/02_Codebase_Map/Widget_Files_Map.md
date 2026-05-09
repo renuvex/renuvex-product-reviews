@@ -44,7 +44,7 @@ src/widget/
 │  └─ review-form-modal/
 │     ├─ index.js                 # Modal entry
 │     ├─ modal-shell.js           # Modal chrome (overlay, close, focus trap, toast)
-│     ├─ progress-bar.js          # Step indicator (form-step bar; recently themed)
+│     ├─ progress-bar.js          # Step indicator + footer buttons (Skip/Continue/Next). Button role switches based on step validity and pending upload state.
 │     ├─ wizard-state.js          # Step state machine
 │     ├─ styles.js                # Inline CSS for modal + toast animations
 │     └─ steps/                   # Individual wizard steps
