@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-08
+updated: 2026-05-09
 tags:
   - widget
   - customization
@@ -143,5 +143,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - 2026-05-07: Modified the `boxed` (Box Square) icon's `empty` state architecture. Previously, it used an outline variant for the box and the inner star, causing visual noise due to double-stroking. It now uses the `filled` variant with an inline `opacity="0.35"` attribute, matching the industry standard for complex container-based icons. Normal star and heart icons retain the 100% opaque outline architecture as they are simple, single-stroke shapes. Related source: [icons.js](src/widget/icons.js).
 - 2026-05-07: Implemented a stroke-based outline for the `favorite` (Heart) icon to fix a visual disjoint in the half-state. The empty state now uses the exact same path as the filled state (`P.heartRounded`) with `fill="none"`, `stroke-width="80"`, and `stroke-miterlimit="2"` (miter join), ensuring perfect geometric synchronization at the 50% clip line and an optical weight matching the star icons. Related source: [icons.js](src/widget/icons.js).
 - 2026-05-07: Added "Live Preview Support" for the Wizard Modal. Previously, changing the star icon in the admin panel only updated the main widget; the open modal required a manual close/re-open. Now, `index.js` dispatches a global `IKR_SETTINGS_UPDATED_PREVIEW` event on settings update, which the active `step-rating.js` listens to for an immediate, non-destructive re-render of star icons. Related source: [index.js](src/widget/index.js), [step-rating.js](src/widget/product-widget/review-form-modal/steps/step-rating.js).
-
+- 2026-05-09: Replaced native `alert()` with a custom toast notification system inside the review form modal. Toast appears at the top-center of the modal with a red background (`rgb(186,26,26)`), white text, 8px radius, and a bounce enter animation (`cubic-bezier(0.21,1.02,0.73,1)`). Auto-dismisses after 4 seconds. Used for: file size limit exceeded, upload errors, and submit network errors. Form validation messages (empty name, no rating) remain inline. Related source: [modal-shell.js](src/widget/product-widget/review-form-modal/modal-shell.js), [styles.js](src/widget/product-widget/review-form-modal/styles.js), [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js), [step-author.js](src/widget/product-widget/review-form-modal/steps/step-author.js).
+- 2026-05-09: Increased photo upload size limit from 5MB to 10MB to match industry standard (Loox 15MB, Judge.me/Yotpo/Okendo 10MB). Toast message updated to `"10MB'dan daha büyük fotoğrafları yükleyemezsin."`. Related source: [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
+- 2026-05-09: Refactored `step-rating.js` to resolve icons dynamically from `currentSettings` on every `applyVisual` call (hover, click, mouseleave) instead of caching `iconPair` at mount time. This allows the star icon to update in an already-open modal when the merchant changes it in the admin panel. Related source: [step-rating.js](src/widget/product-widget/review-form-modal/steps/step-rating.js).
 

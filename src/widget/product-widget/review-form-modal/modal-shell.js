@@ -97,6 +97,37 @@ export function createWizardShell(opts) {
     });
   }
 
+  // ─── Toast ─────────────────────────────────────────────────────────
+  // Loox tarzı üst-ortada kırmızı/yeşil bildirim çubuğu.
+  var toastEl = null;
+  var toastTimer = null;
+
+  function showToast(message, type) {
+    type = type || 'error';
+    if (toastEl) {
+      try { toastEl.remove(); } catch (e) {}
+      toastEl = null;
+    }
+    if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+
+    toastEl = document.createElement('div');
+    toastEl.className = 'ikr-fwizard-toast ikr-fwizard-toast--' + type;
+    toastEl.textContent = message;
+
+    // Modal kutusunun içine ekleyelim ki z-index/scroll bağlamı aynı olsun
+    modal.appendChild(toastEl);
+
+    // 4 saniye sonra kalksın
+    toastTimer = setTimeout(function () {
+      if (toastEl) {
+        toastEl.classList.add('ikr-fwizard-toast--exit');
+        setTimeout(function () {
+          if (toastEl) { try { toastEl.remove(); } catch (e) {} toastEl = null; }
+        }, 300);
+      }
+    }, 4000);
+  }
+
   // ─── Public API ───────────────────────────────────────────────────
   return {
     open: open,
@@ -111,5 +142,6 @@ export function createWizardShell(opts) {
     setStepAttr: function (stepNum) {
       modal.setAttribute('data-step', String(stepNum));
     },
+    showToast: showToast,
   };
 }

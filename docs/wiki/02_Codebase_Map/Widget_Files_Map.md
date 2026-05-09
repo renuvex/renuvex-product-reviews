@@ -43,10 +43,10 @@ src/widget/
 │  ├─ review-modal.js             # Open the multi-step review modal
 │  └─ review-form-modal/
 │     ├─ index.js                 # Modal entry
-│     ├─ modal-shell.js           # Modal chrome (overlay, close, focus trap)
+│     ├─ modal-shell.js           # Modal chrome (overlay, close, focus trap, toast)
 │     ├─ progress-bar.js          # Step indicator (form-step bar; recently themed)
 │     ├─ wizard-state.js          # Step state machine
-│     ├─ styles.js                # Inline CSS for modal
+│     ├─ styles.js                # Inline CSS for modal + toast animations
 │     └─ steps/                   # Individual wizard steps
 │
 ├─ listing-badges/

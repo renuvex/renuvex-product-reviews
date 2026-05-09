@@ -35,6 +35,7 @@ function renderStep(stepNum, state, stepOpts) {
     canNavigate: stepOpts.canNavigate,
     blobMap: stepOpts.blobMap,
     urlToFinger: stepOpts.urlToFinger,
+    showToast: stepOpts.showToast,
   });
   if (stepNum === 3) return createStepContent(state, {
     onValidityChange: stepOpts.onValidityChange,
@@ -42,6 +43,7 @@ function renderStep(stepNum, state, stepOpts) {
   if (stepNum === 4) return createStepAuthor(state, {
     onValidityChange: stepOpts.onValidityChange,
     onSuccess: stepOpts.onSuccess,
+    showToast: stepOpts.showToast,
   });
   // Beklenmedik step — boş placeholder
   var ph = document.createElement('div');
@@ -155,6 +157,7 @@ export function openReviewFormModal(opts) {
         progress.setNextDisabled(!valid);
       },
       onSuccess: showThanks,
+      showToast: shell.showToast,
     });
     currentStepInstance = inst;
 

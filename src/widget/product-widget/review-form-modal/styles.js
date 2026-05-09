@@ -664,4 +664,38 @@ export var FWIZARD_CSS = `
       gap:8px;
     }
   }
+
+  /* ─── Toast bildirim çubuğu ─────────────────────────────────────── */
+  .ikr-fwizard-toast{
+    position:absolute;
+    top:12px;
+    left:50%;
+    transform:translateX(-50%) translateY(-100%);
+    z-index:9999;
+    padding:6px 14px;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:500;
+    line-height:1.4;
+    white-space:nowrap;
+    pointer-events:none;
+    opacity:0;
+    animation:ikrToastEnter 0.35s cubic-bezier(0.21,1.02,0.73,1) forwards;
+    box-shadow:rgba(0,0,0,0.1) 0px 3px 10px 0px, rgba(0,0,0,0.05) 0px 3px 3px 0px;
+  }
+  .ikr-fwizard-toast--error{
+    background:rgb(186,26,26);
+    color:#ffffff;
+  }
+  .ikr-fwizard-toast--exit{
+    animation:ikrToastExit 0.3s ease forwards;
+  }
+  @keyframes ikrToastEnter{
+    0%   { opacity:0; transform:translateX(-50%) translateY(-100%); }
+    100% { opacity:1; transform:translateX(-50%) translateY(0); }
+  }
+  @keyframes ikrToastExit{
+    0%   { opacity:1; transform:translateX(-50%) translateY(0); }
+    100% { opacity:0; transform:translateX(-50%) translateY(-100%); }
+  }
 `;

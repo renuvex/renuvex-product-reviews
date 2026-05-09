@@ -184,6 +184,7 @@ export function createStepAuthor(state, opts) {
         ? 'Bağlantı yavaş, lütfen tekrar deneyin.'
         : (e.message || 'Yorum gönderilemedi.');
       msg.innerHTML = '<div class="ikr-fwizard-msg-error">' + msgText + '</div>';
+      if (opts.showToast) opts.showToast(msgText, 'error');
       submitBtn.disabled = false;
       submitBtn.classList.remove('ikr-fwizard-submit-btn--disabled');
       submitBtn.textContent = originalText;

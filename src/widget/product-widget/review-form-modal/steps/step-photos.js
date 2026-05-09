@@ -7,7 +7,7 @@ import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';
 
 var MAX_PHOTOS = 3;
-var MAX_BYTES = 5 * 1024 * 1024;
+var MAX_BYTES = 10 * 1024 * 1024;
 
 export function createStepPhotos(state, opts) {
   opts = opts || {};
@@ -210,7 +210,9 @@ export function createStepPhotos(state, opts) {
       }
 
       if (file.size > MAX_BYTES) {
-        alert(file.name + ' dosyası 5MB sınırını aşıyor. Lütfen daha küçük bir görsel seçin.');
+        var sizeMsg = '10MB\'dan daha büyük fotoğrafları yükleyemezsin.';
+        if (opts.showToast) opts.showToast(sizeMsg, 'error');
+        else alert(sizeMsg);
         continue;
       }
       var objUrl = URL.createObjectURL(file);
@@ -279,6 +281,10 @@ export function createStepPhotos(state, opts) {
         } catch (err) {
           console.error('[ikr] Image upload failed:', err);
           var errMsg = err.message === 'rate_limit' ? 'Çok fazla deneme. Bekleyin.' : 'Yükleme başarısız.';
+
+          if (opts.showToast) {
+            opts.showToast(errMsg, 'error');
+          }
 
           // Hata durumunda da eğer blob ise temizle (isteğe bağlı, ama genelde kalması zarar vermez)
           // Ancak burada kullanıcı hala "X" basıp silebilir, o yüzden silme anında temizlemek daha güvenli.

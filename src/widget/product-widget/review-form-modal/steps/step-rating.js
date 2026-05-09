@@ -68,13 +68,15 @@ export function createStepRating(state, opts) {
         isAdvancing = true;
         state.set({ rating: value });
         applyVisual(value);
-        // Auto-advance — Küçük gecikme: kullanıcı seçimini görsün.
+        // Auto-advance — Exit animasyonu (300ms) bitene kadar bekle.
+        // 280ms yetmiyordu; canNavigate() animPhase==='idle' kontrolü
+        // yüzünden geçişi engelliyordu.
         setTimeout(function () {
           var canNav = !opts.canNavigate || opts.canNavigate();
           if (canNav) state.goNext();
           // isAdvancing'i sıfırlamıyoruz çünkü zaten step kapanıp destroy edilecek.
           // Geri dönülürse step baştan render edilir.
-        }, 280);
+        }, 400);
       });
 
       stars.push(btn);
