@@ -71,7 +71,12 @@ export function createProgressBar(opts) {
   function configureRightBtn(currentStep, stateData) {
     var isSkippable = skippableSteps.indexOf(currentStep) !== -1;
     var hasNext = nextableSteps.indexOf(currentStep) !== -1;
-    var hasPhotos = stateData && stateData.images && stateData.images.length > 0;
+    // Yükleme devam ederken de (pendingImages doluyken) "Devam Et" görünsün —
+    // kullanıcı geri döndüğünde buton doğru durumda olsun.
+    var hasPhotos = stateData && (
+      (stateData.images && stateData.images.length > 0) ||
+      (stateData.pendingImages && stateData.pendingImages.length > 0)
+    );
 
     if (isSkippable) {
       if (currentStep === 2 && hasPhotos) {
