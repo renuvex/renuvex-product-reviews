@@ -173,9 +173,11 @@ export function createStepPhotos(state, opts) {
   }
 
   fileInput.onchange = async function (e) {
+    // Dosyaları HEMEN oku — value temizlenmeden önce.
+    // Bazı tarayıcılarda value='' ataması e.target.files'ı boşaltır.
+    var files = Array.from(e.target.files).slice(0, MAX_PHOTOS - (state.get().images || []).length);
+
     // Her seçimden sonra input'u temizle — aynı dosyanın tekrar seçilmesini sağlar.
-    // Aksi halde max MB aşımı veya duplicate reddi sonrası aynı dosya
-    // tekrar seçildiğinde onchange tetiklenmez (value değişmemiş gibi görünür).
     fileInput.value = '';
 
     var pendingCount = (state.get().pendingImages || []).length;
@@ -184,15 +186,6 @@ export function createStepPhotos(state, opts) {
     var current = state.get().images || [];
     var preUploadCount = current.length;
     var remaining = MAX_PHOTOS - current.length;
-    // Mevcut parmak izlerini (isim+boyut) topla (hem pending hem bitmiş olanlar)
-    var existingFingerprints = (state.get().images || []).map(function (url) {
-      // images array'i sadece URL tuttuğu için burada meta veriye ihtiyacımız var.
-      // Basitlik için pending listesindeki File objelerinden kontrol edeceğiz.
-      return ''; // Sadece URL olanlar için şimdilik boş, aşağıda geliştirilecek.
-    });
-
-    var pendingFiles = (state.get().pendingImages || []);
-    var files = Array.from(e.target.files).slice(0, remaining);
 
     if (files.length === 0) return;
     var newPending = [];
