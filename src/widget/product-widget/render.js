@@ -288,6 +288,17 @@ export async function render(productId, settings, reviewsData, productName, orde
     var sz = SIZE_PRESETS[settings.size] || SIZE_PRESETS.medium;
     var thumbPx = THUMBNAIL_PRESETS[settings.thumbnailSize] || THUMBNAIL_PRESETS.medium;
 
+    // Liste ve Galeri gibi tasarımlarda, üst galeri şeridi (thumbPx) boyutu
+    // layout'un kendi fotoğraf genişliğinden beslenmeli (tutarlılık için).
+    var reviewLayout = getReviewLayout(settings.reviewLayout);
+    if (reviewLayout.meta && reviewLayout.meta.sizeOverrides && reviewLayout.meta.sizeOverrides[settings.size]) {
+      var overrides = reviewLayout.meta.sizeOverrides[settings.size];
+      var layoutPhotoW = overrides['--ikr-list-photo-w'] || overrides['--ikr-gallery-photo-w'];
+      if (layoutPhotoW) {
+        thumbPx = parseInt(layoutPhotoW);
+      }
+    }
+
     root.style.setProperty('--ikr-title-size', sz.titleSize + 'px');
     root.style.setProperty('--ikr-review-text-size', sz.reviewTextSize + 'px');
     root.style.setProperty('--ikr-review-title-size', sz.reviewTitleSize + 'px');

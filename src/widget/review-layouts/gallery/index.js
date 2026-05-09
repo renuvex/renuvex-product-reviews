@@ -23,8 +23,8 @@ export var meta = {
   // --ikr-gallery-photo-w        : desktop foto kolonu genişliği (3:4 portre)
   // --ikr-gallery-photo-w-mobile : mobile foto kolonu genişliği (3:4 portre)
   sizeOverrides: {
-    small:  { '--ikr-gallery-photo-w':  '90px', '--ikr-gallery-photo-w-mobile':  '80px' },
-    medium: { '--ikr-gallery-photo-w': '120px', '--ikr-gallery-photo-w-mobile': '100px' },
+    small:  { '--ikr-gallery-photo-w':  '80px', '--ikr-gallery-photo-w-mobile':  '80px' },
+    medium: { '--ikr-gallery-photo-w': '110px', '--ikr-gallery-photo-w-mobile': '100px' },
     large:  { '--ikr-gallery-photo-w': '140px', '--ikr-gallery-photo-w-mobile': '110px' },
   },
 };
