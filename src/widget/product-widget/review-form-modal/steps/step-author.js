@@ -12,7 +12,6 @@ import { fetchWithTimeout } from '../../../core/fetch.js';
 import { extractSlug } from '../../../core/helpers.js';
 import { validateStep } from '../wizard-state.js';
 
-var NAME_MIN = 2;
 var NAME_MAX = 40;
 
 export function createStepAuthor(state, opts) {
@@ -133,8 +132,8 @@ export function createStepAuthor(state, opts) {
       return;
     }
 
-    if (author.length < NAME_MIN) {
-      msg.innerHTML = '<div class="ikr-fwizard-msg-error">Ad en az ' + NAME_MIN + ' karakter olmalıdır.</div>';
+    if (!author) {
+      msg.innerHTML = '<div class="ikr-fwizard-msg-error">Gerekli alan</div>';
       return;
     }
     if (!s.rating) {

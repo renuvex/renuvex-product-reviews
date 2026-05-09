@@ -161,8 +161,8 @@ export async function POST(request: Request) {
     if (!ratingNum || ratingNum < 1 || ratingNum > 5) {
       return withCors(NextResponse.json({ error: 'Puan 1 ile 5 arasında olmalıdır.' }, { status: 400 }));
     }
-    if (typeof author !== 'string' || author.trim().length < 2 || author.trim().length > 40) {
-      return withCors(NextResponse.json({ error: 'Ad en az 2, en fazla 40 karakter olmalıdır.' }, { status: 400 }));
+    if (typeof author !== 'string' || author.trim().length === 0 || author.trim().length > 40) {
+      return withCors(NextResponse.json({ error: 'Ad alanı boş bırakılamaz veya 40 karakteri aşamaz.' }, { status: 400 }));
     }
     if (title && typeof title === 'string' && title.trim().length > 60) {
       return withCors(NextResponse.json({ error: 'Başlık en fazla 60 karakter olabilir.' }, { status: 400 }));

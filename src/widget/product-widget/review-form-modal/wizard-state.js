@@ -28,8 +28,8 @@ export function validateStep(step, state) {
       // Yorum içeriği zorunlu.
       return !!(state.comment && state.comment.trim().length > 0);
     case 4:
-      // İsim (author) zorunlu — backend ile aynı kural: >= 2 karakter.
-      return !!(state.author && state.author.trim().length >= 2);
+      // İsim (author) zorunlu.
+      return !!(state.author && state.author.trim().length > 0);
     default:
       return true;
   }
