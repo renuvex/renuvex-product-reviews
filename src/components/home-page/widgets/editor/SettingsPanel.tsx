@@ -210,6 +210,14 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
         fontSize: typography.fontSize.base,
         fontWeight: typography.fontWeight.medium,
         color: colors.textPrimary,
+        transition: 'background-color 0.2s ease',
+        borderRadius: radii.default,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = colors.primaryBg;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
       <span style={{ display: 'flex', alignItems: 'center' }}>
@@ -390,7 +398,7 @@ function FieldRenderer({ field, settings, onChange }: {
             value={String(value ?? field.default ?? '')}
             aria-label={field.label}
             // HTML maxLength kullanıcıyı yazarken durdurur; server tarafı validateSettings
-            // ile aynı limit'i tekrarlar (savunmada katman sayısı = güvenlik).
+            // ile ayn limit'i tekrarlar (savunmada katman sayısı = güvenlik).
             maxLength={field.maxLength}
             onChange={(e) => onChange({ ...settings, [field.key]: e.target.value })}
             style={componentStyles.input}
@@ -536,4 +544,3 @@ function FieldRenderer({ field, settings, onChange }: {
       return null;
   }
 }
-
