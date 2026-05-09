@@ -12,6 +12,7 @@ import { fetchWithTimeout } from '../../../core/fetch.js';
 import { extractSlug } from '../../../core/helpers.js';
 import { validateStep } from '../wizard-state.js';
 
+var NAME_MIN = 2;
 var NAME_MAX = 40;
 
 export function createStepAuthor(state, opts) {
@@ -132,8 +133,8 @@ export function createStepAuthor(state, opts) {
       return;
     }
 
-    if (!author) {
-      msg.innerHTML = '<div class="ikr-fwizard-msg-error">Gerekli alan</div>';
+    if (author.length < NAME_MIN) {
+      msg.innerHTML = '<div class="ikr-fwizard-msg-error">Ad en az ' + NAME_MIN + ' karakter olmalıdır.</div>';
       return;
     }
     if (!s.rating) {
@@ -147,7 +148,7 @@ export function createStepAuthor(state, opts) {
     submitBtn.textContent = 'Gönderiliyor…';
     msg.innerHTML = '';
 
-    // Preview modunda submit simüle et
+    // Preview modunda submit simüle et (validasyonlar geçtikten sonra)
     if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
       setTimeout(function () { onSuccess(); }, 600);
       return;
@@ -183,8 +184,12 @@ export function createStepAuthor(state, opts) {
       var msgText = isAbort
         ? 'Bağlantı yavaş, lütfen tekrar deneyin.'
         : (e.message || 'Yorum gönderilemedi.');
-      msg.innerHTML = '<div class="ikr-fwizard-msg-error">' + msgText + '</div>';
-      if (opts.showToast) opts.showToast(msgText, 'error');
+      // Backend hataları tek kanal: sadece toast (inline ile çift mesaj önlenir)
+      if (opts.showToast) {
+        opts.showToast(msgText, 'error');
+      } else {
+        msg.innerHTML = '<div class="ikr-fwizard-msg-error">' + msgText + '</div>';
+      }
       submitBtn.disabled = false;
       submitBtn.classList.remove('ikr-fwizard-submit-btn--disabled');
       submitBtn.textContent = originalText;
