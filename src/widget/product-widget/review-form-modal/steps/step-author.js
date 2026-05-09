@@ -133,7 +133,7 @@ export function createStepAuthor(state, opts) {
     }
 
     if (!author) {
-      msg.innerHTML = '<div class="ikr-fwizard-msg-error">Lütfen adınızı girin.</div>';
+      msg.innerHTML = '<div class="ikr-fwizard-msg-error">Gerekli alan</div>';
       return;
     }
     if (!s.rating) {
