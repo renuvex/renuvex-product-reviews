@@ -33,6 +33,8 @@ var P = {
   // Phosphor Icons — Crown (Taç)
   phCrownFill:   'M239.75,90.81c0,.11,0,.21-.07.32L217,195a16,16,0,0,1-15.72,13H54.71A16,16,0,0,1,39,195L16.32,91.13c0-.11-.05-.21-.07-.32A16,16,0,0,1,44,77.39l33.67,36.29,35.8-80.29a1,1,0,0,0,0-.1,16,16,0,0,1,29.06,0,1,1,0,0,0,0,.1l35.8,80.29L212,77.39a16,16,0,0,1,27.71,13.42Z',
   phCrownRegular:'M230.9,73.6A15.85,15.85,0,0,0,212,77.39l-33.67,36.29-35.8-80.29a1,1,0,0,1,0-.1,16,16,0,0,0-29.06,0,1,1,0,0,1,0,.1l-35.8,80.29L44,77.39A16,16,0,0,0,16.25,90.81c0,.11,0,.21.07.32L39,195a16,16,0,0,0,15.72,13H201.29A16,16,0,0,0,217,195L239.68,91.13c0-.11,0-.21.07-.32A15.85,15.85,0,0,0,230.9,73.6ZM201.35,191.68l-.06.32H54.71l-.06-.32L32,88l.14.16,42,45.24a8,8,0,0,0,13.18-2.18L128,40l40.69,91.25a8,8,0,0,0,13.18,2.18l42-45.24L224,88Z',
+  // Phosphor Icons — Diamond (Elmas/Sketch)
+  phDiamondFill: 'M246,98.73l-56-64A8,8,0,0,0,184,32H72a8,8,0,0,0-6,2.73l-56,64a8,8,0,0,0,.17,10.73l112,120a8,8,0,0,0,11.7,0l112-120A8,8,0,0,0,246,98.73ZM222.37,96H180L144,48h36.37ZM75.63,48H112L76,96H33.63Z',
 };
 
 // Temel SVG sarıcı — currentColor ile renklenir
@@ -91,6 +93,16 @@ export var ICONS = {
         label: 'Modern (Phosphor)',
         filled: '<svg viewBox="' + PH_VB + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + P.phCrownFill + '"/></svg>',
         empty:  '<svg viewBox="' + PH_VB + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + P.phCrownRegular + '"/></svg>',
+      },
+    },
+  },
+  diamond: {
+    label: 'Elmas',
+    styles: {
+      sketch: {
+        label: 'Mücevher (Sketch)',
+        filled: '<svg viewBox="' + PH_VB + '" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + P.phDiamondFill + '"/></svg>',
+        empty:  '<svg viewBox="' + PH_VB + '" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="' + P.phDiamondFill + '"/></svg>',
       },
     },
   },
