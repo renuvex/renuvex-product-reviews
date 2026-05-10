@@ -15,9 +15,81 @@ function getValidImages(review) {
   return getTrustedReviewImages(review);
 }
 
-function closeModal(overlay, onKeyDown, onPopState) {
-  document.body.style.overflow = '';
-  document.body.style.paddingRight = '';
+function captureBodyScrollState() {
+  var bodyStyle = document.body.style;
+  return {
+    overflow: bodyStyle.getPropertyValue('overflow'),
+    overflowPriority: bodyStyle.getPropertyPriority('overflow'),
+    paddingRight: bodyStyle.getPropertyValue('padding-right'),
+    paddingRightPriority: bodyStyle.getPropertyPriority('padding-right'),
+  };
+}
+
+function restoreStyleProperty(style, propertyName, value, priority) {
+  if (value) {
+    style.setProperty(propertyName, value, priority || '');
+  } else {
+    style.removeProperty(propertyName);
+  }
+}
+
+function lockBodyScroll() {
+  var previousState = captureBodyScrollState();
+  var bodyStyle = document.body.style;
+  var scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+
+  if (scrollbarWidth > 0) {
+    var currentPaddingRight = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
+    bodyStyle.setProperty('padding-right', (currentPaddingRight + scrollbarWidth) + 'px', 'important');
+  }
+  bodyStyle.setProperty('overflow', 'hidden', 'important');
+
+  return previousState;
+}
+
+function restoreBodyScroll(previousState) {
+  if (!previousState) return;
+  var bodyStyle = document.body.style;
+  restoreStyleProperty(bodyStyle, 'overflow', previousState.overflow, previousState.overflowPriority);
+  restoreStyleProperty(bodyStyle, 'padding-right', previousState.paddingRight, previousState.paddingRightPriority);
+}
+
+function createModalHistoryEntry() {
+  var entry = {
+    id: 'ikr-modal-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+    previousState: null,
+    pushed: false,
+    url: window.location.href,
+  };
+
+  try {
+    entry.previousState = history.state;
+    history.pushState({ ikrModal: entry.id }, '', entry.url);
+    entry.pushed = true;
+  } catch (_) {}
+
+  return entry;
+}
+
+function isCurrentModalHistoryEntry(entry) {
+  return !!(
+    entry &&
+    entry.pushed &&
+    window.location.href === entry.url &&
+    history.state &&
+    history.state.ikrModal === entry.id
+  );
+}
+
+function restoreModalHistoryEntry(entry) {
+  if (!isCurrentModalHistoryEntry(entry)) return;
+  try {
+    history.replaceState(entry.previousState, '', entry.url);
+  } catch (_) {}
+}
+
+function closeModal(overlay, onKeyDown, onPopState, bodyScrollState) {
+  restoreBodyScroll(bodyScrollState);
   document.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('popstate', onPopState);
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -272,11 +344,13 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   modal.className = 'ikr-modal';
 
   var closed = false;
+  var bodyScrollState = lockBodyScroll();
+  var modalHistoryEntry = createModalHistoryEntry();
 
   function onPopState() {
     if (closed) return;
     closed = true;
-    closeModal(overlay, onKeyDown, onPopState);
+    closeModal(overlay, onKeyDown, onPopState, bodyScrollState);
   }
 
   function onKeyDown(e) {
@@ -286,18 +360,12 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   function requestClose() {
     if (closed) return;
     closed = true;
-    // Sahte state'i temizle, sonra modalı kapat
-    history.go(-1);
-    closeModal(overlay, onKeyDown, onPopState);
+    closeModal(overlay, onKeyDown, onPopState, bodyScrollState);
+    restoreModalHistoryEntry(modalHistoryEntry);
   }
 
   document.addEventListener('keydown', onKeyDown);
 
-  // Sahte geçmiş adımı — swipe-back/geri butonu bu adımı tüketir, popstate tetiklenir
-  var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-  document.body.style.paddingRight = scrollbarWidth + 'px';
-  document.body.style.overflow = 'hidden';
-  history.pushState({ ikrModal: true }, '');
   window.addEventListener('popstate', onPopState);
 
   overlay.onclick = function() { requestClose(); };

@@ -55,7 +55,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
 - No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
-- Review detail lightbox audit has remaining open risks around body scroll lock restoration and history-state behavior. Paged navigation slice limitation was closed 2026-05-11 by [[ADR_0007_Photo_Strip_Cap_And_Rotation]]; photo-less gallery read-more and review image URL allowlisting were fixed on 2026-05-10. See [[Bug_Review_Detail_Lightbox_Risks]] and [[Product_Review_Lightbox]]
+- Review detail lightbox audit has one remaining navigation risk: card/list/gallery entry points still pass the caller's current review page slice rather than one canonical loaded photo-review collection. Body scroll restoration and UI-close history handling were fixed on 2026-05-11. Photo strip paged navigation was closed by [[ADR_0007_Photo_Strip_Cap_And_Rotation]]. See [[Bug_Review_Detail_Lightbox_Risks]] and [[Product_Review_Lightbox]]
 - Photo strip image render is now per-display-size optimized and P2 is closed: thumbnails use responsive `srcset`, native lazy/eager policy, async decoding, and explicit dimensions. Image error fallback (K2) and silent `cloudName` fail (K3) are still tracked separately.
 
 ## Important Decisions
@@ -77,6 +77,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-11
 
 ## Change Log
+- 2026-05-11: Updated lightbox known issues after fixing body scroll restoration and removing unconditional `history.go(-1)` from normal modal close. Remaining lightbox risk is canonical loaded-review navigation for card/list/gallery.
 - 2026-05-11: Updated status after closing photo thumbnail P2 performance work: responsive `srcset`, lazy/eager policy, async decoding, and explicit dimensions across strip/layout/lightbox mini thumbnails. Related bug: [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]].
 - 2026-05-10: Updated current status after fixing review image URL allowlisting for public review submission and widget rendering. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-10: Updated review detail lightbox known issues after fixing the photo-less gallery read-more path; remaining risks stay tracked in [[Bug_Review_Detail_Lightbox_Risks]].

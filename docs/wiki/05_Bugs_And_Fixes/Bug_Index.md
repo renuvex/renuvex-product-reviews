@@ -20,7 +20,7 @@ related:
 ## Open
 - 2026-05-11 - [[Bug_Review_Image_Error_Fallback]] - No `onerror` handler on any review image; Cloudinary 404 / asset rename produces broken-image icon for up to 7 days until the weekly cleanup cron runs. Silent failure (no telemetry). (K2)
 - 2026-05-11 - [[Bug_Cloud_Name_Silent_Image_Filter]] - When `/api/public/settings` returns 404/5xx with no stale cache, widget filters out **all** trusted review images (strip + card/list/gallery), not just the strip. Silent outage, no log, no alarm. (K3)
-- 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Remaining body/history handling lightbox risks can still conflict with storefront state. (Paged-navigation slice limitation closed 2026-05-11 by [[ADR_0007_Photo_Strip_Cap_And_Rotation]].)
+- 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Remaining lightbox risk is canonical loaded-review navigation for card/list/gallery entry points. Body scroll restoration and UI-close history handling were fixed on 2026-05-11.
 
 ## Recently fixed (verify periodically)
 - 2026-05-11 - [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]] - Photo strip, card/list/gallery thumbnails, and lightbox mini thumbs now use lazy/eager policy, async decoding, responsive `srcset`, and explicit dimensions. Main lightbox image keeps eager loading with explicit dimensions.
@@ -29,6 +29,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-11: Updated [[Bug_Review_Detail_Lightbox_Risks]] after fixing body scroll restoration and removing unconditional `history.go(-1)` from normal modal close.
 - 2026-05-11: Marked [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]] fixed after adding responsive `srcset`, native lazy/eager loading, async decoding, and explicit dimensions to review thumbnail render paths.
 - 2026-05-11: Filed three open photo-related defects discovered during the photo strip refactor analysis — [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]] (P2), [[Bug_Review_Image_Error_Fallback]] (K2), [[Bug_Cloud_Name_Silent_Image_Filter]] (K3). Each entry includes scenario, root cause file:line evidence, and proposed fix direction.
 - 2026-05-11: Closed the lightbox "paged navigation limited to caller review slices" risk via [[ADR_0007_Photo_Strip_Cap_And_Rotation]] — strip and lightbox now share a dedicated newest-first 15-review dataset.
