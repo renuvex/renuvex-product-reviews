@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { getWidgetDefaults, sanitizeSettings } from '@/lib/widget-settings';
+import { getConfiguredCloudinaryCloudName } from '@/lib/review-images';
 
 export async function OPTIONS() {
   return corsOptions();
@@ -42,7 +43,12 @@ export async function GET(req: Request) {
     widgets[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
   }
 
-  const response = withCors(NextResponse.json({ widgets }));
+  const response = withCors(NextResponse.json({
+    widgets,
+    imagePolicy: {
+      cloudName: getConfiguredCloudinaryCloudName(),
+    },
+  }));
   response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
   return response;
 }

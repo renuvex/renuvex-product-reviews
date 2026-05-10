@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-11
 tags:
   - questions
   - uncertainty
@@ -51,6 +51,7 @@ No tests visible in repo. Highest-risk surface is the public POST `/api/public/r
 - Upload happens via Cloudinary signed direct upload from widget.
 - Cleanup runs weekly via `/api/admin/cleanup-images` to remove orphans.
 - Question: what if a review is rejected before approval — does its uploaded image get cleaned up? Is the cleanup safe-listing only `approved` review images, or all linked images?
+- Question (2026-05-11): cleanup cron'un tetiklenme mekanizması (Vercel cron / external scheduler / manuel)? [[Bug_Review_Image_Error_Fallback]] içindeki 1-7 günlük orphan penceresi bu cevaba bağlı; daha sık tetiklenirse storefront kırık-image riski azalır.
 
 ## CORS
 `Access-Control-Allow-Origin: *` on public APIs. Reasonable for read; for POST `/api/public/reviews` consider whether request-origin allowlisting (per merchant configured storefront domains) would meaningfully improve abuse resistance.

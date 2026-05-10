@@ -3,11 +3,16 @@
 import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
+import { setTrustedReviewImageCloudName } from '../core/helpers.js';
 import { render } from './render.js';
 import {
   currentOrderBy, currentPage, currentRatingFilter,
   setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter,
+  setPhotoStripReviews,
 } from '../core/state.js';
+
+// Fotoğraf şeridi cap'i — ADR_0007 (sabit 15, admin ayarı yok, Yotpo/Judge.me bandı).
+var PHOTO_STRIP_LIMIT = 15;
 
 // ── Settings ─────────────────────────────────────────────────────────────────
 
@@ -28,6 +33,7 @@ export async function fetchSettings() {
       var previewRes = await fetchWithTimeout(previewBase + '/api/preview/settings');
       if (previewRes.ok) {
         var previewData = await previewRes.json();
+        setTrustedReviewImageCloudName(previewData.imagePolicy && previewData.imagePolicy.cloudName);
         if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
           previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
         }
@@ -47,7 +53,10 @@ export async function fetchSettings() {
           if (Date.now() - entry.t < SETTINGS_404_TTL) return null;
           cacheSet(SETTINGS_CACHE_KEY, '');
         } else if (entry.v) {
-          if (Date.now() - entry.t < SETTINGS_CACHE_TTL) return entry.v;
+          if (Date.now() - entry.t < SETTINGS_CACHE_TTL) {
+            setTrustedReviewImageCloudName(entry.v.imagePolicy && entry.v.imagePolicy.cloudName);
+            return entry.v;
+          }
           staleEntry = entry.v;
           cacheSet(SETTINGS_CACHE_KEY, '');
         } else {
@@ -64,13 +73,16 @@ export async function fetchSettings() {
       if (res.status === 404) {
         cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), notFound: true }));
       }
+      if (staleEntry) setTrustedReviewImageCloudName(staleEntry.imagePolicy && staleEntry.imagePolicy.cloudName);
       return staleEntry || null;
     }
     var settings = await res.json();
+    setTrustedReviewImageCloudName(settings.imagePolicy && settings.imagePolicy.cloudName);
     cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: settings }));
     return settings;
   } catch (err) {
     console.error('[ikr] fetchSettings error:', err);
+    if (staleEntry) setTrustedReviewImageCloudName(staleEntry.imagePolicy && staleEntry.imagePolicy.cloudName);
     return staleEntry || null;
   }
 }
@@ -79,7 +91,7 @@ export async function fetchSettings() {
 
 var REVIEWS_CACHE_TTL = 60 * 1000; // 1 dakika
 
-export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages) {
+export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages, limit) {
   // Preview modunda mock endpoint kullan — page parametresi load more testi için
   if (window.__ikasPreviewMode) {
     try {
@@ -93,7 +105,10 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
 
   orderBy = orderBy || 'newest';
   page = page || 1;
-  var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0');
+  // limit query param — strip 15 yorum çekerken ana listenin 10'luk cache anahtarıyla
+  // çakışmasını önlemek için cache key'e dahil ediliyor.
+  var limitKey = limit ? '_l' + limit : '';
+  var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + limitKey;
   var staleReviews = null;
   var cached = cacheGet(key);
   if (cached) {
@@ -114,7 +129,8 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
       '&orderBy=' + encodeURIComponent(orderBy) +
       '&page=' + encodeURIComponent(page) +
       (ratingFilter ? '&rating=' + encodeURIComponent(ratingFilter) : '') +
-      (hasImages ? '&hasImages=true' : '');
+      (hasImages ? '&hasImages=true' : '') +
+      (limit ? '&limit=' + encodeURIComponent(limit) : '');
     var res = await fetchWithTimeout(url);
     if (!res.ok) return staleReviews || null;
     var data = await res.json();
@@ -124,6 +140,18 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
     console.error('[ikr] fetchReviews error:', err);
     return staleReviews || null;
   }
+}
+
+// Photo strip için ayrı fetch — newest-first cap 15 fotoğraflı yorum.
+// Ana liste fetch'inden bağımsız: sort/filter/load-more değişikliklerinde strip
+// re-fetch yapmaz. Yeni onaylı yorum geldiğinde REVIEWS_CACHE_TTL (1 dk) sonra
+// otomatik rotation çalışır (en eski strip görseli düşer, yeni baş tarafa girer).
+// Backend `hasImages=true` cloudName guard yapıyor; trusted URL doğrulaması
+// helpers.js:getTrustedReviewImages içinde tekrarlanıyor.
+export async function fetchPhotoStripReviews(productId) {
+  var data = await fetchReviews(productId, 'newest', 1, null, true, PHOTO_STRIP_LIMIT);
+  if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
+  return data.data.reviews;
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
@@ -155,7 +183,13 @@ export async function bootstrap(productId, productName) {
     setCurrentOrderBy('newest');
     setCurrentPage(1);
     setCurrentRatingFilter(null);
-    var reviewsData = await fetchReviews(productId, 'newest', 1, null);
+    // Ana liste ve photo-strip dataset'lerini paralel çek — strip filter/sort'tan bağımsız
+    var fetchResults = await Promise.all([
+      fetchReviews(productId, 'newest', 1, null),
+      fetchPhotoStripReviews(productId),
+    ]);
+    var reviewsData = fetchResults[0];
+    setPhotoStripReviews(fetchResults[1]);
     await render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
   } catch (err) {
     console.error('[ikr] bootstrap error:', err);

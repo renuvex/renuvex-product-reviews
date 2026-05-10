@@ -11,6 +11,12 @@ export var currentBadgeSettings = null;
 export var currentProductName = null;
 export var currentReviewsData = null;
 
+// Fotoğraf şeridi için ayrı dataset — bootstrap'ta `hasImages=true&limit=15&orderBy=newest`
+// çağrısıyla bir kere doldurulur, sort/filter/load-more değişikliklerinde yeniden
+// fetch edilmez. Strateji A (newest-first rotation): yeni onaylı fotoğraflı yorumlar
+// REVIEWS_CACHE_TTL (1 dk) süresince stale kalır, sonra otomatik yenilenir.
+export var photoStripReviews = [];
+
 export function setCurrentOrderBy(v) { currentOrderBy = v; }
 export function setCurrentPage(v) { currentPage = v; }
 export function setCurrentRatingFilter(v) { currentRatingFilter = v; }
@@ -20,6 +26,7 @@ export function setCurrentSettings(v) { currentSettings = v; }
 export function setCurrentBadgeSettings(v) { currentBadgeSettings = v; }
 export function setCurrentProductName(v) { currentProductName = v; }
 export function setCurrentReviewsData(v) { currentReviewsData = v; }
+export function setPhotoStripReviews(v) { photoStripReviews = Array.isArray(v) ? v : []; }
 
 // render() race condition koruması
 export var renderInProgress = false;

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
+import { getConfiguredCloudinaryCloudName, parseStoredReviewImages } from '@/lib/review-images';
 
 /**
  * Handle GET requests: Fetch reviews for the authenticated merchant (paginated)
@@ -34,8 +35,14 @@ export async function GET(request: Request) {
       prisma.review.count({ where }),
     ]);
 
+    const cloudName = getConfiguredCloudinaryCloudName();
+    const sanitizedReviews = reviews.map(review => ({
+      ...review,
+      images: JSON.stringify(parseStoredReviewImages(review.images, cloudName)),
+    }));
+
     return NextResponse.json({
-      data: reviews,
+      data: sanitizedReviews,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {

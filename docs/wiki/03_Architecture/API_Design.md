@@ -3,7 +3,7 @@ type: api
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-10
 tags:
   - api
   - design
@@ -12,6 +12,7 @@ related:
   - "[[Backend_API_Map]]"
   - "[[Auth_And_Installation_Flow]]"
   - "[[Security_And_Rate_Limits]]"
+  - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
 ---
 
 # API Design
@@ -32,7 +33,7 @@ Next.js App Router route handlers, partitioned by trust level: `/api/admin/*` (J
 
 ### Validation
 - OAuth callback uses zod ([src/lib/validation.ts](src/lib/validation.ts) + per-route schema).
-- Public review POST does manual validation (length, range, type, profanity). Should migrate to zod for consistency. Tracked in [[Open_Questions]].
+- Public review POST does manual validation (length, range, type, profanity) and validates `images` through the trusted Cloudinary URL policy in [src/lib/review-images.ts](src/lib/review-images.ts). Should migrate to zod for consistency. Tracked in [[Open_Questions]].
 - Widget settings PUT runs `validateSettings(widgetId, settings)` from [src/lib/widget-settings.ts](src/lib/widget-settings.ts) — type-checked against `widgetDefs.ts`.
 
 ### Rate limits
@@ -65,6 +66,7 @@ Server errors logged via `console.error('[scope] ERROR:', err)` and return `{ er
 - [src/app/api/](src/app/api/)
 - [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts)
 - [src/lib/cors.ts](src/lib/cors.ts)
+- [src/lib/review-images.ts](src/lib/review-images.ts)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 
 ## Obsidian Links
@@ -72,3 +74,7 @@ Server errors logged via `console.error('[scope] ERROR:', err)` and return `{ er
 - [[Auth_And_Installation_Flow]]
 - [[Caching_And_Performance]]
 - [[Security_And_Rate_Limits]]
+- [[ADR_0006_Trusted_Review_Image_URL_Policy]]
+
+## Change Log
+- 2026-05-10: Documented trusted review image validation as part of the public review POST contract. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].

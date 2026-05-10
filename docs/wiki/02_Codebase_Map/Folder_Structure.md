@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-06
+updated: 2026-05-10
 tags:
   - structure
 related:
@@ -94,6 +94,7 @@ yorum-paneli/
 │  │  ├─ cors.ts                 # withCors / corsOptions — wide-open for /api/public/*
 │  │  ├─ design-tokens.ts        # Color tokens shared admin/widget
 │  │  ├─ prisma.ts               # Prisma singleton
+│  │  ├─ review-images.ts        # Trusted review image URL policy (Cloudinary allowlist)
 │  │  ├─ session.ts              # iron-session wrappers
 │  │  ├─ utils.ts                # cn() etc.
 │  │  ├─ validation.ts           # zod helpers
@@ -142,6 +143,7 @@ yorum-paneli/
 - `src/widget/` uses **plain JavaScript (.js)**, not TypeScript, because the bundle is shipped to third-party storefronts and esbuild builds it independently from the Next.js TS pipeline. Don't migrate it to TS without thinking about output size and bundling impact.
 - `public/widget.js` is committed to the repo so deploys ship it without a build step on the Vercel pipeline. Build script must be re-run after any `src/widget/*` change.
 - `widgetDefs.ts` (admin) and `widget-settings.ts` (server) share schema; widget.js receives the same settings via `/api/public/settings`. Don't duplicate — derive.
+- `review-images.ts` is the server-side source of truth for trusted review image URLs. Widget helper logic in `src/widget/core/helpers.js` mirrors this contract for storefront defense in depth.
 - **Theme directory naming quirk**: only `src/widget/themes/ozy/` exists today. The build script ([scripts/build-widget.mjs](scripts/build-widget.mjs)) accepts `--theme=default` (no aliasing — uses direct imports from `themes/ozy/...`) or `--theme=new-theme` (aliases `themes/ozy/styles.js` → `themes/new-theme/styles.js`). The `themes/new-theme/` folder does **not** currently exist, so `pnpm build:widget --theme=new-theme` would fail. The Turkish `.proje-dokuman.md` references both `default/` and `new-theme/` directories that don't match the actual filesystem — that doc is partially stale on this point. Tracked in [[Open_Questions]].
 
 ## Obsidian Links
@@ -152,4 +154,5 @@ yorum-paneli/
 - [[Widget_Files_Map]]
 
 ## Change Log
+- 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) to the source tree map after introducing the trusted review image URL policy.
 - 2026-05-05: Removed the legacy `src/widget/product-widget/review-form.js` entry from the structure map because review submission is now modal-only.

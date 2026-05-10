@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-11
 tags:
   - adr
   - decisions
@@ -23,6 +23,8 @@ related:
 | [[ADR_0002_Widget_Injection_Strategy]] | Single bundled `widget.js` injected via ikas StorefrontJSScript | Accepted |
 | [[ADR_0003_Review_Data_Model]] | Single denormalized `Review` table; `storeId === merchantId`; status as string literals | Accepted |
 | [[ADR_0004_Ikas_Integration_Strategy]] | OAuth via `@ikas/admin-api-client` + GraphQL Codegen for typed operations | Accepted |
+| [[ADR_0006_Trusted_Review_Image_URL_Policy]] | Review images must be app-owned Cloudinary URLs before storage or storefront render | Accepted |
+| [[ADR_0007_Photo_Strip_Cap_And_Rotation]] | Photo strip fixed cap 15, newest-first rotation, dedicated fetch independent of main list | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -38,3 +40,7 @@ related:
 - [[Decision_Template]]
 - [[System_Architecture]]
 - [[Open_Questions]]
+
+## Change Log
+- 2026-05-11: Added [[ADR_0007_Photo_Strip_Cap_And_Rotation]] — photo strip dataset decoupled from main list, fixed cap 15, newest-first rotation.
+- 2026-05-10: Added [[ADR_0006_Trusted_Review_Image_URL_Policy]] for review image URL trust boundaries.

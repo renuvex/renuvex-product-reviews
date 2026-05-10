@@ -3,7 +3,7 @@
 // Fotoğraf yoksa orta kolon foto kolonunu kapsar (no-media modifier).
 // Mobile (<600px) dikey diziliş — styles.js'te tanımlı.
 
-import { starsHTML, formatDate, optimizeImageUrl } from '../../core/helpers.js';
+import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { LIST_CSS } from './styles.js';
@@ -29,7 +29,8 @@ export var meta = {
 export var css = LIST_CSS;
 
 export function render(r, allReviews) {
-  var hasMedia = !!(r.images && Array.isArray(r.images) && r.images.length);
+  var trustedImages = getTrustedReviewImages(r);
+  var hasMedia = trustedImages.length > 0;
 
   var reviewEl = document.createElement('div');
   reviewEl.className = 'ikr-review-list' + (hasMedia ? '' : ' ikr-review-list--no-media');
@@ -109,10 +110,17 @@ export function render(r, allReviews) {
   if (hasMedia) {
     var mediaCol = document.createElement('div');
     mediaCol.className = 'ikr-review-list-media';
-    r.images.forEach(function(imgUrl) {
-      if (!imgUrl || (imgUrl.indexOf('https://') !== 0 && imgUrl.indexOf('data:image/') !== 0)) return;
+    trustedImages.forEach(function(imgUrl) {
       var imgEl = document.createElement('img');
-      imgEl.src = optimizeImageUrl(imgUrl);
+      // Liste sağ kolonu ~90 px, mobile yatay strip aspect 3:4 (styles.js:90).
+      // srcset: 1x/2x retina yedeği. width/height 3:4 oranına uyumlu.
+      var listAttrs = buildResponsiveImgAttrs(imgUrl, PHOTO_STRIP_THUMB_WIDTH);
+      imgEl.src = listAttrs.src;
+      imgEl.srcset = listAttrs.srcset;
+      imgEl.loading = 'lazy';
+      imgEl.decoding = 'async';
+      imgEl.width = PHOTO_STRIP_THUMB_WIDTH;
+      imgEl.height = Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3);
       imgEl.setAttribute('data-ikr-img-url', imgUrl);
       (function(url) {
         imgEl.onclick = function() { openReviewModal(r, url, allReviews); };

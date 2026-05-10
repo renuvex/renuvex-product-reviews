@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-11
 tags:
   - status
 related:
@@ -24,6 +24,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Manual re-injection via `/api/admin/inject-scripts` (button in admin)
 - Storefront widget bundle (`/public/widget.js`, ~150 KB) with:
   - Product review widget (modal submission + listing) with multiple review-layouts (card, gallery, list) and summary-layouts (classic, compact, hero, minimal, split)
+  - Photo strip above review list — dedicated newest-first fetch, cap 15, independent of sort/filter/load-more (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]])
   - Product rating badge (small inline star+count)
   - Listing-page rating badges (auto-discovers product cards on collection pages)
   - Mutation observer for SPA-style theme navigation
@@ -31,6 +32,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
   - Profanity filter (TR + EN)
   - IP-based rate limit (3 reviews / 10 min via Upstash Redis)
   - Image upload via Cloudinary signed direct-upload (10 uploads / 10 min limit)
+  - Trusted review image URL policy rejects third-party/data image URLs before storage and storefront render
   - Auto-approve modes: `manual` / `4plus` / `5stars` / `all`
   - Author masking on output (`Mert W.`)
 - Admin dashboard:
@@ -53,13 +55,15 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
 - No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
-- Review detail lightbox audit has remaining open risks around paged lightbox navigation, user-submitted image URL allowlisting, body scroll lock restoration, and history-state behavior. Photo-less gallery read-more was fixed on 2026-05-10. See [[Bug_Review_Detail_Lightbox_Risks]] and [[Product_Review_Lightbox]]
+- Review detail lightbox audit has remaining open risks around body scroll lock restoration and history-state behavior. Paged navigation slice limitation was closed 2026-05-11 by [[ADR_0007_Photo_Strip_Cap_And_Rotation]]; photo-less gallery read-more and review image URL allowlisting were fixed on 2026-05-10. See [[Bug_Review_Detail_Lightbox_Risks]] and [[Product_Review_Lightbox]]
+- Photo strip image render is now per-display-size optimized and P2 is closed: thumbnails use responsive `srcset`, native lazy/eager policy, async decoding, and explicit dimensions. Image error fallback (K2) and silent `cloudName` fail (K3) are still tracked separately.
 
 ## Important Decisions
 - [[ADR_0001_Project_Stack]] — Next.js 16 App Router + Prisma + Postgres (Supabase)
 - [[ADR_0002_Widget_Injection_Strategy]] — single bundled widget.js injected via ikas StorefrontJSScript
 - [[ADR_0003_Review_Data_Model]] — denormalized Review table; storeId = merchantId; slug + status indexes
 - [[ADR_0004_Ikas_Integration_Strategy]] — OAuth via @ikas/admin-api-client + Codegen GraphQL operations
+- [[ADR_0006_Trusted_Review_Image_URL_Policy]] — review image URLs must be trusted Cloudinary assets before storage or storefront render
 
 ## Next Recommended Steps
 1. Add JSON-LD structured-data injection on product pages (Google rich snippets) — see [[Structured_Data_And_Rich_Snippets]]
@@ -70,8 +74,10 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 6. Consider tests for the public submission endpoint (highest blast-radius surface)
 
 ## Last Updated
-2026-05-10
+2026-05-11
 
 ## Change Log
+- 2026-05-11: Updated status after closing photo thumbnail P2 performance work: responsive `srcset`, lazy/eager policy, async decoding, and explicit dimensions across strip/layout/lightbox mini thumbnails. Related bug: [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]].
+- 2026-05-10: Updated current status after fixing review image URL allowlisting for public review submission and widget rendering. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-10: Updated review detail lightbox known issues after fixing the photo-less gallery read-more path; remaining risks stay tracked in [[Bug_Review_Detail_Lightbox_Risks]].
 - 2026-05-10: Added open review detail lightbox audit risks to known issues. Related notes: [[Product_Review_Lightbox]], [[Bug_Review_Detail_Lightbox_Risks]].

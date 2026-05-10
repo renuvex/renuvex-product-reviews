@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { Redis } from '@upstash/redis';
+import {
+  getConfiguredCloudinaryCloudName,
+  parseStoredReviewImages,
+  sanitizeReviewImageUrls,
+} from '@/lib/review-images';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -60,7 +65,10 @@ export async function GET(req: Request) {
     }
 
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-    const limit = 10;
+    // limit: ana liste için 10 (default); photo-strip newest-first fetch için 15.
+    // 1-30 aralığında clamp — kötüye kullanım önlemi.
+    const limitParam = parseInt(searchParams.get('limit') ?? '10', 10);
+    const limit = Number.isFinite(limitParam) ? Math.min(30, Math.max(1, limitParam)) : 10;
     const skip = (page - 1) * limit;
 
     const orderByParam = searchParams.get('orderBy') ?? 'newest';
@@ -72,13 +80,23 @@ export async function GET(req: Request) {
     const ratingParam = searchParams.get('rating');
     const ratingFilter = ratingParam ? parseInt(ratingParam, 10) : null;
     const hasImagesFilter = searchParams.get('hasImages') === 'true';
+    const cloudName = getConfiguredCloudinaryCloudName();
 
     const where = {
       storeId,
       productId,
       status: 'approved',
       ...(ratingFilter && ratingFilter >= 1 && ratingFilter <= 5 ? { rating: ratingFilter } : {}),
-      ...(hasImagesFilter ? { images: { not: null, notIn: ['[]', '[""]'] } } : {}),
+      ...(hasImagesFilter
+        ? cloudName
+          ? {
+              AND: [
+                { images: { contains: `https://res.cloudinary.com/${cloudName}/image/upload/` } },
+                { images: { contains: '/review_images/' } },
+              ],
+            }
+          : { id: '__missing_cloudinary_cloud_name__' }
+        : {}),
     };
 
     // Filtreden bağımsız — bar chart için tüm approved yorumların dağılımı
@@ -108,12 +126,7 @@ export async function GET(req: Request) {
     const avgRating = allCount > 0 ? (ratingSum / allCount).toFixed(1) : null;
 
     const formattedReviews = reviews.map((r: any) => {
-      let parsedImages: string[] = [];
-      try {
-        parsedImages = r.images ? JSON.parse(r.images) : [];
-      } catch (e) {
-        console.error('JSON Parse Error for review images:', r.id, e);
-      }
+      const parsedImages = parseStoredReviewImages(r.images, cloudName);
       return { ...r, images: parsedImages, author: maskAuthor(r.author) };
     });
 
@@ -174,6 +187,16 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Yorumunuz uygunsuz ifadeler içeriyor.' }, { status: 400 }));
     }
 
+    const cloudName = getConfiguredCloudinaryCloudName();
+    const imageResult = sanitizeReviewImageUrls(images, cloudName);
+    if (!imageResult.ok) {
+      if (imageResult.error === 'missing_cloud') {
+        console.error('[POST] Reviews image validation misconfigured: missing Cloudinary cloud name');
+        return withCors(NextResponse.json({ error: 'Görsel yükleme yapılandırması eksik.' }, { status: 500 }));
+      }
+      return withCors(NextResponse.json({ error: 'Geçersiz yorum görseli.' }, { status: 400 }));
+    }
+
     // Rate limit — sadece geçerli istekleri say
     if (!await checkRateLimit(ip)) {
       return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
@@ -212,7 +235,7 @@ export async function POST(request: Request) {
         comment: comment || '',
         author: String(author).trim(),
         email: email || '',
-        images: images && Array.isArray(images) ? JSON.stringify(images) : null,
+        images: imageResult.urls.length ? JSON.stringify(imageResult.urls) : null,
         status: initialStatus,
       },
     });

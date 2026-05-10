@@ -32,7 +32,7 @@ src/widget/
 │  ├─ state.js                    # Module-level mutable state (currentSettings, currentProductId, ...)
 │  ├─ fetch.js                    # API helpers (calls /api/public/*)
 │  ├─ cache.js                    # sessionStorage wrapper with in-memory fallback (cacheGet/cacheSet)
-│  ├─ helpers.js                  # Misc utilities
+│  ├─ helpers.js                  # Misc utilities + trusted review image URL helpers
 │  └─ badge.js                    # Generic badge primitive
 │
 ├─ product-widget/
@@ -107,6 +107,7 @@ src/widget/
 - `core/state.js` holds module-level mutable state (`currentSettings`, `currentProductId`, `currentReviewsData`, ...). Acceptable because the widget is a single-page-singleton. When refactoring, treat these as the runtime state — re-renders must consume them.
 - Review submission is modal-only. The legacy inline/page form was removed from `src/widget/product-widget/`; all write CTAs open `review-form-modal/`.
 - `review-modal.js` is the photo review detail lightbox, not the review submission wizard. Keep this distinction clear when changing modal behavior. See [[Product_Review_Lightbox]].
+- Review image rendering must go through `getTrustedReviewImages()` / `getFirstTrustedReviewImage()` in [helpers.js](src/widget/core/helpers.js). Do not add layout-local `https://` or `data:image` checks.
 - Always test changes both in `/preview` AND on a real ikas storefront — preview mode skips the mutation observer and theme integrations.
 - The widget is **plain JS**. No TS, no React. Don't introduce a framework without rationale (bundle size + cold-start hit).
 
@@ -124,7 +125,9 @@ src/widget/
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
+- [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-10: Documented the trusted review image helpers in [helpers.js](src/widget/core/helpers.js). Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Removed the legacy inline/page review form from the widget source map. Review submission is now modal-only via [review-form-modal/](src/widget/product-widget/review-form-modal/). Related source: [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
 - 2026-05-10: Corrected `review-modal.js` from "multi-step review modal" to photo review detail lightbox and linked [[Product_Review_Lightbox]]. Related source: [review-modal.js](src/widget/product-widget/review-modal.js).

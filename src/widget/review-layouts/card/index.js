@@ -4,7 +4,7 @@
 // Sıralama gallery layout'u ile aynı (endüstri standardı: rating → title → author → body).
 // CSS .ikr-review* sınıfları base styles.js'te; layout-spesifik override yok.
 
-import { starsHTML, formatDate, optimizeImageUrl } from '../../core/helpers.js';
+import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { buildReplyEl } from '../_shared.js';
@@ -91,13 +91,21 @@ export function render(r, allReviews) {
   }
 
   // Fotoğraflar
-  if (r.images && Array.isArray(r.images) && r.images.length) {
+  var trustedImages = getTrustedReviewImages(r);
+  if (trustedImages.length) {
     var gallery = document.createElement('div');
     gallery.className = 'ikr-gallery';
-    r.images.forEach(function(imgUrl) {
-      if (!imgUrl || (imgUrl.indexOf('https://') !== 0 && imgUrl.indexOf('data:image/') !== 0)) return;
+    trustedImages.forEach(function(imgUrl) {
       var imgEl = document.createElement('img');
-      imgEl.src = optimizeImageUrl(imgUrl);
+      // Kart içi thumbnail 90-140 px gösterilir, 1:1 (styles.js:242 — .ikr-img).
+      // srcset: 1x/2x retina yedeği. CLS rezervi için width===height (1:1).
+      var cardAttrs = buildResponsiveImgAttrs(imgUrl, PHOTO_STRIP_THUMB_WIDTH);
+      imgEl.src = cardAttrs.src;
+      imgEl.srcset = cardAttrs.srcset;
+      imgEl.loading = 'lazy';
+      imgEl.decoding = 'async';
+      imgEl.width = PHOTO_STRIP_THUMB_WIDTH;
+      imgEl.height = PHOTO_STRIP_THUMB_WIDTH;
       imgEl.className = 'ikr-img';
       imgEl.setAttribute('data-ikr-img-url', imgUrl);
       (function(url) {

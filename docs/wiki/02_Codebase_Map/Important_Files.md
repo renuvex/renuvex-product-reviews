@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-08
+updated: 2026-05-10
 tags:
   - critical-files
 related:
@@ -86,7 +86,15 @@ related:
   - Profanity list is hard-coded in the file; updating means redeploy.
   - Rate limit is per IP, 3/10min. Bypass risk if the attacker rotates IPs — by design we accept this trade-off.
   - `containsProfanity` is called on `title`, `comment`, `author`. If you add a new free-text field, pass it through too.
-  - `JSON.parse(r.images)` wrapped in try/catch — output gracefully degrades to `[]`.
+  - Review image input/output must go through [src/lib/review-images.ts](src/lib/review-images.ts), not ad hoc `JSON.parse` or URL prefix checks.
+
+### [src/lib/review-images.ts](src/lib/review-images.ts)
+- **What:** Shared server-side policy for review image URLs.
+- **Why it matters:** Prevents public review submissions from storing third-party tracking images and filters legacy DB image rows before public/admin responses.
+- **Be careful:**
+  - Keep this policy aligned with widget `getTrustedReviewImages()` in [src/widget/core/helpers.js](src/widget/core/helpers.js).
+  - No-image reviews must still succeed when Cloudinary env is missing; only non-empty image payloads require a valid cloud name.
+  - Do not reintroduce broad `https://` or `data:image` acceptance in public API or widget rendering.
 
 ### [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts)
 - **What:** Issues short-lived Cloudinary upload signature; rate-limited 10/10min/IP.
@@ -129,4 +137,5 @@ related:
 - [[Security_And_Rate_Limits]]
 
 ## Change Log
+- 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) as the source of truth for trusted review image URL validation.
 - 2026-05-08: Added [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx) and [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) to the admin widget editor hot-list after introducing schema-driven visual choice cards.

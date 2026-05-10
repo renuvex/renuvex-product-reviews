@@ -12,6 +12,7 @@ related:
   - "[[Storefront_Widget_Overview]]"
   - "[[Widget_Files_Map]]"
   - "[[ADR_0002_Widget_Injection_Strategy]]"
+  - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
 ---
 
 # Widget Architecture
@@ -37,6 +38,7 @@ A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront pa
 | [core/state.js](src/widget/core/state.js) | Module-level mutable state (current product, settings, reviews, paging). |
 | [core/fetch.js](src/widget/core/fetch.js) | API helpers calling `/api/public/*`. |
 | [core/cache.js](src/widget/core/cache.js) | `sessionStorage` wrapper with in-memory fallback (private browsing / quota exceeded). Persists across same-tab navigations. |
+| [core/helpers.js](src/widget/core/helpers.js) | Shared display helpers, including trusted review image URL filtering for storefront render paths. |
 | [observer.js](src/widget/observer.js) | MutationObserver to re-bootstrap on SPA theme nav. |
 | [events.js](src/widget/events.js) | Document-level click handlers (review CTA, modal triggers). |
 | [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Decide whether current page is a product page; mount widget. |
@@ -105,6 +107,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
 - The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, body scroll locking, or history behavior.
+- Review image rendering depends on `imagePolicy.cloudName` from `/api/public/settings`; layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 
 ## Related Source Files
 - [src/widget/](src/widget/)
@@ -119,9 +122,11 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
+- [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[Ikas_Widget_Injection_Notes]]
 
 ## Change Log
+- 2026-05-10: Documented trusted review image URL filtering as part of widget runtime architecture. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Updated the widget architecture note after removing the legacy inline/page review form. Review submission is now modal-only.
 - 2026-05-06: Removed `primaryColor`/`primaryTextColor` from the widget runtime (they were not in the admin schema and only created confusion). `styles.js` double-var fallback chains rely on `--ikr-text`/`--ikr-bg` as fixed fallbacks; these vars are kept in `render.js` with hardcoded defaults so the CSS chains stay intact. An initial attempt to flatten the chains to single-layer broke 32 CSS fallback expressions due to a shell-escape bug in the replacement script; reverted to original `styles.js` and restored the legacy vars as fixed fallbacks instead. Related source: [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).
 - 2026-05-10: Documented the photo review detail lightbox as a separate widget runtime path and linked its open audit risks. Related source: [review-modal.js](src/widget/product-widget/review-modal.js), related note: [[Product_Review_Lightbox]].

@@ -1,6 +1,6 @@
 // product-widget/render.js — Ana widget render fonksiyonu
 
-import { injectStyles, optimizeImageUrl } from '../core/helpers.js';
+import { getFirstTrustedReviewImage, getTrustedReviewImages, injectStyles, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs } from '../core/helpers.js';
 import { fetchReviews } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
 import { injectRatingBadge } from './rating-badge.js';
@@ -15,6 +15,7 @@ import {
   currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentBadgeSettings, currentProductName,
   setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
   setCurrentReviewsData,
+  photoStripReviews,
 } from '../core/state.js';
 
 // ─── CSS değişkenleri ────────────────────────────────────────────────────────
@@ -460,11 +461,15 @@ export async function render(productId, settings, reviewsData, productName, orde
         widget.appendChild(emptyWriteBtn);
       }
 
-      // Fotoğraflı Yorumlar bölümü — sadece filtre aktif değilken göster
-      var allReviewsWithPhotos = reviews.filter(function (r) {
-        return r.images && Array.isArray(r.images) && r.images.some(function (u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
+      // Fotoğraf şeridi — state.photoStripReviews bootstrap'ta tek seferlik
+      // `hasImages=true&limit=15&orderBy=newest` ile dolduruldu. Filtreden
+      // ("Fotoğraflı" sort) ve load-more'dan bağımsız; sadece cache TTL (1 dk)
+      // sonra arka planda yenilenir (Strateji A — newest-first rotation).
+      // ADR_0007: sabit 15 cap, admin ayarı yok.
+      var stripReviews = (photoStripReviews || []).filter(function (r) {
+        return getTrustedReviewImages(r).length > 0;
       });
-      if (settings.showPhotoGallery !== false && !currentHasImages && allReviewsWithPhotos.length > 0) {
+      if (settings.showPhotoGallery !== false && !currentHasImages && stripReviews.length > 0) {
         var photoSection = document.createElement('div');
         photoSection.className = 'ikr-photo-section';
 
@@ -488,17 +493,34 @@ export async function render(productId, settings, reviewsData, productName, orde
         var photoStrip = document.createElement('div');
         photoStrip.className = 'ikr-photo-strip';
 
+        // Backend cap=15 garantili; defansif iç sınır da 15.
+        // `<img>` width/height attribute'ları CSS `--ikr-photo-thumb-aspect` ile uyumlu
+        // olmalı (card: 1/1, list/gallery: 3/4) — CLS rezervi tarayıcı tarafından doğru
+        // hesaplanır. width PHOTO_STRIP_THUMB_WIDTH (300); height layout'a göre.
+        var stripWidth = PHOTO_STRIP_THUMB_WIDTH;
+        var stripHeight = settings.reviewLayout === 'card' ? PHOTO_STRIP_THUMB_WIDTH : Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3);
         var thumbCount = 0;
-        allReviewsWithPhotos.forEach(function (r) {
-          if (thumbCount >= 10) return;
-          var firstImg = r.images.find(function (u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
+        stripReviews.forEach(function (r) {
+          if (thumbCount >= 15) return;
+          var firstImg = getFirstTrustedReviewImage(r);
           if (!firstImg) return;
           var thumb = document.createElement('img');
-          thumb.src = optimizeImageUrl(firstImg);
+          var attrs = buildResponsiveImgAttrs(firstImg, PHOTO_STRIP_THUMB_WIDTH);
+          thumb.src = attrs.src;
+          thumb.srcset = attrs.srcset;
+          // İlk 3 thumbnail above-the-fold ihtimaline karşı eager; gerisi lazy.
+          // Strip her zaman summary altında; mobile'da bazen ilk render'da kısmen
+          // viewport içinde olabiliyor — eager kuyruğu çok küçük tuttuk.
+          thumb.loading = thumbCount < 3 ? 'eager' : 'lazy';
+          thumb.decoding = 'async';
+          thumb.width = stripWidth;
+          thumb.height = stripHeight;
           thumb.className = 'ikr-photo-strip-thumb';
           thumb.alt = 'Yorum fotoğrafı';
+          // Lightbox navigasyonu strip dataset'i içinde gezer — load-more sonrası
+          // ana liste değişse bile lightbox tutarlı kalır (K1.b çözümü).
           (function (url, review) {
-            thumb.onclick = function () { openReviewModal(review, url, reviews); };
+            thumb.onclick = function () { openReviewModal(review, url, stripReviews); };
           })(firstImg, r);
           photoStrip.appendChild(thumb);
           thumbCount++;

@@ -1,3 +1,5 @@
+const cloudinaryCloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: ['*.trycloudflare.com'],
@@ -5,12 +7,15 @@ const nextConfig = {
     NEXT_PUBLIC_DEPLOY_URL: process.env.NEXT_PUBLIC_DEPLOY_URL,
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-      },
-    ],
+    remotePatterns: cloudinaryCloudName
+      ? [
+          {
+            protocol: 'https',
+            hostname: 'res.cloudinary.com',
+            pathname: `/${cloudinaryCloudName}/image/upload/**`,
+          },
+        ]
+      : [],
   },
   webpack: (config) => {
     config.resolve.fallback = {

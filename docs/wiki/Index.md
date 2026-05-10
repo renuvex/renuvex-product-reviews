@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-11
 tags:
   - index
   - ikas
@@ -59,6 +59,7 @@ related:
 - [[Product_Rating_Badge]]
 - [[Product_Review_Widget]]
 - [[Product_Review_Lightbox]]
+- [[Photo_Strip]]
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[Summary_Layout_Padding_Strategy]]
@@ -72,6 +73,8 @@ related:
 - [[ADR_0003_Review_Data_Model]]
 - [[ADR_0004_Ikas_Integration_Strategy]]
 - [[ADR_0005_Summary_Layout_Visual_Consistency_Strategy]]
+- [[ADR_0006_Trusted_Review_Image_URL_Policy]]
+- [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -117,4 +120,4 @@ related:
 
 ---
 
-**Last Updated:** 2026-05-10
+**Last Updated:** 2026-05-11

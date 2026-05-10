@@ -3,7 +3,7 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-11
 tags:
   - bugs
   - solved
@@ -22,7 +22,13 @@ related:
 
 ## Log
 
+### 2026-05-11
+- Performance — Cloudinary Transformation Widths — `optimizeImageUrl(url, width)` is now parametric; strip/card/list thumbnails request 300 px, gallery tile 600 px, lightbox mini 200 px, lightbox main keeps the 1200 px default. Strip thumbnail transfer reduced ~%85; lightbox quality unchanged. Named constants (`PHOTO_STRIP_THUMB_WIDTH`, `GALLERY_TILE_WIDTH`, `LIGHTBOX_MINI_THUMB_WIDTH`, `LIGHTBOX_MAIN_WIDTH`) exported from [helpers.js](src/widget/core/helpers.js). [[Photo_Strip]]
+- Performance — Photo Thumbnail Lazy Loading and srcset — Review photo thumbnails now use responsive `srcset`, async decoding, native lazy/eager loading, and explicit dimensions; first 3 strip thumbnails stay eager and the lightbox main image keeps eager loading with dimensions. [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]]
+- Widget — Photo Strip Stale State — Photo strip now uses dedicated `hasImages=true&limit=15&orderBy=newest` fetch; cap 15, newest-first rotation, independent of sort/filter/load-more. Lightbox navigates the dedicated dataset, closing the paged-slice navigation risk. [[Photo_Strip]] [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
+
 ### 2026-05-10
+- Security - Review Image URL Allowlist - Public review submissions now reject third-party/data image URLs and widget/admin/public read paths only expose trusted Cloudinary review images. [[Bug_Review_Detail_Lightbox_Risks]]
 - Bug — Photo-less Gallery Lightbox — Gallery long-text reviews without valid images now expand inline instead of opening the photo detail lightbox; `openReviewModal` also returns early for empty image sets. [[Bug_Review_Detail_Lightbox_Risks]]
 
 ### 2026-05-07

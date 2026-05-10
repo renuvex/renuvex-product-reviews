@@ -11,12 +11,13 @@ related:
   - "[[Index]]"
   - "[[Auth_And_Installation_Flow]]"
   - "[[API_Design]]"
+  - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
 ---
 
 # Security & Rate Limits
 
 ## Summary
-Trust boundaries: ikas Admin (signed OAuth) → server. Browser admin (JWT) → admin API. Storefront (CORS-open) → public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, signed Cloudinary uploads, server-side cron secret.
+Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> admin API. Storefront (CORS-open) -> public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, signed Cloudinary uploads, trusted Cloudinary image URL allowlisting, server-side cron secret.
 
 ## Trust boundaries
 
@@ -47,6 +48,7 @@ IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theor
   - `author` 2..40 chars
   - `title` ≤ 60 chars
   - `comment` ≤ 2000 chars
+  - `images` must pass the trusted Cloudinary URL policy in [src/lib/review-images.ts](src/lib/review-images.ts)
   - profanity filter on title/comment/author
 - **Admin settings PUT**: `validateSettings(widgetId, settings)` runs the schema in [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
 - **DB caps**: `comment` and `merchantReply` are `@db.VarChar(2000)`.
@@ -63,9 +65,12 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 ## Image upload security
 - Server signs Cloudinary upload params (HMAC) with `folder=review_images` baked in.
 - Client uploads directly to Cloudinary (origin-direct) — avoids proxying body through our server.
-- Weekly cron `cleanup-images` removes orphans. Make sure cron secret is set in Vercel env, otherwise the route is open.
-- Image URLs stored as JSON-stringified array in `Review.images`. Format-fragile — keep parser tolerant.
-- Current public review POST validation accepts any `images` array, while storefront display accepts `https://` and `data:image/` prefixes. Treat image URL host allowlisting as an open hardening item; see [[Bug_Review_Detail_Lightbox_Risks]].
+- Public review POST stores only trusted Cloudinary secure URLs from the configured cloud and `review_images` folder. Third-party HTTPS URLs and `data:image` payloads are rejected.
+- Public/admin read paths parse legacy `Review.images` defensively and expose only trusted URLs; invalid legacy image data becomes `images: []`.
+- Widget rendering uses `imagePolicy.cloudName` from `/api/public/settings` and `getTrustedReviewImages()` before rendering photos or opening the photo lightbox.
+- Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`.
+- Weekly cron `cleanup-images` removes orphans from trusted `review_images/*` public IDs. Make sure cron secret is set in Vercel env, otherwise the route is open.
+- Image URLs remain stored as a JSON-stringified array in `Review.images`; all parsing and validation belongs in [src/lib/review-images.ts](src/lib/review-images.ts).
 
 ## CORS
 - `/api/public/*` → `Access-Control-Allow-Origin: *`. Necessary because storefront domains are unknowable a priori.
@@ -87,7 +92,6 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - IP rate limit can be circumvented with rotating IPs
 - `Access-Control-Allow-Origin: *` on POST endpoints
 - No bot detection / hCaptcha on public POST
-- User-submitted review image URLs are not currently restricted to Cloudinary or a known upload output shape.
 - JWT signing falls back to empty string if env missing
 - `deleteStorefrontJSScript()` blanket-delete is broad (not safe-listed by name)
 
@@ -98,6 +102,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 ## Related Source Files
 - [src/app/api/public/](src/app/api/public/)
 - [src/lib/cors.ts](src/lib/cors.ts)
+- [src/lib/review-images.ts](src/lib/review-images.ts)
 - [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
 
 ## Obsidian Links
@@ -105,6 +110,8 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[API_Design]]
 - [[Open_Questions]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
+- [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-10: Implemented the trusted review image URL policy. Public POST now rejects third-party/data image URLs, read APIs filter legacy rows, and the widget renders only trusted Cloudinary review images. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-10: Added the open image URL allowlisting risk found during the review detail lightbox audit. Related source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

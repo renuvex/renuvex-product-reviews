@@ -6,7 +6,7 @@
 // Mobile'da da aynı split korunur — foto asla metnin üstüne çıkmaz.
 // Masonry için CSS columns parent'a (#ikas-reviews-widget) :has() ile uygulanır.
 
-import { starsHTML, formatDate, optimizeImageUrl } from '../../core/helpers.js';
+import { starsHTML, formatDate, getFirstTrustedReviewImage, GALLERY_TILE_WIDTH, buildResponsiveImgAttrs } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { GALLERY_CSS } from './styles.js';
@@ -31,20 +31,8 @@ export var meta = {
 
 export var css = GALLERY_CSS;
 
-function isValidImageUrl(url) {
-  return !!url && (url.indexOf('https://') === 0 || url.indexOf('data:image/') === 0);
-}
-
-function getFirstValidImage(review) {
-  if (!review.images || !Array.isArray(review.images)) return null;
-  for (var i = 0; i < review.images.length; i++) {
-    if (isValidImageUrl(review.images[i])) return review.images[i];
-  }
-  return null;
-}
-
 export function render(r, allReviews) {
-  var firstImg = getFirstValidImage(r);
+  var firstImg = getFirstTrustedReviewImage(r);
   var hasMedia = !!firstImg;
 
   var reviewEl = document.createElement('div');
@@ -121,8 +109,15 @@ export function render(r, allReviews) {
     var mediaWrap = document.createElement('div');
     mediaWrap.className = 'ikr-review-gallery-media';
     var imgEl = document.createElement('img');
-    imgEl.src = optimizeImageUrl(firstImg);
+    // Gallery masonry tile 200-400 px, aspect 3:4 (styles.js).
+    // srcset: 1x/2x retina yedeği; width/height 3:4 CLS rezervi.
+    var galleryAttrs = buildResponsiveImgAttrs(firstImg, GALLERY_TILE_WIDTH);
+    imgEl.src = galleryAttrs.src;
+    imgEl.srcset = galleryAttrs.srcset;
     imgEl.loading = 'lazy';
+    imgEl.decoding = 'async';
+    imgEl.width = GALLERY_TILE_WIDTH;
+    imgEl.height = Math.round(GALLERY_TILE_WIDTH * 4 / 3);
     imgEl.setAttribute('data-ikr-img-url', firstImg);
     imgEl.onclick = function() { openReviewModal(r, firstImg, allReviews); };
     mediaWrap.appendChild(imgEl);

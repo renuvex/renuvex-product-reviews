@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { v2 as cloudinary } from 'cloudinary';
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-  api_key: process.env.CLOUDINARY_API_KEY!,
-  api_secret: process.env.CLOUDINARY_API_SECRET!,
-});
+import { getConfiguredCloudinaryCloudName, getReviewImagePublicId, parseStoredReviewImages } from '@/lib/review-images';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -18,6 +13,20 @@ export async function GET(request: Request) {
   }
 
   try {
+    const cloudName = getConfiguredCloudinaryCloudName();
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.error('[cleanup-images] Cloudinary config is missing');
+      return NextResponse.json({ error: 'Cloudinary config missing' }, { status: 500 });
+    }
+
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+
     // 1. DB'deki tüm review görsel URL'lerini çek
     const reviews = await prisma.review.findMany({
       where: { images: { not: null } },
@@ -27,12 +36,10 @@ export async function GET(request: Request) {
     const usedPublicIds = new Set<string>();
     for (const review of reviews) {
       if (!review.images) continue;
-      let urls: string[] = [];
-      try { urls = JSON.parse(review.images); } catch { continue; }
+      const urls = parseStoredReviewImages(review.images, cloudName);
       for (const url of urls) {
-        // Cloudinary URL'den public_id çıkar
-        const match = url.match(/\/review_images\/([^/.]+)/);
-        if (match) usedPublicIds.add('review_images/' + match[1]);
+        const publicId = getReviewImagePublicId(url, cloudName);
+        if (publicId) usedPublicIds.add(publicId);
       }
     }
 

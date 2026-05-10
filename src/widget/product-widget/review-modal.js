@@ -1,14 +1,18 @@
 // product-widget/review-modal.js — Fotoğraflı yorum detay modalı
 
-import { starsHTML, formatDate, optimizeImageUrl } from '../core/helpers.js';
+import {
+  starsHTML,
+  formatDate,
+  getTrustedReviewImages,
+  optimizeImageUrl,
+  LIGHTBOX_MAIN_WIDTH,
+  LIGHTBOX_MINI_THUMB_WIDTH,
+  buildResponsiveImgAttrs,
+} from '../core/helpers.js';
 import { currentSettings } from '../core/state.js';
 
-function isValidImageUrl(url) {
-  return !!url && (url.indexOf('https://') === 0 || url.indexOf('data:image/') === 0);
-}
-
 function getValidImages(review) {
-  return (review.images && Array.isArray(review.images)) ? review.images.filter(isValidImageUrl) : [];
+  return getTrustedReviewImages(review);
 }
 
 function closeModal(overlay, onKeyDown, onPopState) {
@@ -109,6 +113,9 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   var animClass = direction === 'next' ? 'ikr-modal-img-enter-right' : direction === 'prev' ? 'ikr-modal-img-enter-left' : '';
   mainImg.className = 'ikr-modal-main-img' + (animClass ? ' ' + animClass : '');
   mainImg.src = optimizeImageUrl(images[currentPhotoIdx] || '');
+  mainImg.decoding = 'async';
+  mainImg.width = LIGHTBOX_MAIN_WIDTH;
+  mainImg.height = Math.round(LIGHTBOX_MAIN_WIDTH * 4 / 3);
   mainImg.alt = 'Yorum fotoğrafı';
   left.appendChild(mainImg);
 
@@ -153,7 +160,14 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
     thumbBar.className = 'ikr-modal-thumbs';
     images.forEach(function(url, i) {
       var th = document.createElement('img');
-      th.src = optimizeImageUrl(url);
+      // Lightbox altı mini şerit 60-80 px — küçük responsive varyant yeter.
+      var thumbAttrs = buildResponsiveImgAttrs(url, LIGHTBOX_MINI_THUMB_WIDTH);
+      th.src = thumbAttrs.src;
+      th.srcset = thumbAttrs.srcset;
+      th.loading = 'lazy';
+      th.decoding = 'async';
+      th.width = LIGHTBOX_MINI_THUMB_WIDTH;
+      th.height = LIGHTBOX_MINI_THUMB_WIDTH;
       th.className = 'ikr-modal-thumb' + (i === currentPhotoIdx ? ' ikr-modal-thumb-active' : '');
       th.alt = 'Küçük resim ' + (i + 1);
       (function(idx) { th.onclick = function() { rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, requestClose, true, null, overlay); }; })(i);

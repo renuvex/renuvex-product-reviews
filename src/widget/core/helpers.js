@@ -105,9 +105,114 @@ export function injectStyles(_color, css) {
   // used by styles.js. All color surfaces now use their own specific variables.
 }
 
-export function optimizeImageUrl(url) {
+var trustedReviewImageCloudName = null;
+var REVIEW_IMAGE_ALLOWED_EXT = { jpg: true, jpeg: true, png: true, webp: true, gif: true, avif: true };
+
+export function setTrustedReviewImageCloudName(cloudName) {
+  var normalizedCloudName = typeof cloudName === 'string' ? cloudName.trim() : '';
+  trustedReviewImageCloudName = /^[A-Za-z0-9_-]+$/.test(normalizedCloudName) ? normalizedCloudName : null;
+}
+
+function isPreviewPlaceholderImage(url) {
+  return typeof window !== 'undefined' &&
+    window.__ikasPreviewMode === true &&
+    url.protocol === 'https:' &&
+    url.hostname === 'placehold.co' &&
+    !url.search &&
+    !url.hash &&
+    /\.(png|jpe?g|webp|gif|avif)$/i.test(url.pathname);
+}
+
+export function isTrustedReviewImageUrl(value) {
+  if (typeof value !== 'string') return false;
+  var raw = value.trim();
+  if (!raw || raw.length > 2048) return false;
+
+  var url;
+  try {
+    url = new URL(raw);
+  } catch (_) {
+    return false;
+  }
+
+  if (isPreviewPlaceholderImage(url)) return true;
+  if (!trustedReviewImageCloudName) return false;
+  if (
+    url.protocol !== 'https:' ||
+    url.hostname !== 'res.cloudinary.com' ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.search ||
+    url.hash
+  ) {
+    return false;
+  }
+
+  var lowerPath = url.pathname.toLowerCase();
+  if (lowerPath.indexOf('%2f') !== -1 || lowerPath.indexOf('%5c') !== -1) return false;
+
+  var parts = url.pathname.split('/').filter(Boolean);
+  if (parts.length < 6) return false;
+  if (parts[0] !== trustedReviewImageCloudName || parts[1] !== 'image' || parts[2] !== 'upload') return false;
+  if (!/^v\d+$/.test(parts[3]) || parts[4] !== 'review_images') return false;
+  for (var i = 5; i < parts.length; i++) {
+    if (parts[i] === '.' || parts[i] === '..') return false;
+  }
+
+  var fileName = parts[parts.length - 1];
+  var dotIdx = fileName.lastIndexOf('.');
+  if (dotIdx === -1) return false;
+  return !!REVIEW_IMAGE_ALLOWED_EXT[fileName.slice(dotIdx + 1).toLowerCase()];
+}
+
+export function getTrustedReviewImages(review) {
+  var images = review && review.images && Array.isArray(review.images) ? review.images : [];
+  var trusted = [];
+  images.forEach(function(url) {
+    if (!isTrustedReviewImageUrl(url)) return;
+    var normalized = url.trim();
+    if (trusted.indexOf(normalized) === -1) trusted.push(normalized);
+  });
+  return trusted;
+}
+
+export function getFirstTrustedReviewImage(review) {
+  var images = getTrustedReviewImages(review);
+  return images.length ? images[0] : null;
+}
+
+// Cloudinary transformation builder — Cloudinary URL'lerine q_auto/f_auto + c_scale,w_<width>
+// ekler. Default width LIGHTBOX_MAIN_WIDTH (1200): lightbox ana görsel + preload için.
+// Diğer çağrılar (thumbnail/tile/mini) ihtiyaca uygun width'i ikinci parametre olarak geçer.
+// Cloudinary olmayan URL'ler olduğu gibi döner — third-party host'lar için no-op.
+//
+// Sabitler — anlamlı isimle hangi çağrı yerine ait olduğunu belgeler. ADR_0007 ve [[Photo_Strip]].
+export var PHOTO_STRIP_THUMB_WIDTH = 300;   // strip + kart/liste thumbnail (90-140 px display, retina yedeği)
+export var GALLERY_TILE_WIDTH = 600;        // gallery masonry tile (200-400 px display, retina yedeği)
+export var LIGHTBOX_MINI_THUMB_WIDTH = 200; // lightbox altı mini görsel şeridi (60-80 px display)
+export var LIGHTBOX_MAIN_WIDTH = 1200;      // lightbox ana görsel + preload (default)
+
+export function optimizeImageUrl(url, width) {
   if (!url || url.indexOf('res.cloudinary.com') === -1) return url;
-  return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_1200/');
+  var w = (typeof width === 'number' && width > 0) ? Math.round(width) : LIGHTBOX_MAIN_WIDTH;
+  return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_' + w + '/');
+}
+
+// Responsive image attribute builder — `<img src srcset>` çifti üretir.
+// 1x: baseWidth, 2x: baseWidth × 2. Tarayıcı DPR'ye göre otomatik seçer.
+// Cloudinary olmayan URL'ler için src ve srcset aynı URL — no-op.
+// Kullanım:
+//   var attrs = buildResponsiveImgAttrs(url, PHOTO_STRIP_THUMB_WIDTH);
+//   img.src = attrs.src; img.srcset = attrs.srcset;
+export function buildResponsiveImgAttrs(url, baseWidth) {
+  if (!url) return { src: '', srcset: '' };
+  var w1 = (typeof baseWidth === 'number' && baseWidth > 0) ? Math.round(baseWidth) : LIGHTBOX_MAIN_WIDTH;
+  var w2 = w1 * 2;
+  var src1 = optimizeImageUrl(url, w1);
+  var src2 = optimizeImageUrl(url, w2);
+  // Cloudinary değilse her ikisi de URL'in kendisidir; srcset duplikasyonu zararsız.
+  return { src: src1, srcset: src1 + ' 1x, ' + src2 + ' 2x' };
 }
 
 // renderStars — form için radio-input tabanlı erişilebilir yıldız seçici.

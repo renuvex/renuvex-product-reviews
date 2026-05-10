@@ -13,6 +13,7 @@ related:
   - "[[Product_Review_Widget]]"
   - "[[Widget_Architecture]]"
   - "[[Bug_Review_Detail_Lightbox_Risks]]"
+  - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
 ---
 
 # Product Review Lightbox
@@ -25,6 +26,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - [styles.js](src/widget/themes/ozy/styles.js) - `.ikr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
 - [render.js](src/widget/product-widget/render.js) - photo strip entry points that call `openReviewModal`.
 - [gallery/index.js](src/widget/review-layouts/gallery/index.js) - gallery layout entry points for images and long-text "read more" behavior.
+- [helpers.js](src/widget/core/helpers.js) - trusted review image helpers used before rendering or opening the lightbox.
 
 ## Obsidian Links
 - [[Product_Review_Widget]]
@@ -32,6 +34,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - [[Widget_Files_Map]]
 - [[Security_And_Rate_Limits]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
+- [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Notes
 - This lightbox is not the multi-step review submission modal. The submission wizard lives under [review-form-modal/](src/widget/product-widget/review-form-modal/).
@@ -39,10 +42,11 @@ The product review lightbox is the photo review detail modal opened from review 
 - In the gallery layout, long photo-backed reviews still open this lightbox so the user sees the image, full comment, thumbnails, and merchant reply together. Long photo-less reviews expand inline inside the gallery card instead of opening a blank photo shell.
 - The lightbox currently receives only the review array passed by the caller. Initial render passes the current page of reviews; load-more insertions pass only the loaded page slice. Navigation therefore does not have a guaranteed all-loaded review set.
 - Review text fields are written with `textContent`, which protects comment/title/reply rendering from direct HTML injection in this component.
-- Image URLs are accepted by prefix checks (`https://` or `data:image/`) in the widget. The public review POST path currently stores any `images` array supplied by the client, so image host allowlisting and data URL policy should be reviewed before relying on photo content as trusted.
+- Image URLs are not accepted by generic prefixes. The lightbox uses `getTrustedReviewImages()`, which accepts only app-owned Cloudinary URLs from the configured cloud and `review_images` folder. This mirrors the server-side policy in [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - Body scroll locking is implemented by overwriting `document.body.style.overflow` and `paddingRight`, then clearing them on close. If the merchant theme already set inline body scroll styles, those values are not restored.
 - Mobile layout uses a full-height modal shell and page-level scrolling through `.ikr-modal-wrap`; desktop scroll is contained in `.ikr-modal-right`.
 
 ## Change Log
+- 2026-05-10: Updated the lightbox image trust contract after implementing the shared trusted Cloudinary URL policy. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-10: Documented the photo-only lightbox contract after fixing the gallery photo-less read-more path and adding an empty-image guard in [review-modal.js](src/widget/product-widget/review-modal.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
 - 2026-05-10: Created this page to document the existing photo review detail lightbox separately from the review submission wizard after a technical audit found the two were conflated in the wiki. Related source: [review-modal.js](src/widget/product-widget/review-modal.js), [styles.js](src/widget/themes/ozy/styles.js), related bug note: [[Bug_Review_Detail_Lightbox_Risks]].

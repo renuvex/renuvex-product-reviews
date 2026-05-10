@@ -5,6 +5,7 @@
 
 import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';
+import { isTrustedReviewImageUrl, setTrustedReviewImageCloudName } from '../../../core/helpers.js';
 
 var MAX_PHOTOS = 3;
 var MAX_BYTES = 10 * 1024 * 1024;
@@ -87,7 +88,12 @@ export function createStepPhotos(state, opts) {
   function createThumbNode(item, displayUrl) {
     var node = document.createElement('div');
     node.className = 'ikr-fwizard-photo-thumb';
-    node.innerHTML = '<img src="' + displayUrl + '" alt="" style="width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; -webkit-user-drag:none; user-select:none;">';
+
+    var img = document.createElement('img');
+    img.src = displayUrl;
+    img.alt = '';
+    img.style.cssText = 'width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; -webkit-user-drag:none; user-select:none;';
+    node.appendChild(img);
 
     var overlay = document.createElement('div');
     overlay.className = 'ikr-fwizard-photo-loading';
@@ -249,6 +255,7 @@ export function createStepPhotos(state, opts) {
             throw new Error('sign failed');
           }
           var sign = await signRes.json();
+          setTrustedReviewImageCloudName(sign.cloud_name);
           var fd = new FormData();
           fd.append('file', f);
           fd.append('api_key', sign.api_key);
@@ -259,7 +266,7 @@ export function createStepPhotos(state, opts) {
           var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
           var upData = await up.json();
 
-          if (upData.secure_url) {
+          if (upData.secure_url && isTrustedReviewImageUrl(upData.secure_url)) {
             // KRİTİK KONTROL: Kullanıcı bu yükleme sürerken görseli silmiş mi?
             var stillPending = (state.get().pendingImages || []).some(function (p) { return p.url === objUrl; });
             if (!stillPending) {
@@ -275,6 +282,8 @@ export function createStepPhotos(state, opts) {
             var c2 = (state.get().images || []).slice();
             c2.push(upData.secure_url);
             state.set({ pendingImages: p2, images: c2 });
+          } else {
+            throw new Error('invalid image url');
           }
         } catch (err) {
           console.error('[ikr] Image upload failed:', err);
