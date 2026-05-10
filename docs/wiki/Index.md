@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-07
+updated: 2026-05-10
 tags:
   - index
   - ikas
@@ -58,6 +58,7 @@ related:
 - [[Storefront_Widget_Overview]]
 - [[Product_Rating_Badge]]
 - [[Product_Review_Widget]]
+- [[Product_Review_Lightbox]]
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[Summary_Layout_Padding_Strategy]]
@@ -116,4 +117,4 @@ related:
 
 ---
 
-**Last Updated:** 2026-05-05
+**Last Updated:** 2026-05-10

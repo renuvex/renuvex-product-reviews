@@ -3,7 +3,7 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-10
 tags:
   - bugs
 related:
@@ -18,10 +18,13 @@ related:
 > Master list of tracked bugs. Add an entry when a real bug is found, with link to a per-bug note. Mark fixed bugs and link to the resolution.
 
 ## Open
-*(none recorded yet)*
+- 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Remaining review detail lightbox risks: navigation is limited to caller review slices, image URL allowlisting is missing, and body/history handling can conflict with storefront state.
 
 ## Recently fixed (verify periodically)
-*(none recorded yet)*
+- 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Photo-less gallery long-text read-more no longer opens the photo detail lightbox; it expands inline, and `openReviewModal` guards empty image sets.
+
+## Change Log
+- 2026-05-10: Marked the photo-less gallery read-more lightbox defect as fixed while keeping the remaining lightbox risks open.
 
 ## Recurring problems
 See [[Recurring_Problems]] for patterns that come back across versions.

@@ -31,9 +31,21 @@ export var meta = {
 
 export var css = GALLERY_CSS;
 
+function isValidImageUrl(url) {
+  return !!url && (url.indexOf('https://') === 0 || url.indexOf('data:image/') === 0);
+}
+
+function getFirstValidImage(review) {
+  if (!review.images || !Array.isArray(review.images)) return null;
+  for (var i = 0; i < review.images.length; i++) {
+    if (isValidImageUrl(review.images[i])) return review.images[i];
+  }
+  return null;
+}
+
 export function render(r, allReviews) {
-  var hasMedia = !!(r.images && Array.isArray(r.images) && r.images.length &&
-    r.images[0] && (r.images[0].indexOf('https://') === 0 || r.images[0].indexOf('data:image/') === 0));
+  var firstImg = getFirstValidImage(r);
+  var hasMedia = !!firstImg;
 
   var reviewEl = document.createElement('div');
   reviewEl.className = 'ikr-review-gallery' + (hasMedia ? '' : ' ikr-review-gallery--no-media');
@@ -76,17 +88,22 @@ export function render(r, allReviews) {
     body.textContent = comment;
     content.appendChild(body);
 
-    // Galeri'de inline expand masonry kolon dengesini bozar — onun yerine
-    // tıklayınca review modal açılır (foto + tam metin + diğer fotolar + yanıt).
-    // Endüstri standardı.
+    // Foto varsa lightbox tam yorum detayını taşır; foto yoksa kart içinde genişler.
     var readMore = document.createElement('span');
     readMore.className = 'ikr-read-more';
     readMore.textContent = 'Devamını oku';
     readMore.style.display = 'none';
     readMore.style.cursor = 'pointer';
+    var expanded = false;
     readMore.onclick = function() {
-      var firstImg = (r.images && Array.isArray(r.images) && r.images.length) ? r.images[0] : null;
-      openReviewModal(r, firstImg, allReviews);
+      if (firstImg) {
+        openReviewModal(r, firstImg, allReviews);
+        return;
+      }
+
+      expanded = !expanded;
+      body.classList.toggle('ikr-body-clamped', !expanded);
+      readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
     };
     content.appendChild(readMore);
 
@@ -101,7 +118,6 @@ export function render(r, allReviews) {
 
   // ─── Sağ: foto (ilk görsel) ───
   if (hasMedia) {
-    var firstImg = r.images[0];
     var mediaWrap = document.createElement('div');
     mediaWrap.className = 'ikr-review-gallery-media';
     var imgEl = document.createElement('img');
@@ -115,12 +131,10 @@ export function render(r, allReviews) {
 
   // Mağaza yanıtı — full-width, foto+metin altında ayrı satırda.
   // Sol kolonda (340px body) sıkışıyordu, sağda da foto altı boş kalıyordu.
-  // "Devamını oku" → modal açar (müşteri yorumuyla tutarlı; galeri'de inline
-  // expand masonry kolon dengesini bozar).
-  var replyEl = buildReplyEl(r.merchantReply, function() {
-    var firstImg = (r.images && Array.isArray(r.images) && r.images.length) ? r.images[0] : null;
+  // Foto yoksa reply "Devamını oku" da shared helper'ın inline davranışını kullanır.
+  var replyEl = buildReplyEl(r.merchantReply, firstImg ? function() {
     openReviewModal(r, firstImg, allReviews);
-  });
+  } : null);
   if (replyEl) {
     replyEl.classList.add('ikr-review-gallery-reply');
     reviewEl.appendChild(replyEl);

@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-06
+updated: 2026-05-10
 tags:
   - widget
   - architecture
@@ -17,13 +17,14 @@ related:
 # Widget Architecture
 
 ## Summary
-A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront page. It detects context (product page, listing page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, and the review submission modal. The bundle is intentionally framework-free.
+A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront page. It detects context (product page, listing page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, the review submission modal, and the photo review detail lightbox. The bundle is intentionally framework-free.
 
 ## Responsibilities
 - Inject summary + reviews on **product detail pages**
 - Inject star+count badges into **listing-page product cards**
 - Inject a **rating badge** above the product title
 - Open a **multi-step review modal** with image upload
+- Open a **photo review detail lightbox** for review images and photo-strip thumbnails
 - React to **SPA-style theme nav** via MutationObserver
 - Run in **preview mode** for live admin customization
 
@@ -41,6 +42,7 @@ A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront pa
 | [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Decide whether current page is a product page; mount widget. |
 | [product-widget/render.js](src/widget/product-widget/render.js) | Compose summary + reviews + modal CTA based on settings. |
 | [product-widget/title-finder.js](src/widget/product-widget/title-finder.js) | Heuristic to find product title element across themes. |
+| [product-widget/review-modal.js](src/widget/product-widget/review-modal.js) | Photo review detail lightbox. Distinct from the submission wizard. |
 | [product-widget/review-form-modal/](src/widget/product-widget/review-form-modal/) | Multi-step submission wizard (steps + progress + state machine). |
 | [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, slug discovery, bulk fetch, injection. |
 | [review-layouts/](src/widget/review-layouts/) | `card` / `gallery` / `list` review item layouts (registry in `index.js`). |
@@ -102,6 +104,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - DOM identification (product id, slug, title) uses heuristics — themes vary. When fixing a "widget doesn't show on theme X" issue, the heuristics in `bootstrap.js` and `title-finder.js` are the usual culprits.
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
+- The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, body scroll locking, or history behavior.
 
 ## Related Source Files
 - [src/widget/](src/widget/)
@@ -112,6 +115,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 ## Obsidian Links
 - [[Storefront_Widget_Overview]]
 - [[Product_Review_Widget]]
+- [[Product_Review_Lightbox]]
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
@@ -120,3 +124,4 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 ## Change Log
 - 2026-05-05: Updated the widget architecture note after removing the legacy inline/page review form. Review submission is now modal-only.
 - 2026-05-06: Removed `primaryColor`/`primaryTextColor` from the widget runtime (they were not in the admin schema and only created confusion). `styles.js` double-var fallback chains rely on `--ikr-text`/`--ikr-bg` as fixed fallbacks; these vars are kept in `render.js` with hardcoded defaults so the CSS chains stay intact. An initial attempt to flatten the chains to single-layer broke 32 CSS fallback expressions due to a shell-escape bug in the replacement script; reverted to original `styles.js` and restored the legacy vars as fixed fallbacks instead. Related source: [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).
+- 2026-05-10: Documented the photo review detail lightbox as a separate widget runtime path and linked its open audit risks. Related source: [review-modal.js](src/widget/product-widget/review-modal.js), related note: [[Product_Review_Lightbox]].

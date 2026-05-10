@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-10
 tags:
   - widget
   - storefront
@@ -40,7 +40,7 @@ src/widget/
 │  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA)
 │  ├─ rating-badge.js             # Star+count badge above product title
 │  ├─ title-finder.js             # Heuristic to locate product title in any theme
-│  ├─ review-modal.js             # Open the multi-step review modal
+│  ├─ review-modal.js             # Photo review detail lightbox
 │  └─ review-form-modal/
 │     ├─ index.js                 # Modal entry
 │     ├─ modal-shell.js           # Modal chrome (overlay, close, focus trap, toast)
@@ -106,6 +106,7 @@ src/widget/
 ## Notes
 - `core/state.js` holds module-level mutable state (`currentSettings`, `currentProductId`, `currentReviewsData`, ...). Acceptable because the widget is a single-page-singleton. When refactoring, treat these as the runtime state — re-renders must consume them.
 - Review submission is modal-only. The legacy inline/page form was removed from `src/widget/product-widget/`; all write CTAs open `review-form-modal/`.
+- `review-modal.js` is the photo review detail lightbox, not the review submission wizard. Keep this distinction clear when changing modal behavior. See [[Product_Review_Lightbox]].
 - Always test changes both in `/preview` AND on a real ikas storefront — preview mode skips the mutation observer and theme integrations.
 - The widget is **plain JS**. No TS, no React. Don't introduce a framework without rationale (bundle size + cold-start hit).
 
@@ -119,9 +120,11 @@ src/widget/
 - [[Widget_Architecture]]
 - [[Storefront_Widget_Overview]]
 - [[Product_Review_Widget]]
+- [[Product_Review_Lightbox]]
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
 
 ## Change Log
 - 2026-05-05: Removed the legacy inline/page review form from the widget source map. Review submission is now modal-only via [review-form-modal/](src/widget/product-widget/review-form-modal/). Related source: [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
+- 2026-05-10: Corrected `review-modal.js` from "multi-step review modal" to photo review detail lightbox and linked [[Product_Review_Lightbox]]. Related source: [review-modal.js](src/widget/product-widget/review-modal.js).

@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-10
 tags:
   - security
   - rate-limit
@@ -65,6 +65,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Client uploads directly to Cloudinary (origin-direct) — avoids proxying body through our server.
 - Weekly cron `cleanup-images` removes orphans. Make sure cron secret is set in Vercel env, otherwise the route is open.
 - Image URLs stored as JSON-stringified array in `Review.images`. Format-fragile — keep parser tolerant.
+- Current public review POST validation accepts any `images` array, while storefront display accepts `https://` and `data:image/` prefixes. Treat image URL host allowlisting as an open hardening item; see [[Bug_Review_Detail_Lightbox_Risks]].
 
 ## CORS
 - `/api/public/*` → `Access-Control-Allow-Origin: *`. Necessary because storefront domains are unknowable a priori.
@@ -86,6 +87,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - IP rate limit can be circumvented with rotating IPs
 - `Access-Control-Allow-Origin: *` on POST endpoints
 - No bot detection / hCaptcha on public POST
+- User-submitted review image URLs are not currently restricted to Cloudinary or a known upload output shape.
 - JWT signing falls back to empty string if env missing
 - `deleteStorefrontJSScript()` blanket-delete is broad (not safe-listed by name)
 
@@ -102,3 +104,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[Auth_And_Installation_Flow]]
 - [[API_Design]]
 - [[Open_Questions]]
+- [[Bug_Review_Detail_Lightbox_Risks]]
+
+## Change Log
+- 2026-05-10: Added the open image URL allowlisting risk found during the review detail lightbox audit. Related source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

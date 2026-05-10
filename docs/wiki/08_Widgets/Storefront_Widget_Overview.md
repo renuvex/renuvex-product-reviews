@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-10
 tags:
   - widget
   - storefront
@@ -16,10 +16,10 @@ related:
 # Storefront Widget Overview
 
 ## Summary
-A single bundled `widget.js` (~165 KB minified) that runs on every storefront page. It detects context and renders one of three things: product review block (PDP), rating badge near the title, or listing-page rating badges. All other widget concepts (carousel/popup/Q&A) are partially scaffolded — see [[Open_Questions]].
+A single bundled `widget.js` (~165 KB minified) that runs on every storefront page. It detects context and renders one of three things: product review block (PDP), rating badge near the title, or listing-page rating badges. The PDP review block also includes a separate photo review detail lightbox. All other widget concepts (carousel/popup/Q&A) are partially scaffolded — see [[Open_Questions]].
 
 ## Where the widget runs
-- **Product detail pages** — full review block with summary, list, photo strip, "Write a Review" CTA, and inline rating badge near title.
+- **Product detail pages** — full review block with summary, list, photo strip, photo detail lightbox, "Write a Review" CTA, and inline rating badge near title.
 - **Collection / search / listing pages** — small star+count badges injected next to product titles in cards.
 - **Preview iframe** (`/preview`) — same code, with `window.__ikasPreviewMode = true`.
 
@@ -59,8 +59,12 @@ See [[Widget_Architecture]] for full details. Key points:
 - [[Widget_Architecture]]
 - [[Widget_Files_Map]]
 - [[Product_Review_Widget]]
+- [[Product_Review_Lightbox]]
 - [[Product_Rating_Badge]]
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[Widget_Performance]]
 - [[Structured_Data_And_Rich_Snippets]]
+
+## Change Log
+- 2026-05-10: Documented the PDP photo review detail lightbox as a separate storefront widget surface. Related note: [[Product_Review_Lightbox]], related bug: [[Bug_Review_Detail_Lightbox_Risks]].

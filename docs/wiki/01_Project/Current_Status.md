@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-07
+updated: 2026-05-10
 tags:
   - status
 related:
@@ -53,6 +53,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
 - No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
+- Review detail lightbox audit has remaining open risks around paged lightbox navigation, user-submitted image URL allowlisting, body scroll lock restoration, and history-state behavior. Photo-less gallery read-more was fixed on 2026-05-10. See [[Bug_Review_Detail_Lightbox_Risks]] and [[Product_Review_Lightbox]]
 
 ## Important Decisions
 - [[ADR_0001_Project_Stack]] — Next.js 16 App Router + Prisma + Postgres (Supabase)
@@ -69,4 +70,8 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 6. Consider tests for the public submission endpoint (highest blast-radius surface)
 
 ## Last Updated
-2026-05-05
+2026-05-10
+
+## Change Log
+- 2026-05-10: Updated review detail lightbox known issues after fixing the photo-less gallery read-more path; remaining risks stay tracked in [[Bug_Review_Detail_Lightbox_Risks]].
+- 2026-05-10: Added open review detail lightbox audit risks to known issues. Related notes: [[Product_Review_Lightbox]], [[Bug_Review_Detail_Lightbox_Risks]].

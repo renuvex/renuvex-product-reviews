@@ -3,7 +3,7 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-10
 tags:
   - bugs
   - solved
@@ -21,6 +21,9 @@ related:
 - Move long context into a dedicated `Bug_<title>.md` file under this folder.
 
 ## Log
+
+### 2026-05-10
+- Bug — Photo-less Gallery Lightbox — Gallery long-text reviews without valid images now expand inline instead of opening the photo detail lightbox; `openReviewModal` also returns early for empty image sets. [[Bug_Review_Detail_Lightbox_Risks]]
 
 ### 2026-05-07
 - UI/UX — Button Height Sync — Implemented `align-items: stretch` in `classic` and `split` layouts to ensure "Write Review" and "Filter" buttons always match in height.

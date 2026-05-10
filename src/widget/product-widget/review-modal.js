@@ -3,6 +3,14 @@
 import { starsHTML, formatDate, optimizeImageUrl } from '../core/helpers.js';
 import { currentSettings } from '../core/state.js';
 
+function isValidImageUrl(url) {
+  return !!url && (url.indexOf('https://') === 0 || url.indexOf('data:image/') === 0);
+}
+
+function getValidImages(review) {
+  return (review.images && Array.isArray(review.images)) ? review.images.filter(isValidImageUrl) : [];
+}
+
 function closeModal(overlay, onKeyDown, onPopState) {
   document.body.style.overflow = '';
   document.body.style.paddingRight = '';
@@ -91,8 +99,8 @@ function updateRight(right, r) {
 }
 
 function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay) {
-  var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); }) : [];
-  var currentPhotoIdx = Math.min(photoIdx, images.length - 1);
+  var images = getValidImages(r);
+  var currentPhotoIdx = Math.max(0, Math.min(photoIdx || 0, images.length - 1));
 
   var left = document.createElement('div');
   left.className = 'ikr-modal-left';
@@ -133,7 +141,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
         rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
-        var prevImages = (prevReview.images || []).filter(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
+        var prevImages = getValidImages(prevReview);
         rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay);
       }
     }
@@ -172,7 +180,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
         rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
-        var prevImages = (prevReview.images || []).filter(function(u) { return u && u.indexOf('https://') === 0; });
+        var prevImages = getValidImages(prevReview);
         rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay);
       }
     };
@@ -203,7 +211,7 @@ function prefetchNeighbors(reviewIdx, reviewsWithPhotos) {
   [-1, 1].forEach(function(offset) {
     var neighbor = reviewsWithPhotos[reviewIdx + offset];
     if (!neighbor) return;
-    var imgs = (neighbor.images || []).filter(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
+    var imgs = getValidImages(neighbor);
     if (imgs[0]) new Image().src = optimizeImageUrl(imgs[0]);
   });
 }
@@ -227,15 +235,21 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
 }
 
 export function openReviewModal(r, clickedUrl, allReviews) {
+  var images = getValidImages(r);
+  if (!images.length) return;
+
   var reviewsWithPhotos = (allReviews || []).filter(function(rv) {
-    return rv.images && Array.isArray(rv.images) && rv.images.some(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); });
+    return getValidImages(rv).length > 0;
   });
 
   var reviewIdx = reviewsWithPhotos.findIndex(function(rv) { return rv === r || rv.id === r.id; });
-  if (reviewIdx === -1) reviewIdx = 0;
+  if (reviewIdx === -1) {
+    reviewsWithPhotos.unshift(r);
+    reviewIdx = 0;
+  }
 
-  var images = (r.images && Array.isArray(r.images)) ? r.images.filter(function(u) { return u && (u.indexOf('https://') === 0 || u.indexOf('data:image/') === 0); }) : [];
-  var photoIdx = Math.max(0, images.indexOf(clickedUrl));
+  var photoIdx = images.indexOf(clickedUrl);
+  if (photoIdx < 0) photoIdx = 0;
 
   var overlay = document.createElement('div');
   overlay.className = 'ikr-modal-overlay';

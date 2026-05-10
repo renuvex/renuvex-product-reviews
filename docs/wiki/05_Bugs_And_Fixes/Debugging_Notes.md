@@ -3,7 +3,7 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-10
 tags:
   - debugging
   - howto
@@ -42,6 +42,12 @@ related:
 - Open it inside the admin (where it sits in `WidgetEditor.tsx`) to test the postMessage protocol.
 - The settings update protocol: admin posts `IKR_SETTINGS_UPDATE`, widget posts back `IKR_WIDGET_READY`.
 
+### Review detail lightbox
+- Use `/preview` to open the photo strip and click a review image. The lightbox path is [review-modal.js](src/widget/product-widget/review-modal.js), not the submission wizard.
+- Test both first-page reviews and reviews inserted by "Daha Fazla Goster"; caller-provided review slices affect previous/next navigation.
+- Test gallery layout long-text reviews with no images; this is tracked in [[Bug_Review_Detail_Lightbox_Risks]].
+- Check body scroll lock interactions against real storefront drawers or menus, not only the preview iframe.
+
 ### Bundle size investigation
 - `node --print "require('fs').statSync('public/widget.js').size"` for raw byte count.
 - esbuild `metafile` if needed: temporarily add `metafile: true` to `scripts/build-widget.mjs` and dump for analyze.
@@ -78,3 +84,8 @@ related:
 - [[Recurring_Problems]]
 - [[Caching_And_Performance]]
 - [[Auth_And_Installation_Flow]]
+- [[Product_Review_Lightbox]]
+- [[Bug_Review_Detail_Lightbox_Risks]]
+
+## Change Log
+- 2026-05-10: Added debugging checklist for the photo review detail lightbox and its current open risks. Related source: [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

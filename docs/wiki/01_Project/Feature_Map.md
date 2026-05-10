@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-10
 tags:
   - features
 related:
@@ -62,6 +62,7 @@ related:
 | Widget bootstrap / mutation observer (SPA themes) | ✅ | [src/widget/index.js](src/widget/index.js), [observer.js](src/widget/observer.js) |
 | Product review widget (form, list, summary) | ✅ | [src/widget/product-widget/](src/widget/product-widget/) |
 | Review form modal (multi-step wizard) | ✅ | [src/widget/product-widget/review-form-modal/](src/widget/product-widget/review-form-modal/) |
+| Review detail lightbox (photo modal) | ✅ with open audit risks | [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), [[Product_Review_Lightbox]], [[Bug_Review_Detail_Lightbox_Risks]] |
 | Summary layouts (classic/compact/hero/minimal/split) | ✅ | [src/widget/summary-layouts/](src/widget/summary-layouts/) |
 | Review layouts (card/gallery/list) | ✅ | [src/widget/review-layouts/](src/widget/review-layouts/) |
 | Listing-page rating badges | ✅ | [src/widget/listing-badges/](src/widget/listing-badges/) |
@@ -92,5 +93,9 @@ related:
 - [[Current_Status]]
 - [[Roadmap]]
 - [[Storefront_Widget_Overview]]
+- [[Product_Review_Lightbox]]
 - [[API_Design]]
 - [[Backend_API_Map]]
+
+## Change Log
+- 2026-05-10: Added review detail lightbox to the storefront widget feature inventory and linked its open audit risks. Related source: [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].
