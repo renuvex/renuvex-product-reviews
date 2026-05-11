@@ -1,5 +1,7 @@
 // helpers.js — Genel yardımcı fonksiyonlar
 
+/* global __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
+
 import { renderStarRow, getIconFromSettings } from '../icons.js';
 
 // Review widget içindeki yıldızlar için CSS custom property — reviews widget ayarından beslenir
@@ -105,12 +107,38 @@ export function injectStyles(_color, css) {
   // used by styles.js. All color surfaces now use their own specific variables.
 }
 
-var trustedReviewImageCloudName = null;
 var REVIEW_IMAGE_ALLOWED_EXT = { jpg: true, jpeg: true, png: true, webp: true, gif: true, avif: true };
+var missingReviewImagePolicyWarned = false;
+
+function normalizeReviewImageCloudName(cloudName) {
+  var normalizedCloudName = typeof cloudName === 'string' ? cloudName.trim() : '';
+  return /^[A-Za-z0-9_-]+$/.test(normalizedCloudName) ? normalizedCloudName : '';
+}
+
+var trustedReviewImageCloudName = normalizeReviewImageCloudName(
+  typeof __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string' ? __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ : ''
+);
 
 export function setTrustedReviewImageCloudName(cloudName) {
-  var normalizedCloudName = typeof cloudName === 'string' ? cloudName.trim() : '';
-  trustedReviewImageCloudName = /^[A-Za-z0-9_-]+$/.test(normalizedCloudName) ? normalizedCloudName : null;
+  var normalizedCloudName = normalizeReviewImageCloudName(cloudName);
+  if (!normalizedCloudName) return false;
+  trustedReviewImageCloudName = normalizedCloudName;
+  missingReviewImagePolicyWarned = false;
+  return true;
+}
+
+export function getTrustedReviewImageCloudName() {
+  return trustedReviewImageCloudName || '';
+}
+
+export function hasTrustedReviewImageCloudName() {
+  return !!trustedReviewImageCloudName;
+}
+
+export function warnMissingReviewImagePolicy(context) {
+  if (missingReviewImagePolicyWarned) return;
+  missingReviewImagePolicyWarned = true;
+  console.error('[ikr] review image policy missing; trusted review images are hidden until imagePolicy.cloudName is available.', context || '');
 }
 
 function isPreviewPlaceholderImage(url) {
@@ -136,7 +164,10 @@ export function isTrustedReviewImageUrl(value) {
   }
 
   if (isPreviewPlaceholderImage(url)) return true;
-  if (!trustedReviewImageCloudName) return false;
+  if (!trustedReviewImageCloudName) {
+    warnMissingReviewImagePolicy('isTrustedReviewImageUrl');
+    return false;
+  }
   if (
     url.protocol !== 'https:' ||
     url.hostname !== 'res.cloudinary.com' ||
@@ -168,6 +199,7 @@ export function isTrustedReviewImageUrl(value) {
 
 export function getTrustedReviewImages(review) {
   var images = review && review.images && Array.isArray(review.images) ? review.images : [];
+  if (images.length && !trustedReviewImageCloudName) warnMissingReviewImagePolicy('getTrustedReviewImages');
   var trusted = [];
   images.forEach(function(url) {
     if (!isTrustedReviewImageUrl(url)) return;

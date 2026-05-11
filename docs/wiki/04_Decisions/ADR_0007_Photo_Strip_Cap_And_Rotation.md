@@ -13,6 +13,7 @@ related:
   - "[[Photo_Strip]]"
   - "[[Product_Review_Widget]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
+  - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
 ---
 
 # ADR_0007 — Photo Strip Cap and Rotation Strategy
@@ -66,8 +67,8 @@ Yotpo ve Judge.me canlı mağazalarında DevTools ile yapılan gözlem: strip 10
 **Takip işleri:**
 - ✅ 2026-05-11 — P1 + M3 kapandı: `optimizeImageUrl(url, width)` parametreli; strip/kart/liste 300, gallery 600, lightbox mini 200, lightbox ana 1200 (default).
 - ✅ 2026-05-11 — P2 kapandı: photo strip, card/list/gallery thumbnails ve lightbox mini thumbnails responsive `srcset`, native lazy/eager policy, async decoding ve explicit dimensions kullanıyor. Lightbox ana görsel eager kaldı; explicit dimensions aldı.
+- ✅ 2026-05-11 — K3 kapandı: trusted image policy build-time public cloud fallback, last-valid widget cache ve settings `stale-if-error` ile dayanıklı hale getirildi. [[Bug_Cloud_Name_Silent_Image_Filter]]
 - K2 (image error fallback) ayrı iş.
-- K3 (cloudName silent fail) ayrı iş.
 - Cap'in admin setting'e taşınması — kullanıcı geri bildirimi sonrası değerlendirilecek.
 
 ## Related Source Files

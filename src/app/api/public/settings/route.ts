@@ -4,6 +4,17 @@ import { withCors, corsOptions } from '@/lib/cors';
 import { getWidgetDefaults, sanitizeSettings } from '@/lib/widget-settings';
 import { getConfiguredCloudinaryCloudName } from '@/lib/review-images';
 
+let missingCloudinaryCloudNameWarned = false;
+
+function getPublicImagePolicy() {
+  const cloudName = getConfiguredCloudinaryCloudName();
+  if (!cloudName && !missingCloudinaryCloudNameWarned) {
+    missingCloudinaryCloudNameWarned = true;
+    console.error('[ikr] Cloudinary cloud name is missing; public review image rendering will fail closed.');
+  }
+  return { cloudName };
+}
+
 export async function OPTIONS() {
   return corsOptions();
 }
@@ -45,10 +56,8 @@ export async function GET(req: Request) {
 
   const response = withCors(NextResponse.json({
     widgets,
-    imagePolicy: {
-      cloudName: getConfiguredCloudinaryCloudName(),
-    },
+    imagePolicy: getPublicImagePolicy(),
   }));
-  response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+  response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300, stale-if-error=604800');
   return response;
 }

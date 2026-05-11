@@ -35,6 +35,45 @@ const themeAlias = {
 const banner = `/* ikas Reviews Widget — built ${new Date().toISOString()} | theme: ${theme} */\n;(function(){\'use strict\';`;
 const footer = `})();`;
 
+function readEnvFileValue(filePath, key) {
+  try {
+    var lines = readFileSync(filePath, 'utf8').split(/\r?\n/);
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line || line[0] === '#') continue;
+      var eqIdx = line.indexOf('=');
+      if (eqIdx === -1) continue;
+      var envKey = line.slice(0, eqIdx).trim();
+      if (envKey !== key) continue;
+      var value = line.slice(eqIdx + 1).trim();
+      if (
+        (value[0] === '"' && value[value.length - 1] === '"') ||
+        (value[0] === "'" && value[value.length - 1] === "'")
+      ) {
+        value = value.slice(1, -1);
+      }
+      return value;
+    }
+  } catch (_) {}
+  return '';
+}
+
+function getEnvValue(key) {
+  return process.env[key] ||
+    readEnvFileValue(resolve(ROOT, '.env.local'), key) ||
+    readEnvFileValue(resolve(ROOT, '.env'), key) ||
+    '';
+}
+
+function normalizePublicCloudName(value) {
+  const cloudName = typeof value === 'string' ? value.trim() : '';
+  return /^[A-Za-z0-9_-]+$/.test(cloudName) ? cloudName : '';
+}
+
+const defaultReviewImageCloudName = normalizePublicCloudName(
+  getEnvValue('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') || getEnvValue('CLOUDINARY_CLOUD_NAME'),
+);
+
 const buildOptions = {
   entryPoints: [entryPoint],
   bundle: true,
@@ -50,6 +89,9 @@ const buildOptions = {
   sourcemap: false,
   logLevel: 'info',
   alias: themeArg ? themeAlias : {},
+  define: {
+    __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
+  },
 };
 
 if (watchMode) {

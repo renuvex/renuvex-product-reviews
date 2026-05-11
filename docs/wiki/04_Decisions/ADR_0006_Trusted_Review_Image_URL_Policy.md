@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-10
-updated: 2026-05-10
+updated: 2026-05-11
 tags:
   - adr
   - security
@@ -13,6 +13,7 @@ related:
   - "[[Decision_Index]]"
   - "[[Security_And_Rate_Limits]]"
   - "[[Product_Review_Lightbox]]"
+  - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
 ---
 
 # ADR_0006 - Trusted Review Image URL Policy
@@ -37,7 +38,7 @@ Review image URLs are trusted only when they match the configured Cloudinary clo
 - No credentials, port, query string, hash, or encoded slash/backslash.
 - Maximum 3 URLs per review.
 
-The server rejects untrusted image URLs on public review submission and filters legacy stored image data before public or admin responses. The widget receives the trusted cloud name from `/api/public/settings` as `imagePolicy.cloudName` and uses the same allowlist before rendering review photos or opening the photo lightbox.
+The server rejects untrusted image URLs on public review submission and filters legacy stored image data before public or admin responses. The widget receives the trusted cloud name from `/api/public/settings` as `imagePolicy.cloudName` and uses the same allowlist before rendering review photos or opening the photo lightbox. The widget also carries a build-time public cloud fallback and a last-valid per-store image policy cache; these are resilience sources for the same allowlist, not permission to accept third-party URLs.
 
 Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`; this exception is not active on storefronts.
 
@@ -51,7 +52,7 @@ The durable boundary must be server-side because public storefront clients are n
 
 ## Consequences
 - Storefronts no longer render third-party review image URLs or `data:image` payloads.
-- If Cloudinary cloud config is missing, no-image reviews still work, but image submissions fail clearly.
+- If Cloudinary cloud config is missing everywhere, no-image reviews still work and image rendering fails closed with an explicit error log. If settings alone omits the cloud name, the widget can keep rendering app-owned images from the build-time public fallback or the last-valid cached policy.
 - Legacy DB rows with invalid image URLs are silently exposed as `images: []` in read APIs.
 - Any future review-image feature must use [src/lib/review-images.ts](src/lib/review-images.ts) and widget `getTrustedReviewImages()` instead of ad hoc URL prefix checks.
 
@@ -71,3 +72,7 @@ The durable boundary must be server-side because public storefront clients are n
 - [[API_Design]]
 - [[Product_Review_Lightbox]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
+- [[Bug_Cloud_Name_Silent_Image_Filter]]
+
+## Change Log
+- 2026-05-11: Documented build-time public cloud fallback and last-valid widget image policy cache as resilience sources for the accepted allowlist. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].

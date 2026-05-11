@@ -16,85 +16,74 @@ related:
   - "[[Caching_And_Performance]]"
 ---
 
-# Bug — cloudName Silent Image Filter (K3)
+# Bug - cloudName Silent Image Filter (K3)
 
 ## Date
 2026-05-11
 
 ## Status
-Open
+Fixed
 
 ## Area
-Widget, Reliability, Observability
+Widget, Reliability, Review Images, Public Settings
 
 ## Symptoms
-- `/api/public/settings` endpoint geçici 404 / 5xx döndüğünde ve cache'de stale entry yoksa, widget `trustedReviewImageCloudName` değerini `undefined` olarak set ediyor.
-- Bu durumda `isTrustedReviewImageUrl()` her URL için false döner → `getTrustedReviewImages()` boş dizi → fotoğraf şeridi **ve yorum kartlarındaki tüm fotoğraflar** sessizce kaybolur.
-- Reviews endpoint çalışmaya devam ettiği için yorum metinleri görünür; sadece görsel kısmı kaybolur.
-- Hiçbir `console.error`, hiçbir telemetri çağrısı yok — monitor "her şey normal" der.
+The storefront widget accepts review image URLs only when they match the trusted Cloudinary image policy. Before the fix, that policy depended on `/api/public/settings` returning `imagePolicy.cloudName` during the current session.
 
-## Sahnelendirme (örnek senaryo)
-Cuma 18:00 deploy'da settings route regression — geçici 404 dönüyor. Cache'i 24 saatten eski olan tüm storefront ziyaretçilerinde (ve cache yok olan cold ziyaretçilerde):
-1. `bootstrap.js:67-83` `/api/public/settings` 404 alır.
-2. `bootstrap.js:72-73` — `staleEntry` yoksa `setTrustedReviewImageCloudName(undefined)` çağrılır.
-3. `helpers.js:155-167` — `isTrustedReviewImageUrl` `parts[0] !== trustedReviewImageCloudName` (undefined) kontrolünde tüm URL'leri reddeder.
-4. `render.js:466` (strip), `card/index.js:94`, `list/index.js:94`, `gallery/index.js` — `getTrustedReviewImages(r).length === 0` → görseller hiç render edilmez.
-5. Pazartesi 09:00'a kadar admin fark etmez; 3 günlük conversion kaybı, alarm yok.
+If `imagePolicy.cloudName` was missing or invalid, `getTrustedReviewImages()` returned an empty array for every review image. Review text could still render, but the photo strip, card/list/gallery thumbnails, and photo lightbox entry points disappeared.
 
-Diğer senaryolar:
-- Yeni mağaza ilk install sonrası settings cache henüz dolmadıysa, network race condition'da aynı sessiz davranış.
-- CDN edge'inde geçici 5xx ve Vercel function downtime.
+There is one important nuance: if `/api/public/settings` returned no response at all and no stale settings existed, product review widget bootstrap could return early. In that case the impact was broader than photo loss. The pure K3 image-loss scenario is a settings response that still contains usable widget settings but lacks a valid image policy.
+
+## Example Before
+1. `/api/public/settings` returns `200` with widget settings but `imagePolicy.cloudName: null`.
+2. `/api/public/reviews` returns approved reviews with valid app-owned Cloudinary URLs.
+3. `helpers.js` has no trusted cloud name, so `isTrustedReviewImageUrl()` rejects every image URL.
+4. Product reviews still show text, ratings, dates, and replies.
+5. All review images silently disappear from strip, cards, list/gallery layouts, and the lightbox.
 
 ## Root Cause
-- [bootstrap.js:67-83](src/widget/product-widget/bootstrap.js) — settings 404/error path'lerinde fallback yok, log yok:
-  ```js
-  if (!res.ok) {
-    if (res.status === 404) {
-      cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), notFound: true }));
-    }
-    if (staleEntry) setTrustedReviewImageCloudName(staleEntry.imagePolicy && staleEntry.imagePolicy.cloudName);
-    return staleEntry || null;
-  }
-  ```
-  `staleEntry` yoksa `setTrustedReviewImageCloudName` hiç çağrılmaz; `trustedReviewImageCloudName` initial `undefined` kalır.
+- [helpers.js](src/widget/core/helpers.js) initialized the trusted review image cloud name as `null` and accepted only runtime settings as the source of truth.
+- [bootstrap.js](src/widget/product-widget/bootstrap.js) kept settings in a short-lived cache and did not keep image policy as a separate durable contract.
+- Expired stale settings were cleared before a network retry finished, weakening outage tolerance.
+- [settings/route.ts](src/app/api/public/settings/route.ts) returned `imagePolicy.cloudName` but did not log when the server-side Cloudinary cloud config was missing.
 
-- [helpers.js:155-167](src/widget/core/helpers.js) — `isTrustedReviewImageUrl` sessizce false döner:
-  ```js
-  if (parts[0] !== trustedReviewImageCloudName || ...) return false;
-  ```
-  `cloudName === undefined` ise tüm URL'ler düşer. Log yok.
+## Fix
+- [scripts/build-widget.mjs](scripts/build-widget.mjs) now injects the public Cloudinary cloud name into the widget bundle at build time. This value is not a secret; the public settings endpoint already exposes it as part of the image allowlist contract.
+- [helpers.js](src/widget/core/helpers.js) initializes trusted image policy from the build-time fallback, preserves the last valid cloud name when a later invalid value arrives, and emits a one-time explicit error if no policy is available.
+- [bootstrap.js](src/widget/product-widget/bootstrap.js) keeps a separate `ikr_image_policy_<publicApiKey>` cache for the last valid review image policy and tolerates stale settings for 7 days during transient settings outages.
+- [settings/route.ts](src/app/api/public/settings/route.ts) logs a one-time server error when the configured Cloudinary cloud name is missing and adds `stale-if-error=604800` to the public settings cache header.
+- [public/widget.js](public/widget.js) was regenerated with `pnpm build:widget`.
 
-- **Etki K3'ten daha geniş**: aynı `getTrustedReviewImages` fonksiyonu kart/liste/gallery layout'larındaki review içi fotoğraflar için de kullanılıyor. K3 sadece strip'i değil tüm fotoğraf akışını öldürür.
+## Example After
+1. `/api/public/settings` returns widget settings but `imagePolicy.cloudName: null`.
+2. The widget keeps using the build-time public cloud name or the last valid cached image policy.
+3. App-owned Cloudinary review images still render.
+4. Third-party image URLs are still rejected; the fix does not fail open.
+5. If no trusted policy exists anywhere, the widget hides images fail-closed and logs an explicit one-time error instead of silently losing images.
 
-## Önerilen düzeltme yönü
-1. **Çevre değişkeni fallback:** Build-time `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` widget bundle'a inject edilebilir; settings yüklenemese bile başlangıç değeri olur. Settings sonra geldiğinde override eder.
-2. **Telemetri:** `setTrustedReviewImageCloudName(falsy)` çağrıldığında `console.error('[ikr] cloudName missing — image filtering inactive')` + (opsiyonel) Sentry breadcrumb / minimal fetch beacon.
-3. **404 retry pencere:** mevcut `SETTINGS_404_TTL = 30 * 1000` — kısaltma veya kısa bir exponential backoff ile birkaç retry.
-4. **Daha uzun stale-while-revalidate**: settings için 24 saat değil 7 gün stale tolerate; bu da büyük outage'larda davranışı korur. [settings/route.ts](src/app/api/public/settings/route.ts) cache header'ı.
+## Files Changed
+- [scripts/build-widget.mjs](scripts/build-widget.mjs)
+- [helpers.js](src/widget/core/helpers.js)
+- [bootstrap.js](src/widget/product-widget/bootstrap.js)
+- [settings/route.ts](src/app/api/public/settings/route.ts)
+- [widget.js](public/widget.js)
+- Documentation updates under `docs/wiki`.
 
-## Etkilenecek dosyalar
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — fallback + log
-- [src/widget/core/helpers.js](src/widget/core/helpers.js) — `setTrustedReviewImageCloudName` falsy çağrılınca warn
-- [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts) — cache header (stale-while-revalidate uzatma)
-- (Opsiyonel) yeni `src/app/api/public/widget-telemetry/route.ts` — error beacon
-- Build pipeline (opsiyonel) — `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` inject
-
-## Etki
-- **K2'den daha geniş etki**: kırık görsel değil **hiç görsel yok** — kart/liste/gallery dahil.
-- Tespit süresi: tesadüfe bağlı (admin manuel storefront ziyareti ile fark eder); günler-haftalar.
-- Yeni yorum yazan müşteri kendi fotoğrafını görmediği için "yüklenemedi mi?" diye yeniden gönderir → DB orphan + müşteri frustration.
+## Verification
+- Ran widget build after injecting the policy fallback.
+- Ran headless Chrome smoke test with a fake storefront where settings returned `imagePolicy.cloudName: null` and reviews returned a valid app Cloudinary URL. The widget rendered and the trusted review image appeared.
 
 ## Prevention
-- E2E test: settings endpoint'i bilinçli mock 404 ile servis et, widget render path'ini smoke-test et.
-- Production health check: settings endpoint 404 oranı için alarm.
-- Synthetic monitoring (örn. Vercel Speed Insights / pingdom): görsel render path'i headless browser ile periyodik test.
+- Keep review image URL checks fail-closed. Never bypass `getTrustedReviewImages()` to recover images.
+- Treat `imagePolicy.cloudName` as a durable runtime contract: build-time fallback, last-valid widget cache, and settings response can all provide it, but invalid or third-party values must not be accepted.
+- Add synthetic storefront monitoring for at least one product with a trusted review image.
 
 ## Related Notes
 - [[Photo_Strip]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[Caching_And_Performance]]
 - [[Bug_Index]]
-- [[Open_Questions]]
 
 ## Change Log
-- 2026-05-11: Sayfa oluşturuldu. Photo strip refactor sırasında yapılan analizde tespit edilen sessiz hata kategorisi — fix henüz uygulanmadı.
+- 2026-05-11: Fixed by adding build-time public cloud fallback, durable widget-side image policy cache, one-time missing-policy logging, 7-day stale settings tolerance, and public settings `stale-if-error`.
+- 2026-05-11: Page created during photo strip refactor analysis for a silent image filtering failure category.

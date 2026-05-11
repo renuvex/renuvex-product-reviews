@@ -19,9 +19,9 @@ related:
 
 ## Open
 - 2026-05-11 - [[Bug_Review_Image_Error_Fallback]] - No `onerror` handler on any review image; Cloudinary 404 / asset rename produces broken-image icon for up to 7 days until the weekly cleanup cron runs. Silent failure (no telemetry). (K2)
-- 2026-05-11 - [[Bug_Cloud_Name_Silent_Image_Filter]] - When `/api/public/settings` returns 404/5xx with no stale cache, widget filters out **all** trusted review images (strip + card/list/gallery), not just the strip. Silent outage, no log, no alarm. (K3)
 
 ## Recently fixed (verify periodically)
+- 2026-05-11 - [[Bug_Cloud_Name_Silent_Image_Filter]] - Review image policy now has build-time public cloud fallback, last-valid widget cache, explicit missing-policy logging, and settings `stale-if-error`.
 - 2026-05-11 - [[Bug_Lightbox_Tablet_Viewport_And_Scroll]] - Photo lightbox now uses a stacked 641-800 px tablet/landscape shell, mobile `vh` / `svh` / `dvh` fallbacks, and explicit scroll containment.
 - 2026-05-11 - [[Bug_Lightbox_Focus_Trap_Accessibility]] - Photo lightbox now exposes dialog semantics, traps keyboard focus inside the modal, and restores previous focus on close.
 - 2026-05-11 - [[Bug_Review_Fetch_Error_Empty_State]] - Review fetch failures now render a retryable error state instead of the normal empty-review state; load-more failures keep a retry button.
@@ -32,6 +32,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-11: Marked [[Bug_Cloud_Name_Silent_Image_Filter]] fixed after adding a durable review image policy fallback/cache contract and public settings stale-if-error.
 - 2026-05-11: Added [[Bug_Lightbox_Tablet_Viewport_And_Scroll]] after fixing the 641-800 px cramped desktop modal range and mobile viewport-unit handling.
 - 2026-05-11: Added [[Bug_Lightbox_Focus_Trap_Accessibility]] after fixing modal focus escaping to storefront controls.
 - 2026-05-11: Added [[Bug_Review_Fetch_Error_Empty_State]] after fixing review fetch failures being rendered as empty review lists.

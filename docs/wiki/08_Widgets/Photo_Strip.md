@@ -15,6 +15,7 @@ related:
   - "[[Widget_Architecture]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
+  - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
 ---
 
 # Photo Strip (Fotoğraf Şeridi)
@@ -80,7 +81,6 @@ Responsive delivery: [helpers.js](src/widget/core/helpers.js) içindeki `buildRe
 Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senaryo ve dosya:satır referansları orada.
 
 - **K2** — [[Bug_Review_Image_Error_Fallback]] — Hiçbir review image `<img>`'inde `onerror` handler yok; Cloudinary 404 / asset rename → kırık-image ikonu (haftalık cleanup cron'una kadar 1-7 gün). Sessiz hata, telemetri yok.
-- **K3** — [[Bug_Cloud_Name_Silent_Image_Filter]] — `/api/public/settings` 404/5xx + stale cache yoksa `cloudName` undefined olur → tüm trusted check'ler false döner → **strip + tüm layout'lardaki review fotoğrafları** kaybolur. Hiçbir log yok.
 - **U2:** Mağazada 15'ten fazla fotoğraflı yorum varsa "+N daha" göstergesi yok (rakipler genelde göstermiyor; opsiyonel).
 - **U3:** Arrow scroll mesafesi sabit 200px; thumbnail boyutuna göre dinamik değil.
 - **U4:** Arrow butonları başta/sonda `disabled` durumuna geçmiyor.
@@ -104,8 +104,10 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
+- [[Bug_Cloud_Name_Silent_Image_Filter]]
 
 ## Change Log
+- 2026-05-11: K3 kapandı. Trusted image policy build-time public cloud fallback, last-valid widget cache ve settings `stale-if-error` ile dayanıklı hale getirildi. İlgili bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: P2 kapandı. Photo strip, card/list/gallery thumbnails ve lightbox mini thumbnail'leri responsive `srcset`, native lazy/eager policy, async decoding ve explicit dimensions kullanıyor. Lightbox ana görsel eager kaldı, 1200 px default Cloudinary varyantıyla explicit dimensions aldı. İlgili bug: [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]].
 - 2026-05-11: `optimizeImageUrl` parametreli imzaya geçirildi (`url, width`); her çağrı yeri display boyutuna uygun width geçiyor — strip 300, gallery tile 600, lightbox mini 200, lightbox ana 1200 (default). Strip thumbnail transferi ~%85 azaldı. P1 + M3 kapandı. İlgili kaynak: [helpers.js](src/widget/core/helpers.js), [render.js](src/widget/product-widget/render.js), [card/index.js](src/widget/review-layouts/card/index.js), [list/index.js](src/widget/review-layouts/list/index.js), [gallery/index.js](src/widget/review-layouts/gallery/index.js), [review-modal.js](src/widget/product-widget/review-modal.js).
 - 2026-05-11: Sayfa oluşturuldu. Cap 15 + newest-first rotation kararıyla birlikte ([[ADR_0007_Photo_Strip_Cap_And_Rotation]]) strip ana liste'den bağımsızlaştırıldı; load-more sonrası stale state (K1) ve lightbox dead-end (K1.b) kapatıldı. İlgili kaynak: [bootstrap.js](src/widget/product-widget/bootstrap.js), [render.js](src/widget/product-widget/render.js), [state.js](src/widget/core/state.js).

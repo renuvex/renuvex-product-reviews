@@ -23,6 +23,7 @@ related:
 ## Log
 
 ### 2026-05-11
+- Widget - Review Image Policy Fallback - Trusted review image rendering now survives missing settings `imagePolicy.cloudName` via build-time public cloud fallback, last-valid widget cache, and explicit fail-closed logging. [[Bug_Cloud_Name_Silent_Image_Filter]]
 - Widget - Lightbox Tablet Viewport And Scroll - Photo lightbox now uses a stacked 641-800 px tablet/landscape layout, mobile `vh` / `svh` / `dvh` fallbacks, and explicit scroll containment. [[Bug_Lightbox_Tablet_Viewport_And_Scroll]]
 - Widget - Lightbox Focus Trap Accessibility - Photo lightbox now exposes dialog semantics, traps `Tab` focus inside the modal, and restores previous focus on close. [[Bug_Lightbox_Focus_Trap_Accessibility]]
 - Widget - Review Fetch Error State - Review fetch failures now show a retryable error state instead of `Henüz yorum yok`; load-more failures keep a retry button. [[Bug_Review_Fetch_Error_Empty_State]]

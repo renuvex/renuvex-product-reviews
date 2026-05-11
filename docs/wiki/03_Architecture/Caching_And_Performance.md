@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-11
 tags:
   - performance
   - caching
@@ -11,12 +11,13 @@ related:
   - "[[Index]]"
   - "[[API_Design]]"
   - "[[System_Architecture]]"
+  - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
 ---
 
 # Caching & Performance
 
 ## Summary
-Two cache layers matter: (1) Vercel **edge cache** for public read APIs via `Cache-Control: s-maxage=60, stale-while-revalidate=300`, and (2) the widget's **sessionStorage cache** (with in-memory fallback when sessionStorage is unavailable / quota-exceeded). Postgres indexes ([[Database_Schema]]) cover the hot query shapes.
+Two cache layers matter: (1) Vercel **edge cache** for public read APIs and (2) the widget's **sessionStorage cache** (with in-memory fallback when sessionStorage is unavailable / quota-exceeded). Postgres indexes ([[Database_Schema]]) cover the hot query shapes.
 
 ## Edge cache (Vercel CDN)
 
@@ -25,9 +26,11 @@ Set on:
 - `GET /api/public/ratings-by-slug` — bulk badges
 - `GET /api/public/settings` — widget config
 
-Header value: `s-maxage=60, stale-while-revalidate=300`.
+Default header value: `s-maxage=60, stale-while-revalidate=300`.
 - 60s fresh window
 - 300s SWR — stale responses served while revalidation runs in the background
+
+`GET /api/public/settings` additionally sends `stale-if-error=604800` so CDN layers that support it can keep serving the last settings response for transient origin failures.
 
 ### Implications
 - New reviews can take **up to 60s** to appear on storefronts (acceptable trade-off).
@@ -36,6 +39,8 @@ Header value: `s-maxage=60, stale-while-revalidate=300`.
 
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
+
+Settings have a 5-minute fresh window in the widget and a 7-day stale tolerance for transient settings fetch failures. Review image policy is cached separately under `ikr_image_policy_<publicApiKey>` for 7 days so the trusted Cloudinary cloud contract survives malformed settings responses without opening the widget to third-party images.
 
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
@@ -59,7 +64,6 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - No lazy-loading attribute set on image tags by default — review when adding photo gallery to listing pages.
 
 ## Possible improvements (not done)
-- Add `stale-if-error=600` to public Cache-Control for resilience during DB outages.
 - Add `Vary: Origin` header to safely tighten CORS later.
 - Postgres connection pooling: already on PgBouncer transaction-mode (`?pgbouncer=true`). Verify Prisma has appropriate `connection_limit` — default is per-instance, watch for cold-start storms.
 - Move `widget.js` from `public/` to a CDN with longer TTL + immutable filenames (versioned). Today it's served by Vercel from origin.
@@ -79,3 +83,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[Database_Schema]]
 - [[Widget_Architecture]]
 - [[Widget_Performance]]
+- [[Bug_Cloud_Name_Silent_Image_Filter]]
+
+## Change Log
+- 2026-05-11: Documented public settings `stale-if-error=604800`, 7-day widget stale settings tolerance, and separate 7-day review image policy cache. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
