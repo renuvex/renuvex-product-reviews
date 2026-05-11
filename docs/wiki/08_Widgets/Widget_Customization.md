@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-09
+updated: 2026-05-12
 tags:
   - widget
   - customization
@@ -110,6 +110,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-05-12: Changed the default review date color from `#111111` to `#5e5e5e` so date metadata reads as secondary text while staying clearly legible. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).
 - 2026-05-08: Added optional visual choice cards for `select` fields. `summaryLayout` and `reviewLayout` now declare preview metadata in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), while [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) renders the admin-only mini layout sketches. Stored setting values are unchanged.
 - 2026-05-05: Removed the `reviewFormStyle` setting and made storefront review submission modal-only. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
 - 2026-05-05: Changed the admin color picker to emit opaque `#rrggbb` values only while preserving backend/runtime support for alpha defaults and legacy `#rrggbbaa` settings. Related source: [ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx), [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx).
@@ -152,4 +153,3 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - 2026-05-09: Fixed progress-bar button state desync when returning to Step 2 during an active upload. `configureRightBtn` previously only checked `stateData.images.length`, so while `pendingImages` was non-empty the button showed "Atla" instead of "Devam Et". Now it checks both `images` and `pendingImages` arrays. Related source: [progress-bar.js](src/widget/product-widget/review-form-modal/progress-bar.js).
 - 2026-05-09: Removed duplicate alert channel on backend submission errors. The `catch` block in `step-author.js` previously wrote to both inline `msg.innerHTML` and `showToast`, causing the same error text to appear twice (inline red text + top toast banner). Now backend/network errors use **toast only**; inline `msg` is reserved for frontend validation (empty name, missing rating). Related source: [step-author.js](src/widget/product-widget/review-form-modal/steps/step-author.js).
 - 2026-05-09: Removed the minimum-2-character author validation that caused a frontend/backend mismatch. Frontend `wizard-state.js` and backend `api/public/reviews/route.ts` both previously enforced `author.trim().length >= 2`, but this was inconsistent with merchant expectations (1-character names like "A" should be accepted). Both frontend and backend now only check `length > 0` (not empty) and `length <= 40` (max). The submit button activates after the first keystroke. Related source: [wizard-state.js](src/widget/product-widget/review-form-modal/wizard-state.js), [step-author.js](src/widget/product-widget/review-form-modal/steps/step-author.js), [route.ts](src/app/api/public/reviews/route.ts).
-

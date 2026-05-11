@@ -203,7 +203,7 @@ export const WIDGETS: WidgetDef[] = [
         fields: [
           { type: 'color', key: 'reviewTitleColor',  label: 'Başlık Rengi',       default: '#111111' },
           { type: 'color', key: 'reviewAuthorColor', label: 'Müşteri Adı Rengi',   default: '#111111' },
-          { type: 'color', key: 'reviewDateColor',   label: 'Tarih Rengi',         default: '#111111' },
+          { type: 'color', key: 'reviewDateColor',   label: 'Tarih Rengi',         default: '#5e5e5e' },
           { type: 'color', key: 'reviewBodyColor',   label: 'Metin Rengi',         default: '#111111' },
           { type: 'color', key: 'reviewBorderColor', label: 'Ayırıcı Çizgi Rengi', default: '#e5e7eb' },
         ],

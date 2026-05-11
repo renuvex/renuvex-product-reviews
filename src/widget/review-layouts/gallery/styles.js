@@ -79,7 +79,7 @@ export var GALLERY_CSS = `
   }
   .ikr-review-gallery-date{
     font-size:var(--ikr-review-date-size,12px);
-    color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,0.6)));
+    color:var(--ikr-review-date,#5e5e5e);
     margin-top:var(--ikr-gap-tight);
   }
   .ikr-review-gallery-body{

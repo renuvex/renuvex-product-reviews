@@ -168,7 +168,7 @@ function applyManualTheme(root, settings) {
   // Grup 6 — Yorum Kartı (reviewStarColor yukarıda Grup 3'te tanımlandı)
   var reviewTitleColor = settings.reviewTitleColor || '#111111';
   var reviewAuthorColor = settings.reviewAuthorColor || '#111111';
-  var reviewDateColor = settings.reviewDateColor || '#111111';
+  var reviewDateColor = settings.reviewDateColor || '#5e5e5e';
   var reviewBodyColor = settings.reviewBodyColor || '#111111';
   var reviewBorderColor = settings.reviewBorderColor || '#e5e7eb';
 

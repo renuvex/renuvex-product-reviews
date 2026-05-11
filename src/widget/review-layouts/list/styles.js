@@ -31,7 +31,7 @@ export var LIST_CSS = `
   }
   .ikr-review-list-author-stars{margin-bottom:var(--ikr-gap-normal);}
   .ikr-review-list-author-name{font-weight:600;font-style:normal;}
-  .ikr-review-list-author-date{margin-top:var(--ikr-gap-tight);font-size:var(--ikr-review-date-size,12px);color:var(--ikr-review-date,var(--ikr-text,rgba(0,0,0,0.6)));}
+  .ikr-review-list-author-date{margin-top:var(--ikr-gap-tight);font-size:var(--ikr-review-date-size,12px);color:var(--ikr-review-date,#5e5e5e);}
   .ikr-review-list-content{display:flex;flex-direction:column;min-width:0;}
   /* Title artık orta kolonun ilk elemanı; üst margin gerekmez. */
   .ikr-review-list-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin:0;}
