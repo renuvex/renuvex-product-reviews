@@ -49,9 +49,11 @@ While the lightbox is open:
 
 - `html` and `body` get `overscroll-behavior-y:none`
 - `html` and `body` overflow are locked
-- touch/mobile viewports also use a fixed-body lock with `top:-scrollY`, then restore `window.scrollTo(scrollX, scrollY)` on close
+- iOS/WebKit viewports also use a fixed-body lock with `top:-scrollY`, then restore `window.scrollTo(scrollX, scrollY)` on close
 
 This keeps short comments non-scrollable when they genuinely fit, keeps long comments scrollable inside `.ikr-modal-wrap`, and blocks the page-level pull-to-refresh channel while the lightbox is active.
+
+Follow-up: Android Chrome browser chrome state during long-to-short review switching is tracked separately in [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]. Android now relies on root `overscroll-behavior-y:none` without fixed-body positioning, while iOS/WebKit keeps fixed-body locking.
 
 ## Files Changed
 - [review-modal.js](src/widget/product-widget/review-modal.js)

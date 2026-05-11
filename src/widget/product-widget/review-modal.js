@@ -55,15 +55,22 @@ function restoreStyleProperty(style, propertyName, value, priority) {
   }
 }
 
+function shouldUseFixedBodyLock() {
+  if (typeof navigator === 'undefined') return false;
+  var platform = navigator.platform || '';
+  var ua = navigator.userAgent || '';
+  var maxTouchPoints = navigator.maxTouchPoints || 0;
+  var isIOS = /iP(ad|hone|od)/.test(platform) || (platform === 'MacIntel' && maxTouchPoints > 1);
+  return isIOS && /AppleWebKit/i.test(ua);
+}
+
 function lockBodyScroll() {
   var previousState = captureBodyScrollState();
   var bodyStyle = document.body.style;
   var rootStyle = document.documentElement.style;
   var scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-  var isMobileViewport = window.matchMedia && window.matchMedia('(max-width: 800px)').matches;
-  var hasTouchInput = typeof navigator !== 'undefined' && navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
   var isBodyAlreadyFixed = window.getComputedStyle(document.body).position === 'fixed';
-  var shouldFixBody = (isMobileViewport || hasTouchInput) && !isBodyAlreadyFixed;
+  var shouldFixBody = shouldUseFixedBodyLock() && !isBodyAlreadyFixed;
 
   if (scrollbarWidth > 0) {
     var currentPaddingRight = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
@@ -449,6 +456,42 @@ function prefetchNeighbors(reviewIdx, reviewsWithPhotos) {
   });
 }
 
+function resetElementScroll(el) {
+  if (!el) return;
+  if (typeof el.scrollTo === 'function') {
+    try {
+      el.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      return;
+    } catch (_) {}
+  }
+  el.scrollTop = 0;
+  el.scrollLeft = 0;
+}
+
+function normalizeReviewChangeScroll(overlay, modal) {
+  var wrap = overlay && overlay.querySelector('.ikr-modal-wrap');
+  var right = modal && modal.querySelector('.ikr-modal-right');
+  var scrollContent = modal && modal.querySelector('.ikr-modal-scroll-content');
+
+  function resetAll() {
+    resetElementScroll(wrap);
+    resetElementScroll(right);
+    resetElementScroll(scrollContent);
+  }
+
+  resetAll();
+  if (wrap) restoreFocus(wrap);
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(function() {
+      resetAll();
+      requestAnimationFrame(resetAll);
+    });
+  } else {
+    setTimeout(resetAll, 0);
+  }
+}
+
 function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly, direction, overlay) {
   if (photoOnly) {
     var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay);
@@ -460,9 +503,8 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
     if (existingRight) {
       updateRight(existingRight, r);
     }
-    // Mobilde scroll container ikr-modal-wrap — yorum değişince en üste al
-    var wrap = overlay && overlay.querySelector('.ikr-modal-wrap');
-    if (wrap) wrap.scrollTop = 0;
+    // Review changes can replace long content with short content; normalize every modal scroll layer after layout settles.
+    normalizeReviewChangeScroll(overlay, modal);
   }
   prefetchNeighbors(reviewIdx, reviewsWithPhotos);
 }

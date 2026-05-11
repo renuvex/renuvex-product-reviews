@@ -23,7 +23,8 @@ related:
 ## Log
 
 ### 2026-05-12
-- Widget - Lightbox Mobile Pull To Refresh - Photo lightbox now locks root overscroll and uses fixed-body locking on touch/mobile viewports so long-comment scroll boundaries do not leak into browser pull-to-refresh. [[Bug_Lightbox_Mobile_Pull_To_Refresh]]
+- Widget - Lightbox Mobile Review Switch Scroll State - Review switches now reset every modal scroll layer after layout settles, and fixed-body locking is limited to iOS/WebKit instead of all touch/mobile browsers. [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]
+- Widget - Lightbox Mobile Pull To Refresh - Photo lightbox now locks root overscroll so long-comment scroll boundaries do not leak into browser pull-to-refresh. [[Bug_Lightbox_Mobile_Pull_To_Refresh]]
 
 ### 2026-05-11
 - Widget - CSS Template Backtick Crash - Removed raw backticks from the storefront CSS template literal so deployed `widget.js` no longer crashes with `ReferenceError: modal is not defined` before render. [[Bug_Widget_CSS_Template_Backtick_Crash]]

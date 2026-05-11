@@ -17,6 +17,7 @@ related:
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[Bug_Review_Image_Error_Fallback]]"
   - "[[Bug_Lightbox_Mobile_Pull_To_Refresh]]"
+  - "[[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
 ---
 
@@ -43,6 +44,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 - [[Bug_Review_Image_Error_Fallback]]
 - [[Bug_Lightbox_Mobile_Pull_To_Refresh]]
+- [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Notes
@@ -54,15 +56,17 @@ The product review lightbox is the photo review detail modal opened from review 
 - Review text fields are written with `textContent`, which protects comment/title/reply rendering from direct HTML injection in this component.
 - Image URLs are not accepted by generic prefixes. The lightbox uses `getTrustedReviewImages()`, which accepts only app-owned Cloudinary URLs from the configured cloud and `review_images` folder. The trusted cloud can come from `/api/public/settings`, the build-time public fallback, or the last-valid widget policy cache. This mirrors the server-side policy in [[ADR_0006_Trusted_Review_Image_URL_Policy]] and the reliability fix in [[Bug_Cloud_Name_Silent_Image_Filter]].
 - If the active main image fails to load after passing the trusted URL policy, the `<img>` is hidden and a neutral in-modal placeholder is shown. Mini thumbnails use the standard thumbnail fallback and hide failed assets. Related bug: [[Bug_Review_Image_Error_Fallback]].
-- Body scroll locking snapshots previous inline `html` / `body` scroll containment styles, body fixed-position fields, padding compensation, and scroll position before locking. Close restores the previous inline values and scroll position.
+- Body scroll locking snapshots previous inline `html` / `body` scroll containment styles, body fixed-position fields, padding compensation, and scroll position before locking. Close restores the previous inline values and scroll position. Android/modern Chrome relies on root overflow plus `overscroll-behavior-y:none`; iOS/WebKit keeps fixed-body locking because that platform needs stronger background-scroll containment.
 - Browser back support uses a widget-owned modal history state. Browser back closes the modal through `popstate`; normal UI close does not call `history.go(-1)` and only replaces the widget-owned state when it is still current.
 - The lightbox wrapper exposes dialog semantics (`role="dialog"`, `aria-modal="true"`), moves focus into the modal on open, traps `Tab` / `Shift+Tab` inside the overlay, and restores previous focus on close.
 - Responsive layout is split by modal readability, not only by a generic mobile breakpoint: `801px+` keeps the desktop two-column shell with the 438 px media column, `641px-800px` uses a stacked tablet/landscape shell with capped media height and full-width text, and `640px` and below keeps the fullscreen mobile shell.
 - Mobile height uses a `100vh` fallback followed by `100svh` and `100dvh` so modern Android and iOS browsers can size the fullscreen shell against small/dynamic viewport units when browser chrome is visible or changing.
-- Scroll containment is explicit on the overlay, desktop right panel, tablet wrapper, and mobile wrapper. While the modal is open, root `html` / `body` also receive `overscroll-behavior-y:none`; touch/mobile viewports use a fixed-body lock so long-comment top-boundary pulls do not leak into page refresh.
+- Scroll containment is explicit on the overlay, desktop right panel, tablet wrapper, and mobile wrapper. While the modal is open, root `html` / `body` also receive `overscroll-behavior-y:none`; iOS/WebKit uses fixed-body locking so long-comment top-boundary pulls do not leak into page refresh.
+- Switching between different reviews normalizes every lightbox scroll layer (`.ikr-modal-wrap`, `.ikr-modal-right`, and `.ikr-modal-scroll-content`) immediately and again after layout settles. This prevents stale long-review scroll state from carrying into a short-review lightbox view.
 
 ## Change Log
-- 2026-05-12: Hardened mobile pull-to-refresh containment. The lightbox now snapshots/restores root scroll styles and scroll position, applies root `overscroll-behavior-y:none`, and uses fixed-body locking on touch/mobile viewports. Related bug: [[Bug_Lightbox_Mobile_Pull_To_Refresh]].
+- 2026-05-12: Added review-switch scroll normalization and made fixed-body locking platform-aware. Related bug: [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]].
+- 2026-05-12: Hardened mobile pull-to-refresh containment. The lightbox now snapshots/restores root scroll styles and scroll position and applies root `overscroll-behavior-y:none`. Related bug: [[Bug_Lightbox_Mobile_Pull_To_Refresh]].
 - 2026-05-11: Documented K2 image error fallback. Main lightbox image failures now show a neutral placeholder while mini thumbnail failures hide the failed thumbnail. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - 2026-05-11: Updated image policy notes after adding build-time public cloud fallback and last-valid widget policy cache. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Documented the responsive lightbox contract after adding the 641-800 px stacked tablet shell, mobile viewport-unit fallback chain, and scroll containment updates in [styles.js](src/widget/themes/ozy/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
