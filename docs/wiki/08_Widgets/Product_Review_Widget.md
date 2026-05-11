@@ -40,6 +40,8 @@ Recurring categories:
 4. `render.js` composes summary + reviews + CTA. Review fetch errors render a retryable error state and do not reuse the empty-review UI. State stored in [core/state.js](src/widget/core/state.js).
 5. CTA opens the multi-step submission wizard.
 
+Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merchant/theme-provided `#ikas-reviews-anchor`. If the anchor is missing, it creates one after the theme product container and falls back to `main` / `body`. This keeps the auto-injected widget independent from manual theme anchor drift. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
+
 ## Photo review detail lightbox
 - Detail lightbox source: [review-modal.js](src/widget/product-widget/review-modal.js). Full note: [[Product_Review_Lightbox]].
 - Entry points include review images inside card/list/gallery layouts and the top photo strip rendered by [render.js](src/widget/product-widget/render.js).
@@ -83,8 +85,10 @@ Recurring categories:
 - [[Listing_Rating_Widget]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
+- [[Bug_Product_Widget_Missing_Auto_Mount]]
 
 ## Change Log
+- 2026-05-11: Documented self-mounting PDP review anchor fallback after fixing deploy/theme cases where missing `#ikas-reviews-anchor` hid both the review block and product-title badge. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 - 2026-05-11: Documented retryable review fetch error state after separating API/network failures from valid empty review lists. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
 - 2026-05-11: Photo strip decoupled from main reviews fetch — dedicated `hasImages=true&limit=15&orderBy=newest` call, cap 15, newest-first rotation. Lightbox now navigates strip dataset, closing the paged-slice navigation risk. Related ADR: [[ADR_0007_Photo_Strip_Cap_And_Rotation]]. Related note: [[Photo_Strip]]. Source: [bootstrap.js](src/widget/product-widget/bootstrap.js), [render.js](src/widget/product-widget/render.js), [state.js](src/widget/core/state.js), [route.ts](src/app/api/public/reviews/route.ts).
 - 2026-05-10: Documented the trusted review image URL policy in the product review widget submission and display flow. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].

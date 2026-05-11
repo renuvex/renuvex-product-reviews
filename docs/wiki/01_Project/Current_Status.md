@@ -28,6 +28,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
   - Review fetch failures render a retryable error state instead of the normal empty-review state
   - Trusted review image policy: cloud name is a single build-time constant injected by the widget build script ([[ADR_0008_Cloud_Name_Build_Time_Only]]); settings response no longer carries `imagePolicy`
   - Review image load failures degrade gracefully: thumbnails hide broken assets, lightbox main image shows a neutral placeholder, and failures log with `console.warn`
+  - Product review widget can self-mount on PDP when a theme-provided `#ikas-reviews-anchor` is missing, preserving both the review block and product-title badge
   - Photo review lightbox traps keyboard focus, exposes dialog semantics, and uses desktop/tablet/mobile responsive shells with mobile viewport-unit fallbacks
   - Product rating badge (small inline star+count)
   - Listing-page rating badges (auto-discovers product cards on collection pages)
@@ -79,6 +80,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-11
 
 ## Change Log
+- 2026-05-11: Fixed PDP review widget mount fallback so missing theme anchors no longer hide both the review block and product-title badge. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 - 2026-05-11: Closed K2 image error fallback. Review thumbnails now hide broken assets, lightbox main image shows a neutral placeholder, and failures log via `console.warn`. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - 2026-05-11: Structurally closed silent review image loss by removing the runtime image-policy contract entirely. Cloud name is now build-time-only ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Settings response field, widget runtime cache, setter, and warn helper all removed (~90 lines). Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Added the photo lightbox responsive shell update: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile with `vh` / `svh` / `dvh` fallbacks. Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].

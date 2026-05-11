@@ -5,6 +5,7 @@ import { fetchReviews, isReviewsFetchError } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
+import { THEME_SINGLE_PRODUCT_CONTAINER } from '../themes/ozy/theme.js';
 import { getIconFromSettings } from '../icons.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
@@ -32,6 +33,30 @@ function hexToRgba(hex, alpha) {
   if (!m) return 'rgba(0,0,0,' + alpha + ')';
   var r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
   return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+function getOrCreateReviewsAnchor() {
+  var anchorEl = document.getElementById('ikas-reviews-anchor');
+  if (anchorEl) return anchorEl;
+
+  anchorEl = document.createElement('div');
+  anchorEl.id = 'ikas-reviews-anchor';
+  anchorEl.setAttribute('data-ikr-auto-anchor', '1');
+
+  var productContainer = null;
+  try {
+    productContainer = document.querySelector(THEME_SINGLE_PRODUCT_CONTAINER);
+  } catch (_) {}
+
+  if (productContainer && productContainer.parentNode) {
+    productContainer.parentNode.insertBefore(anchorEl, productContainer.nextSibling);
+    return anchorEl;
+  }
+
+  var fallbackParent = document.querySelector('main') || document.body;
+  if (!fallbackParent) return null;
+  fallbackParent.appendChild(anchorEl);
+  return anchorEl;
 }
 
 // ─── Boyut Preset'leri ─────────────────────────────────────────────────────
@@ -376,7 +401,7 @@ export async function render(productId, settings, reviewsData, productName, orde
 
     var container = document.getElementById('ikas-reviews');
     if (!container) {
-      var anchorEl = document.getElementById('ikas-reviews-anchor');
+      var anchorEl = getOrCreateReviewsAnchor();
       if (!anchorEl) return;
       container = document.createElement('div');
       container.id = 'ikas-reviews';

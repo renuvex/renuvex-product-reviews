@@ -20,6 +20,7 @@ related:
 ## Open
 
 ## Recently fixed (verify periodically)
+- 2026-05-11 - [[Bug_Product_Widget_Missing_Auto_Mount]] - PDP review block no longer depends exclusively on a manually present `#ikas-reviews-anchor`; missing anchors are generated after the product container so the review block and product-title badge can render after deploy/theme changes.
 - 2026-05-11 - [[Bug_Review_Image_Error_Fallback]] - Review image load failures now degrade gracefully: storefront thumbnails hide broken images, the lightbox main image shows a neutral placeholder, and failures are surfaced with `console.warn`. (K2)
 - 2026-05-11 - [[Bug_Cloud_Name_Silent_Image_Filter]] - Structurally closed by [[ADR_0008_Cloud_Name_Build_Time_Only]]: cloud name is now a single build-time constant. Runtime image-policy cache, setter, settings field, and warn helper removed.
 - 2026-05-11 - [[Bug_Lightbox_Tablet_Viewport_And_Scroll]] - Photo lightbox now uses a stacked 641-800 px tablet/landscape shell, mobile `vh` / `svh` / `dvh` fallbacks, and explicit scroll containment.
@@ -32,6 +33,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-11: Marked [[Bug_Product_Widget_Missing_Auto_Mount]] fixed after adding automatic PDP review anchor creation.
 - 2026-05-11: Marked [[Bug_Review_Image_Error_Fallback]] fixed after adding centralized image error handlers for thumbnails and a lightbox main-image placeholder.
 - 2026-05-11: Re-marked [[Bug_Cloud_Name_Silent_Image_Filter]] as structurally closed via [[ADR_0008_Cloud_Name_Build_Time_Only]] — runtime sources that could fail (`imagePolicy` settings field, localStorage policy cache, `setTrustedReviewImageCloudName` setter) all removed. Cloud name is now a single build-time constant.
 - 2026-05-11: Marked [[Bug_Cloud_Name_Silent_Image_Filter]] fixed after adding a durable review image policy fallback/cache contract and public settings stale-if-error. (Superseded same day by structural closure above.)
