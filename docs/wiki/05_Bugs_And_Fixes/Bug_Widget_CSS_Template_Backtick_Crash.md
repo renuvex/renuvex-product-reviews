@@ -55,6 +55,23 @@ Removed the raw backticks from the CSS comment in [styles.js](src/widget/themes/
 
 The source now contains only the template literal opener and closer backticks for `CLASSIC_CSS`, and `node --check public/widget.js` passes.
 
+## Verification
+- `pnpm build:widget` passed and regenerated [public/widget.js](public/widget.js).
+- `node --check public/widget.js` passed.
+- `pnpm exec tsc --noEmit` passed.
+- `pnpm exec eslint src/widget/themes/ozy/styles.js src/widget/product-widget/review-modal.js` passed.
+- Live `widget.js` changed from the old build timestamp `2026-05-11T16:37:01.138Z` to the rebuilt timestamp `2026-05-11T16:57:25.370Z`.
+- Live API checks returned valid data:
+  - `/api/public/settings?publicApiKey=02786d4b-a09b-4b36-ad8c-56e6d396f6fd` returned `200`.
+  - `/api/public/reviews?...productId=37fb6e3d-6085-4ac1-b0eb-7aaa63ada934` returned `200`, `totalCount=22`, `avgRating=4.4`.
+- User browser verification on `https://dev-mertcopper.ikas.shop/premium-shorts` confirmed the storefront issue was fixed after deploy.
+
+## Critical Diagnostic Notes
+- When the injected script request is `200 OK` and `publicApiKey` matches an existing store, check the browser console before assuming an ikas injection or theme selector problem.
+- A top-level bundle exception prevents all downstream widget behavior: `IkasEvents` subscription, product bootstrap, review render, and product-title badge injection.
+- `#ikas-reviews` / `#ikr-rating-badge` both missing together can mean the render path never started, not just that the mount anchor or title selector failed.
+- CSS stored in JavaScript template literals must not include raw backticks in comments or strings. This is especially important for `src/widget/themes/ozy/styles.js`.
+
 ## Files Changed
 - [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js)
 - [public/widget.js](public/widget.js)
@@ -72,3 +89,4 @@ The source now contains only the template literal opener and closer backticks fo
 
 ## Change Log
 - 2026-05-11: Fixed the deployed widget crash caused by raw backticks inside the CSS template literal.
+- 2026-05-11: Added live verification notes after user confirmed the storefront review area and product-title badge render correctly in browser.
