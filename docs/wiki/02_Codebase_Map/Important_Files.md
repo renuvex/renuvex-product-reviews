@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-11
 tags:
   - critical-files
 related:
@@ -128,6 +128,29 @@ related:
 - **What:** `regions: ["fra1"]` and one weekly cron (`/api/admin/cleanup-images` Mon 03:00 UTC).
 - **Be careful:** The cron route checks `Bearer ${CRON_SECRET}`. Set it in Vercel env. Without it, the route is unauthenticated.
 
+## Observability (Sentry)
+
+### [sentry.server.config.ts](sentry.server.config.ts) / [sentry.edge.config.ts](sentry.edge.config.ts) / [src/instrumentation-client.ts](src/instrumentation-client.ts)
+- **What:** Sentry runtime init for Node, Edge, and browser. Wired through [src/instrumentation.ts](src/instrumentation.ts).
+- **Why it matters:** Controls every Sentry behavior — DSN source, PII attachment, sample rates, Replay masking.
+- **Be careful:**
+  - **`sendDefaultPii: false`** is intentional. Default-true would auto-attach `Authorization` headers (ikas OAuth tokens) and cookies (iron-session JWT) to every captured event. Do not flip this without a `beforeSend` scrubber covering every sensitive header and body field. See [[ADR_0009_Sentry_Observability_Strategy]].
+  - DSN must stay env-driven (`process.env.NEXT_PUBLIC_SENTRY_DSN`). Hardcoding it back makes rotation impossible without a deploy.
+  - `tracesSampleRate: 0.1` in production. Bumping to `1` will burn the Sentry quota in days at current panel traffic.
+  - Replay uses `maskAllText: true` + `blockAllMedia: true`. Disabling either ships merchant data to Sentry.
+
+### [src/instrumentation.ts](src/instrumentation.ts)
+- **What:** Next.js instrumentation entry. Conditionally imports the right Sentry runtime config; exports `onRequestError = Sentry.captureRequestError`.
+- **Be careful:** Don't add other instrumentation logic here. Keep it Sentry-only — Next.js calls this once at runtime startup.
+
+### [src/app/global-error.tsx](src/app/global-error.tsx)
+- **What:** App Router root error boundary. Captures uncaught render errors via `Sentry.captureException`.
+- **Be careful:** Keep the capture call. UX polish is fine; removing the capture silently disables panel error reporting for the worst class of failures.
+
+### [next.config.js](next.config.js) — Sentry wrapper
+- **What:** Wrapped with `withSentryConfig`. `widenClientFileUpload`, `automaticVercelMonitors`, debug-log tree-shake.
+- **Be careful:** Any change to `next.config.js` must preserve the `withSentryConfig` wrapper around `module.exports`. The wizard-injected block is appended below the user config — keep that ordering.
+
 ## Obsidian Links
 - [[Folder_Structure]]
 - [[Project_Index]]
@@ -137,5 +160,6 @@ related:
 - [[Security_And_Rate_Limits]]
 
 ## Change Log
+- 2026-05-11: Added the Observability (Sentry) section: [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), [src/instrumentation.ts](src/instrumentation.ts), [src/instrumentation-client.ts](src/instrumentation-client.ts), [src/app/global-error.tsx](src/app/global-error.tsx), and the `withSentryConfig` wrapping in [next.config.js](next.config.js). Each entry calls out the `sendDefaultPii: false` invariant, env-driven DSN, prod sample rates, and the wizard-wrapper ordering rule. See [[ADR_0009_Sentry_Observability_Strategy]].
 - 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) as the source of truth for trusted review image URL validation.
 - 2026-05-08: Added [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx) and [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) to the admin widget editor hot-list after introducing schema-driven visual choice cards.

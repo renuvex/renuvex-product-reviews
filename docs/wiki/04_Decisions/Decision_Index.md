@@ -26,6 +26,7 @@ related:
 | [[ADR_0006_Trusted_Review_Image_URL_Policy]] | Review images must be app-owned Cloudinary URLs before storage or storefront render | Accepted |
 | [[ADR_0007_Photo_Strip_Cap_And_Rotation]] | Photo strip fixed cap 15, newest-first rotation, dedicated fetch independent of main list | Accepted |
 | [[ADR_0008_Cloud_Name_Build_Time_Only]] | Cloudinary cloud name is a build-time constant; removed from settings response and widget runtime cache | Accepted |
+| [[ADR_0009_Sentry_Observability_Strategy]] | `@sentry/nextjs` on the panel with env-based DSN, `sendDefaultPii: false`, prod `tracesSampleRate: 0.1`, masked Replay; widget bundle stays out | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -43,6 +44,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-11: Added [[ADR_0009_Sentry_Observability_Strategy]] — `@sentry/nextjs` wired into the panel with env-based DSN, `sendDefaultPii: false` (ikas OAuth header leak prevention), prod-only `tracesSampleRate: 0.1`, masked Session Replay, Vercel-Sentry integration for source map upload. Widget bundle intentionally excluded.
 - 2026-05-11: Added [[ADR_0008_Cloud_Name_Build_Time_Only]] — cloud name moved to a single build-time source; removes `imagePolicy` from settings response and ~90 lines of widget runtime image-policy machinery. Structurally closes [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Added [[ADR_0007_Photo_Strip_Cap_And_Rotation]] — photo strip dataset decoupled from main list, fixed cap 15, newest-first rotation.
 - 2026-05-10: Added [[ADR_0006_Trusted_Review_Image_URL_Policy]] for review image URL trust boundaries.

@@ -94,3 +94,7 @@ opencode.json
 
 # Local Obsidian vault folder (not the wiki — the wiki lives in docs/wiki/)
 İkas App/
+
+# Sentry — never commit anything that could carry a token
+.env.sentry-build-plugin
+.sentryclirc
