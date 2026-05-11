@@ -151,6 +151,23 @@ related:
 - **What:** Wrapped with `withSentryConfig`. `widenClientFileUpload`, `automaticVercelMonitors`, debug-log tree-shake.
 - **Be careful:** Any change to `next.config.js` must preserve the `withSentryConfig` wrapper around `module.exports`. The wizard-injected block is appended below the user config — keep that ordering.
 
+### [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js)
+- **What:** Tiny in-widget listener that forwards uncaught widget errors to the panel via `/api/public/widget-error`. Side-effect imported as the first line of [src/widget/index.js](src/widget/index.js).
+- **Why it matters:** Closes the visibility gap left by ADR_0009 (no SDK in widget). 637 bytes gzip on the bundle.
+- **Be careful:**
+  - Must remain the first import in [src/widget/index.js](src/widget/index.js) so its listeners attach before any other module evaluates.
+  - The reporter must **never throw**. Every internal step is wrapped in try/catch. If you add logic, preserve that invariant.
+  - Filters by `widget.js` substring in `event.filename` or stack. If the widget is ever served under a different filename, this filter must be updated or the reporter will go silent.
+  - Session cap (5) and 2-second throttle protect against error-loop floods. Don't remove them.
+
+### [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts)
+- **What:** Public POST endpoint that receives widget error reports, rate-limits per IP (30/60s via Upstash key `ikr_werr_rl:`), then calls `Sentry.captureException` with `source: widget` tag.
+- **Why it matters:** Single ingress for widget-originated Sentry events. Must stay cheap (no DB write, no heavy parsing).
+- **Be careful:**
+  - Always returns 200 — never leak filtering/rate-limit decisions to the caller. Storefronts don't need that information and exposing it just helps attackers shape abuse.
+  - Field length caps (`clip`) are deliberate. Lift only if there's a real need.
+  - Don't add CORS strictness here — this endpoint must accept POST from arbitrary merchant storefront origins, same as the rest of `/api/public/*`.
+
 ## Obsidian Links
 - [[Folder_Structure]]
 - [[Project_Index]]
@@ -160,6 +177,7 @@ related:
 - [[Security_And_Rate_Limits]]
 
 ## Change Log
+- 2026-05-11: Added [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js) and [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts) under Observability. Together they close the widget-side visibility gap from ADR_0009 by forwarding uncaught widget errors to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited server endpoint. See [[ADR_0010_Widget_Error_Forwarding]].
 - 2026-05-11: Added the Observability (Sentry) section: [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), [src/instrumentation.ts](src/instrumentation.ts), [src/instrumentation-client.ts](src/instrumentation-client.ts), [src/app/global-error.tsx](src/app/global-error.tsx), and the `withSentryConfig` wrapping in [next.config.js](next.config.js). Each entry calls out the `sendDefaultPii: false` invariant, env-driven DSN, prod sample rates, and the wizard-wrapper ordering rule. See [[ADR_0009_Sentry_Observability_Strategy]].
 - 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) as the source of truth for trusted review image URL validation.
 - 2026-05-08: Added [SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx) and [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) to the admin widget editor hot-list after introducing schema-driven visual choice cards.

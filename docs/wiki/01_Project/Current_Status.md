@@ -47,7 +47,8 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Caching: public GETs use `s-maxage=60, stale-while-revalidate=300` at the edge
 - Weekly Cloudinary cleanup cron (`/api/admin/cleanup-images`, Mondays 03:00 UTC)
 - Theme variant build: `pnpm build:widget --theme=new-theme` produces a separate bundle (`widget-new-theme.js`)
-- Sentry observability on the panel (Node + Edge + browser): error capture, masked Session Replay, traces (prod 10%), server log ingestion, source map upload via Vercel-Sentry integration. PII auto-attach disabled to prevent ikas OAuth/JWT leakage. Widget bundle excluded by design. See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]].
+- Sentry observability on the panel (Node + Edge + browser): error capture, masked Session Replay, traces (prod 10%), server log ingestion, source map upload via Vercel-Sentry integration. PII auto-attach disabled to prevent ikas OAuth/JWT leakage. See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]].
+- Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress
 - Legacy theme token cleanup — removed `bgColor`/`textColor`/`primaryColor`/`primaryTextColor` cascade from widget bundle; flattened CSS fallback chains in `styles.js` (commit aebbbbe)
@@ -69,6 +70,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - [[ADR_0004_Ikas_Integration_Strategy]] — OAuth via @ikas/admin-api-client + Codegen GraphQL operations
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]] — review image URLs must be trusted Cloudinary assets before storage or storefront render
 - [[ADR_0009_Sentry_Observability_Strategy]] — `@sentry/nextjs` on the panel, env-based DSN, `sendDefaultPii: false`, prod-only sample rates, masked Replay; widget bundle excluded
+- [[ADR_0010_Widget_Error_Forwarding]] — tiny widget-side reporter forwards uncaught widget errors via `/api/public/widget-error` so the visibility gap from ADR_0009 is closed without adding a second SDK to the storefront bundle
 
 ## Next Recommended Steps
 1. Add JSON-LD structured-data injection on product pages (Google rich snippets) — see [[Structured_Data_And_Rich_Snippets]]
@@ -82,6 +84,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-11
 
 ## Change Log
+- 2026-05-11: Added widget-side error forwarding. A 637-byte (gzip) reporter in `widget.js` catches `error`/`unhandledrejection` events filtered to `widget.js` only, throttles them, and POSTs to `/api/public/widget-error` where the panel Sentry SDK records them tagged `source: widget`. No SDK in the widget bundle. Decision in [[ADR_0010_Widget_Error_Forwarding]].
 - 2026-05-11: Added Sentry SDK observability layer to the panel (Node + Edge + browser runtimes). DSN read from env, `sendDefaultPii: false` to block ikas OAuth header leak, prod `tracesSampleRate: 0.1`, masked Session Replay with prod 5% / on-error 100%, server log ingestion. Vercel-Sentry integration installed; source maps upload during Vercel build. Widget bundle deliberately excluded. Recorded decision in [[ADR_0009_Sentry_Observability_Strategy]]; operational reference in [[Sentry_Operations]].
 - 2026-05-11: Fixed PDP review widget mount fallback so missing theme anchors no longer hide both the review block and product-title badge. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 - 2026-05-11: Closed K2 image error fallback. Review thumbnails now hide broken assets, lightbox main image shows a neutral placeholder, and failures log via `console.warn`. Related bug: [[Bug_Review_Image_Error_Fallback]].

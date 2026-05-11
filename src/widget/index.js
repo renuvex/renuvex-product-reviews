@@ -1,6 +1,9 @@
 // index.js — Widget entry point
 // ikas tarafından her sayfaya inject edilir: <script src="/widget.js?publicApiKey=...">
 
+// Error reporter must be the first import so its window listeners are attached
+// before any other widget module evaluates. Side-effect import only.
+import './core/error-reporter.js';
 import { PUBLIC_API_KEY, API_BASE } from './core/config.js';
 import { attachEvents, attachModalBadgeListener } from './events.js';
 import { startMutationObserver } from './observer.js';
