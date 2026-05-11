@@ -3,12 +3,6 @@
 import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
-import {
-  getTrustedReviewImageCloudName,
-  hasTrustedReviewImageCloudName,
-  setTrustedReviewImageCloudName,
-  warnMissingReviewImagePolicy,
-} from '../core/helpers.js';
 import { render } from './render.js';
 import {
   currentOrderBy, currentPage, currentRatingFilter,
@@ -20,50 +14,16 @@ import {
 var PHOTO_STRIP_LIMIT = 15;
 
 // ── Settings ─────────────────────────────────────────────────────────────────
+//
+// ADR_0008: Cloud name artık settings response'undan gelmiyor; build-time'da
+// widget bundle'a inject ediliyor. Bu yüzden settings için ayrı image-policy
+// cache, setter, fallback, warn helper'larına gerek yok — sadece widget
+// ayarları kalıyor. Settings endpoint outage'ı görselleri etkilemez.
 
 var SETTINGS_CACHE_KEY = 'ikr_settings_' + PUBLIC_API_KEY;
 var SETTINGS_CACHE_TTL = 5 * 60 * 1000;  // 5 dakika
 var SETTINGS_CACHE_STALE_TTL = 7 * 24 * 60 * 60 * 1000;
-var IMAGE_POLICY_CACHE_KEY = 'ikr_image_policy_' + PUBLIC_API_KEY;
-var IMAGE_POLICY_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 var SETTINGS_404_TTL = 30 * 1000;       // 404 için kısa TTL
-
-function applyCachedReviewImagePolicy() {
-  var cachedPolicy = cacheGet(IMAGE_POLICY_CACHE_KEY);
-  if (!cachedPolicy) return false;
-  try {
-    var entry = JSON.parse(cachedPolicy);
-    if (!entry || !entry.t || !entry.cloudName || Date.now() - entry.t > IMAGE_POLICY_CACHE_TTL) {
-      cacheSet(IMAGE_POLICY_CACHE_KEY, '');
-      return false;
-    }
-    return setTrustedReviewImageCloudName(entry.cloudName);
-  } catch (_) {
-    cacheSet(IMAGE_POLICY_CACHE_KEY, '');
-    return false;
-  }
-}
-
-function persistCurrentReviewImagePolicy() {
-  var cloudName = getTrustedReviewImageCloudName();
-  if (!cloudName) return;
-  cacheSet(IMAGE_POLICY_CACHE_KEY, JSON.stringify({ t: Date.now(), cloudName: cloudName }));
-}
-
-function applyReviewImagePolicyFromSettings(settings, source) {
-  var cloudName = settings && settings.imagePolicy && settings.imagePolicy.cloudName;
-  if (setTrustedReviewImageCloudName(cloudName)) {
-    persistCurrentReviewImagePolicy();
-    return true;
-  }
-  if (hasTrustedReviewImageCloudName()) {
-    persistCurrentReviewImagePolicy();
-    return true;
-  }
-  if (applyCachedReviewImagePolicy()) return true;
-  warnMissingReviewImagePolicy(source || 'fetchSettings');
-  return false;
-}
 
 export async function fetchSettings() {
   // Preview modunda sessionStorage'dan ayarları oku — flash olmaz
@@ -78,7 +38,6 @@ export async function fetchSettings() {
       var previewRes = await fetchWithTimeout(previewBase + '/api/preview/settings');
       if (previewRes.ok) {
         var previewData = await previewRes.json();
-        setTrustedReviewImageCloudName(previewData.imagePolicy && previewData.imagePolicy.cloudName);
         if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
           previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
         }
@@ -89,7 +48,6 @@ export async function fetchSettings() {
   }
 
   var staleEntry = null;
-  applyCachedReviewImagePolicy();
   var cached = cacheGet(SETTINGS_CACHE_KEY);
   if (cached) {
     try {
@@ -100,13 +58,9 @@ export async function fetchSettings() {
           cacheSet(SETTINGS_CACHE_KEY, '');
         } else if (entry.v) {
           var cacheAge = Date.now() - entry.t;
-          if (cacheAge < SETTINGS_CACHE_TTL) {
-            applyReviewImagePolicyFromSettings(entry.v, 'settings-cache');
-            return entry.v;
-          }
+          if (cacheAge < SETTINGS_CACHE_TTL) return entry.v;
           if (cacheAge < SETTINGS_CACHE_STALE_TTL) {
             staleEntry = entry.v;
-            applyReviewImagePolicyFromSettings(staleEntry, 'settings-stale-cache');
           } else {
             cacheSet(SETTINGS_CACHE_KEY, '');
           }
@@ -124,18 +78,13 @@ export async function fetchSettings() {
       if (res.status === 404) {
         cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), notFound: true }));
       }
-      if (staleEntry) applyReviewImagePolicyFromSettings(staleEntry, 'settings-http-error-stale');
-      else if (!hasTrustedReviewImageCloudName()) warnMissingReviewImagePolicy('settings-http-error');
       return staleEntry || null;
     }
     var settings = await res.json();
-    applyReviewImagePolicyFromSettings(settings, 'settings-response');
     cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: settings }));
     return settings;
   } catch (err) {
     console.error('[ikr] fetchSettings error:', err);
-    if (staleEntry) applyReviewImagePolicyFromSettings(staleEntry, 'settings-fetch-error-stale');
-    else if (!hasTrustedReviewImageCloudName()) warnMissingReviewImagePolicy('settings-fetch-error');
     return staleEntry || null;
   }
 }

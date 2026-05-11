@@ -25,6 +25,7 @@ related:
 | [[ADR_0004_Ikas_Integration_Strategy]] | OAuth via `@ikas/admin-api-client` + GraphQL Codegen for typed operations | Accepted |
 | [[ADR_0006_Trusted_Review_Image_URL_Policy]] | Review images must be app-owned Cloudinary URLs before storage or storefront render | Accepted |
 | [[ADR_0007_Photo_Strip_Cap_And_Rotation]] | Photo strip fixed cap 15, newest-first rotation, dedicated fetch independent of main list | Accepted |
+| [[ADR_0008_Cloud_Name_Build_Time_Only]] | Cloudinary cloud name is a build-time constant; removed from settings response and widget runtime cache | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -42,5 +43,6 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-11: Added [[ADR_0008_Cloud_Name_Build_Time_Only]] — cloud name moved to a single build-time source; removes `imagePolicy` from settings response and ~90 lines of widget runtime image-policy machinery. Structurally closes [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Added [[ADR_0007_Photo_Strip_Cap_And_Rotation]] — photo strip dataset decoupled from main list, fixed cap 15, newest-first rotation.
 - 2026-05-10: Added [[ADR_0006_Trusted_Review_Image_URL_Policy]] for review image URL trust boundaries.

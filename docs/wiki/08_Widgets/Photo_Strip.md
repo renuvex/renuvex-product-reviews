@@ -103,11 +103,13 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [[Widget_Customization]]
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
+- [[ADR_0008_Cloud_Name_Build_Time_Only]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 
 ## Change Log
-- 2026-05-11: K3 kapandı. Trusted image policy build-time public cloud fallback, last-valid widget cache ve settings `stale-if-error` ile dayanıklı hale getirildi. İlgili bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
+- 2026-05-11: K3 yapısal olarak kapandı ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Cloud name widget'ta tek kaynak — build-time inject. Settings response'undan `imagePolicy` kaldırıldı, runtime cache + setter + warn helper silindi (~90 satır). Kaynak: [scripts/build-widget.mjs](scripts/build-widget.mjs), [helpers.js](src/widget/core/helpers.js), [bootstrap.js](src/widget/product-widget/bootstrap.js), [settings/route.ts](src/app/api/public/settings/route.ts), [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
+- 2026-05-11: K3 ilk fix. Trusted image policy build-time public cloud fallback, last-valid widget cache ve settings `stale-if-error` ile dayanıklı hale getirildi. (Aynı gün ADR_0008 ile değiştirildi — defansif runtime katmanları gereksiz hale geldi.) İlgili bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: P2 kapandı. Photo strip, card/list/gallery thumbnails ve lightbox mini thumbnail'leri responsive `srcset`, native lazy/eager policy, async decoding ve explicit dimensions kullanıyor. Lightbox ana görsel eager kaldı, 1200 px default Cloudinary varyantıyla explicit dimensions aldı. İlgili bug: [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]].
 - 2026-05-11: `optimizeImageUrl` parametreli imzaya geçirildi (`url, width`); her çağrı yeri display boyutuna uygun width geçiyor — strip 300, gallery tile 600, lightbox mini 200, lightbox ana 1200 (default). Strip thumbnail transferi ~%85 azaldı. P1 + M3 kapandı. İlgili kaynak: [helpers.js](src/widget/core/helpers.js), [render.js](src/widget/product-widget/render.js), [card/index.js](src/widget/review-layouts/card/index.js), [list/index.js](src/widget/review-layouts/list/index.js), [gallery/index.js](src/widget/review-layouts/gallery/index.js), [review-modal.js](src/widget/product-widget/review-modal.js).
 - 2026-05-11: Sayfa oluşturuldu. Cap 15 + newest-first rotation kararıyla birlikte ([[ADR_0007_Photo_Strip_Cap_And_Rotation]]) strip ana liste'den bağımsızlaştırıldı; load-more sonrası stale state (K1) ve lightbox dead-end (K1.b) kapatıldı. İlgili kaynak: [bootstrap.js](src/widget/product-widget/bootstrap.js), [render.js](src/widget/product-widget/render.js), [state.js](src/widget/core/state.js).

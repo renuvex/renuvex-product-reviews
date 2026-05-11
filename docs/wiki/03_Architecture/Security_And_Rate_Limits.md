@@ -67,7 +67,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Client uploads directly to Cloudinary (origin-direct) — avoids proxying body through our server.
 - Public review POST stores only trusted Cloudinary secure URLs from the configured cloud and `review_images` folder. Third-party HTTPS URLs and `data:image` payloads are rejected.
 - Public/admin read paths parse legacy `Review.images` defensively and expose only trusted URLs; invalid legacy image data becomes `images: []`.
-- Widget rendering uses `imagePolicy.cloudName` from `/api/public/settings` and `getTrustedReviewImages()` before rendering photos or opening the photo lightbox.
+- Widget rendering uses the build-time injected Cloudinary cloud name ([[ADR_0008_Cloud_Name_Build_Time_Only]]) and `getTrustedReviewImages()` before rendering photos or opening the photo lightbox.
 - Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`.
 - Weekly cron `cleanup-images` removes orphans from trusted `review_images/*` public IDs. Make sure cron secret is set in Vercel env, otherwise the route is open.
 - Image URLs remain stored as a JSON-stringified array in `Review.images`; all parsing and validation belongs in [src/lib/review-images.ts](src/lib/review-images.ts).

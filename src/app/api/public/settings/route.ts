@@ -2,18 +2,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { getWidgetDefaults, sanitizeSettings } from '@/lib/widget-settings';
-import { getConfiguredCloudinaryCloudName } from '@/lib/review-images';
 
-let missingCloudinaryCloudNameWarned = false;
-
-function getPublicImagePolicy() {
-  const cloudName = getConfiguredCloudinaryCloudName();
-  if (!cloudName && !missingCloudinaryCloudNameWarned) {
-    missingCloudinaryCloudNameWarned = true;
-    console.error('[ikr] Cloudinary cloud name is missing; public review image rendering will fail closed.');
-  }
-  return { cloudName };
-}
+// ADR_0008: `imagePolicy.cloudName` artık settings response'unda taşınmıyor.
+// Cloud name app-level config'tir (env var); widget bundle build-time'da
+// `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__` sabitini inject eder. Cloudinary
+// config eksikliği `upload/sign` ve `reviews POST` route'larında zaten
+// fail-closed kontrol ediliyor — duplicate logging gereksiz.
 
 export async function OPTIONS() {
   return corsOptions();
@@ -54,10 +48,7 @@ export async function GET(req: Request) {
     widgets[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
   }
 
-  const response = withCors(NextResponse.json({
-    widgets,
-    imagePolicy: getPublicImagePolicy(),
-  }));
+  const response = withCors(NextResponse.json({ widgets }));
   response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300, stale-if-error=604800');
   return response;
 }

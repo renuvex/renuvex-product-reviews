@@ -5,7 +5,7 @@
 
 import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';
-import { isTrustedReviewImageUrl, setTrustedReviewImageCloudName } from '../../../core/helpers.js';
+import { isTrustedReviewImageUrl } from '../../../core/helpers.js';
 
 var MAX_PHOTOS = 3;
 var MAX_BYTES = 10 * 1024 * 1024;
@@ -255,7 +255,6 @@ export function createStepPhotos(state, opts) {
             throw new Error('sign failed');
           }
           var sign = await signRes.json();
-          setTrustedReviewImageCloudName(sign.cloud_name);
           var fd = new FormData();
           fd.append('file', f);
           fd.append('api_key', sign.api_key);

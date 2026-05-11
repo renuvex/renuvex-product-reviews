@@ -13,6 +13,7 @@ related:
   - "[[Decision_Index]]"
   - "[[Security_And_Rate_Limits]]"
   - "[[Product_Review_Lightbox]]"
+  - "[[ADR_0008_Cloud_Name_Build_Time_Only]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
 ---
 
@@ -38,7 +39,7 @@ Review image URLs are trusted only when they match the configured Cloudinary clo
 - No credentials, port, query string, hash, or encoded slash/backslash.
 - Maximum 3 URLs per review.
 
-The server rejects untrusted image URLs on public review submission and filters legacy stored image data before public or admin responses. The widget receives the trusted cloud name from `/api/public/settings` as `imagePolicy.cloudName` and uses the same allowlist before rendering review photos or opening the photo lightbox. The widget also carries a build-time public cloud fallback and a last-valid per-store image policy cache; these are resilience sources for the same allowlist, not permission to accept third-party URLs.
+The server rejects untrusted image URLs on public review submission and filters legacy stored image data before public or admin responses. The widget receives the trusted cloud name as a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) (see [[ADR_0008_Cloud_Name_Build_Time_Only]]) and uses the same allowlist before rendering review photos or opening the photo lightbox. The cloud name is no longer threaded through the settings response, an `imagePolicy` field, or any runtime cache; ADR_0008 supersedes that portion of the runtime contract.
 
 Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`; this exception is not active on storefronts.
 
@@ -73,6 +74,8 @@ The durable boundary must be server-side because public storefront clients are n
 - [[Product_Review_Lightbox]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
+- [[ADR_0008_Cloud_Name_Build_Time_Only]]
 
 ## Change Log
-- 2026-05-11: Documented build-time public cloud fallback and last-valid widget image policy cache as resilience sources for the accepted allowlist. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
+- 2026-05-11: Runtime portion of the cloud-name contract superseded by [[ADR_0008_Cloud_Name_Build_Time_Only]]. The widget no longer reads `imagePolicy.cloudName` from settings or any per-store cache; it consumes a build-time injected constant only. The trust boundary (allowlist shape, max URLs, etc.) is unchanged.
+- 2026-05-11: Documented build-time public cloud fallback and last-valid widget image policy cache as resilience sources for the accepted allowlist. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]]. (Superseded the same day by ADR_0008 — runtime cache + setter + settings field all removed in favor of a single build-time source.)

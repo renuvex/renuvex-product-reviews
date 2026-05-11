@@ -40,7 +40,7 @@ Default header value: `s-maxage=60, stale-while-revalidate=300`.
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
 
-Settings have a 5-minute fresh window in the widget and a 7-day stale tolerance for transient settings fetch failures. Review image policy is cached separately under `ikr_image_policy_<publicApiKey>` for 7 days so the trusted Cloudinary cloud contract survives malformed settings responses without opening the widget to third-party images.
+Settings have a 5-minute fresh window in the widget and a 7-day stale tolerance for transient settings fetch failures. The trusted Cloudinary cloud name is **not** in settings — it is injected as a build-time constant into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]); no per-store runtime image-policy cache exists.
 
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
@@ -86,4 +86,4 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 
 ## Change Log
-- 2026-05-11: Documented public settings `stale-if-error=604800`, 7-day widget stale settings tolerance, and separate 7-day review image policy cache. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
+- 2026-05-11: Documented public settings `stale-if-error=604800` and 7-day widget stale settings tolerance. The separate `ikr_image_policy_<publicApiKey>` cache was added on 2026-05-11 then removed the same day by [[ADR_0008_Cloud_Name_Build_Time_Only]] — cloud name is now a build-time constant and no runtime image-policy cache exists. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].

@@ -75,6 +75,7 @@ related:
 - [[ADR_0005_Summary_Layout_Visual_Consistency_Strategy]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
+- [[ADR_0008_Cloud_Name_Build_Time_Only]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -120,4 +121,4 @@ related:
 
 ---
 
-**Last Updated:** 2026-05-11
+**Last Updated:** 2026-05-11 (ADR_0008 added)

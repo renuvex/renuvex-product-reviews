@@ -111,7 +111,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
 - The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, responsive breakpoints, viewport sizing, scroll containment, body scroll locking, focus management, or history behavior. Card/list/gallery navigation is scoped to the active sort/filter state's loaded review collection; the lightbox does not fetch unloaded pages by itself.
 - Lightbox layout uses a three-tier responsive contract in the Ozy theme: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile at `640px` and below with `vh` / `svh` / `dvh` viewport-unit fallbacks.
-- Review image rendering depends on a trusted Cloudinary cloud policy. The primary runtime source is `imagePolicy.cloudName` from `/api/public/settings`; the widget also has a build-time public cloud fallback and a last-valid per-store image policy cache so transient settings policy failures do not silently remove app-owned images. Layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]] and [[Bug_Cloud_Name_Silent_Image_Filter]].
+- Review image rendering depends on a trusted Cloudinary cloud policy. The cloud name is a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`; it is not threaded through settings, no runtime setter exists, and there is no per-store image-policy cache. Settings endpoint outages cannot remove images. Layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]], [[ADR_0008_Cloud_Name_Build_Time_Only]], and [[Bug_Cloud_Name_Silent_Image_Filter]].
 
 ## Related Source Files
 - [src/widget/](src/widget/)
@@ -127,10 +127,12 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
+- [[ADR_0008_Cloud_Name_Build_Time_Only]]
 - [[Ikas_Widget_Injection_Notes]]
 
 ## Change Log
-- 2026-05-11: Documented the durable review image policy contract after adding build-time cloud fallback and widget-side last-valid policy cache. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
+- 2026-05-11: Cloud-name runtime contract removed. The widget now consumes a build-time injected constant only; settings response, runtime cache, setter, and warn helper all deleted (~90 lines). Related ADR: [[ADR_0008_Cloud_Name_Build_Time_Only]]. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
+- 2026-05-11: Documented the durable review image policy contract after adding build-time cloud fallback and widget-side last-valid policy cache. (Superseded same day by ADR_0008.) Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Documented the lightbox three-tier responsive contract and viewport-unit fallback after updating [styles.js](src/widget/themes/ozy/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
 - 2026-05-11: Documented lightbox focus management as part of the widget runtime risk profile after adding modal dialog semantics and focus trapping. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
 - 2026-05-11: Documented the review fetch error-state contract: stale data is preferred, otherwise the widget renders a retryable error state instead of an empty review list. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].

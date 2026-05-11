@@ -50,7 +50,7 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit` | [route.ts](src/app/api/public/reviews/route.ts) | Approved reviews + rating distribution. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]]) |
 | POST `/api/public/reviews` body | same | Submit review (validation + profanity + rate-limit + trusted image URLs + auto-approve) |
 | GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | Bulk avg+count per slug (listing badges) |
-| GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId) + public `imagePolicy.cloudName` |
+| GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/upload/sign` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload |
 
 ### Caching
@@ -86,7 +86,7 @@ Detail in [[Security_And_Rate_Limits]].
 ## Notes
 - **There is no `/api/admin/auth/me` style endpoint.** The JWT itself carries everything. If the UI needs more, it calls `/api/ikas/get-merchant`.
 - **The cleanup cron must be authenticated.** Without `CRON_SECRET` set, the route is open. Always set in deploy env.
-- **Review image URLs are policy-controlled.** Public review writes and reads must use [src/lib/review-images.ts](src/lib/review-images.ts); widget renderers consume the matching `imagePolicy.cloudName` from public settings.
+- **Review image URLs are policy-controlled.** Public review writes and reads must use [src/lib/review-images.ts](src/lib/review-images.ts); widget renderers consume the matching cloud name from the build-time injected constant (see [[ADR_0008_Cloud_Name_Build_Time_Only]]).
 - **Status enums are strings, not Prisma enums.** `'pending' | 'approved' | 'rejected'` lives in code, not in the DB schema. If you add a state, search for the literals to update everywhere.
 
 ## Related Source Files

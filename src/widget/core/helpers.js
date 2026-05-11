@@ -108,37 +108,24 @@ export function injectStyles(_color, css) {
 }
 
 var REVIEW_IMAGE_ALLOWED_EXT = { jpg: true, jpeg: true, png: true, webp: true, gif: true, avif: true };
-var missingReviewImagePolicyWarned = false;
 
 function normalizeReviewImageCloudName(cloudName) {
   var normalizedCloudName = typeof cloudName === 'string' ? cloudName.trim() : '';
   return /^[A-Za-z0-9_-]+$/.test(normalizedCloudName) ? normalizedCloudName : '';
 }
 
+// Trusted Cloudinary cloud name — ADR_0008 gereği build-time'da bir kez set edilir,
+// runtime'da değişmez. scripts/build-widget.mjs `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`
+// sabitini bundle'a inject eder (env: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME). Settings
+// endpoint artık `imagePolicy` field'ı taşımaz; cloud name app-level config'tir,
+// merchant-level değildir. Eğer bu sabit boşsa deploy config hatası vardır — modül
+// yüklenirken bir kez error log basılır, sonra runtime'da fail-closed davranılır.
 var trustedReviewImageCloudName = normalizeReviewImageCloudName(
   typeof __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string' ? __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ : ''
 );
 
-export function setTrustedReviewImageCloudName(cloudName) {
-  var normalizedCloudName = normalizeReviewImageCloudName(cloudName);
-  if (!normalizedCloudName) return false;
-  trustedReviewImageCloudName = normalizedCloudName;
-  missingReviewImagePolicyWarned = false;
-  return true;
-}
-
-export function getTrustedReviewImageCloudName() {
-  return trustedReviewImageCloudName || '';
-}
-
-export function hasTrustedReviewImageCloudName() {
-  return !!trustedReviewImageCloudName;
-}
-
-export function warnMissingReviewImagePolicy(context) {
-  if (missingReviewImagePolicyWarned) return;
-  missingReviewImagePolicyWarned = true;
-  console.error('[ikr] review image policy missing; trusted review images are hidden until imagePolicy.cloudName is available.', context || '');
+if (!trustedReviewImageCloudName) {
+  console.error('[ikr] NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is missing at build time; review images will be hidden until widget is rebuilt with a valid cloud name.');
 }
 
 function isPreviewPlaceholderImage(url) {
@@ -164,10 +151,9 @@ export function isTrustedReviewImageUrl(value) {
   }
 
   if (isPreviewPlaceholderImage(url)) return true;
-  if (!trustedReviewImageCloudName) {
-    warnMissingReviewImagePolicy('isTrustedReviewImageUrl');
-    return false;
-  }
+  // Build-time inject boşsa modül yüklenirken zaten error loglandı; burada
+  // sessizce fail-closed davran (UI'de görsel görünmez, log spam'i yok).
+  if (!trustedReviewImageCloudName) return false;
   if (
     url.protocol !== 'https:' ||
     url.hostname !== 'res.cloudinary.com' ||
@@ -199,7 +185,8 @@ export function isTrustedReviewImageUrl(value) {
 
 export function getTrustedReviewImages(review) {
   var images = review && review.images && Array.isArray(review.images) ? review.images : [];
-  if (images.length && !trustedReviewImageCloudName) warnMissingReviewImagePolicy('getTrustedReviewImages');
+  // Build-time inject yokken `isTrustedReviewImageUrl` zaten false döner;
+  // log gürültüsü yapma — modül load anındaki tek error log yeterli.
   var trusted = [];
   images.forEach(function(url) {
     if (!isTrustedReviewImageUrl(url)) return;
