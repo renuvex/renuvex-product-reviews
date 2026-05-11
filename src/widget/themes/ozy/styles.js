@@ -342,7 +342,7 @@ export var CLASSIC_CSS = `
   }
   @media(max-width:640px){
     .ikr-modal-overlay{padding:0;background:transparent;}
-    .ikr-modal-wrap{position:fixed;inset:0;overflow-y:auto;z-index:100000;width:100%;max-width:100%;height:100vh;height:100svh;height:100dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:rgba(0,0,0,0.50);}
+    .ikr-modal-wrap{position:fixed;inset:0;overflow-y:scroll;z-index:100000;width:100%;max-width:100%;height:100vh;height:100svh;height:100dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:rgba(0,0,0,0.50);}
     .ikr-modal{flex-direction:column;height:auto;min-height:100vh;min-height:100svh;min-height:100dvh;border-radius:0;box-shadow:none;overflow:hidden;max-height:none;}
     .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;overflow:hidden;}
     .ikr-modal-right{overflow-y:visible;flex:none;width:100%;}
