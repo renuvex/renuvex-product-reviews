@@ -281,8 +281,8 @@ export var CLASSIC_CSS = `
      ile gelir. --ikr-photo-thumb-aspect render.js'de review layout'a göre set
      edilir: card -> 1/1 (kare), list & gallery -> 3/4 (portre, item fotolarıyla
      tutarlı). Fallback 1/1, eski davranış. */
-  .ikr-photo-strip-thumb{flex:0 0 var(--ikr-thumbnail-size,90px);width:var(--ikr-thumbnail-size,90px);height:auto;aspect-ratio:var(--ikr-photo-thumb-aspect,1/1);border-radius:var(--ikr-radius,8px);object-fit:cover;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;border:1px solid var(--ikr-photo-image-border,rgba(0,0,0,0.05));}
-  @media(hover:hover){.ikr-photo-strip-thumb:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,0.12);}}
+  .ikr-photo-strip-thumb{flex:0 0 var(--ikr-thumbnail-size,90px);width:var(--ikr-thumbnail-size,90px);height:auto;aspect-ratio:var(--ikr-photo-thumb-aspect,1/1);border-radius:var(--ikr-radius,8px);object-fit:cover;cursor:pointer;transition:transform 0.2s ease;border:1px solid var(--ikr-photo-image-border,rgba(0,0,0,0.05));}
+  @media(hover:hover){.ikr-photo-strip-thumb:hover{transform:translateY(-2px);}}
 
   .ikr-photo-strip-wrap{position:relative;display:block;}
 
