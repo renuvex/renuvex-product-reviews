@@ -257,6 +257,10 @@ export var CLASSIC_CSS = `
   /* Yükleniyor / boş durum mesajları — tema uyumlu */
   .ikr-state-msg{text-align:center;color:rgba(17,17,17,0.45);font-size:14px;padding:30px 0;}
   .ikr-state-loading{padding:40px;}
+  .ikr-state-error{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#991b1b;}
+  .ikr-state-error-text{max-width:360px;line-height:1.45;}
+  .ikr-state-retry{padding:9px 22px;border:1px solid var(--ikr-load-more-border,#111111);border-radius:var(--ikr-radius,6px);background:var(--ikr-load-more-bg,#ffffff);color:var(--ikr-load-more-text,#111111);font-size:var(--ikr-load-more-size,14px);cursor:pointer;}
+  .ikr-state-retry:disabled{opacity:.6;cursor:not-allowed;}
 
   /* Review Modal */
   /* Modal document.body'ye portal'lanır → widget root scope'undan ÇIKAR.

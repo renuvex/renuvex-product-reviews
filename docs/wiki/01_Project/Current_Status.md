@@ -25,6 +25,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Storefront widget bundle (`/public/widget.js`, ~150 KB) with:
   - Product review widget (modal submission + listing) with multiple review-layouts (card, gallery, list) and summary-layouts (classic, compact, hero, minimal, split)
   - Photo strip above review list — dedicated newest-first fetch, cap 15, independent of sort/filter/load-more (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]])
+  - Review fetch failures render a retryable error state instead of the normal empty-review state
   - Product rating badge (small inline star+count)
   - Listing-page rating badges (auto-discovers product cards on collection pages)
   - Mutation observer for SPA-style theme navigation
@@ -76,6 +77,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-11
 
 ## Change Log
+- 2026-05-11: Added retryable storefront review fetch error state so API/network failures are no longer rendered as empty review lists. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
 - 2026-05-11: Removed the remaining lightbox navigation known issue after card/list/gallery modal handlers were switched to one canonical loaded review collection. Related bug: [[Bug_Review_Detail_Lightbox_Risks]].
 - 2026-05-11: Updated lightbox known issues after fixing body scroll restoration and removing unconditional `history.go(-1)` from normal modal close. At that point, the remaining lightbox risk was canonical loaded-review navigation for card/list/gallery.
 - 2026-05-11: Updated status after closing photo thumbnail P2 performance work: responsive `srcset`, lazy/eager policy, async decoding, and explicit dimensions across strip/layout/lightbox mini thumbnails. Related bug: [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]].

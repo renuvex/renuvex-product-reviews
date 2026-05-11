@@ -90,6 +90,18 @@ export async function fetchSettings() {
 // ── Reviews ───────────────────────────────────────────────────────────────────
 
 var REVIEWS_CACHE_TTL = 60 * 1000; // 1 dakika
+var REVIEWS_FETCH_ERROR = '__ikrReviewsFetchError';
+
+export function createReviewsFetchError(message) {
+  return {
+    type: REVIEWS_FETCH_ERROR,
+    message: message || 'Yorumlar şu anda yüklenemiyor.',
+  };
+}
+
+export function isReviewsFetchError(value) {
+  return !!(value && value.type === REVIEWS_FETCH_ERROR);
+}
 
 export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages, limit) {
   // Preview modunda mock endpoint kullan — page parametresi load more testi için
@@ -100,7 +112,7 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
       var previewRes = await fetchWithTimeout(previewUrl);
       if (previewRes.ok) return await previewRes.json();
     } catch (_) {}
-    return null;
+    return createReviewsFetchError();
   }
 
   orderBy = orderBy || 'newest';
@@ -132,13 +144,13 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
       (hasImages ? '&hasImages=true' : '') +
       (limit ? '&limit=' + encodeURIComponent(limit) : '');
     var res = await fetchWithTimeout(url);
-    if (!res.ok) return staleReviews || null;
+    if (!res.ok) return staleReviews || createReviewsFetchError();
     var data = await res.json();
     cacheSet(key, JSON.stringify({ t: Date.now(), v: data }));
     return data;
   } catch (err) {
     console.error('[ikr] fetchReviews error:', err);
-    return staleReviews || null;
+    return staleReviews || createReviewsFetchError();
   }
 }
 
@@ -193,7 +205,7 @@ export async function bootstrap(productId, productName) {
     await render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
   } catch (err) {
     console.error('[ikr] bootstrap error:', err);
-    await render(productId, FALLBACK, null, productName, undefined, undefined, BADGE_FALLBACK);
+    await render(productId, FALLBACK, createReviewsFetchError(), productName, undefined, undefined, BADGE_FALLBACK);
   } finally {
     delete bootstrapCache[productId];
   }

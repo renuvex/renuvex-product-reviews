@@ -1,7 +1,7 @@
 // product-widget/render.js — Ana widget render fonksiyonu
 
 import { getFirstTrustedReviewImage, getTrustedReviewImages, injectStyles, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs } from '../core/helpers.js';
-import { fetchReviews } from './bootstrap.js';
+import { fetchReviews, isReviewsFetchError } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
@@ -75,6 +75,31 @@ var SIZE_PRESETS = {
 };
 
 var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
+
+function buildReviewsErrorState(message, onRetry) {
+  var wrap = document.createElement('div');
+  wrap.className = 'ikr-state-msg ikr-state-error';
+  wrap.setAttribute('role', 'status');
+  wrap.setAttribute('aria-live', 'polite');
+
+  var text = document.createElement('div');
+  text.className = 'ikr-state-error-text';
+  text.textContent = message || 'Yorumlar şu anda yüklenemiyor.';
+  wrap.appendChild(text);
+
+  var retryBtn = document.createElement('button');
+  retryBtn.type = 'button';
+  retryBtn.className = 'ikr-state-retry';
+  retryBtn.textContent = 'Tekrar Dene';
+  retryBtn.onclick = async function () {
+    retryBtn.disabled = true;
+    retryBtn.textContent = 'Tekrar deneniyor...';
+    await onRetry();
+  };
+  wrap.appendChild(retryBtn);
+
+  return wrap;
+}
 
 function applyManualTheme(root, settings) {
   // Grup 1 — Genel
@@ -374,8 +399,9 @@ export async function render(productId, settings, reviewsData, productName, orde
 
     try {
       var data = reviewsData || {};
-      var reviews = (data.data && data.data.reviews) || [];
-      var totalCount = (data.data && data.data.totalCount) || 0;
+      var hasReviewsFetchError = isReviewsFetchError(data);
+      var reviews = hasReviewsFetchError ? [] : ((data.data && data.data.reviews) || []);
+      var totalCount = hasReviewsFetchError ? 0 : ((data.data && data.data.totalCount) || 0);
       setLoadedLightboxReviews(reviews);
 
       // Önceki listener'ları temizle — parentNode her zaman var (anchorEl.appendChild ile eklendi)
@@ -407,6 +433,15 @@ export async function render(productId, settings, reviewsData, productName, orde
         h2.className = 'ikr-title ikr-title-' + layoutId;
         h2.textContent = title;
         widget.appendChild(h2);
+      }
+
+      if (hasReviewsFetchError) {
+        widget.appendChild(buildReviewsErrorState(data.message, async function () {
+          var retried = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
+          await render(currentProductId, currentSettings, retried, currentProductName, currentOrderBy, 1, currentBadgeSettings);
+        }));
+        container.appendChild(widget);
+        return;
       }
 
       // Özet istatistik — ortalama puan + bar chart + write a review butonu
@@ -571,7 +606,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           loadMoreBtn.textContent = 'Yükleniyor...';
           var nextPage = currentPage + 1;
           var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentHasImages);
-          if (moreData && moreData.data && moreData.data.reviews) {
+          if (moreData && !isReviewsFetchError(moreData) && moreData.data && Array.isArray(moreData.data.reviews)) {
             appendLoadedLightboxReviews(moreData.data.reviews);
             setCurrentPage(nextPage);
             var moreReviewLayout = getReviewLayout(currentSettings.reviewLayout);
@@ -581,7 +616,8 @@ export async function render(productId, settings, reviewsData, productName, orde
             if (!moreData.data.hasMore) loadMoreBtn.remove();
             else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }
           } else {
-            loadMoreBtn.remove();
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.textContent = 'Tekrar Dene';
           }
         };
         widget.appendChild(loadMoreBtn);

@@ -23,6 +23,7 @@ related:
 ## Log
 
 ### 2026-05-11
+- Widget - Review Fetch Error State - Review fetch failures now show a retryable error state instead of `Henüz yorum yok`; load-more failures keep a retry button. [[Bug_Review_Fetch_Error_Empty_State]]
 - Widget - Lightbox Loaded Collection Navigation - Card/list/gallery modal navigation now walks one canonical loaded review collection for the active sort/filter state instead of caller page slices. [[Bug_Review_Detail_Lightbox_Risks]]
 - Widget - Lightbox Body Scroll and History Close - Photo lightbox now restores previous inline body scroll styles and normal UI close no longer calls `history.go(-1)` into storefront history. [[Bug_Review_Detail_Lightbox_Risks]]
 - Performance — Cloudinary Transformation Widths — `optimizeImageUrl(url, width)` is now parametric; strip/card/list thumbnails request 300 px, gallery tile 600 px, lightbox mini 200 px, lightbox main keeps the 1200 px default. Strip thumbnail transfer reduced ~%85; lightbox quality unchanged. Named constants (`PHOTO_STRIP_THUMB_WIDTH`, `GALLERY_TILE_WIDTH`, `LIGHTBOX_MINI_THUMB_WIDTH`, `LIGHTBOX_MAIN_WIDTH`) exported from [helpers.js](src/widget/core/helpers.js). [[Photo_Strip]]

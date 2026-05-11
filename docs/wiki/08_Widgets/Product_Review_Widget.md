@@ -35,9 +35,9 @@ Recurring categories:
 
 ## Render path
 1. `bootstrap.js` decides this is a PDP, finds productId, calls `core/fetch.js`.
-2. Fetches `/api/public/settings` (cached) and `/api/public/reviews` (cached).
+2. Fetches `/api/public/settings` (cached) and `/api/public/reviews` (cached; stale reviews are preferred on failures).
 3. Reads layout choice from settings → looks up registry in [summary-layouts/index.js](src/widget/summary-layouts/index.js) and [review-layouts/index.js](src/widget/review-layouts/index.js).
-4. `render.js` composes summary + reviews + CTA. State stored in [core/state.js](src/widget/core/state.js).
+4. `render.js` composes summary + reviews + CTA. Review fetch errors render a retryable error state and do not reuse the empty-review UI. State stored in [core/state.js](src/widget/core/state.js).
 5. CTA opens the multi-step submission wizard.
 
 ## Photo review detail lightbox
@@ -85,6 +85,7 @@ Recurring categories:
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 
 ## Change Log
+- 2026-05-11: Documented retryable review fetch error state after separating API/network failures from valid empty review lists. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
 - 2026-05-11: Photo strip decoupled from main reviews fetch — dedicated `hasImages=true&limit=15&orderBy=newest` call, cap 15, newest-first rotation. Lightbox now navigates strip dataset, closing the paged-slice navigation risk. Related ADR: [[ADR_0007_Photo_Strip_Cap_And_Rotation]]. Related note: [[Photo_Strip]]. Source: [bootstrap.js](src/widget/product-widget/bootstrap.js), [render.js](src/widget/product-widget/render.js), [state.js](src/widget/core/state.js), [route.ts](src/app/api/public/reviews/route.ts).
 - 2026-05-10: Documented the trusted review image URL policy in the product review widget submission and display flow. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Documented modal-only review submission after removing the legacy inline/page form and `reviewFormStyle` setting.

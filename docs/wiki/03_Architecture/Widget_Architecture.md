@@ -93,6 +93,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 ## Caching strategy
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation.
+- Review fetch failures use stale cached review data when available; without stale data, `fetchReviews()` returns an explicit error result so `render.js` can show a retryable error state instead of an empty list.
 - No localStorage caching today (could be added for repeat visits).
 
 ## Build
@@ -126,6 +127,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Ikas_Widget_Injection_Notes]]
 
 ## Change Log
+- 2026-05-11: Documented the review fetch error-state contract: stale data is preferred, otherwise the widget renders a retryable error state instead of an empty review list. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
 - 2026-05-11: Documented `loadedLightboxReviews` as widget runtime state for card/list/gallery lightbox navigation across all currently loaded reviews. Related note: [[Product_Review_Lightbox]].
 - 2026-05-10: Documented trusted review image URL filtering as part of widget runtime architecture. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Updated the widget architecture note after removing the legacy inline/page review form. Review submission is now modal-only.

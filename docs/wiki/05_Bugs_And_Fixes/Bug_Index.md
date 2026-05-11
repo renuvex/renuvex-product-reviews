@@ -22,6 +22,7 @@ related:
 - 2026-05-11 - [[Bug_Cloud_Name_Silent_Image_Filter]] - When `/api/public/settings` returns 404/5xx with no stale cache, widget filters out **all** trusted review images (strip + card/list/gallery), not just the strip. Silent outage, no log, no alarm. (K3)
 
 ## Recently fixed (verify periodically)
+- 2026-05-11 - [[Bug_Review_Fetch_Error_Empty_State]] - Review fetch failures now render a retryable error state instead of the normal empty-review state; load-more failures keep a retry button.
 - 2026-05-11 - [[Bug_Review_Detail_Lightbox_Risks]] - Card/list/gallery lightbox navigation now uses one canonical loaded review collection for the active sort/filter state instead of caller page slices.
 - 2026-05-11 - [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]] - Photo strip, card/list/gallery thumbnails, and lightbox mini thumbs now use lazy/eager policy, async decoding, responsive `srcset`, and explicit dimensions. Main lightbox image keeps eager loading with explicit dimensions.
 - 2026-05-11 - [[Photo_Strip]] - Photo strip now uses dedicated `hasImages=true&limit=15` fetch independent of the main list. Load-more and sort/filter no longer leave the strip in a stale state; lightbox navigation walks the dedicated strip dataset. See [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
@@ -29,6 +30,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-11: Added [[Bug_Review_Fetch_Error_Empty_State]] after fixing review fetch failures being rendered as empty review lists.
 - 2026-05-11: Marked [[Bug_Review_Detail_Lightbox_Risks]] fixed after card/list/gallery lightbox navigation switched from caller page slices to one canonical loaded review collection.
 - 2026-05-11: Updated [[Bug_Review_Detail_Lightbox_Risks]] after fixing body scroll restoration and removing unconditional `history.go(-1)` from normal modal close.
 - 2026-05-11: Marked [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]] fixed after adding responsive `srcset`, native lazy/eager loading, async decoding, and explicit dimensions to review thumbnail render paths.
