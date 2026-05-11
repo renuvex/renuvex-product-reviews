@@ -15,7 +15,8 @@ import {
   currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentBadgeSettings, currentProductName,
   setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
   setCurrentReviewsData,
-  photoStripReviews,
+  photoStripReviews, loadedLightboxReviews,
+  setLoadedLightboxReviews, appendLoadedLightboxReviews,
 } from '../core/state.js';
 
 // ─── CSS değişkenleri ────────────────────────────────────────────────────────
@@ -375,6 +376,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       var data = reviewsData || {};
       var reviews = (data.data && data.data.reviews) || [];
       var totalCount = (data.data && data.data.totalCount) || 0;
+      setLoadedLightboxReviews(reviews);
 
       // Önceki listener'ları temizle — parentNode her zaman var (anchorEl.appendChild ile eklendi)
       var fresh = container.cloneNode(false);
@@ -555,7 +557,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         widget.appendChild(empty);
       } else {
         var reviewLayout = getReviewLayout(settings.reviewLayout);
-        reviews.forEach(function (r) { widget.appendChild(reviewLayout.render(r, reviews)); });
+        reviews.forEach(function (r) { widget.appendChild(reviewLayout.render(r, loadedLightboxReviews)); });
       }
 
       // Daha Fazla butonu
@@ -570,10 +572,11 @@ export async function render(productId, settings, reviewsData, productName, orde
           var nextPage = currentPage + 1;
           var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentHasImages);
           if (moreData && moreData.data && moreData.data.reviews) {
+            appendLoadedLightboxReviews(moreData.data.reviews);
             setCurrentPage(nextPage);
             var moreReviewLayout = getReviewLayout(currentSettings.reviewLayout);
             moreData.data.reviews.forEach(function (r) {
-              widget.insertBefore(moreReviewLayout.render(r, moreData.data.reviews), loadMoreBtn);
+              widget.insertBefore(moreReviewLayout.render(r, loadedLightboxReviews), loadMoreBtn);
             });
             if (!moreData.data.hasMore) loadMoreBtn.remove();
             else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }

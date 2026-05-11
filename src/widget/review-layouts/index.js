@@ -6,7 +6,7 @@
 //
 // render(r, allReviews) sözleşmesi:
 //   - r            : tek bir yorum nesnesi (rating, title, comment, images, merchantReply, ...)
-//   - allReviews   : aktif sayfada görünen tüm yorumlar (modal navigation için gerekli)
+//   - allReviews   : aktif sort/filter için yüklenmiş canonical yorum koleksiyonu
 //   → DOM elementi döner.
 //
 // ─── meta.supports sözleşmesi (admin paneli alan-gizleme) ──────────────────

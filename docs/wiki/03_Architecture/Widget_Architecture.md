@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-11
 tags:
   - widget
   - architecture
@@ -35,7 +35,7 @@ A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront pa
 |---|---|
 | [src/widget/index.js](src/widget/index.js) | Entry. Branches preview vs prod. Wires events + observer. |
 | [core/config.js](src/widget/core/config.js) | `PUBLIC_API_KEY` and `API_BASE` parsed from own `<script src>`. |
-| [core/state.js](src/widget/core/state.js) | Module-level mutable state (current product, settings, reviews, paging). |
+| [core/state.js](src/widget/core/state.js) | Module-level mutable state (current product, settings, reviews, paging, canonical lightbox review collection). |
 | [core/fetch.js](src/widget/core/fetch.js) | API helpers calling `/api/public/*`. |
 | [core/cache.js](src/widget/core/cache.js) | `sessionStorage` wrapper with in-memory fallback (private browsing / quota exceeded). Persists across same-tab navigations. |
 | [core/helpers.js](src/widget/core/helpers.js) | Shared display helpers, including trusted review image URL filtering for storefront render paths. |
@@ -106,7 +106,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - DOM identification (product id, slug, title) uses heuristics — themes vary. When fixing a "widget doesn't show on theme X" issue, the heuristics in `bootstrap.js` and `title-finder.js` are the usual culprits.
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
-- The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, body scroll locking, or history behavior.
+- The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, body scroll locking, or history behavior. Card/list/gallery navigation is scoped to the active sort/filter state's loaded review collection; the lightbox does not fetch unloaded pages by itself.
 - Review image rendering depends on `imagePolicy.cloudName` from `/api/public/settings`; layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 
 ## Related Source Files
@@ -126,6 +126,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Ikas_Widget_Injection_Notes]]
 
 ## Change Log
+- 2026-05-11: Documented `loadedLightboxReviews` as widget runtime state for card/list/gallery lightbox navigation across all currently loaded reviews. Related note: [[Product_Review_Lightbox]].
 - 2026-05-10: Documented trusted review image URL filtering as part of widget runtime architecture. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Updated the widget architecture note after removing the legacy inline/page review form. Review submission is now modal-only.
 - 2026-05-06: Removed `primaryColor`/`primaryTextColor` from the widget runtime (they were not in the admin schema and only created confusion). `styles.js` double-var fallback chains rely on `--ikr-text`/`--ikr-bg` as fixed fallbacks; these vars are kept in `render.js` with hardcoded defaults so the CSS chains stay intact. An initial attempt to flatten the chains to single-layer broke 32 CSS fallback expressions due to a shell-escape bug in the replacement script; reverted to original `styles.js` and restored the legacy vars as fixed fallbacks instead. Related source: [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).

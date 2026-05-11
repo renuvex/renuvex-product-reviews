@@ -10,6 +10,7 @@ export var currentSettings = null;
 export var currentBadgeSettings = null;
 export var currentProductName = null;
 export var currentReviewsData = null;
+export var loadedLightboxReviews = [];
 
 // Fotoğraf şeridi için ayrı dataset — bootstrap'ta `hasImages=true&limit=15&orderBy=newest`
 // çağrısıyla bir kere doldurulur, sort/filter/load-more değişikliklerinde yeniden
@@ -27,6 +28,44 @@ export function setCurrentBadgeSettings(v) { currentBadgeSettings = v; }
 export function setCurrentProductName(v) { currentProductName = v; }
 export function setCurrentReviewsData(v) { currentReviewsData = v; }
 export function setPhotoStripReviews(v) { photoStripReviews = Array.isArray(v) ? v : []; }
+
+function getReviewIdentity(review) {
+  if (!review || typeof review !== 'object') return '';
+  if (review.id !== undefined && review.id !== null) return 'id:' + String(review.id);
+  if (review._id !== undefined && review._id !== null) return '_id:' + String(review._id);
+  return '';
+}
+
+function dedupeReviews(reviews) {
+  var source = Array.isArray(reviews) ? reviews : [];
+  var seen = {};
+  var result = [];
+
+  source.forEach(function (review) {
+    if (!review) return;
+    var key = getReviewIdentity(review);
+    if (key && seen[key]) return;
+    if (key) seen[key] = true;
+    result.push(review);
+  });
+
+  return result;
+}
+
+function replaceLoadedLightboxReviews(reviews) {
+  loadedLightboxReviews.length = 0;
+  reviews.forEach(function (review) {
+    loadedLightboxReviews.push(review);
+  });
+}
+
+export function setLoadedLightboxReviews(v) {
+  replaceLoadedLightboxReviews(dedupeReviews(v));
+}
+
+export function appendLoadedLightboxReviews(v) {
+  replaceLoadedLightboxReviews(dedupeReviews(loadedLightboxReviews.concat(Array.isArray(v) ? v : [])));
+}
 
 // render() race condition koruması
 export var renderInProgress = false;
