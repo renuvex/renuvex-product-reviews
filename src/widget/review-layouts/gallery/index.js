@@ -6,7 +6,7 @@
 // Mobile'da da aynı split korunur — foto asla metnin üstüne çıkmaz.
 // Masonry için CSS columns parent'a (#ikas-reviews-widget) :has() ile uygulanır.
 
-import { starsHTML, formatDate, getFirstTrustedReviewImage, GALLERY_TILE_WIDTH, buildResponsiveImgAttrs } from '../../core/helpers.js';
+import { starsHTML, formatDate, getFirstTrustedReviewImage, GALLERY_TILE_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { GALLERY_CSS } from './styles.js';
@@ -118,6 +118,7 @@ export function render(r, allReviews) {
     imgEl.decoding = 'async';
     imgEl.width = GALLERY_TILE_WIDTH;
     imgEl.height = Math.round(GALLERY_TILE_WIDTH * 4 / 3);
+    hideOnImageError(imgEl);
     imgEl.setAttribute('data-ikr-img-url', firstImg);
     imgEl.onclick = function() { openReviewModal(r, firstImg, allReviews); };
     mediaWrap.appendChild(imgEl);

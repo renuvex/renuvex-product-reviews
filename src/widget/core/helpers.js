@@ -234,6 +234,39 @@ export function buildResponsiveImgAttrs(url, baseWidth) {
   return { src: src1, srcset: src1 + ' 1x, ' + src2 + ' 2x' };
 }
 
+// Image error fallback — endüstri standardı graceful degradation pattern.
+// `<img>` 404 / network error / CDN outage / user-side block durumlarında
+// browser default kırık-image ikonu yerine caller'ın verdiği fallback'i çalıştırır.
+// Dahili handled guard ile tek sefer fire eder.
+// console.warn DevTools görünürlüğü sağlar; ileride Sentry/observability eklenirse
+// otomatik yakalanır (Sentry browser SDK console.* hook'larını dinler).
+export function attachImageErrorHandler(img, onFail) {
+  if (!img || typeof img.addEventListener !== 'function') return;
+  var handled = false;
+  function handleError() {
+    if (handled) return;
+    handled = true;
+    img.removeEventListener('error', handleError);
+    var src = img.currentSrc || img.getAttribute('src') || '';
+    console.warn('[ikr] image failed to load:', src);
+    if (typeof onFail === 'function') {
+      try { onFail(img); } catch (_) {}
+    }
+  }
+  img.addEventListener('error', handleError);
+  if (img.complete && img.naturalWidth === 0 && (img.currentSrc || img.getAttribute('src'))) {
+    handleError();
+  }
+}
+
+// Convenience: thumbnail-style fallback — kırık görseli DOM'da gizler.
+// Strip, kart, liste, gallery thumbnail'leri ve lightbox alt mini şerit için
+// uygun davranış. Flex/grid container'da gizlenen thumbnail'in boşluğu otomatik
+// kapanır, kırık-ikon görünmez.
+export function hideOnImageError(img) {
+  attachImageErrorHandler(img, function (el) { el.style.display = 'none'; });
+}
+
 // renderStars — form için radio-input tabanlı erişilebilir yıldız seçici.
 // Endüstri standardı pattern: hidden `<input type="radio">` + `<label>` + CSS :checked/:hover.
 // Avantaj: native click/touch/keyboard, screen reader, form validation — JS event handling yok.

@@ -27,6 +27,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
   - Photo strip above review list — dedicated newest-first fetch, cap 15, independent of sort/filter/load-more (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]])
   - Review fetch failures render a retryable error state instead of the normal empty-review state
   - Trusted review image policy: cloud name is a single build-time constant injected by the widget build script ([[ADR_0008_Cloud_Name_Build_Time_Only]]); settings response no longer carries `imagePolicy`
+  - Review image load failures degrade gracefully: thumbnails hide broken assets, lightbox main image shows a neutral placeholder, and failures log with `console.warn`
   - Photo review lightbox traps keyboard focus, exposes dialog semantics, and uses desktop/tablet/mobile responsive shells with mobile viewport-unit fallbacks
   - Product rating badge (small inline star+count)
   - Listing-page rating badges (auto-discovers product cards on collection pages)
@@ -58,7 +59,6 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
 - No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
-- Photo strip image render is now per-display-size optimized and P2 is closed: thumbnails use responsive `srcset`, native lazy/eager policy, async decoding, and explicit dimensions. Image error fallback (K2) is still tracked separately.
 
 ## Important Decisions
 - [[ADR_0001_Project_Stack]] — Next.js 16 App Router + Prisma + Postgres (Supabase)
@@ -79,6 +79,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-11
 
 ## Change Log
+- 2026-05-11: Closed K2 image error fallback. Review thumbnails now hide broken assets, lightbox main image shows a neutral placeholder, and failures log via `console.warn`. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - 2026-05-11: Structurally closed silent review image loss by removing the runtime image-policy contract entirely. Cloud name is now build-time-only ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Settings response field, widget runtime cache, setter, and warn helper all removed (~90 lines). Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Added the photo lightbox responsive shell update: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile with `vh` / `svh` / `dvh` fallbacks. Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
 - 2026-05-11: Added photo review lightbox focus trap and dialog semantics so `Tab` no longer reaches storefront controls while the modal is open. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].

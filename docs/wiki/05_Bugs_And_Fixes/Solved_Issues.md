@@ -23,6 +23,7 @@ related:
 ## Log
 
 ### 2026-05-11
+- Widget - Review Image Error Fallback - Broken review images no longer show browser broken-image icons; thumbnails hide failed images, the lightbox main image shows a neutral placeholder, and failures log via `console.warn`. [[Bug_Review_Image_Error_Fallback]]
 - Architecture - Cloud Name Build-Time Only - Cloudinary cloud name is now a single build-time constant injected by the widget build script. Settings response `imagePolicy` field, widget runtime cache, setter, and warn helper removed (~90 lines). Structurally closes [[Bug_Cloud_Name_Silent_Image_Filter]]. [[ADR_0008_Cloud_Name_Build_Time_Only]]
 - Widget - Review Image Policy Fallback - Trusted review image rendering now survives missing settings `imagePolicy.cloudName` via build-time public cloud fallback, last-valid widget cache, and explicit fail-closed logging. (Superseded same day by ADR_0008 — defensive runtime layers became redundant.) [[Bug_Cloud_Name_Silent_Image_Filter]]
 - Widget - Lightbox Tablet Viewport And Scroll - Photo lightbox now uses a stacked 641-800 px tablet/landscape layout, mobile `vh` / `svh` / `dvh` fallbacks, and explicit scroll containment. [[Bug_Lightbox_Tablet_Viewport_And_Scroll]]

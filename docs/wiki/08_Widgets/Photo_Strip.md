@@ -16,6 +16,7 @@ related:
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
+  - "[[Bug_Review_Image_Error_Fallback]]"
 ---
 
 # Photo Strip (Fotoğraf Şeridi)
@@ -77,10 +78,11 @@ Tasarruf: 1200 px tek varyant → çağrı yerine göre 200-600 px varyantları.
 
 Responsive delivery: [helpers.js](src/widget/core/helpers.js) içindeki `buildResponsiveImgAttrs(url, width)` her thumbnail için `src` + `1x, 2x` `srcset` çiftini üretir. Photo strip ilk 3 thumbnail'i eager yükler; kalan strip thumbnail'leri, card/list/gallery thumbnail'leri ve lightbox mini thumbnail'leri `loading="lazy"` + `decoding="async"` kullanır. Tüm thumbnail render path'leri explicit `width`/`height` attribute'u set eder. Lightbox ana görsel tıklama ile açıldığı için lazy değildir; kaliteyi korumak için 1200 px default Cloudinary varyantı ve explicit 4:3 boyut rezervi kullanır.
 
+Image failure behavior: thumbnail render paths use `hideOnImageError(img)` from [helpers.js](src/widget/core/helpers.js), so Cloudinary 404 / CDN / network failures do not show the browser broken-image icon in the strip or review cards. The lightbox main image uses a separate placeholder pattern documented in [[Product_Review_Lightbox]]. Related bug: [[Bug_Review_Image_Error_Fallback]].
+
 ## Bilinen sınırlamalar (açık iyileştirme alanları)
 Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senaryo ve dosya:satır referansları orada.
 
-- **K2** — [[Bug_Review_Image_Error_Fallback]] — Hiçbir review image `<img>`'inde `onerror` handler yok; Cloudinary 404 / asset rename → kırık-image ikonu (haftalık cleanup cron'una kadar 1-7 gün). Sessiz hata, telemetri yok.
 - **U2:** Mağazada 15'ten fazla fotoğraflı yorum varsa "+N daha" göstergesi yok (rakipler genelde göstermiyor; opsiyonel).
 - **U3:** Arrow scroll mesafesi sabit 200px; thumbnail boyutuna göre dinamik değil.
 - **U4:** Arrow butonları başta/sonda `disabled` durumuna geçmiyor.
@@ -106,8 +108,10 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
+- [[Bug_Review_Image_Error_Fallback]]
 
 ## Change Log
+- 2026-05-11: K2 kapandi. Photo strip and review thumbnail render paths now use `hideOnImageError(img)` so broken image assets collapse instead of showing browser broken-image icons. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - 2026-05-11: K3 yapısal olarak kapandı ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Cloud name widget'ta tek kaynak — build-time inject. Settings response'undan `imagePolicy` kaldırıldı, runtime cache + setter + warn helper silindi (~90 satır). Kaynak: [scripts/build-widget.mjs](scripts/build-widget.mjs), [helpers.js](src/widget/core/helpers.js), [bootstrap.js](src/widget/product-widget/bootstrap.js), [settings/route.ts](src/app/api/public/settings/route.ts), [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
 - 2026-05-11: K3 ilk fix. Trusted image policy build-time public cloud fallback, last-valid widget cache ve settings `stale-if-error` ile dayanıklı hale getirildi. (Aynı gün ADR_0008 ile değiştirildi — defansif runtime katmanları gereksiz hale geldi.) İlgili bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: P2 kapandı. Photo strip, card/list/gallery thumbnails ve lightbox mini thumbnail'leri responsive `srcset`, native lazy/eager policy, async decoding ve explicit dimensions kullanıyor. Lightbox ana görsel eager kaldı, 1200 px default Cloudinary varyantıyla explicit dimensions aldı. İlgili bug: [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]].

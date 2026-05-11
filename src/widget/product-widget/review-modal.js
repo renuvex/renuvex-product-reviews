@@ -8,6 +8,8 @@ import {
   LIGHTBOX_MAIN_WIDTH,
   LIGHTBOX_MINI_THUMB_WIDTH,
   buildResponsiveImgAttrs,
+  attachImageErrorHandler,
+  hideOnImageError,
 } from '../core/helpers.js';
 import { currentSettings } from '../core/state.js';
 
@@ -257,6 +259,18 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   mainImg.width = LIGHTBOX_MAIN_WIDTH;
   mainImg.height = Math.round(LIGHTBOX_MAIN_WIDTH * 4 / 3);
   mainImg.alt = 'Yorum fotoğrafı';
+  // Lightbox ana görsel için thumbnail'lerden farklı davranış — boş bırakmak
+  // UX'i bozar. Görsel yüklenemediğinde yerine "Görsel yüklenemedi" placeholder'ı
+  // konur; lightbox prev/next/swipe navigasyonu çalışmaya devam eder.
+  attachImageErrorHandler(mainImg, function (img) {
+    img.style.display = 'none';
+    if (left.querySelector('.ikr-modal-img-error')) return;
+    var placeholder = document.createElement('div');
+    placeholder.className = 'ikr-modal-img-error';
+    placeholder.setAttribute('role', 'status');
+    placeholder.textContent = 'Bu görsel şu anda yüklenemiyor.';
+    left.insertBefore(placeholder, img);
+  });
   left.appendChild(mainImg);
 
   var mobileClose = document.createElement('button');
@@ -310,6 +324,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
       th.height = LIGHTBOX_MINI_THUMB_WIDTH;
       th.className = 'ikr-modal-thumb' + (i === currentPhotoIdx ? ' ikr-modal-thumb-active' : '');
       th.alt = 'Küçük resim ' + (i + 1);
+      hideOnImageError(th);
       th.tabIndex = 0;
       th.setAttribute('role', 'button');
       th.setAttribute('aria-label', 'Küçük resim ' + (i + 1) + ' seç');

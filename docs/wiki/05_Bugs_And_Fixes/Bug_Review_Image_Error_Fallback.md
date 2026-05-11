@@ -22,15 +22,21 @@ related:
 2026-05-11
 
 ## Status
-Open
+Fixed on 2026-05-11
 
 ## Area
 Widget, Storefront UX, Reliability
 
 ## Symptoms
-- Strip, kart, liste, gallery, lightbox tüm thumbnail / görsel `<img>` etiketlerinde `onerror` handler yok.
-- Cloudinary asset 404 dönerse tarayıcı default kırık-resim ikonu basar.
-- Hata sessiz: telemetri/log yok, admin fark etmez.
+Before the fix:
+- Strip, kart, liste, gallery, lightbox tüm thumbnail / görsel `<img>` etiketlerinde `onerror` handler yoktu.
+- Cloudinary asset 404 dönerse tarayıcı default kırık-resim ikonu basıyordu.
+- Hata sessiz: telemetri/log yok, admin fark etmiyordu.
+
+After the fix:
+- Strip + card/list/gallery thumbnails + lightbox mini thumbs: `hideOnImageError(img)` — kırık görsel DOM'da gizlenir, flex/grid container'da boşluk otomatik kapanır.
+- Lightbox ana görsel: `attachImageErrorHandler` ile özel placeholder — "Bu görsel şu anda yüklenemiyor." mesajı koyu zeminde gösterilir; prev/next/swipe navigasyon çalışmaya devam eder.
+- Tüm fail vakaları `console.warn('[ikr] image failed to load:', src)` ile loglanır → DevTools'tan görünür; ileride Sentry kurulursa otomatik yakalanır.
 
 ## Sahnelendirme (örnek senaryo)
 1. Admin 6 ay önce yüklenmiş bir test fotoğrafını Cloudinary konsolundan manuel siler. DB'deki `review.images` URL'si kalır.
@@ -49,36 +55,39 @@ Widget, Storefront UX, Reliability
 - [card/index.js:99-107](src/widget/review-layouts/card/index.js), [list/index.js:113-122](src/widget/review-layouts/list/index.js), [gallery/index.js:111-117](src/widget/review-layouts/gallery/index.js) — diğer layout'lar da.
 - `getTrustedReviewImages()` ([helpers.js](src/widget/core/helpers.js)) URL **pattern** doğruluyor ama **asset varlığını** doğrulayamaz — bunun için ya HEAD request ya da `<img>` `onload`/`onerror` callback gerekir.
 
-## Önerilen düzeltme yönü
-1. **Thumbnail seviyesinde graceful hide:**
-   ```js
-   thumb.onerror = function() {
-     thumb.style.display = 'none';
-     // Telemetri (örn. Sentry breadcrumb veya minimal fetch beacon)
-   };
-   ```
-2. **Lightbox seviyesinde placeholder:** ana görsel 404 verirse "Görsel yüklenemedi" mesajı + close butonu.
-3. **Telemetri:** her 404 için merkezi log endpoint'e (örn. yeni `/api/public/widget-telemetry`) düşük frekanslı POST. Cleanup cron schedule'ı bu telemetri ile tetiklenebilir hale gelir (Q3 — Open_Questions).
-4. **Kırık görsel review'ı admin'e flag etme:** üst eşik aşılırsa (örn. aynı review'da 3+ 404) admin'e bildirim.
+## Fix
+- [helpers.js](src/widget/core/helpers.js) — iki yeni export:
+  - `attachImageErrorHandler(img, onFail)` — `<img>` error event'inde caller'ın callback'ini bir kez (`{ once: true }`) çalıştırır, ayrıca `console.warn` ile log basar.
+  - `hideOnImageError(img)` — convenience: kırık görseli `display:none` ile gizler. Thumbnail bağlamında uygun.
+- [render.js](src/widget/product-widget/render.js) — strip thumbnail için `hideOnImageError`.
+- [card/index.js](src/widget/review-layouts/card/index.js), [list/index.js](src/widget/review-layouts/list/index.js), [gallery/index.js](src/widget/review-layouts/gallery/index.js) — review thumbnail'leri için `hideOnImageError`.
+- [review-modal.js](src/widget/product-widget/review-modal.js):
+  - Mini şerit thumbnail'leri: `hideOnImageError`.
+  - Ana görsel: `attachImageErrorHandler` ile özel callback — `mainImg` gizlenir, yerine `.ikr-modal-img-error` placeholder eklenir; lightbox navigasyonu (prev/next/swipe/thumbnail row) etkilenmez.
+- [themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — `.ikr-modal-img-error` CSS: koyu zemin, ortalanmış metin.
+- Preload `new Image()` (review-modal.js:212) — dokunulmadı; `new Image().src` zaten DOM'a eklenmediği için sessiz fail eder, UI etkisi yok.
+- [public/widget.js](public/widget.js) `pnpm build:widget` ile yeniden üretildi.
 
-## Etkilenecek dosyalar
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — strip thumbnail
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js) — lightbox ana + mini şerit + preload
+## Files Changed
+- [src/widget/core/helpers.js](src/widget/core/helpers.js) — `attachImageErrorHandler` + `hideOnImageError`
+- [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
 - [src/widget/review-layouts/card/index.js](src/widget/review-layouts/card/index.js)
 - [src/widget/review-layouts/list/index.js](src/widget/review-layouts/list/index.js)
 - [src/widget/review-layouts/gallery/index.js](src/widget/review-layouts/gallery/index.js)
-- (Opsiyonel) yeni `src/app/api/public/widget-telemetry/route.ts` — minimal 404 beacon endpoint
-- [src/widget/core/helpers.js](src/widget/core/helpers.js) — opsiyonel `attachImageErrorHandler(img)` helper
+- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js)
+- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — `.ikr-modal-img-error`
+- [public/widget.js](public/widget.js)
 
-## Etki
-- Storefront görsel kalite riski (premium tema için marka algısı).
-- Cleanup cron + Cloudinary arası 1-7 günlük orphan penceresi kullanıcıya yansır.
-- Sessiz outage tespit edilemez (telemetri yok).
+## Etki (düzeltme sonrası)
+- Kırık-image ikonu hiçbir storefront thumbnail render path'inde görünmez.
+- Cleanup cron + Cloudinary arası orphan penceresi kullanıcıya yansımaz — silently gizlenir.
+- Lightbox ana görsel 404 olsa bile modal kapanmaz; placeholder + navigasyon çalışmaya devam eder.
+- DevTools açıkken `console.warn` ile gözlemlenebilir; production'da sessiz ama ileride Sentry kurulursa otomatik yakalanır.
 
 ## Prevention
-- Cron schedule'ı kısa tut (haftalık → günlük); ek olarak 404 telemetrisi tetikleyici olarak çalışsın.
-- E2E test: bir review.images URL'sini bilinçli olarak kırık yap, widget render path'ini smoke-test et.
-- Cloudinary webhook (asset.delete event) ile DB'yi proaktif temizleme.
+- `hideOnImageError`/`attachImageErrorHandler` her yeni `<img>` render path'inde standart pattern olarak kullanılmalı (kod review checklist).
+- Cron schedule'ı (haftalık) — `console.warn` log volume'u yüksek seyrederse cron sıklaştırılmalı veya proaktif Cloudinary webhook eklenmeli (Q3 — [[Open_Questions]]).
+- E2E test: bir `review.images` URL'sini bilinçli olarak kırık yap, widget'ın placeholder'a düştüğünü doğrula.
 
 ## Related Notes
 - [[Photo_Strip]]
@@ -88,4 +97,5 @@ Widget, Storefront UX, Reliability
 - [[Open_Questions]] (Q3 — cleanup cron sıklığı)
 
 ## Change Log
+- 2026-05-11: Fixed. `attachImageErrorHandler` + `hideOnImageError` helper'ları eklendi; tüm trusted image render path'leri (strip, card, list, gallery, lightbox mini) `hide` davranışına bağlandı. Lightbox ana görsel için özel placeholder eklendi (`.ikr-modal-img-error` koyu zemin + metin). Tüm fail durumları `console.warn` ile loglanıyor.
 - 2026-05-11: Sayfa oluşturuldu. Photo strip cap 15 + per-display-size width düzeltmeleriyle birlikte yapılan analiz sonucu açık bulgu olarak kayıt altına alındı.

@@ -15,6 +15,7 @@ related:
   - "[[Bug_Review_Detail_Lightbox_Risks]]"
   - "[[Bug_Lightbox_Tablet_Viewport_And_Scroll]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
+  - "[[Bug_Review_Image_Error_Fallback]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
 ---
 
@@ -39,6 +40,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - [[Bug_Review_Detail_Lightbox_Risks]]
 - [[Bug_Lightbox_Tablet_Viewport_And_Scroll]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
+- [[Bug_Review_Image_Error_Fallback]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Notes
@@ -49,6 +51,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - The lightbox does not fetch additional review pages by itself. Previous/next navigation is intentionally scoped to reviews already loaded into the storefront widget for the current sort/filter state.
 - Review text fields are written with `textContent`, which protects comment/title/reply rendering from direct HTML injection in this component.
 - Image URLs are not accepted by generic prefixes. The lightbox uses `getTrustedReviewImages()`, which accepts only app-owned Cloudinary URLs from the configured cloud and `review_images` folder. The trusted cloud can come from `/api/public/settings`, the build-time public fallback, or the last-valid widget policy cache. This mirrors the server-side policy in [[ADR_0006_Trusted_Review_Image_URL_Policy]] and the reliability fix in [[Bug_Cloud_Name_Silent_Image_Filter]].
+- If the active main image fails to load after passing the trusted URL policy, the `<img>` is hidden and a neutral in-modal placeholder is shown. Mini thumbnails use the standard thumbnail fallback and hide failed assets. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - Body scroll locking snapshots previous inline `overflow` and `padding-right` values, including inline priority, before locking body scroll. Close restores the exact previous inline values.
 - Browser back support uses a widget-owned modal history state. Browser back closes the modal through `popstate`; normal UI close does not call `history.go(-1)` and only replaces the widget-owned state when it is still current.
 - The lightbox wrapper exposes dialog semantics (`role="dialog"`, `aria-modal="true"`), moves focus into the modal on open, traps `Tab` / `Shift+Tab` inside the overlay, and restores previous focus on close.
@@ -57,6 +60,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - Scroll containment is explicit on the overlay, desktop right panel, tablet wrapper, and mobile wrapper. Body scroll locking remains the primary background-scroll guard; `overscroll-behavior` reduces scroll chaining where supported.
 
 ## Change Log
+- 2026-05-11: Documented K2 image error fallback. Main lightbox image failures now show a neutral placeholder while mini thumbnail failures hide the failed thumbnail. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - 2026-05-11: Updated image policy notes after adding build-time public cloud fallback and last-valid widget policy cache. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Documented the responsive lightbox contract after adding the 641-800 px stacked tablet shell, mobile viewport-unit fallback chain, and scroll containment updates in [styles.js](src/widget/themes/ozy/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
 - 2026-05-11: Documented lightbox accessibility hardening after adding dialog semantics, focus trap, thumbnail keyboard activation, and focus restore. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].

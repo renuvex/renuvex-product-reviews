@@ -4,7 +4,7 @@
 // Sıralama gallery layout'u ile aynı (endüstri standardı: rating → title → author → body).
 // CSS .ikr-review* sınıfları base styles.js'te; layout-spesifik override yok.
 
-import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs } from '../../core/helpers.js';
+import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { buildReplyEl } from '../_shared.js';
@@ -107,6 +107,7 @@ export function render(r, allReviews) {
       imgEl.width = PHOTO_STRIP_THUMB_WIDTH;
       imgEl.height = PHOTO_STRIP_THUMB_WIDTH;
       imgEl.className = 'ikr-img';
+      hideOnImageError(imgEl);
       imgEl.setAttribute('data-ikr-img-url', imgUrl);
       (function(url) {
         imgEl.onclick = function() { openReviewModal(r, url, allReviews); };

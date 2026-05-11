@@ -3,7 +3,7 @@
 // Fotoğraf yoksa orta kolon foto kolonunu kapsar (no-media modifier).
 // Mobile (<600px) dikey diziliş — styles.js'te tanımlı.
 
-import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs } from '../../core/helpers.js';
+import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { LIST_CSS } from './styles.js';
@@ -122,6 +122,7 @@ export function render(r, allReviews) {
       imgEl.width = PHOTO_STRIP_THUMB_WIDTH;
       imgEl.height = Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3);
       imgEl.setAttribute('data-ikr-img-url', imgUrl);
+      hideOnImageError(imgEl);
       (function(url) {
         imgEl.onclick = function() { openReviewModal(r, url, allReviews); };
       })(imgUrl);

@@ -1,6 +1,6 @@
 // product-widget/render.js — Ana widget render fonksiyonu
 
-import { getFirstTrustedReviewImage, getTrustedReviewImages, injectStyles, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs } from '../core/helpers.js';
+import { getFirstTrustedReviewImage, getTrustedReviewImages, injectStyles, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
 import { fetchReviews, isReviewsFetchError } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
 import { injectRatingBadge } from './rating-badge.js';
@@ -554,6 +554,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           thumb.height = stripHeight;
           thumb.className = 'ikr-photo-strip-thumb';
           thumb.alt = 'Yorum fotoğrafı';
+          hideOnImageError(thumb);
           // Lightbox navigasyonu strip dataset'i içinde gezer — load-more sonrası
           // ana liste değişse bile lightbox tutarlı kalır (K1.b çözümü).
           (function (url, review) {
