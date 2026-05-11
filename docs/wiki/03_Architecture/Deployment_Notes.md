@@ -11,6 +11,7 @@ related:
   - "[[Index]]"
   - "[[Config_And_Env_Map]]"
   - "[[Caching_And_Performance]]"
+  - "[[Sentry_Operations]]"
 ---
 
 # Deployment Notes
@@ -64,6 +65,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 ## Health checks
 - No dedicated `/health` route today. Add if uptime monitoring is wired up.
 - Vercel logs are line-based (`console.error('[scope] ERROR', ...)` pattern is searchable).
+- Sentry CLI and MCP are tracked in [[Sentry_Operations]]. Current MCP scope is organization-level (`mert-copper`) until a Sentry project exists.
 
 ## Notes
 - **Don't bypass the widget bundle commit step.** If you forget to commit `public/widget.js`, deploys ship the old widget. CI does not regenerate.
@@ -81,4 +83,8 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Config_And_Env_Map]]
 - [[Caching_And_Performance]]
 - [[Auth_And_Installation_Flow]]
+- [[Sentry_Operations]]
 - [[Open_Questions]]
+
+## Change Log
+- 2026-05-11: Linked [[Sentry_Operations]] after adding Sentry CLI/MCP setup notes.

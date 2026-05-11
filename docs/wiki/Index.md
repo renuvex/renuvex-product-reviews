@@ -45,6 +45,7 @@ related:
 - [[Caching_And_Performance]]
 - [[Security_And_Rate_Limits]]
 - [[Deployment_Notes]]
+- [[Sentry_Operations]]
 
 ## ikas
 - [[Ikas_Platform_Notes]]
