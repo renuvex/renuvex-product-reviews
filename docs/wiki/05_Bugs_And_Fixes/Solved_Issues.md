@@ -23,6 +23,7 @@ related:
 ## Log
 
 ### 2026-05-11
+- Widget - Lightbox Focus Trap Accessibility - Photo lightbox now exposes dialog semantics, traps `Tab` focus inside the modal, and restores previous focus on close. [[Bug_Lightbox_Focus_Trap_Accessibility]]
 - Widget - Review Fetch Error State - Review fetch failures now show a retryable error state instead of `Henüz yorum yok`; load-more failures keep a retry button. [[Bug_Review_Fetch_Error_Empty_State]]
 - Widget - Lightbox Loaded Collection Navigation - Card/list/gallery modal navigation now walks one canonical loaded review collection for the active sort/filter state instead of caller page slices. [[Bug_Review_Detail_Lightbox_Risks]]
 - Widget - Lightbox Body Scroll and History Close - Photo lightbox now restores previous inline body scroll styles and normal UI close no longer calls `history.go(-1)` into storefront history. [[Bug_Review_Detail_Lightbox_Risks]]

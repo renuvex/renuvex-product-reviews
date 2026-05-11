@@ -54,6 +54,73 @@ function restoreBodyScroll(previousState) {
   restoreStyleProperty(bodyStyle, 'padding-right', previousState.paddingRight, previousState.paddingRightPriority);
 }
 
+function getReturnFocusElement() {
+  var el = document.activeElement;
+  if (!el || el === document.body || el === document.documentElement) return null;
+  return el;
+}
+
+function restoreFocus(el) {
+  if (!el || !document.contains(el) || typeof el.focus !== 'function') return;
+  try {
+    el.focus({ preventScroll: true });
+  } catch (_) {
+    try { el.focus(); } catch (_) {}
+  }
+}
+
+function isVisibleFocusable(el) {
+  if (!el || el.disabled) return false;
+  if (el.getAttribute('aria-hidden') === 'true') return false;
+  return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+}
+
+function getFocusableElements(container) {
+  var selector = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+  return Array.prototype.slice.call(container.querySelectorAll(selector)).filter(isVisibleFocusable);
+}
+
+function focusFirstModalControl(container) {
+  var focusables = getFocusableElements(container);
+  var target = focusables[0] || container.querySelector('[role="dialog"]') || container;
+  restoreFocus(target);
+}
+
+function trapModalFocus(e, container) {
+  if (e.key !== 'Tab') return;
+  var focusables = getFocusableElements(container);
+  if (!focusables.length) {
+    e.preventDefault();
+    focusFirstModalControl(container);
+    return;
+  }
+
+  var first = focusables[0];
+  var last = focusables[focusables.length - 1];
+  var active = document.activeElement;
+
+  if (!container.contains(active)) {
+    e.preventDefault();
+    restoreFocus(first);
+    return;
+  }
+
+  if (e.shiftKey && active === first) {
+    e.preventDefault();
+    restoreFocus(last);
+  } else if (!e.shiftKey && active === last) {
+    e.preventDefault();
+    restoreFocus(first);
+  }
+}
+
 function createModalHistoryEntry() {
   var entry = {
     id: 'ikr-modal-' + Date.now() + '-' + Math.random().toString(36).slice(2),
@@ -88,11 +155,12 @@ function restoreModalHistoryEntry(entry) {
   } catch (_) {}
 }
 
-function closeModal(overlay, onKeyDown, onPopState, bodyScrollState) {
+function closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl) {
   restoreBodyScroll(bodyScrollState);
   document.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('popstate', onPopState);
   if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  restoreFocus(returnFocusEl);
 }
 
 function buildRight(r) {
@@ -242,7 +310,22 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
       th.height = LIGHTBOX_MINI_THUMB_WIDTH;
       th.className = 'ikr-modal-thumb' + (i === currentPhotoIdx ? ' ikr-modal-thumb-active' : '');
       th.alt = 'Küçük resim ' + (i + 1);
-      (function(idx) { th.onclick = function() { rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, requestClose, true, null, overlay); }; })(i);
+      th.tabIndex = 0;
+      th.setAttribute('role', 'button');
+      th.setAttribute('aria-label', 'Küçük resim ' + (i + 1) + ' seç');
+      if (i === currentPhotoIdx) th.setAttribute('aria-current', 'true');
+      (function(idx) {
+        function selectThumb() {
+          rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, requestClose, true, null, overlay);
+        }
+        th.onclick = selectThumb;
+        th.onkeydown = function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectThumb();
+          }
+        };
+      })(i);
       thumbBar.appendChild(th);
     });
     left.appendChild(thumbBar);
@@ -344,23 +427,28 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   modal.className = 'ikr-modal';
 
   var closed = false;
+  var returnFocusEl = getReturnFocusElement();
   var bodyScrollState = lockBodyScroll();
   var modalHistoryEntry = createModalHistoryEntry();
 
   function onPopState() {
     if (closed) return;
     closed = true;
-    closeModal(overlay, onKeyDown, onPopState, bodyScrollState);
+    closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
   }
 
   function onKeyDown(e) {
-    if (e.key === 'Escape') requestClose();
+    if (e.key === 'Escape') {
+      requestClose();
+      return;
+    }
+    trapModalFocus(e, overlay);
   }
 
   function requestClose() {
     if (closed) return;
     closed = true;
-    closeModal(overlay, onKeyDown, onPopState, bodyScrollState);
+    closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
     restoreModalHistoryEntry(modalHistoryEntry);
   }
 
@@ -377,6 +465,10 @@ export function openReviewModal(r, clickedUrl, allReviews) {
 
   var modalWrap = document.createElement('div');
   modalWrap.className = 'ikr-modal-wrap';
+  modalWrap.tabIndex = -1;
+  modalWrap.setAttribute('role', 'dialog');
+  modalWrap.setAttribute('aria-modal', 'true');
+  modalWrap.setAttribute('aria-label', 'Yorum fotoğrafı detayı');
   modalWrap.appendChild(modal);
 
   var closeBtn = document.createElement('button');
@@ -388,4 +480,5 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   overlay.appendChild(modalWrap);
 
   document.body.appendChild(overlay);
+  focusFirstModalControl(overlay);
 }

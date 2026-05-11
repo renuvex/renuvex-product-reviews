@@ -47,9 +47,11 @@ The product review lightbox is the photo review detail modal opened from review 
 - Image URLs are not accepted by generic prefixes. The lightbox uses `getTrustedReviewImages()`, which accepts only app-owned Cloudinary URLs from the configured cloud and `review_images` folder. This mirrors the server-side policy in [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - Body scroll locking snapshots previous inline `overflow` and `padding-right` values, including inline priority, before locking body scroll. Close restores the exact previous inline values.
 - Browser back support uses a widget-owned modal history state. Browser back closes the modal through `popstate`; normal UI close does not call `history.go(-1)` and only replaces the widget-owned state when it is still current.
+- The lightbox wrapper exposes dialog semantics (`role="dialog"`, `aria-modal="true"`), moves focus into the modal on open, traps `Tab` / `Shift+Tab` inside the overlay, and restores previous focus on close.
 - Mobile layout uses a full-height modal shell and page-level scrolling through `.ikr-modal-wrap`; desktop scroll is contained in `.ikr-modal-right`.
 
 ## Change Log
+- 2026-05-11: Documented lightbox accessibility hardening after adding dialog semantics, focus trap, thumbnail keyboard activation, and focus restore. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
 - 2026-05-11: Closed the card/list/gallery page-slice navigation risk by documenting the canonical loaded review collection in [state.js](src/widget/core/state.js) and [render.js](src/widget/product-widget/render.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
 - 2026-05-11: Updated body scroll lock and history handling notes after hardening [review-modal.js](src/widget/product-widget/review-modal.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
 - 2026-05-10: Updated the lightbox image trust contract after implementing the shared trusted Cloudinary URL policy. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
