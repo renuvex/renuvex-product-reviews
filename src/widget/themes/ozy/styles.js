@@ -267,7 +267,7 @@ export var CLASSIC_CSS = `
      Yorum item gap token'ları (--ikr-gap-*) burada da yeniden tanımlanır
      ki modal-* selektörleri base ile aynı dili konuşsun. Tek doğruluk
      kaynağı yine üstteki sözleşme yorumudur. */
-  .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;}
+  .ikr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);overscroll-behavior:contain;--ikr-gap-tight:4px;--ikr-gap-normal:8px;--ikr-gap-loose:16px;--ikr-gap-section:24px;}
   .ikr-modal-wrap{position:relative;width:100%;max-width:813px;}
   .ikr-photo-section{margin:24px 0 32px;padding:0 var(--ikr-pad-review-mobile);display:block;}
   .ikr-photo-strip-container{position:relative;}
@@ -308,7 +308,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:var(--ikr-radius,6px);cursor:pointer;border:2px solid transparent;opacity:0.7;}
   .ikr-modal-thumb-active{border-color:#fff;opacity:1;}
   .ikr-modal-close:focus-visible,.ikr-modal-close-mobile:focus-visible,.ikr-modal-nav:focus-visible,.ikr-modal-thumb:focus-visible{outline:2px solid #ffffff;outline-offset:2px;}
-  .ikr-modal-right{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:0;display:flex;flex-direction:column;background:#ffffff;color:#111111;}
+  .ikr-modal-right{flex:1;min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0;display:flex;flex-direction:column;background:#ffffff;color:#111111;}
   /* Flex zincirinde her seviye min-width:0 olmazsa unbreakable string parent'ı zorlar.
      scroll-content de flex column → child'ları (modal-body vs.) shrink edebilsin diye
      burada da min-width:0 zorunlu. overflow-wrap:anywhere ancak shrink mümkünse iş görür. */
@@ -328,10 +328,19 @@ export var CLASSIC_CSS = `
   .ikr-modal-reply-text{font-size:var(--ikr-reply-text-size,13px);font-weight:400;color:var(--ikr-reply-text,#111111);line-height:1.6;}
 
   /* Responsive */
+  @media(min-width:641px) and (max-width:800px){
+    .ikr-modal-wrap{width:100%;max-width:640px;max-height:calc(100vh - 32px);max-height:calc(100svh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+    .ikr-modal{flex-direction:column;height:auto;max-height:none;}
+    .ikr-modal-left{flex:none;width:100%;height:420px;height:min(420px, 56vh);height:min(420px, 56svh);height:min(420px, 56dvh);}
+    .ikr-modal-right{flex:none;width:100%;overflow-y:visible;}
+    .ikr-modal-scroll-content{padding:20px 20px 32px;}
+    .ikr-modal-close{display:none;}
+    .ikr-modal-close-mobile{display:flex;}
+  }
   @media(max-width:640px){
     .ikr-modal-overlay{padding:0;background:transparent;}
-    .ikr-modal-wrap{position:fixed;inset:0;overflow-y:auto;z-index:100000;width:100%;max-width:100%;overscroll-behavior:contain;background:rgba(0,0,0,0.50);}
-    .ikr-modal{flex-direction:column;height:auto;min-height:100vh;border-radius:0;box-shadow:none;overflow:hidden;max-height:none;}
+    .ikr-modal-wrap{position:fixed;inset:0;overflow-y:auto;z-index:100000;width:100%;max-width:100%;height:100vh;height:100svh;height:100dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:rgba(0,0,0,0.50);}
+    .ikr-modal{flex-direction:column;height:auto;min-height:100vh;min-height:100svh;min-height:100dvh;border-radius:0;box-shadow:none;overflow:hidden;max-height:none;}
     .ikr-modal-left{flex:none;width:100%;aspect-ratio:3/4;overflow:hidden;}
     .ikr-modal-right{overflow-y:visible;flex:none;width:100%;}
     .ikr-modal-scroll-content{padding:16px 16px 48px;}

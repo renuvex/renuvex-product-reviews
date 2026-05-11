@@ -23,6 +23,7 @@ related:
 ## Log
 
 ### 2026-05-11
+- Widget - Lightbox Tablet Viewport And Scroll - Photo lightbox now uses a stacked 641-800 px tablet/landscape layout, mobile `vh` / `svh` / `dvh` fallbacks, and explicit scroll containment. [[Bug_Lightbox_Tablet_Viewport_And_Scroll]]
 - Widget - Lightbox Focus Trap Accessibility - Photo lightbox now exposes dialog semantics, traps `Tab` focus inside the modal, and restores previous focus on close. [[Bug_Lightbox_Focus_Trap_Accessibility]]
 - Widget - Review Fetch Error State - Review fetch failures now show a retryable error state instead of `Henüz yorum yok`; load-more failures keep a retry button. [[Bug_Review_Fetch_Error_Empty_State]]
 - Widget - Lightbox Loaded Collection Navigation - Card/list/gallery modal navigation now walks one canonical loaded review collection for the active sort/filter state instead of caller page slices. [[Bug_Review_Detail_Lightbox_Risks]]

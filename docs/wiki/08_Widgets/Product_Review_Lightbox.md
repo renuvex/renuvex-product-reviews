@@ -13,6 +13,7 @@ related:
   - "[[Product_Review_Widget]]"
   - "[[Widget_Architecture]]"
   - "[[Bug_Review_Detail_Lightbox_Risks]]"
+  - "[[Bug_Lightbox_Tablet_Viewport_And_Scroll]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
 ---
 
@@ -35,6 +36,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - [[Widget_Files_Map]]
 - [[Security_And_Rate_Limits]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
+- [[Bug_Lightbox_Tablet_Viewport_And_Scroll]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Notes
@@ -48,9 +50,12 @@ The product review lightbox is the photo review detail modal opened from review 
 - Body scroll locking snapshots previous inline `overflow` and `padding-right` values, including inline priority, before locking body scroll. Close restores the exact previous inline values.
 - Browser back support uses a widget-owned modal history state. Browser back closes the modal through `popstate`; normal UI close does not call `history.go(-1)` and only replaces the widget-owned state when it is still current.
 - The lightbox wrapper exposes dialog semantics (`role="dialog"`, `aria-modal="true"`), moves focus into the modal on open, traps `Tab` / `Shift+Tab` inside the overlay, and restores previous focus on close.
-- Mobile layout uses a full-height modal shell and page-level scrolling through `.ikr-modal-wrap`; desktop scroll is contained in `.ikr-modal-right`.
+- Responsive layout is split by modal readability, not only by a generic mobile breakpoint: `801px+` keeps the desktop two-column shell with the 438 px media column, `641px-800px` uses a stacked tablet/landscape shell with capped media height and full-width text, and `640px` and below keeps the fullscreen mobile shell.
+- Mobile height uses a `100vh` fallback followed by `100svh` and `100dvh` so modern Android and iOS browsers can size the fullscreen shell against small/dynamic viewport units when browser chrome is visible or changing.
+- Scroll containment is explicit on the overlay, desktop right panel, tablet wrapper, and mobile wrapper. Body scroll locking remains the primary background-scroll guard; `overscroll-behavior` reduces scroll chaining where supported.
 
 ## Change Log
+- 2026-05-11: Documented the responsive lightbox contract after adding the 641-800 px stacked tablet shell, mobile viewport-unit fallback chain, and scroll containment updates in [styles.js](src/widget/themes/ozy/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
 - 2026-05-11: Documented lightbox accessibility hardening after adding dialog semantics, focus trap, thumbnail keyboard activation, and focus restore. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
 - 2026-05-11: Closed the card/list/gallery page-slice navigation risk by documenting the canonical loaded review collection in [state.js](src/widget/core/state.js) and [render.js](src/widget/product-widget/render.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
 - 2026-05-11: Updated body scroll lock and history handling notes after hardening [review-modal.js](src/widget/product-widget/review-modal.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
