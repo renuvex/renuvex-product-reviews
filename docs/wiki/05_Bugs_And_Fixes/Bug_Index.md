@@ -3,7 +3,7 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-12
 tags:
   - bugs
 related:
@@ -20,6 +20,7 @@ related:
 ## Open
 
 ## Recently fixed (verify periodically)
+- 2026-05-12 - [[Bug_Lightbox_Mobile_Pull_To_Refresh]] - Photo lightbox now locks root overscroll and uses touch/mobile fixed-body locking so long-comment top-boundary pulls do not leak into browser pull-to-refresh.
 - 2026-05-11 - [[Bug_Widget_CSS_Template_Backtick_Crash]] - Deployed `widget.js` no longer crashes with `ReferenceError: modal is not defined`; raw backticks were removed from the CSS template literal and the bundle was rebuilt.
 - 2026-05-11 - [[Bug_Product_Widget_Missing_Auto_Mount]] - PDP review block no longer depends exclusively on a manually present `#ikas-reviews-anchor`; missing anchors are generated after the product container so the review block and product-title badge can render after deploy/theme changes.
 - 2026-05-11 - [[Bug_Review_Image_Error_Fallback]] - Review image load failures now degrade gracefully: storefront thumbnails hide broken images, the lightbox main image shows a neutral placeholder, and failures are surfaced with `console.warn`. (K2)
@@ -34,6 +35,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-12: Added [[Bug_Lightbox_Mobile_Pull_To_Refresh]] after hardening mobile root scroll locking for the photo review lightbox.
 - 2026-05-11: Added [[Bug_Widget_CSS_Template_Backtick_Crash]] after fixing a deployed widget bundle parse/runtime crash caused by raw backticks inside the CSS template literal.
 - 2026-05-11: Marked [[Bug_Product_Widget_Missing_Auto_Mount]] fixed after adding automatic PDP review anchor creation.
 - 2026-05-11: Marked [[Bug_Review_Image_Error_Fallback]] fixed after adding centralized image error handlers for thumbnails and a lightbox main-image placeholder.

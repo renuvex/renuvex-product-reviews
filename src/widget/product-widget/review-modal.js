@@ -19,11 +19,31 @@ function getValidImages(review) {
 
 function captureBodyScrollState() {
   var bodyStyle = document.body.style;
+  var rootStyle = document.documentElement.style;
   return {
-    overflow: bodyStyle.getPropertyValue('overflow'),
-    overflowPriority: bodyStyle.getPropertyPriority('overflow'),
-    paddingRight: bodyStyle.getPropertyValue('padding-right'),
-    paddingRightPriority: bodyStyle.getPropertyPriority('padding-right'),
+    scrollX: window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
+    scrollY: window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
+    fixedBodyLock: false,
+    bodyOverflow: bodyStyle.getPropertyValue('overflow'),
+    bodyOverflowPriority: bodyStyle.getPropertyPriority('overflow'),
+    bodyPaddingRight: bodyStyle.getPropertyValue('padding-right'),
+    bodyPaddingRightPriority: bodyStyle.getPropertyPriority('padding-right'),
+    bodyPosition: bodyStyle.getPropertyValue('position'),
+    bodyPositionPriority: bodyStyle.getPropertyPriority('position'),
+    bodyTop: bodyStyle.getPropertyValue('top'),
+    bodyTopPriority: bodyStyle.getPropertyPriority('top'),
+    bodyLeft: bodyStyle.getPropertyValue('left'),
+    bodyLeftPriority: bodyStyle.getPropertyPriority('left'),
+    bodyRight: bodyStyle.getPropertyValue('right'),
+    bodyRightPriority: bodyStyle.getPropertyPriority('right'),
+    bodyWidth: bodyStyle.getPropertyValue('width'),
+    bodyWidthPriority: bodyStyle.getPropertyPriority('width'),
+    bodyOverscrollBehaviorY: bodyStyle.getPropertyValue('overscroll-behavior-y'),
+    bodyOverscrollBehaviorYPriority: bodyStyle.getPropertyPriority('overscroll-behavior-y'),
+    rootOverflow: rootStyle.getPropertyValue('overflow'),
+    rootOverflowPriority: rootStyle.getPropertyPriority('overflow'),
+    rootOverscrollBehaviorY: rootStyle.getPropertyValue('overscroll-behavior-y'),
+    rootOverscrollBehaviorYPriority: rootStyle.getPropertyPriority('overscroll-behavior-y'),
   };
 }
 
@@ -38,13 +58,30 @@ function restoreStyleProperty(style, propertyName, value, priority) {
 function lockBodyScroll() {
   var previousState = captureBodyScrollState();
   var bodyStyle = document.body.style;
+  var rootStyle = document.documentElement.style;
   var scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+  var isMobileViewport = window.matchMedia && window.matchMedia('(max-width: 800px)').matches;
+  var hasTouchInput = typeof navigator !== 'undefined' && navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
+  var isBodyAlreadyFixed = window.getComputedStyle(document.body).position === 'fixed';
+  var shouldFixBody = (isMobileViewport || hasTouchInput) && !isBodyAlreadyFixed;
 
   if (scrollbarWidth > 0) {
     var currentPaddingRight = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
     bodyStyle.setProperty('padding-right', (currentPaddingRight + scrollbarWidth) + 'px', 'important');
   }
+  rootStyle.setProperty('overflow', 'hidden', 'important');
+  rootStyle.setProperty('overscroll-behavior-y', 'none', 'important');
   bodyStyle.setProperty('overflow', 'hidden', 'important');
+  bodyStyle.setProperty('overscroll-behavior-y', 'none', 'important');
+
+  if (shouldFixBody) {
+    previousState.fixedBodyLock = true;
+    bodyStyle.setProperty('position', 'fixed', 'important');
+    bodyStyle.setProperty('top', (-previousState.scrollY) + 'px', 'important');
+    bodyStyle.setProperty('left', (-previousState.scrollX) + 'px', 'important');
+    bodyStyle.setProperty('right', '0', 'important');
+    bodyStyle.setProperty('width', '100%', 'important');
+  }
 
   return previousState;
 }
@@ -52,8 +89,20 @@ function lockBodyScroll() {
 function restoreBodyScroll(previousState) {
   if (!previousState) return;
   var bodyStyle = document.body.style;
-  restoreStyleProperty(bodyStyle, 'overflow', previousState.overflow, previousState.overflowPriority);
-  restoreStyleProperty(bodyStyle, 'padding-right', previousState.paddingRight, previousState.paddingRightPriority);
+  var rootStyle = document.documentElement.style;
+  restoreStyleProperty(rootStyle, 'overflow', previousState.rootOverflow, previousState.rootOverflowPriority);
+  restoreStyleProperty(rootStyle, 'overscroll-behavior-y', previousState.rootOverscrollBehaviorY, previousState.rootOverscrollBehaviorYPriority);
+  restoreStyleProperty(bodyStyle, 'overflow', previousState.bodyOverflow, previousState.bodyOverflowPriority);
+  restoreStyleProperty(bodyStyle, 'padding-right', previousState.bodyPaddingRight, previousState.bodyPaddingRightPriority);
+  restoreStyleProperty(bodyStyle, 'overscroll-behavior-y', previousState.bodyOverscrollBehaviorY, previousState.bodyOverscrollBehaviorYPriority);
+  restoreStyleProperty(bodyStyle, 'position', previousState.bodyPosition, previousState.bodyPositionPriority);
+  restoreStyleProperty(bodyStyle, 'top', previousState.bodyTop, previousState.bodyTopPriority);
+  restoreStyleProperty(bodyStyle, 'left', previousState.bodyLeft, previousState.bodyLeftPriority);
+  restoreStyleProperty(bodyStyle, 'right', previousState.bodyRight, previousState.bodyRightPriority);
+  restoreStyleProperty(bodyStyle, 'width', previousState.bodyWidth, previousState.bodyWidthPriority);
+  if (previousState.fixedBodyLock) {
+    window.scrollTo(previousState.scrollX, previousState.scrollY);
+  }
 }
 
 function getReturnFocusElement() {
