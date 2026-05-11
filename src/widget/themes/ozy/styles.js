@@ -290,7 +290,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-left{flex:0 0 438px;background:#222;position:relative;overflow:hidden;}
   .ikr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}
   /* Görsel yüklenemediğinde ana <img> gizlenir, yerine bu placeholder konur.
-     `.ikr-modal-left` koyu zemini koruyor, metin nötr kalıyor. */
+     ikr-modal-left koyu zemini koruyor, metin nötr kalıyor. */
   .ikr-modal-img-error{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;color:#cccccc;background:#222;font-size:14px;line-height:1.4;text-align:center;}
   .ikr-modal-img-enter-right{animation:ikrSlideInRight 0.2s ease forwards;}
   .ikr-modal-img-enter-left{animation:ikrSlideInLeft 0.2s ease forwards;}
