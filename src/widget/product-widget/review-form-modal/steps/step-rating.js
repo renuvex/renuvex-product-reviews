@@ -42,6 +42,7 @@ export function createStepRating(state, opts) {
     stars.forEach(function (btn, idx) {
       var isActive = idx < activeCount;
       btn.classList.toggle('ikr-fwizard-star-active', isActive);
+      btn.setAttribute('aria-checked', idx + 1 === activeCount ? 'true' : 'false');
       // SVG'yi state'e göre filled/empty olarak değiştir — review item ile tutarlı.
       btn.innerHTML = isActive ? iconPair.filled : iconPair.empty;
     });

@@ -60,6 +60,13 @@ function buildThanksScreen() {
   return wrap;
 }
 
+function focusCurrentWizardStep(shell) {
+  if (!shell || !shell.focusFirstControl) return;
+  setTimeout(function () {
+    shell.focusFirstControl();
+  }, 0);
+}
+
 /**
  * Yorum yazma wizard modal'ını aç.
  */
@@ -190,6 +197,7 @@ export function openReviewFormModal(opts) {
 
     if (shell.setStepAttr) shell.setStepAttr(stepNum);
     if (stepNum === 3) progress.setNextDisabled(true);
+    focusCurrentWizardStep(shell);
   }
 
   var isThanksShowing = false;
@@ -204,6 +212,7 @@ export function openReviewFormModal(opts) {
       stepWrap.appendChild(thanksEl);
       shell.setStepAttr('thanks');
       progress.setThanksState(shell.close);
+      focusCurrentWizardStep(shell);
       return;
     }
 
@@ -227,6 +236,7 @@ export function openReviewFormModal(opts) {
       shell.setStepAttr('thanks');
       progress.setThanksState(shell.close);
       animPhase = 'idle';
+      focusCurrentWizardStep(shell);
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);

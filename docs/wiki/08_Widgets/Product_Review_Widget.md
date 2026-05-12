@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-12
 tags:
   - widget
   - reviews
@@ -14,6 +14,7 @@ related:
   - "[[Photo_Strip]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
+  - "[[Bug_Review_Wizard_Focus_Trap_Accessibility]]"
 ---
 
 # Product Review Widget
@@ -52,6 +53,7 @@ Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merch
 
 ## Submission flow (modal)
 - Steps managed in [product-widget/review-form-modal/wizard-state.js](src/widget/product-widget/review-form-modal/wizard-state.js).
+- The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Focus moves into the active step on open/step change and returns to the opening control on close. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary.
 - On submit → `POST /api/public/reviews`; image URLs are validated against the trusted Cloudinary policy before storage, then status is set by auto-approve mode.
 - The legacy inline/page form was removed; all review CTAs open the multi-step modal.
@@ -86,8 +88,10 @@ Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merch
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
+- [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 
 ## Change Log
+- 2026-05-12: Documented review submission wizard accessibility fix: focus trap, active-step focus reset, focus restore on close, keyboard-accessible photo upload trigger, and visible focus outlines. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
 - 2026-05-11: Documented self-mounting PDP review anchor fallback after fixing deploy/theme cases where missing `#ikas-reviews-anchor` hid both the review block and product-title badge. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 - 2026-05-11: Documented retryable review fetch error state after separating API/network failures from valid empty review lists. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
 - 2026-05-11: Photo strip decoupled from main reviews fetch — dedicated `hasImages=true&limit=15&orderBy=newest` call, cap 15, newest-first rotation. Lightbox now navigates strip dataset, closing the paged-slice navigation risk. Related ADR: [[ADR_0007_Photo_Strip_Cap_And_Rotation]]. Related note: [[Photo_Strip]]. Source: [bootstrap.js](src/widget/product-widget/bootstrap.js), [render.js](src/widget/product-widget/render.js), [state.js](src/widget/core/state.js), [route.ts](src/app/api/public/reviews/route.ts).

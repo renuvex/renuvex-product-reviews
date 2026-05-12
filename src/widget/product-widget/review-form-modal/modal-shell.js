@@ -15,8 +15,10 @@ export function createWizardShell(opts) {
   // ─── DOM ──────────────────────────────────────────────────────────
   var overlay = document.createElement('div');
   overlay.className = 'ikr-fwizard-overlay';
+  overlay.tabIndex = -1;
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Yorum yapma formu');
 
   var modal = document.createElement('div');
   modal.className = 'ikr-fwizard';
@@ -39,8 +41,79 @@ export function createWizardShell(opts) {
 
   // ─── State & cleanup ──────────────────────────────────────────────
   var isClosed = false;
+  var returnFocusEl = null;
   var prevBodyOverflow = '';
   var prevBodyPaddingRight = '';
+
+  function getReturnFocusElement() {
+    var el = document.activeElement;
+    if (!el || el === document.body || el === document.documentElement) return null;
+    return el;
+  }
+
+  function restoreFocus(el) {
+    if (!el || !document.contains(el) || typeof el.focus !== 'function') return;
+    try {
+      el.focus({ preventScroll: true });
+    } catch (_) {
+      try { el.focus(); } catch (_) {}
+    }
+  }
+
+  function isVisibleFocusable(el) {
+    if (!el || el.disabled) return false;
+    if (el.getAttribute('aria-hidden') === 'true') return false;
+    var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+    return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+  }
+
+  function getFocusableElements(container) {
+    var selector = [
+      'a[href]',
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+    return Array.prototype.slice.call(container.querySelectorAll(selector)).filter(isVisibleFocusable);
+  }
+
+  function focusFirstWizardControl() {
+    var contentFocusables = getFocusableElements(content);
+    var allFocusables = getFocusableElements(overlay);
+    var target = contentFocusables[0] || allFocusables[0] || overlay;
+    restoreFocus(target);
+  }
+
+  function trapWizardFocus(e) {
+    if (e.key !== 'Tab') return;
+    var focusables = getFocusableElements(overlay);
+    if (!focusables.length) {
+      e.preventDefault();
+      restoreFocus(overlay);
+      return;
+    }
+
+    var first = focusables[0];
+    var last = focusables[focusables.length - 1];
+    var active = document.activeElement;
+
+    if (!overlay.contains(active)) {
+      e.preventDefault();
+      restoreFocus(first);
+      return;
+    }
+
+    if (e.shiftKey && active === first) {
+      e.preventDefault();
+      restoreFocus(last);
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      restoreFocus(first);
+    }
+  }
 
   function lockBodyScroll() {
     var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -68,12 +141,17 @@ export function createWizardShell(opts) {
     setTimeout(function () {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       unlockBodyScroll();
+      restoreFocus(returnFocusEl);
       try { onClose(); } catch (e) { /* sessiz */ }
     }, 200); // CSS transition süresiyle eşleşmeli
   }
 
   function onKeyDown(e) {
-    if (e.key === 'Escape') close();
+    if (e.key === 'Escape') {
+      close();
+      return;
+    }
+    trapWizardFocus(e);
   }
 
   function onOverlayClick(e) {
@@ -88,12 +166,14 @@ export function createWizardShell(opts) {
 
   // ─── Mount ────────────────────────────────────────────────────────
   function open(initialBody) {
+    returnFocusEl = getReturnFocusElement();
     if (initialBody) content.appendChild(initialBody);
     document.body.appendChild(overlay);
     lockBodyScroll();
     // Fade-in için bir tick bekle (DOM ekleme sonrası class transition tetiklensin)
     requestAnimationFrame(function () {
       overlay.classList.add('ikr-fwizard-open');
+      focusFirstWizardControl();
     });
   }
 
@@ -142,6 +222,7 @@ export function createWizardShell(opts) {
     setStepAttr: function (stepNum) {
       modal.setAttribute('data-step', String(stepNum));
     },
+    focusFirstControl: focusFirstWizardControl,
     showToast: showToast,
   };
 }

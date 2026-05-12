@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-12
 tags:
   - status
 related:
@@ -30,6 +30,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
   - Review image load failures degrade gracefully: thumbnails hide broken assets, lightbox main image shows a neutral placeholder, and failures log with `console.warn`
   - Product review widget can self-mount on PDP when a theme-provided `#ikas-reviews-anchor` is missing, preserving both the review block and product-title badge
   - Photo review lightbox traps keyboard focus, exposes dialog semantics, and uses desktop/tablet/mobile responsive shells with mobile viewport-unit fallbacks
+  - Review submission wizard traps keyboard focus, focuses the active step on open/step change, restores previous focus on close, and provides visible keyboard focus states
   - Product rating badge (small inline star+count)
   - Listing-page rating badges (auto-discovers product cards on collection pages)
   - Mutation observer for SPA-style theme navigation
@@ -84,6 +85,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-11
 
 ## Change Log
+- 2026-05-12: Added review submission wizard accessibility fix to working widget status. The multi-step wizard now traps focus, restores opening focus on close, and keeps photo upload keyboard-accessible. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
 - 2026-05-11: Added widget-side error forwarding. A 637-byte (gzip) reporter in `widget.js` catches `error`/`unhandledrejection` events filtered to `widget.js` only, throttles them, and POSTs to `/api/public/widget-error` where the panel Sentry SDK records them tagged `source: widget`. No SDK in the widget bundle. Decision in [[ADR_0010_Widget_Error_Forwarding]].
 - 2026-05-11: Added Sentry SDK observability layer to the panel (Node + Edge + browser runtimes). DSN read from env, `sendDefaultPii: false` to block ikas OAuth header leak, prod `tracesSampleRate: 0.1`, masked Session Replay with prod 5% / on-error 100%, server log ingestion. Vercel-Sentry integration installed; source maps upload during Vercel build. Widget bundle deliberately excluded. Recorded decision in [[ADR_0009_Sentry_Observability_Strategy]]; operational reference in [[Sentry_Operations]].
 - 2026-05-11: Fixed PDP review widget mount fallback so missing theme anchors no longer hide both the review block and product-title badge. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].

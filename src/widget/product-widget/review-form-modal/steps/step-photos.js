@@ -32,8 +32,10 @@ export function createStepPhotos(state, opts) {
   var card = document.createElement('div');
   card.className = 'ikr-fwizard-photo-card';
 
-  // Upload butonu (label + gizli file input)
-  var uploadLabel = document.createElement('label');
+  // Upload button + hidden file input: button keeps keyboard semantics,
+  // file input keeps the native picker contract.
+  var uploadLabel = document.createElement('button');
+  uploadLabel.type = 'button';
   uploadLabel.className = 'ikr-fwizard-photo-add';
   uploadLabel.setAttribute('aria-label', 'Fotoğraf ekle');
   uploadLabel.innerHTML =
@@ -49,8 +51,8 @@ export function createStepPhotos(state, opts) {
   fileInput.accept = 'image/*';
   fileInput.multiple = true;
   fileInput.style.display = 'none';
-  uploadLabel.appendChild(fileInput);
   card.appendChild(uploadLabel);
+  card.appendChild(fileInput);
 
   // Önizleme listesi
   var previews = document.createElement('div');
@@ -169,14 +171,20 @@ export function createStepPhotos(state, opts) {
 
     if (isFull) {
       uploadLabel.style.display = 'none';
+      uploadLabel.disabled = true;
       fileInput.disabled = true;
     } else {
       uploadLabel.style.display = 'flex';
+      uploadLabel.disabled = isUploading;
       fileInput.disabled = isUploading;
       uploadLabel.classList.toggle('ikr-fwizard-photo-add--disabled', isUploading);
-      uploadLabel.appendChild(fileInput);
     }
   }
+
+  uploadLabel.addEventListener('click', function () {
+    if (fileInput.disabled) return;
+    fileInput.click();
+  });
 
   fileInput.onchange = async function (e) {
     // Dosyaları HEMEN oku — value temizlenmeden önce.

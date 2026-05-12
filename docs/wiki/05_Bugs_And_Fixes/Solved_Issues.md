@@ -23,6 +23,7 @@ related:
 ## Log
 
 ### 2026-05-12
+- Widget - Review Wizard Focus Trap Accessibility - Multi-step review submission wizard now keeps keyboard focus inside the modal, focuses the active step, restores the opening focus on close, and shows visible focus outlines. [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 - Widget - Lightbox Mobile Review Switch Scroll State - Review switches now reset every modal scroll layer after layout settles, and fixed-body locking is limited to iOS/WebKit instead of all touch/mobile browsers. [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]
 - Widget - Lightbox Mobile Pull To Refresh - Photo lightbox now locks root overscroll so long-comment scroll boundaries do not leak into browser pull-to-refresh. [[Bug_Lightbox_Mobile_Pull_To_Refresh]]
 

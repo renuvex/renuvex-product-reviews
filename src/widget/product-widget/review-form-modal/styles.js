@@ -575,6 +575,24 @@ export var FWIZARD_CSS = `
     display:none;
   }
 
+  .ikr-fwizard-close:focus-visible,
+  .ikr-fwizard-star:focus-visible,
+  .ikr-fwizard-photo-add:focus-visible,
+  .ikr-fwizard-photo-remove:focus-visible,
+  .ikr-fwizard-submit-btn:focus-visible,
+  .ikr-fwizard-cta-btn:focus-visible,
+  .ikr-fwizard-nav-btn:focus-visible{
+    outline:3px solid var(--ikr-fwizard-focus-ring, rgba(17,17,17,0.42));
+    outline-offset:3px;
+  }
+
+  .ikr-fwizard-input:focus-visible,
+  .ikr-fwizard-textarea:focus-visible{
+    outline:3px solid var(--ikr-fwizard-focus-ring, rgba(17,17,17,0.42));
+    outline-offset:2px;
+    border-color:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
+  }
+
   /* ─── Mobile düzenlemeleri ────────────────────────────────────────
      Mobil yapı:
        - Modal tam ekran (100dvh × 100vw)
