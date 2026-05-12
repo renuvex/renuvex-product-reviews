@@ -210,6 +210,7 @@ export var CLASSIC_CSS = `
     font-weight:500;
     color:var(--ikr-photo-title,#111111);
     margin-bottom:12px;
+    overflow-wrap:anywhere;
   }
   .ikr-photo-strip-wrap{position:relative;}
   /* .ikr-photo-strip ve .ikr-photo-strip-thumb asıl tanımları aşağıda
