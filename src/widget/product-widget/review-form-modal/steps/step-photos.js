@@ -159,7 +159,6 @@ export function createStepPhotos(state, opts) {
     var pendingCount = (state.get().pendingImages || []).length;
     var totalCount = completedCount + pendingCount;
     var isFull = totalCount >= MAX_PHOTOS;
-    var isUploading = pendingCount > 0;
 
     if (totalCount > 0) {
       card.classList.add('ikr-fwizard-photo-card--compact');
@@ -174,10 +173,13 @@ export function createStepPhotos(state, opts) {
       uploadLabel.disabled = true;
       fileInput.disabled = true;
     } else {
+      // Üst sınıra ulaşılmadığı sürece buton her zaman aktif — kullanıcı
+      // mevcut yüklemelerin bitmesini beklemeden yeni foto seçebilir.
+      // Paralel yüklemeler pendingImages içinde bağımsız izleniyor.
       uploadLabel.style.display = 'flex';
-      uploadLabel.disabled = isUploading;
-      fileInput.disabled = isUploading;
-      uploadLabel.classList.toggle('ikr-fwizard-photo-add--disabled', isUploading);
+      uploadLabel.disabled = false;
+      fileInput.disabled = false;
+      uploadLabel.classList.remove('ikr-fwizard-photo-add--disabled');
     }
   }
 
@@ -189,17 +191,19 @@ export function createStepPhotos(state, opts) {
   fileInput.onchange = async function (e) {
     // Dosyaları HEMEN oku — value temizlenmeden önce.
     // Bazı tarayıcılarda value='' ataması e.target.files'ı boşaltır.
-    var files = Array.from(e.target.files).slice(0, MAX_PHOTOS - (state.get().images || []).length);
+    // Üst sınır hem tamamlanan hem de bekleyen yüklemeleri kapsar — paralel
+    // yüklemelerde toplam MAX_PHOTOS'u aşmamak için.
+    var existingTotal = (state.get().images || []).length + (state.get().pendingImages || []).length;
+    var files = Array.from(e.target.files).slice(0, MAX_PHOTOS - existingTotal);
 
     // Her seçimden sonra input'u temizle — aynı dosyanın tekrar seçilmesini sağlar.
     fileInput.value = '';
 
-    var pendingCount = (state.get().pendingImages || []).length;
-    if (pendingCount > 0) return;
-
+    // Mevcut foto sayılarını sonradan kullanmak için snapshot — hızlı geçiş
+    // kararı bu değerlere bakar (önce HİÇ foto yoksa atlat).
+    var pendingBefore = (state.get().pendingImages || []).length;
     var current = state.get().images || [];
     var preUploadCount = current.length;
-    var remaining = MAX_PHOTOS - current.length;
 
     if (files.length === 0) return;
     var newPending = [];
@@ -314,8 +318,11 @@ export function createStepPhotos(state, opts) {
       }
     };
 
-    // HIZLI GEÇİŞ: Sadece ilk kez fotoğraf seçildiğinde anında sonraki adıma geç
-    if (preUploadCount === 0) {
+    // HIZLI GEÇİŞ: Sadece adımda hiç foto yokken (ne tamamlanmış ne bekleyen)
+    // ilk seçimde sonraki adıma atlat. Kullanıcı adım 3'e atladıktan sonra
+    // geri gelip ek foto eklerse manuel akışta kalsın — beklenmedik atlama
+    // yapmasın.
+    if (preUploadCount === 0 && pendingBefore === 0) {
       isExiting = true; // DONDUR: Sayfa gidiyor, DOM değişimini yasakla
       var canNav = !opts.canNavigate || opts.canNavigate();
       if (canNav) state.goNext();

@@ -55,6 +55,8 @@ Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merch
 - Steps managed in [product-widget/review-form-modal/wizard-state.js](src/widget/product-widget/review-form-modal/wizard-state.js).
 - The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Focus moves into the active step on open/step change and returns to the opening control on close. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary.
+- Photo step allows **parallel uploads** — the add button stays enabled while existing uploads are in flight. Each pending upload is tracked independently in `pendingImages`. The submission step blocks submit with a "fotoğraflar yükleniyor" message until every pending upload resolves. Upper bound `MAX_PHOTOS=3` is enforced across completed + pending so parallel selection never exceeds the cap.
+- Auto-jump to the next step fires only on the user's first real photo action (no completed, no pending). Returning to the photo step to add more keeps the user on that step.
 - On submit → `POST /api/public/reviews`; image URLs are validated against the trusted Cloudinary policy before storage, then status is set by auto-approve mode.
 - The legacy inline/page form was removed; all review CTAs open the multi-step modal.
 
@@ -91,6 +93,7 @@ Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merch
 - [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 
 ## Change Log
+- 2026-05-12: Photo step now allows parallel uploads — add button stays enabled while existing uploads are in flight (the previous silent block was confusing when users returned to step 2 after the auto-jump). Auto-jump narrowed to the truly first photo (no completed, no pending). MAX_PHOTOS=3 cap enforced across completed + pending. Source: [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
 - 2026-05-12: Documented review submission wizard accessibility fix: focus trap, active-step focus reset, focus restore on close, keyboard-accessible photo upload trigger, and visible focus outlines. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
 - 2026-05-11: Documented self-mounting PDP review anchor fallback after fixing deploy/theme cases where missing `#ikas-reviews-anchor` hid both the review block and product-title badge. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 - 2026-05-11: Documented retryable review fetch error state after separating API/network failures from valid empty review lists. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
