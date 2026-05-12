@@ -2,6 +2,8 @@
 // Reply (mağaza yanıtı) DOM'u 3 layout'ta da aynı: header (label) + text + clamp/read-more.
 // Tek yerden yönetilir, layout dosyaları sadece append eder.
 
+import { currentSettings } from '../core/state.js';
+
 // Mağaza yanıtı bloğunu oluşturur (clamp + "Devamını oku" davranışı dahil).
 // Yorum metnindeki body-clamp pattern'inin reply versiyonu.
 // Reply DOM'u layout'lar arası tutarlı; sadece eklendiği yer (parent) farklı.
@@ -19,7 +21,7 @@ export function buildReplyEl(merchantReply, onReadMore) {
   replyHeader.className = 'ikr-reply-header';
   var replyLabel = document.createElement('span');
   replyLabel.className = 'ikr-reply-label';
-  replyLabel.textContent = 'Mağaza Sahibi';
+  replyLabel.textContent = (currentSettings && currentSettings.merchantReplyLabel) || 'Mağaza Sahibi';
   replyHeader.appendChild(replyLabel);
   replyEl.appendChild(replyHeader);
 

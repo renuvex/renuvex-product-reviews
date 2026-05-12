@@ -264,7 +264,7 @@ function buildRight(r) {
   replyEl.className = 'ikr-modal-reply';
   var replyLabel = document.createElement('div');
   replyLabel.className = 'ikr-modal-reply-label';
-  replyLabel.textContent = 'Mağaza Sahibi';
+  replyLabel.textContent = (currentSettings && currentSettings.merchantReplyLabel) || 'Mağaza Sahibi';
   var replyText = document.createElement('div');
   replyText.className = 'ikr-modal-reply-text';
   replyText.textContent = r.merchantReply || '';
