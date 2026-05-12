@@ -4,7 +4,15 @@
 // Error reporter must be the first import so its window listeners are attached
 // before any other widget module evaluates. Side-effect import only.
 import './core/error-reporter.js';
+import { ensureBaseReset } from './shared/base-reset.js';
+import { attachInputModalityListeners } from './shared/input-modality.js';
 import { PUBLIC_API_KEY, API_BASE } from './core/config.js';
+
+// Widget-scope base reset + global input modality tracker. Both are
+// idempotent and inherited by every widget surface (review list, summary,
+// wizard, lightbox, badges) since they all run inside this single bundle.
+ensureBaseReset();
+attachInputModalityListeners();
 import { attachEvents, attachModalBadgeListener } from './events.js';
 import { startMutationObserver } from './observer.js';
 import { bootstrap } from './product-widget/bootstrap.js';

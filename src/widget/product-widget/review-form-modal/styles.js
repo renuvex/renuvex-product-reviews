@@ -339,11 +339,10 @@ export var FWIZARD_CSS = `
     box-sizing:border-box;
     transition:border-color 0.15s;
   }
-  .ikr-fwizard-input:focus,
-  .ikr-fwizard-textarea:focus{
-    outline:none;
-    /* Aktiflik efekti kaldırıldı, border rengi sabit kalır */
-  }
+  /* Klavye odak çerçevesi aşağıdaki :focus-visible bloğunda tanımlı.
+     Mouse/touch'ta tarayıcı varsayılan odak halkası modern browser'larda
+     zaten çizilmiyor — bu yüzden ":focus { outline:none }" reset'ine
+     ihtiyaç kalmadı. */
   .ikr-fwizard-input::placeholder,
   .ikr-fwizard-textarea::placeholder{
     color:var(--ikr-fwizard-placeholder, rgba(0,0,0,0.35));

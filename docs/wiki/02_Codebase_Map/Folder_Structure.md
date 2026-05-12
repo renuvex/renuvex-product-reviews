@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-12
 tags:
   - structure
 related:
@@ -130,6 +130,9 @@ yorum-paneli/
 │     │  ├─ review-modal.js
 │     │  └─ title-finder.js      # Heuristic: locate product title in arbitrary themes
 │     ├─ review-layouts/         # card / gallery / list (each with index.js + styles.js)
+│     ├─ shared/                 # Cross-widget utilities — bundle-wide contracts
+│     │  ├─ base-reset.js        # Tap-highlight off + :active feedback + utility classes (ADR_0011)
+│     │  └─ input-modality.js    # wasLastInputKeyboard() — global last-input-modality tracker
 │     ├─ summary-layouts/        # classic / compact / hero / minimal / split / shared
 │     └─ themes/
 │        └─ ozy/                 # Default theme — styles.js + theme.js
@@ -154,5 +157,6 @@ yorum-paneli/
 - [[Widget_Files_Map]]
 
 ## Change Log
+- 2026-05-12: Added `src/widget/shared/` directory with `base-reset.js` and `input-modality.js` — bundle-wide widget utilities introduced by [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]].
 - 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) to the source tree map after introducing the trusted review image URL policy.
 - 2026-05-05: Removed the legacy `src/widget/product-widget/review-form.js` entry from the structure map because review submission is now modal-only.

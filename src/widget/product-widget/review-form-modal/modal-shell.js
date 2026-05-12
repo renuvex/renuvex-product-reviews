@@ -6,6 +6,8 @@
 // Bağımsızlık: Mevcut review-modal'a hiçbir bağımlılık yok. Class'lar
 // 'ikr-fwizard-' prefix'iyle izole.
 
+import { wasLastInputKeyboard } from '../../shared/input-modality.js';
+
 export function createWizardShell(opts) {
   var onClose = opts && opts.onClose ? opts.onClose : function () {};
   // Faz 2+'da step ilerlerken outside-click davranışı değişebilir.
@@ -42,6 +44,10 @@ export function createWizardShell(opts) {
   // ─── State & cleanup ──────────────────────────────────────────────
   var isClosed = false;
   var returnFocusEl = null;
+  // Açılış kaynağı: klavyeden açıldıysa kapanışta odağı tetikleyiciye iade
+  // ediyoruz (Tab akışı sürsün). Pointer/touch ile açıldıysa odağı doğal
+  // olarak bırakıyoruz — yoksa mobilde trigger butonda sticky focus kalır.
+  var openedByKeyboard = false;
   var prevBodyOverflow = '';
   var prevBodyPaddingRight = '';
 
@@ -141,7 +147,8 @@ export function createWizardShell(opts) {
     setTimeout(function () {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       unlockBodyScroll();
-      restoreFocus(returnFocusEl);
+      // Sadece klavye kaynaklı açılışlarda odağı iade et.
+      if (openedByKeyboard) restoreFocus(returnFocusEl);
       try { onClose(); } catch (e) { /* sessiz */ }
     }, 200); // CSS transition süresiyle eşleşmeli
   }
@@ -167,6 +174,7 @@ export function createWizardShell(opts) {
   // ─── Mount ────────────────────────────────────────────────────────
   function open(initialBody) {
     returnFocusEl = getReturnFocusElement();
+    openedByKeyboard = wasLastInputKeyboard();
     if (initialBody) content.appendChild(initialBody);
     document.body.appendChild(overlay);
     lockBodyScroll();

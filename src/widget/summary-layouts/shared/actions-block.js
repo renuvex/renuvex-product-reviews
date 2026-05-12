@@ -5,6 +5,7 @@
 import { registerPopover, notifyOpening } from './popover-registry.js';
 import { getFilterIconSvg } from '../../icons.js';
 import { currentSettings } from '../../core/state.js';
+import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 
 export function buildActionsBlock(opts) {
   var widget = opts.widget;
@@ -46,12 +47,16 @@ export function buildActionsBlock(opts) {
     ['lowest', 'En Düşük Puan', false],
     ['photos', 'Fotoğraflı', true],
   ];
+  // Pointer-vs-keyboard origin: restore focus to the trigger only when the
+  // close was driven by keyboard. Pointer/touch closes leave focus alone so
+  // the mobile button does not retain a stuck pressed/focus appearance.
   function closeFilter(opts) {
     var wasOpen = filterMenu.classList.contains('ikr-open');
     filterMenu.classList.remove('ikr-open');
     filterBtn.classList.remove('ikr-filter-btn-active');
     filterBtn.setAttribute('aria-expanded', 'false');
-    if (wasOpen && opts && opts.restoreFocus) {
+    var shouldRestore = opts && (opts.restoreFocus === true || (opts.restoreFocus === 'auto' && wasLastInputKeyboard()));
+    if (wasOpen && shouldRestore) {
       try { filterBtn.focus({ preventScroll: true }); } catch (_) {
         try { filterBtn.focus(); } catch (_) {}
       }
@@ -81,18 +86,19 @@ export function buildActionsBlock(opts) {
     item.setAttribute('role', 'menuitem');
     item.textContent = opt[1];
     item.onclick = function() {
-      closeFilter({ restoreFocus: true });
+      closeFilter({ restoreFocus: 'auto' });
       onSortChange(opt[0], isPhotos);
     };
     filterMenu.appendChild(item);
   });
 
   filterBtn.onclick = function() {
-    if (filterMenu.classList.contains('ikr-open')) closeFilter({ restoreFocus: true });
+    if (filterMenu.classList.contains('ikr-open')) closeFilter({ restoreFocus: 'auto' });
     else openFilter();
   };
 
   // Klavye: menü açıkken Escape kapatır ve odağı tetikleyiciye döndürür.
+  // Escape doğası gereği klavye olayıdır — restoreFocus burada koşulsuz.
   filterWrap.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && filterMenu.classList.contains('ikr-open')) {
       e.stopPropagation();
