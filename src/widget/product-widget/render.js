@@ -6,7 +6,7 @@ import { openReviewModal } from './review-modal.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
 import { THEME_SINGLE_PRODUCT_CONTAINER } from '../themes/ozy/theme.js';
-import { getIconFromSettings } from '../icons.js';
+import { getIconFromSettings } from '../icons/index.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
 import { openWriteForm } from '../summary-layouts/shared/write-action.js';

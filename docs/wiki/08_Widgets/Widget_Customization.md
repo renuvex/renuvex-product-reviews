@@ -23,6 +23,7 @@ Per-merchant widget settings, schema-driven from a single source of truth in [wi
 - **Server helpers** (defaults, sanitize, validate): [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - **Admin color picker**: [src/components/home-page/widgets/editor/ColorPickerField.tsx](src/components/home-page/widgets/editor/ColorPickerField.tsx)
 - **Visual select cards**: [src/components/home-page/widgets/editor/VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx)
+- **Icon registries**: [src/widget/icons/index.js](src/widget/icons/index.js)
 - **Design tokens**: [src/lib/design-tokens.ts](src/lib/design-tokens.ts)
 
 ## Field types
@@ -95,6 +96,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - Color settings churn has been frequent (visible in migrations). Prefer soft-removing keys via `sanitizeSettings` over a DB migration.
 - The storefront widget container background is intentionally transparent. Store themes own the page background; admin preview background is only a testing surface.
 - Alpha hex values are still valid internally for defaults such as translucent modal controls and borders, but merchants choose opaque colors in the admin picker. If a merchant changes one of those fields manually, the saved value becomes `#rrggbb`; resetting restores the schema default, including alpha where defined.
+- `iconSelect` fields resolve their options from [src/widget/icons/index.js](src/widget/icons/index.js), so admin choices, iframe previews, storefront rating icons, and filter icons share the same registries.
 
 ## Related Source Files
 - [src/components/home-page/widgets/](src/components/home-page/widgets/)
@@ -110,6 +112,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-05-12: Documented the split icon registries used by `iconSelect`: [review-icons.js](src/widget/icons/review-icons.js) for rating/review icons and [filter-icons.js](src/widget/icons/filter-icons.js) for filter button icons, both exported through [icons/index.js](src/widget/icons/index.js).
 - 2026-05-12: Documented the preview settings event payload. Open overlay surfaces can consume `IKR_SETTINGS_UPDATED_PREVIEW.detail.settings`; the photo review lightbox uses this to re-render its right pane while already open. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
 - 2026-05-12: Changed the default review date color from `#111111` to `#5e5e5e` so date metadata reads as secondary text while staying clearly legible. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).
 - 2026-05-08: Added optional visual choice cards for `select` fields. `summaryLayout` and `reviewLayout` now declare preview metadata in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), while [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) renders the admin-only mini layout sketches. Stored setting values are unchanged.

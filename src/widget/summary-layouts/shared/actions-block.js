@@ -3,7 +3,7 @@
 // Tüm summary layout'ları bu shared parçayı kullanır.
 
 import { registerPopover, notifyOpening } from './popover-registry.js';
-import { getFilterIconSvg } from '../../icons.js';
+import { getFilterIconSvg } from '../../icons/index.js';
 import { currentSettings } from '../../core/state.js';
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { colors, typography, radii } from '@/lib/design-tokens';
-import { ICONS, FILTER_ICONS, parseIconValue } from '@/widget/icons.js';
+import { ICONS, FILTER_ICONS, parseIconValue } from '@/widget/icons/index.js';
 
 type Option = { value: string; label: string };
 
@@ -14,8 +14,8 @@ interface IconSelectProps {
 }
 
 // value formatları:
-//   - Yıldız ikonları (ICONS): "star" | "star:rounded" | "heart" — filled+empty çiftli
-//   - Filtre ikonları (FILTER_ICONS): "lines" | "sliders" | "funnel" — tek SVG
+//   - Yorum ikonları (ICONS): "star" | "star:rounded" | "favorite:modern" — filled+empty çiftli
+//   - Filtre ikonları (FILTER_ICONS): "lines" | "linesAlt" | "funnel" | "dense" — tek SVG
 // Önce FILTER_ICONS direct lookup, yoksa ICONS yıldız parse'ı.
 function getPreviewSvg(value: string): string {
   // Filter ikonu mu? (single-state registry)

@@ -1,7 +1,7 @@
 // core/badge.js — Merkezi listing badge factory
 // Tüm widgetlar (listing, carousel, popup, modal) bu fonksiyonu kullanır.
 
-import { getIconStyle } from '../icons.js';
+import { getIconStyle } from '../icons/index.js';
 import { partialStarsHTML } from './helpers.js';
 
 var BADGE_STAR_COLOR = 'var(--ikr-badge-color,#f59e0b)';

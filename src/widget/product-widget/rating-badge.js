@@ -2,7 +2,7 @@
 
 import { findProductTitleEl } from './title-finder.js';
 import { PUBLIC_API_KEY } from '../core/config.js';
-import { getIconStyle } from '../icons.js';
+import { getIconStyle } from '../icons/index.js';
 import { partialStarsHTML } from '../core/helpers.js';
 
 // Boyut map — badge widget ayarındaki "size" değeri bu piksel değerlerini üretir

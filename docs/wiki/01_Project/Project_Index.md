@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-06
+updated: 2026-05-12
 tags:
   - quick-reference
 related:
@@ -61,7 +61,7 @@ related:
 - Config (publicApiKey extraction) → [src/widget/core/config.js](src/widget/core/config.js)
 - DOM observer → [src/widget/observer.js](src/widget/observer.js)
 - Events → [src/widget/events.js](src/widget/events.js)
-- Icons registry → [src/widget/icons.js](src/widget/icons.js)
+- Icons registry API → [src/widget/icons/index.js](src/widget/icons/index.js)
 - Product widget bootstrap/render → [src/widget/product-widget/](src/widget/product-widget/)
 - Listing badges → [src/widget/listing-badges/](src/widget/listing-badges/)
 - Review layouts → [src/widget/review-layouts/](src/widget/review-layouts/)
@@ -101,3 +101,6 @@ related:
 - [[Important_Files]]
 - [[Frontend_Map]]
 - [[Backend_API_Map]]
+
+## Change Log
+- 2026-05-12: Updated the quick pointer for widget icons after splitting the registry under [src/widget/icons/](src/widget/icons/).

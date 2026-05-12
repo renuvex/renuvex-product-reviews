@@ -422,7 +422,7 @@ export var FWIZARD_CSS = `
 
   /* ─── Step 1: Yıldız satırı ───
      İkon ve renk admin "Yıldız Stili"nden gelir:
-       - SVG: getIconFromSettings (icons.js, currentSettings.reviewIcon)
+       - SVG: getIconFromSettings (icons/index.js, currentSettings.reviewIcon)
        - Renk: --ikr-review-star-color (admin "Yıldız Rengi")
      Empty color uses --ikr-star-empty-color, shared with review and bar stars. */
   .ikr-fwizard-stars{

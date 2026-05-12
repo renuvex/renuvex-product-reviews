@@ -10,7 +10,7 @@
 //   - --ikr-review-star-color → dolu yıldız rengi
 // Bu sayede modal review yıldızlarıyla tutarlı görünür.
 
-import { getIconFromSettings } from '../../../icons.js';
+import { getIconFromSettings } from '../../../icons/index.js';
 import { currentSettings } from '../../../core/state.js';
 
 export function createStepRating(state, opts) {

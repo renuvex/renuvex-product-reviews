@@ -1,4 +1,4 @@
-import { getIconOptions, getFilterIconOptions } from '@/widget/icons.js';
+import { getIconOptions, getFilterIconOptions } from '@/widget/icons/index.js';
 
 // ─── Settings field types ────────────────────────────────────────────────────
 

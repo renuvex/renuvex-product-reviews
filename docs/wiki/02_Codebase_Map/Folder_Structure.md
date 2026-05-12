@@ -112,7 +112,11 @@ yorum-paneli/
 │  └─ widget/                    # Storefront bundle source (compiled to public/widget.js)
 │     ├─ index.js                # Entry: detects preview vs prod, attaches events, observer
 │     ├─ events.js               # Click/scroll handlers
-│     ├─ icons.js                # SVG icon registry (also imported by widgetDefs.ts)
+│     ├─ icons.js                # Backward-compatible icon API re-export
+│     ├─ icons/                  # Review/rating + filter icon registries
+│     │  ├─ index.js             # Public icon API for runtime + admin preview
+│     │  ├─ review-icons.js      # Review/rating filled + empty SVG pairs
+│     │  └─ filter-icons.js      # Filter button SVG registry
 │     ├─ observer.js             # MutationObserver — handles SPA-style theme nav
 │     ├─ core/
 │     │  ├─ badge.js
@@ -146,6 +150,7 @@ yorum-paneli/
 - `src/widget/` uses **plain JavaScript (.js)**, not TypeScript, because the bundle is shipped to third-party storefronts and esbuild builds it independently from the Next.js TS pipeline. Don't migrate it to TS without thinking about output size and bundling impact.
 - `public/widget.js` is committed to the repo so deploys ship it without a build step on the Vercel pipeline. Build script must be re-run after any `src/widget/*` change.
 - `widgetDefs.ts` (admin) and `widget-settings.ts` (server) share schema; widget.js receives the same settings via `/api/public/settings`. Don't duplicate — derive.
+- `src/widget/icons/` is the current icon source of truth. Import new code from [src/widget/icons/index.js](src/widget/icons/index.js); [src/widget/icons.js](src/widget/icons.js) exists only as a compatibility re-export.
 - `review-images.ts` is the server-side source of truth for trusted review image URLs. Widget helper logic in `src/widget/core/helpers.js` mirrors this contract for storefront defense in depth.
 - **Theme directory naming quirk**: only `src/widget/themes/ozy/` exists today. The build script ([scripts/build-widget.mjs](scripts/build-widget.mjs)) accepts `--theme=default` (no aliasing — uses direct imports from `themes/ozy/...`) or `--theme=new-theme` (aliases `themes/ozy/styles.js` → `themes/new-theme/styles.js`). The `themes/new-theme/` folder does **not** currently exist, so `pnpm build:widget --theme=new-theme` would fail. The Turkish `.proje-dokuman.md` references both `default/` and `new-theme/` directories that don't match the actual filesystem — that doc is partially stale on this point. Tracked in [[Open_Questions]].
 
@@ -157,6 +162,7 @@ yorum-paneli/
 - [[Widget_Files_Map]]
 
 ## Change Log
+- 2026-05-12: Split the widget icon registry into `src/widget/icons/` modules and kept [src/widget/icons.js](src/widget/icons.js) as a compatibility re-export.
 - 2026-05-12: Added `src/widget/shared/` directory with `base-reset.js` and `input-modality.js` — bundle-wide widget utilities introduced by [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]].
 - 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) to the source tree map after introducing the trusted review image URL policy.
 - 2026-05-05: Removed the legacy `src/widget/product-widget/review-form.js` entry from the structure map because review submission is now modal-only.

@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-12
 tags:
   - widget
   - storefront
@@ -24,7 +24,11 @@ Storefront widget source under `src/widget/*`. Plain JavaScript (.js), bundled b
 src/widget/
 ├─ index.js                       # 🟢 Entry. Detects preview vs prod; attaches observer/events.
 ├─ events.js                      # Document-level click/scroll wiring
-├─ icons.js                       # SVG icon registry; also imported by widgetDefs.ts (admin)
+├─ icons.js                       # Backward-compatible icon API re-export
+├─ icons/
+│  ├─ index.js                    # Public icon API for runtime + admin preview
+│  ├─ review-icons.js             # Review/rating ICONS registry (filled + empty SVG pairs)
+│  └─ filter-icons.js             # Filter button FILTER_ICONS registry (single-state SVGs)
 ├─ observer.js                    # MutationObserver — re-bootstraps widget on SPA-style theme nav
 │
 ├─ core/
@@ -107,6 +111,7 @@ src/widget/
 - `core/state.js` holds module-level mutable state (`currentSettings`, `currentProductId`, `currentReviewsData`, ...). Acceptable because the widget is a single-page-singleton. When refactoring, treat these as the runtime state — re-renders must consume them.
 - Review submission is modal-only. The legacy inline/page form was removed from `src/widget/product-widget/`; all write CTAs open `review-form-modal/`.
 - `review-modal.js` is the photo review detail lightbox, not the review submission wizard. Keep this distinction clear when changing modal behavior. See [[Product_Review_Lightbox]].
+- Review/rating and filter icons are split under `src/widget/icons/`. Import new code from [icons/index.js](src/widget/icons/index.js); [icons.js](src/widget/icons.js) remains only as a compatibility re-export.
 - Review image rendering must go through `getTrustedReviewImages()` / `getFirstTrustedReviewImage()` in [helpers.js](src/widget/core/helpers.js). Do not add layout-local `https://` or `data:image` checks.
 - Always test changes both in `/preview` AND on a real ikas storefront — preview mode skips the mutation observer and theme integrations.
 - The widget is **plain JS**. No TS, no React. Don't introduce a framework without rationale (bundle size + cold-start hit).
@@ -128,6 +133,7 @@ src/widget/
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-12: Split the storefront icon registry into [review-icons.js](src/widget/icons/review-icons.js), [filter-icons.js](src/widget/icons/filter-icons.js), and [icons/index.js](src/widget/icons/index.js). [icons.js](src/widget/icons.js) now remains as a compatibility re-export.
 - 2026-05-10: Documented the trusted review image helpers in [helpers.js](src/widget/core/helpers.js). Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Removed the legacy inline/page review form from the widget source map. Review submission is now modal-only via [review-form-modal/](src/widget/product-widget/review-form-modal/). Related source: [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
 - 2026-05-10: Corrected `review-modal.js` from "multi-step review modal" to photo review detail lightbox and linked [[Product_Review_Lightbox]]. Related source: [review-modal.js](src/widget/product-widget/review-modal.js).

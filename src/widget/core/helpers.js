@@ -2,7 +2,7 @@
 
 /* global __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
 
-import { renderStarRow, getIconFromSettings } from '../icons.js';
+import { renderStarRow, getIconFromSettings } from '../icons/index.js';
 
 // Review widget içindeki yıldızlar için CSS custom property — reviews widget ayarından beslenir
 export var STAR_COLOR = 'var(--ikr-review-star-color,#f59e0b)';

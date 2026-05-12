@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-12
 tags:
   - widget
   - architecture
@@ -41,6 +41,7 @@ A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront pa
 | [core/fetch.js](src/widget/core/fetch.js) | API helpers calling `/api/public/*`. |
 | [core/cache.js](src/widget/core/cache.js) | `sessionStorage` wrapper with in-memory fallback (private browsing / quota exceeded). Persists across same-tab navigations. |
 | [core/helpers.js](src/widget/core/helpers.js) | Shared display helpers, including trusted review image URL filtering for storefront render paths. |
+| [icons/](src/widget/icons/) | Public icon API plus split review/rating and filter icon registries shared by runtime and admin preview. |
 | [observer.js](src/widget/observer.js) | MutationObserver to re-bootstrap on SPA theme nav. |
 | [events.js](src/widget/events.js) | Document-level click handlers (review CTA, modal triggers). |
 | [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Decide whether current page is a product page; mount widget. |
@@ -109,6 +110,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - DOM identification (product id, slug, title) uses heuristics — themes vary. When fixing a "widget doesn't show on theme X" issue, the heuristics in `bootstrap.js` and `title-finder.js` are the usual culprits.
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
+- Icon selection is centralized under [src/widget/icons/](src/widget/icons/): review/rating icons live in `review-icons.js`, filter button icons live in `filter-icons.js`, and consumers import through `icons/index.js`. The old [icons.js](src/widget/icons.js) file is a compatibility re-export only.
 - The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, responsive breakpoints, viewport sizing, scroll containment, body scroll locking, focus management, or history behavior. Card/list/gallery navigation is scoped to the active sort/filter state's loaded review collection; the lightbox does not fetch unloaded pages by itself.
 - Lightbox layout uses a three-tier responsive contract in the Ozy theme: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile at `640px` and below with `vh` / `svh` / `dvh` viewport-unit fallbacks.
 - Review image rendering depends on a trusted Cloudinary cloud policy. The cloud name is a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`; it is not threaded through settings, no runtime setter exists, and there is no per-store image-policy cache. Settings endpoint outages cannot remove images. Layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]], [[ADR_0008_Cloud_Name_Build_Time_Only]], and [[Bug_Cloud_Name_Silent_Image_Filter]].
@@ -131,6 +133,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Ikas_Widget_Injection_Notes]]
 
 ## Change Log
+- 2026-05-12: Split widget icon architecture into [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js), [src/widget/icons/filter-icons.js](src/widget/icons/filter-icons.js), and [src/widget/icons/index.js](src/widget/icons/index.js), with [src/widget/icons.js](src/widget/icons.js) retained as a compatibility re-export.
 - 2026-05-11: Cloud-name runtime contract removed. The widget now consumes a build-time injected constant only; settings response, runtime cache, setter, and warn helper all deleted (~90 lines). Related ADR: [[ADR_0008_Cloud_Name_Build_Time_Only]]. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Documented the durable review image policy contract after adding build-time cloud fallback and widget-side last-valid policy cache. (Superseded same day by ADR_0008.) Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Documented the lightbox three-tier responsive contract and viewport-unit fallback after updating [styles.js](src/widget/themes/ozy/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].

@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-12
 tags:
   - critical-files
 related:
@@ -110,6 +110,11 @@ related:
 - **What:** Entry point. Detects preview vs prod mode. Wires events, observer, modal listener.
 - **Be careful:** Top of file imports many modules — module-level side effects (e.g. `core/config.js` reading `<script src>`) must be SSR-safe (already guarded with `typeof document`).
 
+### [src/widget/icons/index.js](src/widget/icons/index.js)
+- **What:** Public icon API used by storefront runtime, admin setting definitions, icon picker, and admin preview rendering.
+- **Why it matters:** Review/rating icons and filter button icons are split into dedicated registries under [src/widget/icons/](src/widget/icons/) but exposed from one import point. This keeps runtime rendering and admin choices synchronized.
+- **Be careful:** New icon consumers should import from `src/widget/icons/index.js`. [src/widget/icons.js](src/widget/icons.js) remains only as a backward-compatible re-export.
+
 ### [src/widget/core/config.js](src/widget/core/config.js)
 - **What:** Reads `publicApiKey` and base URL from the widget's own `<script>` tag.
 - **Be careful:** SSR-safe (guarded). If anything above this in the import graph reads `document` unguarded, the dashboard build will break — already happened (see `core/config.js` comment).
@@ -177,6 +182,7 @@ related:
 - [[Security_And_Rate_Limits]]
 
 ## Change Log
+- 2026-05-12: Added [src/widget/icons/index.js](src/widget/icons/index.js) to the widget runtime hot-list after splitting review/rating and filter icon registries under [src/widget/icons/](src/widget/icons/).
 - 2026-05-11: Added [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js) and [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts) under Observability. Together they close the widget-side visibility gap from ADR_0009 by forwarding uncaught widget errors to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited server endpoint. See [[ADR_0010_Widget_Error_Forwarding]].
 - 2026-05-11: Added the Observability (Sentry) section: [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), [src/instrumentation.ts](src/instrumentation.ts), [src/instrumentation-client.ts](src/instrumentation-client.ts), [src/app/global-error.tsx](src/app/global-error.tsx), and the `withSentryConfig` wrapping in [next.config.js](next.config.js). Each entry calls out the `sendDefaultPii: false` invariant, env-driven DSN, prod sample rates, and the wizard-wrapper ordering rule. See [[ADR_0009_Sentry_Observability_Strategy]].
 - 2026-05-10: Added [src/lib/review-images.ts](src/lib/review-images.ts) as the source of truth for trusted review image URL validation.
