@@ -4,7 +4,7 @@ import React from 'react';
 import { ICONS, parseIconValue } from '@/widget/icons/index.js';
 import { colors } from '@/lib/design-tokens';
 
-// Settings panelinden gelen iconValue: "star" | "star:rounded" | "favorite:modern" gibi değerler.
+// Settings panelinden gelen iconValue: "star" | "favorite:modern" gibi değerler.
 // ICONS registry'den doğru SVG'yi çözer.
 function resolveSvg(iconValue: string, state: 'filled' | 'empty'): string {
   const { type, style } = parseIconValue(iconValue);

@@ -14,7 +14,7 @@ interface IconSelectProps {
 }
 
 // value formatları:
-//   - Yorum ikonları (ICONS): "star" | "star:rounded" | "favorite:modern" — filled+empty çiftli
+//   - Yorum ikonları (ICONS): "star" | "favorite:modern" — filled+empty çiftli
 //   - Filtre ikonları (FILTER_ICONS): "lines" | "linesAlt" | "funnel" | "dense" — tek SVG
 // Önce FILTER_ICONS direct lookup, yoksa ICONS yıldız parse'ı.
 function getPreviewSvg(value: string): string {

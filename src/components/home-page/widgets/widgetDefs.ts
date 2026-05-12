@@ -29,7 +29,7 @@ export type SelectPreviewKey =
 export type SelectOption = { value: string; label: string; preview?: SelectPreviewKey };
 
 // Select options — statik dizi veya başka ayar değerlerine bağlı dinamik fonksiyon olabilir.
-// Örn: reviewIcon === 'star' ise 3 stil, 'heart' ise 2 stil seçeneği göster.
+// Örn: reviewIcon === 'star' ya da 'favorite:modern' gibi registry değerleri gösterilir.
 export type SelectOptionsSource =
   | SelectOption[]
   | ((settings: Record<string, unknown>) => SelectOption[]);
@@ -142,7 +142,7 @@ export const WIDGETS: WidgetDef[] = [
             type: 'iconSelect',
             key: 'reviewIcon',
             label: 'Yorum İkonu',
-            default: 'star:rounded',
+            default: 'star',
             options: getIconOptions(),
           },
           { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
