@@ -65,3 +65,16 @@ model WidgetSettings {
   @@unique([storeId, widgetId])
   @@index([storeId])
 }
+
+// Registry of Cloudinary uploads that are not yet attached to a Review.
+// Created when the widget reports a successful upload; removed atomically
+// when a review is submitted with that publicId. The cleanup cron expires
+// rows older than the retention window and deletes the orphaned Cloudinary
+// asset. See ADR_0012 for the rationale.
+model PendingReviewImage {
+  publicId  String   @id
+  createdAt DateTime @default(now())
+  ipHash    String?
+
+  @@index([createdAt])
+}

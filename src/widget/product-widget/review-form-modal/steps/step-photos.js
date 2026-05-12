@@ -293,6 +293,19 @@ export function createStepPhotos(state, opts) {
             var c2 = (state.get().images || []).slice();
             c2.push(upData.secure_url);
             state.set({ pendingImages: p2, images: c2 });
+
+            // Server-side pending registry — submit edilmezse cleanup cron'u
+            // bu publicId'yi 24 saat sonra Cloudinary'den siler. Submit edilirse
+            // /api/public/reviews POST'u kaydı atomik olarak temizler.
+            // Fire-and-forget: registry hatası upload akışını bozmaz; haftalık
+            // fallback cron yine de kaçırılanı yakalar.
+            try {
+              fetchWithTimeout(API_BASE + '/api/public/upload/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secureUrl: upData.secure_url }),
+              }).catch(function () { /* sessiz */ });
+            } catch (_) { /* sessiz */ }
           } else {
             throw new Error('invalid image url');
           }

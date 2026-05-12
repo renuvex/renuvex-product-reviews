@@ -3,7 +3,7 @@ type: database
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-12
 tags:
   - database
   - prisma
@@ -12,12 +12,13 @@ related:
   - "[[Index]]"
   - "[[Database_Map]]"
   - "[[ADR_0003_Review_Data_Model]]"
+  - "[[ADR_0012_Pending_Upload_Registry]]"
 ---
 
 # Database Schema
 
 ## Summary
-PostgreSQL via Prisma. Four models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
+PostgreSQL via Prisma. Five models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
 
 ## Models
 
@@ -100,6 +101,24 @@ Constraints:
 
 Read pattern (admin and public): `getWidgetDefaults(widgetId) ⊕ sanitizeSettings(widgetId, row.settings)`. See [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
 
+### `PendingReviewImage`
+Registry of Cloudinary uploads not yet attached to a `Review`. See [[ADR_0012_Pending_Upload_Registry]].
+
+| Field | Type | Notes |
+|---|---|---|
+| `publicId` | String `@id` | Cloudinary `public_id` derived from the upload's `secure_url` |
+| `createdAt` | DateTime `@default(now())` | Used by the cleanup cron's age filter |
+| `ipHash` | String? | sha256(ip).slice(0,32) — optional abuse signal, not user identity |
+
+Indexes:
+- `[createdAt]` — cleanup cron walks this
+
+Lifecycle:
+1. Widget POSTs `{secureUrl}` to `/api/public/upload/register` after a successful Cloudinary upload. Endpoint validates the URL against the trusted policy and upserts a row (idempotent — `createdAt` is not reset on conflict).
+2. `/api/public/reviews` POST runs the review insert and `deleteMany({ publicId: { in: ... } })` inside one `prisma.$transaction`.
+3. `/api/admin/cleanup-pending-uploads` (daily cron) deletes rows where `createdAt < now - 24h` plus their Cloudinary assets.
+4. Monthly `/api/admin/cleanup-images` is the safety-net fallback for uploads that bypassed the registry — it now paginates Cloudinary via `next_cursor` and only deletes assets older than 30 days.
+
 ## Conventions
 - All multi-tenant tables key on `storeId` (which is `merchantId`). No table is shared cross-tenant.
 - String enums (status, widgetId) are not Postgres enums — kept as strings to avoid migrations on every state addition. Trade-off: type-safety lives in TS only.
@@ -122,5 +141,9 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 ## Obsidian Links
 - [[Database_Map]]
 - [[ADR_0003_Review_Data_Model]]
+- [[ADR_0012_Pending_Upload_Registry]]
 - [[Auth_And_Installation_Flow]]
 - [[Widget_Customization]]
+
+## Change Log
+- 2026-05-12: Added `PendingReviewImage` model — registry of Cloudinary uploads not yet attached to a Review. See [[ADR_0012_Pending_Upload_Registry]].

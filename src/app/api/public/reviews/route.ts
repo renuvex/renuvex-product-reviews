@@ -4,6 +4,7 @@ import { withCors, corsOptions } from '@/lib/cors';
 import { Redis } from '@upstash/redis';
 import {
   getConfiguredCloudinaryCloudName,
+  getReviewImagePublicId,
   parseStoredReviewImages,
   sanitizeReviewImageUrls,
 } from '@/lib/review-images';
@@ -224,20 +225,37 @@ export async function POST(request: Request) {
 
     const initialStatus = shouldAutoApprove ? 'approved' : 'pending';
 
-    const newReview = await prisma.review.create({
-      data: {
-        storeId: String(storeId),
-        productId: String(productId),
-        slug: String(slug || ''),
-        productName: productName ? String(productName) : null,
-        rating: ratingNum,
-        title: title ? String(title).trim() : null,
-        comment: comment || '',
-        author: String(author).trim(),
-        email: email || '',
-        images: imageResult.urls.length ? JSON.stringify(imageResult.urls) : null,
-        status: initialStatus,
-      },
+    // Atomic commit: create Review and remove any PendingReviewImage rows
+    // tied to the publicIds this review consumes. Rows that were never
+    // registered are silently ignored — the weekly fallback scan catches them.
+    const committedPublicIds = imageResult.urls
+      .map((url) => getReviewImagePublicId(url, cloudName))
+      .filter((id): id is string => !!id);
+
+    const newReview = await prisma.$transaction(async (tx) => {
+      const created = await tx.review.create({
+        data: {
+          storeId: String(storeId),
+          productId: String(productId),
+          slug: String(slug || ''),
+          productName: productName ? String(productName) : null,
+          rating: ratingNum,
+          title: title ? String(title).trim() : null,
+          comment: comment || '',
+          author: String(author).trim(),
+          email: email || '',
+          images: imageResult.urls.length ? JSON.stringify(imageResult.urls) : null,
+          status: initialStatus,
+        },
+      });
+
+      if (committedPublicIds.length > 0) {
+        await tx.pendingReviewImage.deleteMany({
+          where: { publicId: { in: committedPublicIds } },
+        });
+      }
+
+      return created;
     });
 
     return withCors(NextResponse.json({ message: 'Yorum alındı', data: newReview }, { status: 201 }));

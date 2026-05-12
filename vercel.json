@@ -2,8 +2,12 @@
   "regions": ["fra1"],
   "crons": [
     {
+      "path": "/api/admin/cleanup-pending-uploads",
+      "schedule": "0 3 * * *"
+    },
+    {
       "path": "/api/admin/cleanup-images",
-      "schedule": "0 3 * * 1"
+      "schedule": "0 4 1 * *"
     }
   ]
 }

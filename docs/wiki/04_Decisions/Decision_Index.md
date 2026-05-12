@@ -29,6 +29,7 @@ related:
 | [[ADR_0009_Sentry_Observability_Strategy]] | `@sentry/nextjs` on the panel with env-based DSN, `sendDefaultPii: false`, prod `tracesSampleRate: 0.1`, masked Replay; widget bundle stays out | Accepted |
 | [[ADR_0010_Widget_Error_Forwarding]] | Widget-side `error`/`unhandledrejection` listener POSTs to `/api/public/widget-error`; server forwards to Sentry tagged `source: widget`. +637 bytes gzip; no SDK in widget. | Accepted |
 | [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]] | Widget-scoped tap-highlight reset + controlled `:active` feedback + `:focus-visible` only + global input-modality tracker driving `restoreFocus`. New `src/widget/shared/` directory. | Accepted |
+| [[ADR_0012_Pending_Upload_Registry]] | DB-tracked `PendingReviewImage` registry replaces Cloudinary scan-and-diff. Atomic submit transaction + daily cleanup + monthly fallback. No more 500-asset cap, no in-flight race. | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -46,6 +47,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-12: Added [[ADR_0012_Pending_Upload_Registry]] — DB-tracked `PendingReviewImage` registry replaces the Cloudinary scan-and-diff cleanup pattern. New `/api/public/upload/register` endpoint, atomic transaction in submit, daily cleanup cron, monthly fallback scan with cursor pagination + 30-day age filter. Eliminates the 500-asset cap and the in-flight race that the old design carried.
 - 2026-05-12: Added [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]] — widget-scope tap-highlight reset + controlled `:active` feedback + `:focus-visible` only + global last-input-modality tracker driving `restoreFocus` for popovers/modals. New `src/widget/shared/` directory; filter dropdown and review submission wizard refactored to use the tracker.
 - 2026-05-11: Added [[ADR_0010_Widget_Error_Forwarding]] — fills the visibility gap left by [[ADR_0009_Sentry_Observability_Strategy]]. Tiny widget-side reporter (1.6 KB raw / 637 bytes gzipped) forwards uncaught errors filtered to `widget.js` only, throttled per session, rate-limited per IP. Server records via the existing panel Sentry SDK with `source: widget` tag.
 - 2026-05-11: Added [[ADR_0009_Sentry_Observability_Strategy]] — `@sentry/nextjs` wired into the panel with env-based DSN, `sendDefaultPii: false` (ikas OAuth header leak prevention), prod-only `tracesSampleRate: 0.1`, masked Session Replay, Vercel-Sentry integration for source map upload. Widget bundle intentionally excluded.
