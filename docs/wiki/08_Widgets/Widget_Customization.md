@@ -112,6 +112,9 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-05-12: Added three filter icon choices to the filter icon registry: `Star`, `Controls`, and `Sliders`, while keeping `Lines` as the default. Related source: [filter-icons.js](src/widget/icons/filter-icons.js).
+- 2026-05-12: Removed non-default filter icon choices from the filter icon registry. Existing saved `linesAlt`, `funnel`, or `dense` values fall back to the default `Lines` icon. Related source: [filter-icons.js](src/widget/icons/filter-icons.js).
+- 2026-05-12: Removed the Diamond review icon from the icon registry. Existing saved `diamond:sketch` values fall back to the default Star icon through the registry fallback. Related source: [review-icons.js](src/widget/icons/review-icons.js).
 - 2026-05-12: Replaced the Google Material star options with a single Phosphor star pair and changed the default `reviewIcon` value from `star:rounded` to `star`. Legacy saved values such as `star:rounded` fall back to the new `star` style through the icon registry. Related source: [review-icons.js](src/widget/icons/review-icons.js), [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).
 - 2026-05-12: Normalized thick Phosphor empty-state outlines for heart, crown, and coffee review icons from `stroke-width="24"` to `16`, matching the lighter outline weight already used by leaf and paw. Related source: [review-icons.js](src/widget/icons/review-icons.js).
 - 2026-05-12: Documented the split icon registries used by `iconSelect`: [review-icons.js](src/widget/icons/review-icons.js) for rating/review icons and [filter-icons.js](src/widget/icons/filter-icons.js) for filter button icons, both exported through [icons/index.js](src/widget/icons/index.js).

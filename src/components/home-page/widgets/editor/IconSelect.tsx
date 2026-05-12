@@ -15,7 +15,7 @@ interface IconSelectProps {
 
 // value formatları:
 //   - Yorum ikonları (ICONS): "star" | "favorite:modern" — filled+empty çiftli
-//   - Filtre ikonları (FILTER_ICONS): "lines" | "linesAlt" | "funnel" | "dense" — tek SVG
+//   - Filtre ikonları (FILTER_ICONS): "lines" | "star" | "controls" | "sliders" — tek SVG
 // Önce FILTER_ICONS direct lookup, yoksa ICONS yıldız parse'ı.
 function getPreviewSvg(value: string): string {
   // Filter ikonu mu? (single-state registry)
