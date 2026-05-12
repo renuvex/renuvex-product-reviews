@@ -48,12 +48,20 @@ Example scenario:
 ## Fix
 The wizard shell now owns modal focus management:
 - captures the previously focused element before opening,
-- moves focus into the current wizard step,
+- moves focus into the wizard on open (initial step's first focusable),
 - keeps `Tab` and `Shift+Tab` inside the modal,
-- restores previous focus on close,
-- exposes a `focusFirstControl` shell method so step transitions and the thanks screen reset focus into the newly mounted step.
+- restores previous focus on close — but only for keyboard-originated opens (see [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]).
 
-Wizard controls now have visible `:focus-visible` outlines. The photo upload trigger is a real button that opens the hidden native file input, preserving keyboard and mouse behavior. Rating radio buttons now update `aria-checked`.
+Wizard buttons (close, star, photo add, submit, CTA, nav) now have visible `:focus-visible` outlines. The photo upload trigger is a real button that opens the hidden native file input, preserving keyboard and mouse behavior. Rating radio buttons now update `aria-checked`.
+
+### Follow-up tuning (2026-05-12)
+The first iteration moved focus into the current step on every step change. That auto-focus surfaced two problems on real devices:
+1. On mobile, advancing to step 3 (content) or step 4 (author) auto-focused the first text input → the OS keyboard popped up unprompted.
+2. The heavy `:focus-visible` ring on inputs flashed on every step change, even though the caret was already a sufficient focus indicator.
+
+The tuning:
+- Step transitions no longer auto-focus. The Next button keeps focus after navigation; users tab into the new step. Initial modal-open focus is still managed by the shell.
+- The `:focus-visible` outline on `.ikr-fwizard-input` and `.ikr-fwizard-textarea` was removed; inputs rely on the native caret. Buttons keep their outline.
 
 ## Files Changed
 - [modal-shell.js](src/widget/product-widget/review-form-modal/modal-shell.js)

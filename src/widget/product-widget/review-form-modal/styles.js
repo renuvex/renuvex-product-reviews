@@ -339,10 +339,8 @@ export var FWIZARD_CSS = `
     box-sizing:border-box;
     transition:border-color 0.15s;
   }
-  /* Klavye odak çerçevesi aşağıdaki :focus-visible bloğunda tanımlı.
-     Mouse/touch'ta tarayıcı varsayılan odak halkası modern browser'larda
-     zaten çizilmiyor — bu yüzden ":focus { outline:none }" reset'ine
-     ihtiyaç kalmadı. */
+  /* Input ve textarea için klavye odak göstergesi sadece native caret —
+     ekstra outline aşağıda :focus için kapatılıyor. */
   .ikr-fwizard-input::placeholder,
   .ikr-fwizard-textarea::placeholder{
     color:var(--ikr-fwizard-placeholder, rgba(0,0,0,0.35));
@@ -585,11 +583,12 @@ export var FWIZARD_CSS = `
     outline-offset:3px;
   }
 
-  .ikr-fwizard-input:focus-visible,
-  .ikr-fwizard-textarea:focus-visible{
-    outline:3px solid var(--ikr-fwizard-focus-ring, rgba(17,17,17,0.42));
-    outline-offset:2px;
-    border-color:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
+  /* Input ve textarea klavye odağı için ek outline çizilmez — caret zaten
+     yeterli odak göstergesi. Border rengi sabit; ağır halka mobilde de
+     masaüstünde de görsel olarak yoruyordu. Sadece native caret kalsın. */
+  .ikr-fwizard-input:focus,
+  .ikr-fwizard-textarea:focus{
+    outline:none;
   }
 
   /* ─── Mobile düzenlemeleri ────────────────────────────────────────

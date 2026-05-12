@@ -60,13 +60,6 @@ function buildThanksScreen() {
   return wrap;
 }
 
-function focusCurrentWizardStep(shell) {
-  if (!shell || !shell.focusFirstControl) return;
-  setTimeout(function () {
-    shell.focusFirstControl();
-  }, 0);
-}
-
 /**
  * Yorum yazma wizard modal'ını aç.
  */
@@ -197,7 +190,11 @@ export function openReviewFormModal(opts) {
 
     if (shell.setStepAttr) shell.setStepAttr(stepNum);
     if (stepNum === 3) progress.setNextDisabled(true);
-    focusCurrentWizardStep(shell);
+    // Adım değişimlerinde otomatik focus yok — Next butonu odakta kalır,
+    // kullanıcı Tab ile yeni adıma giriş yapar. Aksi halde adım 3/4'te ilk
+    // input'a focus düşmesi mobil klavyeyi tetikliyor ve klavye odak çerçevesi
+    // her geçişte titriyor. Modal ilk açıldığında shell zaten ilk kontrolü
+    // odaklıyor.
   }
 
   var isThanksShowing = false;
@@ -212,7 +209,6 @@ export function openReviewFormModal(opts) {
       stepWrap.appendChild(thanksEl);
       shell.setStepAttr('thanks');
       progress.setThanksState(shell.close);
-      focusCurrentWizardStep(shell);
       return;
     }
 
@@ -236,7 +232,6 @@ export function openReviewFormModal(opts) {
       shell.setStepAttr('thanks');
       progress.setThanksState(shell.close);
       animPhase = 'idle';
-      focusCurrentWizardStep(shell);
     };
 
     leaving.el.addEventListener('animationend', onExitEnd);
