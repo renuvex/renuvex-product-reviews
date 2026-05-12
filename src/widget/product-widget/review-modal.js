@@ -233,6 +233,7 @@ function buildRight(r) {
 
   var starsEl = document.createElement('div');
   starsEl.className = 'ikr-modal-stars';
+  starsEl.dataset.rating = String(r.rating);
   starsEl.innerHTML = starsHTML(r.rating, currentSettings);
 
   var dateEl = document.createElement('span');
@@ -280,7 +281,9 @@ function buildRight(r) {
 
 function updateRight(right, r) {
   var scrollContent = right.querySelector('.ikr-modal-scroll-content');
-  scrollContent.querySelector('.ikr-modal-stars').innerHTML = starsHTML(r.rating, currentSettings);
+  var starsEl = scrollContent.querySelector('.ikr-modal-stars');
+  starsEl.dataset.rating = String(r.rating);
+  starsEl.innerHTML = starsHTML(r.rating, currentSettings);
   scrollContent.querySelector('.ikr-modal-date').textContent = formatDate(r.createdAt);
 
   var titleEl = scrollContent.querySelector('.ikr-modal-title');
@@ -537,9 +540,21 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   var bodyScrollState = lockBodyScroll();
   var modalHistoryEntry = createModalHistoryEntry();
 
+  // Preview modunda admin paneli ikonu/ayarı değiştirdiğinde modal açıkken yıldız
+  // ikonlarını yansıt. Wizard step-rating ile aynı pattern (IKR_SETTINGS_UPDATED_PREVIEW).
+  // data-rating attribute'u re-render için kaynak — review navigasyonu da bu attribute'u günceller.
+  function onSettingsUpdate() {
+    var starsEl = overlay.querySelector('.ikr-modal-stars');
+    if (!starsEl) return;
+    var rating = parseFloat(starsEl.dataset.rating);
+    if (isNaN(rating)) return;
+    starsEl.innerHTML = starsHTML(rating, currentSettings);
+  }
+
   function onPopState() {
     if (closed) return;
     closed = true;
+    window.removeEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
     closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
   }
 
@@ -554,6 +569,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   function requestClose() {
     if (closed) return;
     closed = true;
+    window.removeEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
     closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
     restoreModalHistoryEntry(modalHistoryEntry);
   }
@@ -561,6 +577,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   document.addEventListener('keydown', onKeyDown);
 
   window.addEventListener('popstate', onPopState);
+  window.addEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
 
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };
