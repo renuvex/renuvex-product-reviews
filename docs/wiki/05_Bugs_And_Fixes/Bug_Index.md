@@ -20,6 +20,7 @@ related:
 ## Open
 
 ## Recently fixed (verify periodically)
+- 2026-05-12 - [[Bug_Lightbox_Preview_Settings_Sync]] - Open photo lightbox preview updates now re-render the full right pane from closure state, including review icons and merchant reply label, instead of reading rating from DOM attributes.
 - 2026-05-12 - [[Bug_Filter_Menu_Keyboard_Accessibility]] - Review summary filter menu now uses real `<button role="menuitem">` items, exposes menu semantics on the trigger, focuses the first option on open, restores focus to the trigger on close, and auto-closes when focus leaves the wrap.
 - 2026-05-12 - [[Bug_Review_Wizard_Focus_Trap_Accessibility]] - Multi-step review submission wizard now traps keyboard focus, focuses the active step on open/step change, restores previous focus on close, and exposes visible focus outlines.
 - 2026-05-12 - [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]] - Photo lightbox now normalizes all modal scroll layers when switching long/short reviews, and fixed-body locking is limited to iOS/WebKit.
@@ -38,6 +39,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-12: Added [[Bug_Lightbox_Preview_Settings_Sync]] after replacing the lightbox preview star-only DOM-state workaround with closure-state right-pane re-rendering.
 - 2026-05-12: Added [[Bug_Filter_Menu_Keyboard_Accessibility]] after fixing the review summary filter dropdown being unreachable by keyboard.
 - 2026-05-12: Added [[Bug_Review_Wizard_Focus_Trap_Accessibility]] after fixing keyboard focus escaping from the multi-step review submission wizard.
 - 2026-05-12: Added [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]] after fixing stale modal scroll state when switching between long and short photo reviews.

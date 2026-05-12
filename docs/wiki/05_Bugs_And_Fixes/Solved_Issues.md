@@ -23,6 +23,7 @@ related:
 ## Log
 
 ### 2026-05-12
+- Widget - Lightbox Preview Settings Sync - Open photo lightbox preview updates now re-render the full right pane from closure state, so review icon and merchant reply label changes apply without closing the modal. [[Bug_Lightbox_Preview_Settings_Sync]]
 - Widget - Filter Menu Keyboard Accessibility - Review summary filter dropdown is now fully keyboard accessible: options are real buttons with menuitem semantics, the trigger exposes `aria-haspopup` / `aria-expanded`, focus moves into the menu on open and back to the trigger on close, and tabbing out auto-closes. [[Bug_Filter_Menu_Keyboard_Accessibility]]
 - Widget - Review Wizard Focus Trap Accessibility - Multi-step review submission wizard now keeps keyboard focus inside the modal, focuses the active step, restores the opening focus on close, and shows visible focus outlines. [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 - Widget - Lightbox Mobile Review Switch Scroll State - Review switches now reset every modal scroll layer after layout settles, and fixed-body locking is limited to iOS/WebKit instead of all touch/mobile browsers. [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]

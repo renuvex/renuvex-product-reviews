@@ -233,7 +233,6 @@ function buildRight(r) {
 
   var starsEl = document.createElement('div');
   starsEl.className = 'ikr-modal-stars';
-  starsEl.dataset.rating = String(r.rating);
   starsEl.innerHTML = starsHTML(r.rating, currentSettings);
 
   var dateEl = document.createElement('span');
@@ -279,11 +278,11 @@ function buildRight(r) {
   return right;
 }
 
-function updateRight(right, r) {
+function updateRight(right, r, settings) {
+  var activeSettings = settings || currentSettings;
   var scrollContent = right.querySelector('.ikr-modal-scroll-content');
   var starsEl = scrollContent.querySelector('.ikr-modal-stars');
-  starsEl.dataset.rating = String(r.rating);
-  starsEl.innerHTML = starsHTML(r.rating, currentSettings);
+  starsEl.innerHTML = starsHTML(r.rating, activeSettings);
   scrollContent.querySelector('.ikr-modal-date').textContent = formatDate(r.createdAt);
 
   var titleEl = scrollContent.querySelector('.ikr-modal-title');
@@ -297,13 +296,15 @@ function updateRight(right, r) {
   bodyEl.style.display = (r.comment && r.comment.trim()) ? '' : 'none';
 
   var replyEl = scrollContent.querySelector('.ikr-modal-reply');
+  replyEl.querySelector('.ikr-modal-reply-label').textContent =
+    (activeSettings && activeSettings.merchantReplyLabel) || 'Mağaza Sahibi';
   replyEl.querySelector('.ikr-modal-reply-text').textContent = r.merchantReply || '';
   replyEl.style.display = r.merchantReply ? '' : 'none';
 
   right.scrollTop = 0;
 }
 
-function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay) {
+function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState) {
   var images = getValidImages(r);
   var currentPhotoIdx = Math.max(0, Math.min(photoIdx || 0, images.length - 1));
 
@@ -350,19 +351,19 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
     if (diff > 0) {
       // sola kaydır — sonraki
       if (hasNextPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, requestClose, true, 'next', overlay);
+        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, requestClose, true, 'next', overlay, modalState);
       } else if (hasNextReview) {
         var nextReview = reviewsWithPhotos[reviewIdx + 1];
-        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, requestClose, false, 'next', overlay);
+        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, requestClose, false, 'next', overlay, modalState);
       }
     } else {
       // sağa kaydır — önceki
       if (hasPrevPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay);
+        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay, modalState);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
         var prevImages = getValidImages(prevReview);
-        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay);
+        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay, modalState);
       }
     }
   }, { passive: true });
@@ -390,7 +391,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
       if (i === currentPhotoIdx) th.setAttribute('aria-current', 'true');
       (function(idx) {
         function selectThumb() {
-          rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, requestClose, true, null, overlay);
+          rebuildModal(r, reviewIdx, idx, reviewsWithPhotos, modal, requestClose, true, null, overlay, modalState);
         }
         th.onclick = selectThumb;
         th.onkeydown = function(e) {
@@ -420,11 +421,11 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
     prevBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasPrevPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay);
+        rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay, modalState);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
         var prevImages = getValidImages(prevReview);
-        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay);
+        rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay, modalState);
       }
     };
     left.appendChild(prevBtn);
@@ -438,10 +439,10 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
     nextBtn.onclick = function(e) {
       e.stopPropagation();
       if (hasNextPhoto) {
-        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, requestClose, true, 'next', overlay);
+        rebuildModal(r, reviewIdx, currentPhotoIdx + 1, reviewsWithPhotos, modal, requestClose, true, 'next', overlay, modalState);
       } else if (hasNextReview) {
         var nextReview = reviewsWithPhotos[reviewIdx + 1];
-        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, requestClose, false, 'next', overlay);
+        rebuildModal(nextReview, reviewIdx + 1, 0, reviewsWithPhotos, modal, requestClose, false, 'next', overlay, modalState);
       }
     };
     left.appendChild(nextBtn);
@@ -495,16 +496,17 @@ function normalizeReviewChangeScroll(overlay, modal) {
   }
 }
 
-function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly, direction, overlay) {
+function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, photoOnly, direction, overlay, modalState) {
+  if (modalState) modalState.currentReview = r;
   if (photoOnly) {
-    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay);
+    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState);
     if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
   } else {
-    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay);
+    var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState);
     var existingRight = modal.querySelector('.ikr-modal-right');
     if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
     if (existingRight) {
-      updateRight(existingRight, r);
+      updateRight(existingRight, r, modalState && modalState.currentSettings);
     }
     // Review changes can replace long content with short content; normalize every modal scroll layer after layout settles.
     normalizeReviewChangeScroll(overlay, modal);
@@ -539,16 +541,19 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   var returnFocusEl = getReturnFocusElement();
   var bodyScrollState = lockBodyScroll();
   var modalHistoryEntry = createModalHistoryEntry();
+  var modalState = {
+    currentReview: r,
+    currentSettings: currentSettings,
+  };
 
-  // Preview modunda admin paneli ikonu/ayarı değiştirdiğinde modal açıkken yıldız
-  // ikonlarını yansıt. Wizard step-rating ile aynı pattern (IKR_SETTINGS_UPDATED_PREVIEW).
-  // data-rating attribute'u re-render için kaynak — review navigasyonu da bu attribute'u günceller.
-  function onSettingsUpdate() {
-    var starsEl = overlay.querySelector('.ikr-modal-stars');
-    if (!starsEl) return;
-    var rating = parseFloat(starsEl.dataset.rating);
-    if (isNaN(rating)) return;
-    starsEl.innerHTML = starsHTML(rating, currentSettings);
+  // Preview modunda açık lightbox ana render ağacının dışında kalır.
+  // Closure state'teki aktif review ile sağ paneli tek seferde yeniden senkronlarız.
+  function onSettingsUpdate(event) {
+    var nextSettings = event && event.detail && event.detail.settings;
+    modalState.currentSettings = nextSettings || currentSettings;
+    var right = modal.querySelector('.ikr-modal-right');
+    if (!right || !modalState.currentReview) return;
+    updateRight(right, modalState.currentReview, modalState.currentSettings);
   }
 
   function onPopState() {
@@ -582,7 +587,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };
 
-  modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, null, overlay));
+  modal.appendChild(buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, null, overlay, modalState));
   modal.appendChild(buildRight(r));
   prefetchNeighbors(reviewIdx, reviewsWithPhotos);
 

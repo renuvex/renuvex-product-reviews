@@ -73,7 +73,7 @@ admin UI changes a field
 ## Live preview
 - Admin renders an iframe pointing at `/preview` (route at [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)).
 - On any setting change → `postMessage({ type: 'IKR_SETTINGS_UPDATE', settings })` to iframe.
-- Inside iframe, [src/widget/index.js](src/widget/index.js) (preview branch) merges and re-renders.
+- Inside iframe, [src/widget/index.js](src/widget/index.js) (preview branch) merges and re-renders, then emits `IKR_SETTINGS_UPDATED_PREVIEW` with merged settings in `event.detail.settings` for open overlay surfaces.
 - Iframe acks via `IKR_WIDGET_READY` once mounted.
 - Preview background color is local editor state in [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx). It changes only the admin preview surface and is not saved to `WidgetSettings`.
 - Preview background uses the same opaque admin color picker as widget colors. Transparent/alpha values are intentionally not user-selectable in the admin UI.
@@ -110,6 +110,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-05-12: Documented the preview settings event payload. Open overlay surfaces can consume `IKR_SETTINGS_UPDATED_PREVIEW.detail.settings`; the photo review lightbox uses this to re-render its right pane while already open. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
 - 2026-05-12: Changed the default review date color from `#111111` to `#5e5e5e` so date metadata reads as secondary text while staying clearly legible. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).
 - 2026-05-08: Added optional visual choice cards for `select` fields. `summaryLayout` and `reviewLayout` now declare preview metadata in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), while [VisualSelectGrid.tsx](src/components/home-page/widgets/editor/VisualSelectGrid.tsx) renders the admin-only mini layout sketches. Stored setting values are unchanged.
 - 2026-05-05: Removed the `reviewFormStyle` setting and made storefront review submission modal-only. Related source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts), [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).

@@ -89,8 +89,9 @@ export function createStepRating(state, opts) {
   applyVisual(state.get().rating);
 
   // Preview modunda ikon değişikliğini modal açıkken yansıt
-  var onSettingsUpdate = function() {
-    iconPair = getIconFromSettings(currentSettings || {});
+  var onSettingsUpdate = function(event) {
+    var nextSettings = event && event.detail && event.detail.settings;
+    iconPair = getIconFromSettings(nextSettings || currentSettings || {});
     applyVisual(state.get().rating);
   };
   window.addEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
