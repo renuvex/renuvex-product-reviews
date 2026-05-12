@@ -73,7 +73,7 @@ export var CLASSIC_CSS = `
   .ikr-modal-title,
   .ikr-modal-author,
   .ikr-modal-reply-text{overflow-wrap:anywhere;}
-  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:500;text-align:left;margin-bottom:12px;color:var(--ikr-header-title,#111111);}
+  .ikr-title{font-size:var(--ikr-title-size,24px);font-weight:500;text-align:left;margin-bottom:12px;color:var(--ikr-header-title,#111111);overflow-wrap:anywhere;}
   /* Classic layout basligi ortali — classic disindaki layout'lar sola yasli */
   .ikr-title-classic{text-align:center;}
 
