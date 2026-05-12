@@ -31,6 +31,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
   - Product review widget can self-mount on PDP when a theme-provided `#ikas-reviews-anchor` is missing, preserving both the review block and product-title badge
   - Photo review lightbox traps keyboard focus, exposes dialog semantics, and uses desktop/tablet/mobile responsive shells with mobile viewport-unit fallbacks
   - Review submission wizard traps keyboard focus, focuses the active step on open/step change, restores previous focus on close, and provides visible keyboard focus states
+  - Review summary filter menu is keyboard-operable: options are buttons with menuitem semantics, the trigger exposes menu state via `aria-haspopup` / `aria-expanded`, focus moves in and out predictably, and tabbing away closes the menu
   - Product rating badge (small inline star+count)
   - Listing-page rating badges (auto-discovers product cards on collection pages)
   - Mutation observer for SPA-style theme navigation
@@ -82,9 +83,10 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 6. Consider tests for the public submission endpoint (highest blast-radius surface)
 
 ## Last Updated
-2026-05-11
+2026-05-12
 
 ## Change Log
+- 2026-05-12: Added review summary filter menu accessibility fix to working widget status. Filter options are now keyboard-activatable buttons with menu semantics, focus moves in on open and back to the trigger on close, and tabbing out auto-closes. Related bug: [[Bug_Filter_Menu_Keyboard_Accessibility]].
 - 2026-05-12: Added review submission wizard accessibility fix to working widget status. The multi-step wizard now traps focus, restores opening focus on close, and keeps photo upload keyboard-accessible. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
 - 2026-05-11: Added widget-side error forwarding. A 637-byte (gzip) reporter in `widget.js` catches `error`/`unhandledrejection` events filtered to `widget.js` only, throttles them, and POSTs to `/api/public/widget-error` where the panel Sentry SDK records them tagged `source: widget`. No SDK in the widget bundle. Decision in [[ADR_0010_Widget_Error_Forwarding]].
 - 2026-05-11: Added Sentry SDK observability layer to the panel (Node + Edge + browser runtimes). DSN read from env, `sendDefaultPii: false` to block ikas OAuth header leak, prod `tracesSampleRate: 0.1`, masked Session Replay with prod 5% / on-error 100%, server log ingestion. Vercel-Sentry integration installed; source maps upload during Vercel build. Widget bundle deliberately excluded. Recorded decision in [[ADR_0009_Sentry_Observability_Strategy]]; operational reference in [[Sentry_Operations]].

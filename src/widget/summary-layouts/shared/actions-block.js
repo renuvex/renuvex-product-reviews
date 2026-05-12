@@ -27,14 +27,18 @@ export function buildActionsBlock(opts) {
   filterWrap.className = 'ikr-filter-wrap';
 
   var filterBtn = document.createElement('button');
+  filterBtn.type = 'button';
   filterBtn.className = 'ikr-filter-btn';
   filterBtn.setAttribute('aria-label', 'Filtrele');
+  filterBtn.setAttribute('aria-haspopup', 'menu');
+  filterBtn.setAttribute('aria-expanded', 'false');
   // İkon admin panelinden seçili (settings.filterIcon); fallback "lines".
   var filterIconKey = (currentSettings && currentSettings.filterIcon) || 'lines';
   filterBtn.innerHTML = getFilterIconSvg(filterIconKey);
 
   var filterMenu = document.createElement('div');
   filterMenu.className = 'ikr-filter-menu';
+  filterMenu.setAttribute('role', 'menu');
 
   var filterOpts = [
     ['newest', 'En Yeni', false],
@@ -42,33 +46,67 @@ export function buildActionsBlock(opts) {
     ['lowest', 'En Düşük Puan', false],
     ['photos', 'Fotoğraflı', true],
   ];
-  function closeFilter() {
+  function closeFilter(opts) {
+    var wasOpen = filterMenu.classList.contains('ikr-open');
     filterMenu.classList.remove('ikr-open');
     filterBtn.classList.remove('ikr-filter-btn-active');
+    filterBtn.setAttribute('aria-expanded', 'false');
+    if (wasOpen && opts && opts.restoreFocus) {
+      try { filterBtn.focus({ preventScroll: true }); } catch (_) {
+        try { filterBtn.focus(); } catch (_) {}
+      }
+    }
   }
   function openFilter() {
     notifyOpening(filterRegistration);
     filterMenu.classList.add('ikr-open');
     filterBtn.classList.add('ikr-filter-btn-active');
+    filterBtn.setAttribute('aria-expanded', 'true');
+    var firstItem = filterMenu.querySelector('.ikr-filter-item-active') || filterMenu.querySelector('.ikr-filter-item');
+    if (firstItem) {
+      requestAnimationFrame(function () {
+        try { firstItem.focus({ preventScroll: true }); } catch (_) {
+          try { firstItem.focus(); } catch (_) {}
+        }
+      });
+    }
   }
 
   filterOpts.forEach(function(opt) {
     var isPhotos = opt[2];
     var isActive = isPhotos ? currentHasImages : (!currentHasImages && (currentOrderBy || 'newest') === opt[0]);
-    var item = document.createElement('div');
+    var item = document.createElement('button');
+    item.type = 'button';
     item.className = 'ikr-filter-item' + (isActive ? ' ikr-filter-item-active' : '');
+    item.setAttribute('role', 'menuitem');
     item.textContent = opt[1];
     item.onclick = function() {
-      closeFilter();
+      closeFilter({ restoreFocus: true });
       onSortChange(opt[0], isPhotos);
     };
     filterMenu.appendChild(item);
   });
 
   filterBtn.onclick = function() {
-    if (filterMenu.classList.contains('ikr-open')) closeFilter();
+    if (filterMenu.classList.contains('ikr-open')) closeFilter({ restoreFocus: true });
     else openFilter();
   };
+
+  // Klavye: menü açıkken Escape kapatır ve odağı tetikleyiciye döndürür.
+  filterWrap.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && filterMenu.classList.contains('ikr-open')) {
+      e.stopPropagation();
+      closeFilter({ restoreFocus: true });
+    }
+  });
+
+  // Tab ile odak filterWrap dışına çıkarsa menüyü kapat (yeniden tetikleyiciye dönüş yapmadan).
+  filterWrap.addEventListener('focusout', function (e) {
+    if (!filterMenu.classList.contains('ikr-open')) return;
+    var nextFocus = e.relatedTarget;
+    if (nextFocus && filterWrap.contains(nextFocus)) return;
+    closeFilter();
+  });
 
   // Filter her zaman popover (overlay) — desktop ve mobile'da light dismiss.
   var filterRegistration = registerPopover({
