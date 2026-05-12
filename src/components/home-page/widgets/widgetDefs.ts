@@ -269,7 +269,7 @@ export const WIDGETS: WidgetDef[] = [
           // toplama "kapısı": gizlenmemeli. Boş bırakılırsa render tarafında
           // 'Yorum Yap' fallback'i kullanılır. Tüm summary layout'ları + empty
           // state + mobile alt-row same key'i okur.
-          { type: 'text',   key: 'writeButtonText',      label: 'Yorum Yap Butonu Metni', placeholder: 'Yorum Yap', default: 'Yorum Yap', maxLength: 30 },
+          { type: 'text',   key: 'writeButtonText',      label: 'Yorum Yap Butonu Metni', placeholder: 'Yorum Yap', default: 'Yorum Yap', maxLength: 25 },
         ],
       },
       {
