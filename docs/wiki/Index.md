@@ -1,16 +1,20 @@
 ---
-type: status
+type: context
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-13
+last_verified: 2026-05-13
+confidence: high
 tags:
   - index
   - ikas
   - reviews
 related:
+  - "[[Hot_Context]]"
   - "[[Project_Overview]]"
   - "[[Current_Status]]"
+source_files: []
 ---
 
 # ikas Review App Wiki Index
@@ -18,6 +22,7 @@ related:
 > Yorum Paneli — review & rating app for ikas e-commerce stores. Merchant admin + storefront widget + structured-data integration.
 
 ## Start Here
+- [[Hot_Context]] - fast active context for new sessions
 - [[Project_Overview]] — what the app is and who it's for
 - [[Current_Status]] — current phase, working features, in-progress work
 - [[Roadmap]] — planned features and rough sequence
@@ -25,6 +30,22 @@ related:
 - [[Glossary]] — domain vocabulary (ikas-specific and project-specific)
 - [[Feature_Map]] — feature inventory with implementation status
 - [[Project_Index]] — quick links to source code entry points
+- [[Log]] - project-memory event log
+
+## Task Routing
+
+| Task Type | Read First | Then Read | Then Inspect |
+|---|---|---|---|
+| New session / unclear task | [[Hot_Context]], [[Current_Status]] | [[Project_Overview]], [[Open_Questions]] | Related source files from focused pages |
+| Admin UI / widget editor task | [[Frontend_Map]], [[Widget_Customization]] | [[Feature_Map]], relevant widget pages | `src/components/home-page/widgets/*` |
+| Storefront widget task | [[Widget_Architecture]], [[Storefront_Widget_Overview]] | Relevant `08_Widgets` pages and ADRs | `src/widget/*`, `public/widget.js` |
+| API task | [[Backend_API_Map]], [[API_Design]] | [[Ikas_API_Notes]], [[Security_And_Rate_Limits]] | `src/app/api/*`, `src/lib/*` |
+| Database task | [[Database_Map]], [[Database_Schema]] | [[Decision_Index]] | `prisma/schema.prisma`, `prisma/migrations/*` |
+| Auth / ikas install task | [[Auth_And_Installation_Flow]], [[Ikas_OAuth_Installation_Notes]] | [[Security_And_Rate_Limits]], [[ADR_0004_Ikas_Integration_Strategy]] | OAuth/API helper files |
+| Deployment / observability task | [[Deployment_Notes]], [[Sentry_Operations]] | [[Config_And_Env_Map]], [[Caching_And_Performance]] | `next.config.js`, `vercel.json`, Sentry config files |
+| Recurring bug | [[Bug_Index]], [[Recurring_Problems]] | Relevant bug note, [[Problem_Resolution_Prompt]] | Related source files in the bug note |
+| Architecture change | [[System_Architecture]], [[Decision_Index]] | Relevant ADRs | Affected modules and config |
+| Wiki maintenance | [[Agent_Rules]], [[Wiki_Maintenance_Prompt]] | [[Documentation_Update_Prompt]], [[Log]] | `docs/wiki/**`, `scripts/wiki-*` |
 
 ## Codebase Map
 - [[Folder_Structure]]
@@ -77,6 +98,10 @@ related:
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
+- [[ADR_0009_Sentry_Observability_Strategy]]
+- [[ADR_0010_Widget_Error_Forwarding]]
+- [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]
+- [[ADR_0012_Pending_Upload_Registry]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -90,6 +115,11 @@ related:
 - [[Competitor_Insights]]
 
 ## Prompts (AI workflows)
+- [[Agent_Rules]]
+- [[New_Session_Start_Prompt]]
+- [[Wiki_Maintenance_Prompt]]
+- [[Problem_Resolution_Prompt]]
+- [[IDE_Agent_Usage]]
 - [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] — canonical pre-existing rule files (Ruler-generated CLAUDE/AGENTS/cursor) + ikas CLI config
 - [[Master_Project_Prompt]]
 - [[Claude_Code_Rules]]
@@ -122,4 +152,4 @@ related:
 
 ---
 
-**Last Updated:** 2026-05-11 (ADR_0008 added)
+**Last Updated:** 2026-05-13 (second-brain migration routing added; latest ADR links restored)

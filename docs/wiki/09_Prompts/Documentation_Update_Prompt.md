@@ -3,18 +3,46 @@ type: prompt
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-13
+last_verified: 2026-05-13
+confidence: high
 tags:
   - prompts
   - documentation
   - lint
 related:
   - "[[Index]]"
+  - "[[Agent_Rules]]"
+  - "[[Wiki_Maintenance_Prompt]]"
+source_files:
+  - "AGENTS.md"
+  - "scripts/wiki-audit.mjs"
+  - "scripts/wiki-secret-scan.py"
+  - "scripts/wiki-prune-report.py"
 ---
 
 # Documentation Update Prompt (Lint / Health Check)
 
 > Use periodically to keep the wiki accurate. This is also the **lint workflow** referenced from CLAUDE.md.
+
+## Second-Brain Maintenance Rules
+
+- Update wiki only when durable project memory changes: architecture, APIs, database, auth, integrations, deployment, meaningful bugs, project status, roadmap, or reusable procedures.
+- Do not update wiki for minor visual-only, copy-only, formatting-only, or low-impact changes.
+- Treat source files, package files, migrations, tests, configs, and runtime behavior as the source of truth.
+- Use `source_files` as focused verification starting points, not exhaustive dependency graphs.
+- Put uncertain information in [[Open_Questions]] instead of guessing.
+- Keep procedures in `09_Prompts`; this repo already uses `08_Widgets` for widget domain memory.
+
+## Advisory Wiki Commands
+
+```bash
+node scripts/wiki-audit.mjs
+python scripts/wiki-secret-scan.py
+python scripts/wiki-prune-report.py
+```
+
+Use `node scripts/wiki-audit.mjs --changed-source-check` only after meaningful source changes when wiki drift review is useful. These checks are advisory health tools, not required git hooks or push gates.
 
 ## Body
 
@@ -31,7 +59,7 @@ For every `.md` under `docs/wiki/` (except `Index.md`, which has a different sha
 - [ ] Has a `## Obsidian Links` (or `## Related Notes`) section with at least one link.
 
 ### Cross-file checks
-- [ ] Every `[[Page]]` link in the wiki resolves to an existing file.
+- [ ] Every Obsidian link resolves to an existing file, for example `[[Current_Status]]`.
 - [ ] Every page has at least one inbound link from another page (no orphans, except templates/index).
 - [ ] Every important page is reachable from `[[Index]]`.
 
@@ -84,4 +112,5 @@ Report grouped as:
 - [[Claude_Code_Rules]]
 
 ## Change Log
+- **2026-05-13** — Added second-brain maintenance rules, advisory wiki commands, and source-files verification guidance for the migration. Related: [[Agent_Rules]], [[Wiki_Maintenance_Prompt]].
 - **2026-05-05** — Added "Wiki update logging discipline" check-list mirroring the new canonical rule in `/AGENTS.md`. The lint workflow now verifies `updated:` frontmatter freshness and the presence/absence of `## Change Log` entries proportional to actual changes. Related: [[Claude_Code_Rules]], [[Existing_AI_Rules_And_Ikas_CLI_Instructions]].

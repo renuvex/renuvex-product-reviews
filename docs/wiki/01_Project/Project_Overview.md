@@ -3,7 +3,9 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-13
+last_verified: 2026-05-13
+confidence: high
 tags:
   - overview
   - product
@@ -12,6 +14,12 @@ related:
   - "[[Current_Status]]"
   - "[[Roadmap]]"
   - "[[System_Architecture]]"
+source_files:
+  - "package.json"
+  - "README.md"
+  - "AGENTS.md"
+  - "src/app/page.tsx"
+  - "src/widget/index.js"
 ---
 
 # Project Overview
@@ -36,7 +44,7 @@ Compete with global review apps within the ikas ecosystem. See [[Competitor_Feat
 - **Auto script injection** — on OAuth install, registers a `StorefrontJSScript` per storefront pointing to `/widget.js?publicApiKey=<merchantId>`
 
 ## Tech Stack (one-line)
-Next.js 16 (16.2) App Router · React 19 · TypeScript · Prisma + Postgres (Supabase) · Tailwind v4 + shadcn/ui · iron-session + JWT · esbuild widget bundle · Cloudinary · Upstash Redis · Vercel (fra1, weekly cron). Full detail in [[ADR_0001_Project_Stack]] and [[Dependency_Map]]. (Note: the public README and the Ruler-generated CLAUDE.md/AGENTS.md still say "Next.js 15" — those docs lag the actual `package.json` version.)
+Next.js 16 (16.2) App Router · React 19 · TypeScript · Prisma + Postgres (Supabase) · Tailwind v4 + shadcn/ui · iron-session + JWT · esbuild widget bundle · Cloudinary · Upstash Redis · Vercel (fra1, weekly cron). Full detail in [[ADR_0001_Project_Stack]] and [[Dependency_Map]]. (Note: the public README and generated/local rule files such as `CLAUDE.md` may still say "Next.js 15"; `package.json` is authoritative.)
 
 ## Architecture in One Picture
 - **Merchant** opens the app inside ikas Admin (iframe). AppBridge → JWT → calls `/api/admin/*`.

@@ -3,7 +3,9 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-13
+last_verified: 2026-05-13
+confidence: medium
 tags:
   - questions
   - uncertainty
@@ -11,11 +13,15 @@ related:
   - "[[Index]]"
   - "[[Current_Status]]"
   - "[[Roadmap]]"
+source_files: []
 ---
 
 # Open Questions
 
 > Anything uncertain about scope, architecture, or implementation. Resolve and either delete or convert to an ADR.
+
+## Wiki prompt folder numbering
+The second-brain setup template names reusable agent procedures under `08_Prompts`, but this repo already uses `08_Widgets` for widget domain memory and `09_Prompts` for AI workflows. The migration kept `09_Prompts` canonical to avoid duplicating or moving existing pages. Decide later whether a deliberate folder renumbering cleanup is worth the churn.
 
 ## Q&A widget scope
 The `qa` widget id is registered in `WidgetDef`, but the storefront and submission flow are unclear from the codebase scan. **Before adding any DB tables**, decide: separate `Question` model, or reuse `Review` with a `kind` column? Will customers answer or only the merchant?
@@ -59,7 +65,7 @@ No tests visible in repo. Highest-risk surface is the public POST `/api/public/r
 ## Stale references in pre-existing docs (Needs Verification)
 Discovered while reconciling existing AI rule files (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]):
 
-- **Next.js version drift** — `package.json` is `next: 16.2.1`, but `README.md`, `/CLAUDE.md`, `/AGENTS.md`, and `.cursor/rules/ruler_cursor_instructions.mdc` all still say "Next.js 15". The wiki has been updated to reflect actual version. Decision needed: do we update `/AGENTS.md` (the Ruler source) and re-run `pnpm apply:ai-rules`?
+- **Next.js version drift** — `package.json` is `next: 16.2.1`. `/AGENTS.md` was updated during the 2026-05-13 second-brain migration, but `README.md`, `/CLAUDE.md`, and any generated Cursor/Ruler outputs may still say "Next.js 15". Decision needed: should we run `pnpm apply:ai-rules` and update generated/local rule files in a separate rules-sync task?
 - **Theme variant gap** — `scripts/build-widget.mjs` accepts `--theme=new-theme` and aliases imports to `themes/new-theme/...`, but **no `themes/new-theme/` directory exists**. `.proje-dokuman.md` references both `themes/default/` and `themes/new-theme/` as if they ship — they don't; only `themes/ozy/` is on disk. Was new-theme dropped, never built, or planned?
 - **Helpful feature in `.proje-dokuman.md`** — the Turkish project doc still describes `helpfulCount`, `/api/public/reviews/[id]/helpful`, and a 24h/IP rate limit for it. The `helpful` feature was added then **removed** in migrations 20260408060000 + 20260417000000. The doc should be updated or marked deprecated.
 - **Two CLAUDE.md files coexist** — `/CLAUDE.md` (Ruler-generated, gitignored) and the worktree-local `CLAUDE.md` created by this wiki seed (also gitignored). Decide a single source-of-truth strategy: (a) treat `/AGENTS.md` as source and let Ruler regenerate `CLAUDE.md`, then delete worktree CLAUDE.md, OR (b) ungitignore CLAUDE.md and merge into a tracked file. Affects all new contributors.

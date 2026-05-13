@@ -3,7 +3,9 @@ type: prompt
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-13
+last_verified: 2026-05-13
+confidence: medium
 tags:
   - prompts
   - ikas-cli
@@ -14,6 +16,11 @@ related:
   - "[[Index]]"
   - "[[Claude_Code_Rules]]"
   - "[[Ikas_Platform_Notes]]"
+source_files:
+  - "AGENTS.md"
+  - "CLAUDE.md"
+  - ".ruler/ruler.toml"
+  - "package.json"
 ---
 
 # Existing AI Rules & ikas CLI Instructions
@@ -58,11 +65,12 @@ Inventory of pre-existing AI/agent instruction files and ikas CLI configuration 
 - Treat tokens and secrets as sensitive. Never log them.
 
 ### Stack as documented in those files
-- Next.js 15 App Router, React 19, TypeScript, Tailwind v4 + shadcn/ui.
+- AGENTS.md: Next.js 16.2.1 App Router, React 19, TypeScript, Tailwind v4 + shadcn/ui.
+- CLAUDE.md and older generated/local docs may still say Next.js 15.
 - ikas Admin GraphQL via `@ikas/admin-api-client` with codegen.
 - iron-session for OAuth state cookie.
 
-> ⚠️ **Note**: these files say "Next.js 15", but `package.json` shows `"next": "16.2.1"`. The project has been upgraded; the rule files lag. This wiki uses the actual version (16.x). See [[Open_Questions]].
+> Note: `package.json` shows `"next": "16.2.1"` and is authoritative. Generated/local files that still say "Next.js 15" need a separate rules-sync pass. See [[Open_Questions]].
 
 ### MCP usage (canonical)
 - **shadcn MCP** — use to fetch component boilerplates and demos before adding new UI primitives under `src/components/ui/*`.

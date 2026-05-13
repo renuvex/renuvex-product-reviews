@@ -3,13 +3,16 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-13
+last_verified: 2026-05-13
+confidence: medium
 tags:
   - bugs
   - solved
 related:
   - "[[Index]]"
   - "[[Bug_Index]]"
+source_files: []
 ---
 
 # Solved Issues
@@ -17,7 +20,7 @@ related:
 > Chronological log of solved issues. Entry per fix: short title + date + 1-line summary + link to detail (if a per-bug note exists). Useful for: "didn't we hit this before?"
 
 ## How to add an entry
-- One-liner format: `- YYYY-MM-DD — short title — 1-line summary [[Bug_Detail_If_Any]]`
+- One-liner format: `- YYYY-MM-DD - short title - 1-line summary Bug_Detail_If_Any`
 - Move long context into a dedicated `Bug_<title>.md` file under this folder.
 
 ## Log

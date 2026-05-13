@@ -3,18 +3,21 @@ type: decision
 project: ikas-review-app
 status: draft
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-13
+last_verified: 2026-05-13
+confidence: high
 tags:
   - template
   - adr
 related:
   - "[[Decision_Index]]"
+source_files: []
 ---
 
 # ADR_XXXX — Decision Title
 
 ## Status
-Proposed | Accepted | Superseded by [[ADR_YYYY_...]] | Deprecated
+Proposed | Accepted | Superseded by ADR_YYYY_Title | Deprecated
 
 ## Date
 YYYY-MM-DD

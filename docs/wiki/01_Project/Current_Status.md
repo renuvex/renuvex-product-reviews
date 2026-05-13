@@ -3,7 +3,10 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-13
+last_verified: 2026-05-13
+confidence: high
+source_files: []
 tags:
   - status
 related:
@@ -88,24 +91,8 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-12
 
 ## Change Log
-- 2026-05-12: Fixed open photo lightbox preview settings sync. `IKR_SETTINGS_UPDATED_PREVIEW` now carries merged settings, and the lightbox re-renders its right pane from closure state so review icon and merchant reply label changes apply without closing the modal. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
-- 2026-05-12: Replaced the Cloudinary scan-and-diff orphan cleanup with a DB-tracked `PendingReviewImage` registry. Widget registers every successful upload at `/api/public/upload/register`; submit endpoint atomically commits + deletes pending rows; daily cron expires registry rows older than 24h and deletes their Cloudinary assets. The old monthly fallback scan now paginates via `next_cursor` and only touches assets older than 30 days. Eliminates the 500-asset cap and the in-flight race the previous design had. Decision: [[ADR_0012_Pending_Upload_Registry]]. Deployment: run `pnpm prisma migrate deploy` to apply migration `20260512100000_add_pending_review_image`.
-- 2026-05-12: Tuned review submission wizard focus management — step transitions no longer auto-focus into the new step (was popping mobile keyboard on steps 3/4 and flashing a heavy focus ring on every transition). Initial modal-open focus is still managed by the shell. Input/textarea `:focus-visible` outline removed; native caret indicates focus. Buttons keep their outline. Updated note: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
-- 2026-05-12: Review submission wizard photo step now allows parallel uploads. The add button stays enabled while existing uploads are in flight — previously the button silently no-op'd, which felt broken when users returned to the photo step after the auto-jump to step 3. Auto-jump narrowed to the truly first photo action only. Submit step still blocks with "fotoğraflar yükleniyor" until every pending upload resolves. Source: [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
-- 2026-05-12: Adopted widget-scope touch-feedback contract — single `src/widget/shared/` directory with `base-reset.js` (tap-highlight off, `:active` opacity dip, `touch-action: manipulation`, `.ikr-press-dim` / `.ikr-press-scale` utilities) and `input-modality.js` (global last-input-modality tracker). Filter dropdown and wizard modal now route `restoreFocus` through the tracker so pointer/touch opens no longer leave sticky focus rings on mobile. Decision: [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]].
-- 2026-05-12: Added review summary filter menu accessibility fix to working widget status. Filter options are now keyboard-activatable buttons with menu semantics, focus moves in on open and back to the trigger on close, and tabbing out auto-closes. Related bug: [[Bug_Filter_Menu_Keyboard_Accessibility]].
-- 2026-05-12: Added review submission wizard accessibility fix to working widget status. The multi-step wizard now traps focus, restores opening focus on close, and keeps photo upload keyboard-accessible. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
-- 2026-05-11: Added widget-side error forwarding. A 637-byte (gzip) reporter in `widget.js` catches `error`/`unhandledrejection` events filtered to `widget.js` only, throttles them, and POSTs to `/api/public/widget-error` where the panel Sentry SDK records them tagged `source: widget`. No SDK in the widget bundle. Decision in [[ADR_0010_Widget_Error_Forwarding]].
-- 2026-05-11: Added Sentry SDK observability layer to the panel (Node + Edge + browser runtimes). DSN read from env, `sendDefaultPii: false` to block ikas OAuth header leak, prod `tracesSampleRate: 0.1`, masked Session Replay with prod 5% / on-error 100%, server log ingestion. Vercel-Sentry integration installed; source maps upload during Vercel build. Widget bundle deliberately excluded. Recorded decision in [[ADR_0009_Sentry_Observability_Strategy]]; operational reference in [[Sentry_Operations]].
-- 2026-05-11: Fixed PDP review widget mount fallback so missing theme anchors no longer hide both the review block and product-title badge. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
-- 2026-05-11: Closed K2 image error fallback. Review thumbnails now hide broken assets, lightbox main image shows a neutral placeholder, and failures log via `console.warn`. Related bug: [[Bug_Review_Image_Error_Fallback]].
-- 2026-05-11: Structurally closed silent review image loss by removing the runtime image-policy contract entirely. Cloud name is now build-time-only ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Settings response field, widget runtime cache, setter, and warn helper all removed (~90 lines). Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
-- 2026-05-11: Added the photo lightbox responsive shell update: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile with `vh` / `svh` / `dvh` fallbacks. Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
-- 2026-05-11: Added photo review lightbox focus trap and dialog semantics so `Tab` no longer reaches storefront controls while the modal is open. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
-- 2026-05-11: Added retryable storefront review fetch error state so API/network failures are no longer rendered as empty review lists. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
-- 2026-05-11: Removed the remaining lightbox navigation known issue after card/list/gallery modal handlers were switched to one canonical loaded review collection. Related bug: [[Bug_Review_Detail_Lightbox_Risks]].
-- 2026-05-11: Updated lightbox known issues after fixing body scroll restoration and removing unconditional `history.go(-1)` from normal modal close. At that point, the remaining lightbox risk was canonical loaded-review navigation for card/list/gallery.
-- 2026-05-11: Updated status after closing photo thumbnail P2 performance work: responsive `srcset`, lazy/eager policy, async decoding, and explicit dimensions across strip/layout/lightbox mini thumbnails. Related bug: [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]].
-- 2026-05-10: Updated current status after fixing review image URL allowlisting for public review submission and widget rendering. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
-- 2026-05-10: Updated review detail lightbox known issues after fixing the photo-less gallery read-more path; remaining risks stay tracked in [[Bug_Review_Detail_Lightbox_Risks]].
-- 2026-05-10: Added open review detail lightbox audit risks to known issues. Related notes: [[Product_Review_Lightbox]], [[Bug_Review_Detail_Lightbox_Risks]].
+- 2026-05-12: **Pending Image Registry**: Replaced Cloudinary scan-and-diff with a robust DB-tracked `PendingReviewImage` registry. Eliminates 500-asset cap and race conditions. ([[ADR_0012_Pending_Upload_Registry]])
+- 2026-05-12: **Accessibility & Touch**: Adopted widget-scope touch-feedback contract and standardized focus trapping for modally-presented UI (Lightbox, Filter Menu). ([[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]])
+- 2026-05-11: **Observability Layer**: Deployed Sentry SDK on panel (Node+Edge+Browser) with PII masking, and implemented a tiny 637-byte custom reporter for the widget bundle to forward errors without shipping an SDK to storefronts. ([[ADR_0009_Sentry_Observability_Strategy]], [[ADR_0010_Widget_Error_Forwarding]])
+- 2026-05-11: **Cloudinary Build-Time Migration**: Removed runtime image-policy contract. Cloud name is now a build-time constant. ([[ADR_0008_Cloud_Name_Build_Time_Only]])
+- *(Note: Detailed bug fixes and minor operational updates are recorded in `05_Bugs_And_Fixes` and the repository commit log).*
