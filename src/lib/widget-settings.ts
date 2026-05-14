@@ -33,9 +33,22 @@ export function sanitizeSettings(widgetId: string, settings: Record<string, unkn
   const allowedKeys = getWidgetFieldKeys(widgetId);
   if (!allowedKeys) return settings;
 
-  return Object.fromEntries(
+  const sanitized = Object.fromEntries(
     Object.entries(settings).filter(([key]) => allowedKeys.has(key))
   );
+
+  const widget = WIDGETS.find((w) => w.id === widgetId);
+  if (!widget) return sanitized;
+
+  for (const group of widget.settings) {
+    for (const field of group.fields) {
+      if (field.type === 'iconSelect' && field.registry === 'filter' && sanitized[field.key] === 'star') {
+        sanitized[field.key] = 'funnel';
+      }
+    }
+  }
+
+  return sanitized;
 }
 
 export function validateSettings(widgetId: string, settings: Record<string, unknown>): string | null {

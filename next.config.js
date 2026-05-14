@@ -1,4 +1,11 @@
-const cloudinaryCloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
+function normalizePublicCloudName(value) {
+  const cloudName = typeof value === 'string' ? value.trim() : '';
+  return /^[A-Za-z0-9_-]+$/.test(cloudName) ? cloudName : '';
+}
+
+const cloudinaryCloudName = normalizePublicCloudName(
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME,
+);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -17,11 +24,16 @@ const nextConfig = {
         ]
       : [],
   },
-  webpack: (config) => {
+  webpack: (config, { webpack }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
     };
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(cloudinaryCloudName),
+      }),
+    );
     return config;
   },
 };

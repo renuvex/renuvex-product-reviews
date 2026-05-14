@@ -27,6 +27,7 @@ export type SelectPreviewKey =
   | 'review-gallery';
 
 export type SelectOption = { value: string; label: string; preview?: SelectPreviewKey };
+export type IconRegistry = 'review' | 'filter';
 
 // Select options — statik dizi veya başka ayar değerlerine bağlı dinamik fonksiyon olabilir.
 // Örn: reviewIcon === 'star' ya da 'favorite:modern' gibi registry değerleri gösterilir.
@@ -45,7 +46,7 @@ export type SettingField =
   | { type: 'range';      key: string; label: string; min: number; max: number; default: number; showWhen?: ShowWhen }
   // iconSelect — ikonların SVG grid popover'ında görüntülendiği özel seçici.
   // options sadece { value, label } — SVG preview ICONS registry'sinden alınır.
-  | { type: 'iconSelect'; key: string; label: string; options: SelectOption[]; default: string; showWhen?: ShowWhen };
+  | { type: 'iconSelect'; key: string; label: string; options: SelectOption[]; default: string; registry: IconRegistry; showWhen?: ShowWhen };
 
 export interface SettingsGroup {
   title: string;
@@ -143,6 +144,7 @@ export const WIDGETS: WidgetDef[] = [
             key: 'reviewIcon',
             label: 'Yorum İkonu',
             default: 'star',
+            registry: 'review',
             options: getIconOptions(),
           },
           { type: 'color', key: 'reviewStarColor', label: 'Yıldız Rengi', default: '#f59e0b' },
@@ -151,6 +153,7 @@ export const WIDGETS: WidgetDef[] = [
             key: 'filterIcon',
             label: 'Filtre İkonu',
             default: 'lines',
+            registry: 'filter',
             options: getFilterIconOptions(),
           },
         ],
@@ -321,6 +324,7 @@ export const WIDGETS: WidgetDef[] = [
             key: 'icon',
             label: 'Puan İkonu',
             default: 'star',
+            registry: 'review',
             options: getIconOptions(),
           },
           {

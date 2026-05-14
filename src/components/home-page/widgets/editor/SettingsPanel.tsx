@@ -431,15 +431,19 @@ function FieldRenderer({ field, settings, onChange }: {
       );
     }
 
-    case 'iconSelect':
+    case 'iconSelect': {
+      const currentIconValue = String(value ?? field.default);
+      const selectedIconValue = field.registry === 'filter' && currentIconValue === 'star' ? 'funnel' : currentIconValue;
       return (
         <IconSelect
           label={field.label}
-          value={String(value ?? field.default)}
+          value={selectedIconValue}
           options={field.options}
+          registry={field.registry}
           onChange={(v) => onChange({ ...settings, [field.key]: v })}
         />
       );
+    }
 
     case 'select': {
       // Options ya statik dizi ya da settings'e bağlı bir fonksiyon olabilir

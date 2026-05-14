@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { colors, typography, radii } from '@/lib/design-tokens';
-import { ICONS, FILTER_ICONS, parseIconValue } from '@/widget/icons/index.js';
+import { ICONS, getFilterIconSvg, parseIconValue } from '@/widget/icons/index.js';
+import type { IconRegistry } from '../widgetDefs';
 
 type Option = { value: string; label: string };
 
@@ -10,19 +11,18 @@ interface IconSelectProps {
   label: string;
   value: string;
   options: Option[];
+  registry?: IconRegistry;
   onChange: (v: string) => void;
 }
 
-// value formatları:
-//   - Yorum ikonları (ICONS): "star" | "favorite:modern" — filled+empty çiftli
-//   - Filtre ikonları (FILTER_ICONS): "lines" | "star" | "controls" | "sliders" — tek SVG
-// Önce FILTER_ICONS direct lookup, yoksa ICONS yıldız parse'ı.
-function getPreviewSvg(value: string): string {
-  // Filter ikonu mu? (single-state registry)
-  const filterIcon = (FILTER_ICONS as Record<string, { svg: string }>)[value];
-  if (filterIcon) return filterIcon.svg;
+// Review and filter icons intentionally use separate registries. Filter values
+// must never fall back to review icons, because both domains can contain keys
+// like "star" for different historical reasons.
+function getPreviewSvg(value: string, registry: IconRegistry): string {
+  if (registry === 'filter') {
+    return getFilterIconSvg(value);
+  }
 
-  // Yıldız ikonu (filled+empty çiftli)
   const { type, style } = parseIconValue(value);
   const icon = (ICONS as Record<string, { styles: Record<string, { filled: string }> }>)[type];
   if (!icon) return '';
@@ -34,11 +34,13 @@ function IconCell({
   iconValue,
   label,
   selected,
+  registry,
   onClick,
 }: {
   iconValue: string;
   label: string;
   selected: boolean;
+  registry: IconRegistry;
   onClick: () => void;
 }) {
   const [hover, setHover] = useState(false);
@@ -68,13 +70,13 @@ function IconCell({
     >
       <span
         style={{ width: 22, height: 22, display: 'inline-flex' }}
-        dangerouslySetInnerHTML={{ __html: getPreviewSvg(iconValue) }}
+        dangerouslySetInnerHTML={{ __html: getPreviewSvg(iconValue, registry) }}
       />
     </button>
   );
 }
 
-export function IconSelect({ label, value, options, onChange }: IconSelectProps) {
+export function IconSelect({ label, value, options, registry = 'review', onChange }: IconSelectProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <label style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.regular, color: colors.textPrimary }}>
@@ -95,6 +97,7 @@ export function IconSelect({ label, value, options, onChange }: IconSelectProps)
             iconValue={opt.value}
             label={opt.label}
             selected={value === opt.value}
+            registry={registry}
             onClick={() => onChange(opt.value)}
           />
         ))}

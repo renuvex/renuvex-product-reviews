@@ -101,7 +101,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - Color settings churn has been frequent (visible in migrations). Prefer soft-removing keys via `sanitizeSettings` over a DB migration.
 - The storefront widget container background is intentionally transparent. Store themes own the page background; admin preview background is only a testing surface.
 - Alpha hex values are still valid internally for defaults such as translucent modal controls and borders, but merchants choose opaque colors in the admin picker. If a merchant changes one of those fields manually, the saved value becomes `#rrggbb`; resetting restores the schema default, including alpha where defined.
-- `iconSelect` fields resolve their options from [src/widget/icons/index.js](src/widget/icons/index.js), so admin choices, iframe previews, storefront rating icons, and filter icons share the same registries.
+- `iconSelect` fields resolve their options from [src/widget/icons/index.js](src/widget/icons/index.js). Review/rating icons and filter icons are separate registries; [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) marks each icon field with `registry: 'review' | 'filter'` so a filter value never falls back to a review icon. Current filter options are `lines`, `funnel`, `controls`, and `sliders`; legacy filter value `star` maps to `funnel` in both runtime rendering and settings sanitization.
 
 ## Related Source Files
 - [src/components/home-page/widgets/](src/components/home-page/widgets/)
@@ -117,6 +117,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-05-14: **Filter Icon Registry Clarified**: Replaced the filter `star` option with `funnel`, kept `star -> funnel` only as a filter-only legacy alias, and separated admin preview rendering by review vs filter registry.
 - 2026-05-12: **Icon Registries Simplified**: Filter icons reduced to 4 core choices; Review icons modernized with unified Phosphor weight. Existing legacy keys fall back safely via registry.
 - 2026-05-12: **Live Preview for Overlays**: Introduced `IKR_SETTINGS_UPDATED_PREVIEW` event payload so active overlays (like the lightbox or review modal) can live-sync admin changes without re-mounting.
 - 2026-05-08: **Visual Select Cards**: Added `preview` metadata to `select` fields in schema to drive image-based visual choice cards in admin panel.

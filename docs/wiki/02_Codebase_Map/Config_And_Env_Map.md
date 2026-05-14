@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-14
 tags:
   - config
   - env
@@ -44,7 +44,7 @@ related:
 ### Cloudinary
 | Var | Purpose |
 |---|---|
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (public) |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (public). Injected into the Next/admin bundle by [next.config.js](next.config.js) and into the public widget bundle by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`. |
 | `CLOUDINARY_API_KEY` | API key |
 | `CLOUDINARY_API_SECRET` | Used to sign uploads in [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts) |
 
