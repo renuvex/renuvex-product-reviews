@@ -199,7 +199,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       />
 
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px]" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: typography.fontSize.base, fontWeight: 600, color: colors.textPrimary }}>
               <AlertCircle size={18} color={colors.error} />

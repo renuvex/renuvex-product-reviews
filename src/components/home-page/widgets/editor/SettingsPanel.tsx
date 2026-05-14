@@ -326,7 +326,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
 
       {/* Sipariş Modal / Dialog */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle style={{ fontSize: typography.fontSize.lg, color: colors.textPrimary }}>Varsayılanlara Sıfırla</DialogTitle>
           </DialogHeader>

@@ -171,7 +171,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
     <>
       {/* Unsaved changes modal */}
       <Dialog open={showUnsavedModal} onOpenChange={(o) => { if (!o) setShowUnsavedModal(false); }}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle style={componentStyles.dialogTitle}>Kaydedilmemiş Değişiklikler</DialogTitle>
           </DialogHeader>
