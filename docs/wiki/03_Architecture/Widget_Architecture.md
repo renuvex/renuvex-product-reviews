@@ -3,8 +3,8 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-15
-last_verified: 2026-05-15
+updated: 2026-05-16
+last_verified: 2026-05-16
 confidence: high
 tags:
   - widget
@@ -15,12 +15,16 @@ related:
   - "[[Widget_Files_Map]]"
   - "[[ADR_0002_Widget_Injection_Strategy]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
+  - "[[ADR_0013_Modular_Widget_Loader_Architecture]]"
   - "[[Bug_Lightbox_Tablet_Viewport_And_Scroll]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
 source_files:
   - "src/widget/index.js"
+  - "src/widget/loader.js"
   - "src/widget/core/config.js"
+  - "src/widget/core/storefront-context.js"
+  - "src/widget/core/registry.js"
   - "src/widget/product-widget/bootstrap.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/listing-badges/index.js"
@@ -48,16 +52,20 @@ As of the 2026-05-15 audit, this is still the current production architecture. T
 
 | Module | Purpose |
 |---|---|
-| [src/widget/index.js](src/widget/index.js) | Entry. Branches preview vs prod. Wires events + observer. |
+| [src/widget/index.js](src/widget/index.js) | Thin entry. Side-effect inits (ADR_0011 order) + preview/prod branch. Delegates to `loader.js`. |
+| [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Wires context → registry (ADR_0013). |
+| [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). |
+| [core/registry.js](src/widget/core/registry.js) | In-bundle surface registry (`reviews-main`, `listing-badge`). Structural indirection, NOT a code-splitting boundary. |
+| [surfaces/](src/widget/surfaces/) | Thin surface descriptors (`detect`/`mount`) adapting `bootstrap`/`renderListingBadges` to the registry. |
 | [core/config.js](src/widget/core/config.js) | `PUBLIC_API_KEY` and `API_BASE` parsed from own `<script src>`. |
 | [core/state.js](src/widget/core/state.js) | Module-level mutable state (current product, settings, reviews, paging, canonical lightbox review collection). |
 | [core/fetch.js](src/widget/core/fetch.js) | API helpers calling `/api/public/*`. |
 | [core/cache.js](src/widget/core/cache.js) | `sessionStorage` wrapper with in-memory fallback (private browsing / quota exceeded). Persists across same-tab navigations. |
 | [core/helpers.js](src/widget/core/helpers.js) | Shared display helpers, including trusted review image URL filtering for storefront render paths. |
 | [icons/](src/widget/icons/) | Public icon API plus split review/rating and filter icon registries shared by runtime and admin preview. |
-| [observer.js](src/widget/observer.js) | MutationObserver to re-bootstrap on SPA theme nav. |
-| [events.js](src/widget/events.js) | Document-level click handlers (review CTA, modal triggers). |
-| [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Decide whether current page is a product page; mount widget. |
+| [observer.js](src/widget/observer.js) | MutationObserver to re-render listing badges on SPA theme nav. |
+| [events.js](src/widget/events.js) | SPA history patch (stale rating-badge cleanup) + quick-view modal badge plumbing. IkasEvents handling moved to `core/storefront-context.js` (ADR_0013). |
+| [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Fetch settings + reviews; mount the PDP review widget via `render()`. |
 | [product-widget/render.js](src/widget/product-widget/render.js) | Compose summary + reviews + modal CTA based on settings. |
 | [product-widget/title-finder.js](src/widget/product-widget/title-finder.js) | Heuristic to find product title element across themes. |
 | [product-widget/review-modal.js](src/widget/product-widget/review-modal.js) | Photo review detail lightbox. Distinct from the submission wizard. |
@@ -76,18 +84,31 @@ Storefront HTML loads <script async>
 core/config.js    → PUBLIC_API_KEY, API_BASE
         │
         ▼
-index.js
-  ├── if preview: subscribe IKR_SETTINGS_UPDATE; bootstrap('mock-product')
-  └── else: attachEvents → attachModalBadgeListener → startMutationObserver
+index.js  (error-reporter / base-reset / input-modality side-effects)
         │
-        ▼ (on relevant DOM change / load)
+        ▼
+loader.js
+  ├── if preview: startPreview() → IKR_SETTINGS_UPDATE listener; bootstrap('mock-product')
+  └── else: startWidget()
+        ├── registerCoreSurfaces()      (reviews-main, listing-badge)
+        ├── initStorefrontContext()     (subscribe window.IkasEvents + DOM fallback)
+        ├── attachHistoryListener / attachModalBadgeListener / startMutationObserver
+        └── onProductView / onPageView  → registry.mountMatching(context)
+        │
+        ▼ (productView context → reviews-main surface)
 product-widget/bootstrap.js
-  ├── detect productId via URL/meta/JSON-LD
   ├── fetch /api/public/settings  (cached)
   ├── fetch /api/public/reviews?storeId&productId
   ├── core/state.js ← write currentSettings, currentReviewsData, ...
-  └── render.js (chooses layouts from settings)
+  └── render.js (chooses layouts from settings; injects rating badge)
 ```
+
+Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] introduced this loader +
+surface registry + Storefront Events context layer. It is an internal structural
+refactor only — the build output is still a single IIFE `widget.js`; no ESM
+migration, code-splitting, or lazy-loading. `core/storefront-context.js` is now the
+single `window.IkasEvents` subscription point. Physical module splitting is a
+future phase; see [[Yotpo_Style_Widget_Modular_Architecture]].
 
 ## Layout-aware settings (key concept)
 
@@ -144,11 +165,14 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
+- [[ADR_0013_Modular_Widget_Loader_Architecture]]
 - [[Ikas_Widget_Injection_Notes]]
+- [[Ikas_Storefront_Events]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-16: Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] — internal loader + surface registry + single Storefront Events context module. New files: `loader.js`, `core/storefront-context.js`, `core/registry.js`, `surfaces/*`. `index.js` is now a thin entry; `events.js` keeps only the SPA history patch + modal badge plumbing; `getProductFromPage` removed from `bootstrap.js`. Build output stays a single IIFE — no ESM/splitting/lazy-load. Verified via `pnpm build:widget` + `/preview` smoke test; live storefront verification pending deploy.
 - 2026-05-15: Added architecture note from Yotpo/Protein Ocean live research. Current single-bundle architecture remains the source of truth, but future large widget surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-12: Split widget icon architecture into [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js), [src/widget/icons/filter-icons.js](src/widget/icons/filter-icons.js), and [src/widget/icons/index.js](src/widget/icons/index.js), with [src/widget/icons.js](src/widget/icons.js) retained as a compatibility re-export.
 - 2026-05-11: Cloud-name runtime contract removed. The widget now consumes a build-time injected constant only; settings response, runtime cache, setter, and warn helper all deleted (~90 lines). Related ADR: [[ADR_0008_Cloud_Name_Build_Time_Only]]. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].

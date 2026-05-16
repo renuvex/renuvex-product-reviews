@@ -212,24 +212,3 @@ export async function bootstrap(productId, productName) {
     delete bootstrapCache[productId];
   }
 }
-
-export function getProductFromPage() {
-  try {
-    var pageProps = window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps;
-    if (pageProps && pageProps.pageType === 'PRODUCT' && pageProps.pageSpecificData && pageProps.pageSpecificData.id) {
-      return { id: pageProps.pageSpecificData.id, name: pageProps.pageSpecificData.name || null };
-    }
-  } catch (_) {}
-  if (window.IkasStorefront && window.IkasStorefront.product && window.IkasStorefront.product.id) {
-    return { id: window.IkasStorefront.product.id, name: window.IkasStorefront.product.name || null };
-  }
-  var match = window.location.pathname.match(/--([a-f0-9-]{36})(?:\/|$|\?)/);
-  if (match) {
-    return { id: match[1], name: null };
-  }
-  var qp = new URLSearchParams(window.location.search).get('productId');
-  if (qp) {
-    return { id: qp, name: null };
-  }
-  return null;
-}

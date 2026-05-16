@@ -3,8 +3,8 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-15
-last_verified: 2026-05-15
+updated: 2026-05-16
+last_verified: 2026-05-16
 confidence: high
 tags:
   - hot-context
@@ -39,6 +39,7 @@ source_files:
 - `package.json` pins Next.js `16.2.1`; older generated rule files or README text that says Next.js 15 is stale unless verified and updated.
 - `scripts/wiki-audit.mjs`, `scripts/wiki-secret-scan.py`, and `scripts/wiki-prune-report.py` are advisory health checks.
 - 2026-05-15: Added read-only research from Protein Ocean's Yotpo widget on an ikas storefront and documented the target one-loader/many-widget-modules architecture. Start with [[Yotpo_Style_Widget_Modular_Architecture]], [[Yotpo_Protein_Ocean_Widget_Research]], and [[Ikas_Storefront_Script_Capabilities]] before large storefront widget changes.
+- 2026-05-16: Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] landed — internal loader + surface registry + single Storefront Events context module (`src/widget/loader.js`, `core/storefront-context.js`, `core/registry.js`, `surfaces/*`). Build output stays one IIFE `widget.js`; zero behavior change. `core/storefront-context.js` is now the single `window.IkasEvents` subscription point. Open item: code subscribes to `VIEW_LISTING`, which is not in the official ikas event list — verify the real runtime event type on a live store ([[Ikas_Storefront_Events]]). Live storefront verification still pending deploy.
 
 ## Current Risks / Open Questions
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.

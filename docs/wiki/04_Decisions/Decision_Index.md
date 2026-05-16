@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-16
 tags:
   - adr
   - decisions
@@ -30,6 +30,7 @@ related:
 | [[ADR_0010_Widget_Error_Forwarding]] | Widget-side `error`/`unhandledrejection` listener POSTs to `/api/public/widget-error`; server forwards to Sentry tagged `source: widget`. +637 bytes gzip; no SDK in widget. | Accepted |
 | [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]] | Widget-scoped tap-highlight reset + controlled `:active` feedback + `:focus-visible` only + global input-modality tracker driving `restoreFocus`. New `src/widget/shared/` directory. | Accepted |
 | [[ADR_0012_Pending_Upload_Registry]] | DB-tracked `PendingReviewImage` registry replaces Cloudinary scan-and-diff. Atomic submit transaction + daily cleanup + monthly fallback. No more 500-asset cap, no in-flight race. | Accepted |
+| [[ADR_0013_Modular_Widget_Loader_Architecture]] | Internal loader + surface registry + single Storefront Events context module. Bundle stays one IIFE — no ESM/splitting/lazy-load in Phase 1. Extends ADR_0002. | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -47,6 +48,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-16: Added [[ADR_0013_Modular_Widget_Loader_Architecture]] — Phase 1 internal refactor of the storefront widget: a single Storefront Events context module, an in-bundle surface registry (`reviews-main` + `listing-badge`), and a thin loader. Bundle stays one IIFE; no ESM migration, code-splitting, or behavior change. Extends [[ADR_0002_Widget_Injection_Strategy]] (does not supersede it). `rating-badge` deferred to Phase 2.
 - 2026-05-12: Added [[ADR_0012_Pending_Upload_Registry]] — DB-tracked `PendingReviewImage` registry replaces the Cloudinary scan-and-diff cleanup pattern. New `/api/public/upload/register` endpoint, atomic transaction in submit, daily cleanup cron, monthly fallback scan with cursor pagination + 30-day age filter. Eliminates the 500-asset cap and the in-flight race that the old design carried.
 - 2026-05-12: Added [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]] — widget-scope tap-highlight reset + controlled `:active` feedback + `:focus-visible` only + global last-input-modality tracker driving `restoreFocus` for popovers/modals. New `src/widget/shared/` directory; filter dropdown and review submission wizard refactored to use the tracker.
 - 2026-05-11: Added [[ADR_0010_Widget_Error_Forwarding]] — fills the visibility gap left by [[ADR_0009_Sentry_Observability_Strategy]]. Tiny widget-side reporter (1.6 KB raw / 637 bytes gzipped) forwards uncaught errors filtered to `widget.js` only, throttled per session, rate-limited per IP. Server records via the existing panel Sentry SDK with `source: widget` tag.
