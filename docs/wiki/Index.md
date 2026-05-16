@@ -3,8 +3,8 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-05-15
+last_verified: 2026-05-15
 confidence: high
 tags:
   - index
@@ -39,6 +39,7 @@ source_files: []
 | New session / unclear task | [[Hot_Context]], [[Current_Status]] | [[Project_Overview]], [[Open_Questions]] | Related source files from focused pages |
 | Admin UI / widget editor task | [[Frontend_Map]], [[Widget_Customization]] | [[Feature_Map]], relevant widget pages | `src/components/home-page/widgets/*` |
 | Storefront widget task | [[Widget_Architecture]], [[Storefront_Widget_Overview]] | Relevant `08_Widgets` pages and ADRs | `src/widget/*`, `public/widget.js` |
+| Modular widget loader / Yotpo-like architecture | [[Yotpo_Style_Widget_Modular_Architecture]], [[Yotpo_Protein_Ocean_Widget_Research]] | [[Ikas_Storefront_Script_Capabilities]], [[Widget_Performance]] | `src/widget/*`, `scripts/build-widget.mjs`, storefront smoke output |
 | API task | [[Backend_API_Map]], [[API_Design]] | [[Ikas_API_Notes]], [[Security_And_Rate_Limits]] | `src/app/api/*`, `src/lib/*` |
 | Database task | [[Database_Map]], [[Database_Schema]] | [[Decision_Index]] | `prisma/schema.prisma`, `prisma/migrations/*` |
 | Auth / ikas install task | [[Auth_And_Installation_Flow]], [[Ikas_OAuth_Installation_Notes]] | [[Security_And_Rate_Limits]], [[ADR_0004_Ikas_Integration_Strategy]] | OAuth/API helper files |
@@ -67,11 +68,13 @@ source_files: []
 - [[Security_And_Rate_Limits]]
 - [[Deployment_Notes]]
 - [[Sentry_Operations]]
+- [[Yotpo_Style_Widget_Modular_Architecture]]
 
 ## ikas
 - [[Ikas_Platform_Notes]]
 - [[Ikas_API_Notes]]
 - [[Ikas_Widget_Injection_Notes]]
+- [[Ikas_Storefront_Script_Capabilities]]
 - [[Ikas_Theme_Limitations]]
 - [[Ikas_App_Store_Requirements]]
 - [[Ikas_OAuth_Installation_Notes]]
@@ -111,6 +114,7 @@ source_files: []
 
 ## Competitors
 - [[Judge_Me]]
+- [[Yotpo]]
 - [[Competitor_Feature_Matrix]]
 - [[Competitor_Insights]]
 
@@ -135,6 +139,7 @@ source_files: []
 - [[Google_Rich_Snippets_Research]]
 - [[Ecommerce_Review_UX_Patterns]]
 - [[Review_Layout_Padding_Research]]
+- [[Yotpo_Protein_Ocean_Widget_Research]]
 - [[Future_Feature_Ideas]]
 
 ## Templates
@@ -152,4 +157,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-05-13 (second-brain migration routing added; latest ADR links restored)
+**Last Updated:** 2026-05-15 (added Yotpo/Protein Ocean research, ikas storefront script capability notes, and modular widget loader architecture routing)

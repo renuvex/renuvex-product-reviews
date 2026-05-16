@@ -3,9 +3,9 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-13
-last_verified: 2026-05-13
-confidence: medium
+updated: 2026-05-15
+last_verified: 2026-05-15
+confidence: high
 tags:
   - hot-context
   - project-memory
@@ -38,6 +38,7 @@ source_files:
 - Recent documented work includes pending upload registry cleanup, widget touch-feedback/focus modality, Sentry observability, and widget error forwarding.
 - `package.json` pins Next.js `16.2.1`; older generated rule files or README text that says Next.js 15 is stale unless verified and updated.
 - `scripts/wiki-audit.mjs`, `scripts/wiki-secret-scan.py`, and `scripts/wiki-prune-report.py` are advisory health checks.
+- 2026-05-15: Added read-only research from Protein Ocean's Yotpo widget on an ikas storefront and documented the target one-loader/many-widget-modules architecture. Start with [[Yotpo_Style_Widget_Modular_Architecture]], [[Yotpo_Protein_Ocean_Widget_Research]], and [[Ikas_Storefront_Script_Capabilities]] before large storefront widget changes.
 
 ## Current Risks / Open Questions
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
@@ -49,3 +50,4 @@ source_files:
 - [[Open_Questions]]
 - [[Agent_Rules]]
 - [[Wiki_Maintenance_Prompt]]
+- [[Yotpo_Style_Widget_Modular_Architecture]]

@@ -3,7 +3,9 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-15
+last_verified: 2026-05-15
+confidence: high
 tags:
   - widget
   - architecture
@@ -15,12 +17,23 @@ related:
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[Bug_Lightbox_Tablet_Viewport_And_Scroll]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
+  - "[[Yotpo_Style_Widget_Modular_Architecture]]"
+source_files:
+  - "src/widget/index.js"
+  - "src/widget/core/config.js"
+  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/product-widget/render.js"
+  - "src/widget/listing-badges/index.js"
+  - "scripts/build-widget.mjs"
+  - "public/widget.js"
 ---
 
 # Widget Architecture
 
 ## Summary
 A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront page. It detects context (product page, listing page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, the review submission modal, and the photo review detail lightbox. The bundle is intentionally framework-free.
+
+As of the 2026-05-15 audit, this is still the current production architecture. The deployed widget measured `177763` bytes and is served as a single `widget.js` asset. Future Yotpo-style work should split this into a small loader plus lazy widget modules; see [[Yotpo_Style_Widget_Modular_Architecture]].
 
 ## Responsibilities
 - Inject summary + reviews on **product detail pages**
@@ -114,6 +127,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, responsive breakpoints, viewport sizing, scroll containment, body scroll locking, focus management, or history behavior. Card/list/gallery navigation is scoped to the active sort/filter state's loaded review collection; the lightbox does not fetch unloaded pages by itself.
 - Lightbox layout uses a three-tier responsive contract in the Ozy theme: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile at `640px` and below with `vh` / `svh` / `dvh` viewport-unit fallbacks.
 - Review image rendering depends on a trusted Cloudinary cloud policy. The cloud name is a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`; it is not threaded through settings, no runtime setter exists, and there is no per-store image-policy cache. Settings endpoint outages cannot remove images. Layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]], [[ADR_0008_Cloud_Name_Build_Time_Only]], and [[Bug_Cloud_Name_Silent_Image_Filter]].
+- A 2026-05-15 Yotpo/Protein Ocean research pass showed that mature review widgets use a small loader, declarative placeholder instances, separate static widget modules, and dynamic review/rating/Q&A APIs. Do not continue growing the single IIFE indefinitely; new major widget surfaces should be designed around the modular loader plan in [[Yotpo_Style_Widget_Modular_Architecture]].
 
 ## Related Source Files
 - [src/widget/](src/widget/)
@@ -131,8 +145,11 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
 - [[Ikas_Widget_Injection_Notes]]
+- [[Yotpo_Style_Widget_Modular_Architecture]]
+- [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-15: Added architecture note from Yotpo/Protein Ocean live research. Current single-bundle architecture remains the source of truth, but future large widget surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-12: Split widget icon architecture into [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js), [src/widget/icons/filter-icons.js](src/widget/icons/filter-icons.js), and [src/widget/icons/index.js](src/widget/icons/index.js), with [src/widget/icons.js](src/widget/icons.js) retained as a compatibility re-export.
 - 2026-05-11: Cloud-name runtime contract removed. The widget now consumes a build-time injected constant only; settings response, runtime cache, setter, and warn helper all deleted (~90 lines). Related ADR: [[ADR_0008_Cloud_Name_Build_Time_Only]]. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Documented the durable review image policy contract after adding build-time cloud fallback and widget-side last-valid policy cache. (Superseded same day by ADR_0008.) Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].

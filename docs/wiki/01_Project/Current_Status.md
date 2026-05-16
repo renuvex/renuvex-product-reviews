@@ -3,8 +3,8 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-05-15
+last_verified: 2026-05-15
 confidence: high
 source_files: []
 tags:
@@ -14,18 +14,20 @@ related:
   - "[[Project_Overview]]"
   - "[[Roadmap]]"
   - "[[Open_Questions]]"
+  - "[[Yotpo_Style_Widget_Modular_Architecture]]"
+  - "[[Yotpo_Protein_Ocean_Widget_Research]]"
 ---
 
 # Current Status — ikas Review App
 
 ## Current Phase
-Active development. Core feature set is functional end-to-end. Recent work has focused on **UI/UX Polish and Visual Consistency**: synchronized button behaviors (align-items: stretch), standardized 20px vertical spacing (ferahlık), and refined tablet breakpoints (768px for Split layout). Most premium design details from industry leaders have been integrated into the Ozy theme. See recent commits.
+Active development. Core feature set is functional end-to-end. Recent work has focused on widget UI/UX polish, storefront reliability, and architecture research for a Yotpo-style loader plus modular widget system. See [[Yotpo_Style_Widget_Modular_Architecture]] and [[Yotpo_Protein_Ocean_Widget_Research]] before large storefront widget changes.
 
 ## Working Features
 - OAuth install flow for ikas merchants — code-signature validation, token exchange, JWT issuance, session cookie
 - Auto-injection of widget script into every merchant storefront on install
 - Manual re-injection via `/api/admin/inject-scripts` (button in admin)
-- Storefront widget bundle (`/public/widget.js`, ~150 KB) with:
+- Storefront widget bundle (`/public/widget.js`; deployed response measured `177763` bytes on 2026-05-15) with:
   - Product review widget (modal submission + listing) with multiple review-layouts (card, gallery, list) and summary-layouts (classic, compact, hero, minimal, split)
   - Photo strip above review list — dedicated newest-first fetch, cap 15, independent of sort/filter/load-more (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]])
   - Review fetch failures render a retryable error state instead of the normal empty-review state
@@ -61,7 +63,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Legacy theme token cleanup — removed `bgColor`/`textColor`/`primaryColor`/`primaryTextColor` cascade from widget bundle; flattened CSS fallback chains in `styles.js` (commit aebbbbe)
 
 ## Known Issues / Gaps
-- No structured-data (JSON-LD) injection yet — see [[Structured_Data_And_Rich_Snippets]] and [[Open_Questions]]
+- Structured-data injection exists in the widget runtime, but it is currently coupled to the rating badge/review-count path and still needs SEO validation and a clearer server/client strategy. See [[Structured_Data_And_Rich_Snippets]] and [[Yotpo_Style_Widget_Modular_Architecture]].
 - No review-request emails / post-purchase triggers
 - No CSV import/export of reviews
 - No analytics dashboard (review volume over time, conversion lift, etc.)
@@ -69,6 +71,8 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
 - No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
+- Current script injection relies on DB-tracked script ids and does not define `listStorefrontJSScript`; reconciliation and delete semantics need review before changing install cleanup. See [[Ikas_Storefront_Script_Capabilities]].
+- Large new storefront surfaces should not be added to the existing single IIFE without a loader/module split plan. See [[Yotpo_Style_Widget_Modular_Architecture]].
 
 ## Important Decisions
 - [[ADR_0001_Project_Stack]] — Next.js 16 App Router + Prisma + Postgres (Supabase)
@@ -80,17 +84,20 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - [[ADR_0010_Widget_Error_Forwarding]] — tiny widget-side reporter forwards uncaught widget errors via `/api/public/widget-error` so the visibility gap from ADR_0009 is closed without adding a second SDK to the storefront bundle
 
 ## Next Recommended Steps
-1. Add JSON-LD structured-data injection on product pages (Google rich snippets) — see [[Structured_Data_And_Rich_Snippets]]
-2. Implement review-request email flow (post-purchase delay + token-gated submit URL)
-3. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]])
-4. Add CSV import/export for reviews
-5. Build a minimal analytics view in admin (counts, average rating trend)
-6. Consider tests for the public submission endpoint (highest blast-radius surface)
+1. Decide the loader/module split strategy for new storefront surfaces; use [[Yotpo_Style_Widget_Modular_Architecture]] as the reference.
+2. Add script reconciliation before changing ikas script cleanup or delete behavior; see [[Ikas_Storefront_Script_Capabilities]].
+3. Clarify structured-data strategy and validate Google rich snippet behavior.
+4. Implement review-request email flow (post-purchase delay + token-gated submit URL).
+5. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
+6. Add CSV import/export for reviews.
+7. Build a minimal analytics view in admin (counts, average rating trend).
+8. Consider tests for the public submission endpoint (highest blast-radius surface).
 
 ## Last Updated
-2026-05-12
+2026-05-15
 
 ## Change Log
+- 2026-05-15: Added current-state corrections from the read-only widget architecture audit: deployed `widget.js` measured `177763` bytes, JSON-LD exists but needs validation/decoupling, and future Yotpo-like surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-12: **Pending Image Registry**: Replaced Cloudinary scan-and-diff with a robust DB-tracked `PendingReviewImage` registry. Eliminates 500-asset cap and race conditions. ([[ADR_0012_Pending_Upload_Registry]])
 - 2026-05-12: **Accessibility & Touch**: Adopted widget-scope touch-feedback contract and standardized focus trapping for modally-presented UI (Lightbox, Filter Menu). ([[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]])
 - 2026-05-11: **Observability Layer**: Deployed Sentry SDK on panel (Node+Edge+Browser) with PII masking, and implemented a tiny 637-byte custom reporter for the widget bundle to forward errors without shipping an SDK to storefronts. ([[ADR_0009_Sentry_Observability_Strategy]], [[ADR_0010_Widget_Error_Forwarding]])

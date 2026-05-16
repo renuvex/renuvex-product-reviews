@@ -3,8 +3,8 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-05-15
+last_verified: 2026-05-15
 confidence: medium
 tags:
   - questions
@@ -13,6 +13,8 @@ related:
   - "[[Index]]"
   - "[[Current_Status]]"
   - "[[Roadmap]]"
+  - "[[Yotpo_Style_Widget_Modular_Architecture]]"
+  - "[[Ikas_Storefront_Script_Capabilities]]"
 source_files: []
 ---
 
@@ -28,6 +30,20 @@ The `qa` widget id is registered in `WidgetDef`, but the storefront and submissi
 
 ## Carousel / Popup widgets
 `carousel` and `popup` widget ids exist in `WidgetDef`. Need to confirm whether they ship today or are scaffolds. Read [src/widget/product-widget/](src/widget/product-widget/) and [src/widget/listing-badges/](src/widget/listing-badges/) before extending.
+
+## Yotpo-style modular loader decisions
+The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-modules architecture. Before implementing it, decide:
+- Should the existing `widget.js` remain a compatibility alias while new installs receive `loader.js`?
+- Which widgets are first-class modules: rating badge, reviews main, listing badge, media gallery, Q&A, review form, schema?
+- What is the stable placeholder contract for `data-ikr-widget` and `data-ikr-product-id`?
+- Should theme adapter selection be explicit merchant config, automatic runtime detection, or both?
+
+Reference: [[Yotpo_Style_Widget_Modular_Architecture]]
+
+## ikas storefront script reconciliation
+Official ikas docs expose listable Storefront JS scripts, but the current project does not define `listStorefrontJSScript`. Current install logic relies on DB-tracked script ids and has risky cleanup behavior when the DB script map is empty. Decide the safe reconciliation flow before changing script lifecycle code.
+
+Reference: [[Ikas_Storefront_Script_Capabilities]]
 
 ## Structured data injection mechanism
 Two approaches for JSON-LD aggregateRating:

@@ -3,7 +3,9 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-15
+last_verified: 2026-05-15
+confidence: high
 tags:
   - ikas
   - widget
@@ -12,6 +14,12 @@ related:
   - "[[Index]]"
   - "[[ADR_0002_Widget_Injection_Strategy]]"
   - "[[Auth_And_Installation_Flow]]"
+  - "[[Ikas_Storefront_Script_Capabilities]]"
+  - "[[Yotpo_Style_Widget_Modular_Architecture]]"
+source_files:
+  - "src/app/api/oauth/callback/ikas/route.ts"
+  - "src/app/api/admin/inject-scripts/route.ts"
+  - "src/lib/ikas-client/graphql-requests.ts"
 ---
 
 # ikas Widget Injection Notes
@@ -57,6 +65,8 @@ Inside the OAuth callback, when `existingScripts` is empty (new install or DB re
 ## Notes
 - Don't add post-install side effects after the script-injection block in the OAuth callback unless they're also wrapped in try/catch — anything throwing there will leave the install in a half-done state.
 - Watch for new storefront creation: a merchant may add a storefront after install. We don't subscribe to webhooks. Add a "re-inject" CTA banner in admin if `listStorefront` returns more storefronts than we have script ids for.
+- 2026-05-15 verification: official ikas Storefront API docs expose `StorefrontJSScript` as a listable script model with `order` and `isHighPriority`, so multiple script records are possible. For this app, still prefer one loader script per storefront and load widget modules from our runtime. See [[Ikas_Storefront_Script_Capabilities]] and [[Yotpo_Style_Widget_Modular_Architecture]].
+- 2026-05-15 risk update: official docs and current MCP/generated code differ on script mutation naming and delete arguments. Re-run MCP `list` + `introspect` before changing script lifecycle code, especially before any delete or cleanup behavior.
 
 ## Related Source Files
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
@@ -68,3 +78,5 @@ Inside the OAuth callback, when `existingScripts` is empty (new install or DB re
 - [[Auth_And_Installation_Flow]]
 - [[Ikas_API_Notes]]
 - [[Recurring_Problems]]
+- [[Ikas_Storefront_Script_Capabilities]]
+- [[Yotpo_Style_Widget_Modular_Architecture]]
