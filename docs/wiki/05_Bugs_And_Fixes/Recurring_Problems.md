@@ -3,7 +3,7 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-17
 tags:
   - bugs
   - patterns
@@ -32,6 +32,23 @@ related:
 **Mitigation:**
 - Inspect [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) and [title-finder.js](src/widget/product-widget/title-finder.js).
 - Add the theme's quirks via the `themes/` system rather than scattering selectors.
+
+### Listing badge appears in the wrong section
+**Signal:** rating badges show in menu, footer, hero/banner, cart, editorial blocks,
+or other non-product-card areas; or they disappear from a newly added product
+slider/category section.
+**Cause:** listing badge placement relies on an old Ozy allowlist/blocklist plus
+product-title class/text heuristics. Merchant-added sections or theme changes can
+look product-like without being valid card surfaces, or valid new surfaces can sit
+outside the allowlist.
+**Mitigation:**
+- Treat [src/widget/themes/ozy/theme.js](src/widget/themes/ozy/theme.js) selector
+  lists as fallback, not a universal contract.
+- During Phase 1 storefront testing, inspect false positives and false negatives
+  across header/menu/footer/banner/cart/editorial/product-slider/category/search
+  surfaces.
+- In Phase 2, move `findListingContainers`, `findListingTitle`, and
+  `ignoreContainers` into a structured theme adapter/fallback contract.
 
 ### "Reviews don't show on storefront immediately"
 **Signal:** merchant approves a review but it doesn't appear for ~60 seconds.

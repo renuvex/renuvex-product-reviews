@@ -3,8 +3,8 @@ type: research
 project: ikas-review-app
 status: active
 created: 2026-05-15
-updated: 2026-05-15
-last_verified: 2026-05-15
+updated: 2026-05-17
+last_verified: 2026-05-17
 confidence: high
 tags:
   - research
@@ -31,6 +31,13 @@ source_files:
 This page records the read-only browser, console, DOM, and network inspection of `https://proteinocean.com/whey-protein` on 2026-05-15. The goal was to understand how a mature Yotpo installation runs on an ikas storefront and to capture architectural lessons for the ikas Review App.
 
 No storefront action was performed. No forms, cart actions, panel changes, API writes, database writes, migrations, package installs, or deployments were run.
+
+Scope guardrail: this is a benchmark from one merchant storefront, not a canonical
+ikas app implementation. Protein Ocean may include merchant-specific theme code,
+custom Yotpo configuration, or enterprise Yotpo behavior that should not be copied
+blindly. Use these findings as comparison material for Phase 2 planning, and
+validate any adopted pattern against official ikas docs, ikas MCP introspection,
+direct ikas developer feedback, and this app's dev-store behavior.
 
 ## Target
 
@@ -262,4 +269,3 @@ No Yotpo runtime exception was observed.
 - [[Ikas_Storefront_Script_Capabilities]]
 - [[Widget_Performance]]
 - [[Storefront_Widget_Overview]]
-

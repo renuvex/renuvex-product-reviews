@@ -3,8 +3,8 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-16
-updated: 2026-05-16
-last_verified: 2026-05-16
+updated: 2026-05-17
+last_verified: 2026-05-17
 confidence: high
 tags:
   - ikas
@@ -34,6 +34,13 @@ Official docs:
 - Quick Start: <https://builders.ikas.com/docs/storefront-events/quick-start>
 - Event Types: <https://builders.ikas.com/docs/storefront-events/events>
 - Example File: <https://builders.ikas.com/docs/storefront-events/example-file>
+
+2026-05-17 recheck: the builders docs HTML was fetchable and contained the key
+tokens `IkasEvents`, `IKAS_EVENT_TYPE`, `IKAS_PAGE_TYPE`, `PAGE_VIEW`,
+`PRODUCT_VIEW`, `VIEW_CATEGORY`, and `VIEW_SEARCH_RESULTS`. This confirms the
+documentation direction, but it still does not prove what the dev storefront emits
+at runtime. Treat exact payload fields and `VIEW_LISTING` compatibility as runtime
+verification items.
 
 ## How It Works
 
@@ -96,6 +103,30 @@ The official JavaScript example shows these payload fields:
 - `COMPLETE_CHECKOUT` → `data.transaction.id`, `data.checkout.items[]` (each item: `item.variant.productId`, `item.finalPrice`, `item.quantity`)
 
 Note: the official docs only enumerate the example fields above. Other events' exact payload shapes should be verified at runtime before relying on them.
+
+## Runtime-Verified Payloads (dev store, 2026-05-17)
+
+Captured live on `dev-mertcopper.ikas.shop` with a read-only `IkasEvents.subscribe`
+probe during the ADR_0013 Phase 1 audit (see [[Phase_1_Widget_Runtime_Audit]]).
+
+| Event | Runtime `data` fields | Notes |
+|---|---|---|
+| `PAGE_VIEW` | `url`, `pageType`, `customer` | `pageType` ∈ `INDEX`, `PRODUCT`, `CATEGORY`, `SEARCH`. ikas double-fires `PAGE_VIEW` on first entry — the widget guards it with an 800 ms window. |
+| `PRODUCT_VIEW` | `productDetail` (`id`, `name`, …) | Matches the official example. |
+| `VIEW_LISTING` | `productDetails[]` (each with `name`, `metaData.slug`) | Fires on category pages. **Real runtime event** despite being absent from the official docs list. |
+| `VIEW_CATEGORY` | `categoryPath`, `category` | Fires alongside `VIEW_LISTING` on category pages; carries **no** product array. |
+| `VIEW_SEARCH_RESULTS` | `searchKeyword`, `productDetails[]` | Fires on search pages; this — not `VIEW_LISTING` — carries the search product array. |
+| `SEARCH` | `searchKeyword` | Fires on search submit; no product array. |
+
+Key conclusions:
+- **`VIEW_LISTING` is valid at runtime.** The official docs event list is
+  incomplete, not contradictory. The widget's `IKAS_EVENT.LISTING_VIEW =
+  'VIEW_LISTING'` (`core/storefront-context.js`) is correct.
+- **Category vs search asymmetry:** category product arrays arrive via
+  `VIEW_LISTING`; search product arrays via `VIEW_SEARCH_RESULTS`. The widget
+  currently handles only `VIEW_LISTING`, so it does not populate `ikrSlugMap` on
+  search pages. Listing badges still render there via the `collectSlugs` DOM
+  fallback; a Phase 2 improvement should also subscribe to `VIEW_SEARCH_RESULTS`.
 
 ## Official JavaScript Example
 
@@ -196,8 +227,8 @@ This matches the current project pattern: the widget reads `publicApiKey` from i
 
 ## Relevance To This Project
 
-- The widget already subscribes to `IkasEvents` for `PRODUCT_VIEW`, `VIEW_LISTING`, and `PAGE_VIEW` in [src/widget/events.js](src/widget/events.js).
-- Note: the current code references `VIEW_LISTING`, but the official event type list above uses `VIEW_CATEGORY` and `VIEW_SEARCH_RESULTS`. Verify the actual event type string emitted at runtime before relying on `VIEW_LISTING`.
+- The widget subscribes to `IkasEvents` for `PRODUCT_VIEW`, `VIEW_LISTING`, and `PAGE_VIEW` in [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js) — the single subscription point since ADR_0013 Phase 1 (the old `events.js` subscription was moved there).
+- Runtime audit (2026-05-17) confirmed `VIEW_LISTING` is emitted on category pages and carries `productDetails[]` — the code is correct. Search pages instead emit `VIEW_SEARCH_RESULTS` with the same `productDetails[]` shape, which the widget does not yet subscribe to. See Runtime-Verified Payloads above.
 - The official docs confirm `PAGE_VIEW` and `PRODUCT_VIEW`, which the widget depends on for product detection and listing-badge rendering.
 - `PAGE_VIEW` + `IKAS_PAGE_TYPE` should be the canonical way to know the current page type, replacing URL/DOM heuristics in [bootstrap.js](src/widget/product-widget/bootstrap.js).
 - `PRODUCT_VIEW.data.productDetail.id` is the official, supported product identity source — preferred over the `__NEXT_DATA__` / URL regex fallbacks in `getProductFromPage()`.
@@ -205,9 +236,13 @@ This matches the current project pattern: the widget reads `publicApiKey` from i
 
 ## Open Questions
 
-- Does the runtime `PAGE_VIEW` payload include `IKAS_PAGE_TYPE` directly, and under which field? Verify before replacing heuristics.
-- Is the current code's `VIEW_LISTING` a valid runtime event type, or should it be `VIEW_CATEGORY` / `VIEW_SEARCH_RESULTS`? Verify on the dev store.
-- Are `IKAS_EVENT_TYPE` and `IKAS_PAGE_TYPE` exposed as runtime globals, or must consumers compare against literal strings?
+Updated 2026-05-17 after the Phase 1 runtime audit ([[Phase_1_Widget_Runtime_Audit]]).
+
+- ~~Does `PAGE_VIEW.data` include the page type?~~ **Resolved** — `data.pageType` (`INDEX | PRODUCT | CATEGORY | SEARCH`).
+- ~~Is `VIEW_LISTING` a valid runtime event type?~~ **Resolved** — yes, emitted on category pages with `productDetails[]`.
+- ~~Does the category/search listing payload include product details?~~ **Resolved** — category via `VIEW_LISTING.data.productDetails[]`, search via `VIEW_SEARCH_RESULTS.data.productDetails[]`.
+- Are `IKAS_EVENT_TYPE` and `IKAS_PAGE_TYPE` exposed as runtime globals, or must consumers compare against literal strings? Still unverified — the widget uses frozen literal-string constants either way (`core/storefront-context.js`).
+- The cold-vs-SPA listing render difference behind [[Bug_Listing_Badge_Stars_Direct_Load]] turned out to be a CSS-injection-path issue (PDP-only `#ikr-styles`), not an event-sequence issue — now fixed.
 
 ## Obsidian Links
 
@@ -216,3 +251,4 @@ This matches the current project pattern: the widget reads `publicApiKey` from i
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Widget_Architecture]]
 - [[Ikas_Platform_Notes]]
+- [[Phase_1_Widget_Runtime_Audit]]

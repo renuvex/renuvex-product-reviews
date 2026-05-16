@@ -3,8 +3,8 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-15
-updated: 2026-05-16
-last_verified: 2026-05-16
+updated: 2026-05-17
+last_verified: 2026-05-17
 confidence: high
 tags:
   - ikas
@@ -72,6 +72,18 @@ Read-only ikas MCP introspection on 2026-05-15 confirmed the current MCP schema 
 `StorefrontJSScript` includes `order`, `isHighPriority`, `scriptContent`, `name`, and `storefrontId`.
 
 This MCP naming differs from the current public docs, which show `saveStorefrontJSScript` and `deleteStorefrontJSScript(storefrontIdList)`. Treat the generated local client and MCP schema as the implementation source for codegen work, but re-check the official docs and MCP before changing script management.
+
+### MCP Recheck - 2026-05-17
+
+Read-only ikas MCP recheck on 2026-05-17 still exposed:
+
+- `createStorefrontJSScript(input: CreateStorefrontJSScriptInput!): StorefrontJSScript!`
+- `updateStorefrontJSScript(input: UpdateStorefrontJSScriptInput!): StorefrontJSScript!`
+- `deleteStorefrontJSScript: Boolean!`
+
+The same MCP list/introspect run did **not** expose `listStorefrontJSScript`; `introspect("listStorefrontJSScript")` returned invalid operation. It also did not expose `listStorefront` through MCP, although the current generated project client contains and uses `listStorefront`.
+
+Confidence: high for the MCP observation, but do not treat it as the final platform contract. It conflicts with public docs and with generated project code in different directions. Before Phase 3 script lifecycle work, re-run MCP and codegen against the active app schema.
 
 ## ikas Developer Feedback — 2026-05-16
 
@@ -153,7 +165,7 @@ Source: [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ik
 
 ### Missing Script Listing In Current Project Documents
 
-The public docs include `listStorefrontJSScript(storefrontId)`, but the project currently does not define it in [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts).
+The public docs include `listStorefrontJSScript(storefrontId)`, but the project currently does not define it in [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts). The 2026-05-17 MCP recheck did not expose this operation either, so reconciliation design is still uncertain.
 
 That makes the project depend on its own DB map to know whether a script already exists. If DB rows are lost or a merchant manually edits scripts, reconciliation is weaker than it could be.
 
@@ -170,6 +182,7 @@ For Yotpo-style architecture on ikas:
 - use a small loader URL, not the full widget bundle
 - avoid blanket delete behavior
 - add read-only reconciliation with `listStorefrontJSScript` before destructive actions
+- if the active schema still lacks `listStorefrontJSScript`, do not invent destructive cleanup; first resolve the public-docs/MCP/generated-client mismatch with ikas or codegen against the app's real schema
 - use `isHighPriority` only if the loader must run before theme scripts
 - keep widget module ordering inside the loader registry
 
@@ -185,4 +198,3 @@ For Yotpo-style architecture on ikas:
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Widget_Architecture]]
 - [[ADR_0002_Widget_Injection_Strategy]]
-

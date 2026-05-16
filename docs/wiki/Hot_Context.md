@@ -3,8 +3,8 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-16
-last_verified: 2026-05-16
+updated: 2026-05-17
+last_verified: 2026-05-17
 confidence: high
 tags:
   - hot-context
@@ -13,6 +13,7 @@ related:
   - "[[Index]]"
   - "[[Current_Status]]"
   - "[[Project_Overview]]"
+  - "[[Phase_1_Widget_Runtime_Audit]]"
 source_files:
   - "package.json"
   - "prisma/schema.prisma"
@@ -24,26 +25,26 @@ source_files:
 # Hot Context
 
 ## Current Focus
-- Active development on an ikas review/rating app with merchant admin, storefront widget, review submission, image upload, moderation, and settings preview flows.
-- The wiki is already a Full-style project memory vault with ADRs, bug notes, ikas notes, widget notes, research, and prompt/rule pages.
-- This migration adds the missing second-brain routing files and advisory audit scripts without changing application source code.
+- ikas review/rating app: merchant admin, storefront widget, review submission, image upload, moderation, settings preview.
+- Current focus: ADR_0013 Phase 1 storefront runtime verification and follow-up widget fixes.
 
 ## Must Know
 - Source code, config, migrations, tests, and runtime behavior are the source of truth; wiki pages are routing and memory.
-- Existing prompt procedures live in `09_Prompts`, while `08_Widgets` is a domain folder. Do not create a duplicate `08_Prompts` folder without a folder migration plan.
-- Important wiki pages should use focused `source_files` as verification starting points, not exhaustive dependency graphs.
+- Prompt procedures live in `09_Prompts`; do not create `08_Prompts`.
 - Do not document secrets or real env values. Env names and purposes are acceptable.
+- `package.json` pins Next.js `16.2.1`; older generated docs saying Next.js 15 are stale unless re-verified.
 
 ## Recent Important Changes
-- Recent documented work includes pending upload registry cleanup, widget touch-feedback/focus modality, Sentry observability, and widget error forwarding.
-- `package.json` pins Next.js `16.2.1`; older generated rule files or README text that says Next.js 15 is stale unless verified and updated.
-- `scripts/wiki-audit.mjs`, `scripts/wiki-secret-scan.py`, and `scripts/wiki-prune-report.py` are advisory health checks.
-- 2026-05-15: Added read-only research from Protein Ocean's Yotpo widget on an ikas storefront and documented the target one-loader/many-widget-modules architecture. Start with [[Yotpo_Style_Widget_Modular_Architecture]], [[Yotpo_Protein_Ocean_Widget_Research]], and [[Ikas_Storefront_Script_Capabilities]] before large storefront widget changes.
-- 2026-05-16: Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] landed — internal loader + surface registry + single Storefront Events context module (`src/widget/loader.js`, `core/storefront-context.js`, `core/registry.js`, `surfaces/*`). Build output stays one IIFE `widget.js`; zero behavior change. `core/storefront-context.js` is now the single `window.IkasEvents` subscription point. Open item: code subscribes to `VIEW_LISTING`, which is not in the official ikas event list — verify the real runtime event type on a live store ([[Ikas_Storefront_Events]]). Live storefront verification still pending deploy.
+- Start large storefront-widget work with [[Yotpo_Style_Widget_Modular_Architecture]], [[Phase_1_Widget_Runtime_Audit]], [[Ikas_Storefront_Events]], and [[Ikas_Storefront_Script_Capabilities]].
+- 2026-05-16: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 1 landed: internal loader, surface registry, and one Storefront Events context module. Output remains one IIFE `widget.js`.
+- 2026-05-17: [[Phase_1_Widget_Runtime_Audit]] records dev-store runtime verification. `VIEW_LISTING` is confirmed as a real runtime event carrying `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` and are Phase 2 work.
+- 2026-05-17: [[Bug_Listing_Badge_Stars_Direct_Load]] fixed. Cold listing stars were 0x0 because `#ikr-styles` was PDP-only; `src/widget/core/badge.js` now self-injects `#ikr-badge-styles`.
+- Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
+- ADR_0013 Phase 1 runtime audit is recorded in [[Phase_1_Widget_Runtime_Audit]]; A/B/C/G ran on 2026-05-17 and gates passed.
+- Remaining Phase 2/3 items: ESM/code-split, `VIEW_SEARCH_RESULTS` handling on search pages, StorefrontJSScript schema reconciliation.
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
-- The prompt folder numbering mismatch is preserved as-is for now: canonical procedures stay under `09_Prompts`.
 
 ## Read Next
 - [[Current_Status]]
@@ -52,3 +53,4 @@ source_files:
 - [[Agent_Rules]]
 - [[Wiki_Maintenance_Prompt]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]
+- [[Phase_1_Widget_Runtime_Audit]]

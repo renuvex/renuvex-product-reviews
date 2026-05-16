@@ -3,8 +3,8 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-15
-updated: 2026-05-16
-last_verified: 2026-05-16
+updated: 2026-05-17
+last_verified: 2026-05-17
 confidence: high
 tags:
   - architecture
@@ -17,6 +17,7 @@ related:
   - "[[Storefront_Widget_Overview]]"
   - "[[Yotpo_Protein_Ocean_Widget_Research]]"
   - "[[Ikas_Storefront_Script_Capabilities]]"
+  - "[[Phase_1_Widget_Runtime_Audit]]"
   - "[[Widget_Performance]]"
 source_files:
   - "src/widget/index.js"
@@ -35,6 +36,8 @@ source_files:
 ## Summary
 
 The target storefront architecture for this project should be a single ikas-injected loader plus multiple lazy widget modules. This matches the Yotpo-style pattern observed on Protein Ocean while keeping the implementation appropriate for ikas and this app's current codebase.
+
+Protein Ocean is a **read-only benchmark**, not a normative implementation contract. It is one ikas storefront with a mature Yotpo installation and may include one-off merchant/theme/customization choices. Use it to identify useful patterns and questions before Phase 2, but use official ikas docs, ikas MCP introspection, direct ikas developer feedback, and this app's dev-store verification as the sources of truth for product architecture.
 
 The key decision: ikas can store multiple JavaScript script records, but this project should still own only one storefront loader record per storefront.
 
@@ -144,6 +147,14 @@ Theme adapters should replace scattered selector heuristics with a structured co
 - `findListingTitle(card)`
 - `ignoreContainers()`
 
+The current Ozy listing badge allowlist/blocklist is an old safety net, not a
+stable cross-theme contract. Phase 2 should treat it as adapter seed material only.
+The adapter must make false-positive prevention explicit: menu, footer, cart,
+hero/banner, editorial, and merchant-added sections with product-like links should
+not receive badges unless they are intentionally product-card surfaces. It must
+also keep false negatives visible: new valid product sliders or lazy-loaded
+sections may need adapter coverage.
+
 Adapters can be selected by:
 
 - explicit merchant setting
@@ -209,19 +220,73 @@ Do not create separate ikas script records for `reviews-main`, `rating-badge`, `
 
 Reference: [[Ikas_Storefront_Script_Capabilities]]
 
-## Migration Path
+## Phased Rollout
 
-1. Introduce a loader build alongside the current `widget.js`.
-2. Move settings fetch, event subscription, product detection, and module registry into the loader.
-3. Split current widget code into modules behind stable registry keys.
-4. Keep the current `widget.js` path as a compatibility alias until existing installs are migrated.
-5. Add `listStorefrontJSScript` reconciliation before changing destructive script behavior.
-6. Add integration smoke checks for listing, PDP, API responses, console, and network.
-7. Add product identity verification before marking reviews as verified.
+The migration is split into three phases. The authoritative phase record is
+[[ADR_0013_Modular_Widget_Loader_Architecture]] → "Phased Rollout Status".
+
+Official-alignment note: the plan is directionally aligned with ikas docs and the
+2026-05-16 ikas developer answer, but it is not allowed to assume undocumented
+runtime details. Runtime Storefront Events payloads and StorefrontJSScript mutation
+shape remain explicit gates before later phases. Use
+[[Phase_1_Widget_Runtime_Audit]] as the Phase 1 -> Phase 2 evidence checklist.
+Context7 may be used for current third-party library docs that shape the test
+method or implementation mechanics (Playwright, Sentry, Next.js, build tooling),
+but not as the source of truth for ikas event/schema/theme contracts.
+
+### Phase 1 — Internal separation — ✅ Implemented (2026-05-16)
+
+Internal loader + surface registry + single Storefront Events context module. The
+build output stays one IIFE `widget.js` — no ESM, no code-splitting, no behavior
+change. This makes the physical split (Phase 2) mechanical and low-risk.
+
+Delivered: `src/widget/loader.js`, `core/storefront-context.js`, `core/registry.js`,
+`surfaces/*`; `index.js` thinned to a side-effect entry; `events.js` drained to the
+SPA history patch + modal badge plumbing; `getProductFromPage` removed from
+`bootstrap.js`. Open item: live storefront verification + confirming the real
+`VIEW_LISTING` runtime event type ([[Ikas_Storefront_Events]]). Phase 1 should not
+be considered fully closed until a dev-store run records the real `PAGE_VIEW`,
+`PRODUCT_VIEW`, category listing, and search listing payloads.
+
+Protein Ocean/Yotpo can be re-inspected during Phase 1 closeout as a read-only
+benchmark for Phase 2 design, but it must not replace the dev-store Phase 1 test.
+Any new observations should be recorded in [[Yotpo_Protein_Ocean_Widget_Research]]
+and compared here as "applicable", "not applicable", or "needs ikas confirmation".
+If the Phase 1 test method depends on Playwright or Sentry behavior, confirm the
+relevant current docs through Context7 and record the checked library id/topic in
+[[Phase_1_Widget_Runtime_Audit]].
+
+### Phase 2 — Physical module split — ⏳ Planned
+
+Migrate the build from IIFE to ESM so esbuild code-splitting works; decouple
+`render.js` (~670 lines) from the layout ecosystem; ship real lazy-loaded modules
+behind the registry (the actual performance win — pages stop loading code they do
+not use); `rating-badge` becomes an independent surface; `events.js` may be renamed
+to `core/spa-nav.js`. Phase 2 should not depend on provisional `VIEW_LISTING` or
+future ikas Studio `data-*` attributes; use verified Storefront Events and
+`PAGE_VIEW` page type first, with DOM/theme heuristics only as fallback. Keep the
+current `widget.js?publicApiKey=...` injection path compatible until the loader URL
+and cache rollout are planned separately.
+
+### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
+
+Cache split (short-cache loader, long-immutable versioned modules); ikas script
+lifecycle hardening (`listStorefrontJSScript` reconciliation before any destructive
+script behavior, drop the blanket zero-argument `deleteStorefrontJSScript`, handle
+storefronts created after install); fix the stale `--theme` build alias; define a
+canonical product identity contract and add product identity verification before
+marking reviews as verified; integration smoke checks for listing, PDP, API
+responses, console, and network. Before any script lifecycle change, re-run ikas
+MCP list + introspect because public docs and the current generated client differ
+on `save/create/update/deleteStorefrontJSScript` naming and delete arguments.
+Reconciliation should use ikas-side script records by predictable name/content as
+well as the local DB script map.
 
 ## Non-Goals
 
 - Do not clone Yotpo's enterprise feature scope.
+- Do not treat Protein Ocean's Yotpo setup as a universal ikas app blueprint; it is
+  one storefront implementation and may not generalize across merchants.
 - Do not introduce a frontend framework into storefront runtime without a separate ADR.
 - Do not require merchants to edit theme code for the first usable version.
 - Do not use multiple ikas script records as the primary widget module mechanism.
@@ -246,8 +311,11 @@ Reference: [[Ikas_Storefront_Script_Capabilities]]
 
 ## Obsidian Links
 
+- [[ADR_0013_Modular_Widget_Loader_Architecture]]
 - [[Widget_Architecture]]
 - [[Storefront_Widget_Overview]]
 - [[Widget_Performance]]
 - [[Ikas_Widget_Injection_Notes]]
+- [[Ikas_Storefront_Events]]
+- [[Phase_1_Widget_Runtime_Audit]]
 - [[Yotpo]]

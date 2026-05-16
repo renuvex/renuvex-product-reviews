@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-17
 tags:
   - sentry
   - observability
@@ -16,6 +16,7 @@ related:
   - "[[Debugging_Notes]]"
   - "[[Security_And_Rate_Limits]]"
   - "[[ADR_0009_Sentry_Observability_Strategy]]"
+  - "[[Phase_1_Widget_Runtime_Audit]]"
 ---
 
 # Sentry Operations
@@ -86,6 +87,24 @@ However, uncaught widget errors are no longer invisible. A 637-byte (gzip) repor
 - Widget reporter cap: 5 errors per page session, dedupe per (message+stack), 2-second minimum gap between sends
 - Server rate-limit: 30 reports per IP per 60 seconds (Upstash key prefix `ikr_werr_rl:`)
 
+## Phase 1 Widget Post-Test Check
+
+For [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 1, Sentry is a secondary
+post-test signal. Run it after the dev-store browser/Playwright pass and check for
+new `tags[source]:widget`, `widget.js`, `/api/public/widget-error`, and
+`/api/public/*` issues.
+
+Context7 check: `/getsentry/sentry-javascript` was reviewed on 2026-05-17 for
+this phase. Relevant Sentry signals are tags, contexts, breadcrumbs, captured
+exceptions/messages, and enriched event details. This supports the triage method;
+it does not replace actual project issue inspection.
+
+Important: a clean Sentry result does not prove Phase 1 passes. Missing listing
+badge stars, badges injected into the wrong section, or Storefront Events fallback
+behavior can happen without an exception. The primary evidence remains browser
+DOM, visual, console, network, and event-payload inspection in
+[[Phase_1_Widget_Runtime_Audit]].
+
 ## Pending Operational Improvements
 Not blocking, no decision required — operational follow-ups to revisit when the trigger condition is met. If you are touching anything in this page, scan this list first.
 
@@ -111,8 +130,11 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Debugging_Notes]]
 - [[Security_And_Rate_Limits]]
 - [[Config_And_Env_Map]]
+- [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-05-17: Added Context7-backed Sentry JavaScript note for Phase 1 post-test triage. Tags, context, breadcrumbs, and captured events are the useful Sentry SDK-level signals, but browser/runtime evidence remains primary.
+- 2026-05-17: Added Phase 1 widget post-test check guidance. Sentry should be used after browser/Playwright verification to catch widget/API runtime errors, but it is not a substitute for visual DOM and event-payload audits. Related: [[Phase_1_Widget_Runtime_Audit]].
 - 2026-05-11: Added "Pending Operational Improvements" section: alert rules, MCP scope narrowing, and saved searches. None blocking — captured here so they are not re-discovered from scratch.
 - 2026-05-11: Added widget error forwarding via `/api/public/widget-error`. Tiny in-widget reporter (637 bytes gzip) forwards uncaught widget errors to the panel's Sentry SDK without bundling the SDK into the widget. Decision in [[ADR_0010_Widget_Error_Forwarding]].
 - 2026-05-11: Wizard ran successfully; SDK initialized for Node/Edge/browser. Switched DSN from wizard-hardcoded literal to env var read. Set `sendDefaultPii: false`, production `tracesSampleRate: 0.1`, masked Replay with prod 5% / on-error 100%. Deleted the wizard-generated `/sentry-example-page` and `/api/sentry-example-api` after verifying ingestion. Recorded decision in [[ADR_0009_Sentry_Observability_Strategy]].

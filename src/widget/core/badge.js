@@ -2,7 +2,7 @@
 // Tüm widgetlar (listing, carousel, popup, modal) bu fonksiyonu kullanır.
 
 import { getIconStyle } from '../icons/index.js';
-import { partialStarsHTML } from './helpers.js';
+import { partialStarsHTML, PARTIAL_STARS_CSS } from './helpers.js';
 
 var BADGE_STAR_COLOR = 'var(--ikr-badge-color,#f59e0b)';
 var BADGE_ICON_SIZE = 13; // px
@@ -18,6 +18,19 @@ function buildBadgeStars(rating) {
          '</span>';
 }
 
+// Listing badge yıldızlarının (.ikr-star / .ikr-stars-partial) CSS'ini bir kez
+// enjekte eder. PDP review render'ı bu CSS'i #ikr-styles ile sağlar; ama soğuk
+// listing / home / category girişinde PDP yolu hiç çalışmaz. Badge factory'si
+// kendi stilini garanti eder — sayfa tipinden ve render.js'ten bağımsız.
+// İdempotent; #ikr-styles ile yan yana sorunsuz (kurallar birebir aynı kaynaktan).
+function ensureBadgeStyles() {
+  if (document.getElementById('ikr-badge-styles')) return;
+  var el = document.createElement('style');
+  el.id = 'ikr-badge-styles';
+  el.textContent = PARTIAL_STARS_CSS;
+  document.head.appendChild(el);
+}
+
 /**
  * Listing badge DOM elementi oluşturur.
  * @param {{ avg: string, count: number }} rating
@@ -25,6 +38,7 @@ function buildBadgeStars(rating) {
  * @returns {HTMLElement}
  */
 export function createBadgeEl(rating, justify) {
+  ensureBadgeStyles();
   var el = document.createElement('div');
   el.setAttribute('data-ikr-listing-badge', '1');
   el.style.cssText = BADGE_CSS + 'justify-content:' + (justify || 'flex-start') + ';';
