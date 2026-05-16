@@ -27,10 +27,10 @@ import { ls, ikrSlugMap } from './state.js';
 var IKAS_EVENT = Object.freeze({
   PAGE_VIEW:    'PAGE_VIEW',
   PRODUCT_VIEW: 'PRODUCT_VIEW',
-  // DOĞRULANMADI: mevcut kod 'VIEW_LISTING' kullanıyor, ama bu string resmî
-  // olay tipi listesinde YOK (resmî karşılıkları VIEW_CATEGORY /
-  // VIEW_SEARCH_RESULTS). Canlı dev store'da gerçek runtime string doğrulanıp
-  // BU SATIR tek başına değiştirilecek. Bkz. ADR_0013, doğrulama adımı F.5.
+  // Runtime-verified on the dev store (2026-05-17): VIEW_LISTING carries
+  // category productDetails[]. VIEW_CATEGORY also fires, but without products.
+  // Search pages emit VIEW_SEARCH_RESULTS; handling that is Phase 2 work.
+  // See ADR_0013 and docs/wiki/10_Research/Phase_1_Widget_Runtime_Audit.md.
   LISTING_VIEW: 'VIEW_LISTING',
 });
 
