@@ -14,6 +14,7 @@ related:
   - "[[Current_Status]]"
   - "[[Project_Overview]]"
   - "[[Phase_1_Widget_Runtime_Audit]]"
+  - "[[Phase_2_Widget_Module_Split_Plan]]"
 source_files:
   - "package.json"
   - "prisma/schema.prisma"
@@ -26,7 +27,7 @@ source_files:
 
 ## Current Focus
 - ikas review/rating app: merchant admin, storefront widget, review submission, image upload, moderation, settings preview.
-- Current focus: ADR_0013 Phase 1 storefront runtime verification and follow-up widget fixes.
+- Current focus: ADR_0013 Phase 2 module split planning and implementation gates.
 
 ## Must Know
 - Source code, config, migrations, tests, and runtime behavior are the source of truth; wiki pages are routing and memory.
@@ -39,6 +40,7 @@ source_files:
 - 2026-05-16: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 1 landed: internal loader, surface registry, and one Storefront Events context module. Output remains one IIFE `widget.js`.
 - 2026-05-17: [[Phase_1_Widget_Runtime_Audit]] records dev-store runtime verification. `VIEW_LISTING` is confirmed as a real runtime event carrying `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` and are Phase 2 work.
 - 2026-05-17: [[Bug_Listing_Badge_Stars_Direct_Load]] fixed. Cold listing stars were 0x0 because `#ikr-styles` was PDP-only; `src/widget/core/badge.js` now self-injects `#ikr-badge-styles`.
+- 2026-05-17: [[Phase_2_Widget_Module_Split_Plan]] defines the Phase 2 work and done criteria. Keep `widget.js?publicApiKey=...` compatible; use a classic loader plus ESM chunks unless ikas module script loading is proven.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
@@ -54,3 +56,4 @@ source_files:
 - [[Wiki_Maintenance_Prompt]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Phase_1_Widget_Runtime_Audit]]
+- [[Phase_2_Widget_Module_Split_Plan]]

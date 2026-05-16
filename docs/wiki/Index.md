@@ -39,7 +39,7 @@ source_files: []
 | New session / unclear task | [[Hot_Context]], [[Current_Status]] | [[Project_Overview]], [[Open_Questions]] | Related source files from focused pages |
 | Admin UI / widget editor task | [[Frontend_Map]], [[Widget_Customization]] | [[Feature_Map]], relevant widget pages | `src/components/home-page/widgets/*` |
 | Storefront widget task | [[Widget_Architecture]], [[Storefront_Widget_Overview]] | Relevant `08_Widgets` pages and ADRs | `src/widget/*`, `public/widget.js` |
-| Modular widget loader / Yotpo-like architecture | [[Yotpo_Style_Widget_Modular_Architecture]], [[Phase_1_Widget_Runtime_Audit]] | [[Yotpo_Protein_Ocean_Widget_Research]], [[Ikas_Storefront_Script_Capabilities]], [[Widget_Performance]] | `src/widget/*`, `scripts/build-widget.mjs`, storefront smoke output |
+| Modular widget loader / Yotpo-like architecture | [[Yotpo_Style_Widget_Modular_Architecture]], [[Phase_1_Widget_Runtime_Audit]], [[Phase_2_Widget_Module_Split_Plan]] | [[Yotpo_Protein_Ocean_Widget_Research]], [[Ikas_Storefront_Script_Capabilities]], [[Widget_Performance]] | `src/widget/*`, `scripts/build-widget.mjs`, storefront smoke output |
 | API task | [[Backend_API_Map]], [[API_Design]] | [[Ikas_API_Notes]], [[Security_And_Rate_Limits]] | `src/app/api/*`, `src/lib/*` |
 | Database task | [[Database_Map]], [[Database_Schema]] | [[Decision_Index]] | `prisma/schema.prisma`, `prisma/migrations/*` |
 | Auth / ikas install task | [[Auth_And_Installation_Flow]], [[Ikas_OAuth_Installation_Notes]] | [[Security_And_Rate_Limits]], [[ADR_0004_Ikas_Integration_Strategy]] | OAuth/API helper files |
@@ -142,6 +142,7 @@ source_files: []
 - [[Review_Layout_Padding_Research]]
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 - [[Phase_1_Widget_Runtime_Audit]]
+- [[Phase_2_Widget_Module_Split_Plan]]
 - [[Future_Feature_Ideas]]
 
 ## Templates
@@ -159,4 +160,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-05-17 (added Phase 1 widget runtime audit routing for ADR_0013 Phase 1 -> Phase 2 evidence gates)
+**Last Updated:** 2026-05-17 (added Phase 2 widget module split plan routing and verification gates)

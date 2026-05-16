@@ -186,12 +186,19 @@ bundle preserved; zero behavior change.
 
 ### Phase 2 — Physical module split — ⏳ Planned
 
+Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
+
 - Migrate the build from IIFE to ESM so esbuild code-splitting works.
+- Keep `widget.js?publicApiKey=...` compatible. Do not replace it with a pure ESM
+  file unless ikas script loading with `type="module"` is proven; prefer a small
+  classic compatibility loader that loads the ESM runtime/chunks.
 - Decouple `render.js` (~670 lines) from the layout ecosystem.
 - Real lazy-loaded widget modules behind the registry — the performance win:
   pages stop paying for code they do not use.
 - `rating-badge` becomes an independent surface (Phase 1 keeps it inside `render.js`
   because the aggregate rating/count is produced by that render pass).
+- Add `VIEW_SEARCH_RESULTS` handling beside verified `VIEW_LISTING`; both carry
+  `productDetails[]` in runtime audit results.
 - `events.js` may be renamed to `core/spa-nav.js`.
 - Do not make Phase 2 depend on `VIEW_LISTING` or any future ikas Studio `data-*`
   attributes. Listing module detection should use verified Storefront Events and
@@ -243,5 +250,6 @@ bundle preserved; zero behavior change.
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Ikas_Storefront_Events]]
 - [[Phase_1_Widget_Runtime_Audit]]
+- [[Phase_2_Widget_Module_Split_Plan]]
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]

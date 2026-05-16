@@ -258,6 +258,8 @@ relevant current docs through Context7 and record the checked library id/topic i
 
 ### Phase 2 — Physical module split — ⏳ Planned
 
+Detailed implementation and verification checklist: [[Phase_2_Widget_Module_Split_Plan]].
+
 Migrate the build from IIFE to ESM so esbuild code-splitting works; decouple
 `render.js` (~670 lines) from the layout ecosystem; ship real lazy-loaded modules
 behind the registry (the actual performance win — pages stop loading code they do
@@ -267,6 +269,11 @@ future ikas Studio `data-*` attributes; use verified Storefront Events and
 `PAGE_VIEW` page type first, with DOM/theme heuristics only as fallback. Keep the
 current `widget.js?publicApiKey=...` injection path compatible until the loader URL
 and cache rollout are planned separately.
+
+Implementation guardrail: because esbuild code splitting requires ESM output,
+`widget.js?publicApiKey=...` should remain a backward-compatible classic loader
+unless the ikas injected script can be proven to use `type="module"`. The loader
+can then import the ESM runtime/chunks behind the existing public URL.
 
 ### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
 
@@ -318,4 +325,5 @@ well as the local DB script map.
 - [[Ikas_Widget_Injection_Notes]]
 - [[Ikas_Storefront_Events]]
 - [[Phase_1_Widget_Runtime_Audit]]
+- [[Phase_2_Widget_Module_Split_Plan]]
 - [[Yotpo]]
