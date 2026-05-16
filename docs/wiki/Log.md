@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-16 - reference | ikas Storefront Events official docs captured
+- Summary: Saved the official ikas Storefront Events documentation (event types, page types, payload shapes, JS example, query-param usage) as a wiki reference page.
+- New wiki page: [[Ikas_Storefront_Events]]
+- Updated wiki pages: [[Index]]
+- Source: <https://builders.ikas.com/docs/storefront-events/events>
+- Note: flagged that current code uses `VIEW_LISTING` while official docs list `VIEW_CATEGORY` / `VIEW_SEARCH_RESULTS` — needs runtime verification.
+
 ## 2026-05-16 - research | ikas developer feedback on storefront script integration
 - Summary: Recorded a direct ikas developer answer about single-loader architecture, theme selectors, and script ordering.
 - Key takeaways: single loader + multiple modules is an accepted ikas pattern; no official stable ids / `data-*` attributes for page areas today; Storefront Events is the supported page/product context mechanism; standard `data-*` attributes are planned (ikas Studio) but not yet broadly available; `isHighPriority` + `order` control load order relative to Facebook/Google scripts.
