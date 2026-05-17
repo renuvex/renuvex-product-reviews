@@ -240,7 +240,7 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 - ikas script lifecycle hardening: remove the blanket zero-argument
   `deleteStorefrontJSScript`, add `listStorefrontJSScript` reconciliation, handle
   storefronts created after install.
-- Fix the stale `--theme` build alias (`themes/ozy/listing-selector.js` does not exist).
+- Done — 2026-05-17 (commit `ce9508d`): removed the dead `themes/ozy/listing-selector.js` entry from the `--theme` build alias in `build-widget.mjs`. The broader `--theme=new-theme` scaffold (no `themes/new-theme/` folder) remains an open question, not a Phase 3 blocker.
 - Define a canonical product identity contract (`storeId` / `ikasProductId` /
   `ikasVariantId` / `slug`).
 - Before changing script lifecycle code, re-run ikas MCP list + introspect for
