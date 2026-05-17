@@ -9,7 +9,7 @@ import { TokenHelpers } from '@/helpers/token-helpers';
 import { AuthToken } from '@/models/auth-token';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { prisma } from '@/lib/prisma';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import z from 'zod';
 import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
 import { buildStorefrontWidgetScript } from '@/lib/storefront-widget-url';
@@ -217,11 +217,15 @@ export async function GET(request: NextRequest) {
       console.error('Product webhook registration failed:', webhookError);
     }
 
-    try {
-      await syncAllProductsForStore(ikas, merchantId);
-    } catch (productSyncError) {
-      console.error('Initial product snapshot sync failed:', productSyncError);
-    }
+    // Backfill snapshots after the response is sent so a large catalog cannot
+    // delay or fail the install; webhooks + /api/admin/sync-products recover misses.
+    after(async () => {
+      try {
+        await syncAllProductsForStore(ikas, merchantId);
+      } catch (productSyncError) {
+        console.error('Initial product snapshot sync failed:', productSyncError);
+      }
+    });
 
     // Update session with new merchant and app IDs, clear state, and set expiration
     session.expiresAt = new Date(Date.now() + 3600 * 1000);

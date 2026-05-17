@@ -75,7 +75,7 @@ Detail in [[Security_And_Rate_Limits]].
 | Method + Path | Source | Purpose |
 |---|---|---|
 | GET `/api/oauth/authorize/ikas?storeName=` | [route.ts](src/app/api/oauth/authorize/ikas/route.ts) | Set CSRF state in session, redirect to ikas authorize URL |
-| GET `/api/oauth/callback/ikas?code&state&signature` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Validate sig+state, exchange code, fetch merchant/app, upsert AuthToken, **auto-inject widget script per storefront**, JWT, redirect to admin |
+| GET `/api/oauth/callback/ikas?code&state&signature` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Validate sig+state, exchange code, fetch merchant/app, upsert AuthToken, **auto-inject widget script per storefront**, register product webhooks, JWT, redirect to admin; `ProductSnapshot` backfill runs post-response via `after()` |
 
 ## Preview iframe
 
@@ -114,6 +114,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-17: OAuth callback now registers product webhooks and runs the `ProductSnapshot` backfill non-blocking via Next.js `after()` (after the 302 response), so a large catalog cannot delay or fail install. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added `/api/public/ratings?productIds=...` as the canonical product-id listing/search badge endpoint. `/ratings-by-slug` remains a DOM-only fallback. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added product webhook receiver and admin product sync/backfill endpoint for `ProductSnapshot`.
 - 2026-05-10: Added the trusted review image URL contract to public review/settings route documentation. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
