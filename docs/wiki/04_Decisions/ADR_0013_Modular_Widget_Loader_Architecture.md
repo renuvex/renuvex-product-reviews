@@ -194,7 +194,7 @@ bundle preserved; zero behavior change.
   choices; record only comparable lessons in [[Yotpo_Protein_Ocean_Widget_Research]]
   and keep dev-store verification as the Phase 1 source of truth.
 
-### Phase 2 — Physical module split — In progress (2026-05-17)
+### Phase 2 — Physical module split — Implemented & verified (2026-05-17)
 
 Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 
@@ -221,8 +221,12 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 - Current verification: `pnpm build:widget`, a manifest boundary assertion, and
   scoped ESLint on changed widget/build files passed. `pnpm lint` itself is not a
   valid gate today because `next lint` fails under the repo's Next.js 16 setup.
-- Phase 2 is not done until the dev-store browser checklist and Sentry post-test
-  check in [[Phase_2_Widget_Module_Split_Plan]] are recorded.
+- Verified live on the dev store 2026-05-17: PDP/category/search cold entries,
+  PDP↔PDP SPA navigation, and a mobile spot check all passed; the Sentry
+  post-test check was clean. Full results in [[Phase_2_Widget_Module_Split_Plan]].
+- `core/settings.js` now de-dupes the in-flight settings request shared by the
+  reviews-main and listing-badge surfaces — a PDP with product carousels
+  previously fetched `/api/public/settings` twice.
 
 ### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
 

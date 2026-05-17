@@ -1,2 +1,2 @@
-/* ikas Reviews Widget ESM runtime - built 2026-05-17T00:09:19.903Z | theme: default */
+/* ikas Reviews Widget ESM runtime - built 2026-05-17T04:28:09.074Z | theme: default */
 var t=!1,n=!1,r={Tab:1,Enter:1," ":1,Spacebar:1,ArrowUp:1,ArrowDown:1,ArrowLeft:1,ArrowRight:1,Home:1,End:1,PageUp:1,PageDown:1,Escape:1};function a(o){r[o.key]&&(t=!0)}function e(){t=!1}function d(){n||typeof document=="undefined"||(document.addEventListener("keydown",a,!0),document.addEventListener("pointerdown",e,!0),typeof window!="undefined"&&!("PointerEvent"in window)&&(document.addEventListener("mousedown",e,!0),document.addEventListener("touchstart",e,!0)),n=!0)}function u(){return t}export{d as a,u as b};

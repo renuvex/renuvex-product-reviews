@@ -20,6 +20,7 @@ source_files:
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
   - "src/widget/core/lazy-modules.js"
+  - "src/widget/core/settings.js"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
   - "src/app/api/public/reviews/route.ts"
@@ -37,6 +38,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - `public/widget-runtime/build-manifest.json` records output bytes and import kinds. In the local build, the runtime entry has dynamic imports for product bootstrap, listing badges, and preview/product render.
 - The deployed pre-Phase-2 `https://new-ikas-app.vercel.app/widget.js?...` response measured `177763` bytes on 2026-05-15. Re-measure after deployment before claiming live performance improvement.
 - Initial requests on PDP: 2 (`/api/public/settings`, `/api/public/reviews`). Edge-cached `s-maxage=60, stale-while-revalidate=300`.
+- A PDP that also has product carousels mounts the listing-badge surface alongside reviews-main; `core/settings.js` shares one in-flight settings request across both surfaces, so `/api/public/settings` is fetched once, not twice (fixed 2026-05-17).
 - Initial requests on listing page: 1 (`/api/public/ratings-by-slug` — bulk).
 - Image upload: client-direct to Cloudinary; no proxy through our server.
 

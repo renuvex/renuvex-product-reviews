@@ -124,9 +124,9 @@ Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] introduced the loader
 surface registry + Storefront Events context layer. Phase 2 implementation started
 on 2026-05-17: build output now uses a classic compatibility loader plus ESM
 runtime/chunks, `VIEW_SEARCH_RESULTS` is handled beside verified `VIEW_LISTING`,
-and listing placement rules moved into the Ozy fallback adapter. Phase 2 still
-requires live dev-store browser/network verification and Sentry post-test checks
-before it is closed.
+and listing placement rules moved into the Ozy fallback adapter. Phase 2 was
+verified live on the dev store on 2026-05-17 (browser + Sentry post-test); see
+[[Phase_2_Widget_Module_Split_Plan]].
 
 ## Layout-aware settings (key concept)
 
@@ -193,7 +193,8 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
-- 2026-05-17: Phase 2 module split implementation started. Build output is now a classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; async lazy surface mounts, `VIEW_SEARCH_RESULTS`, shared settings, and the Ozy fallback adapter are implemented. Live dev-store/Sentry verification remains open.
+- 2026-05-17: Phase 2 module split verified live on the dev store — PDP/category/search cold entries, PDP↔PDP SPA navigation, and a mobile spot check passed; Sentry post-test check clean. Phase 2 is closed. `core/settings.js` now shares one in-flight settings request between the reviews-main and listing-badge surfaces, so a PDP with product carousels fetches settings once instead of twice. See [[Phase_2_Widget_Module_Split_Plan]].
+- 2026-05-17: Phase 2 module split implementation started. Build output is now a classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; async lazy surface mounts, `VIEW_SEARCH_RESULTS`, shared settings, and the Ozy fallback adapter are implemented.
 - 2026-05-16: Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] — internal loader + surface registry + single Storefront Events context module. New files: `loader.js`, `core/storefront-context.js`, `core/registry.js`, `surfaces/*`. `index.js` is now a thin entry; `events.js` keeps only the SPA history patch + modal badge plumbing; `getProductFromPage` removed from `bootstrap.js`. Build output stays a single IIFE — no ESM/splitting/lazy-load. Verified via `pnpm build:widget` + `/preview` smoke test; live storefront verification pending deploy.
 - 2026-05-15: Added architecture note from Yotpo/Protein Ocean live research. Current single-bundle architecture remains the source of truth, but future large widget surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-12: Split widget icon architecture into [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js), [src/widget/icons/filter-icons.js](src/widget/icons/filter-icons.js), and [src/widget/icons/index.js](src/widget/icons/index.js), with [src/widget/icons.js](src/widget/icons.js) retained as a compatibility re-export.

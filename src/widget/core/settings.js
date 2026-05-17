@@ -13,27 +13,46 @@ var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
 var SETTINGS_CACHE_STALE_TTL = 7 * 24 * 60 * 60 * 1000;
 var SETTINGS_404_TTL = 30 * 1000;
 
-export async function fetchSettings() {
-  if (window.__ikasPreviewMode) {
-    try {
-      var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
-      var savedSettings = window.__ikasPreviewSettings || sessionStorage.getItem('ikr_preview_settings') || '';
-      var settingsOverride = {};
-      if (savedSettings) {
-        try { settingsOverride = JSON.parse(savedSettings); } catch (_) {}
-      }
-      var previewRes = await fetchWithTimeout(previewBase + '/api/preview/settings');
-      if (previewRes.ok) {
-        var previewData = await previewRes.json();
-        if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
-          previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
-        }
-        return previewData;
-      }
-    } catch (_) {}
-    return null;
-  }
+// On a PDP with product carousels the reviews-main and listing-badge surfaces
+// both call fetchSettings() before either has populated the cache. Sharing the
+// in-flight promise collapses that race into a single network request.
+var inflightSettings = null;
 
+export function fetchSettings() {
+  if (window.__ikasPreviewMode) {
+    return loadPreviewSettings();
+  }
+  if (inflightSettings) return inflightSettings;
+  inflightSettings = loadSettings();
+  inflightSettings.then(resetInflightSettings, resetInflightSettings);
+  return inflightSettings;
+}
+
+function resetInflightSettings() {
+  inflightSettings = null;
+}
+
+async function loadPreviewSettings() {
+  try {
+    var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
+    var savedSettings = window.__ikasPreviewSettings || sessionStorage.getItem('ikr_preview_settings') || '';
+    var settingsOverride = {};
+    if (savedSettings) {
+      try { settingsOverride = JSON.parse(savedSettings); } catch (_) {}
+    }
+    var previewRes = await fetchWithTimeout(previewBase + '/api/preview/settings');
+    if (previewRes.ok) {
+      var previewData = await previewRes.json();
+      if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
+        previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
+      }
+      return previewData;
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function loadSettings() {
   var staleEntry = null;
   var cached = cacheGet(SETTINGS_CACHE_KEY);
   if (cached) {

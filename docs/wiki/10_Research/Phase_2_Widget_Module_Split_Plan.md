@@ -5,7 +5,7 @@ status: active
 created: 2026-05-17
 updated: 2026-05-17
 last_verified: 2026-05-17
-confidence: medium
+confidence: high
 tags:
   - research
   - widget
@@ -99,9 +99,9 @@ with `format: "esm"` and `outdir`; dynamic `import()` creates lazy chunks.
 
 ## Implementation Snapshot - 2026-05-17
 
-Status: implementation started; build/static module-boundary checks passed.
-Phase 2 is still not complete until the live dev-store browser and Sentry checks
-in the done criteria pass.
+Status: implemented and verified. Live dev-store browser verification and the
+Sentry post-test check passed on 2026-05-17 — see "Phase 2 Verification Result"
+below.
 
 Implemented:
 - `public/widget.js` is now a small classic compatibility loader built from
@@ -142,16 +142,53 @@ Checks run:
   `next lint` treats `lint` as a project directory. Scoped fallback
   `pnpm exec eslint <changed widget/build files>` passed.
 
-Still required before marking Phase 2 done:
-- Deploy/use the new `public/widget.js` and chunks on `https://dev-mertcopper.ikas.shop/`.
-- Run the full browser checklist below, including network proof that pages load
-  only the expected lazy chunks.
-- Run the Sentry post-test check for `source:widget`, `widget.js`,
-  `/widget-runtime/`, `/api/public/widget-error`, and `/api/public/*`.
+## Phase 2 Verification Result — 2026-05-17
+
+Live browser verification on `https://dev-mertcopper.ikas.shop/` (Playwright,
+desktop + mobile viewport). All scenarios passed.
+
+| Scenario | Result |
+|---|---|
+| PDP cold (`/premium-shorts`) | PASS — classic `widget.js` + `runtime.js` + shared chunks + `bootstrap` + `listing-badges` + `/api/public/{settings,reviews,ratings-by-slug}`, all `200` from the canonical HTTPS host. Review summary, 10 review cards, photo strip, filters, rating badge, exactly one JSON-LD. |
+| Category cold (`/clothing`) | PASS — listing path only. `bootstrap`, `/api/public/settings`, `/api/public/reviews` were NOT fetched — lazy isolation confirmed. |
+| Search cold (`/search?s=...`) | PASS — listing path only; the `VIEW_SEARCH_RESULTS` page badged its cards from the rating cache. |
+| SPA navigation (PDP ↔ PDP) | PASS — old surfaces fully torn down (0 stale rating badge / JSON-LD / summary / review cards); the reviewed widget re-mounted exactly at the cold baseline (1 rating badge, 1 JSON-LD, 1 summary, 10 review cards, one copy of each `#ikr-*` style element). |
+| Mobile spot check (390px) | PASS — rating badge and counts correct. |
+
+- Console on every page was clean; the only error is the storefront theme's own
+  `favicon.ico` 404, not widget-originated.
+- `listing-badges` loads on the PDP because the PDP has "Çok Satanlar" and
+  free-gift product carousels — correct lazy behaviour, not eager listing code
+  on a pure PDP.
+- Sentry post-test check (`mert-copper/yorum-paneli`, EU region): clean. No
+  `tags[source]:widget` issues, no issues first-seen in 24h, nothing tied to
+  `widget.js` / `/widget-runtime/` / `/api/public/*`. The two open issues
+  (`YORUM-PANELI-4` UnhandledRejection on `/callback`, `YORUM-PANELI-5` Axios
+  401 on `/dashboard`) are pre-existing panel-side issues unrelated to the
+  widget or Phase 2.
+
+### Polish fix shipped alongside Phase 2
+
+`core/settings.js` now shares one in-flight settings request between the
+reviews-main and listing-badge surfaces. Previously both surfaces called
+`fetchSettings()` before either populated the cache, so a PDP with product
+carousels issued two identical `/api/public/settings` calls. The fix memoizes
+the pending promise; built and syntax-checked. A one-line post-deploy sanity
+check (single settings call on a PDP) confirms it live.
+
+### Deferred — Phase 3 / onboarding
+
+- The listing-badge surface injects a `display:none` badge into the Ozy theme's
+  hidden `passive` search-results container. Not visible and not a leak; a
+  visibility filter in `listing-badges/inject.js` is Phase 3 adapter-hardening
+  polish.
+- The storefront theme renders its own native (empty) review block separate
+  from the app widget. This is not app code — it is a merchant onboarding
+  instruction (disable the theme's built-in reviews), not a code change.
 
 ## Phase 2 Done Criteria
 
-Phase 2 is not done until all of these are recorded:
+All criteria below were met on 2026-05-17 (see "Phase 2 Verification Result" above):
 
 - Build passes and generated files are committed.
 - The classic `widget.js?publicApiKey=...` entry still works on the dev store.

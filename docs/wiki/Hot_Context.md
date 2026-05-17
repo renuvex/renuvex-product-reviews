@@ -42,13 +42,14 @@ source_files:
 - 2026-05-17: [[Phase_1_Widget_Runtime_Audit]] records dev-store runtime verification. `VIEW_LISTING` is confirmed as a real runtime event carrying `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` and are Phase 2 work.
 - 2026-05-17: [[Bug_Listing_Badge_Stars_Direct_Load]] fixed. Cold listing stars were 0x0 because `#ikr-styles` was PDP-only; `src/widget/core/badge.js` now self-injects `#ikr-badge-styles`.
 - 2026-05-17: [[Phase_2_Widget_Module_Split_Plan]] defines the Phase 2 work and done criteria. Keep `widget.js?publicApiKey=...` compatible; use a classic loader plus ESM chunks unless ikas module script loading is proven.
-- 2026-05-17: Phase 2 implementation started. Local build now emits a small classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; `VIEW_SEARCH_RESULTS` is handled; Ozy listing placement moved into a fallback adapter. Live dev-store/browser/Sentry verification is still required before Phase 2 is done.
+- 2026-05-17: Phase 2 (module split) implemented. Local build emits a small classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; `VIEW_SEARCH_RESULTS` is handled; Ozy listing placement moved into a fallback adapter.
+- 2026-05-17: [[Phase_2_Widget_Module_Split_Plan]] verified live on the dev store — PDP/category/search cold entries, PDP↔PDP SPA navigation, and a mobile spot check passed; Sentry post-test clean. Phase 2 is closed. `core/settings.js` now de-dupes the in-flight settings request shared by the reviews-main and listing-badge surfaces.
 - 2026-05-17: Storefront script URL generation now uses `STOREFRONT_WIDGET_BASE_URL` through [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts). `NEXT_PUBLIC_DEPLOY_URL` remains the app/OAuth URL; real ikas storefront script records must load the stable public HTTPS widget host.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
 - ADR_0013 Phase 1 runtime audit is recorded in [[Phase_1_Widget_Runtime_Audit]]; A/B/C/G ran on 2026-05-17 and gates passed.
-- Remaining Phase 2/3 items: live ESM chunk verification on the dev store, Sentry post-test check, StorefrontJSScript schema reconciliation, cache/versioning, and script lifecycle hardening.
+- Remaining Phase 3 items: StorefrontJSScript schema reconciliation, loader/module cache headers and versioning, and script lifecycle hardening. Plus two deferred Phase 2 polish items: a visibility filter for the hidden `passive` search-container badge, and a merchant onboarding note for the theme's native review block.
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
 
 ## Read Next
