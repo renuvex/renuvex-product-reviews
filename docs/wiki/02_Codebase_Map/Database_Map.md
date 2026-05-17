@@ -55,6 +55,27 @@ The migrations show iterative tuning: redundant indexes have been cleaned up at 
 - Deploy: `pnpm build` runs `prisma generate && prisma migrate deploy && next build` — migrations apply on every Vercel deploy.
 - ⚠️ Never `prisma db push` in production (only first-run via `pnpm prisma:init` for local).
 
+### Migration safety (deploy-window rule)
+`prisma migrate deploy` runs *during* the Vercel build, while the previous
+deployment still serves traffic. For ~1-3 minutes the new schema and the old
+code run together, so a migration must not break the old code.
+
+- **Additive / backwards-compatible — one deploy is safe:** new table, new
+  nullable column, new column with a default, new index. Old code simply
+  ignores what it does not know about.
+- **Breaking — must use expand/contract (two deploys):** drop or rename a
+  column/table, add a `NOT NULL` column without a default, narrow a type, add a
+  unique constraint to existing data.
+  1. Deploy 1 — ship code that works with *both* the old and new shape (e.g.
+     stop reading/writing the column); no destructive migration yet.
+  2. Deploy 2 — apply the destructive migration once Deploy 1 is fully live, so
+     no running code still depends on the old shape.
+- A single breaking deploy at a quiet hour is acceptable only when a few minutes
+  of transient errors is tolerable; expand/contract is the zero-downtime default.
+- Example: `20260517160000_remove_product_snapshot_deleted` dropped a column in
+  one deploy — safe only because the store had no live traffic. Do not repeat
+  this pattern for live multi-merchant data.
+
 ## Recent migration themes (chronological)
 - `init`, `add_product_slug_cache` — bootstrap
 - `cleanup_and_auth_token_refactor`, `remove_widget_template` — early refactors
@@ -83,5 +104,6 @@ The migrations show iterative tuning: redundant indexes have been cleaned up at 
 - [[ADR_0003_Review_Data_Model]]
 
 ## Change Log
+- 2026-05-17: Added the migration safety (deploy-window / expand-contract) rule to the migration workflow section.
 - 2026-05-17: Documented `[storeId, productId, status]` for canonical product-id listing/search badge reads and corrected the model count to include `PendingReviewImage`.
 - 2026-05-17: Added `ProductSnapshot` to the model map for webhook/backfill-maintained product identity resolution.

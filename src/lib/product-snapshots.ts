@@ -12,6 +12,7 @@ export type ProductLike = {
   _id?: unknown;
   productId?: unknown;
   name?: unknown;
+  deleted?: unknown;
   updatedAt?: unknown;
   metaData?: { slug?: unknown } | null;
   slug?: unknown;
@@ -69,6 +70,11 @@ export async function upsertProductSnapshot(storeId: string, product: ProductLik
   const normalized = normalizeProduct(product);
   if (!normalized) return null;
 
+  if (product.deleted === true) {
+    await prisma.productSnapshot.deleteMany({ where: { storeId, productId: normalized.productId } });
+    return null;
+  }
+
   return prisma.productSnapshot.upsert({
     where: { storeId_productId: { storeId, productId: normalized.productId } },
     update: {
@@ -96,6 +102,10 @@ async function upsertProductSnapshotBatch(storeId: string, products: IkasProduct
       const normalized = normalizeProduct(product);
       if (!normalized) {
         throw new Error('listProduct returned a product without id');
+      }
+
+      if (product.deleted === true) {
+        return prisma.productSnapshot.deleteMany({ where: { storeId, productId: normalized.productId } });
       }
 
       return prisma.productSnapshot.upsert({

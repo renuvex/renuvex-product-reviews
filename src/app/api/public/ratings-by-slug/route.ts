@@ -42,7 +42,12 @@ export async function GET(request: Request) {
         storeId,
         slug: { in: safeSlugs },
       },
-      orderBy: { lastSyncedAt: 'desc' },
+      orderBy: [
+        { lastSyncedAt: 'desc' },
+        { ikasUpdatedAt: 'desc' },
+        { updatedAt: 'desc' },
+        { productId: 'asc' },
+      ],
       select: { slug: true, productId: true },
     });
 
