@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-17
 tags:
   - performance
   - caching
@@ -37,6 +37,24 @@ Default header value: `s-maxage=60, stale-while-revalidate=300`.
 - After 60–360s, cache may serve stale data with a refresh in flight — this is the "stale-while-revalidate" design.
 - **Cache key includes query params** by default, so different sort/filter combos cache separately.
 
+## Static widget assets (Vercel CDN headers)
+
+`public/widget.js`, `public/widget-runtime/runtime.js`, and the content-hashed
+`public/widget-runtime/chunks/*.js` are served by Vercel's static layer.
+`vercel.json` `headers` sets a three-tier `Cache-Control` policy:
+
+| Asset | `Cache-Control` | Rationale |
+|---|---|---|
+| `/widget.js` | `public, max-age=300, must-revalidate` | Stable URL the ikas StorefrontJSScript record points to — widget code deploys must propagate. |
+| `/widget-runtime/runtime.js` | `public, max-age=300, must-revalidate` | Stable name, imported by the loader at a fixed path; cannot be `immutable` as-is. |
+| `/widget-runtime/chunks/*` | `public, max-age=31536000, immutable` | Content-hashed filenames — a code change yields a new filename, so old chunks are safe to cache for a year. |
+
+A widget code deploy reaches returning visitors within ~5 minutes (the
+loader/runtime `max-age`). Content-hashing `runtime.js` so it too can be
+`immutable` is a deferred [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3
+follow-up. This static-asset policy is independent of the API edge cache above
+and does not affect moderation latency.
+
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
 
@@ -55,9 +73,9 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - No cache for ikas responses today — they're called sparingly (install + manual re-inject).
 
 ## Widget bundle size
-- [public/widget.js](public/widget.js) is currently ~165 KB (minified).
+- Post-Phase-2 the widget is split: [public/widget.js](public/widget.js) is a ~1.6 KB classic loader, `public/widget-runtime/runtime.js` is the ~9.8 KB ESM runtime entry, and the bulk lives in lazy-loaded content-hashed chunks (largest ~147 KB). See [[Widget_Performance]] and [[ADR_0013_Modular_Widget_Loader_Architecture]].
 - Loaded `async` so it doesn't block first paint, but TTFB matters since merchants pay for storefront performance.
-- Adding heavy features (rich previews, lottie animations, etc.) → consider lazy-loading via dynamic `<script>` injection from within the bundle.
+- Adding heavy features → keep them behind the lazy ESM module boundary, not statically imported by the always-loaded loader/runtime.
 
 ## Image performance
 - Cloudinary URLs come pre-CDN'd. Storefront images can use Cloudinary transformations (`f_auto,q_auto,w_400`) — verify the widget URLs include these params.
@@ -66,7 +84,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 ## Possible improvements (not done)
 - Add `Vary: Origin` header to safely tighten CORS later.
 - Postgres connection pooling: already on PgBouncer transaction-mode (`?pgbouncer=true`). Verify Prisma has appropriate `connection_limit` — default is per-instance, watch for cold-start storms.
-- Move `widget.js` from `public/` to a CDN with longer TTL + immutable filenames (versioned). Today it's served by Vercel from origin.
+- Content-hash `widget-runtime/runtime.js` (resolved from the loader) so it can join the `immutable` chunk tier instead of the 5-minute loader tier. Deferred [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3 follow-up.
 
 ## Notes
 - Don't add caching that requires invalidation logic without a story for **how** invalidation happens. The current model — short TTL + SWR — is intentionally invalidation-free.
@@ -86,4 +104,5 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 
 ## Change Log
+- 2026-05-17: Added the "Static widget assets" section — `vercel.json` `headers` now sets a three-tier `Cache-Control` split (short-cache loader/runtime, `immutable` content-hashed chunks). Refreshed the stale pre-Phase-2 bundle-size note. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.
 - 2026-05-11: Documented public settings `stale-if-error=604800` and 7-day widget stale settings tolerance. The separate `ikr_image_policy_<publicApiKey>` cache was added on 2026-05-11 then removed the same day by [[ADR_0008_Cloud_Name_Build_Time_Only]] — cloud name is now a build-time constant and no runtime image-policy cache exists. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].

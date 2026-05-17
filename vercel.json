@@ -9,5 +9,19 @@
       "path": "/api/admin/cleanup-images",
       "schedule": "0 4 1 * *"
     }
+  ],
+  "headers": [
+    {
+      "source": "/widget.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
+    },
+    {
+      "source": "/widget-runtime/runtime.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
+    },
+    {
+      "source": "/widget-runtime/chunks/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
   ]
 }

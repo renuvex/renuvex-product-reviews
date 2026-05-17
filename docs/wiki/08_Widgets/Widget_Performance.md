@@ -50,7 +50,7 @@ Dev store smoke test:
 - homepage DOM had listing badges mounted
 - product page DOM had `#ikas-reviews-widget` and `#ikas-reviews-anchor`
 - public settings, reviews, and ratings endpoints returned 200
-- deployed widget response header was `Cache-Control: public, max-age=0, must-revalidate`
+- deployed widget response header was `Cache-Control: public, max-age=0, must-revalidate` — **superseded 2026-05-17**: `vercel.json` now sets a three-tier cache split (short-cache loader/runtime, `immutable` content-hashed chunks); see [[Caching_And_Performance]]
 
 Yotpo/Protein Ocean reference:
 

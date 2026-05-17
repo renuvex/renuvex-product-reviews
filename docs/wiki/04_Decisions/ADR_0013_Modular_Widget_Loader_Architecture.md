@@ -230,13 +230,12 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 
 ### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
 
-- Cache split — three tiers, not two. `widget.js` (stable name, referenced by the
-  ikas script record) stays short-cache so code updates propagate. Content-hashed
-  chunks (`chunk-*`, `bootstrap-*`, `listing-badges-*`, `render-*`) can be
-  `immutable` with a long max-age. `widget-runtime/runtime.js` is the in-between
-  case: it is currently stable-named and imported by the loader at a fixed path,
-  so it cannot be `immutable`-cached as-is — Phase 3 must either short-cache it
-  too, or give it a content hash and resolve that hashed name from the loader.
+- Done — 2026-05-17: `vercel.json` `headers` now sets the three-tier
+  `Cache-Control` split — `/widget.js` and `/widget-runtime/runtime.js` at
+  `max-age=300, must-revalidate`, `/widget-runtime/chunks/*` at
+  `max-age=31536000, immutable`. The stable-named `runtime.js` is short-cached
+  for now; content-hashing it so it can also be `immutable` (resolved from the
+  loader) remains a deferred follow-up. See [[Caching_And_Performance]].
 - ikas script lifecycle hardening: remove the blanket zero-argument
   `deleteStorefrontJSScript`, add `listStorefrontJSScript` reconciliation, handle
   storefronts created after install.
