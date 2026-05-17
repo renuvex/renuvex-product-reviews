@@ -41,11 +41,13 @@ export async function GET(request: Request) {
       where: {
         storeId,
         slug: { in: safeSlugs },
-        deleted: false,
       },
+      orderBy: { lastSyncedAt: 'desc' },
       select: { slug: true, productId: true },
     });
 
+    // Ordered freshest-first: when a slug maps to multiple snapshots (slug
+    // reassigned between products) the most recently synced one wins below.
     const slugToProductId: Record<string, string> = {};
     for (const snapshot of snapshots) {
       if (snapshot.slug && !slugToProductId[snapshot.slug]) {

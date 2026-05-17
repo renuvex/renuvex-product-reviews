@@ -73,7 +73,6 @@ model ProductSnapshot {
   productId     String
   slug          String?
   name          String?
-  deleted       Boolean   @default(false)
   ikasUpdatedAt DateTime?
   lastSyncedAt  DateTime  @default(now())
   createdAt     DateTime  @default(now())
@@ -81,7 +80,6 @@ model ProductSnapshot {
 
   @@unique([storeId, productId])
   @@index([storeId, slug])
-  @@index([storeId, slug, deleted])
 }
 
 // Registry of Cloudinary uploads that are not yet attached to a Review.

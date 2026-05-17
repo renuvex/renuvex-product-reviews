@@ -47,9 +47,10 @@ source_files:
 - 2026-05-17: [[Phase_2_Widget_Module_Split_Plan]] defines the Phase 2 work and done criteria. Keep `widget.js?publicApiKey=...` compatible; use a classic loader plus ESM chunks unless ikas module script loading is proven.
 - 2026-05-17: Phase 2 (module split) implemented. Local build emits a small classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; `VIEW_SEARCH_RESULTS` is handled; Ozy listing placement moved into a fallback adapter.
 - 2026-05-17: [[Phase_2_Widget_Module_Split_Plan]] verified live on the dev store — PDP/category/search cold entries, PDP↔PDP SPA navigation, and a mobile spot check passed; Sentry post-test clean. Phase 2 is closed. `core/settings.js` now de-dupes the in-flight settings request shared by the reviews-main and listing-badge surfaces.
-- 2026-05-17: Storefront script URL generation now uses `STOREFRONT_WIDGET_BASE_URL` through [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts). `NEXT_PUBLIC_DEPLOY_URL` remains the app/OAuth URL; real ikas storefront script records must load the stable public HTTPS widget host.
+- 2026-05-17: Storefront script URL generation uses `STOREFRONT_WIDGET_BASE_URL` via [storefront-widget-url.ts](src/lib/storefront-widget-url.ts); `NEXT_PUBLIC_DEPLOY_URL` stays the app/OAuth URL.
 - 2026-05-17: [[ADR_0015_Canonical_Product_Identity]] accepted and implemented. Listing/search badges map `productDetails[].id` to slugs and call `/api/public/ratings?productIds=...`; `ratings-by-slug` is DOM-only fallback. Added `ProductSnapshot` read model, ikas product webhook + install/manual backfill, and the `[storeId, productId, status]` index.
 - 2026-05-17: OAuth install no longer blocks on product backfill — `syncAllProductsForStore` runs via Next.js `after()` post-response (webhook registration stays awaited). See [[Auth_And_Installation_Flow]].
+- 2026-05-17: Removed dead `ProductSnapshot.deleted` column + index; `ratings-by-slug` slug→productId resolution is now deterministic (freshest snapshot wins).
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions

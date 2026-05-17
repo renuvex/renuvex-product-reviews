@@ -12,7 +12,6 @@ export type ProductLike = {
   _id?: unknown;
   productId?: unknown;
   name?: unknown;
-  deleted?: unknown;
   updatedAt?: unknown;
   metaData?: { slug?: unknown } | null;
   slug?: unknown;
@@ -62,7 +61,6 @@ function normalizeProduct(product: ProductLike) {
     productId,
     slug: asString(product.slug) || asString(product.metaData?.slug),
     name: asString(product.name),
-    deleted: product.deleted === true,
     ikasUpdatedAt: timestampToDate(product.updatedAt),
   };
 }
@@ -76,7 +74,6 @@ export async function upsertProductSnapshot(storeId: string, product: ProductLik
     update: {
       slug: normalized.slug,
       name: normalized.name,
-      deleted: normalized.deleted,
       ikasUpdatedAt: normalized.ikasUpdatedAt,
       lastSyncedAt: new Date(),
     },
@@ -85,7 +82,6 @@ export async function upsertProductSnapshot(storeId: string, product: ProductLik
       productId: normalized.productId,
       slug: normalized.slug,
       name: normalized.name,
-      deleted: normalized.deleted,
       ikasUpdatedAt: normalized.ikasUpdatedAt,
       lastSyncedAt: new Date(),
     },
@@ -107,7 +103,6 @@ async function upsertProductSnapshotBatch(storeId: string, products: IkasProduct
         update: {
           slug: normalized.slug,
           name: normalized.name,
-          deleted: normalized.deleted,
           ikasUpdatedAt: normalized.ikasUpdatedAt,
           lastSyncedAt: new Date(),
         },
@@ -116,7 +111,6 @@ async function upsertProductSnapshotBatch(storeId: string, products: IkasProduct
           productId: normalized.productId,
           slug: normalized.slug,
           name: normalized.name,
-          deleted: normalized.deleted,
           ikasUpdatedAt: normalized.ikasUpdatedAt,
           lastSyncedAt: new Date(),
         },
