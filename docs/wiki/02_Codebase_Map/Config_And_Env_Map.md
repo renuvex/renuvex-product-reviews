@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-14
+updated: 2026-05-17
 tags:
   - config
   - env
@@ -26,7 +26,9 @@ related:
 | `NODE_ENV` | Runtime mode | Standard |
 | `NEXT_PUBLIC_GRAPH_API_URL` | ikas Admin GraphQL endpoint | [src/globals/config.ts](src/globals/config.ts) |
 | `NEXT_PUBLIC_ADMIN_URL` | ikas admin URL template (`https://{storeName}.myikas.com/admin`) | OAuth callback redirect builder |
-| `NEXT_PUBLIC_DEPLOY_URL` | Public origin of this app (Vercel URL or custom domain) | OAuth redirect URI, JWT issuer, widget script URL |
+| `NEXT_PUBLIC_DEPLOY_URL` | Public origin of this app (Vercel URL or custom domain) | OAuth redirect URI, JWT issuer |
+| `STOREFRONT_WIDGET_BASE_URL` | Canonical public origin used when writing ikas `StorefrontJSScript` records. Set this to the stable HTTPS app URL that storefront browsers should load `widget.js` from. Falls back to `NEXT_PUBLIC_DEPLOY_URL` only for compatibility. | [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts), OAuth callback, manual inject |
+| `ALLOW_LOCAL_STOREFRONT_WIDGET_URL` | Optional local-only escape hatch. When exactly `true`, allows non-HTTPS/local/private widget script URLs for temporary experiments. Do not set in Vercel production or preview. | [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts) |
 
 ### OAuth / JWT
 | Var | Purpose |

@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-17
 tags:
   - architecture
   - system
@@ -65,7 +65,7 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three runtimes: the *
 1. Merchant clicks "install" in ikas App Store (or visits `?storeName=` on the deploy URL).
 2. `GET /api/oauth/authorize/ikas` sets CSRF state and redirects to ikas authorize URL.
 3. ikas redirects back to `GET /api/oauth/callback/ikas?code&signature&state`.
-4. Server validates HMAC signature → exchanges code → fetches merchant + authorized app → upserts `AuthToken` and `StoreSettings` → **for each storefront, creates or updates a `StorefrontJSScript` pointing to `/widget.js?publicApiKey=<merchantId>`** → issues 4h JWT → redirects to `/callback` (client) → ikas Admin.
+4. Server validates HMAC signature → exchanges code → fetches merchant + authorized app → upserts `AuthToken` and `StoreSettings` → **for each storefront, creates or updates a `StorefrontJSScript` pointing to `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>`** → issues 4h JWT → redirects to `/callback` (client) → ikas Admin.
 
 See [[Auth_And_Installation_Flow]] for full trace.
 

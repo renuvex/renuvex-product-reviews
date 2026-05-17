@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-17
 tags:
   - adr
   - widget
@@ -33,7 +33,7 @@ Options:
 ## Decision
 Choose option 1: a single bundled `widget.js` injected via ikas `StorefrontJSScript` mutations. Auto-inject on OAuth install + manual re-inject button in admin.
 
-The script src is `<DEPLOY_URL>/widget.js?publicApiKey=<merchantId>` so the bundle reads tenancy from its own URL.
+The script src is `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>` so the bundle reads tenancy from its own URL. `STOREFRONT_WIDGET_BASE_URL` is separate from the app/OAuth URL to keep local admin development from overwriting real storefronts with localhost script URLs.
 
 ## Reasoning
 - **Zero merchant friction**: install the app → reviews appear. No theme edits required.
@@ -61,6 +61,7 @@ The script src is `<DEPLOY_URL>/widget.js?publicApiKey=<merchantId>` so the bund
 - [public/widget.js](public/widget.js)
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
 - [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts)
+- [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 
 ## Related Notes
 - [[Widget_Architecture]]

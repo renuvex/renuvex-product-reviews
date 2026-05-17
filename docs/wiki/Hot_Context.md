@@ -21,6 +21,7 @@ source_files:
   - "src/widget/index.js"
   - "src/app/api/public/reviews/route.ts"
   - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/lib/storefront-widget-url.ts"
 ---
 
 # Hot Context
@@ -42,6 +43,7 @@ source_files:
 - 2026-05-17: [[Bug_Listing_Badge_Stars_Direct_Load]] fixed. Cold listing stars were 0x0 because `#ikr-styles` was PDP-only; `src/widget/core/badge.js` now self-injects `#ikr-badge-styles`.
 - 2026-05-17: [[Phase_2_Widget_Module_Split_Plan]] defines the Phase 2 work and done criteria. Keep `widget.js?publicApiKey=...` compatible; use a classic loader plus ESM chunks unless ikas module script loading is proven.
 - 2026-05-17: Phase 2 implementation started. Local build now emits a small classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; `VIEW_SEARCH_RESULTS` is handled; Ozy listing placement moved into a fallback adapter. Live dev-store/browser/Sentry verification is still required before Phase 2 is done.
+- 2026-05-17: Storefront script URL generation now uses `STOREFRONT_WIDGET_BASE_URL` through [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts). `NEXT_PUBLIC_DEPLOY_URL` remains the app/OAuth URL; real ikas storefront script records must load the stable public HTTPS widget host.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions

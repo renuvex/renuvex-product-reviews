@@ -22,6 +22,7 @@ source_files:
   - "src/lib/ikas-client/generated/graphql.ts"
   - "src/app/api/oauth/callback/ikas/route.ts"
   - "src/app/api/admin/inject-scripts/route.ts"
+  - "src/lib/storefront-widget-url.ts"
 ---
 
 # ikas Storefront Script Capabilities
@@ -130,13 +131,14 @@ Source: [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-re
 Runtime injection creates a full script tag:
 
 ```html
-<script src="<DEPLOY_URL>/widget.js?publicApiKey=<merchantId>" async></script>
+<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async></script>
 ```
 
 Source paths:
 
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
 - [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts)
+- [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 
 The project tracks installed ikas script ids in `StoreSettings.storefrontScripts`.
 

@@ -5,6 +5,7 @@ import { AuthTokenManager } from '@/models/auth-token/manager';
 import { getIkas } from '@/helpers/api-helpers';
 import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
 import { withCors, corsOptions } from '@/lib/cors';
+import { buildStorefrontWidgetScript, StorefrontWidgetUrlError } from '@/lib/storefront-widget-url';
 
 export async function OPTIONS() {
   return corsOptions();
@@ -29,8 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tema listesi alınamadı' }, { status: 500 });
     }
 
-    const deployUrl = process.env.NEXT_PUBLIC_DEPLOY_URL;
-    const scriptContent = `<script src="${deployUrl}/widget.js?publicApiKey=${user.merchantId}" async></script>`;
+    const scriptContent = buildStorefrontWidgetScript(user.merchantId);
 
     const settings = await prisma.storeSettings.findUnique({ where: { storeId: user.merchantId } });
     const existingScripts: Record<string, string> = (settings?.storefrontScripts as Record<string, string>) ?? {};
@@ -95,6 +95,10 @@ export async function POST(request: Request) {
 
     return withCors(NextResponse.json({ data: { success, failed, total: results.length, results } }));
   } catch (error: any) {
+    if (error instanceof StorefrontWidgetUrlError) {
+      return withCors(NextResponse.json({ error: error.message }, { status: 500 }));
+    }
+
     console.error('[inject-scripts] ERROR:', error);
     return withCors(NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 }));
   }

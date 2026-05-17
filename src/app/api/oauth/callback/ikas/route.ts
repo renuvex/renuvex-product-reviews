@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
+import { buildStorefrontWidgetScript } from '@/lib/storefront-widget-url';
 
 const callbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
@@ -138,8 +139,7 @@ export async function GET(request: NextRequest) {
     try {
       const storefrontResponse = await ikas.queries.listStorefront();
       if (storefrontResponse.isSuccess && storefrontResponse.data?.listStorefront?.length) {
-        const deployUrl = process.env.NEXT_PUBLIC_DEPLOY_URL;
-        const scriptContent = `<script src="${deployUrl}/widget.js?publicApiKey=${merchantId}" async></script>`;
+        const scriptContent = buildStorefrontWidgetScript(merchantId);
 
         // Load previously saved scriptId map from DB (storefrontId -> ikas scriptId)
         const settings = await prisma.storeSettings.findUnique({ where: { storeId: merchantId } });

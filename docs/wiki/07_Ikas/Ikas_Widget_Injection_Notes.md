@@ -3,8 +3,8 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-15
-last_verified: 2026-05-15
+updated: 2026-05-17
+last_verified: 2026-05-17
 confidence: high
 tags:
   - ikas
@@ -19,6 +19,7 @@ related:
 source_files:
   - "src/app/api/oauth/callback/ikas/route.ts"
   - "src/app/api/admin/inject-scripts/route.ts"
+  - "src/lib/storefront-widget-url.ts"
   - "src/lib/ikas-client/graphql-requests.ts"
 ---
 
@@ -50,27 +51,32 @@ Inside the OAuth callback, when `existingScripts` is empty (new install or DB re
 
 ## Script content
 ```html
-<script src="<DEPLOY_URL>/widget.js?publicApiKey=<merchantId>" async></script>
+<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async></script>
 ```
 - `async` so it doesn't block first paint.
 - `publicApiKey` is `merchantId` — public knowledge, not a secret.
 - `name` field on the ikas record: `"yorum-paneli-widget"` — used as the human-readable identifier in ikas Admin.
+- Script content is built by [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts). The helper prefers `STOREFRONT_WIDGET_BASE_URL`, falls back to `NEXT_PUBLIC_DEPLOY_URL` for compatibility, trims accidental whitespace, and rejects localhost/private/non-HTTPS URLs unless `ALLOW_LOCAL_STOREFRONT_WIDGET_URL=true`.
+- `NEXT_PUBLIC_DEPLOY_URL` is still the app/OAuth URL. It may be `http://localhost:3000` during local admin development. Do not rely on it as the canonical storefront widget URL for real stores.
 
 ## Failure modes
 - **ikas API down at install time** — try/catch swallows; merchant must hit "Re-inject" later.
 - **Storefront created after install** — won't have our script until merchant re-injects (or we add a webhook handler).
 - **Merchant deletes our script in ikas Admin** — `update` will fail; the fallback create path handles this.
 - **Two installs in parallel for same merchant** — possible race on `storefrontScripts` map. Acceptable today (rare event).
+- **Local dev overwrites a real storefront script** - mitigated by the canonical widget URL helper. With the default config, `http://localhost:3000/widget.js` is rejected before an ikas update/create mutation can write it.
 
 ## Notes
 - Don't add post-install side effects after the script-injection block in the OAuth callback unless they're also wrapped in try/catch — anything throwing there will leave the install in a half-done state.
 - Watch for new storefront creation: a merchant may add a storefront after install. We don't subscribe to webhooks. Add a "re-inject" CTA banner in admin if `listStorefront` returns more storefronts than we have script ids for.
 - 2026-05-15 verification: official ikas Storefront API docs expose `StorefrontJSScript` as a listable script model with `order` and `isHighPriority`, so multiple script records are possible. For this app, still prefer one loader script per storefront and load widget modules from our runtime. See [[Ikas_Storefront_Script_Capabilities]] and [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-15 risk update: official docs and current MCP/generated code differ on script mutation naming and delete arguments. Re-run MCP `list` + `introspect` before changing script lifecycle code, especially before any delete or cleanup behavior.
+- 2026-05-17 config update: local app development and public storefront widget hosting are separated. Set `STOREFRONT_WIDGET_BASE_URL` to the public Vercel/custom-domain origin in local, preview, and production environments when real ikas storefront script records may be written.
 
 ## Related Source Files
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
 - [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts)
+- [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 - [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts)
 
 ## Obsidian Links

@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-17
 tags:
   - auth
   - oauth
@@ -49,7 +49,7 @@ ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in P
        - AuthTokenManager.put(token)
        - prisma.storeSettings.upsert({ storeId: merchantId })
        - For each storefront: ikas.mutations.createStorefrontJSScript / updateStorefrontJSScript
-           pointing to <DEPLOY_URL>/widget.js?publicApiKey=<merchantId>
+           pointing to <STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>
        - JwtHelpers.createToken(merchantId, authorizedAppId)  [HS256, 4h]
        - 302 → /callback?token=...&redirectUrl=<ikasAdmin>/authorized-app/<id>
        │
@@ -70,6 +70,7 @@ Source files:
 - [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
 - [src/helpers/jwt-helpers.ts](src/helpers/jwt-helpers.ts)
 - [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)
+- [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 
 ## Re-install behavior
 - Hard cleanup at step 4: `deleteMany({ merchantId })` removes all old `AuthToken` rows for the merchant.
