@@ -3,7 +3,7 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-17
 tags:
   - ikas
   - platform
@@ -29,13 +29,13 @@ General platform-level facts about ikas that affect this app. Keep this page sho
 | **Merchant** | Tenant identifier (`merchantId == storeId` in our DB) | OAuth callback `getMerchant` |
 | **Authorized App** | Per-installation identifier (`authorizedAppId` is our `AuthToken` PK) | `getAuthorizedApp` |
 | **Storefront** | Public shop frontend; merchant can have multiple | `listStorefront` |
-| **StorefrontJSScript** | Server-managed `<script>` tag injected into storefront pages | `create/update/deleteStorefrontJSScript` mutations |
+| **StorefrontJSScript** | Server-managed `<script>` tag injected into storefront pages | app source uses `create/updateStorefrontJSScript`; delete is intentionally unused |
 | **AppBridge** | iframe ↔ ikas Admin messaging, including JWT delivery | `@ikas/app-helpers` |
 | **Sales Channel** | Multi-channel selling abstraction (we currently store `salesChannelId` but don't actively use it) | Returned by `getAuthorizedApp` |
 
 ## Constraints (from observed behavior — verify in docs)
 - StorefrontJSScript is **per storefront**, not per page. There's no built-in "only inject on product detail pages". The widget itself decides whether to render based on URL/DOM heuristics.
-- `deleteStorefrontJSScript()` (no args) appears to delete **all** scripts attached to the merchant — including from other apps. The OAuth callback uses this on fresh install. **Re-verify in docs before changing.**
+- Active MCP/generated client exposes zero-argument `deleteStorefrontJSScript()`, while public docs show a targeted delete shape. Because of that mismatch, app source must not use delete for lifecycle cleanup; use non-destructive create/update and DB-tracked ids.
 - Token refresh requires `client_id` + `client_secret` — same as initial exchange.
 - OAuth code includes a `signature` parameter (HMAC-SHA256 of code with client secret). Validation is recommended; we enforce when present.
 

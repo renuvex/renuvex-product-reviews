@@ -54,13 +54,13 @@ Active development. Core feature set is functional end-to-end. Recent work has f
   - Widget editor with per-widget settings panel and live iframe preview at `/preview`
   - Settings persistence in `WidgetSettings` (one row per `(storeId, widgetId)`)
 - Caching: public GETs use `s-maxage=60, stale-while-revalidate=300` at the edge
-- Weekly Cloudinary cleanup cron (`/api/admin/cleanup-images`, Mondays 03:00 UTC)
+- Daily maintenance cron (`/api/admin/daily-maintenance`, 03:00 UTC) plus monthly Cloudinary fallback cleanup (`/api/admin/cleanup-images`, day 1 04:00 UTC)
 - Theme variant build is not a reliable current gate: the stale `--theme=new-theme` alias is tracked as Phase 3 cleanup in [[ADR_0013_Modular_Widget_Loader_Architecture]].
 - Sentry observability on the panel (Node + Edge + browser): error capture, masked Session Replay, traces (prod 10%), server log ingestion, source map upload via Vercel-Sentry integration. PII auto-attach disabled to prevent ikas OAuth/JWT leakage. See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]].
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress
-- ADR_0013 Phase 3 hardening continues with StorefrontJSScript lifecycle/cache work. Canonical product identity Stage 2 is implemented end-to-end via [[ADR_0015_Canonical_Product_Identity]], including event-backed product-id reads plus ProductSnapshot webhook/backfill for DOM-only fallback.
+- ADR_0013 Phase 3 source hardening is implemented: non-destructive StorefrontJSScript create/update lifecycle, daily script reconcile through daily maintenance, hashed runtime entry with stable shim, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]]. Post-deploy storefront/Sentry verification and deployed transfer-size measurement remain.
 
 ## Known Issues / Gaps
 - Structured-data injection exists in the widget runtime, but it is currently coupled to the rating badge/review-count path and still needs SEO validation and a clearer server/client strategy. See [[Structured_Data_And_Rich_Snippets]] and [[Yotpo_Style_Widget_Modular_Architecture]].
@@ -71,7 +71,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
 - No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
-- Current script injection relies on DB-tracked script ids and does not define `listStorefrontJSScript`; reconciliation and delete semantics need review before changing install cleanup. See [[Ikas_Storefront_Script_Capabilities]].
+- Current script injection relies on DB-tracked script ids because active MCP still does not expose `listStorefrontJSScript`; source intentionally avoids destructive cleanup while ikas docs/MCP disagree. See [[Ikas_Storefront_Script_Capabilities]].
 - Large new storefront surfaces should use the Phase 2 loader/module split pattern and must not be statically imported into the always-loaded runtime. See [[Yotpo_Style_Widget_Modular_Architecture]].
 - DOM-only listing badge fallback now resolves current slugs through `ProductSnapshot` before reading reviews by product id. If a snapshot is missing, the old slug query remains as a last-resort compatibility path; run `/api/admin/sync-products` to repair drift.
 
@@ -87,7 +87,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 
 ## Next Recommended Steps
 1. Verify product webhook registration/backfill on the dev store after deploy, then run `/api/admin/sync-products` once for existing merchants.
-2. Add script reconciliation before changing ikas script cleanup or delete behavior; see [[Ikas_Storefront_Script_Capabilities]].
+2. After deploy, verify `/widget.js`, hashed runtime/chunk cache headers, `/api/admin/daily-maintenance`, `/api/admin/reconcile-storefront-scripts`, and dev-store PDP/category/search behavior; then re-measure deployed widget transfer size.
 3. Clarify structured-data strategy and validate Google rich snippet behavior.
 4. Implement review-request email flow (post-purchase delay + token-gated submit URL).
 5. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
@@ -99,9 +99,10 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-17
 
 ## Change Log
+- 2026-05-17: ADR_0013 Phase 3 source hardening implemented: non-destructive StorefrontJSScript lifecycle, daily maintenance reconcile, hashed runtime entry with stable shim, and hidden-link listing badge filter.
 - 2026-05-17: Canonical product identity implemented for listing/search badge reads: widget maps Storefront Events product ids and public ratings can group by `productId`. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added ProductSnapshot read model, ikas product webhook receiver, install/manual backfill, and snapshot-backed slug fallback.
-- 2026-05-17: Phase 2 module split implementation started: classic `public/widget.js` loader + ESM `public/widget-runtime/*` chunks locally, with live verification still pending.
+- 2026-05-17: Phase 2 module split implemented and verified: classic `public/widget.js` loader + ESM `public/widget-runtime/*` chunks.
 - 2026-05-15: Added current-state corrections from the read-only widget architecture audit: deployed `widget.js` measured `177763` bytes, JSON-LD exists but needs validation/decoupling, and future Yotpo-like surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-12: **Pending Image Registry**: Replaced Cloudinary scan-and-diff with a robust DB-tracked `PendingReviewImage` registry. Eliminates 500-asset cap and race conditions. ([[ADR_0012_Pending_Upload_Registry]])
 - 2026-05-12: **Accessibility & Touch**: Adopted widget-scope touch-feedback contract and standardized focus trapping for modally-presented UI (Lightbox, Filter Menu). ([[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]])

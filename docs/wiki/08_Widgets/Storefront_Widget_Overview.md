@@ -84,6 +84,7 @@ See [[Widget_Architecture]] for full details. Key points:
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 
 ## Change Log
-- 2026-05-17: Phase 2 module split implementation started: `public/widget.js` stays as the ikas-compatible loader URL, while `public/widget-runtime/*` carries ESM runtime/chunks. Live dev-store/Sentry verification remains open.
+- 2026-05-17: Phase 3 source hardening implemented: non-destructive script lifecycle, daily maintenance reconcile, hashed runtime entry with stable shim, and hidden-link listing badge filter. Post-deploy verification/transfer-size measurement remains.
+- 2026-05-17: Phase 2 module split implemented and verified: `public/widget.js` stays as the ikas-compatible loader URL, while `public/widget-runtime/*` carries ESM runtime/chunks. Dev-store/Sentry verification passed.
 - 2026-05-15: Updated deployed bundle size observation and linked the modular loader target architecture from the Yotpo/Protein Ocean research pass.
 - 2026-05-10: Documented the PDP photo review detail lightbox as a separate storefront widget surface. Related note: [[Product_Review_Lightbox]], related bug: [[Bug_Review_Detail_Lightbox_Risks]].

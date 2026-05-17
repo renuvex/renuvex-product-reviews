@@ -53,7 +53,7 @@ related:
 | Admin UI (table, dialog, tabs) | ✅ | [src/components/home-page/](src/components/home-page/) |
 | Widget settings GET/PUT | ✅ | [src/app/api/admin/settings/route.ts](src/app/api/admin/settings/route.ts) |
 | Inject scripts (re-inject button) | ✅ | [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts) |
-| Image cleanup cron | ✅ | [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts), [vercel.json](vercel.json) |
+| Image cleanup cron | ✅ | [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts), [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts), [vercel.json](vercel.json) |
 
 ## Storefront Widget
 | Feature | Status | Source |

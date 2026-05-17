@@ -11,8 +11,7 @@ import { AuthTokenManager } from '@/models/auth-token/manager';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse, after } from 'next/server';
 import z from 'zod';
-import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
-import { buildStorefrontWidgetScript } from '@/lib/storefront-widget-url';
+import { ensureStorefrontScripts } from '@/lib/storefront-scripts';
 import { buildProductWebhookEndpoint, registerProductWebhooks, syncAllProductsForStore } from '@/lib/product-snapshots';
 
 const callbackSchema = z.object({
@@ -136,74 +135,9 @@ export async function GET(request: NextRequest) {
       create: { storeId: merchantId },
     });
 
-    // Auto-inject widget script into all storefronts using upsert (update if known ID, create otherwise)
+    // Auto-inject widget script into all storefronts using non-destructive upsert.
     try {
-      const storefrontResponse = await ikas.queries.listStorefront();
-      if (storefrontResponse.isSuccess && storefrontResponse.data?.listStorefront?.length) {
-        const scriptContent = buildStorefrontWidgetScript(merchantId);
-
-        // Load previously saved scriptId map from DB (storefrontId -> ikas scriptId)
-        const settings = await prisma.storeSettings.findUnique({ where: { storeId: merchantId } });
-        const existingScripts: Record<string, string> = (settings?.storefrontScripts as Record<string, string>) ?? {};
-        const updatedScripts: Record<string, string> = {};
-
-        // DB boşsa (yeniden kurulum) ikas'taki tüm eski scriptleri temizle
-        const hasNoSavedScripts = Object.keys(existingScripts).length === 0;
-        if (hasNoSavedScripts) {
-          await ikas.mutations.deleteStorefrontJSScript();
-        }
-
-        await Promise.all(
-          storefrontResponse.data.listStorefront.map(async (storefront) => {
-            const storefrontId = storefront.id!;
-            const existingScriptId = existingScripts[storefrontId];
-
-            if (!hasNoSavedScripts && existingScriptId) {
-              // Update in-place — does not touch other apps' scripts
-              const result = await ikas.mutations.updateStorefrontJSScript({
-                input: { id: existingScriptId, scriptContent },
-              });
-              if (result.isSuccess) {
-                updatedScripts[storefrontId] = existingScriptId;
-              } else {
-                // Script may have been deleted externally — fall back to create
-                const created = await ikas.mutations.createStorefrontJSScript({
-                  input: {
-                    contentType: StorefrontJSScriptContentTypeEnum.SCRIPT,
-                    name: 'yorum-paneli-widget',
-                    scriptContent,
-                    storefrontId,
-                    isHighPriority: false,
-                  },
-                });
-                if (created.isSuccess && created.data?.createStorefrontJSScript?.id) {
-                  updatedScripts[storefrontId] = created.data.createStorefrontJSScript.id;
-                }
-              }
-            } else {
-              // Fresh install or DB was reset — create new script
-              const created = await ikas.mutations.createStorefrontJSScript({
-                input: {
-                  contentType: StorefrontJSScriptContentTypeEnum.SCRIPT,
-                  name: 'yorum-paneli-widget',
-                  scriptContent,
-                  storefrontId,
-                  isHighPriority: false,
-                },
-              });
-              if (created.isSuccess && created.data?.createStorefrontJSScript?.id) {
-                updatedScripts[storefrontId] = created.data.createStorefrontJSScript.id;
-              }
-            }
-          })
-        );
-
-        // Persist updated scriptId map
-        await prisma.storeSettings.update({
-          where: { storeId: merchantId },
-          data: { storefrontScripts: updatedScripts },
-        });
-      }
+      await ensureStorefrontScripts(ikas, merchantId, 'install');
     } catch (scriptError) {
       console.error('Widget script injection failed:', scriptError);
     }

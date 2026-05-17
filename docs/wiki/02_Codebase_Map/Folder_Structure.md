@@ -26,7 +26,7 @@ yorum-paneli/
 ├─ next.config.js                # Next.js config
 ├─ package.json                  # pnpm scripts + deps
 ├─ tsconfig.json
-├─ vercel.json                   # region: fra1, weekly cleanup-images cron
+├─ vercel.json                   # region: fra1, daily/monthly crons, widget cache headers
 ├─ components.json               # shadcn/ui config
 ├─ eslint.config.mjs
 ├─ postcss.config.mjs

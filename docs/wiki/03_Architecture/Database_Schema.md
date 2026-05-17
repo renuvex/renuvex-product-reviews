@@ -137,7 +137,7 @@ Indexes:
 Lifecycle:
 1. Widget POSTs `{secureUrl}` to `/api/public/upload/register` after a successful Cloudinary upload. Endpoint validates the URL against the trusted policy and upserts a row (idempotent — `createdAt` is not reset on conflict).
 2. `/api/public/reviews` POST runs the review insert and `deleteMany({ publicId: { in: ... } })` inside one `prisma.$transaction`.
-3. `/api/admin/cleanup-pending-uploads` (daily cron) deletes rows where `createdAt < now - 24h` plus their Cloudinary assets.
+3. `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily; `/api/admin/cleanup-pending-uploads` remains an explicit maintenance endpoint for the same helper. It deletes rows where `createdAt < now - 24h` plus their Cloudinary assets.
 4. Monthly `/api/admin/cleanup-images` is the safety-net fallback for uploads that bypassed the registry — it now paginates Cloudinary via `next_cursor` and only deletes assets older than 30 days.
 
 ## Conventions

@@ -67,6 +67,7 @@ ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in P
 Source files:
 - [src/app/api/oauth/authorize/ikas/route.ts](src/app/api/oauth/authorize/ikas/route.ts)
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
+- [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts)
 - [src/lib/product-snapshots.ts](src/lib/product-snapshots.ts)
 - [src/app/callback/page.tsx](src/app/callback/page.tsx)
 - [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts)
@@ -77,8 +78,8 @@ Source files:
 
 ## Re-install behavior
 - Hard cleanup at step 4: `deleteMany({ merchantId })` removes all old `AuthToken` rows for the merchant.
-- Storefront scripts: if `StoreSettings.storefrontScripts` is empty (DB reset / fresh install), the callback calls `deleteStorefrontJSScript()` (no args) which **wipes ALL scripts on the merchant**, then creates fresh ones. Otherwise, it updates the known ids in place.
-- ⚠️ The blanket delete affects scripts from **other apps too**. Verify against ikas docs before changing.
+- Storefront scripts: the callback delegates to `ensureStorefrontScripts()` and uses only non-destructive create/update mutations. It no longer calls zero-argument `deleteStorefrontJSScript()`.
+- If `StoreSettings.storefrontScripts` was lost while remote scripts still exist, install/manual re-inject may create a duplicate loader script for this app. That is the chosen tradeoff because deleting unknown merchant/app scripts is not safe under the current ikas contract mismatch.
 
 ## Token refresh
 - `onCheckToken(token)` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) is wired into the ikas client.

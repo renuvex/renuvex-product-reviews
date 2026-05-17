@@ -41,7 +41,7 @@ The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-mo
 Reference: [[Yotpo_Style_Widget_Modular_Architecture]]
 
 ## ikas storefront script reconciliation
-Official ikas docs expose listable Storefront JS scripts, but the current project does not define `listStorefrontJSScript`. Current install logic relies on DB-tracked script ids and has risky cleanup behavior when the DB script map is empty. Decide the safe reconciliation flow before changing script lifecycle code.
+Official ikas docs expose listable Storefront JS scripts, but the current active MCP/codegen contract does not expose `listStorefrontJSScript`. Current install/manual/cron logic relies on DB-tracked script ids and intentionally uses non-destructive create/update only; the remaining question is whether ikas will expose a targeted list/delete contract that lets us safely deduplicate remote scripts later.
 
 Reference: [[Ikas_Storefront_Script_Capabilities]]
 
@@ -71,7 +71,7 @@ No tests visible in repo. Highest-risk surface is the public POST `/api/public/r
 
 ## Image lifecycle
 - Upload happens via Cloudinary signed direct upload from widget.
-- Cleanup runs weekly via `/api/admin/cleanup-images` to remove orphans.
+- Cleanup runs daily through `/api/admin/daily-maintenance`, with monthly `/api/admin/cleanup-images` fallback for assets that bypassed the registry.
 - Question: what if a review is rejected before approval — does its uploaded image get cleaned up? Is the cleanup safe-listing only `approved` review images, or all linked images?
 - Question (2026-05-11): cleanup cron'un tetiklenme mekanizması (Vercel cron / external scheduler / manuel)? [[Bug_Review_Image_Error_Fallback]] içindeki 1-7 günlük orphan penceresi bu cevaba bağlı; daha sık tetiklenirse storefront kırık-image riski azalır.
 

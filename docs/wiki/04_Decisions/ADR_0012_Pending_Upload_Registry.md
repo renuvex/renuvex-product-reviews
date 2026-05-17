@@ -56,7 +56,7 @@ model PendingReviewImage {
 2. **Upload.** Widget posts the file directly to Cloudinary.
 3. **Register.** On successful upload, widget posts `{secureUrl}` to `/api/public/upload/register`. The endpoint validates the URL against the trusted Cloudinary policy ([[ADR_0006_Trusted_Review_Image_URL_Policy]]), derives the `publicId`, and upserts a `PendingReviewImage` row. Idempotent on retry — `createdAt` is not reset on conflict.
 4. **Commit on submit.** `/api/public/reviews` POST runs the review insert and `PendingReviewImage.deleteMany({ publicId: { in: ... } })` inside a single `prisma.$transaction`. Either both succeed or neither does.
-5. **Expire abandoned rows.** `/api/admin/cleanup-pending-uploads` (daily Vercel cron) selects rows where `createdAt < now - 24h`, deletes the matching Cloudinary assets in batches of 100, then deletes the rows.
+5. **Expire abandoned rows.** `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily. The explicit `/api/admin/cleanup-pending-uploads` endpoint runs the same helper on demand. It selects rows where `createdAt < now - 24h`, deletes the matching Cloudinary assets in batches of 100, then deletes the rows.
 6. **Monthly fallback scan.** `/api/admin/cleanup-images` keeps running monthly. Now uses cursor pagination, only considers assets older than 30 days, and exists solely to catch uploads that bypassed the registry (failed register, legacy data, ops uploads).
 
 ### Why a 24-hour TTL eliminates the race
@@ -66,7 +66,7 @@ Cleanup deletes only rows whose `createdAt` is older than 24 hours. A user's sub
 The widget posts to `/api/public/upload/register` after the Cloudinary upload resolves. If that call fails (network blip, server transient error), the upload still works and the submit still works — only the registry entry is missing. The monthly fallback scan catches those orphans within 30 days. Hard-failing the upload on a register error would degrade the user experience for a downstream housekeeping concern.
 
 ### Vercel Hobby plan compatibility
-Two cron slots, both daily-or-slower: daily pending cleanup (`0 3 * * *`) and monthly fallback (`0 4 1 * *`). No Pro upgrade required for the architecture.
+Two cron slots, both daily-or-slower: daily maintenance (`0 3 * * *`, pending cleanup plus storefront script reconcile) and monthly fallback (`0 4 1 * *`). No Pro upgrade required for the architecture.
 
 ## Alternatives Considered
 - **Cloudinary webhook (`notification_url`) instead of client register (rejected for now).** A Cloudinary webhook would make registration impossible to bypass and remove the trust-but-verify aspect. Costs: requires a public webhook URL, webhook delivery delay (1–5 s) which slightly widens the race window vs. immediate client register, retry/dead-letter handling for webhook failures, signature verification. The fire-and-forget client register + monthly fallback already gives the same effective coverage with materially less complexity. We can revisit this if abuse becomes a real signal.
@@ -96,6 +96,8 @@ Two cron slots, both daily-or-slower: daily pending cleanup (`0 3 * * *`) and mo
 - [api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts)
 - [api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
 - [api/admin/cleanup-pending-uploads/route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts)
+- [api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts)
+- [cleanup-pending-uploads.ts](src/lib/cleanup-pending-uploads.ts)
 - [api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
 - [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js)
 - [vercel.json](vercel.json)
@@ -110,5 +112,5 @@ Two cron slots, both daily-or-slower: daily pending cleanup (`0 3 * * *`) and mo
 ## Notes — Deployment checklist
 1. Run `pnpm prisma migrate deploy` (or `migrate dev` locally) to apply `20260512100000_add_pending_review_image`.
 2. Confirm `CRON_SECRET`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, and `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_CLOUD_NAME` are present in the Vercel environment.
-3. Verify the new cron path `/api/admin/cleanup-pending-uploads` appears under Vercel → Settings → Cron Jobs after deploy.
+3. Verify the daily cron path `/api/admin/daily-maintenance` appears under Vercel → Settings → Cron Jobs after deploy.
 4. First production run of the daily cleanup should report `deleted: 0` (no expired pending rows yet); the first non-zero run lands ~24 hours after the first abandoned upload.

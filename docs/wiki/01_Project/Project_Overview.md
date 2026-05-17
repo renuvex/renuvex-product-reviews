@@ -44,13 +44,13 @@ Compete with global review apps within the ikas ecosystem. See [[Competitor_Feat
 - **Auto script injection** — on OAuth install, registers a `StorefrontJSScript` per storefront pointing to `/widget.js?publicApiKey=<merchantId>`
 
 ## Tech Stack (one-line)
-Next.js 16 (16.2) App Router · React 19 · TypeScript · Prisma + Postgres (Supabase) · Tailwind v4 + shadcn/ui · iron-session + JWT · esbuild widget bundle · Cloudinary · Upstash Redis · Vercel (fra1, weekly cron). Full detail in [[ADR_0001_Project_Stack]] and [[Dependency_Map]]. (Note: the public README and generated/local rule files such as `CLAUDE.md` may still say "Next.js 15"; `package.json` is authoritative.)
+Next.js 16 (16.2) App Router · React 19 · TypeScript · Prisma + Postgres (Supabase) · Tailwind v4 + shadcn/ui · iron-session + JWT · esbuild widget bundle · Cloudinary · Upstash Redis · Vercel (fra1, daily/monthly crons). Full detail in [[ADR_0001_Project_Stack]] and [[Dependency_Map]]. (Note: the public README and generated/local rule files such as `CLAUDE.md` may still say "Next.js 15"; `package.json` is authoritative.)
 
 ## Architecture in One Picture
 - **Merchant** opens the app inside ikas Admin (iframe). AppBridge → JWT → calls `/api/admin/*`.
 - **Storefront** loads `/widget.js?publicApiKey=<merchantId>` injected by ikas. Widget calls `/api/public/*` (CORS-open).
 - **Preview** runs widget.js on `/preview` route in an iframe; admin posts settings via `postMessage`.
-- **Cloudinary** receives signed image uploads. **Upstash Redis** rate-limits public endpoints. **Cron** cleans up orphan images weekly.
+- **Cloudinary** receives signed image uploads. **Upstash Redis** rate-limits public endpoints. **Cron** runs daily maintenance plus monthly orphan-image fallback cleanup.
 
 See [[System_Architecture]] for the diagram-level view.
 

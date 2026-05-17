@@ -53,7 +53,7 @@ We need to:
 - We're tightly coupled to `@ikas/admin-api-client`. Breaking changes in the SDK propagate.
 - Generated types must be regenerated after every change to `graphql-requests.ts`. Easy to forget — surface the warning in PR review.
 - The auto-inject behavior at install does work that can fail silently (try/catch in the callback). We accept this for install resilience but should monitor.
-- The blanket `deleteStorefrontJSScript()` (no args) on fresh install affects scripts from other apps too. Document this in [[Ikas_Widget_Injection_Notes]] and verify against ikas docs.
+- Storefront script lifecycle now avoids zero-argument `deleteStorefrontJSScript()` and uses non-destructive create/update only. Keep that invariant until ikas exposes a targeted, verified delete/list contract.
 - OAuth scope (`read_orders,write_orders,read_products,read_inventories,write_inventories`) is template-inherited and probably broader than necessary. Reduce in a follow-up ADR.
 
 ## Related Source Files

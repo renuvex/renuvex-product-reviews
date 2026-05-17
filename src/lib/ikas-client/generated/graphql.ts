@@ -106,14 +106,6 @@ export interface UpdateStorefrontJSScriptMutation {
   updateStorefrontJSScript: UpdateStorefrontJSScriptMutationData;
 }
 
-export type DeleteStorefrontJSScriptMutationVariables = {}
-
-export type DeleteStorefrontJSScriptMutationData = boolean
-
-export interface DeleteStorefrontJSScriptMutation {
-  deleteStorefrontJSScript: DeleteStorefrontJSScriptMutationData;
-}
-
 export type ListProductsForSyncQueryVariables = {
   pagination?: PaginationInput;
   id?: StringFilterInput;
@@ -257,15 +249,6 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<UpdateStorefrontJSScriptMutation>>({ mutation, variables });
-  }
-
-  async deleteStorefrontJSScript(): Promise<APIResult<Partial<DeleteStorefrontJSScriptMutation>>> {
-    const mutation = `
-  mutation deleteStorefrontJSScript {
-    deleteStorefrontJSScript
-  }
-`;
-    return this.client.mutate<Partial<DeleteStorefrontJSScriptMutation>>({ mutation });
   }
 
   async saveProductWebhooks(variables: SaveProductWebhooksMutationVariables): Promise<APIResult<Partial<SaveProductWebhooksMutation>>> {

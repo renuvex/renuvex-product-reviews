@@ -25,13 +25,15 @@ source_files:
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/components/home-page/widgets/widgetDefs.ts"
   - "src/lib/storefront-widget-url.ts"
+  - "src/lib/storefront-scripts.ts"
+  - "src/app/api/admin/daily-maintenance/route.ts"
 ---
 
 # Hot Context
 
 ## Current Focus
 - ikas review/rating app: merchant admin, storefront widget, review submission, image upload, moderation, settings preview.
-- Current focus: ADR_0013 Phase 3 / Stage 2 hardening around canonical product identity for listing/search badges.
+- Current focus: ADR_0013 Phase 3 source hardening is implemented; post-deploy storefront/Sentry verification and broader product gaps remain.
 
 ## Must Know
 - Source code, config, migrations, tests, and runtime behavior are the source of truth; wiki pages are routing and memory.
@@ -51,11 +53,12 @@ source_files:
 - 2026-05-17: [[ADR_0015_Canonical_Product_Identity]] accepted and implemented. Listing/search badges map `productDetails[].id` to slugs and call `/api/public/ratings?productIds=...`; `ratings-by-slug` is DOM-only fallback. Added `ProductSnapshot` read model, ikas product webhook + install/manual backfill, and the `[storeId, productId, status]` index.
 - 2026-05-17: OAuth install no longer blocks on product backfill — `syncAllProductsForStore` runs via Next.js `after()` post-response (webhook registration stays awaited). See [[Auth_And_Installation_Flow]].
 - 2026-05-17: Removed dead `ProductSnapshot.deleted` column + index; `ratings-by-slug` slug→productId resolution is now deterministic (freshest snapshot wins).
+- 2026-05-17: ADR_0013 Phase 3 source hardening landed: script lifecycle is non-destructive create/update only (no zero-argument `deleteStorefrontJSScript`), daily maintenance now runs storefront-script reconcile, production widget builds use a deterministic hashed `runtime-*.js` with `runtime.js` kept as a short-cache compatibility shim, and hidden listing links are filtered before badge injection.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
 - ADR_0013 Phase 1 runtime audit is recorded in [[Phase_1_Widget_Runtime_Audit]]; A/B/C/G ran on 2026-05-17 and gates passed.
-- Remaining Phase 3 items: StorefrontJSScript schema reconciliation, loader/module cache headers and versioning, and script lifecycle hardening. Plus two deferred Phase 2 polish items: a visibility filter for the hidden `passive` search-container badge, and a merchant onboarding note for the theme's native review block.
+- Remaining Phase 3 follow-ups: verify the new lifecycle/cache behavior after deploy, re-measure deployed widget transfer size, and document merchant onboarding for disabling the theme's native review block. `listStorefrontJSScript` remains an ikas contract watch item; source intentionally avoids destructive cleanup while MCP/docs disagree.
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
 
 ## Read Next

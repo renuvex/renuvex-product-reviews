@@ -27,7 +27,10 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | `/api/admin/*` | HS256 JWT (`getUserFromRequest`) | `merchantId` from JWT subject |
 | `/api/ikas/*` | HS256 JWT (same) | same |
 | `/api/public/*` | None — CORS-open | `storeId` from query param (not authoritative) |
+| `/api/admin/daily-maintenance` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
+| `/api/admin/cleanup-pending-uploads` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
 | `/api/admin/cleanup-images` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
+| `/api/admin/reconcile-storefront-scripts` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
 
 ## Rate limits (Upstash Redis)
 
@@ -69,7 +72,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Public/admin read paths parse legacy `Review.images` defensively and expose only trusted URLs; invalid legacy image data becomes `images: []`.
 - Widget rendering uses the build-time injected Cloudinary cloud name ([[ADR_0008_Cloud_Name_Build_Time_Only]]) and `getTrustedReviewImages()` before rendering photos or opening the photo lightbox.
 - Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`.
-- Weekly cron `cleanup-images` removes orphans from trusted `review_images/*` public IDs. Make sure cron secret is set in Vercel env, otherwise the route is open.
+- Daily `/api/admin/daily-maintenance` expires abandoned `PendingReviewImage` rows and reconciles storefront scripts; monthly `/api/admin/cleanup-images` remains the Cloudinary fallback scan. Cron routes require `CRON_SECRET` and return 500 if it is missing.
 - Image URLs remain stored as a JSON-stringified array in `Review.images`; all parsing and validation belongs in [src/lib/review-images.ts](src/lib/review-images.ts).
 
 ## CORS
@@ -93,7 +96,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - `Access-Control-Allow-Origin: *` on POST endpoints
 - No bot detection / hCaptcha on public POST
 - JWT signing falls back to empty string if env missing
-- `deleteStorefrontJSScript()` blanket-delete is broad (not safe-listed by name)
+- Storefront script lifecycle deliberately avoids zero-argument `deleteStorefrontJSScript()` because active ikas contract semantics are ambiguous.
 
 ## Notes
 - Treat `/api/public/reviews` POST as the **highest-risk** endpoint. Any future change here should be reviewed for abuse vectors.

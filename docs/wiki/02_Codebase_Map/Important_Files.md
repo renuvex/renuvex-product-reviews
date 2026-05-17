@@ -59,7 +59,7 @@ related:
 - **Be careful:**
   - This route does a LOT (auth + side-effects). If you add work here, prefer a separate endpoint or a defensive try/catch like the existing script-injection block (it logs but doesn't fail the install).
   - On every install, `prisma.authToken.deleteMany({ merchantId })` runs first — this is intentional for re-install hygiene. Don't remove without a plan.
-  - When `existingScripts` is empty (DB reset / fresh install), it calls `deleteStorefrontJSScript()` (no args) which **wipes ALL scripts** on the merchant — including OTHER apps if any. Verify with ikas docs before changing.
+  - Script injection is now non-destructive: the callback delegates to `ensureStorefrontScripts()` and uses only ikas create/update mutations. Do not reintroduce zero-argument `deleteStorefrontJSScript()` unless ikas provides a targeted, verified delete/list contract.
 
 ### [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)
 - **What:** `getIkas(token)` builds the GraphQL client; `onCheckToken` auto-refreshes expired tokens and persists the new pair.
@@ -130,8 +130,8 @@ related:
 - **Be careful:** `--theme=new-theme` aliases swap theme files at bundle time. If you add a theme variant, declare it in the `validThemes` allowlist and provide all aliased modules.
 
 ### [vercel.json](vercel.json)
-- **What:** `regions: ["fra1"]` and one weekly cron (`/api/admin/cleanup-images` Mon 03:00 UTC).
-- **Be careful:** The cron route checks `Bearer ${CRON_SECRET}`. Set it in Vercel env. Without it, the route is unauthenticated.
+- **What:** `regions: ["fra1"]`, daily maintenance cron (`/api/admin/daily-maintenance`), monthly Cloudinary fallback cleanup, and widget static asset cache headers.
+- **Be careful:** Cron routes require `Bearer ${CRON_SECRET}` and refuse to run if `CRON_SECRET` is missing in Vercel env.
 
 ## Observability (Sentry)
 

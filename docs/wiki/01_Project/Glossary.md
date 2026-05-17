@@ -31,7 +31,7 @@ related:
 - **ikas** — the e-commerce platform this app integrates with (Turkish Shopify equivalent). Admin GraphQL at `https://api.myikas.com/api/v2/admin/graphql`.
 - **AppBridge** — `@ikas/app-helpers` SDK; lets the app receive a token while embedded in ikas Admin iframe.
 - **Storefront** — a public shop frontend bound to a merchant. A merchant can have multiple (e.g. locale variants).
-- **StorefrontJSScript** — ikas-managed `<script>` tag attached to a storefront. We use it to inject `widget.js` into every page of every storefront. Mutations: `createStorefrontJSScript`, `updateStorefrontJSScript`, `deleteStorefrontJSScript`.
+- **StorefrontJSScript** — ikas-managed `<script>` tag attached to a storefront. We use it to inject `widget.js` into every page of every storefront. Source uses non-destructive `createStorefrontJSScript` / `updateStorefrontJSScript`; delete is intentionally unused until ikas exposes a targeted, verified contract.
 - **Authorized App** — an installation of this app for a specific merchant. Identified by `authorizedAppId`, primary key of `AuthToken`.
 - **Merchant** — the ikas account that installed the app. `merchantId` is used everywhere as `storeId`.
 - **publicApiKey** — query param the widget reads from its own `<script src>`; equals `merchantId`. Public, non-secret.

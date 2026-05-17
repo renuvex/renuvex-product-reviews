@@ -61,7 +61,7 @@ related:
 ### Cron
 | Var | Purpose |
 |---|---|
-| `CRON_SECRET` | Bearer token required by `/api/admin/cleanup-images`. **Set in Vercel env** — without it the route is unauthenticated. |
+| `CRON_SECRET` | Bearer token required by cron routes (`/api/admin/daily-maintenance`, `/api/admin/cleanup-images`, and explicit maintenance endpoints). **Set in Vercel env** — cron routes refuse to run without it. |
 
 ### Sentry
 | Var | Purpose | Where |
@@ -80,7 +80,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 |---|---|
 | [ikas.config.json](ikas.config.json) | ikas dev tooling: port (3000), oauth redirect path (`/api/oauth/callback/ikas`), run command |
 | [next.config.js](next.config.js) | Next.js config |
-| [vercel.json](vercel.json) | `regions: ["fra1"]`, weekly cleanup cron |
+| [vercel.json](vercel.json) | `regions: ["fra1"]`, daily maintenance cron, monthly fallback cleanup cron, widget static asset cache headers |
 | [components.json](components.json) | shadcn/ui CLI/MCP config |
 | [tsconfig.json](tsconfig.json) | TS config (paths: `@/*` → `src/*`) |
 | [eslint.config.mjs](eslint.config.mjs) | ESLint flat config |

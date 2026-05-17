@@ -3,7 +3,7 @@ type: api
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-17
 tags:
   - ikas
   - graphql
@@ -28,10 +28,11 @@ ikas Admin GraphQL operations we currently use, plus how to add new ones safely.
 |---|---|---|---|
 | `getMerchant` | Query | OAuth callback, `/api/ikas/get-merchant` | Fetch merchant id, email, storeName |
 | `getAuthorizedApp` | Query | OAuth callback | Get `id`, `salesChannelId` for the install |
-| `listStorefront` | Query | OAuth callback, inject-scripts | Enumerate storefronts to inject script into |
-| `createStorefrontJSScript` | Mutation | OAuth callback, inject-scripts | Add `<script>` to a storefront |
-| `updateStorefrontJSScript` | Mutation | OAuth callback, inject-scripts | Update existing script content (idempotent) |
-| `deleteStorefrontJSScript` | Mutation | OAuth callback (fresh-install branch) | Wipe scripts (no args = blanket) |
+| `listStorefront` | Query | OAuth callback, inject-scripts, daily maintenance/reconcile helper | Enumerate storefronts to inject script into |
+| `createStorefrontJSScript` | Mutation | OAuth callback, inject-scripts, daily maintenance/reconcile helper | Add this app's loader `<script>` to a storefront |
+| `updateStorefrontJSScript` | Mutation | OAuth callback, inject-scripts, daily maintenance/reconcile helper | Update known script content (idempotent) |
+| `saveWebhooks` | Mutation | OAuth callback, sync-products | Register product create/update webhook endpoints |
+| `listProduct` | Query | Product snapshot backfill/webhook repair | Maintain `ProductSnapshot` for current slug/name fallback |
 
 Source: [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts) and generated client at [src/lib/ikas-client/generated/graphql.ts](src/lib/ikas-client/generated/graphql.ts).
 
@@ -49,7 +50,8 @@ Source: [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-re
 ## Notes
 - Don't call ikas API from `/api/public/*` routes. Storefront-side calls would put the access token at risk and break rate limits.
 - The OAuth callback runs storefront-injection inside try/catch — failures here don't break the install. Make sure callers know "install succeeded but widgets not injected" is a possible state.
-- We do not subscribe to ikas webhooks today. Consider when adding review-request emails (post-purchase trigger) or product-rename sync.
+- Source intentionally does not call zero-argument `deleteStorefrontJSScript()` because active MCP/generated client and public docs disagree on delete semantics.
+- We subscribe to ikas product create/update webhooks for `ProductSnapshot`. Consider order webhooks separately when adding review-request emails.
 - Scope review: current `read_orders,write_orders,read_products,read_inventories,write_inventories` — we need read-only mostly; tighten in a follow-up.
 
 ## Related Source Files

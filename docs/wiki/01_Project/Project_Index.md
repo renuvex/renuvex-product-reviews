@@ -36,7 +36,7 @@ related:
 - Reviews (list/update/delete) → [src/app/api/admin/reviews/route.ts](src/app/api/admin/reviews/route.ts)
 - Settings (per-widget) → [src/app/api/admin/settings/route.ts](src/app/api/admin/settings/route.ts)
 - Inject scripts (manual re-inject) → [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts)
-- Cleanup orphan Cloudinary images (cron) → [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
+- Cleanup orphan Cloudinary images (cron) → [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts), [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
 - Example ikas-backed admin call → [src/app/api/ikas/get-merchant/route.ts](src/app/api/ikas/get-merchant/route.ts)
 
 ## Public API (CORS-open, called from widget.js)

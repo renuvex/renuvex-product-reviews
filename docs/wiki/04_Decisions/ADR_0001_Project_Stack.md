@@ -39,7 +39,7 @@ We're building a SaaS review app for ikas merchants: merchant admin (iframe insi
 - **Image storage**: Cloudinary with signed direct uploads
 - **Widget bundle**: vanilla JS bundled by **esbuild** (separate from Next pipeline)
 - **Codegen**: GraphQL Codegen for the ikas Admin client
-- **Hosting**: Vercel (region `fra1`), one weekly cron
+- **Hosting**: Vercel (region `fra1`), daily maintenance cron plus monthly fallback cleanup
 - **Package manager**: pnpm 10.4.1
 
 ## Reasoning

@@ -2,7 +2,7 @@
   "regions": ["fra1"],
   "crons": [
     {
-      "path": "/api/admin/cleanup-pending-uploads",
+      "path": "/api/admin/daily-maintenance",
       "schedule": "0 3 * * *"
     },
     {
@@ -18,6 +18,10 @@
     {
       "source": "/widget-runtime/runtime.js",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
+    },
+    {
+      "source": "/widget-runtime/runtime-:hash.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     },
     {
       "source": "/widget-runtime/chunks/:path*",

@@ -46,7 +46,7 @@ Hard rules (canonical rules from `/CLAUDE.md` + wiki additions):
 - When you edit a wiki page because of a meaningful change, **bump the frontmatter `updated: YYYY-MM-DD`** and (if the change is worth remembering) add a short `## Change Log` entry at the bottom. Skip the log for trivial edits. See [[Claude_Code_Rules]] and the canonical block in [[Existing_AI_Rules_And_Ikas_CLI_Instructions]].
 
 Project-specific gotchas (top 3):
-- The OAuth callback uses `deleteStorefrontJSScript()` (no args) on fresh install — this is a blanket delete that may affect other apps' scripts.
+- Storefront script lifecycle must stay non-destructive: source no longer calls zero-argument `deleteStorefrontJSScript()` because ikas public docs and active MCP disagree on delete/list semantics.
 - `CLIENT_SECRET` is used for both ikas OAuth AND JWT signing. Single rotation invalidates both.
 - `Review.images` is TEXT-stringified JSON. Keep parsing tolerant.
 

@@ -58,7 +58,7 @@ outside the allowlist.
 ### Re-install duplicates / orphan scripts
 **Signal:** multiple `<script src="…/widget.js">` tags on storefront after re-install.
 **Cause:** `StoreSettings.storefrontScripts` was wiped or never persisted; injection ran without ids.
-**Mitigation:** the OAuth callback handles fresh-install case via `deleteStorefrontJSScript()` (no args) — but this is a blanket delete. Check that `storefrontScripts` JSON is intact in DB.
+**Mitigation:** source no longer performs blanket delete. OAuth/manual flows create/update from the DB script map; daily reconcile fills missing storefronts when at least one script id is known. If the DB map is empty, use manual re-inject and inspect duplicate remote scripts explicitly.
 
 ### Token refresh failures (silent)
 **Signal:** ikas API calls return empty/failed for a merchant; no obvious server log.

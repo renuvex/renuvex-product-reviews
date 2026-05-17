@@ -272,26 +272,22 @@ The runtime keeps one ikas StorefrontJSScript record and lazy-loads
 `VIEW_SEARCH_RESULTS` is handled beside verified `VIEW_LISTING`. Ozy listing
 selectors moved behind `themes/ozy/adapter.js` as fallback seed data.
 
-Still required before this phase is complete: live dev-store browser verification,
-network proof of the intended lazy chunk loading, and Sentry post-test checks.
-`rating-badge` remains inside the PDP review/render path until a shared aggregate
+Phase 2 live dev-store browser verification, network proof of intended lazy chunk
+loading, and Sentry post-test checks passed on 2026-05-17. `rating-badge`
+remains inside the PDP review/render path until a shared aggregate
 data service exists; making it independent now would duplicate fetches or add a
-race. Loader/module cache headers, ikas script lifecycle reconciliation,
-`events.js` rename, and stale `--theme` alias cleanup remain Phase 3 work.
+race.
 
-### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
+### Phase 3 — Cache, versioning, ikas script lifecycle — source implemented
 
-Cache split (short-cache loader, long-immutable versioned modules); ikas script
-lifecycle hardening (`listStorefrontJSScript` reconciliation before any destructive
-script behavior, drop the blanket zero-argument `deleteStorefrontJSScript`, handle
-storefronts created after install); fix the stale `--theme` build alias; define a
-canonical product identity contract and add product identity verification before
-marking reviews as verified; integration smoke checks for listing, PDP, API
-responses, console, and network. Before any script lifecycle change, re-run ikas
-MCP list + introspect because public docs and the current generated client differ
-on `save/create/update/deleteStorefrontJSScript` naming and delete arguments.
-Reconciliation should use ikas-side script records by predictable name/content as
-well as the local DB script map.
+Implemented by 2026-05-17: short-cache loader/shim, immutable hashed runtime and
+chunks, non-destructive create/update-only StorefrontJSScript lifecycle, daily
+script reconcile for storefronts created after install, stale `--theme` alias
+cleanup, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]].
+Active MCP still lacks `listStorefrontJSScript`, so source intentionally avoids
+destructive cleanup while public docs and generated/MCP contracts disagree.
+Post-deploy checks still need to verify cache headers, dev-store behavior, Sentry,
+and deployed transfer size.
 
 ## Non-Goals
 

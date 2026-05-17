@@ -34,7 +34,7 @@ source_files:
 The widget runs on every storefront page in the world that hosts our merchants. Bundle size, time to interactive, and request fan-out are the three numbers that matter.
 
 ## Current footprint
-- Phase 2 local build output on 2026-05-17: `public/widget.js` is a classic compatibility loader (~1.6 KB), `public/widget-runtime/runtime.js` is the ESM runtime entry (~9.6 KB), and heavy PDP/product rendering is behind lazy ESM chunks.
+- Phase 3 local build output on 2026-05-17: `public/widget.js` is a classic compatibility loader (~1.6 KB), `public/widget-runtime/runtime.js` is a tiny stable shim, the active ESM entry is content-hashed (`runtime-*.js`, ~9.6 KB), and heavy PDP/product rendering is behind lazy ESM chunks.
 - `public/widget-runtime/build-manifest.json` records output bytes and import kinds. In the local build, the runtime entry has dynamic imports for product bootstrap, listing badges, and preview/product render.
 - The deployed pre-Phase-2 `https://new-ikas-app.vercel.app/widget.js?...` response measured `177763` bytes on 2026-05-15. Re-measure after deployment before claiming live performance improvement.
 - Initial requests on PDP: 2 (`/api/public/settings`, `/api/public/reviews`). Edge-cached `s-maxage=60, stale-while-revalidate=300`.
@@ -50,7 +50,7 @@ Dev store smoke test:
 - homepage DOM had listing badges mounted
 - product page DOM had `#ikas-reviews-widget` and `#ikas-reviews-anchor`
 - public settings, reviews, and ratings endpoints returned 200
-- deployed widget response header was `Cache-Control: public, max-age=0, must-revalidate` — **superseded 2026-05-17**: `vercel.json` now sets a three-tier cache split (short-cache loader/runtime, `immutable` content-hashed chunks); see [[Caching_And_Performance]]
+- deployed widget response header was `Cache-Control: public, max-age=0, must-revalidate` — **superseded 2026-05-17**: `vercel.json` now sets short-cache loader/shim plus immutable content-hashed runtime/chunks; see [[Caching_And_Performance]]
 
 Yotpo/Protein Ocean reference:
 

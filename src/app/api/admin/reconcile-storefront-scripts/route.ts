@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
-import { cleanupPendingUploads } from '@/lib/cleanup-pending-uploads';
-
-// Primary orphan cleanup driven by the PendingReviewImage registry. The daily
-// Vercel cron calls /api/admin/daily-maintenance, which runs this same helper
-// beside storefront script reconciliation.
+import { reconcileStorefrontScripts } from '@/lib/reconcile-storefront-scripts';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   if (!CRON_SECRET) {
-    console.error('[cleanup-pending-uploads] CRON_SECRET is not configured');
+    console.error('[reconcile-storefront-scripts] CRON_SECRET is not configured');
     return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 500 });
   }
   if (authHeader !== `Bearer ${CRON_SECRET}`) {
@@ -18,10 +14,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    return NextResponse.json(await cleanupPendingUploads());
+    return NextResponse.json({ data: await reconcileStorefrontScripts() });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
-    console.error('[cleanup-pending-uploads] ERROR:', error);
+    console.error('[reconcile-storefront-scripts] ERROR:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

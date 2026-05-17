@@ -228,46 +228,52 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
   reviews-main and listing-badge surfaces — a PDP with product carousels
   previously fetched `/api/public/settings` twice.
 
-### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
+### Phase 3 — Cache, versioning, ikas script lifecycle — source implemented (2026-05-17)
 
-- Done — 2026-05-17: `vercel.json` `headers` now sets the three-tier
-  `Cache-Control` split — `/widget.js` and `/widget-runtime/runtime.js` at
-  `max-age=300, must-revalidate`, `/widget-runtime/chunks/*` at
-  `max-age=31536000, immutable`. The stable-named `runtime.js` is short-cached
-  for now; content-hashing it so it can also be `immutable` (resolved from the
-  loader) remains a deferred follow-up. See [[Caching_And_Performance]].
-- ikas script lifecycle hardening: remove the blanket zero-argument
-  `deleteStorefrontJSScript`, add `listStorefrontJSScript` reconciliation, handle
-  storefronts created after install.
+- Done — 2026-05-17: `vercel.json` `headers` sets `/widget.js` and the stable
+  `/widget-runtime/runtime.js` compatibility shim to `max-age=300,
+  must-revalidate`; content-hashed `/widget-runtime/runtime-*.js` and
+  `/widget-runtime/chunks/*` are `max-age=31536000, immutable`. See
+  [[Caching_And_Performance]].
+- Done — 2026-05-17: ikas script lifecycle is non-destructive. The source no
+  longer defines or calls zero-argument `deleteStorefrontJSScript`; OAuth,
+  manual inject, daily maintenance, and explicit reconcile share
+  `ensureStorefrontScripts()` and use create/update only. The daily maintenance
+  cron handles storefronts created after
+  install when the merchant has at least one tracked script id.
 - Done — 2026-05-17 (commit `ce9508d`): removed the dead `themes/ozy/listing-selector.js` entry from the `--theme` build alias in `build-widget.mjs`. The broader `--theme=new-theme` scaffold (no `themes/new-theme/` folder) remains an open question, not a Phase 3 blocker.
-- Define a canonical product identity contract (`storeId` / `ikasProductId` /
-  `ikasVariantId` / `slug`).
+- Done — 2026-05-17: canonical product identity is defined by
+  [[ADR_0015_Canonical_Product_Identity]] as `(storeId, productId)`. Reviews are
+  product-level, not variant-level; slug/name are display snapshots.
 - Before changing script lifecycle code, re-run ikas MCP list + introspect for
   StorefrontJSScript operations. The public docs expose `listStorefrontJSScript`,
   `saveStorefrontJSScript`, and `deleteStorefrontJSScript(storefrontIdList)`, while
-  the current generated client exposes `create/update/delete` with different delete
-  semantics. Resolve that mismatch before any destructive cleanup.
-- Reconciliation should search ikas script records by predictable name/content as
-  well as the local `storefrontScripts` DB map, so DB loss or manual merchant edits
-  do not force unsafe blanket deletion.
+  the active MCP exposes `create/update/delete` with different delete semantics
+  and the generated project client intentionally defines only `create/update`.
+  Resolve that mismatch before any destructive cleanup.
+- Active MCP still does not expose `listStorefrontJSScript`, so reconciliation
+  cannot safely search ikas-side script records by name/content yet. Until ikas
+  exposes a verified list/delete contract, DB-map loss is repaired explicitly by
+  manual re-inject; cron skips a completely empty map to avoid blind duplicate
+  creation.
 - All script-record writes in the lifecycle/reconciliation work must build the
   `<script src>` through `buildStorefrontWidgetScript()` in
   [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts) (added in
   `960fd44`). Do not rebuild the widget URL inline — that helper is what keeps
   localhost and non-HTTPS origins out of real storefront script records.
-- Document the final `isHighPriority` / `order` choice. Current guidance says this
-  review widget does not need to preempt Facebook/Google scripts, so priority should
-  remain deliberate rather than implicit.
-- Deferred Phase 2 polish carried here: the listing-badge surface injects a
-  `display:none` badge into the Ozy theme's hidden `passive` search-results
-  container. Add a visibility filter in `listing-badges/inject.js` (skip links
-  whose `offsetParent` is null) or exclude `.passive` containers in the Ozy
-  adapter. Harmless today (invisible, not a leak) — low priority.
+- Done — 2026-05-17: final ordering choice is `isHighPriority: false`; `order`
+  is not set because the active input type does not expose it. This review app
+  does not manage consent/cookies and does not need to run before Facebook/Google
+  scripts.
+- Done — 2026-05-17: listing badge injection filters invisible links before
+  injecting badges, so the hidden Ozy `passive` search-results container is not
+  decorated.
 - Non-code follow-ups tracked here so they are not lost: (a) a merchant onboarding
   instruction to disable the storefront theme's own native review block, which
   otherwise renders empty next to the app widget; (b) re-measure the deployed
-  widget transfer size after the Phase 2 split lands, replacing the `177763`-byte
-  2026-05-15 pre-split baseline before claiming a live performance win.
+  widget transfer size after the hashed runtime deploy, replacing the
+  `177763`-byte 2026-05-15 pre-split baseline before claiming a live performance
+  win.
 - See [[Yotpo_Style_Widget_Modular_Architecture]].
 
 ## Related Source Files

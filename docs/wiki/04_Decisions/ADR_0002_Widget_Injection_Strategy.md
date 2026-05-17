@@ -53,7 +53,7 @@ The script src is `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchant
 - Public widget API is a **stable contract** — old `widget.js` versions may persist on storefronts if cache TTLs are long.
 - The OAuth callback installs scripts. If ikas API is slow at install, the install still succeeds (try/catch). Merchants may need to use the manual re-inject button.
 - DB-tracked script ids (`storefrontScripts`) are required for idempotency. Wiping the table without a cleanup plan could lead to duplicate scripts on storefronts.
-- The blanket `deleteStorefrontJSScript()` (no args) on fresh install **affects all apps' scripts** on the merchant — verify with ikas docs before changing.
+- Source no longer calls zero-argument `deleteStorefrontJSScript()`; lifecycle is non-destructive create/update only while ikas public docs and active MCP disagree on delete/list semantics.
 
 ## Related Source Files
 - [src/widget/index.js](src/widget/index.js)

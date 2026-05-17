@@ -50,12 +50,6 @@ export const UPDATE_STOREFRONT_JS_SCRIPT = gql`
   }
 `;
 
-export const DELETE_STOREFRONT_JS_SCRIPT = gql`
-  mutation deleteStorefrontJSScript {
-    deleteStorefrontJSScript
-  }
-`;
-
 export const LIST_PRODUCTS_FOR_SYNC = gql`
   query listProductsForSync($pagination: PaginationInput, $id: StringFilterInput) {
     listProduct(pagination: $pagination, id: $id) {

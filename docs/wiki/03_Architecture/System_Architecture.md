@@ -39,7 +39,7 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three runtimes: the *
 │   /api/public/*   CORS-open   ◄─── widget.js (storefronts)      │
 │   /api/preview/*  iframe data                                    │
 │                                                                 │
-│   Cron weekly  ──►  Cloudinary cleanup                          │
+│   Cron jobs    ──►  daily maintenance + monthly cleanup          │
 └──────────────────────┬───────────────┬──────────────┬───────────┘
                        │               │              │
                        ▼               ▼              ▼
@@ -90,7 +90,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 - **Auth boundary** at `getUserFromRequest`. Public APIs are CORS-open and rate-limited by IP.
 - **Rate limit / abuse** via Upstash Redis (incr+expire pattern). Detail in [[Security_And_Rate_Limits]].
 - **Caching** via Vercel edge. Detail in [[Caching_And_Performance]].
-- **Image lifecycle**: client uploads directly to Cloudinary; URLs stored in `Review.images` (TEXT JSON); weekly cron sweeps orphans not referenced by any Review.
+- **Image lifecycle**: client uploads directly to Cloudinary; URLs stored in `Review.images` (TEXT JSON); daily maintenance expires abandoned pending uploads and monthly fallback scans Cloudinary orphans not referenced by any Review.
 
 ## Deployment topology
 - Vercel project. Region `fra1`. Postgres on Supabase. Redis on Upstash. Cloudinary for images. ikas-side: registered app pointing OAuth callback to `<DEPLOY_URL>/api/oauth/callback/ikas`.

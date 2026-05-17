@@ -8,6 +8,12 @@ import { lastClickedSlug } from '../core/state.js';
 var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
 var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
 
+function isVisibleForBadge(el) {
+  if (!el || typeof el.getClientRects !== 'function' || el.getClientRects().length === 0) return false;
+  var style = window.getComputedStyle(el);
+  return style.display !== 'none' && style.visibility !== 'hidden';
+}
+
 export function findTitleEl(scope, productName) {
   var adapter = getThemeAdapter();
 
@@ -41,6 +47,7 @@ export function findTitleEl(scope, productName) {
 
 export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   if (a.getAttribute('data-ikr-badge')) return;
+  if (!isVisibleForBadge(a)) return;
   var adapter = getThemeAdapter();
   var slug = extractSlug(a.href);
 
@@ -145,9 +152,12 @@ export function injectBadges(slugNameMap, ratings) {
 
   containers.forEach(function(c) {
     if (c.tagName === 'A' && c.href) {
+      if (!isVisibleForBadge(c)) return;
       links.push(c);
     } else {
-      c.querySelectorAll('a[href]').forEach(function(a) { links.push(a); });
+      c.querySelectorAll('a[href]').forEach(function(a) {
+        if (isVisibleForBadge(a)) links.push(a);
+      });
     }
   });
 

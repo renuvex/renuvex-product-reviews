@@ -3,11 +3,11 @@
 //
 // Phase 2 output model:
 // - public/widget.js remains the classic ikas StorefrontJSScript entry.
-// - public/widget-runtime/runtime.js is the ESM runtime entry.
-// - public/widget-runtime/chunks/* are lazy-loaded ESM chunks.
+// - public/widget-runtime/runtime.js is a short-cache compatibility shim.
+// - public/widget-runtime/runtime-*.js and chunks/* are immutable ESM assets.
 
 import * as esbuild from 'esbuild';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -36,6 +36,9 @@ const runtimeOutdir = theme === 'default'
 const runtimePublicPath = theme === 'default'
   ? 'widget-runtime/runtime.js'
   : `widget-runtime-${theme}/runtime.js`;
+const runtimeOutdirPublicPrefix = theme === 'default'
+  ? 'public/widget-runtime'
+  : `public/widget-runtime-${theme}`;
 
 const classicEntryPoint = resolve(ROOT, 'src/widget/classic-loader.js');
 const runtimeEntryPoint = resolve(ROOT, 'src/widget/index.js');
@@ -85,51 +88,64 @@ const defaultReviewImageCloudName = normalizePublicCloudName(
   getEnvValue('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') || getEnvValue('CLOUDINARY_CLOUD_NAME'),
 );
 
-const define = {
-  __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
-  __IKR_RUNTIME_PATH__: JSON.stringify(runtimePublicPath),
-};
+function createDefine(runtimePath) {
+  return {
+    __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
+    __IKR_RUNTIME_PATH__: JSON.stringify(runtimePath),
+  };
+}
 
-const sharedOptions = {
-  bundle: true,
-  platform: 'browser',
-  target: ['es2017'],
-  minify: !watchMode,
-  sourcemap: false,
-  logLevel: 'info',
-  alias: themeArg ? themeAlias : {},
-  define,
-};
+function createSharedOptions(runtimePath) {
+  return {
+    bundle: true,
+    platform: 'browser',
+    target: ['es2017'],
+    minify: !watchMode,
+    sourcemap: false,
+    logLevel: 'info',
+    alias: themeArg ? themeAlias : {},
+    define: createDefine(runtimePath),
+  };
+}
 
-const classicBuildOptions = {
-  ...sharedOptions,
-  entryPoints: [classicEntryPoint],
-  format: 'iife',
-  outfile: classicOutfile,
-  banner: { js: `/* ikas Reviews Widget classic loader - built ${buildTime} | theme: ${theme} */` },
-  footer: { js: '' },
-  globalName: undefined,
-};
+function createClassicBuildOptions(runtimePath) {
+  return {
+    ...createSharedOptions(runtimePath),
+    entryPoints: [classicEntryPoint],
+    format: 'iife',
+    outfile: classicOutfile,
+    banner: { js: `/* ikas Reviews Widget classic loader - built ${buildTime} | theme: ${theme} */` },
+    footer: { js: '' },
+    globalName: undefined,
+  };
+}
 
-const runtimeBuildOptions = {
-  ...sharedOptions,
-  entryPoints: [{ in: runtimeEntryPoint, out: 'runtime' }],
-  format: 'esm',
-  splitting: true,
-  outdir: runtimeOutdir,
-  entryNames: '[name]',
-  chunkNames: 'chunks/[name]-[hash]',
-  metafile: true,
-  banner: { js: `/* ikas Reviews Widget ESM runtime - built ${buildTime} | theme: ${theme} */` },
-};
+function createRuntimeBuildOptions(hashedEntry) {
+  return {
+    ...createSharedOptions(runtimePublicPath),
+    entryPoints: [{ in: runtimeEntryPoint, out: 'runtime' }],
+    format: 'esm',
+    splitting: true,
+    outdir: runtimeOutdir,
+    entryNames: hashedEntry ? '[name]-[hash]' : '[name]',
+    chunkNames: 'chunks/[name]-[hash]',
+    metafile: true,
+    banner: { js: `/* ikas Reviews Widget ESM runtime | theme: ${theme} */` },
+  };
+}
 
-function createManifest(metafile) {
+function outputToPublicPath(output) {
+  return output.replace(/\\/g, '/').replace(/^public\//, '');
+}
+
+function createManifest(metafile, runtimeEntry) {
   return {
     builtAt: buildTime,
     theme,
-    entry: 'runtime.js',
+    entry: runtimeEntry,
+    stableEntry: runtimePublicPath,
     outputs: Object.keys(metafile.outputs)
-      .filter((output) => output.replace(/\\/g, '/').indexOf('public/widget-runtime') !== -1)
+      .filter((output) => output.replace(/\\/g, '/').indexOf(runtimeOutdirPublicPrefix) !== -1)
       .map((output) => {
         var normalized = output.replace(/\\/g, '/');
         var item = metafile.outputs[output];
@@ -146,18 +162,39 @@ function createManifest(metafile) {
   };
 }
 
+function findRuntimeEntryOutput(metafile) {
+  return Object.keys(metafile.outputs).find((output) => metafile.outputs[output].entryPoint === 'src/widget/index.js');
+}
+
+function writeStableRuntimeShim(runtimeEntry) {
+  var entryFile = runtimeEntry.split('/').pop();
+  writeFileSync(
+    resolve(runtimeOutdir, 'runtime.js'),
+    `/* ikas Reviews Widget stable runtime shim - built ${buildTime} | theme: ${theme} */\nimport './${entryFile}';\n`,
+  );
+}
+
 if (watchMode) {
   mkdirSync(runtimeOutdir, { recursive: true });
-  const classicCtx = await esbuild.context(classicBuildOptions);
-  const runtimeCtx = await esbuild.context(runtimeBuildOptions);
+  const classicCtx = await esbuild.context(createClassicBuildOptions(runtimePublicPath));
+  const runtimeCtx = await esbuild.context(createRuntimeBuildOptions(false));
   await Promise.all([classicCtx.watch(), runtimeCtx.watch()]);
   console.log(`[build-widget] Watching src/widget/ -> ${classicOutfile} + ${runtimeOutdir}`);
 } else {
-  rmSync(runtimeOutdir, { recursive: true, force: true });
+  // Keep old hashed runtime/chunk files available for cached widget.js loaders
+  // that may still reference them during and after a deploy.
   mkdirSync(runtimeOutdir, { recursive: true });
 
-  const classicResult = await esbuild.build(classicBuildOptions);
-  const runtimeResult = await esbuild.build(runtimeBuildOptions);
+  const runtimeResult = await esbuild.build(createRuntimeBuildOptions(true));
+  const runtimeEntryOutput = findRuntimeEntryOutput(runtimeResult.metafile);
+  if (!runtimeEntryOutput) {
+    console.error('[build-widget] ERROR Could not find ESM runtime entry output.');
+    process.exit(1);
+  }
+  const runtimeEntryPublicPath = outputToPublicPath(runtimeEntryOutput);
+  writeStableRuntimeShim(runtimeEntryPublicPath);
+
+  const classicResult = await esbuild.build(createClassicBuildOptions(runtimeEntryPublicPath));
 
   if (classicResult.errors.length || runtimeResult.errors.length) {
     console.error('[build-widget] Build failed:', classicResult.errors.concat(runtimeResult.errors));
@@ -166,7 +203,7 @@ if (watchMode) {
 
   writeFileSync(
     resolve(runtimeOutdir, 'build-manifest.json'),
-    JSON.stringify(createManifest(runtimeResult.metafile), null, 2),
+    JSON.stringify(createManifest(runtimeResult.metafile, runtimeEntryPublicPath), null, 2),
   );
 
   const { execSync } = await import('child_process');

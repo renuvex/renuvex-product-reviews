@@ -136,7 +136,7 @@ Gate (G): no new Sentry runtime/API issue. ✓
 | Public docs script mutations | Official Storefront API documents `saveStorefrontJSScript(input)` and `deleteStorefrontJSScript(storefrontIdList)`. | High |
 | Current MCP script mutations | ikas MCP introspection on 2026-05-17 exposes `createStorefrontJSScript(input)`, `updateStorefrontJSScript(input)`, and zero-argument `deleteStorefrontJSScript`. | High |
 | MCP listing gap | ikas MCP list/introspect on 2026-05-17 did not expose `listStorefrontJSScript`; `introspect("listStorefrontJSScript")` returned invalid operation. | High |
-| Current generated client | [generated/graphql.ts](src/lib/ikas-client/generated/graphql.ts) includes `listStorefront`, `createStorefrontJSScript`, `updateStorefrontJSScript`, and zero-argument `deleteStorefrontJSScript`. | High |
+| Current generated client | [generated/graphql.ts](src/lib/ikas-client/generated/graphql.ts) includes `listStorefront`, `createStorefrontJSScript`, and `updateStorefrontJSScript`; source no longer defines the zero-argument delete mutation. | High |
 | Storefront Events doc tokens | The current builders docs HTML fetched on 2026-05-17 contains `IkasEvents`, `IKAS_EVENT_TYPE`, `IKAS_PAGE_TYPE`, `PAGE_VIEW`, `PRODUCT_VIEW`, `VIEW_CATEGORY`, and `VIEW_SEARCH_RESULTS`. | Medium-high |
 | Context7 Playwright docs | Context7 `/microsoft/playwright` docs checked on 2026-05-17 for Phase 1 smoke-test evidence: web-first assertions, screenshots, trace capture, console, DOM snapshot, and network inspection are relevant. | High |
 | Context7 Sentry JavaScript docs | Context7 `/getsentry/sentry-javascript` docs checked on 2026-05-17 for post-test triage: tags, context, breadcrumbs, captured exceptions/messages, and event enrichment are relevant. | High |

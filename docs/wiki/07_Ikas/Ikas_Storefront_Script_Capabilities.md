@@ -22,6 +22,9 @@ source_files:
   - "src/lib/ikas-client/generated/graphql.ts"
   - "src/app/api/oauth/callback/ikas/route.ts"
   - "src/app/api/admin/inject-scripts/route.ts"
+  - "src/app/api/admin/daily-maintenance/route.ts"
+  - "src/app/api/admin/reconcile-storefront-scripts/route.ts"
+  - "src/lib/storefront-scripts.ts"
   - "src/lib/storefront-widget-url.ts"
 ---
 
@@ -119,12 +122,13 @@ This section records a direct answer from an ikas developer about storefront scr
 
 ## Current Project State
 
-The project currently defines these GraphQL documents:
+The project currently defines these StorefrontJSScript GraphQL documents:
 
 - `listStorefront`
 - `createStorefrontJSScript`
 - `updateStorefrontJSScript`
-- `deleteStorefrontJSScript`
+
+The active MCP/generated client still exposes zero-argument `deleteStorefrontJSScript`, but this app no longer defines or calls it.
 
 Source: [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts)
 
@@ -138,6 +142,10 @@ Source paths:
 
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
 - [src/app/api/admin/inject-scripts/route.ts](src/app/api/admin/inject-scripts/route.ts)
+- [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts)
+- [src/app/api/admin/reconcile-storefront-scripts/route.ts](src/app/api/admin/reconcile-storefront-scripts/route.ts)
+- [src/lib/reconcile-storefront-scripts.ts](src/lib/reconcile-storefront-scripts.ts)
+- [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts)
 - [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 
 The project tracks installed ikas script ids in `StoreSettings.storefrontScripts`.
@@ -159,11 +167,9 @@ This keeps install, update, rollback, cleanup, and support simpler.
 
 ### Delete Semantics Mismatch
 
-The official docs show a delete mutation that accepts a storefront id list. The generated local client and MCP introspection expose a zero-argument `deleteStorefrontJSScript`.
+The official docs show a delete mutation that accepts a storefront id list. The active MCP introspection exposes a zero-argument `deleteStorefrontJSScript`.
 
-The OAuth callback currently calls `deleteStorefrontJSScript()` in the fresh-install branch when the DB script map is empty. This is risky because it may delete more scripts than intended.
-
-Source: [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
+Source no longer calls this mutation. Script lifecycle now uses non-destructive create/update through [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts). If the DB script map is lost, install/manual re-inject may create a duplicate app loader, but it will not delete scripts belonging to other apps.
 
 ### Missing Script Listing In Current Project Documents
 
@@ -173,7 +179,7 @@ That makes the project depend on its own DB map to know whether a script already
 
 ### Storefronts Created After Install
 
-The app injects during OAuth install and manual re-inject. If a merchant adds a new storefront later, that storefront will not get the loader until re-inject or a future webhook/reconciliation job handles it.
+The app injects during OAuth install and manual re-inject. The daily `GET /api/admin/daily-maintenance` cron also runs storefront-script reconciliation and fills missing storefronts when a merchant already has at least one tracked script id. `GET /api/admin/reconcile-storefront-scripts` remains an explicit ops endpoint for the same helper. If the DB map is completely empty, cron skips to avoid blind duplicate creation; manual re-inject is the explicit repair path.
 
 ## Recommendation
 
@@ -183,8 +189,8 @@ For Yotpo-style architecture on ikas:
 - name it predictably, for example `yorum-paneli-loader`
 - use a small loader URL, not the full widget bundle
 - avoid blanket delete behavior
-- add read-only reconciliation with `listStorefrontJSScript` before destructive actions
-- if the active schema still lacks `listStorefrontJSScript`, do not invent destructive cleanup; first resolve the public-docs/MCP/generated-client mismatch with ikas or codegen against the app's real schema
+- keep reconciliation non-destructive while the active schema lacks `listStorefrontJSScript`
+- do not invent destructive cleanup; first resolve the public-docs/MCP/generated-client mismatch with ikas or codegen against the app's real schema
 - use `isHighPriority` only if the loader must run before theme scripts
 - keep widget module ordering inside the loader registry
 
