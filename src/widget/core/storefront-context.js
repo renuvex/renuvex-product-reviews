@@ -29,9 +29,10 @@ var IKAS_EVENT = Object.freeze({
   PRODUCT_VIEW: 'PRODUCT_VIEW',
   // Runtime-verified on the dev store (2026-05-17): VIEW_LISTING carries
   // category productDetails[]. VIEW_CATEGORY also fires, but without products.
-  // Search pages emit VIEW_SEARCH_RESULTS; handling that is Phase 2 work.
+  // Search pages emit VIEW_SEARCH_RESULTS with the same productDetails[] shape.
   // See ADR_0013 and docs/wiki/10_Research/Phase_1_Widget_Runtime_Audit.md.
   LISTING_VIEW: 'VIEW_LISTING',
+  SEARCH_RESULTS: 'VIEW_SEARCH_RESULTS',
 });
 
 // ── Modül durumu ─────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ var latestPage = null;      // { pageType } | null — son bilinen sayfa
 
 var productViewSubs = [];
 var pageViewSubs = [];
+var listingViewSubs = [];
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
@@ -75,6 +77,12 @@ export function onPageView(cb) {
   if (latestPage) {
     try { cb(latestPage); } catch (err) { console.error('[ikr] onPageView replay error:', err); }
   }
+}
+
+// Listing/search product arrays. cb({ eventType, products }).
+export function onListingView(cb) {
+  if (typeof cb !== 'function') return;
+  listingViewSubs.push(cb);
 }
 
 // Son bilinen ürün — events öncelikli, yoksa DOM heuristic fallback.
@@ -116,7 +124,7 @@ function attachIkasEvents() {
 function handleIkasEvent(event) {
   if (!event) return;
 
-  if (event.type === IKAS_EVENT.LISTING_VIEW) {
+  if (event.type === IKAS_EVENT.LISTING_VIEW || event.type === IKAS_EVENT.SEARCH_RESULTS) {
     var products = event.data && event.data.productDetails;
     if (Array.isArray(products)) {
       products.forEach(function (p) {
@@ -124,6 +132,7 @@ function handleIkasEvent(event) {
           ikrSlugMap[p.metaData.slug] = p.name;
         }
       });
+      emitListingView({ eventType: event.type, products: products });
     }
     return;
   }
@@ -162,6 +171,12 @@ function emitProductView(product) {
 function emitPageView(page) {
   pageViewSubs.forEach(function (cb) {
     try { cb(page); } catch (err) { console.error('[ikr] onPageView callback error:', err); }
+  });
+}
+
+function emitListingView(listing) {
+  listingViewSubs.forEach(function (cb) {
+    try { cb(listing); } catch (err) { console.error('[ikr] onListingView callback error:', err); }
   });
 }
 

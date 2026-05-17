@@ -1,10 +1,9 @@
-// surfaces/reviews-main.surface.js — PDP review bloğu surface descriptor'ı
+// surfaces/reviews-main.surface.js - PDP review block surface descriptor.
 //
-// İnce adaptör: mount, mevcut bootstrap() orkestrasyonunu çağırır (settings +
-// reviews fetch + render). Mantık yeniden yazılmaz. reviews-main yüzeyi tek
-// IIFE bundle içinde statik import edilir — code-splitting sınırı değil (ADR_0013).
+// Phase 2: the descriptor is intentionally light. The product-widget module is
+// imported only when a product context is detected.
 
-import { bootstrap } from '../product-widget/bootstrap.js';
+import { loadReviewsMainModule } from '../core/lazy-modules.js';
 
 export var reviewsMainSurface = {
   key: 'reviews-main',
@@ -12,6 +11,8 @@ export var reviewsMainSurface = {
     return ctx.trigger === 'product' && !!(ctx.product && ctx.product.id);
   },
   mount: function (ctx) {
-    bootstrap(ctx.product.id, ctx.product.name);
+    return loadReviewsMainModule().then(function (mod) {
+      mod.bootstrap(ctx.product.id, ctx.product.name);
+    });
   },
 };

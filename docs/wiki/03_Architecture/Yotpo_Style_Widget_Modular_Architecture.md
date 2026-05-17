@@ -20,15 +20,20 @@ related:
   - "[[Phase_1_Widget_Runtime_Audit]]"
   - "[[Widget_Performance]]"
 source_files:
-  - "src/widget/index.js"
-  - "src/widget/core/config.js"
-  - "src/widget/product-widget/bootstrap.js"
-  - "src/widget/listing-badges/index.js"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "scripts/build-widget.mjs"
+  - "src/widget/classic-loader.js"
+  - "src/widget/index.js"
+  - "src/widget/core/config.js"
+  - "src/widget/core/lazy-modules.js"
+  - "src/widget/core/settings.js"
+  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/listing-badges/index.js"
+  - "src/widget/themes/ozy/adapter.js"
   - "public/widget.js"
+  - "public/widget-runtime/build-manifest.json"
 ---
 
 # Yotpo-Style Widget Modular Architecture
@@ -256,24 +261,23 @@ If the Phase 1 test method depends on Playwright or Sentry behavior, confirm the
 relevant current docs through Context7 and record the checked library id/topic in
 [[Phase_1_Widget_Runtime_Audit]].
 
-### Phase 2 — Physical module split — ⏳ Planned
+### Phase 2 — Physical module split — In progress (2026-05-17)
 
 Detailed implementation and verification checklist: [[Phase_2_Widget_Module_Split_Plan]].
 
-Migrate the build from IIFE to ESM so esbuild code-splitting works; decouple
-`render.js` (~670 lines) from the layout ecosystem; ship real lazy-loaded modules
-behind the registry (the actual performance win — pages stop loading code they do
-not use); `rating-badge` becomes an independent surface; `events.js` may be renamed
-to `core/spa-nav.js`. Phase 2 should not depend on provisional `VIEW_LISTING` or
-future ikas Studio `data-*` attributes; use verified Storefront Events and
-`PAGE_VIEW` page type first, with DOM/theme heuristics only as fallback. Keep the
-current `widget.js?publicApiKey=...` injection path compatible until the loader URL
-and cache rollout are planned separately.
+Implemented so far: `public/widget.js` is now the backward-compatible classic
+loader and `public/widget-runtime/runtime.js` + `chunks/*` are ESM split outputs.
+The runtime keeps one ikas StorefrontJSScript record and lazy-loads
+`reviews-main`, `listing-badge`, and preview render through `core/lazy-modules.js`.
+`VIEW_SEARCH_RESULTS` is handled beside verified `VIEW_LISTING`. Ozy listing
+selectors moved behind `themes/ozy/adapter.js` as fallback seed data.
 
-Implementation guardrail: because esbuild code splitting requires ESM output,
-`widget.js?publicApiKey=...` should remain a backward-compatible classic loader
-unless the ikas injected script can be proven to use `type="module"`. The loader
-can then import the ESM runtime/chunks behind the existing public URL.
+Still required before this phase is complete: live dev-store browser verification,
+network proof of the intended lazy chunk loading, and Sentry post-test checks.
+`rating-badge` remains inside the PDP review/render path until a shared aggregate
+data service exists; making it independent now would duplicate fetches or add a
+race. Loader/module cache headers, ikas script lifecycle reconciliation,
+`events.js` rename, and stale `--theme` alias cleanup remain Phase 3 work.
 
 ### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
 

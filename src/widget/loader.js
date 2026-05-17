@@ -1,56 +1,69 @@
-// loader.js — Widget orkestrasyon katmanı (ince loader)
+// loader.js - widget orchestration layer.
 //
-// index.js'ten çağrılır. Tüm orkestrasyon mantığı buradadır:
-//   - startWidget()  : prod modu — storefront-context + registry + surfaces +
-//                      SPA/observer plumbing'ini başlatır.
-//   - startPreview() : preview modu — admin iframe postMessage kanalı + mock bootstrap.
-//
-// Tek IIFE bundle — buraya dinamik import() EKLENMEZ. Tüm modüller statik import
-// edilir ve widget.js içinde mevcuttur (ADR_0013).
+// Phase 2 keeps this module in the always-loaded ESM runtime. Heavy surfaces are
+// loaded through registry descriptors and core/lazy-modules.js.
 
 import { attachHistoryListener, attachModalBadgeListener } from './events.js';
 import { startMutationObserver } from './observer.js';
-import { initStorefrontContext, onProductView, onPageView, getProductContext } from './core/storefront-context.js';
+import {
+  initStorefrontContext,
+  onProductView,
+  onPageView,
+  onListingView,
+} from './core/storefront-context.js';
 import { mountMatching } from './core/registry.js';
 import { registerCoreSurfaces } from './surfaces/index.js';
-import { renderListingBadges } from './listing-badges/index.js';
+import { loadListingBadgesModule, loadProductRenderModule, loadReviewsMainModule } from './core/lazy-modules.js';
 import { ls } from './core/state.js';
 import {
-  currentSettings, currentProductId, currentProductName,
-  currentOrderBy, currentPage, currentReviewsData,
+  currentSettings,
+  currentProductId,
+  currentProductName,
+  currentOrderBy,
+  currentPage,
+  currentReviewsData,
 } from './core/state.js';
-import { bootstrap } from './product-widget/bootstrap.js';
-import { render } from './product-widget/render.js';
 
-// ── Prod modu ────────────────────────────────────────────────────────────────
+function renderListingBadgesFallback() {
+  return loadListingBadgesModule().then(function (mod) {
+    mod.renderListingBadges();
+  });
+}
 
 function initWidget() {
-  // 1) Çekirdek yüzeyleri registry'ye kaydet (reviews-main + listing-badge).
+  // 1) Register lightweight surface descriptors.
   registerCoreSurfaces();
 
-  // 2) Storefront Events bağlam katmanını başlat — IkasEvents aboneliği +
-  //    DOM ürün tespiti fallback'i. (onProductView/onPageView'dan ÖNCE çağrılır;
-  //    senkron fırlatılan event'ler storefront-context replay'i ile yakalanır.)
+  // 2) Start the single ikas Storefront Events context layer.
   initStorefrontContext();
 
-  // 3) SPA navigasyon + quick-view modal plumbing (IkasEvents'ten bağımsız).
+  // 3) SPA navigation + quick-view modal plumbing. These are independent from
+  // IkasEvents and must remain always-loaded.
   attachHistoryListener();
   attachModalBadgeListener();
 
-  // 4) Slider / infinite-scroll ile gelen yeni ürün kartları için observer.
+  // 4) Product sliders / infinite-scroll content need a small always-on observer.
   startMutationObserver();
 
-  // 5) Bağlam → registry yönlendirmesi.
+  // 5) Context -> registry routing.
   onProductView(function (product) {
     mountMatching({ trigger: 'product', product: product });
   });
   onPageView(function (page) {
     mountMatching({ trigger: 'page', pageType: page.pageType });
   });
+  onListingView(function (listing) {
+    mountMatching({ trigger: 'listing-products', listing: listing });
+  });
 
-  // 6) Fallback: PAGE_VIEW 2sn içinde gelmezse (eski ikas versiyonları) listing
-  //    badge'leri manuel tetikle.
-  setTimeout(function () { if (!ls.rendered) renderListingBadges(); }, 2000);
+  // 6) Fallback for older storefronts where PAGE_VIEW is missing or late.
+  setTimeout(function () {
+    if (!ls.rendered) {
+      renderListingBadgesFallback().catch(function (err) {
+        console.error('[ikr] listing badge fallback error:', err);
+      });
+    }
+  }, 2000);
 }
 
 export function startWidget() {
@@ -61,28 +74,31 @@ export function startWidget() {
   }
 }
 
-// ── Preview modu ─────────────────────────────────────────────────────────────
-// Admin iframe önizlemesi. Preview tek yüzeye sahiptir ve kendi re-render
-// kanalını kullanır — registry'den ve storefront-context'ten GEÇMEZ.
-
 function onPreviewMessage(event) {
   var data = event.data;
   if (!data || data.type !== 'IKR_SETTINGS_UPDATE') return;
   var s = data.settings;
   if (!s || !currentSettings) return;
-  // Mevcut settings ile merge edip yeniden render et
   var merged = Object.assign({}, currentSettings, s);
-  render(currentProductId, merged, currentReviewsData, currentProductName, currentOrderBy, currentPage);
-  window.dispatchEvent(new CustomEvent('IKR_SETTINGS_UPDATED_PREVIEW', { detail: { settings: merged } }));
+  loadProductRenderModule().then(function (mod) {
+    mod.render(currentProductId, merged, currentReviewsData, currentProductName, currentOrderBy, currentPage);
+    window.dispatchEvent(new CustomEvent('IKR_SETTINGS_UPDATED_PREVIEW', { detail: { settings: merged } }));
+  }).catch(function (err) {
+    console.error('[ikr] preview render load error:', err);
+  });
 }
 
 function initPreview() {
-  bootstrap('mock-product', 'Örnek Ürün');
-  try { window.parent.postMessage({ type: 'IKR_WIDGET_READY' }, '*'); } catch (e) {}
+  loadReviewsMainModule().then(function (mod) {
+    return mod.bootstrap('mock-product', 'Ornek Urun');
+  }).then(function () {
+    try { window.parent.postMessage({ type: 'IKR_WIDGET_READY' }, '*'); } catch (e) {}
+  }).catch(function (err) {
+    console.error('[ikr] preview bootstrap load error:', err);
+  });
 }
 
 export function startPreview() {
-  // postMessage listener'ı hemen bağlanır (initPreview DOMContentLoaded'a gate'li).
   window.addEventListener('message', onPreviewMessage);
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPreview);

@@ -1,20 +1,13 @@
-// core/registry.js — Bundle-içi widget surface registry'si
+// core/registry.js - widget surface registry.
 //
-// ÖNEMLİ: Bu registry tek IIFE bundle içinde yapısal bir indirection katmanıdır.
-// Tüm surface'ler statik import edilir ve widget.js içinde mevcuttur. Bu bir
-// code-splitting / lazy-load sınırı DEĞİLDİR — buraya dinamik import() eklemeyin.
-// Bkz. ADR_0013 (docs/wiki/04_Decisions/ADR_0013_Modular_Widget_Loader_Architecture.md).
-//
-// Surface descriptor şekli:
-//   { key:      string,
-//     detect:   (context) => boolean,
-//     mount:    (context) => void,
-//     unmount?: () => void }   // Phase 1'de kullanılmıyor; Phase 2 (unmount akışı) için ayrılmış.
+// Phase 2: surface descriptors stay light, and mount() may lazy-load the real
+// module. The registry isolates detect/mount failures so one surface cannot
+// break the rest of the storefront widget.
 
 var surfaces = [];
 
-// Bir surface descriptor'ı kaydeder. Aynı key tekrar gelirse yok sayılır
-// (registerCoreSurfaces idempotent olsun diye).
+// Register a surface descriptor. Duplicate keys are ignored so
+// registerCoreSurfaces() remains idempotent.
 export function register(descriptor) {
   if (!descriptor || typeof descriptor.key !== 'string') return;
   if (typeof descriptor.detect !== 'function' || typeof descriptor.mount !== 'function') return;
@@ -28,10 +21,14 @@ export function getSurfaces() {
   return surfaces.slice();
 }
 
-// Verilen context için detect() geçen tüm surface'leri mount eder.
-// Her detect/mount çağrısı try/catch ile izole edilir — bir surface hata
-// verirse diğerleri etkilenmez (widget render'ının tek bir yüzey yüzünden
-// tamamen düşmesini engeller).
+function handleMountResult(surface, result) {
+  if (!result || typeof result.then !== 'function') return;
+  result.catch(function (err) {
+    console.error('[ikr] surface mount error (' + surface.key + '):', err);
+  });
+}
+
+// Mount every surface whose detect() passes for the given context.
 export function mountMatching(context) {
   for (var i = 0; i < surfaces.length; i++) {
     var surface = surfaces[i];
@@ -44,7 +41,7 @@ export function mountMatching(context) {
     }
     if (!matched) continue;
     try {
-      surface.mount(context);
+      handleMountResult(surface, surface.mount(context));
     } catch (err) {
       console.error('[ikr] surface mount error (' + surface.key + '):', err);
     }

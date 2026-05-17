@@ -1,98 +1,19 @@
-// product-widget/bootstrap.js — Settings + Reviews fetch, bootstrap orchestration
+// product-widget/bootstrap.js - reviews fetch and PDP render orchestration.
 
 import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
+import { fetchSettings } from '../core/settings.js';
 import { render } from './render.js';
 import {
-  currentOrderBy, currentPage, currentRatingFilter,
   setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter,
   setPhotoStripReviews,
 } from '../core/state.js';
 
-// Fotoğraf şeridi cap'i — ADR_0007 (sabit 15, admin ayarı yok, Yotpo/Judge.me bandı).
 var PHOTO_STRIP_LIMIT = 15;
-
-// ── Settings ─────────────────────────────────────────────────────────────────
-//
-// ADR_0008: Cloud name artık settings response'undan gelmiyor; build-time'da
-// widget bundle'a inject ediliyor. Bu yüzden settings için ayrı image-policy
-// cache, setter, fallback, warn helper'larına gerek yok — sadece widget
-// ayarları kalıyor. Settings endpoint outage'ı görselleri etkilemez.
-
-var SETTINGS_CACHE_KEY = 'ikr_settings_' + PUBLIC_API_KEY;
-var SETTINGS_CACHE_TTL = 5 * 60 * 1000;  // 5 dakika
-var SETTINGS_CACHE_STALE_TTL = 7 * 24 * 60 * 60 * 1000;
-var SETTINGS_404_TTL = 30 * 1000;       // 404 için kısa TTL
-
-export async function fetchSettings() {
-  // Preview modunda sessionStorage'dan ayarları oku — flash olmaz
-  if (window.__ikasPreviewMode) {
-    try {
-      var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
-      var savedSettings = window.__ikasPreviewSettings || sessionStorage.getItem('ikr_preview_settings') || '';
-      var settingsOverride = {};
-      if (savedSettings) {
-        try { settingsOverride = JSON.parse(savedSettings); } catch (_) {}
-      }
-      var previewRes = await fetchWithTimeout(previewBase + '/api/preview/settings');
-      if (previewRes.ok) {
-        var previewData = await previewRes.json();
-        if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
-          previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
-        }
-        return previewData;
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  var staleEntry = null;
-  var cached = cacheGet(SETTINGS_CACHE_KEY);
-  if (cached) {
-    try {
-      var entry = JSON.parse(cached);
-      if (entry && entry.t !== undefined) {
-        if (entry.notFound) {
-          if (Date.now() - entry.t < SETTINGS_404_TTL) return null;
-          cacheSet(SETTINGS_CACHE_KEY, '');
-        } else if (entry.v) {
-          var cacheAge = Date.now() - entry.t;
-          if (cacheAge < SETTINGS_CACHE_TTL) return entry.v;
-          if (cacheAge < SETTINGS_CACHE_STALE_TTL) {
-            staleEntry = entry.v;
-          } else {
-            cacheSet(SETTINGS_CACHE_KEY, '');
-          }
-        } else {
-          cacheSet(SETTINGS_CACHE_KEY, '');
-        }
-      } else {
-        cacheSet(SETTINGS_CACHE_KEY, '');
-      }
-    } catch (_) { cacheSet(SETTINGS_CACHE_KEY, ''); }
-  }
-  try {
-    var res = await fetchWithTimeout(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
-    if (!res.ok) {
-      if (res.status === 404) {
-        cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), notFound: true }));
-      }
-      return staleEntry || null;
-    }
-    var settings = await res.json();
-    cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: settings }));
-    return settings;
-  } catch (err) {
-    console.error('[ikr] fetchSettings error:', err);
-    return staleEntry || null;
-  }
-}
-
-// ── Reviews ───────────────────────────────────────────────────────────────────
-
-var REVIEWS_CACHE_TTL = 60 * 1000; // 1 dakika
+var REVIEWS_CACHE_TTL = 60 * 1000;
 var REVIEWS_FETCH_ERROR = '__ikrReviewsFetchError';
+var bootstrapCache = {};
 
 export function createReviewsFetchError(message) {
   return {
@@ -106,7 +27,6 @@ export function isReviewsFetchError(value) {
 }
 
 export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages, limit) {
-  // Preview modunda mock endpoint kullan — page parametresi load more testi için
   if (window.__ikasPreviewMode) {
     try {
       var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
@@ -119,12 +39,11 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
 
   orderBy = orderBy || 'newest';
   page = page || 1;
-  // limit query param — strip 15 yorum çekerken ana listenin 10'luk cache anahtarıyla
-  // çakışmasını önlemek için cache key'e dahil ediliyor.
   var limitKey = limit ? '_l' + limit : '';
   var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + limitKey;
   var staleReviews = null;
   var cached = cacheGet(key);
+
   if (cached) {
     try {
       var entry = JSON.parse(cached);
@@ -137,6 +56,7 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
       }
     } catch (_) { cacheSet(key, ''); }
   }
+
   try {
     var url = API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
       '&productId=' + encodeURIComponent(productId) +
@@ -156,48 +76,35 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
   }
 }
 
-// Photo strip için ayrı fetch — newest-first cap 15 fotoğraflı yorum.
-// Ana liste fetch'inden bağımsız: sort/filter/load-more değişikliklerinde strip
-// re-fetch yapmaz. Yeni onaylı yorum geldiğinde REVIEWS_CACHE_TTL (1 dk) sonra
-// otomatik rotation çalışır (en eski strip görseli düşer, yeni baş tarafa girer).
-// Backend `hasImages=true` cloudName guard yapıyor; trusted URL doğrulaması
-// helpers.js:getTrustedReviewImages içinde tekrarlanıyor.
 export async function fetchPhotoStripReviews(productId) {
   var data = await fetchReviews(productId, 'newest', 1, null, true, PHOTO_STRIP_LIMIT);
   if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
   return data.data.reviews;
 }
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
-
-var bootstrapCache = {};
-
 export async function bootstrap(productId, productName) {
-  // Yeni ürüne geçilince eski badge'i hemen temizle — bootstrapCache kontrolünden önce
   var oldBadge = document.getElementById('ikr-rating-badge');
   if (oldBadge) oldBadge.remove();
   var oldJsonLd = document.getElementById('ikr-jsonld');
   if (oldJsonLd) oldJsonLd.remove();
   if (bootstrapCache[productId]) return;
   bootstrapCache[productId] = true;
-  // Fallback: reviews widget ayarları için varsayılan değerler
+
   var FALLBACK = { title: 'Müşteri Yorumları', enabled: true };
   var BADGE_FALLBACK = { enabled: true, icon: 'star', size: 'medium', color: '#f59e0b' };
+
   try {
     var response = await fetchSettings();
     if (!response) return;
 
-    // API { widgets: { reviews: {...}, badge: {...} } } döndürüyor
     var reviewsSettings = (response.widgets && response.widgets.reviews) || FALLBACK;
     var badgeSettings = (response.widgets && response.widgets.badge) || BADGE_FALLBACK;
-
-    // Widget devre dışıysa render etme
     if (reviewsSettings.enabled === false) return;
 
     setCurrentOrderBy('newest');
     setCurrentPage(1);
     setCurrentRatingFilter(null);
-    // Ana liste ve photo-strip dataset'lerini paralel çek — strip filter/sort'tan bağımsız
+
     var fetchResults = await Promise.all([
       fetchReviews(productId, 'newest', 1, null),
       fetchPhotoStripReviews(productId),

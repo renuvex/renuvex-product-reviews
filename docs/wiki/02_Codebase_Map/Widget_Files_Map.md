@@ -3,7 +3,22 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-17
+last_verified: 2026-05-17
+confidence: high
+source_files:
+  - "scripts/build-widget.mjs"
+  - "src/widget/classic-loader.js"
+  - "src/widget/index.js"
+  - "src/widget/loader.js"
+  - "src/widget/core/lazy-modules.js"
+  - "src/widget/core/storefront-context.js"
+  - "src/widget/core/registry.js"
+  - "src/widget/core/settings.js"
+  - "src/widget/listing-badges/index.js"
+  - "src/widget/themes/ozy/adapter.js"
+  - "public/widget.js"
+  - "public/widget-runtime/build-manifest.json"
 tags:
   - widget
   - storefront
@@ -16,13 +31,15 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), bundled by esbuild into a single IIFE at [public/widget.js](public/widget.js). Modular: a `core/` runtime, a `product-widget/` for product detail pages, `listing-badges/` for collection pages, swappable `review-layouts/` and `summary-layouts/`, and `themes/` for theme-specific selectors/styles.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `product-widget/` and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/styles.
 
 ## Tree
 
 ```
 src/widget/
-├─ index.js                       # 🟢 Entry. Detects preview vs prod; attaches observer/events.
+├─ classic-loader.js              # Classic ikas script entry; imports ESM runtime.
+├─ index.js                       # ESM runtime entry. Detects preview vs prod.
+├─ loader.js                      # Orchestrates context, registry, observer, lazy modules.
 ├─ events.js                      # Document-level click/scroll wiring
 ├─ icons.js                       # Backward-compatible icon API re-export
 ├─ icons/
@@ -33,6 +50,10 @@ src/widget/
 │
 ├─ core/
 │  ├─ config.js                   # PUBLIC_API_KEY + API_BASE from <script src=...> (SSR-safe)
+│  ├─ storefront-context.js       # Single Storefront Events owner.
+│  ├─ registry.js                 # Surface registry; supports async lazy mounts.
+│  ├─ lazy-modules.js             # Dynamic import boundaries for widget modules.
+│  ├─ settings.js                 # Shared public settings fetch/cache.
 │  ├─ state.js                    # Module-level mutable state (currentSettings, currentProductId, ...)
 │  ├─ fetch.js                    # API helpers (calls /api/public/*)
 │  ├─ cache.js                    # sessionStorage wrapper with in-memory fallback (cacheGet/cacheSet)
@@ -78,7 +99,9 @@ src/widget/
 │  └─ split/
 │
 └─ themes/
+   ├─ current-adapter.js           # Active theme adapter selector.
    └─ ozy/
+      ├─ adapter.js               # Ozy fallback DOM placement adapter.
       ├─ theme.js                 # Theme-specific selectors / hooks
       └─ styles.js                # Theme-specific styles
 ```
@@ -86,7 +109,7 @@ src/widget/
 ## Key concepts
 
 ### Bootstrap path
-`index.js` → `attachEvents` + `attachModalBadgeListener` + `startMutationObserver` → on relevant DOM event, the observer calls `bootstrap()` which detects current product, fetches reviews, calls `render()`.
+`classic-loader.js` -> `public/widget.js` -> dynamic import of `widget-runtime/runtime.js`. The runtime initializes base styles/error reporting, then `loader.js` registers lightweight surfaces, subscribes to Storefront Events through `core/storefront-context.js`, and lazy-loads modules through `core/lazy-modules.js`.
 
 ### Preview mode
 `index.js` checks `window.__ikasPreviewMode === true`. In preview:
@@ -103,7 +126,10 @@ src/widget/
 `scripts/build-widget.mjs` aliases `themes/ozy/listing-selector.js` and `themes/ozy/styles.js` to a different theme folder when `--theme=new-theme`. Output: `widget-new-theme.js`. **The `themes/new-theme/` directory does not exist on disk** — only `themes/ozy/` is present. So `pnpm build:widget --theme=new-theme` would currently fail. The starter scaffold expects the user to add `themes/new-theme/` as a sibling. Source code imports directly from `../themes/ozy/...` (verified: `render.js` and `listing-badges/inject.js`). How runtime selects between `widget.js` and `widget-new-theme.js` is also unclear — see [[Open_Questions]].
 
 ## What lives in `public/`
-- [public/widget.js](public/widget.js) — built bundle (committed). Don't hand-edit.
+- [public/widget.js](public/widget.js) — built classic loader (committed). Don't hand-edit.
+- [public/widget-runtime/runtime.js](public/widget-runtime/runtime.js) — built ESM runtime entry. Don't hand-edit.
+- [public/widget-runtime/chunks/](public/widget-runtime/chunks/) — built lazy chunks. Don't hand-edit.
+- [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json) — build output report including bytes and import kinds.
 - [public/ikr-test.js](public/ikr-test.js) — small local test harness for the widget.
 - [public/logo.svg](public/logo.svg)
 
@@ -119,6 +145,7 @@ src/widget/
 ## Related Source Files
 - [src/widget/](src/widget/)
 - [public/widget.js](public/widget.js)
+- [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json)
 - [scripts/build-widget.mjs](scripts/build-widget.mjs)
 - [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)
 
@@ -133,6 +160,7 @@ src/widget/
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-17: Phase 2 module split implementation started. `public/widget.js` is now a classic loader, `public/widget-runtime/*` contains ESM runtime/chunks, and lazy boundaries live in `core/lazy-modules.js`.
 - 2026-05-12: Split the storefront icon registry into [review-icons.js](src/widget/icons/review-icons.js), [filter-icons.js](src/widget/icons/filter-icons.js), and [icons/index.js](src/widget/icons/index.js). [icons.js](src/widget/icons.js) now remains as a compatibility re-export.
 - 2026-05-10: Documented the trusted review image helpers in [helpers.js](src/widget/core/helpers.js). Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Removed the legacy inline/page review form from the widget source map. Review submission is now modal-only via [review-form-modal/](src/widget/product-widget/review-form-modal/). Related source: [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).

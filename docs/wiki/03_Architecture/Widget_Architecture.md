@@ -3,8 +3,8 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-16
-last_verified: 2026-05-16
+updated: 2026-05-17
+last_verified: 2026-05-17
 confidence: high
 tags:
   - widget
@@ -20,24 +20,33 @@ related:
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
 source_files:
+  - "scripts/build-widget.mjs"
+  - "src/widget/classic-loader.js"
   - "src/widget/index.js"
   - "src/widget/loader.js"
+  - "src/widget/core/lazy-modules.js"
   - "src/widget/core/config.js"
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/registry.js"
+  - "src/widget/core/settings.js"
   - "src/widget/product-widget/bootstrap.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/listing-badges/index.js"
-  - "scripts/build-widget.mjs"
+  - "src/widget/themes/ozy/adapter.js"
   - "public/widget.js"
+  - "public/widget-runtime/build-manifest.json"
 ---
 
 # Widget Architecture
 
 ## Summary
-A single esbuild-bundled IIFE (`public/widget.js`) loaded by every storefront page. It detects context (product page, listing page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, the review submission modal, and the photo review detail lightbox. The bundle is intentionally framework-free.
+A classic ikas-compatible storefront entry (`public/widget.js`) loaded by every storefront page, which imports an ESM runtime and lazy chunks from `public/widget-runtime/*`. It detects context (product page, listing/search page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, the review submission modal, and the photo review detail lightbox. The runtime is intentionally framework-free.
 
-As of the 2026-05-15 audit, this is still the current production architecture. The deployed widget measured `177763` bytes and is served as a single `widget.js` asset. Future Yotpo-style work should split this into a small loader plus lazy widget modules; see [[Yotpo_Style_Widget_Modular_Architecture]].
+As of the 2026-05-17 Phase 2 implementation work, local build output is split:
+`public/widget.js` is a small classic loader, `public/widget-runtime/runtime.js`
+is the ESM runtime entry, and PDP/listing modules are lazy chunks. The deployed
+pre-Phase-2 widget measured `177763` bytes on 2026-05-15; re-measure after
+deployment before claiming live performance improvement.
 
 ## Responsibilities
 - Inject summary + reviews on **product detail pages**
@@ -55,8 +64,10 @@ As of the 2026-05-15 audit, this is still the current production architecture. T
 | [src/widget/index.js](src/widget/index.js) | Thin entry. Side-effect inits (ADR_0011 order) + preview/prod branch. Delegates to `loader.js`. |
 | [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Wires context → registry (ADR_0013). |
 | [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). |
-| [core/registry.js](src/widget/core/registry.js) | In-bundle surface registry (`reviews-main`, `listing-badge`). Structural indirection, NOT a code-splitting boundary. |
-| [surfaces/](src/widget/surfaces/) | Thin surface descriptors (`detect`/`mount`) adapting `bootstrap`/`renderListingBadges` to the registry. |
+| [core/registry.js](src/widget/core/registry.js) | Surface registry (`reviews-main`, `listing-badge`) with guarded async mounts. |
+| [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for product, listing, and preview render modules. |
+| [core/settings.js](src/widget/core/settings.js) | Shared public settings fetch/cache used by lazy modules without pulling PDP render code. |
+| [surfaces/](src/widget/surfaces/) | Thin surface descriptors (`detect`/`mount`) that lazy-load implementation modules. |
 | [core/config.js](src/widget/core/config.js) | `PUBLIC_API_KEY` and `API_BASE` parsed from own `<script src>`. |
 | [core/state.js](src/widget/core/state.js) | Module-level mutable state (current product, settings, reviews, paging, canonical lightbox review collection). |
 | [core/fetch.js](src/widget/core/fetch.js) | API helpers calling `/api/public/*`. |
@@ -73,12 +84,18 @@ As of the 2026-05-15 audit, this is still the current production architecture. T
 | [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, slug discovery, bulk fetch, injection. |
 | [review-layouts/](src/widget/review-layouts/) | `card` / `gallery` / `list` review item layouts (registry in `index.js`). |
 | [summary-layouts/](src/widget/summary-layouts/) | `classic` / `compact` / `hero` / `minimal` / `split` summary layouts. |
-| [themes/ozy/](src/widget/themes/ozy/) | Theme-specific selectors and styles. Default. |
+| [themes/ozy/](src/widget/themes/ozy/) | Theme-specific styles/selectors plus fallback adapter. Default. |
 
 ## Lifecycle
 
 ```
 Storefront HTML loads <script async>
+        │
+        ▼
+public/widget.js classic loader
+        │ dynamic import
+        ▼
+public/widget-runtime/runtime.js
         │
         ▼
 core/config.js    → PUBLIC_API_KEY, API_BASE
@@ -103,12 +120,13 @@ product-widget/bootstrap.js
   └── render.js (chooses layouts from settings; injects rating badge)
 ```
 
-Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] introduced this loader +
-surface registry + Storefront Events context layer. It is an internal structural
-refactor only — the build output is still a single IIFE `widget.js`; no ESM
-migration, code-splitting, or lazy-loading. `core/storefront-context.js` is now the
-single `window.IkasEvents` subscription point. Physical module splitting is a
-future phase; see [[Yotpo_Style_Widget_Modular_Architecture]].
+Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] introduced the loader +
+surface registry + Storefront Events context layer. Phase 2 implementation started
+on 2026-05-17: build output now uses a classic compatibility loader plus ESM
+runtime/chunks, `VIEW_SEARCH_RESULTS` is handled beside verified `VIEW_LISTING`,
+and listing placement rules moved into the Ozy fallback adapter. Phase 2 still
+requires live dev-store browser/network verification and Sentry post-test checks
+before it is closed.
 
 ## Layout-aware settings (key concept)
 
@@ -135,8 +153,10 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 
 ## Build
 - [scripts/build-widget.mjs](scripts/build-widget.mjs) drives esbuild.
-- Format: IIFE, ES2017, minified in prod, banner with build timestamp.
-- Validation: post-build `node --check` syntax test before saving output.
+- Output: classic loader (`public/widget.js`) plus ESM runtime/chunks
+  (`public/widget-runtime/*`), ES2017, minified in prod, banner with build timestamp.
+- Validation: post-build `node --check` for the classic loader plus esbuild ESM
+  bundling and `public/widget-runtime/build-manifest.json` output metadata.
 
 ## Notes
 - The widget is the **highest-leverage code surface** in the codebase (every storefront load executes it). Bundle size and TTI matter.
@@ -148,11 +168,12 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, responsive breakpoints, viewport sizing, scroll containment, body scroll locking, focus management, or history behavior. Card/list/gallery navigation is scoped to the active sort/filter state's loaded review collection; the lightbox does not fetch unloaded pages by itself.
 - Lightbox layout uses a three-tier responsive contract in the Ozy theme: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile at `640px` and below with `vh` / `svh` / `dvh` viewport-unit fallbacks.
 - Review image rendering depends on a trusted Cloudinary cloud policy. The cloud name is a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`; it is not threaded through settings, no runtime setter exists, and there is no per-store image-policy cache. Settings endpoint outages cannot remove images. Layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]], [[ADR_0008_Cloud_Name_Build_Time_Only]], and [[Bug_Cloud_Name_Silent_Image_Filter]].
-- A 2026-05-15 Yotpo/Protein Ocean research pass showed that mature review widgets use a small loader, declarative placeholder instances, separate static widget modules, and dynamic review/rating/Q&A APIs. Do not continue growing the single IIFE indefinitely; new major widget surfaces should be designed around the modular loader plan in [[Yotpo_Style_Widget_Modular_Architecture]].
+- A 2026-05-15 Yotpo/Protein Ocean research pass showed that mature review widgets use a small loader, declarative placeholder instances, separate static widget modules, and dynamic review/rating/Q&A APIs. New major widget surfaces should follow the Phase 2 loader/lazy-module pattern in [[Yotpo_Style_Widget_Modular_Architecture]] rather than being statically imported by the always-loaded runtime.
 
 ## Related Source Files
 - [src/widget/](src/widget/)
 - [public/widget.js](public/widget.js) (built)
+- [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json) (built)
 - [scripts/build-widget.mjs](scripts/build-widget.mjs)
 - [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)
 
@@ -172,6 +193,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-17: Phase 2 module split implementation started. Build output is now a classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; async lazy surface mounts, `VIEW_SEARCH_RESULTS`, shared settings, and the Ozy fallback adapter are implemented. Live dev-store/Sentry verification remains open.
 - 2026-05-16: Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] — internal loader + surface registry + single Storefront Events context module. New files: `loader.js`, `core/storefront-context.js`, `core/registry.js`, `surfaces/*`. `index.js` is now a thin entry; `events.js` keeps only the SPA history patch + modal badge plumbing; `getProductFromPage` removed from `bootstrap.js`. Build output stays a single IIFE — no ESM/splitting/lazy-load. Verified via `pnpm build:widget` + `/preview` smoke test; live storefront verification pending deploy.
 - 2026-05-15: Added architecture note from Yotpo/Protein Ocean live research. Current single-bundle architecture remains the source of truth, but future large widget surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-12: Split widget icon architecture into [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js), [src/widget/icons/filter-icons.js](src/widget/icons/filter-icons.js), and [src/widget/icons/index.js](src/widget/icons/index.js), with [src/widget/icons.js](src/widget/icons.js) retained as a compatibility re-export.

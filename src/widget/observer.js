@@ -1,9 +1,16 @@
-// observer.js — MutationObserver: slider/infinite scroll ile gelen yeni kartları yakalar
+// observer.js - MutationObserver for lazy product-card content.
 
 import { extractSlug, SYSTEM_SLUGS } from './core/helpers.js';
 import { ls } from './core/state.js';
-import { renderListingBadges } from './listing-badges/index.js';
+import { loadListingBadgesModule } from './core/lazy-modules.js';
+
 var mutationDebounceTimer = null;
+
+function renderListingBadgesLazy() {
+  return loadListingBadgesModule().then(function (mod) {
+    mod.renderListingBadges();
+  });
+}
 
 export function startMutationObserver() {
   if (typeof MutationObserver === 'undefined') return;
@@ -27,7 +34,9 @@ export function startMutationObserver() {
       });
       if (!hasUnbadged) return;
       ls.rendered = false;
-      renderListingBadges();
+      renderListingBadgesLazy().catch(function (err) {
+        console.error('[ikr] listing badge lazy render error:', err);
+      });
     }, 300);
   });
   observer.observe(document.body, { childList: true, subtree: true });

@@ -1,7 +1,7 @@
-// listing-badges/index.js — Listing badge orkestrasyon ve state yönetimi
+// listing-badges/index.js - listing badge orchestration and state.
 
 import { ls } from '../core/state.js';
-import { fetchSettings } from '../product-widget/bootstrap.js';
+import { fetchSettings } from '../core/settings.js';
 import { collectSlugs } from './collect.js';
 import { fetchRatings } from './ratings.js';
 import { injectBadges } from './inject.js';
@@ -22,16 +22,16 @@ export async function renderListingBadges() {
     if (!response) { ls.rendered = false; return; }
     var ratings = results[1];
 
-    // Badge rengi: badge.color → default
+    // Badge color: settings badge.color -> default.
     var widgets = (response && response.widgets) || {};
     var badgeColor = (widgets.badge && widgets.badge.color) || '#f59e0b';
 
-    // Badge widget devre dışıysa inject etme
+    // Do not inject listing badges when the badge widget is disabled.
     if (widgets.badge && widgets.badge.enabled === false) { ls.rendered = false; return; }
 
     document.documentElement.style.setProperty('--ikr-badge-color', badgeColor);
 
-    // Fetch tamamlandıktan sonra atomik swap: önce eskileri sil, sonra yenileri inject et
+    // Atomic swap after fetch: remove old badges, then inject the new set.
     if (doCleanup) {
       document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(el) { el.remove(); });
       document.querySelectorAll('[data-ikr-badge]').forEach(function(el) { el.removeAttribute('data-ikr-badge'); });

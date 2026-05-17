@@ -1,33 +1,23 @@
-// listing-badges/inject.js — Ürün kartlarına listing badge inject eder
+// listing-badges/inject.js - inject listing badges into product cards.
 
 import { extractSlug } from '../core/helpers.js';
 import { createBadgeEl } from '../core/badge.js';
-import {
-  THEME_LISTING_TITLE_SELECTOR,
-  THEME_MODAL_SELECTOR,
-  THEME_MODAL_TITLE_SELECTOR,
-  THEME_SINGLE_PRODUCT_CONTAINER,
-  THEME_SINGLE_PRODUCT_NAME_LINK,
-  THEME_BANNER_CONTAINERS,
-  THEME_PRODUCT_CONTAINERS,
-} from '../themes/ozy/theme.js';
-import { lastClickedSlug } from '../core/state.js'; // events.js tarafından set edilir
+import { getThemeAdapter } from '../themes/current-adapter.js';
+import { lastClickedSlug } from '../core/state.js';
 
 var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
 var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
 
-// Bir kart içinde ürün başlığı elementini bulur
 export function findTitleEl(scope, productName) {
-  // 1. Tema'ya özel doğrulanmış selector — en güvenilir
-  var byTheme = scope.querySelector(THEME_LISTING_TITLE_SELECTOR);
+  var adapter = getThemeAdapter();
+
+  var byTheme = adapter.findListingTitle(scope);
   if (byTheme) return byTheme;
 
-  // 2. Genel productTitle/productName class pattern'ı — CSS module temaları
   if (scope.matches && scope.matches(TITLE_CLASS_SELECTOR)) return scope;
   var byClass = scope.querySelector(TITLE_CLASS_SELECTOR);
   if (byClass) return byClass;
 
-  // 3. productName varsa tam text eşleşmesi — styled-components temaları
   if (productName) {
     var all = scope.querySelectorAll('*');
     for (var i = 0; i < all.length; i++) {
@@ -35,7 +25,6 @@ export function findTitleEl(scope, productName) {
     }
   }
 
-  // 4. Yapısal tarama — resim/fiyat olmayan, anlamlı text içeren ilk leaf element
   var candidates = scope.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div');
   for (var j = 0; j < candidates.length; j++) {
     var cel = candidates[j];
@@ -50,40 +39,27 @@ export function findTitleEl(scope, productName) {
   return null;
 }
 
-// Tek bir <a> linkine badge inject eder
 export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   if (a.getAttribute('data-ikr-badge')) return;
+  var adapter = getThemeAdapter();
   var slug = extractSlug(a.href);
 
   if (a.id === 'ikr-rating-badge') { a.setAttribute('data-ikr-badge', '1'); return; }
   if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') { a.setAttribute('data-ikr-badge', '1'); return; }
-  if (a.closest('header') || a.closest('nav')) { a.setAttribute('data-ikr-badge', '1'); return; }
-  if (a.closest('[class*="basket"]') || a.closest('[class*="cart"]')) { a.setAttribute('data-ikr-badge', '1'); return; }
-
-  // Ana ürün container (.single-product-container-main) içindeki ürün adı linki DIŞINDAKİ
-  // tüm linkler (Sepete Ekle, İncele, görsel linki, vb.) listing badge almaz.
-  // Ürün adı linki istisnadır — anasayfadaki single product section'da badge gösterilsin diye.
-  if (a.closest(THEME_SINGLE_PRODUCT_CONTAINER) && !a.closest(THEME_SINGLE_PRODUCT_NAME_LINK)) { a.setAttribute('data-ikr-badge', '1'); return; }
-
-  // Mevcut PDP'nin kendi ürün adı linkine listing badge inject etme —
-  // rating-badge.js zaten bu ürün için büyük #ikr-rating-badge'i title altına inject ediyor.
-  // Anasayfa single product section'da slug !== currentSlug olduğu için bu kural tetiklenmez,
-  // oradaki badge çalışmaya devam eder.
-  if (slug === currentSlug && a.closest(THEME_SINGLE_PRODUCT_NAME_LINK)) { a.setAttribute('data-ikr-badge', '1'); return; }
-
-  if (a.closest(THEME_BANNER_CONTAINERS)) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (adapter.isNavigationLink(a)) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (adapter.isCartLink(a)) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (adapter.isDisallowedSingleProductLink(a, currentSlug, slug)) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (adapter.isBannerLink(a)) { a.setAttribute('data-ikr-badge', '1'); return; }
 
   var hasNestedA = !!a.querySelector('a[href]');
   var realText = Array.from(a.childNodes).filter(function(n) { return n.nodeType === 3; }).map(function(n) { return n.textContent.trim(); }).join('').trim();
   var hasTitleEl = !!findTitleEl(a, productName);
 
-  // Sadece resim içeren anlamsız link → skip
   if (!realText && !hasTitleEl && !hasNestedA) { a.setAttribute('data-ikr-badge', '1'); return; }
 
   a.setAttribute('data-ikr-badge', '1');
 
   if (hasNestedA) {
-    // Pattern 1 — Tüm kart tek <a> içinde (slider kartı)
     a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
     var nameEl = findTitleEl(a, productName);
     if (!nameEl || nameEl.querySelector('[data-ikr-listing-badge]')) return;
@@ -92,7 +68,6 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
     return;
   }
 
-  // Pattern 2/3/4 — Bağımsız link
   var titleEl = findTitleEl(a, productName);
   if (titleEl && titleEl.querySelector('[data-ikr-listing-badge]')) return;
 
@@ -100,34 +75,30 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
     var tAlign = window.getComputedStyle(titleEl).textAlign;
     titleEl.appendChild(createBadgeEl(rating, tAlign === 'center' ? 'center' : tAlign === 'right' ? 'flex-end' : 'flex-start'));
   } else {
-    // Pattern 3 — direkt text node içeren link
     var badge = createBadgeEl(rating, 'flex-start');
     var first = a.firstElementChild;
     first ? a.insertBefore(badge, first) : a.appendChild(badge);
   }
 }
 
-// add-to-basket-modal açıldığında slug ile badge inject eder
 function injectModalBadge(slugNameMap, ratings) {
-  var modal = document.querySelector(THEME_MODAL_SELECTOR);
+  var adapter = getThemeAdapter();
+  var modal = adapter.findModal();
   if (!modal) return;
-  var h1 = modal.querySelector(THEME_MODAL_TITLE_SELECTOR);
+  var h1 = adapter.findModalTitle(modal);
   if (!h1 || h1.querySelector('[data-ikr-listing-badge]')) return;
 
   var slug = null;
 
-  // 1. Click'ten yakalanan slug (kategori/listing sayfası — <a href> tıklandı)
   if (lastClickedSlug && ratings[lastClickedSlug]) {
     slug = lastClickedSlug;
   }
 
-  // 2. Ürün sayfası slug'ı (ürün sayfasındaki <div> buton tıklandı)
   if (!slug) {
     var pageSlug = extractSlug(window.location.pathname);
     if (pageSlug && ratings[pageSlug]) slug = pageSlug;
   }
 
-  // 3. h1 text'ini slugNameMap isimleriyle eşleştir (anasayfa single section)
   if (!slug) {
     var h1Text = h1.textContent.trim();
     Object.keys(slugNameMap).forEach(function(s) {
@@ -137,9 +108,8 @@ function injectModalBadge(slugNameMap, ratings) {
     });
   }
 
-  // 4. single-product-container-main içindeki ilk <a href>'den slug al
   if (!slug) {
-    var spContainer = document.querySelector(THEME_SINGLE_PRODUCT_CONTAINER);
+    var spContainer = adapter.findSingleProductContainer();
     if (spContainer) {
       var spLink = spContainer.querySelector('a[href]');
       if (spLink) {
@@ -149,13 +119,12 @@ function injectModalBadge(slugNameMap, ratings) {
     }
   }
 
-  // 5. h1 text'ini sayfadaki <a href> link text'leriyle eşleştir (genel fallback)
   if (!slug) {
     var h1Lower = h1.textContent.trim().toLowerCase();
     document.querySelectorAll('a[href]').forEach(function(a) {
       if (slug) return;
-      if (a.closest('header') || a.closest('nav')) return;
-      if (a.closest(THEME_SINGLE_PRODUCT_CONTAINER)) return;
+      if (adapter.isNavigationLink(a)) return;
+      if (adapter.isInsideSingleProductContainer(a)) return;
       var aText = a.textContent.trim().toLowerCase();
       if (aText && aText === h1Lower) {
         var s2 = extractSlug(a.href);
@@ -168,31 +137,29 @@ function injectModalBadge(slugNameMap, ratings) {
   h1.appendChild(createBadgeEl(ratings[slug], 'flex-start'));
 }
 
-// Tüm slug'lar için sadece whitelist container'lar içindeki linklere badge inject eder
 export function injectBadges(slugNameMap, ratings) {
+  var adapter = getThemeAdapter();
   var currentSlug = extractSlug(window.location.pathname);
-  // Sadece whitelist container'lar içindeki linkleri tara — dekoratif alanlar otomatik atlanır
-  var containers = document.querySelectorAll(THEME_PRODUCT_CONTAINERS);
+  var containers = adapter.findListingContainers();
   var links = [];
+
   containers.forEach(function(c) {
-    // Container'ın kendisi <a> olabilir (örn. product-block-container)
     if (c.tagName === 'A' && c.href) {
       links.push(c);
     } else {
       c.querySelectorAll('a[href]').forEach(function(a) { links.push(a); });
     }
   });
+
   Object.keys(slugNameMap).forEach(function(slug) {
     var rating = ratings[slug];
     if (!rating || rating._empty || rating.count === 0) return;
-    // Not: Mevcut slug için de iterate ederiz — slider kartlarında mevcut ürünün kendisi
-    // de (örn. "Çok Satanlar") geçebilir ve bu kartlara badge inject edilmeli.
-    // Ana ürün başlığı için çakışma koruması injectBadgeOnLink içinde yapılır.
     var productName = slugNameMap[slug];
     links.forEach(function(a) {
       if (extractSlug(a.href) !== slug) return;
       injectBadgeOnLink(a, rating, productName, currentSlug);
     });
   });
+
   injectModalBadge(slugNameMap, ratings);
 }

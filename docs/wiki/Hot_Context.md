@@ -27,7 +27,7 @@ source_files:
 
 ## Current Focus
 - ikas review/rating app: merchant admin, storefront widget, review submission, image upload, moderation, settings preview.
-- Current focus: ADR_0013 Phase 2 module split planning and implementation gates.
+- Current focus: ADR_0013 Phase 2 module split implementation and live verification gates.
 
 ## Must Know
 - Source code, config, migrations, tests, and runtime behavior are the source of truth; wiki pages are routing and memory.
@@ -41,11 +41,12 @@ source_files:
 - 2026-05-17: [[Phase_1_Widget_Runtime_Audit]] records dev-store runtime verification. `VIEW_LISTING` is confirmed as a real runtime event carrying `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` and are Phase 2 work.
 - 2026-05-17: [[Bug_Listing_Badge_Stars_Direct_Load]] fixed. Cold listing stars were 0x0 because `#ikr-styles` was PDP-only; `src/widget/core/badge.js` now self-injects `#ikr-badge-styles`.
 - 2026-05-17: [[Phase_2_Widget_Module_Split_Plan]] defines the Phase 2 work and done criteria. Keep `widget.js?publicApiKey=...` compatible; use a classic loader plus ESM chunks unless ikas module script loading is proven.
+- 2026-05-17: Phase 2 implementation started. Local build now emits a small classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; `VIEW_SEARCH_RESULTS` is handled; Ozy listing placement moved into a fallback adapter. Live dev-store/browser/Sentry verification is still required before Phase 2 is done.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
 - ADR_0013 Phase 1 runtime audit is recorded in [[Phase_1_Widget_Runtime_Audit]]; A/B/C/G ran on 2026-05-17 and gates passed.
-- Remaining Phase 2/3 items: ESM/code-split, `VIEW_SEARCH_RESULTS` handling on search pages, StorefrontJSScript schema reconciliation.
+- Remaining Phase 2/3 items: live ESM chunk verification on the dev store, Sentry post-test check, StorefrontJSScript schema reconciliation, cache/versioning, and script lifecycle hardening.
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
 
 ## Read Next

@@ -24,7 +24,9 @@ if (hasWindow && API_BASE) {
 
   function isWidgetError(filename, stack) {
     if (filename && filename.indexOf('/widget.js') !== -1) return true;
+    if (filename && filename.indexOf('/widget-runtime/') !== -1) return true;
     if (stack && stack.indexOf('widget.js') !== -1) return true;
+    if (stack && stack.indexOf('widget-runtime') !== -1) return true;
     return false;
   }
 

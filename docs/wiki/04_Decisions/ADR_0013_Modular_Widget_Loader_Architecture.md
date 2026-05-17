@@ -19,12 +19,22 @@ related:
   - "[[Phase_1_Widget_Runtime_Audit]]"
   - "[[ADR_0002_Widget_Injection_Strategy]]"
 source_files:
+  - "scripts/build-widget.mjs"
+  - "src/widget/classic-loader.js"
   - "src/widget/index.js"
   - "src/widget/loader.js"
+  - "src/widget/core/lazy-modules.js"
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/registry.js"
+  - "src/widget/core/settings.js"
   - "src/widget/surfaces/index.js"
+  - "src/widget/surfaces/reviews-main.surface.js"
+  - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/events.js"
+  - "src/widget/themes/current-adapter.js"
+  - "src/widget/themes/ozy/adapter.js"
+  - "public/widget.js"
+  - "public/widget-runtime/build-manifest.json"
 ---
 
 # ADR_0013 — Modular Widget Loader Architecture
@@ -184,34 +194,35 @@ bundle preserved; zero behavior change.
   choices; record only comparable lessons in [[Yotpo_Protein_Ocean_Widget_Research]]
   and keep dev-store verification as the Phase 1 source of truth.
 
-### Phase 2 — Physical module split — ⏳ Planned
+### Phase 2 — Physical module split — In progress (2026-05-17)
 
 Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 
-- Migrate the build from IIFE to ESM so esbuild code-splitting works.
-- Keep `widget.js?publicApiKey=...` compatible. Do not replace it with a pure ESM
-  file unless ikas script loading with `type="module"` is proven; prefer a small
-  classic compatibility loader that loads the ESM runtime/chunks.
-- Decouple `render.js` (~670 lines) from the layout ecosystem.
-- Real lazy-loaded widget modules behind the registry — the performance win:
-  pages stop paying for code they do not use.
-- `rating-badge` becomes an independent surface (Phase 1 keeps it inside `render.js`
-  because the aggregate rating/count is produced by that render pass).
-- Add `VIEW_SEARCH_RESULTS` handling beside verified `VIEW_LISTING`; both carry
-  `productDetails[]` in runtime audit results.
-- `events.js` may be renamed to `core/spa-nav.js`.
-- Do not make Phase 2 depend on `VIEW_LISTING` or any future ikas Studio `data-*`
-  attributes. Listing module detection should use verified Storefront Events and
-  `PAGE_VIEW` page type first, with DOM/theme heuristics only as fallback.
-- Move listing placement selectors into an explicit theme adapter/fallback contract
-  (`findListingContainers`, `findListingTitle`, `ignoreContainers`) before adding
-  more listing-like surfaces. Do not keep expanding scattered Ozy-specific
-  allowlist/blocklist rules as the primary app strategy.
-- Keep the currently injected `widget.js?publicApiKey=...` path compatible until a
-  separate loader URL rollout and cache/versioning plan is ready.
-- Before committing to module boundaries, compare them against any updated
-  Protein Ocean/Yotpo observations, but accept only patterns that still fit a
-  reusable ikas app model across many merchants.
+- Implemented build direction: `public/widget.js` remains a classic ikas-compatible
+  loader, while `public/widget-runtime/runtime.js` and
+  `public/widget-runtime/chunks/*` are ESM split outputs. This follows the ikas
+  developer feedback: keep one storefront script record and use Storefront Events
+  as the context source; do not require merchant theme edits or multiple script
+  records per module.
+- Implemented lazy boundaries: `reviews-main`, `listing-badge`, and preview render
+  are loaded through `core/lazy-modules.js`; the registry now supports async
+  mounts and isolates rejected lazy imports.
+- Implemented event follow-up: `VIEW_SEARCH_RESULTS` is handled beside verified
+  `VIEW_LISTING`; both emit product-array listing context into the surface layer.
+- Implemented adapter follow-up: Ozy listing placement rules moved behind
+  `themes/ozy/adapter.js` and `themes/current-adapter.js`. This remains fallback
+  seed data, not a universal ikas theme contract.
+- Deferred: `rating-badge` is not yet an independent surface because aggregate
+  rating/count still come from the PDP render/reviews path. Splitting it without a
+  shared data service would duplicate fetches or introduce races.
+- Deferred: `events.js` rename to `core/spa-nav.js`, loader/module cache headers,
+  script lifecycle reconciliation, and stale `--theme` alias cleanup remain Phase
+  3 work.
+- Current verification: `pnpm build:widget`, a manifest boundary assertion, and
+  scoped ESLint on changed widget/build files passed. `pnpm lint` itself is not a
+  valid gate today because `next lint` fails under the repo's Next.js 16 setup.
+- Phase 2 is not done until the dev-store browser checklist and Sentry post-test
+  check in [[Phase_2_Widget_Module_Split_Plan]] are recorded.
 
 ### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
 
@@ -236,13 +247,21 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 - See [[Yotpo_Style_Widget_Modular_Architecture]].
 
 ## Related Source Files
+- [scripts/build-widget.mjs](scripts/build-widget.mjs)
+- [src/widget/classic-loader.js](src/widget/classic-loader.js)
 - [src/widget/index.js](src/widget/index.js)
 - [src/widget/loader.js](src/widget/loader.js)
+- [src/widget/core/lazy-modules.js](src/widget/core/lazy-modules.js)
 - [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js)
 - [src/widget/core/registry.js](src/widget/core/registry.js)
+- [src/widget/core/settings.js](src/widget/core/settings.js)
 - [src/widget/surfaces/index.js](src/widget/surfaces/index.js)
+- [src/widget/surfaces/reviews-main.surface.js](src/widget/surfaces/reviews-main.surface.js)
+- [src/widget/surfaces/listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js)
 - [src/widget/events.js](src/widget/events.js)
 - [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js)
+- [src/widget/themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js)
+- [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json)
 
 ## Related Notes
 - [[Decision_Index]]

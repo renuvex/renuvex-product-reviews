@@ -20,9 +20,12 @@ related:
   - "[[Listing_Rating_Widget]]"
 source_files:
   - "scripts/build-widget.mjs"
+  - "src/widget/classic-loader.js"
   - "src/widget/index.js"
   - "src/widget/loader.js"
+  - "src/widget/core/lazy-modules.js"
   - "src/widget/core/registry.js"
+  - "src/widget/core/settings.js"
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/state.js"
   - "src/widget/surfaces/index.js"
@@ -32,7 +35,11 @@ source_files:
   - "src/widget/product-widget/rating-badge.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/inject.js"
+  - "src/widget/themes/current-adapter.js"
+  - "src/widget/themes/ozy/adapter.js"
   - "src/widget/themes/ozy/theme.js"
+  - "public/widget.js"
+  - "public/widget-runtime/build-manifest.json"
 ---
 
 # Phase 2 Widget Module Split Plan
@@ -89,6 +96,58 @@ with `format: "esm"` and `outdir`; dynamic `import()` creates lazy chunks.
   ikas-wide theme contract.
 - Keep false-positive protection for header/nav/footer/hero/banner/cart/editorial
   and merchant-added sections.
+
+## Implementation Snapshot - 2026-05-17
+
+Status: implementation started; build/static module-boundary checks passed.
+Phase 2 is still not complete until the live dev-store browser and Sentry checks
+in the done criteria pass.
+
+Implemented:
+- `public/widget.js` is now a small classic compatibility loader built from
+  `src/widget/classic-loader.js`; it keeps the existing
+  `widget.js?publicApiKey=...` ikas script URL and imports the ESM runtime from
+  the same origin.
+- `scripts/build-widget.mjs` now builds both the classic loader and an ESM
+  runtime with esbuild `format: "esm"`, `splitting: true`, and `outdir`.
+  `public/widget-runtime/build-manifest.json` records output bytes and import
+  kinds (`import-statement` vs `dynamic-import`).
+- `src/widget/core/lazy-modules.js` is the only lazy-load boundary owner for
+  `reviews-main`, `listing-badge`, and preview render.
+- `core/registry.js` now accepts async `mount()` results and isolates rejected
+  lazy imports per surface.
+- `core/storefront-context.js` now emits listing callbacks for both verified
+  `VIEW_LISTING` and search `VIEW_SEARCH_RESULTS` product arrays.
+- Settings fetch/cache moved to `core/settings.js` so the listing badge chunk can
+  fetch settings without pulling in the full PDP review widget.
+- Ozy listing placement rules moved behind `themes/ozy/adapter.js` and
+  `themes/current-adapter.js`; this is still a fallback adapter, not an ikas-wide
+  DOM contract.
+- Runtime error reporting now recognizes `/widget-runtime/` chunk failures.
+
+Build evidence from `pnpm build:widget`:
+- Classic loader: `public/widget.js`, about 1.6 KB.
+- ESM runtime entry: `public/widget-runtime/runtime.js`, about 9.6 KB.
+- Runtime manifest has 2 static imports and 3 dynamic imports from the runtime
+  entry: product bootstrap, listing badges, and preview/product render.
+- Listing badge chunk imports only shared core/theme chunks; it does not import
+  the product-widget bootstrap/render entry chunks.
+
+Checks run:
+- `pnpm build:widget` passed.
+- Manifest assertion script passed: runtime entry, listing chunk, bootstrap chunk,
+  render chunk, and dynamic import boundaries present.
+- `git diff --check` passed.
+- `pnpm lint` is currently not usable with this repo's Next.js 16 script because
+  `next lint` treats `lint` as a project directory. Scoped fallback
+  `pnpm exec eslint <changed widget/build files>` passed.
+
+Still required before marking Phase 2 done:
+- Deploy/use the new `public/widget.js` and chunks on `https://dev-mertcopper.ikas.shop/`.
+- Run the full browser checklist below, including network proof that pages load
+  only the expected lazy chunks.
+- Run the Sentry post-test check for `source:widget`, `widget.js`,
+  `/widget-runtime/`, `/api/public/widget-error`, and `/api/public/*`.
 
 ## Phase 2 Done Criteria
 

@@ -1,24 +1,28 @@
-// surfaces/listing-badge.surface.js — Listing rozetleri surface descriptor'ı
+// surfaces/listing-badge.surface.js - listing badge surface descriptor.
 //
-// İnce adaptör: mount, mevcut renderListingBadges() orkestrasyonunu çağırır.
-// detect her sayfa görüntülemesinde true döner — gerçek karar renderListingBadges
-// içindeki collectSlugs() tarafından verilir (sayfada ürün linki yoksa hiçbir
-// şey yapmaz). Yüzey tek IIFE bundle içinde statik import edilir (ADR_0013).
+// Phase 2: the listing badge module is lazy-loaded for page/listing contexts.
+// The verified ikas events are:
+// - VIEW_LISTING: category productDetails[]
+// - VIEW_SEARCH_RESULTS: search productDetails[]
 
 import { ls } from '../core/state.js';
-import { renderListingBadges } from '../listing-badges/index.js';
+import { loadListingBadgesModule } from '../core/lazy-modules.js';
 
 export var listingBadgeSurface = {
   key: 'listing-badge',
   detect: function (ctx) {
-    return ctx.trigger === 'page';
+    return ctx.trigger === 'page' || ctx.trigger === 'listing-products';
   },
-  mount: function () {
-    // Sayfa navigasyonunda: eski rozetleri temizle + yeniden render et.
-    // (Mevcut PAGE_VIEW handler gövdesi — 800ms çift-tetik guard'ı
-    // storefront-context.js içinde kaldı.)
-    ls.navCleanup = true;
+  mount: function (ctx) {
+    if (ctx.trigger === 'page') {
+      // Page navigation: clean old badges atomically after fresh data is ready.
+      ls.navCleanup = true;
+    }
+    // Listing/search product events can arrive after PAGE_VIEW. Re-run without
+    // cleanup so newly available product names can improve placement fallback.
     ls.rendered = false;
-    renderListingBadges();
+    return loadListingBadgesModule().then(function (mod) {
+      mod.renderListingBadges();
+    });
   },
 };
