@@ -16,6 +16,8 @@ source_files:
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
   - "src/widget/listing-badges/index.js"
+  - "src/widget/listing-badges/collect.js"
+  - "src/widget/listing-badges/ratings.js"
   - "src/widget/themes/ozy/adapter.js"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
@@ -76,8 +78,8 @@ src/widget/
 │
 ├─ listing-badges/
 │  ├─ index.js                    # Bootstrap (find product cards on listing pages)
-│  ├─ collect.js                  # Discover candidate cards (theme-agnostic heuristics)
-│  ├─ ratings.js                  # Bulk fetch via /api/public/ratings-by-slug
+│  ├─ collect.js                  # Discover candidate cards and merge event product ids
+│  ├─ ratings.js                  # Bulk fetch via /api/public/ratings, slug fallback only
 │  └─ inject.js                   # Inject star badges into discovered cards
 │
 ├─ review-layouts/
@@ -160,6 +162,7 @@ src/widget/
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-17: Listing badge files now use canonical ikas product ids from Storefront Events for rating fetches; slug remains DOM fallback only. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Phase 2 module split implementation started. `public/widget.js` is now a classic loader, `public/widget-runtime/*` contains ESM runtime/chunks, and lazy boundaries live in `core/lazy-modules.js`.
 - 2026-05-12: Split the storefront icon registry into [review-icons.js](src/widget/icons/review-icons.js), [filter-icons.js](src/widget/icons/filter-icons.js), and [icons/index.js](src/widget/icons/index.js). [icons.js](src/widget/icons.js) now remains as a compatibility re-export.
 - 2026-05-10: Documented the trusted review image helpers in [helpers.js](src/widget/core/helpers.js). Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].

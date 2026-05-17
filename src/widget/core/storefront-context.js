@@ -14,7 +14,7 @@
 
 import { PUBLIC_API_KEY } from './config.js';
 import { cacheSet } from './cache.js';
-import { ls, ikrSlugMap } from './state.js';
+import { ls, ikrProductMap, ikrSlugMap } from './state.js';
 
 // ── Olay tipi sabitleri — TEK kaynak ─────────────────────────────────────────
 // Resmî olay tipleri (IKAS_EVENT_TYPE): PAGE_VIEW, PRODUCT_VIEW, ADD_TO_CART,
@@ -128,8 +128,15 @@ function handleIkasEvent(event) {
     var products = event.data && event.data.productDetails;
     if (Array.isArray(products)) {
       products.forEach(function (p) {
-        if (p && p.metaData && p.metaData.slug && p.name) {
-          ikrSlugMap[p.metaData.slug] = p.name;
+        var slug = p && (p.slug || (p.metaData && p.metaData.slug));
+        if (slug && p.name) {
+          ikrSlugMap[slug] = p.name;
+        }
+        if (slug && p.id) {
+          ikrProductMap[slug] = {
+            productId: String(p.id),
+            name: p.name || null,
+          };
         }
       });
       emitListingView({ eventType: event.type, products: products });

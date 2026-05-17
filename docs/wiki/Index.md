@@ -106,6 +106,9 @@ source_files: []
 - [[ADR_0010_Widget_Error_Forwarding]]
 - [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]
 - [[ADR_0012_Pending_Upload_Registry]]
+- [[ADR_0013_Modular_Widget_Loader_Architecture]]
+- [[ADR_0014_Public_API_Response_Caching]]
+- [[ADR_0015_Canonical_Product_Identity]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -160,4 +163,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-05-17 (added Phase 2 widget module split plan routing and verification gates)
+**Last Updated:** 2026-05-17 (added canonical product identity ADR and product-id listing badge routing)

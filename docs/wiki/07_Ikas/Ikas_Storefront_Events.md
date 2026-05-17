@@ -16,10 +16,12 @@ related:
   - "[[Ikas_Widget_Injection_Notes]]"
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[Widget_Architecture]]"
+  - "[[ADR_0015_Canonical_Product_Identity]]"
 source_files:
-  - "src/widget/events.js"
+  - "src/widget/core/storefront-context.js"
+  - "src/widget/listing-badges/collect.js"
+  - "src/widget/listing-badges/ratings.js"
   - "src/widget/product-widget/bootstrap.js"
-  - "src/widget/observer.js"
 ---
 
 # ikas Storefront Events
@@ -113,9 +115,9 @@ probe during the ADR_0013 Phase 1 audit (see [[Phase_1_Widget_Runtime_Audit]]).
 |---|---|---|
 | `PAGE_VIEW` | `url`, `pageType`, `customer` | `pageType` ∈ `INDEX`, `PRODUCT`, `CATEGORY`, `SEARCH`. ikas double-fires `PAGE_VIEW` on first entry — the widget guards it with an 800 ms window. |
 | `PRODUCT_VIEW` | `productDetail` (`id`, `name`, …) | Matches the official example. |
-| `VIEW_LISTING` | `productDetails[]` (each with `name`, `metaData.slug`) | Fires on category pages. **Real runtime event** despite being absent from the official docs list. |
+| `VIEW_LISTING` | `productDetails[]` (each with `id`, `name`, `slug` or `metaData.slug`) | Fires on category pages. **Real runtime event** despite being absent from the official docs list. `id` is used for canonical listing badge rating reads. |
 | `VIEW_CATEGORY` | `categoryPath`, `category` | Fires alongside `VIEW_LISTING` on category pages; carries **no** product array. |
-| `VIEW_SEARCH_RESULTS` | `searchKeyword`, `productDetails[]` | Fires on search pages; this — not `VIEW_LISTING` — carries the search product array. |
+| `VIEW_SEARCH_RESULTS` | `searchKeyword`, `productDetails[]` (same product id/name/slug shape as listing) | Fires on search pages; this — not `VIEW_LISTING` — carries the search product array. |
 | `SEARCH` | `searchKeyword` | Fires on search submit; no product array. |
 
 Key conclusions:
@@ -124,9 +126,12 @@ Key conclusions:
   'VIEW_LISTING'` (`core/storefront-context.js`) is correct.
 - **Category vs search asymmetry:** category product arrays arrive via
   `VIEW_LISTING`; search product arrays via `VIEW_SEARCH_RESULTS`. The widget
-  currently handles only `VIEW_LISTING`, so it does not populate `ikrSlugMap` on
-  search pages. Listing badges still render there via the `collectSlugs` DOM
-  fallback; a Phase 2 improvement should also subscribe to `VIEW_SEARCH_RESULTS`.
+  handles both and maps their product ids to the visible slugs for listing badge
+  reads.
+- **Product identity:** `productDetails[].id` is present on listing/search
+  payloads in the dev-store runtime check. Listing/search badges should use this
+  as the stable ikas product id and treat slug as a display/DOM-matching field
+  only. See [[ADR_0015_Canonical_Product_Identity]].
 
 ## Official JavaScript Example
 
@@ -227,8 +232,8 @@ This matches the current project pattern: the widget reads `publicApiKey` from i
 
 ## Relevance To This Project
 
-- The widget subscribes to `IkasEvents` for `PRODUCT_VIEW`, `VIEW_LISTING`, and `PAGE_VIEW` in [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js) — the single subscription point since ADR_0013 Phase 1 (the old `events.js` subscription was moved there).
-- Runtime audit (2026-05-17) confirmed `VIEW_LISTING` is emitted on category pages and carries `productDetails[]` — the code is correct. Search pages instead emit `VIEW_SEARCH_RESULTS` with the same `productDetails[]` shape, which the widget does not yet subscribe to. See Runtime-Verified Payloads above.
+- The widget subscribes to `IkasEvents` for `PRODUCT_VIEW`, `VIEW_LISTING`, `VIEW_SEARCH_RESULTS`, and `PAGE_VIEW` in [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js) — the single subscription point since ADR_0013 Phase 1 (the old `events.js` subscription was moved there).
+- Runtime audit (2026-05-17) confirmed `VIEW_LISTING` is emitted on category pages and carries `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` with the same product id/name/slug shape. The widget uses those product ids for canonical listing/search badge reads.
 - The official docs confirm `PAGE_VIEW` and `PRODUCT_VIEW`, which the widget depends on for product detection and listing-badge rendering.
 - `PAGE_VIEW` + `IKAS_PAGE_TYPE` should be the canonical way to know the current page type, replacing URL/DOM heuristics in [bootstrap.js](src/widget/product-widget/bootstrap.js).
 - `PRODUCT_VIEW.data.productDetail.id` is the official, supported product identity source — preferred over the `__NEXT_DATA__` / URL regex fallbacks in `getProductFromPage()`.
@@ -252,3 +257,4 @@ Updated 2026-05-17 after the Phase 1 runtime audit ([[Phase_1_Widget_Runtime_Aud
 - [[Widget_Architecture]]
 - [[Ikas_Platform_Notes]]
 - [[Phase_1_Widget_Runtime_Audit]]
+- [[ADR_0015_Canonical_Product_Identity]]

@@ -12,6 +12,7 @@ related:
   - "[[API_Design]]"
   - "[[System_Architecture]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
+  - "[[ADR_0015_Canonical_Product_Identity]]"
 ---
 
 # Caching & Performance
@@ -23,6 +24,7 @@ Two cache layers matter: (1) Vercel **edge cache** for public read APIs and (2) 
 
 Set on:
 - `GET /api/public/reviews` — per-product reviews + rating distribution
+- `GET /api/public/ratings` — bulk listing/search badges by canonical ikas product id
 - `GET /api/public/ratings-by-slug` — bulk badges
 - `GET /api/public/settings` — widget config
 
@@ -62,8 +64,8 @@ Settings have a 5-minute fresh window in the widget and a 7-day stale tolerance 
 
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
-- Public reviews: covered by `[storeId, productId]` and `[storeId, slug, status]`.
-- Listing badges: covered by `[storeId, slug]` (`select: { slug, rating }` is index-only-friendly).
+- Public reviews: covered by `[storeId, productId]`.
+- Listing badges: primary product-id path covered by `[storeId, productId, status]`; legacy slug fallback covered by `[storeId, slug, status]`.
 - Admin filtered list: covered by `[storeId, status]`.
 - The migration history shows we cleaned up redundant indexes once already — be selective.
 
@@ -92,6 +94,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 
 ## Related Source Files
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
+- [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)
 - [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
 - [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts)
 - [src/widget/core/cache.js](src/widget/core/cache.js)
@@ -102,7 +105,9 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[Widget_Architecture]]
 - [[Widget_Performance]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
+- [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-05-17: Added `/api/public/ratings` product-id endpoint and `[storeId, productId, status]` hot-path index for canonical listing/search badge reads. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added the "Static widget assets" section — `vercel.json` `headers` now sets a three-tier `Cache-Control` split (short-cache loader/runtime, `immutable` content-hashed chunks). Refreshed the stale pre-Phase-2 bundle-size note. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.
 - 2026-05-11: Documented public settings `stale-if-error=604800` and 7-day widget stale settings tolerance. The separate `ikr_image_policy_<publicApiKey>` cache was added on 2026-05-11 then removed the same day by [[ADR_0008_Cloud_Name_Build_Time_Only]] — cloud name is now a build-time constant and no runtime image-policy cache exists. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].

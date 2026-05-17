@@ -3,7 +3,7 @@ type: database
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-17
 tags:
   - database
   - prisma
@@ -13,6 +13,7 @@ related:
   - "[[Database_Map]]"
   - "[[ADR_0003_Review_Data_Model]]"
   - "[[ADR_0012_Pending_Upload_Registry]]"
+  - "[[ADR_0015_Canonical_Product_Identity]]"
 ---
 
 # Database Schema
@@ -63,13 +64,14 @@ Customer reviews. Public storefront submits; admin moderates.
 
 Indexes:
 - `[storeId, productId]`
+- `[storeId, productId, status]`
 - `[storeId, slug]`
 - `[storeId, status]`
 - `[storeId, slug, status]`
 
 Common queries:
 - Public: `findMany({ storeId, productId, status: 'approved' })` + ordering + filters
-- Public listing badges: `findMany({ storeId, slug: { in: slugs }, status: 'approved' })`, `select: { slug, rating }`
+- Public listing badges: primary `groupBy({ by: ['productId'], where: { storeId, productId: { in: ids }, status: 'approved' } })`; legacy fallback `findMany({ storeId, slug: { in: slugs }, status: 'approved' })`
 - Admin: `findMany({ storeId, status? })` ordered by `createdAt desc`
 
 ### `StoreSettings`
@@ -146,4 +148,5 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-05-17: Added `[storeId, productId, status]` index for canonical product-id listing/search rating reads. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-12: Added `PendingReviewImage` model — registry of Cloudinary uploads not yet attached to a Review. See [[ADR_0012_Pending_Upload_Registry]].

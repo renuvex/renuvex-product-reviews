@@ -1,0 +1,2 @@
+/* ikas Reviews Widget ESM runtime - built 2026-05-17T14:17:31.991Z | theme: default */
+import{b as a,c as b,d as c,e as d,f as e}from"./chunk-ZCSYBZL7.js";import"./chunk-Y52OR736.js";import"./chunk-SYLCVD6S.js";import"./chunk-D5GQYBB2.js";export{e as bootstrap,a as createReviewsFetchError,d as fetchPhotoStripReviews,c as fetchReviews,b as isReviewsFetchError};

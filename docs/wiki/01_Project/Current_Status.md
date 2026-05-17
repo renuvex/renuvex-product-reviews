@@ -40,7 +40,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
   - Review summary filter menu is keyboard-operable: options are buttons with menuitem semantics, the trigger exposes menu state via `aria-haspopup` / `aria-expanded`, focus moves in and out predictably, and tabbing away closes the menu
   - Widget-scope tap-feedback contract ([[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]): tarayıcı tap-highlight devre dışı, deterministik `:active` opacity dip, `:focus-visible` ile sadece klavye odak halkası, ve global "son giriş modalitesi" izleyicisi popover/modal kapanışında `restoreFocus` kararını yönetir
   - Product rating badge (small inline star+count)
-  - Listing-page rating badges (auto-discovers product cards on collection pages)
+  - Listing-page rating badges (auto-discovers product cards on collection/search pages; Storefront Events path now reads by canonical ikas product id)
   - Mutation observer for SPA-style theme navigation
 - Public review submission API:
   - Profanity filter (TR + EN)
@@ -60,7 +60,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress
-- ADR_0013 Phase 2 module split: local build emits a small classic loader plus ESM runtime/chunks; `VIEW_SEARCH_RESULTS` and the Ozy fallback adapter are implemented. Live dev-store browser/network verification and Sentry post-test checks are still required before Phase 2 is closed.
+- ADR_0013 Phase 3 / Stage 2 hardening: canonical product identity is implemented for event-backed listing/search badge reads via [[ADR_0015_Canonical_Product_Identity]]. Remaining scope is the Product read-model/webhook/backfill follow-up for DOM-only fallback and fresh product name/slug sync.
 
 ## Known Issues / Gaps
 - Structured-data injection exists in the widget runtime, but it is currently coupled to the rating badge/review-count path and still needs SEO validation and a clearer server/client strategy. See [[Structured_Data_And_Rich_Snippets]] and [[Yotpo_Style_Widget_Modular_Architecture]].
@@ -73,6 +73,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
 - Current script injection relies on DB-tracked script ids and does not define `listStorefrontJSScript`; reconciliation and delete semantics need review before changing install cleanup. See [[Ikas_Storefront_Script_Capabilities]].
 - Large new storefront surfaces should use the Phase 2 loader/module split pattern and must not be statically imported into the always-loaded runtime. See [[Yotpo_Style_Widget_Modular_Architecture]].
+- DOM-only listing badge fallback still uses slugs when ikas Events do not provide product ids. This is backward-compatible but not the long-term canonical path; close it with a Product read-model fed by ikas product webhooks/backfill.
 
 ## Important Decisions
 - [[ADR_0001_Project_Stack]] — Next.js 16 App Router + Prisma + Postgres (Supabase)
@@ -82,9 +83,10 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]] — review image URLs must be trusted Cloudinary assets before storage or storefront render
 - [[ADR_0009_Sentry_Observability_Strategy]] — `@sentry/nextjs` on the panel, env-based DSN, `sendDefaultPii: false`, prod-only sample rates, masked Replay; widget bundle excluded
 - [[ADR_0010_Widget_Error_Forwarding]] — tiny widget-side reporter forwards uncaught widget errors via `/api/public/widget-error` so the visibility gap from ADR_0009 is closed without adding a second SDK to the storefront bundle
+- [[ADR_0015_Canonical_Product_Identity]] — `(storeId, productId)` is the canonical review product identity; slug/name are display snapshots and slug reads are fallback-only
 
 ## Next Recommended Steps
-1. Complete ADR_0013 Phase 2 dev-store browser/network verification and Sentry post-test checks.
+1. Implement the Product read-model/webhook/backfill follow-up for DOM-only fallback and product name/slug freshness.
 2. Add script reconciliation before changing ikas script cleanup or delete behavior; see [[Ikas_Storefront_Script_Capabilities]].
 3. Clarify structured-data strategy and validate Google rich snippet behavior.
 4. Implement review-request email flow (post-purchase delay + token-gated submit URL).
@@ -97,6 +99,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 2026-05-17
 
 ## Change Log
+- 2026-05-17: Canonical product identity implemented for listing/search badge reads: widget maps Storefront Events product ids and public ratings can group by `productId`. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Phase 2 module split implementation started: classic `public/widget.js` loader + ESM `public/widget-runtime/*` chunks locally, with live verification still pending.
 - 2026-05-15: Added current-state corrections from the read-only widget architecture audit: deployed `widget.js` measured `177763` bytes, JSON-LD exists but needs validation/decoupling, and future Yotpo-like surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-12: **Pending Image Registry**: Replaced Cloudinary scan-and-diff with a robust DB-tracked `PendingReviewImage` registry. Eliminates 500-asset cap and race conditions. ([[ADR_0012_Pending_Upload_Registry]])

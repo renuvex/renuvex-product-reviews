@@ -3,7 +3,7 @@ type: api
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-11
+updated: 2026-05-17
 tags:
   - api
   - routes
@@ -14,6 +14,7 @@ related:
   - "[[Security_And_Rate_Limits]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
+  - "[[ADR_0015_Canonical_Product_Identity]]"
 ---
 
 # Backend / API Map
@@ -49,7 +50,8 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit` | [route.ts](src/app/api/public/reviews/route.ts) | Approved reviews + rating distribution. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]]) |
 | POST `/api/public/reviews` body | same | Submit review (validation + profanity + rate-limit + trusted image URLs + auto-approve) |
-| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | Bulk avg+count per slug (listing badges) |
+| GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]]) |
+| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | Legacy/fallback bulk avg+count per slug for DOM-only listing paths |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/upload/sign` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload |
 
@@ -105,4 +107,5 @@ Detail in [[Security_And_Rate_Limits]].
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-17: Added `/api/public/ratings?productIds=...` as the canonical product-id listing/search badge endpoint. `/ratings-by-slug` remains a DOM-only fallback. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-10: Added the trusted review image URL contract to public review/settings route documentation. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].

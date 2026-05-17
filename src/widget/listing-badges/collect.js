@@ -1,11 +1,12 @@
-// listing-badges/collect.js — Sayfadaki ürün linklerinden slug→name map oluşturur
+// listing-badges/collect.js - builds listing product targets from DOM and ikas events.
 
 import { extractSlug, SYSTEM_SLUGS } from '../core/helpers.js';
-import { ikrSlugMap } from '../core/state.js';
+import { ikrProductMap, ikrSlugMap } from '../core/state.js';
 
-export function collectSlugs() {
+export function collectProductTargets() {
   var map = {};
   var seen = {};
+
   document.querySelectorAll('a[href]').forEach(function(a) {
     try {
       var href = a.getAttribute('href');
@@ -15,10 +16,32 @@ export function collectSlugs() {
       if (!/^[a-z0-9][a-z0-9-]{2,}$/.test(slug)) return;
       if (SYSTEM_SLUGS.test(slug)) return;
       seen[slug] = true;
-      map[slug] = null;
-    } catch(_) {}
+      map[slug] = { productId: null, name: null };
+    } catch (_) {}
   });
-  // VIEW_LISTING'den gelen isimler DOM fallback'i override eder
-  Object.keys(ikrSlugMap).forEach(function(slug) { map[slug] = ikrSlugMap[slug]; });
+
+  Object.keys(ikrSlugMap).forEach(function(slug) {
+    if (!map[slug]) map[slug] = { productId: null, name: null };
+    map[slug].name = ikrSlugMap[slug] || null;
+  });
+
+  Object.keys(ikrProductMap).forEach(function(slug) {
+    var product = ikrProductMap[slug] || {};
+    if (!map[slug]) map[slug] = { productId: null, name: null };
+    map[slug].productId = product.productId || null;
+    if (product.name) map[slug].name = product.name;
+  });
+
+  return map;
+}
+
+export function collectSlugs() {
+  var targets = collectProductTargets();
+  var map = {};
+
+  Object.keys(targets).forEach(function(slug) {
+    map[slug] = targets[slug] ? targets[slug].name : null;
+  });
+
   return map;
 }
