@@ -230,7 +230,13 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 
 ### Phase 3 — Cache, versioning, ikas script lifecycle — ⏳ Planned
 
-- Cache split: short cache for the loader, long-immutable cache for versioned modules.
+- Cache split — three tiers, not two. `widget.js` (stable name, referenced by the
+  ikas script record) stays short-cache so code updates propagate. Content-hashed
+  chunks (`chunk-*`, `bootstrap-*`, `listing-badges-*`, `render-*`) can be
+  `immutable` with a long max-age. `widget-runtime/runtime.js` is the in-between
+  case: it is currently stable-named and imported by the loader at a fixed path,
+  so it cannot be `immutable`-cached as-is — Phase 3 must either short-cache it
+  too, or give it a content hash and resolve that hashed name from the loader.
 - ikas script lifecycle hardening: remove the blanket zero-argument
   `deleteStorefrontJSScript`, add `listStorefrontJSScript` reconciliation, handle
   storefronts created after install.
@@ -245,9 +251,24 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 - Reconciliation should search ikas script records by predictable name/content as
   well as the local `storefrontScripts` DB map, so DB loss or manual merchant edits
   do not force unsafe blanket deletion.
+- All script-record writes in the lifecycle/reconciliation work must build the
+  `<script src>` through `buildStorefrontWidgetScript()` in
+  [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts) (added in
+  `960fd44`). Do not rebuild the widget URL inline — that helper is what keeps
+  localhost and non-HTTPS origins out of real storefront script records.
 - Document the final `isHighPriority` / `order` choice. Current guidance says this
   review widget does not need to preempt Facebook/Google scripts, so priority should
   remain deliberate rather than implicit.
+- Deferred Phase 2 polish carried here: the listing-badge surface injects a
+  `display:none` badge into the Ozy theme's hidden `passive` search-results
+  container. Add a visibility filter in `listing-badges/inject.js` (skip links
+  whose `offsetParent` is null) or exclude `.passive` containers in the Ozy
+  adapter. Harmless today (invisible, not a leak) — low priority.
+- Non-code follow-ups tracked here so they are not lost: (a) a merchant onboarding
+  instruction to disable the storefront theme's own native review block, which
+  otherwise renders empty next to the app widget; (b) re-measure the deployed
+  widget transfer size after the Phase 2 split lands, replacing the `177763`-byte
+  2026-05-15 pre-split baseline before claiming a live performance win.
 - See [[Yotpo_Style_Widget_Modular_Architecture]].
 
 ## Related Source Files
