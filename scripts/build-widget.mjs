@@ -43,7 +43,6 @@ const runtimeEntryPoint = resolve(ROOT, 'src/widget/index.js');
 // Theme aliases are kept for the existing build contract. Do not expand this
 // without a theme-adapter plan; Phase 2 keeps one ikas script and one runtime.
 const themeAlias = {
-  'themes/ozy/listing-selector.js': resolve(ROOT, `src/widget/themes/${theme}/listing-selector.js`),
   'themes/ozy/styles.js': resolve(ROOT, `src/widget/themes/${theme}/styles.js`),
 };
 

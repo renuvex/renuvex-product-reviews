@@ -123,7 +123,7 @@ src/widget/
 - ⚠️ When you add a new layout, declare `supports` keys for everything any setting could check. Otherwise admin shows fields that have no effect.
 
 ### Theme variant
-`scripts/build-widget.mjs` aliases `themes/ozy/listing-selector.js` and `themes/ozy/styles.js` to a different theme folder when `--theme=new-theme`. Output: `widget-new-theme.js`. **The `themes/new-theme/` directory does not exist on disk** — only `themes/ozy/` is present. So `pnpm build:widget --theme=new-theme` would currently fail. The starter scaffold expects the user to add `themes/new-theme/` as a sibling. Source code imports directly from `../themes/ozy/...` (verified: `render.js` and `listing-badges/inject.js`). How runtime selects between `widget.js` and `widget-new-theme.js` is also unclear — see [[Open_Questions]].
+`scripts/build-widget.mjs` aliases `themes/ozy/styles.js` to a different theme folder when `--theme=new-theme`. Output: `widget-new-theme.js`. **The `themes/new-theme/` directory does not exist on disk** — only `themes/ozy/` is present. So `pnpm build:widget --theme=new-theme` would currently fail. The starter scaffold expects the user to add `themes/new-theme/` as a sibling. Source code imports directly from `../themes/ozy/...` (verified: `render.js` and `listing-badges/inject.js`). How runtime selects between `widget.js` and `widget-new-theme.js` is also unclear — see [[Open_Questions]].
 
 ## What lives in `public/`
 - [public/widget.js](public/widget.js) — built classic loader (committed). Don't hand-edit.
