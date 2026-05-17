@@ -3,8 +3,8 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-15
-last_verified: 2026-05-15
+updated: 2026-05-18
+last_verified: 2026-05-18
 confidence: medium
 tags:
   - questions
@@ -39,11 +39,6 @@ The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-mo
 - Should theme adapter selection be explicit merchant config, automatic runtime detection, or both?
 
 Reference: [[Yotpo_Style_Widget_Modular_Architecture]]
-
-## ikas storefront script reconciliation
-Official ikas docs expose listable Storefront JS scripts, but the current active MCP/codegen contract does not expose `listStorefrontJSScript`. Current install/manual/cron logic relies on DB-tracked script ids and intentionally uses non-destructive create/update only; the remaining question is whether ikas will expose a targeted list/delete contract that lets us safely deduplicate remote scripts later.
-
-Reference: [[Ikas_Storefront_Script_Capabilities]]
 
 ## Structured data injection mechanism
 Two approaches for JSON-LD aggregateRating:
@@ -81,8 +76,6 @@ No tests visible in repo. Highest-risk surface is the public POST `/api/public/r
 ## Stale references in pre-existing docs (Needs Verification)
 Discovered while reconciling existing AI rule files (see [[Existing_AI_Rules_And_Ikas_CLI_Instructions]]):
 
-- **Next.js version drift** — `package.json` is `next: 16.2.1`. `/AGENTS.md` was updated during the 2026-05-13 second-brain migration, but `README.md`, `/CLAUDE.md`, and any generated Cursor/Ruler outputs may still say "Next.js 15". Decision needed: should we run `pnpm apply:ai-rules` and update generated/local rule files in a separate rules-sync task?
-- **Theme variant gap** — `scripts/build-widget.mjs` accepts `--theme=new-theme` and aliases imports to `themes/new-theme/...`, but **no `themes/new-theme/` directory exists**. `.proje-dokuman.md` references both `themes/default/` and `themes/new-theme/` as if they ship — they don't; only `themes/ozy/` is on disk. Was new-theme dropped, never built, or planned?
 - **Helpful feature in `.proje-dokuman.md`** — the Turkish project doc still describes `helpfulCount`, `/api/public/reviews/[id]/helpful`, and a 24h/IP rate limit for it. The `helpful` feature was added then **removed** in migrations 20260408060000 + 20260417000000. The doc should be updated or marked deprecated.
 - **Two CLAUDE.md files coexist** — `/CLAUDE.md` (Ruler-generated, gitignored) and the worktree-local `CLAUDE.md` created by this wiki seed (also gitignored). Decide a single source-of-truth strategy: (a) treat `/AGENTS.md` as source and let Ruler regenerate `CLAUDE.md`, then delete worktree CLAUDE.md, OR (b) ungitignore CLAUDE.md and merge into a tracked file. Affects all new contributors.
 

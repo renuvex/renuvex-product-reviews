@@ -261,7 +261,7 @@ If the Phase 1 test method depends on Playwright or Sentry behavior, confirm the
 relevant current docs through Context7 and record the checked library id/topic in
 [[Phase_1_Widget_Runtime_Audit]].
 
-### Phase 2 — Physical module split — In progress (2026-05-17)
+### Phase 2 — Physical module split — Implemented & verified (2026-05-17)
 
 Detailed implementation and verification checklist: [[Phase_2_Widget_Module_Split_Plan]].
 
@@ -278,16 +278,23 @@ remains inside the PDP review/render path until a shared aggregate
 data service exists; making it independent now would duplicate fetches or add a
 race.
 
-### Phase 3 — Cache, versioning, ikas script lifecycle — source implemented
+### Phase 3 — Cache, versioning, ikas script lifecycle — Implemented & verified (2026-05-18)
 
-Implemented by 2026-05-17: short-cache loader/shim, immutable hashed runtime and
-chunks, non-destructive create/update-only StorefrontJSScript lifecycle, daily
-script reconcile for storefronts created after install, stale `--theme` alias
-cleanup, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]].
-Active MCP still lacks `listStorefrontJSScript`, so source intentionally avoids
-destructive cleanup while public docs and generated/MCP contracts disagree.
-Post-deploy checks still need to verify cache headers, dev-store behavior, Sentry,
-and deployed transfer size.
+Closeout record: [[Phase_3_Widget_Lifecycle_Hardening]].
+
+Implemented by 2026-05-17 (commit `1700d789`): short-cache loader/shim, immutable
+hashed runtime and chunks, non-destructive create/update-only StorefrontJSScript
+lifecycle, daily script reconcile for storefronts created after install, stale
+`--theme` alias cleanup, and canonical product identity via
+[[ADR_0015_Canonical_Product_Identity]]. Active MCP still lacks
+`listStorefrontJSScript`, so source intentionally avoids destructive cleanup while
+public docs and generated/MCP contracts disagree.
+
+Live dev-store verification on the Ozy theme passed 2026-05-18: `/widget.js` and
+hashed runtime cache headers correct, home/category/PDP badge flow working,
+`daily-maintenance` cron auth guard verified. Residual operational items:
+authenticated cron run after `CRON_SECRET` is set, and deployed transfer-size
+re-measurement against the `177763`-byte pre-split baseline.
 
 ## Non-Goals
 
@@ -326,4 +333,5 @@ and deployed transfer size.
 - [[Ikas_Storefront_Events]]
 - [[Phase_1_Widget_Runtime_Audit]]
 - [[Phase_2_Widget_Module_Split_Plan]]
+- [[Phase_3_Widget_Lifecycle_Hardening]]
 - [[Yotpo]]

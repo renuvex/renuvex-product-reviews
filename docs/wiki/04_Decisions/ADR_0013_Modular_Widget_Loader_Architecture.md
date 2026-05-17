@@ -228,7 +228,14 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
   reviews-main and listing-badge surfaces — a PDP with product carousels
   previously fetched `/api/public/settings` twice.
 
-### Phase 3 — Cache, versioning, ikas script lifecycle — source implemented (2026-05-17)
+### Phase 3 — Cache, versioning, ikas script lifecycle — Implemented & verified (2026-05-18)
+
+Full closeout record: [[Phase_3_Widget_Lifecycle_Hardening]]. Source landed in
+commit `1700d789` (2026-05-17); live dev-store verification on the Ozy theme
+passed 2026-05-18 (cache headers, PDP/category/home badge flow, cron auth guard).
+Two residual operational items remain: authenticated cron run after `CRON_SECRET`
+is set, and deployed transfer-size re-measurement.
+
 
 - Done — 2026-05-17: `vercel.json` `headers` sets `/widget.js` and the stable
   `/widget-runtime/runtime.js` compatibility shim to `max-age=300,
@@ -300,5 +307,6 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 - [[Ikas_Storefront_Events]]
 - [[Phase_1_Widget_Runtime_Audit]]
 - [[Phase_2_Widget_Module_Split_Plan]]
+- [[Phase_3_Widget_Lifecycle_Hardening]]
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]
