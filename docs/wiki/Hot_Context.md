@@ -49,11 +49,12 @@ source_files:
 - 2026-05-17: [[Phase_2_Widget_Module_Split_Plan]] verified live on the dev store — PDP/category/search cold entries, PDP↔PDP SPA navigation, and a mobile spot check passed; Sentry post-test clean. Phase 2 is closed. `core/settings.js` now de-dupes the in-flight settings request shared by the reviews-main and listing-badge surfaces.
 - 2026-05-17: Storefront script URL generation now uses `STOREFRONT_WIDGET_BASE_URL` through [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts). `NEXT_PUBLIC_DEPLOY_URL` remains the app/OAuth URL; real ikas storefront script records must load the stable public HTTPS widget host.
 - 2026-05-17: [[ADR_0015_Canonical_Product_Identity]] accepted and implemented for the dominant Storefront Events path. Listing/search badges now map `productDetails[].id` to slugs and call `/api/public/ratings?productIds=...`; `/api/public/ratings-by-slug` remains fallback-only for DOM-only contexts. Added the `[storeId, productId, status]` review index.
+- 2026-05-17: [[ADR_0015_Canonical_Product_Identity]] completeness layer implemented: `ProductSnapshot` read model, ikas product webhook endpoint, install-time/manual backfill, and slug fallback resolution through current `slug -> productId` snapshots before legacy slug reads.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
 - ADR_0013 Phase 1 runtime audit is recorded in [[Phase_1_Widget_Runtime_Audit]]; A/B/C/G ran on 2026-05-17 and gates passed.
-- Remaining Phase 3 items: Product read-model/webhook/backfill for DOM-only slug fallback and fresh product names, StorefrontJSScript schema reconciliation, loader/module cache headers and versioning, and script lifecycle hardening. Plus two deferred Phase 2 polish items: a visibility filter for the hidden `passive` search-container badge, and a merchant onboarding note for the theme's native review block.
+- Remaining Phase 3 items: StorefrontJSScript schema reconciliation, loader/module cache headers and versioning, and script lifecycle hardening. Plus two deferred Phase 2 polish items: a visibility filter for the hidden `passive` search-container badge, and a merchant onboarding note for the theme's native review block.
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
 
 ## Read Next

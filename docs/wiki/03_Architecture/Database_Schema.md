@@ -103,6 +103,27 @@ Constraints:
 
 Read pattern (admin and public): `getWidgetDefaults(widgetId) ⊕ sanitizeSettings(widgetId, row.settings)`. See [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
 
+### `ProductSnapshot`
+Local read model for ikas product identity snapshots. ikas remains the source of truth.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String `@id @default(uuid())` | |
+| `storeId` | String | Equals `merchantId` |
+| `productId` | String | ikas product UUID |
+| `slug` | String? | Current ikas slug snapshot |
+| `name` | String? | Current ikas name snapshot |
+| `deleted` | Boolean `@default(false)` | Mirrors ikas product deleted state when available |
+| `ikasUpdatedAt` | DateTime? | ikas product `updatedAt` timestamp |
+| `lastSyncedAt` | DateTime | Last local sync time |
+
+Indexes:
+- unique `[storeId, productId]`
+- `[storeId, slug]`
+- `[storeId, slug, deleted]`
+
+Maintained by install-time `listProduct` backfill, `/api/admin/sync-products`, and `/api/webhooks/ikas/products`.
+
 ### `PendingReviewImage`
 Registry of Cloudinary uploads not yet attached to a `Review`. See [[ADR_0012_Pending_Upload_Registry]].
 
@@ -149,4 +170,5 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 
 ## Change Log
 - 2026-05-17: Added `[storeId, productId, status]` index for canonical product-id listing/search rating reads. Related: [[ADR_0015_Canonical_Product_Identity]].
+- 2026-05-17: Added `ProductSnapshot` read model for current ikas product id/slug/name resolution.
 - 2026-05-12: Added `PendingReviewImage` model — registry of Cloudinary uploads not yet attached to a Review. See [[ADR_0012_Pending_Upload_Registry]].

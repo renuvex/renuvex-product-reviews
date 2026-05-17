@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
 import { buildStorefrontWidgetScript } from '@/lib/storefront-widget-url';
+import { buildProductWebhookEndpoint, registerProductWebhooks, syncAllProductsForStore } from '@/lib/product-snapshots';
 
 const callbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
@@ -205,6 +206,21 @@ export async function GET(request: NextRequest) {
       }
     } catch (scriptError) {
       console.error('Widget script injection failed:', scriptError);
+    }
+
+    try {
+      const host = request.headers.get('host');
+      if (host) {
+        await registerProductWebhooks(ikas, buildProductWebhookEndpoint(host));
+      }
+    } catch (webhookError) {
+      console.error('Product webhook registration failed:', webhookError);
+    }
+
+    try {
+      await syncAllProductsForStore(ikas, merchantId);
+    } catch (productSyncError) {
+      console.error('Initial product snapshot sync failed:', productSyncError);
     }
 
     // Update session with new merchant and app IDs, clear state, and set expiration

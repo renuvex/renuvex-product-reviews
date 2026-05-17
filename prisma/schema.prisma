@@ -67,6 +67,23 @@ model WidgetSettings {
   @@index([storeId])
 }
 
+model ProductSnapshot {
+  id            String    @id @default(uuid())
+  storeId       String
+  productId     String
+  slug          String?
+  name          String?
+  deleted       Boolean   @default(false)
+  ikasUpdatedAt DateTime?
+  lastSyncedAt  DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([storeId, productId])
+  @@index([storeId, slug])
+  @@index([storeId, slug, deleted])
+}
+
 // Registry of Cloudinary uploads that are not yet attached to a Review.
 // Created when the widget reports a successful upload; removed atomically
 // when a review is submitted with that publicId. The cleanup cron expires

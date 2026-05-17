@@ -60,7 +60,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress
-- ADR_0013 Phase 3 / Stage 2 hardening: canonical product identity is implemented for event-backed listing/search badge reads via [[ADR_0015_Canonical_Product_Identity]]. Remaining scope is the Product read-model/webhook/backfill follow-up for DOM-only fallback and fresh product name/slug sync.
+- ADR_0013 Phase 3 hardening continues with StorefrontJSScript lifecycle/cache work. Canonical product identity Stage 2 is implemented end-to-end via [[ADR_0015_Canonical_Product_Identity]], including event-backed product-id reads plus ProductSnapshot webhook/backfill for DOM-only fallback.
 
 ## Known Issues / Gaps
 - Structured-data injection exists in the widget runtime, but it is currently coupled to the rating badge/review-count path and still needs SEO validation and a clearer server/client strategy. See [[Structured_Data_And_Rich_Snippets]] and [[Yotpo_Style_Widget_Modular_Architecture]].
@@ -73,7 +73,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
 - Current script injection relies on DB-tracked script ids and does not define `listStorefrontJSScript`; reconciliation and delete semantics need review before changing install cleanup. See [[Ikas_Storefront_Script_Capabilities]].
 - Large new storefront surfaces should use the Phase 2 loader/module split pattern and must not be statically imported into the always-loaded runtime. See [[Yotpo_Style_Widget_Modular_Architecture]].
-- DOM-only listing badge fallback still uses slugs when ikas Events do not provide product ids. This is backward-compatible but not the long-term canonical path; close it with a Product read-model fed by ikas product webhooks/backfill.
+- DOM-only listing badge fallback now resolves current slugs through `ProductSnapshot` before reading reviews by product id. If a snapshot is missing, the old slug query remains as a last-resort compatibility path; run `/api/admin/sync-products` to repair drift.
 
 ## Important Decisions
 - [[ADR_0001_Project_Stack]] — Next.js 16 App Router + Prisma + Postgres (Supabase)
@@ -86,7 +86,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - [[ADR_0015_Canonical_Product_Identity]] — `(storeId, productId)` is the canonical review product identity; slug/name are display snapshots and slug reads are fallback-only
 
 ## Next Recommended Steps
-1. Implement the Product read-model/webhook/backfill follow-up for DOM-only fallback and product name/slug freshness.
+1. Verify product webhook registration/backfill on the dev store after deploy, then run `/api/admin/sync-products` once for existing merchants.
 2. Add script reconciliation before changing ikas script cleanup or delete behavior; see [[Ikas_Storefront_Script_Capabilities]].
 3. Clarify structured-data strategy and validate Google rich snippet behavior.
 4. Implement review-request email flow (post-purchase delay + token-gated submit URL).
@@ -100,6 +100,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 
 ## Change Log
 - 2026-05-17: Canonical product identity implemented for listing/search badge reads: widget maps Storefront Events product ids and public ratings can group by `productId`. Related: [[ADR_0015_Canonical_Product_Identity]].
+- 2026-05-17: Added ProductSnapshot read model, ikas product webhook receiver, install/manual backfill, and snapshot-backed slug fallback.
 - 2026-05-17: Phase 2 module split implementation started: classic `public/widget.js` loader + ESM `public/widget-runtime/*` chunks locally, with live verification still pending.
 - 2026-05-15: Added current-state corrections from the read-only widget architecture audit: deployed `widget.js` measured `177763` bytes, JSON-LD exists but needs validation/decoupling, and future Yotpo-like surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
 - 2026-05-12: **Pending Image Registry**: Replaced Cloudinary scan-and-diff with a robust DB-tracked `PendingReviewImage` registry. Eliminates 500-asset cap and race conditions. ([[ADR_0012_Pending_Upload_Registry]])

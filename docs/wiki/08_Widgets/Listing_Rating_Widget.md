@@ -47,7 +47,7 @@ Star+count badge injected into product cards on collection / search / category p
 
 ## API
 - Primary endpoint: `GET /api/public/ratings?storeId=<id>&productIds=a,b,c` ([src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)).
-- Fallback endpoint: `GET /api/public/ratings-by-slug?storeId=<id>&slugs=a,b,c` ([src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)) for DOM-only contexts where ikas Events did not provide product ids.
+- Fallback endpoint: `GET /api/public/ratings-by-slug?storeId=<id>&slugs=a,b,c` ([src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)) for DOM-only contexts where ikas Events did not provide product ids. The endpoint first resolves current slugs through `ProductSnapshot`, then reads reviews by `productId`; legacy direct `Review.slug` lookup is last resort only.
 - Server groups approved reviews by `productId`, returns `{ productId: { avg: '4.5', count: 12 } }` on the primary path.
 - Bulk fetch (one request per batch) instead of per-card requests.
 - Max 100 ids/slugs per request — server-side cap.
@@ -70,7 +70,7 @@ Listing widget is currently **not separately configurable** in the admin (no ded
   - Themes that lazy-load cards with IntersectionObserver — handled by our MutationObserver.
   - Themes that render slugs differently from product URLs — verify slug parsing.
 - If a card moves (e.g., theme reflows), the badge may end up in a stale position. Watch for re-injection logic.
-- DOM-only fallback remains slug-based. This is intentionally kept for older/edge themes, but it is not the canonical identity path and can still drift after a slug rename until the future Product read-model/webhook work exists.
+- DOM-only fallback is snapshot-backed: current slug resolves to product id through `ProductSnapshot`. If a snapshot is missing, legacy direct slug lookup remains as a compatibility path.
 - Cold direct entry to home/category/search pages once rendered listing badges as `avg (count)` text without star icons (`.ikr-star` spans were 0×0). Root cause: `#ikr-styles` — which carries the `.ikr-star` `display:inline-flex` rule — was injected only by the PDP `render.js` path. Fixed 2026-05-17: `core/badge.js` self-injects `#ikr-badge-styles` via `ensureBadgeStyles()`, independent of the PDP path. See [[Bug_Listing_Badge_Stars_Direct_Load]].
 - The full Phase 1 listing audit checklist lives in [[Phase_1_Widget_Runtime_Audit]].
 
@@ -103,6 +103,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 
 ## Change Log
 - 2026-05-17: Listing/search badges now prefer canonical product-id rating reads via `/api/public/ratings?productIds=...`. `ratings-by-slug` remains only as DOM fallback. Related: [[ADR_0015_Canonical_Product_Identity]].
+- 2026-05-17: DOM fallback now uses `ProductSnapshot` before legacy slug reads, backed by ikas product webhooks/backfill.
 - 2026-05-17: Phase 2 implementation started: listing badges are now lazy-loaded through `listing-badge.surface.js` and `core/lazy-modules.js`; `VIEW_SEARCH_RESULTS` product arrays are handled beside verified `VIEW_LISTING`; Ozy allowlist/blocklist rules moved into `themes/ozy/adapter.js`. Live dev-store/network/Sentry verification is still required before closing Phase 2.
 - 2026-05-17: Cold-entry missing-star bug fixed — the badge factory (`core/badge.js`) now self-injects its star CSS via `ensureBadgeStyles()` (`#ikr-badge-styles`), no longer depending on the PDP-only `#ikr-styles`. Live placement audit on home/category/search/clothing found no false positives. See [[Bug_Listing_Badge_Stars_Direct_Load]], [[Phase_1_Widget_Runtime_Audit]].
 - 2026-05-17: Documented the old Ozy selector allowlist/blocklist risk. Phase 1 must test false positives/negatives across menus, footer, banners, sliders, category/search grids, and merchant-added sections; Phase 2 should move this into a structured adapter/fallback layer.

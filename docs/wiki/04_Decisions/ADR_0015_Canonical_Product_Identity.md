@@ -19,6 +19,9 @@ related:
 source_files:
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/app/api/webhooks/ikas/products/route.ts"
+  - "src/app/api/admin/sync-products/route.ts"
+  - "src/lib/product-snapshots.ts"
   - "src/widget/core/storefront-context.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
@@ -70,7 +73,13 @@ Listing/search badges now prefer the canonical path:
 4. `/api/public/ratings` groups approved reviews by `Review.productId`.
 
 The legacy `/api/public/ratings-by-slug` endpoint remains only as a fallback for
-DOM-only paths where ikas Events did not provide product ids.
+DOM-only paths where ikas Events did not provide product ids. That fallback now
+first resolves `slug -> productId` through the local `ProductSnapshot` read model
+before using the old `Review.slug` query as the last resort.
+
+`ProductSnapshot` is maintained by install-time `listProduct` backfill, manual
+`POST /api/admin/sync-products`, and ikas product webhooks registered through
+`saveWebhooks` for `store/product/created` and `store/product/updated`.
 
 ## Reasoning
 Product ids are stable; slugs are mutable. Using slugs as identity makes review
@@ -89,10 +98,9 @@ fields define identity.
 - **Rewrite old review slugs on slug change** - rejected as the primary strategy.
   It treats the symptom, still uses a mutable field as identity, and requires
   perfect webhook/backfill behavior.
-- **Add a Product read model before changing the widget** - deferred. A local
-  Product table is useful for DOM-only fallback, fresh product names, and missed
-  event recovery, but it is not required to fix the dominant event-backed listing
-  path.
+- **Add a Product read model before changing the widget** - sequenced after the
+  widget product-id path. The read model is now implemented as the completeness
+  layer for DOM-only fallback and product name/slug freshness.
 
 ## Consequences
 - New listing/search badge reads are robust to future slug renames when ikas
@@ -101,10 +109,12 @@ fields define identity.
   policy as other public read routes.
 - `Review` has a new `[storeId, productId, status]` index to cover the hot
   product-id rating lookup.
-- DOM-only listing fallback remains slug-based until a Product read model is
-  implemented. That follow-up should use ikas product webhooks plus a backfill or
-  reconciliation job; the local table should be a cache/read model, not the
-  source of truth.
+- DOM-only listing fallback can resolve current slugs through `ProductSnapshot`
+  and then read reviews by `productId`. If a product is absent from the snapshot,
+  the endpoint keeps the old slug query as a last-resort compatibility path.
+- The local `ProductSnapshot` table is a read model/cache. ikas remains the
+  source of truth; webhook misses can be repaired by running the admin backfill
+  endpoint.
 - Reviews remain product-level, not variant-level. `ikasVariantId` is not part of
   the review identity unless a future product requirement explicitly changes the
   domain model.
@@ -112,6 +122,9 @@ fields define identity.
 ## Related Source Files
 - [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)
 - [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
+- [src/app/api/webhooks/ikas/products/route.ts](src/app/api/webhooks/ikas/products/route.ts)
+- [src/app/api/admin/sync-products/route.ts](src/app/api/admin/sync-products/route.ts)
+- [src/lib/product-snapshots.ts](src/lib/product-snapshots.ts)
 - [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js)
 - [src/widget/core/state.js](src/widget/core/state.js)
 - [src/widget/listing-badges/collect.js](src/widget/listing-badges/collect.js)
@@ -119,6 +132,7 @@ fields define identity.
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js)
 - [prisma/schema.prisma](prisma/schema.prisma)
 - [prisma/migrations/20260517120000_add_review_product_status_index/migration.sql](prisma/migrations/20260517120000_add_review_product_status_index/migration.sql)
+- [prisma/migrations/20260517133000_add_product_snapshot/migration.sql](prisma/migrations/20260517133000_add_product_snapshot/migration.sql)
 
 ## Related Notes
 - [[Decision_Index]]

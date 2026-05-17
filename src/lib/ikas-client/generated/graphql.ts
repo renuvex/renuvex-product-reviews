@@ -14,6 +14,18 @@ export type CreateStorefrontJSScriptInput = {
   storefrontId: string;
 }
 
+export type PaginationInput = {
+  limit?: number;
+  page?: number;
+}
+
+export type StringFilterInput = {
+  eq?: string;
+  in?: Array<string>;
+  ne?: string;
+  nin?: Array<string>;
+}
+
 export type UpdateStorefrontJSScriptInput = {
   contentType?: StorefrontJSScriptContentTypeEnum;
   fileName?: string;
@@ -22,6 +34,12 @@ export type UpdateStorefrontJSScriptInput = {
   name?: string;
   scriptContent?: string;
   storefrontId?: string;
+}
+
+export type WebhookInput = {
+  endpoint: string;
+  salesChannelIds?: Array<string>;
+  scopes: Array<string>;
 }
 
 export type GetMerchantQueryVariables = {}
@@ -96,6 +114,48 @@ export interface DeleteStorefrontJSScriptMutation {
   deleteStorefrontJSScript: DeleteStorefrontJSScriptMutationData;
 }
 
+export type ListProductsForSyncQueryVariables = {
+  pagination?: PaginationInput;
+  id?: StringFilterInput;
+}
+
+export type ListProductsForSyncQueryData = {
+  count: number;
+  hasNext: boolean;
+  limit: number;
+  page: number;
+  data: Array<{
+  id: string;
+  name: string;
+  deleted: boolean;
+  updatedAt?: number;
+  metaData?: {
+  slug: string;
+};
+}>;
+}
+
+export interface ListProductsForSyncQuery {
+  listProduct: ListProductsForSyncQueryData;
+}
+
+export type SaveProductWebhooksMutationVariables = {
+  input: WebhookInput;
+}
+
+export type SaveProductWebhooksMutationData = Array<{
+  id: string;
+  endpoint: string;
+  scope: string;
+  createdAt?: number;
+  updatedAt?: number;
+  deleted: boolean;
+}>
+
+export interface SaveProductWebhooksMutation {
+  saveWebhooks: SaveProductWebhooksMutationData;
+}
+
 export class GeneratedQueries {
   client: BaseGraphQLAPIClient<any>;
 
@@ -138,6 +198,29 @@ export class GeneratedQueries {
   }
 `;
     return this.client.query<Partial<ListStorefrontQuery>>({ query });
+  }
+
+  async listProductsForSync(variables: ListProductsForSyncQueryVariables): Promise<APIResult<Partial<ListProductsForSyncQuery>>> {
+    const query = `
+  query listProductsForSync($pagination: PaginationInput, $id: StringFilterInput) {
+    listProduct(pagination: $pagination, id: $id) {
+      count
+      hasNext
+      limit
+      page
+      data {
+        id
+        name
+        deleted
+        updatedAt
+        metaData {
+          slug
+        }
+      }
+    }
+  }
+`;
+    return this.client.query<Partial<ListProductsForSyncQuery>>({ query, variables });
   }
 }
 
@@ -183,6 +266,22 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<DeleteStorefrontJSScriptMutation>>({ mutation });
+  }
+
+  async saveProductWebhooks(variables: SaveProductWebhooksMutationVariables): Promise<APIResult<Partial<SaveProductWebhooksMutation>>> {
+    const mutation = `
+  mutation saveProductWebhooks($input: WebhookInput!) {
+    saveWebhooks(input: $input) {
+      id
+      endpoint
+      scope
+      createdAt
+      updatedAt
+      deleted
+    }
+  }
+`;
+    return this.client.mutate<Partial<SaveProductWebhooksMutation>>({ mutation, variables });
   }
 }
 

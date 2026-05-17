@@ -17,7 +17,7 @@ related:
 # Database Map
 
 ## Summary
-Postgres (Supabase) accessed via Prisma. Five models: `AuthToken`, `Review`, `StoreSettings`, `WidgetSettings`, `PendingReviewImage`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
+Postgres (Supabase) accessed via Prisma. Six models: `AuthToken`, `Review`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, `PendingReviewImage`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
 
 ## Files
 
@@ -37,6 +37,7 @@ Postgres (Supabase) accessed via Prisma. Five models: `AuthToken`, `Review`, `St
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` map |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
+| `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
 | `PendingReviewImage` | `publicId` | Registry of Cloudinary uploads not yet attached to a `Review` |
 
 ## Index strategy
@@ -83,3 +84,4 @@ The migrations show iterative tuning: redundant indexes have been cleaned up at 
 
 ## Change Log
 - 2026-05-17: Documented `[storeId, productId, status]` for canonical product-id listing/search badge reads and corrected the model count to include `PendingReviewImage`.
+- 2026-05-17: Added `ProductSnapshot` to the model map for webhook/backfill-maintained product identity resolution.

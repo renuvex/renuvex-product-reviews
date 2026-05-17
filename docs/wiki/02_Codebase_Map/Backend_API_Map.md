@@ -37,6 +37,7 @@ Three groups of API routes:
 | GET `/api/admin/settings` | [route.ts](src/app/api/admin/settings/route.ts) | All widget settings as map (defaults merged) |
 | PUT `/api/admin/settings` `{ widgetId, settings }` | same | Validate + sanitize + upsert into `WidgetSettings` |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Update `<script>` URL on each storefront via ikas mutation; recreates if missing |
+| POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and backfill `ProductSnapshot` from ikas `listProduct` |
 | GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Sweep Cloudinary `review_images/*` → delete orphans |
 | GET `/api/ikas/get-merchant` | [route.ts](src/app/api/ikas/get-merchant/route.ts) | Demo: fetches merchant via ikas Admin GQL |
 
@@ -51,7 +52,7 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit` | [route.ts](src/app/api/public/reviews/route.ts) | Approved reviews + rating distribution. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]]) |
 | POST `/api/public/reviews` body | same | Submit review (validation + profanity + rate-limit + trusted image URLs + auto-approve) |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]]) |
-| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | Legacy/fallback bulk avg+count per slug for DOM-only listing paths |
+| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read by product id; legacy direct slug read is last resort |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/upload/sign` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload |
 
@@ -62,6 +63,12 @@ GET responses set `Cache-Control: s-maxage=60, stale-while-revalidate=300`. See 
 - `/api/public/reviews` POST → 3 / 10min / IP
 - `/api/public/upload/sign` POST → 10 / 10min / IP
 Detail in [[Security_And_Rate_Limits]].
+
+## Webhooks
+
+| Method + Path | Source | Purpose |
+|---|---|---|
+| POST `/api/webhooks/ikas/products` | [route.ts](src/app/api/webhooks/ikas/products/route.ts) | Validate ikas webhook signature, process product create/update events, refresh `ProductSnapshot` |
 
 ## OAuth
 
@@ -108,4 +115,5 @@ Detail in [[Security_And_Rate_Limits]].
 
 ## Change Log
 - 2026-05-17: Added `/api/public/ratings?productIds=...` as the canonical product-id listing/search badge endpoint. `/ratings-by-slug` remains a DOM-only fallback. Related: [[ADR_0015_Canonical_Product_Identity]].
+- 2026-05-17: Added product webhook receiver and admin product sync/backfill endpoint for `ProductSnapshot`.
 - 2026-05-10: Added the trusted review image URL contract to public review/settings route documentation. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
