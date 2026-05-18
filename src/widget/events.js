@@ -54,19 +54,32 @@ export function attachHistoryListener() {
   if (historyPatched) return;
   historyPatched = true;
 
-  var origPush = history.pushState;
-  var origReplace = history.replaceState;
+  // Function-level guard: only wrap history methods that are not already our
+  // wrapper. `historyPatched` covers a double call within this module; the
+  // `__ikrPatched` tag additionally covers a second widget bundle instance
+  // (duplicate injection) sharing the same global `history` object — without
+  // it, each instance would wrap again and run cleanup once per extra wrap.
+  if (!history.pushState.__ikrPatched) {
+    var origPush = history.pushState;
+    history.pushState = function() {
+      var ret = origPush.apply(this, arguments);
+      cleanupStaleRatingBadge();
+      return ret;
+    };
+    history.pushState.__ikrPatched = true;
+  }
+  if (!history.replaceState.__ikrPatched) {
+    var origReplace = history.replaceState;
+    history.replaceState = function() {
+      var ret = origReplace.apply(this, arguments);
+      cleanupStaleRatingBadge();
+      return ret;
+    };
+    history.replaceState.__ikrPatched = true;
+  }
 
-  history.pushState = function() {
-    var ret = origPush.apply(this, arguments);
-    cleanupStaleRatingBadge();
-    return ret;
-  };
-  history.replaceState = function() {
-    var ret = origReplace.apply(this, arguments);
-    cleanupStaleRatingBadge();
-    return ret;
-  };
+  // popstate/hashchange use the same named handler reference, so repeat
+  // addEventListener calls are no-ops by the DOM spec — already idempotent.
   window.addEventListener('popstate', cleanupStaleRatingBadge);
   window.addEventListener('hashchange', cleanupStaleRatingBadge);
 }

@@ -7,6 +7,7 @@ import { collectLinksFromScopes, getMainContentScopes } from './core/link-scope.
 import { getThemeAdapter } from './themes/current-adapter.js';
 
 var mutationDebounceTimer = null;
+var mutationObserver = null;
 
 function renderListingBadgesLazy() {
   return loadListingBadgesModule().then(function (mod) {
@@ -32,7 +33,12 @@ function hasUnbadgedListingLinks() {
 
 export function startMutationObserver() {
   if (typeof MutationObserver === 'undefined') return;
-  var observer = new MutationObserver(function(mutations) {
+  // Idempotent: a repeat call must not attach a second observer to <body>.
+  // The instance is kept in module scope so this guard can detect a prior
+  // start — the audit flagged that it was previously unguarded.
+  if (mutationObserver) return;
+  if (!document.body) return;
+  mutationObserver = new MutationObserver(function(mutations) {
     var hasRelevantMutation = mutations.some(function(m) {
       return Array.from(m.addedNodes).some(function(node) {
         if (node.nodeType !== 1) return false;
@@ -52,5 +58,5 @@ export function startMutationObserver() {
       });
     }, 300);
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  mutationObserver.observe(document.body, { childList: true, subtree: true });
 }

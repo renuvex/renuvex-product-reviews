@@ -1,12 +1,12 @@
 {
-  "builtAt": "2026-05-18T05:22:28.303Z",
+  "builtAt": "2026-05-18T06:58:04.366Z",
   "theme": "default",
-  "entry": "widget-runtime/runtime-2RGD2H4S.js",
+  "entry": "widget-runtime/runtime-BYKXLFE2.js",
   "stableEntry": "widget-runtime/runtime.js",
   "outputs": [
     {
-      "file": "widget-runtime/runtime-2RGD2H4S.js",
-      "bytes": 9990,
+      "file": "widget-runtime/runtime-BYKXLFE2.js",
+      "bytes": 10169,
       "entryPoint": "src/widget/index.js",
       "imports": [
         {
