@@ -61,6 +61,7 @@ source_files:
 - 2026-05-18: O1/O8 listing badge hardening landed: scoped DOM link discovery now starts from theme product containers/main content instead of every document link, invisible badge placeholders reserve vertical space while ratings load, and the MutationObserver re-render gate now reuses the same scoped link discovery instead of `document.querySelectorAll('a[href]')`.
 - 2026-05-18: Post-deploy Chrome/CDP live retest on `dev-mertcopper.ikas.shop` confirmed `runtime-2RGD2H4S.js`, visible listing/PDP badges, no console/runtime errors, and zero widget-sourced `document.querySelectorAll('a[href]')` calls on `/`, `/clothing`, `/premium-shorts`, and mobile `/clothing`.
 - 2026-05-18: D4 rating read API hardening added: `/api/public/ratings` and `/api/public/ratings-by-slug` share a generous Upstash fixed-window limit of 300 requests/min/IP via `src/lib/public-rate-limit.ts`.
+- 2026-05-18: D2 database cleanup added: redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]` were removed because the existing wider composite indexes cover those leftmost prefixes.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions

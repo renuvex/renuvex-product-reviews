@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-18 - database | Drop redundant Review prefix indexes
+- Summary: Removed redundant Review indexes `[storeId, productId]` and `[storeId, slug]`.
+- Reason: Current query paths use `storeId + productId + status` or `storeId + slug + status`; PostgreSQL can use the retained wider composite indexes for the old leftmost prefixes, so the standalone prefix indexes only added write amplification.
+- Key source changes: `prisma/schema.prisma`; migration `20260518130000_drop_redundant_review_indexes`.
+- Verification: `pnpm exec prisma validate`; `pnpm exec tsc --noEmit`.
+- Updated wiki: [[Database_Map]], [[Database_Schema]], [[Hot_Context]]
+
 ## 2026-05-18 - security | Rate-limit public rating reads
 - Summary: Added a shared Upstash fixed-window rate limit for `/api/public/ratings` and `/api/public/ratings-by-slug`.
 - Reason: Rating badge endpoints are CORS-open and can be abused with many query variants to bypass CDN cache and create unnecessary function/Postgres load.

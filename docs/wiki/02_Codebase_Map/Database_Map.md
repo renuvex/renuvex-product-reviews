@@ -3,7 +3,7 @@ type: database
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-18
 tags:
   - database
   - prisma
@@ -42,13 +42,13 @@ Postgres (Supabase) accessed via Prisma. Six models: `AuthToken`, `Review`, `Sto
 
 ## Index strategy
 On `Review`:
-- `[storeId, productId]` — public widget per-product fetch
 - `[storeId, productId, status]` — canonical listing/search badge resolution by ikas product id
-- `[storeId, slug]` — legacy/fallback listing-page badge resolution
 - `[storeId, status]` — admin filtered list
 - `[storeId, slug, status]` — legacy combined slug fallback path (composite added 2026-04)
 
-The migrations show iterative tuning: redundant indexes have been cleaned up at least once. Before adding a new index, scan `prisma/migrations/*` for past attempts.
+`[storeId, productId, status]` also covers the leftmost `(storeId, productId)` prefix, and `[storeId, slug, status]` covers `(storeId, slug)`. The old two-column prefix indexes were removed in `20260518130000_drop_redundant_review_indexes` to reduce write amplification on the highest-write table.
+
+The migrations show iterative tuning: redundant indexes have been cleaned up more than once. Before adding a new index, scan `prisma/migrations/*` for past attempts.
 
 ## Migration workflow
 - Local dev: `pnpm prisma:migrate` (creates + applies migration)
@@ -104,6 +104,7 @@ code run together, so a migration must not break the old code.
 - [[ADR_0003_Review_Data_Model]]
 
 ## Change Log
+- 2026-05-18: Removed redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]`; the wider composite indexes cover those query prefixes and the drop-only migration is backwards-compatible.
 - 2026-05-17: Added the migration safety (deploy-window / expand-contract) rule to the migration workflow section.
 - 2026-05-17: Documented `[storeId, productId, status]` for canonical product-id listing/search badge reads and corrected the model count to include `PendingReviewImage`.
 - 2026-05-17: Added `ProductSnapshot` to the model map for webhook/backfill-maintained product identity resolution.

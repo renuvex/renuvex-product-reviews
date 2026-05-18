@@ -39,9 +39,7 @@ model Review {
   slug          String
   title         String?
 
-  @@index([storeId, productId])
   @@index([storeId, productId, status])
-  @@index([storeId, slug])
   @@index([storeId, status])
   @@index([storeId, slug, status])
 }

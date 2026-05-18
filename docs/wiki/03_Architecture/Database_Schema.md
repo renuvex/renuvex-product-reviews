@@ -3,7 +3,7 @@ type: database
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-18
 tags:
   - database
   - prisma
@@ -19,7 +19,7 @@ related:
 # Database Schema
 
 ## Summary
-PostgreSQL via Prisma. Five models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
+PostgreSQL via Prisma. Six models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
 
 ## Models
 
@@ -63,11 +63,13 @@ Customer reviews. Public storefront submits; admin moderates.
 | `title` | String? | Optional, max 60 chars |
 
 Indexes:
-- `[storeId, productId]`
 - `[storeId, productId, status]`
-- `[storeId, slug]`
 - `[storeId, status]`
 - `[storeId, slug, status]`
+
+The two wider composite indexes also cover the old `(storeId, productId)` and
+`(storeId, slug)` prefix lookups, so the standalone prefix indexes were removed
+in migration `20260518130000_drop_redundant_review_indexes`.
 
 Common queries:
 - Public: `findMany({ storeId, productId, status: 'approved' })` + ordering + filters
@@ -167,6 +169,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-05-18: Removed redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]`; retained `[storeId, productId, status]`, `[storeId, status]`, and `[storeId, slug, status]`.
 - 2026-05-17: Removed unused `ProductSnapshot.deleted` column + `[storeId, slug, deleted]` index — ikas has no product-delete webhook scope, so it was always false. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added `[storeId, productId, status]` index for canonical product-id listing/search rating reads. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added `ProductSnapshot` read model for current ikas product id/slug/name resolution.
