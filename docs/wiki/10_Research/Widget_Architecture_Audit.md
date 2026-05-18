@@ -76,7 +76,7 @@ Denetim sonrası remediation commit'leri (`78595421`..`66a32d81`, `4eff23b2`) ma
 indi ve bu denetimin sahibi tarafından **gerçek kodla yeniden doğrulandı** (iddia
 kabul edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 
-### Kapanan bulgular — 9 madde, doğrulandı
+### Kapanan bulgular — 12 madde, doğrulandı
 
 | Madde | Commit | Doğrulama (dosya:satır) |
 |---|---|---|
@@ -89,14 +89,17 @@ kabul edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 | **O4** Observer/listener idempotency | `4eff23b2` | `observer.js` `startMutationObserver()`'a idempotency guard + instance modül kapsamında saklanıyor + `!document.body` koruması; `events.js` `history.pushState`/`replaceState` wrapper'larına fonksiyon-seviyesi `__ikrPatched` etiketi → çift-sarma engellendi. Build temiz, runtime'da `__ikrPatched` ×4. Deploy edilip dev-store'da canlı doğrulandı: SPA nav'da bayat badge/JSON-LD temizliği, badge render, tek-instance mount, 0 widget console hatası. **Kapandı.** Not: tüketici (page-ömürlü widget) bir teardown çağırmadığı için `stopMutationObserver` eklenmedi — esbuild tree-shake ettiği için ölü export olurdu. |
 | **O7** widget-error Sentry kota tavanı | — (Sentry config) | ikas MCP `tags[source]:widget` sorgusu: tek issue (`YORUM-PANELI-3`, resolved smoke test, 1 event) → widget-error hacmi ~sıfır. Sentry **Spike Protection açık** (panelde doğrulandı) → issue çeşitliliğini bozmadan flood'u sınırlıyor. Kör global cap riski yerine native koruma kullanılıyor; kod gerekmedi. **Kapandı.** |
 | **D5** Eski runtime chunk birikimi | `da2f9f98` | `build-widget.mjs`'e `pruneOldRuntimeFiles()` eklendi — current build'de referans verilmeyen + 7 günden eski hash'li runtime/chunk dosyaları budanıyor; current build dosyaları her zaman korunuyor. mtime-tabanlı; git checkout mtime'ı yalnızca "şimdi"ye çeker (asla daha eski) → yanlış okuma budamayı yalnızca geciktirir, asla gerekli dosyayı silmez. Deterministik test geçti: 10g yaşlı+unreferenced 2 dosya silindi, 2g'lik + canlı dosyalar korundu. **Kapandı** — "eski hash'i tut" doğruydu, "sonsuza dek tut" endüstri standardı değildi; sınırlı-retention eklendi. |
+| **O5** PDP 147KB shared chunk | — (ölçüm) | Deploy edilmiş asset'ler ölçüldü (`new-ikas-app.vercel.app`, build `runtime-5EYUMT6S`). 147KB *ham* `chunk-RDZDCQ76.js` → brotli ile telde **~40KB**. Sayfa toplam tel transferi (manifest import grafiğinden): PDP **~53KB**, listing **~16,5KB**. Hepsi `max-age=31536000, immutable` cache'li; `widget.js` `async` + chunk'lar dinamik `import()` → ilk render'ı bloklamıyor. Tam-özellikli review widget'ı için makul/yalın bütçe. **Kapandı** — ölçüldü, kabul edilebilir; kod aksiyonu gerekmiyor. O5'in "Orta" notu ölçülmemiş ham figüre dayanıyordu. Opsiyonel mikro-iyileştirme (yorum-formu modal'ını ayrı lazy chunk'a almak, ~4-5KB tel) gerekçesiz bulundu. |
+| **D2** Redundant Review index | migration `20260518130000` | `20260518130000_drop_redundant_review_indexes` — `DROP INDEX IF EXISTS Review_storeId_productId_idx` + `Review_storeId_slug_idx`. `schema.prisma` Review modeli artık 3 index; geniş composite'ler (`[storeId,productId,status]`, `[storeId,slug,status]`) aynı leftmost-prefix'i kapsıyor. DROP INDEX backwards-compatible → tek-deploy güvenli. **Kapandı** (kullanıcı tamamladı, migration + şema kodla doğrulandı). |
+| **D3** Cloudinary upload tenant-scope | migration `20260518143000` + kod | `review-images.ts` `getReviewImageFolder()` → `review_images/stores/<storeId>` per-store klasör; `isTrustedReviewImageUrl` URL path'inde storeId klasörünü zorunlu kılıyor → mağaza A, mağaza B klasörüne URL gönderemez. `upload/sign` store doğrulaması + per-store imzalı klasör. `reviews/route.ts` POST/GET/hasImages-filtre/pending-cleanup hepsi `storeId` geçiriyor — tutarlı (görseller kırılmıyor). `PendingReviewImage.storeId` eklendi (`20260518143000`, additive). **Kapandı** (kullanıcı tamamladı, kodla doğrulandı). |
 
 ### Hâlâ açık
 
 - **O2** — Ozy dışı tema otomatik desteklenmiyor; ikas aktif-tema tespiti cevabı bekleniyor.
-- **O5** — PDP 147KB shared chunk; önce deployed transfer ölçümü gerekli.
 - **O6** — `VIEW_LISTING` runtime'da doğrulandı ama resmi dokümanda kontrat değil; ikas cevabı bekleniyor.
-- **D2** — Redundant Review index temizliği migration safety ile ayrı alınacak.
-- **D3** — Closed 2026-05-18: Cloudinary upload klasörü artık tenant-scoped `review_images/stores/<storeId>`.
+
+> Kod-aksiyonu gerektiren tüm denetim maddeleri kapandı. Kalan 2 madde yalnızca ikas
+> tema/event kontrat cevabına bağlı — bu app tarafında yapılabilecek bir şey yok.
 
 ## Kapsam Notu
 
