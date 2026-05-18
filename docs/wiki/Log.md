@@ -3,8 +3,8 @@ type: log
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-18
+last_verified: 2026-05-18
 confidence: high
 tags:
   - log
@@ -19,6 +19,13 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-18 - security | Harden public review submit/read contract
+- Summary: `POST /api/public/reviews` now verifies the submitted target against installed `StoreSettings` and `(storeId, productId)` in `ProductSnapshot`, ignores public `slug`/`productName`/`email`, and stores slug/name snapshots from the server-side product read model.
+- Reason: The public storefront is CORS-open and browser-controlled, so product identity and response fields must not be trusted from client payloads.
+- Key source changes: `src/app/api/public/reviews/route.ts` target verification, public response whitelist, minimal create response.
+- Verification: `pnpm exec prisma validate` and `pnpm exec tsc --noEmit`.
+- Updated wiki: [[Backend_API_Map]], [[Important_Files]], [[Security_And_Rate_Limits]], [[Hot_Context]]
 
 ## 2026-05-17 - docs | Migration safety (expand/contract) rule
 - Summary: Documented the deploy-window migration rule — `prisma migrate deploy` runs during the Vercel build while the old deployment still serves, so breaking schema changes (drop/rename column, add `NOT NULL`, etc.) must use expand/contract across two deploys; additive changes stay single-deploy.

@@ -3,8 +3,8 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-18
+last_verified: 2026-05-18
 confidence: high
 tags:
   - hot-context
@@ -54,6 +54,7 @@ source_files:
 - 2026-05-17: OAuth install no longer blocks on product backfill — `syncAllProductsForStore` runs via Next.js `after()` post-response (webhook registration stays awaited). See [[Auth_And_Installation_Flow]].
 - 2026-05-17: Removed dead `ProductSnapshot.deleted` column + index; `ratings-by-slug` slug→productId resolution is now deterministic (freshest snapshot wins).
 - 2026-05-17: ADR_0013 Phase 3 source hardening landed: script lifecycle is non-destructive create/update only (no zero-argument `deleteStorefrontJSScript`), daily maintenance now runs storefront-script reconcile, production widget builds use a deterministic hashed `runtime-*.js` with `runtime.js` kept as a short-cache compatibility shim, and hidden listing links are filtered before badge injection.
+- 2026-05-18: Public review API hardening landed: `POST /api/public/reviews` verifies installed store + `(storeId, productId)` in `ProductSnapshot`, ignores client `slug`/`productName`/`email`, and `GET /api/public/reviews` returns a public whitelist instead of raw Review rows.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions

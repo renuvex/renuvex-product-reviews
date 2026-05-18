@@ -17,6 +17,27 @@ const redis = new Redis({
 
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_SEC = 10 * 60; // 10 dakika
+const PUBLIC_REVIEW_SELECT = {
+  id: true,
+  rating: true,
+  title: true,
+  comment: true,
+  author: true,
+  merchantReply: true,
+  images: true,
+  createdAt: true,
+} as const;
+
+type PublicReviewRow = {
+  id: string;
+  rating: number;
+  title: string | null;
+  comment: string | null;
+  author: string;
+  merchantReply: string | null;
+  images: string | null;
+  createdAt: Date;
+};
 
 // Profanity filtresi — Türkçe ve İngilizce yaygın küfürler
 const PROFANITY_LIST = [
@@ -41,11 +62,54 @@ function maskAuthor(name: string): string {
   return parts[0] + ' ' + parts[parts.length - 1][0].toLocaleUpperCase('tr-TR') + '.';
 }
 
+function requiredString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text || text.length > maxLength) return null;
+  return text;
+}
+
+function optionalString(value: unknown, maxLength: number): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text) return null;
+  return text.length <= maxLength ? text : null;
+}
+
 async function checkRateLimit(ip: string): Promise<boolean> {
   const key = `ikr_rl:${ip}`;
   const count = await redis.incr(key);
   if (count === 1) await redis.expire(key, RATE_LIMIT_WINDOW_SEC);
   return count <= RATE_LIMIT_MAX;
+}
+
+async function verifyReviewTarget(storeId: string, productId: string) {
+  const [store, product] = await Promise.all([
+    prisma.storeSettings.findUnique({
+      where: { storeId },
+      select: { storeId: true },
+    }),
+    prisma.productSnapshot.findUnique({
+      where: { storeId_productId: { storeId, productId } },
+      select: { productId: true, slug: true, name: true },
+    }),
+  ]);
+
+  return store && product ? product : null;
+}
+
+function formatPublicReview(review: PublicReviewRow, cloudName: string | null) {
+  return {
+    id: review.id,
+    rating: review.rating,
+    title: review.title,
+    comment: review.comment,
+    author: maskAuthor(review.author),
+    merchantReply: review.merchantReply,
+    images: parseStoredReviewImages(review.images, cloudName),
+    createdAt: review.createdAt.toISOString(),
+  };
 }
 
 export async function OPTIONS() {
@@ -104,7 +168,7 @@ export async function GET(req: Request) {
     const baseWhere = { storeId, productId, status: 'approved' };
 
     const [reviews, totalCount, ratingGroups] = await Promise.all([
-      prisma.review.findMany({ where, orderBy, take: limit, skip }),
+      prisma.review.findMany({ where, orderBy, take: limit, skip, select: PUBLIC_REVIEW_SELECT }),
       prisma.review.count({ where }),
       prisma.review.groupBy({
         by: ['rating'],
@@ -126,10 +190,7 @@ export async function GET(req: Request) {
     });
     const avgRating = allCount > 0 ? (ratingSum / allCount).toFixed(1) : null;
 
-    const formattedReviews = reviews.map((r: any) => {
-      const parsedImages = parseStoredReviewImages(r.images, cloudName);
-      return { ...r, images: parsedImages, author: maskAuthor(r.author) };
-    });
+    const formattedReviews = reviews.map((review) => formatPublicReview(review, cloudName));
 
     const res = withCors(NextResponse.json({
       data: {
@@ -165,27 +226,36 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 }));
     }
 
-    const { storeId, productId, slug, productName, rating, title, comment, author, email, images } = body;
+    const { storeId, productId, rating, title, comment, author, images } = body;
+    const storeIdText = requiredString(storeId, 128);
+    const productIdText = requiredString(productId, 128);
+    const authorText = requiredString(author, 40);
+    const titleText = optionalString(title, 60);
+    const commentText = optionalString(comment, 2000);
+    const hasTitleInput = title !== undefined && title !== null && (typeof title !== 'string' || title.trim() !== '');
+    const hasCommentInput = comment !== undefined && comment !== null && (typeof comment !== 'string' || comment.trim() !== '');
 
     // Validasyon — zorunlu alanlar ve tip/aralık kontrolleri
-    if (!storeId || !productId || !author) {
+    if (!storeIdText || !productIdText || !authorText) {
       return withCors(NextResponse.json({ error: 'Lütfen gerekli tüm alanları doldurun.' }, { status: 400 }));
     }
     const ratingNum = Number(rating);
-    if (!ratingNum || ratingNum < 1 || ratingNum > 5) {
+    if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
       return withCors(NextResponse.json({ error: 'Puan 1 ile 5 arasında olmalıdır.' }, { status: 400 }));
     }
-    if (typeof author !== 'string' || author.trim().length === 0 || author.trim().length > 40) {
-      return withCors(NextResponse.json({ error: 'Ad alanı boş bırakılamaz veya 40 karakteri aşamaz.' }, { status: 400 }));
-    }
-    if (title && typeof title === 'string' && title.trim().length > 60) {
+    if (hasTitleInput && !titleText) {
       return withCors(NextResponse.json({ error: 'Başlık en fazla 60 karakter olabilir.' }, { status: 400 }));
     }
-    if (comment && typeof comment === 'string' && comment.length > 2000) {
+    if (hasCommentInput && !commentText) {
       return withCors(NextResponse.json({ error: 'Yorum en fazla 2000 karakter olabilir.' }, { status: 400 }));
     }
-    if (containsProfanity(title) || containsProfanity(comment) || containsProfanity(author)) {
+    if (containsProfanity(titleText ?? '') || containsProfanity(commentText ?? '') || containsProfanity(authorText)) {
       return withCors(NextResponse.json({ error: 'Yorumunuz uygunsuz ifadeler içeriyor.' }, { status: 400 }));
+    }
+
+    // Rate limit — sentaktik olarak geçerli submit denemelerini say.
+    if (!await checkRateLimit(ip)) {
+      return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
     }
 
     const cloudName = getConfiguredCloudinaryCloudName();
@@ -198,13 +268,13 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Geçersiz yorum görseli.' }, { status: 400 }));
     }
 
-    // Rate limit — sadece geçerli istekleri say
-    if (!await checkRateLimit(ip)) {
-      return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
+    const verifiedProduct = await verifyReviewTarget(storeIdText, productIdText);
+    if (!verifiedProduct) {
+      return withCors(NextResponse.json({ error: 'Ürün doğrulanamadı. Lütfen sayfayı yenileyip tekrar deneyin.' }, { status: 400 }));
     }
 
     const reviewsWidget = await prisma.widgetSettings.findUnique({
-      where: { storeId_widgetId: { storeId: String(storeId), widgetId: 'reviews' } },
+      where: { storeId_widgetId: { storeId: storeIdText, widgetId: 'reviews' } },
     });
     const reviewsConfig = (reviewsWidget?.settings ?? {}) as Record<string, unknown>;
 
@@ -235,15 +305,15 @@ export async function POST(request: Request) {
     const newReview = await prisma.$transaction(async (tx) => {
       const created = await tx.review.create({
         data: {
-          storeId: String(storeId),
-          productId: String(productId),
-          slug: String(slug || ''),
-          productName: productName ? String(productName) : null,
+          storeId: storeIdText,
+          productId: productIdText,
+          slug: verifiedProduct.slug ?? '',
+          productName: verifiedProduct.name ?? null,
           rating: ratingNum,
-          title: title ? String(title).trim() : null,
-          comment: comment || '',
-          author: String(author).trim(),
-          email: email || '',
+          title: titleText,
+          comment: commentText ?? '',
+          author: authorText,
+          email: '',
           images: imageResult.urls.length ? JSON.stringify(imageResult.urls) : null,
           status: initialStatus,
         },
@@ -258,7 +328,13 @@ export async function POST(request: Request) {
       return created;
     });
 
-    return withCors(NextResponse.json({ message: 'Yorum alındı', data: newReview }, { status: 201 }));
+    return withCors(NextResponse.json({
+      message: 'Yorum alındı',
+      data: {
+        id: newReview.id,
+        status: newReview.status,
+      },
+    }, { status: 201 }));
   } catch (error: any) {
     console.error('[POST] Reviews ERROR:', error);
     return withCors(NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 }));

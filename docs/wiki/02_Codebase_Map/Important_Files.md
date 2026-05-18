@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-18
 tags:
   - critical-files
 related:
@@ -80,12 +80,13 @@ related:
 ## Public-facing surface
 
 ### [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
-- **What:** GET (paginated reviews + rating distribution) and POST (submit, with profanity + rate limit + auto-approve mode).
+- **What:** GET (paginated reviews + rating distribution, explicit public field whitelist) and POST (submit, with StoreSettings/ProductSnapshot target verification, profanity + rate limit + auto-approve mode).
 - **Be careful:**
   - **Highest-blast-radius surface in the app.** It's CORS-open and accepts user content from anywhere on the internet.
   - Profanity list is hard-coded in the file; updating means redeploy.
   - Rate limit is per IP, 3/10min. Bypass risk if the attacker rotates IPs — by design we accept this trade-off.
   - `containsProfanity` is called on `title`, `comment`, `author`. If you add a new free-text field, pass it through too.
+  - Do not trust public `slug`, `productName`, or `email` from the browser. Review identity/name snapshots come from `ProductSnapshot`; public email stays blank until a verified buyer flow exists.
   - Review image input/output must go through [src/lib/review-images.ts](src/lib/review-images.ts), not ad hoc `JSON.parse` or URL prefix checks.
 
 ### [src/lib/review-images.ts](src/lib/review-images.ts)

@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-18
 tags:
   - security
   - rate-limit
@@ -17,7 +17,7 @@ related:
 # Security & Rate Limits
 
 ## Summary
-Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> admin API. Storefront (CORS-open) -> public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, signed Cloudinary uploads, trusted Cloudinary image URL allowlisting, server-side cron secret.
+Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> admin API. Storefront (CORS-open) -> public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, ProductSnapshot-based public review target verification, signed Cloudinary uploads, trusted Cloudinary image URL allowlisting, public response whitelisting, server-side cron secret.
 
 ## Trust boundaries
 
@@ -26,7 +26,7 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | `/api/oauth/callback/ikas` | HMAC-SHA256 signature on `code` (+ optional state) | merchant from token exchange |
 | `/api/admin/*` | HS256 JWT (`getUserFromRequest`) | `merchantId` from JWT subject |
 | `/api/ikas/*` | HS256 JWT (same) | same |
-| `/api/public/*` | None — CORS-open | `storeId` from query param (not authoritative) |
+| `/api/public/*` | None — CORS-open; write routes add per-route checks | `storeId` from query/body, verified per route where writes happen |
 | `/api/admin/daily-maintenance` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
 | `/api/admin/cleanup-pending-uploads` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
 | `/api/admin/cleanup-images` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
@@ -47,12 +47,15 @@ IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theor
 - **OAuth callback**: zod validates `code`, `state`, `signature`.
 - **Public review POST**: hand-rolled validation
   - `storeId`, `productId`, `author` required
+  - `storeId` must exist in `StoreSettings`
+  - `(storeId, productId)` must exist in `ProductSnapshot`
   - `rating` 1..5
-  - `author` 2..40 chars
+  - `author` 1..40 chars
   - `title` ≤ 60 chars
   - `comment` ≤ 2000 chars
   - `images` must pass the trusted Cloudinary URL policy in [src/lib/review-images.ts](src/lib/review-images.ts)
   - profanity filter on title/comment/author
+  - public `slug`, `productName`, and `email` body fields are ignored; review identity/name snapshots come from `ProductSnapshot`, and public email is stored blank until a verified buyer flow exists
 - **Admin settings PUT**: `validateSettings(widgetId, settings)` runs the schema in [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
 - **DB caps**: `comment` and `merchantReply` are `@db.VarChar(2000)`.
 
@@ -77,7 +80,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 
 ## CORS
 - `/api/public/*` → `Access-Control-Allow-Origin: *`. Necessary because storefront domains are unknowable a priori.
-- Acceptable for read endpoints. For POST `/api/public/reviews`, the design relies on rate-limit + profanity + abuse-detection at the row level. Could tighten with per-merchant origin allowlist (config in `StoreSettings`).
+- Acceptable for read endpoints. For POST `/api/public/reviews`, the design relies on ProductSnapshot target verification + rate-limit + profanity + abuse-detection at the row level. Could tighten further with per-merchant origin allowlist (config in `StoreSettings`).
 - `/api/admin/*` does not set CORS — same-origin (admin iframe is on the deploy URL).
 
 ## CSRF
@@ -116,5 +119,6 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-18: Hardened public review write/read contracts. `POST /api/public/reviews` now verifies the target store/product via `StoreSettings` + `ProductSnapshot`, ignores client-supplied `slug`/`productName`/`email`, and `GET /api/public/reviews` returns an explicit public field whitelist instead of a raw Review row spread.
 - 2026-05-10: Implemented the trusted review image URL policy. Public POST now rejects third-party/data image URLs, read APIs filter legacy rows, and the widget renders only trusted Cloudinary review images. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-10: Added the open image URL allowlisting risk found during the review detail lightbox audit. Related source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].
