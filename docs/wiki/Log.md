@@ -24,7 +24,7 @@ source_files:
 - Summary: The MutationObserver re-render gate now uses the same scoped listing link discovery as listing badge injection instead of `document.querySelectorAll('a[href]')`.
 - Reason: Live Chrome/CDP verification on `dev-mertcopper.ikas.shop` showed the listing inject path was scoped, but the always-loaded runtime still performed whole-document link scans from the observer gate.
 - Key source changes: new `src/widget/core/link-scope.js`, updated `src/widget/observer.js` and `src/widget/listing-badges/dom.js`; regenerated public widget runtime output.
-- Verification: `pnpm build:widget`, `pnpm exec tsc --noEmit`, active generated runtime search confirmed no `document.querySelectorAll('a[href]')` in `runtime-2RGD2H4S.js` / `listing-badges-W6CSI53A.js`. Live deploy retest is required after push/deploy.
+- Verification: `pnpm build:widget`, `pnpm exec tsc --noEmit`, active generated runtime search confirmed no `document.querySelectorAll('a[href]')` in `runtime-2RGD2H4S.js` / `listing-badges-W6CSI53A.js`. Post-deploy Chrome/CDP retest on `/`, `/clothing`, `/premium-shorts`, and mobile `/clothing` confirmed the live site loads `runtime-2RGD2H4S.js`, has visible listing/PDP badges, reports no console/runtime errors, and records zero widget-sourced `document.querySelectorAll('a[href]')` calls.
 - Updated wiki: [[Listing_Rating_Widget]], [[Widget_Architecture]], [[Widget_Files_Map]], [[Hot_Context]]
 
 ## 2026-05-18 - hardening | Reduce listing badge CLS and DOM scan cost

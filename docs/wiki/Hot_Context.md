@@ -59,6 +59,7 @@ source_files:
 - 2026-05-18: Public review API hardening landed: `POST /api/public/reviews` verifies installed store + `(storeId, productId)` in `ProductSnapshot`, ignores client `slug`/`productName`/`email`, and `GET /api/public/reviews` returns a public whitelist instead of raw Review rows.
 - 2026-05-18: O3 settings cache hardening: widget-side stale settings tolerance dropped from 7 days to 24 hours; transient outages still use same-tab stale fallback, but merchant setting changes cannot remain masked for a week.
 - 2026-05-18: O1/O8 listing badge hardening landed: scoped DOM link discovery now starts from theme product containers/main content instead of every document link, invisible badge placeholders reserve vertical space while ratings load, and the MutationObserver re-render gate now reuses the same scoped link discovery instead of `document.querySelectorAll('a[href]')`.
+- 2026-05-18: Post-deploy Chrome/CDP live retest on `dev-mertcopper.ikas.shop` confirmed `runtime-2RGD2H4S.js`, visible listing/PDP badges, no console/runtime errors, and zero widget-sourced `document.querySelectorAll('a[href]')` calls on `/`, `/clothing`, `/premium-shorts`, and mobile `/clothing`.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
