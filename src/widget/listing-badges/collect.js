@@ -2,13 +2,17 @@
 
 import { extractSlug, SYSTEM_SLUGS } from '../core/helpers.js';
 import { ikrProductMap, ikrSlugMap } from '../core/state.js';
+import { getThemeAdapter } from '../themes/current-adapter.js';
+import { collectListingLinks } from './dom.js';
 
 export function collectProductTargets() {
   var map = {};
   var seen = {};
+  var adapter = getThemeAdapter();
 
-  document.querySelectorAll('a[href]').forEach(function(a) {
+  collectListingLinks(adapter).forEach(function(a) {
     try {
+      if (adapter.isNavigationLink(a) || adapter.isCartLink(a) || adapter.isBannerLink(a)) return;
       var href = a.getAttribute('href');
       if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
       var slug = extractSlug(a.href);

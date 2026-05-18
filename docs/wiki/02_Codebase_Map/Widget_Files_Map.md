@@ -3,8 +3,8 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-18
+last_verified: 2026-05-18
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -16,6 +16,7 @@ source_files:
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
   - "src/widget/listing-badges/index.js"
+  - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
   - "src/widget/themes/ozy/adapter.js"
@@ -78,6 +79,7 @@ src/widget/
 │
 ├─ listing-badges/
 │  ├─ index.js                    # Bootstrap (find product cards on listing pages)
+│  ├─ dom.js                      # Scoped link discovery + visibility helpers
 │  ├─ collect.js                  # Discover candidate cards and merge event product ids
 │  ├─ ratings.js                  # Bulk fetch via /api/public/ratings, slug fallback only
 │  └─ inject.js                   # Inject star badges into discovered cards

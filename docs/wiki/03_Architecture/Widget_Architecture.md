@@ -32,6 +32,7 @@ source_files:
   - "src/widget/product-widget/bootstrap.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/listing-badges/index.js"
+  - "src/widget/listing-badges/dom.js"
   - "src/widget/themes/ozy/adapter.js"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
@@ -81,7 +82,7 @@ deployment before claiming live performance improvement.
 | [product-widget/title-finder.js](src/widget/product-widget/title-finder.js) | Heuristic to find product title element across themes. |
 | [product-widget/review-modal.js](src/widget/product-widget/review-modal.js) | Photo review detail lightbox. Distinct from the submission wizard. |
 | [product-widget/review-form-modal/](src/widget/product-widget/review-form-modal/) | Multi-step submission wizard (steps + progress + state machine). |
-| [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, slug discovery, bulk fetch, injection. |
+| [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, scoped link discovery, bulk fetch, slot reservation, injection. |
 | [review-layouts/](src/widget/review-layouts/) | `card` / `gallery` / `list` review item layouts (registry in `index.js`). |
 | [summary-layouts/](src/widget/summary-layouts/) | `classic` / `compact` / `hero` / `minimal` / `split` summary layouts. |
 | [themes/ozy/](src/widget/themes/ozy/) | Theme-specific styles/selectors plus fallback adapter. Default. |
@@ -193,6 +194,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-18: Listing badge hardening reduced CLS and DOM scan cost: candidate links are scoped to theme containers/main content, and invisible badge slots are reserved while rating data loads.
 - 2026-05-18: Reduced widget settings stale tolerance from 7 days to 24 hours in `core/settings.js`.
 - 2026-05-17: Phase 3 source hardening implemented: `widget.js` now points at a content-hashed ESM runtime, stable `runtime.js` remains as a short-cache shim, script lifecycle is create/update-only, and hidden listing links are filtered before badge injection.
 - 2026-05-17: Phase 2 module split verified live on the dev store — PDP/category/search cold entries, PDP↔PDP SPA navigation, and a mobile spot check passed; Sentry post-test check clean. Phase 2 is closed. `core/settings.js` now shares one in-flight settings request between the reviews-main and listing-badge surfaces, so a PDP with product carousels fetches settings once instead of twice. See [[Phase_2_Widget_Module_Split_Plan]].

@@ -3,8 +3,8 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-18
+last_verified: 2026-05-18
 confidence: high
 tags:
   - widget
@@ -19,6 +19,7 @@ related:
   - "[[ADR_0015_Canonical_Product_Identity]]"
 source_files:
   - "src/widget/listing-badges/index.js"
+  - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
   - "src/widget/listing-badges/inject.js"
@@ -39,7 +40,8 @@ Star+count badge injected into product cards on collection / search / category p
 | File | Role |
 |---|---|
 | [index.js](src/widget/listing-badges/index.js) | Bootstrap (decide if current page is a listing page) |
-| [collect.js](src/widget/listing-badges/collect.js) | Discover candidate product cards and merge Storefront Events product ids |
+| [dom.js](src/widget/listing-badges/dom.js) | Scoped link discovery from theme product containers, with `main` fallback instead of whole-document scans |
+| [collect.js](src/widget/listing-badges/collect.js) | Build product targets from scoped candidate links and merge Storefront Events product ids |
 | [ratings.js](src/widget/listing-badges/ratings.js) | Bulk fetch `/api/public/ratings?productIds=...`; falls back to slug only when no product id exists |
 | [inject.js](src/widget/listing-badges/inject.js) | Insert star+count badge into each card |
 | [listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js) | Lazy surface descriptor for page/listing/search contexts |
@@ -60,7 +62,8 @@ Star+count badge injected into product cards on collection / search / category p
 ## Performance notes
 - Single API call per listing page = small fixed cost regardless of # of products on screen.
 - Server caches at edge with `s-maxage=60, stale-while-revalidate=300`.
-- DOM injection uses `requestAnimationFrame` or batched mutations where appropriate (verify in `inject.js`).
+- DOM discovery is scoped to theme product containers first, then `main/[role=main]` fallback; it no longer starts from every link in the whole document.
+- Badge slots are reserved before rating data finishes loading and replaced in place when real ratings arrive, reducing listing-card layout shift.
 
 ## Settings
 Listing widget is currently **not separately configurable** in the admin (no dedicated `widgetId`); it inherits style from the `badge` widget settings or the global theme. ❓ Confirm by reading [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js) before relying on this.
@@ -102,6 +105,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-05-18: Reduced listing badge layout shift and DOM scan cost. `dom.js` now scopes candidate link discovery to theme product containers/main content, and `index.js`/`inject.js` reserve invisible badge slots while ratings are in flight before replacing them with real badges.
 - 2026-05-17: Listing/search badges now prefer canonical product-id rating reads via `/api/public/ratings?productIds=...`. `ratings-by-slug` remains only as DOM fallback. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: DOM fallback now uses `ProductSnapshot` before legacy slug reads, backed by ikas product webhooks/backfill.
 - 2026-05-17: Phase 2 implementation and live verification closed: listing badges lazy-load through `listing-badge.surface.js` and `core/lazy-modules.js`; `VIEW_SEARCH_RESULTS` product arrays are handled beside verified `VIEW_LISTING`; Ozy allowlist/blocklist rules moved into `themes/ozy/adapter.js`.

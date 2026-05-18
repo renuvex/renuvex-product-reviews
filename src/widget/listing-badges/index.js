@@ -4,7 +4,13 @@ import { ls } from '../core/state.js';
 import { fetchSettings } from '../core/settings.js';
 import { collectProductTargets } from './collect.js';
 import { fetchRatings } from './ratings.js';
-import { injectBadges } from './inject.js';
+import { clearBadgePlaceholders, injectBadges, reserveBadgeSlots } from './inject.js';
+
+function cleanupListingBadges() {
+  document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(el) { el.remove(); });
+  document.querySelectorAll('[data-ikr-badge]').forEach(function(el) { el.removeAttribute('data-ikr-badge'); });
+  clearBadgePlaceholders();
+}
 
 export async function renderListingBadges() {
   if (ls.inProgress) { ls.queued = true; return; }
@@ -18,17 +24,20 @@ export async function renderListingBadges() {
     var productTargets = collectProductTargets();
     var slugs = Object.keys(productTargets);
     if (!slugs.length) { ls.rendered = false; return; }
-    var results = await Promise.all([fetchSettings(), fetchRatings(productTargets)]);
-    var response = results[0];
+    var ratingsPromise = fetchRatings(productTargets).catch(function() { return {}; });
+    var response = await fetchSettings();
     if (!response) { ls.rendered = false; return; }
-    var ratings = results[1];
 
     // Badge color: settings badge.color -> default.
     var widgets = (response && response.widgets) || {};
     var badgeColor = (widgets.badge && widgets.badge.color) || '#f59e0b';
 
     // Do not inject listing badges when the badge widget is disabled.
-    if (widgets.badge && widgets.badge.enabled === false) { ls.rendered = false; return; }
+    if (widgets.badge && widgets.badge.enabled === false) {
+      if (doCleanup) cleanupListingBadges();
+      ls.rendered = false;
+      return;
+    }
 
     document.documentElement.style.setProperty('--ikr-badge-color', badgeColor);
 
@@ -37,11 +46,16 @@ export async function renderListingBadges() {
       slugNameMap[slug] = productTargets[slug] ? productTargets[slug].name : null;
     });
 
-    // Atomic swap after fetch: remove old badges, then inject the new set.
+    // Remove old badges before reserving slots for the new page/listing.
     if (doCleanup) {
-      document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(el) { el.remove(); });
-      document.querySelectorAll('[data-ikr-badge]').forEach(function(el) { el.removeAttribute('data-ikr-badge'); });
+      cleanupListingBadges();
     }
+
+    // Reserve stable vertical space while rating data is still in flight, then
+    // replace placeholders with real badges in injectBadges().
+    reserveBadgeSlots(slugNameMap);
+
+    var ratings = await ratingsPromise;
     injectBadges(slugNameMap, ratings);
   } finally {
     ls.inProgress = false;

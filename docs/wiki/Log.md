@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-18 - hardening | Reduce listing badge CLS and DOM scan cost
+- Summary: Listing badge discovery now uses scoped link collection from theme product containers/main content instead of whole-document link scans, and reserves invisible badge slots while ratings load before replacing them in place.
+- Reason: Late badge insertion could create small listing-card layout shifts, and whole-document `a[href]` scans did unnecessary work across header/footer/navigation.
+- Key source changes: `src/widget/listing-badges/dom.js`, `collect.js`, `index.js`, `inject.js`, and `src/widget/core/badge.js`; regenerated public widget runtime output.
+- Verification: `pnpm build:widget`, `pnpm exec tsc --noEmit`, and `git diff --check`.
+- Updated wiki: [[Listing_Rating_Widget]], [[Widget_Architecture]], [[Widget_Files_Map]], [[Hot_Context]]
+
 ## 2026-05-18 - hardening | Reduce widget settings stale TTL
 - Summary: Reduced widget-side stale settings tolerance from 7 days to 24 hours.
 - Reason: A merchant setting change, including disabling a widget surface, should not remain hidden behind a week-long stale same-tab cache during transient settings fetch failures.

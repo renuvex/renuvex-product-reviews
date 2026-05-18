@@ -1,18 +1,13 @@
 // listing-badges/inject.js - inject listing badges into product cards.
 
 import { extractSlug } from '../core/helpers.js';
-import { createBadgeEl } from '../core/badge.js';
+import { createBadgeEl, createBadgePlaceholderEl } from '../core/badge.js';
 import { getThemeAdapter } from '../themes/current-adapter.js';
 import { lastClickedSlug } from '../core/state.js';
+import { collectListingLinks, isVisibleForBadge } from './dom.js';
 
 var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
 var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
-
-function isVisibleForBadge(el) {
-  if (!el || typeof el.getClientRects !== 'function' || el.getClientRects().length === 0) return false;
-  var style = window.getComputedStyle(el);
-  return style.display !== 'none' && style.visibility !== 'hidden';
-}
 
 export function findTitleEl(scope, productName) {
   var adapter = getThemeAdapter();
@@ -45,18 +40,87 @@ export function findTitleEl(scope, productName) {
   return null;
 }
 
+function shouldSkipLink(a, adapter, currentSlug, slug) {
+  if (!slug) return true;
+  if (!isVisibleForBadge(a)) return true;
+  if (a.id === 'ikr-rating-badge') return true;
+  if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') return true;
+  if (adapter.isNavigationLink(a)) return true;
+  if (adapter.isCartLink(a)) return true;
+  if (adapter.isDisallowedSingleProductLink(a, currentSlug, slug)) return true;
+  if (adapter.isBannerLink(a)) return true;
+  return false;
+}
+
+function getJustify(el) {
+  var align = window.getComputedStyle(el).textAlign;
+  return align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+}
+
+function replacePlaceholderOrAppend(parent, badge) {
+  var placeholder = parent.querySelector('[data-ikr-listing-badge-placeholder]');
+  if (placeholder) {
+    placeholder.replaceWith(badge);
+    return;
+  }
+  parent.appendChild(badge);
+}
+
+function insertPlaceholder(parent, justify, beforeEl) {
+  if (!parent || parent.querySelector('[data-ikr-listing-badge],[data-ikr-listing-badge-placeholder]')) return;
+  var placeholder = createBadgePlaceholderEl(justify);
+  beforeEl ? parent.insertBefore(placeholder, beforeEl) : parent.appendChild(placeholder);
+}
+
+function reserveBadgeSlotOnLink(a, productName, currentSlug) {
+  if (a.getAttribute('data-ikr-badge')) return;
+  var adapter = getThemeAdapter();
+  var slug = extractSlug(a.href);
+  if (shouldSkipLink(a, adapter, currentSlug, slug)) return;
+
+  var hasNestedA = !!a.querySelector('a[href]');
+  var titleEl = findTitleEl(a, productName);
+  var realText = Array.from(a.childNodes).filter(function(n) { return n.nodeType === 3; }).map(function(n) { return n.textContent.trim(); }).join('').trim();
+
+  if (!realText && !titleEl && !hasNestedA) return;
+
+  if (hasNestedA) {
+    if (!titleEl) return;
+    insertPlaceholder(titleEl, getJustify(titleEl));
+    return;
+  }
+
+  if (titleEl) {
+    insertPlaceholder(titleEl, getJustify(titleEl));
+    return;
+  }
+
+  if (realText) insertPlaceholder(a, 'flex-start', a.firstElementChild || null);
+}
+
+export function reserveBadgeSlots(slugNameMap) {
+  var currentSlug = extractSlug(window.location.pathname);
+  var links = collectListingLinks(getThemeAdapter());
+
+  Object.keys(slugNameMap).forEach(function(slug) {
+    var productName = slugNameMap[slug];
+    links.forEach(function(a) {
+      if (extractSlug(a.href) !== slug) return;
+      reserveBadgeSlotOnLink(a, productName, currentSlug);
+    });
+  });
+}
+
+export function clearBadgePlaceholders() {
+  document.querySelectorAll('[data-ikr-listing-badge-placeholder]').forEach(function(el) { el.remove(); });
+}
+
 export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   if (a.getAttribute('data-ikr-badge')) return;
-  if (!isVisibleForBadge(a)) return;
   var adapter = getThemeAdapter();
   var slug = extractSlug(a.href);
 
-  if (a.id === 'ikr-rating-badge') { a.setAttribute('data-ikr-badge', '1'); return; }
-  if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') { a.setAttribute('data-ikr-badge', '1'); return; }
-  if (adapter.isNavigationLink(a)) { a.setAttribute('data-ikr-badge', '1'); return; }
-  if (adapter.isCartLink(a)) { a.setAttribute('data-ikr-badge', '1'); return; }
-  if (adapter.isDisallowedSingleProductLink(a, currentSlug, slug)) { a.setAttribute('data-ikr-badge', '1'); return; }
-  if (adapter.isBannerLink(a)) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (shouldSkipLink(a, adapter, currentSlug, slug)) { a.setAttribute('data-ikr-badge', '1'); return; }
 
   var hasNestedA = !!a.querySelector('a[href]');
   var realText = Array.from(a.childNodes).filter(function(n) { return n.nodeType === 3; }).map(function(n) { return n.textContent.trim(); }).join('').trim();
@@ -70,8 +134,7 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
     a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
     var nameEl = findTitleEl(a, productName);
     if (!nameEl || nameEl.querySelector('[data-ikr-listing-badge]')) return;
-    var justify = window.getComputedStyle(nameEl).textAlign;
-    nameEl.appendChild(createBadgeEl(rating, justify === 'center' ? 'center' : justify === 'right' ? 'flex-end' : 'flex-start'));
+    replacePlaceholderOrAppend(nameEl, createBadgeEl(rating, getJustify(nameEl)));
     return;
   }
 
@@ -79,10 +142,11 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug) {
   if (titleEl && titleEl.querySelector('[data-ikr-listing-badge]')) return;
 
   if (titleEl) {
-    var tAlign = window.getComputedStyle(titleEl).textAlign;
-    titleEl.appendChild(createBadgeEl(rating, tAlign === 'center' ? 'center' : tAlign === 'right' ? 'flex-end' : 'flex-start'));
+    replacePlaceholderOrAppend(titleEl, createBadgeEl(rating, getJustify(titleEl)));
   } else {
     var badge = createBadgeEl(rating, 'flex-start');
+    var placeholder = a.querySelector('[data-ikr-listing-badge-placeholder]');
+    if (placeholder) { placeholder.replaceWith(badge); return; }
     var first = a.firstElementChild;
     first ? a.insertBefore(badge, first) : a.appendChild(badge);
   }
@@ -128,7 +192,7 @@ function injectModalBadge(slugNameMap, ratings) {
 
   if (!slug) {
     var h1Lower = h1.textContent.trim().toLowerCase();
-    document.querySelectorAll('a[href]').forEach(function(a) {
+    collectListingLinks(adapter).forEach(function(a) {
       if (slug) return;
       if (adapter.isNavigationLink(a)) return;
       if (adapter.isInsideSingleProductContainer(a)) return;
@@ -147,19 +211,7 @@ function injectModalBadge(slugNameMap, ratings) {
 export function injectBadges(slugNameMap, ratings) {
   var adapter = getThemeAdapter();
   var currentSlug = extractSlug(window.location.pathname);
-  var containers = adapter.findListingContainers();
-  var links = [];
-
-  containers.forEach(function(c) {
-    if (c.tagName === 'A' && c.href) {
-      if (!isVisibleForBadge(c)) return;
-      links.push(c);
-    } else {
-      c.querySelectorAll('a[href]').forEach(function(a) {
-        if (isVisibleForBadge(a)) links.push(a);
-      });
-    }
-  });
+  var links = collectListingLinks(adapter).filter(isVisibleForBadge);
 
   Object.keys(slugNameMap).forEach(function(slug) {
     var rating = ratings[slug];
@@ -171,5 +223,6 @@ export function injectBadges(slugNameMap, ratings) {
     });
   });
 
+  clearBadgePlaceholders();
   injectModalBadge(slugNameMap, ratings);
 }
