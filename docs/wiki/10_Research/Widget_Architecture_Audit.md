@@ -72,11 +72,11 @@ backend/DB/admin examined only where they touch the widget.
 
 ## Remediation Durumu — 2026-05-18 (denetim sonrası yeniden doğrulama)
 
-Denetim sonrası remediation commit'leri (`78595421`..`66a32d81`) main'e indi ve bu
-denetimin sahibi tarafından **gerçek kodla yeniden doğrulandı** (iddia kabul
-edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
+Denetim sonrası remediation commit'leri (`78595421`..`66a32d81`, `4eff23b2`) main'e
+indi ve bu denetimin sahibi tarafından **gerçek kodla yeniden doğrulandı** (iddia
+kabul edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 
-### Kapanan bulgular — 6/6 kodla doğrulandı
+### Kapanan bulgular — 8 madde, doğrulandı
 
 | Madde | Commit | Doğrulama (dosya:satır) |
 |---|---|---|
@@ -86,14 +86,14 @@ edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 | **O3** 7-gün bayat ayar | `a6ff5803` | `settings.js:13` stale TTL `24*60*60*1000` (24 saat). **Kapandı.** |
 | **O8** Tüm-doküman selector taraması | `d8a6b356` | `collect.js` + `observer.js` artık `link-scope.js`/`dom.js` ile `main,[role=main]`'e scoped tarama yapıyor (body fallback, header/nav/footer eleniyor). **Kapandı.** |
 | **D4** ratings rate limit yok | `66a32d81` | `ratings` + `ratings-by-slug` ortak `checkFixedWindowRateLimit` ile 300/dk/IP, paylaşılan `ikr_ratings_rl:` bucket. **Kapandı.** |
+| **O4** Observer/listener idempotency | `4eff23b2` | `observer.js` `startMutationObserver()`'a idempotency guard + instance modül kapsamında saklanıyor + `!document.body` koruması; `events.js` `history.pushState`/`replaceState` wrapper'larına fonksiyon-seviyesi `__ikrPatched` etiketi → çift-sarma engellendi. Build temiz, runtime'da `__ikrPatched` ×4. Deploy edilip dev-store'da canlı doğrulandı: SPA nav'da bayat badge/JSON-LD temizliği, badge render, tek-instance mount, 0 widget console hatası. **Kapandı.** Not: tüketici (page-ömürlü widget) bir teardown çağırmadığı için `stopMutationObserver` eklenmedi — esbuild tree-shake ettiği için ölü export olurdu. |
+| **O7** widget-error Sentry kota tavanı | — (Sentry config) | ikas MCP `tags[source]:widget` sorgusu: tek issue (`YORUM-PANELI-3`, resolved smoke test, 1 event) → widget-error hacmi ~sıfır. Sentry **Spike Protection açık** (panelde doğrulandı) → issue çeşitliliğini bozmadan flood'u sınırlıyor. Kör global cap riski yerine native koruma kullanılıyor; kod gerekmedi. **Kapandı.** |
 
 ### Hâlâ açık
 
 - **O2** — Ozy dışı tema otomatik desteklenmiyor; ikas aktif-tema tespiti cevabı bekleniyor.
-- **O4** — Observer/listener cleanup yapılmadı; `observer.js:55` hâlâ instance saklamadan `document.body`'yi observe ediyor. Ayrı refactor.
 - **O5** — PDP 147KB shared chunk; önce deployed transfer ölçümü gerekli.
 - **O6** — `VIEW_LISTING` runtime'da doğrulandı ama resmi dokümanda kontrat değil; ikas cevabı bekleniyor.
-- **O7** — `widget-error` IP-limitli ama global/merchant Sentry tavanı yok.
 - **D2** — Redundant Review index temizliği migration safety ile ayrı alınacak.
 - **D3** — Cloudinary upload klasörü hâlâ global `review_images` (tenant-scope yok).
 - **D5** — Eski runtime chunk birikimi; bilinçli cache tercihi, bug değil.
