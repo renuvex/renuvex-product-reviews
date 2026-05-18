@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-18 - hardening | Reduce widget settings stale TTL
+- Summary: Reduced widget-side stale settings tolerance from 7 days to 24 hours.
+- Reason: A merchant setting change, including disabling a widget surface, should not remain hidden behind a week-long stale same-tab cache during transient settings fetch failures.
+- Key source changes: `src/widget/core/settings.js`, regenerated public widget runtime output.
+- Verification: `pnpm build:widget`, `pnpm exec tsc --noEmit`, and `git diff --check`.
+- Updated wiki: [[Caching_And_Performance]], [[Widget_Architecture]], [[Hot_Context]]
+
 ## 2026-05-18 - security | Harden public review submit/read contract
 - Summary: `POST /api/public/reviews` now verifies the submitted target against installed `StoreSettings` and `(storeId, productId)` in `ProductSnapshot`, ignores public `slug`/`productName`/`email`, and stores slug/name snapshots from the server-side product read model.
 - Reason: The public storefront is CORS-open and browser-controlled, so product identity and response fields must not be trusted from client payloads.

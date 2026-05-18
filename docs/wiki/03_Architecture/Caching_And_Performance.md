@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-18
 tags:
   - performance
   - caching
@@ -64,7 +64,7 @@ cache above and does not affect moderation latency.
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
 
-Settings have a 5-minute fresh window in the widget and a 7-day stale tolerance for transient settings fetch failures. The trusted Cloudinary cloud name is **not** in settings — it is injected as a build-time constant into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]); no per-store runtime image-policy cache exists.
+Settings have a 5-minute fresh window in the widget and a 24-hour stale tolerance for transient settings fetch failures. The trusted Cloudinary cloud name is **not** in settings — it is injected as a build-time constant into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]); no per-store runtime image-policy cache exists.
 
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
@@ -112,6 +112,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-05-18: Reduced widget-side stale settings tolerance from 7 days to 24 hours. Transient settings outages still have a same-tab fallback, but merchant changes cannot remain hidden behind a week-long stale cache.
 - 2026-05-17: Runtime versioning completed: production builds emit a content-hashed `runtime-*.js`, `widget.js` imports that direct path, and stable `runtime.js` remains a short-cache shim for older cached loaders. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.
 - 2026-05-17: Added `/api/public/ratings` product-id endpoint and `[storeId, productId, status]` hot-path index for canonical listing/search badge reads. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added the "Static widget assets" section — `vercel.json` `headers` now sets a three-tier `Cache-Control` split (short-cache loader/runtime, `immutable` content-hashed chunks). Refreshed the stale pre-Phase-2 bundle-size note. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.

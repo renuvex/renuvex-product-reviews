@@ -3,8 +3,8 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-18
+last_verified: 2026-05-18
 confidence: high
 tags:
   - widget
@@ -147,7 +147,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 
 ## Caching strategy
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
-- Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation.
+- Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.
 - Review fetch failures use stale cached review data when available; without stale data, `fetchReviews()` returns an explicit error result so `render.js` can show a retryable error state instead of an empty list.
 - No localStorage caching today (could be added for repeat visits).
 
@@ -193,6 +193,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-18: Reduced widget settings stale tolerance from 7 days to 24 hours in `core/settings.js`.
 - 2026-05-17: Phase 3 source hardening implemented: `widget.js` now points at a content-hashed ESM runtime, stable `runtime.js` remains as a short-cache shim, script lifecycle is create/update-only, and hidden listing links are filtered before badge injection.
 - 2026-05-17: Phase 2 module split verified live on the dev store — PDP/category/search cold entries, PDP↔PDP SPA navigation, and a mobile spot check passed; Sentry post-test check clean. Phase 2 is closed. `core/settings.js` now shares one in-flight settings request between the reviews-main and listing-badge surfaces, so a PDP with product carousels fetches settings once instead of twice. See [[Phase_2_Widget_Module_Split_Plan]].
 - 2026-05-17: Phase 2 module split implementation started. Build output is now a classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; async lazy surface mounts, `VIEW_SEARCH_RESULTS`, shared settings, and the Ozy fallback adapter are implemented.

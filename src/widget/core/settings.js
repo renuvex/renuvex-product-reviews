@@ -10,7 +10,7 @@ import { fetchWithTimeout } from './fetch.js';
 
 var SETTINGS_CACHE_KEY = 'ikr_settings_' + PUBLIC_API_KEY;
 var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
-var SETTINGS_CACHE_STALE_TTL = 7 * 24 * 60 * 60 * 1000;
+var SETTINGS_CACHE_STALE_TTL = 24 * 60 * 60 * 1000;
 var SETTINGS_404_TTL = 30 * 1000;
 
 // On a PDP with product carousels the reviews-main and listing-badge surfaces
