@@ -76,7 +76,7 @@ Denetim sonrası remediation commit'leri (`78595421`..`66a32d81`, `4eff23b2`) ma
 indi ve bu denetimin sahibi tarafından **gerçek kodla yeniden doğrulandı** (iddia
 kabul edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 
-### Kapanan bulgular — 8 madde, doğrulandı
+### Kapanan bulgular — 9 madde, doğrulandı
 
 | Madde | Commit | Doğrulama (dosya:satır) |
 |---|---|---|
@@ -88,6 +88,7 @@ kabul edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 | **D4** ratings rate limit yok | `66a32d81` | `ratings` + `ratings-by-slug` ortak `checkFixedWindowRateLimit` ile 300/dk/IP, paylaşılan `ikr_ratings_rl:` bucket. **Kapandı.** |
 | **O4** Observer/listener idempotency | `4eff23b2` | `observer.js` `startMutationObserver()`'a idempotency guard + instance modül kapsamında saklanıyor + `!document.body` koruması; `events.js` `history.pushState`/`replaceState` wrapper'larına fonksiyon-seviyesi `__ikrPatched` etiketi → çift-sarma engellendi. Build temiz, runtime'da `__ikrPatched` ×4. Deploy edilip dev-store'da canlı doğrulandı: SPA nav'da bayat badge/JSON-LD temizliği, badge render, tek-instance mount, 0 widget console hatası. **Kapandı.** Not: tüketici (page-ömürlü widget) bir teardown çağırmadığı için `stopMutationObserver` eklenmedi — esbuild tree-shake ettiği için ölü export olurdu. |
 | **O7** widget-error Sentry kota tavanı | — (Sentry config) | ikas MCP `tags[source]:widget` sorgusu: tek issue (`YORUM-PANELI-3`, resolved smoke test, 1 event) → widget-error hacmi ~sıfır. Sentry **Spike Protection açık** (panelde doğrulandı) → issue çeşitliliğini bozmadan flood'u sınırlıyor. Kör global cap riski yerine native koruma kullanılıyor; kod gerekmedi. **Kapandı.** |
+| **D5** Eski runtime chunk birikimi | `da2f9f98` | `build-widget.mjs`'e `pruneOldRuntimeFiles()` eklendi — current build'de referans verilmeyen + 7 günden eski hash'li runtime/chunk dosyaları budanıyor; current build dosyaları her zaman korunuyor. mtime-tabanlı; git checkout mtime'ı yalnızca "şimdi"ye çeker (asla daha eski) → yanlış okuma budamayı yalnızca geciktirir, asla gerekli dosyayı silmez. Deterministik test geçti: 10g yaşlı+unreferenced 2 dosya silindi, 2g'lik + canlı dosyalar korundu. **Kapandı** — "eski hash'i tut" doğruydu, "sonsuza dek tut" endüstri standardı değildi; sınırlı-retention eklendi. |
 
 ### Hâlâ açık
 
@@ -96,7 +97,6 @@ kabul edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 - **O6** — `VIEW_LISTING` runtime'da doğrulandı ama resmi dokümanda kontrat değil; ikas cevabı bekleniyor.
 - **D2** — Redundant Review index temizliği migration safety ile ayrı alınacak.
 - **D3** — Cloudinary upload klasörü hâlâ global `review_images` (tenant-scope yok).
-- **D5** — Eski runtime chunk birikimi; bilinçli cache tercihi, bug değil.
 
 ## Kapsam Notu
 
