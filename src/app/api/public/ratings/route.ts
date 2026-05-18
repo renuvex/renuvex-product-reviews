@@ -1,9 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
+import { checkFixedWindowRateLimit, getClientIp } from '@/lib/public-rate-limit';
+
+const RATINGS_RATE_LIMIT_MAX = 300;
+const RATINGS_RATE_LIMIT_WINDOW_SEC = 60;
 
 export async function OPTIONS() {
   return corsOptions();
+}
+
+function rateLimitedResponse() {
+  const res = withCors(NextResponse.json({ data: {} }, { status: 429 }));
+  res.headers.set('Cache-Control', 'no-store');
+  res.headers.set('Retry-After', String(RATINGS_RATE_LIMIT_WINDOW_SEC));
+  res.headers.set('X-RateLimit-Limit', String(RATINGS_RATE_LIMIT_MAX));
+  res.headers.set('X-RateLimit-Remaining', '0');
+  return res;
 }
 
 /**
@@ -37,6 +50,16 @@ export async function GET(request: Request) {
 
     if (safeProductIds.length === 0) {
       return withCors(NextResponse.json({ data: {} }));
+    }
+
+    const rateLimit = await checkFixedWindowRateLimit({
+      key: `ikr_ratings_rl:${getClientIp(request)}`,
+      max: RATINGS_RATE_LIMIT_MAX,
+      windowSec: RATINGS_RATE_LIMIT_WINDOW_SEC,
+      label: 'public-ratings',
+    });
+    if (!rateLimit.allowed) {
+      return rateLimitedResponse();
     }
 
     const rows = await prisma.review.groupBy({

@@ -12,6 +12,13 @@ related:
   - "[[Auth_And_Installation_Flow]]"
   - "[[API_Design]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
+source_files:
+  - "src/lib/public-rate-limit.ts"
+  - "src/app/api/public/reviews/route.ts"
+  - "src/app/api/public/ratings/route.ts"
+  - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/app/api/public/upload/sign/route.ts"
+  - "src/app/api/public/widget-error/route.ts"
 ---
 
 # Security & Rate Limits
@@ -38,8 +45,10 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 |---|---|---|---|
 | `POST /api/public/reviews` | 3 | 10 min | `ikr_rl:<ip>` |
 | `POST /api/public/upload/sign` | 10 | 10 min | `ikr_upload_rl:<ip>` |
+| `GET /api/public/ratings` + `GET /api/public/ratings-by-slug` | 300 combined | 60 sec | `ikr_ratings_rl:<ip>` |
+| `POST /api/public/widget-error` | 30 | 60 sec | `ikr_werr_rl:<ip>` |
 
-Pattern: `INCR` then `EXPIRE` on first hit. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts).
+Pattern: `INCR` then `EXPIRE` on first hit. Rating read limits use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable, so listing badges do not disappear during a transient Redis issue. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
 
 IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theory if upstream is misconfigured — acceptable today.
 
@@ -107,6 +116,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 
 ## Related Source Files
 - [src/app/api/public/](src/app/api/public/)
+- [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts)
 - [src/lib/cors.ts](src/lib/cors.ts)
 - [src/lib/review-images.ts](src/lib/review-images.ts)
 - [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
@@ -119,6 +129,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-18: Added D4 public rating API read limit: `/api/public/ratings` and `/api/public/ratings-by-slug` share a generous 300 requests/min/IP Redis fixed-window counter. 429 responses are `no-store`; Redis/config failures fail open server-side to preserve storefront rendering.
 - 2026-05-18: Hardened public review write/read contracts. `POST /api/public/reviews` now verifies the target store/product via `StoreSettings` + `ProductSnapshot`, ignores client-supplied `slug`/`productName`/`email`, and `GET /api/public/reviews` returns an explicit public field whitelist instead of a raw Review row spread.
 - 2026-05-10: Implemented the trusted review image URL policy. Public POST now rejects third-party/data image URLs, read APIs filter legacy rows, and the widget renders only trusted Cloudinary review images. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-10: Added the open image URL allowlisting risk found during the review detail lightbox audit. Related source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

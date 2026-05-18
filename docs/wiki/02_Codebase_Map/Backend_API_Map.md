@@ -54,8 +54,8 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit` | [route.ts](src/app/api/public/reviews/route.ts) | Approved reviews + rating distribution with explicit public field whitelist. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]]) |
 | POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + trusted image URLs + auto-approve). Client `slug`/`productName`/`email` are ignored. |
-| GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]]) |
-| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read by product id; legacy direct slug read is last resort |
+| GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
+| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/upload/sign` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload |
 
@@ -65,6 +65,7 @@ GET responses set `Cache-Control: s-maxage=60, stale-while-revalidate=300`. See 
 ### Rate limits (Upstash Redis)
 - `/api/public/reviews` POST → 3 / 10min / IP
 - `/api/public/upload/sign` POST → 10 / 10min / IP
+- `/api/public/ratings` + `/api/public/ratings-by-slug` GET → 300 / 60sec / IP, shared key
 Detail in [[Security_And_Rate_Limits]].
 
 ## Webhooks
@@ -117,6 +118,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-18: Added shared Upstash fixed-window read rate limit to `/api/public/ratings` and `/api/public/ratings-by-slug` (300/min/IP) to protect rating badge APIs from query-variant abuse.
 - 2026-05-18: Hardened `/api/public/reviews`: POST now verifies `(storeId, productId)` against installed store + `ProductSnapshot`, and GET exposes only a public review field whitelist.
 - 2026-05-17: Added `/api/admin/reconcile-storefront-scripts` plus `/api/admin/daily-maintenance` and updated script injection docs. Storefront script lifecycle now uses non-destructive create/update only; no blanket `deleteStorefrontJSScript()` call remains in source.
 - 2026-05-17: OAuth callback now registers product webhooks and runs the `ProductSnapshot` backfill non-blocking via Next.js `after()` (after the 302 response), so a large catalog cannot delay or fail install. Related: [[ADR_0015_Canonical_Product_Identity]].

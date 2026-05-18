@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-18 - security | Rate-limit public rating reads
+- Summary: Added a shared Upstash fixed-window rate limit for `/api/public/ratings` and `/api/public/ratings-by-slug`.
+- Reason: Rating badge endpoints are CORS-open and can be abused with many query variants to bypass CDN cache and create unnecessary function/Postgres load.
+- Key source changes: new `src/lib/public-rate-limit.ts`; `ratings` and `ratings-by-slug` now check `ikr_ratings_rl:<ip>` at 300 requests/minute before hitting Prisma.
+- Verification: `pnpm exec tsc --noEmit`; direct route-level burst test should be run after deploy if the live Redis env is present.
+- Updated wiki: [[Security_And_Rate_Limits]], [[Backend_API_Map]], [[Config_And_Env_Map]], [[Hot_Context]]
+
 ## 2026-05-18 - hardening | Scope listing observer re-render checks
 - Summary: The MutationObserver re-render gate now uses the same scoped listing link discovery as listing badge injection instead of `document.querySelectorAll('a[href]')`.
 - Reason: Live Chrome/CDP verification on `dev-mertcopper.ikas.shop` showed the listing inject path was scoped, but the always-loaded runtime still performed whole-document link scans from the observer gate.

@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-18
 tags:
   - config
   - env
@@ -56,8 +56,6 @@ related:
 | `KV_REST_API_URL` | Upstash REST endpoint |
 | `KV_REST_API_TOKEN` | Upstash REST token |
 
-> ⚠️ Not present in `.env.example` despite being required. Add to local env when needed. Track in [[Open_Questions]] if needed.
-
 ### Cron
 | Var | Purpose |
 |---|---|
@@ -96,7 +94,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 `read_orders,write_orders,read_products,read_inventories,write_inventories` — flagged for review in [[Open_Questions]] (do we really need write_*?).
 
 ## Notes
-- `.env.local` is gitignored. `.env.example` is the contract — keep it accurate when adding env vars.
+- `.env.local` is gitignored. `.env.example` is the contract — keep it accurate when adding env vars. Upstash values in `.env.example` are placeholders only.
 - `.env.sentry-build-plugin` and `.sentryclirc` are also gitignored. Hold Sentry CI secrets only.
 - Never log env values. Code uses `process.env.X || ''` defaults in JWT helpers — be aware of fail-open risk.
 - `NEXT_PUBLIC_*` are exposed to the browser bundle. Don't put secrets there. (DSN is intentionally public-ish — it identifies a Sentry project, no auth.)
