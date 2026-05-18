@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-18 - security | Scope review image uploads by tenant
+- Summary: Review image uploads now use tenant-scoped Cloudinary folders: `review_images/stores/<storeId>`.
+- Reason: The old global `review_images/` folder mixed all merchants' uploads, weakening quota, cleanup, support, and future tenant export/delete operations.
+- Key source changes: `/api/public/upload/sign` verifies `StoreSettings` and signs the tenant folder; the widget uploads to the returned folder and registers `{storeId, secureUrl}`; `review-images.ts`, public review POST/GET, admin review reads, and cleanup compare against the tenant-scoped trusted URL policy; `PendingReviewImage.storeId` was added.
+- Verification: `pnpm prisma:generate`; `pnpm exec prisma validate`; `pnpm exec tsc --noEmit`; `pnpm build:widget`.
+- Updated wiki: [[ADR_0006_Trusted_Review_Image_URL_Policy]], [[ADR_0012_Pending_Upload_Registry]], [[Security_And_Rate_Limits]], [[Backend_API_Map]], [[Database_Schema]], [[Hot_Context]]
+
 ## 2026-05-18 - database | Drop redundant Review prefix indexes
 - Summary: Removed redundant Review indexes `[storeId, productId]` and `[storeId, slug]`.
 - Reason: Current query paths use `storeId + productId + status` or `storeId + slug + status`; PostgreSQL can use the retained wider composite indexes for the old leftmost prefixes, so the standalone prefix indexes only added write amplification.

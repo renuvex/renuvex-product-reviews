@@ -7,6 +7,7 @@ import {
   getConfiguredCloudinaryCloudName,
   getReviewImagePublicId,
   isTrustedReviewImageUrl,
+  normalizeReviewImageStoreId,
 } from '@/lib/review-images';
 
 // Registry endpoint for review-image uploads.
@@ -14,17 +15,17 @@ import {
 // Lifecycle (see ADR_0012):
 //   1. Widget signs an upload via /api/public/upload/sign and uploads directly
 //      to Cloudinary.
-//   2. On successful upload, widget posts {secureUrl} here.
+//   2. On successful upload, widget posts {storeId, secureUrl} here.
 //   3. We extract publicId from the URL and create (or refresh) a
-//      PendingReviewImage row.
+//      tenant-scoped PendingReviewImage row.
 //   4. /api/public/reviews POST atomically deletes pending rows for the
-//      publicIds it commits.
+//      storeId + publicIds it commits.
 //   5. /api/admin/cleanup-pending-uploads cron expires rows older than the
 //      retention window and deletes the Cloudinary asset.
 //
 // Validation:
 //   - URL must pass isTrustedReviewImageUrl (same guard the review submit
-//     path uses) so we never register a public_id outside our trusted folder.
+//     path uses) so we never register a public_id outside the tenant folder.
 //   - Idempotent on publicId — repeated registers (e.g., retries) keep the
 //     same row, the createdAt is not reset on conflict.
 //   - Rate-limited per IP, same shape as the sign endpoint.
@@ -58,13 +59,27 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 }));
     }
 
-    const secureUrl = (body as { secureUrl?: unknown })?.secureUrl;
+    const payload = body as { storeId?: unknown; secureUrl?: unknown };
+    const storeId = normalizeReviewImageStoreId(payload?.storeId);
+    if (!storeId) {
+      return withCors(NextResponse.json({ error: 'Gecersiz magaza.' }, { status: 400 }));
+    }
+
+    const store = await prisma.storeSettings.findUnique({
+      where: { storeId },
+      select: { storeId: true },
+    });
+    if (!store) {
+      return withCors(NextResponse.json({ error: 'Magaza dogrulanamadi.' }, { status: 400 }));
+    }
+
+    const secureUrl = payload?.secureUrl;
     const cloudName = getConfiguredCloudinaryCloudName();
-    if (!isTrustedReviewImageUrl(secureUrl, cloudName)) {
+    if (!isTrustedReviewImageUrl(secureUrl, cloudName, storeId)) {
       return withCors(NextResponse.json({ error: 'Geçersiz görsel URL.' }, { status: 400 }));
     }
 
-    const publicId = getReviewImagePublicId(secureUrl, cloudName);
+    const publicId = getReviewImagePublicId(secureUrl, cloudName, storeId);
     if (!publicId) {
       return withCors(NextResponse.json({ error: 'Public ID çözümlenemedi.' }, { status: 400 }));
     }
@@ -72,7 +87,7 @@ export async function POST(request: Request) {
     await prisma.pendingReviewImage.upsert({
       where: { publicId },
       update: {}, // do not reset createdAt on retry — keeps cleanup deterministic
-      create: { publicId, ipHash: hashIp(ip) },
+      create: { publicId, storeId, ipHash: hashIp(ip) },
     });
 
     return withCors(NextResponse.json({ ok: true }));

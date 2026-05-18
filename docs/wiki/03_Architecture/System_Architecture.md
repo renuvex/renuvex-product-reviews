@@ -44,7 +44,7 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three runtimes: the *
                        │               │              │
                        ▼               ▼              ▼
                  Postgres        Cloudinary      Upstash Redis
-                 (Supabase)      review_images/   (rate limits)
+                 (Supabase)      review_images/stores/<storeId>/   (rate limits)
                                   signed uploads
 
 

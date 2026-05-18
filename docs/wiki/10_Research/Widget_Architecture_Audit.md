@@ -96,7 +96,7 @@ kabul edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 - **O5** — PDP 147KB shared chunk; önce deployed transfer ölçümü gerekli.
 - **O6** — `VIEW_LISTING` runtime'da doğrulandı ama resmi dokümanda kontrat değil; ikas cevabı bekleniyor.
 - **D2** — Redundant Review index temizliği migration safety ile ayrı alınacak.
-- **D3** — Cloudinary upload klasörü hâlâ global `review_images` (tenant-scope yok).
+- **D3** — Closed 2026-05-18: Cloudinary upload klasörü artık tenant-scoped `review_images/stores/<storeId>`.
 
 ## Kapsam Notu
 
@@ -243,13 +243,13 @@ kırık); `tsc --noEmit` temiz geçti.
 - **Etki:** En yüksek-yazımlı tabloda yazma amplifikasyonu + depolama.
 - **Durum:** Doğrulandı (şema).
 
-### D3 — `upload/sign` tenant-başına scope'lanmıyor (Risk: Düşük)
+### D3 — `upload/sign` tenant-başına scope'lanmıyor (Risk: Düşük) — Closed 2026-05-18
 - **Kanıt:** `upload/sign/route.ts:44` imzalı parametrelerde `storeId` yok;
   imza yalnızca `folder: 'review_images'`'a sabitli.
 - **Etki:** Tüm tenant'lar aynı Cloudinary klasörünü paylaşır — tenant'lar arası
   depolama kirliliği mümkün. (api_key sızıntısı YOK — bu publishable anahtar;
   `CLOUDINARY_API_SECRET` istemciye hiç gitmiyor.)
-- **Durum:** Doğrulandı (kod).
+- **Durum:** Kapandı. `/api/public/upload/sign` artık `storeId` doğrulayıp yalnızca `review_images/stores/<storeId>` için imza üretiyor; widget bu folder'ı kullanıyor, `/upload/register` ve review read/write yolları tenant folder dışını reddediyor.
 
 ### D4 — `ratings` / `ratings-by-slug` GET'lerinde rate limit yok (Risk: Düşük)
 - **Kanıt:** Her iki route'ta rate limit çağrısı yok; CDN cache (`s-maxage=60`)
@@ -336,7 +336,7 @@ sızıntısı yok, host-sayfa çökertme riski yok, ikas script şeması uyumlu.
 - **Mevcut tek-merchant (Ozy teması) production dağıtımı için:** yazma-yolu
   bütünlük açığı kapandığı için widget artık **production ready**.
 - **ikas App Store / çok-tema yaygınlaştırması için:** O2 ve O6 (ikas tema/event
-  kontrat cevabına bağlı) çözülmeli; O4/O5/O7 önerilen hardening; D2/D3 ayrı
+  kontrat cevabına bağlı) çözülmeli; O4/O5/O7 önerilen hardening; D2/D3 kapandı, ayrı
   optimization. Hiçbiri mimari revizyon gerektirmiyor.
 
 Önerilen sıra: ikas tema/event cevabı beklenirken O4 veya O7 yapılabilir; cevap

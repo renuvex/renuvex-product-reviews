@@ -51,14 +51,14 @@ export async function GET(request: Request) {
     // 1. Build the set of publicIds currently used by approved/pending Reviews.
     const reviews = await prisma.review.findMany({
       where: { images: { not: null } },
-      select: { images: true },
+      select: { storeId: true, images: true },
     });
     const usedPublicIds = new Set<string>();
     for (const review of reviews) {
       if (!review.images) continue;
-      const urls = parseStoredReviewImages(review.images, cloudName);
+      const urls = parseStoredReviewImages(review.images, cloudName, review.storeId);
       for (const url of urls) {
-        const publicId = getReviewImagePublicId(url, cloudName);
+        const publicId = getReviewImagePublicId(url, cloudName, review.storeId);
         if (publicId) usedPublicIds.add(publicId);
       }
     }

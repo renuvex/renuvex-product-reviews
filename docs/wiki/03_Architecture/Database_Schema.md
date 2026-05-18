@@ -130,17 +130,21 @@ Registry of Cloudinary uploads not yet attached to a `Review`. See [[ADR_0012_Pe
 | Field | Type | Notes |
 |---|---|---|
 | `publicId` | String `@id` | Cloudinary `public_id` derived from the upload's `secure_url` |
+| `storeId` | String? | Merchant/tenant that owns the pending upload; nullable only for pre-D3 rows |
 | `createdAt` | DateTime `@default(now())` | Used by the cleanup cron's age filter |
 | `ipHash` | String? | sha256(ip).slice(0,32) — optional abuse signal, not user identity |
 
 Indexes:
 - `[createdAt]` — cleanup cron walks this
+- `[storeId, createdAt]` — tenant-scoped pending upload lookup / future tenant cleanup
 
 Lifecycle:
-1. Widget POSTs `{secureUrl}` to `/api/public/upload/register` after a successful Cloudinary upload. Endpoint validates the URL against the trusted policy and upserts a row (idempotent — `createdAt` is not reset on conflict).
-2. `/api/public/reviews` POST runs the review insert and `deleteMany({ publicId: { in: ... } })` inside one `prisma.$transaction`.
-3. `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily; `/api/admin/cleanup-pending-uploads` remains an explicit maintenance endpoint for the same helper. It deletes rows where `createdAt < now - 24h` plus their Cloudinary assets.
-4. Monthly `/api/admin/cleanup-images` is the safety-net fallback for uploads that bypassed the registry — it now paginates Cloudinary via `next_cursor` and only deletes assets older than 30 days.
+1. Widget POSTs `{storeId}` to `/api/public/upload/sign`; the endpoint verifies `StoreSettings` and signs `review_images/stores/<storeId>`.
+2. Widget uploads to the signed Cloudinary folder, then POSTs `{storeId, secureUrl}` to `/api/public/upload/register`.
+3. The register endpoint validates the URL against the tenant-scoped trusted policy and upserts a `PendingReviewImage` row with `storeId`.
+4. `/api/public/reviews` POST runs the review insert and `deleteMany({ publicId: { in: ... }, storeId })` inside one `prisma.$transaction`.
+5. `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily; `/api/admin/cleanup-pending-uploads` remains an explicit maintenance endpoint for the same helper. It deletes rows where `createdAt < now - 24h` plus their Cloudinary assets.
+6. Monthly `/api/admin/cleanup-images` is the safety-net fallback for uploads that bypassed the registry — it now paginates Cloudinary via `next_cursor` and only deletes assets older than 30 days.
 
 ## Conventions
 - All multi-tenant tables key on `storeId` (which is `merchantId`). No table is shared cross-tenant.
@@ -169,6 +173,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-05-18: Added nullable `PendingReviewImage.storeId` plus `[storeId, createdAt]` for D3 tenant-scoped Cloudinary uploads. New writes always set `storeId`; nullable exists for safe migration over old rows.
 - 2026-05-18: Removed redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]`; retained `[storeId, productId, status]`, `[storeId, status]`, and `[storeId, slug, status]`.
 - 2026-05-17: Removed unused `ProductSnapshot.deleted` column + `[storeId, slug, deleted]` index — ikas has no product-delete webhook scope, so it was always false. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added `[storeId, productId, status]` index for canonical product-id listing/search rating reads. Related: [[ADR_0015_Canonical_Product_Identity]].

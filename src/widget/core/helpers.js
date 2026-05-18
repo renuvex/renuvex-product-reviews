@@ -3,6 +3,7 @@
 /* global __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
 
 import { renderStarRow, getIconFromSettings } from '../icons/index.js';
+import { PUBLIC_API_KEY } from './config.js';
 
 // Review widget içindeki yıldızlar için CSS custom property — reviews widget ayarından beslenir
 export var STAR_COLOR = 'var(--ikr-review-star-color,#f59e0b)';
@@ -148,10 +149,17 @@ export function injectStyles(_color, css) {
 }
 
 var REVIEW_IMAGE_ALLOWED_EXT = { jpg: true, jpeg: true, png: true, webp: true, gif: true, avif: true };
+var REVIEW_IMAGE_ROOT_FOLDER = 'review_images';
+var REVIEW_IMAGE_TENANT_FOLDER = 'stores';
 
 function normalizeReviewImageCloudName(cloudName) {
   var normalizedCloudName = typeof cloudName === 'string' ? cloudName.trim() : '';
   return /^[A-Za-z0-9_-]+$/.test(normalizedCloudName) ? normalizedCloudName : '';
+}
+
+function normalizeReviewImageStoreId(storeId) {
+  var normalizedStoreId = typeof storeId === 'string' ? storeId.trim() : '';
+  return /^[A-Za-z0-9_-]{1,128}$/.test(normalizedStoreId) ? normalizedStoreId : '';
 }
 
 // Trusted Cloudinary cloud name — ADR_0008 gereği build-time'da bir kez set edilir,
@@ -210,10 +218,20 @@ export function isTrustedReviewImageUrl(value) {
   if (lowerPath.indexOf('%2f') !== -1 || lowerPath.indexOf('%5c') !== -1) return false;
 
   var parts = url.pathname.split('/').filter(Boolean);
-  if (parts.length < 6) return false;
+  var trustedStoreId = normalizeReviewImageStoreId(PUBLIC_API_KEY);
+  if (!trustedStoreId) return false;
+
+  if (parts.length < 8) return false;
   if (parts[0] !== trustedReviewImageCloudName || parts[1] !== 'image' || parts[2] !== 'upload') return false;
-  if (!/^v\d+$/.test(parts[3]) || parts[4] !== 'review_images') return false;
-  for (var i = 5; i < parts.length; i++) {
+  if (
+    !/^v\d+$/.test(parts[3]) ||
+    parts[4] !== REVIEW_IMAGE_ROOT_FOLDER ||
+    parts[5] !== REVIEW_IMAGE_TENANT_FOLDER ||
+    parts[6] !== trustedStoreId
+  ) {
+    return false;
+  }
+  for (var i = 7; i < parts.length; i++) {
     if (parts[i] === '.' || parts[i] === '..') return false;
   }
 

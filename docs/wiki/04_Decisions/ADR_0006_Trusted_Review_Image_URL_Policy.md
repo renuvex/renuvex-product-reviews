@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-10
-updated: 2026-05-11
+updated: 2026-05-18
 tags:
   - adr
   - security
@@ -34,7 +34,7 @@ Review image URLs are trusted only when they match the configured Cloudinary clo
 - HTTPS only.
 - Host exactly `res.cloudinary.com`.
 - Cloud name exactly from `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` or `CLOUDINARY_CLOUD_NAME`.
-- Path under `/<cloudName>/image/upload/v<digits>/review_images/...`.
+- Path under `/<cloudName>/image/upload/v<digits>/review_images/stores/<storeId>/...`.
 - Raster extension in `jpg`, `jpeg`, `png`, `webp`, `gif`, or `avif`.
 - No credentials, port, query string, hash, or encoded slash/backslash.
 - Maximum 3 URLs per review.
@@ -44,7 +44,7 @@ The server rejects untrusted image URLs on public review submission and filters 
 Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`; this exception is not active on storefronts.
 
 ## Reasoning
-The durable boundary must be server-side because public storefront clients are not trusted. The widget-side filter is still needed as defense in depth and to protect cached or legacy rows. Restricting to the app-owned Cloudinary upload folder removes the third-party tracking-image class without changing the existing direct-upload architecture.
+The durable boundary must be server-side because public storefront clients are not trusted. The widget-side filter is still needed as defense in depth and to protect cached or legacy rows. Restricting to the app-owned, tenant-scoped Cloudinary upload folder removes the third-party tracking-image class and prevents cross-tenant storage mixing without changing the direct-upload architecture.
 
 ## Alternatives Considered
 - **Keep prefix checks and rely on moderation** - rejected because auto-approve can publish a tracking image before a moderator sees it.
@@ -77,5 +77,6 @@ The durable boundary must be server-side because public storefront clients are n
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
 
 ## Change Log
+- 2026-05-18: D3 tightened the trusted image URL shape from global `review_images/...` to tenant-scoped `review_images/stores/<storeId>/...`. `/api/public/upload/sign`, `/api/public/upload/register`, public review submit/read paths, admin read paths, and widget-side filtering now all validate the tenant folder.
 - 2026-05-11: Runtime portion of the cloud-name contract superseded by [[ADR_0008_Cloud_Name_Build_Time_Only]]. The widget no longer reads `imagePolicy.cloudName` from settings or any per-store cache; it consumes a build-time injected constant only. The trust boundary (allowlist shape, max URLs, etc.) is unchanged.
 - 2026-05-11: Documented build-time public cloud fallback and last-valid widget image policy cache as resilience sources for the accepted allowlist. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]]. (Superseded the same day by ADR_0008 — runtime cache + setter + settings field all removed in favor of a single build-time source.)

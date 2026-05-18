@@ -261,18 +261,23 @@ export function createStepPhotos(state, opts) {
         }
 
         try {
-          var signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', { method: 'POST' });
+          var signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storeId: PUBLIC_API_KEY }),
+          });
           if (!signRes.ok) {
             if (signRes.status === 429) throw new Error('rate_limit');
             throw new Error('sign failed');
           }
           var sign = await signRes.json();
+          if (!sign.folder) throw new Error('sign folder missing');
           var fd = new FormData();
           fd.append('file', f);
           fd.append('api_key', sign.api_key);
           fd.append('timestamp', sign.timestamp);
           fd.append('signature', sign.signature);
-          fd.append('folder', 'review_images');
+          fd.append('folder', sign.folder);
 
           var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
           var upData = await up.json();
@@ -303,7 +308,7 @@ export function createStepPhotos(state, opts) {
               fetchWithTimeout(API_BASE + '/api/public/upload/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ secureUrl: upData.secure_url }),
+                body: JSON.stringify({ storeId: PUBLIC_API_KEY, secureUrl: upData.secure_url }),
               }).catch(function () { /* sessiz */ });
             } catch (_) { /* sessiz */ }
           } else {

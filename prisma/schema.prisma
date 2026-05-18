@@ -87,8 +87,10 @@ model ProductSnapshot {
 // asset. See ADR_0012 for the rationale.
 model PendingReviewImage {
   publicId  String   @id
+  storeId   String?
   createdAt DateTime @default(now())
   ipHash    String?
 
   @@index([createdAt])
+  @@index([storeId, createdAt])
 }

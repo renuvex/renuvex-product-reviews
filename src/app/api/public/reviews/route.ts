@@ -4,6 +4,7 @@ import { withCors, corsOptions } from '@/lib/cors';
 import { Redis } from '@upstash/redis';
 import {
   getConfiguredCloudinaryCloudName,
+  getReviewImageFolder,
   getReviewImagePublicId,
   parseStoredReviewImages,
   sanitizeReviewImageUrls,
@@ -99,7 +100,7 @@ async function verifyReviewTarget(storeId: string, productId: string) {
   return store && product ? product : null;
 }
 
-function formatPublicReview(review: PublicReviewRow, cloudName: string | null) {
+function formatPublicReview(review: PublicReviewRow, cloudName: string | null, storeId: string) {
   return {
     id: review.id,
     rating: review.rating,
@@ -107,7 +108,7 @@ function formatPublicReview(review: PublicReviewRow, cloudName: string | null) {
     comment: review.comment,
     author: maskAuthor(review.author),
     merchantReply: review.merchantReply,
-    images: parseStoredReviewImages(review.images, cloudName),
+    images: parseStoredReviewImages(review.images, cloudName, storeId),
     createdAt: review.createdAt.toISOString(),
   };
 }
@@ -146,6 +147,7 @@ export async function GET(req: Request) {
     const ratingFilter = ratingParam ? parseInt(ratingParam, 10) : null;
     const hasImagesFilter = searchParams.get('hasImages') === 'true';
     const cloudName = getConfiguredCloudinaryCloudName();
+    const imageFolder = getReviewImageFolder(storeId);
 
     const where = {
       storeId,
@@ -153,11 +155,11 @@ export async function GET(req: Request) {
       status: 'approved',
       ...(ratingFilter && ratingFilter >= 1 && ratingFilter <= 5 ? { rating: ratingFilter } : {}),
       ...(hasImagesFilter
-        ? cloudName
+        ? cloudName && imageFolder
           ? {
               AND: [
                 { images: { contains: `https://res.cloudinary.com/${cloudName}/image/upload/` } },
-                { images: { contains: '/review_images/' } },
+                { images: { contains: `/${imageFolder}/` } },
               ],
             }
           : { id: '__missing_cloudinary_cloud_name__' }
@@ -190,7 +192,7 @@ export async function GET(req: Request) {
     });
     const avgRating = allCount > 0 ? (ratingSum / allCount).toFixed(1) : null;
 
-    const formattedReviews = reviews.map((review) => formatPublicReview(review, cloudName));
+    const formattedReviews = reviews.map((review) => formatPublicReview(review, cloudName, storeId));
 
     const res = withCors(NextResponse.json({
       data: {
@@ -259,7 +261,7 @@ export async function POST(request: Request) {
     }
 
     const cloudName = getConfiguredCloudinaryCloudName();
-    const imageResult = sanitizeReviewImageUrls(images, cloudName);
+    const imageResult = sanitizeReviewImageUrls(images, cloudName, storeIdText);
     if (!imageResult.ok) {
       if (imageResult.error === 'missing_cloud') {
         console.error('[POST] Reviews image validation misconfigured: missing Cloudinary cloud name');
@@ -299,7 +301,7 @@ export async function POST(request: Request) {
     // tied to the publicIds this review consumes. Rows that were never
     // registered are silently ignored — the weekly fallback scan catches them.
     const committedPublicIds = imageResult.urls
-      .map((url) => getReviewImagePublicId(url, cloudName))
+      .map((url) => getReviewImagePublicId(url, cloudName, storeIdText))
       .filter((id): id is string => !!id);
 
     const newReview = await prisma.$transaction(async (tx) => {
@@ -321,7 +323,7 @@ export async function POST(request: Request) {
 
       if (committedPublicIds.length > 0) {
         await tx.pendingReviewImage.deleteMany({
-          where: { publicId: { in: committedPublicIds } },
+          where: { publicId: { in: committedPublicIds }, storeId: storeIdText },
         });
       }
 

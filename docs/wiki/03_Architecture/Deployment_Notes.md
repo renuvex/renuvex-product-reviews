@@ -35,7 +35,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 
 ## Cloudinary
 - Account credentials in env (`CLOUDINARY_*`).
-- All review images live under `review_images/` folder.
+- New review images live under tenant folders: `review_images/stores/<storeId>/`.
 - Monthly fallback cleanup uses `cloudinary.api.resources({ ... type: 'upload', prefix: 'review_images/' })` to enumerate.
 
 ## Upstash Redis

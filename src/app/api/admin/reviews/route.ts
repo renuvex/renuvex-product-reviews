@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     const cloudName = getConfiguredCloudinaryCloudName();
     const sanitizedReviews = reviews.map(review => ({
       ...review,
-      images: JSON.stringify(parseStoredReviewImages(review.images, cloudName)),
+      images: JSON.stringify(parseStoredReviewImages(review.images, cloudName, review.storeId)),
     }));
 
     return NextResponse.json({

@@ -18,6 +18,7 @@ source_files:
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/app/api/public/upload/sign/route.ts"
+  - "src/app/api/public/upload/register/route.ts"
   - "src/app/api/public/widget-error/route.ts"
 ---
 
@@ -45,10 +46,11 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 |---|---|---|---|
 | `POST /api/public/reviews` | 3 | 10 min | `ikr_rl:<ip>` |
 | `POST /api/public/upload/sign` | 10 | 10 min | `ikr_upload_rl:<ip>` |
+| `POST /api/public/upload/register` | 30 | 10 min | `ikr_upload_reg_rl:<ip>` |
 | `GET /api/public/ratings` + `GET /api/public/ratings-by-slug` | 300 combined | 60 sec | `ikr_ratings_rl:<ip>` |
 | `POST /api/public/widget-error` | 30 | 60 sec | `ikr_werr_rl:<ip>` |
 
-Pattern: `INCR` then `EXPIRE` on first hit. Rating read limits use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable, so listing badges do not disappear during a transient Redis issue. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
+Pattern: `INCR` then `EXPIRE` on first hit. Rating read limits use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable, so listing badges do not disappear during a transient Redis issue. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
 
 IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theory if upstream is misconfigured — acceptable today.
 
@@ -78,9 +80,9 @@ Hard-coded list of TR + EN slurs (~25 entries) in [src/app/api/public/reviews/ro
 Public review responses replace last name with initial: `Mert Wilson` → `Mert W.`. Done at the response builder ([src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)). Original full name remains in DB for moderator visibility.
 
 ## Image upload security
-- Server signs Cloudinary upload params (HMAC) with `folder=review_images` baked in.
+- Server signs Cloudinary upload params (HMAC) with `folder=review_images/stores/<storeId>` baked in after verifying `StoreSettings`.
 - Client uploads directly to Cloudinary (origin-direct) — avoids proxying body through our server.
-- Public review POST stores only trusted Cloudinary secure URLs from the configured cloud and `review_images` folder. Third-party HTTPS URLs and `data:image` payloads are rejected.
+- Public review POST stores only trusted Cloudinary secure URLs from the configured cloud and the matching tenant folder. Third-party HTTPS URLs, cross-tenant Cloudinary paths, and `data:image` payloads are rejected.
 - Public/admin read paths parse legacy `Review.images` defensively and expose only trusted URLs; invalid legacy image data becomes `images: []`.
 - Widget rendering uses the build-time injected Cloudinary cloud name ([[ADR_0008_Cloud_Name_Build_Time_Only]]) and `getTrustedReviewImages()` before rendering photos or opening the photo lightbox.
 - Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`.
@@ -130,6 +132,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-18: D3 tenant-scoped Cloudinary uploads: upload signatures now require a verified `storeId` and sign `review_images/stores/<storeId>`; register/review read/write paths and widget filtering reject cross-tenant image paths.
 - 2026-05-18: Added D4 public rating API read limit: `/api/public/ratings` and `/api/public/ratings-by-slug` share a generous 300 requests/min/IP Redis fixed-window counter. 429 responses are `no-store`; Redis/config failures fail open server-side to preserve storefront rendering.
 - 2026-05-18: Hardened public review write/read contracts. `POST /api/public/reviews` now verifies the target store/product via `StoreSettings` + `ProductSnapshot`, ignores client-supplied `slug`/`productName`/`email`, and `GET /api/public/reviews` returns an explicit public field whitelist instead of a raw Review row spread.
 - 2026-05-10: Implemented the trusted review image URL policy. Public POST now rejects third-party/data image URLs, read APIs filter legacy rows, and the widget renders only trusted Cloudinary review images. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].

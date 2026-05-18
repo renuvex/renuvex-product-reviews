@@ -38,7 +38,7 @@ Postgres (Supabase) accessed via Prisma. Six models: `AuthToken`, `Review`, `Sto
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` map |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
 | `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
-| `PendingReviewImage` | `publicId` | Registry of Cloudinary uploads not yet attached to a `Review` |
+| `PendingReviewImage` | `publicId` | Registry of tenant-scoped Cloudinary uploads not yet attached to a `Review` |
 
 ## Index strategy
 On `Review`:
@@ -104,6 +104,7 @@ code run together, so a migration must not break the old code.
 - [[ADR_0003_Review_Data_Model]]
 
 ## Change Log
+- 2026-05-18: Added `PendingReviewImage.storeId` for D3 tenant-scoped Cloudinary upload tracking.
 - 2026-05-18: Removed redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]`; the wider composite indexes cover those query prefixes and the drop-only migration is backwards-compatible.
 - 2026-05-17: Added the migration safety (deploy-window / expand-contract) rule to the migration workflow section.
 - 2026-05-17: Documented `[storeId, productId, status]` for canonical product-id listing/search badge reads and corrected the model count to include `PendingReviewImage`.

@@ -45,7 +45,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Public review submission API:
   - Profanity filter (TR + EN)
   - IP-based rate limit (3 reviews / 10 min via Upstash Redis)
-  - Image upload via Cloudinary signed direct-upload (10 uploads / 10 min limit)
+  - Image upload via tenant-scoped Cloudinary signed direct-upload (10 uploads / 10 min limit)
   - Trusted review image URL policy rejects third-party/data image URLs before storage and storefront render
   - Auto-approve modes: `manual` / `4plus` / `5stars` / `all`
   - Author masking on output (`Mert W.`)

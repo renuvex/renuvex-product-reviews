@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-12
-updated: 2026-05-12
+updated: 2026-05-18
 tags:
   - adr
   - storage
@@ -44,18 +44,25 @@ Invert the source of truth. Track uploads in our own database the moment they ha
 ```prisma
 model PendingReviewImage {
   publicId  String   @id
+  storeId   String?
   createdAt DateTime @default(now())
   ipHash    String?
 
   @@index([createdAt])
+  @@index([storeId, createdAt])
 }
 ```
 
 ### Lifecycle
-1. **Sign.** Widget calls `/api/public/upload/sign` for a Cloudinary signature.
-2. **Upload.** Widget posts the file directly to Cloudinary.
-3. **Register.** On successful upload, widget posts `{secureUrl}` to `/api/public/upload/register`. The endpoint validates the URL against the trusted Cloudinary policy ([[ADR_0006_Trusted_Review_Image_URL_Policy]]), derives the `publicId`, and upserts a `PendingReviewImage` row. Idempotent on retry — `createdAt` is not reset on conflict.
-4. **Commit on submit.** `/api/public/reviews` POST runs the review insert and `PendingReviewImage.deleteMany({ publicId: { in: ... } })` inside a single `prisma.$transaction`. Either both succeed or neither does.
+As of D3 (2026-05-18), upload signatures and registered assets are tenant-scoped:
+the widget sends `{storeId}` to `/api/public/upload/sign`, uploads to the returned
+`folder=review_images/stores/<storeId>`, and registers `{storeId, secureUrl}`.
+`/api/public/reviews` deletes pending rows by both `publicId` and `storeId`.
+
+1. **Sign.** Widget calls `/api/public/upload/sign` with `{storeId}`. The endpoint verifies `StoreSettings` and signs only `folder=review_images/stores/<storeId>`.
+2. **Upload.** Widget posts the file directly to Cloudinary using the signed tenant folder returned by the sign endpoint.
+3. **Register.** On successful upload, widget posts `{storeId, secureUrl}` to `/api/public/upload/register`. The endpoint validates the URL against the tenant-scoped trusted Cloudinary policy ([[ADR_0006_Trusted_Review_Image_URL_Policy]]), derives the `publicId`, and upserts a `PendingReviewImage` row with `storeId`. Idempotent on retry — `createdAt` is not reset on conflict.
+4. **Commit on submit.** `/api/public/reviews` POST runs the review insert and `PendingReviewImage.deleteMany({ publicId: { in: ... }, storeId })` inside a single `prisma.$transaction`. Either both succeed or neither does.
 5. **Expire abandoned rows.** `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily. The explicit `/api/admin/cleanup-pending-uploads` endpoint runs the same helper on demand. It selects rows where `createdAt < now - 24h`, deletes the matching Cloudinary assets in batches of 100, then deletes the rows.
 6. **Monthly fallback scan.** `/api/admin/cleanup-images` keeps running monthly. Now uses cursor pagination, only considers assets older than 30 days, and exists solely to catch uploads that bypassed the registry (failed register, legacy data, ops uploads).
 
@@ -110,7 +117,10 @@ Two cron slots, both daily-or-slower: daily maintenance (`0 3 * * *`, pending cl
 - [[Current_Status]]
 
 ## Notes — Deployment checklist
-1. Run `pnpm prisma migrate deploy` (or `migrate dev` locally) to apply `20260512100000_add_pending_review_image`.
+Change log:
+- 2026-05-18: D3 added tenant scope to pending uploads. New Cloudinary uploads are signed and trusted only under `review_images/stores/<storeId>`, `/api/public/upload/register` records `storeId`, and review submit removes pending rows by `publicId + storeId`.
+
+1. Run `pnpm prisma migrate deploy` (or `migrate dev` locally) to apply `20260512100000_add_pending_review_image` and `20260518143000_scope_pending_uploads_by_store`.
 2. Confirm `CRON_SECRET`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, and `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_CLOUD_NAME` are present in the Vercel environment.
 3. Verify the daily cron path `/api/admin/daily-maintenance` appears under Vercel → Settings → Cron Jobs after deploy.
 4. First production run of the daily cleanup should report `deleted: 0` (no expired pending rows yet); the first non-zero run lands ~24 hours after the first abandoned upload.

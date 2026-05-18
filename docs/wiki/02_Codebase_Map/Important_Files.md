@@ -98,8 +98,8 @@ related:
   - Do not reintroduce broad `https://` or `data:image` acceptance in public API or widget rendering.
 
 ### [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts)
-- **What:** Issues short-lived Cloudinary upload signature; rate-limited 10/10min/IP.
-- **Be careful:** The signature only authorizes uploads to `folder=review_images`. Don't widen the signed params without re-checking abuse vectors.
+- **What:** Issues short-lived Cloudinary upload signature for a verified store; rate-limited 10/10min/IP.
+- **Be careful:** The signature only authorizes uploads to `folder=review_images/stores/<storeId>`. Do not return a client-chosen folder or remove StoreSettings verification.
 
 ### [src/lib/cors.ts](src/lib/cors.ts)
 - **What:** `withCors` adds `Access-Control-Allow-Origin: *` to all `/api/public/*` responses.
