@@ -3,8 +3,8 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-16
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-19
+last_verified: 2026-05-19
 confidence: high
 tags:
   - ikas
@@ -248,6 +248,12 @@ Updated 2026-05-17 after the Phase 1 runtime audit ([[Phase_1_Widget_Runtime_Aud
 - ~~Does the category/search listing payload include product details?~~ **Resolved** — category via `VIEW_LISTING.data.productDetails[]`, search via `VIEW_SEARCH_RESULTS.data.productDetails[]`.
 - Are `IKAS_EVENT_TYPE` and `IKAS_PAGE_TYPE` exposed as runtime globals, or must consumers compare against literal strings? Still unverified — the widget uses frozen literal-string constants either way (`core/storefront-context.js`).
 - The cold-vs-SPA listing render difference behind [[Bug_Listing_Badge_Stars_Direct_Load]] turned out to be a CSS-injection-path issue (PDP-only `#ikr-styles`), not an event-sequence issue — now fixed.
+- **Contract risk — `VIEW_LISTING` is undocumented.** It is runtime-verified (above), but
+  the official docs list `VIEW_CATEGORY` / `VIEW_SEARCH_RESULTS`, not `VIEW_LISTING`. The
+  widget depends on it for category-page product arrays, so ikas renaming/removing it
+  would silently break event-sourced listing badges. Tracked as audit finding O6
+  ([[Widget_Architecture_Audit]], [[Open_Questions]]) — needs ikas confirmation that
+  `VIEW_LISTING` is a supported, stable event.
 
 ## Obsidian Links
 

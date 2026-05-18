@@ -3,8 +3,8 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-18
-last_verified: 2026-05-18
+updated: 2026-05-19
+last_verified: 2026-05-19
 confidence: medium
 tags:
   - questions
@@ -15,6 +15,7 @@ related:
   - "[[Roadmap]]"
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[Ikas_Storefront_Script_Capabilities]]"
+  - "[[Widget_Architecture_Audit]]"
 source_files: []
 ---
 
@@ -39,6 +40,33 @@ The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-mo
 - Should theme adapter selection be explicit merchant config, automatic runtime detection, or both?
 
 Reference: [[Yotpo_Style_Widget_Modular_Architecture]]
+
+## Non-Ozy theme support — ikas-blocked (audit finding O2)
+The storefront widget's **listing-badge mount is theme-coupled**: `themes/current-adapter.js`
+`getThemeAdapter()` hard-codes the Ozy adapter, so on any non-Ozy ikas theme
+`findListingContainers()` returns nothing and **no listing badges are injected** — a silent
+failure. PDP / product-context paths are event-driven and stay theme-independent; only the
+listing-badge DOM mount is affected.
+- **Blocked on ikas:** ikas does not expose a stable runtime theme id, nor official
+  page-area `data-*` anchors (per the 2026-05-16 ikas developer feedback).
+- **To unblock — ask ikas:** can a storefront expose its theme id / theme family at
+  runtime? When will ikas Studio `data-*` anchors be broadly available? Until then each
+  new theme needs a hand-written theme adapter + a smoke test.
+- Detail: [[Widget_Architecture_Audit]] (O2), [[Yotpo_Style_Widget_Modular_Architecture]],
+  [[Ikas_Storefront_Script_Capabilities]].
+
+## `VIEW_LISTING` undocumented ikas event — ikas-blocked (audit finding O6)
+`core/storefront-context.js` depends on the `VIEW_LISTING` Storefront Event for
+category-page product arrays. `VIEW_LISTING` is **runtime-verified** (Phase 1 audit) but is
+**not in the official Storefront Events docs** (which list `VIEW_CATEGORY` /
+`VIEW_SEARCH_RESULTS`, not `VIEW_LISTING`).
+- **Risk:** it works today, but it is not a documented contract — ikas could rename/remove
+  it without notice; category listing badges would then stop populating from events
+  (the DOM-slug fallback only partially covers this).
+- **To unblock — ask ikas:** is `VIEW_LISTING` a supported, stable event? If not, what is
+  the documented way to read the category product array? If ikas will not guarantee it,
+  harden the `VIEW_CATEGORY` + DOM fallback path.
+- Detail: [[Widget_Architecture_Audit]] (O6), [[Ikas_Storefront_Events]].
 
 ## Structured data injection mechanism
 Two approaches for JSON-LD aggregateRating:
