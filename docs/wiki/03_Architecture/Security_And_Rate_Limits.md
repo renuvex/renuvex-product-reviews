@@ -125,6 +125,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[Auth_And_Installation_Flow]]
 - [[API_Design]]
 - [[Open_Questions]]
+- [[Widget_Architecture_Audit]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 

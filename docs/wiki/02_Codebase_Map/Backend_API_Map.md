@@ -115,6 +115,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Security_And_Rate_Limits]]
 - [[Caching_And_Performance]]
 - [[Database_Schema]]
+- [[Widget_Architecture_Audit]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log

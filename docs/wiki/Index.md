@@ -147,6 +147,7 @@ source_files: []
 - [[Phase_1_Widget_Runtime_Audit]]
 - [[Phase_2_Widget_Module_Split_Plan]]
 - [[Phase_3_Widget_Lifecycle_Hardening]]
+- [[Widget_Architecture_Audit]]
 - [[Future_Feature_Ideas]]
 
 ## Templates
