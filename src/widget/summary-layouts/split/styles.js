@@ -70,7 +70,7 @@ export var SPLIT_CSS = `
     }
     .ikr-split-right .ikr-write-btn{flex:0 0 auto;}
     .ikr-split-right .ikr-filter-wrap{flex:0 0 auto; align-self:stretch;}
-    
+
     /* Gizli tavsiye yuzdesi desktop'ta yer kaplar (sol kolonu cokertmemek icin) */
     .ikr-split-rec-hidden { visibility: hidden; }
   }

@@ -15,6 +15,7 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
+  - "src/widget/core/link-scope.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
@@ -57,6 +58,7 @@ src/widget/
 │  ├─ registry.js                 # Surface registry; supports async lazy mounts.
 │  ├─ lazy-modules.js             # Dynamic import boundaries for widget modules.
 │  ├─ settings.js                 # Shared public settings fetch/cache.
+│  ├─ link-scope.js              # Shared scoped link discovery for listing DOM fallbacks.
 │  ├─ state.js                    # Module-level mutable state (currentSettings, currentProductId, ...)
 │  ├─ fetch.js                    # API helpers (calls /api/public/*)
 │  ├─ cache.js                    # sessionStorage wrapper with in-memory fallback (cacheGet/cacheSet)
@@ -143,6 +145,7 @@ src/widget/
 - `review-modal.js` is the photo review detail lightbox, not the review submission wizard. Keep this distinction clear when changing modal behavior. See [[Product_Review_Lightbox]].
 - Review/rating and filter icons are split under `src/widget/icons/`. Import new code from [icons/index.js](src/widget/icons/index.js); [icons.js](src/widget/icons.js) remains only as a compatibility re-export.
 - Review image rendering must go through `getTrustedReviewImages()` / `getFirstTrustedReviewImage()` in [helpers.js](src/widget/core/helpers.js). Do not add layout-local `https://` or `data:image` checks.
+- Listing DOM discovery shared by listing badges and the MutationObserver must go through [link-scope.js](src/widget/core/link-scope.js); do not reintroduce whole-document `document.querySelectorAll('a[href]')` scans.
 - Always test changes both in `/preview` AND on a real ikas storefront — preview mode skips the mutation observer and theme integrations.
 - The widget is **plain JS**. No TS, no React. Don't introduce a framework without rationale (bundle size + cold-start hit).
 
@@ -164,6 +167,7 @@ src/widget/
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-18: Added [core/link-scope.js](src/widget/core/link-scope.js) so listing badges and the MutationObserver share scoped link discovery; active builds no longer use whole-document `document.querySelectorAll('a[href]')` for listing re-render checks.
 - 2026-05-17: Listing badge files now use canonical ikas product ids from Storefront Events for rating fetches; slug remains DOM fallback only. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Phase 2 module split implemented and verified. `public/widget.js` is the classic loader, `public/widget-runtime/*` contains ESM runtime/chunks, and lazy boundaries live in `core/lazy-modules.js`.
 - 2026-05-12: Split the storefront icon registry into [review-icons.js](src/widget/icons/review-icons.js), [filter-icons.js](src/widget/icons/filter-icons.js), and [icons/index.js](src/widget/icons/index.js). [icons.js](src/widget/icons.js) now remains as a compatibility re-export.

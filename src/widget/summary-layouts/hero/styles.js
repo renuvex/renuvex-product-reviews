@@ -52,7 +52,7 @@ export var HERO_CSS = `
     .ikr-hero-rating-col{flex-direction:row;align-items:center;gap:16px;}
     .ikr-hero-avg{font-size:calc(var(--ikr-hero-avg-size,90px) * 0.65);letter-spacing:-1px;}
     .ikr-hero-meta-row{width:auto;gap:8px;}
-    
+
     .ikr-desktop-only{display:none !important;}
 
     /* Filter ve Yorum Yap butonu yan yana */

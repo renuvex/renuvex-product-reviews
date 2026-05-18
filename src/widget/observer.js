@@ -3,12 +3,30 @@
 import { extractSlug, SYSTEM_SLUGS } from './core/helpers.js';
 import { ls } from './core/state.js';
 import { loadListingBadgesModule } from './core/lazy-modules.js';
+import { collectLinksFromScopes, getMainContentScopes } from './core/link-scope.js';
+import { getThemeAdapter } from './themes/current-adapter.js';
 
 var mutationDebounceTimer = null;
 
 function renderListingBadgesLazy() {
   return loadListingBadgesModule().then(function (mod) {
     mod.renderListingBadges();
+  });
+}
+
+function getObserverListingScopes() {
+  var activeAdapter = getThemeAdapter();
+  var containers = activeAdapter && activeAdapter.findListingContainers
+    ? activeAdapter.findListingContainers()
+    : [];
+  return containers && containers.length ? containers : getMainContentScopes();
+}
+
+function hasUnbadgedListingLinks() {
+  return collectLinksFromScopes(getObserverListingScopes()).some(function(a) {
+    if (a.getAttribute('data-ikr-badge')) return false;
+    var path = extractSlug(a.href);
+    return path && path.length >= 3 && !SYSTEM_SLUGS.test(path);
   });
 }
 
@@ -27,12 +45,7 @@ export function startMutationObserver() {
     if (!hasRelevantMutation) return;
     clearTimeout(mutationDebounceTimer);
     mutationDebounceTimer = setTimeout(function() {
-      var hasUnbadged = Array.from(document.querySelectorAll('a[href]')).some(function(a) {
-        if (a.getAttribute('data-ikr-badge')) return false;
-        var path = extractSlug(a.href);
-        return path && path.length >= 3 && !SYSTEM_SLUGS.test(path);
-      });
-      if (!hasUnbadged) return;
+      if (!hasUnbadgedListingLinks()) return;
       ls.rendered = false;
       renderListingBadgesLazy().catch(function (err) {
         console.error('[ikr] listing badge lazy render error:', err);

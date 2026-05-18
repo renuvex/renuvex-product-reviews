@@ -23,6 +23,8 @@ source_files:
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
   - "src/widget/listing-badges/inject.js"
+  - "src/widget/core/link-scope.js"
+  - "src/widget/observer.js"
   - "src/widget/core/storefront-context.js"
   - "src/app/api/public/ratings/route.ts"
   - "src/widget/surfaces/listing-badge.surface.js"
@@ -41,6 +43,7 @@ Star+count badge injected into product cards on collection / search / category p
 |---|---|
 | [index.js](src/widget/listing-badges/index.js) | Bootstrap (decide if current page is a listing page) |
 | [dom.js](src/widget/listing-badges/dom.js) | Scoped link discovery from theme product containers, with `main` fallback instead of whole-document scans |
+| [core/link-scope.js](src/widget/core/link-scope.js) | Shared scoped link collection used by listing badges and the MutationObserver re-render gate |
 | [collect.js](src/widget/listing-badges/collect.js) | Build product targets from scoped candidate links and merge Storefront Events product ids |
 | [ratings.js](src/widget/listing-badges/ratings.js) | Bulk fetch `/api/public/ratings?productIds=...`; falls back to slug only when no product id exists |
 | [inject.js](src/widget/listing-badges/inject.js) | Insert star+count badge into each card |
@@ -63,6 +66,7 @@ Star+count badge injected into product cards on collection / search / category p
 - Single API call per listing page = small fixed cost regardless of # of products on screen.
 - Server caches at edge with `s-maxage=60, stale-while-revalidate=300`.
 - DOM discovery is scoped to theme product containers first, then `main/[role=main]` fallback; it no longer starts from every link in the whole document.
+- MutationObserver re-render checks use the same scoped discovery path, so lazy product-card changes do not trigger a whole-document `document.querySelectorAll('a[href]')` scan.
 - Badge slots are reserved before rating data finishes loading and replaced in place when real ratings arrive, reducing listing-card layout shift.
 
 ## Settings
@@ -105,6 +109,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-05-18: Follow-up O8 live test found the MutationObserver still calling whole-document `document.querySelectorAll('a[href]')` from the runtime. Fixed by sharing scoped link discovery through `core/link-scope.js`; active generated runtime now avoids that scan.
 - 2026-05-18: Reduced listing badge layout shift and DOM scan cost. `dom.js` now scopes candidate link discovery to theme product containers/main content, and `index.js`/`inject.js` reserve invisible badge slots while ratings are in flight before replacing them with real badges.
 - 2026-05-17: Listing/search badges now prefer canonical product-id rating reads via `/api/public/ratings?productIds=...`. `ratings-by-slug` remains only as DOM fallback. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: DOM fallback now uses `ProductSnapshot` before legacy slug reads, backed by ikas product webhooks/backfill.

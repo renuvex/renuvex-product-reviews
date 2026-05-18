@@ -29,6 +29,8 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
+  - "src/widget/core/link-scope.js"
+  - "src/widget/observer.js"
   - "src/widget/product-widget/bootstrap.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/listing-badges/index.js"
@@ -75,7 +77,7 @@ deployment before claiming live performance improvement.
 | [core/cache.js](src/widget/core/cache.js) | `sessionStorage` wrapper with in-memory fallback (private browsing / quota exceeded). Persists across same-tab navigations. |
 | [core/helpers.js](src/widget/core/helpers.js) | Shared display helpers, including trusted review image URL filtering for storefront render paths. |
 | [icons/](src/widget/icons/) | Public icon API plus split review/rating and filter icon registries shared by runtime and admin preview. |
-| [observer.js](src/widget/observer.js) | MutationObserver to re-render listing badges on SPA theme nav. |
+| [observer.js](src/widget/observer.js) | MutationObserver to re-render listing badges on SPA theme nav; uses scoped listing link discovery instead of whole-document link scans. |
 | [events.js](src/widget/events.js) | SPA history patch (stale rating-badge cleanup) + quick-view modal badge plumbing. IkasEvents handling moved to `core/storefront-context.js` (ADR_0013). |
 | [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Fetch settings + reviews; mount the PDP review widget via `render()`. |
 | [product-widget/render.js](src/widget/product-widget/render.js) | Compose summary + reviews + modal CTA based on settings. |
@@ -194,7 +196,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
-- 2026-05-18: Listing badge hardening reduced CLS and DOM scan cost: candidate links are scoped to theme containers/main content, and invisible badge slots are reserved while rating data loads.
+- 2026-05-18: Listing badge hardening reduced CLS and DOM scan cost: candidate links and the MutationObserver re-render gate are scoped to theme containers/main content, and invisible badge slots are reserved while rating data loads.
 - 2026-05-18: Reduced widget settings stale tolerance from 7 days to 24 hours in `core/settings.js`.
 - 2026-05-17: Phase 3 source hardening implemented: `widget.js` now points at a content-hashed ESM runtime, stable `runtime.js` remains as a short-cache shim, script lifecycle is create/update-only, and hidden listing links are filtered before badge injection.
 - 2026-05-17: Phase 2 module split verified live on the dev store — PDP/category/search cold entries, PDP↔PDP SPA navigation, and a mobile spot check passed; Sentry post-test check clean. Phase 2 is closed. `core/settings.js` now shares one in-flight settings request between the reviews-main and listing-badge surfaces, so a PDP with product carousels fetches settings once instead of twice. See [[Phase_2_Widget_Module_Split_Plan]].

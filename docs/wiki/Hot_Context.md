@@ -20,6 +20,8 @@ source_files:
   - "package.json"
   - "prisma/schema.prisma"
   - "src/widget/index.js"
+  - "src/widget/observer.js"
+  - "src/widget/core/link-scope.js"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
@@ -56,7 +58,7 @@ source_files:
 - 2026-05-17: ADR_0013 Phase 3 source hardening landed: script lifecycle is non-destructive create/update only (no zero-argument `deleteStorefrontJSScript`), daily maintenance now runs storefront-script reconcile, production widget builds use a deterministic hashed `runtime-*.js` with `runtime.js` kept as a short-cache compatibility shim, and hidden listing links are filtered before badge injection.
 - 2026-05-18: Public review API hardening landed: `POST /api/public/reviews` verifies installed store + `(storeId, productId)` in `ProductSnapshot`, ignores client `slug`/`productName`/`email`, and `GET /api/public/reviews` returns a public whitelist instead of raw Review rows.
 - 2026-05-18: O3 settings cache hardening: widget-side stale settings tolerance dropped from 7 days to 24 hours; transient outages still use same-tab stale fallback, but merchant setting changes cannot remain masked for a week.
-- 2026-05-18: O1/O8 listing badge hardening landed: scoped DOM link discovery now starts from theme product containers/main content instead of every document link, and invisible badge placeholders reserve vertical space while ratings load.
+- 2026-05-18: O1/O8 listing badge hardening landed: scoped DOM link discovery now starts from theme product containers/main content instead of every document link, invisible badge placeholders reserve vertical space while ratings load, and the MutationObserver re-render gate now reuses the same scoped link discovery instead of `document.querySelectorAll('a[href]')`.
 - Context7 is useful for current Playwright/Sentry/Next.js docs that affect test method or fixes. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
