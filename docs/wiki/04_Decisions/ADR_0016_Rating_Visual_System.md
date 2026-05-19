@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-19
-updated: 2026-05-19
+updated: 2026-05-20
 last_verified: 2026-05-19
 confidence: high
 tags:
@@ -80,10 +80,11 @@ The star icon family, star color, and full/half/empty rendering are one
    (`getIconFromSettings`) instead of calling `getIconStyle` themselves or
    hardcoding `star`. `partialStarsHTML` remains the single half/full/empty
    engine.
-4. **Color via one variable, on both paths.** Star color flows through the
-   `--ikr-review-star-color` / `--ikr-star-empty-color` CSS variables. The PDP
-   path (`render.js`) and the listing path (`listing-badges/index.js`) both set
-   them, so listing badges no longer depend on the PDP render path.
+4. **Color via one variable, on both paths.** Star color flows through a single
+   `--ikr-review-star-color` CSS variable — filled stars and empty-outline stars
+   share it (empty = filled color). The PDP path (`render.js`) and the listing
+   path (`listing-badges/index.js`) both set it, so listing badges no longer
+   depend on the PDP render path.
 5. **Empty star = filled color.** The empty star is an outline in the same color
    as the filled star (the existing outline architecture). There is no separate
    empty-star-color setting.

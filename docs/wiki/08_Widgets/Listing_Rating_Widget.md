@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-19
+updated: 2026-05-20
 last_verified: 2026-05-18
 confidence: high
 tags:
@@ -75,9 +75,9 @@ Listing badges have no dedicated `widgetId`. Visibility is gated by the `badge`
 widget's `enabled` toggle ([index.js](src/widget/listing-badges/index.js)). The
 star **icon** and **color** come from the global rating visual system — the
 `reviews` widget's `reviewIcon` / `reviewStarColor` — which `index.js` resolves
-(`getIconFromSettings`) and applies via the `--ikr-review-star-color` /
-`--ikr-star-empty-color` CSS variables before injecting badges. Badge stars are
-no longer hardcoded to `star:classic`. See [[ADR_0016_Rating_Visual_System]].
+(`getIconFromSettings`) and applies via the single `--ikr-review-star-color`
+CSS variable before injecting badges. Badge stars are no longer hardcoded to
+`star:classic`. See [[ADR_0016_Rating_Visual_System]].
 
 ## Notes
 - Card discovery heuristics (in `collect.js`) vary by theme. Edge cases:

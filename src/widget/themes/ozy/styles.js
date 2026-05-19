@@ -129,7 +129,7 @@ ${PARTIAL_STARS_CSS}
   .ikr-bar-label{flex:0 0 var(--ikr-col-label);display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-size:var(--ikr-bar-label-size,16px);color:#111111;}
   .ikr-bar-star{width:var(--ikr-bar-label-size,20px);height:var(--ikr-bar-label-size,20px);}
   .ikr-bar-star-filled{color:var(--ikr-review-star-color,#f59e0b);}
-  .ikr-bar-star-empty{color:var(--ikr-star-empty-color,#e5e7eb);}
+  .ikr-bar-star-empty{color:var(--ikr-review-star-color,#f59e0b);}
   .ikr-bar-track{flex:1 1 auto;min-width:0;background:var(--ikr-bar-track,#e5e7eb);border-radius:var(--ikr-radius-sm,4px);height:10px;overflow:hidden;}
   .ikr-bar-fill{height:10px;background:var(--ikr-bar-fill,#111111);border-radius:var(--ikr-radius-sm,4px);}
   .ikr-bar-count{flex:0 0 var(--ikr-col-count);white-space:nowrap;text-align:right;color:var(--ikr-bar-count,#111111);font-size:var(--ikr-bar-count-size,14px);}
@@ -201,7 +201,7 @@ ${PARTIAL_STARS_CSS}
   .ikr-review-stars{display:inline-flex;gap:2px;align-items:center;}
   .ikr-review-stars .ikr-icon{width:var(--ikr-star-size,20px);height:var(--ikr-star-size,20px);}
   .ikr-stars .ikr-icon-filled{color:var(--ikr-review-star-color,#f59e0b);}
-  .ikr-stars .ikr-icon-empty{color:var(--ikr-star-empty-color,#e5e7eb);}
+  .ikr-stars .ikr-icon-empty{color:var(--ikr-review-star-color,#f59e0b);}
   /* Yorum item dikey ritm: stars→title (normal), title→author (normal),
      author→body (normal), body→reply (loose). Bkz: gap sözleşmesi (üst yorum). */
   .ikr-review-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,#111111);margin-top:var(--ikr-gap-normal);}

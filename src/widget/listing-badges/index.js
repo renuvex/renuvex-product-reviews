@@ -40,15 +40,14 @@ export async function renderListingBadges() {
 
     // Rating görseli tek kaynaktan: "Ürün Yorumları" widget'ı (reviewIcon +
     // reviewStarColor). Listing rozetleri PDP render.js'e bağlı olmadan kendi
-    // yıldız renk değişkenlerini kurar — soğuk listing girişinde de doğru renk.
-    // Boş yıldız = dolu renk (outline); ikisi de aynı değişkenden beslenir.
+    // yıldız renk değişkenini kurar — soğuk listing girişinde de doğru renk.
+    // Dolu + boş yıldız (outline) tek --ikr-review-star-color'dan beslenir.
     var reviewsSettings = widgets.reviews || {};
     var iconPair = getIconFromSettings(reviewsSettings);
     var starColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(reviewsSettings.reviewStarColor || '')
       ? reviewsSettings.reviewStarColor
       : '#f59e0b';
     document.documentElement.style.setProperty('--ikr-review-star-color', starColor);
-    document.documentElement.style.setProperty('--ikr-star-empty-color', starColor);
 
     var slugNameMap = {};
     slugs.forEach(function(slug) {

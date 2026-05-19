@@ -1,7 +1,6 @@
 // product-widget/rating-badge.js — Ürün başlığının altına rating badge + JSON-LD inject
 
 import { findProductTitleEl } from './title-finder.js';
-import { PUBLIC_API_KEY } from '../core/config.js';
 import { partialStarsHTML } from '../core/helpers.js';
 
 // Boyut map — badge widget ayarındaki "size" değeri bu piksel değerlerini üretir

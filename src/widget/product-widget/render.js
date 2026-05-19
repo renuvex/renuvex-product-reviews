@@ -146,10 +146,6 @@ function applyManualTheme(root, settings) {
   // Grup 6 — Yorum Kartı (reviewStarColor önce tanımlanmalı)
   var reviewStarColor = settings.reviewStarColor || '#f59e0b';
 
-  // Boş yıldız rengi: Outline mimarisine geçildiği için direkt yıldız rengini kullanıyoruz.
-  // Bu sayede tam opak (net) bir çerçeve (border) elde ediliyor.
-  var starEmpty = reviewStarColor;
-
   // Grup 4 — Butonlar
   var btnBg = settings.btnBgColor || '#111111';
   var btnText = settings.btnTextColor || '#ffffff';
@@ -224,7 +220,6 @@ function applyManualTheme(root, settings) {
     // Grup 3 — Puan Dağılımı
     '--ikr-bar-fill': barFill,
     '--ikr-bar-track': barTrack,
-    '--ikr-star-empty-color': starEmpty,
     '--ikr-bar-count': barCount,
     '--ikr-bar-hover-bg': barHoverBg,
 
@@ -375,11 +370,11 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--ikr-read-more-size', sz.readMoreSize + 'px');
     root.style.setProperty('--ikr-thumbnail-size', thumbPx + 'px');
 
-    // Review widget yıldız ayarları — badge'den bağımsız
+    // Yıldız rengi tek kaynak: tüm rating yüzeyleri (özet, liste, rozetler)
+    // --ikr-review-star-color'dan beslenir; boş yıldız da aynı renkte outline.
     // Runtime 6-char veya 8-char hex kabul eder; admin picker sadece opak hex yazar.
     var reviewStarColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
     root.style.setProperty('--ikr-review-star-color', reviewStarColor);
-    root.style.setProperty('--ikr-star-empty-color', reviewStarColor);
     root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
     root.style.setProperty('--ikr-avg-star-size', sz.avgStarSize + 'px');
 

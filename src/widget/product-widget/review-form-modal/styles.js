@@ -424,7 +424,8 @@ export var FWIZARD_CSS = `
      İkon ve renk admin "Yıldız Stili"nden gelir:
        - SVG: getIconFromSettings (icons/index.js, currentSettings.reviewIcon)
        - Renk: --ikr-review-star-color (admin "Yıldız Rengi")
-     Empty color uses --ikr-star-empty-color, shared with review and bar stars. */
+     Empty (inactive) stars use the same --ikr-review-star-color; the filled vs
+     empty SVG shape is the active/inactive distinction (see step-rating.js). */
   .ikr-fwizard-stars{
     display:inline-flex;
     gap:8px;
@@ -437,7 +438,7 @@ export var FWIZARD_CSS = `
     border:none;
     background:transparent;
     cursor:pointer;
-    color:var(--ikr-star-empty-color, #e5e7eb);
+    color:var(--ikr-review-star-color, #f59e0b);
     transition:color 0.15s, transform 0.1s;
     display:inline-flex;
     align-items:center;
