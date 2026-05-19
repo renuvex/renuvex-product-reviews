@@ -106,7 +106,7 @@ export function getIconSvg(iconType, styleName, state) {
 export function getIconFromSettings(settings) {
   var raw = (settings && settings.reviewIcon) || 'star';
   var parsed = parseIconValue(raw);
-  var styleName = parsed.style || (settings && settings.reviewIconStyle) || 'classic';
+  var styleName = parsed.style || 'classic';
   return getIconStyle(parsed.type, styleName);
 }
 

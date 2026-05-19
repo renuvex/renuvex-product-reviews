@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-19
 tags:
   - adr
   - decisions
@@ -33,6 +33,7 @@ related:
 | [[ADR_0013_Modular_Widget_Loader_Architecture]] | Internal loader + surface registry + single Storefront Events context module. Bundle stays one IIFE — no ESM/splitting/lazy-load in Phase 1. Extends ADR_0002. | Accepted |
 | [[ADR_0014_Public_API_Response_Caching]] | Redis read-through cache between the public widget read endpoints and Postgres; `ratings-by-slug` first with per-slug keys, TTL-only v1 | Proposed — draft |
 | [[ADR_0015_Canonical_Product_Identity]] | `(storeId, productId)` is the canonical review product identity; slug/name are display snapshots and slug reads are fallback-only. | Accepted |
+| [[ADR_0016_Rating_Visual_System]] | Star icon + color are one global rating visual system, single-sourced from the `reviews` widget; the `badge` widget is layout-only; theme adapters stay mount/selector-only. | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -50,6 +51,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-19: Added [[ADR_0016_Rating_Visual_System]] — star icon style + star color are one global rating visual system, single-sourced from the "Ürün Yorumları" (`reviews`) widget (`reviewIcon`/`reviewStarColor`). Removed the duplicate `badge.icon`/`badge.color` fields; all badge renderers (`rating-badge.js`, `core/badge.js`) now read the single source. Fixed the PDP-badge icon-parse bug (non-`star` icons silently fell back to star) and the dead `badge.color` setting; listing badges no longer hardcode `star:classic`. Theme adapters remain mount/selector-only.
 - 2026-05-17: Added [[ADR_0015_Canonical_Product_Identity]] after implementing product-id listing/search rating reads. Existing review data already has `productId`; the slug endpoint remains as DOM-only fallback.
 - 2026-05-17: Added [[ADR_0014_Public_API_Response_Caching]] (draft) — proposes a Redis read-through cache layer between the public widget read endpoints and Postgres, prioritising `ratings-by-slug` with per-slug keys and TTL-only invalidation. Upstash is already provisioned for rate-limiting; this expands it to read caching. Draft for discussion after [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.
 - 2026-05-16: Added [[ADR_0013_Modular_Widget_Loader_Architecture]] — Phase 1 internal refactor of the storefront widget: a single Storefront Events context module, an in-bundle surface registry (`reviews-main` + `listing-badge`), and a thin loader. Bundle stays one IIFE; no ESM migration, code-splitting, or behavior change. Extends [[ADR_0002_Widget_Injection_Strategy]] (does not supersede it). `rating-badge` deferred to Phase 2.

@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-18
+updated: 2026-05-19
 last_verified: 2026-05-18
 confidence: high
 tags:
@@ -17,6 +17,7 @@ related:
   - "[[Phase_1_Widget_Runtime_Audit]]"
   - "[[Phase_2_Widget_Module_Split_Plan]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
+  - "[[ADR_0016_Rating_Visual_System]]"
 source_files:
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
@@ -70,7 +71,13 @@ Star+count badge injected into product cards on collection / search / category p
 - Badge slots are reserved before rating data finishes loading and replaced in place when real ratings arrive, reducing listing-card layout shift.
 
 ## Settings
-Listing widget is currently **not separately configurable** in the admin (no dedicated `widgetId`); it inherits style from the `badge` widget settings or the global theme. ❓ Confirm by reading [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js) before relying on this.
+Listing badges have no dedicated `widgetId`. Visibility is gated by the `badge`
+widget's `enabled` toggle ([index.js](src/widget/listing-badges/index.js)). The
+star **icon** and **color** come from the global rating visual system — the
+`reviews` widget's `reviewIcon` / `reviewStarColor` — which `index.js` resolves
+(`getIconFromSettings`) and applies via the `--ikr-review-star-color` /
+`--ikr-star-empty-color` CSS variables before injecting badges. Badge stars are
+no longer hardcoded to `star:classic`. See [[ADR_0016_Rating_Visual_System]].
 
 ## Notes
 - Card discovery heuristics (in `collect.js`) vary by theme. Edge cases:
@@ -109,6 +116,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-05-19: Listing badge star icon + color are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) instead of a hardcoded `star:classic` and the dead `badge.color`. `index.js` parses the icon and sets the star color CSS variables on the listing path itself, so cold listing entry shows the correct icon/color without depending on the PDP `render.js`. `iconPair` is threaded through `injectBadges` → `createBadgeEl`. See [[ADR_0016_Rating_Visual_System]].
 - 2026-05-18: Post-deploy live retest on `dev-mertcopper.ikas.shop` confirmed `runtime-2RGD2H4S.js`, visible listing badges on `/clothing` desktop/mobile, and zero widget-sourced `document.querySelectorAll('a[href]')` calls.
 - 2026-05-18: Follow-up O8 live test found the MutationObserver still calling whole-document `document.querySelectorAll('a[href]')` from the runtime. Fixed by sharing scoped link discovery through `core/link-scope.js`; active generated runtime now avoids that scan.
 - 2026-05-18: Reduced listing badge layout shift and DOM scan cost. `dom.js` now scopes candidate link discovery to theme product containers/main content, and `index.js`/`inject.js` reserve invisible badge slots while ratings are in flight before replacing them with real badges.

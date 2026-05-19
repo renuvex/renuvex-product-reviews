@@ -3,7 +3,7 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-19
 last_verified: 2026-05-17
 confidence: high
 tags:
@@ -109,6 +109,7 @@ source_files: []
 - [[ADR_0013_Modular_Widget_Loader_Architecture]]
 - [[ADR_0014_Public_API_Response_Caching]]
 - [[ADR_0015_Canonical_Product_Identity]]
+- [[ADR_0016_Rating_Visual_System]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -165,4 +166,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-05-17 (added canonical product identity ADR and product-id listing badge routing)
+**Last Updated:** 2026-05-19 (added rating visual system ADR — single-sourced star icon/color)

@@ -18,7 +18,7 @@ export function extractSlug(url) {
 }
 
 // starsHTML(rating, settings) — SVG yıldız satırı üretir.
-// settings'teki reviewIcon + reviewIconStyle'a göre ICONS registry'sinden SVG alır.
+// settings'teki reviewIcon'a göre ICONS registry'sinden SVG alır.
 // Boyut parent CSS (.ikr-review-stars, .ikr-modal-stars vb.) tarafından verilir.
 export function starsHTML(rating, settings) {
   var wrapStyle = 'color:' + STAR_COLOR + ';display:inline-flex;gap:2px;align-items:center;';

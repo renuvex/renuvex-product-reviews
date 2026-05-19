@@ -2,7 +2,6 @@
 
 import { findProductTitleEl } from './title-finder.js';
 import { PUBLIC_API_KEY } from '../core/config.js';
-import { getIconStyle } from '../icons/index.js';
 import { partialStarsHTML } from '../core/helpers.js';
 
 // Boyut map — badge widget ayarındaki "size" değeri bu piksel değerlerini üretir
@@ -12,16 +11,15 @@ var SIZE_MAP = {
   large:  { icon: 20, text: '16px' },
 };
 
-// SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği)
-function buildStars(rating, iconKey, styleKey, color, iconSize) {
-  var pair = getIconStyle(iconKey, styleKey);
+// SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği).
+// iconPair tek kaynaktan ("Ürün Yorumları" → reviewIcon) gelir; render.js geçirir.
+// Yıldız rengi .ikr-star-* sınıfları üzerinden --ikr-review-star-color'dan gelir.
+function buildStars(rating, iconPair, iconSize) {
   var sizeStyle = 'width:' + iconSize + 'px;height:' + iconSize + 'px;';
-  return '<span style="color:' + color + ';display:inline-flex;align-items:center;line-height:1;">' +
-           partialStarsHTML(rating, pair, { sizeStyle: sizeStyle }) +
-         '</span>';
+  return partialStarsHTML(rating, iconPair, { sizeStyle: sizeStyle });
 }
 
-export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings) {
+export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair) {
   // Önceki üründen kalan eski badge'i temizle
   var oldBadge = document.getElementById('ikr-rating-badge');
   if (oldBadge) oldBadge.remove();
@@ -56,11 +54,9 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   var titleEl = findProductTitleEl(productName);
   if (!titleEl || !titleEl.parentNode) return;
 
-  // Badge ayarları — admin "Yıldız Rozeti" widget'ından
-  var iconKey = (badgeSettings && badgeSettings.icon) || 'star';
-  var styleKey = (badgeSettings && badgeSettings.iconStyle) || 'classic';
+  // Boyut "Yıldız Rozeti" widget'ından; yıldız ikonu + rengi tek kaynaktan
+  // ("Ürün Yorumları") gelir — iconPair render.js tarafından geçirilir.
   var sizeKey = (badgeSettings && badgeSettings.size) || 'medium';
-  var color = (badgeSettings && badgeSettings.color) || '#f59e0b';
   var sizes = SIZE_MAP[sizeKey] || SIZE_MAP.medium;
 
   var badge = document.createElement('a');
@@ -69,7 +65,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   var titleAlign = window.getComputedStyle(titleEl).textAlign;
   var justifyVal = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
   badge.style.cssText = 'display:flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;font-weight:400;justify-content:' + justifyVal + ';';
-  badge.innerHTML = buildStars(avgRating, iconKey, styleKey, color, sizes.icon) +
+  badge.innerHTML = buildStars(avgRating, iconPair, sizes.icon) +
     '<span style="font-size:' + sizes.text + ';font-weight:400;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
   badge.onclick = function(e) {
     e.preventDefault();

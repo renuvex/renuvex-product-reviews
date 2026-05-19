@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-19
 tags:
   - widget
   - badge
@@ -12,6 +12,7 @@ related:
   - "[[Storefront_Widget_Overview]]"
   - "[[Listing_Rating_Widget]]"
   - "[[Bug_Product_Widget_Missing_Auto_Mount]]"
+  - "[[ADR_0016_Rating_Visual_System]]"
 ---
 
 # Product Rating Badge
@@ -22,10 +23,15 @@ Small inline `★ rating · count` shown on the product detail page near the pro
 ## Settings (`badge` widgetId)
 Settings live under `WidgetSettings.settings` with `widgetId='badge'`. Source schema: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).
 
-Common fields (verify against current schema before relying on names):
-- `enabled` toggle
-- color tokens (basic + advanced tier)
-- size / weight options
+Fields:
+- `enabled` — toggle; also gates the listing/card badges.
+- `size` — small / medium / large; affects this PDP title badge only.
+
+The star **icon** and **color** are NOT on this widget. They come from the
+global rating visual system — the `reviews` widget's `reviewIcon` /
+`reviewStarColor`. `render.js` resolves the icon pair (`getIconFromSettings`)
+and passes it into `injectRatingBadge`; the star color is applied through the
+`--ikr-review-star-color` CSS variable. See [[ADR_0016_Rating_Visual_System]].
 
 ## Where it appears
 - Product detail page only.
@@ -49,4 +55,5 @@ Common fields (verify against current schema before relying on names):
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 
 ## Change Log
+- 2026-05-19: Star icon + color removed from the `badge` widget; they are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`). `render.js` passes the resolved icon pair into `injectRatingBadge`. Fixed the icon-parse bug — `rating-badge.js` no longer passes an unparsed `type:style` value to `getIconStyle`, so non-`star` icons (heart, leaf, crown, …) render correctly. See [[ADR_0016_Rating_Visual_System]].
 - 2026-05-11: Documented that PDP badge visibility depends on the review render path and is protected by the self-mounting review anchor fallback. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].

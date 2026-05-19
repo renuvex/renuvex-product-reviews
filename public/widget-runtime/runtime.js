@@ -1,2 +1,2 @@
-/* ikas Reviews Widget stable runtime shim - built 2026-05-18T17:05:15.166Z | theme: default */
-import './runtime-5EYUMT6S.js';
+/* ikas Reviews Widget stable runtime shim - built 2026-05-19T15:05:41.769Z | theme: default */
+import './runtime-ZX2V2TIA.js';

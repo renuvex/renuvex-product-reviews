@@ -307,7 +307,10 @@ export const WIDGETS: WidgetDef[] = [
   {
     id: 'badge',
     name: 'Yıldız Rozeti',
-    description: 'Ürün listelerinde ve kartlarında ortalama puanı rozet olarak gösterir.',
+    // Yıldız ikonu ve rengi tek kaynaktan ("Ürün Yorumları" → reviewIcon /
+    // reviewStarColor) gelir; tüm rating yüzeyleri (rozetler dahil) onu kullanır.
+    // Bu widget yalnızca rozete özel görünürlük + boyut taşır.
+    description: 'Ürün sayfasında ve ürün listelerinde ortalama puanı rozet olarak gösterir. Yıldız ikonu ve rengi "Ürün Yorumları" ayarlarından gelir.',
     previewBg: 'rgba(59, 130, 246, 0.08)',
     settings: [
       {
@@ -320,14 +323,6 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Görünüm',
         fields: [
           {
-            type: 'iconSelect',
-            key: 'icon',
-            label: 'Puan İkonu',
-            default: 'star',
-            registry: 'review',
-            options: getIconOptions(),
-          },
-          {
             type: 'select',
             key: 'size',
             label: 'Rozet Boyutu',
@@ -338,7 +333,6 @@ export const WIDGETS: WidgetDef[] = [
               { value: 'large',  label: 'Büyük' },
             ],
           },
-          { type: 'color', key: 'color', label: 'İkon Rengi', default: '#f59e0b' },
         ],
       },
     ],

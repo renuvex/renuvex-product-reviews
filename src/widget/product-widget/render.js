@@ -651,8 +651,9 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       container.appendChild(widget);
 
-      // Rating badge + JSON-LD — admin "Yıldız Rozeti" widget ayarlarından beslenir
-      injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName, currentBadgeSettings);
+      // Rating badge + JSON-LD — görünürlük/boyut "Yıldız Rozeti" widget'ından;
+      // yıldız ikonu + rengi tek kaynaktan (reviews widget) — iconPair geçirilir.
+      injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName, currentBadgeSettings, iconPair);
 
 
     } catch (err) {

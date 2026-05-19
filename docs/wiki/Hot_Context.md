@@ -3,7 +3,7 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-18
+updated: 2026-05-19
 last_verified: 2026-05-18
 confidence: high
 tags:
@@ -14,6 +14,7 @@ related:
   - "[[Current_Status]]"
   - "[[Project_Overview]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
+  - "[[ADR_0016_Rating_Visual_System]]"
 source_files:
   - "package.json"
   - "prisma/schema.prisma"
@@ -54,6 +55,7 @@ source_files:
 - 2026-05-18: Settings stale TTL is 24h; O1/O8 listing badge work scopes DOM discovery and reserves badge space; live retest on `dev-mertcopper.ikas.shop` passed `/`, `/clothing`, `/premium-shorts`, and mobile `/clothing`.
 - 2026-05-18: D4 rating reads now use a shared Upstash fixed-window limit of 300 requests/min/IP.
 - 2026-05-18: D2 removed redundant Review prefix indexes; D3 scopes new Cloudinary review images to `review_images/stores/<storeId>` across sign/register/validate/render/commit.
+- 2026-05-19: [[ADR_0016_Rating_Visual_System]] implemented. Star icon + color are single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) and used by every rating surface incl. badges. `badge.icon`/`badge.color` removed; the PDP-badge icon-parse bug and the dead `badge.color` setting fixed; listing badges no longer hardcode `star:classic`.
 - Context7 helps for current Playwright/Sentry/Next.js docs. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions

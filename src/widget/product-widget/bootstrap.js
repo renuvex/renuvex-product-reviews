@@ -91,7 +91,9 @@ export async function bootstrap(productId, productName) {
   bootstrapCache[productId] = true;
 
   var FALLBACK = { title: 'Müşteri Yorumları', enabled: true };
-  var BADGE_FALLBACK = { enabled: true, icon: 'star', size: 'medium', color: '#f59e0b' };
+  // Badge widget'ı yalnızca görünürlük + boyut taşır; yıldız ikonu/rengi
+  // tek kaynaktan ("Ürün Yorumları" → reviewIcon/reviewStarColor) gelir.
+  var BADGE_FALLBACK = { enabled: true, size: 'medium' };
 
   try {
     var response = await fetchSettings();

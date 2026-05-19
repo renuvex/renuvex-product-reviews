@@ -2,6 +2,7 @@
 
 import { ls } from '../core/state.js';
 import { fetchSettings } from '../core/settings.js';
+import { getIconFromSettings } from '../icons/index.js';
 import { collectProductTargets } from './collect.js';
 import { fetchRatings } from './ratings.js';
 import { clearBadgePlaceholders, injectBadges, reserveBadgeSlots } from './inject.js';
@@ -28,9 +29,7 @@ export async function renderListingBadges() {
     var response = await fetchSettings();
     if (!response) { ls.rendered = false; return; }
 
-    // Badge color: settings badge.color -> default.
     var widgets = (response && response.widgets) || {};
-    var badgeColor = (widgets.badge && widgets.badge.color) || '#f59e0b';
 
     // Do not inject listing badges when the badge widget is disabled.
     if (widgets.badge && widgets.badge.enabled === false) {
@@ -39,7 +38,17 @@ export async function renderListingBadges() {
       return;
     }
 
-    document.documentElement.style.setProperty('--ikr-badge-color', badgeColor);
+    // Rating görseli tek kaynaktan: "Ürün Yorumları" widget'ı (reviewIcon +
+    // reviewStarColor). Listing rozetleri PDP render.js'e bağlı olmadan kendi
+    // yıldız renk değişkenlerini kurar — soğuk listing girişinde de doğru renk.
+    // Boş yıldız = dolu renk (outline); ikisi de aynı değişkenden beslenir.
+    var reviewsSettings = widgets.reviews || {};
+    var iconPair = getIconFromSettings(reviewsSettings);
+    var starColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(reviewsSettings.reviewStarColor || '')
+      ? reviewsSettings.reviewStarColor
+      : '#f59e0b';
+    document.documentElement.style.setProperty('--ikr-review-star-color', starColor);
+    document.documentElement.style.setProperty('--ikr-star-empty-color', starColor);
 
     var slugNameMap = {};
     slugs.forEach(function(slug) {
@@ -56,7 +65,7 @@ export async function renderListingBadges() {
     reserveBadgeSlots(slugNameMap);
 
     var ratings = await ratingsPromise;
-    injectBadges(slugNameMap, ratings);
+    injectBadges(slugNameMap, ratings, iconPair);
   } finally {
     ls.inProgress = false;
     if (ls.queued) {
