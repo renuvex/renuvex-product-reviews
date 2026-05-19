@@ -6,7 +6,7 @@
     "dev": "next dev --webpack",
     "build": "prisma generate && prisma migrate deploy && next build --webpack",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src",
     "codegen": "graphql-codegen --config src/lib/ikas-client/codegen.ts",
     "build:widget": "node scripts/build-widget.mjs",
     "build:widget:watch": "node scripts/build-widget.mjs --watch",
