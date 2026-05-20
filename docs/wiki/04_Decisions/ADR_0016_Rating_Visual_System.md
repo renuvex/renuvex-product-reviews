@@ -137,6 +137,11 @@ fields stay exactly where merchants already set them.
 - New code that adds a rating surface must feed it from `getIconFromSettings` and
   the shared `partialStarsHTML`; it must not hardcode an icon or read `badge.*`
   for visuals.
+- Layout, sizing tokens, mount-point strategy, and click behavior for the badge
+  surface are governed by [[ADR_0017_Badge_Architecture]]. This ADR's scope is
+  the **visual identity** (icon family, color, half-star engine); ADR_0017 owns
+  the **structural** layer (class system, CSS variables, sibling mount, mobile
+  override). The two ADRs are complementary, not overlapping.
 
 ## Related Source Files
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)

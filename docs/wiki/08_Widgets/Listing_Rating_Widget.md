@@ -4,7 +4,7 @@ project: ikas-review-app
 status: active
 created: 2026-05-05
 updated: 2026-05-20
-last_verified: 2026-05-18
+last_verified: 2026-05-20
 confidence: high
 tags:
   - widget
@@ -18,13 +18,17 @@ related:
   - "[[Phase_2_Widget_Module_Split_Plan]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
   - "[[ADR_0016_Rating_Visual_System]]"
+  - "[[ADR_0017_Badge_Architecture]]"
 source_files:
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
   - "src/widget/listing-badges/inject.js"
+  - "src/widget/core/badge.js"
+  - "src/widget/core/helpers.js"
   - "src/widget/core/link-scope.js"
+  - "src/widget/core/rollout.js"
   - "src/widget/observer.js"
   - "src/widget/core/storefront-context.js"
   - "src/app/api/public/ratings/route.ts"

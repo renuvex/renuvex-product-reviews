@@ -3,7 +3,8 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-19
+updated: 2026-05-20
+last_verified: 2026-05-20
 tags:
   - widget
   - badge
@@ -13,6 +14,7 @@ related:
   - "[[Listing_Rating_Widget]]"
   - "[[Bug_Product_Widget_Missing_Auto_Mount]]"
   - "[[ADR_0016_Rating_Visual_System]]"
+  - "[[ADR_0017_Badge_Architecture]]"
 ---
 
 # Product Rating Badge
@@ -25,7 +27,9 @@ Settings live under `WidgetSettings.settings` with `widgetId='badge'`. Source sc
 
 Fields:
 - `enabled` — toggle; also gates the listing/card badges.
-- `size` — small / medium / large; affects this PDP title badge only.
+- `size` — small / medium / large; applies to **both** the PDP title badge and listing-card badges via shared `SIZE_MAP` (icon + text together). See [[ADR_0016_Rating_Visual_System]].
+- `mobileOverride` (toggle) + `mobileSize` (small/medium/large) — opt-in mobile preset. When on, an `@media (max-width:640px)` block in `<style id="ikr-badge-tokens">` overrides desktop tokens. See [[ADR_0017_Badge_Architecture]].
+- `alignment`, `showValue`, `showCount` — additional display knobs introduced in PR-1; consumed by future iterations.
 
 The star **icon** and **color** are NOT on this widget. They come from the
 global rating visual system — the `reviews` widget's `reviewIcon` /

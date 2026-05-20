@@ -3,8 +3,8 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-19
-last_verified: 2026-05-18
+updated: 2026-05-20
+last_verified: 2026-05-20
 confidence: high
 tags:
   - hot-context
@@ -15,6 +15,7 @@ related:
   - "[[Project_Overview]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
   - "[[ADR_0016_Rating_Visual_System]]"
+  - "[[ADR_0017_Badge_Architecture]]"
 source_files:
   - "package.json"
   - "prisma/schema.prisma"
@@ -31,6 +32,10 @@ source_files:
   - "src/lib/storefront-widget-url.ts"
   - "src/lib/storefront-scripts.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
+  - "src/widget/core/badge.js"
+  - "src/widget/core/rollout.js"
+  - "src/widget/listing-badges/inject.js"
+  - "src/widget/product-widget/rating-badge.js"
 ---
 
 # Hot Context
@@ -56,6 +61,7 @@ source_files:
 - 2026-05-18: D4 rating reads now use a shared Upstash fixed-window limit of 300 requests/min/IP.
 - 2026-05-18: D2 removed redundant Review prefix indexes; D3 scopes new Cloudinary review images to `review_images/stores/<storeId>` across sign/register/validate/render/commit.
 - 2026-05-19: [[ADR_0016_Rating_Visual_System]] implemented. Star icon + color are single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) and used by every rating surface incl. badges. `badge.icon`/`badge.color` removed; the PDP-badge icon-parse bug and the dead `badge.color` setting fixed; listing badges no longer hardcode `star:classic`.
+- 2026-05-20: [[ADR_0017_Badge_Architecture]] shipped in four phased PRs (latest `5a2772a`). Class-first DOM (`.ikr-rating-badge` + `--pdp`/`--listing`, `role=figure`, `aria-label`, `data-ikr-*`) for all stores; sibling-of-title mount gated by `core/rollout.js` allowlist (dev store only). Sizing via component-scope CSS variables on `.ikr-rating-badge` (`ensureBadgeTokens` → `<style id="ikr-badge-tokens">`); `mobileOverride` adds an `@media (max-width:640px)` block. Schema-additive (`mobileOverride`/`mobileSize`/`alignment`/`showValue`/`showCount`).
 - Context7 helps for current Playwright/Sentry/Next.js docs. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
