@@ -4,7 +4,25 @@ import { extractSlug } from '../core/helpers.js';
 import { createBadgeEl, createBadgePlaceholderEl } from '../core/badge.js';
 import { getThemeAdapter } from '../themes/current-adapter.js';
 import { lastClickedSlug } from '../core/state.js';
+import { isSiblingMountEnabled } from '../core/rollout.js';
 import { collectListingLinks, isVisibleForBadge } from './dom.js';
+
+// resolveMount — listing badge için yerleştirme hedefi.
+// Sıra (ADR_0017 draft):
+//   1. Adapter `getListingBadgeMountPoint(titleEl)` override eder → o eleman.
+//   2. isSiblingMountEnabled() true → titleEl'in next sibling'i (h2'nin yanına, dışına).
+//   3. Aksi halde → titleEl içine (legacy davranış, h2 içinde div).
+// Allowlist gate'i (core/rollout.js) deploy 1'de yalnızca dev store'u sibling'e
+// alır; üretim default olarak legacy yolda kalır (deploy 2'de default flip).
+function resolveMount(titleEl) {
+  var adapter = getThemeAdapter();
+  var custom = adapter.getListingBadgeMountPoint(titleEl);
+  if (custom) return { parent: custom, beforeEl: null };
+  if (isSiblingMountEnabled() && titleEl && titleEl.parentNode) {
+    return { parent: titleEl.parentNode, beforeEl: titleEl.nextSibling };
+  }
+  return { parent: titleEl, beforeEl: null };
+}
 
 var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
 var STOCK_LABELS = /^(tükendi|sold out|out of stock|stokta yok|satıldı|unavailable)$/i;
@@ -57,13 +75,14 @@ function getJustify(el) {
   return align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
 }
 
-function replacePlaceholderOrAppend(parent, badge) {
+function replacePlaceholderOrAppend(parent, badge, beforeEl) {
+  if (!parent) return;
   var placeholder = parent.querySelector('[data-ikr-listing-badge-placeholder]');
   if (placeholder) {
     placeholder.replaceWith(badge);
     return;
   }
-  parent.appendChild(badge);
+  beforeEl ? parent.insertBefore(badge, beforeEl) : parent.appendChild(badge);
 }
 
 function insertPlaceholder(parent, justify, textSize, beforeEl) {
@@ -86,12 +105,14 @@ function reserveBadgeSlotOnLink(a, productName, currentSlug, textSize) {
 
   if (hasNestedA) {
     if (!titleEl) return;
-    insertPlaceholder(titleEl, getJustify(titleEl), textSize);
+    var mountNested = resolveMount(titleEl);
+    insertPlaceholder(mountNested.parent, getJustify(titleEl), textSize, mountNested.beforeEl);
     return;
   }
 
   if (titleEl) {
-    insertPlaceholder(titleEl, getJustify(titleEl), textSize);
+    var mountTitle = resolveMount(titleEl);
+    insertPlaceholder(mountTitle.parent, getJustify(titleEl), textSize, mountTitle.beforeEl);
     return;
   }
 
@@ -133,16 +154,19 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair,
   if (hasNestedA) {
     a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
     var nameEl = findTitleEl(a, productName);
-    if (!nameEl || nameEl.querySelector('[data-ikr-listing-badge]')) return;
-    replacePlaceholderOrAppend(nameEl, createBadgeEl(rating, getJustify(nameEl), iconPair, iconSize, textSize));
+    if (!nameEl) return;
+    var mountNested = resolveMount(nameEl);
+    if (mountNested.parent && mountNested.parent.querySelector('[data-ikr-listing-badge]')) return;
+    replacePlaceholderOrAppend(mountNested.parent, createBadgeEl(rating, getJustify(nameEl), iconPair, iconSize, textSize), mountNested.beforeEl);
     return;
   }
 
   var titleEl = findTitleEl(a, productName);
-  if (titleEl && titleEl.querySelector('[data-ikr-listing-badge]')) return;
+  var mountTitle = titleEl ? resolveMount(titleEl) : null;
+  if (mountTitle && mountTitle.parent && mountTitle.parent.querySelector('[data-ikr-listing-badge]')) return;
 
   if (titleEl) {
-    replacePlaceholderOrAppend(titleEl, createBadgeEl(rating, getJustify(titleEl), iconPair, iconSize, textSize));
+    replacePlaceholderOrAppend(mountTitle.parent, createBadgeEl(rating, getJustify(titleEl), iconPair, iconSize, textSize), mountTitle.beforeEl);
   } else {
     var badge = createBadgeEl(rating, 'flex-start', iconPair, iconSize, textSize);
     var placeholder = a.querySelector('[data-ikr-listing-badge-placeholder]');

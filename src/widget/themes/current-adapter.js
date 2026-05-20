@@ -17,6 +17,12 @@
 
 import { ozyThemeAdapter } from './ozy/adapter.js';
 
+// Safe defaults for optional adapter methods — call sites can use them without
+// null-checking. Concrete themes override what they need.
+var ADAPTER_DEFAULTS = {
+  getListingBadgeMountPoint: function (_titleEl) { return null; },
+};
+
 export function getThemeAdapter() {
-  return ozyThemeAdapter;
+  return Object.assign({}, ADAPTER_DEFAULTS, ozyThemeAdapter);
 }

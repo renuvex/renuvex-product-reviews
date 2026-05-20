@@ -56,12 +56,30 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   var badge = document.createElement('a');
   badge.id = 'ikr-rating-badge';
+  badge.className = 'ikr-rating-badge ikr-rating-badge--pdp';
   badge.href = '#ikas-reviews';
+  // A11y + data attrs (ADR_0017 draft) — role=figure standart endüstri kalıbı.
+  badge.setAttribute('role', 'figure');
+  badge.setAttribute('aria-label', avgRating + ' üzerinden 5 yıldız, ' + totalCount + ' yorum');
+  badge.setAttribute('data-ikr-surface', 'pdp');
+  badge.setAttribute('data-ikr-rating', String(avgRating));
+  badge.setAttribute('data-ikr-count', String(totalCount));
   var titleAlign = window.getComputedStyle(titleEl).textAlign;
   var justifyVal = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
-  badge.style.cssText = 'display:flex;align-items:center;gap:5px;text-decoration:none;margin-bottom:10px;cursor:pointer;font-weight:400;justify-content:' + justifyVal + ';';
-  badge.innerHTML = buildStars(avgRating, iconPair, sizes.icon) +
-    '<span style="font-size:' + sizes.text + ';font-weight:400;color:#555;">' + avgRating + ' (' + totalCount + ' yorum)</span>';
+  // Layout (display, gap, margin, text-decoration, cursor, font-weight, color)
+  // .ikr-rating-badge + .ikr-rating-badge--pdp class'larından okunur. Inline'da
+  // sadece per-mount justify-content kalır.
+  badge.style.cssText = 'justify-content:' + justifyVal + ';';
+
+  badge.insertAdjacentHTML('beforeend', buildStars(avgRating, iconPair, sizes.icon));
+
+  var labelEl = document.createElement('span');
+  labelEl.className = 'ikr-rating-badge__label';
+  // font-size sizing token — PR-3'te component-scope CSS variable'a taşınacak.
+  labelEl.style.cssText = 'font-size:' + sizes.text + ';';
+  labelEl.textContent = avgRating + ' (' + totalCount + ' yorum)';
+  badge.appendChild(labelEl);
+
   badge.onclick = function(e) {
     e.preventDefault();
     var rev = document.getElementById('ikas-reviews-widget') || document.getElementById('ikas-reviews');

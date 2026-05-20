@@ -14,11 +14,12 @@ export var SIZE_MAP = {
   large:  { icon: 20, text: '16px' },
 };
 
-// Listing badge layout stili — font-size çağrı anında SIZE_MAP[size].text'ten
-// eklenir; gap/margin değerleri dar kart düzenine göre burada sabit.
-// line-height oransal (1.3) — metin büyüdükçe satır kutusu da büyür, ikonla
-// hizalama align-items:center ile korunur.
-var BADGE_CSS = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;line-height:1.3;font-weight:400;color:#555;pointer-events:none;';
+// Layout (display, align, gap, margin, line-height, color, font-weight,
+// font-family/letter-spacing reset, pointer-events) PR-2'den itibaren
+// .ikr-rating-badge + .ikr-rating-badge--listing class'larından okunuyor
+// (PARTIAL_STARS_CSS içinde tanımlı). Inline'da sadece per-mount dinamik
+// (justify-content) ve sizing (font-size) kalır; sizing PR-3'te component-
+// scope CSS variable'a taşınacak.
 
 function buildBadgeStars(rating, iconPair, iconSize) {
   // Yıldız ikonu tek kaynaktan ("Ürün Yorumları" → reviewIcon); çağıran geçirir.
@@ -54,18 +55,35 @@ function ensureBadgeStyles() {
 export function createBadgeEl(rating, justify, iconPair, iconSize, textSize) {
   ensureBadgeStyles();
   var el = document.createElement('div');
+  el.className = 'ikr-rating-badge ikr-rating-badge--listing';
+  el.setAttribute('role', 'figure');
+  el.setAttribute('aria-label', rating.avg + ' üzerinden 5 yıldız, ' + rating.count + ' yorum');
+  // data-ikr-listing-badge legacy (observer / cleanup / placeholder lookups);
+  // data-ikr-* yeni — surface debug + CSS hook (ADR_0017 draft).
   el.setAttribute('data-ikr-listing-badge', '1');
-  el.style.cssText = BADGE_CSS + 'font-size:' + textSize + ';justify-content:' + (justify || 'flex-start') + ';';
-  el.innerHTML = buildBadgeStars(rating.avg, iconPair, iconSize) +
-    '<span style="font-weight:400;">' + rating.avg + ' (' + rating.count + ')</span>';
+  el.setAttribute('data-ikr-surface', 'listing');
+  el.setAttribute('data-ikr-rating', String(rating.avg));
+  el.setAttribute('data-ikr-count', String(rating.count));
+  el.style.cssText = 'font-size:' + textSize + ';justify-content:' + (justify || 'flex-start') + ';';
+
+  // Stars: existing engine returns trusted SVG markup from a closed icon set;
+  // insertAdjacentHTML is the public, mutation-observer-friendly DOM API.
+  el.insertAdjacentHTML('beforeend', buildBadgeStars(rating.avg, iconPair, iconSize));
+
+  var labelEl = document.createElement('span');
+  labelEl.className = 'ikr-rating-badge__label';
+  labelEl.textContent = rating.avg + ' (' + rating.count + ')';
+  el.appendChild(labelEl);
+
   return el;
 }
 
 export function createBadgePlaceholderEl(justify, textSize) {
   ensureBadgeStyles();
   var el = document.createElement('div');
+  el.className = 'ikr-rating-badge ikr-rating-badge--listing';
   el.setAttribute('data-ikr-listing-badge-placeholder', '1');
   el.setAttribute('aria-hidden', 'true');
-  el.style.cssText = BADGE_CSS + 'font-size:' + textSize + ';justify-content:' + (justify || 'flex-start') + ';visibility:hidden;';
+  el.style.cssText = 'font-size:' + textSize + ';justify-content:' + (justify || 'flex-start') + ';visibility:hidden;';
   return el;
 }

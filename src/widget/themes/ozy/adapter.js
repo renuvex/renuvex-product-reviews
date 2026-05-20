@@ -58,4 +58,13 @@ export var ozyThemeAdapter = {
   isInsideSingleProductContainer: function (el) {
     return !!(el && el.closest && el.closest(THEME_SINGLE_PRODUCT_CONTAINER));
   },
+
+  // Optional badge mount-point override for themes whose card layout breaks
+  // the default sibling-of-title placement. Ozy works fine with the default
+  // (returns null → caller falls back to sibling or legacy per rollout gate),
+  // but this surface is here so future themes can pin a specific element
+  // without touching listing-badges/inject.js. See ADR_0017 draft.
+  getListingBadgeMountPoint: function (_titleEl) {
+    return null;
+  },
 };

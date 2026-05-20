@@ -113,7 +113,36 @@ export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + cl
             clip-path: inset(0 50% 0 0);
   }
   .ikr-star-half-bg > svg,
-  .ikr-star-half-fg > svg{width:100%;height:100%;display:block;}`;
+  .ikr-star-half-fg > svg{width:100%;height:100%;display:block;}
+
+  /* ─── BADGE BASE (PR-2 — class-based layout + a11y + theme reset) ─────────
+     Sizing token'ları (font-size, icon size) PR-3'te component-scope CSS
+     variable'a taşınacak — şimdilik font-size inline kalır, icon size
+     .ikr-star üzerine inline width/height olarak yazılır.
+     Tipografi reset (font-family:inherit / letter-spacing:normal /
+     text-transform:none) parent h2'den miras kaçışını keser. */
+  .ikr-rating-badge{
+    display:flex;
+    align-items:center;
+    line-height:1.3;
+    font-weight:400;
+    color:#555;
+    font-family:inherit;
+    letter-spacing:normal;
+    text-transform:none;
+  }
+  .ikr-rating-badge--pdp{
+    gap:5px;
+    margin-bottom:10px;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .ikr-rating-badge--listing{
+    gap:3px;
+    margin-top:0;
+    margin-bottom:4px;
+    pointer-events:none;
+  }`;
 
 export function formatDate(iso) {
   if (!iso) return '';

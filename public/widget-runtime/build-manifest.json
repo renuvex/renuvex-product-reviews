@@ -1,11 +1,11 @@
 {
-  "builtAt": "2026-05-20T17:00:18.736Z",
+  "builtAt": "2026-05-20T18:20:58.526Z",
   "theme": "default",
-  "entry": "widget-runtime/runtime-W2KHZCPF.js",
+  "entry": "widget-runtime/runtime-WV42CF7E.js",
   "stableEntry": "widget-runtime/runtime.js",
   "outputs": [
     {
-      "file": "widget-runtime/runtime-W2KHZCPF.js",
+      "file": "widget-runtime/runtime-WV42CF7E.js",
       "bytes": 10169,
       "entryPoint": "src/widget/index.js",
       "imports": [
@@ -14,34 +14,34 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-QZTN2JUN.js",
+          "path": "public/widget-runtime/chunks/chunk-NNROMV7F.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-5HUEOEFI.js",
+          "path": "public/widget-runtime/chunks/chunk-KW4BJJYV.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/bootstrap-3V4GEWIU.js",
+          "path": "public/widget-runtime/chunks/bootstrap-RSM2IT4O.js",
           "kind": "dynamic-import"
         },
         {
-          "path": "public/widget-runtime/chunks/listing-badges-QDBL33O3.js",
+          "path": "public/widget-runtime/chunks/listing-badges-KPUATWAO.js",
           "kind": "dynamic-import"
         },
         {
-          "path": "public/widget-runtime/chunks/render-4TJHIHD2.js",
+          "path": "public/widget-runtime/chunks/render-ZVMM7J7N.js",
           "kind": "dynamic-import"
         }
       ]
     },
     {
-      "file": "widget-runtime/chunks/render-4TJHIHD2.js",
+      "file": "widget-runtime/chunks/render-ZVMM7J7N.js",
       "bytes": 195,
       "entryPoint": "src/widget/product-widget/render.js",
       "imports": [
         {
-          "path": "public/widget-runtime/chunks/chunk-MQDX4QVD.js",
+          "path": "public/widget-runtime/chunks/chunk-RIXENWMW.js",
           "kind": "import-statement"
         },
         {
@@ -49,22 +49,22 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-IZAX4URV.js",
+          "path": "public/widget-runtime/chunks/chunk-DSZR73XK.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-5HUEOEFI.js",
+          "path": "public/widget-runtime/chunks/chunk-KW4BJJYV.js",
           "kind": "import-statement"
         }
       ]
     },
     {
-      "file": "widget-runtime/chunks/bootstrap-3V4GEWIU.js",
+      "file": "widget-runtime/chunks/bootstrap-RSM2IT4O.js",
       "bytes": 331,
       "entryPoint": "src/widget/product-widget/bootstrap.js",
       "imports": [
         {
-          "path": "public/widget-runtime/chunks/chunk-MQDX4QVD.js",
+          "path": "public/widget-runtime/chunks/chunk-RIXENWMW.js",
           "kind": "import-statement"
         },
         {
@@ -72,18 +72,18 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-IZAX4URV.js",
+          "path": "public/widget-runtime/chunks/chunk-DSZR73XK.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-5HUEOEFI.js",
+          "path": "public/widget-runtime/chunks/chunk-KW4BJJYV.js",
           "kind": "import-statement"
         }
       ]
     },
     {
-      "file": "widget-runtime/chunks/chunk-MQDX4QVD.js",
-      "bytes": 147206,
+      "file": "widget-runtime/chunks/chunk-RIXENWMW.js",
+      "bytes": 147482,
       "entryPoint": null,
       "imports": [
         {
@@ -91,11 +91,11 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-IZAX4URV.js",
+          "path": "public/widget-runtime/chunks/chunk-DSZR73XK.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-5HUEOEFI.js",
+          "path": "public/widget-runtime/chunks/chunk-KW4BJJYV.js",
           "kind": "import-statement"
         }
       ]
@@ -107,49 +107,49 @@
       "imports": []
     },
     {
-      "file": "widget-runtime/chunks/listing-badges-QDBL33O3.js",
-      "bytes": 7932,
+      "file": "widget-runtime/chunks/listing-badges-KPUATWAO.js",
+      "bytes": 8474,
       "entryPoint": "src/widget/listing-badges/index.js",
       "imports": [
         {
-          "path": "public/widget-runtime/chunks/chunk-QZTN2JUN.js",
+          "path": "public/widget-runtime/chunks/chunk-NNROMV7F.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-IZAX4URV.js",
+          "path": "public/widget-runtime/chunks/chunk-DSZR73XK.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-5HUEOEFI.js",
+          "path": "public/widget-runtime/chunks/chunk-KW4BJJYV.js",
           "kind": "import-statement"
         }
       ]
     },
     {
-      "file": "widget-runtime/chunks/chunk-QZTN2JUN.js",
-      "bytes": 1542,
+      "file": "widget-runtime/chunks/chunk-NNROMV7F.js",
+      "bytes": 1672,
       "entryPoint": null,
       "imports": [
         {
-          "path": "public/widget-runtime/chunks/chunk-5HUEOEFI.js",
+          "path": "public/widget-runtime/chunks/chunk-KW4BJJYV.js",
           "kind": "import-statement"
         }
       ]
     },
     {
-      "file": "widget-runtime/chunks/chunk-IZAX4URV.js",
-      "bytes": 2491,
+      "file": "widget-runtime/chunks/chunk-DSZR73XK.js",
+      "bytes": 2810,
       "entryPoint": null,
       "imports": [
         {
-          "path": "public/widget-runtime/chunks/chunk-5HUEOEFI.js",
+          "path": "public/widget-runtime/chunks/chunk-KW4BJJYV.js",
           "kind": "import-statement"
         }
       ]
     },
     {
-      "file": "widget-runtime/chunks/chunk-5HUEOEFI.js",
-      "bytes": 17109,
+      "file": "widget-runtime/chunks/chunk-KW4BJJYV.js",
+      "bytes": 18080,
       "entryPoint": null,
       "imports": []
     }
