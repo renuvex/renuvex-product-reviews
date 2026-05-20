@@ -115,7 +115,7 @@ export function clearBadgePlaceholders() {
   document.querySelectorAll('[data-ikr-listing-badge-placeholder]').forEach(function(el) { el.remove(); });
 }
 
-export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair) {
+export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair, iconSize) {
   if (a.getAttribute('data-ikr-badge')) return;
   var adapter = getThemeAdapter();
   var slug = extractSlug(a.href);
@@ -134,7 +134,7 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair)
     a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
     var nameEl = findTitleEl(a, productName);
     if (!nameEl || nameEl.querySelector('[data-ikr-listing-badge]')) return;
-    replacePlaceholderOrAppend(nameEl, createBadgeEl(rating, getJustify(nameEl), iconPair));
+    replacePlaceholderOrAppend(nameEl, createBadgeEl(rating, getJustify(nameEl), iconPair, iconSize));
     return;
   }
 
@@ -142,9 +142,9 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair)
   if (titleEl && titleEl.querySelector('[data-ikr-listing-badge]')) return;
 
   if (titleEl) {
-    replacePlaceholderOrAppend(titleEl, createBadgeEl(rating, getJustify(titleEl), iconPair));
+    replacePlaceholderOrAppend(titleEl, createBadgeEl(rating, getJustify(titleEl), iconPair, iconSize));
   } else {
-    var badge = createBadgeEl(rating, 'flex-start', iconPair);
+    var badge = createBadgeEl(rating, 'flex-start', iconPair, iconSize);
     var placeholder = a.querySelector('[data-ikr-listing-badge-placeholder]');
     if (placeholder) { placeholder.replaceWith(badge); return; }
     var first = a.firstElementChild;
@@ -152,7 +152,7 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair)
   }
 }
 
-function injectModalBadge(slugNameMap, ratings, iconPair) {
+function injectModalBadge(slugNameMap, ratings, iconPair, iconSize) {
   var adapter = getThemeAdapter();
   var modal = adapter.findModal();
   if (!modal) return;
@@ -205,10 +205,10 @@ function injectModalBadge(slugNameMap, ratings, iconPair) {
   }
 
   if (!slug || !ratings[slug] || ratings[slug]._empty || ratings[slug].count === 0) return;
-  h1.appendChild(createBadgeEl(ratings[slug], 'flex-start', iconPair));
+  h1.appendChild(createBadgeEl(ratings[slug], 'flex-start', iconPair, iconSize));
 }
 
-export function injectBadges(slugNameMap, ratings, iconPair) {
+export function injectBadges(slugNameMap, ratings, iconPair, iconSize) {
   var adapter = getThemeAdapter();
   var currentSlug = extractSlug(window.location.pathname);
   var links = collectListingLinks(adapter).filter(isVisibleForBadge);
@@ -219,10 +219,10 @@ export function injectBadges(slugNameMap, ratings, iconPair) {
     var productName = slugNameMap[slug];
     links.forEach(function(a) {
       if (extractSlug(a.href) !== slug) return;
-      injectBadgeOnLink(a, rating, productName, currentSlug, iconPair);
+      injectBadgeOnLink(a, rating, productName, currentSlug, iconPair, iconSize);
     });
   });
 
   clearBadgePlaceholders();
-  injectModalBadge(slugNameMap, ratings, iconPair);
+  injectModalBadge(slugNameMap, ratings, iconPair, iconSize);
 }

@@ -2,13 +2,9 @@
 
 import { findProductTitleEl } from './title-finder.js';
 import { partialStarsHTML } from '../core/helpers.js';
-
-// Boyut map — badge widget ayarındaki "size" değeri bu piksel değerlerini üretir
-var SIZE_MAP = {
-  small:  { icon: 14, text: '12px' },
-  medium: { icon: 16, text: '14px' },
-  large:  { icon: 20, text: '16px' },
-};
+// Boyut haritası tek kaynak — hem PDP başlık rozeti hem listing kartları
+// aynı SIZE_MAP'i kullanır; merchant'ın badge.size seçimi her iki yüzeye uygulanır.
+import { SIZE_MAP } from '../core/badge.js';
 
 // SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği).
 // iconPair tek kaynaktan ("Ürün Yorumları" → reviewIcon) gelir; render.js geçirir.

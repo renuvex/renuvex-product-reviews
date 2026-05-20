@@ -127,8 +127,11 @@ fields stay exactly where merchants already set them.
   settings` is a JSON column, so no Prisma migration is needed; `sanitizeSettings`
   strips the now-unknown keys from old rows on read. No data migration required —
   the canonical `reviewIcon` / `reviewStarColor` values are untouched.
-- `badge.size` still affects only the PDP title badge; listing-badge size remains
-  a fixed 13px. Unifying badge sizing is deferred future work.
+- `badge.size` now applies to all badge surfaces (PDP title and listing/card
+  badges) via the shared `SIZE_MAP` exported from `core/badge.js`. One
+  small/medium/large choice resolves to a single icon-pixel value used by every
+  badge. Listing-badge text font-size remains 13px (in `BADGE_CSS`) to protect
+  tight card layouts.
 - New code that adds a rating surface must feed it from `getIconFromSettings` and
   the shared `partialStarsHTML`; it must not hardcode an icon or read `badge.*`
   for visuals.

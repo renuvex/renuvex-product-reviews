@@ -3,6 +3,7 @@
 import { ls } from '../core/state.js';
 import { fetchSettings } from '../core/settings.js';
 import { getIconFromSettings } from '../icons/index.js';
+import { SIZE_MAP } from '../core/badge.js';
 import { collectProductTargets } from './collect.js';
 import { fetchRatings } from './ratings.js';
 import { clearBadgePlaceholders, injectBadges, reserveBadgeSlots } from './inject.js';
@@ -49,6 +50,11 @@ export async function renderListingBadges() {
       : '#f59e0b';
     document.documentElement.style.setProperty('--ikr-review-star-color', starColor);
 
+    // Rozet boyutu — "Yıldız Rozeti" → badge.size; SIZE_MAP core/badge.js'te tek kaynak.
+    // Merchant'ın Küçük/Orta/Büyük seçimi PDP başlık rozetiyle aynı şekilde uygulanır.
+    var sizeKey = (widgets.badge && widgets.badge.size) || 'medium';
+    var iconSize = (SIZE_MAP[sizeKey] || SIZE_MAP.medium).icon;
+
     var slugNameMap = {};
     slugs.forEach(function(slug) {
       slugNameMap[slug] = productTargets[slug] ? productTargets[slug].name : null;
@@ -64,7 +70,7 @@ export async function renderListingBadges() {
     reserveBadgeSlots(slugNameMap);
 
     var ratings = await ratingsPromise;
-    injectBadges(slugNameMap, ratings, iconPair);
+    injectBadges(slugNameMap, ratings, iconPair, iconSize);
   } finally {
     ls.inProgress = false;
     if (ls.queued) {
