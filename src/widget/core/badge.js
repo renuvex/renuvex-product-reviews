@@ -16,18 +16,41 @@ export var SIZE_MAP = {
 
 // Layout (display, align, gap, margin, line-height, color, font-weight,
 // font-family/letter-spacing reset, pointer-events) PR-2'den itibaren
-// .ikr-rating-badge + .ikr-rating-badge--listing class'larından okunuyor
-// (PARTIAL_STARS_CSS içinde tanımlı). Inline'da sadece per-mount dinamik
-// (justify-content) ve sizing (font-size) kalır; sizing PR-3'te component-
-// scope CSS variable'a taşınacak.
+// .ikr-rating-badge + .ikr-rating-badge--listing class'larından okunuyor.
+// PR-3'ten itibaren sizing (icon px + text px) component-scope CSS variable
+// (--ikr-badge-icon-size, --ikr-badge-text-size) ile akıyor: PARTIAL_STARS_CSS
+// default'ları .ikr-rating-badge'de tanımlar; ensureBadgeTokens(sizes) merchant
+// seçimini scoped class-selector ile (`#ikr-badge-tokens` style etiketi)
+// override eder. Inline kalan tek şey per-mount dinamik justify-content.
 
-function buildBadgeStars(rating, iconPair, iconSize) {
+function buildBadgeStars(rating, iconPair) {
   // Yıldız ikonu tek kaynaktan ("Ürün Yorumları" → reviewIcon); çağıran geçirir.
-  // İkon boyutu "Yıldız Rozeti" → badge.size'tan (SIZE_MAP) çözülür; çağıran geçirir.
-  // Renk .ikr-star-* sınıfları üzerinden --ikr-review-star-color'dan gelir —
-  // listing-badges/index.js bu değişkeni kurar (PDP render.js'e bağımlı değil).
-  var sizeStyle = 'width:' + iconSize + 'px;height:' + iconSize + 'px;';
-  return partialStarsHTML(rating, iconPair, { sizeStyle: sizeStyle });
+  // Yıldız boyutu .ikr-rating-badge .ikr-star { width:var(--ikr-badge-icon-size) }
+  // ile CSS variable'dan okunuyor — sizeStyle artık geçilmez (inline boş).
+  // Renk .ikr-star-* sınıfları üzerinden --ikr-review-star-color'dan gelir.
+  return partialStarsHTML(rating, iconPair);
+}
+
+// ensureBadgeTokens — merchant'ın seçtiği boyutu component-scope CSS variable
+// olarak yazar. Idempotent: aynı `<style id="ikr-badge-tokens">` etiketinin
+// textContent'i her settings okumasında yeniden kurulur (yeni etiket eklenmez).
+// Scope `.ikr-rating-badge` class selector — `:root` namespace bozulmaz.
+// `mobileSizes` opsiyonel; verilirse `@media (max-width: 640px)` bloğu yazılır
+// (PR-4'te admin mobileOverride toggle'ı buraya bağlanır).
+export function ensureBadgeTokens(sizes, mobileSizes) {
+  if (!sizes || typeof sizes.icon !== 'number' || typeof sizes.text !== 'string') return;
+  var el = document.getElementById('ikr-badge-tokens');
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'ikr-badge-tokens';
+    document.head.appendChild(el);
+  }
+  var desktopRule = '.ikr-rating-badge{--ikr-badge-icon-size:' + sizes.icon + 'px;--ikr-badge-text-size:' + sizes.text + ';}';
+  var mobileRule = '';
+  if (mobileSizes && typeof mobileSizes.icon === 'number' && typeof mobileSizes.text === 'string') {
+    mobileRule = '@media (max-width:640px){.ikr-rating-badge{--ikr-badge-icon-size:' + mobileSizes.icon + 'px;--ikr-badge-text-size:' + mobileSizes.text + ';}}';
+  }
+  el.textContent = desktopRule + mobileRule;
 }
 
 // Listing badge yıldızlarının (.ikr-star / .ikr-stars-partial) CSS'ini bir kez
@@ -48,11 +71,9 @@ function ensureBadgeStyles() {
  * @param {{ avg: string, count: number }} rating
  * @param {'flex-start'|'center'|'flex-end'} justify
  * @param {{ filled: string, empty: string }} iconPair
- * @param {number} iconSize   SIZE_MAP[size].icon
- * @param {string} textSize   SIZE_MAP[size].text (örn. '14px')
  * @returns {HTMLElement}
  */
-export function createBadgeEl(rating, justify, iconPair, iconSize, textSize) {
+export function createBadgeEl(rating, justify, iconPair) {
   ensureBadgeStyles();
   var el = document.createElement('div');
   el.className = 'ikr-rating-badge ikr-rating-badge--listing';
@@ -64,11 +85,14 @@ export function createBadgeEl(rating, justify, iconPair, iconSize, textSize) {
   el.setAttribute('data-ikr-surface', 'listing');
   el.setAttribute('data-ikr-rating', String(rating.avg));
   el.setAttribute('data-ikr-count', String(rating.count));
-  el.style.cssText = 'font-size:' + textSize + ';justify-content:' + (justify || 'flex-start') + ';';
+  // Inline'da sadece per-mount dinamik justify-content. font-size + icon size
+  // .ikr-rating-badge class'ından (CSS variable) gelir; ensureBadgeTokens
+  // merchant değerini set eder.
+  el.style.cssText = 'justify-content:' + (justify || 'flex-start') + ';';
 
   // Stars: existing engine returns trusted SVG markup from a closed icon set;
   // insertAdjacentHTML is the public, mutation-observer-friendly DOM API.
-  el.insertAdjacentHTML('beforeend', buildBadgeStars(rating.avg, iconPair, iconSize));
+  el.insertAdjacentHTML('beforeend', buildBadgeStars(rating.avg, iconPair));
 
   var labelEl = document.createElement('span');
   labelEl.className = 'ikr-rating-badge__label';
@@ -78,12 +102,12 @@ export function createBadgeEl(rating, justify, iconPair, iconSize, textSize) {
   return el;
 }
 
-export function createBadgePlaceholderEl(justify, textSize) {
+export function createBadgePlaceholderEl(justify) {
   ensureBadgeStyles();
   var el = document.createElement('div');
   el.className = 'ikr-rating-badge ikr-rating-badge--listing';
   el.setAttribute('data-ikr-listing-badge-placeholder', '1');
   el.setAttribute('aria-hidden', 'true');
-  el.style.cssText = 'font-size:' + textSize + ';justify-content:' + (justify || 'flex-start') + ';visibility:hidden;';
+  el.style.cssText = 'justify-content:' + (justify || 'flex-start') + ';visibility:hidden;';
   return el;
 }

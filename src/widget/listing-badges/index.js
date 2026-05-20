@@ -3,7 +3,7 @@
 import { ls } from '../core/state.js';
 import { fetchSettings } from '../core/settings.js';
 import { getIconFromSettings } from '../icons/index.js';
-import { SIZE_MAP } from '../core/badge.js';
+import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
 import { collectProductTargets } from './collect.js';
 import { fetchRatings } from './ratings.js';
 import { clearBadgePlaceholders, injectBadges, reserveBadgeSlots } from './inject.js';
@@ -54,10 +54,11 @@ export async function renderListingBadges() {
     // Merchant'ın Küçük/Orta/Büyük seçimi PDP başlık rozetiyle aynı şekilde
     // (hem ikon hem metin boyutuna) uygulanır. Yüzeye özel olan tek şey çevre
     // boşlukları (gap/margin) — listing dar kart, PDP ferah başlık.
+    // PR-3: sizing artık component-scope CSS variable üzerinden akıyor;
+    // ensureBadgeTokens `<style id="ikr-badge-tokens">` etiketini günceller.
     var sizeKey = (widgets.badge && widgets.badge.size) || 'medium';
     var sizes = SIZE_MAP[sizeKey] || SIZE_MAP.medium;
-    var iconSize = sizes.icon;
-    var textSize = sizes.text;
+    ensureBadgeTokens(sizes);
 
     var slugNameMap = {};
     slugs.forEach(function(slug) {
@@ -71,10 +72,10 @@ export async function renderListingBadges() {
 
     // Reserve stable vertical space while rating data is still in flight, then
     // replace placeholders with real badges in injectBadges().
-    reserveBadgeSlots(slugNameMap, textSize);
+    reserveBadgeSlots(slugNameMap);
 
     var ratings = await ratingsPromise;
-    injectBadges(slugNameMap, ratings, iconPair, iconSize, textSize);
+    injectBadges(slugNameMap, ratings, iconPair);
   } finally {
     ls.inProgress = false;
     if (ls.queued) {

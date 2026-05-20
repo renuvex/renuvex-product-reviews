@@ -116,15 +116,19 @@ export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + cl
   .ikr-star-half-fg > svg{width:100%;height:100%;display:block;}
 
   /* ─── BADGE BASE (PR-2 — class-based layout + a11y + theme reset) ─────────
-     Sizing token'ları (font-size, icon size) PR-3'te component-scope CSS
-     variable'a taşınacak — şimdilik font-size inline kalır, icon size
-     .ikr-star üzerine inline width/height olarak yazılır.
+     Sizing token'ları (icon px, text px) PR-3'ten itibaren component-scope
+     CSS variable'ı: --ikr-badge-icon-size, --ikr-badge-text-size. Default'lar
+     .ikr-rating-badge'de tanımlı (small'a denk gelmez — admin'de seçili size'a
+     uyacak şekilde core/badge.js → ensureBadgeTokens runtime'da override eder).
      Tipografi reset (font-family:inherit / letter-spacing:normal /
      text-transform:none) parent h2'den miras kaçışını keser. */
   .ikr-rating-badge{
+    --ikr-badge-icon-size:16px;
+    --ikr-badge-text-size:14px;
     display:flex;
     align-items:center;
     line-height:1.3;
+    font-size:var(--ikr-badge-text-size);
     font-weight:400;
     color:#555;
     font-family:inherit;
@@ -142,6 +146,12 @@ export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + cl
     margin-top:0;
     margin-bottom:4px;
     pointer-events:none;
+  }
+  /* Badge scope'undaki yıldızlar variable'dan boyut alır; dışarıdaki .ikr-star
+     (summary, modal vs.) ayrı kalır — selector specificity ile çakışmaz. */
+  .ikr-rating-badge .ikr-star{
+    width:var(--ikr-badge-icon-size);
+    height:var(--ikr-badge-icon-size);
   }`;
 
 export function formatDate(iso) {

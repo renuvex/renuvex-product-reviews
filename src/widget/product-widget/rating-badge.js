@@ -4,14 +4,15 @@ import { findProductTitleEl } from './title-finder.js';
 import { partialStarsHTML } from '../core/helpers.js';
 // Boyut haritası tek kaynak — hem PDP başlık rozeti hem listing kartları
 // aynı SIZE_MAP'i kullanır; merchant'ın badge.size seçimi her iki yüzeye uygulanır.
-import { SIZE_MAP } from '../core/badge.js';
+// PR-3: sizing artık CSS variable üzerinden akıyor; ensureBadgeTokens scope'lu
+// `<style>` etiketine yazar, .ikr-rating-badge .ikr-star CSS'i değişkenden okur.
+import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
 
 // SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği).
 // iconPair tek kaynaktan ("Ürün Yorumları" → reviewIcon) gelir; render.js geçirir.
-// Yıldız rengi .ikr-star-* sınıfları üzerinden --ikr-review-star-color'dan gelir.
-function buildStars(rating, iconPair, iconSize) {
-  var sizeStyle = 'width:' + iconSize + 'px;height:' + iconSize + 'px;';
-  return partialStarsHTML(rating, iconPair, { sizeStyle: sizeStyle });
+// Yıldız boyutu .ikr-rating-badge scope'undaki CSS variable'dan okunur.
+function buildStars(rating, iconPair) {
+  return partialStarsHTML(rating, iconPair);
 }
 
 export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair) {
@@ -51,8 +52,11 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   // Boyut "Yıldız Rozeti" widget'ından; yıldız ikonu + rengi tek kaynaktan
   // ("Ürün Yorumları") gelir — iconPair render.js tarafından geçirilir.
+  // ensureBadgeTokens scoped `<style id="ikr-badge-tokens">` etiketini günceller;
+  // hem PDP hem listing aynı etiketi paylaşır (settings tek kaynak, çakışmaz).
   var sizeKey = (badgeSettings && badgeSettings.size) || 'medium';
   var sizes = SIZE_MAP[sizeKey] || SIZE_MAP.medium;
+  ensureBadgeTokens(sizes);
 
   var badge = document.createElement('a');
   badge.id = 'ikr-rating-badge';
@@ -71,12 +75,12 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // sadece per-mount justify-content kalır.
   badge.style.cssText = 'justify-content:' + justifyVal + ';';
 
-  badge.insertAdjacentHTML('beforeend', buildStars(avgRating, iconPair, sizes.icon));
+  badge.insertAdjacentHTML('beforeend', buildStars(avgRating, iconPair));
 
   var labelEl = document.createElement('span');
   labelEl.className = 'ikr-rating-badge__label';
-  // font-size sizing token — PR-3'te component-scope CSS variable'a taşınacak.
-  labelEl.style.cssText = 'font-size:' + sizes.text + ';';
+  // Font-size .ikr-rating-badge { font-size:var(--ikr-badge-text-size) } üzerinden
+  // gelir (inheritance). Inline yok — ensureBadgeTokens merchant değerini set eder.
   labelEl.textContent = avgRating + ' (' + totalCount + ' yorum)';
   badge.appendChild(labelEl);
 
