@@ -54,11 +54,18 @@ export async function renderListingBadges() {
     // Merchant'ın Küçük/Orta/Büyük seçimi PDP başlık rozetiyle aynı şekilde
     // (hem ikon hem metin boyutuna) uygulanır. Yüzeye özel olan tek şey çevre
     // boşlukları (gap/margin) — listing dar kart, PDP ferah başlık.
-    // PR-3: sizing artık component-scope CSS variable üzerinden akıyor;
+    // PR-3: sizing component-scope CSS variable üzerinden akıyor;
     // ensureBadgeTokens `<style id="ikr-badge-tokens">` etiketini günceller.
-    var sizeKey = (widgets.badge && widgets.badge.size) || 'medium';
+    // PR-4: mobileOverride açıksa `@media (max-width:640px)` bloğu da yazılır.
+    var badgeSettings = widgets.badge || {};
+    var sizeKey = badgeSettings.size || 'medium';
     var sizes = SIZE_MAP[sizeKey] || SIZE_MAP.medium;
-    ensureBadgeTokens(sizes);
+    var mobileSizes = null;
+    if (badgeSettings.mobileOverride === true) {
+      var mobileSizeKey = badgeSettings.mobileSize || 'small';
+      mobileSizes = SIZE_MAP[mobileSizeKey] || SIZE_MAP.small;
+    }
+    ensureBadgeTokens(sizes, mobileSizes);
 
     var slugNameMap = {};
     slugs.forEach(function(slug) {

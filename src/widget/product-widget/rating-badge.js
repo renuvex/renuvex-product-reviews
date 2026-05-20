@@ -54,9 +54,15 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // ("Ürün Yorumları") gelir — iconPair render.js tarafından geçirilir.
   // ensureBadgeTokens scoped `<style id="ikr-badge-tokens">` etiketini günceller;
   // hem PDP hem listing aynı etiketi paylaşır (settings tek kaynak, çakışmaz).
+  // PR-4: mobileOverride açıksa `@media (max-width:640px)` bloğu da yazılır.
   var sizeKey = (badgeSettings && badgeSettings.size) || 'medium';
   var sizes = SIZE_MAP[sizeKey] || SIZE_MAP.medium;
-  ensureBadgeTokens(sizes);
+  var mobileSizes = null;
+  if (badgeSettings && badgeSettings.mobileOverride === true) {
+    var mobileSizeKey = badgeSettings.mobileSize || 'small';
+    mobileSizes = SIZE_MAP[mobileSizeKey] || SIZE_MAP.small;
+  }
+  ensureBadgeTokens(sizes, mobileSizes);
 
   var badge = document.createElement('a');
   badge.id = 'ikr-rating-badge';
