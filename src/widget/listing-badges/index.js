@@ -51,9 +51,13 @@ export async function renderListingBadges() {
     document.documentElement.style.setProperty('--ikr-review-star-color', starColor);
 
     // Rozet boyutu — "Yıldız Rozeti" → badge.size; SIZE_MAP core/badge.js'te tek kaynak.
-    // Merchant'ın Küçük/Orta/Büyük seçimi PDP başlık rozetiyle aynı şekilde uygulanır.
+    // Merchant'ın Küçük/Orta/Büyük seçimi PDP başlık rozetiyle aynı şekilde
+    // (hem ikon hem metin boyutuna) uygulanır. Yüzeye özel olan tek şey çevre
+    // boşlukları (gap/margin) — listing dar kart, PDP ferah başlık.
     var sizeKey = (widgets.badge && widgets.badge.size) || 'medium';
-    var iconSize = (SIZE_MAP[sizeKey] || SIZE_MAP.medium).icon;
+    var sizes = SIZE_MAP[sizeKey] || SIZE_MAP.medium;
+    var iconSize = sizes.icon;
+    var textSize = sizes.text;
 
     var slugNameMap = {};
     slugs.forEach(function(slug) {
@@ -67,10 +71,10 @@ export async function renderListingBadges() {
 
     // Reserve stable vertical space while rating data is still in flight, then
     // replace placeholders with real badges in injectBadges().
-    reserveBadgeSlots(slugNameMap);
+    reserveBadgeSlots(slugNameMap, textSize);
 
     var ratings = await ratingsPromise;
-    injectBadges(slugNameMap, ratings, iconPair, iconSize);
+    injectBadges(slugNameMap, ratings, iconPair, iconSize, textSize);
   } finally {
     ls.inProgress = false;
     if (ls.queued) {

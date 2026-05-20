@@ -5,17 +5,20 @@ import { partialStarsHTML, PARTIAL_STARS_CSS } from './helpers.js';
 
 // Rozet boyut haritası — "Yıldız Rozeti" widget'ındaki badge.size (Küçük/Orta/
 // Büyük) için TEK kaynak. Hem PDP başlık rozeti (rating-badge.js) hem listing
-// kart rozetleri (listing-badges/index.js) buradan okur; merchant'ın seçimi
-// her iki yüzeye de aynı şekilde uygulanır.
+// kart rozetleri (listing-badges/index.js) buradan okar; merchant'ın seçimi
+// ikon ve metin boyutuna aynı anda uygulanır. Yüzeye özel olan tek şey çevre
+// boşlukları (gap/margin) — bunlar dar kart vs. ferah PDP başlığı için farklı.
 export var SIZE_MAP = {
   small:  { icon: 14, text: '12px' },
   medium: { icon: 16, text: '14px' },
   large:  { icon: 20, text: '16px' },
 };
 
-// Listing badge CSS — yatay layout + 13px metin. Metin boyutu kart layout'unu
-// dar yapmamak için size'a bağlı değil; ikon size'ı SIZE_MAP'ten gelir.
-var BADGE_CSS = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;min-height:17px;line-height:17px;font-size:13px;font-weight:400;color:#555;pointer-events:none;';
+// Listing badge layout stili — font-size çağrı anında SIZE_MAP[size].text'ten
+// eklenir; gap/margin değerleri dar kart düzenine göre burada sabit.
+// line-height oransal (1.3) — metin büyüdükçe satır kutusu da büyür, ikonla
+// hizalama align-items:center ile korunur.
+var BADGE_CSS = 'display:flex;align-items:center;gap:3px;margin-top:0px;margin-bottom:4px;line-height:1.3;font-weight:400;color:#555;pointer-events:none;';
 
 function buildBadgeStars(rating, iconPair, iconSize) {
   // Yıldız ikonu tek kaynaktan ("Ürün Yorumları" → reviewIcon); çağıran geçirir.
@@ -43,23 +46,26 @@ function ensureBadgeStyles() {
  * Listing badge DOM elementi oluşturur.
  * @param {{ avg: string, count: number }} rating
  * @param {'flex-start'|'center'|'flex-end'} justify
+ * @param {{ filled: string, empty: string }} iconPair
+ * @param {number} iconSize   SIZE_MAP[size].icon
+ * @param {string} textSize   SIZE_MAP[size].text (örn. '14px')
  * @returns {HTMLElement}
  */
-export function createBadgeEl(rating, justify, iconPair, iconSize) {
+export function createBadgeEl(rating, justify, iconPair, iconSize, textSize) {
   ensureBadgeStyles();
   var el = document.createElement('div');
   el.setAttribute('data-ikr-listing-badge', '1');
-  el.style.cssText = BADGE_CSS + 'justify-content:' + (justify || 'flex-start') + ';';
+  el.style.cssText = BADGE_CSS + 'font-size:' + textSize + ';justify-content:' + (justify || 'flex-start') + ';';
   el.innerHTML = buildBadgeStars(rating.avg, iconPair, iconSize) +
     '<span style="font-weight:400;">' + rating.avg + ' (' + rating.count + ')</span>';
   return el;
 }
 
-export function createBadgePlaceholderEl(justify) {
+export function createBadgePlaceholderEl(justify, textSize) {
   ensureBadgeStyles();
   var el = document.createElement('div');
   el.setAttribute('data-ikr-listing-badge-placeholder', '1');
   el.setAttribute('aria-hidden', 'true');
-  el.style.cssText = BADGE_CSS + 'justify-content:' + (justify || 'flex-start') + ';visibility:hidden;';
+  el.style.cssText = BADGE_CSS + 'font-size:' + textSize + ';justify-content:' + (justify || 'flex-start') + ';visibility:hidden;';
   return el;
 }

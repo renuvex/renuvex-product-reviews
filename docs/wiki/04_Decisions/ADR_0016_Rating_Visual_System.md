@@ -4,7 +4,7 @@ project: ikas-review-app
 status: active
 created: 2026-05-19
 updated: 2026-05-20
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 confidence: high
 tags:
   - adr
@@ -129,9 +129,11 @@ fields stay exactly where merchants already set them.
   the canonical `reviewIcon` / `reviewStarColor` values are untouched.
 - `badge.size` now applies to all badge surfaces (PDP title and listing/card
   badges) via the shared `SIZE_MAP` exported from `core/badge.js`. One
-  small/medium/large choice resolves to a single icon-pixel value used by every
-  badge. Listing-badge text font-size remains 13px (in `BADGE_CSS`) to protect
-  tight card layouts.
+  small/medium/large choice resolves to **both** an icon-pixel value and a text
+  font-size, used identically by every badge surface. Surface-specific values
+  are layout only: PDP keeps `gap:5px` / `margin-bottom:10px` for the ferah
+  title row; listing keeps `gap:3px` / `margin-bottom:4px` for tight cards.
+  `line-height` is proportional (1.3) so the row reservation scales with text.
 - New code that adds a rating surface must feed it from `getIconFromSettings` and
   the shared `partialStarsHTML`; it must not hardcode an icon or read `badge.*`
   for visuals.
