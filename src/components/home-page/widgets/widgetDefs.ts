@@ -322,10 +322,13 @@ export const WIDGETS: WidgetDef[] = [
       {
         title: 'Görünüm',
         fields: [
+          // Masaüstü boyutu — ana preset. mobileOverride kapalıyken hem masaüstü
+          // hem mobil için kullanılır (geriye uyumlu). ADR_0017'ye göre ikon ve
+          // metin SIZE_MAP'ten birlikte uygulanır.
           {
             type: 'select',
             key: 'size',
-            label: 'Rozet Boyutu',
+            label: 'Rozet Boyutu (Masaüstü)',
             default: 'medium',
             options: [
               { value: 'small',  label: 'Küçük' },
@@ -333,6 +336,44 @@ export const WIDGETS: WidgetDef[] = [
               { value: 'large',  label: 'Büyük' },
             ],
           },
+          // Mobil override — dar kartta merchant ayrı boyut isterse aktif eder.
+          // Toggle kapalıyken davranış değişmez (mobileSize gizli, runtime'a sızmaz).
+          {
+            type: 'toggle',
+            key: 'mobileOverride',
+            label: 'Mobilde farklı boyut kullan',
+            default: false,
+          },
+          {
+            type: 'select',
+            key: 'mobileSize',
+            label: 'Rozet Boyutu (Mobil)',
+            default: 'small',
+            options: [
+              { value: 'small',  label: 'Küçük' },
+              { value: 'medium', label: 'Orta' },
+              { value: 'large',  label: 'Büyük' },
+            ],
+            showWhen: { key: 'mobileOverride', equals: true },
+          },
+          // Hizalama — 'auto' başlığın text-align'ından türetilir (mevcut davranış).
+          // Diğer değerler theme-bağımsız sabit hizalama verir.
+          {
+            type: 'select',
+            key: 'alignment',
+            label: 'Hizalama',
+            default: 'auto',
+            options: [
+              { value: 'auto',   label: 'Başlığa Göre' },
+              { value: 'left',   label: 'Sola' },
+              { value: 'center', label: 'Ortaya' },
+              { value: 'right',  label: 'Sağa' },
+            ],
+          },
+          // İçerik toggles — kart layoutu sıkışıksa merchant count veya value'yu
+          // gizleyebilir. Default'ları mevcut davranışı korur (her ikisi açık).
+          { type: 'toggle', key: 'showValue', label: 'Ortalama puanı göster', default: true },
+          { type: 'toggle', key: 'showCount', label: 'Yorum sayısını göster', default: true },
         ],
       },
     ],
