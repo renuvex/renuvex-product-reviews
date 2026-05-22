@@ -3,8 +3,8 @@ type: log
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-18
-last_verified: 2026-05-18
+updated: 2026-05-22
+last_verified: 2026-05-22
 confidence: high
 tags:
   - log
@@ -19,6 +19,13 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-22 - hardening | Reconcile storefront scripts with v1 list adoption
+- Summary: Fixed StorefrontJSScript recovery when ikas returns `error_messages.theme.storefront_sf_script_not_found` for a DB-tracked script id that no longer exists remotely, then added read-only v1 script listing to adopt live remote app scripts before creating new ones.
+- Reason: The non-destructive script lifecycle introduced in `1700d789` already intended to recreate missing/deleted scripts, but the matcher only handled space-separated `not found`; ikas returns underscore-separated `not_found`, so reinstall/manual inject could fail without recreating the loader. A stronger path also needs DB-lost/live-remote reconciliation to avoid duplicate scripts.
+- Key source changes: `src/lib/storefront-scripts.ts` now accepts space, dash, and underscore separators in missing-script error phrases and uses v1 `listStorefrontJSScript` as read-only evidence. `src/lib/ikas-client/v1-graphql-requests.ts` and `generated/v1-graphql.ts` provide the typed v1 query client.
+- Verification: Refreshed the dev-store OAuth token, confirmed v1 `listStorefrontJSScript` returned zero scripts while `StoreSettings.storefrontScripts` held a stale id, reproduced the v2 update error, recreated the script, updated the DB map, then verified ikas reports one active non-deleted `yorum-paneli-widget` script with the expected widget URL. Browser retest showed `/premium-shorts` and `/clothing` load the widget and render `ikr-*` nodes with no widget console errors; `/` still did not publish the script in-browser during the retest despite the active global script record, so home-route ikas/CDN publication remains an external follow-up.
+- Updated wiki: [[Hot_Context]], [[Ikas_Widget_Injection_Notes]], [[Log]]
 
 ## 2026-05-18 - security | Scope review image uploads by tenant
 - Summary: Review image uploads now use tenant-scoped Cloudinary folders: `review_images/stores/<storeId>`.

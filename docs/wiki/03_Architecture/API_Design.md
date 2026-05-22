@@ -47,7 +47,7 @@ See [[Backend_API_Map]] for the full list with descriptions.
 
 ## Idempotency
 - `PUT /api/admin/settings` is idempotent — upserts on `(storeId, widgetId)`.
-- `POST /api/admin/inject-scripts` is idempotent — uses ikas `updateStorefrontJSScript` when an id exists, otherwise `create`.
+- `POST /api/admin/inject-scripts` is idempotent: it adopts a live app-owned script from v1 `listStorefrontJSScript` when possible, then uses v2 `updateStorefrontJSScript` or `createStorefrontJSScript`.
 - `POST /api/public/reviews` is **not** idempotent — each call creates a new row. Rate limit and human friction are the only de-duplication.
 
 ## Error handling

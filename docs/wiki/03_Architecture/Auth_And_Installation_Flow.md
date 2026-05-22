@@ -3,7 +3,9 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-22
+last_verified: 2026-05-22
+confidence: high
 tags:
   - auth
   - oauth
@@ -13,6 +15,12 @@ related:
   - "[[System_Architecture]]"
   - "[[Important_Files]]"
   - "[[ADR_0004_Ikas_Integration_Strategy]]"
+source_files:
+  - "src/app/api/oauth/authorize/ikas/route.ts"
+  - "src/app/api/oauth/callback/ikas/route.ts"
+  - "src/lib/storefront-scripts.ts"
+  - "src/lib/ikas-client/v1-graphql-requests.ts"
+  - "src/helpers/api-helpers.ts"
 ---
 
 # Auth & Installation Flow
@@ -48,7 +56,7 @@ ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in P
        - prisma.authToken.deleteMany({ merchantId })   [reinstall hygiene]
        - AuthTokenManager.put(token)
        - prisma.storeSettings.upsert({ storeId: merchantId })
-       - For each storefront: ikas.mutations.createStorefrontJSScript / updateStorefrontJSScript
+      - For each storefront: adopt/create/update StorefrontJSScript
            pointing to <STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>
        - registerProductWebhooks → saveWebhooks for store/product/created|updated
        - JwtHelpers.createToken(merchantId, authorizedAppId)  [HS256, 4h]
@@ -78,8 +86,8 @@ Source files:
 
 ## Re-install behavior
 - Hard cleanup at step 4: `deleteMany({ merchantId })` removes all old `AuthToken` rows for the merchant.
-- Storefront scripts: the callback delegates to `ensureStorefrontScripts()` and uses only non-destructive create/update mutations. It no longer calls zero-argument `deleteStorefrontJSScript()`.
-- If `StoreSettings.storefrontScripts` was lost while remote scripts still exist, install/manual re-inject may create a duplicate loader script for this app. That is the chosen tradeoff because deleting unknown merchant/app scripts is not safe under the current ikas contract mismatch.
+- Storefront scripts: the callback delegates to `ensureStorefrontScripts()` and uses only non-destructive read/adopt/create/update. It no longer calls zero-argument `deleteStorefrontJSScript()`.
+- If `StoreSettings.storefrontScripts` was lost while remote scripts still exist, install/manual re-inject uses v1 `listStorefrontJSScript` to adopt the live app-owned script id before creating a new loader. If v1 list fails, it falls back to conservative create/update-only behavior.
 
 ## Token refresh
 - `onCheckToken(token)` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) is wired into the ikas client.

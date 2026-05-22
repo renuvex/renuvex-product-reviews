@@ -3,8 +3,8 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-15
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-22
+last_verified: 2026-05-22
 confidence: high
 tags:
   - ikas
@@ -19,7 +19,9 @@ related:
   - "[[Ikas_API_Notes]]"
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
+  - "src/lib/ikas-client/v1-graphql-requests.ts"
   - "src/lib/ikas-client/generated/graphql.ts"
+  - "src/lib/ikas-client/generated/v1-graphql.ts"
   - "src/app/api/oauth/callback/ikas/route.ts"
   - "src/app/api/admin/inject-scripts/route.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
@@ -124,13 +126,20 @@ This section records a direct answer from an ikas developer about storefront scr
 
 The project currently defines these StorefrontJSScript GraphQL documents:
 
+v2 create/update path:
+
 - `listStorefront`
 - `createStorefrontJSScript`
 - `updateStorefrontJSScript`
 
+v1 read-only reconciliation path:
+
+- `listStorefrontJSScript(storefrontId)`
+
 The active MCP/generated client still exposes zero-argument `deleteStorefrontJSScript`, but this app no longer defines or calls it.
 
 Source: [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts)
+Source: [src/lib/ikas-client/v1-graphql-requests.ts](src/lib/ikas-client/v1-graphql-requests.ts)
 
 Runtime injection creates a full script tag:
 
@@ -148,7 +157,7 @@ Source paths:
 - [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts)
 - [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 
-The project tracks installed ikas script ids in `StoreSettings.storefrontScripts`.
+The project tracks installed ikas script ids in `StoreSettings.storefrontScripts`, but treats that JSON map as a cache. The remote ikas script list is the source of truth when the v1 read succeeds.
 
 ## Multiple Widgets: What ikas Allows vs What We Should Do
 
@@ -169,13 +178,13 @@ This keeps install, update, rollback, cleanup, and support simpler.
 
 The official docs show a delete mutation that accepts a storefront id list. The active MCP introspection exposes a zero-argument `deleteStorefrontJSScript`.
 
-Source no longer calls this mutation. Script lifecycle now uses non-destructive create/update through [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts). If the DB script map is lost, install/manual re-inject may create a duplicate app loader, but it will not delete scripts belonging to other apps.
+Source no longer calls this mutation. Script lifecycle now uses non-destructive read/adopt/create/update through [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts). If the DB script map is lost and v1 list succeeds, install/manual/cron can adopt a live remote app-owned script instead of creating a duplicate. If v1 list fails, the helper falls back to the conservative create/update-only behavior.
 
-### Missing Script Listing In Current Project Documents
+### Script Listing Contract Split
 
-The public docs include `listStorefrontJSScript(storefrontId)`, but the project currently does not define it in [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts). The 2026-05-17 MCP recheck did not expose this operation either, so reconciliation design is still uncertain.
+The public v1 docs include `listStorefrontJSScript(storefrontId)`, but the v2 MCP recheck on 2026-05-22 still did not expose this operation. The project therefore keeps v2 create/update in [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts) and generates a separate v1 read-only client from [src/lib/ikas-client/v1-graphql-requests.ts](src/lib/ikas-client/v1-graphql-requests.ts).
 
-That makes the project depend on its own DB map to know whether a script already exists. If DB rows are lost or a merchant manually edits scripts, reconciliation is weaker than it could be.
+Do not move mutation writes to v1 unless ikas confirms the contract. The v1 list is only used to avoid stale DB ids and duplicate app-owned scripts.
 
 ### Storefronts Created After Install
 
@@ -189,8 +198,8 @@ For Yotpo-style architecture on ikas:
 - name it predictably, for example `yorum-paneli-loader`
 - use a small loader URL, not the full widget bundle
 - avoid blanket delete behavior
-- keep reconciliation non-destructive while the active schema lacks `listStorefrontJSScript`
-- do not invent destructive cleanup; first resolve the public-docs/MCP/generated-client mismatch with ikas or codegen against the app's real schema
+- keep reconciliation non-destructive: read/adopt via v1 list, then write via v2 create/update
+- do not invent destructive cleanup; first resolve the public-docs/MCP/generated-client mismatch with ikas
 - use `isHighPriority` only if the loader must run before theme scripts
 - keep widget module ordering inside the loader registry
 

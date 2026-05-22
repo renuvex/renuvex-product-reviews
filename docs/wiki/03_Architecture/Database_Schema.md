@@ -86,7 +86,7 @@ Per-merchant config. One row per merchant, created on OAuth callback.
 | `createdAt`, `updatedAt` | DateTime | |
 | `storefrontScripts` | Json? | Map: `{ [storefrontId]: ikasScriptId }` |
 
-The `storefrontScripts` map is what makes script injection idempotent across re-installs and re-syncs.
+The `storefrontScripts` map is an idempotency cache for re-installs and re-syncs. When v1 `listStorefrontJSScript` is available, the remote ikas script record is treated as source of truth and the map can be adopted/refreshed.
 
 ### `WidgetSettings`
 Per-widget JSON config.

@@ -1,17 +1,32 @@
-import { getIkas } from '@/helpers/api-helpers';
+import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
 import { prisma } from '@/lib/prisma';
 import { buildStorefrontWidgetScript } from '@/lib/storefront-widget-url';
 import { StorefrontJSScriptContentTypeEnum, type ikasAdminGraphQLAPIClient } from '@/lib/ikas-client/generated/graphql';
+import type { ikasAdminGraphQLAPIClient as ikasAdminGraphQLAPIV1Client } from '@/lib/ikas-client/generated/v1-graphql';
 import type { AuthToken } from '@/models/auth-token';
 
 const STOREFRONT_SCRIPT_NAME = 'yorum-paneli-widget';
 
 type IkasClient = ikasAdminGraphQLAPIClient<AuthToken>;
+type IkasV1Client = ikasAdminGraphQLAPIV1Client<AuthToken>;
 type StorefrontScriptMode = 'install' | 'manual' | 'cron';
-type StorefrontScriptAction = 'updated' | 'created' | 'recreated' | 'skipped_empty_map' | 'failed';
+type StorefrontScriptAction = 'updated' | 'adopted' | 'created' | 'recreated' | 'skipped_empty_map' | 'failed';
 type IkasResultError = {
   error?: string;
   errors?: Array<{ message?: string }>;
+};
+
+type StorefrontScriptOptions = {
+  scriptListClient?: IkasV1Client;
+};
+
+type RemoteStorefrontScript = {
+  id: string;
+  name: string;
+  storefrontId: string;
+  isActive: boolean;
+  deleted?: boolean;
+  scriptContent: string;
 };
 
 export type StorefrontScriptResult = {
@@ -66,7 +81,39 @@ function resultErrorMessage(result: IkasResultError) {
 }
 
 function canRecreateAfterUpdateFailure(message: string) {
-  return /not\s*found|does\s*not\s*exist|deleted|bulunamad|silin/i.test(message);
+  return /not[\s_-]*found|does[\s_-]*not[\s_-]*exist|deleted|bulunamad|silin/i.test(message);
+}
+
+function isAppScript(script: RemoteStorefrontScript, storeId: string) {
+  return script.name === STOREFRONT_SCRIPT_NAME || script.scriptContent.includes(`publicApiKey=${storeId}`);
+}
+
+function selectRemoteScript(scripts: RemoteStorefrontScript[], existingScriptId: string | undefined, storeId: string, scriptContent: string) {
+  const usableScripts = scripts.filter((script) => !script.deleted);
+  const existingActiveScript = existingScriptId
+    ? usableScripts.find((script) => script.id === existingScriptId && script.isActive && isAppScript(script, storeId))
+    : undefined;
+
+  if (existingActiveScript) return existingActiveScript;
+
+  return (
+    usableScripts.find((script) => script.isActive && script.name === STOREFRONT_SCRIPT_NAME && script.scriptContent === scriptContent) ||
+    usableScripts.find((script) => script.isActive && script.name === STOREFRONT_SCRIPT_NAME && script.scriptContent.includes(`publicApiKey=${storeId}`)) ||
+    usableScripts.find((script) => script.isActive && script.name === STOREFRONT_SCRIPT_NAME) ||
+    usableScripts.find((script) => script.isActive && isAppScript(script, storeId))
+  );
+}
+
+async function listRemoteStorefrontScripts(scriptListClient: IkasV1Client | undefined, storefrontId: string) {
+  if (!scriptListClient) return null;
+
+  try {
+    const result = await scriptListClient.queries.listStorefrontJSScript({ storefrontId });
+    if (!result.isSuccess) return null;
+    return result.data?.listStorefrontJSScript ?? [];
+  } catch {
+    return null;
+  }
 }
 
 async function createStorefrontScript(ikas: IkasClient, storefrontId: string, scriptContent: string) {
@@ -81,7 +128,12 @@ async function createStorefrontScript(ikas: IkasClient, storefrontId: string, sc
   });
 }
 
-export async function ensureStorefrontScripts(ikas: IkasClient, storeId: string, mode: StorefrontScriptMode): Promise<StorefrontScriptSummary> {
+export async function ensureStorefrontScripts(
+  ikas: IkasClient,
+  storeId: string,
+  mode: StorefrontScriptMode,
+  options: StorefrontScriptOptions = {},
+): Promise<StorefrontScriptSummary> {
   const storefrontResponse = await ikas.queries.listStorefront();
   const storefronts = storefrontResponse.data?.listStorefront ?? [];
 
@@ -103,17 +155,23 @@ export async function ensureStorefrontScripts(ikas: IkasClient, storeId: string,
     storefronts.map(async (storefront) => {
       const storefrontId = storefront.id;
       const existingScriptId = existingScripts[storefrontId];
+      const remoteScripts = await listRemoteStorefrontScripts(options.scriptListClient, storefrontId);
+      const remoteScript = remoteScripts ? selectRemoteScript(remoteScripts, existingScriptId, storeId, scriptContent) : undefined;
+      const scriptIdToUpdate = remoteScript?.id || (remoteScripts ? undefined : existingScriptId);
+      const actionForUpdate: StorefrontScriptAction = remoteScript && remoteScript.id !== existingScriptId ? 'adopted' : 'updated';
+      const shouldRecreate =
+        Boolean(existingScriptId) || Boolean(remoteScripts?.some((script) => isAppScript(script, storeId) || script.id === existingScriptId));
 
-      if (!existingScriptId && mode === 'cron' && hasNoSavedScripts) {
+      if (!scriptIdToUpdate && mode === 'cron' && hasNoSavedScripts) {
         return { storefrontId, action: 'skipped_empty_map' as const };
       }
 
-      if (existingScriptId) {
+      if (scriptIdToUpdate) {
         let updateError = '';
         try {
           const updateResult = await ikas.mutations.updateStorefrontJSScript({
             input: {
-              id: existingScriptId,
+              id: scriptIdToUpdate,
               name: STOREFRONT_SCRIPT_NAME,
               scriptContent,
               isHighPriority: false,
@@ -121,9 +179,9 @@ export async function ensureStorefrontScripts(ikas: IkasClient, storeId: string,
           });
 
           if (updateResult.isSuccess) {
-            const scriptId = updateResult.data?.updateStorefrontJSScript?.id || existingScriptId;
+            const scriptId = updateResult.data?.updateStorefrontJSScript?.id || scriptIdToUpdate;
             updatedScripts[storefrontId] = scriptId;
-            return { storefrontId, action: 'updated' as const, scriptId };
+            return { storefrontId, action: actionForUpdate, scriptId };
           }
           updateError = resultErrorMessage(updateResult);
         } catch (error) {
@@ -156,7 +214,7 @@ export async function ensureStorefrontScripts(ikas: IkasClient, storeId: string,
         const scriptId = created.data?.createStorefrontJSScript?.id;
         if (created.isSuccess && scriptId) {
           updatedScripts[storefrontId] = scriptId;
-          return { storefrontId, action: 'created' as const, scriptId };
+          return { storefrontId, action: shouldRecreate ? ('recreated' as const) : ('created' as const), scriptId };
         }
         return { storefrontId, action: 'failed' as const, error: 'createStorefrontJSScript failed' };
       } catch (error) {
@@ -174,5 +232,5 @@ export async function ensureStorefrontScripts(ikas: IkasClient, storeId: string,
 }
 
 export async function ensureStorefrontScriptsForToken(token: AuthToken, mode: StorefrontScriptMode) {
-  return ensureStorefrontScripts(getIkas(token), token.merchantId, mode);
+  return ensureStorefrontScripts(getIkas(token), token.merchantId, mode, { scriptListClient: getIkasV1(token) });
 }

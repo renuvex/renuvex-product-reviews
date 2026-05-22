@@ -3,8 +3,8 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-20
-last_verified: 2026-05-20
+updated: 2026-05-22
+last_verified: 2026-05-22
 confidence: high
 tags:
   - hot-context
@@ -42,10 +42,10 @@ source_files:
 
 ## Current Focus
 - ikas review/rating app: merchant admin, storefront widget, review submission, image upload, moderation, settings preview.
-- Current focus: ADR_0013 Phase 3 source hardening is implemented; post-deploy storefront/Sentry verification and broader product gaps remain.
+- Current focus: post-deploy storefront/Sentry verification and broader product gaps.
 
 ## Must Know
-- Source code, config, migrations, tests, and runtime behavior are the source of truth; wiki pages are routing and memory.
+- Source/config/tests/runtime are the source of truth; wiki is routing and memory.
 - Prompt procedures live in `09_Prompts`; do not create `08_Prompts`.
 - Do not document secrets or real env values. Env names and purposes are acceptable.
 - `package.json` pins Next.js `16.2.1`; older generated docs saying Next.js 15 are stale unless re-verified.
@@ -62,10 +62,11 @@ source_files:
 - 2026-05-18: D2 removed redundant Review prefix indexes; D3 scopes new Cloudinary review images to `review_images/stores/<storeId>` across sign/register/validate/render/commit.
 - 2026-05-19: [[ADR_0016_Rating_Visual_System]] implemented. Star icon + color are single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) and used by every rating surface incl. badges. `badge.icon`/`badge.color` removed; the PDP-badge icon-parse bug and the dead `badge.color` setting fixed; listing badges no longer hardcode `star:classic`.
 - 2026-05-20: [[ADR_0017_Badge_Architecture]] shipped in four phased PRs (latest `5a2772a`). Class-first DOM (`.ikr-rating-badge` + `--pdp`/`--listing`, `role=figure`, `aria-label`, `data-ikr-*`) for all stores; sibling-of-title mount gated by `core/rollout.js` allowlist (dev store only). Sizing via component-scope CSS variables on `.ikr-rating-badge` (`ensureBadgeTokens` → `<style id="ikr-badge-tokens">`); `mobileOverride` adds an `@media (max-width:640px)` block. Schema-additive (`mobileOverride`/`mobileSize`/`alignment`/`showValue`/`showCount`).
+- 2026-05-22: Storefront script recovery now uses v1 read-only list adoption plus ikas `not_found` recreate; dev PDP/category render. Home still needs ikas/CDN follow-up.
 - Context7 helps for current Playwright/Sentry/Next.js docs. ikas contracts still require ikas docs/MCP and live storefront evidence.
 
 ## Current Risks / Open Questions
-- Remaining Phase 3 follow-ups: verify lifecycle/cache behavior after deploy, re-measure deployed widget transfer size, and document merchant onboarding for disabling the theme's native review block.
+- Phase 3 follow-ups: verify deploy lifecycle/cache, re-measure widget size, and document disabling native theme reviews.
 - Ozy outside-theme placement remains adapter/admin-theme-selection work pending ikas theme detection answer.
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
 

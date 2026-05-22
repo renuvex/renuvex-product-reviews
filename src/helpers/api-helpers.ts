@@ -3,7 +3,10 @@ import moment from 'moment';
 import { AuthToken } from '../models/auth-token';
 import { AuthTokenManager } from '../models/auth-token/manager';
 import { ikasAdminGraphQLAPIClient } from '../lib/ikas-client/generated/graphql';
+import { ikasAdminGraphQLAPIClient as ikasAdminGraphQLAPIV1Client } from '../lib/ikas-client/generated/v1-graphql';
 import { config } from '../globals/config';
+
+const IKAS_ADMIN_GRAPH_API_V1_URL = 'https://api.myikas.com/api/v1/admin/graphql';
 
 /**
  * Returns a new instance of the ikasAdminGraphQLAPIClient with the provided token.
@@ -12,6 +15,15 @@ import { config } from '../globals/config';
 export function getIkas(token: AuthToken): ikasAdminGraphQLAPIClient<AuthToken> {
   return new ikasAdminGraphQLAPIClient<AuthToken>({
     graphApiUrl: config.graphApiUrl!,
+    accessToken: token.accessToken,
+    tokenData: token,
+    onCheckToken: () => onCheckToken(token),
+  });
+}
+
+export function getIkasV1(token: AuthToken): ikasAdminGraphQLAPIV1Client<AuthToken> {
+  return new ikasAdminGraphQLAPIV1Client<AuthToken>({
+    graphApiUrl: IKAS_ADMIN_GRAPH_API_V1_URL,
     accessToken: token.accessToken,
     tokenData: token,
     onCheckToken: () => onCheckToken(token),

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
-import { getIkas } from '@/helpers/api-helpers';
+import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
 import { withCors, corsOptions } from '@/lib/cors';
 import { StorefrontWidgetUrlError } from '@/lib/storefront-widget-url';
 import { ensureStorefrontScripts } from '@/lib/storefront-scripts';
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     if (!authToken) return NextResponse.json({ error: 'Auth token bulunamadı' }, { status: 404 });
 
     const ikasClient = getIkas(authToken);
-    const summary = await ensureStorefrontScripts(ikasClient, user.merchantId, 'manual');
+    const summary = await ensureStorefrontScripts(ikasClient, user.merchantId, 'manual', { scriptListClient: getIkasV1(authToken) });
 
     return withCors(NextResponse.json({ data: summary }));
   } catch (error: any) {

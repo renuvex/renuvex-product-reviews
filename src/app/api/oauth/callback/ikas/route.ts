@@ -3,7 +3,7 @@ import { getSession, setSession } from '@/lib/session';
 import { validateRequest } from '@/lib/validation';
 import { OAuthAPI } from '@ikas/admin-api-client';
 import moment from 'moment';
-import { getIkas, getRedirectUri } from '@/helpers/api-helpers';
+import { getIkas, getIkasV1, getRedirectUri } from '@/helpers/api-helpers';
 import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { AuthToken } from '@/models/auth-token';
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
 
     // Auto-inject widget script into all storefronts using non-destructive upsert.
     try {
-      await ensureStorefrontScripts(ikas, merchantId, 'install');
+      await ensureStorefrontScripts(ikas, merchantId, 'install', { scriptListClient: getIkasV1(token) });
     } catch (scriptError) {
       console.error('Widget script injection failed:', scriptError);
     }
