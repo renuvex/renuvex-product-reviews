@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-23 - hardening | Split theme sync from script injection
+- Summary: Added a lightweight storefront theme sync lifecycle with stable/pending state, dashboard/settings triggers, and batched cron verification. Public settings keep serving the stable adapter while a newly observed theme is pending verification.
+- Reason: ikas has no confirmed theme-publish webhook/event, and dashboard load was previously calling full script injection just to refresh theme metadata. The new path avoids unnecessary StorefrontJSScript reconciliation and handles ikas theme "preparing" delay with delayed confirmation.
+- Key source changes: `src/lib/storefront-theme.ts`, `src/lib/storefront-theme-sync.ts`, `/api/admin/storefront-theme/sync`, `/api/admin/daily-maintenance`, dashboard initialization, and settings save post-response sync.
+- Verification: `pnpm exec tsc --noEmit`, `pnpm lint`.
+- Updated wiki: [[Ikas_Theme_Limitations]], [[Backend_API_Map]], [[Config_And_Env_Map]], [[Database_Map]], [[Database_Schema]], [[Deployment_Notes]], [[System_Architecture]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-23 - fix | Prefer stable theme ids for adapter matching
 - Summary: Hardened active theme adapter matching so merchant-editable theme names cannot misclassify a storefront. Known adapters now match by stable ikas `themeId` first; theme-name matching is only a fallback when `themeId` is unavailable.
 - Reason: Merchants can rename themes in the ikas admin panel. A renamed Kombos/IZO theme should not become Ozy just because the display name contains "Ozy", and a renamed Ozy theme should still resolve to the Ozy adapter by id.

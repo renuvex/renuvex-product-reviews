@@ -33,8 +33,7 @@ export default function DashboardPage() {
 
       if (fetchedToken) {
         await fetchStoreName(fetchedToken);
-        // Aktif temaya script inject et — sessizce, hata olsa bile devam et
-        ApiRequests.ikas.injectScripts(fetchedToken).catch(() => {});
+        ApiRequests.ikas.syncStorefrontTheme(fetchedToken, 'dashboard_open').catch(() => {});
       }
     } catch (error) {
       console.error('Error initializing dashboard:', error);
@@ -43,7 +42,6 @@ export default function DashboardPage() {
 
   // Close the loader shown by ikas platform when opening the iframe
   useEffect(() => {
-    // Import helper inline if needed or at the top
     const { AppBridgeHelper } = require('@ikas/app-helpers');
     AppBridgeHelper.closeLoader();
   }, []);

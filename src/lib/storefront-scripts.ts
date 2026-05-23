@@ -1,6 +1,7 @@
 import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
 import { prisma } from '@/lib/prisma';
-import { resolveStorefrontThemeMetadata } from '@/lib/storefront-theme';
+import { Prisma } from '@prisma/client';
+import { buildStorefrontThemeState, resolveStorefrontThemeMetadata } from '@/lib/storefront-theme';
 import { buildStorefrontWidgetScript, STOREFRONT_WIDGET_APP_MARKER } from '@/lib/storefront-widget-url';
 import { StorefrontJSScriptContentTypeEnum, type ikasAdminGraphQLAPIClient } from '@/lib/ikas-client/generated/graphql';
 import type { ikasAdminGraphQLAPIClient as ikasAdminGraphQLAPIV1Client } from '@/lib/ikas-client/generated/v1-graphql';
@@ -221,6 +222,12 @@ async function createStorefrontScript(ikas: IkasClient, storefrontId: string, sc
   });
 }
 
+function themeSyncReasonForMode(mode: StorefrontScriptMode) {
+  if (mode === 'install') return 'install' as const;
+  if (mode === 'manual') return 'manual' as const;
+  return 'cron' as const;
+}
+
 export async function ensureStorefrontScripts(
   ikas: IkasClient,
   storeId: string,
@@ -229,7 +236,6 @@ export async function ensureStorefrontScripts(
 ): Promise<StorefrontScriptSummary> {
   const storefrontResponse = await ikas.queries.listStorefront();
   const storefronts = storefrontResponse.data?.listStorefront ?? [];
-  const storefrontTheme = resolveStorefrontThemeMetadata(storefronts);
 
   if (!storefrontResponse.isSuccess || storefronts.length === 0) {
     throw new Error('Storefront list could not be fetched');
@@ -244,6 +250,9 @@ export async function ensureStorefrontScripts(
   const hasNoSavedScripts = Object.keys(existingScripts).length === 0;
   const updatedScripts: Record<string, string> = { ...existingScripts };
   const scriptContent = buildStorefrontWidgetScript(storeId);
+  const storefrontTheme = buildStorefrontThemeState(settings.storefrontTheme, resolveStorefrontThemeMetadata(storefronts), {
+    reason: themeSyncReasonForMode(mode),
+  });
 
   const results = await Promise.all(
     storefronts.map(async (storefront) => {
@@ -323,7 +332,7 @@ export async function ensureStorefrontScripts(
     where: { storeId },
     data: {
       storefrontScripts: updatedScripts,
-      storefrontTheme,
+      storefrontTheme: storefrontTheme as unknown as Prisma.InputJsonValue,
     },
   });
 

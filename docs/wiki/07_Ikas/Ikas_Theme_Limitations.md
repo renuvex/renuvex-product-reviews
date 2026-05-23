@@ -17,6 +17,8 @@ related:
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/storefront-theme.ts"
+  - "src/lib/storefront-theme-sync.ts"
+  - "src/app/api/admin/storefront-theme/sync/route.ts"
   - "src/app/api/public/settings/route.ts"
   - "src/widget/themes/"
   - "src/widget/core/settings.js"
@@ -46,7 +48,16 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - Schema verification on 2026-05-23 confirmed `isMainTheme` is on `StorefrontTheme`, not directly on `Storefront`. The current query requests `mainStorefrontThemeId` plus `themes { id name themeId themeVersionId isMainTheme deleted }`.
 - This is an Admin/API-side signal, not a storefront browser global. The storefront widget cannot safely read it by itself without backend/public-settings plumbing.
 - The app stores non-sensitive resolved metadata in `StoreSettings.storefrontTheme`, then exposes only `runtime.themeAdapterKey/source` from public settings. Adapter selection uses stable ikas `themeId` first because merchant-facing theme names are editable. Ozy maps by known theme id; unknown active theme ids use the generic adapter; no active theme signal falls back to Ozy for backwards compatibility.
+- `StoreSettings.storefrontTheme` now uses a v2 JSON state: `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`. Public settings read the stable theme while a newly observed theme is pending.
 - This helps choose an adapter automatically, but it does not provide stable DOM anchors for product title, product card, or review block placement.
+
+## Theme Sync Lifecycle
+- Install and manual script repair still call the script lifecycle, and that path also updates theme metadata using the same `listStorefront` response.
+- Admin dashboard open calls `POST /api/admin/storefront-theme/sync`, which only reads `listStorefront` and updates theme metadata. It does not create or update StorefrontJSScript records.
+- Settings save schedules the same lightweight sync with Next.js `after()`, so widget setting writes are not blocked by ikas Admin API latency.
+- When a sync observes a different active `themeId` from the current stable state, it writes the new metadata as `pending_verification` and keeps the previous stable adapter in public settings.
+- Cron verifies pending themes after the delay window. If the same pending theme is still active, it promotes it to stable; if ikas reports the old theme again, pending is cleared.
+- The public storefront widget never calls ikas Admin APIs. Theme detection stays server-side to avoid exposing tokens, storefront latency, and rate-limit risk.
 
 ## Theme Integration Points Today
 - [src/widget/themes/ozy/](src/widget/themes/ozy/) - selectors and styles for the default theme.
@@ -73,6 +84,8 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 ## Related Source Files
 - [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts)
 - [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts)
+- [src/lib/storefront-theme-sync.ts](src/lib/storefront-theme-sync.ts)
+- [src/app/api/admin/storefront-theme/sync/route.ts](src/app/api/admin/storefront-theme/sync/route.ts)
 - [src/widget/themes/](src/widget/themes/)
 - [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js)
 - [src/widget/product-widget/title-finder.js](src/widget/product-widget/title-finder.js)

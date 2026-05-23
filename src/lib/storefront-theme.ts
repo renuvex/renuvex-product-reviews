@@ -1,6 +1,8 @@
 export type ThemeAdapterKey = 'ozy' | 'generic';
 export type ThemeAdapterSource = 'auto' | 'generic_unknown' | 'legacy_fallback';
 export type ThemeAdapterMatchedBy = 'theme_id' | 'theme_name_fallback' | 'legacy_fallback' | 'none';
+export type StorefrontThemeSyncReason = 'install' | 'manual' | 'dashboard_open' | 'settings_save' | 'cron' | 'verification';
+export type StorefrontThemeSyncStatus = 'stable' | 'pending_verification';
 
 export type StorefrontThemeMetadata = {
   activeStorefrontId: string | null;
@@ -16,9 +18,28 @@ export type StorefrontThemeMetadata = {
   detectedAt: string;
 };
 
+export type StorefrontThemeState = {
+  schemaVersion: 2;
+  syncStatus: StorefrontThemeSyncStatus;
+  stable: StorefrontThemeMetadata | null;
+  pending: StorefrontThemeMetadata | null;
+  lastCheckedAt: string;
+  lastChangedAt: string | null;
+  verificationDueAt: string | null;
+  verifiedAt: string | null;
+  reason: StorefrontThemeSyncReason;
+};
+
 export type PublicThemeRuntime = {
   themeAdapterKey: ThemeAdapterKey;
   themeAdapterSource: ThemeAdapterSource;
+};
+
+export type BuildStorefrontThemeStateOptions = {
+  now?: Date;
+  reason: StorefrontThemeSyncReason;
+  verificationDelayMs?: number;
+  promotePending?: boolean;
 };
 
 type StorefrontThemeLike = {
@@ -46,6 +67,8 @@ const FALLBACK_RUNTIME: PublicThemeRuntime = {
   themeAdapterKey: 'ozy',
   themeAdapterSource: 'legacy_fallback',
 };
+
+const DEFAULT_VERIFICATION_DELAY_MS = 5 * 60 * 1000;
 
 const THEME_ADAPTER_BY_THEME_ID: Record<string, ThemeAdapterKey> = {
   // ikas Ozy base theme id. Theme display names are merchant-editable; do not
@@ -128,10 +151,214 @@ export function resolveStorefrontThemeMetadata(storefronts: StorefrontLike[], de
   };
 }
 
-export function buildPublicThemeRuntime(value: unknown): PublicThemeRuntime {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return FALLBACK_RUNTIME;
+function isThemeAdapterKey(value: unknown): value is ThemeAdapterKey {
+  return value === 'ozy' || value === 'generic';
+}
 
-  const metadata = value as Partial<StorefrontThemeMetadata>;
+function isThemeAdapterSource(value: unknown): value is ThemeAdapterSource {
+  return value === 'auto' || value === 'generic_unknown' || value === 'legacy_fallback';
+}
+
+function isThemeAdapterMatchedBy(value: unknown): value is ThemeAdapterMatchedBy {
+  return value === 'theme_id' || value === 'theme_name_fallback' || value === 'legacy_fallback' || value === 'none';
+}
+
+function isStorefrontThemeMetadata(value: unknown): value is StorefrontThemeMetadata {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const candidate = value as Partial<StorefrontThemeMetadata>;
+  return isThemeAdapterKey(candidate.themeAdapterKey) && isThemeAdapterSource(candidate.adapterSource);
+}
+
+function coerceStorefrontThemeMetadata(value: unknown): StorefrontThemeMetadata | null {
+  if (!isStorefrontThemeMetadata(value)) return null;
+  return {
+    activeStorefrontId: cleanString(value.activeStorefrontId),
+    activeStorefrontName: cleanString(value.activeStorefrontName),
+    activeStorefrontThemeId: cleanString(value.activeStorefrontThemeId),
+    activeThemeId: cleanString(value.activeThemeId),
+    activeThemeVersionId: cleanString(value.activeThemeVersionId),
+    activeThemeName: cleanString(value.activeThemeName),
+    mainStorefrontThemeId: cleanString(value.mainStorefrontThemeId),
+    themeAdapterKey: value.themeAdapterKey,
+    adapterSource: value.adapterSource,
+    adapterMatchedBy: isThemeAdapterMatchedBy(value.adapterMatchedBy) ? value.adapterMatchedBy : 'none',
+    detectedAt: cleanString(value.detectedAt) || new Date(0).toISOString(),
+  };
+}
+
+function isStorefrontThemeState(value: unknown): value is StorefrontThemeState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const candidate = value as Partial<StorefrontThemeState>;
+  return candidate.schemaVersion === 2 && (candidate.syncStatus === 'stable' || candidate.syncStatus === 'pending_verification');
+}
+
+export function parseStorefrontThemeState(value: unknown): StorefrontThemeState | null {
+  if (isStorefrontThemeState(value)) {
+    const stable = coerceStorefrontThemeMetadata(value.stable);
+    const pending = coerceStorefrontThemeMetadata(value.pending);
+
+    return {
+      schemaVersion: 2,
+      syncStatus: value.syncStatus,
+      stable,
+      pending,
+      lastCheckedAt: cleanString(value.lastCheckedAt) || stable?.detectedAt || pending?.detectedAt || new Date(0).toISOString(),
+      lastChangedAt: cleanString(value.lastChangedAt),
+      verificationDueAt: cleanString(value.verificationDueAt),
+      verifiedAt: cleanString(value.verifiedAt),
+      reason: isStorefrontThemeSyncReason(value.reason) ? value.reason : 'cron',
+    };
+  }
+
+  const legacyMetadata = coerceStorefrontThemeMetadata(value);
+  if (!legacyMetadata) return null;
+
+  return {
+    schemaVersion: 2,
+    syncStatus: 'stable',
+    stable: legacyMetadata,
+    pending: null,
+    lastCheckedAt: legacyMetadata.detectedAt,
+    lastChangedAt: legacyMetadata.detectedAt,
+    verificationDueAt: null,
+    verifiedAt: legacyMetadata.detectedAt,
+    reason: 'cron',
+  };
+}
+
+function isStorefrontThemeSyncReason(value: unknown): value is StorefrontThemeSyncReason {
+  return value === 'install' || value === 'manual' || value === 'dashboard_open' || value === 'settings_save' || value === 'cron' || value === 'verification';
+}
+
+function metadataIdentity(metadata: StorefrontThemeMetadata | null) {
+  if (!metadata) return '';
+  return [
+    metadata.activeStorefrontId,
+    metadata.activeStorefrontThemeId,
+    metadata.activeThemeId,
+    metadata.activeThemeVersionId,
+    metadata.mainStorefrontThemeId,
+    metadata.themeAdapterKey,
+    metadata.adapterSource,
+    metadata.adapterMatchedBy,
+  ]
+    .map((value) => value || '')
+    .join('|');
+}
+
+export function isSameStorefrontThemeIdentity(a: StorefrontThemeMetadata | null, b: StorefrontThemeMetadata | null) {
+  return metadataIdentity(a) === metadataIdentity(b);
+}
+
+function stateIdentity(state: StorefrontThemeState | null) {
+  if (!state) return '';
+  return [
+    state.schemaVersion,
+    state.syncStatus,
+    metadataIdentity(state.stable),
+    metadataIdentity(state.pending),
+    state.lastChangedAt || '',
+    state.verificationDueAt || '',
+    state.verifiedAt || '',
+  ].join('||');
+}
+
+export function hasStorefrontThemeStateChanged(previousValue: unknown, nextState: StorefrontThemeState) {
+  if (previousValue && !isStorefrontThemeState(previousValue)) return true;
+  return stateIdentity(parseStorefrontThemeState(previousValue)) !== stateIdentity(nextState);
+}
+
+export function getPublicStorefrontThemeMetadata(value: unknown): StorefrontThemeMetadata | null {
+  const state = parseStorefrontThemeState(value);
+  return state?.stable || state?.pending || null;
+}
+
+export function buildStorefrontThemeState(
+  previousValue: unknown,
+  observedMetadata: StorefrontThemeMetadata,
+  options: BuildStorefrontThemeStateOptions,
+): StorefrontThemeState {
+  const now = options.now || new Date();
+  const nowIso = now.toISOString();
+  const previousState = parseStorefrontThemeState(previousValue);
+  const previousStable = previousState?.stable ?? null;
+  const previousPending = previousState?.pending ?? null;
+  const verificationDelayMs = options.verificationDelayMs ?? DEFAULT_VERIFICATION_DELAY_MS;
+  const verificationDueAt = new Date(now.getTime() + verificationDelayMs).toISOString();
+  const observed = { ...observedMetadata, detectedAt: nowIso };
+
+  if (!previousStable) {
+    return {
+      schemaVersion: 2,
+      syncStatus: 'stable',
+      stable: observed,
+      pending: null,
+      lastCheckedAt: nowIso,
+      lastChangedAt: nowIso,
+      verificationDueAt: null,
+      verifiedAt: nowIso,
+      reason: options.reason,
+    };
+  }
+
+  if (isSameStorefrontThemeIdentity(previousStable, observed)) {
+    return {
+      schemaVersion: 2,
+      syncStatus: 'stable',
+      stable: { ...previousStable, ...observed },
+      pending: null,
+      lastCheckedAt: nowIso,
+      lastChangedAt: previousState?.lastChangedAt || previousStable.detectedAt,
+      verificationDueAt: null,
+      verifiedAt: previousState?.verifiedAt || nowIso,
+      reason: options.reason,
+    };
+  }
+
+  const pendingStartedAt = previousState?.lastChangedAt || nowIso;
+  const pendingDueAt = previousState?.verificationDueAt || verificationDueAt;
+  const pendingDueTime = Date.parse(pendingDueAt);
+  const pendingIsDue = Number.isFinite(pendingDueTime) && pendingDueTime <= now.getTime();
+  const observedMatchesPreviousPending = isSameStorefrontThemeIdentity(previousPending, observed);
+
+  if (observedMatchesPreviousPending && (options.promotePending || pendingIsDue)) {
+    return {
+      schemaVersion: 2,
+      syncStatus: 'stable',
+      stable: observed,
+      pending: null,
+      lastCheckedAt: nowIso,
+      lastChangedAt: pendingStartedAt,
+      verificationDueAt: null,
+      verifiedAt: nowIso,
+      reason: options.reason,
+    };
+  }
+
+  return {
+    schemaVersion: 2,
+    syncStatus: 'pending_verification',
+    stable: previousStable,
+    pending: observed,
+    lastCheckedAt: nowIso,
+    lastChangedAt: observedMatchesPreviousPending ? pendingStartedAt : nowIso,
+    verificationDueAt: observedMatchesPreviousPending ? pendingDueAt : verificationDueAt,
+    verifiedAt: previousState?.verifiedAt || null,
+    reason: options.reason,
+  };
+}
+
+export function isPendingStorefrontThemeDue(value: unknown, now = new Date()) {
+  const state = parseStorefrontThemeState(value);
+  if (state?.syncStatus !== 'pending_verification' || !state.verificationDueAt) return false;
+  const dueTime = Date.parse(state.verificationDueAt);
+  return Number.isFinite(dueTime) && dueTime <= now.getTime();
+}
+
+export function buildPublicThemeRuntime(value: unknown): PublicThemeRuntime {
+  const metadata = getPublicStorefrontThemeMetadata(value);
+  if (!metadata) return FALLBACK_RUNTIME;
+
   const themeAdapterKey: ThemeAdapterKey = metadata.themeAdapterKey === 'generic' ? 'generic' : 'ozy';
   const themeAdapterSource: ThemeAdapterSource =
     metadata.adapterSource === 'auto' || metadata.adapterSource === 'generic_unknown' ? metadata.adapterSource : 'legacy_fallback';

@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { getWidgetDefaults, sanitizeSettings, validateSettings } from '@/lib/widget-settings';
+import { syncStorefrontThemeForToken } from '@/lib/storefront-theme-sync';
+import { AuthTokenManager } from '@/models/auth-token/manager';
 
 /**
  * GET /api/admin/settings
@@ -63,6 +65,17 @@ export async function PUT(request: Request) {
       where: { storeId_widgetId: { storeId: user.merchantId, widgetId } },
       update: { settings: jsonSettings },
       create: { storeId: user.merchantId, widgetId, settings: jsonSettings },
+    });
+
+    after(async () => {
+      try {
+        const authToken = await AuthTokenManager.get(user.authorizedAppId);
+        if (authToken) {
+          await syncStorefrontThemeForToken(authToken, { reason: 'settings_save' });
+        }
+      } catch (error) {
+        console.warn('[settings] storefront theme sync failed:', error);
+      }
     });
 
     return NextResponse.json({ data: updated });

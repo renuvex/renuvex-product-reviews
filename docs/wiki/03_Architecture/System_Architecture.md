@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-23
 tags:
   - architecture
   - system
@@ -39,7 +39,7 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three runtimes: the *
 │   /api/public/*   CORS-open   ◄─── widget.js (storefronts)      │
 │   /api/preview/*  iframe data                                    │
 │                                                                 │
-│   Cron jobs    ──►  daily maintenance + monthly cleanup          │
+│   Cron jobs    ──►  theme sync + daily/monthly maintenance       │
 └──────────────────────┬───────────────┬──────────────┬───────────┘
                        │               │              │
                        ▼               ▼              ▼
@@ -65,7 +65,7 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three runtimes: the *
 1. Merchant clicks "install" in ikas App Store (or visits `?storeName=` on the deploy URL).
 2. `GET /api/oauth/authorize/ikas` sets CSRF state and redirects to ikas authorize URL.
 3. ikas redirects back to `GET /api/oauth/callback/ikas?code&signature&state`.
-4. Server validates HMAC signature → exchanges code → fetches merchant + authorized app → upserts `AuthToken` and `StoreSettings` → **for each storefront, creates or updates a `StorefrontJSScript` pointing to `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>`** → issues 4h JWT → redirects to `/callback` (client) → ikas Admin.
+4. Server validates HMAC signature → exchanges code → fetches merchant + authorized app → upserts `AuthToken` and `StoreSettings` → **for each storefront, creates or updates a `StorefrontJSScript` pointing to `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>` and records active theme metadata** → issues 4h JWT → redirects to `/callback` (client) → ikas Admin.
 
 See [[Auth_And_Installation_Flow]] for full trace.
 
@@ -85,12 +85,19 @@ See [[Auth_And_Installation_Flow]] for full trace.
 1. Admin UI calls `/api/admin/reviews?status=pending&page=1`. JWT validated, rows scoped to `merchantId`.
 2. Merchant approves / rejects / replies → `PUT /api/admin/reviews`. Approved rows immediately appear on storefront (after edge cache TTL).
 
+### Theme sync
+1. Install and manual script repair update scripts and theme metadata from the same ikas `listStorefront` read.
+2. Dashboard open and settings save call only lightweight theme sync; they do not reconcile StorefrontJSScript records.
+3. If a different active `themeId` is observed, it is stored as pending while public settings keep serving the previous stable adapter.
+4. The 5-minute maintenance cron verifies pending themes and promotes them to stable only when the same `themeId` is still active.
+
 ## Cross-cutting concerns
 
 - **Auth boundary** at `getUserFromRequest`. Public APIs are CORS-open and rate-limited by IP.
 - **Rate limit / abuse** via Upstash Redis (incr+expire pattern). Detail in [[Security_And_Rate_Limits]].
 - **Caching** via Vercel edge. Detail in [[Caching_And_Performance]].
 - **Image lifecycle**: client uploads directly to Cloudinary; URLs stored in `Review.images` (TEXT JSON); daily maintenance expires abandoned pending uploads and monthly fallback scans Cloudinary orphans not referenced by any Review.
+- **Theme lifecycle**: private/admin-triggered sync plus delayed cron verification. The storefront browser never calls ikas Admin APIs.
 
 ## Deployment topology
 - Vercel project. Region `fra1`. Postgres on Supabase. Redis on Upstash. Cloudinary for images. ikas-side: registered app pointing OAuth callback to `<DEPLOY_URL>/api/oauth/callback/ikas`.

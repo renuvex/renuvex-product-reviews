@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-23
 tags:
   - deployment
   - vercel
@@ -17,11 +17,11 @@ related:
 # Deployment Notes
 
 ## Summary
-Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. Cloudinary for images. Two scheduled jobs: daily maintenance and monthly Cloudinary fallback cleanup. Build runs `prisma generate && prisma migrate deploy && next build`.
+Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. Cloudinary for images. Two scheduled jobs: frequent maintenance and monthly Cloudinary fallback cleanup. Build runs `prisma generate && prisma migrate deploy && next build`.
 
 ## Vercel
 - **Region**: `["fra1"]` ([vercel.json](vercel.json)). Reasonable proximity to ikas/Supabase EU regions.
-- **Cron**: `/api/admin/daily-maintenance` daily 03:00 UTC; `/api/admin/cleanup-images` monthly on day 1 at 04:00 UTC.
+- **Cron**: `/api/admin/daily-maintenance` every 5 minutes for lightweight storefront theme sync/verification. The route only runs heavier pending-upload cleanup and storefront script reconciliation during the 03:00 UTC daily window or with `?full=1`. `/api/admin/cleanup-images` remains monthly on day 1 at 04:00 UTC.
 - **Build command**: `pnpm build` → `prisma generate && prisma migrate deploy && next build --webpack`.
 - **Why webpack**: build script forces `--webpack` (Turbopack opt-out, presumably for compatibility — verify when Next ships stable Turbopack production builds).
 
@@ -71,7 +71,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 ## Notes
 - **Don't bypass the widget bundle commit step.** If you forget to commit `public/widget.js`, deploys ship the old widget. CI does not regenerate.
 - Migrations run on **every** deploy. Avoid migrations that can't safely run during traffic (long-running locks). For risky migrations, consider an out-of-band deploy.
-- Cron routes require `CRON_SECRET`; without it they return 500. Set it in Vercel env before deploy.
+- Cron routes require `CRON_SECRET`; without it they return 500. Set it in Vercel env before deploy. The 5-minute theme sync cron assumes a Vercel plan that supports sub-daily cron frequency.
 - Keep `NEXT_PUBLIC_DEPLOY_URL` and the app's URL in sync. Mismatch breaks OAuth (`getRedirectUri` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when `localhost` config meets non-localhost host, but it's a fallback).
 - Keep `STOREFRONT_WIDGET_BASE_URL` in sync with the public widget host. The helper trims accidental whitespace and rejects localhost/private/non-HTTPS URLs by default so local development cannot overwrite real storefront script records with `http://localhost:3000/widget.js`.
 
@@ -90,4 +90,5 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-23: Changed `/api/admin/daily-maintenance` from one daily run to a 5-minute lightweight theme sync/verification cron; heavy cleanup/script reconciliation remains gated to the 03:00 UTC daily window.
 - 2026-05-11: Linked [[Sentry_Operations]] after adding Sentry CLI/MCP setup notes.

@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-18
+updated: 2026-05-23
 tags:
   - config
   - env
@@ -61,6 +61,10 @@ related:
 |---|---|
 | `CRON_SECRET` | Bearer token required by cron routes (`/api/admin/daily-maintenance`, `/api/admin/cleanup-images`, and explicit maintenance endpoints). **Set in Vercel env** — cron routes refuse to run without it. |
 
+| `STOREFRONT_THEME_CRON_LIMIT` | Optional max merchants checked by each lightweight theme sync cron run. Default: `100`. |
+| `STOREFRONT_THEME_PENDING_SCAN_LIMIT` | Optional max pending theme rows scanned before due verification. Default: `500`. |
+| `STOREFRONT_THEME_CRON_CONCURRENCY` | Optional concurrency for ikas `listStorefront` calls in theme maintenance. Default: `5`. |
+
 ### Sentry
 | Var | Purpose | Where |
 |---|---|---|
@@ -78,7 +82,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 |---|---|
 | [ikas.config.json](ikas.config.json) | ikas dev tooling: port (3000), oauth redirect path (`/api/oauth/callback/ikas`), run command |
 | [next.config.js](next.config.js) | Next.js config |
-| [vercel.json](vercel.json) | `regions: ["fra1"]`, daily maintenance cron, monthly fallback cleanup cron, widget static asset cache headers |
+| [vercel.json](vercel.json) | `regions: ["fra1"]`, 5-minute lightweight theme maintenance cron, monthly fallback cleanup cron, widget static asset cache headers |
 | [components.json](components.json) | shadcn/ui CLI/MCP config |
 | [tsconfig.json](tsconfig.json) | TS config (paths: `@/*` → `src/*`) |
 | [eslint.config.mjs](eslint.config.mjs) | ESLint flat config |

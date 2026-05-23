@@ -3,7 +3,7 @@ type: api
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-18
+updated: 2026-05-23
 tags:
   - api
   - routes
@@ -35,10 +35,11 @@ Three groups of API routes:
 | PUT `/api/admin/reviews` `{ id, status?, merchantReply? }` | same | Update status / reply |
 | DELETE `/api/admin/reviews?id=` | same | Hard delete |
 | GET `/api/admin/settings` | [route.ts](src/app/api/admin/settings/route.ts) | All widget settings as map (defaults merged) |
-| PUT `/api/admin/settings` `{ widgetId, settings }` | same | Validate + sanitize + upsert into `WidgetSettings` |
+| PUT `/api/admin/settings` `{ widgetId, settings }` | same | Validate + sanitize + upsert into `WidgetSettings`; schedules lightweight storefront theme sync after the response |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
+| POST `/api/admin/storefront-theme/sync` | [route.ts](src/app/api/admin/storefront-theme/sync/route.ts) | Lightweight active theme sync from ikas `listStorefront`; no script create/update |
 | POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and backfill `ProductSnapshot` from ikas `listProduct` |
-| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Daily Vercel cron: pending upload cleanup + storefront script reconciliation |
+| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Vercel cron: frequent batch storefront theme sync/verification; daily window also runs pending upload cleanup + storefront script reconciliation |
 | GET `/api/admin/reconcile-storefront-scripts` (Bearer CRON) | [route.ts](src/app/api/admin/reconcile-storefront-scripts/route.ts) | Explicit non-destructive storefront script reconciliation for existing merchants |
 | GET `/api/admin/cleanup-pending-uploads` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts) | Explicit PendingReviewImage cleanup using the same helper as daily maintenance |
 | GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Monthly Cloudinary `review_images/*` fallback scan → delete orphans |
@@ -121,6 +122,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-23: Added `/api/admin/storefront-theme/sync` and split lightweight theme sync from StorefrontJSScript repair. `/api/admin/daily-maintenance` now runs theme verification in small batches and reserves upload/script maintenance for the daily UTC window.
 - 2026-05-18: D3 scoped Cloudinary review-image uploads by tenant. `/api/public/upload/sign` now signs only `review_images/stores/<storeId>`, `/api/public/upload/register` requires `storeId`, and review image reads/writes reject cross-tenant Cloudinary paths.
 - 2026-05-18: Added shared Upstash fixed-window read rate limit to `/api/public/ratings` and `/api/public/ratings-by-slug` (300/min/IP) to protect rating badge APIs from query-variant abuse.
 - 2026-05-18: Hardened `/api/public/reviews`: POST now verifies `(storeId, productId)` against installed store + `ProductSnapshot`, and GET exposes only a public review field whitelist.

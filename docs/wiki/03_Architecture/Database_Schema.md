@@ -85,11 +85,11 @@ Per-merchant config. One row per merchant, created on OAuth callback.
 | `storeId` | String `@unique` | == merchantId |
 | `createdAt`, `updatedAt` | DateTime | |
 | `storefrontScripts` | Json? | Map: `{ [storefrontId]: ikasScriptId }` |
-| `storefrontTheme` | Json? | Non-sensitive active storefront/theme metadata for runtime adapter selection |
+| `storefrontTheme` | Json? | Non-sensitive active storefront/theme sync state for runtime adapter selection |
 
 The `storefrontScripts` map is an idempotency cache for re-installs and re-syncs. When v1 `listStorefrontJSScript` is available, the remote ikas script record is treated as source of truth and the map can be adopted/refreshed.
 
-The `storefrontTheme` JSON is resolved from Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback during script reconciliation. Public settings expose only `runtime.themeAdapterKey/source`, not the full theme metadata.
+The `storefrontTheme` JSON is resolved from Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. Current shape is v2 state: `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`. Public settings expose only the stable `runtime.themeAdapterKey/source`, not the full theme metadata. Legacy flat metadata is still accepted by the runtime parser.
 
 ### `WidgetSettings`
 Per-widget JSON config.
@@ -176,6 +176,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-05-23: Upgraded `StoreSettings.storefrontTheme` app-layer shape to v2 stable/pending sync state; no DB migration needed because the column remains nullable JSON.
 - 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.
 - 2026-05-18: Added nullable `PendingReviewImage.storeId` plus `[storeId, createdAt]` for D3 tenant-scoped Cloudinary uploads. New writes always set `storeId`; nullable exists for safe migration over old rows.
 - 2026-05-18: Removed redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]`; retained `[storeId, productId, status]`, `[storeId, status]`, and `[storeId, slug, status]`.
