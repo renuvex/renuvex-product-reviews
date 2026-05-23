@@ -64,12 +64,13 @@ source_files:
 - 2026-05-20: [[ADR_0017_Badge_Architecture]] shipped. Class-first DOM (`.ikr-rating-badge`, `data-ikr-*`) for all stores; sibling-of-title mount remains dev-store gated. Sizing uses `.ikr-rating-badge` CSS vars from `ensureBadgeTokens`; schema adds mobile/alignment/count controls.
 - 2026-05-23: Storefront script records now carry `data-ikr-*` markers, v1 reconciliation reports match/duplicate diagnostics, and badge render paths emit health telemetry plus one-shot self-heal for DOM removal.
 - 2026-05-23: Active theme selection uses Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. `StoreSettings.storefrontTheme` stores non-sensitive metadata; public settings expose only `runtime.themeAdapterKey/source`. Adapter matching uses stable `themeId` first; merchant-editable theme names are diagnostic/fallback only.
-- 2026-05-23: Theme sync is split from script injection. Dashboard/settings now call lightweight `syncStorefrontTheme`; install/manual script repair still updates scripts and theme metadata; cron verifies pending theme changes in batches before promoting them to stable.
+- 2026-05-23: Theme sync is split from script injection. Dashboard/settings now call lightweight `syncStorefrontTheme`; install/manual script repair still updates scripts and theme metadata; the maintenance cron verifies pending theme changes in batches before promoting them to stable.
+- 2026-05-23: Vercel deployment rejected the attempted 5-minute cron because the current cron plan only accepts daily schedules. `vercel.json` is back to a daily 03:00 UTC `/api/admin/daily-maintenance` schedule; true 2-5 minute delayed verification needs Vercel Pro/Enterprise cron or a queue such as QStash.
 
 ## Current Risks / Open Questions
 - Phase 3 follow-ups: verify deploy lifecycle/cache, re-measure widget size, and document disabling native theme reviews.
 - Theme adapter selection now uses Admin API `listStorefront.themes[].isMainTheme`; no runtime DOM mount-point contract exists yet.
-- The 5-minute theme sync cron assumes the Vercel plan supports sub-daily cron frequency; on lower plans, pending verification falls back to the next allowed cron run.
+- Current Vercel cron config is daily-compatible. Pending theme verification can lag until the next maintenance run unless the deploy plan supports sub-daily cron or a delayed queue is added.
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
 
 ## Read Next

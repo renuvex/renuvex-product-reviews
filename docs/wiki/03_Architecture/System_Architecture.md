@@ -89,7 +89,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 1. Install and manual script repair update scripts and theme metadata from the same ikas `listStorefront` read.
 2. Dashboard open and settings save call only lightweight theme sync; they do not reconcile StorefrontJSScript records.
 3. If a different active `themeId` is observed, it is stored as pending while public settings keep serving the previous stable adapter.
-4. The 5-minute maintenance cron verifies pending themes and promotes them to stable only when the same `themeId` is still active.
+4. The maintenance cron verifies pending themes and promotes them to stable only when the same `themeId` is still active. Current Vercel config runs this daily for plan compatibility; sub-daily verification can be enabled later with Pro/Enterprise cron or a delayed queue.
 
 ## Cross-cutting concerns
 
@@ -97,7 +97,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 - **Rate limit / abuse** via Upstash Redis (incr+expire pattern). Detail in [[Security_And_Rate_Limits]].
 - **Caching** via Vercel edge. Detail in [[Caching_And_Performance]].
 - **Image lifecycle**: client uploads directly to Cloudinary; URLs stored in `Review.images` (TEXT JSON); daily maintenance expires abandoned pending uploads and monthly fallback scans Cloudinary orphans not referenced by any Review.
-- **Theme lifecycle**: private/admin-triggered sync plus delayed cron verification. The storefront browser never calls ikas Admin APIs.
+- **Theme lifecycle**: private/admin-triggered sync plus maintenance verification. The storefront browser never calls ikas Admin APIs.
 
 ## Deployment topology
 - Vercel project. Region `fra1`. Postgres on Supabase. Redis on Upstash. Cloudinary for images. ikas-side: registered app pointing OAuth callback to `<DEPLOY_URL>/api/oauth/callback/ikas`.

@@ -82,7 +82,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 |---|---|
 | [ikas.config.json](ikas.config.json) | ikas dev tooling: port (3000), oauth redirect path (`/api/oauth/callback/ikas`), run command |
 | [next.config.js](next.config.js) | Next.js config |
-| [vercel.json](vercel.json) | `regions: ["fra1"]`, 5-minute lightweight theme maintenance cron, monthly fallback cleanup cron, widget static asset cache headers |
+| [vercel.json](vercel.json) | `regions: ["fra1"]`, daily Vercel-compatible maintenance cron, monthly fallback cleanup cron, widget static asset cache headers |
 | [components.json](components.json) | shadcn/ui CLI/MCP config |
 | [tsconfig.json](tsconfig.json) | TS config (paths: `@/*` → `src/*`) |
 | [eslint.config.mjs](eslint.config.mjs) | ESLint flat config |

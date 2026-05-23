@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/admin/daily-maintenance",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/admin/cleanup-images",

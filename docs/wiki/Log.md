@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-23 - fix | Restore Vercel-compatible cron schedule
+- Summary: Changed `/api/admin/daily-maintenance` back to the daily 03:00 UTC Vercel cron schedule after the attempted 5-minute schedule failed deployment on the current Vercel cron plan.
+- Reason: Vercel Hobby cron accepts daily schedules only; sub-daily cron expressions fail deployment before the app code builds. The theme sync lifecycle remains intact, but fast delayed verification now requires Pro/Enterprise cron or an external delayed queue such as QStash.
+- Key source changes: `vercel.json`; wiki deployment/API/theme notes.
+- Verification: `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, `node scripts/wiki-audit.mjs --changed-source-check` (warnings only).
+- Updated wiki: [[Hot_Context]], [[Deployment_Notes]], [[Backend_API_Map]], [[Config_And_Env_Map]], [[System_Architecture]], [[Ikas_Theme_Limitations]], [[Log]]
+
 ## 2026-05-23 - hardening | Split theme sync from script injection
 - Summary: Added a lightweight storefront theme sync lifecycle with stable/pending state, dashboard/settings triggers, and batched cron verification. Public settings keep serving the stable adapter while a newly observed theme is pending verification.
 - Reason: ikas has no confirmed theme-publish webhook/event, and dashboard load was previously calling full script injection just to refresh theme metadata. The new path avoids unnecessary StorefrontJSScript reconciliation and handles ikas theme "preparing" delay with delayed confirmation.
