@@ -3,7 +3,7 @@ type: database
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-18
+updated: 2026-05-23
 tags:
   - database
   - prisma
@@ -85,8 +85,11 @@ Per-merchant config. One row per merchant, created on OAuth callback.
 | `storeId` | String `@unique` | == merchantId |
 | `createdAt`, `updatedAt` | DateTime | |
 | `storefrontScripts` | Json? | Map: `{ [storefrontId]: ikasScriptId }` |
+| `storefrontTheme` | Json? | Non-sensitive active storefront/theme metadata for runtime adapter selection |
 
 The `storefrontScripts` map is an idempotency cache for re-installs and re-syncs. When v1 `listStorefrontJSScript` is available, the remote ikas script record is treated as source of truth and the map can be adopted/refreshed.
+
+The `storefrontTheme` JSON is resolved from Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback during script reconciliation. Public settings expose only `runtime.themeAdapterKey/source`, not the full theme metadata.
 
 ### `WidgetSettings`
 Per-widget JSON config.
@@ -155,7 +158,7 @@ Lifecycle:
 History documented in [[Database_Map]]. Notable themes: index churn (added → cleaned up), `helpful` feature (added → reverted), color settings churn (recent).
 
 ## Notes
-- **JSON columns** (`settings`, `storefrontScripts`) are not validated at the DB layer. All validation must live in app code. Don't trust their shape after manual DB edits.
+- **JSON columns** (`settings`, `storefrontScripts`, `storefrontTheme`) are not validated at the DB layer. All validation must live in app code. Don't trust their shape after manual DB edits.
 - `Review.images` could be a separate `ReviewImage` table; today it's TEXT JSON for simplicity. Migrate when image features grow (lightbox, ordering, alt text).
 - No soft-delete. `prisma.review.delete` is hard delete.
 
@@ -173,6 +176,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.
 - 2026-05-18: Added nullable `PendingReviewImage.storeId` plus `[storeId, createdAt]` for D3 tenant-scoped Cloudinary uploads. New writes always set `storeId`; nullable exists for safe migration over old rows.
 - 2026-05-18: Removed redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]`; retained `[storeId, productId, status]`, `[storeId, status]`, and `[storeId, slug, status]`.
 - 2026-05-17: Removed unused `ProductSnapshot.deleted` column + `[storeId, slug, deleted]` index — ikas has no product-delete webhook scope, so it was always false. Related: [[ADR_0015_Canonical_Product_Identity]].

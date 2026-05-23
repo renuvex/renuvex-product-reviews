@@ -6,9 +6,10 @@ import { getIconFromSettings } from '../icons/index.js';
 import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
 import { collectProductTargets } from './collect.js';
 import { fetchRatings } from './ratings.js';
-import { clearBadgePlaceholders, injectBadges, reserveBadgeSlots } from './inject.js';
+import { clearBadgePlaceholders, disconnectListingBadgeRemovalObservers, injectBadges, reserveBadgeSlots } from './inject.js';
 
 function cleanupListingBadges() {
+  disconnectListingBadgeRemovalObservers();
   document.querySelectorAll('[data-ikr-listing-badge]').forEach(function(el) { el.remove(); });
   document.querySelectorAll('[data-ikr-badge]').forEach(function(el) { el.removeAttribute('data-ikr-badge'); });
   clearBadgePlaceholders();
@@ -23,10 +24,6 @@ export async function renderListingBadges() {
     var doCleanup = ls.navCleanup;
     if (doCleanup) ls.navCleanup = false;
 
-    var productTargets = collectProductTargets();
-    var slugs = Object.keys(productTargets);
-    if (!slugs.length) { ls.rendered = false; return; }
-    var ratingsPromise = fetchRatings(productTargets).catch(function() { return {}; });
     var response = await fetchSettings();
     if (!response) { ls.rendered = false; return; }
 
@@ -43,6 +40,11 @@ export async function renderListingBadges() {
     // reviewStarColor). Listing rozetleri PDP render.js'e bağlı olmadan kendi
     // yıldız renk değişkenini kurar — soğuk listing girişinde de doğru renk.
     // Dolu + boş yıldız (outline) tek --ikr-review-star-color'dan beslenir.
+    var productTargets = collectProductTargets();
+    var slugs = Object.keys(productTargets);
+    if (!slugs.length) { ls.rendered = false; return; }
+    var ratingsPromise = fetchRatings(productTargets).catch(function() { return {}; });
+
     var reviewsSettings = widgets.reviews || {};
     var iconPair = getIconFromSettings(reviewsSettings);
     var starColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(reviewsSettings.reviewStarColor || '')

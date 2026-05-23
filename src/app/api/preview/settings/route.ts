@@ -27,5 +27,5 @@ export async function GET() {
     },
   };
 
-  return withCors(NextResponse.json({ widgets }));
+  return withCors(NextResponse.json({ widgets, runtime: { themeAdapterKey: 'ozy', themeAdapterSource: 'legacy_fallback' } }));
 }

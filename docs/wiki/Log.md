@@ -3,8 +3,8 @@ type: log
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-22
-last_verified: 2026-05-22
+updated: 2026-05-23
+last_verified: 2026-05-23
 confidence: high
 tags:
   - log
@@ -19,6 +19,24 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-23 - feature | Add active theme adapter metadata
+- Summary: Implemented active theme metadata capture from ikas `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback, persisted it in nullable `StoreSettings.storefrontTheme`, and exposed only `runtime.themeAdapterKey/source` through public settings.
+- Reason: ikas confirmed there is no browser-runtime theme detector. Backend Admin API theme metadata is the cleanest available selector for a theme adapter, while DOM placement still requires Storefront Events plus heuristics.
+- Key source changes: `src/lib/storefront-theme.ts` resolves Ozy vs generic adapter metadata; `src/lib/storefront-scripts.ts` writes it during install/manual/cron reconciliation; `src/widget/core/settings.js` applies it before listing discovery; `src/widget/themes/generic/adapter.js` adds a conservative fallback for unknown themes.
+- Verification: `pnpm codegen`, `pnpm prisma:generate`, `pnpm exec prisma validate`, `pnpm exec tsc --noEmit`, `pnpm build:widget`.
+- Updated wiki: [[Ikas_Theme_Limitations]], [[Ikas_Storefront_Script_Capabilities]], [[Widget_Architecture]], [[Database_Map]], [[Database_Schema]], [[Hot_Context]], [[Log]]
+
+## 2026-05-23 - docs | Record ikas active-theme detection feedback
+- Summary: Added ikas developer feedback that there is no dedicated runtime active-theme detector; schema verification later showed the usable signal is nested `listStorefront.themes[].isMainTheme`, not `Storefront.isMainTheme`.
+- Updated wiki: [[Ikas_Theme_Limitations]], [[Ikas_Storefront_Script_Capabilities]], [[Yotpo_Style_Widget_Modular_Architecture]], [[Hot_Context]]
+
+## 2026-05-23 - hardening | Add storefront script diagnostics and widget conflict telemetry
+- Summary: Strengthened StorefrontJSScript reconciliation with `data-ikr-*` script markers, remote match diagnostics, duplicate reporting, runtime widget health markers, badge visibility probes, and bounded one-shot self-heal for DOM removal.
+- Reason: Third-party storefront apps should not overwrite this app's ikas script record under the normal platform model, but stale/deleted script records and aggressive browser-side DOM/CSS changes need clearer detection and safer recovery without creating duplicate scripts.
+- Key source changes: `src/lib/storefront-widget-url.ts` adds script markers; `src/lib/storefront-scripts.ts` and `src/lib/reconcile-storefront-scripts.ts` return remote diagnostics; `src/widget/core/health.js`, `src/widget/product-widget/rating-badge.js`, and `src/widget/listing-badges/inject.js` add health telemetry and one-shot remount; `scripts/build-widget.mjs` injects a widget version marker.
+- Verification: `pnpm build:widget`, `pnpm exec tsc --noEmit`, and `pnpm lint` passed locally before this log entry. Live ikas/CDN verification is still required after deploy.
+- Updated wiki: [[Hot_Context]], [[Widget_Architecture]], [[Ikas_Widget_Injection_Notes]], [[Ikas_Storefront_Script_Capabilities]], [[Log]]
 
 ## 2026-05-22 - hardening | Reconcile storefront scripts with v1 list adoption
 - Summary: Fixed StorefrontJSScript recovery when ikas returns `error_messages.theme.storefront_sf_script_not_found` for a DB-tracked script id that no longer exists remotely, then added read-only v1 script listing to adopt live remote app scripts before creating new ones.

@@ -92,6 +92,7 @@ function createDefine(runtimePath) {
   return {
     __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
     __IKR_RUNTIME_PATH__: JSON.stringify(runtimePath),
+    __IKR_WIDGET_VERSION__: JSON.stringify(buildTime),
   };
 }
 

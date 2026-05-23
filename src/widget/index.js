@@ -11,12 +11,14 @@ import './core/error-reporter.js';
 import { ensureBaseReset } from './shared/base-reset.js';
 import { attachInputModalityListeners } from './shared/input-modality.js';
 import { PUBLIC_API_KEY } from './core/config.js';
+import { markWidgetLoaded } from './core/health.js';
 import { startWidget, startPreview } from './loader.js';
 
 // Widget-scope base reset + global input modality tracker. İkisi de idempotent
 // ve tek bundle içindeki tüm widget yüzeyleri tarafından miras alınır.
 ensureBaseReset();
 attachInputModalityListeners();
+markWidgetLoaded();
 
 if (window.__ikasPreviewMode === true) {
   startPreview();

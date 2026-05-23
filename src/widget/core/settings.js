@@ -7,6 +7,7 @@
 import { PUBLIC_API_KEY, API_BASE } from './config.js';
 import { cacheGet, cacheSet } from './cache.js';
 import { fetchWithTimeout } from './fetch.js';
+import { setThemeAdapterKey } from '../themes/current-adapter.js';
 
 var SETTINGS_CACHE_KEY = 'ikr_settings_' + PUBLIC_API_KEY;
 var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
@@ -17,6 +18,12 @@ var SETTINGS_404_TTL = 30 * 1000;
 // both call fetchSettings() before either has populated the cache. Sharing the
 // in-flight promise collapses that race into a single network request.
 var inflightSettings = null;
+
+function applyRuntimeSettings(settings) {
+  var runtime = settings && settings.runtime ? settings.runtime : {};
+  setThemeAdapterKey(runtime.themeAdapterKey);
+  return settings;
+}
 
 export function fetchSettings() {
   if (window.__ikasPreviewMode) {
@@ -46,7 +53,7 @@ async function loadPreviewSettings() {
       if (previewData.widgets && previewData.widgets.reviews && Object.keys(settingsOverride).length) {
         previewData.widgets.reviews = Object.assign({}, previewData.widgets.reviews, settingsOverride);
       }
-      return previewData;
+      return applyRuntimeSettings(previewData);
     }
   } catch (_) {}
   return null;
@@ -64,7 +71,7 @@ async function loadSettings() {
           cacheSet(SETTINGS_CACHE_KEY, '');
         } else if (entry.v) {
           var cacheAge = Date.now() - entry.t;
-          if (cacheAge < SETTINGS_CACHE_TTL) return entry.v;
+          if (cacheAge < SETTINGS_CACHE_TTL) return applyRuntimeSettings(entry.v);
           if (cacheAge < SETTINGS_CACHE_STALE_TTL) {
             staleEntry = entry.v;
           } else {
@@ -85,13 +92,13 @@ async function loadSettings() {
       if (res.status === 404) {
         cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), notFound: true }));
       }
-      return staleEntry || null;
+      return staleEntry ? applyRuntimeSettings(staleEntry) : null;
     }
     var settings = await res.json();
     cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: settings }));
-    return settings;
+    return applyRuntimeSettings(settings);
   } catch (err) {
     console.error('[ikr] fetchSettings error:', err);
-    return staleEntry || null;
+    return staleEntry ? applyRuntimeSettings(staleEntry) : null;
   }
 }

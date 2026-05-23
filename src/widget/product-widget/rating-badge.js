@@ -7,6 +7,9 @@ import { partialStarsHTML } from '../core/helpers.js';
 // PR-3: sizing artık CSS variable üzerinden akıyor; ensureBadgeTokens scope'lu
 // `<style>` etiketine yazar, .ikr-rating-badge .ikr-star CSS'i değişkenden okur.
 import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
+import { probeWidgetVisibility, watchOneTimeRemoval } from '../core/health.js';
+
+var ratingBadgeRemovalObserver = null;
 
 // SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği).
 // iconPair tek kaynaktan ("Ürün Yorumları" → reviewIcon) gelir; render.js geçirir.
@@ -15,7 +18,12 @@ function buildStars(rating, iconPair) {
   return partialStarsHTML(rating, iconPair);
 }
 
-export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair) {
+export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, selfHealAttempt) {
+  if (ratingBadgeRemovalObserver) {
+    ratingBadgeRemovalObserver.disconnect();
+    ratingBadgeRemovalObserver = null;
+  }
+
   // Önceki üründen kalan eski badge'i temizle
   var oldBadge = document.getElementById('ikr-rating-badge');
   if (oldBadge) oldBadge.remove();
@@ -100,4 +108,10 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
     window.scrollTo({ top: top, behavior: 'smooth' });
   };
   titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+  probeWidgetVisibility(badge, 'pdp-badge', { productName: productName || '' });
+  if (!selfHealAttempt) {
+    ratingBadgeRemovalObserver = watchOneTimeRemoval(badge, 'pdp-badge', function () {
+      injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, true);
+    }, { productName: productName || '' });
+  }
 }

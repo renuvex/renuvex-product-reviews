@@ -70,6 +70,15 @@ export type ListStorefrontQueryVariables = {}
 export type ListStorefrontQueryData = Array<{
   id: string;
   name: string;
+  mainStorefrontThemeId?: string;
+  themes: Array<{
+  id: string;
+  name: string;
+  themeId?: string;
+  themeVersionId?: string;
+  isMainTheme: boolean;
+  deleted: boolean;
+}>;
 }>
 
 export interface ListStorefrontQuery {
@@ -186,6 +195,15 @@ export class GeneratedQueries {
     listStorefront {
       id
       name
+      mainStorefrontThemeId
+      themes {
+        id
+        name
+        themeId
+        themeVersionId
+        isMainTheme
+        deleted
+      }
     }
   }
 `;

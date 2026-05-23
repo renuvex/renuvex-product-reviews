@@ -3,8 +3,8 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-15
-updated: 2026-05-22
-last_verified: 2026-05-22
+updated: 2026-05-23
+last_verified: 2026-05-23
 confidence: high
 tags:
   - ikas
@@ -28,13 +28,14 @@ source_files:
   - "src/app/api/admin/reconcile-storefront-scripts/route.ts"
   - "src/lib/storefront-scripts.ts"
   - "src/lib/storefront-widget-url.ts"
+  - "src/lib/storefront-theme.ts"
 ---
 
 # ikas Storefront Script Capabilities
 
 ## Summary
 
-ikas supports storing JavaScript snippets per storefront. This is enough to run a Yotpo-style storefront loader for this project. The preferred architecture is still one project-owned loader script per storefront, not one ikas script record per widget module.
+ikas supports storing JavaScript snippets per storefront. This is enough to run a Yotpo-style storefront loader for this project. The preferred architecture is still one project-owned loader script per storefront, not one ikas script record per widget module. Script content now includes project-owned `data-ikr-*` markers so reconciliation can identify/adopt the correct remote record without depending only on a cached DB id.
 
 ## Official Documentation Evidence
 
@@ -104,6 +105,7 @@ This section records a direct answer from an ikas developer about storefront scr
   - A reliable way to read product id / variant id / slug from the DOM?
   - Official mount points / slots / extension points for product card, product title, product detail?
   - Recommended official way to mount widgets without depending on theme classes?
+  - Is there a way to detect the active storefront theme?
   - Can `isHighPriority` and `order` be used for script ordering, and are there special rules?
 
 ### ikas developer's answer (authoritative)
@@ -114,11 +116,18 @@ This section records a direct answer from an ikas developer about storefront scr
 - **Standard `data-` attributes are planned but not yet available.** ikas has upcoming ikas Studio work that will introduce `data-` prefixed standard attributes, but it is early. Even once shipped, it will not be present on many stores for a while — so it cannot be relied on yet.
 - **`isHighPriority` loads the script before Facebook / Google scripts.** This matters for apps that manage cookies/consent. For `order`: setting `order` to `0` or `1` with priority `false` means the Facebook/Google scripts will run before this app's script.
 
+### Active theme follow-up - 2026-05-23
+
+Direct ikas developer feedback: there is no dedicated active-theme detector. However, calling `listStorefront` and selecting the theme where `themes[].isMainTheme` is `true` can be used to identify the published theme/storefront context. Treat this as an Admin/API-side signal for adapter selection, not as a storefront runtime DOM or mount-point contract.
+
+Schema verification on 2026-05-23 confirmed `isMainTheme` belongs to the nested `StorefrontTheme` type, not directly to `Storefront`. The current generated query requests `mainStorefrontThemeId` and `themes { id name themeId themeVersionId isMainTheme deleted }`. The app resolves this into `StoreSettings.storefrontTheme` and exposes only non-sensitive runtime adapter metadata through `/api/public/settings`.
+
 ### Implications for this project
 
 - Keep one project-owned loader `StorefrontJSScript` per storefront. This is confirmed as an accepted ikas pattern, not a workaround.
 - **Do not build theme adapters as the primary mechanism, and do not hack around missing anchors.** The correct, ikas-sanctioned source of page/product context is Storefront Events — not DOM class heuristics. Theme-class selectors should be treated as a temporary fallback only, not the architecture.
 - There is currently no official DOM mount point. Until ikas Studio `data-*` attributes ship and reach enough stores, mounting still requires the app's own anchor/placeholder logic, but page and product identity must come from Storefront Events rather than DOM scraping.
+- Active theme adapter selection uses `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. This does not remove the need for generic placement heuristics or manual/support fallback.
 - Plan for a future migration to ikas `data-*` attributes once they are broadly available; design the loader so the context source can be swapped without rewriting widget modules.
 - For `isHighPriority` / `order`: this review app does not manage cookies/consent, so it does not need to preempt Facebook/Google scripts. Choose ordering deliberately and document the choice rather than leaving it implicit.
 
@@ -144,7 +153,7 @@ Source: [src/lib/ikas-client/v1-graphql-requests.ts](src/lib/ikas-client/v1-grap
 Runtime injection creates a full script tag:
 
 ```html
-<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async></script>
+<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async data-ikr-app="yorum-paneli" data-ikr-store-id="<merchantId>"></script>
 ```
 
 Source paths:
@@ -157,7 +166,7 @@ Source paths:
 - [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts)
 - [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 
-The project tracks installed ikas script ids in `StoreSettings.storefrontScripts`, but treats that JSON map as a cache. The remote ikas script list is the source of truth when the v1 read succeeds.
+The project tracks installed ikas script ids in `StoreSettings.storefrontScripts`, but treats that JSON map as a cache. The remote ikas script list is the source of truth when the v1 read succeeds. Reconciliation reports `remoteStatus`, `matchedBy`, `duplicateCount`, `contentMatches`, `isActive`, and `deleted` so manual inject and maintenance responses can distinguish stale DB ids, missing remote scripts, duplicate app-owned records, and v1 list outages.
 
 ## Multiple Widgets: What ikas Allows vs What We Should Do
 
@@ -197,6 +206,7 @@ For Yotpo-style architecture on ikas:
 - keep one ikas script record per storefront
 - name it predictably, for example `yorum-paneli-loader`
 - use a small loader URL, not the full widget bundle
+- include project-owned `data-ikr-app` and store-id markers in script content
 - avoid blanket delete behavior
 - keep reconciliation non-destructive: read/adopt via v1 list, then write via v2 create/update
 - do not invent destructive cleanup; first resolve the public-docs/MCP/generated-client mismatch with ikas

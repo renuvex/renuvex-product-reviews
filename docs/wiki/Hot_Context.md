@@ -3,8 +3,8 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-22
-last_verified: 2026-05-22
+updated: 2026-05-23
+last_verified: 2026-05-23
 confidence: high
 tags:
   - hot-context
@@ -25,14 +25,19 @@ source_files:
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/upload/sign/route.ts"
   - "src/app/api/public/upload/register/route.ts"
+  - "src/app/api/public/widget-error/route.ts"
   - "src/lib/review-images.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/components/home-page/widgets/widgetDefs.ts"
   - "src/lib/storefront-widget-url.ts"
   - "src/lib/storefront-scripts.ts"
+  - "src/lib/storefront-theme.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/widget/core/badge.js"
+  - "src/widget/core/health.js"
+  - "src/widget/themes/current-adapter.js"
+  - "src/widget/themes/generic/adapter.js"
   - "src/widget/core/rollout.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/product-widget/rating-badge.js"
@@ -58,16 +63,15 @@ source_files:
 - 2026-05-17/18: ADR_0013 Phase 3 hardening landed: non-destructive storefront script create/update, daily script reconcile, deterministic hashed runtime, hidden-link filtering, observer cleanup, Sentry flood cap, and stale chunk pruning.
 - 2026-05-18: Public review API hardening landed: `POST /api/public/reviews` verifies installed store + `(storeId, productId)` in `ProductSnapshot`, ignores client identity snapshots, and `GET /api/public/reviews` returns a public whitelist.
 - 2026-05-18: Settings stale TTL is 24h; O1/O8 listing badge work scopes DOM discovery and reserves badge space; live retest on `dev-mertcopper.ikas.shop` passed `/`, `/clothing`, `/premium-shorts`, and mobile `/clothing`.
-- 2026-05-18: D4 rating reads now use a shared Upstash fixed-window limit of 300 requests/min/IP.
-- 2026-05-18: D2 removed redundant Review prefix indexes; D3 scopes new Cloudinary review images to `review_images/stores/<storeId>` across sign/register/validate/render/commit.
+- 2026-05-18: D2/D4 hardening landed: redundant Review prefix indexes removed; rating reads use Upstash 300 requests/min/IP.
 - 2026-05-19: [[ADR_0016_Rating_Visual_System]] implemented. Star icon + color are single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) and used by every rating surface incl. badges. `badge.icon`/`badge.color` removed; the PDP-badge icon-parse bug and the dead `badge.color` setting fixed; listing badges no longer hardcode `star:classic`.
-- 2026-05-20: [[ADR_0017_Badge_Architecture]] shipped in four phased PRs (latest `5a2772a`). Class-first DOM (`.ikr-rating-badge` + `--pdp`/`--listing`, `role=figure`, `aria-label`, `data-ikr-*`) for all stores; sibling-of-title mount gated by `core/rollout.js` allowlist (dev store only). Sizing via component-scope CSS variables on `.ikr-rating-badge` (`ensureBadgeTokens` → `<style id="ikr-badge-tokens">`); `mobileOverride` adds an `@media (max-width:640px)` block. Schema-additive (`mobileOverride`/`mobileSize`/`alignment`/`showValue`/`showCount`).
-- 2026-05-22: Storefront script recovery now uses v1 read-only list adoption plus ikas `not_found` recreate; dev PDP/category render. Home still needs ikas/CDN follow-up.
-- Context7 helps for current Playwright/Sentry/Next.js docs. ikas contracts still require ikas docs/MCP and live storefront evidence.
+- 2026-05-20: [[ADR_0017_Badge_Architecture]] shipped. Class-first DOM (`.ikr-rating-badge`, `data-ikr-*`) for all stores; sibling-of-title mount remains dev-store gated. Sizing uses `.ikr-rating-badge` CSS vars from `ensureBadgeTokens`; schema adds mobile/alignment/count controls.
+- 2026-05-23: Storefront script records now carry `data-ikr-*` markers, v1 reconciliation reports match/duplicate diagnostics, and badge render paths emit health telemetry plus one-shot self-heal for DOM removal.
+- 2026-05-23: Active theme selection uses Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. `StoreSettings.storefrontTheme` stores non-sensitive metadata; public settings expose only `runtime.themeAdapterKey/source`. Ozy auto-selects by name, unknown active themes use `generic`, missing signal falls back to Ozy.
 
 ## Current Risks / Open Questions
 - Phase 3 follow-ups: verify deploy lifecycle/cache, re-measure widget size, and document disabling native theme reviews.
-- Ozy outside-theme placement remains adapter/admin-theme-selection work pending ikas theme detection answer.
+- Theme adapter selection now uses Admin API `listStorefront.themes[].isMainTheme`; no runtime DOM mount-point contract exists yet.
 - Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
 
 ## Read Next

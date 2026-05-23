@@ -1,5 +1,5 @@
 import { AuthTokenManager } from '@/models/auth-token/manager';
-import { ensureStorefrontScriptsForToken } from '@/lib/storefront-scripts';
+import { ensureStorefrontScriptsForToken, type StorefrontScriptResult } from '@/lib/storefront-scripts';
 
 export type StorefrontScriptsReconcileMerchant = {
   merchantId: string;
@@ -7,6 +7,7 @@ export type StorefrontScriptsReconcileMerchant = {
   failed: number;
   skipped: number;
   total: number;
+  results?: StorefrontScriptResult[];
   error?: string;
 };
 
@@ -29,6 +30,7 @@ export async function reconcileStorefrontScripts(): Promise<StorefrontScriptsRec
         failed: summary.failed,
         skipped: summary.skipped,
         total: summary.total,
+        results: summary.results,
       });
     } catch (error) {
       merchants.push({

@@ -23,6 +23,17 @@ function clip(value: unknown, max: number): string | undefined {
   return value.length > max ? value.slice(0, max) : value;
 }
 
+function sanitizeExtra(extra: Record<string, unknown> | undefined) {
+  if (!extra) return undefined;
+  const safe: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(extra)) {
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(key)) continue;
+    if (typeof value === 'string') safe[key] = clip(value, 500);
+    else if (typeof value === 'number' || typeof value === 'boolean') safe[key] = value;
+  }
+  return safe;
+}
+
 export async function OPTIONS() {
   return corsOptions();
 }
@@ -54,6 +65,7 @@ export async function POST(req: Request) {
       b.extra && typeof b.extra === 'object' && !Array.isArray(b.extra)
         ? (b.extra as Record<string, unknown>)
         : undefined;
+    const safeExtra = sanitizeExtra(extra);
 
     const err = new Error(message);
     if (stack) err.stack = stack;
@@ -61,15 +73,16 @@ export async function POST(req: Request) {
     Sentry.captureException(err, {
       tags: {
         source: 'widget',
-        widgetEventType: typeof extra?.type === 'string' ? (extra.type as string) : 'unknown',
+        widgetEventType: typeof safeExtra?.type === 'string' ? (safeExtra.type as string) : 'unknown',
       },
       extra: {
         url,
         userAgent,
         publicApiKey,
-        filename: extra?.filename,
-        lineno: extra?.lineno,
-        colno: extra?.colno,
+        filename: safeExtra?.filename,
+        lineno: safeExtra?.lineno,
+        colno: safeExtra?.colno,
+        widgetHealth: safeExtra,
         ip,
       },
     });

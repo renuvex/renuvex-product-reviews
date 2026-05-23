@@ -51,6 +51,8 @@ model StoreSettings {
   updatedAt         DateTime @updatedAt
   /// JSON map of storefrontId -> ikas scriptId
   storefrontScripts Json?
+  /// Non-sensitive published storefront/theme metadata for runtime adapter selection
+  storefrontTheme   Json?
 }
 
 model WidgetSettings {

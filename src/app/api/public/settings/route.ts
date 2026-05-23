@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
+import { buildPublicThemeRuntime } from '@/lib/storefront-theme';
 import { getWidgetDefaults, sanitizeSettings } from '@/lib/widget-settings';
 
 // ADR_0008: `imagePolicy.cloudName` artık settings response'unda taşınmıyor.
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
     widgets[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
   }
 
-  const response = withCors(NextResponse.json({ widgets }));
+  const response = withCors(NextResponse.json({ widgets, runtime: buildPublicThemeRuntime(store.storefrontTheme) }));
   response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300, stale-if-error=604800');
   return response;
 }

@@ -1,4 +1,5 @@
 const LOCAL_HOSTNAMES = new Set(['localhost', '0.0.0.0', '::1']);
+export const STOREFRONT_WIDGET_APP_MARKER = 'yorum-paneli';
 
 export class StorefrontWidgetUrlError extends Error {
   constructor(message: string) {
@@ -65,6 +66,10 @@ export function buildStorefrontWidgetUrl(publicApiKey: string) {
   return `${resolveStorefrontWidgetBaseUrl()}/widget.js?publicApiKey=${encodeURIComponent(publicApiKey)}`;
 }
 
+function escapeHtmlAttribute(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 export function buildStorefrontWidgetScript(publicApiKey: string) {
-  return `<script src="${buildStorefrontWidgetUrl(publicApiKey)}" async></script>`;
+  return `<script src="${buildStorefrontWidgetUrl(publicApiKey)}" async data-ikr-app="${STOREFRONT_WIDGET_APP_MARKER}" data-ikr-store-id="${escapeHtmlAttribute(publicApiKey)}"></script>`;
 }

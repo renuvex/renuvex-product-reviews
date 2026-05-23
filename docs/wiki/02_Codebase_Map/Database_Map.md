@@ -3,7 +3,7 @@ type: database
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-18
+updated: 2026-05-23
 tags:
   - database
   - prisma
@@ -35,7 +35,7 @@ Postgres (Supabase) accessed via Prisma. Six models: `AuthToken`, `Review`, `Sto
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow |
-| `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` map |
+| `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` and non-sensitive `storefrontTheme: Json` metadata |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
 | `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
 | `PendingReviewImage` | `publicId` | Registry of tenant-scoped Cloudinary uploads not yet attached to a `Review` |
@@ -89,7 +89,8 @@ code run together, so a migration must not break the old code.
 ## Notes
 - `Review.images` is **TEXT containing `JSON.stringify(string[])`**, not a relation. Parsing happens at the API layer with try/catch.
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
-- `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` — the OAuth callback maintains this map so re-installs update existing scripts in place rather than creating duplicates. See [[Auth_And_Installation_Flow]].
+- `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
+- `StoreSettings.storefrontTheme` stores non-sensitive active storefront/theme metadata resolved from `listStorefront.themes[].isMainTheme`; public settings expose only `runtime.themeAdapterKey/source` to select Ozy vs generic adapter.
 - `AuthToken` has `merchantId` (column) AND `authorizedAppId` (PK). Both are needed: `authorizedAppId` is unique per install, `merchantId` is shared across installs. The callback `deleteMany({ where: { merchantId } })` uses this to clean reinstalls.
 
 ## Related Source Files
@@ -104,6 +105,7 @@ code run together, so a migration must not break the old code.
 - [[ADR_0003_Review_Data_Model]]
 
 ## Change Log
+- 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.
 - 2026-05-18: Added `PendingReviewImage.storeId` for D3 tenant-scoped Cloudinary upload tracking.
 - 2026-05-18: Removed redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]`; the wider composite indexes cover those query prefixes and the drop-only migration is backwards-compatible.
 - 2026-05-17: Added the migration safety (deploy-window / expand-contract) rule to the migration workflow section.

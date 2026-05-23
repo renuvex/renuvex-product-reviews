@@ -3,8 +3,8 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-18
-last_verified: 2026-05-18
+updated: 2026-05-23
+last_verified: 2026-05-23
 confidence: high
 tags:
   - widget
@@ -30,12 +30,17 @@ source_files:
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
   - "src/widget/core/link-scope.js"
+  - "src/widget/core/health.js"
   - "src/widget/observer.js"
   - "src/widget/product-widget/bootstrap.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
+  - "src/widget/themes/current-adapter.js"
+  - "src/widget/themes/generic/adapter.js"
   - "src/widget/themes/ozy/adapter.js"
+  - "src/lib/storefront-theme.ts"
+  - "src/app/api/public/widget-error/route.ts"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
 ---
@@ -44,6 +49,8 @@ source_files:
 
 ## Summary
 A classic ikas-compatible storefront entry (`public/widget.js`) loaded by every storefront page, which imports an ESM runtime and lazy chunks from `public/widget-runtime/*`. It detects context (product page, listing/search page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, the review submission modal, and the photo review detail lightbox. The runtime is intentionally framework-free.
+
+As of 2026-05-23, public settings also return `runtime.themeAdapterKey/source`. The backend resolves this from ikas Admin API `listStorefront.themes[].isMainTheme` during script reconciliation and stores the non-sensitive result in `StoreSettings.storefrontTheme`. Ozy remains the verified adapter; unknown active themes use a conservative generic adapter.
 
 As of the 2026-05-17 Phase 2 implementation work, local build output is split:
 `public/widget.js` is a small classic loader, `public/widget-runtime/runtime.js`
@@ -70,6 +77,7 @@ deployment before claiming live performance improvement.
 | [core/registry.js](src/widget/core/registry.js) | Surface registry (`reviews-main`, `listing-badge`) with guarded async mounts. |
 | [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for product, listing, and preview render modules. |
 | [core/settings.js](src/widget/core/settings.js) | Shared public settings fetch/cache used by lazy modules without pulling PDP render code. |
+| [core/health.js](src/widget/core/health.js) | Runtime health marker, visibility telemetry, and bounded one-shot DOM-removal self-heal helpers for badge surfaces. |
 | [surfaces/](src/widget/surfaces/) | Thin surface descriptors (`detect`/`mount`) that lazy-load implementation modules. |
 | [core/config.js](src/widget/core/config.js) | `PUBLIC_API_KEY` and `API_BASE` parsed from own `<script src>`. |
 | [core/state.js](src/widget/core/state.js) | Module-level mutable state (current product, settings, reviews, paging, canonical lightbox review collection). |
@@ -87,6 +95,8 @@ deployment before claiming live performance improvement.
 | [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, scoped link discovery, bulk fetch, slot reservation, injection. |
 | [review-layouts/](src/widget/review-layouts/) | `card` / `gallery` / `list` review item layouts (registry in `index.js`). |
 | [summary-layouts/](src/widget/summary-layouts/) | `classic` / `compact` / `hero` / `minimal` / `split` summary layouts. |
+| [themes/current-adapter.js](src/widget/themes/current-adapter.js) | Runtime-selected adapter registry. Defaults to Ozy unless public settings select `generic`. |
+| [themes/generic/](src/widget/themes/generic/) | Conservative unknown-theme adapter; avoids Ozy-specific selectors and relies on generic scoped link/title heuristics. |
 | [themes/ozy/](src/widget/themes/ozy/) | Theme-specific styles/selectors plus fallback adapter. Default. |
 
 ## Lifecycle
@@ -158,6 +168,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [scripts/build-widget.mjs](scripts/build-widget.mjs) drives esbuild.
 - Output: classic loader (`public/widget.js`) plus ESM runtime/chunks
   (`public/widget-runtime/*`), ES2017, minified in prod, banner with build timestamp.
+- The build injects `__IKR_WIDGET_VERSION__` from the build timestamp; the runtime exposes it through `window.__IKR_WIDGET__` and widget-error health events.
 - Validation: post-build `node --check` for the classic loader plus esbuild ESM
   bundling and `public/widget-runtime/build-manifest.json` output metadata.
 
@@ -165,6 +176,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - The widget is the **highest-leverage code surface** in the codebase (every storefront load executes it). Bundle size and TTI matter.
 - Don't introduce a framework (React, Preact, Lit) without an explicit ADR. The vanilla approach is a deliberate trade-off — see [[ADR_0002_Widget_Injection_Strategy]].
 - DOM identification (product id, slug, title) uses heuristics — themes vary. When fixing a "widget doesn't show on theme X" issue, the heuristics in `bootstrap.js` and `title-finder.js` are the usual culprits.
+- Browser conflict hardening is diagnostic and bounded: badge render paths report visibility/dom-conflict events and try one remount if a rendered badge node is removed; they do not loop against aggressive third-party scripts.
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
 - Icon selection is centralized under [src/widget/icons/](src/widget/icons/): review/rating icons live in `review-icons.js`, filter button icons live in `filter-icons.js`, and consumers import through `icons/index.js`. The old [icons.js](src/widget/icons.js) file is a compatibility re-export only.
@@ -196,6 +208,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-23: Added runtime health marker, badge visibility probes, widget-error health telemetry, and one-shot badge self-heal for third-party DOM removal; the build now injects a widget version marker.
 - 2026-05-18: Listing badge hardening reduced CLS and DOM scan cost: candidate links and the MutationObserver re-render gate are scoped to theme containers/main content, and invisible badge slots are reserved while rating data loads.
 - 2026-05-18: Reduced widget settings stale tolerance from 7 days to 24 hours in `core/settings.js`.
 - 2026-05-17: Phase 3 source hardening implemented: `widget.js` now points at a content-hashed ESM runtime, stable `runtime.js` remains as a short-cache shim, script lifecycle is create/update-only, and hidden listing links are filtered before badge injection.
