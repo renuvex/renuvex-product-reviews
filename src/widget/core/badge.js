@@ -2,6 +2,7 @@
 // Tüm widgetlar (listing, carousel, popup, modal) bu fonksiyonu kullanır.
 
 import { partialStarsHTML, PARTIAL_STARS_CSS } from './helpers.js';
+import { createOwnedSlot, setSlotContext } from './slot.js';
 
 // Rozet boyut haritası — "Yıldız Rozeti" widget'ındaki badge.size (Küçük/Orta/
 // Büyük) için TEK kaynak. Hem PDP başlık rozeti (rating-badge.js) hem listing
@@ -75,16 +76,29 @@ function ensureBadgeStyles() {
  */
 export function createBadgeEl(rating, justify, iconPair) {
   ensureBadgeStyles();
+  var meta = arguments[3] || {};
+  var slot = createOwnedSlot({
+    slot: 'listing-rating',
+    legacySlot: 'listing-badge',
+    className: 'renuvex-pr-listing-badge-slot ikr-listing-badge-slot',
+    context: { surface: 'listing', slug: meta.slug || '', productId: meta.productId || '' },
+  });
+  slot.setAttribute('data-ikr-listing-badge', '1');
+
   var el = document.createElement('div');
-  el.className = 'ikr-rating-badge ikr-rating-badge--listing';
+  el.className = 'renuvex-pr-rating-badge ikr-rating-badge ikr-rating-badge--listing';
   el.setAttribute('role', 'figure');
   el.setAttribute('aria-label', rating.avg + ' üzerinden 5 yıldız, ' + rating.count + ' yorum');
   // data-ikr-listing-badge legacy (observer / cleanup / placeholder lookups);
   // data-ikr-* yeni — surface debug + CSS hook (ADR_0017 draft).
   el.setAttribute('data-ikr-listing-badge', '1');
   el.setAttribute('data-ikr-surface', 'listing');
+  el.setAttribute('data-renuvex-surface', 'listing');
   el.setAttribute('data-ikr-rating', String(rating.avg));
+  el.setAttribute('data-renuvex-rating', String(rating.avg));
   el.setAttribute('data-ikr-count', String(rating.count));
+  el.setAttribute('data-renuvex-count', String(rating.count));
+  setSlotContext(el, { surface: 'listing', slug: meta.slug || '', productId: meta.productId || '' });
   // Inline'da sadece per-mount dinamik justify-content. font-size + icon size
   // .ikr-rating-badge class'ından (CSS variable) gelir; ensureBadgeTokens
   // merchant değerini set eder.
@@ -99,13 +113,18 @@ export function createBadgeEl(rating, justify, iconPair) {
   labelEl.textContent = rating.avg + ' (' + rating.count + ')';
   el.appendChild(labelEl);
 
-  return el;
+  slot.appendChild(el);
+  return slot;
 }
 
 export function createBadgePlaceholderEl(justify) {
   ensureBadgeStyles();
-  var el = document.createElement('div');
-  el.className = 'ikr-rating-badge ikr-rating-badge--listing';
+  var el = createOwnedSlot({
+    slot: 'listing-rating-placeholder',
+    legacySlot: 'listing-badge-placeholder',
+    className: 'renuvex-pr-listing-badge-slot ikr-listing-badge-slot ikr-rating-badge ikr-rating-badge--listing',
+    context: { surface: 'listing' },
+  });
   el.setAttribute('data-ikr-listing-badge-placeholder', '1');
   el.setAttribute('aria-hidden', 'true');
   el.style.cssText = 'justify-content:' + (justify || 'flex-start') + ';visibility:hidden;';

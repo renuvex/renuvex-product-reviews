@@ -7,17 +7,14 @@
 // derives the project base URL, then loads the ESM runtime/chunks from the same
 // origin. The runtime still reads publicApiKey from the original widget.js tag.
 
+import { findRenuvexWidgetScript, getPublicApiKeyFromScript, getWidgetScriptBaseUrl } from './core/script-identity.js';
+
 var hasWindow = typeof window !== 'undefined';
 var hasDocument = typeof document !== 'undefined';
 
 function findCurrentScript() {
   if (!hasDocument) return null;
-  if (document.currentScript && document.currentScript.src) return document.currentScript;
-  var scripts = document.getElementsByTagName('script');
-  for (var i = scripts.length - 1; i >= 0; i--) {
-    if (scripts[i].src && scripts[i].src.indexOf('/widget.js') !== -1) return scripts[i];
-  }
-  return scripts[scripts.length - 1] || null;
+  return findRenuvexWidgetScript();
 }
 
 function postRuntimeError(baseUrl, publicApiKey, message, stack, runtimeUrl) {
@@ -51,11 +48,10 @@ function postRuntimeError(baseUrl, publicApiKey, message, stack, runtimeUrl) {
 if (hasWindow && hasDocument) {
   var script = findCurrentScript();
   var scriptSrc = script && script.src ? script.src : '';
-  var scriptBase = scriptSrc ? scriptSrc.split('?')[0].replace(/\/widget\.js$/, '') : '';
-  var query = scriptSrc.split('?')[1] || '';
-  var publicApiKey = new URLSearchParams(query).get('publicApiKey');
+  var scriptBase = getWidgetScriptBaseUrl(script);
+  var publicApiKey = getPublicApiKeyFromScript(script);
 
-  if (scriptBase && !window.__ikrRuntimeLoading) {
+  if (scriptSrc && scriptBase && publicApiKey && !window.__ikrRuntimeLoading) {
     window.__ikrRuntimeLoading = true;
     var runtimePath = typeof __IKR_RUNTIME_PATH__ !== 'undefined'
       ? __IKR_RUNTIME_PATH__

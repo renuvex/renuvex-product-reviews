@@ -8,6 +8,7 @@ import { partialStarsHTML } from '../core/helpers.js';
 // `<style>` etiketine yazar, .ikr-rating-badge .ikr-star CSS'i değişkenden okur.
 import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
 import { probeWidgetVisibility, watchOneTimeRemoval } from '../core/health.js';
+import { createOwnedSlot, removeOwnedSlots, setSlotContext } from '../core/slot.js';
 
 var ratingBadgeRemovalObserver = null;
 
@@ -18,13 +19,14 @@ function buildStars(rating, iconPair) {
   return partialStarsHTML(rating, iconPair);
 }
 
-export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, selfHealAttempt) {
+export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, selfHealAttempt) {
   if (ratingBadgeRemovalObserver) {
     ratingBadgeRemovalObserver.disconnect();
     ratingBadgeRemovalObserver = null;
   }
 
   // Önceki üründen kalan eski badge'i temizle
+  removeOwnedSlots('product-title-rating', 'product-title-badge');
   var oldBadge = document.getElementById('ikr-rating-badge');
   if (oldBadge) oldBadge.remove();
 
@@ -72,16 +74,27 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   }
   ensureBadgeTokens(sizes, mobileSizes);
 
+  var slot = createOwnedSlot({
+    slot: 'product-title-rating',
+    legacySlot: 'product-title-badge',
+    className: 'renuvex-pr-product-badge-slot ikr-product-badge-slot',
+    context: { surface: 'pdp', productId: productId || '' },
+  });
+
   var badge = document.createElement('a');
   badge.id = 'ikr-rating-badge';
-  badge.className = 'ikr-rating-badge ikr-rating-badge--pdp';
+  badge.className = 'renuvex-pr-rating-badge ikr-rating-badge ikr-rating-badge--pdp';
   badge.href = '#ikas-reviews';
   // A11y + data attrs (ADR_0017 draft) — role=figure standart endüstri kalıbı.
   badge.setAttribute('role', 'figure');
   badge.setAttribute('aria-label', avgRating + ' üzerinden 5 yıldız, ' + totalCount + ' yorum');
   badge.setAttribute('data-ikr-surface', 'pdp');
+  badge.setAttribute('data-renuvex-surface', 'pdp');
   badge.setAttribute('data-ikr-rating', String(avgRating));
+  badge.setAttribute('data-renuvex-rating', String(avgRating));
   badge.setAttribute('data-ikr-count', String(totalCount));
+  badge.setAttribute('data-renuvex-count', String(totalCount));
+  setSlotContext(badge, { surface: 'pdp', productId: productId || '' });
   var titleAlign = window.getComputedStyle(titleEl).textAlign;
   var justifyVal = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
   // Layout (display, gap, margin, text-decoration, cursor, font-weight, color)
@@ -107,11 +120,12 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
     var top = rev.getBoundingClientRect().top + window.pageYOffset - headerH - 16;
     window.scrollTo({ top: top, behavior: 'smooth' });
   };
-  titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
-  probeWidgetVisibility(badge, 'pdp-badge', { productName: productName || '' });
+  slot.appendChild(badge);
+  titleEl.parentNode.insertBefore(slot, titleEl.nextSibling);
+  probeWidgetVisibility(slot, 'pdp-badge', { productName: productName || '', productId: productId || '' });
   if (!selfHealAttempt) {
-    ratingBadgeRemovalObserver = watchOneTimeRemoval(badge, 'pdp-badge', function () {
-      injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, true);
-    }, { productName: productName || '' });
+    ratingBadgeRemovalObserver = watchOneTimeRemoval(slot, 'pdp-badge', function () {
+      injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, true);
+    }, { productName: productName || '', productId: productId || '' });
   }
 }

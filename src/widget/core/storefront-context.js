@@ -214,15 +214,18 @@ function startDomProductDetection() {
 }
 
 function detectProductFromDOM() {
+  var fromNextDataScript = detectProductFromNextDataScript();
+  if (fromNextDataScript) return fromNextDataScript;
+
   try {
-    var pageProps = window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps;
-    if (pageProps && pageProps.pageType === 'PRODUCT' && pageProps.pageSpecificData && pageProps.pageSpecificData.id) {
-      return { id: pageProps.pageSpecificData.id, name: pageProps.pageSpecificData.name || null };
-    }
+    var fromGlobalNextData = detectProductFromNextData(window.__NEXT_DATA__);
+    if (fromGlobalNextData) return fromGlobalNextData;
   } catch (_) {}
   if (window.IkasStorefront && window.IkasStorefront.product && window.IkasStorefront.product.id) {
     return { id: window.IkasStorefront.product.id, name: window.IkasStorefront.product.name || null };
   }
+  var fromJsonLd = detectProductFromJsonLd();
+  if (fromJsonLd) return fromJsonLd;
   var match = window.location.pathname.match(/--([a-f0-9-]{36})(?:\/|$|\?)/);
   if (match) {
     return { id: match[1], name: null };
@@ -230,6 +233,56 @@ function detectProductFromDOM() {
   var qp = new URLSearchParams(window.location.search).get('productId');
   if (qp) {
     return { id: qp, name: null };
+  }
+  return null;
+}
+
+function detectProductFromNextDataScript() {
+  try {
+    var el = document.getElementById('__NEXT_DATA__');
+    if (!el || !el.textContent) return null;
+    return detectProductFromNextData(JSON.parse(el.textContent));
+  } catch (_) {
+    return null;
+  }
+}
+
+function detectProductFromNextData(nextData) {
+  var pageProps = nextData && nextData.props && nextData.props.pageProps;
+  if (!pageProps || pageProps.pageType !== 'PRODUCT') return null;
+  var product = pageProps.pageSpecificData;
+  if (!product || !product.id) return null;
+  return { id: String(product.id), name: product.name || null };
+}
+
+function detectProductFromJsonLd() {
+  try {
+    var scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (var i = 0; i < scripts.length; i++) {
+      var found = findProductInJsonLd(JSON.parse(scripts[i].textContent || 'null'));
+      if (found) return found;
+    }
+  } catch (_) {}
+  return null;
+}
+
+function findProductInJsonLd(value) {
+  if (!value) return null;
+  if (Array.isArray(value)) {
+    for (var i = 0; i < value.length; i++) {
+      var item = findProductInJsonLd(value[i]);
+      if (item) return item;
+    }
+    return null;
+  }
+  if (value['@graph']) return findProductInJsonLd(value['@graph']);
+  var type = value['@type'];
+  var isProduct = type === 'Product' || (Array.isArray(type) && type.indexOf('Product') !== -1);
+  if (!isProduct) return null;
+  var id = value.productID || value.productId || value.sku || value['@id'];
+  if (typeof id === 'string') {
+    var uuid = id.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i);
+    if (uuid) return { id: uuid[0], name: value.name || null };
   }
   return null;
 }

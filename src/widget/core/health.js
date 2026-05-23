@@ -69,10 +69,16 @@ function send(payload) {
 export function markWidgetLoaded() {
   if (typeof window === 'undefined') return;
   var loadedAt = Date.now();
-  window.__IKR_WIDGET__ = {
+  var marker = {
     loadedAt: loadedAt,
     publicApiKey: PUBLIC_API_KEY || null,
     version: getWidgetVersion(),
+  };
+  window.__RENUVEX_PRODUCT_REVIEWS__ = marker;
+  window.__IKR_WIDGET__ = {
+    loadedAt: marker.loadedAt,
+    publicApiKey: marker.publicApiKey,
+    version: marker.version,
   };
 }
 

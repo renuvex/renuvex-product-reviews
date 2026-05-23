@@ -3,8 +3,8 @@ type: log
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-23
-last_verified: 2026-05-23
+updated: 2026-05-24
+last_verified: 2026-05-24
 confidence: high
 tags:
   - log
@@ -19,6 +19,18 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-24 - fix | Harden widget ownership against third-party widget.js conflicts
+- Summary: Recorded and implemented the Renuvex Product Reviews storefront resilience decision. A third-party app can also load a `widget.js` file, so this app's loader/runtime now treats owned markers and `publicApiKey` as the script identity boundary rather than relying on `/widget.js` alone.
+- Reason: Live dev-store testing with the Serpingo/X app showed our `widget.js` and runtime chunks loaded with `200 OK`, but no public settings/reviews calls happened because runtime ownership could select the third-party script.
+- Key source changes: `src/lib/storefront-widget-url.ts` adds Renuvex markers to ikas `StorefrontJSScript` content; `src/widget/core/script-identity.js`, `classic-loader.js`, and `core/config.js` harden script discovery; owned slot wrappers cover PDP badges, listing badges, and review block mounting.
+- Verification: `pnpm build:widget`, `node --check public/widget.js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check` passed. A local-build browser smoke test injected the new widget into the live dev storefront with the Serpingo/X app present: `/premium-shorts` loaded settings/reviews/ratings, set `window.__RENUVEX_PRODUCT_REVIEWS__`, rendered one PDP badge slot and one review slot; `/clothing` rendered two listing badge slots with no duplicate slugs.
+- Updated wiki: [[ADR_0018_Widget_Ownership_And_Placement_Resilience]], [[Bug_Widget_Script_Ownership_Conflict]], [[Ikas_Storefront_Script_Capabilities]], [[Ikas_Widget_Injection_Notes]], [[Hot_Context]], [[Log]]
+
+## 2026-05-24 - docs | Record cron upgrade and QStash decision
+- Summary: Documented the Vercel Pro cron upgrade path and clarified that Upstash Redis is already used for rate limiting, while QStash should stay optional until delayed per-merchant verification or queue retry semantics are required.
+- Reason: The failed 5-minute cron deployment was caused by the current Vercel plan, not by the theme sync code. Future agents need a clean playbook for revisiting this after a Pro upgrade without installing unnecessary infrastructure.
+- Updated wiki: [[Hot_Context]], [[Deployment_Notes]], [[Log]]
 
 ## 2026-05-23 - fix | Restore Vercel-compatible cron schedule
 - Summary: Changed `/api/admin/daily-maintenance` back to the daily 03:00 UTC Vercel cron schedule after the attempted 5-minute schedule failed deployment on the current Vercel cron plan.

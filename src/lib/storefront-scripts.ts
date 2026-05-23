@@ -2,7 +2,7 @@ import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { buildStorefrontThemeState, resolveStorefrontThemeMetadata } from '@/lib/storefront-theme';
-import { buildStorefrontWidgetScript, STOREFRONT_WIDGET_APP_MARKER } from '@/lib/storefront-widget-url';
+import { buildStorefrontWidgetScript, STOREFRONT_WIDGET_APP_MARKER, STOREFRONT_WIDGET_RENUVEX_APP_MARKER } from '@/lib/storefront-widget-url';
 import { StorefrontJSScriptContentTypeEnum, type ikasAdminGraphQLAPIClient } from '@/lib/ikas-client/generated/graphql';
 import type { ikasAdminGraphQLAPIClient as ikasAdminGraphQLAPIV1Client } from '@/lib/ikas-client/generated/v1-graphql';
 import type { AuthToken } from '@/models/auth-token';
@@ -103,11 +103,14 @@ function canRecreateAfterUpdateFailure(message: string) {
 }
 
 function includesStoreIdMarker(scriptContent: string, storeId: string) {
-  return scriptContent.includes(`data-ikr-store-id="${storeId}"`);
+  return scriptContent.includes(`data-renuvex-store-id="${storeId}"`) || scriptContent.includes(`data-ikr-store-id="${storeId}"`);
 }
 
 function includesAppMarker(scriptContent: string) {
-  return scriptContent.includes(`data-ikr-app="${STOREFRONT_WIDGET_APP_MARKER}"`);
+  return (
+    scriptContent.includes(`data-renuvex-app="${STOREFRONT_WIDGET_RENUVEX_APP_MARKER}"`) ||
+    scriptContent.includes(`data-ikr-app="${STOREFRONT_WIDGET_APP_MARKER}"`)
+  );
 }
 
 function includesPublicApiKey(scriptContent: string, storeId: string) {

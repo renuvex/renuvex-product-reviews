@@ -3,7 +3,7 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-05-24
 tags:
   - bugs
 related:
@@ -21,6 +21,7 @@ related:
 - _None tracked._
 
 ## Recently fixed (verify periodically)
+- 2026-05-24 - [[Bug_Widget_Script_Ownership_Conflict]] - A third-party app also loaded a `widget.js` file, and this app's loader/runtime could select that script when `document.currentScript` was unavailable. Fixed with marker-first, `publicApiKey`-required script discovery plus owned Renuvex/legacy slot wrappers; live deploy verification remains required.
 - 2026-05-17 - [[Bug_Listing_Badge_Stars_Direct_Load]] - Listing badge stars were missing on cold direct entry to home/category/search pages (`.ikr-star` spans rendered 0×0 because `#ikr-styles`, which carries the `display:inline-flex` rule, was injected only by the PDP `render.js` path). Fixed: the badge factory self-injects `#ikr-badge-styles` via `ensureBadgeStyles()`, sharing one `PARTIAL_STARS_CSS` constant with `CLASSIC_CSS`. Verified on the dev store with cold home/category entry.
 - 2026-05-12 - [[Bug_Lightbox_Preview_Settings_Sync]] - Open photo lightbox preview updates now re-render the full right pane from closure state, including review icons and merchant reply label, instead of reading rating from DOM attributes.
 - 2026-05-12 - [[Bug_Filter_Menu_Keyboard_Accessibility]] - Review summary filter menu now uses real `<button role="menuitem">` items, exposes menu semantics on the trigger, focuses the first option on open, restores focus to the trigger on close, and auto-closes when focus leaves the wrap.
@@ -41,6 +42,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-24: Added [[Bug_Widget_Script_Ownership_Conflict]] after live Serpingo/X-app testing proved the storefront script loaded but runtime ownership detection selected the wrong `/widget.js` candidate.
 - 2026-05-17: Marked [[Bug_Listing_Badge_Stars_Direct_Load]] fixed — root cause was `#ikr-styles` (which carries the `.ikr-star` `display` rule) being injected only by the PDP `render.js` path; the listing badge factory now self-injects `#ikr-badge-styles`. Verified on the dev store with cold home/category entry.
 - 2026-05-17: Added [[Bug_Listing_Badge_Stars_Direct_Load]] after user-provided storefront screenshot showed listing badge star icons missing on direct listing entry but recovering after PDP navigation.
 - 2026-05-12: Added [[Bug_Lightbox_Preview_Settings_Sync]] after replacing the lightbox preview star-only DOM-state workaround with closure-state right-pane re-rendering.

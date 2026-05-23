@@ -110,6 +110,8 @@ source_files: []
 - [[ADR_0014_Public_API_Response_Caching]]
 - [[ADR_0015_Canonical_Product_Identity]]
 - [[ADR_0016_Rating_Visual_System]]
+- [[ADR_0017_Badge_Architecture]]
+- [[ADR_0018_Widget_Ownership_And_Placement_Resilience]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]

@@ -3,7 +3,7 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-20
+updated: 2026-05-24
 tags:
   - adr
   - decisions
@@ -35,6 +35,7 @@ related:
 | [[ADR_0015_Canonical_Product_Identity]] | `(storeId, productId)` is the canonical review product identity; slug/name are display snapshots and slug reads are fallback-only. | Accepted |
 | [[ADR_0016_Rating_Visual_System]] | Star icon + color are one global rating visual system, single-sourced from the `reviews` widget; the `badge` widget is layout-only; theme adapters stay mount/selector-only. | Accepted |
 | [[ADR_0017_Badge_Architecture]] | Listing badge mounts as title sibling (not inside `<h2>`), class-first styling, component-scope CSS variables for sizing, opt-in mobile preset at 640px. Allowlist-gated rollout. | Accepted |
+| [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] | Widget loader ownership is marker-first and `publicApiKey`-required; storefront surfaces render inside Renuvex/legacy owned slots; placement conflicts are measured and fixed through theme adapters, not script order. | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -52,6 +53,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-24: Added [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] after the Serpingo/X-app conflict showed that a third-party `widget.js` URL could be mistaken for this app's loader. The decision adds Renuvex-compatible markers, marker-first script discovery, owned slots, and the "keep and measure" placement policy.
 - 2026-05-20: Added [[ADR_0017_Badge_Architecture]] — listing badge moved out of the `<h2>` and into the title's parent as a sibling; class-first styling (`.ikr-rating-badge` + `--pdp`/`--listing` modifiers, `role="figure"` + `aria-label`, `data-ikr-*` debug attrs); sizing tokens are component-scope CSS variables (`--ikr-badge-icon-size`, `--ikr-badge-text-size`) on `.ikr-rating-badge`, with `:root` reserved for the brand-global `--ikr-review-star-color` (ADR_0016); opt-in mobile preset via `badge.mobileOverride` + `badge.mobileSize` writing a 640px `@media` block. Mount change shipped behind a publicApiKey allowlist gate in `core/rollout.js` for a phased rollout (dev store → default flip → cleanup).
 - 2026-05-19: Added [[ADR_0016_Rating_Visual_System]] — star icon style + star color are one global rating visual system, single-sourced from the "Ürün Yorumları" (`reviews`) widget (`reviewIcon`/`reviewStarColor`). Removed the duplicate `badge.icon`/`badge.color` fields; all badge renderers (`rating-badge.js`, `core/badge.js`) now read the single source. Fixed the PDP-badge icon-parse bug (non-`star` icons silently fell back to star) and the dead `badge.color` setting; listing badges no longer hardcode `star:classic`. Theme adapters remain mount/selector-only.
 - 2026-05-17: Added [[ADR_0015_Canonical_Product_Identity]] after implementing product-id listing/search rating reads. Existing review data already has `productId`; the slug endpoint remains as DOM-only fallback.

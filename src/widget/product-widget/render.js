@@ -10,6 +10,8 @@ import { getIconFromSettings } from '../icons/index.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
 import { openWriteForm } from '../summary-layouts/shared/write-action.js';
+import { createOwnedSlot, setSlotContext } from '../core/slot.js';
+import { probeWidgetVisibility } from '../core/health.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -57,6 +59,21 @@ function getOrCreateReviewsAnchor() {
   if (!fallbackParent) return null;
   fallbackParent.appendChild(anchorEl);
   return anchorEl;
+}
+
+function getOrCreateReviewsSlot(anchorEl, productId) {
+  var slot = anchorEl.querySelector('[data-renuvex-slot="product-reviews"],[data-ikr-slot="product-reviews"]');
+  if (!slot) {
+    slot = createOwnedSlot({
+      slot: 'product-reviews',
+      legacySlot: 'product-reviews',
+      className: 'renuvex-pr-reviews-slot ikr-reviews-slot',
+      context: { surface: 'reviews', productId: productId || '' },
+    });
+    anchorEl.appendChild(slot);
+  }
+  setSlotContext(slot, { surface: 'reviews', productId: productId || '' });
+  return slot;
 }
 
 // ─── Boyut Preset'leri ─────────────────────────────────────────────────────
@@ -394,15 +411,16 @@ export async function render(productId, settings, reviewsData, productName, orde
     // İkon + stil seçimine göre SVG çifti (filled/empty) al — ICONS registry'sinden
     var iconPair = getIconFromSettings(settings);
 
+    var anchorEl = getOrCreateReviewsAnchor();
+    if (!anchorEl) return;
+    var reviewsSlot = getOrCreateReviewsSlot(anchorEl, productId);
     var container = document.getElementById('ikas-reviews');
     if (!container) {
-      var anchorEl = getOrCreateReviewsAnchor();
-      if (!anchorEl) return;
       container = document.createElement('div');
       container.id = 'ikas-reviews';
       container.style.minHeight = '200px';
-      anchorEl.appendChild(container);
     }
+    if (container.parentNode !== reviewsSlot) reviewsSlot.appendChild(container);
 
     if (settings.enabled === false) {
       container.style.minHeight = 'auto';
@@ -431,6 +449,13 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       var widget = document.createElement('div');
       widget.id = 'ikas-reviews-widget';
+      widget.className = 'renuvex-pr-reviews-widget';
+      widget.setAttribute('data-renuvex-surface', 'reviews');
+      widget.setAttribute('data-ikr-surface', 'reviews');
+      if (productId) {
+        widget.setAttribute('data-renuvex-product-id', String(productId));
+        widget.setAttribute('data-ikr-product-id', String(productId));
+      }
 
       // Admin iframe önizlemesinde full-bleed (100vw + margin hack) iframe
       // viewport'u ile parent genişliği uyuşmadığında yatay scroll yaratıyor.
@@ -461,6 +486,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           await render(currentProductId, currentSettings, retried, currentProductName, currentOrderBy, 1, currentBadgeSettings);
         }));
         container.appendChild(widget);
+        probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '', reason: 'fetch_error' });
         return;
       }
 
@@ -645,10 +671,11 @@ export async function render(productId, settings, reviewsData, productName, orde
       }
 
       container.appendChild(widget);
+      probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '' });
 
       // Rating badge + JSON-LD — görünürlük/boyut "Yıldız Rozeti" widget'ından;
       // yıldız ikonu + rengi tek kaynaktan (reviews widget) — iconPair geçirilir.
-      injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName, currentBadgeSettings, iconPair);
+      injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName, currentBadgeSettings, iconPair, currentProductId);
 
 
     } catch (err) {

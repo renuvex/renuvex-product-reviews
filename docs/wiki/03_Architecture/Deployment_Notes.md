@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-23
+updated: 2026-05-24
 tags:
   - deployment
   - vercel
@@ -41,7 +41,13 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 ## Upstash Redis
 - REST-based (works in serverless without long-lived sockets).
 - Two env vars: `KV_REST_API_URL`, `KV_REST_API_TOKEN`.
-- ⚠️ Not present in `.env.example`. Add if you onboard a new contributor or set up a fresh deploy.
+- Present in `.env.example`. Configure the real values in Vercel Production/Preview envs; never commit real tokens.
+
+## Future cron upgrade path
+- **Current state**: daily 03:00 UTC maintenance cron is intentionally Hobby-compatible and deploy-safe.
+- **After Vercel Pro/Enterprise upgrade**: change only `/api/admin/daily-maintenance` in [vercel.json](vercel.json) to a sub-daily expression such as `*/5 * * * *`, redeploy, and verify Vercel Cron Jobs. The route already gates heavier cleanup/script reconciliation to the 03:00 UTC daily window, so more frequent invocations stay lightweight.
+- **When to add QStash**: only if fast per-merchant delayed verification is required while staying on Hobby, or if we need durable retries, deduplication, callbacks, or flow control independent of Vercel Cron. Do not add QStash merely because Redis exists; Redis handles rate limits, QStash is a separate queue/scheduler product.
+- **If QStash is added later**: add env placeholders only with the implementation (`QSTASH_TOKEN` plus signing keys), create a verified internal endpoint for delayed theme verification, use one idempotency/flow-control key per merchant, and keep the daily Vercel cron as a backup.
 
 ## ikas app config
 - Register the app in ikas Partners.
@@ -90,5 +96,6 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-24: Recorded the Pro upgrade path for sub-daily theme verification and clarified that Upstash Redis is already configured for rate limits, while QStash remains optional future infrastructure.
 - 2026-05-23: Restored `/api/admin/daily-maintenance` to the daily 03:00 UTC Vercel-compatible schedule after the attempted 5-minute cron failed deployment on the current plan. The route still supports lightweight sub-daily runs if the deploy plan or queue architecture changes later.
 - 2026-05-11: Linked [[Sentry_Operations]] after adding Sentry CLI/MCP setup notes.

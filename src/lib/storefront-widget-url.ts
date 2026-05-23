@@ -1,5 +1,6 @@
 const LOCAL_HOSTNAMES = new Set(['localhost', '0.0.0.0', '::1']);
 export const STOREFRONT_WIDGET_APP_MARKER = 'yorum-paneli';
+export const STOREFRONT_WIDGET_RENUVEX_APP_MARKER = 'product-reviews';
 
 export class StorefrontWidgetUrlError extends Error {
   constructor(message: string) {
@@ -71,5 +72,6 @@ function escapeHtmlAttribute(value: string) {
 }
 
 export function buildStorefrontWidgetScript(publicApiKey: string) {
-  return `<script src="${buildStorefrontWidgetUrl(publicApiKey)}" async data-ikr-app="${STOREFRONT_WIDGET_APP_MARKER}" data-ikr-store-id="${escapeHtmlAttribute(publicApiKey)}"></script>`;
+  const escapedPublicApiKey = escapeHtmlAttribute(publicApiKey);
+  return `<script src="${buildStorefrontWidgetUrl(publicApiKey)}" async data-renuvex-app="${STOREFRONT_WIDGET_RENUVEX_APP_MARKER}" data-renuvex-store-id="${escapedPublicApiKey}" data-ikr-app="${STOREFRONT_WIDGET_APP_MARKER}" data-ikr-store-id="${escapedPublicApiKey}"></script>`;
 }

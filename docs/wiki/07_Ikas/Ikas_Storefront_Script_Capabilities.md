@@ -3,8 +3,8 @@ type: ikas
 project: ikas-review-app
 status: active
 created: 2026-05-15
-updated: 2026-05-23
-last_verified: 2026-05-23
+updated: 2026-05-24
+last_verified: 2026-05-24
 confidence: high
 tags:
   - ikas
@@ -153,7 +153,7 @@ Source: [src/lib/ikas-client/v1-graphql-requests.ts](src/lib/ikas-client/v1-grap
 Runtime injection creates a full script tag:
 
 ```html
-<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async data-ikr-app="yorum-paneli" data-ikr-store-id="<merchantId>"></script>
+<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async data-renuvex-app="product-reviews" data-renuvex-store-id="<merchantId>" data-ikr-app="yorum-paneli" data-ikr-store-id="<merchantId>"></script>
 ```
 
 Source paths:
@@ -167,6 +167,17 @@ Source paths:
 - [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 
 The project tracks installed ikas script ids in `StoreSettings.storefrontScripts`, but treats that JSON map as a cache. The remote ikas script list is the source of truth when the v1 read succeeds. Reconciliation reports `remoteStatus`, `matchedBy`, `duplicateCount`, `contentMatches`, `isActive`, and `deleted` so manual inject and maintenance responses can distinguish stale DB ids, missing remote scripts, duplicate app-owned records, and v1 list outages.
+
+### ikas Developer Follow-up - 2026-05-24
+
+Direct ikas developer feedback for uninstall/reinstall and cross-app conflict:
+
+- App uninstall does **not** currently delete the app's `StorefrontJSScript` records, but automatic cleanup is on the roadmap.
+- If a DB-tracked `scriptId` no longer exists remotely, the correct flow is to create a new script and update this app's DB map.
+- `isHighPriority` / `order` are not a hard cross-app execution-order guarantee; if multiple scripts have the same effective priority/order, the result can be non-deterministic.
+- ikas does not currently provide an official slot/conflict mechanism for two apps that both render under the product title. ikas's practical guidance is to coordinate with the other app developer when that app's behavior is bad.
+
+Project implication: script lifecycle reconciliation remains correct, but browser-side widget resilience cannot depend on platform slotting or script order. See [[ADR_0018_Widget_Ownership_And_Placement_Resilience]].
 
 ## Multiple Widgets: What ikas Allows vs What We Should Do
 
