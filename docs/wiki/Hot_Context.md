@@ -67,7 +67,7 @@ source_files:
 - 2026-05-19: [[ADR_0016_Rating_Visual_System]] implemented. Star icon + color are single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) and used by every rating surface incl. badges. `badge.icon`/`badge.color` removed; the PDP-badge icon-parse bug and the dead `badge.color` setting fixed; listing badges no longer hardcode `star:classic`.
 - 2026-05-20: [[ADR_0017_Badge_Architecture]] shipped. Class-first DOM (`.ikr-rating-badge`, `data-ikr-*`) for all stores; sibling-of-title mount remains dev-store gated. Sizing uses `.ikr-rating-badge` CSS vars from `ensureBadgeTokens`; schema adds mobile/alignment/count controls.
 - 2026-05-23: Storefront script records now carry `data-ikr-*` markers, v1 reconciliation reports match/duplicate diagnostics, and badge render paths emit health telemetry plus one-shot self-heal for DOM removal.
-- 2026-05-23: Active theme selection uses Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. `StoreSettings.storefrontTheme` stores non-sensitive metadata; public settings expose only `runtime.themeAdapterKey/source`. Ozy auto-selects by name, unknown active themes use `generic`, missing signal falls back to Ozy.
+- 2026-05-23: Active theme selection uses Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. `StoreSettings.storefrontTheme` stores non-sensitive metadata; public settings expose only `runtime.themeAdapterKey/source`. Adapter matching uses stable `themeId` first; merchant-editable theme names are diagnostic/fallback only.
 
 ## Current Risks / Open Questions
 - Phase 3 follow-ups: verify deploy lifecycle/cache, re-measure widget size, and document disabling native theme reviews.

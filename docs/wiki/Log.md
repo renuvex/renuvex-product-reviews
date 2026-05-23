@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-23 - fix | Prefer stable theme ids for adapter matching
+- Summary: Hardened active theme adapter matching so merchant-editable theme names cannot misclassify a storefront. Known adapters now match by stable ikas `themeId` first; theme-name matching is only a fallback when `themeId` is unavailable.
+- Reason: Merchants can rename themes in the ikas admin panel. A renamed Kombos/IZO theme should not become Ozy just because the display name contains "Ozy", and a renamed Ozy theme should still resolve to the Ozy adapter by id.
+- Key source changes: `src/lib/storefront-theme.ts`.
+- Verification: `pnpm exec tsc --noEmit`, `pnpm lint`, `node scripts/wiki-audit.mjs --changed-source-check`.
+- Updated wiki: [[Ikas_Theme_Limitations]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-23 - feature | Add active theme adapter metadata
 - Summary: Implemented active theme metadata capture from ikas `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback, persisted it in nullable `StoreSettings.storefrontTheme`, and exposed only `runtime.themeAdapterKey/source` through public settings.
 - Reason: ikas confirmed there is no browser-runtime theme detector. Backend Admin API theme metadata is the cleanest available selector for a theme adapter, while DOM placement still requires Storefront Events plus heuristics.

@@ -1,5 +1,6 @@
 export type ThemeAdapterKey = 'ozy' | 'generic';
 export type ThemeAdapterSource = 'auto' | 'generic_unknown' | 'legacy_fallback';
+export type ThemeAdapterMatchedBy = 'theme_id' | 'theme_name_fallback' | 'legacy_fallback' | 'none';
 
 export type StorefrontThemeMetadata = {
   activeStorefrontId: string | null;
@@ -11,6 +12,7 @@ export type StorefrontThemeMetadata = {
   mainStorefrontThemeId: string | null;
   themeAdapterKey: ThemeAdapterKey;
   adapterSource: ThemeAdapterSource;
+  adapterMatchedBy: ThemeAdapterMatchedBy;
   detectedAt: string;
 };
 
@@ -45,6 +47,12 @@ const FALLBACK_RUNTIME: PublicThemeRuntime = {
   themeAdapterSource: 'legacy_fallback',
 };
 
+const THEME_ADAPTER_BY_THEME_ID: Record<string, ThemeAdapterKey> = {
+  // ikas Ozy base theme id. Theme display names are merchant-editable; do not
+  // use a mutable name when a stable theme id is available.
+  '57225e07-aa38-4d38-9688-f6730ee16143': 'ozy',
+};
+
 function cleanString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
@@ -53,8 +61,28 @@ function normalizeForMatch(value: string | null) {
   return (value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-function isOzyTheme(storefrontName: string | null, themeName: string | null) {
-  return normalizeForMatch(storefrontName).includes('ozy') || normalizeForMatch(themeName).includes('ozy');
+function resolveThemeAdapter(
+  hasActiveTheme: boolean,
+  activeThemeId: string | null,
+  activeThemeName: string | null,
+): { themeAdapterKey: ThemeAdapterKey; adapterSource: ThemeAdapterSource; adapterMatchedBy: ThemeAdapterMatchedBy } {
+  if (!hasActiveTheme) {
+    return { themeAdapterKey: 'ozy', adapterSource: 'legacy_fallback', adapterMatchedBy: 'legacy_fallback' };
+  }
+
+  if (activeThemeId && THEME_ADAPTER_BY_THEME_ID[activeThemeId]) {
+    return {
+      themeAdapterKey: THEME_ADAPTER_BY_THEME_ID[activeThemeId],
+      adapterSource: 'auto',
+      adapterMatchedBy: 'theme_id',
+    };
+  }
+
+  if (!activeThemeId && normalizeForMatch(activeThemeName).includes('ozy')) {
+    return { themeAdapterKey: 'ozy', adapterSource: 'auto', adapterMatchedBy: 'theme_name_fallback' };
+  }
+
+  return { themeAdapterKey: 'generic', adapterSource: 'generic_unknown', adapterMatchedBy: 'none' };
 }
 
 function findActiveTheme(storefronts: StorefrontLike[]): ActiveThemeMatch | null {
@@ -81,21 +109,21 @@ export function resolveStorefrontThemeMetadata(storefronts: StorefrontLike[], de
   const theme = activeMatch?.theme;
   const activeStorefrontName = cleanString(storefront?.name);
   const activeThemeName = cleanString(theme?.name);
+  const activeThemeId = cleanString(theme?.themeId);
   const hasActiveTheme = Boolean(activeMatch);
-  const isOzy = isOzyTheme(activeStorefrontName, activeThemeName);
-  const themeAdapterKey: ThemeAdapterKey = !hasActiveTheme || isOzy ? 'ozy' : 'generic';
-  const adapterSource: ThemeAdapterSource = !hasActiveTheme ? 'legacy_fallback' : isOzy ? 'auto' : 'generic_unknown';
+  const adapter = resolveThemeAdapter(hasActiveTheme, activeThemeId, activeThemeName);
 
   return {
     activeStorefrontId: cleanString(storefront?.id),
     activeStorefrontName,
     activeStorefrontThemeId: cleanString(theme?.id),
-    activeThemeId: cleanString(theme?.themeId) || cleanString(theme?.id),
+    activeThemeId: activeThemeId || cleanString(theme?.id),
     activeThemeVersionId: cleanString(theme?.themeVersionId),
     activeThemeName,
     mainStorefrontThemeId: cleanString(storefront?.mainStorefrontThemeId),
-    themeAdapterKey,
-    adapterSource,
+    themeAdapterKey: adapter.themeAdapterKey,
+    adapterSource: adapter.adapterSource,
+    adapterMatchedBy: adapter.adapterMatchedBy,
     detectedAt,
   };
 }
