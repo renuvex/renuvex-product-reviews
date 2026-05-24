@@ -8,7 +8,7 @@ import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
 import { registerPopover, notifyOpening } from '../shared/popover-registry.js';
 import { partialStarsHTML } from '../../core/helpers.js';
-import { starUseSvg } from '../../icons/star-sprite.js';
+import { starUseSvg, iconUseSvg } from '../../icons/star-sprite.js';
 import { currentSettings } from '../../core/state.js';
 import { COMPACT_CSS } from './styles.js';
 
@@ -59,9 +59,7 @@ export function render(opts) {
     '<span class="ikr-compact-trigger-stars">' + partialStarsHTML(avgRatingVal, iconPair) + '</span>' +
     '<span class="ikr-compact-trigger-text">' + allCount.toLocaleString('tr-TR') + ' Yorum</span>' +
     '<span class="ikr-compact-chevron">' +
-      '<svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-        '<path d="M7.11 5.16L2.16 0.21L0.75 1.62L7.11 7.98L13.48 1.62L12.06 0.21L7.11 5.16Z" fill="currentColor"/>' +
-      '</svg>' +
+      iconUseSvg('<svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7.11 5.16L2.16 0.21L0.75 1.62L7.11 7.98L13.48 1.62L12.06 0.21L7.11 5.16Z" fill="currentColor"/></svg>') +
     '</span>';
   triggerWrap.appendChild(trigger);
   header.appendChild(triggerWrap);

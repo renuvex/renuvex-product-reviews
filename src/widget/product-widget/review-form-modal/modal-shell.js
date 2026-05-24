@@ -7,6 +7,7 @@
 // 'ikr-fwizard-' prefix'iyle izole.
 
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
+import { iconUseSvg } from '../../icons/star-sprite.js';
 
 export function createWizardShell(opts) {
   var onClose = opts && opts.onClose ? opts.onClose : function () {};
@@ -31,10 +32,7 @@ export function createWizardShell(opts) {
   closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', 'Kapat');
   closeBtn.innerHTML =
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<line x1="18" y1="6" x2="6" y2="18"></line>' +
-    '<line x1="6" y1="6" x2="18" y2="18"></line>' +
-    '</svg>';
+    iconUseSvg('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>');
   modal.appendChild(closeBtn);
 
   var content = document.createElement('div');

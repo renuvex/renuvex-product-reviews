@@ -4,6 +4,7 @@
 
 import { registerPopover, notifyOpening } from './popover-registry.js';
 import { getFilterIconSvg } from '../../icons/index.js';
+import { iconUseSvg } from '../../icons/star-sprite.js';
 import { currentSettings } from '../../core/state.js';
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 
@@ -35,7 +36,7 @@ export function buildActionsBlock(opts) {
   filterBtn.setAttribute('aria-expanded', 'false');
   // İkon admin panelinden seçili (settings.filterIcon); fallback "lines".
   var filterIconKey = (currentSettings && currentSettings.filterIcon) || 'lines';
-  filterBtn.innerHTML = getFilterIconSvg(filterIconKey);
+  filterBtn.innerHTML = iconUseSvg(getFilterIconSvg(filterIconKey));
 
   var filterMenu = document.createElement('div');
   filterMenu.className = 'ikr-filter-menu';

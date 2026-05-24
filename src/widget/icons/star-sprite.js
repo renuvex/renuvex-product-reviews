@@ -1,85 +1,128 @@
-// icons/star-sprite.js — single SVG <symbol> sprite for rating stars.
+// icons/star-sprite.js — unified SVG <symbol> sprite for ALL widget icons.
 //
-// Why: the rating star is the most-repeated icon on every storefront surface.
-// Inlining its full <path d="…"> per star bloated the live DOM (measured ~76 KB
-// of duplicated path data on a busy PDP, ~4.6 KB per listing badge). This module
-// defines the ACTIVE icon's geometry once as two <symbol>s (full + outline) and
-// lets every read-only star render as a tiny <use href="#…"> reference.
+// Why: icons were inlined as full SVG markup at every use site. The rating star
+// is the worst offender (repeated 5× per row across badges, cards, summary, bar
+// chart — measured ~76 KB of duplicated path data on a busy PDP), but the goal
+// here is one global icon system: every widget icon is defined once as a
+// <symbol> and referenced via <use href="#…">.
 //
-// The icon geometry/color stay single-sourced from the ICONS registry (ADR_0016);
-// only the delivery mechanism changes. Symbols are DERIVED from the same trusted
-// SVG strings the admin preview also consumes, so there is one source of truth.
+// Single sprite container (`#ikr-icon-sprite`), symbols added individually and
+// idempotently. The star symbols use fixed ids and are swapped in place when the
+// merchant changes the icon (live preview) WITHOUT clobbering other icons'
+// symbols. Generic one-off icons get a content-hashed id and are injected once.
 //
-// Correct-by-construction: ensureStarSprite() runs at the top of every star
-// renderer, BEFORE the returned <use> markup is inserted into the DOM, so a
-// <use> can never resolve against a missing <symbol> (no race, no flag/gate).
+// Correct-by-construction: the ensure* helpers run before the returned <use>
+// markup is inserted, so a <use> never resolves against a missing <symbol>.
+// SSR-safe: every entry point guards on `document`/`DOMParser`.
 
 export var STAR_SYMBOL_FULL_ID = 'ikr-sym-star-full';
 export var STAR_SYMBOL_OUTLINE_ID = 'ikr-sym-star-outline';
 
 var SPRITE_ID = 'ikr-icon-sprite';
+var currentStarKey = null;
 
-// Turn one trusted ICONS SVG string into a <symbol> with the given id, keeping
-// viewBox + fill/stroke presentation attrs so the rendered <use> is visually
-// identical to the old inline <svg>. xmlns is dropped (the wrapping sprite <svg>
-// carries it) and aria-hidden is dropped (the sprite root + each <use> set it).
+function hashStr(s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
+  return (h >>> 0).toString(36);
+}
+
+function getAttr(svgString, attr) {
+  var m = svgString.match(new RegExp('\\b' + attr + '="([^"]*)"'));
+  return m ? m[1] : null;
+}
+
+// Convert one trusted SVG string into a <symbol> with the given id. Keeps viewBox
+// + fill/stroke presentation attrs (so the geometry renders identically); drops
+// xmlns/aria-hidden/width/height (the wrapping sprite carries xmlns; the outer
+// <svg> at each use site carries size + aria-hidden).
 function svgStringToSymbol(svgString, symbolId) {
   if (typeof svgString !== 'string') return '';
   return svgString
     .replace(/^\s*<svg\b/, '<symbol id="' + symbolId + '"')
     .replace(/\s+xmlns="[^"]*"/g, '')
     .replace(/\s+aria-hidden="[^"]*"/g, '')
+    .replace(/\s+width="[^"]*"/g, '')
+    .replace(/\s+height="[^"]*"/g, '')
     .replace(/<\/svg>\s*$/, '</symbol>');
 }
 
-// Cheap stable key so the sprite is re-injected only when the active icon
-// actually changes (e.g. live preview icon swap). Keyed on the geometry itself.
-function spriteKeyFor(iconPair) {
-  var s = (iconPair.filled || '') + '|' + (iconPair.empty || '');
-  var h = 0;
-  for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
-  return (h >>> 0).toString(36);
-}
-
-// Inject (or refresh) the hidden sprite holding the active icon's two symbols.
-// Idempotent: re-running with the same icon is a no-op; a changed icon swaps the
-// symbol set in place. Built with DOMParser + importNode (no innerHTML).
-export function ensureStarSprite(iconPair) {
-  if (typeof document === 'undefined' || typeof DOMParser === 'undefined') return;
-  if (!iconPair || !iconPair.filled || !iconPair.empty) return;
-
-  var key = spriteKeyFor(iconPair);
-  var sprite = document.getElementById(SPRITE_ID);
-  if (sprite && sprite.getAttribute('data-ikr-icon-key') === key) return;
-
-  var markup = '<svg xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">' +
-    svgStringToSymbol(iconPair.filled, STAR_SYMBOL_FULL_ID) +
-    svgStringToSymbol(iconPair.empty, STAR_SYMBOL_OUTLINE_ID) +
-    '</svg>';
-
-  var parsed = new DOMParser().parseFromString(markup, 'image/svg+xml');
-  var svgEl = parsed && parsed.documentElement;
-  // Bail if the parser produced an error document instead of an <svg> root.
-  if (!svgEl || String(svgEl.nodeName).toLowerCase() !== 'svg') return;
-
-  if (!sprite) {
-    sprite = document.createElement('div');
-    sprite.id = SPRITE_ID;
-    sprite.setAttribute('aria-hidden', 'true');
-    // Hide without display:none — display:none on the sprite container stops
-    // some engines from rendering <use> references to its symbols.
-    sprite.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
-    (document.body || document.documentElement).appendChild(sprite);
-  } else {
-    while (sprite.firstChild) sprite.removeChild(sprite.firstChild);
+// Return the inner <svg> of the hidden sprite container, creating it if needed.
+function getSpriteSvg() {
+  if (typeof document === 'undefined' || typeof DOMParser === 'undefined') return null;
+  var container = document.getElementById(SPRITE_ID);
+  if (!container) {
+    container = document.createElement('div');
+    container.id = SPRITE_ID;
+    container.setAttribute('aria-hidden', 'true');
+    // Hide without display:none — display:none on the container stops some
+    // engines from rendering <use> references to its symbols.
+    container.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+    (document.body || document.documentElement).appendChild(container);
+    var parsed = new DOMParser().parseFromString(
+      '<svg xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"></svg>',
+      'image/svg+xml',
+    );
+    var root = parsed && parsed.documentElement;
+    if (root && String(root.nodeName).toLowerCase() === 'svg') {
+      container.appendChild(document.importNode(root, true));
+    }
   }
-  sprite.setAttribute('data-ikr-icon-key', key);
-  sprite.appendChild(document.importNode(svgEl, true));
+  return container.firstChild || null;
 }
 
-// Markup for one star as a <use> reference. state: 'full' | 'outline'.
-// Sizing/color come from CSS (.ikr-star-svg + currentColor), same as before.
+// Inject (or replace) one <symbol> by id. Replacing only touches that one
+// symbol, so swapping the star icon never clobbers other icons.
+function putSymbol(svgString, symbolId, replace) {
+  if (typeof document === 'undefined' || typeof DOMParser === 'undefined') return false;
+  var existing = document.getElementById(symbolId);
+  if (existing && !replace) return true;
+  var svgRoot = getSpriteSvg();
+  if (!svgRoot) return false;
+  var parsed = new DOMParser().parseFromString(
+    '<svg xmlns="http://www.w3.org/2000/svg">' + svgStringToSymbol(svgString, symbolId) + '</svg>',
+    'image/svg+xml',
+  );
+  var wrapper = parsed && parsed.documentElement;
+  if (!wrapper || String(wrapper.nodeName).toLowerCase() !== 'svg' || !wrapper.firstChild) return false;
+  var symbol = wrapper.firstChild;
+  if (existing && replace && existing.parentNode) existing.parentNode.removeChild(existing);
+  svgRoot.appendChild(document.importNode(symbol, true));
+  return true;
+}
+
+// ── Rating star (fixed ids, swapped in place when the icon changes) ──────────
+export function ensureStarSprite(iconPair) {
+  if (typeof document === 'undefined' || !iconPair || !iconPair.filled || !iconPair.empty) return;
+  var key = hashStr(iconPair.filled + '|' + iconPair.empty);
+  if (key === currentStarKey && document.getElementById(STAR_SYMBOL_FULL_ID)) return;
+  var okFull = putSymbol(iconPair.filled, STAR_SYMBOL_FULL_ID, true);
+  var okOutline = putSymbol(iconPair.empty, STAR_SYMBOL_OUTLINE_ID, true);
+  if (okFull && okOutline) currentStarKey = key;
+}
+
 export function starUseSvg(state) {
   var id = state === 'outline' ? STAR_SYMBOL_OUTLINE_ID : STAR_SYMBOL_FULL_ID;
   return '<svg class="ikr-star-svg" viewBox="0 0 256 256" aria-hidden="true"><use href="#' + id + '"/></svg>';
+}
+
+// ── Generic one-off icon (content-hashed id, injected once) ──────────────────
+// Returns a <use>-based svg that renders identically to the inline source
+// (viewBox + width/height preserved). Falls back to the original string if the
+// DOM/parser is unavailable (SSR) or injection fails.
+export function iconUseSvg(svgString, className) {
+  if (typeof document === 'undefined' || typeof DOMParser === 'undefined' || typeof svgString !== 'string' || !svgString) {
+    return svgString || '';
+  }
+  var id = 'ikr-sym-' + hashStr(svgString);
+  putSymbol(svgString, id, false);
+  if (!document.getElementById(id)) return svgString;
+  var vb = getAttr(svgString, 'viewBox') || '0 0 24 24';
+  var w = getAttr(svgString, 'width');
+  var h = getAttr(svgString, 'height');
+  var out = '<svg class="' + (className || 'ikr-icon-svg') + '" viewBox="' + vb + '"';
+  if (w) out += ' width="' + w + '"';
+  if (h) out += ' height="' + h + '"';
+  out += ' aria-hidden="true"><use href="#' + id + '"/></svg>';
+  return out;
 }

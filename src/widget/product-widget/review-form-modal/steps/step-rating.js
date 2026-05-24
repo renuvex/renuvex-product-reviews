@@ -11,6 +11,7 @@
 // Bu sayede modal review yıldızlarıyla tutarlı görünür.
 
 import { getIconFromSettings } from '../../../icons/index.js';
+import { ensureStarSprite, starUseSvg } from '../../../icons/star-sprite.js';
 import { currentSettings } from '../../../core/state.js';
 
 export function createStepRating(state, opts) {
@@ -36,6 +37,7 @@ export function createStepRating(state, opts) {
   // İkon çifti admin'deki "Yıldız Stili → Yorum İkonu"ndan gelir.
   // Renk --ikr-review-star-color (admin "Yıldız Rengi") via .ikr-fwizard-star-active.
   var iconPair = getIconFromSettings(currentSettings || {});
+  ensureStarSprite(iconPair);
 
   var stars = [];
 
@@ -45,7 +47,7 @@ export function createStepRating(state, opts) {
       btn.classList.toggle('ikr-fwizard-star-active', isActive);
       btn.setAttribute('aria-checked', idx + 1 === activeCount ? 'true' : 'false');
       // SVG'yi state'e göre filled/empty olarak değiştir — review item ile tutarlı.
-      btn.innerHTML = isActive ? iconPair.filled : iconPair.empty;
+      btn.innerHTML = isActive ? starUseSvg('full') : starUseSvg('outline');
     });
   }
 
@@ -73,7 +75,7 @@ export function createStepRating(state, opts) {
       btn.setAttribute('role', 'radio');
       btn.setAttribute('aria-label', value + ' yıldız');
       // Başlangıçta empty — applyVisual ilk çağrıda doğru SVG'yi yerleştirir.
-      btn.innerHTML = iconPair.empty;
+      btn.innerHTML = starUseSvg('outline');
 
       btn.addEventListener('mouseenter', function () {
         applyVisual(value);

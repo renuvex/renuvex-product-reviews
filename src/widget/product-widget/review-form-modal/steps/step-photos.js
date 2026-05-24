@@ -6,6 +6,7 @@
 import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';
 import { isTrustedReviewImageUrl } from '../../../core/helpers.js';
+import { iconUseSvg } from '../../../icons/star-sprite.js';
 
 var MAX_PHOTOS = 3;
 var MAX_BYTES = 10 * 1024 * 1024;
@@ -39,11 +40,7 @@ export function createStepPhotos(state, opts) {
   uploadLabel.className = 'ikr-fwizard-photo-add';
   uploadLabel.setAttribute('aria-label', 'Fotoğraf ekle');
   uploadLabel.innerHTML =
-    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>' +
-    '<circle cx="8.5" cy="8.5" r="1.5"/>' +
-    '<polyline points="21 15 16 10 5 21"/>' +
-    '</svg>' +
+    iconUseSvg('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>') +
     '<span>Fotoğraf Ekle</span>';
 
   var fileInput = document.createElement('input');
@@ -162,10 +159,10 @@ export function createStepPhotos(state, opts) {
 
     if (totalCount > 0) {
       card.classList.add('ikr-fwizard-photo-card--compact');
-      uploadLabel.innerHTML = PLUS_ICON;
+      uploadLabel.innerHTML = iconUseSvg(PLUS_ICON);
     } else {
       card.classList.remove('ikr-fwizard-photo-card--compact');
-      uploadLabel.innerHTML = PHOTO_ICON + '<span>Fotoğraf Ekle</span>';
+      uploadLabel.innerHTML = iconUseSvg(PHOTO_ICON) + '<span>Fotoğraf Ekle</span>';
     }
 
     if (isFull) {

@@ -72,8 +72,28 @@ Adopted from Yotpo's class-leading pattern:
 - **No static `id="ikr-rating-badge"`.** Duplicate-id risk if two badges ever render; cleanup now selects by `.ikr-rating-badge--pdp`.
 - **Alignment via `data-ikr-align` + CSS** (Loox-style `data-alignment`) instead of an inline `justify-content` style on the badge.
 
-### 4. Scope: read-only stars only
-All repeated read-only star surfaces use the sprite: PDP/listing badges, review cards, the review modal, and the summary layouts — both the average star (classic/split/compact) and the shared rating-distribution **bar chart** (`summary-layouts/shared/bar-chart.js`, 25 stars per chart). The **interactive form rating picker** (`renderStars` in helpers.js, `step-rating.js`) renders ~10 icons once per form-open and carries focus/hover/tap logic (recently WebKit-hardened); it is intentionally left inline — negligible bloat, real interaction risk. Non-star UI chrome (filter funnel, chevron) also stays inline (one-off icons, not rating stars).
+### 4. Scope: a unified icon system (all widget icons)
+`star-sprite.js` is the single icon sprite for the whole widget. Every
+widget-owned icon is defined once as a `<symbol>` and referenced via `<use>`:
+- **Rating stars** (heavily repeated — the real DOM win): badges, review cards,
+  modal, and all summary layouts incl. the distribution **bar chart**
+  (`bar-chart.js`, 25 stars/chart). Via `ensureStarSprite` + `starUseSvg`.
+- **Interactive form rating picker** (`step-rating.js`): now also `<use>` — only
+  the icon markup changed; the WebKit-hardened pointer/touch/keyboard activation
+  logic is untouched.
+- **One-off UI icons** via `iconUseSvg(svgString)` (content-hashed `<symbol>`,
+  injected once): filter funnel (`actions-block.js`), compact chevron, modal
+  close (`modal-shell.js`), wizard back arrow (`progress-bar.js`), photo
+  upload/plus (`step-photos.js`). These give ~no DOM win (single instances) but
+  unify the mechanism; `iconUseSvg` preserves each icon's
+  `viewBox`/`width`/`height`/stroke so rendering is byte-identical.
+- **Sole exception:** the widget-*disabled* empty-state placeholder
+  (`render.js`) stays inline — it renders only when the merchant turns the
+  widget OFF (never customer-facing) and carries a one-off inline `style`.
+
+`iconUseSvg` and `ensureStarSprite` write into the **same** `#ikr-icon-sprite`
+container but manage symbols individually: a live-preview star-icon swap replaces
+only the two star symbols and never clobbers the one-off icon symbols.
 
 ## Reasoning
 - A shared `<symbol>` + `<use>` removes per-instance geometry duplication: the PDP star DOM drops from ~76 KB of path data to ~2 KB (geometry once + tiny refs), verified in a real browser (`useCount` 6, `pathCount` 0, half-star clip intact, geometry paints).

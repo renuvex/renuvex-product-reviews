@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-24 - refactor | Unify ALL widget icons into the SVG sprite (ADR 0019 follow-up)
+- Summary: Extended the sprite from rating-stars-only to a single unified widget icon system. The interactive wizard rating picker, the filter funnel, the compact chevron, and the review-form modal chrome (close ×, back arrow, photo-upload/plus icons) now reference the shared `#ikr-icon-sprite` via `<use>` instead of inline SVG.
+- Reason: Follow-through on "make the whole icon system global/consistent". One-off icons give ~no DOM win (single instances) but the unified mechanism is cleaner; the wizard rating stars are genuine rating stars and now match every other star surface.
+- Key source changes: `icons/star-sprite.js` generalized — added `iconUseSvg(svgString)` (content-hashed `<symbol>`, injected once, preserves viewBox/width/height/stroke) and made symbol injection per-symbol (no-clobber) so a live-preview star swap no longer wipes other icons. Converted `step-rating.js` (wizard stars → `starUseSvg`), `summary-layouts/shared/actions-block.js` (funnel), `summary-layouts/compact/index.js` (chevron), `review-form-modal/modal-shell.js` (close), `review-form-modal/progress-bar.js` (back arrow), `review-form-modal/steps/step-photos.js` (upload/photo/plus). The wizard's WebKit-hardened tap logic was NOT touched (only icon markup). The widget-disabled empty-state icon in `render.js` stays inline (admin-only, never customer-facing).
+- Verification: `pnpm build:widget` + `pnpm lint` clean. Real-browser check of `iconUseSvg` with a stroke icon (close ×, viewBox 0 0 24 24, width preserved) and a fill icon (funnel) — both render via `<use>` (getBBox > 0), 0 inline paths. Live modal/funnel re-check pending this commit's deploy.
+- Updated wiki: [[ADR_0019_Icon_Sprite_Rendering]], [[Log]]
+
 ## 2026-05-24 - refactor | Sprite the review-summary + bar-chart stars (ADR 0019 follow-up)
 - Summary: Completed the SVG sprite migration for the review area. The summary average star (classic/split/compact layouts) and the shared rating-distribution bar chart (25 inline stars per chart) still used inline `<path>`; they now emit `<use>` like the rest.
 - Reason: The first pass converted `partialStarsHTML`/`starsHTML`/`renderStarRow`, but the classic/split/compact avg star and `bar-chart.js` render stars through their own inline `iconPair.filled`/`empty` path — they were the ~20 KB of remaining inline star path data measured on the live PDP review area.

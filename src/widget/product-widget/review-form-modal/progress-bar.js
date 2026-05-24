@@ -8,6 +8,7 @@
 // çalışır.
 
 import { TOTAL_STEPS, validateStep } from './wizard-state.js';
+import { iconUseSvg } from '../../icons/star-sprite.js';
 
 // SVG ok ikonu — sadece "Geri" butonunda kullanılır.
 var ARROW_LEFT_SVG =
@@ -33,7 +34,7 @@ export function createProgressBar(opts) {
   leftBtn.type = 'button';
   leftBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-back';
   leftBtn.setAttribute('aria-label', 'Geri');
-  leftBtn.innerHTML = ARROW_LEFT_SVG + '<span>Geri</span>';
+  leftBtn.innerHTML = iconUseSvg(ARROW_LEFT_SVG) + '<span>Geri</span>';
   leftBtn.addEventListener('click', function () { onBack(); });
   wrap.appendChild(leftBtn);
 
