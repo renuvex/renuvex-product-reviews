@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-24 - hardening | Safe wizard error DOM and sprite id guard
+- Summary: Removed the two remaining dynamic widget-wizard error `innerHTML` sinks from photo upload and review submit errors, and strengthened one-off SVG sprite ids with a length + double-hash key.
+- Reason: The SVG sprite refactor was correct, but production widget HTML generation should keep dynamic messages out of HTML string concatenation. The sprite helper also now avoids silent symbol reuse if a future local icon source collides with an existing content id.
+- Key source changes: `step-photos.js` and `step-author.js` now render dynamic error messages with `createElement` + `textContent`; `icons/star-sprite.js` uses `symbolKey()` for generic one-off icons and stores `data-ikr-symbol-key`; [[ADR_0019_Icon_Sprite_Rendering]] now reflects that the interactive picker has been converted.
+- Verification: `pnpm build:widget`, `node --check` on changed widget files plus built loader/runtime, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check` passed. Wiki audit remains Yellow because of pre-existing metadata/length warnings.
+- Updated wiki: [[ADR_0019_Icon_Sprite_Rendering]], [[Log]]
+
 ## 2026-05-24 - refactor | Guard listing badge slot positions
 - Summary: Extended the PDP owned-slot position guard standard to listing badges, which covers category, home product blocks, search results, and blog product blocks through the shared listing module.
 - Reason: If a third-party app or late theme script inserts into the same product-card parent after Renuvex renders, the listing badge should keep its own slot at the adapter-selected mount point without moving or deleting the third-party node.

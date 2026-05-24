@@ -21,10 +21,14 @@ export var STAR_SYMBOL_OUTLINE_ID = 'ikr-sym-star-outline';
 var SPRITE_ID = 'ikr-icon-sprite';
 var currentStarKey = null;
 
-function hashStr(s) {
-  var h = 0;
+function hashStr(s, seed) {
+  var h = seed || 0;
   for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
   return (h >>> 0).toString(36);
+}
+
+function symbolKey(svgString) {
+  return svgString.length.toString(36) + '-' + hashStr(svgString, 0) + '-' + hashStr(svgString, 5381);
 }
 
 function getAttr(svgString, attr) {
@@ -75,8 +79,9 @@ function getSpriteSvg() {
 // symbol, so swapping the star icon never clobbers other icons.
 function putSymbol(svgString, symbolId, replace) {
   if (typeof document === 'undefined' || typeof DOMParser === 'undefined') return false;
+  var key = symbolKey(svgString);
   var existing = document.getElementById(symbolId);
-  if (existing && !replace) return true;
+  if (existing && !replace) return existing.getAttribute('data-ikr-symbol-key') === key;
   var svgRoot = getSpriteSvg();
   if (!svgRoot) return false;
   var parsed = new DOMParser().parseFromString(
@@ -86,6 +91,7 @@ function putSymbol(svgString, symbolId, replace) {
   var wrapper = parsed && parsed.documentElement;
   if (!wrapper || String(wrapper.nodeName).toLowerCase() !== 'svg' || !wrapper.firstChild) return false;
   var symbol = wrapper.firstChild;
+  symbol.setAttribute('data-ikr-symbol-key', key);
   if (existing && replace && existing.parentNode) existing.parentNode.removeChild(existing);
   svgRoot.appendChild(document.importNode(symbol, true));
   return true;
@@ -94,7 +100,7 @@ function putSymbol(svgString, symbolId, replace) {
 // ── Rating star (fixed ids, swapped in place when the icon changes) ──────────
 export function ensureStarSprite(iconPair) {
   if (typeof document === 'undefined' || !iconPair || !iconPair.filled || !iconPair.empty) return;
-  var key = hashStr(iconPair.filled + '|' + iconPair.empty);
+  var key = symbolKey(iconPair.filled + '|' + iconPair.empty);
   if (key === currentStarKey && document.getElementById(STAR_SYMBOL_FULL_ID)) return;
   var okFull = putSymbol(iconPair.filled, STAR_SYMBOL_FULL_ID, true);
   var okOutline = putSymbol(iconPair.empty, STAR_SYMBOL_OUTLINE_ID, true);
@@ -114,7 +120,7 @@ export function iconUseSvg(svgString, className) {
   if (typeof document === 'undefined' || typeof DOMParser === 'undefined' || typeof svgString !== 'string' || !svgString) {
     return svgString || '';
   }
-  var id = 'ikr-sym-' + hashStr(svgString);
+  var id = 'ikr-sym-' + symbolKey(svgString);
   putSymbol(svgString, id, false);
   if (!document.getElementById(id)) return svgString;
   var vb = getAttr(svgString, 'viewBox') || '0 0 24 24';

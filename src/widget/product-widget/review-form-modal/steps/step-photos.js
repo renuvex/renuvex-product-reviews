@@ -118,9 +118,14 @@ export function createStepPhotos(state, opts) {
     var overlay = node.querySelector('.ikr-fwizard-photo-loading');
     if (item.isPending && item.error) {
       overlay.style.display = 'flex';
-      overlay.innerHTML = '<span class="ikr-upload-error">✗ ' + item.error + '</span>';
+      overlay.textContent = '';
+      var errorEl = document.createElement('span');
+      errorEl.className = 'ikr-upload-error';
+      errorEl.textContent = '✗ ' + item.error;
+      overlay.appendChild(errorEl);
     } else {
       overlay.style.display = 'none';
+      overlay.textContent = '';
     }
 
     var removeBtn = node.querySelector('.ikr-fwizard-photo-remove');

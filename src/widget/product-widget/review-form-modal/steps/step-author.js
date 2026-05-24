@@ -120,6 +120,18 @@ export function createStepAuthor(state, opts) {
   // Mikro-defer: footer mount edildikten sonra validity'yi bildir
   setTimeout(function () { onValidityChange(isValid()); }, 0);
 
+  function clearMessage() {
+    msg.textContent = '';
+  }
+
+  function showInlineError(message) {
+    clearMessage();
+    var errorEl = document.createElement('div');
+    errorEl.className = 'ikr-fwizard-msg-error';
+    errorEl.textContent = message || '';
+    msg.appendChild(errorEl);
+  }
+
   submitBtn.onclick = async function () {
     if (submitBtn.disabled) return;
     var s = state.get();
@@ -133,11 +145,11 @@ export function createStepAuthor(state, opts) {
     }
 
     if (!author) {
-      msg.innerHTML = '<div class="ikr-fwizard-msg-error">Gerekli alan</div>';
+      showInlineError('Gerekli alan');
       return;
     }
     if (!s.rating) {
-      msg.innerHTML = '<div class="ikr-fwizard-msg-error">Lütfen bir yıldız seçin.</div>';
+      showInlineError('Lütfen bir yıldız seçin.');
       return;
     }
 
@@ -145,7 +157,7 @@ export function createStepAuthor(state, opts) {
     submitBtn.classList.add('ikr-fwizard-submit-btn--disabled');
     var originalText = submitBtn.textContent;
     submitBtn.textContent = 'Gönderiliyor…';
-    msg.innerHTML = '';
+    clearMessage();
 
     // Preview modunda submit simüle et (validasyonlar geçtikten sonra)
     if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
@@ -187,7 +199,7 @@ export function createStepAuthor(state, opts) {
       if (opts.showToast) {
         opts.showToast(msgText, 'error');
       } else {
-        msg.innerHTML = '<div class="ikr-fwizard-msg-error">' + msgText + '</div>';
+        showInlineError(msgText);
       }
       submitBtn.disabled = false;
       submitBtn.classList.remove('ikr-fwizard-submit-btn--disabled');

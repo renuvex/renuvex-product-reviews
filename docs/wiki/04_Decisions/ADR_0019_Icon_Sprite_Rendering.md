@@ -81,7 +81,7 @@ widget-owned icon is defined once as a `<symbol>` and referenced via `<use>`:
 - **Interactive form rating picker** (`step-rating.js`): now also `<use>` — only
   the icon markup changed; the WebKit-hardened pointer/touch/keyboard activation
   logic is untouched.
-- **One-off UI icons** via `iconUseSvg(svgString)` (content-hashed `<symbol>`,
+- **One-off UI icons** via `iconUseSvg(svgString)` (length + double-hashed `<symbol>`,
   injected once): filter funnel (`actions-block.js`), compact chevron, modal
   close (`modal-shell.js`), wizard back arrow (`progress-bar.js`), photo
   upload/plus (`step-photos.js`). These give ~no DOM win (single instances) but
@@ -104,12 +104,13 @@ only the two star symbols and never clobbers the one-off icon symbols.
 ## Alternatives Considered
 - **Per-star `<linearGradient>` fill (Yotpo).** Smooth fractional fill but requires a unique gradient id per star → incompatible with a shared sprite, more DOM, id-collision workarounds. Rejected.
 - **External `.svg` sprite file referenced by URL.** Adds a network request and a same-origin/CORS surface for `<use>`; our geometry is tiny and already in the JS bundle. Rejected.
-- **Convert the interactive picker too.** Negligible byte win, real risk to recently-hardened tap/focus logic. Deferred.
+- **Keep the interactive picker inline.** Initially considered to avoid touching recently-hardened tap/focus logic; superseded by the follow-up icon-unification commit because only markup changed and the WebKit-safe event logic stayed intact.
 - **Keep inlining (status quo).** Valid and shipped by Yotpo, but leaves the measured listing/PDP DOM bloat unaddressed. Rejected.
 
 ## Consequences
 - Star geometry now depends on `#ikr-icon-sprite` existing in the DOM. `ensureStarSprite` runs synchronously inside every read-only renderer before its `<use>` markup is inserted, so the dependency is satisfied by construction; there is no flag/gate to retire.
 - Theme-agnostic: the sprite lives in shared `icons/` core, not in any theme adapter or per-theme bundle. **Future themes beyond ozy inherit it automatically** — a new theme implements only DOM mount/selectors (see [[ADR_0017_Badge_Architecture]] / current-adapter), never icon rendering.
+- Generic one-off symbol ids include source length plus two independent hash passes, and injected symbols carry a source key. The icon set is still trusted/local, but this avoids silent reuse if the helper is later called with a different SVG that collides with an existing id.
 - SEO unaffected: the `AggregateRating` JSON-LD in [rating-badge.js](src/widget/product-widget/rating-badge.js) is independent of the visual DOM.
 - **Amends [[ADR_0017_Badge_Architecture]]** for the PDP badge: its "every badge gets `role=figure` + `aria-label`", the static `id="ikr-rating-badge"`, and the inline `justify-content` are superseded here (link role, `aria-labelledby` sr-only, `data-ikr-align`). The listing badge's `role="figure"` and `pointer-events:none` card-link behavior are unchanged.
 - Dual `data-renuvex-*`/`data-ikr-*` markers are untouched (still ADR_0018 migration debt; retire later via expand/contract).
