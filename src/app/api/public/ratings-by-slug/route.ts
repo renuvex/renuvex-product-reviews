@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     }
 
     const rateLimit = await checkFixedWindowRateLimit({
-      key: `ikr_ratings_rl:${getClientIp(request)}`,
+      key: `renuvex_pr_ratings_rl:${getClientIp(request)}`,
       max: RATINGS_RATE_LIMIT_MAX,
       windowSec: RATINGS_RATE_LIMIT_WINDOW_SEC,
       label: 'public-ratings-by-slug',

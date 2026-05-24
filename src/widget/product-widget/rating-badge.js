@@ -138,6 +138,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // (Loox-style data-alignment) instead of an inline style.
   var titleAlign = window.getComputedStyle(titleEl).textAlign;
   var badgeAlign = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'right' : 'left';
+  badge.setAttribute('data-renuvex-align', badgeAlign);
   badge.setAttribute('data-ikr-align', badgeAlign);
 
   badge.insertAdjacentHTML('beforeend', a11y.html + buildStars(avgRating, iconPair));

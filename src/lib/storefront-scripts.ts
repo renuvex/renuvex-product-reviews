@@ -2,12 +2,13 @@ import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { buildStorefrontThemeState, resolveStorefrontThemeMetadata } from '@/lib/storefront-theme';
-import { buildStorefrontWidgetScript, STOREFRONT_WIDGET_APP_MARKER, STOREFRONT_WIDGET_RENUVEX_APP_MARKER } from '@/lib/storefront-widget-url';
+import { buildStorefrontWidgetScript, LEGACY_STOREFRONT_WIDGET_APP_MARKER, STOREFRONT_WIDGET_APP_MARKER } from '@/lib/storefront-widget-url';
 import { StorefrontJSScriptContentTypeEnum, type ikasAdminGraphQLAPIClient } from '@/lib/ikas-client/generated/graphql';
 import type { ikasAdminGraphQLAPIClient as ikasAdminGraphQLAPIV1Client } from '@/lib/ikas-client/generated/v1-graphql';
 import type { AuthToken } from '@/models/auth-token';
 
-const STOREFRONT_SCRIPT_NAME = 'yorum-paneli-widget';
+const STOREFRONT_SCRIPT_NAME = 'renuvex-product-reviews-widget';
+const LEGACY_STOREFRONT_SCRIPT_NAMES = ['yorum-paneli-widget'];
 
 type IkasClient = ikasAdminGraphQLAPIClient<AuthToken>;
 type IkasV1Client = ikasAdminGraphQLAPIV1Client<AuthToken>;
@@ -106,11 +107,20 @@ function includesStoreIdMarker(scriptContent: string, storeId: string) {
   return scriptContent.includes(`data-renuvex-store-id="${storeId}"`) || scriptContent.includes(`data-ikr-store-id="${storeId}"`);
 }
 
+function includesRenuvexAppMarker(scriptContent: string) {
+  return scriptContent.includes(`data-renuvex-app="${STOREFRONT_WIDGET_APP_MARKER}"`);
+}
+
+function includesLegacyAppMarker(scriptContent: string) {
+  return scriptContent.includes(`data-ikr-app="${LEGACY_STOREFRONT_WIDGET_APP_MARKER}"`);
+}
+
 function includesAppMarker(scriptContent: string) {
-  return (
-    scriptContent.includes(`data-renuvex-app="${STOREFRONT_WIDGET_RENUVEX_APP_MARKER}"`) ||
-    scriptContent.includes(`data-ikr-app="${STOREFRONT_WIDGET_APP_MARKER}"`)
-  );
+  return includesRenuvexAppMarker(scriptContent) || includesLegacyAppMarker(scriptContent);
+}
+
+function isKnownScriptName(name: string) {
+  return name === STOREFRONT_SCRIPT_NAME || LEGACY_STOREFRONT_SCRIPT_NAMES.includes(name);
 }
 
 function includesPublicApiKey(scriptContent: string, storeId: string) {
@@ -119,7 +129,7 @@ function includesPublicApiKey(scriptContent: string, storeId: string) {
 
 function isAppScript(script: RemoteStorefrontScript, storeId: string) {
   return (
-    script.name === STOREFRONT_SCRIPT_NAME ||
+    isKnownScriptName(script.name) ||
     (includesAppMarker(script.scriptContent) && includesStoreIdMarker(script.scriptContent, storeId)) ||
     includesPublicApiKey(script.scriptContent, storeId)
   );
@@ -131,16 +141,23 @@ function getMatchPriority(
   storeId: string,
   scriptContent: string,
 ): { matchedBy: StorefrontScriptMatchedBy; priority: number } {
-  const hasAppMarker = includesAppMarker(script.scriptContent);
+  const hasRenuvexMarker = includesRenuvexAppMarker(script.scriptContent);
+  const hasLegacyMarker = includesLegacyAppMarker(script.scriptContent);
+  const hasAppMarker = hasRenuvexMarker || hasLegacyMarker;
   const hasStoreMarker = includesStoreIdMarker(script.scriptContent, storeId);
   const hasPublicApiKey = includesPublicApiKey(script.scriptContent, storeId);
-  const hasScriptName = script.name === STOREFRONT_SCRIPT_NAME;
+  const hasCanonicalScriptName = script.name === STOREFRONT_SCRIPT_NAME;
+  const hasKnownScriptName = isKnownScriptName(script.name);
 
   if (existingScriptId && script.id === existingScriptId && hasAppMarker && hasStoreMarker) return { matchedBy: 'db_id_marker', priority: 100 };
-  if (hasAppMarker && hasStoreMarker) return { matchedBy: 'app_marker_store_id', priority: 90 };
-  if (hasScriptName && script.scriptContent === scriptContent) return { matchedBy: 'script_name_exact_content', priority: 80 };
-  if (hasScriptName && hasPublicApiKey) return { matchedBy: 'script_name_store_id', priority: 70 };
-  if (hasScriptName) return { matchedBy: 'script_name', priority: 60 };
+  if (hasRenuvexMarker && hasStoreMarker) return { matchedBy: 'app_marker_store_id', priority: 95 };
+  if (hasLegacyMarker && hasStoreMarker) return { matchedBy: 'app_marker_store_id', priority: 90 };
+  if (hasCanonicalScriptName && script.scriptContent === scriptContent) return { matchedBy: 'script_name_exact_content', priority: 80 };
+  if (hasKnownScriptName && script.scriptContent === scriptContent) return { matchedBy: 'script_name_exact_content', priority: 78 };
+  if (hasCanonicalScriptName && hasPublicApiKey) return { matchedBy: 'script_name_store_id', priority: 70 };
+  if (hasKnownScriptName && hasPublicApiKey) return { matchedBy: 'script_name_store_id', priority: 68 };
+  if (hasCanonicalScriptName) return { matchedBy: 'script_name', priority: 60 };
+  if (hasKnownScriptName) return { matchedBy: 'script_name', priority: 58 };
   if (hasPublicApiKey) return { matchedBy: 'public_api_key', priority: 50 };
   return { matchedBy: 'none', priority: 0 };
 }

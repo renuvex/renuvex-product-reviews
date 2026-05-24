@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-10
-updated: 2026-05-12
+updated: 2026-05-24
 tags:
   - widget
   - reviews
@@ -65,9 +65,10 @@ The product review lightbox is the photo review detail modal opened from review 
 - Scroll containment is explicit on the overlay, desktop right panel, tablet wrapper, and mobile wrapper. While the modal is open, root `html` / `body` also receive `overscroll-behavior-y:none`; iOS/WebKit uses fixed-body locking so long-comment top-boundary pulls do not leak into page refresh.
 - Mobile uses `overflow-y:scroll` on `.ikr-modal-wrap` so the fullscreen lightbox remains a consistent scroll container even when a short review does not exceed the viewport.
 - Switching between different reviews normalizes every lightbox scroll layer (`.ikr-modal-wrap`, `.ikr-modal-right`, and `.ikr-modal-scroll-content`) immediately and again after layout settles. This prevents stale long-review scroll state from carrying into a short-review lightbox view.
-- In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. `IKR_SETTINGS_UPDATED_PREVIEW` carries merged settings, and the lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
+- In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The canonical `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings; `IKR_SETTINGS_UPDATED_PREVIEW` remains a legacy alias during the namespace expand phase. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
 
 ## Change Log
+- 2026-05-24: Updated preview-event wording for ADR_0020 namespace migration. `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` is canonical; `IKR_SETTINGS_UPDATED_PREVIEW` remains a compatibility alias.
 - 2026-05-12: Fixed preview settings synchronization for an already-open lightbox. The right pane now re-renders from closure state on `IKR_SETTINGS_UPDATED_PREVIEW`, covering review icons, merchant reply labels, and future right-pane setting-dependent fields. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
 - 2026-05-12: Changed the main lightbox image from `cover` to `contain` on the existing dark media background so customer review photos are shown without crop; preview thumbnails remain `cover`.
 - 2026-05-12: Changed mobile `.ikr-modal-wrap` from `overflow-y:auto` to `overflow-y:scroll` to keep the fullscreen lightbox's scroll-container behavior consistent in short-review cases.

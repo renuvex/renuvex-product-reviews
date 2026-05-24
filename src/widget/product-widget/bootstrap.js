@@ -12,7 +12,7 @@ import {
 
 var PHOTO_STRIP_LIMIT = 15;
 var REVIEWS_CACHE_TTL = 60 * 1000;
-var REVIEWS_FETCH_ERROR = '__ikrReviewsFetchError';
+var REVIEWS_FETCH_ERROR = '__renuvexProductReviewsFetchError';
 var bootstrapCache = {};
 
 export function createReviewsFetchError(message) {
@@ -40,7 +40,7 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
   orderBy = orderBy || 'newest';
   page = page || 1;
   var limitKey = limit ? '_l' + limit : '';
-  var key = 'ikr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + limitKey;
+  var key = 'renuvex_pr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + limitKey;
   var staleReviews = null;
   var cached = cacheGet(key);
 
@@ -71,7 +71,7 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
     cacheSet(key, JSON.stringify({ t: Date.now(), v: data }));
     return data;
   } catch (err) {
-    console.error('[ikr] fetchReviews error:', err);
+    console.error('[renuvex-pr] fetchReviews error:', err);
     return staleReviews || createReviewsFetchError();
   }
 }
@@ -115,7 +115,7 @@ export async function bootstrap(productId, productName) {
     setPhotoStripReviews(fetchResults[1]);
     await render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
   } catch (err) {
-    console.error('[ikr] bootstrap error:', err);
+    console.error('[renuvex-pr] bootstrap error:', err);
     await render(productId, FALLBACK, createReviewsFetchError(), productName, undefined, undefined, BADGE_FALLBACK);
   } finally {
     delete bootstrapCache[productId];

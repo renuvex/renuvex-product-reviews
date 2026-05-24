@@ -13,6 +13,10 @@
 import { getIconFromSettings } from '../../../icons/index.js';
 import { ensureStarSprite, starUseSvg } from '../../../icons/star-sprite.js';
 import { currentSettings } from '../../../core/state.js';
+import {
+  LEGACY_IKR_SETTINGS_UPDATED_PREVIEW,
+  RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
+} from '../../../core/namespace.js';
 
 export function createStepRating(state, opts) {
   opts = opts || {};
@@ -112,12 +116,16 @@ export function createStepRating(state, opts) {
   applyVisual(state.get().rating);
 
   // Preview modunda ikon değişikliğini modal açıkken yansıt
+  var lastPreviewSettings = null;
   var onSettingsUpdate = function(event) {
     var nextSettings = event && event.detail && event.detail.settings;
+    if (nextSettings && nextSettings === lastPreviewSettings) return;
+    lastPreviewSettings = nextSettings || null;
     iconPair = getIconFromSettings(nextSettings || currentSettings || {});
     applyVisual(state.get().rating);
   };
-  window.addEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
+  window.addEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
+  window.addEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
 
   root.appendChild(starsRow);
 
@@ -126,7 +134,8 @@ export function createStepRating(state, opts) {
     // Step manager step değişiminde temizleme yapsın diye opsiyonel destroy
     destroy: function () {
       if (advanceTimer) clearTimeout(advanceTimer);
-      window.removeEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
+      window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
+      window.removeEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
       // hover listener'lar btn ile birlikte DOM'dan çıkınca otomatik kalkar
     },
   };

@@ -31,6 +31,7 @@ const nextConfig = {
     };
     config.plugins.push(
       new webpack.DefinePlugin({
+        __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(cloudinaryCloudName),
         __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(cloudinaryCloudName),
       }),
     );
@@ -49,8 +50,8 @@ module.exports = withSentryConfig(module.exports, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  org: "mert-copper",
-  project: "yorum-paneli",
+  org: process.env.SENTRY_ORG || "mert-copper",
+  project: process.env.SENTRY_PROJECT || "yorum-paneli",
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,

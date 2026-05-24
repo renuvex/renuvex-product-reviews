@@ -3,7 +3,7 @@ type: codebase
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-23
+updated: 2026-05-24
 tags:
   - config
   - env
@@ -46,7 +46,7 @@ related:
 ### Cloudinary
 | Var | Purpose |
 |---|---|
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (public). Injected into the Next/admin bundle by [next.config.js](next.config.js) and into the public widget bundle by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`. |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (public). Injected into the Next/admin bundle by [next.config.js](next.config.js) and into the public widget bundle by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`; the legacy `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__` define is kept during expand phase. |
 | `CLOUDINARY_API_KEY` | API key |
 | `CLOUDINARY_API_SECRET` | Used to sign uploads in [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts) |
 
@@ -72,7 +72,7 @@ related:
 | `SENTRY_DSN` | Optional server/edge override; falls back to `NEXT_PUBLIC_SENTRY_DSN`. Usually unset. | (optional) |
 | `SENTRY_AUTH_TOKEN` | Build-time token for source map upload and release creation. | `.env.sentry-build-plugin` (local, gitignored) + Vercel (Production + Preview, Sensitive) |
 | `SENTRY_ORG` | `mert-copper`. | Injected automatically by Vercel-Sentry integration |
-| `SENTRY_PROJECT` | `yorum-paneli`. | Injected automatically by Vercel-Sentry integration |
+| `SENTRY_PROJECT` | Sentry project slug. Defaults to `yorum-paneli` until the external Sentry project is renamed; target slug is `renuvex-product-reviews`. | Injected automatically by Vercel-Sentry integration or read by [next.config.js](next.config.js) |
 
 See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the full contract.
 

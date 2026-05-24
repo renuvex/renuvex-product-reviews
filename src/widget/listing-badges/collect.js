@@ -1,7 +1,7 @@
 // listing-badges/collect.js - builds listing product targets from DOM and ikas events.
 
 import { extractSlug, SYSTEM_SLUGS } from '../core/helpers.js';
-import { ikrProductMap, ikrSlugMap } from '../core/state.js';
+import { renuvexPrProductMap, renuvexPrSlugMap } from '../core/state.js';
 import { getThemeAdapter } from '../themes/current-adapter.js';
 import { collectListingLinks } from './dom.js';
 
@@ -24,13 +24,13 @@ export function collectProductTargets() {
     } catch (_) {}
   });
 
-  Object.keys(ikrSlugMap).forEach(function(slug) {
+  Object.keys(renuvexPrSlugMap).forEach(function(slug) {
     if (!map[slug]) map[slug] = { productId: null, name: null };
-    map[slug].name = ikrSlugMap[slug] || null;
+    map[slug].name = renuvexPrSlugMap[slug] || null;
   });
 
-  Object.keys(ikrProductMap).forEach(function(slug) {
-    var product = ikrProductMap[slug] || {};
+  Object.keys(renuvexPrProductMap).forEach(function(slug) {
+    var product = renuvexPrProductMap[slug] || {};
     if (!map[slug]) map[slug] = { productId: null, name: null };
     map[slug].productId = product.productId || null;
     if (product.name) map[slug].name = product.name;

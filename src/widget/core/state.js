@@ -83,11 +83,11 @@ export var ls = {
 };
 
 // VIEW_LISTING'den gelen slug→name map
-export var ikrSlugMap = {};
+export var renuvexPrSlugMap = {};
 
 // VIEW_LISTING/VIEW_SEARCH_RESULTS'den gelen slug -> canonical product context.
 // productId is the stable ikas product UUID; slug/name are display snapshots.
-export var ikrProductMap = {};
+export var renuvexPrProductMap = {};
 
 // Quick-view modal için son tıklanan ürün slug'ı
 export var lastClickedSlug = null;

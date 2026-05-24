@@ -15,7 +15,10 @@ export function createOwnedSlot(options) {
 
 export function setSlotContext(slot, context) {
   if (!slot || !context) return slot;
-  if (context.surface) slot.setAttribute('data-renuvex-surface', String(context.surface));
+  if (context.surface) {
+    slot.setAttribute('data-renuvex-surface', String(context.surface));
+    slot.setAttribute('data-ikr-surface', String(context.surface));
+  }
   if (context.productId) {
     slot.setAttribute('data-renuvex-product-id', String(context.productId));
     slot.setAttribute('data-ikr-product-id', String(context.productId));
@@ -46,7 +49,19 @@ export function removeOwnedSlots(slotName, legacySlotName, context) {
 }
 
 function matchesSlotContext(node, context) {
-  if (context.productId && node.getAttribute('data-renuvex-product-id') !== String(context.productId)) return false;
-  if (context.slug && node.getAttribute('data-renuvex-product-slug') !== String(context.slug)) return false;
+  if (
+    context.productId &&
+    node.getAttribute('data-renuvex-product-id') !== String(context.productId) &&
+    node.getAttribute('data-ikr-product-id') !== String(context.productId)
+  ) {
+    return false;
+  }
+  if (
+    context.slug &&
+    node.getAttribute('data-renuvex-product-slug') !== String(context.slug) &&
+    node.getAttribute('data-ikr-product-slug') !== String(context.slug)
+  ) {
+    return false;
+  }
   return true;
 }

@@ -11,6 +11,12 @@ import { ColorPickerField } from './ColorPickerField';
 
 // Widgets that support iframe preview (real widget.js)
 const IFRAME_PREVIEW_WIDGETS = ['reviews'];
+const RENUVEX_PR_WIDGET_READY = 'RENUVEX_PR_WIDGET_READY';
+const LEGACY_IKR_WIDGET_READY = 'IKR_WIDGET_READY';
+const RENUVEX_PR_SETTINGS_UPDATE = 'RENUVEX_PR_SETTINGS_UPDATE';
+const LEGACY_IKR_SETTINGS_UPDATE = 'IKR_SETTINGS_UPDATE';
+const RENUVEX_PR_PREVIEW_SETTINGS_KEY = 'renuvex_pr_preview_settings';
+const LEGACY_IKR_PREVIEW_SETTINGS_KEY = 'ikr_preview_settings';
 
 const VIEWPORT_PRESETS = [
   { key: 'mobile',  label: 'Mobil',   icon: Smartphone, width: 390  },
@@ -72,6 +78,20 @@ function isDirty(a: WidgetSettingsDraft, b: WidgetSettingsDraft): boolean {
   return JSON.stringify(a) !== JSON.stringify(b);
 }
 
+function isWidgetReadyMessage(data: unknown): boolean {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'type' in data &&
+    ((data as { type?: unknown }).type === RENUVEX_PR_WIDGET_READY || (data as { type?: unknown }).type === LEGACY_IKR_WIDGET_READY)
+  );
+}
+
+function postPreviewSettingsUpdate(targetWindow: Window, settings: WidgetSettingsDraft) {
+  targetWindow.postMessage({ type: RENUVEX_PR_SETTINGS_UPDATE, settings }, '*');
+  targetWindow.postMessage({ type: LEGACY_IKR_SETTINGS_UPDATE, settings }, '*');
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }: WidgetEditorProps) {
@@ -95,17 +115,15 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
     draftRef.current = draft;
   }, [draft]);
 
-  // Widget iframe'i hazır olduğunu bildirdiğinde (IKR_WIDGET_READY) mevcut draft'ı gönder
+  // Widget iframe'i hazır olduğunu bildirdiğinde mevcut draft'ı gönder.
   useEffect(() => {
     if (!useIframe) return;
     function onMessage(event: MessageEvent) {
-      if (event.data?.type !== 'IKR_WIDGET_READY') return;
+      if (!isWidgetReadyMessage(event.data)) return;
+      if (widgetReadyRef.current) return;
       widgetReadyRef.current = true;
       if (iframeRef.current?.contentWindow) {
-        iframeRef.current.contentWindow.postMessage(
-          { type: 'IKR_SETTINGS_UPDATE', settings: draftRef.current },
-          '*'
-        );
+        postPreviewSettingsUpdate(iframeRef.current.contentWindow, draftRef.current);
       }
     }
     window.addEventListener('message', onMessage);
@@ -118,10 +136,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
     if (!widgetReadyRef.current) return;
     const timer = setTimeout(() => {
       if (iframeRef.current?.contentWindow) {
-        iframeRef.current.contentWindow.postMessage(
-          { type: 'IKR_SETTINGS_UPDATE', settings: draft },
-          '*'
-        );
+        postPreviewSettingsUpdate(iframeRef.current.contentWindow, draft);
       }
     }, 50);
     return () => clearTimeout(timer);
@@ -129,7 +144,8 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
 
   // draft değişince sessionStorage'a yaz — iframe flash önlemek için (effect içinde, render'da değil)
   useEffect(() => {
-    sessionStorage.setItem('ikr_preview_settings', JSON.stringify(draft));
+    sessionStorage.setItem(RENUVEX_PR_PREVIEW_SETTINGS_KEY, JSON.stringify(draft));
+    sessionStorage.removeItem(LEGACY_IKR_PREVIEW_SETTINGS_KEY);
   }, [draft]);
 
   const dirty = isDirty(draft, mergeWithDefaults(widget, savedSettings));
@@ -271,7 +287,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
         <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
           {/* Sol — Ayarlar */}
-          <div className="ikr-settings-scroll" style={{ width: '380px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', height: '100%', paddingRight: 8, paddingLeft: 16 }}>
+          <div className="renuvex-pr-settings-scroll ikr-settings-scroll" style={{ width: '380px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', height: '100%', paddingRight: 8, paddingLeft: 16 }}>
             <SettingsPanel
               groups={widget.settings}
               settings={draft}
@@ -363,14 +379,11 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
                     title="Widget Önizleme"
                     onLoad={() => {
                       widgetReadyRef.current = false;
-                      // IKR_WIDGET_READY zaten geldiyse veya gelmezse 100ms sonra fallback gönder
+                      // Ready event zaten geldiyse veya gelmezse 100ms sonra fallback gönder.
                       setTimeout(() => {
                         if (iframeRef.current?.contentWindow) {
                           widgetReadyRef.current = true;
-                          iframeRef.current.contentWindow.postMessage(
-                            { type: 'IKR_SETTINGS_UPDATE', settings: draftRef.current },
-                            '*'
-                          );
+                          postPreviewSettingsUpdate(iframeRef.current.contentWindow, draftRef.current);
                         }
                       }, 100);
                     }}

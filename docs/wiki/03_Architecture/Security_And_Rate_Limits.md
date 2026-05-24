@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-18
+updated: 2026-05-24
 tags:
   - security
   - rate-limit
@@ -44,11 +44,11 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 
 | Endpoint | Limit | Window | Key |
 |---|---|---|---|
-| `POST /api/public/reviews` | 3 | 10 min | `ikr_rl:<ip>` |
-| `POST /api/public/upload/sign` | 10 | 10 min | `ikr_upload_rl:<ip>` |
-| `POST /api/public/upload/register` | 30 | 10 min | `ikr_upload_reg_rl:<ip>` |
-| `GET /api/public/ratings` + `GET /api/public/ratings-by-slug` | 300 combined | 60 sec | `ikr_ratings_rl:<ip>` |
-| `POST /api/public/widget-error` | 30 | 60 sec | `ikr_werr_rl:<ip>` |
+| `POST /api/public/reviews` | 3 | 10 min | `renuvex_pr_rl:<ip>` |
+| `POST /api/public/upload/sign` | 10 | 10 min | `renuvex_pr_upload_rl:<ip>` |
+| `POST /api/public/upload/register` | 30 | 10 min | `renuvex_pr_upload_reg_rl:<ip>` |
+| `GET /api/public/ratings` + `GET /api/public/ratings-by-slug` | 300 combined | 60 sec | `renuvex_pr_ratings_rl:<ip>` |
+| `POST /api/public/widget-error` | 30 | 60 sec | `renuvex_pr_werr_rl:<ip>` |
 
 Pattern: `INCR` then `EXPIRE` on first hit. Rating read limits use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable, so listing badges do not disappear during a transient Redis issue. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
 
@@ -132,6 +132,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-24: Namespace migration changed public Redis rate-limit prefixes from `ikr_*` to `renuvex_pr_*`. Limits and windows are unchanged.
 - 2026-05-18: D3 tenant-scoped Cloudinary uploads: upload signatures now require a verified `storeId` and sign `review_images/stores/<storeId>`; register/review read/write paths and widget filtering reject cross-tenant image paths.
 - 2026-05-18: Added D4 public rating API read limit: `/api/public/ratings` and `/api/public/ratings-by-slug` share a generous 300 requests/min/IP Redis fixed-window counter. 429 responses are `no-store`; Redis/config failures fail open server-side to preserve storefront rendering.
 - 2026-05-18: Hardened public review write/read contracts. `POST /api/public/reviews` now verifies the target store/product via `StoreSettings` + `ProductSnapshot`, ignores client-supplied `slug`/`productName`/`email`, and `GET /api/public/reviews` returns an explicit public field whitelist instead of a raw Review row spread.

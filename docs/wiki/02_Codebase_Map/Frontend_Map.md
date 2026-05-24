@@ -87,9 +87,9 @@ src/components/
 
 ### Live preview pattern (settings)
 1. `WidgetEditor` renders settings panel + an iframe pointed at `/preview`.
-2. On any setting change → `postMessage({ type: 'IKR_SETTINGS_UPDATE', settings })` to iframe.
+2. On any setting change -> `postMessage({ type: 'RENUVEX_PR_SETTINGS_UPDATE', settings })` to iframe. The legacy `IKR_SETTINGS_UPDATE` alias is still emitted during expand phase.
 3. Inside iframe, `widget.js` running in preview mode merges + re-renders.
-4. The iframe acks ready with `IKR_WIDGET_READY` postMessage from [src/widget/index.js](src/widget/index.js).
+4. The iframe acks ready with `RENUVEX_PR_WIDGET_READY` plus the legacy `IKR_WIDGET_READY` alias from [src/widget/index.js](src/widget/index.js).
 5. Settings save: `PUT /api/admin/settings` (debounced or on-blur; check `WidgetEditor` for the exact strategy).
 
 This pattern keeps preview pixel-identical to production widget without duplicating render code.

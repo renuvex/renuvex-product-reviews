@@ -24,7 +24,7 @@ const UPLOAD_RATE_LIMIT_WINDOW_SEC = 10 * 60; // 10 dakika
 export async function POST(request: Request) {
   try {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rlKey = `ikr_upload_rl:${ip}`;
+    const rlKey = `renuvex_pr_upload_rl:${ip}`;
     const count = await redis.incr(rlKey);
     if (count === 1) await redis.expire(rlKey, UPLOAD_RATE_LIMIT_WINDOW_SEC);
     if (count > UPLOAD_RATE_LIMIT_MAX) {

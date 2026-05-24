@@ -120,8 +120,8 @@ src/widget/
 
 ### Preview mode
 `index.js` checks `window.__ikasPreviewMode === true`. In preview:
-- Listens for `IKR_SETTINGS_UPDATE` postMessage
-- Posts back `IKR_WIDGET_READY` once mounted
+- Listens for `RENUVEX_PR_SETTINGS_UPDATE` postMessage and accepts legacy `IKR_SETTINGS_UPDATE`
+- Posts back `RENUVEX_PR_WIDGET_READY` and legacy `IKR_WIDGET_READY` once mounted
 - Bootstraps with `'mock-product'` and a fixture product name
 
 ### Layout-aware settings (important)
@@ -137,7 +137,7 @@ src/widget/
 - [public/widget-runtime/runtime.js](public/widget-runtime/runtime.js) — built ESM runtime entry. Don't hand-edit.
 - [public/widget-runtime/chunks/](public/widget-runtime/chunks/) — built lazy chunks. Don't hand-edit.
 - [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json) — build output report including bytes and import kinds.
-- [public/ikr-test.js](public/ikr-test.js) — small local test harness for the widget.
+- [public/renuvex-pr-test.js](public/renuvex-pr-test.js) — small local test harness for the widget.
 - [public/logo.svg](public/logo.svg)
 
 ## Notes

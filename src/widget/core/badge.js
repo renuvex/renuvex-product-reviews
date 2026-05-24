@@ -2,6 +2,7 @@
 // Tüm widgetlar (listing, carousel, popup, modal) bu fonksiyonu kullanır.
 
 import { partialStarsHTML, PARTIAL_STARS_CSS, buildRatingA11yLabel } from './helpers.js';
+import { expandRenuvexCss } from './namespace.js';
 import { createOwnedSlot, setSlotContext } from './slot.js';
 
 // Rozet boyut haritası — "Yıldız Rozeti" widget'ındaki badge.size (Küçük/Orta/
@@ -51,7 +52,7 @@ export function ensureBadgeTokens(sizes, mobileSizes) {
   if (mobileSizes && typeof mobileSizes.icon === 'number' && typeof mobileSizes.text === 'string') {
     mobileRule = '@media (max-width:640px){.ikr-rating-badge{--ikr-badge-icon-size:' + mobileSizes.icon + 'px;--ikr-badge-text-size:' + mobileSizes.text + ';}}';
   }
-  el.textContent = desktopRule + mobileRule;
+  el.textContent = expandRenuvexCss(desktopRule + mobileRule);
 }
 
 // Listing badge yıldızlarının (.ikr-star / .ikr-stars-partial) CSS'ini bir kez
@@ -63,7 +64,7 @@ function ensureBadgeStyles() {
   if (document.getElementById('ikr-badge-styles')) return;
   var el = document.createElement('style');
   el.id = 'ikr-badge-styles';
-  el.textContent = PARTIAL_STARS_CSS;
+  el.textContent = expandRenuvexCss(PARTIAL_STARS_CSS);
   document.head.appendChild(el);
 }
 
@@ -83,6 +84,7 @@ export function createBadgeEl(rating, justify, iconPair) {
     className: 'renuvex-pr-listing-badge-slot ikr-listing-badge-slot',
     context: { surface: 'listing', slug: meta.slug || '', productId: meta.productId || '' },
   });
+  slot.setAttribute('data-renuvex-listing-badge', '1');
   slot.setAttribute('data-ikr-listing-badge', '1');
 
   var el = document.createElement('div');
@@ -94,6 +96,7 @@ export function createBadgeEl(rating, justify, iconPair) {
   el.setAttribute('aria-labelledby', a11y.id);
   // data-ikr-listing-badge legacy (observer / cleanup / placeholder lookups);
   // data-ikr-* yeni — surface debug + CSS hook (ADR_0017 draft).
+  el.setAttribute('data-renuvex-listing-badge', '1');
   el.setAttribute('data-ikr-listing-badge', '1');
   el.setAttribute('data-ikr-surface', 'listing');
   el.setAttribute('data-renuvex-surface', 'listing');
@@ -105,6 +108,7 @@ export function createBadgeEl(rating, justify, iconPair) {
   // Alignment via data-attr + CSS (Loox-style) instead of an inline style.
   // font-size + icon size come from .ikr-rating-badge CSS variables.
   var alignMap = { 'center': 'center', 'flex-end': 'right', 'flex-start': 'left' };
+  el.setAttribute('data-renuvex-align', alignMap[justify] || 'left');
   el.setAttribute('data-ikr-align', alignMap[justify] || 'left');
 
   // Stars: existing engine returns trusted SVG markup from a closed icon set;
@@ -130,6 +134,7 @@ export function createBadgePlaceholderEl(justify) {
     className: 'renuvex-pr-listing-badge-slot ikr-listing-badge-slot ikr-rating-badge ikr-rating-badge--listing',
     context: { surface: 'listing', slug: meta.slug || '', productId: meta.productId || '' },
   });
+  el.setAttribute('data-renuvex-listing-badge-placeholder', '1');
   el.setAttribute('data-ikr-listing-badge-placeholder', '1');
   el.setAttribute('aria-hidden', 'true');
   el.style.cssText = 'justify-content:' + (justify || 'flex-start') + ';visibility:hidden;';

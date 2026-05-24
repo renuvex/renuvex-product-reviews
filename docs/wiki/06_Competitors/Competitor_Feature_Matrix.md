@@ -27,7 +27,7 @@ related:
 
 ## Matrix
 
-| Feature | **Yorum Paneli** | Loox | Judge.me | Yotpo | Okendo |
+| Feature | **Renuvex Product Reviews** | Loox | Judge.me | Yotpo | Okendo |
 |---|---|---|---|---|---|
 | ikas native install | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Photo reviews | ✅ | ✅ | ✅ | ✅ | ✅ |

@@ -14,7 +14,7 @@
 
 import { PUBLIC_API_KEY } from './config.js';
 import { cacheSet } from './cache.js';
-import { ls, ikrProductMap, ikrSlugMap } from './state.js';
+import { ls, renuvexPrProductMap, renuvexPrSlugMap } from './state.js';
 
 // ── Olay tipi sabitleri — TEK kaynak ─────────────────────────────────────────
 // Resmî olay tipleri (IKAS_EVENT_TYPE): PAGE_VIEW, PRODUCT_VIEW, ADD_TO_CART,
@@ -65,7 +65,7 @@ export function onProductView(cb) {
   if (typeof cb !== 'function') return;
   productViewSubs.push(cb);
   if (latestProduct) {
-    try { cb(latestProduct); } catch (err) { console.error('[ikr] onProductView replay error:', err); }
+    try { cb(latestProduct); } catch (err) { console.error('[renuvex-pr] onProductView replay error:', err); }
   }
 }
 
@@ -75,7 +75,7 @@ export function onPageView(cb) {
   if (typeof cb !== 'function') return;
   pageViewSubs.push(cb);
   if (latestPage) {
-    try { cb(latestPage); } catch (err) { console.error('[ikr] onPageView replay error:', err); }
+    try { cb(latestPage); } catch (err) { console.error('[renuvex-pr] onPageView replay error:', err); }
   }
 }
 
@@ -130,10 +130,10 @@ function handleIkasEvent(event) {
       products.forEach(function (p) {
         var slug = p && (p.slug || (p.metaData && p.metaData.slug));
         if (slug && p.name) {
-          ikrSlugMap[slug] = p.name;
+          renuvexPrSlugMap[slug] = p.name;
         }
         if (slug && p.id) {
-          ikrProductMap[slug] = {
+          renuvexPrProductMap[slug] = {
             productId: String(p.id),
             name: p.name || null,
           };
@@ -149,7 +149,7 @@ function handleIkasEvent(event) {
     var productId = pd && pd.id;
     var productName = pd && pd.name;
     if (productId) {
-      cacheSet('ikr_reviews_' + PUBLIC_API_KEY + '_' + productId, '');
+      cacheSet('renuvex_pr_reviews_' + PUBLIC_API_KEY + '_' + productId, '');
       emitProductView({ id: productId, name: productName || null });
     }
     return;
@@ -171,19 +171,19 @@ function handleIkasEvent(event) {
 function emitProductView(product) {
   latestProduct = product;
   productViewSubs.forEach(function (cb) {
-    try { cb(product); } catch (err) { console.error('[ikr] onProductView callback error:', err); }
+    try { cb(product); } catch (err) { console.error('[renuvex-pr] onProductView callback error:', err); }
   });
 }
 
 function emitPageView(page) {
   pageViewSubs.forEach(function (cb) {
-    try { cb(page); } catch (err) { console.error('[ikr] onPageView callback error:', err); }
+    try { cb(page); } catch (err) { console.error('[renuvex-pr] onPageView callback error:', err); }
   });
 }
 
 function emitListingView(listing) {
   listingViewSubs.forEach(function (cb) {
-    try { cb(listing); } catch (err) { console.error('[ikr] onListingView callback error:', err); }
+    try { cb(listing); } catch (err) { console.error('[renuvex-pr] onListingView callback error:', err); }
   });
 }
 

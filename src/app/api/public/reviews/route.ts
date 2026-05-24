@@ -79,7 +79,7 @@ function optionalString(value: unknown, maxLength: number): string | null {
 }
 
 async function checkRateLimit(ip: string): Promise<boolean> {
-  const key = `ikr_rl:${ip}`;
+  const key = `renuvex_pr_rl:${ip}`;
   const count = await redis.incr(key);
   if (count === 1) await redis.expire(key, RATE_LIMIT_WINDOW_SEC);
   return count <= RATE_LIMIT_MAX;

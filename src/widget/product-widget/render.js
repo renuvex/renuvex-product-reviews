@@ -681,7 +681,7 @@ export async function render(productId, settings, reviewsData, productName, orde
 
 
     } catch (err) {
-      console.error('[ikr] render error:', err);
+      console.error('[renuvex-pr] render error:', err);
       container.innerHTML = '<p style="text-align:center;color:#dc2626;">Yorumlar yüklenirken bir hata oluştu.</p>';
     }
   } finally {

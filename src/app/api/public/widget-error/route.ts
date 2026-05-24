@@ -12,7 +12,7 @@ const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_SEC = 60;
 
 async function checkRateLimit(ip: string): Promise<boolean> {
-  const key = `ikr_werr_rl:${ip}`;
+  const key = `renuvex_pr_werr_rl:${ip}`;
   const count = await redis.incr(key);
   if (count === 1) await redis.expire(key, RATE_LIMIT_WINDOW_SEC);
   return count <= RATE_LIMIT_MAX;

@@ -13,6 +13,7 @@ import { createStepRating } from './steps/step-rating.js';
 import { createStepPhotos } from './steps/step-photos.js';
 import { createStepContent } from './steps/step-content.js';
 import { createStepAuthor } from './steps/step-author.js';
+import { expandRenuvexCss } from '../../core/namespace.js';
 
 // ─── CSS bir kez inject ─────
 var stylesInjected = false;
@@ -20,7 +21,8 @@ function ensureStyles() {
   if (stylesInjected) return;
   var styleEl = document.createElement('style');
   styleEl.setAttribute('data-ikr-fwizard', '');
-  styleEl.textContent = FWIZARD_CSS;
+  styleEl.setAttribute('data-renuvex-pr-style', 'review-form-wizard');
+  styleEl.textContent = expandRenuvexCss(FWIZARD_CSS);
   document.head.appendChild(styleEl);
   stylesInjected = true;
 }

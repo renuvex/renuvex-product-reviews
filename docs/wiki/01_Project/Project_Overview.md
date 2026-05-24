@@ -3,8 +3,8 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-05-24
+last_verified: 2026-05-24
 confidence: high
 tags:
   - overview
@@ -25,7 +25,7 @@ source_files:
 # Project Overview
 
 ## Summary
-Yorum Paneli is a SaaS-style review and rating app for ikas e-commerce merchants. It provides a merchant admin panel for moderating reviews, a customizable storefront widget that collects and displays reviews on product pages, and listing-level rating badges. The repo started from `ikas-app-starter-template` and has been extended with a review domain on top of the OAuth + Prisma + GraphQL foundation.
+Renuvex Product Reviews is a SaaS-style review and rating app for ikas e-commerce merchants. It provides a merchant admin panel for moderating reviews, a customizable storefront widget that collects and displays reviews on product pages, and listing-level rating badges. The repo started from `ikas-app-starter-template` and has been extended with a review domain on top of the OAuth + Prisma + GraphQL foundation.
 
 ## Product Goal
 Compete with global review apps within the ikas ecosystem. See [[Competitor_Feature_Matrix]] and [[Competitor_Insights]] for positioning.
@@ -74,6 +74,7 @@ See [[System_Architecture]] for the diagram-level view.
 - [[Storefront_Widget_Overview]]
 
 ## Notes
-- The project name in package.json is still `ikas-app-starter-template` — historical artifact, not a product name. Display name is "yorum-paneli" / "Yorum Paneli".
-- Comments and UI copy are mostly Turkish; code identifiers and this wiki are English. Keep that pattern.
+- The package name is `renuvex-product-reviews`. Public technical identity is app-specific: `product-reviews`, `renuvex-pr`, and `renuvex-product-reviews-widget`.
+- Legacy `ikr-*`, `data-ikr-*`, `IKR_*`, and `yorum-paneli` markers remain compatibility aliases during the namespace expand phase. See [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]].
+- Code identifiers and project memory should be English/global. Turkish remains acceptable only for merchant-facing copy where the ikas marketplace/admin experience requires it.
 - All state is keyed on `merchantId` (used as `storeId` everywhere). There is no separate "store" abstraction yet.

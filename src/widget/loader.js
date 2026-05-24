@@ -14,6 +14,11 @@ import {
 import { mountMatching } from './core/registry.js';
 import { registerCoreSurfaces } from './surfaces/index.js';
 import { loadListingBadgesModule, loadProductRenderModule, loadReviewsMainModule } from './core/lazy-modules.js';
+import {
+  dispatchPreviewSettingsUpdated,
+  isPreviewSettingsUpdateMessage,
+  postPreviewWidgetReady,
+} from './core/namespace.js';
 import { ls } from './core/state.js';
 import {
   currentSettings,
@@ -23,6 +28,9 @@ import {
   currentPage,
   currentReviewsData,
 } from './core/state.js';
+
+var lastPreviewSettingsFingerprint = '';
+var lastPreviewSettingsAt = 0;
 
 function renderListingBadgesFallback() {
   return loadListingBadgesModule().then(function (mod) {
@@ -60,7 +68,7 @@ function initWidget() {
   setTimeout(function () {
     if (!ls.rendered) {
       renderListingBadgesFallback().catch(function (err) {
-        console.error('[ikr] listing badge fallback error:', err);
+        console.error('[renuvex-pr] listing badge fallback error:', err);
       });
     }
   }, 2000);
@@ -76,15 +84,21 @@ export function startWidget() {
 
 function onPreviewMessage(event) {
   var data = event.data;
-  if (!data || data.type !== 'IKR_SETTINGS_UPDATE') return;
+  if (!isPreviewSettingsUpdateMessage(data)) return;
   var s = data.settings;
   if (!s || !currentSettings) return;
+  var fingerprint = '';
+  try { fingerprint = JSON.stringify(s); } catch (_) {}
+  var now = Date.now();
+  if (fingerprint && fingerprint === lastPreviewSettingsFingerprint && now - lastPreviewSettingsAt < 100) return;
+  lastPreviewSettingsFingerprint = fingerprint;
+  lastPreviewSettingsAt = now;
   var merged = Object.assign({}, currentSettings, s);
   loadProductRenderModule().then(function (mod) {
     mod.render(currentProductId, merged, currentReviewsData, currentProductName, currentOrderBy, currentPage);
-    window.dispatchEvent(new CustomEvent('IKR_SETTINGS_UPDATED_PREVIEW', { detail: { settings: merged } }));
+    dispatchPreviewSettingsUpdated(merged);
   }).catch(function (err) {
-    console.error('[ikr] preview render load error:', err);
+    console.error('[renuvex-pr] preview render load error:', err);
   });
 }
 
@@ -92,9 +106,9 @@ function initPreview() {
   loadReviewsMainModule().then(function (mod) {
     return mod.bootstrap('mock-product', 'Ornek Urun');
   }).then(function () {
-    try { window.parent.postMessage({ type: 'IKR_WIDGET_READY' }, '*'); } catch (e) {}
+    try { postPreviewWidgetReady(window.parent); } catch (e) {}
   }).catch(function (err) {
-    console.error('[ikr] preview bootstrap load error:', err);
+    console.error('[renuvex-pr] preview bootstrap load error:', err);
   });
 }
 

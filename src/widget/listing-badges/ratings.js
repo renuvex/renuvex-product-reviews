@@ -55,7 +55,7 @@ function fetchJsonData(url) {
 export async function fetchRatings(input) {
   var targets = normalizeTargets(input);
   var slugs = Object.keys(targets);
-  var ratingsKey = 'ikr_ratings_' + PUBLIC_API_KEY;
+  var ratingsKey = 'renuvex_pr_ratings_' + PUBLIC_API_KEY;
   var ratings = {};
 
   var cached = cacheGet(ratingsKey);

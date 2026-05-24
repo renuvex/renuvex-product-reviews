@@ -19,7 +19,7 @@ source_files: []
 
 # ikas Review App Wiki Index
 
-> Yorum Paneli — review & rating app for ikas e-commerce stores. Merchant admin + storefront widget + structured-data integration.
+> Renuvex Product Reviews — review & rating app for ikas e-commerce stores. Merchant admin + storefront widget + structured-data integration.
 
 ## Start Here
 - [[Hot_Context]] - fast active context for new sessions

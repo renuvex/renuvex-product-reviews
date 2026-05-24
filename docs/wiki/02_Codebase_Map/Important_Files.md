@@ -167,7 +167,7 @@ related:
   - Session cap (5) and 2-second throttle protect against error-loop floods. Don't remove them.
 
 ### [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts)
-- **What:** Public POST endpoint that receives widget error reports, rate-limits per IP (30/60s via Upstash key `ikr_werr_rl:`), then calls `Sentry.captureException` with `source: widget` tag.
+- **What:** Public POST endpoint that receives widget error reports, rate-limits per IP (30/60s via Upstash key `renuvex_pr_werr_rl:`), then calls `Sentry.captureException` with `source: widget` tag.
 - **Why it matters:** Single ingress for widget-originated Sentry events. Must stay cheap (no DB write, no heavy parsing).
 - **Be careful:**
   - Always returns 200 — never leak filtering/rate-limit decisions to the caller. Storefronts don't need that information and exposing it just helps attackers shape abuse.

@@ -215,7 +215,7 @@ The app injects during OAuth install and manual re-inject. The daily `GET /api/a
 For Yotpo-style architecture on ikas:
 
 - keep one ikas script record per storefront
-- name it predictably, for example `yorum-paneli-loader`
+- name it predictably, for example `renuvex-product-reviews-widget`
 - use a small loader URL, not the full widget bundle
 - include project-owned `data-ikr-app` and store-id markers in script content
 - avoid blanket delete behavior

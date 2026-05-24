@@ -1,14 +1,15 @@
 // helpers.js — Genel yardımcı fonksiyonlar
 
-/* global __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
+/* global __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__, __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
 
 import { renderStarRow, getIconFromSettings } from '../icons/index.js';
 import { ensureStarSprite, starUseSvg } from '../icons/star-sprite.js';
 import { PUBLIC_API_KEY } from './config.js';
+import { expandRenuvexCss } from './namespace.js';
 
 // Tüm yıldızlar (dolu + boş outline) için tek CSS renk değişkeni — reviews
 // widget ayarından (reviewStarColor) beslenir. Boş yıldız aynı renkte outline.
-export var STAR_COLOR = 'var(--ikr-review-star-color,#f59e0b)';
+export var STAR_COLOR = 'var(--renuvex-pr-review-star-color,var(--ikr-review-star-color,#f59e0b))';
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
@@ -202,8 +203,10 @@ export function applyWidgetColor(color) {
   // react-colorful 8-char hex (#rrggbbaa) gonderebilir — kabul et.
   var validColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(color) ? color : '#111111';
   document.documentElement.style.setProperty('--ikr-color', validColor);
+  document.documentElement.style.setProperty('--renuvex-pr-color', validColor);
   var rgb = hexToRgb(validColor);
   document.documentElement.style.setProperty('--ikr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
+  document.documentElement.style.setProperty('--renuvex-pr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
 }
 
 export function injectStyles(_color, css) {
@@ -213,7 +216,7 @@ export function injectStyles(_color, css) {
     el.id = 'ikr-styles';
     document.head.appendChild(el);
   }
-  el.textContent = css;
+  el.textContent = expandRenuvexCss(css);
   // applyWidgetColor removed — --ikr-color and --ikr-color-light are no longer
   // used by styles.js. All color surfaces now use their own specific variables.
 }
@@ -233,17 +236,19 @@ function normalizeReviewImageStoreId(storeId) {
 }
 
 // Trusted Cloudinary cloud name — ADR_0008 gereği build-time'da bir kez set edilir,
-// runtime'da değişmez. scripts/build-widget.mjs `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`
+// runtime'da değişmez. scripts/build-widget.mjs `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`
 // sabitini bundle'a inject eder (env: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME). Settings
 // endpoint artık `imagePolicy` field'ı taşımaz; cloud name app-level config'tir,
 // merchant-level değildir. Eğer bu sabit boşsa deploy config hatası vardır — modül
 // yüklenirken bir kez error log basılır, sonra runtime'da fail-closed davranılır.
 var trustedReviewImageCloudName = normalizeReviewImageCloudName(
-  typeof __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string' ? __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ : ''
+  typeof __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string'
+    ? __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__
+    : (typeof __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string' ? __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ : '')
 );
 
 if (!trustedReviewImageCloudName) {
-  console.error('[ikr] NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is missing at build time; review images will be hidden until widget is rebuilt with a valid cloud name.');
+  console.error('[renuvex-pr] NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is missing at build time; review images will be hidden until widget is rebuilt with a valid cloud name.');
 }
 
 function isPreviewPlaceholderImage(url) {
@@ -376,7 +381,7 @@ export function attachImageErrorHandler(img, onFail) {
     handled = true;
     img.removeEventListener('error', handleError);
     var src = img.currentSrc || img.getAttribute('src') || '';
-    console.warn('[ikr] image failed to load:', src);
+    console.warn('[renuvex-pr] image failed to load:', src);
     if (typeof onFail === 'function') {
       try { onFail(img); } catch (_) {}
     }
@@ -481,6 +486,6 @@ function ensureStarStyles() {
 
   var style = document.createElement('style');
   style.setAttribute('data-ikr', 'rating');
-  style.textContent = css;
+  style.textContent = expandRenuvexCss(css);
   document.head.appendChild(style);
 }

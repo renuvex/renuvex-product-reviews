@@ -25,7 +25,7 @@ function getObserverListingScopes() {
 
 function hasUnbadgedListingLinks() {
   return collectLinksFromScopes(getObserverListingScopes()).some(function(a) {
-    if (a.getAttribute('data-ikr-badge')) return false;
+    if (a.getAttribute('data-renuvex-pr-badge') || a.getAttribute('data-ikr-badge')) return false;
     var path = extractSlug(a.href);
     return path && path.length >= 3 && !SYSTEM_SLUGS.test(path);
   });
@@ -42,9 +42,9 @@ export function startMutationObserver() {
     var hasRelevantMutation = mutations.some(function(m) {
       return Array.from(m.addedNodes).some(function(node) {
         if (node.nodeType !== 1) return false;
-        if (node.hasAttribute && (node.hasAttribute('data-renuvex-slot') || node.hasAttribute('data-ikr-listing-badge') || node.id === 'ikr-rating-badge' || node.id === 'ikr-reviews-widget')) return false;
-        if (node.closest && (node.closest('[data-renuvex-slot]') || node.closest('[data-ikr-listing-badge]') || node.closest('#ikr-rating-badge') || node.closest('#ikr-reviews-widget'))) return false;
-        if (node.querySelector && node.querySelector('[data-renuvex-slot],[data-ikr-listing-badge],#ikr-reviews-widget,#ikr-rating-badge')) return false;
+        if (node.hasAttribute && (node.hasAttribute('data-renuvex-slot') || node.hasAttribute('data-renuvex-listing-badge') || node.hasAttribute('data-ikr-listing-badge') || node.id === 'ikr-rating-badge' || node.id === 'ikr-reviews-widget')) return false;
+        if (node.closest && (node.closest('[data-renuvex-slot]') || node.closest('[data-renuvex-listing-badge]') || node.closest('[data-ikr-listing-badge]') || node.closest('#ikr-rating-badge') || node.closest('#ikr-reviews-widget'))) return false;
+        if (node.querySelector && node.querySelector('[data-renuvex-slot],[data-renuvex-listing-badge],[data-ikr-listing-badge],#ikr-reviews-widget,#ikr-rating-badge')) return false;
         return true;
       });
     });
@@ -54,7 +54,7 @@ export function startMutationObserver() {
       if (!hasUnbadgedListingLinks()) return;
       ls.rendered = false;
       renderListingBadgesLazy().catch(function (err) {
-        console.error('[ikr] listing badge lazy render error:', err);
+        console.error('[renuvex-pr] listing badge lazy render error:', err);
       });
     }, 300);
   });

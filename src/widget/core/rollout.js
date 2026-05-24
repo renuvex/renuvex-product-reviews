@@ -5,9 +5,8 @@
 // is added below for 48-72h monitoring after PR-2 lands.
 //
 // Emergency override (debug only):
-//   window.IKR_BADGE_MOUNT_LEGACY = true  → forces legacy mount even on
-//   allowlisted stores. Use from console if a sibling regression appears in
-//   production before deploy 2.
+//   window.RENUVEX_PR_BADGE_MOUNT_LEGACY = true -> canonical override.
+//   window.IKR_BADGE_MOUNT_LEGACY = true -> legacy alias.
 
 import { PUBLIC_API_KEY } from './config.js';
 
@@ -19,6 +18,7 @@ var SIBLING_MOUNT_ALLOWLIST = [
 ];
 
 export function isSiblingMountEnabled() {
+  if (typeof window !== 'undefined' && window.RENUVEX_PR_BADGE_MOUNT_LEGACY === true) return false;
   if (typeof window !== 'undefined' && window.IKR_BADGE_MOUNT_LEGACY === true) return false;
   if (!PUBLIC_API_KEY) return false;
   return SIBLING_MOUNT_ALLOWLIST.indexOf(PUBLIC_API_KEY) !== -1;

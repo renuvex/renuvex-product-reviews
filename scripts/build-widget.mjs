@@ -90,6 +90,9 @@ const defaultReviewImageCloudName = normalizePublicCloudName(
 
 function createDefine(runtimePath) {
   return {
+    __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
+    __RENUVEX_PR_RUNTIME_PATH__: JSON.stringify(runtimePath),
+    __RENUVEX_PR_WIDGET_VERSION__: JSON.stringify(buildTime),
     __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
     __IKR_RUNTIME_PATH__: JSON.stringify(runtimePath),
     __IKR_WIDGET_VERSION__: JSON.stringify(buildTime),
@@ -115,7 +118,7 @@ function createClassicBuildOptions(runtimePath) {
     entryPoints: [classicEntryPoint],
     format: 'iife',
     outfile: classicOutfile,
-    banner: { js: `/* ikas Reviews Widget classic loader - built ${buildTime} | theme: ${theme} */` },
+    banner: { js: `/* Renuvex Product Reviews classic loader - built ${buildTime} | theme: ${theme} */` },
     footer: { js: '' },
     globalName: undefined,
   };
@@ -131,7 +134,7 @@ function createRuntimeBuildOptions(hashedEntry) {
     entryNames: hashedEntry ? '[name]-[hash]' : '[name]',
     chunkNames: 'chunks/[name]-[hash]',
     metafile: true,
-    banner: { js: `/* ikas Reviews Widget ESM runtime | theme: ${theme} */` },
+    banner: { js: `/* Renuvex Product Reviews ESM runtime | theme: ${theme} */` },
   };
 }
 
@@ -171,7 +174,7 @@ function writeStableRuntimeShim(runtimeEntry) {
   var entryFile = runtimeEntry.split('/').pop();
   writeFileSync(
     resolve(runtimeOutdir, 'runtime.js'),
-    `/* ikas Reviews Widget stable runtime shim - built ${buildTime} | theme: ${theme} */\nimport './${entryFile}';\n`,
+    `/* Renuvex Product Reviews stable runtime shim - built ${buildTime} | theme: ${theme} */\nimport './${entryFile}';\n`,
   );
 }
 

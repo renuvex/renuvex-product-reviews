@@ -3,7 +3,7 @@ type: architecture
 project: ikas-review-app
 status: active
 created: 2026-05-11
-updated: 2026-05-17
+updated: 2026-05-24
 tags:
   - sentry
   - observability
@@ -26,14 +26,14 @@ Sentry is the observability surface for the Next.js panel app. The maintainer's 
 
 ## Libraries / Technologies
 - `@sentry/nextjs` (panel SDK)
-- Sentry MCP server: `https://mcp.sentry.dev/mcp/mert-copper/yorum-paneli`
+- Sentry MCP server: `https://mcp.sentry.dev/mcp/mert-copper/yorum-paneli` until the external project rename phase.
 - Sentry CLI npm package: `sentry@^0.33` (global on the maintainer machine)
 - CLI config: `C:\Users\mertw\.sentry\cli.db`
 - Vercel-Sentry integration (Vercel Marketplace): injects `SENTRY_ORG` and `SENTRY_PROJECT` into Vercel env automatically; `SENTRY_AUTH_TOKEN` is added manually.
 
 ## Project Coordinates
 - Organization: `mert-copper`
-- Project slug: `yorum-paneli`
+- Project slug: `yorum-paneli` currently; target external rename is `renuvex-product-reviews`.
 - Project ID: `4511372449218640`
 - Region: EU (`de.sentry.io`)
 - Authenticated CLI user: `mertworkspace2906@gmail.com`
@@ -61,7 +61,7 @@ Sentry is the observability surface for the Next.js panel app. The maintainer's 
 | `NEXT_PUBLIC_SENTRY_DSN` | `.env.local` (local), Vercel env (Production + Preview, marked Sensitive) | runtime | DSN read by SDK in all runtimes |
 | `SENTRY_AUTH_TOKEN` | `.env.sentry-build-plugin` (local, gitignored), Vercel env (Production + Preview, marked Sensitive) | build-time | Source map upload + release creation |
 | `SENTRY_ORG` | Vercel env, injected by Vercel-Sentry integration | build-time | `mert-copper` |
-| `SENTRY_PROJECT` | Vercel env, injected by Vercel-Sentry integration | build-time | `yorum-paneli` |
+| `SENTRY_PROJECT` | Vercel env, injected by Vercel-Sentry integration or set manually | build-time | Defaults to `yorum-paneli`; target external rename is `renuvex-product-reviews` |
 
 `.env.sentry-build-plugin` and `.sentryclirc` are listed in `.gitignore`. Never commit either.
 
@@ -85,7 +85,7 @@ However, uncaught widget errors are no longer invisible. A 637-byte (gzip) repor
 - Widget-originated issues: query `tags[source]:widget`
 - Panel-originated issues: query `!tags[source]:widget` (or omit the tag)
 - Widget reporter cap: 5 errors per page session, dedupe per (message+stack), 2-second minimum gap between sends
-- Server rate-limit: 30 reports per IP per 60 seconds (Upstash key prefix `ikr_werr_rl:`)
+- Server rate-limit: 30 reports per IP per 60 seconds (Upstash key prefix `renuvex_pr_werr_rl:`; legacy `ikr_werr_rl:` was pre-namespace-migration)
 
 ## Phase 1 Widget Post-Test Check
 
@@ -133,6 +133,7 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-05-24: Namespace migration made `next.config.js` read `SENTRY_PROJECT` / `SENTRY_ORG` from env with the legacy project slug as fallback. Widget-error rate-limit keys now use `renuvex_pr_werr_rl:`. Actual Sentry project rename remains an external ops phase.
 - 2026-05-17: Added Context7-backed Sentry JavaScript note for Phase 1 post-test triage. Tags, context, breadcrumbs, and captured events are the useful Sentry SDK-level signals, but browser/runtime evidence remains primary.
 - 2026-05-17: Added Phase 1 widget post-test check guidance. Sentry should be used after browser/Playwright verification to catch widget/API runtime errors, but it is not a substitute for visual DOM and event-payload audits. Related: [[Phase_1_Widget_Runtime_Audit]].
 - 2026-05-11: Added "Pending Operational Improvements" section: alert rules, MCP scope narrowing, and saved searches. None blocking — captured here so they are not re-discovered from scratch.

@@ -143,8 +143,8 @@ slots are not available.
   and visibility/CSS conflicts.
 - Theme adapters remain placement-only. Visual tokens and review data logic stay
   outside adapters.
-- The app can migrate branding from `yorum-paneli` / `ikr-*` to Renuvex without
-  breaking existing installed storefronts.
+- Branding migration is implemented in [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]:
+  Renuvex is canonical while `yorum-paneli` / `ikr-*` remain expand-phase aliases.
 
 ## Related Source Files
 - [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)

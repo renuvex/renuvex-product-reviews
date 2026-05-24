@@ -6,7 +6,7 @@ import { getWidgetDefaults, sanitizeSettings } from '@/lib/widget-settings';
 
 // ADR_0008: `imagePolicy.cloudName` artık settings response'unda taşınmıyor.
 // Cloud name app-level config'tir (env var); widget bundle build-time'da
-// `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__` sabitini inject eder. Cloudinary
+// `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__` sabitini inject eder. Cloudinary
 // config eksikliği `upload/sign` ve `reviews POST` route'larında zaten
 // fail-closed kontrol ediliyor — duplicate logging gereksiz.
 

@@ -1,6 +1,6 @@
 // core/health.js - storefront runtime health and conflict diagnostics.
 
-/* global __IKR_WIDGET_VERSION__ */
+/* global __RENUVEX_PR_WIDGET_VERSION__, __IKR_WIDGET_VERSION__ */
 
 import { API_BASE, PUBLIC_API_KEY } from './config.js';
 
@@ -10,6 +10,7 @@ var sentKeys = {};
 
 function getWidgetVersion() {
   try {
+    if (typeof __RENUVEX_PR_WIDGET_VERSION__ !== 'undefined') return __RENUVEX_PR_WIDGET_VERSION__;
     return typeof __IKR_WIDGET_VERSION__ !== 'undefined' ? __IKR_WIDGET_VERSION__ : 'dev';
   } catch (_) {
     return 'dev';
@@ -27,7 +28,7 @@ function currentPath() {
 function shouldReport(type, extra) {
   if (!API_BASE || sentCount >= MAX_HEALTH_EVENTS_PER_SESSION) return false;
   var key = [
-    'ikr-health',
+    'renuvex-pr-health',
     PUBLIC_API_KEY || 'unknown',
     type || 'unknown',
     (extra && extra.surface) || 'unknown',

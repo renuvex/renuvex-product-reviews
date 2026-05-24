@@ -12,6 +12,10 @@ import {
   hideOnImageError,
 } from '../core/helpers.js';
 import { currentSettings } from '../core/state.js';
+import {
+  LEGACY_IKR_SETTINGS_UPDATED_PREVIEW,
+  RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
+} from '../core/namespace.js';
 
 function getValidImages(review) {
   return getTrustedReviewImages(review);
@@ -545,11 +549,14 @@ export function openReviewModal(r, clickedUrl, allReviews) {
     currentReview: r,
     currentSettings: currentSettings,
   };
+  var lastPreviewSettings = null;
 
   // Preview modunda açık lightbox ana render ağacının dışında kalır.
   // Closure state'teki aktif review ile sağ paneli tek seferde yeniden senkronlarız.
   function onSettingsUpdate(event) {
     var nextSettings = event && event.detail && event.detail.settings;
+    if (nextSettings && nextSettings === lastPreviewSettings) return;
+    lastPreviewSettings = nextSettings || null;
     modalState.currentSettings = nextSettings || currentSettings;
     var right = modal.querySelector('.ikr-modal-right');
     if (!right || !modalState.currentReview) return;
@@ -559,7 +566,8 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   function onPopState() {
     if (closed) return;
     closed = true;
-    window.removeEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
+    window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
+    window.removeEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
     closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
   }
 
@@ -574,7 +582,8 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   function requestClose() {
     if (closed) return;
     closed = true;
-    window.removeEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
+    window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
+    window.removeEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
     closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
     restoreModalHistoryEntry(modalHistoryEntry);
   }
@@ -582,7 +591,8 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   document.addEventListener('keydown', onKeyDown);
 
   window.addEventListener('popstate', onPopState);
-  window.addEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
+  window.addEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
+  window.addEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
 
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };

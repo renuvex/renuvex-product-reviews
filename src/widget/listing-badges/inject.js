@@ -98,6 +98,16 @@ function shouldSkipLink(a, adapter, currentSlug, slug) {
   return false;
 }
 
+function isLinkProcessed(a) {
+  return !!(a && (a.getAttribute('data-renuvex-pr-badge') || a.getAttribute('data-ikr-badge')));
+}
+
+function markLinkProcessed(a) {
+  if (!a) return;
+  a.setAttribute('data-renuvex-pr-badge', '1');
+  a.setAttribute('data-ikr-badge', '1');
+}
+
 function getJustify(el) {
   var align = window.getComputedStyle(el).textAlign;
   return align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
@@ -167,7 +177,7 @@ function setupListingBadgeGuards(badge, mountPoint, slug, remount) {
 }
 
 function reserveBadgeSlotOnLink(a, productName, currentSlug) {
-  if (a.getAttribute('data-ikr-badge')) return;
+  if (isLinkProcessed(a)) return;
   var adapter = getThemeAdapter();
   var slug = extractSlug(a.href);
   if (shouldSkipLink(a, adapter, currentSlug, slug)) return;
@@ -208,26 +218,26 @@ export function reserveBadgeSlots(slugNameMap) {
 }
 
 export function clearBadgePlaceholders() {
-  document.querySelectorAll('[data-ikr-listing-badge-placeholder]').forEach(function(el) { el.remove(); });
+  document.querySelectorAll('[data-renuvex-listing-badge-placeholder],[data-ikr-listing-badge-placeholder]').forEach(function(el) { el.remove(); });
 }
 
 export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair) {
-  if (a.getAttribute('data-ikr-badge')) return;
+  if (isLinkProcessed(a)) return;
   var adapter = getThemeAdapter();
   var slug = extractSlug(a.href);
 
-  if (shouldSkipLink(a, adapter, currentSlug, slug)) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (shouldSkipLink(a, adapter, currentSlug, slug)) { markLinkProcessed(a); return; }
 
   var hasNestedA = !!a.querySelector('a[href]');
   var realText = Array.from(a.childNodes).filter(function(n) { return n.nodeType === 3; }).map(function(n) { return n.textContent.trim(); }).join('').trim();
   var hasTitleEl = !!findTitleEl(a, productName);
 
-  if (!realText && !hasTitleEl && !hasNestedA) { a.setAttribute('data-ikr-badge', '1'); return; }
+  if (!realText && !hasTitleEl && !hasNestedA) { markLinkProcessed(a); return; }
 
-  a.setAttribute('data-ikr-badge', '1');
+  markLinkProcessed(a);
 
   if (hasNestedA) {
-    a.querySelectorAll('a[href]').forEach(function(inner) { inner.setAttribute('data-ikr-badge', '1'); });
+    a.querySelectorAll('a[href]').forEach(markLinkProcessed);
     var nameEl = findTitleEl(a, productName);
     if (!nameEl) return;
     var mountNested = resolveMount(nameEl);
@@ -269,7 +279,7 @@ function injectModalBadge(slugNameMap, ratings, iconPair) {
   var modal = adapter.findModal();
   if (!modal) return;
   var h1 = adapter.findModalTitle(modal);
-  if (!h1 || h1.querySelector('[data-ikr-listing-badge]')) return;
+  if (!h1 || h1.querySelector('[data-renuvex-listing-badge],[data-ikr-listing-badge]')) return;
 
   var slug = null;
 
@@ -321,7 +331,7 @@ function injectModalBadge(slugNameMap, ratings, iconPair) {
   h1.appendChild(modalBadge);
   probeWidgetVisibility(modalBadge, 'listing-modal-badge', { slug: slug || '' });
   watchListingBadgeRemoval(modalBadge, 'listing-modal-badge', function () {
-    if (!h1.isConnected || h1.querySelector('[data-ikr-listing-badge]')) return;
+    if (!h1.isConnected || h1.querySelector('[data-renuvex-listing-badge],[data-ikr-listing-badge]')) return;
     h1.appendChild(createBadgeEl(ratings[slug], 'flex-start', iconPair, { slug: slug || '' }));
   }, { slug: slug || '' });
 }

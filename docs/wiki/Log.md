@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-24 - refactor | Renuvex Product Reviews namespace expand phase
+- Summary: Migrated canonical identity from Yorum Paneli / `ikr` to Renuvex Product Reviews without removing legacy public aliases. New canonical keys are `product-reviews`, `renuvex-pr`, `renuvex_pr`, and `renuvex-product-reviews-widget`.
+- Reason: The app is now part of the Renuvex brand family, but storefront scripts and cached widget chunks can outlive a deploy. Expand/contract keeps old installations and CDN/browser cache windows safe while making the new identity canonical.
+- Key source changes: `storefront-scripts.ts` writes the canonical ikas script name and prefers Renuvex markers while adopting legacy records; `core/namespace.js` mirrors `ikr-*` class state to `renuvex-pr-*` and expands injected CSS; preview events now use `RENUVEX_PR_*` with `IKR_*` aliases; public cache/rate-limit keys moved to `renuvex_pr_*`; Sentry project config is env-driven.
+- Verification: `pnpm build:widget`, `node --check public/widget.js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check` passed. Wiki audit remains Yellow because of pre-existing warnings, with 0 errors.
+- Updated wiki: [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]], [[Decision_Index]], [[Project_Overview]], [[Ikas_Widget_Injection_Notes]], [[Widget_Architecture]], [[Config_And_Env_Map]], [[Sentry_Operations]], [[Security_And_Rate_Limits]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-24 - hardening | Safe wizard error DOM and sprite id guard
 - Summary: Removed the two remaining dynamic widget-wizard error `innerHTML` sinks from photo upload and review submit errors, and strengthened one-off SVG sprite ids with a length + double-hash key.
 - Reason: The SVG sprite refactor was correct, but production widget HTML generation should keep dynamic messages out of HTML string concatenation. The sprite helper also now avoids silent symbol reuse if a future local icon source collides with an existing content id.

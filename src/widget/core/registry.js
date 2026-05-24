@@ -24,7 +24,7 @@ export function getSurfaces() {
 function handleMountResult(surface, result) {
   if (!result || typeof result.then !== 'function') return;
   result.catch(function (err) {
-    console.error('[ikr] surface mount error (' + surface.key + '):', err);
+    console.error('[renuvex-pr] surface mount error (' + surface.key + '):', err);
   });
 }
 
@@ -36,14 +36,14 @@ export function mountMatching(context) {
     try {
       matched = !!surface.detect(context);
     } catch (err) {
-      console.error('[ikr] surface detect error (' + surface.key + '):', err);
+      console.error('[renuvex-pr] surface detect error (' + surface.key + '):', err);
       continue;
     }
     if (!matched) continue;
     try {
       handleMountResult(surface, surface.mount(context));
     } catch (err) {
-      console.error('[ikr] surface mount error (' + surface.key + '):', err);
+      console.error('[renuvex-pr] surface mount error (' + surface.key + '):', err);
     }
   }
 }

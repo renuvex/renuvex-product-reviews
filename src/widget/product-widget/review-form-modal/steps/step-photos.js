@@ -223,7 +223,7 @@ export function createStepPhotos(state, opts) {
         newPending.some(function (n) { return (n.file.name + '_' + n.file.size) === finger; });
 
       if (isDup) {
-        console.log('[ikr] Duplicate file detected, skipping:', file.name);
+        console.log('[renuvex-pr] Duplicate file detected, skipping:', file.name);
         continue;
       }
 
@@ -288,7 +288,7 @@ export function createStepPhotos(state, opts) {
             // KRİTİK KONTROL: Kullanıcı bu yükleme sürerken görseli silmiş mi?
             var stillPending = (state.get().pendingImages || []).some(function (p) { return p.url === objUrl; });
             if (!stillPending) {
-              console.log('[ikr] Upload finished but image was already deleted by user. Aborting state update.');
+              console.log('[renuvex-pr] Upload finished but image was already deleted by user. Aborting state update.');
               return;
             }
 
@@ -317,7 +317,7 @@ export function createStepPhotos(state, opts) {
             throw new Error('invalid image url');
           }
         } catch (err) {
-          console.error('[ikr] Image upload failed:', err);
+          console.error('[renuvex-pr] Image upload failed:', err);
           var errMsg = err.message === 'rate_limit' ? 'Çok fazla deneme. Bekleyin.' : 'Yükleme başarısız.';
 
           if (opts.showToast) {

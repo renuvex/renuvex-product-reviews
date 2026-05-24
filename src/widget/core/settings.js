@@ -8,8 +8,9 @@ import { PUBLIC_API_KEY, API_BASE } from './config.js';
 import { cacheGet, cacheSet } from './cache.js';
 import { fetchWithTimeout } from './fetch.js';
 import { setThemeAdapterKey } from '../themes/current-adapter.js';
+import { getPreviewSettingsStorage } from './namespace.js';
 
-var SETTINGS_CACHE_KEY = 'ikr_settings_' + PUBLIC_API_KEY;
+var SETTINGS_CACHE_KEY = 'renuvex_pr_settings_' + PUBLIC_API_KEY;
 var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
 var SETTINGS_CACHE_STALE_TTL = 24 * 60 * 60 * 1000;
 var SETTINGS_404_TTL = 30 * 1000;
@@ -42,7 +43,7 @@ function resetInflightSettings() {
 async function loadPreviewSettings() {
   try {
     var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
-    var savedSettings = window.__ikasPreviewSettings || sessionStorage.getItem('ikr_preview_settings') || '';
+    var savedSettings = getPreviewSettingsStorage();
     var settingsOverride = {};
     if (savedSettings) {
       try { settingsOverride = JSON.parse(savedSettings); } catch (_) {}
@@ -98,7 +99,7 @@ async function loadSettings() {
     cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), v: settings }));
     return applyRuntimeSettings(settings);
   } catch (err) {
-    console.error('[ikr] fetchSettings error:', err);
+    console.error('[renuvex-pr] fetchSettings error:', err);
     return staleEntry ? applyRuntimeSettings(staleEntry) : null;
   }
 }

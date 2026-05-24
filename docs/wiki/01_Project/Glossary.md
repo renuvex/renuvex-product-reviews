@@ -3,7 +3,7 @@ type: status
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-24
 tags:
   - glossary
 related:
@@ -15,7 +15,8 @@ related:
 # Glossary
 
 ## Project / Domain
-- **Yorum Paneli** — Turkish for "Comment Panel"; this app's display name.
+- **Renuvex Product Reviews** — canonical product name for this app.
+- **Yorum Paneli** — historical Turkish project/display name. Kept only in old notes and compatibility context.
 - **Review** — a customer rating + optional title + comment + images, attached to a product.
 - **Approved / Pending / Rejected** — review `status` values. Public widget shows only `approved`.
 - **Auto-approve mode** — `manual` / `4plus` / `5stars` / `all` — controls initial review status.
@@ -24,7 +25,7 @@ related:
 - **Summary layout** — different visual styles for the per-product review summary block: `classic` / `compact` / `hero` / `minimal` / `split`.
 - **Review layout** — different ways the review list is rendered: `card` / `gallery` / `list`.
 - **Layout-aware setting** — a settings field that hides itself when the active layout doesn't `support` it (`layoutKey + supports` in `widgetDefs.ts`).
-- **Preview mode** — widget.js running in `/preview` iframe with `window.__ikasPreviewMode = true`; reacts to `IKR_SETTINGS_UPDATE` postMessage.
+- **Preview mode** — widget.js running in `/preview` iframe with `window.__ikasPreviewMode = true`; reacts to canonical `RENUVEX_PR_SETTINGS_UPDATE` postMessage and accepts the legacy `IKR_SETTINGS_UPDATE` alias during expand phase.
 - **Author masking** — public review responses replace last name with initial: `Mert Wilson` → `Mert W.`.
 
 ## ikas-specific

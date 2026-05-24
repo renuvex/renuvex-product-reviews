@@ -17,6 +17,7 @@ related:
   - "[[ADR_0016_Rating_Visual_System]]"
   - "[[ADR_0017_Badge_Architecture]]"
   - "[[ADR_0018_Widget_Ownership_And_Placement_Resilience]]"
+  - "[[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]"
 source_files:
   - "package.json"
   - "prisma/schema.prisma"
@@ -46,6 +47,7 @@ source_files:
   - "src/widget/core/health.js"
   - "src/widget/core/slot.js"
   - "src/widget/core/slot-position.js"
+  - "src/widget/core/namespace.js"
   - "src/widget/summary-layouts/shared/actions-block.js"
   - "src/widget/product-widget/title-finder.js"
   - "src/widget/product-widget/review-form-modal/steps/step-rating.js"
@@ -60,7 +62,7 @@ source_files:
 
 ## Current Focus
 - ikas review/rating app: merchant admin, storefront widget, review submission, image upload, moderation, settings preview.
-- Current focus: storefront widget resilience.
+- Current focus: Renuvex Product Reviews namespace migration and storefront widget resilience.
 
 ## Must Know
 - Source/config/tests/runtime are source of truth; wiki is routing.
@@ -82,13 +84,13 @@ source_files:
 - 2026-05-24: Listing/home/search badges now use the same bounded owned-slot position guard as PDP, without flipping the sibling-mount rollout gate.
 - 2026-05-24: [[Bug_Filter_Menu_WebKit_Tap_Activation]] + [[Bug_Review_Wizard_WebKit_Rating_Advance]] fixed iOS/WebKit tap bugs (filter menu + review wizard): custom widget controls need pointer-safe activation with click+keyboard fallback and no one-shot animation gates.
 - 2026-05-24: [[ADR_0019_Icon_Sprite_Rendering]] shipped. Read-only rating stars use one injected SVG `<symbol>` sprite + `<use>` (not inline `<path>` per star). Half-star clip + `ICONS` source unchanged. Adds sr-only/`aria-labelledby` a11y; PDP badge now a link + `data-ikr-align` (no `role=figure`/static `id`).
+- 2026-05-24: [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] shipped expand phase. Canonical identity is `Renuvex Product Reviews` / `product-reviews` / `renuvex-pr`; legacy `ikr-*`, `data-ikr-*`, `IKR_*`, and `yorum-paneli-widget` remain compatibility aliases until contract cleanup.
 
 ## Current Risks / Open Questions
-- Phase 3 follow-ups: verify deploy/cache, re-measure widget size, and document disabling native theme reviews.
-- Theme adapter selection now uses Admin API `listStorefront.themes[].isMainTheme`; no runtime DOM mount-point contract exists yet.
-- Current Vercel cron config is daily-compatible. Pending theme verification can lag until the next maintenance run unless the deploy plan supports sub-daily cron or a delayed queue is added.
-- Redis already handles public API rate limits. QStash is not installed; add only for Hobby delayed verification or queue retry/dedup/flow-control needs.
-- Structured data injection, review-request emails, CSV import/export, analytics, localization, and test coverage remain documented gaps.
+- Verify deploy/cache, re-measure widget size, and document disabling native theme reviews.
+- Theme adapters use Admin API `listStorefront.themes[].isMainTheme`; no runtime DOM mount-point contract exists.
+- Daily cron can delay pending theme verification unless sub-daily cron or a delayed queue is added.
+- Structured data, review-request emails, CSV import/export, analytics, localization, and test coverage remain gaps.
 
 ## Read Next
 - [[Current_Status]]
