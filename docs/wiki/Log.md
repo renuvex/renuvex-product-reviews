@@ -20,6 +20,20 @@ source_files:
 
 # Project Log
 
+## 2026-05-24 - fix | Harden review wizard rating taps on WebKit
+- Summary: Made the first review-wizard rating step pointer/touch-safe and removed the one-shot `canNavigate()` drop that could leave slower WebKit devices waiting on step 1 after a star tap.
+- Reason: A physical iPhone 11 Safari test showed the wizard could select a rating but not auto-advance, while newer iPhone Safari tests worked. The source risk was a delayed click path that only attempted navigation once after 400 ms.
+- Key source changes: `src/widget/product-widget/review-form-modal/steps/step-rating.js` now activates on pointer/touch/mouse down with keyboard and click fallbacks, stores rating immediately, and lets the parent wizard state machine queue the step transition.
+- Verification: `node --check src/widget/product-widget/review-form-modal/steps/step-rating.js` and `pnpm build:widget` passed. Local-build browser verification on the live dev storefront passed for WebKit iPhone 11, WebKit iPhone 13, and Android Chromium / Pixel 5: tapping the fifth star moved step 1 to step 2 with no widget-originated console errors.
+- Updated wiki: [[Bug_Review_Wizard_WebKit_Rating_Advance]], [[Bug_Index]], [[Hot_Context]], [[Log]]
+
+## 2026-05-24 - fix | Stabilize WebKit filter taps and PDP badge position
+- Summary: Fixed the iOS/WebKit summary-layout filter menu so real taps activate rating/sort/photo filters before focus light-dismiss closes the menu. Added a bounded PDP badge position guard so the owned Renuvex slot stays directly under the product title when another app inserts into the same parent after runtime load, and made widget-error CORS echo the requesting storefront origin when credentials are involved.
+- Reason: Live iPhone/WebKit testing showed filter menu taps closed the menu without changing the active filter or sending a new reviews request, while Android worked. Separate live/fixture checks showed the PDP badge is currently visible with the X app, but late sibling insertion can move the Renuvex slot below a third-party widget unless our own slot position is reanchored.
+- Key source changes: `src/widget/summary-layouts/shared/actions-block.js` activates options on pointer/touch/mouse down with keyboard and click fallbacks; `src/widget/product-widget/render.js` fetches reviews with explicit next filter state; `src/widget/product-widget/rating-badge.js` adds a 15-second bounded position observer for the owned slot; `src/lib/cors.ts` and `/api/public/widget-error` return origin-aware CORS headers.
+- Verification: `pnpm build:widget`, `node --check public/widget.js`, `pnpm exec tsc --noEmit`, `pnpm lint`, and local CORS route checks passed. A local-build browser test injected the new widget into the live dev storefront with the X app installed: Android and WebKit/iPhone both changed review lists for highest, lowest, and photo filters; the PDP badge remained title -> Renuvex -> X after a simulated late third-party insert.
+- Updated wiki: [[Bug_Filter_Menu_WebKit_Tap_Activation]], [[ADR_0018_Widget_Ownership_And_Placement_Resilience]], [[ADR_0010_Widget_Error_Forwarding]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-24 - fix | Harden widget ownership against third-party widget.js conflicts
 - Summary: Recorded and implemented the Renuvex Product Reviews storefront resilience decision. A third-party app can also load a `widget.js` file, so this app's loader/runtime now treats owned markers and `publicApiKey` as the script identity boundary rather than relying on `/widget.js` alone.
 - Reason: Live dev-store testing with the Serpingo/X app showed our `widget.js` and runtime chunks loaded with `200 OK`, but no public settings/reviews calls happened because runtime ownership could select the third-party script.

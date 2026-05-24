@@ -47,6 +47,7 @@ export function buildActionsBlock(opts) {
     ['lowest', 'En Düşük Puan', false],
     ['photos', 'Fotoğraflı', true],
   ];
+  var isActivatingOption = false;
   // Pointer-vs-keyboard origin: restore focus to the trigger only when the
   // close was driven by keyboard. Pointer/touch closes leave focus alone so
   // the mobile button does not retain a stuck pressed/focus appearance.
@@ -85,9 +86,40 @@ export function buildActionsBlock(opts) {
     item.className = 'ikr-filter-item' + (isActive ? ' ikr-filter-item-active' : '');
     item.setAttribute('role', 'menuitem');
     item.textContent = opt[1];
-    item.onclick = function() {
-      closeFilter({ restoreFocus: 'auto' });
+    var activated = false;
+    function activateOption(e, restoreFocus) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (activated) return;
+      activated = true;
+      isActivatingOption = true;
+      closeFilter({ restoreFocus: restoreFocus });
       onSortChange(opt[0], isPhotos);
+      setTimeout(function () {
+        activated = false;
+        isActivatingOption = false;
+      }, 0);
+    }
+    item.addEventListener('pointerdown', function (e) {
+      if (e.button !== undefined && e.button !== 0) return;
+      activateOption(e, false);
+    });
+    if (typeof window !== 'undefined' && !window.PointerEvent) {
+      item.addEventListener('touchstart', function (e) {
+        activateOption(e, false);
+      }, { passive: false });
+    }
+    item.addEventListener('mousedown', function (e) {
+      if (e.button !== undefined && e.button !== 0) return;
+      activateOption(e, false);
+    });
+    item.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') activateOption(e, true);
+    });
+    item.onclick = function(e) {
+      activateOption(e, false);
     };
     filterMenu.appendChild(item);
   });
@@ -109,6 +141,7 @@ export function buildActionsBlock(opts) {
   // Tab ile odak filterWrap dışına çıkarsa menüyü kapat (yeniden tetikleyiciye dönüş yapmadan).
   filterWrap.addEventListener('focusout', function (e) {
     if (!filterMenu.classList.contains('ikr-open')) return;
+    if (isActivatingOption) return;
     var nextFocus = e.relatedTarget;
     if (nextFocus && filterWrap.contains(nextFocus)) return;
     closeFilter();

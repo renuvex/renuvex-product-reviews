@@ -82,6 +82,10 @@ Renuvex Product Reviews owns its script and DOM surfaces explicitly.
   `ikr-*` classes and data attributes remain for compatibility, while new
   `renuvex-pr-*` classes and `data-renuvex-*` markers become the forward
   namespace.
+- The PDP rating badge owns only its own slot position. If another app inserts
+  a node between the product title and the Renuvex badge shortly after render,
+  the runtime may move the Renuvex slot back directly under the title. It does
+  not delete, edit, or move the third-party node.
 - The default conflict policy is "keep and measure": do not delete, move, or
   overwrite another app's DOM. If a theme or third-party widget causes a real
   visual problem, fix placement in the theme adapter or merchant support path.
@@ -118,6 +122,8 @@ slots are not available.
   reading its own `publicApiKey`.
 - Duplicate guards should operate on owned slot markers plus product id/slug,
   not only on broad badge classes.
+- The PDP badge has a bounded post-render position guard. This handles normal
+  async script timing without creating a permanent DOM fight with another app.
 - Widget health telemetry distinguishes script ownership failure, DOM removal,
   and visibility/CSS conflicts.
 - Theme adapters remain placement-only. Visual tokens and review data logic stay

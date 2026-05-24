@@ -515,22 +515,24 @@ export async function render(productId, settings, reviewsData, productName, orde
           currentOrderBy: currentOrderBy,
           currentHasImages: currentHasImages,
           onFilterChange: async function (starVal) {
-            setCurrentRatingFilter(currentRatingFilter === starVal ? null : starVal);
+            var nextRatingFilter = currentRatingFilter === starVal ? null : starVal;
+            setCurrentRatingFilter(nextRatingFilter);
             setCurrentPage(1);
-            var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
+            var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, nextRatingFilter, currentHasImages);
             await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
           },
           onSortChange: async function (orderBy, isPhotos) {
             setCurrentPage(1);
+            var nextOrderBy = orderBy;
+            var nextHasImages = false;
             if (isPhotos) {
-              setCurrentHasImages(true);
-              setCurrentOrderBy('newest');
-            } else {
-              setCurrentHasImages(false);
-              setCurrentOrderBy(orderBy);
+              nextHasImages = true;
+              nextOrderBy = 'newest';
             }
-            var newData = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
-            await render(currentProductId, currentSettings, newData, currentProductName, currentOrderBy, 1);
+            setCurrentHasImages(nextHasImages);
+            setCurrentOrderBy(nextOrderBy);
+            var newData = await fetchReviews(currentProductId, nextOrderBy, 1, currentRatingFilter, nextHasImages);
+            await render(currentProductId, currentSettings, newData, currentProductName, nextOrderBy, 1);
           },
         });
         widget.appendChild(summary);

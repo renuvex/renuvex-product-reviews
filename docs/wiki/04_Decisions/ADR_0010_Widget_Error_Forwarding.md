@@ -60,6 +60,10 @@ Accepted
 - Sentry will start receiving issues tagged `source: widget`. Set up a saved query or alert on `tags[source]:widget` to separate widget noise from panel noise.
 - Filtering by `widget.js` substring is fragile if the bundle is ever served from a different filename (e.g. a CDN that hash-fingerprints). Track in [[Open_Questions]] if we ever change widget delivery.
 - The reporter does not capture errors that happen before its import (i.e. errors in the script tag itself, before module evaluation begins). That window is small and acceptable.
+- 2026-05-24: `widget-error` CORS echoes the request `Origin` and returns
+  `Access-Control-Allow-Credentials: true` for origin-bearing requests. This
+  avoids beacon failures where credentialed telemetry requests reject wildcard
+  `Access-Control-Allow-Origin`.
 
 ## Related Source Files
 - [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js)

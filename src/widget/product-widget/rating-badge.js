@@ -7,10 +7,11 @@ import { partialStarsHTML } from '../core/helpers.js';
 // PR-3: sizing artık CSS variable üzerinden akıyor; ensureBadgeTokens scope'lu
 // `<style>` etiketine yazar, .ikr-rating-badge .ikr-star CSS'i değişkenden okur.
 import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
-import { probeWidgetVisibility, watchOneTimeRemoval } from '../core/health.js';
+import { probeWidgetVisibility, reportWidgetHealth, watchOneTimeRemoval } from '../core/health.js';
 import { createOwnedSlot, removeOwnedSlots, setSlotContext } from '../core/slot.js';
 
 var ratingBadgeRemovalObserver = null;
+var ratingBadgePositionObserver = null;
 
 // SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği).
 // iconPair tek kaynaktan ("Ürün Yorumları" → reviewIcon) gelir; render.js geçirir.
@@ -19,10 +20,50 @@ function buildStars(rating, iconPair) {
   return partialStarsHTML(rating, iconPair);
 }
 
+function placeAfterTitle(slot, titleEl) {
+  if (!slot || !titleEl || !titleEl.parentNode) return false;
+  var parent = titleEl.parentNode;
+  if (slot.parentNode !== parent || titleEl.nextSibling !== slot) {
+    parent.insertBefore(slot, titleEl.nextSibling);
+    return true;
+  }
+  return false;
+}
+
+function watchBadgePosition(slot, titleEl, extra) {
+  if (typeof MutationObserver === 'undefined' || !slot || !titleEl || !titleEl.parentNode) return null;
+  var parent = titleEl.parentNode;
+  var corrections = 0;
+  var reported = false;
+  var observer = new MutationObserver(function () {
+    if (!slot.isConnected || !titleEl.isConnected || slot.parentNode !== parent || titleEl.parentNode !== parent) {
+      observer.disconnect();
+      return;
+    }
+    if (titleEl.nextSibling === slot) return;
+    corrections += 1;
+    placeAfterTitle(slot, titleEl);
+    if (!reported) {
+      reported = true;
+      reportWidgetHealth('dom-conflict', 'PDP badge slot reordered after render', Object.assign({ surface: 'pdp-badge', reason: 'position_reanchored' }, extra || {}));
+    }
+    if (corrections >= 3) observer.disconnect();
+  });
+  observer.observe(parent, { childList: true });
+  setTimeout(function () {
+    observer.disconnect();
+  }, 15000);
+  return observer;
+}
+
 export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, selfHealAttempt) {
   if (ratingBadgeRemovalObserver) {
     ratingBadgeRemovalObserver.disconnect();
     ratingBadgeRemovalObserver = null;
+  }
+  if (ratingBadgePositionObserver) {
+    ratingBadgePositionObserver.disconnect();
+    ratingBadgePositionObserver = null;
   }
 
   // Önceki üründen kalan eski badge'i temizle
@@ -121,7 +162,8 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
     window.scrollTo({ top: top, behavior: 'smooth' });
   };
   slot.appendChild(badge);
-  titleEl.parentNode.insertBefore(slot, titleEl.nextSibling);
+  placeAfterTitle(slot, titleEl);
+  ratingBadgePositionObserver = watchBadgePosition(slot, titleEl, { productName: productName || '', productId: productId || '' });
   probeWidgetVisibility(slot, 'pdp-badge', { productName: productName || '', productId: productId || '' });
   if (!selfHealAttempt) {
     ratingBadgeRemovalObserver = watchOneTimeRemoval(slot, 'pdp-badge', function () {

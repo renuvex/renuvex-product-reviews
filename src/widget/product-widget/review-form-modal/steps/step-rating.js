@@ -19,6 +19,7 @@ export function createStepRating(state, opts) {
   root.className = 'ikr-fwizard-step ikr-fwizard-step-rating';
 
   var isAdvancing = false;
+  var advanceTimer = null;
 
   // Başlık
   var title = document.createElement('div');
@@ -48,6 +49,22 @@ export function createStepRating(state, opts) {
     });
   }
 
+  function activateRating(value, e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (isAdvancing) return;
+    isAdvancing = true;
+    state.set({ rating: value });
+    applyVisual(value);
+
+    if (advanceTimer) clearTimeout(advanceTimer);
+    advanceTimer = setTimeout(function () {
+      // The wizard state machine queues transitions while a step animation is
+      // busy, so a one-shot canNavigate check must not drop mobile taps.
+      state.goNext();
+    }, 280);
+  }
+
   for (var i = 1; i <= 5; i++) {
     (function (value) {
       var btn = document.createElement('button');
@@ -64,20 +81,24 @@ export function createStepRating(state, opts) {
       btn.addEventListener('mouseleave', function () {
         applyVisual(state.get().rating);
       });
-      btn.addEventListener('click', function () {
-        if (isAdvancing) return;
-        isAdvancing = true;
-        state.set({ rating: value });
-        applyVisual(value);
-        // Auto-advance — Exit animasyonu (300ms) bitene kadar bekle.
-        // 280ms yetmiyordu; canNavigate() animPhase==='idle' kontrolü
-        // yüzünden geçişi engelliyordu.
-        setTimeout(function () {
-          var canNav = !opts.canNavigate || opts.canNavigate();
-          if (canNav) state.goNext();
-          // isAdvancing'i sıfırlamıyoruz çünkü zaten step kapanıp destroy edilecek.
-          // Geri dönülürse step baştan render edilir.
-        }, 400);
+      btn.addEventListener('pointerdown', function (e) {
+        if (e.button && e.button !== 0) return;
+        activateRating(value, e);
+      });
+      if (typeof window !== 'undefined' && !window.PointerEvent) {
+        btn.addEventListener('touchstart', function (e) {
+          activateRating(value, e);
+        }, { passive: false });
+      }
+      btn.addEventListener('mousedown', function (e) {
+        if (window.PointerEvent) return;
+        activateRating(value, e);
+      });
+      btn.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') activateRating(value, e);
+      });
+      btn.addEventListener('click', function (e) {
+        activateRating(value, e);
       });
 
       stars.push(btn);
@@ -102,6 +123,7 @@ export function createStepRating(state, opts) {
     el: root,
     // Step manager step değişiminde temizleme yapsın diye opsiyonel destroy
     destroy: function () {
+      if (advanceTimer) clearTimeout(advanceTimer);
       window.removeEventListener('IKR_SETTINGS_UPDATED_PREVIEW', onSettingsUpdate);
       // hover listener'lar btn ile birlikte DOM'dan çıkınca otomatik kalkar
     },

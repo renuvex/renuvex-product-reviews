@@ -43,6 +43,8 @@ source_files:
   - "src/widget/core/badge.js"
   - "src/widget/core/health.js"
   - "src/widget/core/slot.js"
+  - "src/widget/summary-layouts/shared/actions-block.js"
+  - "src/widget/product-widget/review-form-modal/steps/step-rating.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/generic/adapter.js"
   - "src/widget/core/rollout.js"
@@ -54,7 +56,7 @@ source_files:
 
 ## Current Focus
 - ikas review/rating app: merchant admin, storefront widget, review submission, image upload, moderation, settings preview.
-- Current focus: post-deploy verification and product gaps.
+- Current focus: post-deploy verification.
 
 ## Must Know
 - Source/config/tests/runtime are the source of truth; wiki is routing and memory.
@@ -63,16 +65,17 @@ source_files:
 - `package.json` pins Next.js `16.2.1`; older generated docs saying Next.js 15 are stale unless re-verified.
 
 ## Recent Important Changes
-- Widget hardening reference chain: [[Yotpo_Style_Widget_Modular_Architecture]], [[ADR_0013_Modular_Widget_Loader_Architecture]], [[Phase_1_Widget_Runtime_Audit]], [[Phase_2_Widget_Module_Split_Plan]], [[Ikas_Storefront_Events]], [[Ikas_Storefront_Script_Capabilities]].
-- 2026-05-17/18: Widget module split, canonical product identity, install backfill via `after()`, non-destructive script lifecycle, public review hardening, rating read rate limits, and live storefront retests landed.
+- Widget hardening refs: [[ADR_0013_Modular_Widget_Loader_Architecture]], [[Phase_2_Widget_Module_Split_Plan]], [[Ikas_Storefront_Script_Capabilities]].
+- 2026-05-17/18: Module split, canonical product identity, install backfill, non-destructive script lifecycle, public review hardening, rate limits, and live retests landed.
 - 2026-05-19: [[ADR_0016_Rating_Visual_System]] implemented. Star icon + color are single-sourced from the `reviews` widget and used by every rating surface.
 - 2026-05-20: [[ADR_0017_Badge_Architecture]] shipped. Class-first DOM (`.ikr-rating-badge`, `data-ikr-*`) for all stores; sibling-of-title mount remains dev-store gated. Sizing uses `.ikr-rating-badge` CSS vars from `ensureBadgeTokens`; schema adds mobile/alignment/count controls.
 - 2026-05-23: Storefront script records now carry `data-ikr-*` markers, v1 reconciliation reports match/duplicate diagnostics, and badge render paths emit health telemetry plus one-shot self-heal for DOM removal.
 - 2026-05-23: Active theme selection uses Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId`; adapter matching uses stable `themeId` before merchant-editable names.
 - 2026-05-23: Theme sync is split from script injection. Dashboard/settings call lightweight `syncStorefrontTheme`; install/manual script repair still updates scripts and theme metadata.
-- 2026-05-23: Vercel rejected the attempted 5-minute cron on the current plan. `vercel.json` is back to daily 03:00 UTC; true 2-5 minute verification needs Pro/Enterprise cron or QStash.
-- 2026-05-24: Vercel docs rechecked: Pro/Enterprise allow once-per-minute cron, Hobby is daily only. On Pro, set `/api/admin/daily-maintenance` back to `*/5 * * * *`; QStash is not required for Pro cron.
+- 2026-05-23/24: Current Vercel plan rejected 5-minute cron; daily 03:00 UTC is restored. Pro/Enterprise can use `*/5 * * * *`; QStash is optional.
 - 2026-05-24: [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] records the X-app/Serpingo conflict. Runtime script discovery must be marker-first and `publicApiKey`-required; storefront surfaces use Renuvex/legacy owned slots. ikas has no official slot/conflict mechanism, and `isHighPriority` / `order` is not a hard cross-app ordering guarantee.
+- 2026-05-24: [[Bug_Filter_Menu_WebKit_Tap_Activation]] fixed the iOS/WebKit review filter tap bug. Custom widget menus must use pointer-safe activation, click fallback, and keyboard activation; Android and WebKit are separate storefront quality gates.
+- 2026-05-24: [[Bug_Review_Wizard_WebKit_Rating_Advance]] fixed a physical iPhone 11 Safari risk where the review wizard could select a star but wait on step 1. Review wizard tap controls should avoid one-shot animation gates and let the wizard state machine queue transitions.
 
 ## Current Risks / Open Questions
 - Phase 3 follow-ups: verify deploy lifecycle/cache, re-measure widget size, and document disabling native theme reviews.
