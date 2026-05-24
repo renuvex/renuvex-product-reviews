@@ -9,6 +9,8 @@ import { partialStarsHTML } from '../core/helpers.js';
 import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
 import { probeWidgetVisibility, reportWidgetHealth, watchOneTimeRemoval } from '../core/health.js';
 import { createOwnedSlot, removeOwnedSlots, setSlotContext } from '../core/slot.js';
+import { getAfterElementMountPoint, placeOwnedSlot, watchOwnedSlotPosition } from '../core/slot-position.js';
+import { getThemeAdapter } from '../themes/current-adapter.js';
 
 var ratingBadgeRemovalObserver = null;
 var ratingBadgePositionObserver = null;
@@ -20,40 +22,15 @@ function buildStars(rating, iconPair) {
   return partialStarsHTML(rating, iconPair);
 }
 
-function placeAfterTitle(slot, titleEl) {
-  if (!slot || !titleEl || !titleEl.parentNode) return false;
-  var parent = titleEl.parentNode;
-  if (slot.parentNode !== parent || titleEl.nextSibling !== slot) {
-    parent.insertBefore(slot, titleEl.nextSibling);
-    return true;
+function getProductBadgeMountPoint(titleEl) {
+  var adapter = getThemeAdapter();
+  if (adapter && typeof adapter.getProductBadgeMountPoint === 'function') {
+    try {
+      var byTheme = adapter.getProductBadgeMountPoint(titleEl);
+      if (byTheme && byTheme.parent) return byTheme;
+    } catch (_) {}
   }
-  return false;
-}
-
-function watchBadgePosition(slot, titleEl, extra) {
-  if (typeof MutationObserver === 'undefined' || !slot || !titleEl || !titleEl.parentNode) return null;
-  var parent = titleEl.parentNode;
-  var corrections = 0;
-  var reported = false;
-  var observer = new MutationObserver(function () {
-    if (!slot.isConnected || !titleEl.isConnected || slot.parentNode !== parent || titleEl.parentNode !== parent) {
-      observer.disconnect();
-      return;
-    }
-    if (titleEl.nextSibling === slot) return;
-    corrections += 1;
-    placeAfterTitle(slot, titleEl);
-    if (!reported) {
-      reported = true;
-      reportWidgetHealth('dom-conflict', 'PDP badge slot reordered after render', Object.assign({ surface: 'pdp-badge', reason: 'position_reanchored' }, extra || {}));
-    }
-    if (corrections >= 3) observer.disconnect();
-  });
-  observer.observe(parent, { childList: true });
-  setTimeout(function () {
-    observer.disconnect();
-  }, 15000);
-  return observer;
+  return getAfterElementMountPoint(titleEl);
 }
 
 export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, selfHealAttempt) {
@@ -99,7 +76,26 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   document.head.appendChild(jsonLdEl);
 
   var titleEl = findProductTitleEl(productName);
-  if (!titleEl || !titleEl.parentNode) return;
+  if (!titleEl || !titleEl.parentNode) {
+    reportWidgetHealth('dom-conflict', 'PDP product title could not be found for badge placement', {
+      surface: 'pdp-badge',
+      reason: 'title_not_found',
+      productName: productName || '',
+      productId: productId || '',
+    });
+    return;
+  }
+
+  var mountPoint = getProductBadgeMountPoint(titleEl);
+  if (!mountPoint || !mountPoint.parent) {
+    reportWidgetHealth('dom-conflict', 'PDP badge mount point could not be resolved', {
+      surface: 'pdp-badge',
+      reason: 'mount_not_found',
+      productName: productName || '',
+      productId: productId || '',
+    });
+    return;
+  }
 
   // Boyut "Yıldız Rozeti" widget'ından; yıldız ikonu + rengi tek kaynaktan
   // ("Ürün Yorumları") gelir — iconPair render.js tarafından geçirilir.
@@ -162,8 +158,13 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
     window.scrollTo({ top: top, behavior: 'smooth' });
   };
   slot.appendChild(badge);
-  placeAfterTitle(slot, titleEl);
-  ratingBadgePositionObserver = watchBadgePosition(slot, titleEl, { productName: productName || '', productId: productId || '' });
+  placeOwnedSlot(slot, mountPoint);
+  ratingBadgePositionObserver = watchOwnedSlotPosition(slot, mountPoint, {
+    surface: 'pdp-badge',
+    reason: 'position_reanchored',
+    message: 'PDP badge slot reordered after render',
+    extra: { productName: productName || '', productId: productId || '' },
+  });
   probeWidgetVisibility(slot, 'pdp-badge', { productName: productName || '', productId: productId || '' });
   if (!selfHealAttempt) {
     ratingBadgeRemovalObserver = watchOneTimeRemoval(slot, 'pdp-badge', function () {

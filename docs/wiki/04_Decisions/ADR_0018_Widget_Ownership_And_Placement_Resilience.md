@@ -31,7 +31,9 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/health.js"
   - "src/widget/core/slot.js"
+  - "src/widget/core/slot-position.js"
   - "src/widget/core/badge.js"
+  - "src/widget/product-widget/title-finder.js"
   - "src/widget/product-widget/rating-badge.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/listing-badges/inject.js"
@@ -86,6 +88,9 @@ Renuvex Product Reviews owns its script and DOM surfaces explicitly.
   a node between the product title and the Renuvex badge shortly after render,
   the runtime may move the Renuvex slot back directly under the title. It does
   not delete, edit, or move the third-party node.
+- PDP title discovery and badge mount decisions are theme-adapter concerns.
+  The bounded guard is shared infrastructure; Ozy/Kombos/other themes should
+  only provide selectors or a mount point, not copy positioning logic.
 - The default conflict policy is "keep and measure": do not delete, move, or
   overwrite another app's DOM. If a theme or third-party widget causes a real
   visual problem, fix placement in the theme adapter or merchant support path.
@@ -124,6 +129,9 @@ slots are not available.
   not only on broad badge classes.
 - The PDP badge has a bounded post-render position guard. This handles normal
   async script timing without creating a permanent DOM fight with another app.
+- New PDP theme support should add `findProductTitle()` and, when needed,
+  `getProductBadgeMountPoint()` to the adapter. The shared guard then protects
+  the returned mount point for the app-owned slot.
 - Widget health telemetry distinguishes script ownership failure, DOM removal,
   and visibility/CSS conflicts.
 - Theme adapters remain placement-only. Visual tokens and review data logic stay
@@ -140,7 +148,9 @@ slots are not available.
 - [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js)
 - [src/widget/core/health.js](src/widget/core/health.js)
 - [src/widget/core/slot.js](src/widget/core/slot.js)
+- [src/widget/core/slot-position.js](src/widget/core/slot-position.js)
 - [src/widget/core/badge.js](src/widget/core/badge.js)
+- [src/widget/product-widget/title-finder.js](src/widget/product-widget/title-finder.js)
 - [src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js)
 - [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js)

@@ -14,6 +14,7 @@ var ADAPTER_DEFAULTS = {
   key: 'generic',
   findListingContainers: function () { return []; },
   findListingTitle: function (_scope) { return null; },
+  findProductTitle: function (_productName) { return null; },
   findModal: function () { return null; },
   findModalTitle: function (_modal) { return null; },
   isNavigationLink: function (_a) { return false; },
@@ -23,6 +24,10 @@ var ADAPTER_DEFAULTS = {
   findSingleProductContainer: function () { return null; },
   isInsideSingleProductContainer: function (_el) { return false; },
   getListingBadgeMountPoint: function (_titleEl) { return null; },
+  getProductBadgeMountPoint: function (titleEl) {
+    if (!titleEl || !titleEl.parentNode) return null;
+    return { parent: titleEl.parentNode, anchorEl: titleEl, position: 'after' };
+  },
 };
 
 var THEME_ADAPTERS = {

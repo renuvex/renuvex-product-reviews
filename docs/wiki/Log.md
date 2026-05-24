@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-24 - refactor | Move PDP badge guard behind theme adapters
+- Summary: Refactored PDP badge placement so title discovery and mount decisions belong to the active theme adapter, while the bounded owned-slot position guard lives in shared core infrastructure.
+- Reason: Different ikas themes can rename PDP title classes. The durable boundary is not theme-specific guard code; it is a shared guard protecting an adapter-provided mount point for Renuvex's own slot.
+- Key source changes: `src/widget/core/slot-position.js` adds shared owned-slot placement/guard helpers; `src/widget/product-widget/title-finder.js` asks the active adapter before generic fallback; Ozy now declares PDP title selectors and product badge mount behavior; `rating-badge.js` consumes the adapter mount point.
+- Verification: `pnpm build:widget` passed. Local-build browser verification on the live dev storefront passed in Chromium desktop and WebKit iPhone 13: the PDP badge mounted under the Ozy title selector, reanchored after a simulated late third-party insert, and remounted once after slot removal with no widget-originated console errors.
+- Updated wiki: [[ADR_0018_Widget_Ownership_And_Placement_Resilience]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-24 - fix | Harden review wizard rating taps on WebKit
 - Summary: Made the first review-wizard rating step pointer/touch-safe and removed the one-shot `canNavigate()` drop that could leave slower WebKit devices waiting on step 1 after a star tap.
 - Reason: A physical iPhone 11 Safari test showed the wizard could select a rating but not auto-advance, while newer iPhone Safari tests worked. The source risk was a delayed click path that only attempted navigation once after 400 ms.

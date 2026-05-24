@@ -5,6 +5,7 @@
 
 import {
   THEME_LISTING_TITLE_SELECTOR,
+  THEME_PRODUCT_TITLE_SELECTOR,
   THEME_MODAL_SELECTOR,
   THEME_MODAL_TITLE_SELECTOR,
   THEME_SINGLE_PRODUCT_CONTAINER,
@@ -22,6 +23,17 @@ export var ozyThemeAdapter = {
 
   findListingTitle: function (scope) {
     return scope.querySelector(THEME_LISTING_TITLE_SELECTOR);
+  },
+
+  findProductTitle: function (productName) {
+    var candidates = Array.from(document.querySelectorAll(THEME_PRODUCT_TITLE_SELECTOR));
+    if (productName) {
+      var exact = candidates.find(function (el) {
+        return el && el.textContent && el.textContent.trim() === productName;
+      });
+      if (exact) return exact;
+    }
+    return candidates[0] || null;
   },
 
   findModal: function () {
@@ -66,5 +78,10 @@ export var ozyThemeAdapter = {
   // without touching listing-badges/inject.js. See ADR_0017 draft.
   getListingBadgeMountPoint: function (_titleEl) {
     return null;
+  },
+
+  getProductBadgeMountPoint: function (titleEl) {
+    if (!titleEl || !titleEl.parentNode) return null;
+    return { parent: titleEl.parentNode, anchorEl: titleEl, position: 'after' };
   },
 };

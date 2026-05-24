@@ -11,6 +11,10 @@ export var genericThemeAdapter = {
     return null;
   },
 
+  findProductTitle: function (_productName) {
+    return null;
+  },
+
   findModal: function () {
     return null;
   },
@@ -47,5 +51,10 @@ export var genericThemeAdapter = {
 
   getListingBadgeMountPoint: function (_titleEl) {
     return null;
+  },
+
+  getProductBadgeMountPoint: function (titleEl) {
+    if (!titleEl || !titleEl.parentNode) return null;
+    return { parent: titleEl.parentNode, anchorEl: titleEl, position: 'after' };
   },
 };

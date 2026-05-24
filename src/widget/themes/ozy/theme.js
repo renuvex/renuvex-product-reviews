@@ -4,6 +4,10 @@
 // Listing kartlarında ürün başlığını bulmak için kullanılan selector
 export var THEME_LISTING_TITLE_SELECTOR = '.product-name';
 
+// PDP product title. Prefer the title inside product-name-main so navigation
+// and recommendation titles cannot be selected before the actual PDP title.
+export var THEME_PRODUCT_TITLE_SELECTOR = '.product-name-main h1.product-name, .product-name-main h1, h1.product-name';
+
 // Quick-view modal container selector'ı
 export var THEME_MODAL_SELECTOR = '.add-to-basket-modal';
 
