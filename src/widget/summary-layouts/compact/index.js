@@ -8,6 +8,7 @@ import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
 import { registerPopover, notifyOpening } from '../shared/popover-registry.js';
 import { partialStarsHTML } from '../../core/helpers.js';
+import { starUseSvg } from '../../icons/star-sprite.js';
 import { currentSettings } from '../../core/state.js';
 import { COMPACT_CSS } from './styles.js';
 
@@ -100,7 +101,7 @@ export function render(opts) {
   var avg = document.createElement('div');
   avg.className = 'ikr-compact-avg';
   avg.innerHTML =
-    '<span class="ikr-icon">' + iconPair.filled + '</span>' +
+    '<span class="ikr-icon">' + starUseSvg('full') + '</span>' +
     '<span>' + avgRatingVal + '</span>';
   panelInner.appendChild(avg);
 

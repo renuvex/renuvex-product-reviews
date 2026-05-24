@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-24 - refactor | Sprite the review-summary + bar-chart stars (ADR 0019 follow-up)
+- Summary: Completed the SVG sprite migration for the review area. The summary average star (classic/split/compact layouts) and the shared rating-distribution bar chart (25 inline stars per chart) still used inline `<path>`; they now emit `<use>` like the rest.
+- Reason: The first pass converted `partialStarsHTML`/`starsHTML`/`renderStarRow`, but the classic/split/compact avg star and `bar-chart.js` render stars through their own inline `iconPair.filled`/`empty` path — they were the ~20 KB of remaining inline star path data measured on the live PDP review area.
+- Key source changes: `summary-layouts/shared/bar-chart.js`, `summary-layouts/classic/index.js`, `summary-layouts/split/index.js`, `summary-layouts/compact/index.js` now call `ensureStarSprite` and emit `starUseSvg('full'|'outline')`. Sizing/color unchanged (`.ikr-icon > svg`, `.ikr-avg-star`/`.ikr-bar-star` container sizes, currentColor). Interactive form picker + non-star UI chrome (filter funnel, chevron) stay inline.
+- Verification: `pnpm build:widget` + `pnpm lint` clean. Live re-measure pending the deploy of this commit.
+- Updated wiki: [[ADR_0019_Icon_Sprite_Rendering]], [[Log]]
+
 ## 2026-05-24 - refactor | Rating stars render via SVG sprite (ADR 0019)
 - Summary: Read-only rating stars (PDP badge, listing badge, summary layouts, review cards, modal) now reference a single injected SVG `<symbol>` sprite via `<use>` instead of inlining the full `<path>` per star. Added Yotpo-style sr-only + `aria-labelledby` accessibility and fixed three PDP-badge correctness issues.
 - Reason: Inlining the ~765-byte star `<path>` per star bloated the live DOM — measured ~76 KB of duplicated path data on a busy PDP (10 reviews) and ~4.6 KB per listing badge (linear in catalog size). The geometry is identical everywhere, so it should be defined once (industry-standard SVG symbol sprite, like Loox).

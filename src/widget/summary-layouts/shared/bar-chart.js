@@ -3,12 +3,17 @@
 // 5★→1★ satır, her satır: yıldız label + track + count.
 // Satıra tıklayınca rating filtresi toggle olur.
 
+import { ensureStarSprite, starUseSvg } from '../../icons/star-sprite.js';
+
 export function buildBarChart(opts) {
   var ratingCounts = opts.ratingCounts;
   var allCount = opts.allCount;
   var iconPair = opts.iconPair;
   var currentFilter = opts.currentRatingFilter;
   var onFilterChange = opts.onFilterChange;
+  // Stars reference the shared SVG sprite (ADR_0019); ensure it exists before
+  // the <use> markup below is inserted.
+  ensureStarSprite(iconPair);
 
   var bars = document.createElement('div');
   bars.className = 'ikr-summary-block ikr-summary-bars';
@@ -28,7 +33,7 @@ export function buildBarChart(opts) {
         '<span class="ikr-bar-star ikr-icon ' +
         (filled ? 'ikr-bar-star-filled' : 'ikr-bar-star-empty') +
         '">' +
-        (filled ? iconPair.filled : iconPair.empty) +
+        starUseSvg(filled ? 'full' : 'outline') +
         '</span>';
     }
 

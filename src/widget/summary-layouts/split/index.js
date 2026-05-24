@@ -8,6 +8,7 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
+import { ensureStarSprite, starUseSvg } from '../../icons/star-sprite.js';
 import { SPLIT_CSS } from './styles.js';
 
 export var meta = {
@@ -30,6 +31,8 @@ export function render(opts) {
   var onFilterChange = opts.onFilterChange;
   var onSortChange = opts.onSortChange;
 
+  ensureStarSprite(iconPair);
+
   var summary = document.createElement('div');
   summary.className = 'ikr-summary ikr-summary-split';
 
@@ -41,7 +44,7 @@ export function render(opts) {
   var avgBlock = document.createElement('div');
   avgBlock.className = 'ikr-summary-block ikr-summary-avg ikr-split-left-avg-block';
   avgBlock.innerHTML =
-    '<span class="ikr-avg-star ikr-icon">' + iconPair.filled + '</span>' +
+    '<span class="ikr-avg-star ikr-icon">' + starUseSvg('full') + '</span>' +
     '<span class="ikr-avg-num">' + avgRatingVal + '</span>';
   left.appendChild(avgBlock);
 
