@@ -41,6 +41,8 @@ source_files:
   - "src/widget/core/config.js"
   - "src/widget/core/script-identity.js"
   - "src/widget/core/badge.js"
+  - "src/widget/icons/star-sprite.js"
+  - "src/widget/icons/review-icons.js"
   - "src/widget/core/health.js"
   - "src/widget/core/slot.js"
   - "src/widget/core/slot-position.js"
@@ -77,8 +79,8 @@ source_files:
 - 2026-05-23/24: Current Vercel plan rejected 5-minute cron; daily 03:00 UTC is restored. Pro/Enterprise can use `*/5 * * * *`; QStash is optional.
 - 2026-05-24: [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] records the X-app/Serpingo conflict. Runtime script discovery must be marker-first and `publicApiKey`-required; storefront surfaces use Renuvex/legacy owned slots. ikas has no official slot/conflict mechanism, and `isHighPriority` / `order` is not a hard cross-app ordering guarantee.
 - 2026-05-24: PDP badge position guard is shared core infrastructure; theme adapters own PDP title/mount selectors.
-- 2026-05-24: [[Bug_Filter_Menu_WebKit_Tap_Activation]] fixed the iOS/WebKit review filter tap bug. Custom widget menus must use pointer-safe activation, click fallback, and keyboard activation; Android and WebKit are separate storefront quality gates.
-- 2026-05-24: [[Bug_Review_Wizard_WebKit_Rating_Advance]] fixed a physical iPhone 11 Safari risk where the review wizard could select a star but wait on step 1. Review wizard tap controls should avoid one-shot animation gates and let the wizard state machine queue transitions.
+- 2026-05-24: [[Bug_Filter_Menu_WebKit_Tap_Activation]] + [[Bug_Review_Wizard_WebKit_Rating_Advance]] fixed iOS/WebKit tap bugs (filter menu + review wizard): custom widget controls need pointer-safe activation with click+keyboard fallback and no one-shot animation gates.
+- 2026-05-24: [[ADR_0019_Icon_Sprite_Rendering]] shipped. Read-only rating stars use one injected SVG `<symbol>` sprite + `<use>` (not inline `<path>` per star). Half-star clip + `ICONS` source unchanged. Adds sr-only/`aria-labelledby` a11y; PDP badge now a link + `data-ikr-align` (no `role=figure`/static `id`).
 
 ## Current Risks / Open Questions
 - Phase 3 follow-ups: verify deploy lifecycle/cache, re-measure widget size, and document disabling native theme reviews.

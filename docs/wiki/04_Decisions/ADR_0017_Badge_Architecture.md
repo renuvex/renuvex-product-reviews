@@ -244,6 +244,13 @@ Each rule corresponds to a structural risk surfaced in the audit:
   `.ikr-rating-badge` + a `--<variant>` modifier; size tokens should flow
   through `ensureBadgeTokens` or its successor. Do not introduce
   surface-specific size sources.
+- **Amended in part by [[ADR_0019_Icon_Sprite_Rendering]] (2026-05-24):** the
+  PDP badge is now a plain link (no `role="figure"`) named via an sr-only
+  `aria-labelledby` span, carries no static `id="ikr-rating-badge"`, and takes
+  alignment from a `data-ikr-align` attribute instead of an inline
+  `justify-content` style. Star glyphs render via a shared SVG `<symbol>` sprite
+  + `<use>` rather than inline `<path>`. The listing badge's `role="figure"` and
+  `pointer-events:none` card-link behavior are unchanged.
 
 ## Related Source Files
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
@@ -259,6 +266,7 @@ Each rule corresponds to a structural risk surfaced in the audit:
 ## Related Notes
 - [[Decision_Index]]
 - [[ADR_0016_Rating_Visual_System]]
+- [[ADR_0019_Icon_Sprite_Rendering]]
 - [[Product_Rating_Badge]]
 - [[Listing_Rating_Widget]]
 - [[ADR_0002_Widget_Injection_Strategy]]

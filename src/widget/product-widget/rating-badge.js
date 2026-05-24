@@ -1,7 +1,7 @@
 // product-widget/rating-badge.js — Ürün başlığının altına rating badge + JSON-LD inject
 
 import { findProductTitleEl } from './title-finder.js';
-import { partialStarsHTML } from '../core/helpers.js';
+import { partialStarsHTML, buildRatingA11yLabel } from '../core/helpers.js';
 // Boyut haritası tek kaynak — hem PDP başlık rozeti hem listing kartları
 // aynı SIZE_MAP'i kullanır; merchant'ın badge.size seçimi her iki yüzeye uygulanır.
 // PR-3: sizing artık CSS variable üzerinden akıyor; ensureBadgeTokens scope'lu
@@ -45,7 +45,8 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   // Önceki üründen kalan eski badge'i temizle
   removeOwnedSlots('product-title-rating', 'product-title-badge');
-  var oldBadge = document.getElementById('ikr-rating-badge');
+  // Static id kaldırıldı (duplicate-id riski) — class ile fallback temizlik.
+  var oldBadge = document.querySelector('.ikr-rating-badge--pdp');
   if (oldBadge) oldBadge.remove();
 
   if (!avgRating) return;
@@ -119,12 +120,13 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   });
 
   var badge = document.createElement('a');
-  badge.id = 'ikr-rating-badge';
   badge.className = 'renuvex-pr-rating-badge ikr-rating-badge ikr-rating-badge--pdp';
   badge.href = '#ikas-reviews';
-  // A11y + data attrs (ADR_0017 draft) — role=figure standart endüstri kalıbı.
-  badge.setAttribute('role', 'figure');
-  badge.setAttribute('aria-label', avgRating + ' üzerinden 5 yıldız, ' + totalCount + ' yorum');
+  // A11y: a real text label (sr-only) referenced via aria-labelledby — translation
+  // friendly. The element is a scroll-to-reviews LINK, so it keeps its link role
+  // (no role=figure override). The star row is decorative (aria-hidden).
+  var a11y = buildRatingA11yLabel(avgRating, totalCount);
+  badge.setAttribute('aria-labelledby', a11y.id);
   badge.setAttribute('data-ikr-surface', 'pdp');
   badge.setAttribute('data-renuvex-surface', 'pdp');
   badge.setAttribute('data-ikr-rating', String(avgRating));
@@ -132,14 +134,13 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   badge.setAttribute('data-ikr-count', String(totalCount));
   badge.setAttribute('data-renuvex-count', String(totalCount));
   setSlotContext(badge, { surface: 'pdp', productId: productId || '' });
+  // Alignment follows the product title, expressed as a data-attr + CSS
+  // (Loox-style data-alignment) instead of an inline style.
   var titleAlign = window.getComputedStyle(titleEl).textAlign;
-  var justifyVal = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'flex-end' : 'flex-start';
-  // Layout (display, gap, margin, text-decoration, cursor, font-weight, color)
-  // .ikr-rating-badge + .ikr-rating-badge--pdp class'larından okunur. Inline'da
-  // sadece per-mount justify-content kalır.
-  badge.style.cssText = 'justify-content:' + justifyVal + ';';
+  var badgeAlign = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'right' : 'left';
+  badge.setAttribute('data-ikr-align', badgeAlign);
 
-  badge.insertAdjacentHTML('beforeend', buildStars(avgRating, iconPair));
+  badge.insertAdjacentHTML('beforeend', a11y.html + buildStars(avgRating, iconPair));
 
   var labelEl = document.createElement('span');
   labelEl.className = 'ikr-rating-badge__label';

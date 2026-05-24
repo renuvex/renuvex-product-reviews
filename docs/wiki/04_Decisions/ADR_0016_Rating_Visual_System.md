@@ -142,6 +142,12 @@ fields stay exactly where merchants already set them.
   the **visual identity** (icon family, color, half-star engine); ADR_0017 owns
   the **structural** layer (class system, CSS variables, sibling mount, mobile
   override). The two ADRs are complementary, not overlapping.
+- The **delivery mechanism** of the star geometry is governed by
+  [[ADR_0019_Icon_Sprite_Rendering]]: read-only stars reference a single injected
+  SVG `<symbol>` sprite via `<use>` instead of inlining `<path>` per star. The
+  single `ICONS` source defined here is unchanged — the sprite derives its two
+  symbols from it, and `partialStarsHTML` + the half-star clip-path engine are
+  untouched.
 
 ## Related Source Files
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
@@ -160,3 +166,5 @@ fields stay exactly where merchants already set them.
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
 - [[ADR_0002_Widget_Injection_Strategy]]
+- [[ADR_0017_Badge_Architecture]]
+- [[ADR_0019_Icon_Sprite_Rendering]]

@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-24 - refactor | Rating stars render via SVG sprite (ADR 0019)
+- Summary: Read-only rating stars (PDP badge, listing badge, summary layouts, review cards, modal) now reference a single injected SVG `<symbol>` sprite via `<use>` instead of inlining the full `<path>` per star. Added Yotpo-style sr-only + `aria-labelledby` accessibility and fixed three PDP-badge correctness issues.
+- Reason: Inlining the ~765-byte star `<path>` per star bloated the live DOM — measured ~76 KB of duplicated path data on a busy PDP (10 reviews) and ~4.6 KB per listing badge (linear in catalog size). The geometry is identical everywhere, so it should be defined once (industry-standard SVG symbol sprite, like Loox).
+- Key source changes: `src/widget/icons/star-sprite.js` (new) derives two `<symbol>`s from the active `ICONS` strings and injects one hidden sprite (DOMParser, idempotent, keyed by icon); `partialStarsHTML`/`starsHTML` (`core/helpers.js`) and `renderStarRow` (`icons/review-icons.js`) call `ensureStarSprite` and emit `starUseSvg`; `buildRatingA11yLabel` + `.ikr-sr-only` added; `rating-badge.js` drops `role="figure"`/static `id`/inline `justify-content` (now `aria-labelledby` + `data-ikr-align`); `core/badge.js` listing badge gets the same a11y/align treatment. `ICONS` strings unchanged (admin preview still consumes them). Interactive form picker (`renderStars`, `step-rating.js`) left inline by design.
+- Verification: `pnpm build:widget` + `pnpm lint` clean; new tokens present in built chunks. Real-browser check (playwright, real Phosphor geometry): sprite parses, 2 symbols / 2 paths defined once, a 4.3 badge renders 4 full + 1 half via 6 `<use>` with 0 inline paths, half-star `clip-path` intact, `<use>` geometry paints. Live path-byte re-measure pending deploy.
+- Updated wiki: [[ADR_0019_Icon_Sprite_Rendering]], [[Decision_Index]], [[ADR_0016_Rating_Visual_System]], [[ADR_0017_Badge_Architecture]], [[Widget_Files_Map]], [[Widget_Performance]], [[Product_Rating_Badge]], [[Listing_Rating_Widget]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-24 - refactor | Move PDP badge guard behind theme adapters
 - Summary: Refactored PDP badge placement so title discovery and mount decisions belong to the active theme adapter, while the bounded owned-slot position guard lives in shared core infrastructure.
 - Reason: Different ikas themes can rename PDP title classes. The durable boundary is not theme-specific guard code; it is a shared guard protecting an adapter-provided mount point for Renuvex's own slot.

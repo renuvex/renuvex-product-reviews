@@ -3,6 +3,7 @@
 /* global __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
 
 import { renderStarRow, getIconFromSettings } from '../icons/index.js';
+import { ensureStarSprite, starUseSvg } from '../icons/star-sprite.js';
 import { PUBLIC_API_KEY } from './config.js';
 
 // Tüm yıldızlar (dolu + boş outline) için tek CSS renk değişkeni — reviews
@@ -22,7 +23,10 @@ export function extractSlug(url) {
 // Boyut parent CSS (.ikr-review-stars, .ikr-modal-stars vb.) tarafından verilir.
 export function starsHTML(rating, settings) {
   var wrapStyle = 'color:' + STAR_COLOR + ';display:inline-flex;gap:2px;align-items:center;';
-  return '<span class="ikr-stars" style="' + wrapStyle + '">' +
+  var rounded = Math.round(parseFloat(rating)) || 0;
+  // role=img + aria-label: review cards / modal have no other rating text, so the
+  // star row carries the accessible name. Inner star svgs stay aria-hidden.
+  return '<span class="ikr-stars" role="img" aria-label="' + rounded + ' üzerinden 5 yıldız" style="' + wrapStyle + '">' +
     renderStarRow(rating, settings) +
     '</span>';
 }
@@ -38,6 +42,7 @@ export function starsHTML(rating, settings) {
 //   iconPair : { filled, empty } — getIconFromSettings'ten gelen SVG çifti
 //   opts     : { sizeStyle? } — inline 'width:Xpx;height:Xpx;' (opsiyonel, normalde CSS'ten gelir)
 export function partialStarsHTML(rating, iconPair, opts) {
+  ensureStarSprite(iconPair);
   var r = Math.max(0, Math.min(5, parseFloat(rating) || 0));
   // 0.25/0.75 snap — endüstri standardı (Material UI, Judge.me, Stamped):
   // her yıldız için kesir < 0.25 → boş, 0.25-0.74 → yarım, ≥ 0.75 → dolu.
@@ -56,23 +61,40 @@ export function partialStarsHTML(rating, iconPair, opts) {
 
     if (state === 'full') {
       html += '<span class="ikr-star ikr-star-full" style="' + sizeStyle + '">'
-            +   iconPair.filled
+            +   starUseSvg('full')
             + '</span>';
     } else if (state === 'empty') {
       // Tam-state empty: outline mimarisi korunuyor (filled+gri değil, outline SVG).
       html += '<span class="ikr-star ikr-star-empty" style="' + sizeStyle + '">'
-            +   iconPair.empty
+            +   starUseSvg('outline')
             + '</span>';
     } else { // half
-      // Tek geometri (filled) iki katmanda: alt boş-renk full, üst dolu-renk + clip sol %50.
+      // Tek geometri iki katmanda: alt boş-renk (outline), üst dolu-renk + clip sol %50.
+      // clip-path .ikr-star-half-fg span'ine uygulanır; <use> ile tam uyumlu.
       html += '<span class="ikr-star ikr-star-half" style="' + sizeStyle + '">'
-            +   '<span class="ikr-star-half-bg">' + iconPair.empty + '</span>'
-            +   '<span class="ikr-star-half-fg">' + iconPair.filled + '</span>'
+            +   '<span class="ikr-star-half-bg">' + starUseSvg('outline') + '</span>'
+            +   '<span class="ikr-star-half-fg">' + starUseSvg('full') + '</span>'
             + '</span>';
     }
   }
 
-  return '<span class="ikr-stars-partial">' + html + '</span>';
+  // Wrapper is decorative — the container (badge/summary) provides the accessible
+  // name; individual star svgs are aria-hidden too (see starUseSvg).
+  return '<span class="ikr-stars-partial" aria-hidden="true">' + html + '</span>';
+}
+
+// buildRatingA11yLabel — visually-hidden accessible label for a rating control.
+// Returns { id, html }: the html is a `.ikr-sr-only` <span> carrying the rating
+// sentence as REAL text (translation-tool friendly, unlike aria-label), to be
+// referenced by the container's aria-labelledby. (Adopted from Yotpo's a11y.)
+// Unique id per instance so multiple ratings on one page never collide.
+export function buildRatingA11yLabel(avg, count) {
+  var id = 'ikr-rating-label-' + Math.random().toString(36).slice(2, 9);
+  var hasCount = count !== undefined && count !== null && count !== '';
+  var text = hasCount
+    ? avg + ' üzerinden 5 yıldız, ' + count + ' yorum'
+    : avg + ' üzerinden 5 yıldız';
+  return { id: id, html: '<span class="ikr-sr-only" id="' + id + '">' + text + '</span>' };
 }
 
 // PARTIAL_STARS_CSS — partialStarsHTML çıktısının (.ikr-star / .ikr-stars-partial)
@@ -95,6 +117,10 @@ export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + cl
     line-height:1;
   }
   .ikr-star > svg{width:100%;height:100%;display:block;}
+  /* Sprite-based star svg — references #ikr-icon-sprite symbols via <use href>. */
+  .ikr-star-svg{width:100%;height:100%;display:block;}
+  /* Visually-hidden accessible label (screen-reader only). */
+  .ikr-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
   .ikr-star-full  { color: var(--ikr-review-star-color, #f59e0b); }
   .ikr-star-empty { color: var(--ikr-review-star-color, #f59e0b); }
   /* Half: iki katman, üst katman clip ile sol %50. */
@@ -147,6 +173,11 @@ export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + cl
     margin-bottom:4px;
     pointer-events:none;
   }
+  /* Alignment via data-attr (Loox-style data-alignment) — replaces per-mount
+     inline justify-content style on the badge. */
+  .ikr-rating-badge[data-ikr-align="left"]{justify-content:flex-start;}
+  .ikr-rating-badge[data-ikr-align="center"]{justify-content:center;}
+  .ikr-rating-badge[data-ikr-align="right"]{justify-content:flex-end;}
   /* Badge scope'undaki yıldızlar variable'dan boyut alır; dışarıdaki .ikr-star
      (summary, modal vs.) ayrı kalır — selector specificity ile çakışmaz. */
   .ikr-rating-badge .ikr-star{

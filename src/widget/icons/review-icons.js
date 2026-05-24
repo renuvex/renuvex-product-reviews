@@ -2,6 +2,8 @@
 //
 // Source: Phosphor Icons - MIT
 
+import { ensureStarSprite, starUseSvg } from './star-sprite.js';
+
 var PH_VB = '0 0 256 256';
 
 var P = {
@@ -113,13 +115,14 @@ export function getIconFromSettings(settings) {
 export function renderStarRow(rating, settings, opts) {
   var r = Math.round(parseFloat(rating)) || 0;
   var pair = getIconFromSettings(settings);
+  ensureStarSprite(pair);
   var sizePx = opts && opts.sizePx;
   var sizeStyle = sizePx ? 'width:' + sizePx + 'px;height:' + sizePx + 'px;' : '';
   var html = '';
   for (var i = 1; i <= 5; i++) {
     var isFilled = i <= r;
     html += '<span class="ikr-icon ' + (isFilled ? 'ikr-icon-filled' : 'ikr-icon-empty') + '" style="' + sizeStyle + '">' +
-            (isFilled ? pair.filled : pair.empty) +
+            starUseSvg(isFilled ? 'full' : 'outline') +
             '</span>';
   }
   return html;

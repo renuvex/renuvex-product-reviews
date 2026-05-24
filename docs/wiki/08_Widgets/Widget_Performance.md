@@ -41,6 +41,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - A PDP that also has product carousels mounts the listing-badge surface alongside reviews-main; `core/settings.js` shares one in-flight settings request across both surfaces, so `/api/public/settings` is fetched once, not twice (fixed 2026-05-17).
 - Initial requests on listing page: 1 (`/api/public/ratings-by-slug` — bulk).
 - Image upload: client-direct to Cloudinary; no proxy through our server.
+- 2026-05-24 (ADR_0019): read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` instead of inlining the full `<path>` per star. Measured before the change on the live dev store: ~76 KB of duplicated `<path>` data on a busy PDP (10 reviews) and ~4.6 KB per listing badge (linear in catalog size). The sprite defines the geometry once, so each star becomes a small `<use>` ref. Re-measure live DOM path bytes after deploy.
 
 ## 2026-05-15 Live Observations
 

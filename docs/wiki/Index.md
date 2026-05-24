@@ -112,6 +112,7 @@ source_files: []
 - [[ADR_0016_Rating_Visual_System]]
 - [[ADR_0017_Badge_Architecture]]
 - [[ADR_0018_Widget_Ownership_And_Placement_Resilience]]
+- [[ADR_0019_Icon_Sprite_Rendering]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]

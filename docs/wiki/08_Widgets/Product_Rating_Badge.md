@@ -15,6 +15,7 @@ related:
   - "[[Bug_Product_Widget_Missing_Auto_Mount]]"
   - "[[ADR_0016_Rating_Visual_System]]"
   - "[[ADR_0017_Badge_Architecture]]"
+  - "[[ADR_0019_Icon_Sprite_Rendering]]"
 ---
 
 # Product Rating Badge
@@ -46,6 +47,7 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 ## Notes
 - If a merchant theme has unusual title markup, the badge may attach to the wrong element. The fix is in [title-finder.js](src/widget/product-widget/title-finder.js).
 - The badge fetches the same data already loaded by the product review widget (it shares `currentReviewsData` in [core/state.js](src/widget/core/state.js)) — no extra request.
+- Star glyphs render via a shared SVG `<symbol>` sprite (`<use>` into `#ikr-icon-sprite`), not inline `<path>`. The badge is a real link named by an sr-only `aria-labelledby` span (no `role="figure"`, no static `id`); alignment comes from `data-ikr-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
 
 ## Related Source Files
 - [src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js)
@@ -59,5 +61,6 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 
 ## Change Log
+- 2026-05-24: Stars now render via the shared SVG `<symbol>` sprite (`<use>`); the PDP badge dropped `role="figure"`, the static `id="ikr-rating-badge"`, and the inline `justify-content` for a link role + sr-only `aria-labelledby` + `data-ikr-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-19: Star icon + color removed from the `badge` widget; they are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`). `render.js` passes the resolved icon pair into `injectRatingBadge`. Fixed the icon-parse bug — `rating-badge.js` no longer passes an unparsed `type:style` value to `getIconStyle`, so non-`star` icons (heart, leaf, crown, …) render correctly. See [[ADR_0016_Rating_Visual_System]].
 - 2026-05-11: Documented that PDP badge visibility depends on the review render path and is protected by the self-mounting review anchor fallback. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].

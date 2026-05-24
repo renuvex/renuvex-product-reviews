@@ -49,6 +49,7 @@ src/widget/
 ├─ icons/
 │  ├─ index.js                    # Public icon API for runtime + admin preview
 │  ├─ review-icons.js             # Review/rating ICONS registry (filled + empty SVG pairs)
+│  ├─ star-sprite.js              # SVG <symbol> sprite for rating stars (<use>) — ADR_0019
 │  └─ filter-icons.js             # Filter button FILTER_ICONS registry (single-state SVGs)
 ├─ observer.js                    # MutationObserver — re-bootstraps widget on SPA-style theme nav
 │
@@ -167,6 +168,7 @@ src/widget/
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-24: Added [icons/star-sprite.js](src/widget/icons/star-sprite.js) — read-only rating stars render via a single injected SVG `<symbol>` sprite referenced by `<use>` instead of inlining `<path>` per star. Renderers (`partialStarsHTML`, `starsHTML`, `renderStarRow`) call `ensureStarSprite` + emit `starUseSvg`; `ICONS` strings stay the single source (admin preview + sprite both derive from them). Related: [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-18: Added [core/link-scope.js](src/widget/core/link-scope.js) so listing badges and the MutationObserver share scoped link discovery; active builds no longer use whole-document `document.querySelectorAll('a[href]')` for listing re-render checks.
 - 2026-05-17: Listing badge files now use canonical ikas product ids from Storefront Events for rating fetches; slug remains DOM fallback only. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Phase 2 module split implemented and verified. `public/widget.js` is the classic loader, `public/widget-runtime/*` contains ESM runtime/chunks, and lazy boundaries live in `core/lazy-modules.js`.

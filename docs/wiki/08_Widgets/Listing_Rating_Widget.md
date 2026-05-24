@@ -19,6 +19,7 @@ related:
   - "[[ADR_0015_Canonical_Product_Identity]]"
   - "[[ADR_0016_Rating_Visual_System]]"
   - "[[ADR_0017_Badge_Architecture]]"
+  - "[[ADR_0019_Icon_Sprite_Rendering]]"
 source_files:
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
@@ -120,6 +121,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-05-24: Listing badge stars now render via the shared SVG `<symbol>` sprite (`<use>`) instead of inline `<path>` (~4.6 KB/badge of duplicated path data removed); the badge is labelled via an sr-only `aria-labelledby` span and aligned via `data-ikr-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-19: Listing badge star icon + color are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) instead of a hardcoded `star:classic` and the dead `badge.color`. `index.js` parses the icon and sets the star color CSS variables on the listing path itself, so cold listing entry shows the correct icon/color without depending on the PDP `render.js`. `iconPair` is threaded through `injectBadges` → `createBadgeEl`. See [[ADR_0016_Rating_Visual_System]].
 - 2026-05-18: Post-deploy live retest on `dev-mertcopper.ikas.shop` confirmed `runtime-2RGD2H4S.js`, visible listing badges on `/clothing` desktop/mobile, and zero widget-sourced `document.querySelectorAll('a[href]')` calls.
 - 2026-05-18: Follow-up O8 live test found the MutationObserver still calling whole-document `document.querySelectorAll('a[href]')` from the runtime. Fixed by sharing scoped link discovery through `core/link-scope.js`; active generated runtime now avoids that scan.

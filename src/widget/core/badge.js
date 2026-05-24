@@ -1,7 +1,7 @@
 // core/badge.js — Merkezi listing badge factory
 // Tüm widgetlar (listing, carousel, popup, modal) bu fonksiyonu kullanır.
 
-import { partialStarsHTML, PARTIAL_STARS_CSS } from './helpers.js';
+import { partialStarsHTML, PARTIAL_STARS_CSS, buildRatingA11yLabel } from './helpers.js';
 import { createOwnedSlot, setSlotContext } from './slot.js';
 
 // Rozet boyut haritası — "Yıldız Rozeti" widget'ındaki badge.size (Küçük/Orta/
@@ -87,8 +87,11 @@ export function createBadgeEl(rating, justify, iconPair) {
 
   var el = document.createElement('div');
   el.className = 'renuvex-pr-rating-badge ikr-rating-badge ikr-rating-badge--listing';
+  // Non-interactive figure; accessible name from a real sr-only text node
+  // (aria-labelledby) instead of aria-label — translation-tool friendly.
+  var a11y = buildRatingA11yLabel(rating.avg, rating.count);
   el.setAttribute('role', 'figure');
-  el.setAttribute('aria-label', rating.avg + ' üzerinden 5 yıldız, ' + rating.count + ' yorum');
+  el.setAttribute('aria-labelledby', a11y.id);
   // data-ikr-listing-badge legacy (observer / cleanup / placeholder lookups);
   // data-ikr-* yeni — surface debug + CSS hook (ADR_0017 draft).
   el.setAttribute('data-ikr-listing-badge', '1');
@@ -99,14 +102,15 @@ export function createBadgeEl(rating, justify, iconPair) {
   el.setAttribute('data-ikr-count', String(rating.count));
   el.setAttribute('data-renuvex-count', String(rating.count));
   setSlotContext(el, { surface: 'listing', slug: meta.slug || '', productId: meta.productId || '' });
-  // Inline'da sadece per-mount dinamik justify-content. font-size + icon size
-  // .ikr-rating-badge class'ından (CSS variable) gelir; ensureBadgeTokens
-  // merchant değerini set eder.
-  el.style.cssText = 'justify-content:' + (justify || 'flex-start') + ';';
+  // Alignment via data-attr + CSS (Loox-style) instead of an inline style.
+  // font-size + icon size come from .ikr-rating-badge CSS variables.
+  var alignMap = { 'center': 'center', 'flex-end': 'right', 'flex-start': 'left' };
+  el.setAttribute('data-ikr-align', alignMap[justify] || 'left');
 
   // Stars: existing engine returns trusted SVG markup from a closed icon set;
-  // insertAdjacentHTML is the public, mutation-observer-friendly DOM API.
-  el.insertAdjacentHTML('beforeend', buildBadgeStars(rating.avg, iconPair));
+  // insertAdjacentHTML is the public, mutation-observer-friendly DOM API. The
+  // sr-only label is inserted first so aria-labelledby resolves to it.
+  el.insertAdjacentHTML('beforeend', a11y.html + buildBadgeStars(rating.avg, iconPair));
 
   var labelEl = document.createElement('span');
   labelEl.className = 'ikr-rating-badge__label';
