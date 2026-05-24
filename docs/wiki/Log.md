@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-24 - refactor | Guard listing badge slot positions
+- Summary: Extended the PDP owned-slot position guard standard to listing badges, which covers category, home product blocks, search results, and blog product blocks through the shared listing module.
+- Reason: If a third-party app or late theme script inserts into the same product-card parent after Renuvex renders, the listing badge should keep its own slot at the adapter-selected mount point without moving or deleting the third-party node.
+- Key source changes: `src/widget/listing-badges/inject.js` now places placeholders and rendered badges with `core/slot-position.js`, adds bounded position observers, and scopes duplicate checks to owned slot markers plus slug context; `src/widget/core/badge.js` adds slug/product context to listing placeholders.
+- Verification: `pnpm build:widget`, `node --check` on changed widget files and `public/widget.js`, `pnpm exec tsc --noEmit`, `pnpm lint`, and `git diff --check` passed. Local-build browser verification on the live dev storefront passed for `/clothing`, `/`, `/search?q=premium`, and `/premium-shortsg`: listing/search badges reanchored after simulated third-party insertion and remounted once after removal; PDP badge/review block still rendered under the product title. WebKit PDP only showed external Cloudinary image SSL resource noise, not widget-originated errors.
+- Updated wiki: [[ADR_0018_Widget_Ownership_And_Placement_Resilience]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-24 - refactor | Unify ALL widget icons into the SVG sprite (ADR 0019 follow-up)
 - Summary: Extended the sprite from rating-stars-only to a single unified widget icon system. The interactive wizard rating picker, the filter funnel, the compact chevron, and the review-form modal chrome (close ×, back arrow, photo-upload/plus icons) now reference the shared `#ikr-icon-sprite` via `<use>` instead of inline SVG.
 - Reason: Follow-through on "make the whole icon system global/consistent". One-off icons give ~no DOM win (single instances) but the unified mechanism is cleaner; the wizard rating stars are genuine rating stars and now match every other star surface.

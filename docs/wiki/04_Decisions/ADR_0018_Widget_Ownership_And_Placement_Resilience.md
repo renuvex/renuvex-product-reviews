@@ -88,6 +88,10 @@ Renuvex Product Reviews owns its script and DOM surfaces explicitly.
   a node between the product title and the Renuvex badge shortly after render,
   the runtime may move the Renuvex slot back directly under the title. It does
   not delete, edit, or move the third-party node.
+- Listing surfaces use the same bounded owned-slot position guard. Category,
+  home, search, and blog product-block badges go through the shared listing
+  module, so a late sibling insert can reanchor only the matching
+  Renuvex-owned listing slot.
 - PDP title discovery and badge mount decisions are theme-adapter concerns.
   The bounded guard is shared infrastructure; Ozy/Kombos/other themes should
   only provide selectors or a mount point, not copy positioning logic.
@@ -129,6 +133,9 @@ slots are not available.
   not only on broad badge classes.
 - The PDP badge has a bounded post-render position guard. This handles normal
   async script timing without creating a permanent DOM fight with another app.
+- Listing/home/search badge placeholders and rendered badges carry slug
+  context and use the same bounded guard. The existing sibling-mount rollout
+  gate remains unchanged; this ADR does not flip global listing placement.
 - New PDP theme support should add `findProductTitle()` and, when needed,
   `getProductBadgeMountPoint()` to the adapter. The shared guard then protects
   the returned mount point for the app-owned slot.

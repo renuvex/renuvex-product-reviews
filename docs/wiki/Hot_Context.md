@@ -60,13 +60,13 @@ source_files:
 
 ## Current Focus
 - ikas review/rating app: merchant admin, storefront widget, review submission, image upload, moderation, settings preview.
-- Current focus: post-deploy verification.
+- Current focus: storefront widget resilience.
 
 ## Must Know
-- Source/config/tests/runtime are the source of truth; wiki is routing and memory.
+- Source/config/tests/runtime are source of truth; wiki is routing.
 - Prompt procedures live in `09_Prompts`; do not create `08_Prompts`.
-- Do not document secrets or real env values. Env names and purposes are acceptable.
-- `package.json` pins Next.js `16.2.1`; older generated docs saying Next.js 15 are stale unless re-verified.
+- Do not document secrets; env names/purposes are acceptable.
+- `package.json` pins Next.js `16.2.1`; older Next.js 15 docs are stale unless re-verified.
 
 ## Recent Important Changes
 - Widget hardening refs: [[ADR_0013_Modular_Widget_Loader_Architecture]], [[Phase_2_Widget_Module_Split_Plan]], [[Ikas_Storefront_Script_Capabilities]].
@@ -76,14 +76,15 @@ source_files:
 - 2026-05-23: Storefront script records now carry `data-ikr-*` markers, v1 reconciliation reports match/duplicate diagnostics, and badge render paths emit health telemetry plus one-shot self-heal for DOM removal.
 - 2026-05-23: Active theme selection uses Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId`; adapter matching uses stable `themeId` before merchant-editable names.
 - 2026-05-23: Theme sync is split from script injection. Dashboard/settings call lightweight `syncStorefrontTheme`; install/manual script repair still updates scripts and theme metadata.
-- 2026-05-23/24: Current Vercel plan rejected 5-minute cron; daily 03:00 UTC is restored. Pro/Enterprise can use `*/5 * * * *`; QStash is optional.
+- 2026-05-23/24: Current Vercel plan rejected 5-minute cron; daily 03:00 UTC is restored. Pro/Enterprise or QStash can shorten pending theme verification.
 - 2026-05-24: [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] records the X-app/Serpingo conflict. Runtime script discovery must be marker-first and `publicApiKey`-required; storefront surfaces use Renuvex/legacy owned slots. ikas has no official slot/conflict mechanism, and `isHighPriority` / `order` is not a hard cross-app ordering guarantee.
 - 2026-05-24: PDP badge position guard is shared core infrastructure; theme adapters own PDP title/mount selectors.
+- 2026-05-24: Listing/home/search badges now use the same bounded owned-slot position guard as PDP, without flipping the sibling-mount rollout gate.
 - 2026-05-24: [[Bug_Filter_Menu_WebKit_Tap_Activation]] + [[Bug_Review_Wizard_WebKit_Rating_Advance]] fixed iOS/WebKit tap bugs (filter menu + review wizard): custom widget controls need pointer-safe activation with click+keyboard fallback and no one-shot animation gates.
 - 2026-05-24: [[ADR_0019_Icon_Sprite_Rendering]] shipped. Read-only rating stars use one injected SVG `<symbol>` sprite + `<use>` (not inline `<path>` per star). Half-star clip + `ICONS` source unchanged. Adds sr-only/`aria-labelledby` a11y; PDP badge now a link + `data-ikr-align` (no `role=figure`/static `id`).
 
 ## Current Risks / Open Questions
-- Phase 3 follow-ups: verify deploy lifecycle/cache, re-measure widget size, and document disabling native theme reviews.
+- Phase 3 follow-ups: verify deploy/cache, re-measure widget size, and document disabling native theme reviews.
 - Theme adapter selection now uses Admin API `listStorefront.themes[].isMainTheme`; no runtime DOM mount-point contract exists yet.
 - Current Vercel cron config is daily-compatible. Pending theme verification can lag until the next maintenance run unless the deploy plan supports sub-daily cron or a delayed queue is added.
 - Redis already handles public API rate limits. QStash is not installed; add only for Hobby delayed verification or queue retry/dedup/flow-control needs.

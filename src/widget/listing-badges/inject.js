@@ -6,18 +6,32 @@ import { getThemeAdapter } from '../themes/current-adapter.js';
 import { lastClickedSlug } from '../core/state.js';
 import { isSiblingMountEnabled } from '../core/rollout.js';
 import { probeWidgetVisibility, watchOneTimeRemoval } from '../core/health.js';
+import { getAfterElementMountPoint, placeOwnedSlot, watchOwnedSlotPosition } from '../core/slot-position.js';
 import { collectListingLinks, isVisibleForBadge } from './dom.js';
 
 var listingBadgeRemovalObservers = [];
+var listingBadgePositionObservers = [];
 
 function watchListingBadgeRemoval(root, surface, remount, extra) {
   var observer = watchOneTimeRemoval(root, surface, remount, extra);
   if (observer) listingBadgeRemovalObservers.push(observer);
 }
 
+function watchListingBadgePosition(root, mountPoint, extra) {
+  var observer = watchOwnedSlotPosition(root, mountPoint, {
+    surface: 'listing-badge',
+    reason: 'position_reanchored',
+    message: 'Listing badge slot reordered after render',
+    extra: extra || {},
+  });
+  if (observer) listingBadgePositionObservers.push(observer);
+}
+
 export function disconnectListingBadgeRemovalObservers() {
   listingBadgeRemovalObservers.forEach(function(observer) { observer.disconnect(); });
+  listingBadgePositionObservers.forEach(function(observer) { observer.disconnect(); });
   listingBadgeRemovalObservers = [];
+  listingBadgePositionObservers = [];
 }
 
 // resolveMount — listing badge için yerleştirme hedefi.
@@ -30,11 +44,12 @@ export function disconnectListingBadgeRemovalObservers() {
 function resolveMount(titleEl) {
   var adapter = getThemeAdapter();
   var custom = adapter.getListingBadgeMountPoint(titleEl);
-  if (custom) return { parent: custom, beforeEl: null };
+  if (custom && custom.parent) return custom;
+  if (custom) return { parent: custom, beforeEl: null, position: 'before' };
   if (isSiblingMountEnabled() && titleEl && titleEl.parentNode) {
-    return { parent: titleEl.parentNode, beforeEl: titleEl.nextSibling };
+    return getAfterElementMountPoint(titleEl);
   }
-  return { parent: titleEl, beforeEl: null };
+  return { parent: titleEl, beforeEl: null, position: 'before' };
 }
 
 var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
@@ -88,21 +103,67 @@ function getJustify(el) {
   return align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
 }
 
-function replacePlaceholderOrAppend(parent, badge, beforeEl) {
+function matchesListingContext(node, slug, productId) {
+  if (!node) return false;
+  if (slug && node.getAttribute('data-renuvex-product-slug') !== String(slug)) return false;
+  if (productId && node.getAttribute('data-renuvex-product-id') !== String(productId)) return false;
+  return true;
+}
+
+function findOwnedListingNode(parent, slotName, legacySlotName, slug, productId) {
   if (!parent) return null;
-  var placeholder = parent.querySelector('[data-ikr-listing-badge-placeholder]');
+  var selector = '[data-renuvex-slot="' + slotName + '"],[data-ikr-slot="' + legacySlotName + '"]';
+  var nodes = parent.querySelectorAll(selector);
+  for (var i = 0; i < nodes.length; i++) {
+    if (matchesListingContext(nodes[i], slug, productId)) return nodes[i];
+  }
+  return null;
+}
+
+function hasOwnedListingBadge(parent, slug, productId) {
+  return !!findOwnedListingNode(parent, 'listing-rating', 'listing-badge', slug, productId);
+}
+
+function hasOwnedListingPlaceholder(parent, slug, productId) {
+  return !!findOwnedListingNode(parent, 'listing-rating-placeholder', 'listing-badge-placeholder', slug, productId);
+}
+
+function hasOwnedListingSlot(parent, slug, productId) {
+  return hasOwnedListingBadge(parent, slug, productId) || hasOwnedListingPlaceholder(parent, slug, productId);
+}
+
+function replacePlaceholderOrPlace(mountPoint, badge, slug) {
+  if (!mountPoint || !mountPoint.parent) return null;
+  var placeholder = findOwnedListingNode(mountPoint.parent, 'listing-rating-placeholder', 'listing-badge-placeholder', slug, null);
   if (placeholder) {
     placeholder.replaceWith(badge);
-    return badge;
+  } else {
+    placeOwnedSlot(badge, mountPoint);
   }
-  beforeEl ? parent.insertBefore(badge, beforeEl) : parent.appendChild(badge);
+  placeOwnedSlot(badge, mountPoint);
   return badge;
 }
 
-function insertPlaceholder(parent, justify, beforeEl) {
-  if (!parent || parent.querySelector('[data-ikr-listing-badge],[data-ikr-listing-badge-placeholder]')) return;
-  var placeholder = createBadgePlaceholderEl(justify);
-  beforeEl ? parent.insertBefore(placeholder, beforeEl) : parent.appendChild(placeholder);
+function insertPlaceholder(mountPoint, justify, slug, productId) {
+  if (!mountPoint || !mountPoint.parent || hasOwnedListingSlot(mountPoint.parent, slug, productId)) return;
+  var placeholder = createBadgePlaceholderEl(justify, { slug: slug || '', productId: productId || '' });
+  placeOwnedSlot(placeholder, mountPoint);
+}
+
+function createListingBadge(rating, justify, iconPair, slug) {
+  var productId = rating && rating._productId ? rating._productId : '';
+  return createBadgeEl(rating, justify, iconPair, { slug: slug || '', productId: productId });
+}
+
+function setupListingBadgeGuards(badge, mountPoint, slug, remount) {
+  if (!badge || !mountPoint || !mountPoint.parent) return;
+  var extra = { slug: slug || '' };
+  probeWidgetVisibility(badge, 'listing-badge', extra);
+  watchListingBadgePosition(badge, mountPoint, extra);
+  watchListingBadgeRemoval(badge, 'listing-badge', function () {
+    if (!mountPoint.parent || hasOwnedListingBadge(mountPoint.parent, slug)) return;
+    remount();
+  }, extra);
 }
 
 function reserveBadgeSlotOnLink(a, productName, currentSlug) {
@@ -120,17 +181,17 @@ function reserveBadgeSlotOnLink(a, productName, currentSlug) {
   if (hasNestedA) {
     if (!titleEl) return;
     var mountNested = resolveMount(titleEl);
-    insertPlaceholder(mountNested.parent, getJustify(titleEl), mountNested.beforeEl);
+    insertPlaceholder(mountNested, getJustify(titleEl), slug);
     return;
   }
 
   if (titleEl) {
     var mountTitle = resolveMount(titleEl);
-    insertPlaceholder(mountTitle.parent, getJustify(titleEl), mountTitle.beforeEl);
+    insertPlaceholder(mountTitle, getJustify(titleEl), slug);
     return;
   }
 
-  if (realText) insertPlaceholder(a, 'flex-start', a.firstElementChild || null);
+  if (realText) insertPlaceholder({ parent: a, beforeEl: a.firstElementChild || null, position: 'before' }, 'flex-start', slug);
 }
 
 export function reserveBadgeSlots(slugNameMap) {
@@ -170,54 +231,36 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair)
     var nameEl = findTitleEl(a, productName);
     if (!nameEl) return;
     var mountNested = resolveMount(nameEl);
-    if (mountNested.parent && mountNested.parent.querySelector('[data-ikr-listing-badge]')) return;
-    var nestedBadge = replacePlaceholderOrAppend(mountNested.parent, createBadgeEl(rating, getJustify(nameEl), iconPair, { slug: slug || '' }), mountNested.beforeEl);
+    if (mountNested.parent && hasOwnedListingBadge(mountNested.parent, slug)) return;
+    var nestedBadge = replacePlaceholderOrPlace(mountNested, createListingBadge(rating, getJustify(nameEl), iconPair, slug), slug);
     if (nestedBadge) {
-      probeWidgetVisibility(nestedBadge, 'listing-badge', { slug: slug || '' });
-      watchListingBadgeRemoval(nestedBadge, 'listing-badge', function () {
-        if (!mountNested.parent || mountNested.parent.querySelector('[data-ikr-listing-badge]')) return;
-        replacePlaceholderOrAppend(mountNested.parent, createBadgeEl(rating, getJustify(nameEl), iconPair, { slug: slug || '' }), mountNested.beforeEl);
-      }, { slug: slug || '' });
+      setupListingBadgeGuards(nestedBadge, mountNested, slug, function () {
+        replacePlaceholderOrPlace(mountNested, createListingBadge(rating, getJustify(nameEl), iconPair, slug), slug);
+      });
     }
     return;
   }
 
   var titleEl = findTitleEl(a, productName);
   var mountTitle = titleEl ? resolveMount(titleEl) : null;
-  if (mountTitle && mountTitle.parent && mountTitle.parent.querySelector('[data-ikr-listing-badge]')) return;
+  if (mountTitle && mountTitle.parent && hasOwnedListingBadge(mountTitle.parent, slug)) return;
 
   if (titleEl) {
-    var titleBadge = replacePlaceholderOrAppend(mountTitle.parent, createBadgeEl(rating, getJustify(titleEl), iconPair, { slug: slug || '' }), mountTitle.beforeEl);
+    var titleBadge = replacePlaceholderOrPlace(mountTitle, createListingBadge(rating, getJustify(titleEl), iconPair, slug), slug);
     if (titleBadge) {
-      probeWidgetVisibility(titleBadge, 'listing-badge', { slug: slug || '' });
-      watchListingBadgeRemoval(titleBadge, 'listing-badge', function () {
-        if (!mountTitle.parent || mountTitle.parent.querySelector('[data-ikr-listing-badge]')) return;
-        replacePlaceholderOrAppend(mountTitle.parent, createBadgeEl(rating, getJustify(titleEl), iconPair, { slug: slug || '' }), mountTitle.beforeEl);
-      }, { slug: slug || '' });
+      setupListingBadgeGuards(titleBadge, mountTitle, slug, function () {
+        replacePlaceholderOrPlace(mountTitle, createListingBadge(rating, getJustify(titleEl), iconPair, slug), slug);
+      });
     }
   } else {
-    var badge = createBadgeEl(rating, 'flex-start', iconPair, { slug: slug || '' });
-    var placeholder = a.querySelector('[data-ikr-listing-badge-placeholder]');
-    if (placeholder) {
-      placeholder.replaceWith(badge);
-      probeWidgetVisibility(badge, 'listing-badge', { slug: slug || '' });
-      watchListingBadgeRemoval(badge, 'listing-badge', function () {
-        if (!a.isConnected || a.querySelector('[data-ikr-listing-badge]')) return;
-        var healedBadge = createBadgeEl(rating, 'flex-start', iconPair, { slug: slug || '' });
-        var healedFirst = a.firstElementChild;
-        healedFirst ? a.insertBefore(healedBadge, healedFirst) : a.appendChild(healedBadge);
-      }, { slug: slug || '' });
-      return;
+    var fallbackMount = { parent: a, beforeEl: a.firstElementChild || null, position: 'before' };
+    if (hasOwnedListingBadge(a, slug)) return;
+    var badge = replacePlaceholderOrPlace(fallbackMount, createListingBadge(rating, 'flex-start', iconPair, slug), slug);
+    if (badge) {
+      setupListingBadgeGuards(badge, fallbackMount, slug, function () {
+        replacePlaceholderOrPlace(fallbackMount, createListingBadge(rating, 'flex-start', iconPair, slug), slug);
+      });
     }
-    var first = a.firstElementChild;
-    first ? a.insertBefore(badge, first) : a.appendChild(badge);
-    probeWidgetVisibility(badge, 'listing-badge', { slug: slug || '' });
-    watchListingBadgeRemoval(badge, 'listing-badge', function () {
-      if (!a.isConnected || a.querySelector('[data-ikr-listing-badge]')) return;
-      var healedBadge = createBadgeEl(rating, 'flex-start', iconPair, { slug: slug || '' });
-      var healedFirst = a.firstElementChild;
-      healedFirst ? a.insertBefore(healedBadge, healedFirst) : a.appendChild(healedBadge);
-    }, { slug: slug || '' });
   }
 }
 

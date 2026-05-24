@@ -123,11 +123,12 @@ export function createBadgeEl(rating, justify, iconPair) {
 
 export function createBadgePlaceholderEl(justify) {
   ensureBadgeStyles();
+  var meta = arguments[1] || {};
   var el = createOwnedSlot({
     slot: 'listing-rating-placeholder',
     legacySlot: 'listing-badge-placeholder',
     className: 'renuvex-pr-listing-badge-slot ikr-listing-badge-slot ikr-rating-badge ikr-rating-badge--listing',
-    context: { surface: 'listing' },
+    context: { surface: 'listing', slug: meta.slug || '', productId: meta.productId || '' },
   });
   el.setAttribute('data-ikr-listing-badge-placeholder', '1');
   el.setAttribute('aria-hidden', 'true');
