@@ -137,7 +137,6 @@ src/widget/
 - [public/widget-runtime/runtime.js](public/widget-runtime/runtime.js) — built ESM runtime entry. Don't hand-edit.
 - [public/widget-runtime/chunks/](public/widget-runtime/chunks/) — built lazy chunks. Don't hand-edit.
 - [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json) — build output report including bytes and import kinds.
-- [public/renuvex-pr-test.js](public/renuvex-pr-test.js) — small local test harness for the widget.
 - [public/logo.svg](public/logo.svg)
 
 ## Notes

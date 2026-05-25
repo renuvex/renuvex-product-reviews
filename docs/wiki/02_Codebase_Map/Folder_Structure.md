@@ -40,7 +40,6 @@ yorum-paneli/
 │
 ├─ public/
 │  ├─ widget.js                  # ✅ BUILT artifact (esbuild) — do NOT hand-edit
-│  ├─ renuvex-pr-test.js         # Local test harness for widget
 │  └─ logo.svg
 │
 ├─ scripts/

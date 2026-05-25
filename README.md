@@ -49,12 +49,13 @@ node scripts/wiki-audit.mjs --changed-source-check
 - `public/widget.js` and `public/widget-runtime/**` - generated widget assets
 - `docs/wiki/**` - project memory, ADRs, bug notes, and architecture maps
 
-## Namespace Policy
+## Product Identity
 
-Canonical public identity is app-specific, not brand-global:
+This repository contains the Product Reviews app under the Renuvex brand:
 
 - Brand: `Renuvex`
 - App: `Product Reviews`
 - Technical key: `product-reviews`
-- DOM/CSS prefix: `renuvex-pr`
-- ikas script name: `renuvex-product-reviews-widget`
+
+Namespace and storefront script details are documented in
+`docs/wiki/04_Decisions/ADR_0020_Renuvex_Product_Reviews_Namespace_Migration.md`.
