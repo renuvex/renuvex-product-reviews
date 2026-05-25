@@ -58,7 +58,7 @@ remaining problems with the rating badge were structural and merchant-visible:
    commonly override. The PDP badge was already a sibling of the title element
    (correct); only listing diverged.
 3. **Sizing tokens lived in inline styles.** Both PDP and listing emitted
-   `style="width:20px;height:20px"` on every `<span class="ikr-star">` and
+   `style="width:20px;height:20px"` on every `<span class="renuvex-pr-star">` and
    `font-size:Xpx` on the count span. This worked but blocked responsive
    overrides (no media queries on inline styles), kept layout decisions and
    merchant config tangled, and gave theme CSS no clean override surface.
@@ -88,7 +88,7 @@ not inside it. The PDP badge was already a sibling. Resolution order:
    pins a specific element, use it. Default returns `null`.
 2. `titleEl.parentNode.insertBefore(badge, titleEl.nextSibling)` — sibling
    mount, the default.
-3. `window.IKR_BADGE_MOUNT_LEGACY === true` — debug-only escape hatch back to
+3. `window.RENUVEX_PR_BADGE_MOUNT_LEGACY === true` — debug-only escape hatch back to
    the in-`<h2>` mount. Not exposed to merchants; for incident recovery from
    the browser console.
 
@@ -107,44 +107,44 @@ Badge layout (`display`, `align-items`, `gap`, `margin`, `line-height`, `color`,
 `font-weight`, `font-family:inherit` typography reset, `pointer-events`,
 `text-decoration`, `cursor`) lives in CSS classes injected via
 `PARTIAL_STARS_CSS` in [src/widget/core/helpers.js](src/widget/core/helpers.js):
-`.ikr-rating-badge`, `.ikr-rating-badge--pdp`, `.ikr-rating-badge--listing`.
+`.renuvex-pr-rating-badge`, `.renuvex-pr-rating-badge--pdp`, `.renuvex-pr-rating-badge--listing`.
 
 The only inline styles emitted at runtime are values that cannot live in a
 stylesheet:
 - `justify-content` — derived per mount from `getComputedStyle(titleEl).textAlign`.
 
 Every badge gets `role="figure"`, `aria-label="X üzerinden 5 yıldız, Y yorum"`,
-and `data-ikr-surface="pdp|listing"` / `data-ikr-rating` / `data-ikr-count`
+and `data-renuvex-surface="pdp|listing"` / `data-renuvex-rating` / `data-renuvex-count`
 data attributes for debugging and future CSS hooks. The legacy
-`data-ikr-listing-badge="1"` is preserved on listing badges so existing
+`data-renuvex-listing-badge="1"` is preserved on listing badges so existing
 observer, cleanup, and placeholder code paths keep working.
 
 ### 3. Sizing tokens: component-scope CSS variables, not :root
 
 Badge icon size and text size flow through two CSS custom properties scoped
-to `.ikr-rating-badge`:
+to `.renuvex-pr-rating-badge`:
 
-- `--ikr-badge-icon-size` — drives `.ikr-rating-badge .ikr-star { width; height }`
-- `--ikr-badge-text-size` — drives `.ikr-rating-badge { font-size }` (label
+- `--renuvex-pr-badge-icon-size` — drives `.renuvex-pr-rating-badge .renuvex-pr-star { width; height }`
+- `--renuvex-pr-badge-text-size` — drives `.renuvex-pr-rating-badge { font-size }` (label
   inherits)
 
 Defaults are in `PARTIAL_STARS_CSS`. Merchant overrides are written by
 `ensureBadgeTokens(sizes, mobileSizes?)` in
 [src/widget/core/badge.js](src/widget/core/badge.js), which rewrites the
-`textContent` of a single `<style id="ikr-badge-tokens">` tag idempotently.
+`textContent` of a single `<style id="renuvex-pr-badge-tokens">` tag idempotently.
 Both the PDP and listing render paths call this helper after resolving
 `SIZE_MAP[badgeSettings.size]`; they share the same style tag and write the
 same content (settings are the single source).
 
 `:root` is reserved for **truly global** rating tokens. Today that means only
-`--ikr-review-star-color` (ADR_0016). Future per-surface variants (carousel,
-popup) can override sizing per modifier (`.ikr-rating-badge--carousel`)
+`--renuvex-pr-review-star-color` (ADR_0016). Future per-surface variants (carousel,
+popup) can override sizing per modifier (`.renuvex-pr-rating-badge--carousel`)
 without polluting `:root`.
 
-Inside `.ikr-rating-badge`, the `.ikr-star` selector reads the variable.
+Inside `.renuvex-pr-rating-badge`, the `.renuvex-pr-star` selector reads the variable.
 Outside (review summary stars, modal stars, form rating), the existing inline
 `width`/`height` pattern is preserved because the more specific
-`.ikr-rating-badge .ikr-star { width: var(...) }` rule does not apply.
+`.renuvex-pr-rating-badge .renuvex-pr-star { width: var(...) }` rule does not apply.
 
 ### 4. Mobile/desktop sizing: opt-in toggle, single breakpoint
 
@@ -152,8 +152,8 @@ The merchant default is one preset (`badge.size`) applied at every viewport —
 backward-compatible with stores that have not touched the new fields. When
 `badge.mobileOverride === true`, a separate `badge.mobileSize` preset takes
 effect at `max-width: 640px` via an `@media` block written by
-`ensureBadgeTokens` into the same `<style id="ikr-badge-tokens">` tag,
-scoped to `.ikr-rating-badge`.
+`ensureBadgeTokens` into the same `<style id="renuvex-pr-badge-tokens">` tag,
+scoped to `.renuvex-pr-rating-badge`.
 
 The breakpoint (`640px`) is a hardcoded constant for now; ikas does not
 publish a canonical mobile breakpoint, and `640px` is the prevailing
@@ -163,7 +163,7 @@ that becomes its own ADR.
 Click behavior is part of the surface contract and **not merchant-tunable**:
 - Listing: `pointer-events: none` — clicks pass through the badge to the
   parent product `<a>` for card navigation.
-- PDP: `<a id="ikr-rating-badge" href="#ikas-reviews">` with a JS handler that
+- PDP: `<a id="renuvex-pr-rating-badge" href="#ikas-reviews">` with a JS handler that
   `preventDefault`s and `scrollTo`s the reviews section, with sticky-header
   offset compensation.
 
@@ -176,13 +176,13 @@ Each rule corresponds to a structural risk surfaced in the audit:
   cover the long tail of unusual themes without forcing two parallel mount
   paths into the main code.
 - **Class-first styling** turns the badge into a stable CSS target. Themes
-  can override `.ikr-rating-badge .ikr-rating-badge__label` if they need to;
+  can override `.renuvex-pr-rating-badge .renuvex-pr-rating-badge__label` if they need to;
   inline styles previously made that impossible without `!important` wars.
   It also lets media queries land cleanly (next rule).
 - **Component-scope variables** keep `:root` clean and let future surface
   variants own their own size tokens without colliding with the global brand
   variable. The pattern matches what Loox and Okendo do; the existing
-  `--ikr-review-star-color` shows the inverse case (truly global — keep on
+  `--renuvex-pr-review-star-color` shows the inverse case (truly global — keep on
   `:root`).
 - **Opt-in mobile** matches the actual merchant ask: %95 of merchants will
   not configure mobile separately; the 5% who care should not be forced into
@@ -219,10 +219,10 @@ Each rule corresponds to a structural risk surfaced in the audit:
   rows merge with defaults via `getWidgetDefaults`. `alignment`, `showValue`,
   and `showCount` are recorded as merchant-tunable preferences for the badge
   surface (consumed by future iterations).
-- Listing and PDP badges share one DOM contract — a `.ikr-rating-badge` root
+- Listing and PDP badges share one DOM contract — a `.renuvex-pr-rating-badge` root
   with surface modifier, `role="figure"`, `aria-label`, and three
-  `data-ikr-*` attributes. Existing observers / cleanup that key off
-  `[data-ikr-listing-badge]` keep working.
+  `data-renuvex-*` attributes. Existing observers / cleanup that key off
+  `[data-renuvex-listing-badge]` keep working.
 - Theme adapters carry an optional `getListingBadgeMountPoint(titleEl)`
   method. `themes/current-adapter.js` augments any adapter with a default
   that returns `null`, so call sites in `listing-badges/inject.js` can call
@@ -236,18 +236,18 @@ Each rule corresponds to a structural risk surfaced in the audit:
   - Deploy 2 (~3-7 days): flip default — sibling for everyone; allowlist
     becomes a `LEGACY_MOUNT_OPT_OUT` opt-out for any tenant that needs it.
   - Deploy 3 (~2 sprints): remove the legacy mount path from `resolveMount`.
-- Component-scope CSS variables (`--ikr-badge-icon-size`,
-  `--ikr-badge-text-size`) live on `.ikr-rating-badge`. `:root` remains
-  reserved for ADR_0016's `--ikr-review-star-color`. Future variants
+- Component-scope CSS variables (`--renuvex-pr-badge-icon-size`,
+  `--renuvex-pr-badge-text-size`) live on `.renuvex-pr-rating-badge`. `:root` remains
+  reserved for ADR_0016's `--renuvex-pr-review-star-color`. Future variants
   (carousel, popup) can override on their own modifier classes.
 - Future code that introduces a new badge surface should reuse
-  `.ikr-rating-badge` + a `--<variant>` modifier; size tokens should flow
+  `.renuvex-pr-rating-badge` + a `--<variant>` modifier; size tokens should flow
   through `ensureBadgeTokens` or its successor. Do not introduce
   surface-specific size sources.
 - **Amended in part by [[ADR_0019_Icon_Sprite_Rendering]] (2026-05-24):** the
   PDP badge is now a plain link (no `role="figure"`) named via an sr-only
-  `aria-labelledby` span, carries no static `id="ikr-rating-badge"`, and takes
-  alignment from a `data-ikr-align` attribute instead of an inline
+  `aria-labelledby` span, carries no static duplicate-prone badge id, and takes
+  alignment from a `data-renuvex-align` attribute instead of an inline
   `justify-content` style. Star glyphs render via a shared SVG `<symbol>` sprite
   + `<use>` rather than inline `<path>`. The listing badge's `role="figure"` and
   `pointer-events:none` card-link behavior are unchanged.

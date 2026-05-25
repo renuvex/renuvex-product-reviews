@@ -29,7 +29,7 @@ Settings live under `WidgetSettings.settings` with `widgetId='badge'`. Source sc
 Fields:
 - `enabled` — toggle; also gates the listing/card badges.
 - `size` — small / medium / large; applies to **both** the PDP title badge and listing-card badges via shared `SIZE_MAP` (icon + text together). See [[ADR_0016_Rating_Visual_System]].
-- `mobileOverride` (toggle) + `mobileSize` (small/medium/large) — opt-in mobile preset. When on, an `@media (max-width:640px)` block in `<style id="ikr-badge-tokens">` overrides desktop tokens. See [[ADR_0017_Badge_Architecture]].
+- `mobileOverride` (toggle) + `mobileSize` (small/medium/large) — opt-in mobile preset. When on, an `@media (max-width:640px)` block in `<style id="renuvex-pr-badge-tokens">` overrides desktop tokens. See [[ADR_0017_Badge_Architecture]].
 - `alignment`, `showValue`, `showCount` — additional display knobs introduced in PR-1; consumed by future iterations.
 
 The star **icon** and **color** are NOT on this widget. They come from the

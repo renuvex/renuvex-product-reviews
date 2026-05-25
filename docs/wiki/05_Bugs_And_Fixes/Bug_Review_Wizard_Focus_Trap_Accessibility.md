@@ -61,7 +61,7 @@ The first iteration moved focus into the current step on every step change. That
 
 The tuning:
 - Step transitions no longer auto-focus. The Next button keeps focus after navigation; users tab into the new step. Initial modal-open focus is still managed by the shell.
-- The `:focus-visible` outline on `.ikr-fwizard-input` and `.ikr-fwizard-textarea` was removed; inputs rely on the native caret. Buttons keep their outline.
+- The `:focus-visible` outline on `.renuvex-pr-fwizard-input` and `.renuvex-pr-fwizard-textarea` was removed; inputs rely on the native caret. Buttons keep their outline.
 
 ## Files Changed
 - [modal-shell.js](src/widget/product-widget/review-form-modal/modal-shell.js)

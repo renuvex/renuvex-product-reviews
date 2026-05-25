@@ -182,9 +182,9 @@ bundle preserved; zero behavior change.
     and placement (no header/footer/hero/banner/cart leakage) all passed. No double
     render. Sentry post-test check clean.
   - Audit B surfaced a **pre-existing** bug — listing badge stars rendered 0×0 on
-    cold direct entry because `#ikr-styles` (carrying the `.ikr-star` display rule)
+    cold direct entry because `#renuvex-pr-styles` (carrying the `.renuvex-pr-star` display rule)
     was injected only by the PDP `render.js` path. Fixed: the badge factory now
-    self-injects `#ikr-badge-styles`. Re-verified. Not an ADR_0013 regression. See
+    self-injects `#renuvex-pr-badge-styles`. Re-verified. Not an ADR_0013 regression. See
     [[Bug_Listing_Badge_Stars_Direct_Load]].
   - Context7 `/microsoft/playwright` and `/getsentry/sentry-javascript` were used
     only for the test/triage method, per the guardrail.

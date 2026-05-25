@@ -36,7 +36,7 @@ The `qa` widget id is registered in `WidgetDef`, but the storefront and submissi
 The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-modules architecture. Before implementing it, decide:
 - Should the existing `widget.js` remain a compatibility alias while new installs receive `loader.js`?
 - Which widgets are first-class modules: rating badge, reviews main, listing badge, media gallery, Q&A, review form, schema?
-- What is the stable placeholder contract for `data-ikr-widget` and `data-ikr-product-id`?
+- What is the stable placeholder contract for `data-renuvex-widget` and `data-renuvex-product-id`?
 - Should theme adapter selection be explicit merchant config, automatic runtime detection, or both?
 
 Reference: [[Yotpo_Style_Widget_Modular_Architecture]]

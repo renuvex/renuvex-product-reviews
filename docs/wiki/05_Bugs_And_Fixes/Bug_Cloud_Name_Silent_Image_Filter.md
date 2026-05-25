@@ -50,7 +50,7 @@ There is one important nuance: if `/api/public/settings` returned no response at
 ## Fix
 - [scripts/build-widget.mjs](scripts/build-widget.mjs) now injects the public Cloudinary cloud name into the widget bundle at build time. This value is not a secret; the public settings endpoint already exposes it as part of the image allowlist contract.
 - [helpers.js](src/widget/core/helpers.js) initializes trusted image policy from the build-time fallback, preserves the last valid cloud name when a later invalid value arrives, and emits a one-time explicit error if no policy is available.
-- [bootstrap.js](src/widget/product-widget/bootstrap.js) keeps a separate `ikr_image_policy_<publicApiKey>` cache for the last valid review image policy and tolerates stale settings for 7 days during transient settings outages.
+- [helpers.js](src/widget/core/helpers.js) keeps the build-time public Cloudinary cloud name as the durable fallback and tolerates transient settings outages without a legacy image-policy cache.
 - [settings/route.ts](src/app/api/public/settings/route.ts) logs a one-time server error when the configured Cloudinary cloud name is missing and adds `stale-if-error=604800` to the public settings cache header.
 - [public/widget.js](public/widget.js) was regenerated with `pnpm build:widget`.
 

@@ -50,7 +50,7 @@ Example: a user opens a review photo, presses `Tab`, and focus can move to produ
 - Documentation updates under `docs/wiki`.
 
 ## Prevention
-- Add browser smoke coverage that opens the lightbox, presses `Tab` repeatedly, and asserts focus remains inside `.ikr-modal-overlay`.
+- Add browser smoke coverage that opens the lightbox, presses `Tab` repeatedly, and asserts focus remains inside `.renuvex-pr-modal-overlay`.
 - Include ARIA and focus management in the lightbox review checklist.
 
 ## Related Notes

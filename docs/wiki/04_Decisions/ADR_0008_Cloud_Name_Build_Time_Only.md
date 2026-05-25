@@ -27,8 +27,8 @@ Accepted (supersedes the runtime portion of [[ADR_0006_Trusted_Review_Image_URL_
 ## Context
 Trusted Cloudinary cloud name was historically threaded through three sources at runtime in the widget:
 1. `/api/public/settings` response (`imagePolicy.cloudName` field)
-2. `localStorage` cache (`ikr_image_policy_<publicApiKey>`, 7-day TTL)
-3. Build-time injected constant (`__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`)
+2. Legacy `localStorage` image-policy cache
+3. Build-time injected constant (`__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`)
 
 Plus a setter (`setTrustedReviewImageCloudName`) called from settings fetch, preview mode, and the upload-sign response. This was originally defensive — protect against the K3 silent failure where settings might not return `cloudName` ([[Bug_Cloud_Name_Silent_Image_Filter]]).
 
@@ -37,7 +37,7 @@ But the cloud name is **app-level** config, not merchant-level: every merchant u
 ## Decision
 The Cloudinary cloud name is now **a build-time constant only**:
 - Provided by `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` env var at widget build time
-- Injected into the bundle by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__`
+- Injected into the bundle by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`
 - Read once at module load in [helpers.js](src/widget/core/helpers.js); never reassigned
 - Settings response no longer carries `imagePolicy`
 - Widget has no setter, no localStorage cache, no warn-on-missing helper threaded through settings/preview/upload flows
@@ -72,7 +72,7 @@ If the build-time inject is empty (deploy config error), a single `console.error
 - Cloudinary Dashboard'da **Strict transformations** ayarının açık olması bağımsız bir hardening; bu ADR ile alakası yok ama tavsiye edilir (cloud name herkese açık olduğu için transformation abuse riski).
 
 ## Related Source Files
-- [scripts/build-widget.mjs](scripts/build-widget.mjs) — `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__` inject
+- [scripts/build-widget.mjs](scripts/build-widget.mjs) — `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__` inject
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — single-source cloud name, fail-closed startup check
 - [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — image policy machinery removed
 - [src/widget/product-widget/review-form-modal/steps/step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js) — `setTrustedReviewImageCloudName` çağrısı kaldırıldı

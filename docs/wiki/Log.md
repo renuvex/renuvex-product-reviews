@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-05-25 - docs | Renuvex wiki namespace cleanup
+- Summary: Refreshed current wiki maps, widget notes, and ADR summaries so active examples use `renuvex-pr`, `data-renuvex-*`, `RENUVEX_PR_*`, `renuvex_pr_*`, and `renuvex-product-reviews-widget`.
+- Reason: The source/runtime namespace is now Renuvex-only; old `ikr` / `yorum-paneli` terms should not appear as current implementation guidance.
+- Verification: `git diff --check` passed; `node scripts/wiki-audit.mjs --changed-source-check` completed with 0 errors. Remaining old-name references are historical/legacy-context notes, not active code guidance.
+- Updated wiki: [[Index]], [[Frontend_Map]], [[Widget_Files_Map]], [[Storefront_Widget_Overview]], [[Product_Rating_Badge]], [[Listing_Rating_Widget]], [[Product_Review_Lightbox]], [[Ikas_Storefront_Script_Capabilities]], [[Decision_Index]]
+
 ## 2026-05-25 - ops | External Renuvex rename started
 - Summary: Renamed the GitHub repository from `heyomert/new-ikas-app` to `heyomert/renuvex-product-reviews`, updated the local `origin` remote, and set the GitHub repository description to "Renuvex Product Reviews app for ikas".
 - Reason: Align external repository identity with the completed Renuvex Product Reviews source/runtime namespace.

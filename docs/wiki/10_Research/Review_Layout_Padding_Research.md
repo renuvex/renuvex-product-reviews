@@ -99,7 +99,7 @@ Arastirma uc kaynaktan beslendi:
 
 | Layout | Yan Padding | Kaynak | Degerlendirme |
 |---|---|---|---|
-| **card** | `0` (base `.ikr-review`) | `styles.js` | ❌ Kenara yapisik olabilir |
+| **card** | `0` (base `.renuvex-pr-review`) | `styles.js` | ❌ Kenara yapisik olabilir |
 | **list** | `0` (base) | `list/styles.js` | ❌ Grid yapiya uygun degil |
 | **gallery** | `0` (base) | `gallery/styles.js` | ❌ Masonry kolon dengesi riski |
 
@@ -107,9 +107,9 @@ Arastirma uc kaynaktan beslendi:
 
 | Layout | Yan Padding | Degisken | Degerlendirme |
 |---|---|---|---|
-| **card** | `var(--ikr-pad-review-mobile)` | `16px` | ✅ Uygun |
-| **list** | `var(--ikr-pad-review-mobile)` | `16px` | ✅ Uygun |
-| **gallery** | `var(--ikr-pad-review-mobile)` | `16px` | ✅ Uygun |
+| **card** | `var(--renuvex-pr-pad-review-mobile)` | `16px` | ✅ Uygun |
+| **list** | `var(--renuvex-pr-pad-review-mobile)` | `16px` | ✅ Uygun |
+| **gallery** | `var(--renuvex-pr-pad-review-mobile)` | `16px` | ✅ Uygun |
 
 ### 3.3 Diger Parametreler
 
@@ -146,7 +146,7 @@ Arastirma uc kaynaktan beslendi:
 
 ### 4.3 List Layout Grid Etkisi
 
-**Sorun**: List `grid-template-columns:140px 1fr var(--ikr-list-photo-w,120px)` kullaniyor.
+**Sorun**: List `grid-template-columns:140px 1fr var(--renuvex-pr-list-photo-w,120px)` kullaniyor.
 
 **Hesaplama**:
 - Grid gap: `24px`
@@ -193,7 +193,7 @@ Arastirma uc kaynaktan beslendi:
 ### Mobil
 
 Mevcut durum **uygundur**:
-- `10px` yan padding (`--ikr-pad-review-mobile`)
+- `10px` yan padding (`--renuvex-pr-pad-review-mobile`)
 - `18-24px` top/bottom padding
 - `36px` touch target (yasal minimum uzerinde)
 
@@ -214,7 +214,7 @@ Mevcut durum **uygundur**:
 
 ## 8. Source Files
 
-- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — base `.ikr-review`, mobile padding block
+- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — base `.renuvex-pr-review`, mobile padding block
 - [src/widget/review-layouts/card/index.js](src/widget/review-layouts/card/index.js) — card render
 - [src/widget/review-layouts/list/styles.js](src/widget/review-layouts/list/styles.js) — list CSS
 - [src/widget/review-layouts/gallery/styles.js](src/widget/review-layouts/gallery/styles.js) — gallery CSS
@@ -229,5 +229,5 @@ Mevcut durum **uygundur**:
 
 - **2026-05-07**: Rapor olusturuldu. Endustri standartlari (WCAG 2.2, Apple HIG, Material Design), rakip uygulamalar (Loox, Yotpo, Okendo, Judge.me) ve mevcut durum analizi yapildi.
 - **2026-05-07**: Desktop padding onerisi revize edildi. Gorsel testler sonucunda desktop'ta review layout'lara ek yan padding gerekli olmadigi tespit edildi. Widget container `max-width:1200px; margin:auto` icerigi zaten dengeli tutuyor.
-- **2026-05-07**: Mobile padding token'lari ikas temasi ile senkronize edildi. `--ikr-pad-review-mobile` `10px` -> `16px`. Foto galeri section ve strip padding'leri review token'ina baglandi.
-- **2026-05-07**: Foto galeri negatif margin sorunu duzeltildi. `.ikr-photo-strip-container` negatif margin sadece desktop'a (`@media(min-width:601px)`) sinirlandirildi. Mobile'da negatif margin kalkti, thumbnail'lar padding ile hizali kaldi.
+- **2026-05-07**: Mobile padding token'lari ikas temasi ile senkronize edildi. `--renuvex-pr-pad-review-mobile` `10px` -> `16px`. Foto galeri section ve strip padding'leri review token'ina baglandi.
+- **2026-05-07**: Foto galeri negatif margin sorunu duzeltildi. `.renuvex-pr-photo-strip-container` negatif margin sadece desktop'a (`@media(min-width:601px)`) sinirlandirildi. Mobile'da negatif margin kalkti, thumbnail'lar padding ile hizali kaldi.

@@ -29,8 +29,8 @@ related:
 - **Sıralama: newest-first rotation.** Yeni onaylı fotoğraflı yorum geldiğinde 1 dakikalık `REVIEWS_CACHE_TTL` sonrası strip başına eklenir; en eski düşer.
 - **Bağımsızlık:** Sort/filter (newest/highest/lowest/rating) ve "Daha Fazla Göster" değişikliklerinde strip re-fetch yapmaz. Yalnızca `bootstrap.js` çalıştığında tek seferlik doldurulur.
 - **Filter görünürlüğü:** Kullanıcı "Fotoğraflı" filtresini aktif ederse (`currentHasImages === true`) strip gizlenir — odak filtrelenmiş listeye verilir.
-- **Gallery layout:** `:has(.ikr-review-gallery)` CSS selektörüyle strip tamamen gizlenir ([gallery/styles.js](src/widget/review-layouts/gallery/styles.js)).
-- **Layout uyumu:** Card layout'ta thumbnail aspect 1:1, list/gallery'de 3:4 — `--ikr-photo-thumb-aspect` CSS değişkeniyle render anında set edilir.
+- **Gallery layout:** `:has(.renuvex-pr-review-gallery)` CSS selektörüyle strip tamamen gizlenir ([gallery/styles.js](src/widget/review-layouts/gallery/styles.js)).
+- **Layout uyumu:** Card layout'ta thumbnail aspect 1:1, list/gallery'de 3:4 — `--renuvex-pr-photo-thumb-aspect` CSS değişkeniyle render anında set edilir.
 
 ## Veri akışı
 1. `bootstrap.js` ürün sayfasında iki paralel istek atar:
@@ -42,12 +42,12 @@ related:
 
 ## Görsel ve CSS
 - DOM yapısı:
-  - `.ikr-photo-section` — bölüm wrapper
-  - `.ikr-photo-title` — başlık (`settings.photoGalleryTitle`, default "Fotoğraflı Yorumlar")
-  - `.ikr-photo-strip-wrap` — relative pozisyonlama
-  - `.ikr-photo-strip` — yatay flex container, `overflow-x:auto`
-  - `.ikr-photo-strip-thumb` — tek thumbnail (`<img>`)
-  - `.ikr-photo-strip-arrow-prev` / `.ikr-photo-strip-arrow-next` — desktop ok butonları
+  - `.renuvex-pr-photo-section` — bölüm wrapper
+  - `.renuvex-pr-photo-title` — başlık (`settings.photoGalleryTitle`, default "Fotoğraflı Yorumlar")
+  - `.renuvex-pr-photo-strip-wrap` — relative pozisyonlama
+  - `.renuvex-pr-photo-strip` — yatay flex container, `overflow-x:auto`
+  - `.renuvex-pr-photo-strip-thumb` — tek thumbnail (`<img>`)
+  - `.renuvex-pr-photo-strip-arrow-prev` / `.renuvex-pr-photo-strip-arrow-next` — desktop ok butonları
 - CSS dosyası: [themes/ozy/styles.js](src/widget/themes/ozy/styles.js)
 - Mobile (`@media max-width:600px`) — arrow butonları `display:none`; sadece touch swipe.
 

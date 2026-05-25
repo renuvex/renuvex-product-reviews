@@ -28,7 +28,7 @@ The product review lightbox is the photo review detail modal opened from review 
 
 ## Related Source Files
 - [review-modal.js](src/widget/product-widget/review-modal.js) - photo review detail lightbox.
-- [styles.js](src/widget/themes/ozy/styles.js) - `.ikr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
+- [styles.js](src/widget/themes/ozy/styles.js) - `.renuvex-pr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
 - [render.js](src/widget/product-widget/render.js) - review layout and photo strip entry points that call `openReviewModal`.
 - [state.js](src/widget/core/state.js) - canonical loaded review collection used by review layout lightbox navigation.
 - [gallery/index.js](src/widget/review-layouts/gallery/index.js) - gallery layout entry points for images and long-text "read more" behavior.
@@ -63,15 +63,15 @@ The product review lightbox is the photo review detail modal opened from review 
 - Responsive layout is split by modal readability, not only by a generic mobile breakpoint: `801px+` keeps the desktop two-column shell with the 438 px media column, `641px-800px` uses a stacked tablet/landscape shell with capped media height and full-width text, and `640px` and below keeps the fullscreen mobile shell.
 - Mobile height uses a `100vh` fallback followed by `100svh` and `100dvh` so modern Android and iOS browsers can size the fullscreen shell against small/dynamic viewport units when browser chrome is visible or changing.
 - Scroll containment is explicit on the overlay, desktop right panel, tablet wrapper, and mobile wrapper. While the modal is open, root `html` / `body` also receive `overscroll-behavior-y:none`; iOS/WebKit uses fixed-body locking so long-comment top-boundary pulls do not leak into page refresh.
-- Mobile uses `overflow-y:scroll` on `.ikr-modal-wrap` so the fullscreen lightbox remains a consistent scroll container even when a short review does not exceed the viewport.
-- Switching between different reviews normalizes every lightbox scroll layer (`.ikr-modal-wrap`, `.ikr-modal-right`, and `.ikr-modal-scroll-content`) immediately and again after layout settles. This prevents stale long-review scroll state from carrying into a short-review lightbox view.
-- In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The canonical `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings; `IKR_SETTINGS_UPDATED_PREVIEW` remains a legacy alias during the namespace expand phase. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
+- Mobile uses `overflow-y:scroll` on `.renuvex-pr-modal-wrap` so the fullscreen lightbox remains a consistent scroll container even when a short review does not exceed the viewport.
+- Switching between different reviews normalizes every lightbox scroll layer (`.renuvex-pr-modal-wrap`, `.renuvex-pr-modal-right`, and `.renuvex-pr-modal-scroll-content`) immediately and again after layout settles. This prevents stale long-review scroll state from carrying into a short-review lightbox view.
+- In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
 
 ## Change Log
-- 2026-05-24: Updated preview-event wording for ADR_0020 namespace migration. `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` is canonical; `IKR_SETTINGS_UPDATED_PREVIEW` remains a compatibility alias.
-- 2026-05-12: Fixed preview settings synchronization for an already-open lightbox. The right pane now re-renders from closure state on `IKR_SETTINGS_UPDATED_PREVIEW`, covering review icons, merchant reply labels, and future right-pane setting-dependent fields. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
+- 2026-05-24/25: Updated preview-event wording for ADR_0020 namespace migration. `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` is the active preview event.
+- 2026-05-12: Fixed preview settings synchronization for an already-open lightbox. The right pane now re-renders from closure state on the preview settings event, covering review icons, merchant reply labels, and future right-pane setting-dependent fields. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
 - 2026-05-12: Changed the main lightbox image from `cover` to `contain` on the existing dark media background so customer review photos are shown without crop; preview thumbnails remain `cover`.
-- 2026-05-12: Changed mobile `.ikr-modal-wrap` from `overflow-y:auto` to `overflow-y:scroll` to keep the fullscreen lightbox's scroll-container behavior consistent in short-review cases.
+- 2026-05-12: Changed mobile `.renuvex-pr-modal-wrap` from `overflow-y:auto` to `overflow-y:scroll` to keep the fullscreen lightbox's scroll-container behavior consistent in short-review cases.
 - 2026-05-12: Added review-switch scroll normalization and made fixed-body locking platform-aware. Related bug: [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]].
 - 2026-05-12: Hardened mobile pull-to-refresh containment. The lightbox now snapshots/restores root scroll styles and scroll position and applies root `overscroll-behavior-y:none`. Related bug: [[Bug_Lightbox_Mobile_Pull_To_Refresh]].
 - 2026-05-11: Documented K2 image error fallback. Main lightbox image failures now show a neutral placeholder while mini thumbnail failures hide the failed thumbnail. Related bug: [[Bug_Review_Image_Error_Fallback]].

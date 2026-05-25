@@ -113,6 +113,7 @@ source_files: []
 - [[ADR_0017_Badge_Architecture]]
 - [[ADR_0018_Widget_Ownership_And_Placement_Resilience]]
 - [[ADR_0019_Icon_Sprite_Rendering]]
+- [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -169,4 +170,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-05-19 (added rating visual system ADR — single-sourced star icon/color)
+**Last Updated:** 2026-05-25 (added Renuvex namespace migration ADR and refreshed routing)

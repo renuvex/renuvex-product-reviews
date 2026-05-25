@@ -87,7 +87,7 @@ with `format: "esm"` and `outdir`; dynamic `import()` creates lazy chunks.
   independent surface. If aggregate data is still only produced by `render.js`,
   keep it inside `reviews-main` until a shared data service exists.
 - Ensure CSS injection remains idempotent per module. The Phase 1
-  `#ikr-badge-styles` fix must not regress.
+  `#renuvex-pr-badge-styles` fix must not regress.
 
 4. Theme adapter fallback:
 - Move Ozy listing placement logic into an explicit adapter/fallback contract,
@@ -152,7 +152,7 @@ desktop + mobile viewport). All scenarios passed.
 | PDP cold (`/premium-shorts`) | PASS — classic `widget.js` + `runtime.js` + shared chunks + `bootstrap` + `listing-badges` + `/api/public/{settings,reviews,ratings-by-slug}`, all `200` from the canonical HTTPS host. Review summary, 10 review cards, photo strip, filters, rating badge, exactly one JSON-LD. |
 | Category cold (`/clothing`) | PASS — listing path only. `bootstrap`, `/api/public/settings`, `/api/public/reviews` were NOT fetched — lazy isolation confirmed. |
 | Search cold (`/search?s=...`) | PASS — listing path only; the `VIEW_SEARCH_RESULTS` page badged its cards from the rating cache. |
-| SPA navigation (PDP ↔ PDP) | PASS — old surfaces fully torn down (0 stale rating badge / JSON-LD / summary / review cards); the reviewed widget re-mounted exactly at the cold baseline (1 rating badge, 1 JSON-LD, 1 summary, 10 review cards, one copy of each `#ikr-*` style element). |
+| SPA navigation (PDP ↔ PDP) | PASS — old surfaces fully torn down (0 stale rating badge / JSON-LD / summary / review cards); the reviewed widget re-mounted exactly at the cold baseline (1 rating badge, 1 JSON-LD, 1 summary, 10 review cards, one copy of each `#renuvex-pr-*` style element). |
 | Mobile spot check (390px) | PASS — rating badge and counts correct. |
 
 - Console on every page was clean; the only error is the storefront theme's own

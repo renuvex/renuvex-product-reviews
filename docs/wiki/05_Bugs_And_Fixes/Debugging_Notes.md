@@ -40,7 +40,7 @@ related:
 ### In the admin preview iframe
 - Open `/preview` directly in a tab to debug the iframe HTML page.
 - Open it inside the admin (where it sits in `WidgetEditor.tsx`) to test the postMessage protocol.
-- The settings update protocol: admin posts `IKR_SETTINGS_UPDATE`, widget posts back `IKR_WIDGET_READY`.
+- The settings update protocol: admin posts `RENUVEX_PR_SETTINGS_UPDATE`, widget posts back `RENUVEX_PR_WIDGET_READY`.
 
 ### Review detail lightbox
 - Use `/preview` to open the photo strip and click a review image. The lightbox path is [review-modal.js](src/widget/product-widget/review-modal.js), not the submission wizard.

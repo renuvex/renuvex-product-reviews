@@ -20,7 +20,7 @@ Top-level layout. Three big buckets: the Next.js app (`src/app/*`), the storefro
 ## Tree (annotated)
 
 ```
-yorum-paneli/
+renuvex-product-reviews/
 ├─ .env.example                  # Required env contract — never document real values
 ├─ ikas.config.json              # ikas dev tooling (port, oauth redirect path)
 ├─ next.config.js                # Next.js config

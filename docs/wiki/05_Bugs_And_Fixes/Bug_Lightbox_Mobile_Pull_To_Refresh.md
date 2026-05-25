@@ -30,10 +30,10 @@ Widget, Storefront UX, Mobile Scroll Lock, Photo Review Lightbox
 ## Symptoms
 On mobile Chrome, opening a photo-backed review with a short comment can feel like the lightbox is locked because the modal content does not exceed the viewport and therefore no internal scroll range exists. With a long comment, the lightbox does scroll, but pulling down at the top boundary can sometimes trigger the browser's page refresh gesture.
 
-Example: a user opens a photo review on a product page. For a short comment, the fullscreen lightbox fits inside the viewport, so dragging vertically does not move anything and Chrome's address bar does not collapse or expand like normal page scroll. For a long comment, `.ikr-modal-wrap` becomes scrollable; when the user reaches the top and keeps pulling down, Chrome may route the gesture to the page-level overscroll/pull-to-refresh behavior.
+Example: a user opens a photo review on a product page. For a short comment, the fullscreen lightbox fits inside the viewport, so dragging vertically does not move anything and Chrome's address bar does not collapse or expand like normal page scroll. For a long comment, `.renuvex-pr-modal-wrap` becomes scrollable; when the user reaches the top and keeps pulling down, Chrome may route the gesture to the page-level overscroll/pull-to-refresh behavior.
 
 ## Root Cause
-The short-comment behavior is expected: [styles.js](src/widget/themes/ozy/styles.js) makes the mobile `.ikr-modal-wrap` a fixed fullscreen scroll container. If its content is shorter than `100dvh`, there is nothing to scroll.
+The short-comment behavior is expected: [styles.js](src/widget/themes/ozy/styles.js) makes the mobile `.renuvex-pr-modal-wrap` a fixed fullscreen scroll container. If its content is shorter than `100dvh`, there is nothing to scroll.
 
 The long-comment pull-to-refresh behavior was a real containment gap. [review-modal.js](src/widget/product-widget/review-modal.js) locked only `document.body` with `overflow:hidden`. Mobile Chrome pull-to-refresh is rooted above the modal's internal overflow container, so body overflow alone is not always enough when a fixed modal scroll container reaches its top boundary.
 
@@ -51,7 +51,7 @@ While the lightbox is open:
 - `html` and `body` overflow are locked
 - iOS/WebKit viewports also use a fixed-body lock with `top:-scrollY`, then restore `window.scrollTo(scrollX, scrollY)` on close
 
-This keeps short comments non-scrollable when they genuinely fit, keeps long comments scrollable inside `.ikr-modal-wrap`, and blocks the page-level pull-to-refresh channel while the lightbox is active.
+This keeps short comments non-scrollable when they genuinely fit, keeps long comments scrollable inside `.renuvex-pr-modal-wrap`, and blocks the page-level pull-to-refresh channel while the lightbox is active.
 
 Follow-up: Android Chrome browser chrome state during long-to-short review switching is tracked separately in [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]. Android now relies on root `overscroll-behavior-y:none` without fixed-body positioning, while iOS/WebKit keeps fixed-body locking.
 

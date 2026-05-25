@@ -45,7 +45,7 @@ Reproduced on the dev product page with the X/Serpingo app installed:
 
 ## Root Cause
 The filter menu relied on `item.onclick`. The menu also closes on
-`.ikr-filter-wrap` `focusout`. On mobile WebKit, tapping a focused menu item can
+`.renuvex-pr-filter-wrap` `focusout`. On mobile WebKit, tapping a focused menu item can
 blur/close the menu before the synthesized `click` reaches the option, so the
 visual menu closes but `onSortChange` never runs.
 

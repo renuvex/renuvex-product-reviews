@@ -46,7 +46,7 @@ Historical 2026-05-11 fix, now superseded by the 2026-05-25 opt-in mount contrac
 [render.js](src/widget/product-widget/render.js) now calls `getOrCreateReviewsAnchor()`:
 
 - If `#ikas-reviews-anchor` exists, it uses it.
-- If not, it creates the anchor with `data-ikr-auto-anchor="1"`.
+- If not, it creates the anchor with `data-renuvex-auto-anchor="1"`.
 - The generated anchor is inserted after the theme product container selector from [theme.js](src/widget/themes/ozy/theme.js).
 - If the product container cannot be found, it falls back to `main` or `body`.
 

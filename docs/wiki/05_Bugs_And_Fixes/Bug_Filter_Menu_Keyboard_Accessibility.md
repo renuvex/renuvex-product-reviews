@@ -45,9 +45,9 @@ Example scenario:
 - Filter menu has `role="menu"`; trigger has `aria-haspopup="menu"` and toggles `aria-expanded` on open/close.
 - Opening the menu focuses the first option (the currently active filter if any, otherwise the first item).
 - Pressing `Escape` while the menu is open closes it and returns focus to the trigger.
-- Tabbing out of the filter group (focus leaves `.ikr-filter-wrap`) auto-closes the menu so a hidden-but-open menu does not linger.
+- Tabbing out of the filter group (focus leaves `.renuvex-pr-filter-wrap`) auto-closes the menu so a hidden-but-open menu does not linger.
 - Selecting an item closes the menu and restores focus to the trigger before the sort change fires.
-- Added `:focus-visible` outlines on `.ikr-filter-btn` and `.ikr-filter-item` so keyboard focus is visible.
+- Added `:focus-visible` outlines on `.renuvex-pr-filter-btn` and `.renuvex-pr-filter-item` so keyboard focus is visible.
 - The existing popover-registry light dismiss (outside click + global Escape) is preserved.
 
 ## Files Changed

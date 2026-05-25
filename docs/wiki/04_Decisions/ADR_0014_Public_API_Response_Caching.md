@@ -85,7 +85,7 @@ browser sessionStorage → Vercel CDN edge → [Redis read-through] → Postgres
 Scope and priority:
 
 1. **`ratings-by-slug` first.** Worst CDN hit rate, highest call volume. Cache
-   **per slug** (`ikr_rating:<storeId>:<slug>`), not per URL — so the cache is
+   **per slug** (`renuvex_pr_rating:<storeId>:<slug>`), not per URL — so the cache is
    shared across every slug-combination URL. This is the structural win the CDN
    cannot replicate.
 2. **`reviews` GET — second.** The CDN covers popular products; Redis helps the

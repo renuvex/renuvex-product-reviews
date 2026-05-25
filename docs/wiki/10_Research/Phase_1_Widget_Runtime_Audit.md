@@ -88,7 +88,7 @@ Gate (A): real event names and payload shapes documented. ✓
 Cold direct entry to home/category/search rendered listing badges as `avg (count)`
 text with **0×0 star SVGs**. Root cause confirmed and fixed — see
 [[Bug_Listing_Badge_Stars_Direct_Load]]. Post-fix: cold home/category stars render
-`13×13`; `--ikr-badge-color` set; no duplicate `[data-ikr-listing-badge]`.
+`13×13`; `--renuvex-pr-badge-color` set; no duplicate `[data-renuvex-listing-badge]`.
 
 Visual evidence is archived with the bug note:
 [before fix](../assets/cold-home-listing-badge-no-stars.png) and
@@ -98,8 +98,8 @@ Gate (B): [[Bug_Listing_Badge_Stars_Direct_Load]] is fixed and re-verified. ✓
 
 ### C. Listing placement false positive/negative audit — clean
 
-On home, `/shorts`, `/search`, and `/clothing`, every `[data-ikr-listing-badge]`
-and every processed `[data-ikr-badge]` link was inside a whitelisted product
+On home, `/shorts`, `/search`, and `/clothing`, every `[data-renuvex-listing-badge]`
+and every processed `[data-renuvex-badge]` link was inside a whitelisted product
 container — **zero** badges in header/nav, footer, hero/banner/marquee, or
 cart/basket. Only the reviewed product received badges (expected — others have 0
 reviews). The MutationObserver was confirmed to fire on dynamic node insertion and
@@ -154,7 +154,7 @@ Updated 2026-05-17 after the runtime audit (see Runtime Audit Results above).
 - ~~What field shape `PAGE_VIEW.data` uses~~ — **Resolved.** `data` =
   `{ url, pageType, customer }`; `pageType` ∈ `INDEX | PRODUCT | CATEGORY | SEARCH`.
 - ~~Why cold direct listing entry renders `avg (count)` without star icons~~ —
-  **Resolved and fixed.** `#ikr-styles` (carrying the `.ikr-star` `display` rule)
+  **Resolved and fixed.** `#renuvex-pr-styles` (carrying the `.renuvex-pr-star` `display` rule)
   was injected only by the PDP `render.js` path. See
   [[Bug_Listing_Badge_Stars_Direct_Load]].
 - The current Ozy allowlist/blocklist showed **no false positives** on the audited
@@ -190,9 +190,9 @@ Check listing badge render on cold direct entry and after PDP navigation:
 
 - star SVG exists in DOM
 - star SVG is visible by computed style
-- `--ikr-badge-color` is set before/when badge is injected
+- `--renuvex-pr-badge-color` is set before/when badge is injected
 - `avg (count)` text remains aligned with the star row
-- no duplicate `[data-ikr-listing-badge]` is inserted after remount
+- no duplicate `[data-renuvex-listing-badge]` is inserted after remount
 
 Acceptance gate: [[Bug_Listing_Badge_Stars_Direct_Load]] is either fixed or has a
 confirmed root cause before Phase 2 module splitting starts.

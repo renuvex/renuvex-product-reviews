@@ -53,8 +53,8 @@ Competitor research: Loox uses an SVG **symbol sprite** (`<symbol>` defined once
 
 ### 1. Star geometry is delivered via an SVG symbol sprite
 A new module [src/widget/icons/star-sprite.js](src/widget/icons/star-sprite.js) exposes `ensureStarSprite(iconPair)` and `starUseSvg(state)`:
-- `ensureStarSprite` derives **two `<symbol>`s** (`#ikr-sym-star-full`, `#ikr-sym-star-outline`) from the active icon's existing `ICONS` SVG strings (regex `<svg…>`→`<symbol…>`, preserving `viewBox` + fill/stroke), parses them with `DOMParser` (`image/svg+xml`), and injects one hidden `<div id="ikr-icon-sprite">` into `document.body`. Idempotent and **keyed by the icon geometry**, so a live-preview icon swap replaces the symbols in place. Hidden via `position:absolute;width:0;height:0;overflow:hidden` (never `display:none`, which breaks `<use>` rendering).
-- `starUseSvg('full'|'outline')` returns `<svg class="ikr-star-svg" viewBox="0 0 256 256" aria-hidden="true"><use href="#…"/></svg>`.
+- `ensureStarSprite` derives **two `<symbol>`s** (`#renuvex-pr-sym-star-full`, `#renuvex-pr-sym-star-outline`) from the active icon's existing `ICONS` SVG strings (regex `<svg…>`→`<symbol…>`, preserving `viewBox` + fill/stroke), parses them with `DOMParser` (`image/svg+xml`), and injects one hidden `<div id="renuvex-pr-icon-sprite">` into `document.body`. Idempotent and **keyed by the icon geometry**, so a live-preview icon swap replaces the symbols in place. Hidden via `position:absolute;width:0;height:0;overflow:hidden` (never `display:none`, which breaks `<use>` rendering).
+- `starUseSvg('full'|'outline')` returns `<svg class="renuvex-pr-star-svg" viewBox="0 0 256 256" aria-hidden="true"><use href="#…"/></svg>`.
 
 The read-only star renderers in [src/widget/core/helpers.js](src/widget/core/helpers.js) (`partialStarsHTML`, `starsHTML`) and [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js) (`renderStarRow`) call `ensureStarSprite` at the top (so the symbol exists before the returned `<use>` markup is inserted — **correct-by-construction**, no race, no rollout gate) and emit `starUseSvg(...)` instead of the inline string. The `clip-path` half-star engine is unchanged: bg layer `<use href="#…outline">`, fg layer `<use href="#…full">` + `clip-path:inset(0 50% 0 0)` on the wrapper.
 
@@ -62,15 +62,15 @@ The `ICONS` registry strings stay intact — they remain the single source the s
 
 ### 2. Accessibility: sr-only label + aria-labelledby (decorative stars)
 Adopted from Yotpo's class-leading pattern:
-- `buildRatingA11yLabel(avg, count)` (helpers.js) returns `{ id, html }` — a visually-hidden `.ikr-sr-only` `<span>` carrying the rating sentence as **real text** (translation-tool friendly, unlike `aria-label`), with a per-instance unique id.
+- `buildRatingA11yLabel(avg, count)` (helpers.js) returns `{ id, html }` — a visually-hidden `.renuvex-pr-sr-only` `<span>` carrying the rating sentence as **real text** (translation-tool friendly, unlike `aria-label`), with a per-instance unique id.
 - `partialStarsHTML` wrappers are `aria-hidden="true"` (decorative); the PDP badge (`<a>`) and listing badge (`<div>`) reference the sr-only span via `aria-labelledby`.
 - `starsHTML` (review cards / modal — no other rating text nearby) gets `role="img"` + `aria-label` so it always has an accessible name with no per-consumer edits.
 - Summary layouts already render the average + count as visible text, so their decorative stars need no extra label.
 
 ### 3. PDP badge correctness (refines ADR_0017)
 - **No `role="figure"` on the PDP badge.** It is a real scroll-to-reviews `<a>`; `role="figure"` suppressed its link role for assistive tech. It keeps its link role and is named by `aria-labelledby`. (The non-interactive listing `<div>` keeps `role="figure"`.)
-- **No static `id="ikr-rating-badge"`.** Duplicate-id risk if two badges ever render; cleanup now selects by `.ikr-rating-badge--pdp`.
-- **Alignment via `data-ikr-align` + CSS** (Loox-style `data-alignment`) instead of an inline `justify-content` style on the badge.
+- **No static duplicate-prone badge id.** Duplicate-id risk if two badges ever render; cleanup now selects by `.renuvex-pr-rating-badge--pdp`.
+- **Alignment via `data-renuvex-align` + CSS** (Loox-style `data-alignment`) instead of an inline `justify-content` style on the badge.
 
 ### 4. Scope: a unified icon system (all widget icons)
 `star-sprite.js` is the single icon sprite for the whole widget. Every
@@ -91,7 +91,7 @@ widget-owned icon is defined once as a `<symbol>` and referenced via `<use>`:
   (`render.js`) stays inline — it renders only when the merchant turns the
   widget OFF (never customer-facing) and carries a one-off inline `style`.
 
-`iconUseSvg` and `ensureStarSprite` write into the **same** `#ikr-icon-sprite`
+`iconUseSvg` and `ensureStarSprite` write into the **same** `#renuvex-pr-icon-sprite`
 container but manage symbols individually: a live-preview star-icon swap replaces
 only the two star symbols and never clobbers the one-off icon symbols.
 
@@ -108,12 +108,12 @@ only the two star symbols and never clobbers the one-off icon symbols.
 - **Keep inlining (status quo).** Valid and shipped by Yotpo, but leaves the measured listing/PDP DOM bloat unaddressed. Rejected.
 
 ## Consequences
-- Star geometry now depends on `#ikr-icon-sprite` existing in the DOM. `ensureStarSprite` runs synchronously inside every read-only renderer before its `<use>` markup is inserted, so the dependency is satisfied by construction; there is no flag/gate to retire.
+- Star geometry now depends on `#renuvex-pr-icon-sprite` existing in the DOM. `ensureStarSprite` runs synchronously inside every read-only renderer before its `<use>` markup is inserted, so the dependency is satisfied by construction; there is no flag/gate to retire.
 - Theme-agnostic: the sprite lives in shared `icons/` core, not in any theme adapter or per-theme bundle. **Future themes beyond ozy inherit it automatically** — a new theme implements only DOM mount/selectors (see [[ADR_0017_Badge_Architecture]] / current-adapter), never icon rendering.
 - Generic one-off symbol ids include source length plus two independent hash passes, and injected symbols carry a source key. The icon set is still trusted/local, but this avoids silent reuse if the helper is later called with a different SVG that collides with an existing id.
 - SEO unaffected: the `AggregateRating` JSON-LD in [rating-badge.js](src/widget/product-widget/rating-badge.js) is independent of the visual DOM.
-- **Amends [[ADR_0017_Badge_Architecture]]** for the PDP badge: its "every badge gets `role=figure` + `aria-label`", the static `id="ikr-rating-badge"`, and the inline `justify-content` are superseded here (link role, `aria-labelledby` sr-only, `data-ikr-align`). The listing badge's `role="figure"` and `pointer-events:none` card-link behavior are unchanged.
-- Dual `data-renuvex-*`/`data-ikr-*` markers are untouched (still ADR_0018 migration debt; retire later via expand/contract).
+- **Amends [[ADR_0017_Badge_Architecture]]** for the PDP badge: its "every badge gets `role=figure` + `aria-label`", static badge id, and inline `justify-content` are superseded here (link role, `aria-labelledby` sr-only, `data-renuvex-align`). The listing badge's `role="figure"` and `pointer-events:none` card-link behavior are unchanged.
+- ADR_0020 later removed the legacy namespace aliases; active sprite, badge, and slot markers are Renuvex-only.
 - After any `src/widget` edit, run `pnpm build:widget` (HMR does not rebundle the widget).
 
 ## Related Source Files

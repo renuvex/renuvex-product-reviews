@@ -27,13 +27,13 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 1. **Tutarlilik**: Tum layout'lar ayni padding/margin dilini konusur. Magic number yerine token ve ortak kural.
 2. **Desktop yan padding birligi**: Dar ekranlarda ve farkli temalarda icerik kenara yapismasin.
 3. **Baslik hizalama birligi**: Tum layout'larda baslik sola yasli (mobile'da da).
-4. **Mobile/desktop ayrimi**: Tek breakpoint (`600px`) uzerinden. Mobile'da `var(--ikr-pad-summary-mobile)` kullanilir.
+4. **Mobile/desktop ayrimi**: Tek breakpoint (`600px`) uzerinden. Mobile'da `var(--renuvex-pr-pad-summary-mobile)` kullanilir.
 
 ## Padding Reference Table
 
 ### Desktop (>= 601px)
 
-| Layout | `.ikr-summary` Padding | Panel/Inner Padding | Baslik Hizasi | Not |
+| Layout | `.renuvex-pr-summary` Padding | Panel/Inner Padding | Baslik Hizasi | Not |
 |---|---|---|---|---|
 | `classic` | `16px 28px 24px` | — (summary = panel) | sol | Base layout, en fazla padding |
 | `compact` | `0 16px` | `16px 28px 24px` (panel) | sol | Header+trigger padding `0`, summary yan padding `16px` |
@@ -43,7 +43,7 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 
 ### Mobile (<= 600px / 768px)
 
-| Layout | `.ikr-summary` Padding | Baslik Hizasi | Gap (Vertical) |
+| Layout | `.renuvex-pr-summary` Padding | Baslik Hizasi | Gap (Vertical) |
 |---|---|---|---|
 | `classic` | `16px 16px` | ortada | `20px` |
 | `compact` | `16px 16px` | sol | `20px` (header-to-panel) |
@@ -55,17 +55,17 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 
 | Variable | Default | Kullanim Yeri |
 |---|---|---|
-| `--ikr-pad-summary-mobile` | `16px` | Tum summary layout'larin mobile yan padding'i |
-| `--ikr-pad-review-mobile` | `16px` | Review item'larin (card/list/gallery) mobile yan padding'i |
-| `--ikr-col-gap` | `20px` | Summary block'lar arasi dikey bosluk (Classic/Split Mobile) |
+| `--renuvex-pr-pad-summary-mobile` | `16px` | Tum summary layout'larin mobile yan padding'i |
+| `--renuvex-pr-pad-review-mobile` | `16px` | Review item'larin (card/list/gallery) mobile yan padding'i |
+| `--renuvex-pr-col-gap` | `20px` | Summary block'lar arasi dikey bosluk (Classic/Split Mobile) |
 
 Tanim yeri: [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js).
 
 ## Baslik Hizalama
 
-Base `.ikr-title` rule:
+Base `.renuvex-pr-title` rule:
 ```css
-.ikr-title {
+.renuvex-pr-title {
   text-align: left;  /* 2026-05-07: center -> left */
 }
 ```
@@ -73,17 +73,17 @@ Base `.ikr-title` rule:
 Mobile override:
 ```css
 @media(max-width:600px) {
-  .ikr-title {
+  .renuvex-pr-title {
     text-align: center;  /* mobile'da ortali */
   }
 }
 ```
 
 Layout-spesifik baslik override'lari (hepsi `text-align: left`):
-- `.ikr-title-compact` — [compact/styles.js](src/widget/summary-layouts/compact/styles.js)
-- `.ikr-title-hero` — [hero/styles.js](src/widget/summary-layouts/hero/styles.js)
-- `.ikr-title-minimal` — [minimal/styles.js](src/widget/summary-layouts/minimal/styles.js)
-- `.ikr-title-split` — [split/styles.js](src/widget/summary-layouts/split/styles.js)
+- `.renuvex-pr-title-compact` — [compact/styles.js](src/widget/summary-layouts/compact/styles.js)
+- `.renuvex-pr-title-hero` — [hero/styles.js](src/widget/summary-layouts/hero/styles.js)
+- `.renuvex-pr-title-minimal` — [minimal/styles.js](src/widget/summary-layouts/minimal/styles.js)
+- `.renuvex-pr-title-split` — [split/styles.js](src/widget/summary-layouts/split/styles.js)
 
 ## Breakpoint
 
@@ -99,7 +99,7 @@ Sistemde iki ana breakpoint yaklasimi vardir:
 
 ## Source Files
 
-- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — base `.ikr-summary`, `.ikr-title`, mobile block
+- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — base `.renuvex-pr-summary`, `.renuvex-pr-title`, mobile block
 - [src/widget/summary-layouts/classic/index.js](src/widget/summary-layouts/classic/index.js) — classic render
 - [src/widget/summary-layouts/compact/styles.js](src/widget/summary-layouts/compact/styles.js) — compact header + panel padding
 - [src/widget/summary-layouts/hero/styles.js](src/widget/summary-layouts/hero/styles.js) — hero padding
@@ -114,5 +114,5 @@ Sistemde iki ana breakpoint yaklasimi vardir:
   - Compact layout mobil sızıntısı giderildi, panel ici bosluk `20px` yapildi.
   - Filtre butonu "Yorum Yap" butonu ile dikeyde esitlendi (`align-items: stretch`).
 - **2026-05-07**: Desktop yan padding birligi saglandi. `hero`, `minimal`, `split` layout'larina `8px` yan padding eklendi.
-- **2026-05-07**: Baslik hizalama birligi saglandi. Base `.ikr-title` `text-align: center` -> `left`. 
-- **2026-05-07**: Ikas temasi padding analizi yapildi. `--ikr-pad-summary-mobile` `16px`, `--ikr-pad-review-mobile` `16px` yapildi.
+- **2026-05-07**: Baslik hizalama birligi saglandi. Base `.renuvex-pr-title` `text-align: center` -> `left`.
+- **2026-05-07**: Ikas temasi padding analizi yapildi. `--renuvex-pr-pad-summary-mobile` `16px`, `--renuvex-pr-pad-review-mobile` `16px` yapildi.

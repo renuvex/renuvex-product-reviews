@@ -55,7 +55,7 @@ Accepted
 ## Consequences
 - New widget module: [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js). Side-effect imported as the first line of [src/widget/index.js](src/widget/index.js) so its listeners are attached before any other widget module evaluates.
 - New public API route: [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts). Uses the existing Upstash Redis client and the existing CORS helper.
-- A new Redis key prefix `ikr_werr_rl:` is used for rate-limit accounting. Coordinate with [[Security_And_Rate_Limits]] when adding other widget endpoints to avoid prefix collisions.
+- Redis key prefix `renuvex_pr_werr_rl:` is used for rate-limit accounting. Coordinate with [[Security_And_Rate_Limits]] when adding other widget endpoints to avoid prefix collisions.
 - Widget bundle size: 47,219 → 47,856 bytes gzipped (+637 bytes, +1.3%). Recorded for future bundle-budget conversations.
 - Sentry will start receiving issues tagged `source: widget`. Set up a saved query or alert on `tags[source]:widget` to separate widget noise from panel noise.
 - Filtering by `widget.js` substring is fragile if the bundle is ever served from a different filename (e.g. a CDN that hash-fingerprints). Track in [[Open_Questions]] if we ever change widget delivery.

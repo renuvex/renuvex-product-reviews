@@ -63,8 +63,8 @@ After the fix:
 - [card/index.js](src/widget/review-layouts/card/index.js), [list/index.js](src/widget/review-layouts/list/index.js), [gallery/index.js](src/widget/review-layouts/gallery/index.js) — review thumbnail'leri için `hideOnImageError`.
 - [review-modal.js](src/widget/product-widget/review-modal.js):
   - Mini şerit thumbnail'leri: `hideOnImageError`.
-  - Ana görsel: `attachImageErrorHandler` ile özel callback — `mainImg` gizlenir, yerine `.ikr-modal-img-error` placeholder eklenir; lightbox navigasyonu (prev/next/swipe/thumbnail row) etkilenmez.
-- [themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — `.ikr-modal-img-error` CSS: koyu zemin, ortalanmış metin.
+  - Ana görsel: `attachImageErrorHandler` ile özel callback — `mainImg` gizlenir, yerine `.renuvex-pr-modal-img-error` placeholder eklenir; lightbox navigasyonu (prev/next/swipe/thumbnail row) etkilenmez.
+- [themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — `.renuvex-pr-modal-img-error` CSS: koyu zemin, ortalanmış metin.
 - Preload `new Image()` (review-modal.js:212) — dokunulmadı; `new Image().src` zaten DOM'a eklenmediği için sessiz fail eder, UI etkisi yok.
 - [public/widget.js](public/widget.js) `pnpm build:widget` ile yeniden üretildi.
 
@@ -75,7 +75,7 @@ After the fix:
 - [src/widget/review-layouts/list/index.js](src/widget/review-layouts/list/index.js)
 - [src/widget/review-layouts/gallery/index.js](src/widget/review-layouts/gallery/index.js)
 - [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js)
-- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — `.ikr-modal-img-error`
+- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — `.renuvex-pr-modal-img-error`
 - [public/widget.js](public/widget.js)
 
 ## Etki (düzeltme sonrası)
@@ -97,5 +97,5 @@ After the fix:
 - [[Open_Questions]] (Q3 — cleanup cron sıklığı)
 
 ## Change Log
-- 2026-05-11: Fixed. `attachImageErrorHandler` + `hideOnImageError` helper'ları eklendi; tüm trusted image render path'leri (strip, card, list, gallery, lightbox mini) `hide` davranışına bağlandı. Lightbox ana görsel için özel placeholder eklendi (`.ikr-modal-img-error` koyu zemin + metin). Tüm fail durumları `console.warn` ile loglanıyor.
+- 2026-05-11: Fixed. `attachImageErrorHandler` + `hideOnImageError` helper'ları eklendi; tüm trusted image render path'leri (strip, card, list, gallery, lightbox mini) `hide` davranışına bağlandı. Lightbox ana görsel için özel placeholder eklendi (`.renuvex-pr-modal-img-error` koyu zemin + metin). Tüm fail durumları `console.warn` ile loglanıyor.
 - 2026-05-11: Sayfa oluşturuldu. Photo strip cap 15 + per-display-size width düzeltmeleriyle birlikte yapılan analiz sonucu açık bulgu olarak kayıt altına alındı.

@@ -43,10 +43,10 @@ widget.js?publicApiKey=02786d4b-a09b-4b36-ad8c-56e6d396f6fd:257 Uncaught Referen
 2. The script request returns `200 OK`.
 3. Public settings and reviews endpoints return valid data for the same `publicApiKey` and product.
 4. Before the widget can subscribe to `IkasEvents`, bootstrap, or render, the browser parses a broken bundle and throws `ReferenceError: modal is not defined`.
-5. Because the bundle fails during evaluation, neither `#ikas-reviews` nor `#ikr-rating-badge` is created.
+5. Because the bundle fails during evaluation, neither `#ikas-reviews` nor `#renuvex-pr-rating-badge` is created.
 
 ## Root Cause
-[styles.js](src/widget/themes/ozy/styles.js) exports widget CSS through a JavaScript template literal. A CSS comment inside that template literal contained raw backticks around `.ikr-modal-left`.
+[styles.js](src/widget/themes/ozy/styles.js) exports widget CSS through a JavaScript template literal. A CSS comment inside that template literal contained raw backticks around `.renuvex-pr-modal-left`.
 
 When esbuild bundled the widget, those backticks prematurely closed the JavaScript template literal. The following CSS text was then parsed as JavaScript, causing the browser to look for a `modal` variable and throw before widget initialization.
 
@@ -69,7 +69,7 @@ The source now contains only the template literal opener and closer backticks fo
 ## Critical Diagnostic Notes
 - When the injected script request is `200 OK` and `publicApiKey` matches an existing store, check the browser console before assuming an ikas injection or theme selector problem.
 - A top-level bundle exception prevents all downstream widget behavior: `IkasEvents` subscription, product bootstrap, review render, and product-title badge injection.
-- `#ikas-reviews` / `#ikr-rating-badge` both missing together can mean the render path never started, not just that the mount anchor or title selector failed.
+- `#ikas-reviews` / `#renuvex-pr-rating-badge` both missing together can mean the render path never started, not just that the mount anchor or title selector failed.
 - CSS stored in JavaScript template literals must not include raw backticks in comments or strings. This is especially important for `src/widget/themes/ozy/styles.js`.
 
 ## Files Changed

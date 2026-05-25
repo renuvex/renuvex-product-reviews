@@ -33,10 +33,10 @@ After scrolling a long-comment photo review inside the mobile lightbox, switchin
 Example: a customer opens a long photo review, scrolls the modal content, then taps next/previous to a short photo review. The short modal content fits the viewport, so dragging vertically does not move the modal and Chrome's URL bar may remain hidden. Switching back to a long review gives the user a scroll range again, and upward scrolling can make the URL bar visible.
 
 ## Root Cause
-[review-modal.js](src/widget/product-widget/review-modal.js) reset only `.ikr-modal-wrap.scrollTop` when switching between reviews. That was too narrow for the three responsive shells:
+[review-modal.js](src/widget/product-widget/review-modal.js) reset only `.renuvex-pr-modal-wrap.scrollTop` when switching between reviews. That was too narrow for the three responsive shells:
 
-- mobile/tablet scroll on `.ikr-modal-wrap`
-- desktop text scroll on `.ikr-modal-right`
+- mobile/tablet scroll on `.renuvex-pr-modal-wrap`
+- desktop text scroll on `.renuvex-pr-modal-right`
 - content replacement can settle after the immediate DOM mutation because the left image column and right text panel are rebuilt/updated together
 
 The previous mobile body lock also applied fixed-body locking to all touch/mobile viewports. Android Chrome has native `overscroll-behavior` support, so fixed-body locking there can make browser chrome state feel more static than necessary. iOS/WebKit still needs the fixed-body strategy.
@@ -44,9 +44,9 @@ The previous mobile body lock also applied fixed-body locking to all touch/mobil
 ## Fix
 [review-modal.js](src/widget/product-widget/review-modal.js) now normalizes review-switch scroll state through one helper:
 
-- resets `.ikr-modal-wrap`
-- resets `.ikr-modal-right`
-- resets `.ikr-modal-scroll-content`
+- resets `.renuvex-pr-modal-wrap`
+- resets `.renuvex-pr-modal-right`
+- resets `.renuvex-pr-modal-scroll-content`
 - moves focus back to the dialog wrapper with `preventScroll`
 - repeats the reset after layout settles via `requestAnimationFrame`
 

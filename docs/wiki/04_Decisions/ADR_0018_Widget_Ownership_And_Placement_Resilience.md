@@ -70,8 +70,8 @@ ikas developer feedback also set the platform boundary:
 ## Decision
 Renuvex Product Reviews owns its script and DOM surfaces explicitly.
 
-- The injected script content carries both the legacy `data-ikr-*` markers and
-  the Renuvex markers: `data-renuvex-app="product-reviews"` and
+- The injected script content carries Renuvex ownership markers:
+  `data-renuvex-app="product-reviews"` and
   `data-renuvex-store-id="<merchantId>"`.
 - The classic loader and ESM runtime only identify this app's script by an
   owned marker or a `widget.js` URL that contains `publicApiKey`. A generic
@@ -80,10 +80,8 @@ Renuvex Product Reviews owns its script and DOM surfaces explicitly.
   behavior must be correct regardless of script order.
 - Product identity still prefers ikas Storefront Events, but the runtime also
   reads the DOM `#__NEXT_DATA__` script when globals are absent.
-- Every rendered storefront surface gets an owned slot wrapper. Existing
-  `ikr-*` classes and data attributes remain for compatibility, while new
-  `renuvex-pr-*` classes and `data-renuvex-*` markers become the forward
-  namespace.
+- Every rendered storefront surface gets an owned slot wrapper using
+  `renuvex-pr-*` classes and `data-renuvex-*` markers.
 - The PDP rating badge owns only its own slot position. If another app inserts
   a node between the product title and the Renuvex badge shortly after render,
   the runtime may move the Renuvex slot back directly under the title. It does
@@ -144,7 +142,9 @@ slots are not available.
 - Theme adapters remain placement-only. Visual tokens and review data logic stay
   outside adapters.
 - Branding migration is implemented in [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]:
-  Renuvex is canonical while `yorum-paneli` / `ikr-*` remain expand-phase aliases.
+  Renuvex is the only active namespace; legacy `yorum-paneli` / `ikr-*`
+  aliases were removed after the contract phase because there were no real
+  merchant installs.
 
 ## Related Source Files
 - [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)

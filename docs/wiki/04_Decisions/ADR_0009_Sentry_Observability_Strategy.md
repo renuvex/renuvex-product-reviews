@@ -27,7 +27,7 @@ Accepted
 ## Context
 Until now the panel had no centralized error visibility. Production failures (Next.js API routes, server actions, client render crashes, hydration mismatches in iframe-mounted admin pages) were only visible through Vercel function logs, which has no grouping, no breadcrumbs, no source maps, and no session timeline. The widget itself is a separate bundle and intentionally stays minimal — its crash strategy is documented under [[Bug_Widget_CSS_Template_Backtick_Crash]] — so widget observability stays out of scope for this ADR.
 
-The maintainer's Sentry CLI and the Sentry MCP server were already authenticated against the `mert-copper` organization (see [[Sentry_Operations]]). What was missing was an SDK actually wired into the Next.js panel and a discipline around what gets sent.
+The maintainer's Sentry CLI and the Sentry MCP server were already authenticated (see [[Sentry_Operations]]). The project now uses the Renuvex Sentry org/project slugs; what was missing for this ADR was an SDK actually wired into the Next.js panel and a discipline around what gets sent.
 
 ## Decision
 1. Adopt `@sentry/nextjs` for the panel app (Next.js 16, App Router, webpack build).
@@ -48,7 +48,7 @@ The maintainer's Sentry CLI and the Sentry MCP server were already authenticated
 - **Replay is the highest-leverage feature for this app.** Most reported bugs are UI-level: hydration mismatches in iframe pages, `IntersectionObserver` mis-fires, modal/lightbox focus issues, and SPA-navigation observer races. Stack traces alone do not show those — a DOM timeline does.
 - **`sendDefaultPii: false` is non-negotiable here.** With PII on, Sentry would receive merchant OAuth tokens and ikas JWTs on every captured error. That is a credential leak by default. We accept losing automatic user-IP attribution; if a specific surface needs identity, it can call `Sentry.setUser({ id: merchantId })` explicitly with non-secret values.
 - **`tracesSampleRate` 0.1 in prod** keeps the quota survivable. Every API hit in the panel produces a transaction; at `1.0` the quota burns in days. Replay is also throttled (5% session, 100% on-error) for the same reason.
-- **DSN from env, not hardcoded.** The wizard hardcoded a DSN it created; we standardize on the DSN already provisioned through MCP and stored in env, so DSN rotation requires no code change. Both DSNs in fact point at the same Sentry project (`yorum-paneli`, ID `4511372449218640`), so existing events are unaffected.
+- **DSN from env, not hardcoded.** The wizard hardcoded a DSN it created; we standardize on the DSN already provisioned through MCP and stored in env, so DSN rotation requires no code change. Both DSNs in fact pointed at the same Sentry project, now named `renuvex-product-reviews`, so existing events are unaffected.
 - **Widget bundle deliberately stays out.** The widget runs on third-party storefronts; shipping Sentry there would bloat the bundle and pull in tracking that merchants did not consent to. Widget crashes are handled with localized try/catch and `console.warn`; see [[Bug_Widget_CSS_Template_Backtick_Crash]].
 
 ## Alternatives Considered
@@ -65,7 +65,7 @@ The maintainer's Sentry CLI and the Sentry MCP server were already authenticated
 - `.gitignore` excludes `.env.sentry-build-plugin` and `.sentryclirc`. Never commit either.
 - Vercel needs the auth token to upload source maps. Without it, prod stack traces will appear minified. The token rotates per the org policy (currently no rotation cadence — flag for [[Open_Questions]]).
 - Sentry quota becomes a thing we can run out of. If quota alerts ever fire, the first lever is dropping `replaysSessionSampleRate`, then `tracesSampleRate`.
-- AI-assisted debugging via Sentry MCP is now project-scoped against `mert-copper/yorum-paneli`.
+- AI-assisted debugging via Sentry MCP is now scoped to `renuvex/renuvex-product-reviews`.
 
 ## Related Source Files
 - [sentry.server.config.ts](sentry.server.config.ts)

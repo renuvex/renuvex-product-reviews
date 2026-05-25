@@ -50,7 +50,7 @@ visual system:
   value (e.g. `favorite:modern`) straight into `getIconStyle` without
   `parseIconValue`, so any non-`star` icon silently fell back to a classic star.
 - **Bug B:** `badge.color` was applied to a wrapper element, but the
-  `.ikr-star-*` class rules in `PARTIAL_STARS_CSS` set `color` directly on the
+  `.renuvex-pr-star-*` class rules in `PARTIAL_STARS_CSS` set `color` directly on the
   glyph elements, so the wrapper color never reached the stars. `badge.color`
   was a dead setting.
 - The listing/card/slider/home/quick-view badges hardcoded `getIconStyle('star',
@@ -81,7 +81,7 @@ The star icon family, star color, and full/half/empty rendering are one
    hardcoding `star`. `partialStarsHTML` remains the single half/full/empty
    engine.
 4. **Color via one variable, on both paths.** Star color flows through a single
-   `--ikr-review-star-color` CSS variable — filled stars and empty-outline stars
+   `--renuvex-pr-review-star-color` CSS variable — filled stars and empty-outline stars
    share it (empty = filled color). The PDP path (`render.js`) and the listing
    path (`listing-badges/index.js`) both set it, so listing badges no longer
    depend on the PDP render path.
@@ -120,7 +120,7 @@ fields stay exactly where merchants already set them.
 - Choosing a non-star icon (heart, leaf, crown, paw, clover, coffee) now renders
   correctly on the PDP title badge (Bug A fixed) and on every listing badge.
 - Star color changes apply consistently to all badges (Bug B fixed); the dead
-  `--ikr-badge-color` variable and `badge.color` field are removed.
+  `--renuvex-pr-badge-color` variable and `badge.color` field are removed.
 - Cold listing-page entry shows the correct brand-color stars without a prior PDP
   visit (the listing path sets its own star color variables).
 - `badge.icon` / `badge.color` are removed from `widgetDefs.ts`. `WidgetSettings.

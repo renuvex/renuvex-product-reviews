@@ -57,7 +57,7 @@ See [[Widget_Architecture]] for full details. Key points:
 - `public/widget.js` classic loader imports `public/widget-runtime/runtime.js`; heavy PDP/listing modules are lazy chunks.
 - MutationObserver re-bootstraps on SPA-style theme nav.
 - Layout-aware settings via `supports` declarations on each layout — admin hides irrelevant fields.
-- Real-time preview via canonical `RENUVEX_PR_SETTINGS_UPDATE` postMessage; `IKR_SETTINGS_UPDATE` remains a legacy alias during the namespace expand phase.
+- Real-time preview via `RENUVEX_PR_SETTINGS_UPDATE` postMessage.
 
 ## Notes
 - The widget assumes one product per page on PDP. Multi-product layouts (looks/sets) need a redesign.
@@ -84,7 +84,7 @@ See [[Widget_Architecture]] for full details. Key points:
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 
 ## Change Log
-- 2026-05-24: Updated widget identity notes for ADR_0020. Renuvex Product Reviews is canonical, while legacy `IKR_*` preview messages stay readable during expand phase.
+- 2026-05-24/25: Updated widget identity notes for ADR_0020. Renuvex Product Reviews is the active namespace; legacy preview-message aliases were removed during the contract cleanup.
 - 2026-05-17: Phase 3 source hardening implemented: non-destructive script lifecycle, daily maintenance reconcile, hashed runtime entry with stable shim, and hidden-link listing badge filter. Post-deploy verification/transfer-size measurement remains.
 - 2026-05-17: Phase 2 module split implemented and verified: `public/widget.js` stays as the ikas-compatible loader URL, while `public/widget-runtime/*` carries ESM runtime/chunks. Dev-store/Sentry verification passed.
 - 2026-05-15: Updated deployed bundle size observation and linked the modular loader target architecture from the Yotpo/Protein Ocean research pass.

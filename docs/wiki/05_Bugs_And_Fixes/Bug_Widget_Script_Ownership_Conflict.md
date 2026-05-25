@@ -63,7 +63,7 @@ app deleted this app's DOM.
 Script ownership is now explicit:
 
 - injected script content includes both `data-renuvex-*` and legacy
-  `data-ikr-*` markers;
+  `data-renuvex-*` markers;
 - loader/config script discovery requires an owned marker or
   `publicApiKey=...`;
 - product context fallback reads DOM `#__NEXT_DATA__` when ikas Storefront

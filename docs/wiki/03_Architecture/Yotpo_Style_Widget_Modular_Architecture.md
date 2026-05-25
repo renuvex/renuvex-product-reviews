@@ -131,9 +131,9 @@ Initial registry candidates:
 Preferred long-term mount contract:
 
 ```html
-<div data-ikr-widget="rating-badge" data-ikr-product-id="..."></div>
-<div data-ikr-widget="reviews-main" data-ikr-product-id="..."></div>
-<div data-ikr-widget="questions-answers" data-ikr-product-id="..."></div>
+<div data-renuvex-widget="rating-badge" data-renuvex-product-id="..."></div>
+<div data-renuvex-widget="reviews" data-renuvex-product-id="..."></div>
+<div data-renuvex-widget="questions-answers" data-renuvex-product-id="..."></div>
 ```
 
 The loader should support placeholders first. If placeholders are absent, it may fall back to theme adapters and heuristics.

@@ -25,7 +25,7 @@ related:
 - **Summary layout** — different visual styles for the per-product review summary block: `classic` / `compact` / `hero` / `minimal` / `split`.
 - **Review layout** — different ways the review list is rendered: `card` / `gallery` / `list`.
 - **Layout-aware setting** — a settings field that hides itself when the active layout doesn't `support` it (`layoutKey + supports` in `widgetDefs.ts`).
-- **Preview mode** — widget.js running in `/preview` iframe with `window.__ikasPreviewMode = true`; reacts to canonical `RENUVEX_PR_SETTINGS_UPDATE` postMessage and accepts the legacy `IKR_SETTINGS_UPDATE` alias during expand phase.
+- **Preview mode** — widget.js running in `/preview` iframe with `window.__ikasPreviewMode = true`; reacts to the `RENUVEX_PR_SETTINGS_UPDATE` postMessage.
 - **Author masking** — public review responses replace last name with initial: `Mert Wilson` → `Mert W.`.
 
 ## ikas-specific

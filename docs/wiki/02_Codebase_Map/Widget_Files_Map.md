@@ -120,8 +120,8 @@ src/widget/
 
 ### Preview mode
 `index.js` checks `window.__ikasPreviewMode === true`. In preview:
-- Listens for `RENUVEX_PR_SETTINGS_UPDATE` postMessage and accepts legacy `IKR_SETTINGS_UPDATE`
-- Posts back `RENUVEX_PR_WIDGET_READY` and legacy `IKR_WIDGET_READY` once mounted
+- Listens for `RENUVEX_PR_SETTINGS_UPDATE` postMessage
+- Posts back `RENUVEX_PR_WIDGET_READY` once mounted
 - Bootstraps with `'mock-product'` and a fixture product name
 
 ### Layout-aware settings (important)

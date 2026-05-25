@@ -35,7 +35,7 @@ source_files:
 
 ## Summary
 
-ikas supports storing JavaScript snippets per storefront. This is enough to run a Yotpo-style storefront loader for this project. The preferred architecture is still one project-owned loader script per storefront, not one ikas script record per widget module. Script content now includes project-owned `data-ikr-*` markers so reconciliation can identify/adopt the correct remote record without depending only on a cached DB id.
+ikas supports storing JavaScript snippets per storefront. This is enough to run a Yotpo-style storefront loader for this project. The preferred architecture is still one project-owned loader script per storefront, not one ikas script record per widget module. Script content now includes project-owned `data-renuvex-*` markers so reconciliation can identify/adopt the correct remote record without depending only on a cached DB id.
 
 ## Official Documentation Evidence
 
@@ -153,7 +153,7 @@ Source: [src/lib/ikas-client/v1-graphql-requests.ts](src/lib/ikas-client/v1-grap
 Runtime injection creates a full script tag:
 
 ```html
-<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async data-renuvex-app="product-reviews" data-renuvex-store-id="<merchantId>" data-ikr-app="yorum-paneli" data-ikr-store-id="<merchantId>"></script>
+<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async data-renuvex-app="product-reviews" data-renuvex-store-id="<merchantId>"></script>
 ```
 
 Source paths:
@@ -217,7 +217,7 @@ For Yotpo-style architecture on ikas:
 - keep one ikas script record per storefront
 - name it predictably, for example `renuvex-product-reviews-widget`
 - use a small loader URL, not the full widget bundle
-- include project-owned `data-ikr-app` and store-id markers in script content
+- include project-owned `data-renuvex-app` and store-id markers in script content
 - avoid blanket delete behavior
 - keep reconciliation non-destructive: read/adopt via v1 list, then write via v2 create/update
 - do not invent destructive cleanup; first resolve the public-docs/MCP/generated-client mismatch with ikas
