@@ -5,7 +5,6 @@ import { fetchReviews, isReviewsFetchError } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
 import { injectRatingBadge } from './rating-badge.js';
 import { CLASSIC_CSS } from '../themes/ozy/styles.js';
-import { THEME_SINGLE_PRODUCT_CONTAINER } from '../themes/ozy/theme.js';
 import { getIconFromSettings } from '../icons/index.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
@@ -37,28 +36,31 @@ function hexToRgba(hex, alpha) {
   return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 }
 
-function getOrCreateReviewsAnchor() {
-  var anchorEl = document.querySelector('[data-renuvex-widget="reviews"]');
-  if (anchorEl) return anchorEl;
+// Review section mount is OPT-IN: it renders only where the merchant places
+// `<div data-renuvex-widget="reviews"></div>` in the theme. There is no
+// auto-create — if the mount is absent, the review section simply does not
+// render. (The PDP rating badge is a separate "badge" feature, injected
+// independently of this mount.)
+function findReviewsMount() {
+  return document.querySelector('[data-renuvex-widget="reviews"]');
+}
 
-  anchorEl = document.createElement('div');
-  anchorEl.setAttribute('data-renuvex-widget', 'reviews');
-  anchorEl.setAttribute('data-renuvex-auto-anchor', '1');
-
-  var productContainer = null;
-  try {
-    productContainer = document.querySelector(THEME_SINGLE_PRODUCT_CONTAINER);
-  } catch (_) {}
-
-  if (productContainer && productContainer.parentNode) {
-    productContainer.parentNode.insertBefore(anchorEl, productContainer.nextSibling);
-    return anchorEl;
+// Rating summary for the PDP title badge, derived from the reviews payload.
+// Mirrors the review-section's own computation so the badge shows the same
+// average/count WITHOUT depending on the review section rendering.
+function getRatingSummary(reviewsData) {
+  var d = reviewsData || {};
+  if (isReviewsFetchError(d)) return { avg: null, totalCount: 0 };
+  var dd = d.data || {};
+  var totalCount = dd.totalCount || 0;
+  var allCount = dd.allCount || 0;
+  var avg = dd.avgRating || '0.0';
+  var reviews = dd.reviews || [];
+  if (!dd.ratingCounts && reviews.length > 0) {
+    var s = reviews.reduce(function (a, r) { return a + r.rating; }, 0);
+    avg = (s / reviews.length).toFixed(1);
   }
-
-  var fallbackParent = document.querySelector('main') || document.body;
-  if (!fallbackParent) return null;
-  fallbackParent.appendChild(anchorEl);
-  return anchorEl;
+  return { avg: allCount > 0 ? avg : null, totalCount: totalCount };
 }
 
 function getOrCreateReviewsSlot(anchorEl, productId) {
@@ -410,7 +412,21 @@ export async function render(productId, settings, reviewsData, productName, orde
     // İkon + stil seçimine göre SVG çifti (filled/empty) al — ICONS registry'sinden
     var iconPair = getIconFromSettings(settings);
 
-    var anchorEl = getOrCreateReviewsAnchor();
+    // PDP rating badge — a "badge" feature: it auto-places on the product title
+    // and is independent of the review-section mount div and the reviews on/off
+    // toggle. Gated only by the badge widget toggle (checked inside
+    // injectRatingBadge). Injected before the opt-in mount check so it shows
+    // even when no review-section mount div is present.
+    try {
+      var ratingSummary = getRatingSummary(reviewsData);
+      injectRatingBadge(ratingSummary.avg, ratingSummary.totalCount, productName, currentBadgeSettings, iconPair, currentProductId);
+    } catch (badgeErr) {
+      try { console.error('[renuvex-pr] rating badge inject error:', badgeErr); } catch (_) {}
+    }
+
+    // Review section is opt-in: render only where the merchant placed
+    // <div data-renuvex-widget="reviews"></div>. No mount -> no review section.
+    var anchorEl = findReviewsMount();
     if (!anchorEl) return;
     var reviewsSlot = getOrCreateReviewsSlot(anchorEl, productId);
     var container = document.getElementById('renuvex-reviews');
@@ -438,7 +454,6 @@ export async function render(productId, settings, reviewsData, productName, orde
       var data = reviewsData || {};
       var hasReviewsFetchError = isReviewsFetchError(data);
       var reviews = hasReviewsFetchError ? [] : ((data.data && data.data.reviews) || []);
-      var totalCount = hasReviewsFetchError ? 0 : ((data.data && data.data.totalCount) || 0);
       setLoadedLightboxReviews(reviews);
 
       // Önceki listener'ları temizle — parentNode her zaman var (anchorEl.appendChild ile eklendi)
@@ -671,12 +686,6 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       container.appendChild(widget);
       probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '' });
-
-      // Rating badge + JSON-LD — görünürlük/boyut "Yıldız Rozeti" widget'ından;
-      // yıldız ikonu + rengi tek kaynaktan (reviews widget) — iconPair geçirilir.
-      injectRatingBadge(allCount > 0 ? avgRatingVal : null, totalCount, productName, currentBadgeSettings, iconPair, currentProductId);
-
-
     } catch (err) {
       console.error('[renuvex-pr] render error:', err);
       container.innerHTML = '<p style="text-align:center;color:#dc2626;">Yorumlar yüklenirken bir hata oluştu.</p>';

@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-25 - feat | Opt-in review mount + badge decoupling
+- Summary: Review section is now opt-in — renders only where the merchant places `<div data-renuvex-widget="reviews"></div>`. Removed the auto-create fallback (no more `main`/`body`/footer last-resort). The PDP rating badge was decoupled from the review render: it injects independently (auto-places on the product title, gated only by the badge widget toggle), so PDP title + listing badges work regardless of the review mount.
+- Reason: Merchant-controlled placement + eliminates the transient "reviews under footer" fallback. Matches the admin's separate `reviews`/`badge` widgets: review section = HTML mount + toggle; badges = auto-DOM + toggle. Supersedes [[Bug_Product_Widget_Missing_Auto_Mount]]'s auto-mount.
+- Key source changes: `render.js` — `getOrCreateReviewsAnchor` → `findReviewsMount` (no create); new `getRatingSummary` helper; `injectRatingBadge` moved before the opt-in mount check (guarded try); removed orphan `totalCount` + unused `THEME_SINGLE_PRODUCT_CONTAINER` import.
+- Verification: `pnpm build:widget`, `node --check`, `pnpm exec tsc --noEmit` 0, `pnpm lint` 0, live re-test on dev store.
+- Updated wiki: [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]], [[Product_Review_Widget]], [[Bug_Product_Widget_Missing_Auto_Mount]], [[Log]]
+
 ## 2026-05-25 - refactor | Public mount contract -> data-renuvex-widget scheme
 - Summary: Renamed the review widget's public mount point and internal section ids off the ad-hoc `ikas-reviews*` naming. Mount is now `<div data-renuvex-widget="reviews"></div>` (scalable per-widget attribute; a future carousel uses `data-renuvex-widget="carousel"`). Internal ids `#ikas-reviews`→`#renuvex-reviews`, `#ikas-reviews-widget`→`#renuvex-reviews-widget`; PDP badge scroll target + IkasEvents subscribe id updated. Auto-mount preserved.
 - Reason: Establish one professional, branded, multi-widget public-mount convention before adding more widgets; `ikas-reviews*` was neither old-brand nor Renuvex.

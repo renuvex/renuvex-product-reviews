@@ -136,9 +136,19 @@ scalable per-widget scheme (future widgets such as a carousel use
 `data-renuvex-widget="carousel"`). The review-section ids were renamed
 `#ikas-reviews`→`#renuvex-reviews` and `#ikas-reviews-widget`→
 `#renuvex-reviews-widget` (badge scroll target + IkasEvents subscribe id
-updated). Auto-mount is preserved, so storefronts without a manual mount div
-keep working. (Supersedes the expand-phase note above that left `#ikas-reviews*`
+updated). (Supersedes the expand-phase note above that left `#ikas-reviews*`
 untouched.)
+
+Update 2026-05-25 (opt-in mount + badge decoupling) — the review section is now
+opt-in: it renders only where the merchant places
+`<div data-renuvex-widget="reviews"></div>`. The previous auto-create fallback
+(insert after the product container, else `main`/`body`) was removed, so a
+missing mount means no review section (and no surprise footer placement). The
+PDP rating badge was decoupled from the review render: it auto-places on the
+product title and is gated only by the badge widget toggle, so badges (PDP title
++ listing) work independently of the review mount. Rationale: explicit
+merchant-controlled placement for the review block; badges stay zero-config.
+Supersedes the auto-mount in [[Bug_Product_Widget_Missing_Auto_Mount]].
 
 ## Verification
 Required checks for this migration:
