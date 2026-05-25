@@ -7,7 +7,7 @@
 import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
-import { buildReplyEl } from '../_shared.js';
+import { buildReplyEl, buildClampedBody } from '../_shared.js';
 
 export var meta = {
   id: 'card',
@@ -26,7 +26,7 @@ export var meta = {
 export var css = '';
 
 export function render(r, allReviews) {
-  var reviewEl = document.createElement('div');
+  var reviewEl = document.createElement('article');
   reviewEl.className = 'renuvex-pr-review renuvex-pr-review-card';
 
   // Satır 1: yıldız | tarih (sağda)
@@ -40,8 +40,9 @@ export function render(r, allReviews) {
   starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
   leftTop.appendChild(starsSpan);
 
-  var dateEl = document.createElement('span');
+  var dateEl = document.createElement('time');
   dateEl.className = 'renuvex-pr-date';
+  if (r.createdAt) dateEl.setAttribute('datetime', r.createdAt);
   dateEl.textContent = formatDate(r.createdAt);
 
   topRow.appendChild(leftTop);
@@ -62,32 +63,11 @@ export function render(r, allReviews) {
   authorEl.textContent = r.author || '';
   reviewEl.appendChild(authorEl);
 
-  // Yorum metni — 4 satırdan uzunsa CSS line-clamp ile kısalt
+  // Yorum metni — 4 satırdan uzunsa CSS line-clamp + keyboard-erişilebilir
+  // "Devamını oku" (shared helper, tek kaynak).
   var comment = (r.comment || '').trim();
   if (comment) {
-    var body = document.createElement('div');
-    body.className = 'renuvex-pr-body renuvex-pr-body-clamped';
-    body.textContent = comment;
-    reviewEl.appendChild(body);
-
-    var readMore = document.createElement('span');
-    readMore.className = 'renuvex-pr-read-more';
-    readMore.textContent = 'Devamını oku';
-    readMore.style.display = 'none';
-    reviewEl.appendChild(readMore);
-
-    // Tarayıcı clamp uyguladı mı kontrol et
-    requestAnimationFrame(function() {
-      if (body.scrollHeight > body.clientHeight + 2) {
-        readMore.style.display = 'inline';
-        var expanded = false;
-        readMore.onclick = function() {
-          expanded = !expanded;
-          body.classList.toggle('renuvex-pr-body-clamped', !expanded);
-          readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
-        };
-      }
-    });
+    reviewEl.appendChild(buildClampedBody(comment, 'renuvex-pr-body').fragment);
   }
 
   // Fotoğraflar
@@ -109,8 +89,16 @@ export function render(r, allReviews) {
       imgEl.className = 'renuvex-pr-img';
       hideOnImageError(imgEl);
       imgEl.setAttribute('data-renuvex-img-url', imgUrl);
+      // Keyboard-erişilebilir lightbox tetiği (img tıklaması klavyeyle çalışmıyordu).
+      imgEl.setAttribute('role', 'button');
+      imgEl.setAttribute('tabindex', '0');
+      imgEl.setAttribute('aria-label', 'Yorum fotoğrafını büyüt');
       (function(url) {
-        imgEl.onclick = function() { openReviewModal(r, url, allReviews); };
+        var open = function() { openReviewModal(r, url, allReviews); };
+        imgEl.onclick = open;
+        imgEl.onkeydown = function(e) {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); open(); }
+        };
       })(imgUrl);
       gallery.appendChild(imgEl);
     });

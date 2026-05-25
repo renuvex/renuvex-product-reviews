@@ -118,10 +118,11 @@ export function renderStarRow(rating, settings, opts) {
   ensureStarSprite(pair);
   var sizePx = opts && opts.sizePx;
   var sizeStyle = sizePx ? 'width:' + sizePx + 'px;height:' + sizePx + 'px;' : '';
+  var st = sizeStyle ? ' style="' + sizeStyle + '"' : '';
   var html = '';
   for (var i = 1; i <= 5; i++) {
     var isFilled = i <= r;
-    html += '<span class="renuvex-pr-icon ' + (isFilled ? 'renuvex-pr-icon-filled' : 'renuvex-pr-icon-empty') + '" style="' + sizeStyle + '">' +
+    html += '<span class="renuvex-pr-icon ' + (isFilled ? 'renuvex-pr-icon-filled' : 'renuvex-pr-icon-empty') + '"' + st + '>' +
             starUseSvg(isFilled ? 'full' : 'outline') +
             '</span>';
   }

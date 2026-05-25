@@ -461,8 +461,9 @@ export async function render(productId, settings, reviewsData, productName, orde
       container.parentNode.replaceChild(fresh, container);
       container = fresh;
 
-      var widget = document.createElement('div');
+      var widget = document.createElement('section');
       widget.id = 'renuvex-reviews-widget';
+      widget.setAttribute('aria-label', 'Ürün yorumları');
       widget.className = 'renuvex-pr-reviews-widget';
       widget.setAttribute('data-renuvex-surface', 'reviews');
       if (productId) {

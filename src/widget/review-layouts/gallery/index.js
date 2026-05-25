@@ -10,7 +10,7 @@ import { starsHTML, formatDate, getFirstTrustedReviewImage, GALLERY_TILE_WIDTH, 
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { GALLERY_CSS } from './styles.js';
-import { buildReplyEl } from '../_shared.js';
+import { buildReplyEl, buildClampedBody } from '../_shared.js';
 
 export var meta = {
   id: 'gallery',
@@ -35,7 +35,7 @@ export function render(r, allReviews) {
   var firstImg = getFirstTrustedReviewImage(r);
   var hasMedia = !!firstImg;
 
-  var reviewEl = document.createElement('div');
+  var reviewEl = document.createElement('article');
   reviewEl.className = 'renuvex-pr-review-gallery' + (hasMedia ? '' : ' renuvex-pr-review-gallery--no-media');
 
   // ─── Sol: içerik ───
@@ -63,43 +63,21 @@ export function render(r, allReviews) {
   content.appendChild(authorEl);
 
   // 4) Tarih
-  var dateEl = document.createElement('div');
+  var dateEl = document.createElement('time');
   dateEl.className = 'renuvex-pr-review-gallery-date';
+  dateEl.style.display = 'block';
+  if (r.createdAt) dateEl.setAttribute('datetime', r.createdAt);
   dateEl.textContent = formatDate(r.createdAt);
   content.appendChild(dateEl);
 
   // Metin (clamp + devamını oku)
+  // Metin (clamp + "Devamını oku"). Foto varsa read-more lightbox'ta tam detayı
+  // açar; foto yoksa kart içinde genişler (shared helper, keyboard-erişilebilir).
   var comment = (r.comment || '').trim();
   if (comment) {
-    var body = document.createElement('div');
-    body.className = 'renuvex-pr-review-gallery-body renuvex-pr-body-clamped';
-    body.textContent = comment;
-    content.appendChild(body);
-
-    // Foto varsa lightbox tam yorum detayını taşır; foto yoksa kart içinde genişler.
-    var readMore = document.createElement('span');
-    readMore.className = 'renuvex-pr-read-more';
-    readMore.textContent = 'Devamını oku';
-    readMore.style.display = 'none';
-    readMore.style.cursor = 'pointer';
-    var expanded = false;
-    readMore.onclick = function() {
-      if (firstImg) {
-        openReviewModal(r, firstImg, allReviews);
-        return;
-      }
-
-      expanded = !expanded;
-      body.classList.toggle('renuvex-pr-body-clamped', !expanded);
-      readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
-    };
-    content.appendChild(readMore);
-
-    requestAnimationFrame(function() {
-      if (body.scrollHeight > body.clientHeight + 2) {
-        readMore.style.display = 'inline';
-      }
-    });
+    content.appendChild(buildClampedBody(comment, 'renuvex-pr-review-gallery-body', firstImg ? {
+      onReadMore: function() { openReviewModal(r, firstImg, allReviews); }
+    } : null).fragment);
   }
 
   reviewEl.appendChild(content);
@@ -120,7 +98,14 @@ export function render(r, allReviews) {
     imgEl.height = Math.round(GALLERY_TILE_WIDTH * 4 / 3);
     hideOnImageError(imgEl);
     imgEl.setAttribute('data-renuvex-img-url', firstImg);
-    imgEl.onclick = function() { openReviewModal(r, firstImg, allReviews); };
+    imgEl.setAttribute('role', 'button');
+    imgEl.setAttribute('tabindex', '0');
+    imgEl.setAttribute('aria-label', 'Yorum fotoğrafını büyüt');
+    var openGalleryImg = function() { openReviewModal(r, firstImg, allReviews); };
+    imgEl.onclick = openGalleryImg;
+    imgEl.onkeydown = function(e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); openGalleryImg(); }
+    };
     mediaWrap.appendChild(imgEl);
     reviewEl.appendChild(mediaWrap);
   }

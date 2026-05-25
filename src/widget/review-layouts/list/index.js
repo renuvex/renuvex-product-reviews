@@ -7,7 +7,7 @@ import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH,
 import { openReviewModal } from '../../product-widget/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { LIST_CSS } from './styles.js';
-import { buildReplyEl } from '../_shared.js';
+import { buildReplyEl, buildClampedBody } from '../_shared.js';
 
 export var meta = {
   id: 'list',
@@ -32,7 +32,7 @@ export function render(r, allReviews) {
   var trustedImages = getTrustedReviewImages(r);
   var hasMedia = trustedImages.length > 0;
 
-  var reviewEl = document.createElement('div');
+  var reviewEl = document.createElement('article');
   reviewEl.className = 'renuvex-pr-review-list' + (hasMedia ? '' : ' renuvex-pr-review-list--no-media');
 
   // ─── Sol kolon: imza grubu (yıldız → yazar → tarih) ───
@@ -52,8 +52,9 @@ export function render(r, allReviews) {
   authorName.textContent = r.author || '';
   authorCol.appendChild(authorName);
 
-  var dateEl = document.createElement('span');
+  var dateEl = document.createElement('time');
   dateEl.className = 'renuvex-pr-date renuvex-pr-review-list-author-date';
+  if (r.createdAt) dateEl.setAttribute('datetime', r.createdAt);
   dateEl.textContent = formatDate(r.createdAt);
   authorCol.appendChild(dateEl);
 
@@ -72,28 +73,7 @@ export function render(r, allReviews) {
 
   var comment = (r.comment || '').trim();
   if (comment) {
-    var body = document.createElement('div');
-    body.className = 'renuvex-pr-review-list-body renuvex-pr-body-clamped';
-    body.textContent = comment;
-    contentCol.appendChild(body);
-
-    var readMore = document.createElement('span');
-    readMore.className = 'renuvex-pr-read-more';
-    readMore.textContent = 'Devamını oku';
-    readMore.style.display = 'none';
-    contentCol.appendChild(readMore);
-
-    requestAnimationFrame(function() {
-      if (body.scrollHeight > body.clientHeight + 2) {
-        readMore.style.display = 'inline';
-        var expanded = false;
-        readMore.onclick = function() {
-          expanded = !expanded;
-          body.classList.toggle('renuvex-pr-body-clamped', !expanded);
-          readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
-        };
-      }
-    });
+    contentCol.appendChild(buildClampedBody(comment, 'renuvex-pr-review-list-body').fragment);
   }
 
   // Mağaza yanıtı orta kolonun altında
@@ -123,8 +103,15 @@ export function render(r, allReviews) {
       imgEl.height = Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3);
       imgEl.setAttribute('data-renuvex-img-url', imgUrl);
       hideOnImageError(imgEl);
+      imgEl.setAttribute('role', 'button');
+      imgEl.setAttribute('tabindex', '0');
+      imgEl.setAttribute('aria-label', 'Yorum fotoğrafını büyüt');
       (function(url) {
-        imgEl.onclick = function() { openReviewModal(r, url, allReviews); };
+        var open = function() { openReviewModal(r, url, allReviews); };
+        imgEl.onclick = open;
+        imgEl.onkeydown = function(e) {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); open(); }
+        };
       })(imgUrl);
       mediaCol.appendChild(imgEl);
     });

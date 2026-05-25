@@ -3,7 +3,7 @@ type: research
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-25
 tags:
   - competitor
   - matrix
@@ -41,7 +41,7 @@ related:
 | Review-request email | 📅 | ✅ | ✅ | ✅ | ✅ |
 | SMS review request | ❌ | ❌ | 🟡 | ✅ | 🟡 |
 | Verified buyer badge | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Rich snippets (JSON-LD) | 📅 | ✅ | ✅ | ✅ | ✅ |
+| Rich snippets (JSON-LD) | ✅ | ✅ | ✅ | ✅ | ✅ |
 | CSV import | 📅 | ✅ | ✅ | ✅ | ✅ |
 | CSV export | 📅 | ✅ | ✅ | ✅ | ✅ |
 | Aspect / attribute reviews | ❌ | 🟡 | 🟡 | 🟡 | ✅ |
@@ -54,7 +54,7 @@ related:
 | Multi-storefront settings | ❌ (merchant-global) | ✅ | ✅ | ✅ | ✅ |
 
 ## Closing the gap (priorities, not commitments)
-1. Rich snippets (high SEO ROI, low cost)
+1. ~~Rich snippets (high SEO ROI, low cost)~~ — **shipped** (AggregateRating JSON-LD in `rating-badge.js`).
 2. Review-request email
 3. CSV import/export (migration story)
 4. Verified buyer badge (we have ikas API access)

@@ -8,7 +8,7 @@ import { PUBLIC_API_KEY } from './config.js';
 
 // Tüm yıldızlar (dolu + boş outline) için tek CSS renk değişkeni — reviews
 // widget ayarından (reviewStarColor) beslenir. Boş yıldız aynı renkte outline.
-export var STAR_COLOR = 'var(--renuvex-pr-review-star-color,var(--renuvex-pr-review-star-color,#f59e0b))';
+export var STAR_COLOR = 'var(--renuvex-pr-review-star-color,#f59e0b)';
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
@@ -22,11 +22,11 @@ export function extractSlug(url) {
 // settings'teki reviewIcon'a göre ICONS registry'sinden SVG alır.
 // Boyut parent CSS (.renuvex-pr-review-stars, .renuvex-pr-modal-stars vb.) tarafından verilir.
 export function starsHTML(rating, settings) {
-  var wrapStyle = 'color:' + STAR_COLOR + ';display:inline-flex;gap:2px;align-items:center;';
   var rounded = Math.round(parseFloat(rating)) || 0;
   // role=img + aria-label: review cards / modal have no other rating text, so the
   // star row carries the accessible name. Inner star svgs stay aria-hidden.
-  return '<span class="renuvex-pr-stars" role="img" aria-label="' + rounded + ' üzerinden 5 yıldız" style="' + wrapStyle + '">' +
+  // Layout + renk artık .renuvex-pr-stars class'ından gelir (inline style yok).
+  return '<span class="renuvex-pr-stars" role="img" aria-label="' + rounded + ' üzerinden 5 yıldız">' +
     renderStarRow(rating, settings) +
     '</span>';
 }
@@ -51,6 +51,7 @@ export function partialStarsHTML(rating, iconPair, opts) {
   var frac = r - whole;
   var snapped = frac < 0.25 ? whole : (frac < 0.75 ? whole + 0.5 : whole + 1);
   var sizeStyle = (opts && opts.sizeStyle) || '';
+  var st = sizeStyle ? ' style="' + sizeStyle + '"' : '';
 
   var html = '';
   for (var i = 1; i <= 5; i++) {
@@ -60,18 +61,18 @@ export function partialStarsHTML(rating, iconPair, opts) {
                                 : 'empty';
 
     if (state === 'full') {
-      html += '<span class="renuvex-pr-star renuvex-pr-star-full" style="' + sizeStyle + '">'
+      html += '<span class="renuvex-pr-star renuvex-pr-star-full"' + st + '>'
             +   starUseSvg('full')
             + '</span>';
     } else if (state === 'empty') {
       // Tam-state empty: outline mimarisi korunuyor (filled+gri değil, outline SVG).
-      html += '<span class="renuvex-pr-star renuvex-pr-star-empty" style="' + sizeStyle + '">'
+      html += '<span class="renuvex-pr-star renuvex-pr-star-empty"' + st + '>'
             +   starUseSvg('outline')
             + '</span>';
     } else { // half
       // Tek geometri iki katmanda: alt boş-renk (outline), üst dolu-renk + clip sol %50.
       // clip-path .renuvex-pr-star-half-fg span'ine uygulanır; <use> ile tam uyumlu.
-      html += '<span class="renuvex-pr-star renuvex-pr-star-half" style="' + sizeStyle + '">'
+      html += '<span class="renuvex-pr-star renuvex-pr-star-half"' + st + '>'
             +   '<span class="renuvex-pr-star-half-bg">' + starUseSvg('outline') + '</span>'
             +   '<span class="renuvex-pr-star-half-fg">' + starUseSvg('full') + '</span>'
             + '</span>';
