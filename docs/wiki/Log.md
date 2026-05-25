@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-05-25 - ops | External Renuvex rename started
+- Summary: Renamed the GitHub repository from `heyomert/new-ikas-app` to `heyomert/renuvex-product-reviews`, updated the local `origin` remote, and set the GitHub repository description to "Renuvex Product Reviews app for ikas".
+- Reason: Align external repository identity with the completed Renuvex Product Reviews source/runtime namespace.
+- Verification: `gh repo view heyomert/renuvex-product-reviews` returns the private renamed repo, and `git ls-remote --heads origin main` resolves the current `main` head. Vercel still reports project `new-ikas-app`; `https://new-ikas-app.vercel.app/widget.js` returns 200 while `https://renuvex-product-reviews.vercel.app/widget.js` returns 404, so Vercel/env/ikas script URL migration is intentionally pending.
+- Updated wiki: [[Deployment_Notes]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-25 - chore | Renuvex namespace audit cleanup
 - Summary: Audited the namespace migration across source, active generated widget assets, public helper scripts, and wiki routing metadata. Rebuilt the widget, removed unreferenced old hashed runtime chunks from the repo, changed the Sentry local fallback to `renuvex-product-reviews`, and updated current wiki pages away from stale expand-phase language.
 - Reason: The hard rename had landed in source, but stale public chunks and docs still made broad repository searches look like the old `ikr` / `yorum-paneli` namespace was active.
