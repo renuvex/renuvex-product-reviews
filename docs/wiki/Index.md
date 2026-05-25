@@ -69,6 +69,7 @@ source_files: []
 - [[Deployment_Notes]]
 - [[Sentry_Operations]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]
+- [[Theme_Adapter_Playbook]]
 
 ## ikas
 - [[Ikas_Platform_Notes]]
@@ -170,4 +171,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-05-25 (added Renuvex namespace migration ADR and refreshed routing)
+**Last Updated:** 2026-05-25 (added theme adapter playbook and refreshed routing)

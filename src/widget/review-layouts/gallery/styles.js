@@ -11,7 +11,7 @@
 //
 // Dikey gap: content kolonu uniform gap kullanmaz, her child kendi
 // margin-top'unu token ile alır (--renuvex-pr-gap-tight/normal/loose). Sözleşme:
-// themes/ozy/styles.js üst yorum bloğu. Yeni satır eklerken magic number
+// product-widget/styles.js üst yorum bloğu. Yeni satır eklerken magic number
 // yazma — ilişki tipine göre token seç.
 
 export var GALLERY_CSS = `

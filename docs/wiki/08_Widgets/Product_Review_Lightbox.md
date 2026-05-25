@@ -28,7 +28,7 @@ The product review lightbox is the photo review detail modal opened from review 
 
 ## Related Source Files
 - [review-modal.js](src/widget/product-widget/review-modal.js) - photo review detail lightbox.
-- [styles.js](src/widget/themes/ozy/styles.js) - `.renuvex-pr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
+- [styles.js](src/widget/product-widget/styles.js) - `.renuvex-pr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
 - [render.js](src/widget/product-widget/render.js) - review layout and photo strip entry points that call `openReviewModal`.
 - [state.js](src/widget/core/state.js) - canonical loaded review collection used by review layout lightbox navigation.
 - [gallery/index.js](src/widget/review-layouts/gallery/index.js) - gallery layout entry points for images and long-text "read more" behavior.
@@ -76,10 +76,10 @@ The product review lightbox is the photo review detail modal opened from review 
 - 2026-05-12: Hardened mobile pull-to-refresh containment. The lightbox now snapshots/restores root scroll styles and scroll position and applies root `overscroll-behavior-y:none`. Related bug: [[Bug_Lightbox_Mobile_Pull_To_Refresh]].
 - 2026-05-11: Documented K2 image error fallback. Main lightbox image failures now show a neutral placeholder while mini thumbnail failures hide the failed thumbnail. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - 2026-05-11: Updated image policy notes after adding build-time public cloud fallback and last-valid widget policy cache. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
-- 2026-05-11: Documented the responsive lightbox contract after adding the 641-800 px stacked tablet shell, mobile viewport-unit fallback chain, and scroll containment updates in [styles.js](src/widget/themes/ozy/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
+- 2026-05-11: Documented the responsive lightbox contract after adding the 641-800 px stacked tablet shell, mobile viewport-unit fallback chain, and scroll containment updates in [styles.js](src/widget/product-widget/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
 - 2026-05-11: Documented lightbox accessibility hardening after adding dialog semantics, focus trap, thumbnail keyboard activation, and focus restore. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
 - 2026-05-11: Closed the card/list/gallery page-slice navigation risk by documenting the canonical loaded review collection in [state.js](src/widget/core/state.js) and [render.js](src/widget/product-widget/render.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
 - 2026-05-11: Updated body scroll lock and history handling notes after hardening [review-modal.js](src/widget/product-widget/review-modal.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
 - 2026-05-10: Updated the lightbox image trust contract after implementing the shared trusted Cloudinary URL policy. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-10: Documented the photo-only lightbox contract after fixing the gallery photo-less read-more path and adding an empty-image guard in [review-modal.js](src/widget/product-widget/review-modal.js). Related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
-- 2026-05-10: Created this page to document the existing photo review detail lightbox separately from the review submission wizard after a technical audit found the two were conflated in the wiki. Related source: [review-modal.js](src/widget/product-widget/review-modal.js), [styles.js](src/widget/themes/ozy/styles.js), related bug note: [[Bug_Review_Detail_Lightbox_Risks]].
+- 2026-05-10: Created this page to document the existing photo review detail lightbox separately from the review submission wizard after a technical audit found the two were conflated in the wiki. Related source: [review-modal.js](src/widget/product-widget/review-modal.js), [styles.js](src/widget/product-widget/styles.js), related bug note: [[Bug_Review_Detail_Lightbox_Risks]].

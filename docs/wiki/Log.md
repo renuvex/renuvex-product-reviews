@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-05-25 - refactor/docs | Clarify theme adapter boundary
+- Summary: Moved shared review widget CSS from `src/widget/themes/ozy/styles.js` to `src/widget/product-widget/styles.js`, left the Ozy styles file as a compatibility re-export / override placeholder, and added [[Theme_Adapter_Playbook]] with the Ozy selector spec and new-theme checklist.
+- Reason: Ozy adapters should own placement selectors only. Shared `renuvex-pr-*` widget styling should not live under a theme-specific folder before adding more theme adapters.
+- Verification: `pnpm build:widget`, `node --check public/widget.js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check` passed. Wiki audit remains Yellow due pre-existing warnings, with 0 errors.
+- Updated wiki: [[Theme_Adapter_Playbook]], [[Ikas_Theme_Limitations]], [[Ikas_Storefront_Script_Capabilities]], [[Open_Questions]], [[Widget_Files_Map]], [[Folder_Structure]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-25 - docs | Renuvex wiki namespace cleanup
 - Summary: Refreshed current wiki maps, widget notes, and ADR summaries so active examples use `renuvex-pr`, `data-renuvex-*`, `RENUVEX_PR_*`, `renuvex_pr_*`, and `renuvex-product-reviews-widget`.
 - Reason: The source/runtime namespace is now Renuvex-only; old `ikr` / `yorum-paneli` terms should not appear as current implementation guidance.

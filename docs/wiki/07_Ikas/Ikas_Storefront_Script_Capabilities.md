@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-15
-updated: 2026-05-24
-last_verified: 2026-05-24
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - ikas
@@ -17,6 +17,7 @@ related:
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[ADR_0002_Widget_Injection_Strategy]]"
   - "[[Ikas_API_Notes]]"
+  - "[[Theme_Adapter_Playbook]]"
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/ikas-client/v1-graphql-requests.ts"
@@ -113,6 +114,7 @@ This section records a direct answer from an ikas developer about storefront scr
 - **Single loader + multiple modules is an accepted, used pattern.** ikas's own partners and ikas's own features do exactly this. ikas did not push a one-script-record-per-module model.
 - **There are NO official stable ids or `data-*` attributes today** that mark specific page areas (e.g. "under the product name", "above the category filters") across themes. ikas does not currently have a feature that exposes such anchored areas.
 - **Storefront Events is the documented, supported mechanism for page/product context.** When the user navigates to a product detail page, ikas pushes an event together with the product data, so the app can know which page the user is on and which product is shown. Docs: <https://builders.ikas.com/docs/storefront-events>
+- Direct quote from ikas developer: "data- ile başlayacak şekilde standart attribute'larımız olacak ikas Studio'da bir çalışmamız olacak ama henüz erken, yapsak bile hemen çok fazla kullanıcıda göremeyeceksinizdir."
 - **Standard `data-` attributes are planned but not yet available.** ikas has upcoming ikas Studio work that will introduce `data-` prefixed standard attributes, but it is early. Even once shipped, it will not be present on many stores for a while — so it cannot be relied on yet.
 - **`isHighPriority` loads the script before Facebook / Google scripts.** This matters for apps that manage cookies/consent. For `order`: setting `order` to `0` or `1` with priority `false` means the Facebook/Google scripts will run before this app's script.
 
@@ -127,6 +129,7 @@ Schema verification on 2026-05-23 confirmed `isMainTheme` belongs to the nested 
 - Keep one project-owned loader `StorefrontJSScript` per storefront. This is confirmed as an accepted ikas pattern, not a workaround.
 - **Do not build theme adapters as the primary mechanism, and do not hack around missing anchors.** The correct, ikas-sanctioned source of page/product context is Storefront Events — not DOM class heuristics. Theme-class selectors should be treated as a temporary fallback only, not the architecture.
 - There is currently no official DOM mount point. Until ikas Studio `data-*` attributes ship and reach enough stores, mounting still requires the app's own anchor/placeholder logic, but page and product identity must come from Storefront Events rather than DOM scraping.
+- Theme adapters are the placement fallback layer. The per-theme selector checklist and Ozy spec live in [[Theme_Adapter_Playbook]].
 - Active theme adapter selection uses `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. This does not remove the need for generic placement heuristics or manual/support fallback.
 - Plan for a future migration to ikas `data-*` attributes once they are broadly available; design the loader so the context source can be swapped without rewriting widget modules.
 - For `isHighPriority` / `order`: this review app does not manage cookies/consent, so it does not need to preempt Facebook/Google scripts. Choose ordering deliberately and document the choice rather than leaving it implicit.

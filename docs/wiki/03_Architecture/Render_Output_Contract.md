@@ -25,7 +25,7 @@ source_files:
   - "src/widget/icons/star-sprite.js"
   - "src/widget/review-layouts/_shared.js"
   - "src/widget/product-widget/rating-badge.js"
-  - "src/widget/themes/ozy/styles.js"
+  - "src/widget/product-widget/styles.js"
 ---
 
 # Render Output Contract

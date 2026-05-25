@@ -48,7 +48,7 @@ related:
   - `.renuvex-pr-photo-strip` — yatay flex container, `overflow-x:auto`
   - `.renuvex-pr-photo-strip-thumb` — tek thumbnail (`<img>`)
   - `.renuvex-pr-photo-strip-arrow-prev` / `.renuvex-pr-photo-strip-arrow-next` — desktop ok butonları
-- CSS dosyası: [themes/ozy/styles.js](src/widget/themes/ozy/styles.js)
+- CSS dosyası: [product-widget/styles.js](src/widget/product-widget/styles.js)
 - Mobile (`@media max-width:600px`) — arrow butonları `display:none`; sadece touch swipe.
 
 ## Admin ayarları
@@ -93,7 +93,7 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [src/widget/core/state.js](src/widget/core/state.js) — `photoStripReviews` state
 - [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js) — lightbox navigation
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `getTrustedReviewImages`, `optimizeImageUrl`, `buildResponsiveImgAttrs`
-- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — strip CSS
+- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js) — strip CSS
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts) — `limit` query param (1-30 clamp)
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) — admin settings
 

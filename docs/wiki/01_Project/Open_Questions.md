@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-19
-last_verified: 2026-05-19
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: medium
 tags:
   - questions
@@ -41,19 +41,19 @@ The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-mo
 
 Reference: [[Yotpo_Style_Widget_Modular_Architecture]]
 
-## Non-Ozy theme support — ikas-blocked (audit finding O2)
-The storefront widget's **listing-badge mount is theme-coupled**: `themes/current-adapter.js`
-`getThemeAdapter()` hard-codes the Ozy adapter, so on any non-Ozy ikas theme
-`findListingContainers()` returns nothing and **no listing badges are injected** — a silent
-failure. PDP / product-context paths are event-driven and stay theme-independent; only the
-listing-badge DOM mount is affected.
-- **Blocked on ikas:** ikas does not expose a stable runtime theme id, nor official
-  page-area `data-*` anchors (per the 2026-05-16 ikas developer feedback).
-- **To unblock — ask ikas:** can a storefront expose its theme id / theme family at
-  runtime? When will ikas Studio `data-*` anchors be broadly available? Until then each
-  new theme needs a hand-written theme adapter + a smoke test.
-- Detail: [[Widget_Architecture_Audit]] (O2), [[Yotpo_Style_Widget_Modular_Architecture]],
-  [[Ikas_Storefront_Script_Capabilities]].
+## Theme adapter coverage - partially resolved, ongoing per-theme work
+The old "Ozy hard-coded" audit risk is superseded. Current code resolves the active
+theme server-side with `listStorefront.themes[].isMainTheme`, persists stable/pending
+state in `StoreSettings.storefrontTheme`, and exposes only public
+`runtime.themeAdapterKey/source` to the widget. `themes/current-adapter.js` then selects
+`ozy` or `generic`.
+
+Still open: each supported non-Ozy theme needs a stable `themeId` mapping, adapter files,
+selector spec, and smoke test. ikas still does not expose official public DOM slots, and
+planned ikas Studio `data-*` attributes are not broad enough to rely on today.
+
+Detail: [[Theme_Adapter_Playbook]], [[Ikas_Theme_Limitations]],
+[[Ikas_Storefront_Script_Capabilities]].
 
 ## `VIEW_LISTING` undocumented ikas event — ikas-blocked (audit finding O6)
 `core/storefront-context.js` depends on the `VIEW_LISTING` Storefront Event for

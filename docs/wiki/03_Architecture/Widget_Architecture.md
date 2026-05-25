@@ -34,6 +34,7 @@ source_files:
   - "src/widget/observer.js"
   - "src/widget/product-widget/bootstrap.js"
   - "src/widget/product-widget/render.js"
+  - "src/widget/product-widget/styles.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
   - "src/widget/themes/current-adapter.js"
@@ -97,7 +98,8 @@ deployment before claiming live performance improvement.
 | [summary-layouts/](src/widget/summary-layouts/) | `classic` / `compact` / `hero` / `minimal` / `split` summary layouts. |
 | [themes/current-adapter.js](src/widget/themes/current-adapter.js) | Runtime-selected adapter registry. Defaults to Ozy unless public settings select `generic`. |
 | [themes/generic/](src/widget/themes/generic/) | Conservative unknown-theme adapter; avoids Ozy-specific selectors and relies on generic scoped link/title heuristics. |
-| [themes/ozy/](src/widget/themes/ozy/) | Theme-specific styles/selectors plus fallback adapter. Default. |
+| [product-widget/styles.js](src/widget/product-widget/styles.js) | Shared Renuvex review widget CSS. Theme-agnostic; imported by PDP review render. |
+| [themes/ozy/](src/widget/themes/ozy/) | Ozy selectors plus fallback adapter. Theme-specific CSS should only live here if it is a real Ozy override. |
 
 ## Lifecycle
 
@@ -221,11 +223,11 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - 2026-05-12: Split widget icon architecture into [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js), [src/widget/icons/filter-icons.js](src/widget/icons/filter-icons.js), and [src/widget/icons/index.js](src/widget/icons/index.js), with [src/widget/icons.js](src/widget/icons.js) retained as a compatibility re-export.
 - 2026-05-11: Cloud-name runtime contract removed. The widget now consumes a build-time injected constant only; settings response, runtime cache, setter, and warn helper all deleted (~90 lines). Related ADR: [[ADR_0008_Cloud_Name_Build_Time_Only]]. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: Documented the durable review image policy contract after adding build-time cloud fallback and widget-side last-valid policy cache. (Superseded same day by ADR_0008.) Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
-- 2026-05-11: Documented the lightbox three-tier responsive contract and viewport-unit fallback after updating [styles.js](src/widget/themes/ozy/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
+- 2026-05-11: Documented the lightbox three-tier responsive contract and viewport-unit fallback after updating [styles.js](src/widget/product-widget/styles.js). Related bug: [[Bug_Lightbox_Tablet_Viewport_And_Scroll]].
 - 2026-05-11: Documented lightbox focus management as part of the widget runtime risk profile after adding modal dialog semantics and focus trapping. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
 - 2026-05-11: Documented the review fetch error-state contract: stale data is preferred, otherwise the widget renders a retryable error state instead of an empty review list. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
 - 2026-05-11: Documented `loadedLightboxReviews` as widget runtime state for card/list/gallery lightbox navigation across all currently loaded reviews. Related note: [[Product_Review_Lightbox]].
 - 2026-05-10: Documented trusted review image URL filtering as part of widget runtime architecture. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Updated the widget architecture note after removing the legacy inline/page review form. Review submission is now modal-only.
-- 2026-05-06: Removed `primaryColor`/`primaryTextColor` from the widget runtime (they were not in the admin schema and only created confusion). Historical note: this first used legacy fixed CSS fallback vars, but [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] later moved the active runtime contract to `--renuvex-pr-*`. Related source: [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/themes/ozy/styles.js).
+- 2026-05-06: Removed `primaryColor`/`primaryTextColor` from the widget runtime (they were not in the admin schema and only created confusion). Historical note: this first used legacy fixed CSS fallback vars, but [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] later moved the active runtime contract to `--renuvex-pr-*`. Related source: [render.js](src/widget/product-widget/render.js), [styles.js](src/widget/product-widget/styles.js).
 - 2026-05-10: Documented the photo review detail lightbox as a separate widget runtime path and linked its open audit risks. Related source: [review-modal.js](src/widget/product-widget/review-modal.js), related note: [[Product_Review_Lightbox]].

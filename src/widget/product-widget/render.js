@@ -4,7 +4,7 @@ import { getFirstTrustedReviewImage, getTrustedReviewImages, injectStyles, PHOTO
 import { fetchReviews, isReviewsFetchError } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
 import { injectRatingBadge } from './rating-badge.js';
-import { CLASSIC_CSS } from '../themes/ozy/styles.js';
+import { CLASSIC_CSS } from './styles.js';
 import { getIconFromSettings } from '../icons/index.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';

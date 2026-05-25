@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-18
-last_verified: 2026-05-18
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -20,7 +20,11 @@ source_files:
   - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
+  - "src/widget/product-widget/styles.js"
+  - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/ozy/adapter.js"
+  - "src/widget/themes/ozy/theme.js"
+  - "src/widget/themes/generic/adapter.js"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
 tags:
@@ -35,7 +39,7 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `product-widget/` and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/styles.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `product-widget/` and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `product-widget/styles.js`, not inside a theme adapter folder.
 
 ## Tree
 
@@ -70,6 +74,7 @@ src/widget/
 │  ├─ bootstrap.js                # Mount widget into product detail anchor
 │  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA)
 │  ├─ rating-badge.js             # Star+count badge above product title
+│  ├─ styles.js                  # Shared Renuvex review widget CSS
 │  ├─ title-finder.js             # Heuristic to locate product title in any theme
 │  ├─ review-modal.js             # Photo review detail lightbox
 │  └─ review-form-modal/
@@ -110,7 +115,7 @@ src/widget/
    └─ ozy/
       ├─ adapter.js               # Ozy fallback DOM placement adapter.
       ├─ theme.js                 # Theme-specific selectors / hooks
-      └─ styles.js                # Theme-specific styles
+      └─ styles.js                # Ozy override placeholder / compatibility re-export
 ```
 
 ## Key concepts
@@ -130,7 +135,7 @@ src/widget/
 - ⚠️ When you add a new layout, declare `supports` keys for everything any setting could check. Otherwise admin shows fields that have no effect.
 
 ### Theme variant
-`scripts/build-widget.mjs` aliases `themes/ozy/styles.js` to a different theme folder when `--theme=new-theme`. Output: `widget-new-theme.js`. **The `themes/new-theme/` directory does not exist on disk** — only `themes/ozy/` is present. So `pnpm build:widget --theme=new-theme` would currently fail. The starter scaffold expects the user to add `themes/new-theme/` as a sibling. Source code imports directly from `../themes/ozy/...` (verified: `render.js` and `listing-badges/inject.js`). How runtime selects between `widget.js` and `widget-new-theme.js` is also unclear — see [[Open_Questions]].
+Runtime theme selection is not a per-theme bundle split. The live widget receives `runtime.themeAdapterKey/source` from public settings and selects the adapter through `themes/current-adapter.js`. The historical `--theme=new-theme` build alias still exists in [scripts/build-widget.mjs](scripts/build-widget.mjs), but it is not the current adapter model. Base review widget CSS now imports from `product-widget/styles.js`; `themes/ozy/styles.js` is only a compatibility re-export / future Ozy override placeholder.
 
 ## What lives in `public/`
 - [public/widget.js](public/widget.js) — built classic loader (committed). Don't hand-edit.

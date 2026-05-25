@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-25
 tags:
   - structure
 related:
@@ -129,6 +129,7 @@ renuvex-product-reviews/
 │     │  ├─ bootstrap.js
 │     │  ├─ rating-badge.js
 │     │  ├─ render.js
+│     │  ├─ styles.js           # Shared Renuvex review widget CSS
 │     │  ├─ review-form-modal/   # Multi-step submission wizard
 │     │  ├─ review-modal.js
 │     │  └─ title-finder.js      # Heuristic: locate product title in arbitrary themes
@@ -138,7 +139,7 @@ renuvex-product-reviews/
 │     │  └─ input-modality.js    # wasLastInputKeyboard() — global last-input-modality tracker
 │     ├─ summary-layouts/        # classic / compact / hero / minimal / split / shared
 │     └─ themes/
-│        └─ ozy/                 # Default theme — styles.js + theme.js
+│        └─ ozy/                 # Ozy selector adapter + optional style override placeholder
 │
 └─ docs/
    └─ wiki/                      # 👈 This wiki (project memory)
@@ -151,7 +152,7 @@ renuvex-product-reviews/
 - `widgetDefs.ts` (admin) and `widget-settings.ts` (server) share schema; widget.js receives the same settings via `/api/public/settings`. Don't duplicate — derive.
 - `src/widget/icons/` is the current icon source of truth. Import new code from [src/widget/icons/index.js](src/widget/icons/index.js); [src/widget/icons.js](src/widget/icons.js) exists only as a compatibility re-export.
 - `review-images.ts` is the server-side source of truth for trusted review image URLs. Widget helper logic in `src/widget/core/helpers.js` mirrors this contract for storefront defense in depth.
-- **Theme directory naming quirk**: only `src/widget/themes/ozy/` exists today. The build script ([scripts/build-widget.mjs](scripts/build-widget.mjs)) accepts `--theme=default` (no aliasing — uses direct imports from `themes/ozy/...`) or `--theme=new-theme` (aliases `themes/ozy/styles.js` → `themes/new-theme/styles.js`). The `themes/new-theme/` folder does **not** currently exist, so `pnpm build:widget --theme=new-theme` would fail. The Turkish `.proje-dokuman.md` references both `default/` and `new-theme/` directories that don't match the actual filesystem — that doc is partially stale on this point. Tracked in [[Open_Questions]].
+- **Theme adapter note**: runtime theme selection is through public settings (`runtime.themeAdapterKey/source`) and `src/widget/themes/current-adapter.js`, not per-theme bundle URLs. Shared review widget CSS lives in `src/widget/product-widget/styles.js`; `src/widget/themes/ozy/styles.js` is only a compatibility re-export / future Ozy-specific override placeholder. The older `--theme=new-theme` build alias still exists, but it is not the current adapter model. See [[Theme_Adapter_Playbook]].
 
 ## Obsidian Links
 - [[Important_Files]]

@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-23
-last_verified: 2026-05-23
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - ikas
@@ -14,6 +14,7 @@ related:
   - "[[Ikas_Widget_Injection_Notes]]"
   - "[[Ikas_Storefront_Script_Capabilities]]"
   - "[[Widget_Architecture]]"
+  - "[[Theme_Adapter_Playbook]]"
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/storefront-theme.ts"
@@ -25,12 +26,13 @@ source_files:
   - "src/widget/product-widget/title-finder.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/themes/current-adapter.js"
+  - "src/widget/product-widget/styles.js"
 ---
 
 # ikas Theme Limitations
 
 ## Summary
-The widget runs inside arbitrary merchant themes. ikas does not expose a browser-runtime theme detector or stable DOM mount points today, so the widget still needs Storefront Events for page/product context plus DOM heuristics or adapters for placement. ikas developer feedback on 2026-05-23 says Admin API `listStorefront` can identify the published theme by checking `themes[].isMainTheme: true`.
+The widget runs inside arbitrary merchant themes. ikas does not expose a browser-runtime theme detector or stable DOM mount points today, so the widget still needs Storefront Events for page/product context plus DOM heuristics or adapters for placement. ikas developer feedback on 2026-05-23 says Admin API `listStorefront` can identify the published theme by checking `themes[].isMainTheme: true`. Direct ikas feedback also says standard `data-*` storefront attributes are planned for ikas Studio, but are too early and too sparsely deployed to rely on today.
 
 ## What we control
 - A single `<script>` per storefront via `StorefrontJSScript`.
@@ -60,12 +62,13 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - The public storefront widget never calls ikas Admin APIs. Theme detection stays server-side to avoid exposing tokens, storefront latency, and rate-limit risk.
 
 ## Theme Integration Points Today
-- [src/widget/themes/ozy/](src/widget/themes/ozy/) - selectors and styles for the default theme.
+- [src/widget/themes/ozy/](src/widget/themes/ozy/) - Ozy selectors, adapter behavior, and optional Ozy-specific style overrides.
 - [src/widget/themes/generic/](src/widget/themes/generic/) - conservative fallback adapter for unknown active themes.
 - [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts) - resolves Admin API storefront/theme metadata into public runtime adapter metadata.
 - [src/widget/product-widget/title-finder.js](src/widget/product-widget/title-finder.js) - generic heuristic to locate product title.
 - [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) - product detection fallback.
 - [src/widget/listing-badges/collect.js](src/widget/listing-badges/collect.js) - listing card discovery.
+- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js) - shared Renuvex review widget CSS; this is intentionally outside theme adapter folders.
 
 ## Known Constraints / TODO
 - No structured theme widget surface or stable DOM mount point from ikas is confirmed today.
@@ -75,6 +78,7 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 ## Workarounds We Use
 - MutationObserver in [src/widget/observer.js](src/widget/observer.js) to handle SPA-style navigation.
 - Defensive selectors in `themes/ozy/`.
+- A per-theme adapter checklist in [[Theme_Adapter_Playbook]], with Ozy as the current reference implementation.
 - Storefront Events remain the primary context source. `listStorefront.themes[].isMainTheme` can only help select an adapter; it does not replace runtime placement checks.
 
 ## Notes
@@ -87,6 +91,7 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - [src/lib/storefront-theme-sync.ts](src/lib/storefront-theme-sync.ts)
 - [src/app/api/admin/storefront-theme/sync/route.ts](src/app/api/admin/storefront-theme/sync/route.ts)
 - [src/widget/themes/](src/widget/themes/)
+- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js)
 - [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js)
 - [src/widget/product-widget/title-finder.js](src/widget/product-widget/title-finder.js)
 - [src/widget/observer.js](src/widget/observer.js)
@@ -95,4 +100,5 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - [[Ikas_Widget_Injection_Notes]]
 - [[Ikas_Storefront_Script_Capabilities]]
 - [[Widget_Architecture]]
+- [[Theme_Adapter_Playbook]]
 - [[Open_Questions]]

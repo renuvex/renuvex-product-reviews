@@ -59,7 +59,7 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 | `--renuvex-pr-pad-review-mobile` | `16px` | Review item'larin (card/list/gallery) mobile yan padding'i |
 | `--renuvex-pr-col-gap` | `20px` | Summary block'lar arasi dikey bosluk (Classic/Split Mobile) |
 
-Tanim yeri: [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js).
+Tanim yeri: [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js).
 
 ## Baslik Hizalama
 
@@ -99,7 +99,7 @@ Sistemde iki ana breakpoint yaklasimi vardir:
 
 ## Source Files
 
-- [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — base `.renuvex-pr-summary`, `.renuvex-pr-title`, mobile block
+- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js) — base `.renuvex-pr-summary`, `.renuvex-pr-title`, mobile block
 - [src/widget/summary-layouts/classic/index.js](src/widget/summary-layouts/classic/index.js) — classic render
 - [src/widget/summary-layouts/compact/styles.js](src/widget/summary-layouts/compact/styles.js) — compact header + panel padding
 - [src/widget/summary-layouts/hero/styles.js](src/widget/summary-layouts/hero/styles.js) — hero padding
