@@ -191,24 +191,6 @@ export function formatDate(iso) {
   return new Date(iso).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// 6-char (#rrggbb) veya 8-char (#rrggbbaa) hex. 8-char gelirse alpha yoksayilir
-// (bu fonksiyon sadece RGB kanallari lazim — caller opacity uygulayacak).
-function hexToRgb(hex) {
-  var m = /^#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/.exec(hex);
-  if (!m) return null;
-  return [parseInt(m[1].slice(0,2),16), parseInt(m[1].slice(2,4),16), parseInt(m[1].slice(4,6),16)];
-}
-
-export function applyWidgetColor(color) {
-  // react-colorful 8-char hex (#rrggbbaa) gonderebilir — kabul et.
-  var validColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(color) ? color : '#111111';
-  document.documentElement.style.setProperty('--renuvex-pr-color', validColor);
-  document.documentElement.style.setProperty('--renuvex-pr-color', validColor);
-  var rgb = hexToRgb(validColor);
-  document.documentElement.style.setProperty('--renuvex-pr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
-  document.documentElement.style.setProperty('--renuvex-pr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
-}
-
 export function injectStyles(_color, css) {
   var el = document.getElementById('renuvex-pr-styles');
   if (!el) {
@@ -217,8 +199,7 @@ export function injectStyles(_color, css) {
     document.head.appendChild(el);
   }
   el.textContent = (css);
-  // applyWidgetColor removed — --renuvex-pr-color and --renuvex-pr-color-light are no longer
-  // used by styles.js. All color surfaces now use their own specific variables.
+  // Renk yüzeyleri kendi özel CSS değişkenlerini kullanır; global renk var enjeksiyonu yok.
 }
 
 var REVIEW_IMAGE_ALLOWED_EXT = { jpg: true, jpeg: true, png: true, webp: true, gif: true, avif: true };
