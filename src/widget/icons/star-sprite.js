@@ -6,7 +6,7 @@
 // here is one global icon system: every widget icon is defined once as a
 // <symbol> and referenced via <use href="#…">.
 //
-// Single sprite container (`#ikr-icon-sprite`), symbols added individually and
+// Single sprite container (`#renuvex-pr-icon-sprite`), symbols added individually and
 // idempotently. The star symbols use fixed ids and are swapped in place when the
 // merchant changes the icon (live preview) WITHOUT clobbering other icons'
 // symbols. Generic one-off icons get a content-hashed id and are injected once.
@@ -15,10 +15,10 @@
 // markup is inserted, so a <use> never resolves against a missing <symbol>.
 // SSR-safe: every entry point guards on `document`/`DOMParser`.
 
-export var STAR_SYMBOL_FULL_ID = 'ikr-sym-star-full';
-export var STAR_SYMBOL_OUTLINE_ID = 'ikr-sym-star-outline';
+export var STAR_SYMBOL_FULL_ID = 'renuvex-pr-sym-star-full';
+export var STAR_SYMBOL_OUTLINE_ID = 'renuvex-pr-sym-star-outline';
 
-var SPRITE_ID = 'ikr-icon-sprite';
+var SPRITE_ID = 'renuvex-pr-icon-sprite';
 var currentStarKey = null;
 
 function hashStr(s, seed) {
@@ -81,7 +81,7 @@ function putSymbol(svgString, symbolId, replace) {
   if (typeof document === 'undefined' || typeof DOMParser === 'undefined') return false;
   var key = symbolKey(svgString);
   var existing = document.getElementById(symbolId);
-  if (existing && !replace) return existing.getAttribute('data-ikr-symbol-key') === key;
+  if (existing && !replace) return existing.getAttribute('data-renuvex-symbol-key') === key;
   var svgRoot = getSpriteSvg();
   if (!svgRoot) return false;
   var parsed = new DOMParser().parseFromString(
@@ -91,7 +91,7 @@ function putSymbol(svgString, symbolId, replace) {
   var wrapper = parsed && parsed.documentElement;
   if (!wrapper || String(wrapper.nodeName).toLowerCase() !== 'svg' || !wrapper.firstChild) return false;
   var symbol = wrapper.firstChild;
-  symbol.setAttribute('data-ikr-symbol-key', key);
+  symbol.setAttribute('data-renuvex-symbol-key', key);
   if (existing && replace && existing.parentNode) existing.parentNode.removeChild(existing);
   svgRoot.appendChild(document.importNode(symbol, true));
   return true;
@@ -109,7 +109,7 @@ export function ensureStarSprite(iconPair) {
 
 export function starUseSvg(state) {
   var id = state === 'outline' ? STAR_SYMBOL_OUTLINE_ID : STAR_SYMBOL_FULL_ID;
-  return '<svg class="ikr-star-svg" viewBox="0 0 256 256" aria-hidden="true"><use href="#' + id + '"/></svg>';
+  return '<svg class="renuvex-pr-star-svg" viewBox="0 0 256 256" aria-hidden="true"><use href="#' + id + '"/></svg>';
 }
 
 // ── Generic one-off icon (content-hashed id, injected once) ──────────────────
@@ -120,13 +120,13 @@ export function iconUseSvg(svgString, className) {
   if (typeof document === 'undefined' || typeof DOMParser === 'undefined' || typeof svgString !== 'string' || !svgString) {
     return svgString || '';
   }
-  var id = 'ikr-sym-' + symbolKey(svgString);
+  var id = 'renuvex-pr-sym-' + symbolKey(svgString);
   putSymbol(svgString, id, false);
   if (!document.getElementById(id)) return svgString;
   var vb = getAttr(svgString, 'viewBox') || '0 0 24 24';
   var w = getAttr(svgString, 'width');
   var h = getAttr(svgString, 'height');
-  var out = '<svg class="' + (className || 'ikr-icon-svg') + '" viewBox="' + vb + '"';
+  var out = '<svg class="' + (className || 'renuvex-pr-icon-svg') + '" viewBox="' + vb + '"';
   if (w) out += ' width="' + w + '"';
   if (h) out += ' height="' + h + '"';
   out += ' aria-hidden="true"><use href="#' + id + '"/></svg>';

@@ -4,7 +4,7 @@
 // "modal aç/kapat" sözleşmesini sağlar; içeriği `body` parametresiyle alır.
 //
 // Bağımsızlık: Mevcut review-modal'a hiçbir bağımlılık yok. Class'lar
-// 'ikr-fwizard-' prefix'iyle izole.
+// 'renuvex-pr-fwizard-' prefix'iyle izole.
 
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 import { iconUseSvg } from '../../icons/star-sprite.js';
@@ -17,18 +17,18 @@ export function createWizardShell(opts) {
 
   // ─── DOM ──────────────────────────────────────────────────────────
   var overlay = document.createElement('div');
-  overlay.className = 'ikr-fwizard-overlay';
+  overlay.className = 'renuvex-pr-fwizard-overlay';
   overlay.tabIndex = -1;
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', 'Yorum yapma formu');
 
   var modal = document.createElement('div');
-  modal.className = 'ikr-fwizard';
+  modal.className = 'renuvex-pr-fwizard';
   overlay.appendChild(modal);
 
   var closeBtn = document.createElement('button');
-  closeBtn.className = 'ikr-fwizard-close';
+  closeBtn.className = 'renuvex-pr-fwizard-close';
   closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', 'Kapat');
   closeBtn.innerHTML =
@@ -36,7 +36,7 @@ export function createWizardShell(opts) {
   modal.appendChild(closeBtn);
 
   var content = document.createElement('div');
-  content.className = 'ikr-fwizard-content';
+  content.className = 'renuvex-pr-fwizard-content';
   modal.appendChild(content);
 
   // ─── State & cleanup ──────────────────────────────────────────────
@@ -141,7 +141,7 @@ export function createWizardShell(opts) {
     overlay.removeEventListener('click', onOverlayClick);
     closeBtn.removeEventListener('click', close);
     // Fade-out animasyonu
-    overlay.classList.remove('ikr-fwizard-open');
+    overlay.classList.remove('renuvex-pr-fwizard-open');
     setTimeout(function () {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       unlockBodyScroll();
@@ -178,7 +178,7 @@ export function createWizardShell(opts) {
     lockBodyScroll();
     // Fade-in için bir tick bekle (DOM ekleme sonrası class transition tetiklensin)
     requestAnimationFrame(function () {
-      overlay.classList.add('ikr-fwizard-open');
+      overlay.classList.add('renuvex-pr-fwizard-open');
       focusFirstWizardControl();
     });
   }
@@ -197,7 +197,7 @@ export function createWizardShell(opts) {
     if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
 
     toastEl = document.createElement('div');
-    toastEl.className = 'ikr-fwizard-toast ikr-fwizard-toast--' + type;
+    toastEl.className = 'renuvex-pr-fwizard-toast renuvex-pr-fwizard-toast--' + type;
     toastEl.textContent = message;
 
     // Modal kutusunun içine ekleyelim ki z-index/scroll bağlamı aynı olsun
@@ -206,7 +206,7 @@ export function createWizardShell(opts) {
     // 4 saniye sonra kalksın
     toastTimer = setTimeout(function () {
       if (toastEl) {
-        toastEl.classList.add('ikr-fwizard-toast--exit');
+        toastEl.classList.add('renuvex-pr-fwizard-toast--exit');
         setTimeout(function () {
           if (toastEl) { try { toastEl.remove(); } catch (e) {} toastEl = null; }
         }, 300);

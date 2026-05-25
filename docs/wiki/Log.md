@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-25 - refactor | Renuvex namespace contract phase (legacy ikr removed)
+- Summary: Completed the hard rename — removed every legacy `ikr-*`, `data-ikr-*`, `IKR_*`, `--ikr-*`, `#ikr-*`, and `yorum-paneli` identifier from source. The canonical Renuvex namespace is now the only namespace in DOM/CSS/events/cache/build. `core/namespace.js` is reduced to single-namespace preview helpers (runtime class-mirror observer + CSS expand layer removed).
+- Reason: Only the dev store is installed (no real merchant installs), so the expand/contract overlap window is unnecessary; a clean single-namespace codebase is safe.
+- Key source changes: mechanical `ikr-`→`renuvex-pr-` and `data-ikr-`→`data-renuvex-` across 43 widget files; camelCase `ikrStepEnter`/`ikrModal` → `renuvexPr*`; namespace.js simplified; storefront matcher dropped legacy name/marker tiers (the still-legacy live record is adopted via the `publicApiKey` fallback and rewritten on next reconcile, no duplicate); storefront-widget-url tag emits Renuvex markers only. External service/repo rename still deferred.
+- Verification: `pnpm build:widget` (active bundle ikr-free, renuvex-native), `node --check` on built bundles, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, live storefront re-test on dev store (home + PDP + listing render, 200s, 0 console errors, no Sentry/runtime errors).
+- Updated wiki: [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]], [[Log]]
+
 ## 2026-05-24 - refactor | Renuvex Product Reviews namespace expand phase
 - Summary: Migrated canonical identity from Yorum Paneli / `ikr` to Renuvex Product Reviews without removing legacy public aliases. New canonical keys are `product-reviews`, `renuvex-pr`, `renuvex_pr`, and `renuvex-product-reviews-widget`.
 - Reason: The app is now part of the Renuvex brand family, but storefront scripts and cached widget chunks can outlive a deploy. Expand/contract keeps old installations and CDN/browser cache windows safe while making the new identity canonical.

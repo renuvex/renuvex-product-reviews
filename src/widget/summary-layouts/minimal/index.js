@@ -29,28 +29,28 @@ export function render(opts) {
   var onSortChange = opts.onSortChange;
 
   var summary = document.createElement('div');
-  summary.className = 'ikr-summary ikr-summary-minimal';
+  summary.className = 'renuvex-pr-summary renuvex-pr-summary-minimal';
 
   // ─── SOL: avg + yıldız + alt satırda "X yorum üzerinden" ───────
   var info = document.createElement('div');
-  info.className = 'ikr-minimal-info';
+  info.className = 'renuvex-pr-minimal-info';
 
   var topRow = document.createElement('div');
-  topRow.className = 'ikr-minimal-row';
+  topRow.className = 'renuvex-pr-minimal-row';
 
   var avg = document.createElement('span');
-  avg.className = 'ikr-minimal-avg';
+  avg.className = 'renuvex-pr-minimal-avg';
   avg.textContent = avgRatingVal;
   topRow.appendChild(avg);
 
   var stars = document.createElement('span');
-  stars.className = 'ikr-minimal-stars';
+  stars.className = 'renuvex-pr-minimal-stars';
   stars.innerHTML = partialStarsHTML(avgRatingVal, iconPair);
   topRow.appendChild(stars);
 
   // Count artik avg+stars ile ayni satirda — "4.5 ★★★★★ 8 Yorum"
   var count = document.createElement('span');
-  count.className = 'ikr-minimal-count';
+  count.className = 'renuvex-pr-minimal-count';
   count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
   topRow.appendChild(count);
 
@@ -66,11 +66,11 @@ export function render(opts) {
     onWriteClick: openWriteForm,
     onSortChange: onSortChange,
   });
-  var filterWrap = actions.querySelector('.ikr-filter-wrap');
-  var writeBtn = actions.querySelector('.ikr-write-btn');
+  var filterWrap = actions.querySelector('.renuvex-pr-filter-wrap');
+  var writeBtn = actions.querySelector('.renuvex-pr-write-btn');
 
   var actionsSlot = document.createElement('div');
-  actionsSlot.className = 'ikr-minimal-actions';
+  actionsSlot.className = 'renuvex-pr-minimal-actions';
   if (writeBtn) actionsSlot.appendChild(writeBtn);
   if (filterWrap) actionsSlot.appendChild(filterWrap);
   summary.appendChild(actionsSlot);
@@ -78,11 +78,11 @@ export function render(opts) {
   // ─── Mobile-only write satırı (CSS ile sadece <600 görünür) ────
   if (writeBtn) {
     var writeBtnMobile = document.createElement('button');
-    writeBtnMobile.className = 'ikr-write-btn';
+    writeBtnMobile.className = 'renuvex-pr-write-btn';
     writeBtnMobile.textContent = (currentSettings && currentSettings.writeButtonText) || 'Yorum Yap';
     writeBtnMobile.onclick = openWriteForm;
     var writeRow = document.createElement('div');
-    writeRow.className = 'ikr-minimal-write-row';
+    writeRow.className = 'renuvex-pr-minimal-write-row';
     writeRow.appendChild(writeBtnMobile);
     summary.appendChild(writeRow);
   }

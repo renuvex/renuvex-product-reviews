@@ -83,9 +83,9 @@ export async function fetchPhotoStripReviews(productId) {
 }
 
 export async function bootstrap(productId, productName) {
-  var oldBadge = document.getElementById('ikr-rating-badge');
+  var oldBadge = document.getElementById('renuvex-pr-rating-badge');
   if (oldBadge) oldBadge.remove();
-  var oldJsonLd = document.getElementById('ikr-jsonld');
+  var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
   if (oldJsonLd) oldJsonLd.remove();
   if (bootstrapCache[productId]) return;
   bootstrapCache[productId] = true;

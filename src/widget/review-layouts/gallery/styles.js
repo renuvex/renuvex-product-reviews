@@ -10,7 +10,7 @@
 // metnin önüne geçmez — referans tutarlılığı).
 //
 // Dikey gap: content kolonu uniform gap kullanmaz, her child kendi
-// margin-top'unu token ile alır (--ikr-gap-tight/normal/loose). Sözleşme:
+// margin-top'unu token ile alır (--renuvex-pr-gap-tight/normal/loose). Sözleşme:
 // themes/ozy/styles.js üst yorum bloğu. Yeni satır eklerken magic number
 // yazma — ilişki tipine göre token seç.
 
@@ -18,7 +18,7 @@ export var GALLERY_CSS = `
   /* Galeri seçiliyken widget full-bleed yerine 1200px ile sınırlı —
      CSS columns parent genişliğine yayıldığı için widget kendisi sınırlanmalı.
      Diğer layoutlar (card/list) full-bleed olarak kalır. */
-  #ikas-reviews-widget:has(.ikr-review-gallery){
+  #ikas-reviews-widget:has(.renuvex-pr-review-gallery){
     width:auto;
     max-width:1200px;
     margin-left:auto;
@@ -27,100 +27,100 @@ export var GALLERY_CSS = `
     column-gap:32px;
   }
   /* Non-review elemanlar kolon dışına çıkar — summary, başlık, foto strip vs. */
-  #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-title,
-  #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-summary,
-  #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-photo-section,
-  #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-write-btn,
-  #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-load-more,
-  #ikas-reviews-widget:has(.ikr-review-gallery) > .ikr-state-msg{
+  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-title,
+  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-summary,
+  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-photo-section,
+  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-write-btn,
+  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-load-more,
+  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-state-msg{
     column-span:all;
     -webkit-column-span:all;
   }
   /* Item — column içinde kalır, içinde sol-sağ split */
-  .ikr-review-gallery{
+  .renuvex-pr-review-gallery{
     break-inside:avoid;
     -webkit-column-break-inside:avoid;
     page-break-inside:avoid;
     display:grid;
-    grid-template-columns:1fr var(--ikr-gallery-photo-w,120px);
+    grid-template-columns:1fr var(--renuvex-pr-gallery-photo-w,120px);
     column-gap:32px;
     row-gap:8px;
     align-items:start;
-    /* Yan padding theme mobile bloğundan gelir (--ikr-pad-review-mobile).
+    /* Yan padding theme mobile bloğundan gelir (--renuvex-pr-pad-review-mobile).
        Shorthand yan padding'i 0'a resetleyip theme kuralını ezmesin diye
        top/bottom ayrı set. */
     padding-top:18px;padding-bottom:18px;
     margin:0;
-    border-top:1px solid var(--ikr-review-border,#e5e7eb);
+    border-top:1px solid var(--renuvex-pr-review-border,#e5e7eb);
   }
-  .ikr-review-gallery.ikr-review-gallery--no-media{
+  .renuvex-pr-review-gallery.renuvex-pr-review-gallery--no-media{
     grid-template-columns:1fr;
   }
-  .ikr-review-gallery-content{
+  .renuvex-pr-review-gallery-content{
     display:flex;flex-direction:column;min-width:0;
   }
   /* Galeri dikey sıra: stars → title → author → date → body → reply.
      stars→title (normal); title→author (normal); author→date (tight, aynı imza
      grubu); date→body (normal). Bkz: gap sözleşmesi. */
-  .ikr-review-gallery-stars{
+  .renuvex-pr-review-gallery-stars{
     /* en üstte; margin yok */
   }
-  .ikr-review-gallery-title{
+  .renuvex-pr-review-gallery-title{
     font-weight:600;
-    font-size:var(--ikr-review-title-size,15px);
-    color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));
-    margin:var(--ikr-gap-normal) 0 0 0;
+    font-size:var(--renuvex-pr-review-title-size,15px);
+    color:var(--renuvex-pr-review-title,var(--renuvex-pr-text,rgba(0,0,0,1)));
+    margin:var(--renuvex-pr-gap-normal) 0 0 0;
   }
-  .ikr-review-gallery-author{
+  .renuvex-pr-review-gallery-author{
     font-weight:600;
-    font-size:var(--ikr-author-size,14px);
-    color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));
-    margin-top:var(--ikr-gap-normal);
+    font-size:var(--renuvex-pr-author-size,14px);
+    color:var(--renuvex-pr-review-author,var(--renuvex-pr-text,rgba(0,0,0,1)));
+    margin-top:var(--renuvex-pr-gap-normal);
   }
-  .ikr-review-gallery-date{
-    font-size:var(--ikr-review-date-size,12px);
-    color:var(--ikr-review-date,#5e5e5e);
-    margin-top:var(--ikr-gap-tight);
+  .renuvex-pr-review-gallery-date{
+    font-size:var(--renuvex-pr-review-date-size,12px);
+    color:var(--renuvex-pr-review-date,#5e5e5e);
+    margin-top:var(--renuvex-pr-gap-tight);
   }
-  .ikr-review-gallery-body{
+  .renuvex-pr-review-gallery-body{
     line-height:1.55;
-    color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));
-    font-size:var(--ikr-review-text-size,14px);
-    margin-top:var(--ikr-gap-normal);
+    color:var(--renuvex-pr-review-body,var(--renuvex-pr-text,rgba(0,0,0,1)));
+    font-size:var(--renuvex-pr-review-text-size,14px);
+    margin-top:var(--renuvex-pr-gap-normal);
     max-width:340px;
   }
   /* Mobile tap highlight kaldırıldı — modal açılırken görünür kalıyordu */
-  .ikr-review-gallery .ikr-read-more{
+  .renuvex-pr-review-gallery .renuvex-pr-read-more{
     -webkit-tap-highlight-color:transparent;
     tap-highlight-color:transparent;
     user-select:none;-webkit-user-select:none;
   }
-  .ikr-review-gallery-media{
+  .renuvex-pr-review-gallery-media{
     cursor:zoom-in;
   }
   /* Reply full-width: foto+metin altında her iki kolona yayılır */
-  .ikr-review-gallery-reply{
+  .renuvex-pr-review-gallery-reply{
     grid-column:1 / -1;
   }
-  .ikr-review-gallery-media img{
+  .renuvex-pr-review-gallery-media img{
     display:block;width:100%;height:auto;
     aspect-ratio:3/4;object-fit:cover;
-    border-radius:var(--ikr-radius,6px);
-    border:1px solid var(--ikr-photo-image-border,rgba(0,0,0,0.05));
+    border-radius:var(--renuvex-pr-radius,6px);
+    border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
   }
   @media (max-width:600px){
-    #ikas-reviews-widget:has(.ikr-review-gallery){
+    #ikas-reviews-widget:has(.renuvex-pr-review-gallery){
       column-count:1;
       column-gap:0;
     }
-    .ikr-review-gallery{
-      grid-template-columns:1fr var(--ikr-gallery-photo-w-mobile,100px);
+    .renuvex-pr-review-gallery{
+      grid-template-columns:1fr var(--renuvex-pr-gallery-photo-w-mobile,100px);
       column-gap:12px;row-gap:12px;
-      /* Yan padding theme mobile bloguna tasindi (--ikr-pad-review-mobile).
+      /* Yan padding theme mobile bloguna tasindi (--renuvex-pr-pad-review-mobile).
          Burada sadece top/bottom set edilir ki theme kuralini ezmesin. */
       padding-top:16px;padding-bottom:16px;
     }
-    .ikr-review-gallery.ikr-review-gallery--no-media{
+    .renuvex-pr-review-gallery.renuvex-pr-review-gallery--no-media{
       grid-template-columns:1fr;
     }
   }

@@ -93,9 +93,6 @@ function createDefine(runtimePath) {
     __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
     __RENUVEX_PR_RUNTIME_PATH__: JSON.stringify(runtimePath),
     __RENUVEX_PR_WIDGET_VERSION__: JSON.stringify(buildTime),
-    __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
-    __IKR_RUNTIME_PATH__: JSON.stringify(runtimePath),
-    __IKR_WIDGET_VERSION__: JSON.stringify(buildTime),
   };
 }
 

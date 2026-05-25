@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     window.__ikasPreviewMode = true;
     window.__ikasPreviewBaseUrl = '${baseUrl}';
     window.__renuvexProductReviewsPreviewSettings = sessionStorage.getItem('renuvex_pr_preview_settings') || '';
-    window.__ikasPreviewSettings = window.__renuvexProductReviewsPreviewSettings || sessionStorage.getItem('ikr_preview_settings') || '';
+    window.__ikasPreviewSettings = window.__renuvexProductReviewsPreviewSettings || '';
   </script>
   <!-- v= timestamp -> her preview acılısında widget.js bypass cache; admin
        degisiklik yapınca anında güncel goruntu (sadece preview, prod widget'a

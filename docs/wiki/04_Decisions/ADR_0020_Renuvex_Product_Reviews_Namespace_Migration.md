@@ -116,10 +116,19 @@ Tradeoffs:
 
 Deferred:
 
-- Contract cleanup removing `.ikr-*`, `data-ikr-*`, and `IKR_*`.
-- External service/repository rename.
-- Any hard removal of `#ikr-*` IDs after live retention proves no old runtime
-  relies on them.
+- External service/repository rename (Vercel project, Sentry slug, Upstash DB, repo).
+
+Update 2026-05-25 — contract phase completed. Because only the dev store is
+installed (no real merchant installs), the expand/contract overlap window was
+unnecessary, so the legacy aliases were removed in one pass: all `.ikr-*`,
+`data-ikr-*`, `IKR_*`, `--ikr-*`, `#ikr-*`, and `yorum-paneli` identifiers are
+gone from source and the active runtime bundle. `core/namespace.js` is reduced
+to the single-namespace preview helpers (the runtime class-mirror observer and
+CSS expand layer are removed). The storefront matcher dropped its legacy
+name/marker tiers; the still-legacy live ikas script record is adopted via the
+`publicApiKey` fallback and rewritten to canonical on the next reconcile, so no
+duplicate is created. Old hashed runtime chunks remain on disk under the
+existing 7-day retention prune.
 
 ## Verification
 Required checks for this migration:

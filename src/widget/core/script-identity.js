@@ -1,5 +1,4 @@
 export var RENUVEX_APP_MARKER = 'product-reviews';
-export var LEGACY_IKR_APP_MARKER = 'yorum-paneli';
 
 function getDatasetValue(script, key) {
   try {
@@ -38,7 +37,7 @@ function getSearchParams(src) {
 }
 
 export function hasOwnedWidgetMarker(script) {
-  return getDatasetValue(script, 'renuvexApp') === RENUVEX_APP_MARKER || getDatasetValue(script, 'ikrApp') === LEGACY_IKR_APP_MARKER;
+  return getDatasetValue(script, 'renuvexApp') === RENUVEX_APP_MARKER;
 }
 
 export function getPublicApiKeyFromScript(script) {

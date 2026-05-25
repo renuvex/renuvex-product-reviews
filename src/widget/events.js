@@ -43,9 +43,9 @@ function cleanupStaleRatingBadge() {
   try {
     if (location.pathname === lastPathname) return;
     lastPathname = location.pathname;
-    var oldBadge = document.getElementById('ikr-rating-badge');
+    var oldBadge = document.getElementById('renuvex-pr-rating-badge');
     if (oldBadge) oldBadge.remove();
-    var oldJsonLd = document.getElementById('ikr-jsonld');
+    var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
     if (oldJsonLd) oldJsonLd.remove();
   } catch (_) {}
 }
@@ -56,10 +56,10 @@ export function attachHistoryListener() {
 
   // Function-level guard: only wrap history methods that are not already our
   // wrapper. `historyPatched` covers a double call within this module; the
-  // `__renuvexPrPatched`/`__ikrPatched` tags additionally cover a second widget bundle instance
+  // `__renuvexPrPatched` tag additionally covers a second widget bundle instance
   // (duplicate injection) sharing the same global `history` object — without
   // it, each instance would wrap again and run cleanup once per extra wrap.
-  if (!history.pushState.__renuvexPrPatched && !history.pushState.__ikrPatched) {
+  if (!history.pushState.__renuvexPrPatched) {
     var origPush = history.pushState;
     history.pushState = function() {
       var ret = origPush.apply(this, arguments);
@@ -67,9 +67,8 @@ export function attachHistoryListener() {
       return ret;
     };
     history.pushState.__renuvexPrPatched = true;
-    history.pushState.__ikrPatched = true;
   }
-  if (!history.replaceState.__renuvexPrPatched && !history.replaceState.__ikrPatched) {
+  if (!history.replaceState.__renuvexPrPatched) {
     var origReplace = history.replaceState;
     history.replaceState = function() {
       var ret = origReplace.apply(this, arguments);
@@ -77,7 +76,6 @@ export function attachHistoryListener() {
       return ret;
     };
     history.replaceState.__renuvexPrPatched = true;
-    history.replaceState.__ikrPatched = true;
   }
 
   // popstate/hashchange use the same named handler reference, so repeat

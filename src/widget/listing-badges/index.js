@@ -10,10 +10,10 @@ import { clearBadgePlaceholders, disconnectListingBadgeRemovalObservers, injectB
 
 function cleanupListingBadges() {
   disconnectListingBadgeRemovalObservers();
-  document.querySelectorAll('[data-renuvex-listing-badge],[data-ikr-listing-badge]').forEach(function(el) { el.remove(); });
-  document.querySelectorAll('[data-renuvex-pr-badge],[data-ikr-badge]').forEach(function(el) {
+  document.querySelectorAll('[data-renuvex-listing-badge],[data-renuvex-listing-badge]').forEach(function(el) { el.remove(); });
+  document.querySelectorAll('[data-renuvex-pr-badge],[data-renuvex-badge]').forEach(function(el) {
     el.removeAttribute('data-renuvex-pr-badge');
-    el.removeAttribute('data-ikr-badge');
+    el.removeAttribute('data-renuvex-badge');
   });
   clearBadgePlaceholders();
 }
@@ -42,7 +42,7 @@ export async function renderListingBadges() {
     // Rating görseli tek kaynaktan: "Ürün Yorumları" widget'ı (reviewIcon +
     // reviewStarColor). Listing rozetleri PDP render.js'e bağlı olmadan kendi
     // yıldız renk değişkenini kurar — soğuk listing girişinde de doğru renk.
-    // Dolu + boş yıldız (outline) tek --ikr-review-star-color'dan beslenir.
+    // Dolu + boş yıldız (outline) tek --renuvex-pr-review-star-color'dan beslenir.
     var productTargets = collectProductTargets();
     var slugs = Object.keys(productTargets);
     if (!slugs.length) { ls.rendered = false; return; }
@@ -53,14 +53,14 @@ export async function renderListingBadges() {
     var starColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(reviewsSettings.reviewStarColor || '')
       ? reviewsSettings.reviewStarColor
       : '#f59e0b';
-    document.documentElement.style.setProperty('--ikr-review-star-color', starColor);
+    document.documentElement.style.setProperty('--renuvex-pr-review-star-color', starColor);
 
     // Rozet boyutu — "Yıldız Rozeti" → badge.size; SIZE_MAP core/badge.js'te tek kaynak.
     // Merchant'ın Küçük/Orta/Büyük seçimi PDP başlık rozetiyle aynı şekilde
     // (hem ikon hem metin boyutuna) uygulanır. Yüzeye özel olan tek şey çevre
     // boşlukları (gap/margin) — listing dar kart, PDP ferah başlık.
     // PR-3: sizing component-scope CSS variable üzerinden akıyor;
-    // ensureBadgeTokens `<style id="ikr-badge-tokens">` etiketini günceller.
+    // ensureBadgeTokens `<style id="renuvex-pr-badge-tokens">` etiketini günceller.
     // PR-4: mobileOverride açıksa `@media (max-width:640px)` bloğu da yazılır.
     var badgeSettings = widgets.badge || {};
     var sizeKey = badgeSettings.size || 'medium';

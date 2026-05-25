@@ -12,11 +12,8 @@ import { ColorPickerField } from './ColorPickerField';
 // Widgets that support iframe preview (real widget.js)
 const IFRAME_PREVIEW_WIDGETS = ['reviews'];
 const RENUVEX_PR_WIDGET_READY = 'RENUVEX_PR_WIDGET_READY';
-const LEGACY_IKR_WIDGET_READY = 'IKR_WIDGET_READY';
 const RENUVEX_PR_SETTINGS_UPDATE = 'RENUVEX_PR_SETTINGS_UPDATE';
-const LEGACY_IKR_SETTINGS_UPDATE = 'IKR_SETTINGS_UPDATE';
 const RENUVEX_PR_PREVIEW_SETTINGS_KEY = 'renuvex_pr_preview_settings';
-const LEGACY_IKR_PREVIEW_SETTINGS_KEY = 'ikr_preview_settings';
 
 const VIEWPORT_PRESETS = [
   { key: 'mobile',  label: 'Mobil',   icon: Smartphone, width: 390  },
@@ -83,13 +80,12 @@ function isWidgetReadyMessage(data: unknown): boolean {
     typeof data === 'object' &&
     data !== null &&
     'type' in data &&
-    ((data as { type?: unknown }).type === RENUVEX_PR_WIDGET_READY || (data as { type?: unknown }).type === LEGACY_IKR_WIDGET_READY)
+    (data as { type?: unknown }).type === RENUVEX_PR_WIDGET_READY
   );
 }
 
 function postPreviewSettingsUpdate(targetWindow: Window, settings: WidgetSettingsDraft) {
   targetWindow.postMessage({ type: RENUVEX_PR_SETTINGS_UPDATE, settings }, '*');
-  targetWindow.postMessage({ type: LEGACY_IKR_SETTINGS_UPDATE, settings }, '*');
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -145,7 +141,6 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   // draft değişince sessionStorage'a yaz — iframe flash önlemek için (effect içinde, render'da değil)
   useEffect(() => {
     sessionStorage.setItem(RENUVEX_PR_PREVIEW_SETTINGS_KEY, JSON.stringify(draft));
-    sessionStorage.removeItem(LEGACY_IKR_PREVIEW_SETTINGS_KEY);
   }, [draft]);
 
   const dirty = isDirty(draft, mergeWithDefaults(widget, savedSettings));
@@ -287,7 +282,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
         <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
           {/* Sol — Ayarlar */}
-          <div className="renuvex-pr-settings-scroll ikr-settings-scroll" style={{ width: '380px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', height: '100%', paddingRight: 8, paddingLeft: 16 }}>
+          <div className="renuvex-pr-settings-scroll" style={{ width: '380px', flexShrink: 0, overflowY: 'auto', overflowX: 'hidden', height: '100%', paddingRight: 8, paddingLeft: 16 }}>
             <SettingsPanel
               groups={widget.settings}
               settings={draft}

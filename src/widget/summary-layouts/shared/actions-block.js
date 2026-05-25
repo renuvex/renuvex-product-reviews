@@ -16,21 +16,21 @@ export function buildActionsBlock(opts) {
   var onSortChange = opts.onSortChange;
 
   var actionsBlock = document.createElement('div');
-  actionsBlock.className = 'ikr-summary-block ikr-summary-actions';
+  actionsBlock.className = 'renuvex-pr-summary-block renuvex-pr-summary-actions';
 
   var writeBtn = document.createElement('button');
-  writeBtn.className = 'ikr-write-btn';
+  writeBtn.className = 'renuvex-pr-write-btn';
   // Buton metni admin "Yorum Yap Butonu Metni" alanından gelir; boşsa fallback.
   writeBtn.textContent = (currentSettings && currentSettings.writeButtonText) || 'Yorum Yap';
   writeBtn.onclick = onWriteClick;
   actionsBlock.appendChild(writeBtn);
 
   var filterWrap = document.createElement('div');
-  filterWrap.className = 'ikr-filter-wrap';
+  filterWrap.className = 'renuvex-pr-filter-wrap';
 
   var filterBtn = document.createElement('button');
   filterBtn.type = 'button';
-  filterBtn.className = 'ikr-filter-btn';
+  filterBtn.className = 'renuvex-pr-filter-btn';
   filterBtn.setAttribute('aria-label', 'Filtrele');
   filterBtn.setAttribute('aria-haspopup', 'menu');
   filterBtn.setAttribute('aria-expanded', 'false');
@@ -39,7 +39,7 @@ export function buildActionsBlock(opts) {
   filterBtn.innerHTML = iconUseSvg(getFilterIconSvg(filterIconKey));
 
   var filterMenu = document.createElement('div');
-  filterMenu.className = 'ikr-filter-menu';
+  filterMenu.className = 'renuvex-pr-filter-menu';
   filterMenu.setAttribute('role', 'menu');
 
   var filterOpts = [
@@ -53,9 +53,9 @@ export function buildActionsBlock(opts) {
   // close was driven by keyboard. Pointer/touch closes leave focus alone so
   // the mobile button does not retain a stuck pressed/focus appearance.
   function closeFilter(opts) {
-    var wasOpen = filterMenu.classList.contains('ikr-open');
-    filterMenu.classList.remove('ikr-open');
-    filterBtn.classList.remove('ikr-filter-btn-active');
+    var wasOpen = filterMenu.classList.contains('renuvex-pr-open');
+    filterMenu.classList.remove('renuvex-pr-open');
+    filterBtn.classList.remove('renuvex-pr-filter-btn-active');
     filterBtn.setAttribute('aria-expanded', 'false');
     var shouldRestore = opts && (opts.restoreFocus === true || (opts.restoreFocus === 'auto' && wasLastInputKeyboard()));
     if (wasOpen && shouldRestore) {
@@ -66,10 +66,10 @@ export function buildActionsBlock(opts) {
   }
   function openFilter() {
     notifyOpening(filterRegistration);
-    filterMenu.classList.add('ikr-open');
-    filterBtn.classList.add('ikr-filter-btn-active');
+    filterMenu.classList.add('renuvex-pr-open');
+    filterBtn.classList.add('renuvex-pr-filter-btn-active');
     filterBtn.setAttribute('aria-expanded', 'true');
-    var firstItem = filterMenu.querySelector('.ikr-filter-item-active') || filterMenu.querySelector('.ikr-filter-item');
+    var firstItem = filterMenu.querySelector('.renuvex-pr-filter-item-active') || filterMenu.querySelector('.renuvex-pr-filter-item');
     if (firstItem) {
       requestAnimationFrame(function () {
         try { firstItem.focus({ preventScroll: true }); } catch (_) {
@@ -84,7 +84,7 @@ export function buildActionsBlock(opts) {
     var isActive = isPhotos ? currentHasImages : (!currentHasImages && (currentOrderBy || 'newest') === opt[0]);
     var item = document.createElement('button');
     item.type = 'button';
-    item.className = 'ikr-filter-item' + (isActive ? ' ikr-filter-item-active' : '');
+    item.className = 'renuvex-pr-filter-item' + (isActive ? ' renuvex-pr-filter-item-active' : '');
     item.setAttribute('role', 'menuitem');
     item.textContent = opt[1];
     var activated = false;
@@ -126,14 +126,14 @@ export function buildActionsBlock(opts) {
   });
 
   filterBtn.onclick = function() {
-    if (filterMenu.classList.contains('ikr-open')) closeFilter({ restoreFocus: 'auto' });
+    if (filterMenu.classList.contains('renuvex-pr-open')) closeFilter({ restoreFocus: 'auto' });
     else openFilter();
   };
 
   // Klavye: menü açıkken Escape kapatır ve odağı tetikleyiciye döndürür.
   // Escape doğası gereği klavye olayıdır — restoreFocus burada koşulsuz.
   filterWrap.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && filterMenu.classList.contains('ikr-open')) {
+    if (e.key === 'Escape' && filterMenu.classList.contains('renuvex-pr-open')) {
       e.stopPropagation();
       closeFilter({ restoreFocus: true });
     }
@@ -141,7 +141,7 @@ export function buildActionsBlock(opts) {
 
   // Tab ile odak filterWrap dışına çıkarsa menüyü kapat (yeniden tetikleyiciye dönüş yapmadan).
   filterWrap.addEventListener('focusout', function (e) {
-    if (!filterMenu.classList.contains('ikr-open')) return;
+    if (!filterMenu.classList.contains('renuvex-pr-open')) return;
     if (isActivatingOption) return;
     var nextFocus = e.relatedTarget;
     if (nextFocus && filterWrap.contains(nextFocus)) return;

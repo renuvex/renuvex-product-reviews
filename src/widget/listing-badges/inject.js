@@ -89,7 +89,7 @@ export function findTitleEl(scope, productName) {
 function shouldSkipLink(a, adapter, currentSlug, slug) {
   if (!slug) return true;
   if (!isVisibleForBadge(a)) return true;
-  if (a.id === 'ikr-rating-badge') return true;
+  if (a.id === 'renuvex-pr-rating-badge') return true;
   if (slug === currentSlug && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') return true;
   if (adapter.isNavigationLink(a)) return true;
   if (adapter.isCartLink(a)) return true;
@@ -99,13 +99,13 @@ function shouldSkipLink(a, adapter, currentSlug, slug) {
 }
 
 function isLinkProcessed(a) {
-  return !!(a && (a.getAttribute('data-renuvex-pr-badge') || a.getAttribute('data-ikr-badge')));
+  return !!(a && (a.getAttribute('data-renuvex-pr-badge') || a.getAttribute('data-renuvex-badge')));
 }
 
 function markLinkProcessed(a) {
   if (!a) return;
   a.setAttribute('data-renuvex-pr-badge', '1');
-  a.setAttribute('data-ikr-badge', '1');
+  a.setAttribute('data-renuvex-badge', '1');
 }
 
 function getJustify(el) {
@@ -122,7 +122,7 @@ function matchesListingContext(node, slug, productId) {
 
 function findOwnedListingNode(parent, slotName, legacySlotName, slug, productId) {
   if (!parent) return null;
-  var selector = '[data-renuvex-slot="' + slotName + '"],[data-ikr-slot="' + legacySlotName + '"]';
+  var selector = '[data-renuvex-slot="' + slotName + '"],[data-renuvex-slot="' + legacySlotName + '"]';
   var nodes = parent.querySelectorAll(selector);
   for (var i = 0; i < nodes.length; i++) {
     if (matchesListingContext(nodes[i], slug, productId)) return nodes[i];
@@ -218,7 +218,7 @@ export function reserveBadgeSlots(slugNameMap) {
 }
 
 export function clearBadgePlaceholders() {
-  document.querySelectorAll('[data-renuvex-listing-badge-placeholder],[data-ikr-listing-badge-placeholder]').forEach(function(el) { el.remove(); });
+  document.querySelectorAll('[data-renuvex-listing-badge-placeholder],[data-renuvex-listing-badge-placeholder]').forEach(function(el) { el.remove(); });
 }
 
 export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair) {
@@ -279,7 +279,7 @@ function injectModalBadge(slugNameMap, ratings, iconPair) {
   var modal = adapter.findModal();
   if (!modal) return;
   var h1 = adapter.findModalTitle(modal);
-  if (!h1 || h1.querySelector('[data-renuvex-listing-badge],[data-ikr-listing-badge]')) return;
+  if (!h1 || h1.querySelector('[data-renuvex-listing-badge],[data-renuvex-listing-badge]')) return;
 
   var slug = null;
 
@@ -331,7 +331,7 @@ function injectModalBadge(slugNameMap, ratings, iconPair) {
   h1.appendChild(modalBadge);
   probeWidgetVisibility(modalBadge, 'listing-modal-badge', { slug: slug || '' });
   watchListingBadgeRemoval(modalBadge, 'listing-modal-badge', function () {
-    if (!h1.isConnected || h1.querySelector('[data-renuvex-listing-badge],[data-ikr-listing-badge]')) return;
+    if (!h1.isConnected || h1.querySelector('[data-renuvex-listing-badge],[data-renuvex-listing-badge]')) return;
     h1.appendChild(createBadgeEl(ratings[slug], 'flex-start', iconPair, { slug: slug || '' }));
   }, { slug: slug || '' });
 }

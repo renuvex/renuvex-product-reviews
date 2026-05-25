@@ -17,12 +17,12 @@ export var meta = {
   // Foto kolonu genel size ayarıyla orantılı büyüsün — küçük yazıda büyük foto
   // patlamasın, büyük yazıda foto sönük kalmasın. Card'ın bağımsız thumbnail
   // ayarı var; list/gallery için tek genel size kontrolü yeter.
-  // --ikr-list-photo-w        : desktop sağ kolon foto genişliği (3:4 portre)
-  // --ikr-list-photo-w-mobile : mobile, metin altına düşen foto genişliği (3:4 portre)
+  // --renuvex-pr-list-photo-w        : desktop sağ kolon foto genişliği (3:4 portre)
+  // --renuvex-pr-list-photo-w-mobile : mobile, metin altına düşen foto genişliği (3:4 portre)
   sizeOverrides: {
-    small:  { '--ikr-list-photo-w':  '80px', '--ikr-list-photo-w-mobile':  '80px' },
-    medium: { '--ikr-list-photo-w': '110px', '--ikr-list-photo-w-mobile': '100px' },
-    large:  { '--ikr-list-photo-w': '140px', '--ikr-list-photo-w-mobile': '110px' },
+    small:  { '--renuvex-pr-list-photo-w':  '80px', '--renuvex-pr-list-photo-w-mobile':  '80px' },
+    medium: { '--renuvex-pr-list-photo-w': '110px', '--renuvex-pr-list-photo-w-mobile': '100px' },
+    large:  { '--renuvex-pr-list-photo-w': '140px', '--renuvex-pr-list-photo-w-mobile': '110px' },
   },
 };
 
@@ -33,27 +33,27 @@ export function render(r, allReviews) {
   var hasMedia = trustedImages.length > 0;
 
   var reviewEl = document.createElement('div');
-  reviewEl.className = 'ikr-review-list' + (hasMedia ? '' : ' ikr-review-list--no-media');
+  reviewEl.className = 'renuvex-pr-review-list' + (hasMedia ? '' : ' renuvex-pr-review-list--no-media');
 
   // ─── Sol kolon: imza grubu (yıldız → yazar → tarih) ───
   // Yazar tek başına sol kolonda izole görünüyordu; yıldız + tarih ile
   // birlikte gruplanınca "kim, kaç yıldız, ne zaman" tek bakışta okunur.
   // Endüstri standardı: Trustpilot, Amazon, Çiçeksepeti.
   var authorCol = document.createElement('div');
-  authorCol.className = 'ikr-review-list-author';
+  authorCol.className = 'renuvex-pr-review-list-author';
 
   var starsSpan = document.createElement('span');
-  starsSpan.className = 'ikr-review-stars ikr-review-list-author-stars';
+  starsSpan.className = 'renuvex-pr-review-stars renuvex-pr-review-list-author-stars';
   starsSpan.innerHTML = starsHTML(r.rating, currentSettings);
   authorCol.appendChild(starsSpan);
 
   var authorName = document.createElement('span');
-  authorName.className = 'ikr-review-list-author-name';
+  authorName.className = 'renuvex-pr-review-list-author-name';
   authorName.textContent = r.author || '';
   authorCol.appendChild(authorName);
 
   var dateEl = document.createElement('span');
-  dateEl.className = 'ikr-date ikr-review-list-author-date';
+  dateEl.className = 'renuvex-pr-date renuvex-pr-review-list-author-date';
   dateEl.textContent = formatDate(r.createdAt);
   authorCol.appendChild(dateEl);
 
@@ -61,11 +61,11 @@ export function render(r, allReviews) {
 
   // ─── Orta kolon: içerik (title → body → reply) ───
   var contentCol = document.createElement('div');
-  contentCol.className = 'ikr-review-list-content';
+  contentCol.className = 'renuvex-pr-review-list-content';
 
   if (r.title) {
     var titleEl = document.createElement('div');
-    titleEl.className = 'ikr-review-list-title';
+    titleEl.className = 'renuvex-pr-review-list-title';
     titleEl.textContent = r.title;
     contentCol.appendChild(titleEl);
   }
@@ -73,12 +73,12 @@ export function render(r, allReviews) {
   var comment = (r.comment || '').trim();
   if (comment) {
     var body = document.createElement('div');
-    body.className = 'ikr-review-list-body ikr-body-clamped';
+    body.className = 'renuvex-pr-review-list-body renuvex-pr-body-clamped';
     body.textContent = comment;
     contentCol.appendChild(body);
 
     var readMore = document.createElement('span');
-    readMore.className = 'ikr-read-more';
+    readMore.className = 'renuvex-pr-read-more';
     readMore.textContent = 'Devamını oku';
     readMore.style.display = 'none';
     contentCol.appendChild(readMore);
@@ -89,7 +89,7 @@ export function render(r, allReviews) {
         var expanded = false;
         readMore.onclick = function() {
           expanded = !expanded;
-          body.classList.toggle('ikr-body-clamped', !expanded);
+          body.classList.toggle('renuvex-pr-body-clamped', !expanded);
           readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
         };
       }
@@ -109,7 +109,7 @@ export function render(r, allReviews) {
   // sonrakileri gizliyor (display:none).
   if (hasMedia) {
     var mediaCol = document.createElement('div');
-    mediaCol.className = 'ikr-review-list-media';
+    mediaCol.className = 'renuvex-pr-review-list-media';
     trustedImages.forEach(function(imgUrl) {
       var imgEl = document.createElement('img');
       // Liste sağ kolonu ~90 px, mobile yatay strip aspect 3:4 (styles.js:90).
@@ -121,7 +121,7 @@ export function render(r, allReviews) {
       imgEl.decoding = 'async';
       imgEl.width = PHOTO_STRIP_THUMB_WIDTH;
       imgEl.height = Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3);
-      imgEl.setAttribute('data-ikr-img-url', imgUrl);
+      imgEl.setAttribute('data-renuvex-img-url', imgUrl);
       hideOnImageError(imgEl);
       (function(url) {
         imgEl.onclick = function() { openReviewModal(r, url, allReviews); };

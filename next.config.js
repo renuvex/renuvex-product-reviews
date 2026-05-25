@@ -32,7 +32,6 @@ const nextConfig = {
     config.plugins.push(
       new webpack.DefinePlugin({
         __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(cloudinaryCloudName),
-        __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(cloudinaryCloudName),
       }),
     );
     return config;

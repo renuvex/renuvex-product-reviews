@@ -25,14 +25,14 @@ export function createProgressBar(opts) {
   var onNext = opts.onNext || function () { };
 
   var wrap = document.createElement('div');
-  wrap.className = 'ikr-fwizard-footer';
+  wrap.className = 'renuvex-pr-fwizard-footer';
 
   // ─── Sol slot: tek buton (Geri) ──────────────────────────────────
   // Geri sadece step > 1 iken aktif olur; aksi halde visibility:hidden
   // ile yer korur (grid kolonu sabit 120px zaten).
   var leftBtn = document.createElement('button');
   leftBtn.type = 'button';
-  leftBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-back';
+  leftBtn.className = 'renuvex-pr-fwizard-nav-btn renuvex-pr-fwizard-footer-back';
   leftBtn.setAttribute('aria-label', 'Geri');
   leftBtn.innerHTML = iconUseSvg(ARROW_LEFT_SVG) + '<span>Geri</span>';
   leftBtn.addEventListener('click', function () { onBack(); });
@@ -40,11 +40,11 @@ export function createProgressBar(opts) {
 
   // ─── Orta: progress segments ─────────────────────────────────────
   var progressWrap = document.createElement('div');
-  progressWrap.className = 'ikr-fwizard-footer-progress';
+  progressWrap.className = 'renuvex-pr-fwizard-footer-progress';
   var segments = [];
   for (var i = 0; i < TOTAL_STEPS; i++) {
     var seg = document.createElement('span');
-    seg.className = 'ikr-fwizard-progress-seg';
+    seg.className = 'renuvex-pr-fwizard-progress-seg';
     progressWrap.appendChild(seg);
     segments.push(seg);
   }
@@ -82,24 +82,24 @@ export function createProgressBar(opts) {
     if (isSkippable) {
       if (currentStep === 2 && hasPhotos) {
         // Fotoğraf var → "Devam Et" (Siyah Buton - CTA)
-        rightBtn.className = 'ikr-fwizard-cta-btn ikr-fwizard-footer-next';
+        rightBtn.className = 'renuvex-pr-fwizard-cta-btn renuvex-pr-fwizard-footer-next';
         rightBtn.setAttribute('aria-label', 'Devam Et');
         rightBtn.innerHTML = 'Devam Et';
         setRightHandler(function () { onNext(); });
       } else {
         // Fotoğraf yok → "Atla" (Şeffaf Buton - Nav)
-        rightBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
+        rightBtn.className = 'renuvex-pr-fwizard-nav-btn renuvex-pr-fwizard-footer-skip';
         rightBtn.setAttribute('aria-label', 'Atla');
         rightBtn.innerHTML = '<span>Atla</span>';
         setRightHandler(function () { onSkip(); });
       }
       rightBtn.disabled = false;
-      rightBtn.classList.remove('ikr-fwizard-cta-btn--disabled');
+      rightBtn.classList.remove('renuvex-pr-fwizard-cta-btn--disabled');
       rightBtn.style.visibility = '';
       rightBtn.tabIndex = 0;
     } else if (hasNext) {
       // Sonraki — CTA, dolu siyah
-      rightBtn.className = 'ikr-fwizard-cta-btn ikr-fwizard-footer-next';
+      rightBtn.className = 'renuvex-pr-fwizard-cta-btn renuvex-pr-fwizard-footer-next';
       rightBtn.setAttribute('aria-label', 'Sonraki');
       rightBtn.innerHTML = 'Sonraki';
       rightBtn.style.visibility = '';
@@ -109,7 +109,7 @@ export function createProgressBar(opts) {
       // Merkezi kural setine (validateStep) soruyoruz.
       var isValid = validateStep(currentStep, stateData);
       rightBtn.disabled = !isValid;
-      rightBtn.classList.toggle('ikr-fwizard-cta-btn--disabled', !isValid);
+      rightBtn.classList.toggle('renuvex-pr-fwizard-cta-btn--disabled', !isValid);
 
       setRightHandler(function () {
         if (rightBtn.disabled) return;
@@ -117,7 +117,7 @@ export function createProgressBar(opts) {
       });
     } else {
       // Hiç buton yok — slot görünmez ama yer korur
-      rightBtn.className = 'ikr-fwizard-nav-btn ikr-fwizard-footer-skip';
+      rightBtn.className = 'renuvex-pr-fwizard-nav-btn renuvex-pr-fwizard-footer-skip';
       rightBtn.innerHTML = '';
       rightBtn.style.visibility = 'hidden';
       rightBtn.tabIndex = -1;
@@ -132,9 +132,9 @@ export function createProgressBar(opts) {
       // Progress segment'leri
       segments.forEach(function (seg, idx) {
         if (idx + 1 <= currentStep) {
-          seg.classList.add('ikr-fwizard-progress-seg-active');
+          seg.classList.add('renuvex-pr-fwizard-progress-seg-active');
         } else {
-          seg.classList.remove('ikr-fwizard-progress-seg-active');
+          seg.classList.remove('renuvex-pr-fwizard-progress-seg-active');
         }
       });
 
@@ -151,9 +151,9 @@ export function createProgressBar(opts) {
       // Sadece "Sonraki" CTA aktifken anlamlı; Atla/no-button
       // durumlarında zaten farklı className. Class'a bakarak
       // güvenli toggle yapıyoruz.
-      if (rightBtn.classList.contains('ikr-fwizard-cta-btn')) {
+      if (rightBtn.classList.contains('renuvex-pr-fwizard-cta-btn')) {
         rightBtn.disabled = !!disabled;
-        rightBtn.classList.toggle('ikr-fwizard-cta-btn--disabled', !!disabled);
+        rightBtn.classList.toggle('renuvex-pr-fwizard-cta-btn--disabled', !!disabled);
       }
     },
     setThanksState: function (onContinue) {
@@ -162,12 +162,12 @@ export function createProgressBar(opts) {
       progressWrap.style.visibility = 'hidden';
 
       // Sağ kolonu "Devam Et" yap (Siyah CTA butonu)
-      rightBtn.className = 'ikr-fwizard-cta-btn ikr-fwizard-footer-next';
+      rightBtn.className = 'renuvex-pr-fwizard-cta-btn renuvex-pr-fwizard-footer-next';
       rightBtn.setAttribute('aria-label', 'Devam Et');
       rightBtn.innerHTML = 'Devam Et';
       rightBtn.style.visibility = '';
       rightBtn.disabled = false;
-      rightBtn.classList.remove('ikr-fwizard-cta-btn--disabled');
+      rightBtn.classList.remove('renuvex-pr-fwizard-cta-btn--disabled');
       setRightHandler(onContinue);
     },
   };

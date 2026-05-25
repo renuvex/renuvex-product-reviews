@@ -20,27 +20,27 @@ export function createStepAuthor(state, opts) {
   var onSuccess = opts.onSuccess || function () { };
 
   var root = document.createElement('div');
-  root.className = 'ikr-fwizard-step ikr-fwizard-step-author';
+  root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-author';
 
   // Başlık
   var title = document.createElement('div');
-  title.className = 'ikr-fwizard-step-title ikr-fwizard-step-title--lg';
+  title.className = 'renuvex-pr-fwizard-step-title renuvex-pr-fwizard-step-title--lg';
   title.textContent = 'Hakkınızda';
   root.appendChild(title);
 
   // Form alanı
   var form = document.createElement('div');
-  form.className = 'ikr-fwizard-author-form';
+  form.className = 'renuvex-pr-fwizard-author-form';
 
   // Ad — zorunlu
   var nameWrap = document.createElement('div');
-  nameWrap.className = 'ikr-fwizard-field';
+  nameWrap.className = 'renuvex-pr-fwizard-field';
   var nameLabel = document.createElement('label');
-  nameLabel.className = 'ikr-fwizard-label';
-  nameLabel.innerHTML = 'Adınız <span class="ikr-fwizard-required" aria-hidden="true">*</span>';
+  nameLabel.className = 'renuvex-pr-fwizard-label';
+  nameLabel.innerHTML = 'Adınız <span class="renuvex-pr-fwizard-required" aria-hidden="true">*</span>';
   var nameInput = document.createElement('input');
   nameInput.type = 'text';
-  nameInput.className = 'ikr-fwizard-input';
+  nameInput.className = 'renuvex-pr-fwizard-input';
   nameInput.maxLength = NAME_MAX;
   nameInput.setAttribute('aria-required', 'true');
   nameInput.value = state.get().author || '';
@@ -50,13 +50,13 @@ export function createStepAuthor(state, opts) {
 
   // Email — opsiyonel
   var emailWrap = document.createElement('div');
-  emailWrap.className = 'ikr-fwizard-field';
+  emailWrap.className = 'renuvex-pr-fwizard-field';
   var emailLabel = document.createElement('label');
-  emailLabel.className = 'ikr-fwizard-label';
+  emailLabel.className = 'renuvex-pr-fwizard-label';
   emailLabel.textContent = 'E-posta (opsiyonel)';
   var emailInput = document.createElement('input');
   emailInput.type = 'email';
-  emailInput.className = 'ikr-fwizard-input';
+  emailInput.className = 'renuvex-pr-fwizard-input';
   emailInput.setAttribute('autocomplete', 'email');
   emailInput.value = state.get().email || '';
   emailWrap.appendChild(emailLabel);
@@ -65,14 +65,14 @@ export function createStepAuthor(state, opts) {
 
   // KVKK / yayın bilgilendirmesi
   var notice = document.createElement('div');
-  notice.className = 'ikr-fwizard-notice';
+  notice.className = 'renuvex-pr-fwizard-notice';
   notice.textContent =
     'Gönder\'e tıklayarak yorumumun ürün sayfasında herkese açık şekilde yayınlanacağını kabul ediyorum.';
   form.appendChild(notice);
 
   // Hata / durum mesajı
   var msg = document.createElement('div');
-  msg.className = 'ikr-fwizard-msg';
+  msg.className = 'renuvex-pr-fwizard-msg';
   msg.setAttribute('role', 'alert');
   msg.setAttribute('aria-live', 'assertive');
   form.appendChild(msg);
@@ -80,7 +80,7 @@ export function createStepAuthor(state, opts) {
   // Step içi submit butonu (footer'da Sonraki yok, submit burada)
   var submitBtn = document.createElement('button');
   submitBtn.type = 'button';
-  submitBtn.className = 'ikr-fwizard-submit-btn';
+  submitBtn.className = 'renuvex-pr-fwizard-submit-btn';
   submitBtn.textContent = 'Gönder';
   form.appendChild(submitBtn);
 
@@ -97,11 +97,11 @@ export function createStepAuthor(state, opts) {
 
     if (isUploading) {
       submitBtn.disabled = true;
-      submitBtn.classList.add('ikr-fwizard-submit-btn--disabled');
+      submitBtn.classList.add('renuvex-pr-fwizard-submit-btn--disabled');
       submitBtn.textContent = 'Fotoğraflar Yükleniyor...';
     } else {
       submitBtn.disabled = disabled;
-      submitBtn.classList.toggle('ikr-fwizard-submit-btn--disabled', disabled);
+      submitBtn.classList.toggle('renuvex-pr-fwizard-submit-btn--disabled', disabled);
       submitBtn.textContent = 'Gönder';
     }
   }
@@ -127,7 +127,7 @@ export function createStepAuthor(state, opts) {
   function showInlineError(message) {
     clearMessage();
     var errorEl = document.createElement('div');
-    errorEl.className = 'ikr-fwizard-msg-error';
+    errorEl.className = 'renuvex-pr-fwizard-msg-error';
     errorEl.textContent = message || '';
     msg.appendChild(errorEl);
   }
@@ -154,7 +154,7 @@ export function createStepAuthor(state, opts) {
     }
 
     submitBtn.disabled = true;
-    submitBtn.classList.add('ikr-fwizard-submit-btn--disabled');
+    submitBtn.classList.add('renuvex-pr-fwizard-submit-btn--disabled');
     var originalText = submitBtn.textContent;
     submitBtn.textContent = 'Gönderiliyor…';
     clearMessage();
@@ -202,7 +202,7 @@ export function createStepAuthor(state, opts) {
         showInlineError(msgText);
       }
       submitBtn.disabled = false;
-      submitBtn.classList.remove('ikr-fwizard-submit-btn--disabled');
+      submitBtn.classList.remove('renuvex-pr-fwizard-submit-btn--disabled');
       submitBtn.textContent = originalText;
     }
   };

@@ -4,43 +4,43 @@
 // Mobile: dikey diziliş (yazar → içerik → foto).
 //
 // Dikey gap: orta kolon uniform gap kullanmaz, her child kendi margin-top'unu
-// token ile alır (--ikr-gap-tight/normal/loose). Sözleşme: themes/ozy/styles.js
+// token ile alır (--renuvex-pr-gap-tight/normal/loose). Sözleşme: themes/ozy/styles.js
 // üst yorum bloğu. Yeni satır eklerken magic number yazma — ilişki tipine göre
 // token seç.
 
 export var LIST_CSS = `
-  .ikr-review-list{
+  .renuvex-pr-review-list{
     display:grid;
-    grid-template-columns:140px 1fr var(--ikr-list-photo-w,120px);
+    grid-template-columns:140px 1fr var(--renuvex-pr-list-photo-w,120px);
     gap:60px;
     align-items:start;
-    /* Yan padding theme mobile bloğundan gelir (--ikr-pad-review-mobile).
+    /* Yan padding theme mobile bloğundan gelir (--renuvex-pr-pad-review-mobile).
        Shorthand padding:24px 0 yan padding'i 0'a resetler ve theme kuralını
        specifity savaşında ezer. Sadece top/bottom ayrı set. */
     padding-top:24px;padding-bottom:24px;
-    border-top:1px solid var(--ikr-review-border,#e5e7eb);
+    border-top:1px solid var(--renuvex-pr-review-border,#e5e7eb);
     border-bottom:none;
   }
-  .ikr-review-list.ikr-review-list--no-media{grid-template-columns:140px 1fr;}
+  .renuvex-pr-review-list.renuvex-pr-review-list--no-media{grid-template-columns:140px 1fr;}
   /* Sol kolon imza grubu: yıldız → yazar → tarih.
      yıldız→yazar normal (8), yazar→tarih tight (4) aynı imza grubu. */
-  .ikr-review-list-author{
+  .renuvex-pr-review-list-author{
     display:flex;flex-direction:column;
-    font-size:var(--ikr-author-size,14px);
-    color:var(--ikr-review-author,var(--ikr-text,rgba(0,0,0,1)));
+    font-size:var(--renuvex-pr-author-size,14px);
+    color:var(--renuvex-pr-review-author,var(--renuvex-pr-text,rgba(0,0,0,1)));
   }
-  .ikr-review-list-author-stars{margin-bottom:var(--ikr-gap-normal);}
-  .ikr-review-list-author-name{font-weight:600;font-style:normal;}
-  .ikr-review-list-author-date{margin-top:var(--ikr-gap-tight);font-size:var(--ikr-review-date-size,12px);color:var(--ikr-review-date,#5e5e5e);}
-  .ikr-review-list-content{display:flex;flex-direction:column;min-width:0;}
+  .renuvex-pr-review-list-author-stars{margin-bottom:var(--renuvex-pr-gap-normal);}
+  .renuvex-pr-review-list-author-name{font-weight:600;font-style:normal;}
+  .renuvex-pr-review-list-author-date{margin-top:var(--renuvex-pr-gap-tight);font-size:var(--renuvex-pr-review-date-size,12px);color:var(--renuvex-pr-review-date,#5e5e5e);}
+  .renuvex-pr-review-list-content{display:flex;flex-direction:column;min-width:0;}
   /* Title artık orta kolonun ilk elemanı; üst margin gerekmez. */
-  .ikr-review-list-title{font-weight:600;font-size:var(--ikr-review-title-size,16px);color:var(--ikr-review-title,var(--ikr-text,rgba(0,0,0,1)));margin:0;}
-  .ikr-review-list-body{margin-top:var(--ikr-gap-normal);line-height:1.6;color:var(--ikr-review-body,var(--ikr-text,rgba(0,0,0,1)));font-size:var(--ikr-review-text-size,14px);}
-  .ikr-review-list-media{display:flex;justify-content:flex-end;}
-  .ikr-review-list-media img{
-    width:100%;max-width:var(--ikr-list-photo-w,120px);aspect-ratio:3/4;object-fit:cover;
-    border-radius:var(--ikr-radius,6px);
-    border:1px solid var(--ikr-photo-image-border,rgba(0,0,0,0.05));
+  .renuvex-pr-review-list-title{font-weight:600;font-size:var(--renuvex-pr-review-title-size,16px);color:var(--renuvex-pr-review-title,var(--renuvex-pr-text,rgba(0,0,0,1)));margin:0;}
+  .renuvex-pr-review-list-body{margin-top:var(--renuvex-pr-gap-normal);line-height:1.6;color:var(--renuvex-pr-review-body,var(--renuvex-pr-text,rgba(0,0,0,1)));font-size:var(--renuvex-pr-review-text-size,14px);}
+  .renuvex-pr-review-list-media{display:flex;justify-content:flex-end;}
+  .renuvex-pr-review-list-media img{
+    width:100%;max-width:var(--renuvex-pr-list-photo-w,120px);aspect-ratio:3/4;object-fit:cover;
+    border-radius:var(--renuvex-pr-radius,6px);
+    border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
     cursor:zoom-in;
   }
   /* Desktop: sadece ilk foto görünür (sağ kolonda tek delil görseli). DOM'da
@@ -48,7 +48,7 @@ export var LIST_CSS = `
      için min-width:601 media query içinde tanımlandı — böylece mobile strip
      tüm fotoları göstermeye engel olmaz. */
   @media (min-width:601px){
-    .ikr-review-list-media img:not(:first-child){display:none;}
+    .renuvex-pr-review-list-media img:not(:first-child){display:none;}
   }
   @media (max-width:600px){
     /* Mobile sıra: yıldız → title → yazar → tarih → body → foto → reply.
@@ -56,37 +56,37 @@ export var LIST_CSS = `
        Mobile'da author display:contents ile şeffaflaşır; yıldız/yazar/tarih
        ayrı flex item olur. Content de display:contents → title/body/reply
        ayrı flex item olur. Tek seviyede order ile sıralanır. DOM dokunulmaz. */
-    .ikr-review-list,
-    .ikr-review-list.ikr-review-list--no-media{
-      /* Yan padding theme mobile bloguna tasindi (--ikr-pad-review-mobile).
+    .renuvex-pr-review-list,
+    .renuvex-pr-review-list.renuvex-pr-review-list--no-media{
+      /* Yan padding theme mobile bloguna tasindi (--renuvex-pr-pad-review-mobile).
          Burada sadece top/bottom set edilir ki theme kuralini ezmesin. */
       display:flex;flex-direction:column;gap:8px;padding-top:16px;padding-bottom:16px;
     }
-    .ikr-review-list-author{display:contents;}
-    .ikr-review-list-content{display:contents;}
-    .ikr-review-list-author-stars{order:1;margin-bottom:0;}
-    .ikr-review-list-title{order:2;}
-    .ikr-review-list-author-name{order:3;}
+    .renuvex-pr-review-list-author{display:contents;}
+    .renuvex-pr-review-list-content{display:contents;}
+    .renuvex-pr-review-list-author-stars{order:1;margin-bottom:0;}
+    .renuvex-pr-review-list-title{order:2;}
+    .renuvex-pr-review-list-author-name{order:3;}
     /* yazar→tarih aynı imza grubu, galeri ile tutarlı kompakt 4px (gap 8 - margin -4) */
-    .ikr-review-list-author-date{order:4;margin-top:-4px;}
-    .ikr-review-list-body{order:5;margin-top:0;}
+    .renuvex-pr-review-list-author-date{order:4;margin-top:-4px;}
+    .renuvex-pr-review-list-body{order:5;margin-top:0;}
     /* body sonrası read-more body ile aynı bloğa ait;
        reviewEl 8px gap sonrası net 4px kalması için -4px (galeri/card uyumu) */
-    .ikr-review-list-content > .ikr-read-more{order:6;margin-top:-4px;}
-    .ikr-review-list-media{order:7;justify-content:flex-start;}
-    .ikr-reply{order:8;width:100%;}
+    .renuvex-pr-review-list-content > .renuvex-pr-read-more{order:6;margin-top:-4px;}
+    .renuvex-pr-review-list-media{order:7;justify-content:flex-start;}
+    .renuvex-pr-reply{order:8;width:100%;}
     /* Mobile media: tüm fotolar yatay strip (overflow-x:auto). flex-shrink:0
        ile fotolar küçülmez, sığmayanlar yatay scroll. Desktop'taki "sadece ilk
        foto" kuralı burada ezilir. Scroll bar gizli, parmakla kaydırma. */
-    .ikr-review-list-media{
+    .renuvex-pr-review-list-media{
       flex-wrap:nowrap;overflow-x:auto;gap:8px;
       padding-bottom:4px;scrollbar-width:none;
       justify-content:flex-start;
     }
-    .ikr-review-list-media::-webkit-scrollbar{display:none;}
-    .ikr-review-list-media img{
+    .renuvex-pr-review-list-media::-webkit-scrollbar{display:none;}
+    .renuvex-pr-review-list-media img{
       flex-shrink:0;
-      max-width:var(--ikr-list-photo-w-mobile,100px);
+      max-width:var(--renuvex-pr-list-photo-w-mobile,100px);
       aspect-ratio:3/4;
       display:block;
     }

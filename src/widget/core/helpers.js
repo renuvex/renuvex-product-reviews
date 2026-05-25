@@ -1,15 +1,14 @@
 // helpers.js — Genel yardımcı fonksiyonlar
 
-/* global __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__, __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
+/* global __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
 
 import { renderStarRow, getIconFromSettings } from '../icons/index.js';
 import { ensureStarSprite, starUseSvg } from '../icons/star-sprite.js';
 import { PUBLIC_API_KEY } from './config.js';
-import { expandRenuvexCss } from './namespace.js';
 
 // Tüm yıldızlar (dolu + boş outline) için tek CSS renk değişkeni — reviews
 // widget ayarından (reviewStarColor) beslenir. Boş yıldız aynı renkte outline.
-export var STAR_COLOR = 'var(--renuvex-pr-review-star-color,var(--ikr-review-star-color,#f59e0b))';
+export var STAR_COLOR = 'var(--renuvex-pr-review-star-color,var(--renuvex-pr-review-star-color,#f59e0b))';
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
@@ -21,19 +20,19 @@ export function extractSlug(url) {
 
 // starsHTML(rating, settings) — SVG yıldız satırı üretir.
 // settings'teki reviewIcon'a göre ICONS registry'sinden SVG alır.
-// Boyut parent CSS (.ikr-review-stars, .ikr-modal-stars vb.) tarafından verilir.
+// Boyut parent CSS (.renuvex-pr-review-stars, .renuvex-pr-modal-stars vb.) tarafından verilir.
 export function starsHTML(rating, settings) {
   var wrapStyle = 'color:' + STAR_COLOR + ';display:inline-flex;gap:2px;align-items:center;';
   var rounded = Math.round(parseFloat(rating)) || 0;
   // role=img + aria-label: review cards / modal have no other rating text, so the
   // star row carries the accessible name. Inner star svgs stay aria-hidden.
-  return '<span class="ikr-stars" role="img" aria-label="' + rounded + ' üzerinden 5 yıldız" style="' + wrapStyle + '">' +
+  return '<span class="renuvex-pr-stars" role="img" aria-label="' + rounded + ' üzerinden 5 yıldız" style="' + wrapStyle + '">' +
     renderStarRow(rating, settings) +
     '</span>';
 }
 
 // partialStarsHTML(rating, iconPair, opts) — Ortalama puan için yarım yıldız desteği.
-// Bireysel yıldız + clip-path mimarisi. Her yıldız bağımsız .ikr-star kapsayıcısı.
+// Bireysel yıldız + clip-path mimarisi. Her yıldız bağımsız .renuvex-pr-star kapsayıcısı.
 // Half state'inde tek filled SVG iki katmanda kullanılır (alt boş-renk, üst dolu-renk
 // + clip-path:inset(0 50% 0 0) ile sol yarı). Tek path → geometri uyumsuzluğu
 // fiziksel olarak imkânsız (kare/kalp ikonlarında bile tam ortadan simetrik bölünür).
@@ -61,55 +60,55 @@ export function partialStarsHTML(rating, iconPair, opts) {
                                 : 'empty';
 
     if (state === 'full') {
-      html += '<span class="ikr-star ikr-star-full" style="' + sizeStyle + '">'
+      html += '<span class="renuvex-pr-star renuvex-pr-star-full" style="' + sizeStyle + '">'
             +   starUseSvg('full')
             + '</span>';
     } else if (state === 'empty') {
       // Tam-state empty: outline mimarisi korunuyor (filled+gri değil, outline SVG).
-      html += '<span class="ikr-star ikr-star-empty" style="' + sizeStyle + '">'
+      html += '<span class="renuvex-pr-star renuvex-pr-star-empty" style="' + sizeStyle + '">'
             +   starUseSvg('outline')
             + '</span>';
     } else { // half
       // Tek geometri iki katmanda: alt boş-renk (outline), üst dolu-renk + clip sol %50.
-      // clip-path .ikr-star-half-fg span'ine uygulanır; <use> ile tam uyumlu.
-      html += '<span class="ikr-star ikr-star-half" style="' + sizeStyle + '">'
-            +   '<span class="ikr-star-half-bg">' + starUseSvg('outline') + '</span>'
-            +   '<span class="ikr-star-half-fg">' + starUseSvg('full') + '</span>'
+      // clip-path .renuvex-pr-star-half-fg span'ine uygulanır; <use> ile tam uyumlu.
+      html += '<span class="renuvex-pr-star renuvex-pr-star-half" style="' + sizeStyle + '">'
+            +   '<span class="renuvex-pr-star-half-bg">' + starUseSvg('outline') + '</span>'
+            +   '<span class="renuvex-pr-star-half-fg">' + starUseSvg('full') + '</span>'
             + '</span>';
     }
   }
 
   // Wrapper is decorative — the container (badge/summary) provides the accessible
   // name; individual star svgs are aria-hidden too (see starUseSvg).
-  return '<span class="ikr-stars-partial" aria-hidden="true">' + html + '</span>';
+  return '<span class="renuvex-pr-stars-partial" aria-hidden="true">' + html + '</span>';
 }
 
 // buildRatingA11yLabel — visually-hidden accessible label for a rating control.
-// Returns { id, html }: the html is a `.ikr-sr-only` <span> carrying the rating
+// Returns { id, html }: the html is a `.renuvex-pr-sr-only` <span> carrying the rating
 // sentence as REAL text (translation-tool friendly, unlike aria-label), to be
 // referenced by the container's aria-labelledby. (Adopted from Yotpo's a11y.)
 // Unique id per instance so multiple ratings on one page never collide.
 export function buildRatingA11yLabel(avg, count) {
-  var id = 'ikr-rating-label-' + Math.random().toString(36).slice(2, 9);
+  var id = 'renuvex-pr-rating-label-' + Math.random().toString(36).slice(2, 9);
   var hasCount = count !== undefined && count !== null && count !== '';
   var text = hasCount
     ? avg + ' üzerinden 5 yıldız, ' + count + ' yorum'
     : avg + ' üzerinden 5 yıldız';
-  return { id: id, html: '<span class="ikr-sr-only" id="' + id + '">' + text + '</span>' };
+  return { id: id, html: '<span class="renuvex-pr-sr-only" id="' + id + '">' + text + '</span>' };
 }
 
-// PARTIAL_STARS_CSS — partialStarsHTML çıktısının (.ikr-star / .ikr-stars-partial)
+// PARTIAL_STARS_CSS — partialStarsHTML çıktısının (.renuvex-pr-star / .renuvex-pr-stars-partial)
 // eşleşen CSS'i. HTML üretici ile tek bir HTML+CSS çiftidir. Hem CLASSIC_CSS
-// (PDP review render'ının #ikr-styles'ı) hem core/badge.js (#ikr-badge-styles)
+// (PDP review render'ının #renuvex-pr-styles'ı) hem core/badge.js (#renuvex-pr-badge-styles)
 // bu sabiti tüketir — tek doğruluk kaynağı, iki kopya asla ayrışamaz.
 export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + clip-path) ───────────────────────
-     Her yıldız bağımsız .ikr-star kapsayıcısında. Half state'te tek filled
+     Her yıldız bağımsız .renuvex-pr-star kapsayıcısında. Half state'te tek filled
      geometri iki katmanda: alt katman boş-renk full, üst katman dolu-renk
      + clip-path:inset(0 50% 0 0) ile sol %50. Tek SVG path kullanıldığı
      için kare/kalp ikonlarında bile geometri uyumsuzluğu fiziksel olarak
      imkânsız. Material UI Rating decimal mode + react-stars pattern. */
-  .ikr-stars-partial{display:inline-flex;gap:2px;align-items:center;line-height:1;}
-  .ikr-star{
+  .renuvex-pr-stars-partial{display:inline-flex;gap:2px;align-items:center;line-height:1;}
+  .renuvex-pr-star{
     position:relative;
     display:inline-flex;
     align-items:center;
@@ -117,58 +116,58 @@ export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + cl
     flex-shrink:0;
     line-height:1;
   }
-  .ikr-star > svg{width:100%;height:100%;display:block;}
-  /* Sprite-based star svg — references #ikr-icon-sprite symbols via <use href>. */
-  .ikr-star-svg{width:100%;height:100%;display:block;}
+  .renuvex-pr-star > svg{width:100%;height:100%;display:block;}
+  /* Sprite-based star svg — references #renuvex-pr-icon-sprite symbols via <use href>. */
+  .renuvex-pr-star-svg{width:100%;height:100%;display:block;}
   /* Visually-hidden accessible label (screen-reader only). */
-  .ikr-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
-  .ikr-star-full  { color: var(--ikr-review-star-color, #f59e0b); }
-  .ikr-star-empty { color: var(--ikr-review-star-color, #f59e0b); }
+  .renuvex-pr-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+  .renuvex-pr-star-full  { color: var(--renuvex-pr-review-star-color, #f59e0b); }
+  .renuvex-pr-star-empty { color: var(--renuvex-pr-review-star-color, #f59e0b); }
   /* Half: iki katman, üst katman clip ile sol %50. */
-  .ikr-star-half-bg,
-  .ikr-star-half-fg{
+  .renuvex-pr-star-half-bg,
+  .renuvex-pr-star-half-fg{
     position:absolute;
     inset:0;
     display:inline-flex;
     align-items:center;
     justify-content:center;
   }
-  .ikr-star-half-bg{ color: var(--ikr-review-star-color, #f59e0b); }
-  .ikr-star-half-fg{
-    color: var(--ikr-review-star-color, #f59e0b);
+  .renuvex-pr-star-half-bg{ color: var(--renuvex-pr-review-star-color, #f59e0b); }
+  .renuvex-pr-star-half-fg{
+    color: var(--renuvex-pr-review-star-color, #f59e0b);
     -webkit-clip-path: inset(0 50% 0 0);
             clip-path: inset(0 50% 0 0);
   }
-  .ikr-star-half-bg > svg,
-  .ikr-star-half-fg > svg{width:100%;height:100%;display:block;}
+  .renuvex-pr-star-half-bg > svg,
+  .renuvex-pr-star-half-fg > svg{width:100%;height:100%;display:block;}
 
   /* ─── BADGE BASE (PR-2 — class-based layout + a11y + theme reset) ─────────
      Sizing token'ları (icon px, text px) PR-3'ten itibaren component-scope
-     CSS variable'ı: --ikr-badge-icon-size, --ikr-badge-text-size. Default'lar
-     .ikr-rating-badge'de tanımlı (small'a denk gelmez — admin'de seçili size'a
+     CSS variable'ı: --renuvex-pr-badge-icon-size, --renuvex-pr-badge-text-size. Default'lar
+     .renuvex-pr-rating-badge'de tanımlı (small'a denk gelmez — admin'de seçili size'a
      uyacak şekilde core/badge.js → ensureBadgeTokens runtime'da override eder).
      Tipografi reset (font-family:inherit / letter-spacing:normal /
      text-transform:none) parent h2'den miras kaçışını keser. */
-  .ikr-rating-badge{
-    --ikr-badge-icon-size:16px;
-    --ikr-badge-text-size:14px;
+  .renuvex-pr-rating-badge{
+    --renuvex-pr-badge-icon-size:16px;
+    --renuvex-pr-badge-text-size:14px;
     display:flex;
     align-items:center;
     line-height:1.3;
-    font-size:var(--ikr-badge-text-size);
+    font-size:var(--renuvex-pr-badge-text-size);
     font-weight:400;
     color:#555;
     font-family:inherit;
     letter-spacing:normal;
     text-transform:none;
   }
-  .ikr-rating-badge--pdp{
+  .renuvex-pr-rating-badge--pdp{
     gap:5px;
     margin-bottom:10px;
     text-decoration:none;
     cursor:pointer;
   }
-  .ikr-rating-badge--listing{
+  .renuvex-pr-rating-badge--listing{
     gap:3px;
     margin-top:0;
     margin-bottom:4px;
@@ -176,14 +175,14 @@ export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + cl
   }
   /* Alignment via data-attr (Loox-style data-alignment) — replaces per-mount
      inline justify-content style on the badge. */
-  .ikr-rating-badge[data-ikr-align="left"]{justify-content:flex-start;}
-  .ikr-rating-badge[data-ikr-align="center"]{justify-content:center;}
-  .ikr-rating-badge[data-ikr-align="right"]{justify-content:flex-end;}
-  /* Badge scope'undaki yıldızlar variable'dan boyut alır; dışarıdaki .ikr-star
+  .renuvex-pr-rating-badge[data-renuvex-align="left"]{justify-content:flex-start;}
+  .renuvex-pr-rating-badge[data-renuvex-align="center"]{justify-content:center;}
+  .renuvex-pr-rating-badge[data-renuvex-align="right"]{justify-content:flex-end;}
+  /* Badge scope'undaki yıldızlar variable'dan boyut alır; dışarıdaki .renuvex-pr-star
      (summary, modal vs.) ayrı kalır — selector specificity ile çakışmaz. */
-  .ikr-rating-badge .ikr-star{
-    width:var(--ikr-badge-icon-size);
-    height:var(--ikr-badge-icon-size);
+  .renuvex-pr-rating-badge .renuvex-pr-star{
+    width:var(--renuvex-pr-badge-icon-size);
+    height:var(--renuvex-pr-badge-icon-size);
   }`;
 
 export function formatDate(iso) {
@@ -202,22 +201,22 @@ function hexToRgb(hex) {
 export function applyWidgetColor(color) {
   // react-colorful 8-char hex (#rrggbbaa) gonderebilir — kabul et.
   var validColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(color) ? color : '#111111';
-  document.documentElement.style.setProperty('--ikr-color', validColor);
+  document.documentElement.style.setProperty('--renuvex-pr-color', validColor);
   document.documentElement.style.setProperty('--renuvex-pr-color', validColor);
   var rgb = hexToRgb(validColor);
-  document.documentElement.style.setProperty('--ikr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
+  document.documentElement.style.setProperty('--renuvex-pr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
   document.documentElement.style.setProperty('--renuvex-pr-color-light', rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)' : 'rgba(17,17,17,0.07)');
 }
 
 export function injectStyles(_color, css) {
-  var el = document.getElementById('ikr-styles');
+  var el = document.getElementById('renuvex-pr-styles');
   if (!el) {
     el = document.createElement('style');
-    el.id = 'ikr-styles';
+    el.id = 'renuvex-pr-styles';
     document.head.appendChild(el);
   }
-  el.textContent = expandRenuvexCss(css);
-  // applyWidgetColor removed — --ikr-color and --ikr-color-light are no longer
+  el.textContent = (css);
+  // applyWidgetColor removed — --renuvex-pr-color and --renuvex-pr-color-light are no longer
   // used by styles.js. All color surfaces now use their own specific variables.
 }
 
@@ -244,7 +243,7 @@ function normalizeReviewImageStoreId(storeId) {
 var trustedReviewImageCloudName = normalizeReviewImageCloudName(
   typeof __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string'
     ? __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__
-    : (typeof __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string' ? __IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__ : '')
+    : ''
 );
 
 if (!trustedReviewImageCloudName) {
@@ -407,10 +406,10 @@ export function hideOnImageError(img) {
 // tüm kardeşler dolu" kuralı çalışır (DOM sırası sağ→sol, flex-direction:row-reverse ile görünüm düzelir).
 export function renderStars(rating, interactive, onChange, settings) {
   var pair = getIconFromSettings(settings);
-  var name = 'ikr-rating-' + Math.random().toString(36).slice(2, 9);
+  var name = 'renuvex-pr-rating-' + Math.random().toString(36).slice(2, 9);
 
   var wrap = document.createElement('div');
-  wrap.className = 'ikr-rating' + (interactive ? ' ikr-rating-interactive' : '');
+  wrap.className = 'renuvex-pr-rating' + (interactive ? ' renuvex-pr-rating-interactive' : '');
   // row-reverse ile DOM 5,4,3,2,1 → görsel 1,2,3,4,5.
   wrap.style.cssText = 'display:inline-flex;flex-direction:row-reverse;justify-content:flex-end;gap:4px;';
 
@@ -419,7 +418,7 @@ export function renderStars(rating, interactive, onChange, settings) {
     wrap.style.flexDirection = 'row';
     for (var j = 1; j <= 5; j++) {
       var star = document.createElement('span');
-      star.className = 'ikr-icon';
+      star.className = 'renuvex-pr-icon';
       star.style.cssText = 'width:24px;height:24px;display:inline-flex;color:' + STAR_COLOR + ';';
       star.innerHTML = j <= rating ? pair.filled : pair.empty;
       wrap.appendChild(star);
@@ -435,7 +434,7 @@ export function renderStars(rating, interactive, onChange, settings) {
       input.name = name;
       input.value = String(idx);
       input.id = name + '-' + idx;
-      input.className = 'ikr-rating-input';
+      input.className = 'renuvex-pr-rating-input';
       if (idx === rating) input.checked = true;
       // Görsel olarak gizle ama erişilebilir kalsın (screen reader + klavye çalışır).
       input.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
@@ -445,7 +444,7 @@ export function renderStars(rating, interactive, onChange, settings) {
 
       var label = document.createElement('label');
       label.htmlFor = input.id;
-      label.className = 'ikr-rating-label';
+      label.className = 'renuvex-pr-rating-label';
       label.setAttribute('aria-label', idx + ' yıldız');
       label.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:pointer;transition:color .15s;';
       
@@ -454,7 +453,7 @@ export function renderStars(rating, interactive, onChange, settings) {
         e.preventDefault();
         
         // Grubun tümünü temizle (Manuel checked=true yaptığımızda grubun senkronu bozulmasın diye)
-        var allRadios = wrap.querySelectorAll('.ikr-rating-input');
+        var allRadios = wrap.querySelectorAll('.renuvex-pr-rating-input');
         for(var r=0; r<allRadios.length; r++) { allRadios[r].checked = false; }
         
         input.checked = true;
@@ -464,8 +463,8 @@ export function renderStars(rating, interactive, onChange, settings) {
       // Pointer-events:none ile resimlerin tıklamayı emmesi tamamen önleniyor.
       // Inline opacity:0 yerine class yapısı kullanarak stil ezilmesini de kaldırıyoruz
       label.innerHTML =
-        '<span class="ikr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';pointer-events:none;">' + pair.filled + '</span>' +
-        '<span class="ikr-rating-empty" style="position:relative;width:24px;height:24px;color:' + STAR_COLOR + ';pointer-events:none;">' + pair.empty + '</span>';
+        '<span class="renuvex-pr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';pointer-events:none;">' + pair.filled + '</span>' +
+        '<span class="renuvex-pr-rating-empty" style="position:relative;width:24px;height:24px;color:' + STAR_COLOR + ';pointer-events:none;">' + pair.empty + '</span>';
       label.style.position = 'relative';
 
       wrap.appendChild(input);
@@ -482,10 +481,10 @@ var starStylesInjected = false;
 function ensureStarStyles() {
   if (starStylesInjected) return;
   starStylesInjected = true;
-  var css = '.ikr-rating-interactive .ikr-rating-filled{opacity:0; transition:opacity .15s;}' + '.ikr-rating-interactive .ikr-rating-empty{opacity:1; transition:opacity .15s;}' + '.ikr-rating-interactive .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-filled{opacity:1 !important;}' + '.ikr-rating-interactive .ikr-rating-input:checked ~ .ikr-rating-label .ikr-rating-empty{opacity:0 !important;}' + '.ikr-rating-interactive .ikr-rating-input:focus-visible + .ikr-rating-label{outline:2px solid ' + STAR_COLOR + ';outline-offset:2px;border-radius:4px;}';
+  var css = '.renuvex-pr-rating-interactive .renuvex-pr-rating-filled{opacity:0; transition:opacity .15s;}' + '.renuvex-pr-rating-interactive .renuvex-pr-rating-empty{opacity:1; transition:opacity .15s;}' + '.renuvex-pr-rating-interactive .renuvex-pr-rating-input:checked ~ .renuvex-pr-rating-label .renuvex-pr-rating-filled{opacity:1 !important;}' + '.renuvex-pr-rating-interactive .renuvex-pr-rating-input:checked ~ .renuvex-pr-rating-label .renuvex-pr-rating-empty{opacity:0 !important;}' + '.renuvex-pr-rating-interactive .renuvex-pr-rating-input:focus-visible + .renuvex-pr-rating-label{outline:2px solid ' + STAR_COLOR + ';outline-offset:2px;border-radius:4px;}';
 
   var style = document.createElement('style');
-  style.setAttribute('data-ikr', 'rating');
-  style.textContent = expandRenuvexCss(css);
+  style.setAttribute('data-renuvex-pr-style', 'rating');
+  style.textContent = (css);
   document.head.appendChild(style);
 }

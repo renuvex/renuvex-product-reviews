@@ -13,16 +13,15 @@ import { createStepRating } from './steps/step-rating.js';
 import { createStepPhotos } from './steps/step-photos.js';
 import { createStepContent } from './steps/step-content.js';
 import { createStepAuthor } from './steps/step-author.js';
-import { expandRenuvexCss } from '../../core/namespace.js';
 
 // ─── CSS bir kez inject ─────
 var stylesInjected = false;
 function ensureStyles() {
   if (stylesInjected) return;
   var styleEl = document.createElement('style');
-  styleEl.setAttribute('data-ikr-fwizard', '');
+  styleEl.setAttribute('data-renuvex-fwizard', '');
   styleEl.setAttribute('data-renuvex-pr-style', 'review-form-wizard');
-  styleEl.textContent = expandRenuvexCss(FWIZARD_CSS);
+  styleEl.textContent = (FWIZARD_CSS);
   document.head.appendChild(styleEl);
   stylesInjected = true;
 }
@@ -49,16 +48,16 @@ function renderStep(stepNum, state, stepOpts) {
   });
   // Beklenmedik step — boş placeholder
   var ph = document.createElement('div');
-  ph.className = 'ikr-fwizard-step ikr-fwizard-step-placeholder';
+  ph.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-placeholder';
   return { el: ph, destroy: function () {} };
 }
 
 function buildThanksScreen() {
   var wrap = document.createElement('div');
-  wrap.className = 'ikr-fwizard-step ikr-fwizard-step-thanks';
+  wrap.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-thanks';
   wrap.innerHTML =
-    '<div class="ikr-fwizard-step-title ikr-fwizard-thanks-title">Teşekkürler</div>' +
-    '<div class="ikr-fwizard-step-subtitle ikr-fwizard-thanks-subtitle">Değerlendirmeniz alındı.</div>';
+    '<div class="renuvex-pr-fwizard-step-title renuvex-pr-fwizard-thanks-title">Teşekkürler</div>' +
+    '<div class="renuvex-pr-fwizard-step-subtitle renuvex-pr-fwizard-thanks-subtitle">Değerlendirmeniz alındı.</div>';
   return wrap;
 }
 
@@ -82,7 +81,7 @@ export function openReviewFormModal(opts) {
       window.removeEventListener('popstate', onPopState);
       // Eğer X butonuyla veya ESC ile kapandıysa (back button değilse), 
       // eklediğimiz history state'i temizle.
-      if (window.history.state && window.history.state.ikrReviewModal) {
+      if (window.history.state && window.history.state.renuvexPrReviewModal) {
         window.history.back();
       }
 
@@ -97,7 +96,7 @@ export function openReviewFormModal(opts) {
   });
 
   // ─── History Management (Mobil Geri Tuşu Desteği) ───
-  var modalHistoryState = { ikrReviewModal: true };
+  var modalHistoryState = { renuvexPrReviewModal: true };
   window.history.pushState(modalHistoryState, null, '');
 
   var onPopState = function (e) {
@@ -110,7 +109,7 @@ export function openReviewFormModal(opts) {
 
   // ─── Modal layout: stepWrap (içerik) + progressBar (alt) ───
   var stepWrap = document.createElement('div');
-  stepWrap.className = 'ikr-fwizard-step-wrap';
+  stepWrap.className = 'renuvex-pr-fwizard-step-wrap';
 
   var progress = createProgressBar({
     skippableSteps: [2],
@@ -128,7 +127,7 @@ export function openReviewFormModal(opts) {
 
   // Wizard layout container — content + footer dikey
   var layout = document.createElement('div');
-  layout.className = 'ikr-fwizard-layout';
+  layout.className = 'renuvex-pr-fwizard-layout';
   layout.appendChild(stepWrap);
   layout.appendChild(progress.el);
 
@@ -168,13 +167,13 @@ export function openReviewFormModal(opts) {
 
     if (withEnterAnim) {
       animPhase = 'entering';
-      inst.el.classList.add('ikr-fwizard-step--enter');
+      inst.el.classList.add('renuvex-pr-fwizard-step--enter');
 
       var timeoutId = null;
       var onEnd = function () {
         if (timeoutId) clearTimeout(timeoutId);
         inst.el.removeEventListener('animationend', onEnd);
-        inst.el.classList.remove('ikr-fwizard-step--enter');
+        inst.el.classList.remove('renuvex-pr-fwizard-step--enter');
         animPhase = 'idle';
         // Kuyrukta bekleyen yeni hedef varsa şimdi işle
         if (pendingStep !== null) {
@@ -207,7 +206,7 @@ export function openReviewFormModal(opts) {
     if (!currentStepInstance) {
       stepWrap.innerHTML = '';
       var thanksEl = buildThanksScreen();
-      thanksEl.classList.add('ikr-fwizard-step--enter');
+      thanksEl.classList.add('renuvex-pr-fwizard-step--enter');
       stepWrap.appendChild(thanksEl);
       shell.setStepAttr('thanks');
       progress.setThanksState(shell.close);
@@ -216,7 +215,7 @@ export function openReviewFormModal(opts) {
 
     var leaving = currentStepInstance;
     animPhase = 'exiting';
-    leaving.el.classList.add('ikr-fwizard-step--exit');
+    leaving.el.classList.add('renuvex-pr-fwizard-step--exit');
 
     var onExitEnd = function () {
       if (timeoutId) clearTimeout(timeoutId);
@@ -228,7 +227,7 @@ export function openReviewFormModal(opts) {
       
       stepWrap.innerHTML = '';
       var thanksEl = buildThanksScreen();
-      thanksEl.classList.add('ikr-fwizard-step--enter');
+      thanksEl.classList.add('renuvex-pr-fwizard-step--enter');
       stepWrap.appendChild(thanksEl);
       
       shell.setStepAttr('thanks');
@@ -260,7 +259,7 @@ export function openReviewFormModal(opts) {
     // Normal geçiş: exit → mount
     var leaving = currentStepInstance;
     animPhase = 'exiting';
-    leaving.el.classList.add('ikr-fwizard-step--exit');
+    leaving.el.classList.add('renuvex-pr-fwizard-step--exit');
 
     var onExitEnd = function () {
       if (timeoutId) clearTimeout(timeoutId);

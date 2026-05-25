@@ -51,16 +51,14 @@ if (hasWindow && hasDocument) {
   var scriptBase = getWidgetScriptBaseUrl(script);
   var publicApiKey = getPublicApiKeyFromScript(script);
 
-  if (scriptSrc && scriptBase && publicApiKey && !window.__renuvexProductReviewsRuntimeLoading && !window.__ikrRuntimeLoading) {
+  if (scriptSrc && scriptBase && publicApiKey && !window.__renuvexProductReviewsRuntimeLoading) {
     window.__renuvexProductReviewsRuntimeLoading = true;
-    window.__ikrRuntimeLoading = true;
     var runtimePath = typeof __RENUVEX_PR_RUNTIME_PATH__ !== 'undefined'
       ? __RENUVEX_PR_RUNTIME_PATH__
-      : (typeof __IKR_RUNTIME_PATH__ !== 'undefined' ? __IKR_RUNTIME_PATH__ : 'widget-runtime/runtime.js');
+      : 'widget-runtime/runtime.js';
     var runtimeUrl = scriptBase + '/' + runtimePath;
     import(runtimeUrl).catch(function (err) {
       window.__renuvexProductReviewsRuntimeLoading = false;
-      window.__ikrRuntimeLoading = false;
       postRuntimeError(scriptBase, publicApiKey, err && err.message, err && err.stack, runtimeUrl);
       try { console.error('[renuvex-pr] runtime import failed:', err); } catch (_) {}
     });

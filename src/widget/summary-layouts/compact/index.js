@@ -17,9 +17,9 @@ export var meta = {
   name: 'Kompakt (Açılır)',
   // Trigger yıldızı global size ayarına bağlı, bar-label-size'den bağımsız.
   sizeOverrides: {
-    small:  { '--ikr-compact-star-size': '20px' },
-    medium: { '--ikr-compact-star-size': '24px' },
-    large:  { '--ikr-compact-star-size': '28px' },
+    small:  { '--renuvex-pr-compact-star-size': '20px' },
+    medium: { '--renuvex-pr-compact-star-size': '24px' },
+    large:  { '--renuvex-pr-compact-star-size': '28px' },
   },
 };
 
@@ -39,26 +39,26 @@ export function render(opts) {
   var onSortChange = opts.onSortChange;
 
   var summary = document.createElement('div');
-  summary.className = 'ikr-summary ikr-summary-compact';
+  summary.className = 'renuvex-pr-summary renuvex-pr-summary-compact';
 
   // ─── Header (her zaman görünür) ─────────────────────────────
   var header = document.createElement('div');
-  header.className = 'ikr-compact-header';
+  header.className = 'renuvex-pr-compact-header';
 
   // Trigger wrap — popover'ı anchor edebilmek için position:relative parent
   var triggerWrap = document.createElement('div');
-  triggerWrap.className = 'ikr-compact-trigger-wrap';
+  triggerWrap.className = 'renuvex-pr-compact-trigger-wrap';
 
   // Trigger: yıldız + sayı + chevron — tıklanınca popover toggle
   var trigger = document.createElement('button');
-  trigger.className = 'ikr-compact-trigger';
+  trigger.className = 'renuvex-pr-compact-trigger';
   trigger.type = 'button';
   trigger.setAttribute('aria-expanded', 'false');
 
   trigger.innerHTML =
-    '<span class="ikr-compact-trigger-stars">' + partialStarsHTML(avgRatingVal, iconPair) + '</span>' +
-    '<span class="ikr-compact-trigger-text">' + allCount.toLocaleString('tr-TR') + ' Yorum</span>' +
-    '<span class="ikr-compact-chevron">' +
+    '<span class="renuvex-pr-compact-trigger-stars">' + partialStarsHTML(avgRatingVal, iconPair) + '</span>' +
+    '<span class="renuvex-pr-compact-trigger-text">' + allCount.toLocaleString('tr-TR') + ' Yorum</span>' +
+    '<span class="renuvex-pr-compact-chevron">' +
       iconUseSvg('<svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7.11 5.16L2.16 0.21L0.75 1.62L7.11 7.98L13.48 1.62L12.06 0.21L7.11 5.16Z" fill="currentColor"/></svg>') +
     '</span>';
   triggerWrap.appendChild(trigger);
@@ -74,11 +74,11 @@ export function render(opts) {
   });
 
   // Header sağında actions slot — desktop'ta hem write hem filter, mobile'da sadece filter
-  var filterWrap = actions.querySelector('.ikr-filter-wrap');
-  var writeBtn = actions.querySelector('.ikr-write-btn');
+  var filterWrap = actions.querySelector('.renuvex-pr-filter-wrap');
+  var writeBtn = actions.querySelector('.renuvex-pr-write-btn');
 
   var actionsSlot = document.createElement('div');
-  actionsSlot.className = 'ikr-compact-actions-slot';
+  actionsSlot.className = 'renuvex-pr-compact-actions-slot';
   if (writeBtn) actionsSlot.appendChild(writeBtn);
   if (filterWrap) actionsSlot.appendChild(filterWrap);
   header.appendChild(actionsSlot);
@@ -87,19 +87,19 @@ export function render(opts) {
 
   // ─── Popover Panel (trigger'a anchor, overlay) ──────────────
   var panel = document.createElement('div');
-  panel.className = 'ikr-compact-panel';
+  panel.className = 'renuvex-pr-compact-panel';
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-hidden', 'true');
 
   var panelInner = document.createElement('div');
-  panelInner.className = 'ikr-compact-panel-inner';
+  panelInner.className = 'renuvex-pr-compact-panel-inner';
 
   // Büyük ortalama puan — tek dolu yıldız + sayı (classic'e benzer pattern,
   // panel zaten avg'ı vurgulu gösteriyor; partial stars trigger'da var)
   var avg = document.createElement('div');
-  avg.className = 'ikr-compact-avg';
+  avg.className = 'renuvex-pr-compact-avg';
   avg.innerHTML =
-    '<span class="ikr-icon">' + starUseSvg('full') + '</span>' +
+    '<span class="renuvex-pr-icon">' + starUseSvg('full') + '</span>' +
     '<span>' + avgRatingVal + '</span>';
   panelInner.appendChild(avg);
 
@@ -123,8 +123,8 @@ export function render(opts) {
     var targetParent = isMobile ? summary : triggerWrap;
     if (panel.parentNode === targetParent) return;
     // Eşik geçişinde state karışmasın — açıksa kapat (CSS değişiyor)
-    if (panel.classList.contains('ikr-open')) {
-      panel.classList.remove('ikr-open');
+    if (panel.classList.contains('renuvex-pr-open')) {
+      panel.classList.remove('renuvex-pr-open');
       panel.setAttribute('aria-hidden', 'true');
       trigger.setAttribute('aria-expanded', 'false');
     }
@@ -140,18 +140,18 @@ export function render(opts) {
   // Mobile-only write satırı — header'daki butonun ikinci kopyası, CSS ile sadece mobile'da gözükür
   if (writeBtn) {
     var writeBtnMobile = document.createElement('button');
-    writeBtnMobile.className = 'ikr-write-btn';
+    writeBtnMobile.className = 'renuvex-pr-write-btn';
     writeBtnMobile.textContent = (currentSettings && currentSettings.writeButtonText) || 'Yorum Yap';
     writeBtnMobile.onclick = openWriteForm;
     var writeRow = document.createElement('div');
-    writeRow.className = 'ikr-compact-write-row';
+    writeRow.className = 'renuvex-pr-compact-write-row';
     writeRow.appendChild(writeBtnMobile);
     summary.appendChild(writeRow);
   }
 
   // ─── Toggle davranışı ───────────────────────────────────────
   function closePanel() {
-    panel.classList.remove('ikr-open');
+    panel.classList.remove('renuvex-pr-open');
     panel.setAttribute('aria-hidden', 'true');
     trigger.setAttribute('aria-expanded', 'false');
   }
@@ -159,12 +159,12 @@ export function render(opts) {
     // Desktop popover'da: diğer açık popover'ları kapat (one-at-a-time).
     // Mobile accordion'da kayıt yapılmadığı için no-op gibi davranır.
     notifyOpening(panelRegistration);
-    panel.classList.add('ikr-open');
+    panel.classList.add('renuvex-pr-open');
     panel.setAttribute('aria-hidden', 'false');
     trigger.setAttribute('aria-expanded', 'true');
   }
   trigger.onclick = function() {
-    if (panel.classList.contains('ikr-open')) closePanel();
+    if (panel.classList.contains('renuvex-pr-open')) closePanel();
     else openPanel();
   };
 
@@ -195,9 +195,9 @@ export function render(opts) {
     var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
     if (recommendPct > 0) {
       var rec = document.createElement('div');
-      rec.className = 'ikr-summary-block ikr-summary-recommend';
+      rec.className = 'renuvex-pr-summary-block renuvex-pr-summary-recommend';
       rec.style.marginTop = '8px';
-      rec.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
+      rec.innerHTML = '<span class="renuvex-pr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
       panelInner.appendChild(rec);
     }
   }

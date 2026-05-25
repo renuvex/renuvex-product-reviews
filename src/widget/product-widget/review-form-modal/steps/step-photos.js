@@ -15,29 +15,29 @@ export function createStepPhotos(state, opts) {
   opts = opts || {};
   var isExiting = false; // Geçiş başladığında UI güncellemesini durdurmak için bayrak
   var root = document.createElement('div');
-  root.className = 'ikr-fwizard-step ikr-fwizard-step-photos';
+  root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-photos';
 
   // Başlık
   var title = document.createElement('div');
-  title.className = 'ikr-fwizard-step-title ikr-fwizard-step-title--lg';
+  title.className = 'renuvex-pr-fwizard-step-title renuvex-pr-fwizard-step-title--lg';
   title.textContent = 'Fotoğraflı değerlendirme';
   root.appendChild(title);
 
   // Alt başlık
   var subtitle = document.createElement('div');
-  subtitle.className = 'ikr-fwizard-step-subtitle';
+  subtitle.className = 'renuvex-pr-fwizard-step-subtitle';
   subtitle.textContent = 'Fotoğraf ekleyebilirsiniz.';
   root.appendChild(subtitle);
 
   // Çerçeveli kart — upload butonu ve önizlemeler burada
   var card = document.createElement('div');
-  card.className = 'ikr-fwizard-photo-card';
+  card.className = 'renuvex-pr-fwizard-photo-card';
 
   // Upload button + hidden file input: button keeps keyboard semantics,
   // file input keeps the native picker contract.
   var uploadLabel = document.createElement('button');
   uploadLabel.type = 'button';
-  uploadLabel.className = 'ikr-fwizard-photo-add';
+  uploadLabel.className = 'renuvex-pr-fwizard-photo-add';
   uploadLabel.setAttribute('aria-label', 'Fotoğraf ekle');
   uploadLabel.innerHTML =
     iconUseSvg('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>') +
@@ -53,7 +53,7 @@ export function createStepPhotos(state, opts) {
 
   // Önizleme listesi
   var previews = document.createElement('div');
-  previews.className = 'ikr-fwizard-photo-previews';
+  previews.className = 'renuvex-pr-fwizard-photo-previews';
   previews.setAttribute('aria-live', 'polite');
   card.appendChild(previews);
 
@@ -86,7 +86,7 @@ export function createStepPhotos(state, opts) {
 
   function createThumbNode(item, displayUrl) {
     var node = document.createElement('div');
-    node.className = 'ikr-fwizard-photo-thumb';
+    node.className = 'renuvex-pr-fwizard-photo-thumb';
 
     var img = document.createElement('img');
     img.src = displayUrl;
@@ -95,13 +95,13 @@ export function createStepPhotos(state, opts) {
     node.appendChild(img);
 
     var overlay = document.createElement('div');
-    overlay.className = 'ikr-fwizard-photo-loading';
+    overlay.className = 'renuvex-pr-fwizard-photo-loading';
     overlay.style.display = 'none';
     node.appendChild(overlay);
 
     var removeBtn = document.createElement('button');
     removeBtn.type = 'button';
-    removeBtn.className = 'ikr-fwizard-photo-remove';
+    removeBtn.className = 'renuvex-pr-fwizard-photo-remove';
     removeBtn.innerHTML = '&#x2715;';
     node.appendChild(removeBtn);
 
@@ -115,12 +115,12 @@ export function createStepPhotos(state, opts) {
       img.src = displayUrl;
     }
 
-    var overlay = node.querySelector('.ikr-fwizard-photo-loading');
+    var overlay = node.querySelector('.renuvex-pr-fwizard-photo-loading');
     if (item.isPending && item.error) {
       overlay.style.display = 'flex';
       overlay.textContent = '';
       var errorEl = document.createElement('span');
-      errorEl.className = 'ikr-upload-error';
+      errorEl.className = 'renuvex-pr-upload-error';
       errorEl.textContent = '✗ ' + item.error;
       overlay.appendChild(errorEl);
     } else {
@@ -128,7 +128,7 @@ export function createStepPhotos(state, opts) {
       overlay.textContent = '';
     }
 
-    var removeBtn = node.querySelector('.ikr-fwizard-photo-remove');
+    var removeBtn = node.querySelector('.renuvex-pr-fwizard-photo-remove');
     removeBtn.onclick = function () {
       // urlToFinger haritasından bak (hem blob hem cloud URL'ler kayıtlı)
       // item.file fallback olarak kalır (ekstra güvence)
@@ -163,10 +163,10 @@ export function createStepPhotos(state, opts) {
     var isFull = totalCount >= MAX_PHOTOS;
 
     if (totalCount > 0) {
-      card.classList.add('ikr-fwizard-photo-card--compact');
+      card.classList.add('renuvex-pr-fwizard-photo-card--compact');
       uploadLabel.innerHTML = iconUseSvg(PLUS_ICON);
     } else {
-      card.classList.remove('ikr-fwizard-photo-card--compact');
+      card.classList.remove('renuvex-pr-fwizard-photo-card--compact');
       uploadLabel.innerHTML = iconUseSvg(PHOTO_ICON) + '<span>Fotoğraf Ekle</span>';
     }
 
@@ -181,7 +181,7 @@ export function createStepPhotos(state, opts) {
       uploadLabel.style.display = 'flex';
       uploadLabel.disabled = false;
       fileInput.disabled = false;
-      uploadLabel.classList.remove('ikr-fwizard-photo-add--disabled');
+      uploadLabel.classList.remove('renuvex-pr-fwizard-photo-add--disabled');
     }
   }
 

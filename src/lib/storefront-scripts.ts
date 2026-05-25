@@ -2,13 +2,12 @@ import { getIkas, getIkasV1 } from '@/helpers/api-helpers';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { buildStorefrontThemeState, resolveStorefrontThemeMetadata } from '@/lib/storefront-theme';
-import { buildStorefrontWidgetScript, LEGACY_STOREFRONT_WIDGET_APP_MARKER, STOREFRONT_WIDGET_APP_MARKER } from '@/lib/storefront-widget-url';
+import { buildStorefrontWidgetScript, STOREFRONT_WIDGET_APP_MARKER } from '@/lib/storefront-widget-url';
 import { StorefrontJSScriptContentTypeEnum, type ikasAdminGraphQLAPIClient } from '@/lib/ikas-client/generated/graphql';
 import type { ikasAdminGraphQLAPIClient as ikasAdminGraphQLAPIV1Client } from '@/lib/ikas-client/generated/v1-graphql';
 import type { AuthToken } from '@/models/auth-token';
 
 const STOREFRONT_SCRIPT_NAME = 'renuvex-product-reviews-widget';
-const LEGACY_STOREFRONT_SCRIPT_NAMES = ['yorum-paneli-widget'];
 
 type IkasClient = ikasAdminGraphQLAPIClient<AuthToken>;
 type IkasV1Client = ikasAdminGraphQLAPIV1Client<AuthToken>;
@@ -104,23 +103,19 @@ function canRecreateAfterUpdateFailure(message: string) {
 }
 
 function includesStoreIdMarker(scriptContent: string, storeId: string) {
-  return scriptContent.includes(`data-renuvex-store-id="${storeId}"`) || scriptContent.includes(`data-ikr-store-id="${storeId}"`);
+  return scriptContent.includes(`data-renuvex-store-id="${storeId}"`);
 }
 
 function includesRenuvexAppMarker(scriptContent: string) {
   return scriptContent.includes(`data-renuvex-app="${STOREFRONT_WIDGET_APP_MARKER}"`);
 }
 
-function includesLegacyAppMarker(scriptContent: string) {
-  return scriptContent.includes(`data-ikr-app="${LEGACY_STOREFRONT_WIDGET_APP_MARKER}"`);
-}
-
 function includesAppMarker(scriptContent: string) {
-  return includesRenuvexAppMarker(scriptContent) || includesLegacyAppMarker(scriptContent);
+  return includesRenuvexAppMarker(scriptContent);
 }
 
 function isKnownScriptName(name: string) {
-  return name === STOREFRONT_SCRIPT_NAME || LEGACY_STOREFRONT_SCRIPT_NAMES.includes(name);
+  return name === STOREFRONT_SCRIPT_NAME;
 }
 
 function includesPublicApiKey(scriptContent: string, storeId: string) {
@@ -142,22 +137,15 @@ function getMatchPriority(
   scriptContent: string,
 ): { matchedBy: StorefrontScriptMatchedBy; priority: number } {
   const hasRenuvexMarker = includesRenuvexAppMarker(script.scriptContent);
-  const hasLegacyMarker = includesLegacyAppMarker(script.scriptContent);
-  const hasAppMarker = hasRenuvexMarker || hasLegacyMarker;
   const hasStoreMarker = includesStoreIdMarker(script.scriptContent, storeId);
   const hasPublicApiKey = includesPublicApiKey(script.scriptContent, storeId);
   const hasCanonicalScriptName = script.name === STOREFRONT_SCRIPT_NAME;
-  const hasKnownScriptName = isKnownScriptName(script.name);
 
-  if (existingScriptId && script.id === existingScriptId && hasAppMarker && hasStoreMarker) return { matchedBy: 'db_id_marker', priority: 100 };
+  if (existingScriptId && script.id === existingScriptId && hasRenuvexMarker && hasStoreMarker) return { matchedBy: 'db_id_marker', priority: 100 };
   if (hasRenuvexMarker && hasStoreMarker) return { matchedBy: 'app_marker_store_id', priority: 95 };
-  if (hasLegacyMarker && hasStoreMarker) return { matchedBy: 'app_marker_store_id', priority: 90 };
   if (hasCanonicalScriptName && script.scriptContent === scriptContent) return { matchedBy: 'script_name_exact_content', priority: 80 };
-  if (hasKnownScriptName && script.scriptContent === scriptContent) return { matchedBy: 'script_name_exact_content', priority: 78 };
   if (hasCanonicalScriptName && hasPublicApiKey) return { matchedBy: 'script_name_store_id', priority: 70 };
-  if (hasKnownScriptName && hasPublicApiKey) return { matchedBy: 'script_name_store_id', priority: 68 };
   if (hasCanonicalScriptName) return { matchedBy: 'script_name', priority: 60 };
-  if (hasKnownScriptName) return { matchedBy: 'script_name', priority: 58 };
   if (hasPublicApiKey) return { matchedBy: 'public_api_key', priority: 50 };
   return { matchedBy: 'none', priority: 0 };
 }

@@ -34,24 +34,24 @@ export function render(opts) {
   ensureStarSprite(iconPair);
 
   var summary = document.createElement('div');
-  summary.className = 'ikr-summary ikr-summary-split';
+  summary.className = 'renuvex-pr-summary renuvex-pr-summary-split';
 
   // ─── SOL: tek büyük yıldız + avg yan yana, altında sayı + tavsiye ───
   // Classic layout ile aynı avg pattern (büyük dolu yıldız + büyük puan).
   var left = document.createElement('div');
-  left.className = 'ikr-split-col ikr-split-left';
+  left.className = 'renuvex-pr-split-col renuvex-pr-split-left';
 
   var avgBlock = document.createElement('div');
-  avgBlock.className = 'ikr-summary-block ikr-summary-avg ikr-split-left-avg-block';
+  avgBlock.className = 'renuvex-pr-summary-block renuvex-pr-summary-avg renuvex-pr-split-left-avg-block';
   avgBlock.innerHTML =
-    '<span class="ikr-avg-star ikr-icon">' + starUseSvg('full') + '</span>' +
-    '<span class="ikr-avg-num">' + avgRatingVal + '</span>';
+    '<span class="renuvex-pr-avg-star renuvex-pr-icon">' + starUseSvg('full') + '</span>' +
+    '<span class="renuvex-pr-avg-num">' + avgRatingVal + '</span>';
   left.appendChild(avgBlock);
 
   var count = document.createElement('div');
-  // Classic ile birebir ayni tipografi icin .ikr-summary-count kullanilir.
+  // Classic ile birebir ayni tipografi icin .renuvex-pr-summary-count kullanilir.
   // Boyut/renk/weight degisiklikleri otomatik split'e de yansir — tek kaynak.
-  count.className = 'ikr-summary-block ikr-summary-count ikr-split-left-count';
+  count.className = 'renuvex-pr-summary-block renuvex-pr-summary-count renuvex-pr-split-left-count';
   count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
   left.appendChild(count);
 
@@ -59,7 +59,7 @@ export function render(opts) {
 
   // ─── ORTA: bar chart ──────────────────────────────────────────
   var mid = document.createElement('div');
-  mid.className = 'ikr-split-col ikr-split-mid';
+  mid.className = 'renuvex-pr-split-col renuvex-pr-split-mid';
   mid.appendChild(buildBarChart({
     ratingCounts: ratingCounts,
     allCount: allCount,
@@ -79,11 +79,11 @@ export function render(opts) {
     onWriteClick: openWriteForm,
     onSortChange: onSortChange,
   });
-  var filterWrap = actions.querySelector('.ikr-filter-wrap');
-  var writeBtn = actions.querySelector('.ikr-write-btn');
+  var filterWrap = actions.querySelector('.renuvex-pr-filter-wrap');
+  var writeBtn = actions.querySelector('.renuvex-pr-write-btn');
 
   var right = document.createElement('div');
-  right.className = 'ikr-split-col ikr-split-right';
+  right.className = 'renuvex-pr-split-col renuvex-pr-split-right';
   if (writeBtn) right.appendChild(writeBtn);
   if (filterWrap) right.appendChild(filterWrap);
   summary.appendChild(right);
@@ -95,10 +95,10 @@ export function render(opts) {
   var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
   var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
   var rec = document.createElement('div');
-  rec.className = 'ikr-summary-block ikr-summary-recommend';
-  rec.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
+  rec.className = 'renuvex-pr-summary-block renuvex-pr-summary-recommend';
+  rec.innerHTML = '<span class="renuvex-pr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
   var hideRec = (settings.showRecommendation === false) || (recommendPct === 0);
-  if (hideRec) { rec.classList.add('ikr-split-rec-hidden'); }
+  if (hideRec) { rec.classList.add('renuvex-pr-split-rec-hidden'); }
   left.appendChild(rec);
 
   return summary;

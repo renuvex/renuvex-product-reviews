@@ -1,18 +1,18 @@
 // product-widget/review-form-modal/styles.js
 // Yorum yazma wizard modal'ı — bağımsız stil dosyası.
-// Tüm class'lar 'ikr-fwizard-' prefix'iyle, mevcut review-modal'dan tamamen
-// izole. CSS variable'ları da kendi seti (--ikr-fwizard-*) → tema güncellenince
+// Tüm class'lar 'renuvex-pr-fwizard-' prefix'iyle, mevcut review-modal'dan tamamen
+// izole. CSS variable'ları da kendi seti (--renuvex-pr-fwizard-*) → tema güncellenince
 // review modal'a yansır ama form wizard etkilenmez.
 //
 // Color contract:
-// render.js maps the shared review form admin fields to --ikr-fwizard-*.
+// render.js maps the shared review form admin fields to --renuvex-pr-fwizard-*.
 // Overlay color is not part of that contract and stays fixed by default.
 //
 // Kullanım: index.js bu CSS'i ilk açılışta document'a inject eder.
 
 export var FWIZARD_CSS = `
   /* Backdrop — viewport'u kaplar, modal kutusunu ortalar */
-  .ikr-fwizard-overlay{
+  .renuvex-pr-fwizard-overlay{
     position:fixed;
     inset:0;
     z-index:99999;
@@ -20,26 +20,26 @@ export var FWIZARD_CSS = `
     align-items:center;
     justify-content:center;
     padding:16px;
-    background:var(--ikr-fwizard-overlay-bg, rgba(0,0,0,0.50));
+    background:var(--renuvex-pr-fwizard-overlay-bg, rgba(0,0,0,0.50));
     /* Açılış fade animasyonu */
     opacity:0;
     transition:opacity 0.2s ease;
   }
-  .ikr-fwizard-overlay.ikr-fwizard-open{
+  .renuvex-pr-fwizard-overlay.renuvex-pr-fwizard-open{
     opacity:1;
   }
 
   /* Modal kutusu — 680×600, max 85vh */
-  .ikr-fwizard{
+  .renuvex-pr-fwizard{
     position:relative;
     width:100%;
     max-width:680px;
     height:600px;
     max-height:85vh;
-    background:var(--ikr-fwizard-bg, #ffffff);
-    color:var(--ikr-fwizard-text, rgb(17,17,17));
+    background:var(--renuvex-pr-fwizard-bg, #ffffff);
+    color:var(--renuvex-pr-fwizard-text, rgb(17,17,17));
     border:none;
-    border-radius:var(--ikr-radius,12px);
+    border-radius:var(--renuvex-pr-radius,12px);
     display:flex;
     flex-direction:column;
     overflow:hidden;
@@ -47,16 +47,16 @@ export var FWIZARD_CSS = `
   }
 
   /* Close (X) butonu — sağ üst köşe */
-  .ikr-fwizard-close{
+  .renuvex-pr-fwizard-close{
     position:absolute;
     top:8px;
     right:8px;
     width:44px;
     height:44px;
-    border-radius:var(--ikr-radius-sm,8px);
+    border-radius:var(--renuvex-pr-radius-sm,8px);
     border:none;
     background:transparent;
-    color:var(--ikr-fwizard-close-text, #6b7280);
+    color:var(--renuvex-pr-fwizard-close-text, #6b7280);
     cursor:pointer;
     font-size:18px;
     line-height:1;
@@ -68,25 +68,25 @@ export var FWIZARD_CSS = `
   }
 
   /* X Butonu Görünürlük Kuralları (Desktop + Mobile) */
-  .ikr-fwizard[data-step="1"] .ikr-fwizard-close,
-  .ikr-fwizard[data-step="thanks"] .ikr-fwizard-close{
+  .renuvex-pr-fwizard[data-step="1"] .renuvex-pr-fwizard-close,
+  .renuvex-pr-fwizard[data-step="thanks"] .renuvex-pr-fwizard-close{
     display:flex;
   }
-  .ikr-fwizard[data-step="2"] .ikr-fwizard-close,
-  .ikr-fwizard[data-step="3"] .ikr-fwizard-close,
-  .ikr-fwizard[data-step="4"] .ikr-fwizard-close{
+  .renuvex-pr-fwizard[data-step="2"] .renuvex-pr-fwizard-close,
+  .renuvex-pr-fwizard[data-step="3"] .renuvex-pr-fwizard-close,
+  .renuvex-pr-fwizard[data-step="4"] .renuvex-pr-fwizard-close{
     display:none;
   }
 
   @media(hover:hover){
-    .ikr-fwizard-close:hover{
-      background:var(--ikr-fwizard-close-hover-bg, rgba(0,0,0,0.05));
-      color:var(--ikr-fwizard-text, #111111);
+    .renuvex-pr-fwizard-close:hover{
+      background:var(--renuvex-pr-fwizard-close-hover-bg, rgba(0,0,0,0.05));
+      color:var(--renuvex-pr-fwizard-text, #111111);
     }
   }
 
   /* İçerik konteyneri — wizard layout (step + footer) burada. */
-  .ikr-fwizard-content{
+  .renuvex-pr-fwizard-content{
     padding:0;
     overflow:hidden;
     flex:1 1 auto;
@@ -96,7 +96,7 @@ export var FWIZARD_CSS = `
   }
 
   /* Wizard layout — step içeriği + alttaki progress bar dikey */
-  .ikr-fwizard-layout{
+  .renuvex-pr-fwizard-layout{
     display:flex;
     flex-direction:column;
     flex:1 1 auto;
@@ -104,7 +104,7 @@ export var FWIZARD_CSS = `
   }
 
   /* Step içeriği konteyneri — scroll burada */
-  .ikr-fwizard-step-wrap{
+  .renuvex-pr-fwizard-step-wrap{
     flex:1 1 auto;
     overflow-y:auto;
     padding:48px 24px 32px;
@@ -116,7 +116,7 @@ export var FWIZARD_CSS = `
   }
 
   /* Step kart — her adımın temel layout'u */
-  .ikr-fwizard-step{
+  .renuvex-pr-fwizard-step{
     width:100%;
     display:flex;
     flex-direction:column;
@@ -126,72 +126,72 @@ export var FWIZARD_CSS = `
 
   /* Step geçiş animasyonları — Standart, belirgin ve süreyi optimize eden "Deep Fade & Slide" tasarımı.
      Hem masaüstü hem mobil için standart. Arka plan işlemlerine (upload vb.) zaman kazandırır. */
-  .ikr-fwizard-step--enter{
-    animation:ikrStepEnter 0.65s ease forwards;
+  .renuvex-pr-fwizard-step--enter{
+    animation:renuvexPrStepEnter 0.65s ease forwards;
     will-change:opacity;
   }
-  .ikr-fwizard-step--exit{
-    animation:ikrStepExit 0.3s ease forwards;
+  .renuvex-pr-fwizard-step--exit{
+    animation:renuvexPrStepExit 0.3s ease forwards;
     will-change:opacity;
   }
-  @keyframes ikrStepEnter{
+  @keyframes renuvexPrStepEnter{
     0%   { opacity:0; }
     100% { opacity:1; }
   }
-  @keyframes ikrStepExit{
+  @keyframes renuvexPrStepExit{
     0%   { opacity:1; }
     100% { opacity:0; }
   }
 
 
   /* Step başlığı — varsayılan (step 1: yıldız) */
-  .ikr-fwizard-step-title{
+  .renuvex-pr-fwizard-step-title{
     font-size:18px;
     font-weight:500;
-    color:var(--ikr-fwizard-text, rgb(17,17,17));
+    color:var(--renuvex-pr-fwizard-text, rgb(17,17,17));
     line-height:1.3;
   }
 
   /* Büyük başlık varyantı — step 2/3/4 başlıkları daha güçlü
      görünüm gerektirir. Mobile'da @media içinde 18px/700'e iner. */
-  .ikr-fwizard-step-title--lg{
+  .renuvex-pr-fwizard-step-title--lg{
     font-size:26px;
     font-weight:700;
     line-height:1.25;
   }
 
   /* Step alt başlığı — başlığın hemen altında, daha sönük */
-  .ikr-fwizard-step-subtitle{
+  .renuvex-pr-fwizard-step-subtitle{
     margin-top:-20px;
     font-size:16px;
     font-weight:400;
-    color:var(--ikr-fwizard-secondary-text, #6b7280);
+    color:var(--renuvex-pr-fwizard-secondary-text, #6b7280);
     line-height:1.4;
   }
 
   /* Teşekkür Ekranı Özel (Extra Large) */
-  .ikr-fwizard-thanks-title{
+  .renuvex-pr-fwizard-thanks-title{
     font-size:38px !important;
     font-weight:700 !important;
     line-height:1.1;
   }
-  .ikr-fwizard-thanks-subtitle{
+  .renuvex-pr-fwizard-thanks-subtitle{
     font-size:16px !important;
     margin-top:0 !important;
     font-weight:400;
   }
-  .ikr-fwizard-step-thanks{
+  .renuvex-pr-fwizard-step-thanks{
     justify-content:center;
     padding-bottom:40px;
     gap:12px !important;
   }
 
   /* ─── Step 2: Foto kartı ─── */
-  .ikr-fwizard-photo-card{
+  .renuvex-pr-fwizard-photo-card{
     width:100%;
     max-width:420px;
-    border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
-    border-radius:var(--ikr-radius,12px);
+    border:1px solid var(--renuvex-pr-fwizard-input-border, #AFAFAF);
+    border-radius:var(--renuvex-pr-radius,12px);
     padding:12px;
     display:flex;
     flex-direction:column;
@@ -201,22 +201,22 @@ export var FWIZARD_CSS = `
     transition:all 0.3s ease;
   }
   /* Kompakt mod: Fotoğraflar yan yana, buton kare */
-  .ikr-fwizard-photo-card--compact{
+  .renuvex-pr-fwizard-photo-card--compact{
     flex-direction:row;
     flex-wrap:wrap;
     align-items:center;
     gap:10px;
   }
-  .ikr-fwizard-photo-add{
+  .renuvex-pr-fwizard-photo-add{
     display:flex;
     align-items:center;
     justify-content:center;
     gap:10px;
     width:100%;
     padding:14px 20px;
-    background:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
-    color:var(--ikr-fwizard-btn-text, #ffffff);
-    border-radius:var(--ikr-radius-sm,8px);
+    background:var(--renuvex-pr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--renuvex-pr-fwizard-btn-text, #ffffff);
+    border-radius:var(--renuvex-pr-radius-sm,8px);
     font-size:15px;
     font-weight:500;
     cursor:pointer;
@@ -226,51 +226,51 @@ export var FWIZARD_CSS = `
     border:1px solid transparent;
   }
   /* Kompakt buton tasarımı */
-  .ikr-fwizard-photo-card--compact .ikr-fwizard-photo-add{
+  .renuvex-pr-fwizard-photo-card--compact .renuvex-pr-fwizard-photo-add{
     width:88px;
     height:88px;
     padding:0;
-    background:var(--ikr-fwizard-bg, #f9f9f9);
-    color:var(--ikr-fwizard-text, #000000);
-    border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
+    background:var(--renuvex-pr-fwizard-bg, #f9f9f9);
+    color:var(--renuvex-pr-fwizard-text, #000000);
+    border:1px solid var(--renuvex-pr-fwizard-input-border, #AFAFAF);
     order:10; /* Listenin sonuna atar */
   }
-  .ikr-fwizard-photo-add:hover{
+  .renuvex-pr-fwizard-photo-add:hover{
     opacity:0.92;
   }
-  .ikr-fwizard-photo-card--compact .ikr-fwizard-photo-add:hover{
+  .renuvex-pr-fwizard-photo-card--compact .renuvex-pr-fwizard-photo-add:hover{
     opacity:0.92;
   }
-  .ikr-fwizard-photo-add--disabled{
+  .renuvex-pr-fwizard-photo-add--disabled{
     opacity:0.4;
     cursor:not-allowed;
     pointer-events:none;
   }
-  .ikr-fwizard-photo-add svg{
+  .renuvex-pr-fwizard-photo-add svg{
     flex-shrink:0;
     width:20px;
     height:20px;
   }
-  .ikr-fwizard-photo-card--compact .ikr-fwizard-photo-add span{
+  .renuvex-pr-fwizard-photo-card--compact .renuvex-pr-fwizard-photo-add span{
     display:none;
   }
-  .ikr-fwizard-photo-previews{
+  .renuvex-pr-fwizard-photo-previews{
     display:flex;
     flex-wrap:wrap;
     gap:10px;
   }
-  .ikr-fwizard-photo-previews:empty{
+  .renuvex-pr-fwizard-photo-previews:empty{
     display:none;
   }
-  .ikr-fwizard-photo-thumb{
+  .renuvex-pr-fwizard-photo-thumb{
     position:relative;
     width:88px;
     height:88px;
-    border-radius:var(--ikr-radius-sm,8px);
+    border-radius:var(--renuvex-pr-radius-sm,8px);
     overflow:hidden;
-    border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
+    border:1px solid var(--renuvex-pr-fwizard-input-border, #AFAFAF);
   }
-  .ikr-fwizard-photo-thumb img{
+  .renuvex-pr-fwizard-photo-thumb img{
     width:100%;
     height:100%;
     object-fit:cover;
@@ -279,7 +279,7 @@ export var FWIZARD_CSS = `
     -webkit-user-drag:none;
     user-select:none;
   }
-  .ikr-fwizard-photo-loading{
+  .renuvex-pr-fwizard-photo-loading{
     position:absolute;
     top:0;left:0;
     width:100%;height:100%;
@@ -287,16 +287,16 @@ export var FWIZARD_CSS = `
     display:flex;
     align-items:center;
     justify-content:center;
-    border-radius:var(--ikr-radius-sm,8px);
+    border-radius:var(--renuvex-pr-radius-sm,8px);
   }
-  .ikr-upload-error {
+  .renuvex-pr-upload-error {
     color: #ff3333;
     font-size: 13px;
     font-weight: 600;
     text-align: center;
     padding: 0 4px;
   }
-  .ikr-fwizard-photo-remove{
+  .renuvex-pr-fwizard-photo-remove{
     position:absolute;
     top:-6px;
     right:-6px;
@@ -318,7 +318,7 @@ export var FWIZARD_CSS = `
   }
 
   /* ─── Step 3: İçerik formu (başlık + textarea) ─── */
-  .ikr-fwizard-content-form{
+  .renuvex-pr-fwizard-content-form{
     width:100%;
     max-width:520px;
     display:flex;
@@ -326,39 +326,39 @@ export var FWIZARD_CSS = `
     gap:12px;
     text-align:left;
   }
-  .ikr-fwizard-input,
-  .ikr-fwizard-textarea{
+  .renuvex-pr-fwizard-input,
+  .renuvex-pr-fwizard-textarea{
     width:100%;
     padding:12px 14px;
-    background:var(--ikr-fwizard-input-bg, #ffffff);
-    border:1px solid var(--ikr-fwizard-input-border, #AFAFAF);
-    border-radius:var(--ikr-radius-sm,8px);
+    background:var(--renuvex-pr-fwizard-input-bg, #ffffff);
+    border:1px solid var(--renuvex-pr-fwizard-input-border, #AFAFAF);
+    border-radius:var(--renuvex-pr-radius-sm,8px);
     font-size:16px; /* iOS zoom bug'ını önlemek için min 16px olmalı */
     font-family:inherit;
-    color:var(--ikr-fwizard-input-text, var(--ikr-fwizard-text, rgb(17,17,17)));
+    color:var(--renuvex-pr-fwizard-input-text, var(--renuvex-pr-fwizard-text, rgb(17,17,17)));
     box-sizing:border-box;
     transition:border-color 0.15s;
   }
   /* Input ve textarea için klavye odak göstergesi sadece native caret —
      ekstra outline aşağıda :focus için kapatılıyor. */
-  .ikr-fwizard-input::placeholder,
-  .ikr-fwizard-textarea::placeholder{
-    color:var(--ikr-fwizard-placeholder, rgba(0,0,0,0.35));
+  .renuvex-pr-fwizard-input::placeholder,
+  .renuvex-pr-fwizard-textarea::placeholder{
+    color:var(--renuvex-pr-fwizard-placeholder, rgba(0,0,0,0.35));
   }
-  .ikr-fwizard-textarea{
+  .renuvex-pr-fwizard-textarea{
     resize:none;
     min-height:140px;
     line-height:1.5;
   }
-  .ikr-fwizard-char-counter{
+  .renuvex-pr-fwizard-char-counter{
     display:none;
   }
-  .ikr-fwizard-char-counter--max{
+  .renuvex-pr-fwizard-char-counter--max{
     color:#dc2626;
   }
 
   /* ─── Step 4: Hakkınızda (Ad + E-posta + Submit) ─── */
-  .ikr-fwizard-author-form{
+  .renuvex-pr-fwizard-author-form{
     width:100%;
     max-width:520px;
     display:flex;
@@ -366,39 +366,39 @@ export var FWIZARD_CSS = `
     gap:16px;
     text-align:left;
   }
-  .ikr-fwizard-field{
+  .renuvex-pr-fwizard-field{
     display:flex;
     flex-direction:column;
     gap:6px;
   }
-  .ikr-fwizard-label{
+  .renuvex-pr-fwizard-label{
     font-size:14px;
     font-weight:600;
-    color:var(--ikr-fwizard-secondary-text, #6b7280);
+    color:var(--renuvex-pr-fwizard-secondary-text, #6b7280);
   }
-  .ikr-fwizard-required{
+  .renuvex-pr-fwizard-required{
     color:#dc2626;
     margin-left:2px;
   }
-  .ikr-fwizard-notice{
+  .renuvex-pr-fwizard-notice{
     font-size:12px;
     line-height:1.5;
-    color:var(--ikr-fwizard-secondary-text, #6b7280);
+    color:var(--renuvex-pr-fwizard-secondary-text, #6b7280);
     text-align:center;
     padding:4px 8px;
   }
-  .ikr-fwizard-msg{
+  .renuvex-pr-fwizard-msg{
     min-height:20px;
   }
-  .ikr-fwizard-msg-error{
+  .renuvex-pr-fwizard-msg-error{
     color:#dc2626;
     font-size:13px;
   }
-  .ikr-fwizard-submit-btn{
-    background:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
-    color:var(--ikr-fwizard-btn-text, #ffffff);
-    border:1px solid var(--ikr-fwizard-btn-border, rgb(17,17,17));
-    border-radius:var(--ikr-radius-sm,8px);
+  .renuvex-pr-fwizard-submit-btn{
+    background:var(--renuvex-pr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--renuvex-pr-fwizard-btn-text, #ffffff);
+    border:1px solid var(--renuvex-pr-fwizard-btn-border, rgb(17,17,17));
+    border-radius:var(--renuvex-pr-radius-sm,8px);
     padding:14px 24px;
     font-size:15px;
     font-weight:500;
@@ -407,14 +407,14 @@ export var FWIZARD_CSS = `
     font-family:inherit;
     margin-top:4px;
   }
-  .ikr-fwizard-submit-btn:hover:not(:disabled){
+  .renuvex-pr-fwizard-submit-btn:hover:not(:disabled){
     opacity:0.92;
   }
-  .ikr-fwizard-submit-btn--disabled,
-  .ikr-fwizard-submit-btn:disabled{
-    background:var(--ikr-fwizard-btn-disabled-bg, rgba(0,0,0,0.18));
-    color:var(--ikr-fwizard-btn-disabled-text, rgba(255,255,255,0.85));
-    border-color:var(--ikr-fwizard-btn-disabled-border, transparent);
+  .renuvex-pr-fwizard-submit-btn--disabled,
+  .renuvex-pr-fwizard-submit-btn:disabled{
+    background:var(--renuvex-pr-fwizard-btn-disabled-bg, rgba(0,0,0,0.18));
+    color:var(--renuvex-pr-fwizard-btn-disabled-text, rgba(255,255,255,0.85));
+    border-color:var(--renuvex-pr-fwizard-btn-disabled-border, transparent);
     cursor:not-allowed;
   }
 
@@ -423,37 +423,37 @@ export var FWIZARD_CSS = `
   /* ─── Step 1: Yıldız satırı ───
      İkon ve renk admin "Yıldız Stili"nden gelir:
        - SVG: getIconFromSettings (icons/index.js, currentSettings.reviewIcon)
-       - Renk: --ikr-review-star-color (admin "Yıldız Rengi")
-     Empty (inactive) stars use the same --ikr-review-star-color; the filled vs
+       - Renk: --renuvex-pr-review-star-color (admin "Yıldız Rengi")
+     Empty (inactive) stars use the same --renuvex-pr-review-star-color; the filled vs
      empty SVG shape is the active/inactive distinction (see step-rating.js). */
-  .ikr-fwizard-stars{
+  .renuvex-pr-fwizard-stars{
     display:inline-flex;
     gap:8px;
     align-items:center;
   }
-  .ikr-fwizard-star{
+  .renuvex-pr-fwizard-star{
     width:48px;
     height:48px;
     padding:0;
     border:none;
     background:transparent;
     cursor:pointer;
-    color:var(--ikr-review-star-color, #f59e0b);
+    color:var(--renuvex-pr-review-star-color, #f59e0b);
     transition:color 0.15s, transform 0.1s;
     display:inline-flex;
     align-items:center;
     justify-content:center;
   }
-  .ikr-fwizard-star svg{
+  .renuvex-pr-fwizard-star svg{
     width:100%;
     height:100%;
     display:block;
   }
-  .ikr-fwizard-star:hover{
+  .renuvex-pr-fwizard-star:hover{
     transform:scale(1.05);
   }
-  .ikr-fwizard-star-active{
-    color:var(--ikr-review-star-color, #f59e0b);
+  .renuvex-pr-fwizard-star-active{
+    color:var(--renuvex-pr-review-star-color, #f59e0b);
   }
 
   /* ─── Footer: [Geri]  [progress]  [Atla|Sonraki] ─────────────────
@@ -464,7 +464,7 @@ export var FWIZARD_CSS = `
          küçük olsa da konum sabit; her step'te aynı X koordinatı.
        - Orta kolon 1fr → progress pills doğal olarak ortalanır,
          absolute hile yok, butonların üstüne binmez. */
-  .ikr-fwizard-footer{
+  .renuvex-pr-fwizard-footer{
     flex:0 0 auto;
     padding:16px;
     /* min-height: butonlar artık sabit 40px kutu, dikey padding 16px*2.
@@ -477,31 +477,31 @@ export var FWIZARD_CSS = `
     align-items:center;
     gap:16px;
   }
-  .ikr-fwizard-footer-back{
+  .renuvex-pr-fwizard-footer-back{
     justify-self:start;
   }
-  .ikr-fwizard-footer-next,
-  .ikr-fwizard-footer-skip{
+  .renuvex-pr-fwizard-footer-next,
+  .renuvex-pr-fwizard-footer-skip{
     justify-self:end;
   }
-  .ikr-fwizard-footer-progress{
+  .renuvex-pr-fwizard-footer-progress{
     justify-self:center;
     display:flex;
     align-items:center;
     gap:6px;
   }
   /* Step 1'de progress bar'ı gizle (Desktop & Mobile) */
-  .ikr-fwizard[data-step="1"] .ikr-fwizard-footer-progress{
+  .renuvex-pr-fwizard[data-step="1"] .renuvex-pr-fwizard-footer-progress{
     display:none;
   }
   /* CTA ve nav butonları — sabit width × height kutu, içerik flex
      center ile ortalanır. Step'ten step'e buton şekli birebir aynı
      kalır. Hiyerarşi: CTA dolu siyah, nav transparent. */
-  .ikr-fwizard-cta-btn{
-    background:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
-    color:var(--ikr-fwizard-btn-text, #ffffff);
-    border:1px solid var(--ikr-fwizard-btn-border, rgb(17,17,17));
-    border-radius:var(--ikr-radius-sm,8px);
+  .renuvex-pr-fwizard-cta-btn{
+    background:var(--renuvex-pr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--renuvex-pr-fwizard-btn-text, #ffffff);
+    border:1px solid var(--renuvex-pr-fwizard-btn-border, rgb(17,17,17));
+    border-radius:var(--renuvex-pr-radius-sm,8px);
     width:108px;
     height:40px;
     padding:0;
@@ -516,29 +516,29 @@ export var FWIZARD_CSS = `
     font-family:inherit;
     box-sizing:border-box;
   }
-  .ikr-fwizard-cta-btn:hover:not(:disabled){
+  .renuvex-pr-fwizard-cta-btn:hover:not(:disabled){
     opacity:0.92;
   }
-  .ikr-fwizard-cta-btn--disabled,
-  .ikr-fwizard-cta-btn:disabled{
-    background:var(--ikr-fwizard-btn-disabled-bg, rgba(0,0,0,0.18));
-    color:var(--ikr-fwizard-btn-disabled-text, rgba(255,255,255,0.85));
-    border-color:var(--ikr-fwizard-btn-disabled-border, transparent);
+  .renuvex-pr-fwizard-cta-btn--disabled,
+  .renuvex-pr-fwizard-cta-btn:disabled{
+    background:var(--renuvex-pr-fwizard-btn-disabled-bg, rgba(0,0,0,0.18));
+    color:var(--renuvex-pr-fwizard-btn-disabled-text, rgba(255,255,255,0.85));
+    border-color:var(--renuvex-pr-fwizard-btn-disabled-border, transparent);
     cursor:not-allowed;
   }
-  .ikr-fwizard-cta-btn[hidden]{
+  .renuvex-pr-fwizard-cta-btn[hidden]{
     display:none;
   }
-  .ikr-fwizard-progress-seg{
+  .renuvex-pr-fwizard-progress-seg{
     flex:0 0 auto;
     width:80px;
     height:8px;
-    border-radius:var(--ikr-radius-sm,8px);
-    background:var(--ikr-fwizard-progress-bg, rgba(0,0,0,0.08));
+    border-radius:var(--renuvex-pr-radius-sm,8px);
+    background:var(--renuvex-pr-fwizard-progress-bg, rgba(0,0,0,0.08));
     transition:background 0.2s;
   }
-  .ikr-fwizard-progress-seg-active{
-    background:var(--ikr-fwizard-progress-active, rgb(17,17,17));
+  .renuvex-pr-fwizard-progress-seg-active{
+    background:var(--renuvex-pr-fwizard-progress-active, rgb(17,17,17));
   }
   /* Nav butonları (Geri / Atla) — CTA ile aynı kutu (108×40), sadece
      arkaplan transparent. Hiyerarşi fill vs transparent ile, boyut
@@ -546,13 +546,13 @@ export var FWIZARD_CSS = `
      asimetrik gözüktüğü için kaldırıldı (ok+metin kutuda farklı
      X koordinatlarında, hover bg buton kutusu büyüklüğünde olunca
      metnin ortasında değil, kutunun ortasında görünür). */
-  .ikr-fwizard-nav-btn{
+  .renuvex-pr-fwizard-nav-btn{
     background:transparent;
     border:none;
     width:108px;
     height:40px;
     padding:0;
-    color:var(--ikr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--renuvex-pr-fwizard-btn-bg, rgb(17,17,17));
     font-size:15px;
     font-weight:600;
     line-height:1;
@@ -561,34 +561,34 @@ export var FWIZARD_CSS = `
     align-items:center;
     justify-content:center;
     gap:6px;
-    border-radius:var(--ikr-radius-sm,8px);
+    border-radius:var(--renuvex-pr-radius-sm,8px);
     font-family:inherit;
     box-sizing:border-box;
     transition:background 0.15s;
   }
-  .ikr-fwizard-nav-btn:hover{
-    background:var(--ikr-fwizard-nav-hover-bg, rgba(17,17,17,0.06));
+  .renuvex-pr-fwizard-nav-btn:hover{
+    background:var(--renuvex-pr-fwizard-nav-hover-bg, rgba(17,17,17,0.06));
   }
-  .ikr-fwizard-nav-btn[hidden]{
+  .renuvex-pr-fwizard-nav-btn[hidden]{
     display:none;
   }
 
-  .ikr-fwizard-close:focus-visible,
-  .ikr-fwizard-star:focus-visible,
-  .ikr-fwizard-photo-add:focus-visible,
-  .ikr-fwizard-photo-remove:focus-visible,
-  .ikr-fwizard-submit-btn:focus-visible,
-  .ikr-fwizard-cta-btn:focus-visible,
-  .ikr-fwizard-nav-btn:focus-visible{
-    outline:3px solid var(--ikr-fwizard-focus-ring, rgba(17,17,17,0.42));
+  .renuvex-pr-fwizard-close:focus-visible,
+  .renuvex-pr-fwizard-star:focus-visible,
+  .renuvex-pr-fwizard-photo-add:focus-visible,
+  .renuvex-pr-fwizard-photo-remove:focus-visible,
+  .renuvex-pr-fwizard-submit-btn:focus-visible,
+  .renuvex-pr-fwizard-cta-btn:focus-visible,
+  .renuvex-pr-fwizard-nav-btn:focus-visible{
+    outline:3px solid var(--renuvex-pr-fwizard-focus-ring, rgba(17,17,17,0.42));
     outline-offset:3px;
   }
 
   /* Input ve textarea klavye odağı için ek outline çizilmez — caret zaten
      yeterli odak göstergesi. Border rengi sabit; ağır halka mobilde de
      masaüstünde de görsel olarak yoruyordu. Sadece native caret kalsın. */
-  .ikr-fwizard-input:focus,
-  .ikr-fwizard-textarea:focus{
+  .renuvex-pr-fwizard-input:focus,
+  .renuvex-pr-fwizard-textarea:focus{
     outline:none;
   }
 
@@ -604,10 +604,10 @@ export var FWIZARD_CSS = `
      DOM dokunulmaz, step state'i shell.setStepAttr ile data-step
      attribute'u olarak modal kutusuna işlenir. */
   @media(max-width:640px){
-    .ikr-fwizard-overlay{
+    .renuvex-pr-fwizard-overlay{
       padding:0;
     }
-    .ikr-fwizard{
+    .renuvex-pr-fwizard{
       width:100vw;
       max-width:none;
       height:100vh;       /* fallback */
@@ -621,12 +621,12 @@ export var FWIZARD_CSS = `
 
 
     /* Progress bar üst kenara absolute — sadece step 2-4'te görünür */
-    .ikr-fwizard-content{
+    .renuvex-pr-fwizard-content{
       position:relative;
       padding-top:32px;
       box-sizing:border-box;
     }
-    .ikr-fwizard-footer-progress{
+    .renuvex-pr-fwizard-footer-progress{
       position:absolute;
       top:16px;
       bottom:auto;
@@ -638,7 +638,7 @@ export var FWIZARD_CSS = `
       z-index:2;
     }
     /* Step 1'de üst padding'e gerek yok — X kendi position:absolute */
-    .ikr-fwizard[data-step="1"] .ikr-fwizard-content{
+    .renuvex-pr-fwizard[data-step="1"] .renuvex-pr-fwizard-content{
       padding-top:0;
     }
 
@@ -646,44 +646,44 @@ export var FWIZARD_CSS = `
        ok ikonu gizli. Atla zaten yazı+ok (desktop ile aynı).
        Grid kolonları mobile'da auto/1fr/auto: yan kolonlar buton kadar,
        orta esnek. */
-    .ikr-fwizard-footer{
+    .renuvex-pr-fwizard-footer{
       padding:20px;
       min-height:80px;
       grid-template-columns:auto 1fr auto;
     }
-    .ikr-fwizard-footer-back > svg{
+    .renuvex-pr-fwizard-footer-back > svg{
       display:none;
     }
     /* Sağ slot butonu (Atla / Sonraki) grid item olarak kolonun sağ
        ucuna yaslı dursun. Refactor sonrası eski .footer-right wrapper
        div'i kalktı, buton doğrudan footer grid item — justify-self
        ataması burada yapılır. */
-    .ikr-fwizard-footer-skip,
-    .ikr-fwizard-footer-next{
+    .renuvex-pr-fwizard-footer-skip,
+    .renuvex-pr-fwizard-footer-next{
       justify-self:end;
     }
 
-    .ikr-fwizard-step-wrap{
+    .renuvex-pr-fwizard-step-wrap{
       padding:36px 20px 28px;
     }
-    .ikr-fwizard-step{
+    .renuvex-pr-fwizard-step{
       gap:24px;
     }
     /* Büyük başlık varyantı mobile'da küçülür: 26 → 18, weight korunur */
-    .ikr-fwizard-step-title--lg{
+    .renuvex-pr-fwizard-step-title--lg{
       font-size:20px;
     }
-    .ikr-fwizard-star{
+    .renuvex-pr-fwizard-star{
       width:48px;
       height:48px;
     }
-    .ikr-fwizard-stars{
+    .renuvex-pr-fwizard-stars{
       gap:8px;
     }
   }
 
   /* ─── Toast bildirim çubuğu ─────────────────────────────────────── */
-  .ikr-fwizard-toast{
+  .renuvex-pr-fwizard-toast{
     position:absolute;
     top:12px;
     left:50%;
@@ -697,21 +697,21 @@ export var FWIZARD_CSS = `
     white-space:nowrap;
     pointer-events:none;
     opacity:0;
-    animation:ikrToastEnter 0.35s cubic-bezier(0.21,1.02,0.73,1) forwards;
+    animation:renuvexPrToastEnter 0.35s cubic-bezier(0.21,1.02,0.73,1) forwards;
     box-shadow:rgba(0,0,0,0.1) 0px 3px 10px 0px, rgba(0,0,0,0.05) 0px 3px 3px 0px;
   }
-  .ikr-fwizard-toast--error{
+  .renuvex-pr-fwizard-toast--error{
     background:rgb(186,26,26);
     color:#ffffff;
   }
-  .ikr-fwizard-toast--exit{
-    animation:ikrToastExit 0.3s ease forwards;
+  .renuvex-pr-fwizard-toast--exit{
+    animation:renuvexPrToastExit 0.3s ease forwards;
   }
-  @keyframes ikrToastEnter{
+  @keyframes renuvexPrToastEnter{
     0%   { opacity:0; transform:translateX(-50%) translateY(-100%); }
     100% { opacity:1; transform:translateX(-50%) translateY(0); }
   }
-  @keyframes ikrToastExit{
+  @keyframes renuvexPrToastExit{
     0%   { opacity:1; transform:translateX(-50%) translateY(0); }
     100% { opacity:0; transform:translateX(-50%) translateY(-100%); }
   }

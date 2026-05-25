@@ -121,7 +121,7 @@ export function renderStarRow(rating, settings, opts) {
   var html = '';
   for (var i = 1; i <= 5; i++) {
     var isFilled = i <= r;
-    html += '<span class="ikr-icon ' + (isFilled ? 'ikr-icon-filled' : 'ikr-icon-empty') + '" style="' + sizeStyle + '">' +
+    html += '<span class="renuvex-pr-icon ' + (isFilled ? 'renuvex-pr-icon-filled' : 'renuvex-pr-icon-empty') + '" style="' + sizeStyle + '">' +
             starUseSvg(isFilled ? 'full' : 'outline') +
             '</span>';
   }

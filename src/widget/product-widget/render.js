@@ -24,7 +24,7 @@ import {
 
 // ─── CSS değişkenleri ────────────────────────────────────────────────────────
 // Her UI elemanı kendi spesifik CSS değişkeniyle renklendirilir. Eski genel
-// tema token'ları (--ikr-bg, --ikr-text vb.) kaldırıldı; her renk doğrudan
+// tema token'ları (--renuvex-pr-bg, --renuvex-pr-text vb.) kaldırıldı; her renk doğrudan
 // schema'daki karşılığından veya sabit default'tan gelir.
 
 // Yardımcı: hex → rgba string (alpha verilerek). Structural translucency
@@ -43,7 +43,7 @@ function getOrCreateReviewsAnchor() {
 
   anchorEl = document.createElement('div');
   anchorEl.id = 'ikas-reviews-anchor';
-  anchorEl.setAttribute('data-ikr-auto-anchor', '1');
+  anchorEl.setAttribute('data-renuvex-auto-anchor', '1');
 
   var productContainer = null;
   try {
@@ -62,12 +62,11 @@ function getOrCreateReviewsAnchor() {
 }
 
 function getOrCreateReviewsSlot(anchorEl, productId) {
-  var slot = anchorEl.querySelector('[data-renuvex-slot="product-reviews"],[data-ikr-slot="product-reviews"]');
+  var slot = anchorEl.querySelector('[data-renuvex-slot="product-reviews"]');
   if (!slot) {
     slot = createOwnedSlot({
       slot: 'product-reviews',
-      legacySlot: 'product-reviews',
-      className: 'renuvex-pr-reviews-slot ikr-reviews-slot',
+      className: 'renuvex-pr-reviews-slot',
       context: { surface: 'reviews', productId: productId || '' },
     });
     anchorEl.appendChild(slot);
@@ -120,18 +119,18 @@ var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
 
 function buildReviewsErrorState(message, onRetry) {
   var wrap = document.createElement('div');
-  wrap.className = 'ikr-state-msg ikr-state-error';
+  wrap.className = 'renuvex-pr-state-msg renuvex-pr-state-error';
   wrap.setAttribute('role', 'status');
   wrap.setAttribute('aria-live', 'polite');
 
   var text = document.createElement('div');
-  text.className = 'ikr-state-error-text';
+  text.className = 'renuvex-pr-state-error-text';
   text.textContent = message || 'Yorumlar şu anda yüklenemiyor.';
   wrap.appendChild(text);
 
   var retryBtn = document.createElement('button');
   retryBtn.type = 'button';
-  retryBtn.className = 'ikr-state-retry';
+  retryBtn.className = 'renuvex-pr-state-retry';
   retryBtn.textContent = 'Tekrar Dene';
   retryBtn.onclick = async function () {
     retryBtn.disabled = true;
@@ -225,80 +224,80 @@ function applyManualTheme(root, settings) {
 
   var vars = {
     // Grup 1 — Genel
-    '--ikr-widget-bg': '#ffffff00',
-    '--ikr-widget-border': '#ffffff00',
+    '--renuvex-pr-widget-bg': '#ffffff00',
+    '--renuvex-pr-widget-border': '#ffffff00',
 
     // Grup 2 — Başlık & Özet
-    '--ikr-header-title': headerTitle,
-    '--ikr-header-avg': headerAvg,
-    '--ikr-header-count': headerCount,
-    '--ikr-header-recommend': headerRecommend,
+    '--renuvex-pr-header-title': headerTitle,
+    '--renuvex-pr-header-avg': headerAvg,
+    '--renuvex-pr-header-count': headerCount,
+    '--renuvex-pr-header-recommend': headerRecommend,
 
     // Grup 3 — Puan Dağılımı
-    '--ikr-bar-fill': barFill,
-    '--ikr-bar-track': barTrack,
-    '--ikr-bar-count': barCount,
-    '--ikr-bar-hover-bg': barHoverBg,
+    '--renuvex-pr-bar-fill': barFill,
+    '--renuvex-pr-bar-track': barTrack,
+    '--renuvex-pr-bar-count': barCount,
+    '--renuvex-pr-bar-hover-bg': barHoverBg,
 
     // Grup 4 — Butonlar
-    '--ikr-btn-bg': btnBg,
-    '--ikr-btn-text': btnText,
-    '--ikr-btn-border': btnBorder,
-    '--ikr-filter-btn-bg': filterBg,
-    '--ikr-filter-btn-text': filterText,
-    '--ikr-filter-btn-border': filterBorder,
+    '--renuvex-pr-btn-bg': btnBg,
+    '--renuvex-pr-btn-text': btnText,
+    '--renuvex-pr-btn-border': btnBorder,
+    '--renuvex-pr-filter-btn-bg': filterBg,
+    '--renuvex-pr-filter-btn-text': filterText,
+    '--renuvex-pr-filter-btn-border': filterBorder,
 
     // Grup 5 — Filtre Menüsü
-    '--ikr-filter-menu-bg': filterMenuBg,
-    '--ikr-filter-menu-border': filterMenuBorder,
-    '--ikr-filter-item-text': filterItemText,
-    '--ikr-filter-item-hover-bg': filterItemHoverBg,
-    '--ikr-filter-item-active': filterItemActive,
+    '--renuvex-pr-filter-menu-bg': filterMenuBg,
+    '--renuvex-pr-filter-menu-border': filterMenuBorder,
+    '--renuvex-pr-filter-item-text': filterItemText,
+    '--renuvex-pr-filter-item-hover-bg': filterItemHoverBg,
+    '--renuvex-pr-filter-item-active': filterItemActive,
 
     // Grup 6 — Yorum Kartı
-    '--ikr-review-title': reviewTitleColor,
-    '--ikr-review-author': reviewAuthorColor,
-    '--ikr-review-date': reviewDateColor,
-    '--ikr-review-body': reviewBodyColor,
-    '--ikr-review-border': reviewBorderColor,
-    '--ikr-review-star-color': reviewStarColor,
+    '--renuvex-pr-review-title': reviewTitleColor,
+    '--renuvex-pr-review-author': reviewAuthorColor,
+    '--renuvex-pr-review-date': reviewDateColor,
+    '--renuvex-pr-review-body': reviewBodyColor,
+    '--renuvex-pr-review-border': reviewBorderColor,
+    '--renuvex-pr-review-star-color': reviewStarColor,
 
     // Grup 7 — Mağaza Yanıtı
-    '--ikr-reply-bg-color': replyBgVar,
-    '--ikr-reply-border': replyBorderVar,
-    '--ikr-reply-label': replyLabelColor,
-    '--ikr-reply-text': replyTextVar,
+    '--renuvex-pr-reply-bg-color': replyBgVar,
+    '--renuvex-pr-reply-border': replyBorderVar,
+    '--renuvex-pr-reply-label': replyLabelColor,
+    '--renuvex-pr-reply-text': replyTextVar,
 
     // Grup 9 — Fotoğraf Galerisi
-    '--ikr-photo-title': photoTitle,
-    '--ikr-photo-image-border': photoImageBorder,
-    '--ikr-photo-arrow-bg': photoArrowBg,
-    '--ikr-photo-arrow-text': photoArrowText,
-    '--ikr-photo-arrow-border': photoArrowBorder,
+    '--renuvex-pr-photo-title': photoTitle,
+    '--renuvex-pr-photo-image-border': photoImageBorder,
+    '--renuvex-pr-photo-arrow-bg': photoArrowBg,
+    '--renuvex-pr-photo-arrow-text': photoArrowText,
+    '--renuvex-pr-photo-arrow-border': photoArrowBorder,
 
     // Grup 10 — Form wizard
-    '--ikr-fwizard-bg': formBg,
-    '--ikr-fwizard-text': formPrimary,
-    '--ikr-fwizard-secondary-text': formSecondary,
-    '--ikr-fwizard-input-bg': formBg,
-    '--ikr-fwizard-input-text': inputTextVar,
-    '--ikr-fwizard-input-border': inputBorderVar,
-    '--ikr-fwizard-placeholder': placeholderColor,
-    '--ikr-fwizard-close-text': formPrimary,
-    '--ikr-fwizard-close-hover-bg': formSubtleBg,
-    '--ikr-fwizard-progress-bg': formSubtleBg,
-    '--ikr-fwizard-progress-active': formStepBarColor,
-    '--ikr-fwizard-btn-bg': formBtnBg,
-    '--ikr-fwizard-btn-text': formBtnText,
-    '--ikr-fwizard-btn-border': formBtnBorder,
-    '--ikr-fwizard-btn-disabled-bg': formBtnDisabledBg,
-    '--ikr-fwizard-btn-disabled-text': formBtnDisabledText,
-    '--ikr-fwizard-nav-hover-bg': formNavHoverBg,
+    '--renuvex-pr-fwizard-bg': formBg,
+    '--renuvex-pr-fwizard-text': formPrimary,
+    '--renuvex-pr-fwizard-secondary-text': formSecondary,
+    '--renuvex-pr-fwizard-input-bg': formBg,
+    '--renuvex-pr-fwizard-input-text': inputTextVar,
+    '--renuvex-pr-fwizard-input-border': inputBorderVar,
+    '--renuvex-pr-fwizard-placeholder': placeholderColor,
+    '--renuvex-pr-fwizard-close-text': formPrimary,
+    '--renuvex-pr-fwizard-close-hover-bg': formSubtleBg,
+    '--renuvex-pr-fwizard-progress-bg': formSubtleBg,
+    '--renuvex-pr-fwizard-progress-active': formStepBarColor,
+    '--renuvex-pr-fwizard-btn-bg': formBtnBg,
+    '--renuvex-pr-fwizard-btn-text': formBtnText,
+    '--renuvex-pr-fwizard-btn-border': formBtnBorder,
+    '--renuvex-pr-fwizard-btn-disabled-bg': formBtnDisabledBg,
+    '--renuvex-pr-fwizard-btn-disabled-text': formBtnDisabledText,
+    '--renuvex-pr-fwizard-nav-hover-bg': formNavHoverBg,
 
     // Grup 11 — Daha Fazla Göster
-    '--ikr-load-more-bg': loadMoreBg,
-    '--ikr-load-more-text': loadMoreText,
-    '--ikr-load-more-border': loadMoreBorder,
+    '--renuvex-pr-load-more-bg': loadMoreBg,
+    '--renuvex-pr-load-more-text': loadMoreText,
+    '--renuvex-pr-load-more-border': loadMoreBorder,
   };
 
   Object.keys(vars).forEach(function (k) { root.style.setProperty(k, vars[k]); });
@@ -340,8 +339,8 @@ export async function render(productId, settings, reviewsData, productName, orde
 
     applyManualTheme(root, settings);
 
-    // injectStyles CSS'i enjekte eder; renk parametresi --ikr-color ve
-    // --ikr-color-light için kullanılır. Bu token'lar artık kullanılmıyor
+    // injectStyles CSS'i enjekte eder; renk parametresi --renuvex-pr-color ve
+    // --renuvex-pr-color-light için kullanılır. Bu token'lar artık kullanılmıyor
     // (tüm renkler spesifik var'lar üzerinden gidiyor), ama injectStyles
     // hâlâ CSS <style> elementini oluşturup/güncelliyor.
     injectStyles('#111111', CLASSIC_CSS + getLayoutsCSS() + getReviewLayoutsCSS());
@@ -357,47 +356,47 @@ export async function render(productId, settings, reviewsData, productName, orde
     var reviewLayout = getReviewLayout(settings.reviewLayout);
     if (reviewLayout.meta && reviewLayout.meta.sizeOverrides && reviewLayout.meta.sizeOverrides[settings.size]) {
       var overrides = reviewLayout.meta.sizeOverrides[settings.size];
-      var layoutPhotoW = overrides['--ikr-list-photo-w'] || overrides['--ikr-gallery-photo-w'];
+      var layoutPhotoW = overrides['--renuvex-pr-list-photo-w'] || overrides['--renuvex-pr-gallery-photo-w'];
       if (layoutPhotoW) {
         thumbPx = parseInt(layoutPhotoW);
       }
     }
 
-    root.style.setProperty('--ikr-title-size', sz.titleSize + 'px');
-    root.style.setProperty('--ikr-review-text-size', sz.reviewTextSize + 'px');
-    root.style.setProperty('--ikr-review-title-size', sz.reviewTitleSize + 'px');
-    root.style.setProperty('--ikr-author-size', sz.authorSize + 'px');
-    root.style.setProperty('--ikr-reply-name-size', sz.replyNameSize + 'px');
-    root.style.setProperty('--ikr-reply-text-size', sz.replyTextSize + 'px');
-    root.style.setProperty('--ikr-radius', radius + 'px');
-    root.style.setProperty('--ikr-radius-sm', Math.max(0, radius - 4) + 'px');
-    root.style.setProperty('--ikr-photo-title-size', sz.photoTitleSize + 'px');
-    root.style.setProperty('--ikr-avg-rating-size', sz.avgRatingSize + 'px');
-    root.style.setProperty('--ikr-review-count-size', sz.reviewCountSize + 'px');
-    root.style.setProperty('--ikr-compact-count-size', sz.compactCountSize + 'px');
-    root.style.setProperty('--ikr-recommend-size', sz.recommendSize + 'px');
-    root.style.setProperty('--ikr-btn-text-size', sz.btnTextSize + 'px');
-    root.style.setProperty('--ikr-bar-label-size', sz.barLabelSize + 'px');
-    root.style.setProperty('--ikr-minimal-avg-size', sz.minimalAvgSize + 'px');
-    root.style.setProperty('--ikr-hero-avg-size', sz.heroAvgSize + 'px');
-    root.style.setProperty('--ikr-bar-count-size', sz.barCountSize + 'px');
-    root.style.setProperty('--ikr-review-date-size', sz.reviewDateSize + 'px');
-    root.style.setProperty('--ikr-filter-text-size', sz.filterTextSize + 'px');
-    root.style.setProperty('--ikr-load-more-size', sz.loadMoreSize + 'px');
-    root.style.setProperty('--ikr-read-more-size', sz.readMoreSize + 'px');
-    root.style.setProperty('--ikr-thumbnail-size', thumbPx + 'px');
+    root.style.setProperty('--renuvex-pr-title-size', sz.titleSize + 'px');
+    root.style.setProperty('--renuvex-pr-review-text-size', sz.reviewTextSize + 'px');
+    root.style.setProperty('--renuvex-pr-review-title-size', sz.reviewTitleSize + 'px');
+    root.style.setProperty('--renuvex-pr-author-size', sz.authorSize + 'px');
+    root.style.setProperty('--renuvex-pr-reply-name-size', sz.replyNameSize + 'px');
+    root.style.setProperty('--renuvex-pr-reply-text-size', sz.replyTextSize + 'px');
+    root.style.setProperty('--renuvex-pr-radius', radius + 'px');
+    root.style.setProperty('--renuvex-pr-radius-sm', Math.max(0, radius - 4) + 'px');
+    root.style.setProperty('--renuvex-pr-photo-title-size', sz.photoTitleSize + 'px');
+    root.style.setProperty('--renuvex-pr-avg-rating-size', sz.avgRatingSize + 'px');
+    root.style.setProperty('--renuvex-pr-review-count-size', sz.reviewCountSize + 'px');
+    root.style.setProperty('--renuvex-pr-compact-count-size', sz.compactCountSize + 'px');
+    root.style.setProperty('--renuvex-pr-recommend-size', sz.recommendSize + 'px');
+    root.style.setProperty('--renuvex-pr-btn-text-size', sz.btnTextSize + 'px');
+    root.style.setProperty('--renuvex-pr-bar-label-size', sz.barLabelSize + 'px');
+    root.style.setProperty('--renuvex-pr-minimal-avg-size', sz.minimalAvgSize + 'px');
+    root.style.setProperty('--renuvex-pr-hero-avg-size', sz.heroAvgSize + 'px');
+    root.style.setProperty('--renuvex-pr-bar-count-size', sz.barCountSize + 'px');
+    root.style.setProperty('--renuvex-pr-review-date-size', sz.reviewDateSize + 'px');
+    root.style.setProperty('--renuvex-pr-filter-text-size', sz.filterTextSize + 'px');
+    root.style.setProperty('--renuvex-pr-load-more-size', sz.loadMoreSize + 'px');
+    root.style.setProperty('--renuvex-pr-read-more-size', sz.readMoreSize + 'px');
+    root.style.setProperty('--renuvex-pr-thumbnail-size', thumbPx + 'px');
 
     // Yıldız rengi tek kaynak: tüm rating yüzeyleri (özet, liste, rozetler)
-    // --ikr-review-star-color'dan beslenir; boş yıldız da aynı renkte outline.
+    // --renuvex-pr-review-star-color'dan beslenir; boş yıldız da aynı renkte outline.
     // Runtime 6-char veya 8-char hex kabul eder; admin picker sadece opak hex yazar.
     var reviewStarColor = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(settings.reviewStarColor || '') ? settings.reviewStarColor : '#f59e0b';
-    root.style.setProperty('--ikr-review-star-color', reviewStarColor);
-    root.style.setProperty('--ikr-star-size', sz.reviewStarSize + 'px');
-    root.style.setProperty('--ikr-avg-star-size', sz.avgStarSize + 'px');
+    root.style.setProperty('--renuvex-pr-review-star-color', reviewStarColor);
+    root.style.setProperty('--renuvex-pr-star-size', sz.reviewStarSize + 'px');
+    root.style.setProperty('--renuvex-pr-avg-star-size', sz.avgStarSize + 'px');
 
     // Layout-spesifik boyut override'ları (opsiyonel).
     // Bir layout'un meta.sizeOverrides[size] objesi varsa, oradaki CSS değişkenleri
-    // global SIZE_PRESETS değerlerinin üzerine yazılır. Sözleşme: { '--ikr-xxx': '14px', ... }.
+    // global SIZE_PRESETS değerlerinin üzerine yazılır. Sözleşme: { '--renuvex-pr-xxx': '14px', ... }.
     // Layout'lar bu alanı export etmek zorunda değil — yoksa global preset aynen geçerli kalır.
     function applyLayoutSizeOverrides(layout, sizeKey) {
       if (!layout || !layout.meta || !layout.meta.sizeOverrides) return;
@@ -433,7 +432,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       return;
     }
 
-    container.innerHTML = '<p class="ikr-state-msg ikr-state-loading">Yorumlar yükleniyor...</p>';
+    container.innerHTML = '<p class="renuvex-pr-state-msg renuvex-pr-state-loading">Yorumlar yükleniyor...</p>';
 
     try {
       var data = reviewsData || {};
@@ -451,10 +450,8 @@ export async function render(productId, settings, reviewsData, productName, orde
       widget.id = 'ikas-reviews-widget';
       widget.className = 'renuvex-pr-reviews-widget';
       widget.setAttribute('data-renuvex-surface', 'reviews');
-      widget.setAttribute('data-ikr-surface', 'reviews');
       if (productId) {
         widget.setAttribute('data-renuvex-product-id', String(productId));
-        widget.setAttribute('data-ikr-product-id', String(productId));
       }
 
       // Admin iframe önizlemesinde full-bleed (100vw + margin hack) iframe
@@ -470,12 +467,12 @@ export async function render(productId, settings, reviewsData, productName, orde
       }
 
       // Başlık — Eğer title varsa oluştur, yoksa (boş bırakıldıysa) hiç ekleme
-      // Layout id class'ı ekleniyor (ör. ikr-title-compact) ki layout'lar
+      // Layout id class'ı ekleniyor (ör. renuvex-pr-title-compact) ki layout'lar
       // başlık hizasını kendi CSS'lerinde override edebilsin.
       if (title) {
         var h2 = document.createElement('div');
         var layoutId = settings.summaryLayout || 'classic';
-        h2.className = 'ikr-title ikr-title-' + layoutId;
+        h2.className = 'renuvex-pr-title renuvex-pr-title-' + layoutId;
         h2.textContent = title;
         widget.appendChild(h2);
       }
@@ -539,7 +536,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       } else {
         // Yorum yoksa sadece Yorum Yap butonu göster
         var emptyWriteBtn = document.createElement('button');
-        emptyWriteBtn.className = 'ikr-write-btn';
+        emptyWriteBtn.className = 'renuvex-pr-write-btn';
         emptyWriteBtn.style.cssText = 'display:block;margin:16px auto 0;';
         emptyWriteBtn.textContent = settings.writeButtonText || 'Yorum Yap';
         emptyWriteBtn.onclick = openWriteForm;
@@ -556,15 +553,15 @@ export async function render(productId, settings, reviewsData, productName, orde
       });
       if (settings.showPhotoGallery !== false && !currentHasImages && stripReviews.length > 0) {
         var photoSection = document.createElement('div');
-        photoSection.className = 'ikr-photo-section';
+        photoSection.className = 'renuvex-pr-photo-section';
 
         // Strip üstündeki başlık — admin paneldeki "Genel → Görsel Galeri Başlığı"
         // ile özelleştirilebilir; toggle (showPhotoGalleryTitle) kapalıysa hiç render edilmez.
-        // Boyut --ikr-photo-title-size, renk --ikr-photo-title CSS variable üzerinden.
+        // Boyut --renuvex-pr-photo-title-size, renk --renuvex-pr-photo-title CSS variable üzerinden.
         if (settings.showPhotoGalleryTitle !== false) {
           var photoTitleText = (settings.photoGalleryTitle || '').trim() || 'Fotoğraflı Yorumlar';
           var photoTitle = document.createElement('div');
-          photoTitle.className = 'ikr-photo-title';
+          photoTitle.className = 'renuvex-pr-photo-title';
           photoTitle.textContent = photoTitleText;
           photoSection.appendChild(photoTitle);
         }
@@ -573,13 +570,13 @@ export async function render(productId, settings, reviewsData, productName, orde
         // card review fotoları 1:1 → strip de kare; list/gallery review fotoları
         // 3:4 portre → strip de portre. Tutarlı görsel akış.
         var thumbAspect = settings.reviewLayout === 'card' ? '1/1' : '3/4';
-        root.style.setProperty('--ikr-photo-thumb-aspect', thumbAspect);
+        root.style.setProperty('--renuvex-pr-photo-thumb-aspect', thumbAspect);
 
         var photoStrip = document.createElement('div');
-        photoStrip.className = 'ikr-photo-strip';
+        photoStrip.className = 'renuvex-pr-photo-strip';
 
         // Backend cap=15 garantili; defansif iç sınır da 15.
-        // `<img>` width/height attribute'ları CSS `--ikr-photo-thumb-aspect` ile uyumlu
+        // `<img>` width/height attribute'ları CSS `--renuvex-pr-photo-thumb-aspect` ile uyumlu
         // olmalı (card: 1/1, list/gallery: 3/4) — CLS rezervi tarayıcı tarafından doğru
         // hesaplanır. width PHOTO_STRIP_THUMB_WIDTH (300); height layout'a göre.
         var stripWidth = PHOTO_STRIP_THUMB_WIDTH;
@@ -600,7 +597,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           thumb.decoding = 'async';
           thumb.width = stripWidth;
           thumb.height = stripHeight;
-          thumb.className = 'ikr-photo-strip-thumb';
+          thumb.className = 'renuvex-pr-photo-strip-thumb';
           thumb.alt = 'Yorum fotoğrafı';
           hideOnImageError(thumb);
           // Lightbox navigasyonu strip dataset'i içinde gezer — load-more sonrası
@@ -614,19 +611,19 @@ export async function render(productId, settings, reviewsData, productName, orde
 
         // Desktop ok butonları
         var prevArrow = document.createElement('button');
-        prevArrow.className = 'ikr-photo-strip-arrow ikr-photo-strip-arrow-prev';
+        prevArrow.className = 'renuvex-pr-photo-strip-arrow renuvex-pr-photo-strip-arrow-prev';
         prevArrow.innerHTML = '&#8249;';
         prevArrow.setAttribute('aria-label', 'Önceki');
         prevArrow.onclick = function () { photoStrip.scrollBy({ left: -200, behavior: 'smooth' }); };
 
         var nextArrow = document.createElement('button');
-        nextArrow.className = 'ikr-photo-strip-arrow ikr-photo-strip-arrow-next';
+        nextArrow.className = 'renuvex-pr-photo-strip-arrow renuvex-pr-photo-strip-arrow-next';
         nextArrow.innerHTML = '&#8250;';
         nextArrow.setAttribute('aria-label', 'Sonraki');
         nextArrow.onclick = function () { photoStrip.scrollBy({ left: 200, behavior: 'smooth' }); };
 
         var stripWrap = document.createElement('div');
-        stripWrap.className = 'ikr-photo-strip-wrap';
+        stripWrap.className = 'renuvex-pr-photo-strip-wrap';
         stripWrap.appendChild(prevArrow);
         stripWrap.appendChild(photoStrip);
         stripWrap.appendChild(nextArrow);
@@ -636,7 +633,7 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       if (reviews.length === 0) {
         var empty = document.createElement('p');
-        empty.className = 'ikr-state-msg';
+        empty.className = 'renuvex-pr-state-msg';
         empty.textContent = 'Henüz yorum yok.';
         widget.appendChild(empty);
       } else {
@@ -648,7 +645,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       var hasMore = data.data && data.data.hasMore;
       if (hasMore) {
         var loadMoreBtn = document.createElement('button');
-        loadMoreBtn.className = 'ikr-load-more';
+        loadMoreBtn.className = 'renuvex-pr-load-more';
         loadMoreBtn.textContent = 'Daha Fazla Göster';
         loadMoreBtn.onclick = async function () {
           loadMoreBtn.disabled = true;

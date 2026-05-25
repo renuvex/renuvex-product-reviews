@@ -130,27 +130,22 @@
 }
 
 /* Widget editor — ince scrollbar (settings paneli) */
-.renuvex-pr-settings-scroll,
-.ikr-settings-scroll {
+.renuvex-pr-settings-scroll {
   scrollbar-width: thin;
   scrollbar-gutter: stable;
   scrollbar-color: rgb(213 205 255) transparent;
 }
-.renuvex-pr-settings-scroll::-webkit-scrollbar,
-.ikr-settings-scroll::-webkit-scrollbar {
+.renuvex-pr-settings-scroll::-webkit-scrollbar {
   width: 6px;
 }
-.renuvex-pr-settings-scroll::-webkit-scrollbar-track,
-.ikr-settings-scroll::-webkit-scrollbar-track {
+.renuvex-pr-settings-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
-.renuvex-pr-settings-scroll::-webkit-scrollbar-thumb,
-.ikr-settings-scroll::-webkit-scrollbar-thumb {
+.renuvex-pr-settings-scroll::-webkit-scrollbar-thumb {
   background-color: rgb(213 205 255);
   border-radius: 999px;
 }
-.renuvex-pr-settings-scroll::-webkit-scrollbar-thumb:hover,
-.ikr-settings-scroll::-webkit-scrollbar-thumb:hover {
+.renuvex-pr-settings-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgb(160 140 255);
 }
 

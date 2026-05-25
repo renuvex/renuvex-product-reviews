@@ -7,39 +7,38 @@
 // İkon ve renk admin panelden gelir:
 //   - getIconFromSettings(currentSettings) → { filled, empty } SVG çifti
 //     (Yıldız Stili → Yorum İkonu seçimi: star/heart/box vb.)
-//   - --ikr-review-star-color → dolu yıldız rengi
+//   - --renuvex-pr-review-star-color → dolu yıldız rengi
 // Bu sayede modal review yıldızlarıyla tutarlı görünür.
 
 import { getIconFromSettings } from '../../../icons/index.js';
 import { ensureStarSprite, starUseSvg } from '../../../icons/star-sprite.js';
 import { currentSettings } from '../../../core/state.js';
 import {
-  LEGACY_IKR_SETTINGS_UPDATED_PREVIEW,
   RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
 } from '../../../core/namespace.js';
 
 export function createStepRating(state, opts) {
   opts = opts || {};
   var root = document.createElement('div');
-  root.className = 'ikr-fwizard-step ikr-fwizard-step-rating';
+  root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-rating';
 
   var isAdvancing = false;
   var advanceTimer = null;
 
   // Başlık
   var title = document.createElement('div');
-  title.className = 'ikr-fwizard-step-title';
+  title.className = 'renuvex-pr-fwizard-step-title';
   title.textContent = 'Bu ürünü nasıl değerlendirirsiniz?';
   root.appendChild(title);
 
   // Yıldız sırası
   var starsRow = document.createElement('div');
-  starsRow.className = 'ikr-fwizard-stars';
+  starsRow.className = 'renuvex-pr-fwizard-stars';
   starsRow.setAttribute('role', 'radiogroup');
   starsRow.setAttribute('aria-label', 'Yıldız puanı');
 
   // İkon çifti admin'deki "Yıldız Stili → Yorum İkonu"ndan gelir.
-  // Renk --ikr-review-star-color (admin "Yıldız Rengi") via .ikr-fwizard-star-active.
+  // Renk --renuvex-pr-review-star-color (admin "Yıldız Rengi") via .renuvex-pr-fwizard-star-active.
   var iconPair = getIconFromSettings(currentSettings || {});
   ensureStarSprite(iconPair);
 
@@ -48,7 +47,7 @@ export function createStepRating(state, opts) {
   function applyVisual(activeCount) {
     stars.forEach(function (btn, idx) {
       var isActive = idx < activeCount;
-      btn.classList.toggle('ikr-fwizard-star-active', isActive);
+      btn.classList.toggle('renuvex-pr-fwizard-star-active', isActive);
       btn.setAttribute('aria-checked', idx + 1 === activeCount ? 'true' : 'false');
       // SVG'yi state'e göre filled/empty olarak değiştir — review item ile tutarlı.
       btn.innerHTML = isActive ? starUseSvg('full') : starUseSvg('outline');
@@ -75,7 +74,7 @@ export function createStepRating(state, opts) {
     (function (value) {
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'ikr-fwizard-star';
+      btn.className = 'renuvex-pr-fwizard-star';
       btn.setAttribute('role', 'radio');
       btn.setAttribute('aria-label', value + ' yıldız');
       // Başlangıçta empty — applyVisual ilk çağrıda doğru SVG'yi yerleştirir.
@@ -125,7 +124,6 @@ export function createStepRating(state, opts) {
     applyVisual(state.get().rating);
   };
   window.addEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-  window.addEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
 
   root.appendChild(starsRow);
 
@@ -135,7 +133,6 @@ export function createStepRating(state, opts) {
     destroy: function () {
       if (advanceTimer) clearTimeout(advanceTimer);
       window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-      window.removeEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
       // hover listener'lar btn ile birlikte DOM'dan çıkınca otomatik kalkar
     },
   };

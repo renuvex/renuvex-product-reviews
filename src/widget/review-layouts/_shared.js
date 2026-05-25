@@ -15,25 +15,25 @@ export function buildReplyEl(merchantReply, onReadMore) {
   if (!merchantReply) return null;
 
   var replyEl = document.createElement('div');
-  replyEl.className = 'ikr-reply';
+  replyEl.className = 'renuvex-pr-reply';
 
   var replyHeader = document.createElement('div');
-  replyHeader.className = 'ikr-reply-header';
+  replyHeader.className = 'renuvex-pr-reply-header';
   var replyLabel = document.createElement('span');
-  replyLabel.className = 'ikr-reply-label';
+  replyLabel.className = 'renuvex-pr-reply-label';
   replyLabel.textContent = (currentSettings && currentSettings.merchantReplyLabel) || 'Mağaza Sahibi';
   replyHeader.appendChild(replyLabel);
   replyEl.appendChild(replyHeader);
 
   var replyText = document.createElement('div');
-  replyText.className = 'ikr-reply-text ikr-reply-text-clamped';
+  replyText.className = 'renuvex-pr-reply-text renuvex-pr-reply-text-clamped';
   replyText.textContent = merchantReply;
   replyEl.appendChild(replyText);
 
   // "Devamını oku" — sadece clamp gerçekten devreye girdiyse görünür.
   // requestAnimationFrame: tarayıcı layout hesabı tamamlanmadan scrollHeight okunamaz.
   var readMore = document.createElement('span');
-  readMore.className = 'ikr-read-more ikr-reply-read-more';
+  readMore.className = 'renuvex-pr-read-more renuvex-pr-reply-read-more';
   readMore.textContent = 'Devamını oku';
   readMore.style.display = 'none';
   replyEl.appendChild(readMore);
@@ -47,7 +47,7 @@ export function buildReplyEl(merchantReply, onReadMore) {
         var expanded = false;
         readMore.onclick = function() {
           expanded = !expanded;
-          replyText.classList.toggle('ikr-reply-text-clamped', !expanded);
+          replyText.classList.toggle('renuvex-pr-reply-text-clamped', !expanded);
           readMore.textContent = expanded ? 'Daha az göster' : 'Devamını oku';
         };
       }

@@ -13,7 +13,6 @@ import {
 } from '../core/helpers.js';
 import { currentSettings } from '../core/state.js';
 import {
-  LEGACY_IKR_SETTINGS_UPDATED_PREVIEW,
   RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
 } from '../core/namespace.js';
 
@@ -185,7 +184,7 @@ function trapModalFocus(e, container) {
 
 function createModalHistoryEntry() {
   var entry = {
-    id: 'ikr-modal-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+    id: 'renuvex-pr-modal-' + Date.now() + '-' + Math.random().toString(36).slice(2),
     previousState: null,
     pushed: false,
     url: window.location.href,
@@ -193,7 +192,7 @@ function createModalHistoryEntry() {
 
   try {
     entry.previousState = history.state;
-    history.pushState({ ikrModal: entry.id }, '', entry.url);
+    history.pushState({ renuvexPrModal: entry.id }, '', entry.url);
     entry.pushed = true;
   } catch (_) {}
 
@@ -206,7 +205,7 @@ function isCurrentModalHistoryEntry(entry) {
     entry.pushed &&
     window.location.href === entry.url &&
     history.state &&
-    history.state.ikrModal === entry.id
+    history.state.renuvexPrModal === entry.id
   );
 }
 
@@ -227,20 +226,20 @@ function closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocus
 
 function buildRight(r) {
   var right = document.createElement('div');
-  right.className = 'ikr-modal-right';
+  right.className = 'renuvex-pr-modal-right';
 
   var scrollContent = document.createElement('div');
-  scrollContent.className = 'ikr-modal-scroll-content';
+  scrollContent.className = 'renuvex-pr-modal-scroll-content';
 
   var topRow = document.createElement('div');
-  topRow.className = 'ikr-modal-top-row';
+  topRow.className = 'renuvex-pr-modal-top-row';
 
   var starsEl = document.createElement('div');
-  starsEl.className = 'ikr-modal-stars';
+  starsEl.className = 'renuvex-pr-modal-stars';
   starsEl.innerHTML = starsHTML(r.rating, currentSettings);
 
   var dateEl = document.createElement('span');
-  dateEl.className = 'ikr-modal-date';
+  dateEl.className = 'renuvex-pr-modal-date';
   dateEl.textContent = formatDate(r.createdAt);
 
   topRow.appendChild(starsEl);
@@ -248,29 +247,29 @@ function buildRight(r) {
   scrollContent.appendChild(topRow);
 
   var titleEl = document.createElement('div');
-  titleEl.className = 'ikr-modal-title';
+  titleEl.className = 'renuvex-pr-modal-title';
   titleEl.textContent = r.title || '';
   titleEl.style.display = r.title ? '' : 'none';
   scrollContent.appendChild(titleEl);
 
   var authorEl = document.createElement('div');
-  authorEl.className = 'ikr-modal-author';
+  authorEl.className = 'renuvex-pr-modal-author';
   authorEl.textContent = r.author || '';
   scrollContent.appendChild(authorEl);
 
   var bodyEl = document.createElement('div');
-  bodyEl.className = 'ikr-modal-body';
+  bodyEl.className = 'renuvex-pr-modal-body';
   bodyEl.textContent = (r.comment || '').trim();
   bodyEl.style.display = (r.comment && r.comment.trim()) ? '' : 'none';
   scrollContent.appendChild(bodyEl);
 
   var replyEl = document.createElement('div');
-  replyEl.className = 'ikr-modal-reply';
+  replyEl.className = 'renuvex-pr-modal-reply';
   var replyLabel = document.createElement('div');
-  replyLabel.className = 'ikr-modal-reply-label';
+  replyLabel.className = 'renuvex-pr-modal-reply-label';
   replyLabel.textContent = (currentSettings && currentSettings.merchantReplyLabel) || 'Mağaza Sahibi';
   var replyText = document.createElement('div');
-  replyText.className = 'ikr-modal-reply-text';
+  replyText.className = 'renuvex-pr-modal-reply-text';
   replyText.textContent = r.merchantReply || '';
   replyEl.appendChild(replyLabel);
   replyEl.appendChild(replyText);
@@ -284,25 +283,25 @@ function buildRight(r) {
 
 function updateRight(right, r, settings) {
   var activeSettings = settings || currentSettings;
-  var scrollContent = right.querySelector('.ikr-modal-scroll-content');
-  var starsEl = scrollContent.querySelector('.ikr-modal-stars');
+  var scrollContent = right.querySelector('.renuvex-pr-modal-scroll-content');
+  var starsEl = scrollContent.querySelector('.renuvex-pr-modal-stars');
   starsEl.innerHTML = starsHTML(r.rating, activeSettings);
-  scrollContent.querySelector('.ikr-modal-date').textContent = formatDate(r.createdAt);
+  scrollContent.querySelector('.renuvex-pr-modal-date').textContent = formatDate(r.createdAt);
 
-  var titleEl = scrollContent.querySelector('.ikr-modal-title');
+  var titleEl = scrollContent.querySelector('.renuvex-pr-modal-title');
   titleEl.textContent = r.title || '';
   titleEl.style.display = r.title ? '' : 'none';
 
-  scrollContent.querySelector('.ikr-modal-author').textContent = r.author || '';
+  scrollContent.querySelector('.renuvex-pr-modal-author').textContent = r.author || '';
 
-  var bodyEl = scrollContent.querySelector('.ikr-modal-body');
+  var bodyEl = scrollContent.querySelector('.renuvex-pr-modal-body');
   bodyEl.textContent = (r.comment || '').trim();
   bodyEl.style.display = (r.comment && r.comment.trim()) ? '' : 'none';
 
-  var replyEl = scrollContent.querySelector('.ikr-modal-reply');
-  replyEl.querySelector('.ikr-modal-reply-label').textContent =
+  var replyEl = scrollContent.querySelector('.renuvex-pr-modal-reply');
+  replyEl.querySelector('.renuvex-pr-modal-reply-label').textContent =
     (activeSettings && activeSettings.merchantReplyLabel) || 'Mağaza Sahibi';
-  replyEl.querySelector('.ikr-modal-reply-text').textContent = r.merchantReply || '';
+  replyEl.querySelector('.renuvex-pr-modal-reply-text').textContent = r.merchantReply || '';
   replyEl.style.display = r.merchantReply ? '' : 'none';
 
   right.scrollTop = 0;
@@ -313,11 +312,11 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   var currentPhotoIdx = Math.max(0, Math.min(photoIdx || 0, images.length - 1));
 
   var left = document.createElement('div');
-  left.className = 'ikr-modal-left';
+  left.className = 'renuvex-pr-modal-left';
 
   var mainImg = document.createElement('img');
-  var animClass = direction === 'next' ? 'ikr-modal-img-enter-right' : direction === 'prev' ? 'ikr-modal-img-enter-left' : '';
-  mainImg.className = 'ikr-modal-main-img' + (animClass ? ' ' + animClass : '');
+  var animClass = direction === 'next' ? 'renuvex-pr-modal-img-enter-right' : direction === 'prev' ? 'renuvex-pr-modal-img-enter-left' : '';
+  mainImg.className = 'renuvex-pr-modal-main-img' + (animClass ? ' ' + animClass : '');
   mainImg.src = optimizeImageUrl(images[currentPhotoIdx] || '');
   mainImg.decoding = 'async';
   mainImg.width = LIGHTBOX_MAIN_WIDTH;
@@ -328,9 +327,9 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   // konur; lightbox prev/next/swipe navigasyonu çalışmaya devam eder.
   attachImageErrorHandler(mainImg, function (img) {
     img.style.display = 'none';
-    if (left.querySelector('.ikr-modal-img-error')) return;
+    if (left.querySelector('.renuvex-pr-modal-img-error')) return;
     var placeholder = document.createElement('div');
-    placeholder.className = 'ikr-modal-img-error';
+    placeholder.className = 'renuvex-pr-modal-img-error';
     placeholder.setAttribute('role', 'status');
     placeholder.textContent = 'Bu görsel şu anda yüklenemiyor.';
     left.insertBefore(placeholder, img);
@@ -338,7 +337,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   left.appendChild(mainImg);
 
   var mobileClose = document.createElement('button');
-  mobileClose.className = 'ikr-modal-close-mobile';
+  mobileClose.className = 'renuvex-pr-modal-close-mobile';
   mobileClose.textContent = '✕';
   mobileClose.setAttribute('aria-label', 'Kapat');
   mobileClose.onclick = function(e) { e.stopPropagation(); requestClose(); };
@@ -375,7 +374,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
 
   if (images.length > 1) {
     var thumbBar = document.createElement('div');
-    thumbBar.className = 'ikr-modal-thumbs';
+    thumbBar.className = 'renuvex-pr-modal-thumbs';
     images.forEach(function(url, i) {
       var th = document.createElement('img');
       // Lightbox altı mini şerit 60-80 px — küçük responsive varyant yeter.
@@ -386,7 +385,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
       th.decoding = 'async';
       th.width = LIGHTBOX_MINI_THUMB_WIDTH;
       th.height = LIGHTBOX_MINI_THUMB_WIDTH;
-      th.className = 'ikr-modal-thumb' + (i === currentPhotoIdx ? ' ikr-modal-thumb-active' : '');
+      th.className = 'renuvex-pr-modal-thumb' + (i === currentPhotoIdx ? ' renuvex-pr-modal-thumb-active' : '');
       th.alt = 'Küçük resim ' + (i + 1);
       hideOnImageError(th);
       th.tabIndex = 0;
@@ -419,7 +418,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
 
   if (hasPrev) {
     var prevBtn = document.createElement('button');
-    prevBtn.className = 'ikr-modal-nav ikr-modal-nav-prev';
+    prevBtn.className = 'renuvex-pr-modal-nav renuvex-pr-modal-nav-prev';
     prevBtn.innerHTML = '&#8249;';
     prevBtn.setAttribute('aria-label', 'Önceki');
     prevBtn.onclick = function(e) {
@@ -437,7 +436,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
 
   if (hasNext) {
     var nextBtn = document.createElement('button');
-    nextBtn.className = 'ikr-modal-nav ikr-modal-nav-next';
+    nextBtn.className = 'renuvex-pr-modal-nav renuvex-pr-modal-nav-next';
     nextBtn.innerHTML = '&#8250;';
     nextBtn.setAttribute('aria-label', 'Sonraki');
     nextBtn.onclick = function(e) {
@@ -477,9 +476,9 @@ function resetElementScroll(el) {
 }
 
 function normalizeReviewChangeScroll(overlay, modal) {
-  var wrap = overlay && overlay.querySelector('.ikr-modal-wrap');
-  var right = modal && modal.querySelector('.ikr-modal-right');
-  var scrollContent = modal && modal.querySelector('.ikr-modal-scroll-content');
+  var wrap = overlay && overlay.querySelector('.renuvex-pr-modal-wrap');
+  var right = modal && modal.querySelector('.renuvex-pr-modal-right');
+  var scrollContent = modal && modal.querySelector('.renuvex-pr-modal-scroll-content');
 
   function resetAll() {
     resetElementScroll(wrap);
@@ -507,7 +506,7 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
     if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
   } else {
     var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState);
-    var existingRight = modal.querySelector('.ikr-modal-right');
+    var existingRight = modal.querySelector('.renuvex-pr-modal-right');
     if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
     if (existingRight) {
       updateRight(existingRight, r, modalState && modalState.currentSettings);
@@ -536,10 +535,10 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   if (photoIdx < 0) photoIdx = 0;
 
   var overlay = document.createElement('div');
-  overlay.className = 'ikr-modal-overlay';
+  overlay.className = 'renuvex-pr-modal-overlay';
 
   var modal = document.createElement('div');
-  modal.className = 'ikr-modal';
+  modal.className = 'renuvex-pr-modal';
 
   var closed = false;
   var returnFocusEl = getReturnFocusElement();
@@ -558,7 +557,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
     if (nextSettings && nextSettings === lastPreviewSettings) return;
     lastPreviewSettings = nextSettings || null;
     modalState.currentSettings = nextSettings || currentSettings;
-    var right = modal.querySelector('.ikr-modal-right');
+    var right = modal.querySelector('.renuvex-pr-modal-right');
     if (!right || !modalState.currentReview) return;
     updateRight(right, modalState.currentReview, modalState.currentSettings);
   }
@@ -567,7 +566,6 @@ export function openReviewModal(r, clickedUrl, allReviews) {
     if (closed) return;
     closed = true;
     window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-    window.removeEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
     closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
   }
 
@@ -583,7 +581,6 @@ export function openReviewModal(r, clickedUrl, allReviews) {
     if (closed) return;
     closed = true;
     window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-    window.removeEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
     closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
     restoreModalHistoryEntry(modalHistoryEntry);
   }
@@ -592,7 +589,6 @@ export function openReviewModal(r, clickedUrl, allReviews) {
 
   window.addEventListener('popstate', onPopState);
   window.addEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-  window.addEventListener(LEGACY_IKR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
 
   overlay.onclick = function() { requestClose(); };
   modal.onclick = function(e) { e.stopPropagation(); };
@@ -602,7 +598,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   prefetchNeighbors(reviewIdx, reviewsWithPhotos);
 
   var modalWrap = document.createElement('div');
-  modalWrap.className = 'ikr-modal-wrap';
+  modalWrap.className = 'renuvex-pr-modal-wrap';
   modalWrap.tabIndex = -1;
   modalWrap.setAttribute('role', 'dialog');
   modalWrap.setAttribute('aria-modal', 'true');
@@ -610,7 +606,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   modalWrap.appendChild(modal);
 
   var closeBtn = document.createElement('button');
-  closeBtn.className = 'ikr-modal-close';
+  closeBtn.className = 'renuvex-pr-modal-close';
   closeBtn.textContent = '✕';
   closeBtn.setAttribute('aria-label', 'Kapat');
   closeBtn.onclick = function(e) { e.stopPropagation(); requestClose(); };

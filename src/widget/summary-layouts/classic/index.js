@@ -29,30 +29,30 @@ export function render(opts) {
   ensureStarSprite(iconPair);
 
   var summary = document.createElement('div');
-  summary.className = 'ikr-summary';
+  summary.className = 'renuvex-pr-summary';
 
   var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
   var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
 
   // Ortalama puan
   var avgBlock = document.createElement('div');
-  avgBlock.className = 'ikr-summary-block ikr-summary-avg';
+  avgBlock.className = 'renuvex-pr-summary-block renuvex-pr-summary-avg';
   avgBlock.innerHTML =
-    '<span class="ikr-avg-star ikr-icon">' + starUseSvg('full') + '</span>' +
-    '<span class="ikr-avg-num">' + avgRatingVal + '</span>';
+    '<span class="renuvex-pr-avg-star renuvex-pr-icon">' + starUseSvg('full') + '</span>' +
+    '<span class="renuvex-pr-avg-num">' + avgRatingVal + '</span>';
   summary.appendChild(avgBlock);
 
   // Toplam yorum sayısı
   var countBlock = document.createElement('div');
-  countBlock.className = 'ikr-summary-block ikr-summary-count';
+  countBlock.className = 'renuvex-pr-summary-block renuvex-pr-summary-count';
   countBlock.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
   summary.appendChild(countBlock);
 
   // Tavsiye yüzdesi (opsiyonel)
   if ((settings.showRecommendation !== false) && recommendPct > 0) {
     var recBlock = document.createElement('div');
-    recBlock.className = 'ikr-summary-block ikr-summary-recommend';
-    recBlock.innerHTML = '<span class="ikr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
+    recBlock.className = 'renuvex-pr-summary-block renuvex-pr-summary-recommend';
+    recBlock.innerHTML = '<span class="renuvex-pr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
     summary.appendChild(recBlock);
   }
 

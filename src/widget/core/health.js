@@ -1,6 +1,6 @@
 // core/health.js - storefront runtime health and conflict diagnostics.
 
-/* global __RENUVEX_PR_WIDGET_VERSION__, __IKR_WIDGET_VERSION__ */
+/* global __RENUVEX_PR_WIDGET_VERSION__ */
 
 import { API_BASE, PUBLIC_API_KEY } from './config.js';
 
@@ -10,8 +10,7 @@ var sentKeys = {};
 
 function getWidgetVersion() {
   try {
-    if (typeof __RENUVEX_PR_WIDGET_VERSION__ !== 'undefined') return __RENUVEX_PR_WIDGET_VERSION__;
-    return typeof __IKR_WIDGET_VERSION__ !== 'undefined' ? __IKR_WIDGET_VERSION__ : 'dev';
+    return typeof __RENUVEX_PR_WIDGET_VERSION__ !== 'undefined' ? __RENUVEX_PR_WIDGET_VERSION__ : 'dev';
   } catch (_) {
     return 'dev';
   }
@@ -76,11 +75,6 @@ export function markWidgetLoaded() {
     version: getWidgetVersion(),
   };
   window.__RENUVEX_PRODUCT_REVIEWS__ = marker;
-  window.__IKR_WIDGET__ = {
-    loadedAt: marker.loadedAt,
-    publicApiKey: marker.publicApiKey,
-    version: marker.version,
-  };
 }
 
 export function reportWidgetHealth(type, message, extra) {
@@ -133,7 +127,7 @@ export function probeWidgetVisibility(root, surface, extra) {
         return;
       }
 
-      var stars = root.querySelectorAll ? root.querySelectorAll('.ikr-star') : [];
+      var stars = root.querySelectorAll ? root.querySelectorAll('.renuvex-pr-star') : [];
       for (var i = 0; i < stars.length; i++) {
         var starRect = stars[i].getBoundingClientRect();
         if (starRect.width <= 0 || starRect.height <= 0) {

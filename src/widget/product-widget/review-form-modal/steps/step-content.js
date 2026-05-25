@@ -12,22 +12,22 @@ export function createStepContent(state, opts) {
   var onValidityChange = opts.onValidityChange || function () { };
 
   var root = document.createElement('div');
-  root.className = 'ikr-fwizard-step ikr-fwizard-step-content';
+  root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-content';
 
   // Başlık
   var heading = document.createElement('div');
-  heading.className = 'ikr-fwizard-step-title ikr-fwizard-step-title--lg';
+  heading.className = 'renuvex-pr-fwizard-step-title renuvex-pr-fwizard-step-title--lg';
   heading.textContent = 'Deneyiminizi anlatın';
   root.appendChild(heading);
 
   // Form alanı
   var form = document.createElement('div');
-  form.className = 'ikr-fwizard-content-form';
+  form.className = 'renuvex-pr-fwizard-content-form';
 
   // Title input (opsiyonel)
   var titleInput = document.createElement('input');
   titleInput.type = 'text';
-  titleInput.className = 'ikr-fwizard-input';
+  titleInput.className = 'renuvex-pr-fwizard-input';
   titleInput.placeholder = 'Kısa bir başlık (opsiyonel)';
   titleInput.maxLength = TITLE_MAX;
   titleInput.setAttribute('aria-label', 'Yorum başlığı');
@@ -39,7 +39,7 @@ export function createStepContent(state, opts) {
 
   // Comment textarea (zorunlu)
   var textarea = document.createElement('textarea');
-  textarea.className = 'ikr-fwizard-textarea';
+  textarea.className = 'renuvex-pr-fwizard-textarea';
   textarea.placeholder = 'Deneyiminizi anlatın…';
   textarea.maxLength = COMMENT_MAX;
   textarea.rows = 6;
@@ -49,14 +49,14 @@ export function createStepContent(state, opts) {
 
   // Karakter sayacı
   var counter = document.createElement('div');
-  counter.className = 'ikr-fwizard-char-counter';
+  counter.className = 'renuvex-pr-fwizard-char-counter';
   counter.setAttribute('aria-live', 'polite');
   form.appendChild(counter);
 
   function updateCounter() {
     var len = textarea.value.length;
     counter.textContent = len + '/' + COMMENT_MAX;
-    counter.classList.toggle('ikr-fwizard-char-counter--max', len >= COMMENT_MAX);
+    counter.classList.toggle('renuvex-pr-fwizard-char-counter--max', len >= COMMENT_MAX);
   }
 
   function isValid() {

@@ -16,31 +16,31 @@ export function buildBarChart(opts) {
   ensureStarSprite(iconPair);
 
   var bars = document.createElement('div');
-  bars.className = 'ikr-summary-block ikr-summary-bars';
+  bars.className = 'renuvex-pr-summary-block renuvex-pr-summary-bars';
 
   for (var si = 5; si >= 1; si--) {
     var cnt = ratingCounts[si - 1] || 0;
     var pct = allCount > 0 ? Math.round((cnt / allCount) * 100) : 0;
     var isActive = currentFilter === si;
     var row = document.createElement('div');
-    row.className = 'ikr-bar-row' + (isActive ? ' ikr-bar-active' : '');
+    row.className = 'renuvex-pr-bar-row' + (isActive ? ' renuvex-pr-bar-active' : '');
     if (currentFilter && !isActive) row.style.opacity = '0.35';
 
     var starsHtml = '';
     for (var s = 1; s <= 5; s++) {
       var filled = s <= si;
       starsHtml +=
-        '<span class="ikr-bar-star ikr-icon ' +
-        (filled ? 'ikr-bar-star-filled' : 'ikr-bar-star-empty') +
+        '<span class="renuvex-pr-bar-star renuvex-pr-icon ' +
+        (filled ? 'renuvex-pr-bar-star-filled' : 'renuvex-pr-bar-star-empty') +
         '">' +
         starUseSvg(filled ? 'full' : 'outline') +
         '</span>';
     }
 
     row.innerHTML =
-      '<span class="ikr-bar-label">' + starsHtml + '</span>' +
-      '<div class="ikr-bar-track"><div class="ikr-bar-fill" style="width:' + pct + '%;"></div></div>' +
-      '<span class="ikr-bar-count">(' + cnt.toLocaleString('tr-TR') + ')</span>';
+      '<span class="renuvex-pr-bar-label">' + starsHtml + '</span>' +
+      '<div class="renuvex-pr-bar-track"><div class="renuvex-pr-bar-fill" style="width:' + pct + '%;"></div></div>' +
+      '<span class="renuvex-pr-bar-count">(' + cnt.toLocaleString('tr-TR') + ')</span>';
 
     (function(starVal) {
       row.onclick = function() { onFilterChange(starVal); };
