@@ -46,11 +46,11 @@ export var CLASSIC_CSS = `
      NOT: 100vw scrollbar'ı hesaba katmaz — scroll varsa margin-left yerine
      parent.getBoundingClientRect() ile runtime düzeltme de yapılabilir, ama
      genelde bu kural yeterli. */
-  #ikas-reviews-widget{color:#111111;background:transparent;border:1px solid var(--renuvex-pr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;--renuvex-pr-gap-tight:4px;--renuvex-pr-gap-normal:8px;--renuvex-pr-gap-loose:16px;--renuvex-pr-gap-section:24px;--renuvex-pr-pad-summary-mobile:16px;--renuvex-pr-pad-review-mobile:16px;}
+  #renuvex-reviews-widget{color:#111111;background:transparent;border:1px solid var(--renuvex-pr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;--renuvex-pr-gap-tight:4px;--renuvex-pr-gap-normal:8px;--renuvex-pr-gap-loose:16px;--renuvex-pr-gap-section:24px;--renuvex-pr-pad-summary-mobile:16px;--renuvex-pr-pad-review-mobile:16px;}
   /* Doğrudan widget çocukları — inner wrap (1200px ortalı). Summary'deki
      3 sütun (puan + bars + buton) max boyutlarda ancak ~1030px tutuyor,
      1200px tavan wrap riskini pratik olarak sıfırlar. */
-  #ikas-reviews-widget > *{max-width:1200px;margin-left:auto;margin-right:auto;}
+  #renuvex-reviews-widget > *{max-width:1200px;margin-left:auto;margin-right:auto;}
   /* NOT: Eskiden burada .renuvex-pr-body ve .renuvex-pr-reply-text için max-width:70ch vardı
      (okunabilirlik). Card layout'ta "Devamını oku" sonrası body 70ch'de kesiliyor,
      parent genişliğini kullanmıyordu — kaldırıldı. Satır uzunluğu artık layout
@@ -60,16 +60,16 @@ export var CLASSIC_CSS = `
      ürün kodu) container'ı zorlamasın diye yumuşak kırma. Sadece text class'larına
      uygulanır, buton/UI tipografisine dokunulmaz. Gallery masonry için kritik:
      tek bir uzun string break-inside:avoid'a rağmen kolon dengesini bozardı. */
-  #ikas-reviews-widget .renuvex-pr-body,
-  #ikas-reviews-widget .renuvex-pr-author,
-  #ikas-reviews-widget .renuvex-pr-review-title,
-  #ikas-reviews-widget .renuvex-pr-review-list-body,
-  #ikas-reviews-widget .renuvex-pr-review-list-title,
-  #ikas-reviews-widget .renuvex-pr-review-list-author-name,
-  #ikas-reviews-widget .renuvex-pr-review-gallery-body,
-  #ikas-reviews-widget .renuvex-pr-review-gallery-title,
-  #ikas-reviews-widget .renuvex-pr-review-gallery-author,
-  #ikas-reviews-widget .renuvex-pr-reply-text{overflow-wrap:anywhere;}
+  #renuvex-reviews-widget .renuvex-pr-body,
+  #renuvex-reviews-widget .renuvex-pr-author,
+  #renuvex-reviews-widget .renuvex-pr-review-title,
+  #renuvex-reviews-widget .renuvex-pr-review-list-body,
+  #renuvex-reviews-widget .renuvex-pr-review-list-title,
+  #renuvex-reviews-widget .renuvex-pr-review-list-author-name,
+  #renuvex-reviews-widget .renuvex-pr-review-gallery-body,
+  #renuvex-reviews-widget .renuvex-pr-review-gallery-title,
+  #renuvex-reviews-widget .renuvex-pr-review-gallery-author,
+  #renuvex-reviews-widget .renuvex-pr-reply-text{overflow-wrap:anywhere;}
   /* Modal document.body'ye portal'lanır → widget scope'undan ÇIKAR. Global kural şart. */
   .renuvex-pr-modal-body,
   .renuvex-pr-modal-title,
@@ -327,14 +327,14 @@ ${PARTIAL_STARS_CSS}
        CSS degiskenleri uzerinden. Root frame padding 0 olur, her blok
        kendi yan bosluklarini verir.
        --renuvex-pr-pad-summary-mobile: summary bloklari (classic/split/compact/hero/minimal)
-       --renuvex-pr-pad-review-mobile:  yorum listesi container'i (#ikas-reviews)
+       --renuvex-pr-pad-review-mobile:  yorum listesi container'i (#renuvex-reviews)
        Ileride admin panelinden degistirmek icin: settings -> CSS variable. */
-    #ikas-reviews-widget{padding-left:0;padding-right:0;}
+    #renuvex-reviews-widget{padding-left:0;padding-right:0;}
     /* Summary yan padding'i .renuvex-pr-summary mobile bloguna eklendi (--renuvex-pr-pad-summary-mobile) */
     /* Review layoutlari widget direct child — her item kendi yan padding'ini
-       --renuvex-pr-pad-review-mobile uzerinden alir. #ikas-reviews container'ina
+       --renuvex-pr-pad-review-mobile uzerinden alir. #renuvex-reviews container'ina
        padding vermek yerine item class'larina vermek gerek cunku review'lar
-       widget'in child'i, #ikas-reviews icinde degil. */
+       widget'in child'i, #renuvex-reviews icinde degil. */
     .renuvex-pr-review-card,
     .renuvex-pr-review-list,
     .renuvex-pr-review-gallery{

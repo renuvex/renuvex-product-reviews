@@ -4,7 +4,7 @@
 // (Card ile aynı sıralama — sadece görsel layout farklı: 2-kolon masonry + sağ foto.)
 // Foto yoksa sol kolon tüm genişliği kullanır (no-media modifier).
 // Mobile'da da aynı split korunur — foto asla metnin üstüne çıkmaz.
-// Masonry için CSS columns parent'a (#ikas-reviews-widget) :has() ile uygulanır.
+// Masonry için CSS columns parent'a (#renuvex-reviews-widget) :has() ile uygulanır.
 
 import { starsHTML, formatDate, getFirstTrustedReviewImage, GALLERY_TILE_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
 import { openReviewModal } from '../../product-widget/review-modal.js';

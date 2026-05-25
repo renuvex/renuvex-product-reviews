@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 </head>
 <body>
   <div class="preview-container">
-    <div id="ikas-reviews-anchor"></div>
+    <div data-renuvex-widget="reviews"></div>
   </div>
 
   <script>

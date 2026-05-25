@@ -38,11 +38,11 @@ function hexToRgba(hex, alpha) {
 }
 
 function getOrCreateReviewsAnchor() {
-  var anchorEl = document.getElementById('ikas-reviews-anchor');
+  var anchorEl = document.querySelector('[data-renuvex-widget="reviews"]');
   if (anchorEl) return anchorEl;
 
   anchorEl = document.createElement('div');
-  anchorEl.id = 'ikas-reviews-anchor';
+  anchorEl.setAttribute('data-renuvex-widget', 'reviews');
   anchorEl.setAttribute('data-renuvex-auto-anchor', '1');
 
   var productContainer = null;
@@ -413,10 +413,10 @@ export async function render(productId, settings, reviewsData, productName, orde
     var anchorEl = getOrCreateReviewsAnchor();
     if (!anchorEl) return;
     var reviewsSlot = getOrCreateReviewsSlot(anchorEl, productId);
-    var container = document.getElementById('ikas-reviews');
+    var container = document.getElementById('renuvex-reviews');
     if (!container) {
       container = document.createElement('div');
-      container.id = 'ikas-reviews';
+      container.id = 'renuvex-reviews';
       container.style.minHeight = '200px';
     }
     if (container.parentNode !== reviewsSlot) reviewsSlot.appendChild(container);
@@ -447,7 +447,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       container = fresh;
 
       var widget = document.createElement('div');
-      widget.id = 'ikas-reviews-widget';
+      widget.id = 'renuvex-reviews-widget';
       widget.className = 'renuvex-pr-reviews-widget';
       widget.setAttribute('data-renuvex-surface', 'reviews');
       if (productId) {

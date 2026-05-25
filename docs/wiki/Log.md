@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-05-25 - refactor | Public mount contract -> data-renuvex-widget scheme
+- Summary: Renamed the review widget's public mount point and internal section ids off the ad-hoc `ikas-reviews*` naming. Mount is now `<div data-renuvex-widget="reviews"></div>` (scalable per-widget attribute; a future carousel uses `data-renuvex-widget="carousel"`). Internal ids `#ikas-reviews`→`#renuvex-reviews`, `#ikas-reviews-widget`→`#renuvex-reviews-widget`; PDP badge scroll target + IkasEvents subscribe id updated. Auto-mount preserved.
+- Reason: Establish one professional, branded, multi-widget public-mount convention before adding more widgets; `ikas-reviews*` was neither old-brand nor Renuvex.
+- Verification: `pnpm build:widget` (active bundle has `data-renuvex-widget` + `renuvex-reviews-widget`, 0 `ikas-reviews`), `tsc --noEmit` 0, `pnpm lint` 0, `node --check`, live re-test on dev store.
+- Updated wiki: [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]], [[Product_Review_Widget]], [[Log]]
+
 ## 2026-05-25 - refactor | Renuvex namespace contract phase (legacy ikr removed)
 - Summary: Completed the hard rename — removed every legacy `ikr-*`, `data-ikr-*`, `IKR_*`, `--ikr-*`, `#ikr-*`, and `yorum-paneli` identifier from source. The canonical Renuvex namespace is now the only namespace in DOM/CSS/events/cache/build. `core/namespace.js` is reduced to single-namespace preview helpers (runtime class-mirror observer + CSS expand layer removed).
 - Reason: Only the dev store is installed (no real merchant installs), so the expand/contract overlap window is unnecessary; a clean single-namespace codebase is safe.

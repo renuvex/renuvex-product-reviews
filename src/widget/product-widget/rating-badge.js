@@ -120,7 +120,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   var badge = document.createElement('a');
   badge.className = 'renuvex-pr-rating-badge renuvex-pr-rating-badge--pdp';
-  badge.href = '#ikas-reviews';
+  badge.href = '#renuvex-reviews';
   // A11y: a real text label (sr-only) referenced via aria-labelledby — translation
   // friendly. The element is a scroll-to-reviews LINK, so it keeps its link role
   // (no role=figure override). The star row is decorative (aria-hidden).
@@ -147,7 +147,7 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   badge.onclick = function(e) {
     e.preventDefault();
-    var rev = document.getElementById('ikas-reviews-widget') || document.getElementById('ikas-reviews');
+    var rev = document.getElementById('renuvex-reviews-widget') || document.getElementById('renuvex-reviews');
     if (!rev) return;
     var stickyHeader = document.querySelector('header');
     var headerH = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;

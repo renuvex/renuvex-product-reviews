@@ -130,6 +130,16 @@ name/marker tiers; the still-legacy live ikas script record is adopted via the
 duplicate is created. Old hashed runtime chunks remain on disk under the
 existing 7-day retention prune.
 
+Update 2026-05-25 (mount contract) — the public mount point moved from the id
+`#ikas-reviews-anchor` to the attribute `data-renuvex-widget="reviews"`, a
+scalable per-widget scheme (future widgets such as a carousel use
+`data-renuvex-widget="carousel"`). The review-section ids were renamed
+`#ikas-reviews`→`#renuvex-reviews` and `#ikas-reviews-widget`→
+`#renuvex-reviews-widget` (badge scroll target + IkasEvents subscribe id
+updated). Auto-mount is preserved, so storefronts without a manual mount div
+keep working. (Supersedes the expand-phase note above that left `#ikas-reviews*`
+untouched.)
+
 ## Verification
 Required checks for this migration:
 

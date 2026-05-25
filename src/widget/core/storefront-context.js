@@ -104,7 +104,7 @@ function attachIkasEvents() {
   if (subscribed) return;
   if (window.IkasEvents) {
     subscribed = true;
-    window.IkasEvents.subscribe({ id: 'ikas-reviews-widget', callback: handleIkasEvent });
+    window.IkasEvents.subscribe({ id: 'renuvex-reviews-widget', callback: handleIkasEvent });
     return;
   }
   // IkasEvents henüz yüklenmedi — 50ms aralıklarla tekrar dene (max 5sn)
@@ -113,7 +113,7 @@ function attachIkasEvents() {
     if (subscribed) return;
     if (window.IkasEvents) {
       subscribed = true;
-      window.IkasEvents.subscribe({ id: 'ikas-reviews-widget', callback: handleIkasEvent });
+      window.IkasEvents.subscribe({ id: 'renuvex-reviews-widget', callback: handleIkasEvent });
     } else if (attempts < 100) {
       attempts++;
       setTimeout(tryAttach, 50);

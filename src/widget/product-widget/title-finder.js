@@ -22,7 +22,7 @@ export function findProductTitleEl(productName) {
         el.tagName !== 'TITLE' &&
         !el.closest('[data-renuvex-listing-badge]') &&
         !el.closest('[data-renuvex-slot]') &&
-        !el.closest('#ikas-reviews') &&
+        !el.closest('#renuvex-reviews') &&
         !el.closest('nav') &&
         !el.closest('header') &&
         !el.closest('[class*="breadcrumb"]') &&

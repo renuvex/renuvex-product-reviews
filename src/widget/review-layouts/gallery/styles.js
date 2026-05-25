@@ -1,5 +1,5 @@
 // review-layouts/gallery/styles.js — Premium tarzda 2-kolon galeri tasarımı.
-// CSS columns ile JS'siz masonry. Parent (#ikas-reviews-widget) :has() ile
+// CSS columns ile JS'siz masonry. Parent (#renuvex-reviews-widget) :has() ile
 // hedeflenir; non-review elemanlar (summary, başlık, photo-section,
 // load-more, state-msg) column-span:all ile kolon dışına alınır — sözleşme
 // dokunulmaz, render.js değişmez.
@@ -18,7 +18,7 @@ export var GALLERY_CSS = `
   /* Galeri seçiliyken widget full-bleed yerine 1200px ile sınırlı —
      CSS columns parent genişliğine yayıldığı için widget kendisi sınırlanmalı.
      Diğer layoutlar (card/list) full-bleed olarak kalır. */
-  #ikas-reviews-widget:has(.renuvex-pr-review-gallery){
+  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery){
     width:auto;
     max-width:1200px;
     margin-left:auto;
@@ -27,12 +27,12 @@ export var GALLERY_CSS = `
     column-gap:32px;
   }
   /* Non-review elemanlar kolon dışına çıkar — summary, başlık, foto strip vs. */
-  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-title,
-  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-summary,
-  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-photo-section,
-  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-write-btn,
-  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-load-more,
-  #ikas-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-state-msg{
+  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-title,
+  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-summary,
+  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-photo-section,
+  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-write-btn,
+  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-load-more,
+  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-state-msg{
     column-span:all;
     -webkit-column-span:all;
   }
@@ -109,7 +109,7 @@ export var GALLERY_CSS = `
     border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
   }
   @media (max-width:600px){
-    #ikas-reviews-widget:has(.renuvex-pr-review-gallery){
+    #renuvex-reviews-widget:has(.renuvex-pr-review-gallery){
       column-count:1;
       column-gap:0;
     }

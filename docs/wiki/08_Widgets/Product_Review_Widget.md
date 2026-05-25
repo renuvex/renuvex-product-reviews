@@ -41,7 +41,7 @@ Recurring categories:
 4. `render.js` composes summary + reviews + CTA. Review fetch errors render a retryable error state and do not reuse the empty-review UI. State stored in [core/state.js](src/widget/core/state.js).
 5. CTA opens the multi-step submission wizard.
 
-Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merchant/theme-provided `#ikas-reviews-anchor`. If the anchor is missing, it creates one after the theme product container and falls back to `main` / `body`. This keeps the auto-injected widget independent from manual theme anchor drift. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
+Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merchant/theme-provided mount point `<div data-renuvex-widget="reviews"></div>`. If it is missing, it creates one after the theme product container and falls back to `main` / `body`. This keeps the auto-injected widget independent from manual theme anchor drift. The review section root is `#renuvex-reviews-widget` (inner container `#renuvex-reviews`); the PDP badge scroll target is `#renuvex-reviews`. `data-renuvex-widget="<type>"` is the canonical public mount scheme for all widgets (e.g. a future carousel uses `data-renuvex-widget="carousel"`). Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 
 ## Photo review detail lightbox
 - Detail lightbox source: [review-modal.js](src/widget/product-widget/review-modal.js). Full note: [[Product_Review_Lightbox]].
