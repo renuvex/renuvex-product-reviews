@@ -1,6 +1,6 @@
 ---
 type: widget
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-11
 updated: 2026-05-11

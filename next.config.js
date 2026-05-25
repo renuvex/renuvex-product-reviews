@@ -50,7 +50,7 @@ module.exports = withSentryConfig(module.exports, {
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
   org: process.env.SENTRY_ORG || "mert-copper",
-  project: process.env.SENTRY_PROJECT || "yorum-paneli",
+  project: process.env.SENTRY_PROJECT || "renuvex-product-reviews",
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,

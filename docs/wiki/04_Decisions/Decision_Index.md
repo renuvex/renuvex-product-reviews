@@ -1,9 +1,9 @@
 ---
 type: decision
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-24
+updated: 2026-05-25
 tags:
   - adr
   - decisions
@@ -36,8 +36,8 @@ related:
 | [[ADR_0016_Rating_Visual_System]] | Star icon + color are one global rating visual system, single-sourced from the `reviews` widget; the `badge` widget is layout-only; theme adapters stay mount/selector-only. | Accepted |
 | [[ADR_0017_Badge_Architecture]] | Listing badge mounts as title sibling (not inside `<h2>`), class-first styling, component-scope CSS variables for sizing, opt-in mobile preset at 640px. Allowlist-gated rollout. | Accepted |
 | [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] | Widget loader ownership is marker-first and `publicApiKey`-required; storefront surfaces render inside Renuvex/legacy owned slots; placement conflicts are measured and fixed through theme adapters, not script order. | Accepted |
-| [[ADR_0019_Icon_Sprite_Rendering]] | Read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` (geometry defined once) instead of inlining `<path>` per star; adds Yotpo-style sr-only/`aria-labelledby` a11y; refines ADR_0017 PDP-badge contract (link role, no static id, `data-ikr-align`). | Accepted |
-| [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] | Canonical identity is now Renuvex Product Reviews (`product-reviews`, `renuvex-pr`, `renuvex-product-reviews-widget`) while legacy `ikr` / `yorum-paneli` public aliases stay readable during the expand phase. | Accepted |
+| [[ADR_0019_Icon_Sprite_Rendering]] | Read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` (geometry defined once) instead of inlining `<path>` per star; adds Yotpo-style sr-only/`aria-labelledby` a11y; refines ADR_0017 PDP-badge contract (link role, no static id, `data-renuvex-align`). | Accepted |
+| [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] | Canonical identity is now Renuvex Product Reviews (`product-reviews`, `renuvex-pr`, `renuvex-product-reviews-widget`); because there are no real merchant installs yet, the hard namespace cleanup removed legacy public aliases from source and active generated assets. | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -55,7 +55,8 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
-- 2026-05-24: Added [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] - canonical app identity moved to Renuvex Product Reviews. The first rollout is expand-only: ikas script name/content, build defines, preview events, cache/rate-limit keys, and DOM/CSS aliasing now use `renuvex-pr` / `renuvex_pr` while legacy `ikr-*`, `data-ikr-*`, `IKR_*`, and `yorum-paneli-widget` remain compatibility inputs.
+- 2026-05-25: Updated [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] - hard cleanup is now the current contract. Source and active generated widget assets use only `renuvex-pr` / `renuvex_pr`; legacy namespace terms are historical notes only.
+- 2026-05-24: Added [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] - canonical app identity moved to Renuvex Product Reviews. The first rollout was expand-only; it was superseded by the 2026-05-25 hard cleanup because there are no real merchant installs yet.
 - 2026-05-24: Added [[ADR_0019_Icon_Sprite_Rendering]] — read-only rating stars now reference a single injected SVG sprite (`#ikr-sym-star-full`/`#ikr-sym-star-outline`) via `<use>` instead of inlining the full `<path>` per star (measured ~76 KB of duplicated path data on a busy PDP → ~2 KB; ~4.6 KB per listing badge). Clip-path half-star engine and the single `ICONS` source (ADR_0016) are unchanged; `ICONS` strings still feed both the sprite and the admin preview. Adds Yotpo-style sr-only + `aria-labelledby` a11y and refines the ADR_0017 PDP-badge contract (link role instead of `role=figure`, no static `id`, `data-ikr-align` instead of inline justify-content). Interactive form picker left inline.
 - 2026-05-24: Added [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] after the Serpingo/X-app conflict showed that a third-party `widget.js` URL could be mistaken for this app's loader. The decision adds Renuvex-compatible markers, marker-first script discovery, owned slots, and the "keep and measure" placement policy.
 - 2026-05-20: Added [[ADR_0017_Badge_Architecture]] — listing badge moved out of the `<h2>` and into the title's parent as a sibling; class-first styling (`.ikr-rating-badge` + `--pdp`/`--listing` modifiers, `role="figure"` + `aria-label`, `data-ikr-*` debug attrs); sizing tokens are component-scope CSS variables (`--ikr-badge-icon-size`, `--ikr-badge-text-size`) on `.ikr-rating-badge`, with `:root` reserved for the brand-global `--ikr-review-star-color` (ADR_0016); opt-in mobile preset via `badge.mobileOverride` + `badge.mobileSize` writing a 640px `@media` block. Mount change shipped behind a publicApiKey allowlist gate in `core/rollout.js` for a phased rollout (dev store → default flip → cleanup).

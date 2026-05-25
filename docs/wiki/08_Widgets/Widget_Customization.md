@@ -1,10 +1,10 @@
 ---
 type: widget
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
@@ -78,9 +78,9 @@ admin UI changes a field
 
 ## Live preview
 - Admin renders an iframe pointing at `/preview` (route at [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)).
-- On any setting change -> `postMessage({ type: 'RENUVEX_PR_SETTINGS_UPDATE', settings })` to iframe. The legacy `IKR_SETTINGS_UPDATE` alias is still emitted during expand phase.
-- Inside iframe, [src/widget/index.js](src/widget/index.js) (preview branch) merges and re-renders, then emits `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` plus the legacy `IKR_SETTINGS_UPDATED_PREVIEW` alias with merged settings in `event.detail.settings` for open overlay surfaces.
-- Iframe acks via `RENUVEX_PR_WIDGET_READY` plus the legacy `IKR_WIDGET_READY` alias once mounted.
+- On any setting change -> `postMessage({ type: 'RENUVEX_PR_SETTINGS_UPDATE', settings })` to iframe.
+- Inside iframe, [src/widget/index.js](src/widget/index.js) (preview branch) merges and re-renders, then emits `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` with merged settings in `event.detail.settings` for open overlay surfaces.
+- Iframe acks via `RENUVEX_PR_WIDGET_READY` once mounted.
 - Preview background color is local editor state in [WidgetEditor.tsx](src/components/home-page/widgets/editor/WidgetEditor.tsx). It changes only the admin preview surface and is not saved to `WidgetSettings`.
 - Preview background uses the same opaque admin color picker as widget colors. Transparent/alpha values are intentionally not user-selectable in the admin UI.
 - Desktop preview fills the available preview panel width and height without a device-frame shadow, so it behaves like a browser viewport; mobile and tablet keep fixed device widths.
@@ -119,7 +119,8 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 ## Change Log
 - 2026-05-14: **Filter Icon Registry Clarified**: Replaced the filter `star` option with `funnel`, kept `star -> funnel` only as a filter-only legacy alias, and separated admin preview rendering by review vs filter registry.
 - 2026-05-12: **Icon Registries Simplified**: Filter icons reduced to 4 core choices; Review icons modernized with unified Phosphor weight. Existing legacy keys fall back safely via registry.
-- 2026-05-12: **Live Preview for Overlays**: Introduced the preview settings-updated event payload so active overlays (like the lightbox or review modal) can live-sync admin changes without re-mounting. As of ADR_0020 the canonical event is `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW`; `IKR_SETTINGS_UPDATED_PREVIEW` remains a legacy alias.
+- 2026-05-25: **Renuvex Namespace Cleanup**: Preview protocol is now canonical-only: `RENUVEX_PR_SETTINGS_UPDATE`, `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW`, and `RENUVEX_PR_WIDGET_READY`.
+- 2026-05-12: **Live Preview for Overlays**: Introduced the preview settings-updated event payload so active overlays (like the lightbox or review modal) can live-sync admin changes without re-mounting.
 - 2026-05-08: **Visual Select Cards**: Added `preview` metadata to `select` fields in schema to drive image-based visual choice cards in admin panel.
 - 2026-05-05/06: **Color & Token Refactor**: Removed `reviewFormStyle`, `Marka Kimliği` cascade, and all legacy CSS variables (`--ikr-bg`, etc). Admin color picker now emits strict opaque `#rrggbb`, while structural translucency is hardcoded in frontend styles.
 - 2026-05-07: **Constraints**: Added `maxLength` to text fields (e.g., `writeButtonText` max 30) for frontend and backend validation.

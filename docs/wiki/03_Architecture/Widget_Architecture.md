@@ -1,10 +1,10 @@
 ---
 type: widget
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-23
-last_verified: 2026-05-23
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - widget
@@ -118,7 +118,7 @@ index.js  (error-reporter / base-reset / input-modality side-effects)
         │
         ▼
 loader.js
-  ├── if preview: startPreview() -> RENUVEX_PR_SETTINGS_UPDATE listener; legacy IKR_SETTINGS_UPDATE alias accepted; bootstrap('mock-product')
+  ├── if preview: startPreview() -> RENUVEX_PR_SETTINGS_UPDATE listener; bootstrap('mock-product')
   └── else: startWidget()
         ├── registerCoreSurfaces()      (reviews-main, listing-badge)
         ├── initStorefrontContext()     (subscribe window.IkasEvents + DOM fallback)
@@ -168,7 +168,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [scripts/build-widget.mjs](scripts/build-widget.mjs) drives esbuild.
 - Output: classic loader (`public/widget.js`) plus ESM runtime/chunks
   (`public/widget-runtime/*`), ES2017, minified in prod, banner with build timestamp.
-- The build injects `__RENUVEX_PR_WIDGET_VERSION__` from the build timestamp; the runtime exposes it through `window.__RENUVEX_PRODUCT_REVIEWS__`, the legacy `window.__IKR_WIDGET__` alias, and widget-error health events.
+- The build injects `__RENUVEX_PR_WIDGET_VERSION__` from the build timestamp; the runtime exposes it through `window.__RENUVEX_PRODUCT_REVIEWS__` and widget-error health events.
 - Validation: post-build `node --check` for the classic loader plus esbuild ESM
   bundling and `public/widget-runtime/build-manifest.json` output metadata.
 
@@ -182,7 +182,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - Icon selection is centralized under [src/widget/icons/](src/widget/icons/): review/rating icons live in `review-icons.js`, filter button icons live in `filter-icons.js`, and consumers import through `icons/index.js`. The old [icons.js](src/widget/icons.js) file is a compatibility re-export only.
 - The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, responsive breakpoints, viewport sizing, scroll containment, body scroll locking, focus management, or history behavior. Card/list/gallery navigation is scoped to the active sort/filter state's loaded review collection; the lightbox does not fetch unloaded pages by itself.
 - Lightbox layout uses a three-tier responsive contract in the Ozy theme: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile at `640px` and below with `vh` / `svh` / `dvh` viewport-unit fallbacks.
-- Review image rendering depends on a trusted Cloudinary cloud policy. The cloud name is a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`; the legacy `__IKR_DEFAULT_CLOUDINARY_CLOUD_NAME__` define remains during expand phase. It is not threaded through settings, no runtime setter exists, and there is no per-store image-policy cache. Settings endpoint outages cannot remove images. Layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]], [[ADR_0008_Cloud_Name_Build_Time_Only]], and [[Bug_Cloud_Name_Silent_Image_Filter]].
+- Review image rendering depends on a trusted Cloudinary cloud policy. The cloud name is a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`. It is not threaded through settings, no runtime setter exists, and there is no per-store image-policy cache. Settings endpoint outages cannot remove images. Layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]], [[ADR_0008_Cloud_Name_Build_Time_Only]], and [[Bug_Cloud_Name_Silent_Image_Filter]].
 - A 2026-05-15 Yotpo/Protein Ocean research pass showed that mature review widgets use a small loader, declarative placeholder instances, separate static widget modules, and dynamic review/rating/Q&A APIs. New major widget surfaces should follow the Phase 2 loader/lazy-module pattern in [[Yotpo_Style_Widget_Modular_Architecture]] rather than being statically imported by the always-loaded runtime.
 
 ## Related Source Files
@@ -208,7 +208,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
-- 2026-05-24: Renuvex namespace expand phase: preview events now use `RENUVEX_PR_*` with `IKR_*` aliases, health global is `window.__RENUVEX_PRODUCT_REVIEWS__`, build defines are `__RENUVEX_PR_*`, and DOM/CSS aliasing is centralized in `src/widget/core/namespace.js`.
+- 2026-05-25: Renuvex hard namespace cleanup completed for source and active generated widget assets. Preview events use `RENUVEX_PR_*`, health global is `window.__RENUVEX_PRODUCT_REVIEWS__`, and build defines are `__RENUVEX_PR_*`.
 - 2026-05-23: Added runtime health marker, badge visibility probes, widget-error health telemetry, and one-shot badge self-heal for third-party DOM removal; the build now injects a widget version marker.
 - 2026-05-18: Listing badge hardening reduced CLS and DOM scan cost: candidate links and the MutationObserver re-render gate are scoped to theme containers/main content, and invisible badge slots are reserved while rating data loads.
 - 2026-05-18: Reduced widget settings stale tolerance from 7 days to 24 hours in `core/settings.js`.

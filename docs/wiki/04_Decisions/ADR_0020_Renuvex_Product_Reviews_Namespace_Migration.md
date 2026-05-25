@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-24
-updated: 2026-05-24
-last_verified: 2026-05-24
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - adr
@@ -28,7 +28,9 @@ source_files:
 # ADR 0020: Renuvex Product Reviews Namespace Migration
 
 ## Status
-Accepted.
+Accepted. Current contract: hard cleanup completed on 2026-05-25. The original
+expand-phase decision below is retained as history; the update notes define the
+active namespace behavior.
 
 ## Context
 The app started as `Yorum Paneli` with public technical identifiers such as
@@ -127,8 +129,10 @@ to the single-namespace preview helpers (the runtime class-mirror observer and
 CSS expand layer are removed). The storefront matcher dropped its legacy
 name/marker tiers; the still-legacy live ikas script record is adopted via the
 `publicApiKey` fallback and rewritten to canonical on the next reconcile, so no
-duplicate is created. Old hashed runtime chunks remain on disk under the
-existing 7-day retention prune.
+duplicate is created. During the follow-up audit, unreferenced old hashed
+runtime chunks were removed from the repo because there are no real merchant
+installs yet; future builds can still retain recent canonical chunks for normal
+cache safety.
 
 Update 2026-05-25 (mount contract) — the public mount point moved from the id
 `#ikas-reviews-anchor` to the attribute `data-renuvex-widget="reviews"`, a
@@ -161,6 +165,6 @@ Required checks for this migration:
 - `node scripts/wiki-audit.mjs --changed-source-check`
 
 Live verification should confirm that ikas `listStorefrontJSScript` reports one
-active app-owned script named `renuvex-product-reviews-widget` with both
-Renuvex and legacy markers, and that storefront pages load `widget.js`,
-runtime chunks, settings, ratings, and reviews without duplicate widget DOM.
+active app-owned script named `renuvex-product-reviews-widget` with canonical
+Renuvex markers, and that storefront pages load `widget.js`, runtime chunks,
+settings, ratings, and reviews without duplicate widget DOM.

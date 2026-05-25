@@ -58,8 +58,3 @@ Canonical public identity is app-specific, not brand-global:
 - Technical key: `product-reviews`
 - DOM/CSS prefix: `renuvex-pr`
 - ikas script name: `renuvex-product-reviews-widget`
-
-Legacy `ikr-*`, `data-ikr-*`, and `IKR_*` aliases are kept during the expand
-phase so cached widget assets and existing script records continue to work.
-External service renames and legacy alias removal are separate contract-cleanup
-phases.

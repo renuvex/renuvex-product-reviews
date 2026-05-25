@@ -1,6 +1,6 @@
 ---
 type: status
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-05
 updated: 2026-05-05

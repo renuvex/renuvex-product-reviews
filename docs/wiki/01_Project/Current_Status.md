@@ -1,10 +1,10 @@
 ---
 type: status
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 source_files: []
 tags:
@@ -18,7 +18,7 @@ related:
   - "[[Yotpo_Protein_Ocean_Widget_Research]]"
 ---
 
-# Current Status — ikas Review App
+# Current Status - Renuvex Product Reviews
 
 ## Current Phase
 Active development. Core feature set is functional end-to-end. Recent work has focused on widget UI/UX polish, storefront reliability, and architecture research for a Yotpo-style loader plus modular widget system. See [[Yotpo_Style_Widget_Modular_Architecture]] and [[Yotpo_Protein_Ocean_Widget_Research]] before large storefront widget changes.
@@ -33,7 +33,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
   - Review fetch failures render a retryable error state instead of the normal empty-review state
   - Trusted review image policy: cloud name is a single build-time constant injected by the widget build script ([[ADR_0008_Cloud_Name_Build_Time_Only]]); settings response no longer carries `imagePolicy`
   - Review image load failures degrade gracefully: thumbnails hide broken assets, lightbox main image shows a neutral placeholder, and failures log with `console.warn`
-  - Product review widget can self-mount on PDP when a theme-provided `#ikas-reviews-anchor` is missing, preserving both the review block and product-title badge
+  - Product review section is opt-in on PDP via `<div data-renuvex-widget="reviews"></div>`; missing mount means no review section, while PDP title badge and listing badges remain independent and are controlled by the `badge` widget toggle
   - Photo review lightbox traps keyboard focus, exposes dialog semantics, and uses desktop/tablet/mobile responsive shells with mobile viewport-unit fallbacks
   - Photo review lightbox live preview keeps an already-open right pane synchronized with setting changes such as review icon and merchant reply label
   - Review submission wizard traps keyboard focus, focuses the active step on open/step change, restores previous focus on close, and provides visible keyboard focus states
@@ -96,9 +96,10 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 8. Consider tests for the public submission endpoint (highest blast-radius surface).
 
 ## Last Updated
-2026-05-17
+2026-05-25
 
 ## Change Log
+- 2026-05-25: Renuvex Product Reviews hard namespace cleanup and opt-in review mount contract are current. Source and active generated widget assets use `renuvex-pr` / `renuvex_pr`; historical `ikr` / `yorum-paneli` notes remain only in old ADRs/bug history.
 - 2026-05-17: ADR_0013 Phase 3 source hardening implemented: non-destructive StorefrontJSScript lifecycle, daily maintenance reconcile, hashed runtime entry with stable shim, and hidden-link listing badge filter.
 - 2026-05-17: Canonical product identity implemented for listing/search badge reads: widget maps Storefront Events product ids and public ratings can group by `productId`. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added ProductSnapshot read model, ikas product webhook receiver, install/manual backfill, and snapshot-backed slug fallback.

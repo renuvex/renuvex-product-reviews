@@ -1,10 +1,10 @@
 ---
 type: log
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-24
-last_verified: 2026-05-24
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - log
@@ -19,6 +19,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-25 - chore | Renuvex namespace audit cleanup
+- Summary: Audited the namespace migration across source, active generated widget assets, public helper scripts, and wiki routing metadata. Rebuilt the widget, removed unreferenced old hashed runtime chunks from the repo, changed the Sentry local fallback to `renuvex-product-reviews`, and updated current wiki pages away from stale expand-phase language.
+- Reason: The hard rename had landed in source, but stale public chunks and docs still made broad repository searches look like the old `ikr` / `yorum-paneli` namespace was active.
+- Verification: active manifest scan now returns no `IKR_*`, `data-ikr-*`, `.ikr-*`, `#ikr`, `--ikr`, `yorum-paneli`, or `ikas-reviews*` matches in `public/widget.js` / active runtime outputs. Source/config scan is clean except README's explicit historical note.
+- Updated wiki: [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]], [[Decision_Index]], [[Project_Overview]], [[Current_Status]], [[Config_And_Env_Map]], [[Widget_Architecture]], [[Widget_Customization]], [[Ikas_Widget_Injection_Notes]], [[Hot_Context]], [[Log]]
 
 ## 2026-05-25 - feat | Opt-in review mount + badge decoupling
 - Summary: Review section is now opt-in — renders only where the merchant places `<div data-renuvex-widget="reviews"></div>`. Removed the auto-create fallback (no more `main`/`body`/footer last-resort). The PDP rating badge was decoupled from the review render: it injects independently (auto-places on the product title, gated only by the badge widget toggle), so PDP title + listing badges work regardless of the review mount.

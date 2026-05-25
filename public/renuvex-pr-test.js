@@ -1,20 +1,24 @@
 /**
- * Renuvex Product Reviews Badge Test Script
- * Konsola yapıştır — sayfayı değiştirmez, sadece raporlar + badge simüle eder.
- * Kullanım: tüm içeriği kopyala, kategori/listing sayfasında konsola yapıştır.
+ * Renuvex Product Reviews badge placement test helper.
+ * Paste into the browser console on a listing/category/search page.
+ * It does not mutate the page; it reports the target each badge would use.
  */
 (function () {
-  var STAR_COLOR = '#f59e0b';
   var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
 
   function extractSlug(url) {
-    try { return new URL(url, window.location.origin).pathname.replace(/^\//, '').split('?')[0].split('/')[0]; } catch (_) { return ''; }
+    try {
+      return new URL(url, window.location.origin).pathname.replace(/^\//, '').split('?')[0].split('/')[0];
+    } catch (_) {
+      return '';
+    }
   }
 
   function findTitleEl(scope, productName) {
     if (scope.matches && scope.matches(TITLE_CLASS_SELECTOR)) return scope;
     var byClass = scope.querySelector(TITLE_CLASS_SELECTOR);
     if (byClass) return byClass;
+
     if (productName) {
       var allEls = scope.querySelectorAll('*');
       for (var i = 0; i < allEls.length; i++) {
@@ -22,12 +26,13 @@
         if (el.children.length === 0 && el.textContent.trim() === productName) return el;
       }
     }
+
     var candidates = scope.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div');
     for (var j = 0; j < candidates.length; j++) {
       var cel = candidates[j];
       var text = cel.textContent.trim();
       if (!text || text.length < 2 || text.length > 150) continue;
-      if (/^[\d\s.,₺$€£%]+$/.test(text)) continue;
+      if (/^[\d\s.,TRY$EURGBP%]+$/.test(text)) continue;
       if (cel.closest('figure') || cel.closest('picture')) continue;
       if (cel.children.length > 1) continue;
       return cel;
@@ -35,29 +40,29 @@
     return null;
   }
 
-  // Sayfadaki tüm ürün linklerini topla (slug → linkler)
-  // data-renuvex-pr-badge / data-ikr-badge markers are already processed by the widget.
   var slugMap = {};
   document.querySelectorAll('a[href]').forEach(function (a) {
     var href = a.getAttribute('href');
     if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
-    if (a.getAttribute('data-renuvex-pr-badge') || a.getAttribute('data-ikr-badge')) return; // widget zaten işledi (skip veya inject)
-    if (a.closest('header') || a.closest('nav')) return; // navigasyon linkleri — ürün değil
+    if (a.getAttribute('data-renuvex-pr-badge')) return;
+    if (a.closest('header') || a.closest('nav')) return;
+
     var slug = extractSlug(a.href);
     if (!slug || slug.length < 3) return;
     if (/^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/.test(slug)) return;
+
     if (!slugMap[slug]) slugMap[slug] = [];
     slugMap[slug].push(a);
   });
 
   var slugs = Object.keys(slugMap);
   if (!slugs.length) {
-    console.warn('[RENUVEX PR TEST] Sayfada ürün linki bulunamadı.');
+    console.warn('[RENUVEX PR TEST] No product links were found on this page.');
     return;
   }
 
-  console.log('%c[RENUVEX PR TEST] ' + slugs.length + ' ürün slug\'u bulundu', 'color:#7c3aed;font-weight:bold;font-size:14px');
-  console.log('Sluglar:', slugs);
+  console.log('%c[RENUVEX PR TEST] Found ' + slugs.length + ' product slugs', 'color:#7c3aed;font-weight:bold;font-size:14px');
+  console.log('Slugs:', slugs);
 
   var report = [];
   var globalDuplicateWarnings = [];
@@ -66,131 +71,122 @@
     var links = slugMap[slug];
     var injected = [];
     var skipped = [];
-    var slugInjected = false; // widget ile aynı: her slug için sadece 1 inject
+    var slugInjected = false;
 
     links.forEach(function (a, idx) {
       var hasNestedA = !!a.querySelector('a[href]');
       var realText = Array.from(a.childNodes)
-        .filter(function(n) { return n.nodeType === 3; })
-        .map(function(n) { return n.textContent.trim(); })
+        .filter(function (n) { return n.nodeType === 3; })
+        .map(function (n) { return n.textContent.trim(); })
         .join('').trim();
       var hasText = realText.length > 0;
       var hasTitleEl = !!findTitleEl(a, null);
 
-      // Header/nav içindeki linkler → skip
       if (a.closest('header') || a.closest('nav')) {
-        skipped.push({ idx: idx, reason: 'Header/nav içinde — navigasyon linki' });
+        skipped.push({ idx: idx, reason: 'Header/nav navigation link' });
         return;
       }
 
-      // Slider klonu: bu slug için zaten inject yapıldı → skip
       if (slugInjected) {
-        skipped.push({ idx: idx, reason: 'Slider klonu — bu slug için badge zaten inject edildi' });
+        skipped.push({ idx: idx, reason: 'Duplicate product link for this slug' });
         return;
       }
 
-      // Pattern X — anlamsız link: ne metin ne title el ne nested <a>, sadece resim
       if (!hasText && !hasTitleEl && !hasNestedA) {
-        skipped.push({ idx: idx, reason: 'Pattern X — anlamsız link (metin/title/nested yok)' });
+        skipped.push({ idx: idx, reason: 'Image-only link without title text' });
         return;
       }
 
-      // Pattern 1 — wrapper <a>
       if (hasNestedA) {
         var nameEl1 = findTitleEl(a, null);
         if (!nameEl1) {
-          skipped.push({ idx: idx, reason: 'Pattern 1 — wrapper <a> ama title el bulunamadı' });
+          skipped.push({ idx: idx, reason: 'Wrapper link without a detectable title element' });
           return;
         }
         var rect1 = nameEl1.getBoundingClientRect();
         injected.push({
           idx: idx,
-          pattern: '1 (Wrapper <a> → başlık div içeride)',
+          pattern: 'Wrapper link with nested title',
           targetTag: nameEl1.tagName,
-          targetClass: nameEl1.className || '(yok)',
+          targetClass: nameEl1.className || '(none)',
           targetText: nameEl1.textContent.trim().substring(0, 50),
-          position: 'nameEl\'in hemen altına',
+          position: 'Immediately after the title element',
           rect: { top: Math.round(rect1.top + window.scrollY), left: Math.round(rect1.left) },
         });
         slugInjected = true;
         return;
       }
 
-      // Pattern 2/3/4 — bağımsız <a>
       var nameEl = findTitleEl(a, null);
       if (nameEl) {
-        var isP4 = nameEl.matches && nameEl.matches(TITLE_CLASS_SELECTOR);
+        var isDirectTitle = nameEl.matches && nameEl.matches(TITLE_CLASS_SELECTOR);
         var rect2 = nameEl.getBoundingClientRect();
         injected.push({
           idx: idx,
-          pattern: isP4 ? '4 (<a> kendisi productTitle class\'lı)' : '2 (Ayrı başlık <a>, title el bulundu)',
+          pattern: isDirectTitle ? 'Title link with product-title class' : 'Separate link with detectable title',
           targetTag: nameEl.tagName,
-          targetClass: nameEl.className || '(yok)',
+          targetClass: nameEl.className || '(none)',
           targetText: nameEl.textContent.trim().substring(0, 50),
-          position: 'nameEl\'in hemen altına',
+          position: 'Immediately after the title element',
           rect: { top: Math.round(rect2.top + window.scrollY), left: Math.round(rect2.left) },
         });
       } else {
         var rect3 = a.getBoundingClientRect();
         injected.push({
           idx: idx,
-          pattern: '3 (<a> içinde direkt text node, title el yok)',
+          pattern: 'Direct text link without a separate title element',
           targetTag: a.tagName,
-          targetClass: a.className || '(yok)',
+          targetClass: a.className || '(none)',
           targetText: a.textContent.trim().substring(0, 50),
-          position: '<a> içindeki ilk child\'dan önce',
+          position: 'Before the first child inside the link',
           rect: { top: Math.round(rect3.top + window.scrollY), left: Math.round(rect3.left) },
         });
       }
       slugInjected = true;
     });
 
-    // Duplicate kontrolü: aynı slug için 1'den fazla inject varsa uyar
     var isDuplicate = injected.length > 1;
     if (isDuplicate) globalDuplicateWarnings.push(slug);
-
     report.push({ slug: slug, totalLinks: links.length, injected: injected, skipped: skipped, isDuplicate: isDuplicate });
   });
 
-  // Rapor çıktısı
   report.forEach(function (r) {
-    var status = r.isDuplicate ? '❌ DUPLICATE' : r.injected.length === 0 ? '⚠️  BADGE YOK' : '✅ OK';
-    console.group('%c[RENUVEX PR TEST] ' + status + ' — ' + r.slug, 'font-weight:bold;color:' + (r.isDuplicate ? '#dc2626' : r.injected.length === 0 ? '#d97706' : '#059669'));
-    console.log('Toplam link:', r.totalLinks, '| Badge inject:', r.injected.length, '| Skip:', r.skipped.length);
+    var status = r.isDuplicate ? 'DUPLICATE' : r.injected.length === 0 ? 'NO BADGE TARGET' : 'OK';
+    console.group('%c[RENUVEX PR TEST] ' + status + ' - ' + r.slug, 'font-weight:bold;color:' + (r.isDuplicate ? '#dc2626' : r.injected.length === 0 ? '#d97706' : '#059669'));
+    console.log('Total links:', r.totalLinks, '| Badge targets:', r.injected.length, '| Skipped:', r.skipped.length);
 
     r.injected.forEach(function (inj) {
       console.log(
-        '  → Inject [link ' + inj.idx + '] Pattern ' + inj.pattern,
-        '\n    Hedef:', inj.targetTag + (inj.targetClass ? '.' + inj.targetClass.split(' ')[0] : ''),
-        '\n    Metin:', '"' + inj.targetText + '"',
-        '\n    Konum:', inj.position,
-        '\n    Sayfa pozisyonu: top=' + inj.rect.top + 'px, left=' + inj.rect.left + 'px'
+        '  -> Target [link ' + inj.idx + '] ' + inj.pattern,
+        '\n    Element:', inj.targetTag + (inj.targetClass ? '.' + inj.targetClass.split(' ')[0] : ''),
+        '\n    Text:', '"' + inj.targetText + '"',
+        '\n    Position:', inj.position,
+        '\n    Page position: top=' + inj.rect.top + 'px, left=' + inj.rect.left + 'px'
       );
     });
 
     r.skipped.forEach(function (sk) {
-      console.log('  ↷ Skip [link ' + sk.idx + ']:', sk.reason);
+      console.log('  -> Skip [link ' + sk.idx + ']:', sk.reason);
     });
 
     if (r.injected.length === 0 && r.skipped.length > 0) {
-      console.warn('  ⚠️  Tüm linkler skip edildi — bu ürün için badge çıkmayacak!');
-      console.log('  DOM örneği:', r.skipped.map(function(sk) { return slugMap[r.slug][sk.idx].outerHTML.substring(0, 200); }));
+      console.warn('  No usable badge target was found for this product.');
+      console.log('  DOM sample:', r.skipped.map(function (sk) { return slugMap[r.slug][sk.idx].outerHTML.substring(0, 200); }));
     }
 
     console.groupEnd();
   });
 
-  // Özet
   console.log('');
-  console.log('%c[RENUVEX PR TEST] ÖZET', 'color:#7c3aed;font-weight:bold;font-size:14px');
-  console.log('Toplam ürün:', report.length);
-  console.log('Badge OK:', report.filter(function(r) { return r.injected.length > 0 && !r.isDuplicate; }).length);
-  console.log('Badge YOK:', report.filter(function(r) { return r.injected.length === 0; }).length);
-  console.log('Duplicate:', globalDuplicateWarnings.length, globalDuplicateWarnings.length ? '→ ' + globalDuplicateWarnings.join(', ') : '');
+  console.log('%c[RENUVEX PR TEST] SUMMARY', 'color:#7c3aed;font-weight:bold;font-size:14px');
+  console.log('Total products:', report.length);
+  console.log('Badge OK:', report.filter(function (r) { return r.injected.length > 0 && !r.isDuplicate; }).length);
+  console.log('No badge target:', report.filter(function (r) { return r.injected.length === 0; }).length);
+  console.log('Duplicate:', globalDuplicateWarnings.length, globalDuplicateWarnings.length ? '-> ' + globalDuplicateWarnings.join(', ') : '');
 
-  if (globalDuplicateWarnings.length === 0 && report.every(function(r) { return r.injected.length > 0; })) {
-    console.log('%c✅ Tüm ürünler için badge doğru — deploy edilebilir.', 'color:#059669;font-weight:bold;font-size:14px');
+  if (globalDuplicateWarnings.length === 0 && report.every(function (r) { return r.injected.length > 0; })) {
+    console.log('%cAll detected products have one badge target.', 'color:#059669;font-weight:bold;font-size:14px');
   } else {
-    console.warn('%c⚠️  Sorun var — yukarıdaki ürünleri incele.', 'color:#dc2626;font-weight:bold;font-size:14px');
+    console.warn('%cSome products need selector review. Inspect the groups above.', 'color:#dc2626;font-weight:bold;font-size:14px');
   }
 })();

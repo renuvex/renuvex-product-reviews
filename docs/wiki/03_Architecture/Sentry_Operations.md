@@ -1,6 +1,6 @@
 ---
 type: architecture
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-11
 updated: 2026-05-24
@@ -33,7 +33,7 @@ Sentry is the observability surface for the Next.js panel app. The maintainer's 
 
 ## Project Coordinates
 - Organization: `mert-copper`
-- Project slug: `yorum-paneli` currently; target external rename is `renuvex-product-reviews`.
+- Project slug should be `renuvex-product-reviews` for new/local config. If the external Sentry project is still named `yorum-paneli`, keep `SENTRY_PROJECT` set explicitly in the deployment environment until the Sentry project is renamed.
 - Project ID: `4511372449218640`
 - Region: EU (`de.sentry.io`)
 - Authenticated CLI user: `mertworkspace2906@gmail.com`
@@ -61,7 +61,7 @@ Sentry is the observability surface for the Next.js panel app. The maintainer's 
 | `NEXT_PUBLIC_SENTRY_DSN` | `.env.local` (local), Vercel env (Production + Preview, marked Sensitive) | runtime | DSN read by SDK in all runtimes |
 | `SENTRY_AUTH_TOKEN` | `.env.sentry-build-plugin` (local, gitignored), Vercel env (Production + Preview, marked Sensitive) | build-time | Source map upload + release creation |
 | `SENTRY_ORG` | Vercel env, injected by Vercel-Sentry integration | build-time | `mert-copper` |
-| `SENTRY_PROJECT` | Vercel env, injected by Vercel-Sentry integration or set manually | build-time | Defaults to `yorum-paneli`; target external rename is `renuvex-product-reviews` |
+| `SENTRY_PROJECT` | Vercel env, injected by Vercel-Sentry integration or set manually | build-time | Defaults to `renuvex-product-reviews`; set explicitly if the external project still uses another slug |
 
 `.env.sentry-build-plugin` and `.sentryclirc` are listed in `.gitignore`. Never commit either.
 
@@ -133,7 +133,7 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
-- 2026-05-24: Namespace migration made `next.config.js` read `SENTRY_PROJECT` / `SENTRY_ORG` from env with the legacy project slug as fallback. Widget-error rate-limit keys now use `renuvex_pr_werr_rl:`. Actual Sentry project rename remains an external ops phase.
+- 2026-05-25: Namespace cleanup changed the local `next.config.js` fallback to `renuvex-product-reviews`. Widget-error rate-limit keys use `renuvex_pr_werr_rl:`. If the external Sentry project has not yet been renamed, deployment env must provide the current slug.
 - 2026-05-17: Added Context7-backed Sentry JavaScript note for Phase 1 post-test triage. Tags, context, breadcrumbs, and captured events are the useful Sentry SDK-level signals, but browser/runtime evidence remains primary.
 - 2026-05-17: Added Phase 1 widget post-test check guidance. Sentry should be used after browser/Playwright verification to catch widget/API runtime errors, but it is not a substitute for visual DOM and event-payload audits. Related: [[Phase_1_Widget_Runtime_Audit]].
 - 2026-05-11: Added "Pending Operational Improvements" section: alert rules, MCP scope narrowing, and saved searches. None blocking — captured here so they are not re-discovered from scratch.

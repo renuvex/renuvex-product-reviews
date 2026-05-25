@@ -1,10 +1,10 @@
 ---
 type: ikas
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-24
-last_verified: 2026-05-24
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - ikas
@@ -31,12 +31,12 @@ source_files:
 # ikas Widget Injection Notes
 
 ## Summary
-How `widget.js` gets onto every storefront page. Uses ikas `StorefrontJSScript` with a per-merchant `<script src=".../widget.js?publicApiKey=<merchantId>" async data-renuvex-app="product-reviews" data-renuvex-store-id="<merchantId>" data-ikr-app="yorum-paneli" data-ikr-store-id="<merchantId>">`. Idempotent via DB-tracked script ids, read-only remote reconciliation, and non-destructive create/update.
+How `widget.js` gets onto every storefront page. Uses ikas `StorefrontJSScript` with a per-merchant `<script src=".../widget.js?publicApiKey=<merchantId>" async data-renuvex-app="product-reviews" data-renuvex-store-id="<merchantId>">`. Idempotent via DB-tracked script ids, read-only remote reconciliation, and non-destructive create/update.
 
 ## Mechanism
 - The active v2 MCP/generated client exposes `createStorefrontJSScript`, `updateStorefrontJSScript`, and a zero-argument `deleteStorefrontJSScript`; this app intentionally uses only create/update because delete semantics differ from public docs.
 - The official v1 Admin GraphQL docs expose read-only `listStorefrontJSScript(storefrontId)`. Source uses a separate v1 generated client only to inspect existing remote scripts before deciding whether to update, adopt, or create.
-- Each script has a `name` and `scriptContent` (a full `<script>` tag string). Canonical script name is `renuvex-product-reviews-widget`; legacy `yorum-paneli-widget` is still recognized for adoption. Script content includes Renuvex `data-renuvex-*` markers and legacy `data-ikr-*` markers so old DB ids, app name, and store markers can all be used for reconciliation.
+- Each script has a `name` and `scriptContent` (a full `<script>` tag string). Canonical script name is `renuvex-product-reviews-widget`. Script content includes Renuvex `data-renuvex-*` markers; stale live records can still be adopted through the `publicApiKey=<merchantId>` fallback and then rewritten to canonical content.
 - Scripts are attached per `storefrontId`. A merchant has one or more storefronts; we inject into all.
 - `StoreSettings.storefrontScripts` has shape `{ [storefrontId]: ikasScriptId }`. Treat it as an idempotency cache; the remote ikas `StorefrontJSScript` record is the source of truth.
 
@@ -49,7 +49,7 @@ How `widget.js` gets onto every storefront page. Uses ikas `StorefrontJSScript` 
 ## Logic
 For each storefront:
 - First, read v1 `listStorefrontJSScript(storefrontId)` when available.
-- If a live app-owned script exists by DB id + app marker, app marker + store id, script name, or legacy `publicApiKey=<merchantId>` marker, adopt its id into `StoreSettings.storefrontScripts` and update it to canonical content.
+- If a live app-owned script exists by DB id + app marker, app marker + store id, script name, or `publicApiKey=<merchantId>` marker, adopt its id into `StoreSettings.storefrontScripts` and update it to canonical content.
 - If only stale/deleted/inactive app-owned scripts exist, create a fresh active script for install/manual flows and for cron when the merchant already has a non-empty script map.
 - If the v1 list read fails, fall back to the previous path: update DB id if present; recreate only on missing/deleted-script errors; otherwise create when allowed.
 - Every result reports diagnostics: `remoteStatus`, `matchedBy`, `duplicateCount`, `contentMatches`, `isActive`, and `deleted`. Duplicate app-owned scripts are not deleted automatically; they are surfaced for ops follow-up.
@@ -61,11 +61,11 @@ The cron reconcile helper is still conservative: if a merchant's DB map is compl
 
 ## Script Content
 ```html
-<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async data-renuvex-app="product-reviews" data-renuvex-store-id="<merchantId>" data-ikr-app="yorum-paneli" data-ikr-store-id="<merchantId>"></script>
+<script src="<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>" async data-renuvex-app="product-reviews" data-renuvex-store-id="<merchantId>"></script>
 ```
 - `async` so it does not block first paint.
 - `publicApiKey` is `merchantId`; it is public knowledge, not a secret.
-- `name` field on the ikas record: `"renuvex-product-reviews-widget"`; `"yorum-paneli-widget"` is legacy-adopt only.
+- `name` field on the ikas record: `"renuvex-product-reviews-widget"`.
 - Script content is built by `src/lib/storefront-widget-url.ts`. The helper prefers `STOREFRONT_WIDGET_BASE_URL`, falls back to `NEXT_PUBLIC_DEPLOY_URL`, trims whitespace, and rejects localhost/private/non-HTTPS URLs unless `ALLOW_LOCAL_STOREFRONT_WIDGET_URL=true`.
 - `NEXT_PUBLIC_DEPLOY_URL` is still the app/OAuth URL. It may be `http://localhost:3000` during local admin development. Do not rely on it as the canonical storefront widget URL for real stores.
 
@@ -84,8 +84,8 @@ The cron reconcile helper is still conservative: if a merchant's DB map is compl
 - Watch for new storefront creation: daily maintenance covers this when `storefrontScripts` already has at least one known script id. If the DB map is empty, cron only adopts an existing remote app-owned script; use manual re-inject to create a missing one.
 - 2026-05-17 risk update: official docs and current MCP/generated code still differ on script mutation naming and delete arguments. Source no longer uses delete; keep it that way unless ikas provides a targeted, verified delete/list contract.
 - 2026-05-22 incident/follow-up: v1 `listStorefrontJSScript` can be used as read-only evidence even though v2 MCP/codegen does not expose it. A dev-store reinstall left a stale script id in `StoreSettings.storefrontScripts`; v1 listed zero remote scripts and v2 update returned `error_messages.theme.storefront_sf_script_not_found`. The recreate matcher was widened, then v1 list adoption was added so DB-lost/live-remote and stale-id cases reconcile before creating duplicates.
-- 2026-05-23 hardening: canonical script content gained `data-ikr-app` and `data-ikr-store-id`; reconciliation now reports match/remote diagnostics and duplicate counts for manual inject, install, and cron paths.
-- 2026-05-24 namespace migration: canonical script name changed to `renuvex-product-reviews-widget`; matcher prefers Renuvex markers, still adopts legacy `yorum-paneli-widget`, and reports duplicates without destructive auto-delete.
+- 2026-05-23 hardening: reconciliation now reports match/remote diagnostics and duplicate counts for manual inject, install, and cron paths.
+- 2026-05-24/25 namespace migration: canonical script name changed to `renuvex-product-reviews-widget`; script content emits only Renuvex markers. The `publicApiKey` fallback remains so stale records can be adopted and rewritten without duplicate creation.
 
 ## Related Source Files
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)

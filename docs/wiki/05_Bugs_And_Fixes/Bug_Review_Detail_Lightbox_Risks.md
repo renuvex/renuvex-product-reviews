@@ -1,6 +1,6 @@
 ---
 type: bug
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-10
 updated: 2026-05-11

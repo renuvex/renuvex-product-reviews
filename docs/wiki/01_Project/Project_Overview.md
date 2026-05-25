@@ -1,10 +1,10 @@
 ---
 type: status
-project: ikas-review-app
+project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-24
-last_verified: 2026-05-24
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - overview
@@ -75,6 +75,6 @@ See [[System_Architecture]] for the diagram-level view.
 
 ## Notes
 - The package name is `renuvex-product-reviews`. Public technical identity is app-specific: `product-reviews`, `renuvex-pr`, and `renuvex-product-reviews-widget`.
-- Legacy `ikr-*`, `data-ikr-*`, `IKR_*`, and `yorum-paneli` markers remain compatibility aliases during the namespace expand phase. See [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]].
+- The hard namespace contract is now Renuvex-only in source and active generated widget assets. Historical notes may still mention `ikr` / `yorum-paneli`, but current code should use `renuvex-pr`, `renuvex_pr`, `product-reviews`, and `renuvex-product-reviews-widget`.
 - Code identifiers and project memory should be English/global. Turkish remains acceptable only for merchant-facing copy where the ikas marketplace/admin experience requires it.
 - All state is keyed on `merchantId` (used as `storeId` everywhere). There is no separate "store" abstraction yet.

@@ -1,6 +1,6 @@
 ---
 type: decision
-project: ikas-review-app
+project: renuvex-product-reviews
 status: draft
 created: 2026-05-17
 updated: 2026-05-17
