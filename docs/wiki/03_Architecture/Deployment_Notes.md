@@ -21,7 +21,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 
 ## Vercel
 - **Region**: `["fra1"]` ([vercel.json](vercel.json)). Reasonable proximity to ikas/Supabase EU regions.
-- **Project rename status**: GitHub has been renamed to `heyomert/renuvex-product-reviews`, but the Vercel project is still `new-ikas-app` until it is renamed from the Vercel dashboard or via a Vercel API token. Do not update `STOREFRONT_WIDGET_BASE_URL` or ikas script records to `renuvex-product-reviews.vercel.app` until that URL serves `widget.js`.
+- **Project rename status**: GitHub and the Vercel project are now named `renuvex-product-reviews`. The production Vercel domain intentionally remains `new-ikas-app.vercel.app` until a stable custom domain is added. Do not update `STOREFRONT_WIDGET_BASE_URL` or ikas script records away from that working domain until the replacement domain serves `widget.js`.
 - **Cron**: `/api/admin/daily-maintenance` daily at 03:00 UTC. It verifies pending storefront themes in batches and runs pending-upload cleanup plus storefront script reconciliation. The route still supports lightweight sub-daily execution if the Vercel plan is upgraded and the cron expression is changed later. `/api/admin/cleanup-images` remains monthly on day 1 at 04:00 UTC.
 - **Build command**: `pnpm build` → `prisma generate && prisma migrate deploy && next build --webpack`.
 - **Why webpack**: build script forces `--webpack` (Turbopack opt-out, presumably for compatibility — verify when Next ships stable Turbopack production builds).
@@ -73,7 +73,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 ## Health checks
 - No dedicated `/health` route today. Add if uptime monitoring is wired up.
 - Vercel logs are line-based (`console.error('[scope] ERROR', ...)` pattern is searchable).
-- Sentry CLI and MCP are tracked in [[Sentry_Operations]]. Current MCP scope is organization-level (`mert-copper`) until a Sentry project exists.
+- Sentry CLI and MCP are tracked in [[Sentry_Operations]]. Current MCP scope is organization-level (`renuvex`).
 
 ## Notes
 - **Don't bypass the widget bundle commit step.** If you forget to commit `public/widget.js`, deploys ship the old widget. CI does not regenerate.
@@ -98,7 +98,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
-- 2026-05-25: GitHub repository renamed to `heyomert/renuvex-product-reviews` and local `origin` updated. Vercel remains `new-ikas-app`; `renuvex-product-reviews.vercel.app` returned 404 during verification, so storefront script URLs must not be changed yet.
+- 2026-05-25: GitHub repository and Vercel project renamed to `renuvex-product-reviews`; local `origin` updated. Production domain remains `new-ikas-app.vercel.app` until a custom domain replaces it. `renuvex-product-reviews.vercel.app` returned 404 and the team-scoped Vercel domain is protected, so storefront script URLs must not be changed yet.
 - 2026-05-24: Recorded the Pro upgrade path for sub-daily theme verification and clarified that Upstash Redis is already configured for rate limits, while QStash remains optional future infrastructure.
 - 2026-05-23: Restored `/api/admin/daily-maintenance` to the daily 03:00 UTC Vercel-compatible schedule after the attempted 5-minute cron failed deployment on the current plan. The route still supports lightweight sub-daily runs if the deploy plan or queue architecture changes later.
 - 2026-05-11: Linked [[Sentry_Operations]] after adding Sentry CLI/MCP setup notes.

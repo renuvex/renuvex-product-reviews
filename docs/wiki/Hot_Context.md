@@ -85,7 +85,7 @@ source_files:
 - 2026-05-24: [[ADR_0019_Icon_Sprite_Rendering]] shipped. Read-only rating stars use one injected SVG `<symbol>` sprite + `<use>` (not inline `<path>` per star). Half-star clip + `ICONS` source unchanged. Adds sr-only/`aria-labelledby` a11y; PDP badge now a link + `data-renuvex-align` (no `role=figure`/static `id`).
 - 2026-05-24/25: [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] shipped and then completed its hard-rename contract because there are no real merchant installs yet. Current source and active generated widget assets use `Renuvex Product Reviews` / `product-reviews` / `renuvex-pr` only; legacy `ikr-*`, `data-ikr-*`, `IKR_*`, and `yorum-paneli-widget` remain historical documentation only.
 - 2026-05-25: Review section placement is opt-in through `<div data-renuvex-widget="reviews"></div>`. Missing mount means no review section; PDP title badge and listing badges stay independent and are controlled by the `badge` widget toggle.
-- 2026-05-25: External rename started. GitHub is `heyomert/renuvex-product-reviews`; Vercel is still `new-ikas-app`, so keep `STOREFRONT_WIDGET_BASE_URL` on the old working domain until the new Vercel domain serves `widget.js`.
+- 2026-05-25: External rename started. GitHub/Vercel project and Sentry org/project use Renuvex names; production domain remains `new-ikas-app.vercel.app`, so keep `STOREFRONT_WIDGET_BASE_URL` there until a custom domain serves `widget.js`.
 
 ## Current Risks / Open Questions
 - Verify deploy/cache, re-measure widget size, and document disabling native theme reviews.

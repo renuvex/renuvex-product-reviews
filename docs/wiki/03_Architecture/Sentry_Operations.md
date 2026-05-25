@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-05-24
+updated: 2026-05-25
 tags:
   - sentry
   - observability
@@ -22,18 +22,18 @@ related:
 # Sentry Operations
 
 ## Summary
-Sentry is the observability surface for the Next.js panel app. The maintainer's CLI is authenticated against `mert-copper`, the Sentry MCP server is wired into the AI tooling, and `@sentry/nextjs` is installed and initialized for Node, Edge, and browser runtimes. The strategy and trade-offs live in [[ADR_0009_Sentry_Observability_Strategy]]; this page is the operational reference.
+Sentry is the observability surface for the Next.js panel app. The organization and project slugs are now under the Renuvex namespace, the Sentry MCP server is wired into the AI tooling, and `@sentry/nextjs` is installed and initialized for Node, Edge, and browser runtimes. The strategy and trade-offs live in [[ADR_0009_Sentry_Observability_Strategy]]; this page is the operational reference.
 
 ## Libraries / Technologies
 - `@sentry/nextjs` (panel SDK)
-- Sentry MCP server: `https://mcp.sentry.dev/mcp/mert-copper/yorum-paneli` until the external project rename phase.
+- Sentry MCP server: `https://mcp.sentry.dev/mcp/renuvex`
 - Sentry CLI npm package: `sentry@^0.33` (global on the maintainer machine)
 - CLI config: `C:\Users\mertw\.sentry\cli.db`
 - Vercel-Sentry integration (Vercel Marketplace): injects `SENTRY_ORG` and `SENTRY_PROJECT` into Vercel env automatically; `SENTRY_AUTH_TOKEN` is added manually.
 
 ## Project Coordinates
-- Organization: `mert-copper`
-- Project slug should be `renuvex-product-reviews` for new/local config. If the external Sentry project is still named `yorum-paneli`, keep `SENTRY_PROJECT` set explicitly in the deployment environment until the Sentry project is renamed.
+- Organization: `renuvex`
+- Project slug: `renuvex-product-reviews`
 - Project ID: `4511372449218640`
 - Region: EU (`de.sentry.io`)
 - Authenticated CLI user: `mertworkspace2906@gmail.com`
@@ -60,8 +60,8 @@ Sentry is the observability surface for the Next.js panel app. The maintainer's 
 |---|---|---|---|
 | `NEXT_PUBLIC_SENTRY_DSN` | `.env.local` (local), Vercel env (Production + Preview, marked Sensitive) | runtime | DSN read by SDK in all runtimes |
 | `SENTRY_AUTH_TOKEN` | `.env.sentry-build-plugin` (local, gitignored), Vercel env (Production + Preview, marked Sensitive) | build-time | Source map upload + release creation |
-| `SENTRY_ORG` | Vercel env, injected by Vercel-Sentry integration | build-time | `mert-copper` |
-| `SENTRY_PROJECT` | Vercel env, injected by Vercel-Sentry integration or set manually | build-time | Defaults to `renuvex-product-reviews`; set explicitly if the external project still uses another slug |
+| `SENTRY_ORG` | Vercel env, injected by Vercel-Sentry integration or set manually | build-time | `renuvex` |
+| `SENTRY_PROJECT` | Vercel env, injected by Vercel-Sentry integration or set manually | build-time | `renuvex-product-reviews` |
 
 `.env.sentry-build-plugin` and `.sentryclirc` are listed in `.gitignore`. Never commit either.
 
@@ -111,7 +111,7 @@ Not blocking, no decision required — operational follow-ups to revisit when th
 | # | Improvement | Trigger to act | How |
 |---|---|---|---|
 | 1 | **Alert rules** for new issues. Currently no email/Slack notification on regressions. | First time a real production bug stays unnoticed for >1 hour, or when traffic grows past hobby level. | Sentry UI → Alerts → New Alert Rule. Suggested: `eventCount > 10 in 5m` (regression spike) and `users > 5 in 1h` (broad impact). Route to maintainer email. |
-| 2 | **Narrow Sentry MCP scope** from organization to project. | When a second Sentry project is added to `mert-copper`. With only one project, scope makes no practical difference. | Edit `.mcp.json`: `https://mcp.sentry.dev/mcp/mert-copper` → `https://mcp.sentry.dev/mcp/mert-copper/yorum-paneli`. |
+| 2 | **Narrow Sentry MCP scope** from organization to project. | When a second Sentry project is added to `renuvex`. With only one project, scope makes no practical difference. | Edit `.mcp.json`: `https://mcp.sentry.dev/mcp/renuvex` -> `https://mcp.sentry.dev/mcp/renuvex/renuvex-product-reviews`. |
 | 3 | **Saved searches** in Sentry UI for `tags[source]:widget` and `!tags[source]:widget`. | First time widget errors start arriving and the dashboard needs to be triaged separately from panel issues. | Sentry UI → Issues → run the query → "Save Search". UI-only, no code or wiki change. |
 
 None of the above is a quality-gate blocker. They exist here so future-you (or future Claude) does not re-discover them from scratch.
@@ -133,7 +133,8 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
-- 2026-05-25: Namespace cleanup changed the local `next.config.js` fallback to `renuvex-product-reviews`. Widget-error rate-limit keys use `renuvex_pr_werr_rl:`. If the external Sentry project has not yet been renamed, deployment env must provide the current slug.
+- 2026-05-25: Sentry organization/project external slugs are now `renuvex` / `renuvex-product-reviews`; Vercel env was redeployed successfully and `.mcp.json` now points at the Renuvex organization scope.
+- 2026-05-25: Namespace cleanup changed the local `next.config.js` project fallback to `renuvex-product-reviews`. Widget-error rate-limit keys use `renuvex_pr_werr_rl:`.
 - 2026-05-17: Added Context7-backed Sentry JavaScript note for Phase 1 post-test triage. Tags, context, breadcrumbs, and captured events are the useful Sentry SDK-level signals, but browser/runtime evidence remains primary.
 - 2026-05-17: Added Phase 1 widget post-test check guidance. Sentry should be used after browser/Playwright verification to catch widget/API runtime errors, but it is not a substitute for visual DOM and event-payload audits. Related: [[Phase_1_Widget_Runtime_Audit]].
 - 2026-05-11: Added "Pending Operational Improvements" section: alert rules, MCP scope narrowing, and saved searches. None blocking — captured here so they are not re-discovered from scratch.

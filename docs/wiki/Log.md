@@ -26,6 +26,12 @@ source_files:
 - Verification: `gh repo view heyomert/renuvex-product-reviews` returns the private renamed repo, and `git ls-remote --heads origin main` resolves the current `main` head. Vercel still reports project `new-ikas-app`; `https://new-ikas-app.vercel.app/widget.js` returns 200 while `https://renuvex-product-reviews.vercel.app/widget.js` returns 404, so Vercel/env/ikas script URL migration is intentionally pending.
 - Updated wiki: [[Deployment_Notes]], [[Hot_Context]], [[Log]]
 
+## 2026-05-25 - ops | Sentry external rename completed
+- Summary: Sentry organization/project slugs changed to `renuvex` / `renuvex-product-reviews`, Vercel env was redeployed successfully, and repo config now uses the Renuvex org fallback plus Renuvex MCP URL.
+- Reason: Keep observability under the Renuvex brand family while preserving the existing DSN and widget domain.
+- Verification: Latest production Vercel deployment `dpl_747SWPwC71kQbXhdMzkAPWDfN5Yq` is READY and build completed without Sentry build failure. `https://new-ikas-app.vercel.app/widget.js` still returns 200. Team-scoped `renuvex-product-reviews-mertcopper.vercel.app` is protected and plain `renuvex-product-reviews.vercel.app` is 404, so ikas script URLs stay on the old production domain until a custom domain is added.
+- Updated wiki: [[Sentry_Operations]], [[Config_And_Env_Map]], [[Deployment_Notes]], [[Hot_Context]], [[Log]]
+
 ## 2026-05-25 - chore | Renuvex namespace audit cleanup
 - Summary: Audited the namespace migration across source, active generated widget assets, public helper scripts, and wiki routing metadata. Rebuilt the widget, removed unreferenced old hashed runtime chunks from the repo, changed the Sentry local fallback to `renuvex-product-reviews`, and updated current wiki pages away from stale expand-phase language.
 - Reason: The hard rename had landed in source, but stale public chunks and docs still made broad repository searches look like the old `ikr` / `yorum-paneli` namespace was active.

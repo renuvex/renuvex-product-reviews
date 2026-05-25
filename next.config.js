@@ -49,7 +49,7 @@ module.exports = withSentryConfig(module.exports, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  org: process.env.SENTRY_ORG || "mert-copper",
+  org: process.env.SENTRY_ORG || "renuvex",
   project: process.env.SENTRY_PROJECT || "renuvex-product-reviews",
 
   // Only print logs for uploading source maps in CI

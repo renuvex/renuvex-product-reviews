@@ -71,8 +71,8 @@ related:
 | `NEXT_PUBLIC_SENTRY_DSN` | DSN read by SDK in all runtimes. Required for any Sentry capture. | `.env.local` + Vercel (Production + Preview, Sensitive) |
 | `SENTRY_DSN` | Optional server/edge override; falls back to `NEXT_PUBLIC_SENTRY_DSN`. Usually unset. | (optional) |
 | `SENTRY_AUTH_TOKEN` | Build-time token for source map upload and release creation. | `.env.sentry-build-plugin` (local, gitignored) + Vercel (Production + Preview, Sensitive) |
-| `SENTRY_ORG` | `mert-copper`. | Injected automatically by Vercel-Sentry integration |
-| `SENTRY_PROJECT` | Sentry project slug. Defaults to `renuvex-product-reviews` in local config. If the external Sentry project has not yet been renamed, Vercel/env must set the current slug explicitly. | Injected automatically by Vercel-Sentry integration or read by [next.config.js](next.config.js) |
+| `SENTRY_ORG` | `renuvex`. | Injected automatically by Vercel-Sentry integration or read by [next.config.js](next.config.js) |
+| `SENTRY_PROJECT` | Sentry project slug. Defaults to `renuvex-product-reviews` in local config. | Injected automatically by Vercel-Sentry integration or read by [next.config.js](next.config.js) |
 
 See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the full contract.
 
