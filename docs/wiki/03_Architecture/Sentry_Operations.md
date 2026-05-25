@@ -135,6 +135,7 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-05-25: RENUVEX-PRODUCT-REVIEWS-6 (`listing-badge` / `missing_after_render`, ~93 events) proven to be a **false positive** — the visibility probe held a stale reference to the pre-self-heal element. Fixed in `core/health.js` (probe re-resolves the live owned node); verified on the dev store (1 report/session → 0). See [[Bug_Listing_Badge_Missing_After_Render]], [[Widget_Architecture]].
 - 2026-05-25: Documented that the Sentry MCP `search_issues` tool under-counts (returns only the latest-active issue, omits other unresolved ones) — enumerate by short ID. Noted that all widget health signals fingerprint into one issue; differentiate via `widgetEventType`/`widgetHealth`. Fixed three issues surfaced this way: `/callback` token-log removal, `setToken` throw→return, dashboard init 401 guard (see [[Debugging_Notes]], [[Auth_And_Installation_Flow]]).
 - 2026-05-25: Sentry organization/project external slugs are now `renuvex` / `renuvex-product-reviews`; Vercel env was redeployed successfully and `.mcp.json` now points at the Renuvex organization scope.
 - 2026-05-25: Namespace cleanup changed the local `next.config.js` project fallback to `renuvex-product-reviews`. Widget-error rate-limit keys use `renuvex_pr_werr_rl:`.

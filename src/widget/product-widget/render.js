@@ -498,7 +498,9 @@ export async function render(productId, settings, reviewsData, productName, orde
           await render(currentProductId, currentSettings, retried, currentProductName, currentOrderBy, 1, currentBadgeSettings);
         }));
         container.appendChild(widget);
-        probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '', reason: 'fetch_error' });
+        probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '', reason: 'fetch_error' }, function () {
+          return document.getElementById('renuvex-reviews-widget');
+        });
         return;
       }
 
@@ -685,7 +687,9 @@ export async function render(productId, settings, reviewsData, productName, orde
       }
 
       container.appendChild(widget);
-      probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '' });
+      probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '' }, function () {
+        return document.getElementById('renuvex-reviews-widget');
+      });
     } catch (err) {
       console.error('[renuvex-pr] render error:', err);
       container.innerHTML = '<p style="text-align:center;color:#dc2626;">Yorumlar yüklenirken bir hata oluştu.</p>';

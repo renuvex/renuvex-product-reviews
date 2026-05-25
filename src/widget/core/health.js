@@ -98,17 +98,27 @@ export function reportWidgetHealth(type, message, extra) {
   });
 }
 
-export function probeWidgetVisibility(root, surface, extra) {
+export function probeWidgetVisibility(root, surface, extra, resolveCurrent) {
   if (typeof window === 'undefined') return;
   setTimeout(function () {
     try {
-      if (!root || !root.isConnected) {
+      // Evaluate the LIVE owned node, not the originally injected reference. The
+      // bounded one-shot self-heal (and the theme's own re-render) can replace the
+      // element after injection, so checking the stale `root` would report
+      // "missing"/visibility faults against a node that is no longer the live badge.
+      var node = null;
+      if (typeof resolveCurrent === 'function') {
+        try { node = resolveCurrent(); } catch (_) { node = null; }
+      }
+      if (!node) node = root && root.isConnected ? root : null;
+
+      if (!node || !node.isConnected) {
         reportWidgetHealth('dom-conflict', 'Widget node missing after render', Object.assign({ surface: surface, reason: 'missing_after_render' }, extra || {}));
         return;
       }
 
-      var style = window.getComputedStyle(root);
-      var rect = root.getBoundingClientRect();
+      var style = window.getComputedStyle(node);
+      var rect = node.getBoundingClientRect();
       var opacity = parseFloat(style.opacity || '1');
       if (style.display === 'none') {
         reportWidgetHealth('visibility-health', 'Widget node hidden by display:none', Object.assign({ surface: surface, reason: 'display_none' }, extra || {}));
@@ -127,7 +137,7 @@ export function probeWidgetVisibility(root, surface, extra) {
         return;
       }
 
-      var stars = root.querySelectorAll ? root.querySelectorAll('.renuvex-pr-star') : [];
+      var stars = node.querySelectorAll ? node.querySelectorAll('.renuvex-pr-star') : [];
       for (var i = 0; i < stars.length; i++) {
         var starRect = stars[i].getBoundingClientRect();
         if (starRect.width <= 0 || starRect.height <= 0) {

@@ -167,7 +167,9 @@ function createListingBadge(rating, justify, iconPair, slug) {
 function setupListingBadgeGuards(badge, mountPoint, slug, remount) {
   if (!badge || !mountPoint || !mountPoint.parent) return;
   var extra = { slug: slug || '' };
-  probeWidgetVisibility(badge, 'listing-badge', extra);
+  probeWidgetVisibility(badge, 'listing-badge', extra, function () {
+    return mountPoint.parent ? findOwnedListingNode(mountPoint.parent, 'listing-rating', slug, null) : null;
+  });
   watchListingBadgePosition(badge, mountPoint, extra);
   watchListingBadgeRemoval(badge, 'listing-badge', function () {
     if (!mountPoint.parent || hasOwnedListingBadge(mountPoint.parent, slug)) return;
@@ -328,7 +330,9 @@ function injectModalBadge(slugNameMap, ratings, iconPair) {
   if (!slug || !ratings[slug] || ratings[slug]._empty || ratings[slug].count === 0) return;
   var modalBadge = createBadgeEl(ratings[slug], 'flex-start', iconPair, { slug: slug || '' });
   h1.appendChild(modalBadge);
-  probeWidgetVisibility(modalBadge, 'listing-modal-badge', { slug: slug || '' });
+  probeWidgetVisibility(modalBadge, 'listing-modal-badge', { slug: slug || '' }, function () {
+    return h1 && h1.isConnected ? h1.querySelector('[data-renuvex-listing-badge]') : null;
+  });
   watchListingBadgeRemoval(modalBadge, 'listing-modal-badge', function () {
     if (!h1.isConnected || h1.querySelector('[data-renuvex-listing-badge]')) return;
     h1.appendChild(createBadgeEl(ratings[slug], 'flex-start', iconPair, { slug: slug || '' }));

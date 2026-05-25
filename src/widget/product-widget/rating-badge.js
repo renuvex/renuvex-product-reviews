@@ -162,7 +162,9 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
     message: 'PDP badge slot reordered after render',
     extra: { productName: productName || '', productId: productId || '' },
   });
-  probeWidgetVisibility(slot, 'pdp-badge', { productName: productName || '', productId: productId || '' });
+  probeWidgetVisibility(slot, 'pdp-badge', { productName: productName || '', productId: productId || '' }, function () {
+    return document.querySelector('[data-renuvex-slot="product-title-rating"]');
+  });
   if (!selfHealAttempt) {
     ratingBadgeRemovalObserver = watchOneTimeRemoval(slot, 'pdp-badge', function () {
       injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, true);
