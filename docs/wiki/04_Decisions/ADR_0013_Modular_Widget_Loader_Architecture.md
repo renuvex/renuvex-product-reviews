@@ -3,8 +3,8 @@ type: decision
 project: ikas-review-app
 status: active
 created: 2026-05-16
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - adr
@@ -212,9 +212,11 @@ Authoritative implementation checklist: [[Phase_2_Widget_Module_Split_Plan]].
 - Implemented adapter follow-up: Ozy listing placement rules moved behind
   `themes/ozy/adapter.js` and `themes/current-adapter.js`. This remains fallback
   seed data, not a universal ikas theme contract.
-- Deferred: `rating-badge` is not yet an independent surface because aggregate
-  rating/count still come from the PDP render/reviews path. Splitting it without a
-  shared data service would duplicate fetches or introduce races.
+- Updated 2026-05-25: the PDP `rating-badge` is now independent from the review
+  section mount. It still reuses the PDP review payload in `render.js`, but it
+  injects before the opt-in `<div data-renuvex-widget="reviews"></div>` check, so
+  missing review mount hides only the review section, not the product-title badge.
+  A fully separate registry surface remains optional future work.
 - Deferred: `events.js` rename to `core/spa-nav.js`, loader/module cache headers,
   script lifecycle reconciliation, and stale `--theme` alias cleanup remain Phase
   3 work.

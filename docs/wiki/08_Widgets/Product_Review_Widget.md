@@ -3,7 +3,7 @@ type: widget
 project: ikas-review-app
 status: active
 created: 2026-05-05
-updated: 2026-05-12
+updated: 2026-05-25
 tags:
   - widget
   - reviews
@@ -93,9 +93,10 @@ Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merch
 - [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 
 ## Change Log
+- 2026-05-25: Review-section placement became opt-in via `<div data-renuvex-widget="reviews"></div>`. Missing mount now means no review section; the PDP title badge remains independent and is controlled by the `badge` widget toggle.
 - 2026-05-12: Photo step now allows parallel uploads — add button stays enabled while existing uploads are in flight (the previous silent block was confusing when users returned to step 2 after the auto-jump). Auto-jump narrowed to the truly first photo (no completed, no pending). MAX_PHOTOS=3 cap enforced across completed + pending. Source: [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
 - 2026-05-12: Documented review submission wizard accessibility fix: focus trap, active-step focus reset, focus restore on close, keyboard-accessible photo upload trigger, and visible focus outlines. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
-- 2026-05-11: Documented self-mounting PDP review anchor fallback after fixing deploy/theme cases where missing `#ikas-reviews-anchor` hid both the review block and product-title badge. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
+- 2026-05-11: Documented the then-current self-mounting PDP review anchor fallback after fixing deploy/theme cases where missing `#ikas-reviews-anchor` hid both the review block and product-title badge. Superseded by the 2026-05-25 opt-in review mount contract. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 - 2026-05-11: Documented retryable review fetch error state after separating API/network failures from valid empty review lists. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
 - 2026-05-11: Photo strip decoupled from main reviews fetch — dedicated `hasImages=true&limit=15&orderBy=newest` call, cap 15, newest-first rotation. Lightbox now navigates strip dataset, closing the paged-slice navigation risk. Related ADR: [[ADR_0007_Photo_Strip_Cap_And_Rotation]]. Related note: [[Photo_Strip]]. Source: [bootstrap.js](src/widget/product-widget/bootstrap.js), [render.js](src/widget/product-widget/render.js), [state.js](src/widget/core/state.js), [route.ts](src/app/api/public/reviews/route.ts).
 - 2026-05-10: Documented the trusted review image URL policy in the product review widget submission and display flow. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].

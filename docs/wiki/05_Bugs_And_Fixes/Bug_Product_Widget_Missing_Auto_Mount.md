@@ -3,7 +3,7 @@ type: bug
 project: ikas-review-app
 status: active
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-25
 tags:
   - bug
   - widget
@@ -41,6 +41,8 @@ After deploy, the product detail review area and the rating badge under the prod
 [render.js](src/widget/product-widget/render.js) treated `#ikas-reviews-anchor` as mandatory. The widget was therefore coupled to a manually present theme anchor even though the script itself is auto-injected into storefronts.
 
 ## Fix
+Historical 2026-05-11 fix, now superseded by the 2026-05-25 opt-in mount contract:
+
 [render.js](src/widget/product-widget/render.js) now calls `getOrCreateReviewsAnchor()`:
 
 - If `#ikas-reviews-anchor` exists, it uses it.
@@ -55,9 +57,9 @@ This keeps existing merchant-provided anchors compatible while making the PDP re
 - [public/widget.js](public/widget.js)
 
 ## Prevention
-- PDP widget rendering must not depend exclusively on a manually present theme anchor.
+- Current contract: the review section intentionally depends on an explicit `<div data-renuvex-widget="reviews"></div>` mount.
 - Product rating badge injection must not be indirectly blocked by review block mount-point lookup.
-- Smoke test product pages both with and without `#ikas-reviews-anchor`.
+- Smoke test product pages both with and without `<div data-renuvex-widget="reviews"></div>`: missing mount should hide only the review section, not the PDP title badge.
 
 ## Related Notes
 - [[Product_Review_Widget]]
@@ -66,4 +68,5 @@ This keeps existing merchant-provided anchors compatible while making the PDP re
 - [[Bug_Index]]
 
 ## Change Log
+- 2026-05-25: Marked the self-mounting behavior as superseded by the opt-in review mount contract and independent PDP badge injection.
 - 2026-05-11: Fixed by adding self-mounting fallback anchor creation in [render.js](src/widget/product-widget/render.js).

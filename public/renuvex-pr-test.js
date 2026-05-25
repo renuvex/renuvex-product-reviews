@@ -1,5 +1,5 @@
 /**
- * IKR Badge Test Script
+ * Renuvex Product Reviews Badge Test Script
  * Konsola yapıştır — sayfayı değiştirmez, sadece raporlar + badge simüle eder.
  * Kullanım: tüm içeriği kopyala, kategori/listing sayfasında konsola yapıştır.
  */
@@ -36,12 +36,12 @@
   }
 
   // Sayfadaki tüm ürün linklerini topla (slug → linkler)
-  // data-ikr-badge='1' olanlar widget tarafından işaretlenmiş (skip edilmiş) — bunları dahil etme
+  // data-renuvex-pr-badge / data-ikr-badge markers are already processed by the widget.
   var slugMap = {};
   document.querySelectorAll('a[href]').forEach(function (a) {
     var href = a.getAttribute('href');
     if (!href || href.charAt(0) === '#' || href.charAt(0) === '?') return;
-    if (a.getAttribute('data-ikr-badge')) return; // widget zaten işledi (skip veya inject)
+    if (a.getAttribute('data-renuvex-pr-badge') || a.getAttribute('data-ikr-badge')) return; // widget zaten işledi (skip veya inject)
     if (a.closest('header') || a.closest('nav')) return; // navigasyon linkleri — ürün değil
     var slug = extractSlug(a.href);
     if (!slug || slug.length < 3) return;
@@ -52,11 +52,11 @@
 
   var slugs = Object.keys(slugMap);
   if (!slugs.length) {
-    console.warn('[IKR TEST] Sayfada ürün linki bulunamadı.');
+    console.warn('[RENUVEX PR TEST] Sayfada ürün linki bulunamadı.');
     return;
   }
 
-  console.log('%c[IKR TEST] ' + slugs.length + ' ürün slug\'u bulundu', 'color:#7c3aed;font-weight:bold;font-size:14px');
+  console.log('%c[RENUVEX PR TEST] ' + slugs.length + ' ürün slug\'u bulundu', 'color:#7c3aed;font-weight:bold;font-size:14px');
   console.log('Sluglar:', slugs);
 
   var report = [];
@@ -155,7 +155,7 @@
   // Rapor çıktısı
   report.forEach(function (r) {
     var status = r.isDuplicate ? '❌ DUPLICATE' : r.injected.length === 0 ? '⚠️  BADGE YOK' : '✅ OK';
-    console.group('%c[IKR TEST] ' + status + ' — ' + r.slug, 'font-weight:bold;color:' + (r.isDuplicate ? '#dc2626' : r.injected.length === 0 ? '#d97706' : '#059669'));
+    console.group('%c[RENUVEX PR TEST] ' + status + ' — ' + r.slug, 'font-weight:bold;color:' + (r.isDuplicate ? '#dc2626' : r.injected.length === 0 ? '#d97706' : '#059669'));
     console.log('Toplam link:', r.totalLinks, '| Badge inject:', r.injected.length, '| Skip:', r.skipped.length);
 
     r.injected.forEach(function (inj) {
@@ -182,7 +182,7 @@
 
   // Özet
   console.log('');
-  console.log('%c[IKR TEST] ÖZET', 'color:#7c3aed;font-weight:bold;font-size:14px');
+  console.log('%c[RENUVEX PR TEST] ÖZET', 'color:#7c3aed;font-weight:bold;font-size:14px');
   console.log('Toplam ürün:', report.length);
   console.log('Badge OK:', report.filter(function(r) { return r.injected.length > 0 && !r.isDuplicate; }).length);
   console.log('Badge YOK:', report.filter(function(r) { return r.injected.length === 0; }).length);

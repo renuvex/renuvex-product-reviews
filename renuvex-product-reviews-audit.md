@@ -1,4 +1,4 @@
-# ikas Review App — Read-Only Analiz, Doğrulama ve Mimari Kıyaslama Dokümanı
+# Renuvex Product Reviews — Read-Only Analysis, Verification, and Architecture Comparison
 
 > **Amaç:** Bu doküman, ikas Review App projesini mevcut kodbase, resmî ikas dokümantasyonu, ikas MCP/API yetenekleri, browser smoke testleri, network/console çıktıları ve rakip widget davranışlarıyla karşılaştırmak için hazırlanmış read-only referans dokümanıdır.
 >

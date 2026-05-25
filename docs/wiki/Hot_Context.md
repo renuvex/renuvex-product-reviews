@@ -3,8 +3,8 @@ type: context
 project: ikas-review-app
 status: active
 created: 2026-05-13
-updated: 2026-05-24
-last_verified: 2026-05-24
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - hot-context
@@ -48,8 +48,8 @@ source_files:
   - "src/widget/core/slot.js"
   - "src/widget/core/slot-position.js"
   - "src/widget/core/namespace.js"
-  - "src/widget/summary-layouts/shared/actions-block.js"
   - "src/widget/product-widget/title-finder.js"
+  - "src/widget/product-widget/render.js"
   - "src/widget/product-widget/review-form-modal/steps/step-rating.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/generic/adapter.js"
@@ -72,19 +72,20 @@ source_files:
 
 ## Recent Important Changes
 - Widget hardening refs: [[ADR_0013_Modular_Widget_Loader_Architecture]], [[Phase_2_Widget_Module_Split_Plan]], [[Ikas_Storefront_Script_Capabilities]].
-- 2026-05-17/18: Module split, canonical product identity, install backfill, non-destructive script lifecycle, public review hardening, rate limits, and live retests landed.
+- 2026-05-17/18: Module split, product identity, script lifecycle, public review hardening, rate limits, and live retests landed.
 - 2026-05-19: [[ADR_0016_Rating_Visual_System]] implemented. Star icon + color are single-sourced from the `reviews` widget and used by every rating surface.
 - 2026-05-20: [[ADR_0017_Badge_Architecture]] shipped. Class-first DOM (`.ikr-rating-badge`, `data-ikr-*`) for all stores; sibling-of-title mount remains dev-store gated. Sizing uses `.ikr-rating-badge` CSS vars from `ensureBadgeTokens`; schema adds mobile/alignment/count controls.
 - 2026-05-23: Storefront script records now carry `data-ikr-*` markers, v1 reconciliation reports match/duplicate diagnostics, and badge render paths emit health telemetry plus one-shot self-heal for DOM removal.
 - 2026-05-23: Active theme selection uses Admin API `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId`; adapter matching uses stable `themeId` before merchant-editable names.
-- 2026-05-23: Theme sync is split from script injection. Dashboard/settings call lightweight `syncStorefrontTheme`; install/manual script repair still updates scripts and theme metadata.
+- 2026-05-23: Theme sync is split from script injection; dashboard/settings use lightweight `syncStorefrontTheme`.
 - 2026-05-23/24: Current Vercel plan rejected 5-minute cron; daily 03:00 UTC is restored. Pro/Enterprise or QStash can shorten pending theme verification.
 - 2026-05-24: [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] records the X-app/Serpingo conflict. Runtime script discovery must be marker-first and `publicApiKey`-required; storefront surfaces use Renuvex/legacy owned slots. ikas has no official slot/conflict mechanism, and `isHighPriority` / `order` is not a hard cross-app ordering guarantee.
 - 2026-05-24: PDP badge position guard is shared core infrastructure; theme adapters own PDP title/mount selectors.
 - 2026-05-24: Listing/home/search badges now use the same bounded owned-slot position guard as PDP, without flipping the sibling-mount rollout gate.
-- 2026-05-24: [[Bug_Filter_Menu_WebKit_Tap_Activation]] + [[Bug_Review_Wizard_WebKit_Rating_Advance]] fixed iOS/WebKit tap bugs (filter menu + review wizard): custom widget controls need pointer-safe activation with click+keyboard fallback and no one-shot animation gates.
+- 2026-05-24: WebKit tap bugs fixed; custom controls need pointer-safe activation plus click/keyboard fallback.
 - 2026-05-24: [[ADR_0019_Icon_Sprite_Rendering]] shipped. Read-only rating stars use one injected SVG `<symbol>` sprite + `<use>` (not inline `<path>` per star). Half-star clip + `ICONS` source unchanged. Adds sr-only/`aria-labelledby` a11y; PDP badge now a link + `data-ikr-align` (no `role=figure`/static `id`).
 - 2026-05-24: [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] shipped expand phase. Canonical identity is `Renuvex Product Reviews` / `product-reviews` / `renuvex-pr`; legacy `ikr-*`, `data-ikr-*`, `IKR_*`, and `yorum-paneli-widget` remain compatibility aliases until contract cleanup.
+- 2026-05-25: Review section placement is opt-in through `<div data-renuvex-widget="reviews"></div>`. Missing mount means no review section; PDP title badge and listing badges stay independent and are controlled by the `badge` widget toggle.
 
 ## Current Risks / Open Questions
 - Verify deploy/cache, re-measure widget size, and document disabling native theme reviews.
