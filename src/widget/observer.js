@@ -25,7 +25,7 @@ function getObserverListingScopes() {
 
 function hasUnbadgedListingLinks() {
   return collectLinksFromScopes(getObserverListingScopes()).some(function(a) {
-    if (a.getAttribute('data-renuvex-pr-badge') || a.getAttribute('data-renuvex-badge')) return false;
+    if (a.getAttribute('data-renuvex-badge')) return false;
     var path = extractSlug(a.href);
     return path && path.length >= 3 && !SYSTEM_SLUGS.test(path);
   });
@@ -42,9 +42,9 @@ export function startMutationObserver() {
     var hasRelevantMutation = mutations.some(function(m) {
       return Array.from(m.addedNodes).some(function(node) {
         if (node.nodeType !== 1) return false;
-        if (node.hasAttribute && (node.hasAttribute('data-renuvex-slot') || node.hasAttribute('data-renuvex-listing-badge') || node.hasAttribute('data-renuvex-listing-badge') || node.id === 'renuvex-pr-rating-badge' || node.id === 'renuvex-pr-reviews-widget')) return false;
-        if (node.closest && (node.closest('[data-renuvex-slot]') || node.closest('[data-renuvex-listing-badge]') || node.closest('[data-renuvex-listing-badge]') || node.closest('#renuvex-pr-rating-badge') || node.closest('#renuvex-pr-reviews-widget'))) return false;
-        if (node.querySelector && node.querySelector('[data-renuvex-slot],[data-renuvex-listing-badge],[data-renuvex-listing-badge],#renuvex-pr-reviews-widget,#renuvex-pr-rating-badge')) return false;
+        if (node.hasAttribute && (node.hasAttribute('data-renuvex-slot') || node.hasAttribute('data-renuvex-listing-badge') || node.id === 'renuvex-pr-rating-badge' || node.id === 'renuvex-pr-reviews-widget')) return false;
+        if (node.closest && (node.closest('[data-renuvex-slot]') || node.closest('[data-renuvex-listing-badge]') || node.closest('#renuvex-pr-rating-badge') || node.closest('#renuvex-pr-reviews-widget'))) return false;
+        if (node.querySelector && node.querySelector('[data-renuvex-slot],[data-renuvex-listing-badge],#renuvex-pr-reviews-widget,#renuvex-pr-rating-badge')) return false;
         return true;
       });
     });

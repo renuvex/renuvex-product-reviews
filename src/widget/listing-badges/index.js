@@ -10,9 +10,8 @@ import { clearBadgePlaceholders, disconnectListingBadgeRemovalObservers, injectB
 
 function cleanupListingBadges() {
   disconnectListingBadgeRemovalObservers();
-  document.querySelectorAll('[data-renuvex-listing-badge],[data-renuvex-listing-badge]').forEach(function(el) { el.remove(); });
-  document.querySelectorAll('[data-renuvex-pr-badge],[data-renuvex-badge]').forEach(function(el) {
-    el.removeAttribute('data-renuvex-pr-badge');
+  document.querySelectorAll('[data-renuvex-listing-badge]').forEach(function(el) { el.remove(); });
+  document.querySelectorAll('[data-renuvex-badge]').forEach(function(el) {
     el.removeAttribute('data-renuvex-badge');
   });
   clearBadgePlaceholders();

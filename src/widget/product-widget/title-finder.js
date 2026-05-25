@@ -21,7 +21,6 @@ export function findProductTitleEl(productName) {
         el.textContent.trim() === productName &&
         el.tagName !== 'TITLE' &&
         !el.closest('[data-renuvex-listing-badge]') &&
-        !el.closest('[data-renuvex-listing-badge]') &&
         !el.closest('[data-renuvex-slot]') &&
         !el.closest('#ikas-reviews') &&
         !el.closest('nav') &&
