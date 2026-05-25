@@ -86,9 +86,7 @@ export class TokenHelpers {
    * 
    * @param {ReturnType<typeof useRouter>} router - Next.js router instance for navigation
    * @param {URLSearchParams} params - URL search parameters containing OAuth callback data
-   * 
-   * @throws {string} Throws 'redirectUrl-called' after successful redirect to indicate flow completion
-   * 
+   *
    * @remarks
    * - Expects 'token', 'redirectUrl', and 'authorizedAppId' parameters in the URL
    * - Stores both the token and authorized app ID in session storage
@@ -118,9 +116,9 @@ export class TokenHelpers {
       
       // Redirect to the specified URL (typically back to the app)
       window.location.replace(redirectUrl);
-      
-      // Throw to indicate successful redirect (prevents further execution)
-      throw 'redirectUrl-called';
+
+      // Done — token stored and redirect issued; skip the authorize-store fallback below.
+      return;
     }
     
     // Missing required parameters - redirect to authorization page

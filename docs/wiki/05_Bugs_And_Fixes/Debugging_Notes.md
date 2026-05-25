@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-05-25
 tags:
   - debugging
   - howto
@@ -70,6 +70,12 @@ related:
 - `EXPLAIN ANALYZE` via `psql` to verify index usage on `Review` queries.
 - Profile real queries by adding `process.env.PRISMA_LOG = 'query'` in dev and checking dev-server output.
 
+## Sentry / error monitoring
+
+Operational reference: [[Sentry_Operations]] (org `renuvex`, project `renuvex-product-reviews`, region `de.sentry.io`; widget vs panel issues split via `tags[source]:widget`).
+
+- **`search_issues` (MCP) under-counts.** It has returned only the most-recently-active issue and silently omitted other `unresolved` ones (reproduced with `is:unresolved` and `lastSeen:-30d`). Enumerate by fetching consecutive short IDs (`RENUVEX-PRODUCT-REVIEWS-<n>`) via `get_sentry_resource`, or use the web UI — don't trust the search count.
+
 ## Common gotchas
 
 - **`document` references at module load** — must be SSR-guarded. `core/config.js` is a reference for the pattern.
@@ -88,4 +94,5 @@ related:
 - [[Bug_Review_Detail_Lightbox_Risks]]
 
 ## Change Log
+- 2026-05-25: Fixed three Sentry-surfaced issues — removed the token-leaking `/callback` console.log, changed `TokenHelpers.setToken` throw→return (the throw became an `unhandledrejection`), and guarded the dashboard `HomePage` init against an unhandled `/api/admin/settings` 401. Documented the `search_issues` under-count gotcha. Sources: [src/app/callback/page.tsx](src/app/callback/page.tsx), [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts), [src/components/home-page/index.tsx](src/components/home-page/index.tsx).
 - 2026-05-10: Added debugging checklist for the photo review detail lightbox and its current open risks. Related source: [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

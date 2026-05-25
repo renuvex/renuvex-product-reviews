@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-22
-last_verified: 2026-05-22
+updated: 2026-05-25
+last_verified: 2026-05-25
 confidence: high
 tags:
   - auth
@@ -109,6 +109,8 @@ Source files:
 - HMAC-SHA256 signature on OAuth callback is the primary defense against code-injection from a malicious referrer. Don't bypass.
 - `CLIENT_SECRET` is used for **both** OAuth (with ikas) AND JWT signing. Single secret = single rotation. If we rotate `CLIENT_SECRET`, all in-flight JWTs become invalid (acceptable, JWTs are short-lived).
 - JWT signing uses `process.env.CLIENT_SECRET || ''`. Empty fallback is dangerous — add explicit env validation at boot.
+- The `/callback` client page must not log its query params — they carry the session JWT. A debug `console.log` of the params was removed. See [[Security_And_Rate_Limits]].
+- `TokenHelpers.setToken` **returns** after `window.location.replace(redirectUrl)` (step 5); it no longer `throw`s a `'redirectUrl-called'` sentinel. The old throw escaped the un-awaited callback IIFE as an `unhandledrejection` (logged to Sentry). The explicit `return` still skips the authorize-store fallback. Source: [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts).
 
 ## Notes
 - **Product snapshot backfill is non-blocking.** The callback awaits product webhook registration (one `saveWebhooks` mutation) but runs the full `ProductSnapshot` backfill (`syncAllProductsForStore`) via Next.js `after()`, *after* the 302 response is sent. Install latency stays independent of catalog size; a backfill cut short by the serverless function timeout is recovered by product webhooks or `POST /api/admin/sync-products`. See [[ADR_0015_Canonical_Product_Identity]].

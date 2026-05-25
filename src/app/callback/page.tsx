@@ -19,12 +19,15 @@ function CallbackContent() {
   useEffect(() => {
     // Immediately-invoked async function to handle token setting and redirect
     (async () => {
-      // Convert searchParams to URLSearchParams for compatibility
-      const params = new URLSearchParams(searchParams.toString());
-      // Log params for debugging purposes
-      console.log('OAuth callback params:', params.toString());
-      // Set token and handle redirect logic
-      await TokenHelpers.setToken(router, params);
+      try {
+        // Convert searchParams to URLSearchParams for compatibility
+        const params = new URLSearchParams(searchParams.toString());
+        // Set token and handle redirect logic
+        await TokenHelpers.setToken(router, params);
+      } catch (error) {
+        // Surface genuine failures; never log params (they contain the token)
+        console.error('OAuth callback failed:', error);
+      }
     })();
   }, [router, searchParams]);
 

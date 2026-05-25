@@ -70,6 +70,7 @@ Sentry is the observability surface for the Next.js panel app. The organization 
 - Vercel "Redeploy" without a new commit will re-run with current env, but **will not include code changes not yet pushed**. Always commit Sentry config changes before redeploying.
 - Multiple org auth tokens exist for the project (wizard generates one per run). Keep one for local (`.env.sentry-build-plugin`) and one for Vercel CI; revoke unused ones in Settings → Organization Tokens.
 - Sentry MCP token persists in `C:\Users\mertw\.sentry\cli.db`. It auto-refreshes; do not commit the file.
+- ⚠️ **`search_issues` (MCP) under-counts for this org.** It has returned only the most-recently-active issue, silently omitting other `unresolved` ones (reproduced with `is:unresolved` and `lastSeen:-30d`). To enumerate reliably, fetch consecutive short IDs (`RENUVEX-PRODUCT-REVIEWS-<n>`) via `get_sentry_resource`, or use the web UI. Treat `search_issues` counts as a lower bound.
 
 ## Quota Levers (in order of preference if quota alerts fire)
 1. Drop `replaysSessionSampleRate` from `0.05` toward `0.01`.
@@ -84,6 +85,7 @@ However, uncaught widget errors are no longer invisible. A 637-byte (gzip) repor
 ### Filtering widget vs panel issues in Sentry
 - Widget-originated issues: query `tags[source]:widget`
 - Panel-originated issues: query `!tags[source]:widget` (or omit the tag)
+- **All widget health signals collapse into one issue.** dom-conflict, visibility-health, slot-reorder, and title-not-found forward through the same endpoint with an identical server stack (and no client stack), so Sentry fingerprints them into a single issue (e.g. titled "Widget node missing after render"). Differentiate sub-types via the `widgetEventType` tag and the `widgetHealth.reason`/`surface` extras, not the issue title.
 - Widget reporter cap: 5 errors per page session, dedupe per (message+stack), 2-second minimum gap between sends
 - Server rate-limit: 30 reports per IP per 60 seconds (Upstash key prefix `renuvex_pr_werr_rl:`; legacy `ikr_werr_rl:` was pre-namespace-migration)
 
@@ -133,6 +135,7 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-05-25: Documented that the Sentry MCP `search_issues` tool under-counts (returns only the latest-active issue, omits other unresolved ones) — enumerate by short ID. Noted that all widget health signals fingerprint into one issue; differentiate via `widgetEventType`/`widgetHealth`. Fixed three issues surfaced this way: `/callback` token-log removal, `setToken` throw→return, dashboard init 401 guard (see [[Debugging_Notes]], [[Auth_And_Installation_Flow]]).
 - 2026-05-25: Sentry organization/project external slugs are now `renuvex` / `renuvex-product-reviews`; Vercel env was redeployed successfully and `.mcp.json` now points at the Renuvex organization scope.
 - 2026-05-25: Namespace cleanup changed the local `next.config.js` project fallback to `renuvex-product-reviews`. Widget-error rate-limit keys use `renuvex_pr_werr_rl:`.
 - 2026-05-17: Added Context7-backed Sentry JavaScript note for Phase 1 post-test triage. Tags, context, breadcrumbs, and captured events are the useful Sentry SDK-level signals, but browser/runtime evidence remains primary.

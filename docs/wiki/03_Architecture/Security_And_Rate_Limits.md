@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-24
+updated: 2026-05-25
 tags:
   - security
   - rate-limit
@@ -103,6 +103,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - `SECRET_COOKIE_PASSWORD` for iron-session.
 - `CLOUDINARY_API_SECRET`, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only.
 - ⚠️ Never log secrets or full tokens. Code uses `console.error('[scope] ERROR', err)` patterns — keep err objects from leaking sensitive headers.
+- ⚠️ The `/callback` client page receives the session JWT as a URL query param. A `console.log('OAuth callback params:', params.toString())` that printed it to the browser console was removed — never re-add param logging there. See [[Auth_And_Installation_Flow]].
 
 ## Known weaknesses
 - Profanity filter is bypassable (see above)
@@ -132,6 +133,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-25: Removed a `console.log` in the `/callback` client page that printed the full query string (including the session JWT) to the browser console. Source: [src/app/callback/page.tsx](src/app/callback/page.tsx).
 - 2026-05-24: Namespace migration changed public Redis rate-limit prefixes from `ikr_*` to `renuvex_pr_*`. Limits and windows are unchanged.
 - 2026-05-18: D3 tenant-scoped Cloudinary uploads: upload signatures now require a verified `storeId` and sign `review_images/stores/<storeId>`; register/review read/write paths and widget filtering reject cross-tenant image paths.
 - 2026-05-18: Added D4 public rating API read limit: `/api/public/ratings` and `/api/public/ratings-by-slug` share a generous 300 requests/min/IP Redis fixed-window counter. 429 responses are `no-store`; Redis/config failures fail open server-side to preserve storefront rendering.

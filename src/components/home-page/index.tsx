@@ -87,12 +87,16 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   useEffect(() => {
     if (!token) return;
     const init = async () => {
-      const [, settingsRes] = await Promise.all([
-        fetchReviews('pending', 1),
-        axios.get('/api/admin/settings', { headers: await freshAuthHeader(token) }),
-      ]);
-      if (settingsRes.data?.data) setSettings(settingsRes.data.data as WidgetSettingsMap);
-      fetchAllCounts();
+      try {
+        const [, settingsRes] = await Promise.all([
+          fetchReviews('pending', 1),
+          axios.get('/api/admin/settings', { headers: await freshAuthHeader(token) }),
+        ]);
+        if (settingsRes.data?.data) setSettings(settingsRes.data.data as WidgetSettingsMap);
+        fetchAllCounts();
+      } catch (error) {
+        console.error("Panel başlatılırken hata:", error);
+      }
     };
     init();
   }, [token, fetchReviews, fetchAllCounts]);
