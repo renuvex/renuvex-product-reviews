@@ -48,8 +48,24 @@ var THEME_ADAPTERS = {
   ozy: ozyThemeAdapter,
 };
 
+// setThemeAdapterKey — accept any key registered in THEME_ADAPTERS.
+//
+// Previously this hard-coded `key === 'generic' ? 'generic' : 'ozy'`. That
+// worked for the two-adapter world but forced every new theme addition to
+// also remember to widen this whitelist. The map-driven version keeps the
+// adapter registry as the single source of truth: register an adapter in
+// THEME_ADAPTERS and it becomes a valid runtime key automatically.
+//
+// Fallback stays 'ozy' for unknown keys to match the historical contract
+// (FALLBACK_RUNTIME in src/lib/storefront-theme.ts also defaults to 'ozy'
+// when no metadata is available). Combined with ADR_0022's
+// autoPlacementEnabled gate, an unknown key falling through to Ozy adapter
+// cannot trigger DOM-heuristic placement on an unsupported theme — the
+// placement allowlist is the safety net here.
 export function setThemeAdapterKey(key) {
-  activeThemeAdapterKey = key === 'generic' ? 'generic' : 'ozy';
+  activeThemeAdapterKey = typeof key === 'string' && Object.prototype.hasOwnProperty.call(THEME_ADAPTERS, key)
+    ? key
+    : 'ozy';
 }
 
 export function getThemeAdapterKey() {

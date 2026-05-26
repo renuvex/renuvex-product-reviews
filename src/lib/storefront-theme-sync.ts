@@ -126,9 +126,35 @@ export async function syncStorefrontTheme(
     });
   }
 
+  const action = getSyncAction(settings.storefrontTheme, nextState, changed, shouldPersist);
+
+  // ADR_0022 follow-up: telemetry for unsupported themes. Emit a structured
+  // console.warn (caught by Sentry as a breadcrumb) when we first detect an
+  // unrecognized themeId. Only fires on real state transitions ('updated' /
+  // 'pending' / 'verified'), NOT on 'checked' (lastCheckedAt-only persist) or
+  // 'unchanged'. This keeps the signal high — one log per merchant per theme
+  // change rather than one per check — and tells us which themeIds to
+  // prioritize when writing the next adapter. The fields are non-sensitive
+  // (themeId, themeName, themeVersionId, reason) — no tokens, no merchant
+  // PII beyond the storeId we already log elsewhere.
+  if (
+    observedMetadata.adapterMatchedBy === 'none' &&
+    (action === 'updated' || action === 'pending' || action === 'verified')
+  ) {
+    console.warn('[storefront-theme-sync] generic_unknown theme observed', {
+      storeId,
+      themeId: observedMetadata.activeThemeId,
+      themeName: observedMetadata.activeThemeName,
+      themeVersionId: observedMetadata.activeThemeVersionId,
+      adapterSource: observedMetadata.adapterSource,
+      reason: options.reason,
+      action,
+    });
+  }
+
   return {
     storeId,
-    action: getSyncAction(settings.storefrontTheme, nextState, changed, shouldPersist),
+    action,
     syncStatus: nextState.syncStatus,
     persisted: shouldPersist,
     stable: nextState.stable,

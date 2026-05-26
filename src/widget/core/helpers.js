@@ -144,42 +144,82 @@ export var PARTIAL_STARS_CSS = `  /* ─── PARTIAL STARS (bireysel star + cl
      .renuvex-pr-rating-badge'de tanımlı (small'a denk gelmez — admin'de seçili size'a
      uyacak şekilde core/badge.js → ensureBadgeTokens runtime'da override eder).
      Tipografi reset (font-family:inherit / letter-spacing:normal /
-     text-transform:none) parent h2'den miras kaçışını keser. */
+     text-transform:none) parent h2'den miras kaçışını keser.
+
+     DEFENSIVE !important POLICY (2026-05-27 audit follow-up):
+       Badges stay in light DOM by design (ADR_0017: must inherit theme
+       typography). That means host-theme selectors CAN target our elements.
+       Loox-style 'all: revert' would break ADR_0017's typography inherit, so
+       we use surgical !important instead on layout-critical + link styling.
+       - LAYOUT props (display, align-items, line-height, font-size, color,
+         gaps, margins): !important so host themes cannot accidentally break
+         badge geometry with broad rules like '.some-class img{}' or
+         'a{line-height:1!important}'.
+       - TYPOGRAPHY (font-family): NO !important — must stay inheritable so
+         badge picks up theme font (ADR_0017 contract). letter-spacing /
+         text-transform: !important because they are reset values, not
+         inheritance hooks.
+       - LINK STATES (.--pdp variant is an <a>): explicit
+         text-decoration:none and color reset on :link/:visited/:hover/:focus/
+         :active. Host rules like 'a{text-decoration:underline}' and
+         'a:hover{color:red}' are extremely common; without this hardening the
+         badge link would flicker/underline in most merchant themes.
+       - STAR SIZING inside badge: !important so host 'img{width:100%}'-class
+         rules cannot blow up the SVG (we use SVG not img, but defensive belt). */
   .renuvex-pr-rating-badge{
     --renuvex-pr-badge-icon-size:16px;
     --renuvex-pr-badge-text-size:14px;
-    display:flex;
-    align-items:center;
-    line-height:1.3;
-    font-size:var(--renuvex-pr-badge-text-size);
-    font-weight:400;
-    color:#555;
+    display:flex !important;
+    align-items:center !important;
+    line-height:1.3 !important;
+    font-size:var(--renuvex-pr-badge-text-size) !important;
+    font-weight:400 !important;
+    color:#555 !important;
     font-family:inherit;
-    letter-spacing:normal;
-    text-transform:none;
+    letter-spacing:normal !important;
+    text-transform:none !important;
   }
   .renuvex-pr-rating-badge--pdp{
-    gap:5px;
-    margin-bottom:10px;
-    text-decoration:none;
-    cursor:pointer;
+    gap:5px !important;
+    margin-bottom:10px !important;
+    text-decoration:none !important;
+    cursor:pointer !important;
+  }
+  /* PDP badge is an <a>. Host themes frequently style <a> with underline,
+     color overrides, and hover/visited rules; defeat all of them so the
+     badge stays visually consistent across themes. */
+  .renuvex-pr-rating-badge--pdp:link,
+  .renuvex-pr-rating-badge--pdp:visited,
+  .renuvex-pr-rating-badge--pdp:hover,
+  .renuvex-pr-rating-badge--pdp:focus,
+  .renuvex-pr-rating-badge--pdp:active{
+    text-decoration:none !important;
+    color:#555 !important;
   }
   .renuvex-pr-rating-badge--listing{
-    gap:3px;
-    margin-top:0;
-    margin-bottom:4px;
-    pointer-events:none;
+    gap:3px !important;
+    margin-top:0 !important;
+    margin-bottom:4px !important;
+    pointer-events:none !important;
   }
   /* Alignment via data-attr (Loox-style data-alignment) — replaces per-mount
      inline justify-content style on the badge. */
-  .renuvex-pr-rating-badge[data-renuvex-align="left"]{justify-content:flex-start;}
-  .renuvex-pr-rating-badge[data-renuvex-align="center"]{justify-content:center;}
-  .renuvex-pr-rating-badge[data-renuvex-align="right"]{justify-content:flex-end;}
+  .renuvex-pr-rating-badge[data-renuvex-align="left"]{justify-content:flex-start !important;}
+  .renuvex-pr-rating-badge[data-renuvex-align="center"]{justify-content:center !important;}
+  .renuvex-pr-rating-badge[data-renuvex-align="right"]{justify-content:flex-end !important;}
   /* Badge scope'undaki yıldızlar variable'dan boyut alır; dışarıdaki .renuvex-pr-star
-     (summary, modal vs.) ayrı kalır — selector specificity ile çakışmaz. */
+     (summary, modal vs.) ayrı kalır — selector specificity ile çakışmaz.
+     !important here defeats any host rule targeting badge SVG / star elements. */
   .renuvex-pr-rating-badge .renuvex-pr-star{
-    width:var(--renuvex-pr-badge-icon-size);
-    height:var(--renuvex-pr-badge-icon-size);
+    width:var(--renuvex-pr-badge-icon-size) !important;
+    height:var(--renuvex-pr-badge-icon-size) !important;
+  }
+  .renuvex-pr-rating-badge .renuvex-pr-star > svg,
+  .renuvex-pr-rating-badge .renuvex-pr-star-svg{
+    width:100% !important;
+    height:100% !important;
+    max-width:none !important;
+    max-height:none !important;
   }`;
 
 export function formatDate(iso) {
