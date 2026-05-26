@@ -54,12 +54,15 @@ export function ensureBadgeTokens(sizes, mobileSizes) {
   el.textContent = desktopRule + mobileRule;
 }
 
-// Listing badge yıldızlarının (.renuvex-pr-star / .renuvex-pr-stars-partial) CSS'ini bir kez
-// enjekte eder. PDP review render'ı bu CSS'i #renuvex-pr-styles ile sağlar; ama soğuk
-// listing / home / category girişinde PDP yolu hiç çalışmaz. Badge factory'si
-// kendi stilini garanti eder — sayfa tipinden ve render.js'ten bağımsız.
-// İdempotent; #renuvex-pr-styles ile yan yana sorunsuz (kurallar birebir aynı kaynaktan).
-function ensureBadgeStyles() {
+// Badge yıldızlarının (.renuvex-pr-star / .renuvex-pr-stars-partial) CSS'ini bir
+// kez head'e enjekte eder. ADR_0021 (Shadow DOM isolation) sonrası CLASSIC_CSS
+// artık head'e değil review section'ın shadow root'una gidiyor — yani PDP
+// review render'ı badge CSS'ini head'e SAĞLAMIYOR. Her badge yüzeyi (PDP
+// rating, listing, ileride carousel/popup/modal) bu fonksiyonu kendisi
+// çağırmak zorunda; aksi halde soğuk PDP girişinde (kategori sayfasından
+// geçmeden) PARTIAL_STARS_CSS hiç head'e gelmez ve yıldızlar boyutsuz patlar.
+// İdempotent. Idle-time tekrar çağrı performans cezası taşımaz.
+export function ensureBadgeStyles() {
   if (document.getElementById('renuvex-pr-badge-styles')) return;
   var el = document.createElement('style');
   el.id = 'renuvex-pr-badge-styles';

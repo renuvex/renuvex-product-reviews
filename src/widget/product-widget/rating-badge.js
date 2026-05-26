@@ -6,7 +6,7 @@ import { partialStarsHTML, buildRatingA11yLabel } from '../core/helpers.js';
 // aynı SIZE_MAP'i kullanır; merchant'ın badge.size seçimi her iki yüzeye uygulanır.
 // PR-3: sizing artık CSS variable üzerinden akıyor; ensureBadgeTokens scope'lu
 // `<style>` etiketine yazar, .renuvex-pr-rating-badge .renuvex-pr-star CSS'i değişkenden okur.
-import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
+import { SIZE_MAP, ensureBadgeTokens, ensureBadgeStyles } from '../core/badge.js';
 import { probeWidgetVisibility, reportWidgetHealth, watchOneTimeRemoval } from '../core/health.js';
 import { createOwnedSlot, removeOwnedSlots, setSlotContext } from '../core/slot.js';
 import { getAfterElementMountPoint, placeOwnedSlot, watchOwnedSlotPosition } from '../core/slot-position.js';
@@ -53,6 +53,12 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   // Badge widget devre dışıysa hiç inject etme
   if (badgeSettings && badgeSettings.enabled === false) return;
+
+  // PARTIAL_STARS_CSS'i head'e garanti et. ADR_0021 sonrası CLASSIC_CSS shadow
+  // root'a taşındı; soğuk PDP girişinde (kategori sayfası olmadan) bu CSS
+  // hiçbir başka yoldan head'e gelmiyor → badge yıldızları boyutsuz patlar.
+  // Idempotent; her render'da güvenle çağrılabilir.
+  ensureBadgeStyles();
 
   // JSON-LD structured data — Google rich snippet (badge devre dışı olsa bile render edilmeli,
   // ama burada zaten enabled !== false yolundayız)

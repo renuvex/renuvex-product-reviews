@@ -121,6 +121,21 @@ Inside an open shadow root, `document.activeElement` returns the *host*, not the
 ## Verification
 Pre-commit verification (see plan file `tamam-faka-bu-commit-greedy-axolotl.md` for the full checklist) — `pnpm build:widget`, `pnpm dev`, load the fixture via MCP browser tools, assert thumbnail size + shadow isolation + lightbox/wizard focus-trap parity, then `pnpm lint`.
 
+## Follow-up: PDP badge regression fix (2026-05-26)
+The initial migration broke an implicit contract that pre-migration code carried in `core/badge.js`'s comment:
+
+> "PDP review render'ı bu CSS'i #renuvex-pr-styles ile sağlar; … Badge factory'si kendi stilini garanti eder — sayfa tipinden ve render.js'ten bağımsız."
+
+Pre-migration, `render.js:348` did `injectStyles('#111111', CLASSIC_CSS + …)`, and `CLASSIC_CSS` embeds `${PARTIAL_STARS_CSS}` (via the styles.js template literal at the position formerly noted as line 89). That single call put every badge sizing rule (`.renuvex-pr-rating-badge .renuvex-pr-star { width:var(--renuvex-pr-badge-icon-size); height:… }` plus the SVG `.renuvex-pr-star-svg { width:100%; height:100% }`) into the document head, where the light-DOM PDP rating badge needed them.
+
+This ADR's migration moved `CLASSIC_CSS` into the review section's shadow root. Light-DOM `<style>` rules can't cross into shadow, but the inverse here was the issue: the rules that ONLY ever existed in head via the review render were no longer there, and the PDP badge (still light DOM by design) lost its sizing rules. `ensureBadgeStyles()` already existed in `core/badge.js` but was internal and called only by the listing-badge factory (`createBadgeEl` / `createBadgePlaceholderEl`). Cold PDP entry (direct URL, no preceding category/listing visit) never triggered it → PDP rating badge stars rendered unsized (~393×393 px, filling their inline-flow box).
+
+Confirmed via MCP on `https://dev-mertcopper.ikas.shop/premium-shortsg` (no query params): shadow root healthy (3 children, 57 KB styles, bar stars 22 px), badge tokens style `#renuvex-pr-badge-tokens` present in head (16 px var), but no head `<style>` containing `.renuvex-pr-rating-badge .renuvex-pr-star` rules. The same URL with `?Color=Black&Size=S` reached via the category page worked because listing-badge `createBadgeEl` had already called `ensureBadgeStyles()` in the prior page.
+
+**Fix:** `ensureBadgeStyles` is now exported from `core/badge.js` and called from `product-widget/rating-badge.js` at the top of `injectRatingBadge`, mirroring the listing path. Idempotent; no double-inject. The function's header comment is also updated to record that the old "PDP review render guarantees this CSS" assumption is dead — every badge surface (PDP, listing, future carousel/popup/modal) must call `ensureBadgeStyles()` itself.
+
+Lesson recorded so we don't repeat it: when isolating something into Shadow DOM, audit which light-DOM consumers were depending on the previously-leaking head injection. The two are not symmetric: shadow rules can't reach light DOM, AND light DOM loses any rules the shadow injection used to also put in head as a side effect.
+
 ## Related Source Files
 - [src/widget/core/shadow.js](src/widget/core/shadow.js)
 - [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
