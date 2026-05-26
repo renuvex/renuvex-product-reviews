@@ -10,7 +10,7 @@ import { SIZE_MAP, ensureBadgeTokens, ensureBadgeStyles } from '../core/badge.js
 import { probeWidgetVisibility, reportWidgetHealth, watchOneTimeRemoval } from '../core/health.js';
 import { createOwnedSlot, removeOwnedSlots, setSlotContext } from '../core/slot.js';
 import { getAfterElementMountPoint, placeOwnedSlot, watchOwnedSlotPosition } from '../core/slot-position.js';
-import { getThemeAdapter } from '../themes/current-adapter.js';
+import { getThemeAdapter, isAutoPlacementEnabled } from '../themes/current-adapter.js';
 
 var ratingBadgeRemovalObserver = null;
 var ratingBadgePositionObserver = null;
@@ -43,11 +43,22 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
     ratingBadgePositionObserver = null;
   }
 
-  // Önceki üründen kalan eski badge'i temizle
+  // Önceki üründen kalan eski badge'i temizle. Cleanup, ADR_0022 gate'inden
+  // ÖNCE çalışır: bir önceki sayfada placement açıkken inject olmuş eski bir
+  // badge varsa, gate kapanmış olsa bile temizlenmesi gerek.
   removeOwnedSlots('product-title-rating');
   // Static id kaldırıldı (duplicate-id riski) — class ile fallback temizlik.
   var oldBadge = document.querySelector('.renuvex-pr-rating-badge--pdp');
   if (oldBadge) oldBadge.remove();
+
+  // ADR_0022 — Placement allowlist. Unknown themes (or any state where
+  // `adapterMatchedBy !== 'theme_id'`) silently skip auto-placement. The
+  // explicit-mount review section continues to render via its own opt-in
+  // path; only the heuristic PDP/listing/modal badges are gated here.
+  // Skip after cleanup but BEFORE any DOM probe / style injection / JSON-LD
+  // write so "placement off" means "no badge surface at all", matching the
+  // contract documented in ADR_0022.
+  if (!isAutoPlacementEnabled()) return;
 
   if (!avgRating) return;
 

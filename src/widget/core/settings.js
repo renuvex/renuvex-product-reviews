@@ -7,7 +7,7 @@
 import { PUBLIC_API_KEY, API_BASE } from './config.js';
 import { cacheGet, cacheSet } from './cache.js';
 import { fetchWithTimeout } from './fetch.js';
-import { setThemeAdapterKey } from '../themes/current-adapter.js';
+import { setAutoPlacementEnabled, setReviewsMountEnabled, setThemeAdapterKey } from '../themes/current-adapter.js';
 import { getPreviewSettingsStorage } from './namespace.js';
 
 var SETTINGS_CACHE_KEY = 'renuvex_pr_settings_' + PUBLIC_API_KEY;
@@ -23,6 +23,13 @@ var inflightSettings = null;
 function applyRuntimeSettings(settings) {
   var runtime = settings && settings.runtime ? settings.runtime : {};
   setThemeAdapterKey(runtime.themeAdapterKey);
+  // ADR_0022 — Read explicit booleans from the runtime payload. The server
+  // sends both flags; preview mode also passes them through. If a stale
+  // server somehow omits them, the setters keep the fail-closed defaults
+  // (false), which is the safer regression than accidentally enabling
+  // auto-placement on an unsupported theme.
+  setAutoPlacementEnabled(runtime.autoPlacementEnabled === true);
+  setReviewsMountEnabled(runtime.reviewsMountEnabled === true);
   return settings;
 }
 

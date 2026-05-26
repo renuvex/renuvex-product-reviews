@@ -14,6 +14,7 @@ import { probeWidgetVisibility } from '../core/health.js';
 import { attachShadowHost, injectShadowStyles, getOrCreateShadowContent, HOST_RESET_CSS } from '../core/shadow.js';
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot } from '../icons/star-sprite.js';
+import { isReviewsMountEnabled } from '../themes/current-adapter.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -88,7 +89,15 @@ function buildDisabledStateEl(radius) {
 // auto-create — if the mount is absent, the review section simply does not
 // render. (The PDP rating badge is a separate "badge" feature, injected
 // independently of this mount.)
+//
+// ADR_0022 — Defense-in-depth gate. Even if the explicit mount exists, the
+// runtime `reviewsMountEnabled` flag can be flipped off server-side to
+// kill-switch the review section per merchant or per theme without a widget
+// redeploy. Today the flag is true whenever any active-theme metadata is
+// known (`buildPublicThemeRuntime`); the FALLBACK_RUNTIME path keeps it
+// false, so the no-metadata case never renders.
 function findReviewsMount() {
+  if (!isReviewsMountEnabled()) return null;
   return document.querySelector('[data-renuvex-widget="reviews"]');
 }
 

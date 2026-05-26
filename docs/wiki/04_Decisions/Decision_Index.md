@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-26
+updated: 2026-05-27
 tags:
   - adr
   - decisions
@@ -39,6 +39,7 @@ related:
 | [[ADR_0019_Icon_Sprite_Rendering]] | Read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` (geometry defined once) instead of inlining `<path>` per star; adds Yotpo-style sr-only/`aria-labelledby` a11y; refines ADR_0017 PDP-badge contract (link role, no static id, `data-renuvex-align`). | Accepted |
 | [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] | Canonical identity is now Renuvex Product Reviews (`product-reviews`, `renuvex-pr`, `renuvex-product-reviews-widget`); because there are no real merchant installs yet, the hard namespace cleanup removed legacy public aliases from source and active generated assets. | Accepted |
 | [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] | Three self-contained review surfaces (review section, photo lightbox, review-form wizard) render inside their own open Shadow DOM roots; CSS rules are injected per root, the global icon sprite is mirrored into each root via a MutationObserver, `:host` re-admits inherited typography for Ozy parity. Closes the CSS isolation gap from [[Ikas_Theme_Limitations]]. Badges and JSON-LD stay in light DOM. Single commit, git revert is the safety net. | Accepted |
+| [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] | Public runtime gains `autoPlacementEnabled` (gates PDP / listing / modal badges; true only when `adapterMatchedBy === 'theme_id'` AND `themeAdapterKey !== 'generic'`) and `reviewsMountEnabled` (kill-switch for the explicit-mount review section; true whenever active-theme metadata exists). `/api/public/settings` adds a third sync trigger: stale `lastCheckedAt` (>30 min) fires `syncStorefrontThemeForToken(..., 'lazy_storefront')` via Next.js `after()`. Closes the placement axis [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] deferred; theme-id cross-merchant stability empirically verified on 2026-05-27. ikas has no `store/theme/*` webhook scope (introspected). | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -56,6 +57,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-27: Added [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] — `PublicThemeRuntime` carries two new flags (`autoPlacementEnabled`, `reviewsMountEnabled`); badge inject paths (`rating-badge.js`, `listing-badges/inject.js`) early-return when auto-placement is gated off; `render.js findReviewsMount` adds a defense-in-depth check against the reviews flag. `/api/public/settings` adds Next.js `after()` lazy-resync trigger (30-minute stale threshold, `reason: 'lazy_storefront'`, debounced via `persistUnchangedCheck: true`). `AuthTokenManager.getByMerchantId` added to support per-merchant token lookup from the public endpoint. Empirical cross-merchant `themeId` stability verified in-session (Ares `98c72ebc...` identical across two independent merchants; theme version upgrade only flips `activeThemeVersionId`). ikas Admin API introspection confirms there is no `store/theme/*` webhook scope — lazy resync is the freshness mechanism until ikas adds one.
 - 2026-05-26: Added [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] — review section, photo lightbox, and review-form wizard now render inside their own open Shadow DOM roots (host: existing `#renuvex-reviews` light element + two new body-level overlay hosts). Style rules are injected per root via a new `core/shadow.js` (`HOST_RESET_CSS + …`); custom properties on `:root` inherit in; SVG `<use>` icon sprite is mirrored into each shadow root via a MutationObserver on the global sprite container (`registerSpriteRoot` / `unregisterSpriteRoot`). Focus traps use `getActiveElementWithin`; `restoreFocus` switched to `el.isConnected`. Wizard's `document.querySelector('h1')` fallback dropped; dead `renderStars`/`ensureStarStyles`/`STAR_COLOR` removed from `core/helpers.js`. Closes the CSS isolation gap recorded on 2026-05-25 in [[Ikas_Theme_Limitations]]; placement allowlist remains pending in [[Open_Questions]]. Dev fixture committed at `public/widget-runtime/__fixtures__/ozy-hostile.html`.
 - 2026-05-25: Updated [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] - hard cleanup is now the current contract. Source and active generated widget assets use only `renuvex-pr` / `renuvex_pr`; legacy namespace terms are historical notes only.
 - 2026-05-24: Added [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] - canonical app identity moved to Renuvex Product Reviews. The first rollout was expand-only; it was superseded by the 2026-05-25 hard cleanup because there are no real merchant installs yet.

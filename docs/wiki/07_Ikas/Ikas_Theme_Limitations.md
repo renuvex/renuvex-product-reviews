@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-26
-last_verified: 2026-05-26
+updated: 2026-05-27
+last_verified: 2026-05-27
 confidence: high
 tags:
   - ikas
@@ -74,41 +74,54 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - No structured theme widget surface or stable DOM mount point from ikas is confirmed today.
 - Multi-storefront-per-merchant settings are merchant-global today; ikas allows per-storefront variants. See [[Open_Questions]].
 - Theme variants in build: `pnpm build:widget --theme=new-theme` exists, but runtime selection of which bundle to load is unclear.
-- `generic_unknown` is an adapter selector, not a visibility policy: unknown themes still render every widget surface (verified 2026-05-25). No `reviewsMountEnabled` / `autoPlacementEnabled` gate exists today.
-- ~~The review section is not isolated against host-theme `!important` CSS~~ — **RESOLVED 2026-05-26** by [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]. The review section, photo lightbox, and review-form wizard now render inside their own open Shadow DOM roots; selector-targeted host rules (the `img{width:100%!important}` class of breakage) cannot cross the boundary. Theme typography still flows in via `:host { …: inherit }` so supported-theme parity is preserved. This is orthogonal to the still-pending placement allowlist below.
+- ~~`generic_unknown` is an adapter selector, not a visibility policy~~ — **RESOLVED 2026-05-27** by [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]. The public runtime now carries `autoPlacementEnabled` (gates badges; false unless `adapterMatchedBy === 'theme_id'` AND adapter key is non-generic) and `reviewsMountEnabled` (gates the explicit-mount review section; true whenever active-theme metadata exists). Unknown themes silently skip auto-placement.
+- ~~The review section is not isolated against host-theme `!important` CSS~~ — **RESOLVED 2026-05-26** by [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]. The review section, photo lightbox, and review-form wizard now render inside their own open Shadow DOM roots; selector-targeted host rules (the `img{width:100%!important}` class of breakage) cannot cross the boundary. Theme typography still flows in via `:host { …: inherit }` so supported-theme parity is preserved.
 
-## Unknown-theme behavior and CSS isolation (verified 2026-05-25)
-Live testing across three themes (Ozy / Mine / Siva) confirmed the server-side theme
-identity tracking is correct, but surfaced two gaps on the widget runtime side.
+## ikas Webhook Scopes (introspected 2026-05-27)
+The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
+- `store/order/created`, `store/order/updated`
+- `store/product/created`, `store/product/updated`
+- `store/customer/created`, `store/customer/updated`
+- `store/customerFavoriteProducts/created`, `store/customerFavoriteProducts/updated`
+- `store/stock/created`, `store/stock/updated`
 
+**There is no `store/theme/*` (or storefront/script) webhook scope.** The Admin API exposes 55 total operations; storefront theme events are not among them. The merchant-facing "Bildirim Adresi" panel covers billing notifications and the app-uninstall notification only — not theme changes. Shopify's equivalent `THEMES_PUBLISH` webhook does not have an ikas counterpart. A feature request to ikas is parallel work; in the meantime [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] uses the public `/api/public/settings` endpoint as a third sync trigger (`reason: 'lazy_storefront'`) to keep `StoreSettings.storefrontTheme` fresh between dashboard opens / daily cron without merchant action.
+
+## Unknown-theme behavior and CSS isolation (verified 2026-05-25 → 2026-05-27)
 - **Identity tracking is correct.** Adapter selection follows the stable `themeId`, not the
-  editable theme name. Renaming a theme (`Siva` -> `Siva test`) did not change the resolved
-  adapter because `themeId` was unchanged. Switching to a brand-new theme writes the new
+  editable theme name. Renames (`Siva` → `Siva test` on 2026-05-25, `Ares` → `dsfdf` on
+  2026-05-27) did not change the resolved adapter because `themeId` and the rest of the
+  `metadataIdentity` fields were unchanged. Switching to a brand-new theme writes the new
   metadata as `pending_verification` and keeps the previous stable adapter until the
   verification window promotes it.
-- **`generic_unknown` does not hide anything today.** On unknown themes the widget still
-  renders the PDP rating badge, listing badges, and the review section. The public runtime
-  only carries `themeAdapterKey/source` (`buildPublicThemeRuntime` in
-  [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts)); the widget consumes only
-  `themeAdapterKey` in [src/widget/core/settings.js](src/widget/core/settings.js). There is
-  no visibility/placement gate.
-- **Explicit mount beats heuristic badges.** The review section mounted via
-  `data-renuvex-widget="reviews"` rendered correctly on Siva. PDP/listing badges rely on DOM
-  heuristics (title-finder / card discovery) and are riskier on unknown themes.
-- **Host CSS can break the review section.** ~~The "Mine" theme
-  (`themeId a7644737-8367-47f2-b4ab-dcfb2fa7d5f6`) ships `.hOHcRx img { width:100% !important }`,
-  which overrides `.renuvex-pr-img`. …thumbnails blow up to the container width (~1200px).~~
-  **RESOLVED 2026-05-26 by [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]:** the review
-  section now renders inside an open Shadow DOM root; selector-targeted host rules (any
-  `img{…}` / `button{…}` / `input{…}` / class/id selector) cannot match elements inside the
-  shadow tree, so the Mine breakage and any equivalent on future themes is structurally
-  impossible. The fix covers the photo lightbox and review-form wizard too; badges stay in
-  light DOM (intentional, per [[ADR_0017_Badge_Architecture]]).
-
-Proposed follow-up (not yet implemented): a two-layer visibility policy — keep the
-explicit-mount review section on unknown themes (with CSS hardening) but fail-closed the
-auto-placed badges until the active `themeId` is allowlisted. See [[Open_Questions]] and
-[[Theme_Adapter_Playbook]].
+- **`themeId` is a cross-merchant catalog id.** 2026-05-27 cross-merchant test — Ares on two
+  independent merchants returned identical `activeThemeId: 98c72ebc-aa2f-4fb7-9b36-3570e94394da`
+  and identical `activeThemeVersionId: fcfdf2b5-2894-4aac-94ce-5e09603fe88b`. Per-merchant
+  fields `activeStorefrontThemeId` and `mainStorefrontThemeId` differed as expected. The Ozy
+  entry in `THEME_ADAPTER_BY_THEME_ID` resolved cleanly on the second merchant install with
+  `adapterSource: 'auto'` + `adapterMatchedBy: 'theme_id'`, confirming the lookup works
+  across stores. A single allowlist entry per supported theme covers every merchant using
+  that theme.
+- **Theme version upgrades preserve `activeThemeId`.** 2026-05-27 controlled test — upgrading
+  Ares on Merchant A flipped only `activeThemeVersionId` (`3ba12649...` → `fcfdf2b5...`);
+  `activeThemeId`, `activeStorefrontThemeId`, and `mainStorefrontThemeId` all stable. The
+  rename tracer ("dsfdf") survived the upgrade, confirming ikas did not replace the record.
+- **`generic_unknown` now hides auto-placement** (resolved 2026-05-27 by ADR_0022). PDP / listing /
+  modal badges respect `runtime.autoPlacementEnabled`. The explicit-mount review section is
+  unaffected — it continues to render on any theme via `data-renuvex-widget="reviews"` plus
+  the shadow-isolation guarantee from ADR_0021.
+- **Lazy resync replaces missing webhook.** `/api/public/settings` now reads the persisted
+  `lastCheckedAt`; when stale (>30 min) it fires `syncStorefrontThemeForToken(..., 'lazy_storefront')`
+  via Next.js `after()` so the storefront visitor sees no added latency. Per-merchant
+  debounce is implicit: `persistUnchangedCheck: true` advances `lastCheckedAt` on every
+  check, so subsequent requests within the threshold skip the trigger automatically.
+  The 30-minute threshold is v1; tuning signals and playbook captured in
+  [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] "Future Tuning Signals".
+- **First visitor after a theme change** still sees the stale adapter for one storefront
+  cache cycle (`s-maxage=60, stale-while-revalidate=300`). Under ADR_0022's fail-closed
+  default this manifests as "missing badges" on a theme that was just switched off the
+  allowlist, never as "badge in the wrong place" — a strictly safer regression than the
+  pre-ADR generic-adapter heuristic behavior.
 
 ## Workarounds We Use
 - MutationObserver in [src/widget/observer.js](src/widget/observer.js) to handle SPA-style navigation.

@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
-last_verified: 2026-05-25
+updated: 2026-05-27
+last_verified: 2026-05-27
 confidence: medium
 tags:
   - questions
@@ -55,19 +55,26 @@ planned ikas Studio `data-*` attributes are not broad enough to rely on today.
 Detail: [[Theme_Adapter_Playbook]], [[Ikas_Theme_Limitations]],
 [[Ikas_Storefront_Script_Capabilities]].
 
-## Unknown-theme widget visibility policy (proposed 2026-05-25)
-Live testing (Ozy/Mine/Siva) showed `generic_unknown` themes still render every widget
-surface, and the review section is not isolated from host-theme CSS (Mine's
-`.hOHcRx img { width:100% !important }` broke `.renuvex-pr-img`). Proposed direction — a
-two-layer policy instead of one fail-closed switch:
-- `reviewsMountEnabled`: render the review section when an explicit
-  `data-renuvex-widget="reviews"` mount exists (robust on unknown themes), plus CSS hardening.
-- `autoPlacementEnabled`: gate DOM-heuristic surfaces (PDP badge, listing badge, modal badge)
-  to allowlisted theme ids; default `false` on unknown/generic themes.
-Plus an admin warning for unsupported/generic themes. **Not yet implemented** — the public
-runtime carries no such flags today (`PublicThemeRuntime` has only `themeAdapterKey/source`).
-Decide whether to formalize as an ADR and implement. Detail: [[Theme_Adapter_Playbook]],
-[[Ikas_Theme_Limitations]].
+## Unknown-theme widget visibility policy — RESOLVED 2026-05-27
+**Resolved by [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].** The two-layer policy
+shipped exactly as proposed: `autoPlacementEnabled` gates PDP / listing / modal badges
+on `adapterMatchedBy === 'theme_id'` AND non-generic adapter; `reviewsMountEnabled`
+acts as a backend kill-switch for the explicit-mount review section (true whenever
+active-theme metadata exists). Both flags are emitted by `buildPublicThemeRuntime`,
+consumed by the widget through `themes/current-adapter.js`, and gating points live in
+`rating-badge.js`, `listing-badges/inject.js`, and `render.js findReviewsMount`. The
+admin warning UI for unsupported themes is **deferred** as a follow-up — the runtime
+signal is already in place (`adapterSource === 'generic_unknown'`), it just needs a
+dashboard surface.
+
+## ikas storefront theme webhook (parallel feature request)
+ikas Admin API has no `store/theme/*` webhook scope (introspected 2026-05-27 — only 10
+scopes exist, all under `store/order/*`, `store/product/*`, `store/customer/*`,
+`store/customerFavoriteProducts/*`, `store/stock/*`). Shopify offers `THEMES_PUBLISH`
+which the global review-app ecosystem keys off; ikas's gap forced [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]
+to use a pull-model lazy resync instead. Open a feature request to ikas; if a theme
+webhook ships, layer it as a third sync trigger (`reason: 'webhook'`) alongside the
+existing lazy resync path.
 
 ## `VIEW_LISTING` undocumented ikas event — ikas-blocked (audit finding O6)
 `core/storefront-context.js` depends on the `VIEW_LISTING` Storefront Event for

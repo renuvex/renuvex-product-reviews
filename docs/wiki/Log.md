@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-25
-last_verified: 2026-05-25
+updated: 2026-05-27
+last_verified: 2026-05-27
 confidence: high
 tags:
   - log
@@ -19,6 +19,13 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-27 - feat | Placement allowlist + storefront-driven lazy theme resync (ADR_0022)
+- Summary: Public runtime gains `autoPlacementEnabled` (gates PDP / listing / modal badges; true only when `adapterMatchedBy === 'theme_id'` AND `themeAdapterKey !== 'generic'`) and `reviewsMountEnabled` (kill-switch for the explicit-mount review section; true whenever active-theme metadata exists). `/api/public/settings` adds a third sync trigger: stale `lastCheckedAt` (>30 min) fires `syncStorefrontThemeForToken(..., 'lazy_storefront')` via Next.js `after()`, debounced implicitly by `persistUnchangedCheck: true`. `AuthTokenManager.getByMerchantId` added for per-merchant token lookup from the public endpoint.
+- Reason: ADR_0021 closed the rendering-isolation axis but explicitly left placement open. Today the widget attempts auto-placement on every theme via the generic adapter, risking visual breakage on unsupported themes. In-session cross-merchant test on 2026-05-27 empirically confirmed `activeThemeId` is a global catalog id (Ares identical across two independent merchants), theme version upgrades preserve `activeThemeId` (only `activeThemeVersionId` flips), and renames never touch any id (`metadataIdentity` excludes `activeThemeName` by design). ikas Admin API has no `store/theme/*` webhook scope (introspected 2026-05-27 — only 10 scopes exist, none storefront/theme related), so a push-model freshness mechanism is not available; lazy resync is the pull-model equivalent that other major e-commerce platforms ship.
+- Key source changes: `src/lib/storefront-theme.ts` adds the two flags to `PublicThemeRuntime`, derives them in `buildPublicThemeRuntime`, updates `FALLBACK_RUNTIME`, and adds `'lazy_storefront'` to `StorefrontThemeSyncReason`. `src/app/api/public/settings/route.ts` reads `parseStorefrontThemeState(...).lastCheckedAt`, fires `after(async () => syncStorefrontThemeForToken(...))` when stale. `src/app/api/preview/settings/route.ts` includes both flags in its hardcoded preview payload (both `true`). `src/models/auth-token/manager.ts` adds `getByMerchantId`. `src/widget/themes/current-adapter.js` adds `setAutoPlacementEnabled`/`isAutoPlacementEnabled`/`setReviewsMountEnabled`/`isReviewsMountEnabled` with fail-closed defaults. `src/widget/core/settings.js applyRuntimeSettings` wires the new setters. `src/widget/product-widget/rating-badge.js injectRatingBadge` early-returns after cleanup when `!isAutoPlacementEnabled()`. `src/widget/listing-badges/inject.js reserveBadgeSlots`/`injectBadges` early-return on the same flag. `src/widget/product-widget/render.js findReviewsMount` adds a defense-in-depth `isReviewsMountEnabled()` check.
+- Verification: `pnpm build:widget`, `pnpm exec tsc --noEmit`, `pnpm lint`, `node scripts/wiki-audit.mjs --changed-source-check` all expected to pass. Cross-merchant `themeId` empirical test captured in [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] Context section. Manual post-deploy smoke test plan: Ozy merchant → `autoPlacementEnabled: true`, badges render; Ares (or any unknown) → `autoPlacementEnabled: false`, no badges, opt-in review section still works. Switch Ozy → Ares without opening Renuvex; next storefront visit should trigger lazy resync (look for `reason: 'lazy_storefront'` in logs).
+- Updated wiki: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] (new), [[Decision_Index]], [[Theme_Adapter_Playbook]] (Ares + Nile rows, key takeaway block, new theme checklist), [[Ikas_Theme_Limitations]] (webhook scope list, two-layer policy resolved, lazy resync trigger), [[Open_Questions]] (unknown-theme visibility policy → resolved; ikas webhook feature request opened), [[Hot_Context]] (recent changes + risks), [[Log]].
 
 ## 2026-05-25 - refactor/docs | Clarify theme adapter boundary
 - Summary: Moved shared review widget CSS from `src/widget/themes/ozy/styles.js` to `src/widget/product-widget/styles.js`, left the Ozy styles file as a compatibility re-export / override placeholder, and added [[Theme_Adapter_Playbook]] with the Ozy selector spec and new-theme checklist.

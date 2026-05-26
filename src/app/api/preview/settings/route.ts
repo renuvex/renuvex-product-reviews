@@ -27,5 +27,16 @@ export async function GET() {
     },
   };
 
-  return withCors(NextResponse.json({ widgets, runtime: { themeAdapterKey: 'ozy', themeAdapterSource: 'legacy_fallback' } }));
+  // Preview iframe lives inside the Renuvex admin dashboard. There is no
+  // merchant theme to gate against; both ADR_0022 flags are forced ON so
+  // every surface renders against the preview fixture HTML.
+  return withCors(NextResponse.json({
+    widgets,
+    runtime: {
+      themeAdapterKey: 'ozy',
+      themeAdapterSource: 'legacy_fallback',
+      autoPlacementEnabled: true,
+      reviewsMountEnabled: true,
+    },
+  }));
 }

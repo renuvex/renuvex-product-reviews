@@ -4,11 +4,24 @@
 // /api/public/settings. ikas does not expose a runtime DOM mount-point contract,
 // so adapters only answer placement/context questions; visual rendering stays in
 // the shared badge/review components.
+//
+// ADR_0022 — Placement allowlist. The runtime also carries two boolean
+// gates (`autoPlacementEnabled`, `reviewsMountEnabled`) derived server-side
+// from the active theme's adapterMatchedBy. Badge inject paths and the
+// review-section mount consult these gates so unknown themes silently skip
+// auto-placement instead of guessing with the generic adapter.
 
 import { genericThemeAdapter } from './generic/adapter.js';
 import { ozyThemeAdapter } from './ozy/adapter.js';
 
 var activeThemeAdapterKey = 'ozy';
+
+// Defaults are intentionally fail-closed. The widget loads with both gates
+// OFF until settings.js applies the runtime payload from /api/public/settings.
+// If the settings fetch fails (404, network), the widget stays silent rather
+// than auto-placing badges with stale/unknown adapter data.
+var autoPlacementEnabled = false;
+var reviewsMountEnabled = false;
 
 var ADAPTER_DEFAULTS = {
   key: 'generic',
@@ -45,4 +58,22 @@ export function getThemeAdapterKey() {
 
 export function getThemeAdapter() {
   return Object.assign({}, ADAPTER_DEFAULTS, THEME_ADAPTERS[activeThemeAdapterKey] || ozyThemeAdapter);
+}
+
+// ADR_0022 setters/getters. Booleans only; settings.js coerces the runtime
+// payload to true/false before calling these.
+export function setAutoPlacementEnabled(value) {
+  autoPlacementEnabled = value === true;
+}
+
+export function isAutoPlacementEnabled() {
+  return autoPlacementEnabled;
+}
+
+export function setReviewsMountEnabled(value) {
+  reviewsMountEnabled = value === true;
+}
+
+export function isReviewsMountEnabled() {
+  return reviewsMountEnabled;
 }

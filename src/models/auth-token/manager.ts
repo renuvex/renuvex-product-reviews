@@ -34,6 +34,24 @@ export class AuthTokenManager {
   }
 
   /**
+   * Retrieve the most recently updated AuthToken for a given merchantId.
+   * `merchantId` is not unique in the schema (reinstalling the app creates a
+   * new `authorizedAppId` for the same merchant); callers that only know the
+   * merchant id (e.g. the public storefront settings endpoint, where the
+   * `publicApiKey` IS the merchantId) need this lookup to drive merchant-scoped
+   * background work like ADR_0022's lazy theme resync.
+   * @param merchantId - The ID of the merchant (storeId).
+   * @returns The latest AuthToken if any exists, otherwise undefined.
+   */
+  static async getByMerchantId(merchantId: string): Promise<AuthToken | undefined> {
+    const token = await prisma.authToken.findFirst({
+      where: { merchantId },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return token ? this.toModel(token) : undefined;
+  }
+
+  /**
    * Store a new AuthToken if it does not already exist.
    * @param token - The AuthToken to store.
    * @returns The stored AuthToken.

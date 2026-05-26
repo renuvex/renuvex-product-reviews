@@ -2,7 +2,7 @@
 
 import { extractSlug } from '../core/helpers.js';
 import { createBadgeEl, createBadgePlaceholderEl } from '../core/badge.js';
-import { getThemeAdapter } from '../themes/current-adapter.js';
+import { getThemeAdapter, isAutoPlacementEnabled } from '../themes/current-adapter.js';
 import { lastClickedSlug } from '../core/state.js';
 import { isSiblingMountEnabled } from '../core/rollout.js';
 import { probeWidgetVisibility, watchOneTimeRemoval } from '../core/health.js';
@@ -206,6 +206,10 @@ function reserveBadgeSlotOnLink(a, productName, currentSlug) {
 }
 
 export function reserveBadgeSlots(slugNameMap) {
+  // ADR_0022 — Listing badges are heuristic auto-placement; gate them on
+  // the placement allowlist. Skipping the placeholder reservation prevents
+  // any visual flicker on unsupported themes.
+  if (!isAutoPlacementEnabled()) return;
   var currentSlug = extractSlug(window.location.pathname);
   var links = collectListingLinks(getThemeAdapter());
 
@@ -340,6 +344,10 @@ function injectModalBadge(slugNameMap, ratings, iconPair) {
 }
 
 export function injectBadges(slugNameMap, ratings, iconPair) {
+  // ADR_0022 — Auto-placed listing badges + modal badge share the placement
+  // allowlist gate. On unknown themes the listing surface stays empty;
+  // explicit-mount review section is independent and unaffected.
+  if (!isAutoPlacementEnabled()) return;
   var adapter = getThemeAdapter();
   var currentSlug = extractSlug(window.location.pathname);
   var links = collectListingLinks(adapter).filter(isVisibleForBadge);
