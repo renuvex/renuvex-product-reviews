@@ -1,6 +1,6 @@
 // product-widget/render.js — Ana widget render fonksiyonu
 
-import { getFirstTrustedReviewImage, getTrustedReviewImages, injectStyles, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
+import { getFirstTrustedReviewImage, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
 import { fetchReviews, isReviewsFetchError } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
 import { injectRatingBadge } from './rating-badge.js';
@@ -11,6 +11,9 @@ import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js
 import { openWriteForm } from '../summary-layouts/shared/write-action.js';
 import { createOwnedSlot, setSlotContext } from '../core/slot.js';
 import { probeWidgetVisibility } from '../core/health.js';
+import { attachShadowHost, injectShadowStyles, getOrCreateShadowContent, HOST_RESET_CSS } from '../core/shadow.js';
+import { BASE_RESET_CSS } from '../shared/base-reset.js';
+import { registerSpriteRoot } from '../icons/star-sprite.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -34,6 +37,50 @@ function hexToRgba(hex, alpha) {
   if (!m) return 'rgba(0,0,0,' + alpha + ')';
   var r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
   return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+// Disabled-state placeholder (admin preview when settings.enabled === false).
+// Built via DOM (not an HTML string) so it can render inside the shadow root.
+function buildDisabledStateEl(radius) {
+  var box = document.createElement('div');
+  box.style.cssText =
+    'padding:40px 20px;margin-top:24px;text-align:center;color:#6e6d7a;font-family:Inter,sans-serif;' +
+    'border:1px dashed #e3e1e5;border-radius:' + radius + 'px;background:#fafafa;display:flex;' +
+    'flex-direction:column;align-items:center;justify-content:center;gap:8px;';
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', '32');
+  svg.setAttribute('height', '32');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.style.cssText = 'color:#6e6d7a;margin-bottom:4px;';
+  var path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24');
+  var line = document.createElementNS(NS, 'line');
+  line.setAttribute('x1', '1');
+  line.setAttribute('y1', '1');
+  line.setAttribute('x2', '23');
+  line.setAttribute('y2', '23');
+  svg.appendChild(path);
+  svg.appendChild(line);
+
+  var titleEl = document.createElement('div');
+  titleEl.style.cssText = 'font-weight:500;font-size:18px;color:#1a191a;letter-spacing:-0.01em;';
+  titleEl.textContent = 'Widget şu anda Pasif durumda';
+
+  var descEl = document.createElement('div');
+  descEl.style.cssText = 'font-size:16px;color:#6e6d7a;max-width:380px;line-height:1.5;';
+  descEl.textContent = 'Canlı mağazanızda müşterileriniz hiçbir yorum alanı görmeyecektir.';
+
+  box.appendChild(svg);
+  box.appendChild(titleEl);
+  box.appendChild(descEl);
+  return box;
 }
 
 // Review section mount is OPT-IN: it renders only where the merchant places
@@ -341,11 +388,9 @@ export async function render(productId, settings, reviewsData, productName, orde
 
     applyManualTheme(root, settings);
 
-    // injectStyles CSS'i enjekte eder; renk parametresi --renuvex-pr-color ve
-    // --renuvex-pr-color-light için kullanılır. Bu token'lar artık kullanılmıyor
-    // (tüm renkler spesifik var'lar üzerinden gidiyor), ama injectStyles
-    // hâlâ CSS <style> elementini oluşturup/güncelliyor.
-    injectStyles('#111111', CLASSIC_CSS + getLayoutsCSS() + getReviewLayoutsCSS());
+    // Review CSS is injected into the shadow root (see attachShadowHost below),
+    // not document.head — host-theme selector rules cannot cross that boundary.
+    // CSS custom properties set on document.documentElement still inherit in.
 
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
 
@@ -437,9 +482,21 @@ export async function render(productId, settings, reviewsData, productName, orde
     }
     if (container.parentNode !== reviewsSlot) reviewsSlot.appendChild(container);
 
+    // #renuvex-reviews stays in light DOM (badge scroll-to, health probe and the
+    // mutation observer reference it by id); all review content renders inside its
+    // shadow root so host-theme CSS cannot bleed in. CSS vars on documentElement
+    // still inherit across the boundary.
+    var sRoot = attachShadowHost(container);
+    var allCSS = HOST_RESET_CSS + BASE_RESET_CSS + CLASSIC_CSS + getLayoutsCSS() + getReviewLayoutsCSS();
+    injectShadowStyles(sRoot, allCSS);
+    // All review content lives inside a persistent wrapper so replaceChildren
+    // doesn't wipe the injected <style> or the sprite mirror, both of which
+    // stay as direct children of sRoot.
+    var contentEl = getOrCreateShadowContent(sRoot);
+
     if (settings.enabled === false) {
       container.style.minHeight = 'auto';
-      container.innerHTML = '<div style="padding: 40px 20px; margin-top: 24px; text-align: center; color: #6e6d7a; font-family: Inter, sans-serif; border: 1px dashed #e3e1e5; border-radius: ' + (settings.borderRadius !== undefined ? settings.borderRadius : 8) + 'px; background: #fafafa; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6e6d7a; margin-bottom: 4px;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg><div style="font-weight: 500; font-size: 18px; color: #1a191a; letter-spacing: -0.01em;">Widget şu anda Pasif durumda</div><div style="font-size: 16px; color: #6e6d7a; max-width: 380px; line-height: 1.5;">Canlı mağazanızda müşterileriniz hiçbir yorum alanı görmeyecektir.</div></div>';
+      contentEl.replaceChildren(buildDisabledStateEl(settings.borderRadius !== undefined ? settings.borderRadius : 8));
 
       setRenderInProgress(false);
       var p = pendingRender;
@@ -448,7 +505,10 @@ export async function render(productId, settings, reviewsData, productName, orde
       return;
     }
 
-    container.innerHTML = '<p class="renuvex-pr-state-msg renuvex-pr-state-loading">Yorumlar yükleniyor...</p>';
+    var loadingMsg = document.createElement('p');
+    loadingMsg.className = 'renuvex-pr-state-msg renuvex-pr-state-loading';
+    loadingMsg.textContent = 'Yorumlar yükleniyor...';
+    contentEl.replaceChildren(loadingMsg);
 
     try {
       var data = reviewsData || {};
@@ -456,10 +516,12 @@ export async function render(productId, settings, reviewsData, productName, orde
       var reviews = hasReviewsFetchError ? [] : ((data.data && data.data.reviews) || []);
       setLoadedLightboxReviews(reviews);
 
-      // Önceki listener'ları temizle — parentNode her zaman var (anchorEl.appendChild ile eklendi)
-      var fresh = container.cloneNode(false);
-      container.parentNode.replaceChild(fresh, container);
-      container = fresh;
+      // Önceki render içeriğini temizle. container (#renuvex-reviews) ışık DOM'da
+      // sabit kalır (badge scroll-to + health probe + observer ona bağlı); içerik
+      // ve listener'lar shadow wrapper'da yaşar — contentEl.replaceChildren
+      // sadece içeriği temizler, sRoot direct child'ları (style, sprite mirror)
+      // korunur. (cloneNode shadow root'u KOPYALAMAZ; host'u klonlamak izolasyonu bozardı.)
+      contentEl.replaceChildren();
 
       var widget = document.createElement('section');
       widget.id = 'renuvex-reviews-widget';
@@ -498,9 +560,12 @@ export async function render(productId, settings, reviewsData, productName, orde
           var retried = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
           await render(currentProductId, currentSettings, retried, currentProductName, currentOrderBy, 1, currentBadgeSettings);
         }));
-        container.appendChild(widget);
+        contentEl.appendChild(widget);
+        // Mirror the global icon sprite into the shadow root so <use href="#id">
+        // can resolve to cloned <symbol>s (sprite refs don't cross shadow).
+        registerSpriteRoot(sRoot);
         probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '', reason: 'fetch_error' }, function () {
-          return document.getElementById('renuvex-reviews-widget');
+          return sRoot.getElementById('renuvex-reviews-widget');
         });
         return;
       }
@@ -687,13 +752,18 @@ export async function render(productId, settings, reviewsData, productName, orde
         widget.appendChild(loadMoreBtn);
       }
 
-      container.appendChild(widget);
+      contentEl.appendChild(widget);
+      // Mirror the global icon sprite into the shadow root (see note above).
+      registerSpriteRoot(sRoot);
       probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '' }, function () {
-        return document.getElementById('renuvex-reviews-widget');
+        return sRoot.getElementById('renuvex-reviews-widget');
       });
     } catch (err) {
       console.error('[renuvex-pr] render error:', err);
-      container.innerHTML = '<p style="text-align:center;color:#dc2626;">Yorumlar yüklenirken bir hata oluştu.</p>';
+      var errMsg = document.createElement('p');
+      errMsg.style.cssText = 'text-align:center;color:#dc2626;';
+      errMsg.textContent = 'Yorumlar yüklenirken bir hata oluştu.';
+      if (contentEl) contentEl.replaceChildren(errMsg);
     }
   } finally {
     setRenderInProgress(false);

@@ -15,6 +15,10 @@ import { currentSettings } from '../core/state.js';
 import {
   RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
 } from '../core/namespace.js';
+import { createOverlayShadowHost, injectShadowStyles, getActiveElementWithin, HOST_RESET_CSS } from '../core/shadow.js';
+import { CLASSIC_CSS } from './styles.js';
+import { BASE_RESET_CSS } from '../shared/base-reset.js';
+import { registerSpriteRoot, unregisterSpriteRoot } from '../icons/star-sprite.js';
 
 function getValidImages(review) {
   return getTrustedReviewImages(review);
@@ -122,7 +126,9 @@ function getReturnFocusElement() {
 }
 
 function restoreFocus(el) {
-  if (!el || !document.contains(el) || typeof el.focus !== 'function') return;
+  // isConnected (not document.contains) so focus works for elements living
+  // inside a shadow root, which document.contains() reports as not present.
+  if (!el || !el.isConnected || typeof el.focus !== 'function') return;
   try {
     el.focus({ preventScroll: true });
   } catch (_) {
@@ -154,7 +160,7 @@ function focusFirstModalControl(container) {
   restoreFocus(target);
 }
 
-function trapModalFocus(e, container) {
+function trapModalFocus(e, container, root) {
   if (e.key !== 'Tab') return;
   var focusables = getFocusableElements(container);
   if (!focusables.length) {
@@ -165,7 +171,9 @@ function trapModalFocus(e, container) {
 
   var first = focusables[0];
   var last = focusables[focusables.length - 1];
-  var active = document.activeElement;
+  // Inside an open shadow root document.activeElement is the host, not the
+  // focused control; read the root's activeElement so trap math is correct.
+  var active = getActiveElementWithin(root);
 
   if (!container.contains(active)) {
     e.preventDefault();
@@ -216,11 +224,14 @@ function restoreModalHistoryEntry(entry) {
   } catch (_) {}
 }
 
-function closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl) {
+function closeModal(host, onKeyDown, onPopState, bodyScrollState, returnFocusEl) {
   restoreBodyScroll(bodyScrollState);
   document.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('popstate', onPopState);
-  if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  // Stop the sprite observer from tracking this root, then remove the host;
+  // removing the body-level shadow host disposes the overlay + its shadow root.
+  if (host && host.shadowRoot) unregisterSpriteRoot(host.shadowRoot);
+  if (host && host.parentNode) host.parentNode.removeChild(host);
   restoreFocus(returnFocusEl);
 }
 
@@ -541,6 +552,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   modal.className = 'renuvex-pr-modal';
 
   var closed = false;
+  var shadow = null;
   var returnFocusEl = getReturnFocusElement();
   var bodyScrollState = lockBodyScroll();
   var modalHistoryEntry = createModalHistoryEntry();
@@ -566,7 +578,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
     if (closed) return;
     closed = true;
     window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-    closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
+    closeModal(shadow && shadow.host, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
   }
 
   function onKeyDown(e) {
@@ -574,14 +586,14 @@ export function openReviewModal(r, clickedUrl, allReviews) {
       requestClose();
       return;
     }
-    trapModalFocus(e, overlay);
+    trapModalFocus(e, overlay, shadow && shadow.root);
   }
 
   function requestClose() {
     if (closed) return;
     closed = true;
     window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-    closeModal(overlay, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
+    closeModal(shadow && shadow.host, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
     restoreModalHistoryEntry(modalHistoryEntry);
   }
 
@@ -613,6 +625,13 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   modalWrap.appendChild(closeBtn);
   overlay.appendChild(modalWrap);
 
-  document.body.appendChild(overlay);
+  // Isolate the lightbox in its own body-level shadow root so host-theme CSS
+  // cannot reach it. Review CSS vars on documentElement still inherit in; the
+  // modal CSS rules (from CLASSIC_CSS) are injected into this shadow root.
+  shadow = createOverlayShadowHost();
+  injectShadowStyles(shadow.root, HOST_RESET_CSS + BASE_RESET_CSS + CLASSIC_CSS);
+  shadow.root.appendChild(overlay);
+  // Mirror the icon sprite so star/icon <use> refs resolve inside this shadow.
+  registerSpriteRoot(shadow.root);
   focusFirstModalControl(overlay);
 }

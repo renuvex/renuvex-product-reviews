@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
-last_verified: 2026-05-25
+updated: 2026-05-26
+last_verified: 2026-05-26
 confidence: high
 tags:
   - ikas
@@ -74,6 +74,41 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - No structured theme widget surface or stable DOM mount point from ikas is confirmed today.
 - Multi-storefront-per-merchant settings are merchant-global today; ikas allows per-storefront variants. See [[Open_Questions]].
 - Theme variants in build: `pnpm build:widget --theme=new-theme` exists, but runtime selection of which bundle to load is unclear.
+- `generic_unknown` is an adapter selector, not a visibility policy: unknown themes still render every widget surface (verified 2026-05-25). No `reviewsMountEnabled` / `autoPlacementEnabled` gate exists today.
+- ~~The review section is not isolated against host-theme `!important` CSS~~ — **RESOLVED 2026-05-26** by [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]. The review section, photo lightbox, and review-form wizard now render inside their own open Shadow DOM roots; selector-targeted host rules (the `img{width:100%!important}` class of breakage) cannot cross the boundary. Theme typography still flows in via `:host { …: inherit }` so supported-theme parity is preserved. This is orthogonal to the still-pending placement allowlist below.
+
+## Unknown-theme behavior and CSS isolation (verified 2026-05-25)
+Live testing across three themes (Ozy / Mine / Siva) confirmed the server-side theme
+identity tracking is correct, but surfaced two gaps on the widget runtime side.
+
+- **Identity tracking is correct.** Adapter selection follows the stable `themeId`, not the
+  editable theme name. Renaming a theme (`Siva` -> `Siva test`) did not change the resolved
+  adapter because `themeId` was unchanged. Switching to a brand-new theme writes the new
+  metadata as `pending_verification` and keeps the previous stable adapter until the
+  verification window promotes it.
+- **`generic_unknown` does not hide anything today.** On unknown themes the widget still
+  renders the PDP rating badge, listing badges, and the review section. The public runtime
+  only carries `themeAdapterKey/source` (`buildPublicThemeRuntime` in
+  [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts)); the widget consumes only
+  `themeAdapterKey` in [src/widget/core/settings.js](src/widget/core/settings.js). There is
+  no visibility/placement gate.
+- **Explicit mount beats heuristic badges.** The review section mounted via
+  `data-renuvex-widget="reviews"` rendered correctly on Siva. PDP/listing badges rely on DOM
+  heuristics (title-finder / card discovery) and are riskier on unknown themes.
+- **Host CSS can break the review section.** ~~The "Mine" theme
+  (`themeId a7644737-8367-47f2-b4ab-dcfb2fa7d5f6`) ships `.hOHcRx img { width:100% !important }`,
+  which overrides `.renuvex-pr-img`. …thumbnails blow up to the container width (~1200px).~~
+  **RESOLVED 2026-05-26 by [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]:** the review
+  section now renders inside an open Shadow DOM root; selector-targeted host rules (any
+  `img{…}` / `button{…}` / `input{…}` / class/id selector) cannot match elements inside the
+  shadow tree, so the Mine breakage and any equivalent on future themes is structurally
+  impossible. The fix covers the photo lightbox and review-form wizard too; badges stay in
+  light DOM (intentional, per [[ADR_0017_Badge_Architecture]]).
+
+Proposed follow-up (not yet implemented): a two-layer visibility policy — keep the
+explicit-mount review section on unknown themes (with CSS hardening) but fail-closed the
+auto-placed badges until the active `themeId` is allowlisted. See [[Open_Questions]] and
+[[Theme_Adapter_Playbook]].
 
 ## Workarounds We Use
 - MutationObserver in [src/widget/observer.js](src/widget/observer.js) to handle SPA-style navigation.

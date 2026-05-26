@@ -66,6 +66,21 @@ ikas does not provide a reliable public DOM slot contract today. Direct ikas fee
 ## Ozy Hardening Policy
 Do not tighten Ozy selectors just because they look broad. Change selectors only after a fixture or live smoke test proves a false positive or false negative. The current safe order is documentation, fixture/live verification, then targeted selector changes.
 
+## Theme Smoke Test Log
+Empirical results from live testing. Append observed behavior per theme here.
+
+| Theme | themeId | Adapter / matchedBy | PDP badge | Listing badge | Review section | Notes |
+|-------|---------|---------------------|-----------|---------------|----------------|-------|
+| Ozy | `57225e07-aa38-4d38-9688-f6730ee16143` | `ozy` / `theme_id` | OK | OK | OK | Reference implementation. |
+| Mine | `a7644737-8367-47f2-b4ab-dcfb2fa7d5f6` | `generic` / `none` (`generic_unknown`) | shows | shows | renders but visually broken | Host rule `.hOHcRx img { width:100% !important }` overrides `.renuvex-pr-img`; needs CSS hardening, not a mount fix. |
+| Siva (renamed "Siva test") | stable across rename | `generic` / `none` (`generic_unknown`) | shows | shows | OK (110px thumbs) | Renaming theme did not change adapter (themeId stable). No host `img` override. |
+
+Key takeaways (2026-05-25):
+- `themeId`-based identity is correct; theme renames are safe.
+- `generic_unknown` does not hide surfaces today — badges still render on unknown themes via DOM heuristics.
+- Explicit `data-renuvex-widget="reviews"` mount is more robust than heuristic badges.
+- Review CSS needs host-theme `!important` hardening. See [[Ikas_Theme_Limitations]] and [[Open_Questions]] for the proposed two-layer visibility policy.
+
 ## Related Source Files
 - [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts)
 - [src/widget/themes/current-adapter.js](src/widget/themes/current-adapter.js)

@@ -167,7 +167,10 @@ export function createStepAuthor(state, opts) {
 
     try {
       var pageSlug = extractSlug(window.location.href);
-      var submitName = s.productName || (document.querySelector('h1') ? document.querySelector('h1').innerText.trim() : null);
+      // s.productName comes from openReviewFormModal({productName}); the old
+      // document.querySelector('h1') fallback was unreliable across themes and
+      // doesn't help once the wizard renders inside a shadow root.
+      var submitName = s.productName || null;
       var r = await fetchWithTimeout(API_BASE + '/api/public/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

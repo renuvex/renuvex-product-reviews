@@ -132,3 +132,51 @@ export function iconUseSvg(svgString, className) {
   out += ' aria-hidden="true"><use href="#' + id + '"/></svg>';
   return out;
 }
+
+// ── Sprite mirroring into shadow roots ───────────────────────────────────────
+// SVG <use href="#id"> fragment refs resolve only within the same DOM tree.
+// Review/lightbox/wizard surfaces render inside their own shadow roots, so the
+// global sprite in document.body is unreachable from <use> refs inside them.
+// Mirror the global sprite into each registered shadow root and keep mirrors
+// in sync via a MutationObserver — covers lazy one-off icon symbols and live
+// preview star swaps without threading a "root" arg through every call site.
+
+var mirrorRoots = [];
+var spriteObserver = null;
+var SPRITE_MIRROR_MARKER = 'data-renuvex-sprite-mirror';
+
+function cloneSpriteInto(root) {
+  if (!root || typeof document === 'undefined') return;
+  var globalSvg = getSpriteSvg();
+  if (!globalSvg) return;
+  var prev = root.querySelector('[' + SPRITE_MIRROR_MARKER + ']');
+  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+  var wrap = document.createElement('div');
+  wrap.setAttribute(SPRITE_MIRROR_MARKER, '');
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+  wrap.appendChild(globalSvg.cloneNode(true));
+  root.appendChild(wrap);
+}
+
+function ensureSpriteObserver() {
+  if (spriteObserver || typeof MutationObserver === 'undefined') return;
+  var container = document.getElementById(SPRITE_ID);
+  if (!container) return;
+  spriteObserver = new MutationObserver(function () {
+    for (var i = 0; i < mirrorRoots.length; i++) cloneSpriteInto(mirrorRoots[i]);
+  });
+  spriteObserver.observe(container, { childList: true, subtree: true, attributes: true });
+}
+
+export function registerSpriteRoot(root) {
+  if (!root) return;
+  if (mirrorRoots.indexOf(root) === -1) mirrorRoots.push(root);
+  cloneSpriteInto(root);
+  ensureSpriteObserver();
+}
+
+export function unregisterSpriteRoot(root) {
+  var i = mirrorRoots.indexOf(root);
+  if (i !== -1) mirrorRoots.splice(i, 1);
+}

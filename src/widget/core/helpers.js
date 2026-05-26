@@ -6,10 +6,6 @@ import { renderStarRow, getIconFromSettings } from '../icons/index.js';
 import { ensureStarSprite, starUseSvg } from '../icons/star-sprite.js';
 import { PUBLIC_API_KEY } from './config.js';
 
-// Tüm yıldızlar (dolu + boş outline) için tek CSS renk değişkeni — reviews
-// widget ayarından (reviewStarColor) beslenir. Boş yıldız aynı renkte outline.
-export var STAR_COLOR = 'var(--renuvex-pr-review-star-color,#f59e0b)';
-
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
 export function extractSlug(url) {
@@ -191,17 +187,6 @@ export function formatDate(iso) {
   return new Date(iso).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-export function injectStyles(_color, css) {
-  var el = document.getElementById('renuvex-pr-styles');
-  if (!el) {
-    el = document.createElement('style');
-    el.id = 'renuvex-pr-styles';
-    document.head.appendChild(el);
-  }
-  el.textContent = (css);
-  // Renk yüzeyleri kendi özel CSS değişkenlerini kullanır; global renk var enjeksiyonu yok.
-}
-
 var REVIEW_IMAGE_ALLOWED_EXT = { jpg: true, jpeg: true, png: true, webp: true, gif: true, avif: true };
 var REVIEW_IMAGE_ROOT_FOLDER = 'review_images';
 var REVIEW_IMAGE_TENANT_FOLDER = 'stores';
@@ -381,92 +366,7 @@ export function hideOnImageError(img) {
   attachImageErrorHandler(img, function (el) { el.style.display = 'none'; });
 }
 
-// renderStars — form için radio-input tabanlı erişilebilir yıldız seçici.
-// Endüstri standardı pattern: hidden `<input type="radio">` + `<label>` + CSS :checked/:hover.
-// Avantaj: native click/touch/keyboard, screen reader, form validation — JS event handling yok.
-// Yıldızlar TERS sırayla render edilir (5→1), böylece CSS ~ selector "seçilenin/hover'ın solundaki
-// tüm kardeşler dolu" kuralı çalışır (DOM sırası sağ→sol, flex-direction:row-reverse ile görünüm düzelir).
-export function renderStars(rating, interactive, onChange, settings) {
-  var pair = getIconFromSettings(settings);
-  var name = 'renuvex-pr-rating-' + Math.random().toString(36).slice(2, 9);
-
-  var wrap = document.createElement('div');
-  wrap.className = 'renuvex-pr-rating' + (interactive ? ' renuvex-pr-rating-interactive' : '');
-  // row-reverse ile DOM 5,4,3,2,1 → görsel 1,2,3,4,5.
-  wrap.style.cssText = 'display:inline-flex;flex-direction:row-reverse;justify-content:flex-end;gap:4px;';
-
-  if (!interactive) {
-    // Read-only: basitçe dolu/boş yıldızları göster, input yok.
-    wrap.style.flexDirection = 'row';
-    for (var j = 1; j <= 5; j++) {
-      var star = document.createElement('span');
-      star.className = 'renuvex-pr-icon';
-      star.style.cssText = 'width:24px;height:24px;display:inline-flex;color:' + STAR_COLOR + ';';
-      star.innerHTML = j <= rating ? pair.filled : pair.empty;
-      wrap.appendChild(star);
-    }
-    return wrap;
-  }
-
-  // Interactive: radio inputs, 5'ten 1'e doğru (row-reverse ile görsel 1→5).
-  for (var i = 5; i >= 1; i--) {
-    (function (idx) {
-      var input = document.createElement('input');
-      input.type = 'radio';
-      input.name = name;
-      input.value = String(idx);
-      input.id = name + '-' + idx;
-      input.className = 'renuvex-pr-rating-input';
-      if (idx === rating) input.checked = true;
-      // Görsel olarak gizle ama erişilebilir kalsın (screen reader + klavye çalışır).
-      input.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
-      input.addEventListener('change', function () {
-        onChange && onChange(idx);
-      });
-
-      var label = document.createElement('label');
-      label.htmlFor = input.id;
-      label.className = 'renuvex-pr-rating-label';
-      label.setAttribute('aria-label', idx + ' yıldız');
-      label.style.cssText = 'width:24px;height:24px;display:inline-flex;cursor:pointer;transition:color .15s;';
-      
-      // %100 Güvenli ve Bubbling (çakışma) yapmayan Tıklama Tetiği
-      label.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        // Grubun tümünü temizle (Manuel checked=true yaptığımızda grubun senkronu bozulmasın diye)
-        var allRadios = wrap.querySelectorAll('.renuvex-pr-rating-input');
-        for(var r=0; r<allRadios.length; r++) { allRadios[r].checked = false; }
-        
-        input.checked = true;
-        if (onChange) onChange(idx);
-      });
-
-      // Pointer-events:none ile resimlerin tıklamayı emmesi tamamen önleniyor.
-      // Inline opacity:0 yerine class yapısı kullanarak stil ezilmesini de kaldırıyoruz
-      label.innerHTML =
-        '<span class="renuvex-pr-rating-filled" style="position:absolute;width:24px;height:24px;color:' + STAR_COLOR + ';pointer-events:none;">' + pair.filled + '</span>' +
-        '<span class="renuvex-pr-rating-empty" style="position:relative;width:24px;height:24px;color:' + STAR_COLOR + ';pointer-events:none;">' + pair.empty + '</span>';
-      label.style.position = 'relative';
-
-      wrap.appendChild(input);
-      wrap.appendChild(label);
-    })(i);
-  }
-
-  ensureStarStyles();
-  return wrap;
-}
-
-// CSS kurallarını bir kez <style> olarak ekle
-var starStylesInjected = false;
-function ensureStarStyles() {
-  if (starStylesInjected) return;
-  starStylesInjected = true;
-  var css = '.renuvex-pr-rating-interactive .renuvex-pr-rating-filled{opacity:0; transition:opacity .15s;}' + '.renuvex-pr-rating-interactive .renuvex-pr-rating-empty{opacity:1; transition:opacity .15s;}' + '.renuvex-pr-rating-interactive .renuvex-pr-rating-input:checked ~ .renuvex-pr-rating-label .renuvex-pr-rating-filled{opacity:1 !important;}' + '.renuvex-pr-rating-interactive .renuvex-pr-rating-input:checked ~ .renuvex-pr-rating-label .renuvex-pr-rating-empty{opacity:0 !important;}' + '.renuvex-pr-rating-interactive .renuvex-pr-rating-input:focus-visible + .renuvex-pr-rating-label{outline:2px solid ' + STAR_COLOR + ';outline-offset:2px;border-radius:4px;}';
-
-  var style = document.createElement('style');
-  style.setAttribute('data-renuvex-pr-style', 'rating');
-  style.textContent = (css);
-  document.head.appendChild(style);
-}
+// renderStars / ensureStarStyles / STAR_COLOR removed during the Shadow DOM
+// migration. The new wizard step-rating builds its own button-based stars in
+// product-widget/review-form-modal/steps/step-rating.js; head-injected CSS
+// from the old helpers would not reach inside a shadow root anyway.

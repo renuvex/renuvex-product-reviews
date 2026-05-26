@@ -55,6 +55,20 @@ planned ikas Studio `data-*` attributes are not broad enough to rely on today.
 Detail: [[Theme_Adapter_Playbook]], [[Ikas_Theme_Limitations]],
 [[Ikas_Storefront_Script_Capabilities]].
 
+## Unknown-theme widget visibility policy (proposed 2026-05-25)
+Live testing (Ozy/Mine/Siva) showed `generic_unknown` themes still render every widget
+surface, and the review section is not isolated from host-theme CSS (Mine's
+`.hOHcRx img { width:100% !important }` broke `.renuvex-pr-img`). Proposed direction — a
+two-layer policy instead of one fail-closed switch:
+- `reviewsMountEnabled`: render the review section when an explicit
+  `data-renuvex-widget="reviews"` mount exists (robust on unknown themes), plus CSS hardening.
+- `autoPlacementEnabled`: gate DOM-heuristic surfaces (PDP badge, listing badge, modal badge)
+  to allowlisted theme ids; default `false` on unknown/generic themes.
+Plus an admin warning for unsupported/generic themes. **Not yet implemented** — the public
+runtime carries no such flags today (`PublicThemeRuntime` has only `themeAdapterKey/source`).
+Decide whether to formalize as an ADR and implement. Detail: [[Theme_Adapter_Playbook]],
+[[Ikas_Theme_Limitations]].
+
 ## `VIEW_LISTING` undocumented ikas event — ikas-blocked (audit finding O6)
 `core/storefront-context.js` depends on the `VIEW_LISTING` Storefront Event for
 category-page product arrays. `VIEW_LISTING` is **runtime-verified** (Phase 1 audit) but is

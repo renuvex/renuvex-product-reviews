@@ -6,7 +6,6 @@
 // Bağımsızlık sözleşmesi: review-modal ile import / class / variable çakışması yok.
 
 import { createWizardShell } from './modal-shell.js';
-import { FWIZARD_CSS } from './styles.js';
 import { createWizardState, TOTAL_STEPS } from './wizard-state.js';
 import { createProgressBar } from './progress-bar.js';
 import { createStepRating } from './steps/step-rating.js';
@@ -14,17 +13,8 @@ import { createStepPhotos } from './steps/step-photos.js';
 import { createStepContent } from './steps/step-content.js';
 import { createStepAuthor } from './steps/step-author.js';
 
-// ─── CSS bir kez inject ─────
-var stylesInjected = false;
-function ensureStyles() {
-  if (stylesInjected) return;
-  var styleEl = document.createElement('style');
-  styleEl.setAttribute('data-renuvex-fwizard', '');
-  styleEl.setAttribute('data-renuvex-pr-style', 'review-form-wizard');
-  styleEl.textContent = (FWIZARD_CSS);
-  document.head.appendChild(styleEl);
-  stylesInjected = true;
-}
+// CSS is now injected into the wizard's shadow root by createWizardShell.open()
+// — see modal-shell.js. No head-level <style> injection is needed.
 
 // stepOpts: step-specific callback'ler (validity, success).
 function renderStep(stepNum, state, stepOpts) {
@@ -66,7 +56,6 @@ function buildThanksScreen() {
  */
 export function openReviewFormModal(opts) {
   opts = opts || {};
-  ensureStyles();
 
   var state = createWizardState({
     productId: opts.productId,

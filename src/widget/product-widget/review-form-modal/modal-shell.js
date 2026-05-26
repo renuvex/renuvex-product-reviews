@@ -7,7 +7,9 @@
 // 'renuvex-pr-fwizard-' prefix'iyle izole.
 
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
-import { iconUseSvg } from '../../icons/star-sprite.js';
+import { iconUseSvg, registerSpriteRoot, unregisterSpriteRoot } from '../../icons/star-sprite.js';
+import { createOverlayShadowHost, injectShadowStyles, getActiveElementWithin, HOST_RESET_CSS } from '../../core/shadow.js';
+import { FWIZARD_CSS } from './styles.js';
 
 export function createWizardShell(opts) {
   var onClose = opts && opts.onClose ? opts.onClose : function () {};
@@ -41,6 +43,7 @@ export function createWizardShell(opts) {
 
   // ─── State & cleanup ──────────────────────────────────────────────
   var isClosed = false;
+  var shadow = null;
   var returnFocusEl = null;
   // Açılış kaynağı: klavyeden açıldıysa kapanışta odağı tetikleyiciye iade
   // ediyoruz (Tab akışı sürsün). Pointer/touch ile açıldıysa odağı doğal
@@ -56,7 +59,8 @@ export function createWizardShell(opts) {
   }
 
   function restoreFocus(el) {
-    if (!el || !document.contains(el) || typeof el.focus !== 'function') return;
+    // isConnected (not document.contains) so focus works inside a shadow root.
+    if (!el || !el.isConnected || typeof el.focus !== 'function') return;
     try {
       el.focus({ preventScroll: true });
     } catch (_) {
@@ -102,7 +106,9 @@ export function createWizardShell(opts) {
 
     var first = focusables[0];
     var last = focusables[focusables.length - 1];
-    var active = document.activeElement;
+    // Inside an open shadow root document.activeElement is the host, not the
+    // focused control; read the root's activeElement so trap math is correct.
+    var active = getActiveElementWithin(shadow && shadow.root);
 
     if (!overlay.contains(active)) {
       e.preventDefault();
@@ -143,7 +149,14 @@ export function createWizardShell(opts) {
     // Fade-out animasyonu
     overlay.classList.remove('renuvex-pr-fwizard-open');
     setTimeout(function () {
-      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      // Stop observing this root, then remove the body-level shadow host —
+      // disposing the host disposes the shadow root + overlay together.
+      if (shadow) {
+        unregisterSpriteRoot(shadow.root);
+        if (shadow.host && shadow.host.parentNode) shadow.host.parentNode.removeChild(shadow.host);
+      } else if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
       unlockBodyScroll();
       // Sadece klavye kaynaklı açılışlarda odağı iade et.
       if (openedByKeyboard) restoreFocus(returnFocusEl);
@@ -174,7 +187,13 @@ export function createWizardShell(opts) {
     returnFocusEl = getReturnFocusElement();
     openedByKeyboard = wasLastInputKeyboard();
     if (initialBody) content.appendChild(initialBody);
-    document.body.appendChild(overlay);
+    // Isolate the wizard in its own body-level shadow root. Host-theme CSS
+    // cannot reach inside; FWIZARD_CSS is injected into the root; sprite
+    // <use> refs resolve via a mirror of the global sprite (registered below).
+    shadow = createOverlayShadowHost();
+    injectShadowStyles(shadow.root, HOST_RESET_CSS + FWIZARD_CSS);
+    shadow.root.appendChild(overlay);
+    registerSpriteRoot(shadow.root);
     lockBodyScroll();
     // Fade-in için bir tick bekle (DOM ekleme sonrası class transition tetiklensin)
     requestAnimationFrame(function () {

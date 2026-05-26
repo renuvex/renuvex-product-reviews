@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
+updated: 2026-05-26
 tags:
   - adr
   - decisions
@@ -38,6 +38,7 @@ related:
 | [[ADR_0018_Widget_Ownership_And_Placement_Resilience]] | Widget loader ownership is marker-first and `publicApiKey`-required; storefront surfaces render inside Renuvex/legacy owned slots; placement conflicts are measured and fixed through theme adapters, not script order. | Accepted |
 | [[ADR_0019_Icon_Sprite_Rendering]] | Read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` (geometry defined once) instead of inlining `<path>` per star; adds Yotpo-style sr-only/`aria-labelledby` a11y; refines ADR_0017 PDP-badge contract (link role, no static id, `data-renuvex-align`). | Accepted |
 | [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] | Canonical identity is now Renuvex Product Reviews (`product-reviews`, `renuvex-pr`, `renuvex-product-reviews-widget`); because there are no real merchant installs yet, the hard namespace cleanup removed legacy public aliases from source and active generated assets. | Accepted |
+| [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] | Three self-contained review surfaces (review section, photo lightbox, review-form wizard) render inside their own open Shadow DOM roots; CSS rules are injected per root, the global icon sprite is mirrored into each root via a MutationObserver, `:host` re-admits inherited typography for Ozy parity. Closes the CSS isolation gap from [[Ikas_Theme_Limitations]]. Badges and JSON-LD stay in light DOM. Single commit, git revert is the safety net. | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -55,6 +56,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-05-26: Added [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] — review section, photo lightbox, and review-form wizard now render inside their own open Shadow DOM roots (host: existing `#renuvex-reviews` light element + two new body-level overlay hosts). Style rules are injected per root via a new `core/shadow.js` (`HOST_RESET_CSS + …`); custom properties on `:root` inherit in; SVG `<use>` icon sprite is mirrored into each shadow root via a MutationObserver on the global sprite container (`registerSpriteRoot` / `unregisterSpriteRoot`). Focus traps use `getActiveElementWithin`; `restoreFocus` switched to `el.isConnected`. Wizard's `document.querySelector('h1')` fallback dropped; dead `renderStars`/`ensureStarStyles`/`STAR_COLOR` removed from `core/helpers.js`. Closes the CSS isolation gap recorded on 2026-05-25 in [[Ikas_Theme_Limitations]]; placement allowlist remains pending in [[Open_Questions]]. Dev fixture committed at `public/widget-runtime/__fixtures__/ozy-hostile.html`.
 - 2026-05-25: Updated [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] - hard cleanup is now the current contract. Source and active generated widget assets use only `renuvex-pr` / `renuvex_pr`; legacy namespace terms are historical notes only.
 - 2026-05-24: Added [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]] - canonical app identity moved to Renuvex Product Reviews. The first rollout was expand-only; it was superseded by the 2026-05-25 hard cleanup because there are no real merchant installs yet.
 - 2026-05-24: Added [[ADR_0019_Icon_Sprite_Rendering]] — read-only rating stars now reference a single injected SVG sprite (`#renuvex-pr-sym-star-full`/`#renuvex-pr-sym-star-outline`) via `<use>` instead of inlining the full `<path>` per star (measured ~76 KB of duplicated path data on a busy PDP → ~2 KB; ~4.6 KB per listing badge). Clip-path half-star engine and the single `ICONS` source (ADR_0016) are unchanged; `ICONS` strings still feed both the sprite and the admin preview. Adds Yotpo-style sr-only + `aria-labelledby` a11y and refines the ADR_0017 PDP-badge contract (link role instead of `role=figure`, no static `id`, `data-renuvex-align` instead of inline justify-content). Interactive form picker left inline.
