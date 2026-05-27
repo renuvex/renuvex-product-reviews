@@ -4,6 +4,7 @@ import { ls } from '../core/state.js';
 import { fetchSettings } from '../core/settings.js';
 import { getIconFromSettings } from '../icons/index.js';
 import { SIZE_MAP, ensureBadgeTokens } from '../core/badge.js';
+import { isAutoPlacementEnabled } from '../themes/current-adapter.js';
 import { collectProductTargets } from './collect.js';
 import { fetchRatings } from './ratings.js';
 import { clearBadgePlaceholders, disconnectListingBadgeRemovalObservers, injectBadges, reserveBadgeSlots } from './inject.js';
@@ -33,6 +34,19 @@ export async function renderListingBadges() {
 
     // Do not inject listing badges when the badge widget is disabled.
     if (widgets.badge && widgets.badge.enabled === false) {
+      if (doCleanup) cleanupListingBadges();
+      ls.rendered = false;
+      return;
+    }
+
+    // ADR_0022 + ADR_0023 capability gate (top-level). Skip ALL heavy work
+    // (DOM walk via collectProductTargets, /api/public/ratings network call,
+    // ensureBadgeTokens, placeholder reservation) on themes that have not
+    // been allowlisted for auto-placement. The defense-in-depth gates inside
+    // inject.js reserveBadgeSlots / injectBadges remain — they catch direct
+    // programmatic callers — but the entry function gate is what stops the
+    // wasted work on every category page visit by unsupported-theme merchants.
+    if (!isAutoPlacementEnabled()) {
       if (doCleanup) cleanupListingBadges();
       ls.rendered = false;
       return;

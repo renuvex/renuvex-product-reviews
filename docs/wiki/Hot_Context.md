@@ -20,6 +20,7 @@ related:
   - "[[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]"
   - "[[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]"
   - "[[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]"
+  - "[[ADR_0023_Widget_Lifecycle_Gating_Contract]]"
   - "[[Theme_Adapter_Playbook]]"
 source_files:
   - "package.json"
@@ -79,15 +80,13 @@ source_files:
 - `package.json` pins Next.js `16.2.1`; older Next.js 15 docs are stale unless re-verified.
 
 ## Recent Important Changes
-- 2026-05-19/24: Rating visuals, badge architecture, X-app resilience, owned-slot guards, WebKit fixes, and SVG star sprite are covered by ADRs 0016-0019.
-- 2026-05-23: Script reconciliation reports remote match/duplicate diagnostics; theme sync is split from script injection and uses `listStorefront.themes[].isMainTheme` plus stable `themeId`.
-- 2026-05-23/24: Current Vercel plan rejected 5-minute cron; daily 03:00 UTC is restored. Pro/Enterprise or QStash can shorten pending theme verification.
-- 2026-05-24/25: Renuvex hard-rename completed. Active source/generated widget assets use `Renuvex Product Reviews` / `product-reviews` / `renuvex-pr`; old names are historical docs only.
-- 2026-05-25: Review section is opt-in through `<div data-renuvex-widget="reviews"></div>`; PDP/listing badges stay independent and use the `badge` widget toggle.
-- 2026-05-25: External rename started. GitHub/Vercel project and Sentry org/project use Renuvex names; production widget domain remains `new-ikas-app.vercel.app` until a custom domain is added.
-- 2026-05-25: [[Theme_Adapter_Playbook]] records the Ozy selector spec. Shared review CSS moved to `product-widget/styles.js`; Ozy selectors stay unchanged until fixture/live evidence proves a false placement.
-- 2026-05-26: [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] — review section / lightbox / form wizard render inside open Shadow DOM roots; CSS isolation gap closed.
-- 2026-05-27: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] — `runtime.autoPlacementEnabled` + `runtime.reviewsMountEnabled` flags gate badge / review-section surfaces; only themes matched by stable `themeId` unlock auto-placement. `/api/public/settings` adds Next.js `after()` lazy theme resync (30 min stale threshold) since ikas has no `store/theme/*` webhook. Cross-merchant `themeId` stability empirically verified (Ares identical across two stores; version upgrade preserves `themeId`).
+- 2026-05-19/24: Rating visuals + badge architecture + X-app resilience + owned-slot guards + SVG sprite (ADRs 0016-0019).
+- 2026-05-23: Theme sync split from script injection; uses `listStorefront.themes[].isMainTheme` + stable `themeId`. Vercel cron daily 03:00 UTC.
+- 2026-05-24/25: Renuvex hard-rename complete (`renuvex-pr` everywhere); external rename in progress; production widget domain stays `new-ikas-app.vercel.app`.
+- 2026-05-25: Review section opt-in via `<div data-renuvex-widget="reviews">`. [[Theme_Adapter_Playbook]] records Ozy spec; shared review CSS in `product-widget/styles.js`.
+- 2026-05-26: [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] — review/lightbox/wizard in open Shadow DOM; host-theme CSS bleed closed.
+- 2026-05-27: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] — `autoPlacementEnabled` / `reviewsMountEnabled` runtime flags gate badge + review surfaces; only stable `themeId` matches unlock auto-placement. `/api/public/settings` lazy theme resync (30 min stale, Next.js `after()`); ikas has no theme webhook. Cross-merchant `themeId` stability empirically verified.
+- 2026-05-27: [[ADR_0023_Widget_Lifecycle_Gating_Contract]] — three-layer gating model (always-load bootstrap / context-driven chunks / settings+capability gates) formalized with 8-step new-widget checklist. listing-badges top-level `isAutoPlacementEnabled()` gate fix.
 
 ## Current Risks / Open Questions
 - Verify deploy/cache, re-measure widget size, and document disabling native theme reviews.
