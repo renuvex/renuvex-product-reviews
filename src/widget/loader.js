@@ -38,6 +38,88 @@ function renderListingBadgesFallback() {
   });
 }
 
+function getPathnameFromHref(href) {
+  try {
+    var url = new URL(href, window.location.href);
+    if (url.origin !== window.location.origin) return '';
+    return url.pathname;
+  } catch (_) {
+    return '';
+  }
+}
+
+function isLikelyProductPath(pathname) {
+  if (!pathname || pathname === '/') return false;
+  var parts = pathname.split('/').filter(Boolean);
+  if (parts.length !== 1) return false;
+  var slug = parts[0].toLowerCase();
+  if (
+    slug === 'account' ||
+    slug === 'cart' ||
+    slug === 'checkout' ||
+    slug === 'login' ||
+    slug === 'register' ||
+    slug === 'search' ||
+    slug === 'pages'
+  ) {
+    return false;
+  }
+  return slug.length > 2;
+}
+
+function hasNearbyImage(anchor) {
+  var el = anchor;
+  var depth = 0;
+  while (el && depth < 5) {
+    if (typeof el.querySelector === 'function' && el.querySelector('img,picture')) return true;
+    el = el.parentElement;
+    depth++;
+  }
+  return false;
+}
+
+function isIgnoredListingScope(anchor) {
+  var el = anchor;
+  while (el && el !== document.body) {
+    var tag = el.tagName ? el.tagName.toLowerCase() : '';
+    if (tag === 'header' || tag === 'nav' || tag === 'footer') return true;
+    var label = String(el.getAttribute && el.getAttribute('aria-label') || '').toLowerCase();
+    var className = String(el.className || '').toLowerCase();
+    if (
+      label.indexOf('breadcrumb') !== -1 ||
+      className.indexOf('breadcrumb') !== -1 ||
+      className.indexOf('account') !== -1 ||
+      className.indexOf('cart') !== -1 ||
+      className.indexOf('basket') !== -1 ||
+      className.indexOf('menu') !== -1
+    ) {
+      return true;
+    }
+    el = el.parentElement;
+  }
+  return false;
+}
+
+function hasListingFallbackCandidates() {
+  var scope = document.querySelector('main') || document.body;
+  if (!scope) return false;
+  var anchors = scope.querySelectorAll('a[href]');
+  var seen = {};
+  var count = 0;
+  for (var i = 0; i < anchors.length; i++) {
+    var a = anchors[i];
+    if (isIgnoredListingScope(a)) continue;
+    var pathname = getPathnameFromHref(a.href);
+    if (!isLikelyProductPath(pathname)) continue;
+    if (!hasNearbyImage(a)) continue;
+    if (seen[pathname]) continue;
+    seen[pathname] = true;
+    count++;
+    if (count >= 2) return true;
+  }
+  return false;
+}
+
 function initWidget() {
   // 1) Register lightweight surface descriptors.
   registerCoreSurfaces();
@@ -65,16 +147,13 @@ function initWidget() {
   });
 
   // 6) Fallback for older storefronts where PAGE_VIEW is missing or late.
-  // ADR_0024 — Guard against firing on pages with no listing-shaped DOM (most
-  // PDPs without product carousels). The check is intentionally loose: a page
-  // with ANY <a href="/..."> is a candidate. Better to false-positive (load
-  // the ~10KB listing-badges chunk on a page with stray links) than to
-  // false-negative (miss a legitimate listing). The chunk's own top-level
-  // gate (ADR_0023 + the renderListingBadges autoPlacementEnabled fix) catches
-  // any false-positive cheaply with no DOM probe or network call.
+  // ADR_0024: guard against firing on pages with no listing-shaped DOM. The
+  // probe requires at least two same-origin product-like links with nearby media,
+  // which is stricter than the old generic-link check but still conservative.
+  // The listing entry chunk keeps its own settings/theme gates as defense in depth.
   setTimeout(function () {
     if (ls.rendered) return;
-    if (!document.querySelector('a[href*="/"]')) return;
+    if (!hasListingFallbackCandidates()) return;
     renderListingBadgesFallback().catch(function (err) {
       console.error('[renuvex-pr] listing badge fallback error:', err);
     });

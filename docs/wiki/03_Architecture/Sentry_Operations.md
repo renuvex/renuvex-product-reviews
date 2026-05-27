@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-05-25
+updated: 2026-05-27
 tags:
   - sentry
   - observability
@@ -80,13 +80,14 @@ Sentry is the observability surface for the Next.js panel app. The organization 
 ## Widget Bundle Exclusion
 The storefront widget bundle (`public/widget.js`) intentionally **does not** ship the Sentry SDK. Reasons in [[ADR_0009_Sentry_Observability_Strategy]] §Reasoning.
 
-However, uncaught widget errors are no longer invisible. A 637-byte (gzip) reporter in the widget forwards `error` and `unhandledrejection` events whose source mentions `widget.js` to `/api/public/widget-error`. The panel-side endpoint captures them with `Sentry.captureException` tagged `source: widget`. Decision recorded in [[ADR_0010_Widget_Error_Forwarding]].
+However, uncaught widget errors are no longer invisible. A tiny reporter in the widget forwards `error`, `unhandledrejection`, and widget script/chunk resource-load failures whose source mentions `widget.js` / `widget-runtime` to `/api/public/widget-error`. The panel-side endpoint captures them with `Sentry.captureException` tagged `source: widget`. Decision recorded in [[ADR_0010_Widget_Error_Forwarding]].
 
 ### Filtering widget vs panel issues in Sentry
 - Widget-originated issues: query `tags[source]:widget`
 - Panel-originated issues: query `!tags[source]:widget` (or omit the tag)
 - **All widget health signals collapse into one issue.** dom-conflict, visibility-health, slot-reorder, and title-not-found forward through the same endpoint with an identical server stack (and no client stack), so Sentry fingerprints them into a single issue (e.g. titled "Widget node missing after render"). Differentiate sub-types via the `widgetEventType` tag and the `widgetHealth.reason`/`surface` extras, not the issue title.
 - Widget reporter cap: 5 errors per page session, dedupe per (message+stack), 2-second minimum gap between sends
+- Widget runtime context on forwarded reports: route, document visibility/ready state, online status, and failed resource URL/tag when the browser reports a script/chunk load failure.
 - Server rate-limit: 30 reports per IP per 60 seconds (Upstash key prefix `renuvex_pr_werr_rl:`; legacy `ikr_werr_rl:` was pre-namespace-migration)
 
 ## Phase 1 Widget Post-Test Check
@@ -125,6 +126,9 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [src/instrumentation-client.ts](src/instrumentation-client.ts)
 - [src/app/global-error.tsx](src/app/global-error.tsx)
 - [next.config.js](next.config.js)
+- [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js)
+- [src/widget/classic-loader.js](src/widget/classic-loader.js)
+- [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts)
 
 ## Obsidian Links
 - [[ADR_0009_Sentry_Observability_Strategy]]
@@ -135,6 +139,7 @@ None of the above is a quality-gate blocker. They exist here so future-you (or f
 - [[Phase_1_Widget_Runtime_Audit]]
 
 ## Change Log
+- 2026-05-27: Widget reporter now forwards widget script/chunk resource-load failures and route/visibility/readyState/online context. Classic loader runtime-import failures include the same context, so intermittent "error script" reports after refresh or SPA navigation can be tied to a failed hashed runtime URL instead of remaining browser-only noise.
 - 2026-05-25: RENUVEX-PRODUCT-REVIEWS-6 (`listing-badge` / `missing_after_render`, ~93 events) proven to be a **false positive** — the visibility probe held a stale reference to the pre-self-heal element. Fixed in `core/health.js` (probe re-resolves the live owned node); verified on the dev store (1 report/session → 0). See [[Bug_Listing_Badge_Missing_After_Render]], [[Widget_Architecture]].
 - 2026-05-25: Documented that the Sentry MCP `search_issues` tool under-counts (returns only the latest-active issue, omits other unresolved ones) — enumerate by short ID. Noted that all widget health signals fingerprint into one issue; differentiate via `widgetEventType`/`widgetHealth`. Fixed three issues surfaced this way: `/callback` token-log removal, `setToken` throw→return, dashboard init 401 guard (see [[Debugging_Notes]], [[Auth_And_Installation_Flow]]).
 - 2026-05-25: Sentry organization/project external slugs are now `renuvex` / `renuvex-product-reviews`; Vercel env was redeployed successfully and `.mcp.json` now points at the Renuvex organization scope.

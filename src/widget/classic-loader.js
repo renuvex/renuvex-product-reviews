@@ -20,6 +20,14 @@ function findCurrentScript() {
 function postRuntimeError(baseUrl, publicApiKey, message, stack, runtimeUrl) {
   if (!baseUrl) return;
   try {
+    var extra = {
+      type: 'runtime-import',
+      runtimeUrl: runtimeUrl,
+      route: hasWindow && window.location ? String(window.location.pathname + window.location.search).slice(0, 500) : undefined,
+      visibilityState: hasDocument ? document.visibilityState : undefined,
+      readyState: hasDocument ? document.readyState : undefined,
+      online: typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : undefined,
+    };
     var body = JSON.stringify({
       message: String(message || 'Widget runtime failed to load').slice(0, 500),
       stack: stack ? String(stack).slice(0, 4000) : undefined,
@@ -27,7 +35,7 @@ function postRuntimeError(baseUrl, publicApiKey, message, stack, runtimeUrl) {
       userAgent: typeof navigator !== 'undefined' ? String(navigator.userAgent || '').slice(0, 500) : undefined,
       publicApiKey: publicApiKey || null,
       timestamp: Date.now(),
-      extra: { type: 'runtime-import', runtimeUrl: runtimeUrl },
+      extra: extra,
     });
     var reportUrl = baseUrl + '/api/public/widget-error';
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {

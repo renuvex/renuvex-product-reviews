@@ -26,6 +26,7 @@ source_files:
   - "src/widget/core/lazy-modules.js"
   - "src/widget/surfaces/index.js"
   - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/product-widget/reviews-api.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/events.js"
   - "src/widget/loader.js"
@@ -50,7 +51,8 @@ The PDP rating badge is now its own storefront surface.
 - `rating-badge/inject.js` owns PDP badge DOM + JSON-LD cleanup and injection.
 - `product-widget/render.js` no longer injects the PDP badge or derives a rating summary from the full reviews payload.
 - `product-widget/bootstrap.js` now returns before `fetchReviews` / `fetchPhotoStripReviews` when the explicit reviews mount is absent, and dynamically imports `render.js` only after that mount check and the review fetches. This import boundary is required; a static `render.js` import pulls the review content chunk back into the bootstrap path.
-- `loader.js` keeps the 2-second listing-badges fallback but adds a cheap DOM candidate guard so clean PDPs do not eagerly load the listing-badges chunk.
+- `product-widget/reviews-api.js` owns shared review/photoStrip fetch helpers and the explicit review-fetch error result, so `bootstrap.js` remains orchestration and `render.js` can reuse the same data contract.
+- `loader.js` keeps the 2-second listing-badges fallback but requires product-card-like DOM candidates (same-origin product-like link + nearby image, at least two unique products) so clean PDPs do not eagerly load the listing-badges chunk.
 
 ## Reasoning
 - The review section and the badge have different ownership: the review section is explicit-mount, shadow-isolated, and heavy; the badge is auto-placed, light DOM, and small.
@@ -66,6 +68,7 @@ The PDP rating badge is now its own storefront surface.
 - Badge disabled, unsupported themes, no ratings, and rating fetch failures all clean stale PDP badge DOM + JSON-LD before returning.
 - SPA pathname changes clean the new owned-slot/class badge without importing the rating-badge chunk from `events.js`; when the chunk is already loaded, `window.__renuvexPrCleanupPdpBadge` also disconnects badge self-heal observers.
 - `ADR_0023` remains the lifecycle contract; this ADR retroactively applies it to the PDP badge.
+- Follow-up hardening keeps the same public behavior but makes the ownership boundaries explicit: badge surface owns badge cleanup/injection, review bootstrap owns only review-section orchestration, `reviews-api.js` owns review/photoStrip data access, and `loader.js` owns the legacy listing fallback probe.
 
 ## Alternatives Considered
 - Keep badge inside review render: rejected because badge-only merchants still pay review-section network and chunk costs.
@@ -84,6 +87,7 @@ The PDP rating badge is now its own storefront surface.
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/surfaces/rating-badge.surface.js](src/widget/surfaces/rating-badge.surface.js)
 - [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js)
+- [src/widget/product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js)
 - [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
 - [src/widget/events.js](src/widget/events.js)
 - [src/widget/loader.js](src/widget/loader.js)

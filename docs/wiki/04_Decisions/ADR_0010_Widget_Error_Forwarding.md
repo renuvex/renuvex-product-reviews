@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-27
 tags:
   - adr
   - sentry
@@ -30,7 +30,7 @@ Accepted
 ## Decision
 1. Ship a tiny error reporter in the widget bundle that listens for `error` and `unhandledrejection` and POSTs to a panel-side endpoint.
 2. The endpoint, `/api/public/widget-error`, calls `Sentry.captureException` server-side using the already-initialized panel SDK. Captured events are tagged `source: widget` so they are distinguishable from panel errors.
-3. **Filter at the source.** The reporter only forwards events whose `filename` or `stack` mentions `widget.js`. Errors thrown by the merchant's theme, other apps, or random third-party scripts on the storefront are ignored.
+3. **Filter at the source.** The reporter only forwards events whose `filename`, `stack`, or failed resource URL mentions `widget.js` / `widget-runtime`. Errors thrown by the merchant's theme, other apps, or random third-party scripts on the storefront are ignored.
 4. **Throttle at the source.** Max 5 forwards per page session, 2-second minimum gap between sends, and per-(message+stack) dedupe.
 5. **Rate-limit at the server.** Upstash Redis: 30 reports per IP per 60 seconds, then silently drop.
 6. **Reporter never crashes the widget.** Every internal step is wrapped in try/catch and returns silently on failure.
@@ -64,6 +64,7 @@ Accepted
   `Access-Control-Allow-Credentials: true` for origin-bearing requests. This
   avoids beacon failures where credentialed telemetry requests reject wildcard
   `Access-Control-Allow-Origin`.
+- 2026-05-27: The reporter also captures widget script/chunk resource-load errors (`type: resource-error`) and adds route, `document.visibilityState`, `document.readyState`, and `navigator.onLine` context. The classic loader's runtime-import failure path sends the same context. This is diagnostic coverage for rare DevTools "error script" reports during refresh/navigation, without adding a new endpoint or SDK.
 
 ## Related Source Files
 - [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js)

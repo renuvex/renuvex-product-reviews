@@ -44,6 +44,8 @@ source_files:
   - "src/app/api/admin/storefront-theme/sync/route.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/widget/classic-loader.js"
+  - "src/widget/loader.js"
+  - "src/widget/core/error-reporter.js"
   - "src/widget/core/config.js"
   - "src/widget/core/script-identity.js"
   - "src/widget/core/badge.js"
@@ -57,6 +59,8 @@ source_files:
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/surfaces/rating-badge.surface.js"
+  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/product-widget/reviews-api.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/product-widget/styles.js"
   - "src/widget/product-widget/review-form-modal/steps/step-rating.js"
@@ -91,6 +95,7 @@ source_files:
 - 2026-05-27: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] — `autoPlacementEnabled` / `reviewsMountEnabled` runtime flags gate badge + review surfaces; only stable `themeId` matches unlock auto-placement. `/api/public/settings` lazy theme resync (30 min stale, Next.js `after()`); ikas has no theme webhook. Cross-merchant `themeId` stability empirically verified.
 - 2026-05-27: [[ADR_0023_Widget_Lifecycle_Gating_Contract]] — three-layer gating model (always-load bootstrap / context-driven chunks / settings+capability gates) formalized with 8-step new-widget checklist. listing-badges top-level `isAutoPlacementEnabled()` gate fix.
 - 2026-05-27: [[ADR_0024_Badge_Review_Surface_Separation]] - PDP badge is now an independent product surface + `rating-badge-*` lazy chunk; badge-only PDPs skip review render/BIG chunks and review/photoStrip APIs when the explicit reviews mount is absent.
+- 2026-05-27: ADR_0024 follow-up hardened boundaries: review/photoStrip fetch helpers moved to `product-widget/reviews-api.js`, the legacy listing fallback now probes product-card-like candidates instead of any link, and widget error forwarding now captures script/chunk resource-load failures with route/visibility/online context.
 
 ## Current Risks / Open Questions
 - Verify deploy/cache, re-measure widget size, and document disabling native theme reviews.

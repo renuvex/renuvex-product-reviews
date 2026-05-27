@@ -22,19 +22,41 @@ if (hasWindow && API_BASE) {
   var lastSentAt = 0;
   var seen = {};
 
-  function isWidgetError(filename, stack) {
+  function getRuntimeContext() {
+    return {
+      route: hasWindow && window.location ? String(window.location.pathname + window.location.search).slice(0, 500) : undefined,
+      visibilityState: typeof document !== 'undefined' ? document.visibilityState : undefined,
+      readyState: typeof document !== 'undefined' ? document.readyState : undefined,
+      online: typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : undefined,
+    };
+  }
+
+  function getResourceUrl(event) {
+    var target = event && event.target;
+    if (!target || target === window) return '';
+    return String(target.currentSrc || target.src || target.href || '');
+  }
+
+  function getResourceTag(event) {
+    var target = event && event.target;
+    return target && target.tagName ? String(target.tagName).toLowerCase() : '';
+  }
+
+  function isWidgetError(filename, stack, resourceUrl) {
     if (filename && filename.indexOf('/widget.js') !== -1) return true;
     if (filename && filename.indexOf('/widget-runtime/') !== -1) return true;
     if (stack && stack.indexOf('widget.js') !== -1) return true;
     if (stack && stack.indexOf('widget-runtime') !== -1) return true;
+    if (resourceUrl && resourceUrl.indexOf('/widget.js') !== -1) return true;
+    if (resourceUrl && resourceUrl.indexOf('/widget-runtime/') !== -1) return true;
     return false;
   }
 
-  function shouldSend(message, stack) {
+  function shouldSend(message, stack, resourceUrl) {
     if (sentCount >= MAX_PER_SESSION) return false;
     var now = Date.now();
     if (now - lastSentAt < MIN_INTERVAL_MS) return false;
-    var key = String(message) + '|' + String(stack || '').slice(0, 200);
+    var key = String(message) + '|' + String(stack || resourceUrl || '').slice(0, 200);
     if (seen[key]) return false;
     seen[key] = true;
     lastSentAt = now;
@@ -69,7 +91,7 @@ if (hasWindow && API_BASE) {
       userAgent: typeof navigator !== 'undefined' ? String(navigator.userAgent || '').slice(0, 500) : undefined,
       publicApiKey: PUBLIC_API_KEY || null,
       timestamp: Date.now(),
-      extra: extra || undefined,
+      extra: extra ? Object.assign(getRuntimeContext(), extra) : getRuntimeContext(),
     };
   }
 
@@ -77,12 +99,16 @@ if (hasWindow && API_BASE) {
     if (!event) return;
     var filename = event.filename || (event.error && event.error.fileName) || '';
     var stack = event.error && event.error.stack;
-    if (!isWidgetError(filename, stack)) return;
-    var message = event.message || (event.error && event.error.message) || 'window.onerror';
-    if (!shouldSend(message, stack)) return;
+    var resourceUrl = getResourceUrl(event);
+    var resourceTag = getResourceTag(event);
+    if (!isWidgetError(filename, stack, resourceUrl)) return;
+    var message = event.message || (event.error && event.error.message) || (resourceUrl ? 'widget resource failed to load' : 'window.onerror');
+    if (!shouldSend(message, stack, resourceUrl)) return;
     send(buildPayload(message, stack, {
-      type: 'error',
+      type: resourceUrl ? 'resource-error' : 'error',
       filename: filename || undefined,
+      resourceUrl: resourceUrl || undefined,
+      resourceTag: resourceTag || undefined,
       lineno: event.lineno || undefined,
       colno: event.colno || undefined,
     }));
@@ -93,9 +119,9 @@ if (hasWindow && API_BASE) {
     var reason = event.reason;
     var stack = reason && reason.stack;
     var filename = (reason && reason.fileName) || '';
-    if (!isWidgetError(filename, stack)) return;
+    if (!isWidgetError(filename, stack, '')) return;
     var message = (reason && reason.message) || String(reason || 'unhandled rejection');
-    if (!shouldSend(message, stack)) return;
+    if (!shouldSend(message, stack, '')) return;
     send(buildPayload(message, stack, { type: 'unhandledrejection' }));
   });
 }

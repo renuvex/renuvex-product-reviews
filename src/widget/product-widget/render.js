@@ -1,7 +1,7 @@
 // product-widget/render.js — Ana widget render fonksiyonu
 
 import { getFirstTrustedReviewImage, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
-import { fetchReviews, isReviewsFetchError } from './bootstrap.js';
+import { fetchReviews, isReviewsFetchError } from './reviews-api.js';
 import { openReviewModal } from './review-modal.js';
 // ADR_0024: PDP rating badge is now its own surface (src/widget/rating-badge/)
 // and renders independently of the review section. render() no longer injects

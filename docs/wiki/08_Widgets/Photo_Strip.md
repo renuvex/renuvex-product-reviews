@@ -3,7 +3,7 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-27
 tags:
   - widget
   - reviews
@@ -27,13 +27,13 @@ related:
 ## Davranış
 - **Cap: 15 fotoğraflı yorum** (sabit, admin ayarı yok). Bkz [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
 - **Sıralama: newest-first rotation.** Yeni onaylı fotoğraflı yorum geldiğinde 1 dakikalık `REVIEWS_CACHE_TTL` sonrası strip başına eklenir; en eski düşer.
-- **Bağımsızlık:** Sort/filter (newest/highest/lowest/rating) ve "Daha Fazla Göster" değişikliklerinde strip re-fetch yapmaz. Yalnızca `bootstrap.js` çalıştığında tek seferlik doldurulur.
+- **Bağımsızlık:** Sort/filter (newest/highest/lowest/rating) ve "Daha Fazla Göster" değişikliklerinde strip re-fetch yapmaz. Yalnızca explicit review mount varsa `bootstrap.js` başlangıçta `reviews-api.js` helper'ını çağırır ve strip tek seferlik doldurulur.
 - **Filter görünürlüğü:** Kullanıcı "Fotoğraflı" filtresini aktif ederse (`currentHasImages === true`) strip gizlenir — odak filtrelenmiş listeye verilir.
 - **Gallery layout:** `:has(.renuvex-pr-review-gallery)` CSS selektörüyle strip tamamen gizlenir ([gallery/styles.js](src/widget/review-layouts/gallery/styles.js)).
 - **Layout uyumu:** Card layout'ta thumbnail aspect 1:1, list/gallery'de 3:4 — `--renuvex-pr-photo-thumb-aspect` CSS değişkeniyle render anında set edilir.
 
 ## Veri akışı
-1. `bootstrap.js` ürün sayfasında iki paralel istek atar:
+1. `bootstrap.js` explicit review mount'u doğruladıktan sonra `reviews-api.js` üzerinden ürün sayfasında iki paralel istek atar:
    - Ana liste: `/api/public/reviews?orderBy=newest&page=1`
    - Photo strip: `/api/public/reviews?hasImages=true&orderBy=newest&limit=15`
 2. Strip yanıtı `state.photoStripReviews` global state'e yazılır.
@@ -89,7 +89,8 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 
 ## Related Source Files
 - [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — strip render bloğu
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — `fetchPhotoStripReviews`, `PHOTO_STRIP_LIMIT`
+- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — explicit mount gate + initial parallel fetch orchestration
+- [src/widget/product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js) — `fetchPhotoStripReviews`, `PHOTO_STRIP_LIMIT`
 - [src/widget/core/state.js](src/widget/core/state.js) — `photoStripReviews` state
 - [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js) — lightbox navigation
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `getTrustedReviewImages`, `optimizeImageUrl`, `buildResponsiveImgAttrs`
@@ -111,6 +112,7 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [[Bug_Review_Image_Error_Fallback]]
 
 ## Change Log
+- 2026-05-27: ADR_0024 follow-up moved `fetchPhotoStripReviews` and `PHOTO_STRIP_LIMIT` from `bootstrap.js` to `reviews-api.js`. `bootstrap.js` now only triggers the initial fetch after the explicit reviews mount exists; badge-only PDPs do not call photoStrip.
 - 2026-05-11: K2 kapandi. Photo strip and review thumbnail render paths now use `hideOnImageError(img)` so broken image assets collapse instead of showing browser broken-image icons. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - 2026-05-11: K3 yapısal olarak kapandı ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Cloud name widget'ta tek kaynak — build-time inject. Settings response'undan `imagePolicy` kaldırıldı, runtime cache + setter + warn helper silindi (~90 satır). Kaynak: [scripts/build-widget.mjs](scripts/build-widget.mjs), [helpers.js](src/widget/core/helpers.js), [bootstrap.js](src/widget/product-widget/bootstrap.js), [settings/route.ts](src/app/api/public/settings/route.ts), [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
 - 2026-05-11: K3 ilk fix. Trusted image policy build-time public cloud fallback, last-valid widget cache ve settings `stale-if-error` ile dayanıklı hale getirildi. (Aynı gün ADR_0008 ile değiştirildi — defansif runtime katmanları gereksiz hale geldi.) İlgili bug: [[Bug_Cloud_Name_Silent_Image_Filter]].

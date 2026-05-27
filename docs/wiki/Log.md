@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-27 - refactor | Widget surface boundary hardening
+- Summary: Follow-up to [[ADR_0024_Badge_Review_Surface_Separation]]. `product-widget/bootstrap.js` now stays a small review-section orchestrator; shared review/photoStrip data access moved to `src/widget/product-widget/reviews-api.js`. The legacy 2-second listing fallback in `src/widget/loader.js` now requires product-card-like candidates instead of any generic link. Widget error forwarding now captures failed widget script/chunk resource loads plus route/visibility/readyState/online context.
+- Reason: The ADR_0024 split solved the main bundle/API waste, but the review fetch helpers still lived in a too-broad bootstrap module and the listing fallback guard was intentionally loose. The rare DevTools "error script" observation also needed diagnostic data rather than a guess. These changes keep the same public behavior while making ownership boundaries explicit and improving production triage.
+- Key source changes: New `src/widget/product-widget/reviews-api.js`; updated `src/widget/product-widget/bootstrap.js`, `src/widget/product-widget/render.js`, `src/widget/loader.js`, `src/widget/core/error-reporter.js`, and `src/widget/classic-loader.js`.
+- Verification: `pnpm build:widget`, `node --check public/widget.js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, `node scripts/wiki-audit.mjs --changed-source-check`, and post-deploy smoke on the dev storefront.
+- Updated wiki: [[Widget_Architecture]], [[Widget_Files_Map]], [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]], [[ADR_0010_Widget_Error_Forwarding]], [[ADR_0024_Badge_Review_Surface_Separation]], [[Sentry_Operations]], [[Hot_Context]], [[Log]].
+
 ## 2026-05-27 - feat | Badge / review section surface separation (ADR_0024)
 - Summary: PDP rating badge is now an independent product surface with its own `rating-badge-*` lazy chunk. The review section no longer owns badge injection, and review bootstrap returns before reviews/photoStrip fetches when `<div data-renuvex-widget="reviews"></div>` is absent.
 - Reason: Badge-only PDPs were paying the review-section bundle and API cost. Separating the surfaces applies [[ADR_0023_Widget_Lifecycle_Gating_Contract]] to the PDP badge and keeps unknown-theme auto-placement fail-closed via [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].

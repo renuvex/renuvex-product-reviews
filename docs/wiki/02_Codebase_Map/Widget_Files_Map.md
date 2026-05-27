@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
-last_verified: 2026-05-25
+updated: 2026-05-27
+last_verified: 2026-05-27
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -20,7 +20,12 @@ source_files:
   - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
+  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/product-widget/reviews-api.js"
+  - "src/widget/product-widget/render.js"
   - "src/widget/product-widget/styles.js"
+  - "src/widget/rating-badge/index.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/ozy/adapter.js"
   - "src/widget/themes/ozy/theme.js"
@@ -71,7 +76,8 @@ src/widget/
 │  └─ badge.js                    # Generic badge primitive
 │
 ├─ product-widget/
-│  ├─ bootstrap.js                # Mount widget into product detail anchor
+│  ├─ bootstrap.js                # Reviews section entry: settings, mount gate, initial fetch orchestration
+│  ├─ reviews-api.js              # Reviews/photoStrip fetch helpers and explicit fetch-error result
 │  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA)
 │  ├─ styles.js                  # Shared Renuvex review widget CSS
 │  ├─ title-finder.js             # Heuristic to locate product title in any theme
@@ -175,6 +181,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-27: Added [product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js) to make the product-widget folder boundary explicit: `bootstrap.js` owns review mount orchestration, `reviews-api.js` owns review/photoStrip data access, and `render.js` owns review-section UI interactions.
 - 2026-05-24: Added [icons/star-sprite.js](src/widget/icons/star-sprite.js) — read-only rating stars render via a single injected SVG `<symbol>` sprite referenced by `<use>` instead of inlining `<path>` per star. Renderers (`partialStarsHTML`, `starsHTML`, `renderStarRow`) call `ensureStarSprite` + emit `starUseSvg`; `ICONS` strings stay the single source (admin preview + sprite both derive from them). Related: [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-18: Added [core/link-scope.js](src/widget/core/link-scope.js) so listing badges and the MutationObserver share scoped link discovery; active builds no longer use whole-document `document.querySelectorAll('a[href]')` for listing re-render checks.
 - 2026-05-17: Listing badge files now use canonical ikas product ids from Storefront Events for rating fetches; slug remains DOM fallback only. Related: [[ADR_0015_Canonical_Product_Identity]].

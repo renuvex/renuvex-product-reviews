@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
-last_verified: 2026-05-25
+updated: 2026-05-27
+last_verified: 2026-05-27
 confidence: high
 tags:
   - widget
@@ -24,6 +24,7 @@ source_files:
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
   - "src/widget/loader.js"
+  - "src/widget/core/error-reporter.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/core/config.js"
   - "src/widget/core/storefront-context.js"
@@ -33,8 +34,11 @@ source_files:
   - "src/widget/core/health.js"
   - "src/widget/observer.js"
   - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/product-widget/reviews-api.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/product-widget/styles.js"
+  - "src/widget/rating-badge/index.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
   - "src/widget/themes/current-adapter.js"
@@ -75,7 +79,7 @@ deployment before claiming live performance improvement.
 | [src/widget/index.js](src/widget/index.js) | Thin entry. Side-effect inits (ADR_0011 order) + preview/prod branch. Delegates to `loader.js`. |
 | [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Wires context → registry (ADR_0013). |
 | [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). |
-| [core/registry.js](src/widget/core/registry.js) | Surface registry (`reviews-main`, `listing-badge`) with guarded async mounts. |
+| [core/registry.js](src/widget/core/registry.js) | Surface registry (`rating-badge`, `reviews-main`, `listing-badge`) with guarded async mounts. |
 | [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for product, listing, and preview render modules. |
 | [core/settings.js](src/widget/core/settings.js) | Shared public settings fetch/cache used by lazy modules without pulling PDP render code. |
 | [core/health.js](src/widget/core/health.js) | Runtime health marker, visibility telemetry, and bounded one-shot DOM-removal self-heal helpers for badge surfaces. |
@@ -88,8 +92,10 @@ deployment before claiming live performance improvement.
 | [icons/](src/widget/icons/) | Public icon API plus split review/rating and filter icon registries shared by runtime and admin preview. |
 | [observer.js](src/widget/observer.js) | MutationObserver to re-render listing badges on SPA theme nav; uses scoped listing link discovery instead of whole-document link scans. |
 | [events.js](src/widget/events.js) | SPA history patch (stale rating-badge cleanup) + quick-view modal badge plumbing. IkasEvents handling moved to `core/storefront-context.js` (ADR_0013). |
-| [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Fetch settings + reviews; mount the PDP review widget via `render()`. |
-| [product-widget/render.js](src/widget/product-widget/render.js) | Compose summary + reviews + modal CTA based on settings. |
+| [rating-badge/](src/widget/rating-badge/) | Independent PDP rating badge surface. Fetches one-product rating summaries and owns badge DOM + JSON-LD cleanup. |
+| [product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) | Reviews section entry. Fetches settings, checks the explicit reviews mount, fetches initial review/photo-strip data, then dynamically imports `render.js`. |
+| [product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js) | Shared reviews/photoStrip fetch helpers, cache handling, preview fallback, and explicit review-fetch error result. |
+| [product-widget/render.js](src/widget/product-widget/render.js) | Compose summary + reviews + modal CTA based on settings; handles filter/sort/load-more fetches through `reviews-api.js`. |
 | [product-widget/title-finder.js](src/widget/product-widget/title-finder.js) | Heuristic to find product title element across themes. |
 | [product-widget/review-modal.js](src/widget/product-widget/review-modal.js) | Photo review detail lightbox. Distinct from the submission wizard. |
 | [product-widget/review-form-modal/](src/widget/product-widget/review-form-modal/) | Multi-step submission wizard (steps + progress + state machine). |
@@ -122,17 +128,25 @@ index.js  (error-reporter / base-reset / input-modality side-effects)
 loader.js
   ├── if preview: startPreview() -> RENUVEX_PR_SETTINGS_UPDATE listener; bootstrap('mock-product')
   └── else: startWidget()
-        ├── registerCoreSurfaces()      (reviews-main, listing-badge)
+        ├── registerCoreSurfaces()      (rating-badge, reviews-main, listing-badge)
         ├── initStorefrontContext()     (subscribe window.IkasEvents + DOM fallback)
         ├── attachHistoryListener / attachModalBadgeListener / startMutationObserver
         └── onProductView / onPageView  → registry.mountMatching(context)
         │
+        ▼ (productView context → rating-badge surface)
+rating-badge/index.js
+  ├── fetch /api/public/settings  (cached)
+  ├── settings + theme auto-placement gates
+  ├── fetch /api/public/ratings?productIds=<one>
+  └── rating-badge/inject.js (badge DOM + JSON-LD)
+
         ▼ (productView context → reviews-main surface)
 product-widget/bootstrap.js
   ├── fetch /api/public/settings  (cached)
-  ├── fetch /api/public/reviews?storeId&productId
+  ├── explicit <div data-renuvex-widget="reviews"> mount gate
+  ├── product-widget/reviews-api.js fetches reviews + photoStrip
   ├── core/state.js ← write currentSettings, currentReviewsData, ...
-  └── render.js (chooses layouts from settings; injects rating badge)
+  └── dynamic import render.js (chooses layouts from settings)
 ```
 
 Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] introduced the loader +
@@ -163,7 +177,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 ## Caching strategy
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.
-- Review fetch failures use stale cached review data when available; without stale data, `fetchReviews()` returns an explicit error result so `render.js` can show a retryable error state instead of an empty list.
+- Review fetch failures use stale cached review data when available; without stale data, `reviews-api.js fetchReviews()` returns an explicit error result so `render.js` can show a retryable error state instead of an empty list.
 - No localStorage caching today (could be added for repeat visits).
 
 ## Build
@@ -177,7 +191,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 ## Notes
 - The widget is the **highest-leverage code surface** in the codebase (every storefront load executes it). Bundle size and TTI matter.
 - Don't introduce a framework (React, Preact, Lit) without an explicit ADR. The vanilla approach is a deliberate trade-off — see [[ADR_0002_Widget_Injection_Strategy]].
-- DOM identification (product id, slug, title) uses heuristics — themes vary. When fixing a "widget doesn't show on theme X" issue, the heuristics in `bootstrap.js` and `title-finder.js` are the usual culprits.
+- DOM identification (product id, slug, title) uses Storefront Events first and theme/DOM fallbacks second. When fixing a "widget doesn't show on theme X" issue, inspect `core/storefront-context.js`, `title-finder.js`, and the active theme adapter before changing review bootstrap.
 - Browser conflict hardening is diagnostic and bounded: badge render paths report visibility/dom-conflict events and try one remount if a rendered badge node is removed; they do not loop against aggressive third-party scripts. The visibility probe re-resolves the **current** owned node when it fires (not the originally injected reference), so a self-heal/theme re-render that swaps the element does not produce a false `missing_after_render`. See [[Bug_Listing_Badge_Missing_After_Render]].
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
@@ -210,6 +224,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-27: Follow-up hardening after [[ADR_0024_Badge_Review_Surface_Separation]]. Review/photoStrip API helpers moved from `product-widget/bootstrap.js` to `product-widget/reviews-api.js`, so bootstrap remains mount-gate orchestration and `render.js` can reuse the same fetch contract without importing bootstrap. The 2-second listing fallback in `loader.js` now probes for product-card-like candidates instead of any generic link. Widget error forwarding now captures script/chunk resource-load errors and route/visibility/online context to diagnose rare DevTools "error script" reports.
 - 2026-05-25: `probeWidgetVisibility` now evaluates the live owned node at probe time (via a `resolveCurrent` resolver at each call site) instead of the originally injected element, fixing a high-volume false-positive `missing_after_render` that fired after the one-shot self-heal / theme re-render swapped the badge element. Root cause proven mount-mode-independent and verified on the dev store. The bounded one-shot self-heal was left unchanged. See [[Bug_Listing_Badge_Missing_After_Render]].
 - 2026-05-25: Renuvex hard namespace cleanup completed for source and active generated widget assets. Preview events use `RENUVEX_PR_*`, health global is `window.__RENUVEX_PRODUCT_REVIEWS__`, and build defines are `__RENUVEX_PR_*`.
 - 2026-05-23: Added runtime health marker, badge visibility probes, widget-error health telemetry, and one-shot badge self-heal for third-party DOM removal; the build now injects a widget version marker.

@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-27
 tags:
   - adr
   - widget
@@ -37,7 +37,7 @@ Yotpo ve Judge.me canlı mağazalarında DevTools ile yapılan gözlem: strip 10
 - **Cap: sabit 15 fotoğraflı yorum**. Admin ayarı yok; dağılım data'sı toplandıktan sonra setting'e taşıma kararı verilebilir.
 - **Strateji: A — newest-first rotation**. Backend `?hasImages=true&orderBy=newest&limit=15` ile yeni dedike çağrı; ana liste fetch'inden bağımsız.
 - **Cache: 1 dakika** (mevcut `REVIEWS_CACHE_TTL`); yeni onaylı fotoğraflı yorum 1 dakikaya kadar strip'te belirir, en eski düşer.
-- **Bağımsızlık**: Sort/filter/load-more değişikliklerinde strip re-fetch yapılmaz — `state.photoStripReviews` bootstrap'ta bir kez doldurulur ve tüm widget yaşam döngüsü boyunca aynı kalır.
+- **Bağımsızlık**: Sort/filter/load-more değişikliklerinde strip re-fetch yapılmaz — `state.photoStripReviews` review bootstrap sırasında bir kez doldurulur ve tüm widget yaşam döngüsü boyunca aynı kalır. Fetch helper `reviews-api.js` içindedir; `bootstrap.js` yalnızca explicit review mount varsa çağırır.
 
 ## Reasoning
 - **Endüstri standardına paritedir.** Yotpo (10-20), Judge.me (10-20), Loox (12-20 + paid'da curate).
@@ -74,7 +74,8 @@ Yotpo ve Judge.me canlı mağazalarında DevTools ile yapılan gözlem: strip 10
 ## Related Source Files
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts) — `limit` query param (1-30 clamp)
 - [src/widget/core/state.js](src/widget/core/state.js) — `photoStripReviews` state + setter
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — `fetchPhotoStripReviews`, `PHOTO_STRIP_LIMIT = 15`
+- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — explicit mount gate + initial photo strip fetch orchestration
+- [src/widget/product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js) — `fetchPhotoStripReviews`, `PHOTO_STRIP_LIMIT = 15`
 - [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — strip render bloğu state'ten okur
 - [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js) — lightbox stripReviews üzerinde navigate
 
