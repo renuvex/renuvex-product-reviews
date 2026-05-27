@@ -83,10 +83,6 @@ export async function fetchPhotoStripReviews(productId) {
 }
 
 export async function bootstrap(productId, productName) {
-  var oldBadge = document.getElementById('renuvex-pr-rating-badge');
-  if (oldBadge) oldBadge.remove();
-  var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
-  if (oldJsonLd) oldJsonLd.remove();
   if (bootstrapCache[productId]) return;
   bootstrapCache[productId] = true;
 
@@ -103,6 +99,15 @@ export async function bootstrap(productId, productName) {
     var badgeSettings = (response.widgets && response.widgets.badge) || BADGE_FALLBACK;
     if (reviewsSettings.enabled === false) return;
 
+    // ADR_0024 — Review section is opt-in via <div data-renuvex-widget="reviews">.
+    // If the mount is absent on this PDP, the review-section path has nothing to
+    // do: no reviews fetch, no photo-strip fetch, no render-chunk download. The
+    // rating badge surface runs independently (and earlier, by registration
+    // order in surfaces/index.js) and has already injected the PDP badge with a
+    // LIGHT /api/public/ratings call. Saves ~158 KB content chunk + 2 review
+    // API calls per PDP visit on badge-only merchants.
+    if (!document.querySelector('[data-renuvex-widget="reviews"]')) return;
+
     setCurrentOrderBy('newest');
     setCurrentPage(1);
     setCurrentRatingFilter(null);
@@ -116,7 +121,11 @@ export async function bootstrap(productId, productName) {
     await render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
   } catch (err) {
     console.error('[renuvex-pr] bootstrap error:', err);
-    await render(productId, FALLBACK, createReviewsFetchError(), productName, undefined, undefined, BADGE_FALLBACK);
+    // Render the fetch-error state only when the merchant has an explicit
+    // review mount on the page — otherwise there is nothing to render into.
+    if (document.querySelector('[data-renuvex-widget="reviews"]')) {
+      await render(productId, FALLBACK, createReviewsFetchError(), productName, undefined, undefined, BADGE_FALLBACK);
+    }
   } finally {
     delete bootstrapCache[productId];
   }

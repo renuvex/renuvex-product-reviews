@@ -22,7 +22,7 @@ source_files:
   - "src/widget/core/config.js"
   - "src/widget/core/script-identity.js"
   - "src/widget/core/storefront-context.js"
-  - "src/widget/product-widget/rating-badge.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/listing-badges/inject.js"
 ---
 
@@ -80,7 +80,7 @@ Script ownership is now explicit:
 - [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js)
 - [src/widget/core/health.js](src/widget/core/health.js)
 - [src/widget/core/slot.js](src/widget/core/slot.js)
-- [src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js)
+- [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js)
 
 ## Prevention

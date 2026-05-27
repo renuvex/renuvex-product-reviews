@@ -21,6 +21,7 @@ related:
   - "[[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]"
   - "[[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]"
   - "[[ADR_0023_Widget_Lifecycle_Gating_Contract]]"
+  - "[[ADR_0024_Badge_Review_Surface_Separation]]"
   - "[[Theme_Adapter_Playbook]]"
 source_files:
   - "package.json"
@@ -53,6 +54,9 @@ source_files:
   - "src/widget/core/slot-position.js"
   - "src/widget/core/namespace.js"
   - "src/widget/product-widget/title-finder.js"
+  - "src/widget/rating-badge/index.js"
+  - "src/widget/rating-badge/inject.js"
+  - "src/widget/surfaces/rating-badge.surface.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/product-widget/styles.js"
   - "src/widget/product-widget/review-form-modal/steps/step-rating.js"
@@ -60,7 +64,6 @@ source_files:
   - "src/widget/themes/generic/adapter.js"
   - "src/widget/core/rollout.js"
   - "src/widget/listing-badges/inject.js"
-  - "src/widget/product-widget/rating-badge.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/core/settings.js"
@@ -87,6 +90,7 @@ source_files:
 - 2026-05-26: [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] — review/lightbox/wizard in open Shadow DOM; host-theme CSS bleed closed.
 - 2026-05-27: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] — `autoPlacementEnabled` / `reviewsMountEnabled` runtime flags gate badge + review surfaces; only stable `themeId` matches unlock auto-placement. `/api/public/settings` lazy theme resync (30 min stale, Next.js `after()`); ikas has no theme webhook. Cross-merchant `themeId` stability empirically verified.
 - 2026-05-27: [[ADR_0023_Widget_Lifecycle_Gating_Contract]] — three-layer gating model (always-load bootstrap / context-driven chunks / settings+capability gates) formalized with 8-step new-widget checklist. listing-badges top-level `isAutoPlacementEnabled()` gate fix.
+- 2026-05-27: [[ADR_0024_Badge_Review_Surface_Separation]] - PDP badge is now an independent product surface + `rating-badge-*` lazy chunk; badge-only PDPs skip review render/BIG chunks and review/photoStrip APIs when the explicit reviews mount is absent.
 
 ## Current Risks / Open Questions
 - Verify deploy/cache, re-measure widget size, and document disabling native theme reviews.

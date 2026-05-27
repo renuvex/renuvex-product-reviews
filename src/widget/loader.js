@@ -65,12 +65,19 @@ function initWidget() {
   });
 
   // 6) Fallback for older storefronts where PAGE_VIEW is missing or late.
+  // ADR_0024 — Guard against firing on pages with no listing-shaped DOM (most
+  // PDPs without product carousels). The check is intentionally loose: a page
+  // with ANY <a href="/..."> is a candidate. Better to false-positive (load
+  // the ~10KB listing-badges chunk on a page with stray links) than to
+  // false-negative (miss a legitimate listing). The chunk's own top-level
+  // gate (ADR_0023 + the renderListingBadges autoPlacementEnabled fix) catches
+  // any false-positive cheaply with no DOM probe or network call.
   setTimeout(function () {
-    if (!ls.rendered) {
-      renderListingBadgesFallback().catch(function (err) {
-        console.error('[renuvex-pr] listing badge fallback error:', err);
-      });
-    }
+    if (ls.rendered) return;
+    if (!document.querySelector('a[href*="/"]')) return;
+    renderListingBadgesFallback().catch(function (err) {
+      console.error('[renuvex-pr] listing badge fallback error:', err);
+    });
   }, 2000);
 }
 

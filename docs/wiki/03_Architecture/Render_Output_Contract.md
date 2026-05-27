@@ -24,7 +24,7 @@ source_files:
   - "src/widget/core/badge.js"
   - "src/widget/icons/star-sprite.js"
   - "src/widget/review-layouts/_shared.js"
-  - "src/widget/product-widget/rating-badge.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/product-widget/styles.js"
 ---
 
@@ -75,7 +75,7 @@ Required because ikas gives no stable mount point/slot ([[ADR_0018_Widget_Owners
 - Stars: `partialStarsHTML` / `starsHTML` ([src/widget/core/helpers.js](src/widget/core/helpers.js)); badge factory `createBadgeEl` ([src/widget/core/badge.js](src/widget/core/badge.js)).
 
 ## SEO
-- PDP injects `application/ld+json` `AggregateRating` ([src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js)); `<time datetime>` on review dates complements it. This is **shipped** (Competitor_Feature_Matrix previously listed it as planned).
+- PDP injects `application/ld+json` `AggregateRating` ([src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)); `<time datetime>` on review dates complements it. This is **shipped** (Competitor_Feature_Matrix previously listed it as planned).
 
 ## Admin vs storefront
 Storefront HTML is **not** reused verbatim in the admin panel (React/TSX `PreviewStars`, `BadgePreview`). Share the *source* (ICONS registry, design tokens, settings) — not the markup. True-fidelity preview is the `/preview` iframe rendering the real widget.

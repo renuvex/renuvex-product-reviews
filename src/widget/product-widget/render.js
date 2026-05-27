@@ -3,7 +3,11 @@
 import { getFirstTrustedReviewImage, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
 import { fetchReviews, isReviewsFetchError } from './bootstrap.js';
 import { openReviewModal } from './review-modal.js';
-import { injectRatingBadge } from './rating-badge.js';
+// ADR_0024: PDP rating badge is now its own surface (src/widget/rating-badge/)
+// and renders independently of the review section. render() no longer injects
+// the badge — the rating-badge surface does it via its own lazy chunk with a
+// LIGHT /api/public/ratings fetch. This keeps the BIG review-section content
+// chunk out of "badge-enabled, no review mount" pages.
 import { CLASSIC_CSS } from './styles.js';
 import { getIconFromSettings } from '../icons/index.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
@@ -101,23 +105,10 @@ function findReviewsMount() {
   return document.querySelector('[data-renuvex-widget="reviews"]');
 }
 
-// Rating summary for the PDP title badge, derived from the reviews payload.
-// Mirrors the review-section's own computation so the badge shows the same
-// average/count WITHOUT depending on the review section rendering.
-function getRatingSummary(reviewsData) {
-  var d = reviewsData || {};
-  if (isReviewsFetchError(d)) return { avg: null, totalCount: 0 };
-  var dd = d.data || {};
-  var totalCount = dd.totalCount || 0;
-  var allCount = dd.allCount || 0;
-  var avg = dd.avgRating || '0.0';
-  var reviews = dd.reviews || [];
-  if (!dd.ratingCounts && reviews.length > 0) {
-    var s = reviews.reduce(function (a, r) { return a + r.rating; }, 0);
-    avg = (s / reviews.length).toFixed(1);
-  }
-  return { avg: allCount > 0 ? avg : null, totalCount: totalCount };
-}
+// ADR_0024: getRatingSummary() was here; removed with the badge inject call
+// below. The rating badge surface now derives its avg/count from the LIGHT
+// /api/public/ratings endpoint instead of mining it out of the full reviews
+// payload — see src/widget/rating-badge/index.js fetchRatingSummary.
 
 function getOrCreateReviewsSlot(anchorEl, productId) {
   var slot = anchorEl.querySelector('[data-renuvex-slot="product-reviews"]');
@@ -463,20 +454,10 @@ export async function render(productId, settings, reviewsData, productName, orde
     applyLayoutSizeOverrides(getLayout(settings.summaryLayout), settings.size);
     applyLayoutSizeOverrides(getReviewLayout(settings.reviewLayout), settings.size);
 
-    // İkon + stil seçimine göre SVG çifti (filled/empty) al — ICONS registry'sinden
+    // İkon + stil seçimine göre SVG çifti (filled/empty) al — ICONS registry'sinden.
+    // Used by the review section layouts below; the PDP rating badge runs in a
+    // separate surface chunk (ADR_0024) and fetches its own iconPair there.
     var iconPair = getIconFromSettings(settings);
-
-    // PDP rating badge — a "badge" feature: it auto-places on the product title
-    // and is independent of the review-section mount div and the reviews on/off
-    // toggle. Gated only by the badge widget toggle (checked inside
-    // injectRatingBadge). Injected before the opt-in mount check so it shows
-    // even when no review-section mount div is present.
-    try {
-      var ratingSummary = getRatingSummary(reviewsData);
-      injectRatingBadge(ratingSummary.avg, ratingSummary.totalCount, productName, currentBadgeSettings, iconPair, currentProductId);
-    } catch (badgeErr) {
-      try { console.error('[renuvex-pr] rating badge inject error:', badgeErr); } catch (_) {}
-    }
 
     // Review section is opt-in: render only where the merchant placed
     // <div data-renuvex-widget="reviews"></div>. No mount -> no review section.

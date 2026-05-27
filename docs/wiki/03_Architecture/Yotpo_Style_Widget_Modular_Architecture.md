@@ -118,13 +118,13 @@ Initial registry candidates:
 
 | Registry key | Purpose | Current equivalent |
 |---|---|---|
-| `rating-badge` | PDP title rating summary | `product-widget/rating-badge.js` |
+| `rating-badge` | PDP title rating summary | `rating-badge/inject.js` |
 | `reviews-main` | PDP summary, filters, reviews, write CTA | `product-widget/render.js` |
 | `listing-badge` | collection/search product cards | `listing-badges/*` |
 | `review-form` | multi-step review submission modal | `review-form-modal/*` |
 | `media-gallery` | photo strip and photo lightbox | `Photo_Strip`, `Product_Review_Lightbox` |
 | `questions-answers` | product Q&A | not production-complete |
-| `schema` | Product/AggregateRating JSON-LD | `rating-badge.js` today |
+| `schema` | Product/AggregateRating JSON-LD | `rating-badge/inject.js` today |
 
 ## Placeholder Contract
 

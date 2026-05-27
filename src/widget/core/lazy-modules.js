@@ -6,6 +6,7 @@
 var reviewsMainPromise = null;
 var listingBadgesPromise = null;
 var productRenderPromise = null;
+var ratingBadgePromise = null;
 
 export function loadReviewsMainModule() {
   if (!reviewsMainPromise) {
@@ -26,4 +27,14 @@ export function loadProductRenderModule() {
     productRenderPromise = import('../product-widget/render.js');
   }
   return productRenderPromise;
+}
+
+// ADR_0024: rating badge surface is independent of reviews-main so the BIG
+// review-section content chunk (~158 KB) is NOT loaded when the merchant has
+// no review mount on the PDP.
+export function loadRatingBadgeModule() {
+  if (!ratingBadgePromise) {
+    ratingBadgePromise = import('../rating-badge/index.js');
+  }
+  return ratingBadgePromise;
 }

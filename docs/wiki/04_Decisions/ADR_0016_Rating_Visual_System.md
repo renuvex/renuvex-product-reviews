@@ -19,7 +19,7 @@ related:
   - "[[ADR_0002_Widget_Injection_Strategy]]"
 source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
-  - "src/widget/product-widget/rating-badge.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/core/badge.js"
   - "src/widget/listing-badges/index.js"
@@ -151,7 +151,7 @@ fields stay exactly where merchants already set them.
 
 ## Related Source Files
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
-- [src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js)
+- [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
 - [src/widget/core/badge.js](src/widget/core/badge.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)

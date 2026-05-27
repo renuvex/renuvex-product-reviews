@@ -39,7 +39,7 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `product-widget/` and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `product-widget/styles.js`, not inside a theme adapter folder.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `product-widget/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `product-widget/styles.js`, not inside a theme adapter folder.
 
 ## Tree
 
@@ -73,7 +73,6 @@ src/widget/
 ├─ product-widget/
 │  ├─ bootstrap.js                # Mount widget into product detail anchor
 │  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA)
-│  ├─ rating-badge.js             # Star+count badge above product title
 │  ├─ styles.js                  # Shared Renuvex review widget CSS
 │  ├─ title-finder.js             # Heuristic to locate product title in any theme
 │  ├─ review-modal.js             # Photo review detail lightbox
@@ -84,6 +83,10 @@ src/widget/
 │     ├─ wizard-state.js          # Step state machine
 │     ├─ styles.js                # Inline CSS for modal + toast animations
 │     └─ steps/                   # Individual wizard steps
+│
+├─ rating-badge/
+│  ├─ index.js                    # PDP badge surface entry: settings gates + ratings fetch
+│  └─ inject.js                   # PDP title badge DOM + JSON-LD injection and cleanup
 │
 ├─ listing-badges/
 │  ├─ index.js                    # Bootstrap (find product cards on listing pages)

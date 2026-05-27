@@ -20,6 +20,7 @@ source_files:
   - "src/widget/index.js"
   - "src/widget/loader.js"
   - "src/widget/core/lazy-modules.js"
+  - "src/widget/rating-badge/index.js"
   - "src/widget/product-widget/bootstrap.js"
   - "src/widget/listing-badges/index.js"
   - "public/widget.js"
@@ -33,7 +34,7 @@ source_files:
 A single ikas-injected `widget.js` URL that runs on every storefront page. As of Phase 2 implementation work on 2026-05-17, `public/widget.js` is a small classic compatibility loader and the actual runtime/modules live under `public/widget-runtime/*` as ESM chunks. The deployed pre-Phase-2 widget measured `177763` bytes during the 2026-05-15 audit. The runtime detects context and renders product review block (PDP), rating badge near the title, or listing/search rating badges. The PDP review block also includes a separate photo review detail lightbox. All other widget concepts (carousel/popup/Q&A) are partially scaffolded or unverified; see [[Open_Questions]].
 
 ## Where the widget runs
-- **Product detail pages** — full review block with summary, list, photo strip, photo detail lightbox, "Write a Review" CTA, and inline rating badge near title.
+- **Product detail pages** — independent PDP rating badge near title plus optional explicit-mount review block with summary, list, photo strip, photo detail lightbox, and "Write a Review" CTA.
 - **Collection / search / listing pages** — small star+count badges injected next to product titles in cards.
 - **Preview iframe** (`/preview`) — same code, with `window.__ikasPreviewMode = true`.
 
@@ -54,7 +55,7 @@ Settings UI in admin: [src/components/home-page/widgets/editor/SettingsPanel.tsx
 
 ## Render lifecycle
 See [[Widget_Architecture]] for full details. Key points:
-- `public/widget.js` classic loader imports `public/widget-runtime/runtime.js`; heavy PDP/listing modules are lazy chunks.
+- `public/widget.js` classic loader imports `public/widget-runtime/runtime.js`; PDP badge, review section, and listing modules are lazy chunks.
 - MutationObserver re-bootstraps on SPA-style theme nav.
 - Layout-aware settings via `supports` declarations on each layout — admin hides irrelevant fields.
 - Real-time preview via `RENUVEX_PR_SETTINGS_UPDATE` postMessage.

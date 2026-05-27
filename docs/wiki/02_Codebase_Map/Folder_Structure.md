@@ -125,9 +125,9 @@ renuvex-product-reviews/
 │     │  ├─ helpers.js
 │     │  └─ state.js             # Module-level mutable state (current product, settings, etc.)
 │     ├─ listing-badges/         # Inject ★ badges into product cards on listing pages
+│     ├─ rating-badge/           # PDP title badge surface entry + DOM/JSON-LD injection
 │     ├─ product-widget/
 │     │  ├─ bootstrap.js
-│     │  ├─ rating-badge.js
 │     │  ├─ render.js
 │     │  ├─ styles.js           # Shared Renuvex review widget CSS
 │     │  ├─ review-form-modal/   # Multi-step submission wizard

@@ -28,7 +28,8 @@ source_files:
   - "src/app/api/public/settings/route.ts"
   - "src/widget/core/settings.js"
   - "src/widget/themes/current-adapter.js"
-  - "src/widget/product-widget/rating-badge.js"
+  - "src/widget/rating-badge/index.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/product-widget/render.js"
 ---
@@ -97,7 +98,7 @@ Default fallback (`FALLBACK_RUNTIME`, used when metadata is missing): both flags
 The widget runtime consumes the flags through new getters in `themes/current-adapter.js` (`isAutoPlacementEnabled()` / `isReviewsMountEnabled()`). `settings.js` `applyRuntimeSettings` calls the matching setters alongside `setThemeAdapterKey`.
 
 Gating points:
-- `product-widget/rating-badge.js injectRatingBadge` — early-return when `!isAutoPlacementEnabled()`, BEFORE any DOM probe, badge style injection, or JSON-LD write. JSON-LD aggregateRating is part of the badge feature today; treating placement-off as "no badge surface at all" keeps the contract consistent.
+- `rating-badge/index.js renderRatingBadge` and `rating-badge/inject.js injectRatingBadge` — early-return when `!isAutoPlacementEnabled()`, BEFORE rating fetch, DOM probe, badge style injection, or JSON-LD write. JSON-LD aggregateRating is part of the badge feature today; treating placement-off as "no badge surface at all" keeps the contract consistent.
 - `listing-badges/inject.js` `reserveBadgeSlots`, `injectBadges`, `injectModalBadge` — early-return when `!isAutoPlacementEnabled()`. `observer.js`'s lazy listing-badge render also no-ops because the underlying functions return immediately.
 - `product-widget/render.js` `findReviewsMount` path — guarded by `isReviewsMountEnabled()` for defense in depth. Today the function already returns `null` when no `data-renuvex-widget="reviews"` element exists; the gate is structural protection for the future.
 
@@ -169,7 +170,7 @@ Without one of these signals, tuning is premature — there is no production tra
 - [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts) — lazy resync trigger
 - [src/widget/core/settings.js](src/widget/core/settings.js) — applies runtime flags to widget runtime
 - [src/widget/themes/current-adapter.js](src/widget/themes/current-adapter.js) — flag setters/getters
-- [src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js) — PDP badge gate
+- [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js) — PDP badge gate
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js) — listing badge gate
 - [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — review section gate (defense in depth)
 

@@ -26,11 +26,13 @@ source_files:
   - "src/widget/core/registry.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/surfaces/index.js"
+  - "src/widget/surfaces/rating-badge.surface.js"
   - "src/widget/surfaces/reviews-main.surface.js"
   - "src/widget/surfaces/listing-badge.surface.js"
+  - "src/widget/rating-badge/index.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/product-widget/bootstrap.js"
   - "src/widget/product-widget/render.js"
-  - "src/widget/product-widget/rating-badge.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/themes/current-adapter.js"
@@ -80,8 +82,8 @@ Every widget surface follows the same three-layer gating model. The layers are o
 
 | Surface | Disabled in admin (`enabled=false`) | Unsupported theme (`autoPlacementEnabled=false`) | No mount (opt-in surfaces only) |
 |---|---|---|---|
-| Review section (PDP) | render.js chunk, BIG content chunk (~158 KB), `/api/public/reviews` request, Shadow DOM creation, title selector queries | n/a (review section is opt-in, not auto-placed) | render() runs but `findReviewsMount` returns null → no Shadow DOM, no fetch in render(), but `/api/public/reviews` already fired in bootstrap |
-| PDP rating badge | JSON-LD inject, title selector queries, badge mount (gate is inside `injectRatingBadge`) | Same as disabled (ADR_0022 gate is at the same point) | n/a (auto-placed) |
+| Review section (PDP) | render.js chunk, BIG content chunk (~158 KB), `/api/public/reviews` request, Shadow DOM creation | n/a (review section is opt-in, not auto-placed) | bootstrap returns before reviews/photoStrip fetch and render chunk load |
+| PDP rating badge | `/api/public/ratings` request, JSON-LD inject, title selector queries, badge mount | Same as disabled (ADR_0022 gate is at the rating-badge entry and inject layers) | n/a (auto-placed) |
 | Listing badges | `/api/public/ratings` request, `collectProductTargets()` DOM walk, all badge placeholders + slots | Same as disabled (ADR_0022 top-level gate added 2026-05-27) | n/a (auto-placed) |
 | Modal badge (quick-view) | Same path as listing badge | Same | n/a |
 
@@ -171,6 +173,7 @@ When adding a new widget surface, follow this checklist:
 - The listing badge surface is brought into compliance: a top-level `isAutoPlacementEnabled()` gate is added in `listing-badges/index.js renderListingBadges()` so the DOM walk + `/api/public/ratings` request do not fire on unsupported themes. Previously the gate was at `reserveBadgeSlots`/`injectBadges` only (inject.js), which let the heavy work run before the gate fired.
 - Future widgets that use Shadow DOM (ADR_0021) get the full CSS isolation benefit for free; future light-DOM widgets follow the badge defensive-CSS playbook from the 2026-05-27 audit.
 - Per-widget telemetry on gate decisions (planned breadcrumb) gives production visibility into which widgets are most often disabled or unsupported, informing roadmap.
+- [[ADR_0024_Badge_Review_Surface_Separation]] retroactively applies this contract to the PDP badge: the badge is now a normal product surface descriptor instead of a special branch inside the review render path.
 
 ## Verification
 - Manual smoke test per gate:
@@ -190,8 +193,10 @@ When adding a new widget surface, follow this checklist:
 - [src/widget/surfaces/reviews-main.surface.js](src/widget/surfaces/reviews-main.surface.js) — reviews surface descriptor
 - [src/widget/surfaces/listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js) — listing badge surface descriptor
 - [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — PDP entry function, settings + reviews-enabled gate
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — review section render, badge inject orchestration, opt-in mount gate
-- [src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js) — PDP badge gate (autoPlacementEnabled + badge.enabled)
+- [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — review section render and opt-in mount gate
+- [src/widget/surfaces/rating-badge.surface.js](src/widget/surfaces/rating-badge.surface.js) — PDP badge surface descriptor
+- [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js) — PDP badge entry function, settings/capability gates, ratings fetch
+- [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js) — PDP badge DOM injection, cleanup, JSON-LD writer
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js) — listing entry function, all-gates
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js) — defense-in-depth gates at injection points
 - [src/widget/themes/current-adapter.js](src/widget/themes/current-adapter.js) — `isAutoPlacementEnabled` / `isReviewsMountEnabled` getters

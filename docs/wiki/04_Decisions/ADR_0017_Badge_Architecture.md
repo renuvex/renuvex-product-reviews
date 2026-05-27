@@ -27,7 +27,7 @@ source_files:
   - "src/widget/core/rollout.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/listing-badges/index.js"
-  - "src/widget/product-widget/rating-badge.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/ozy/adapter.js"
 ---
@@ -259,7 +259,7 @@ Each rule corresponds to a structural risk surfaced in the audit:
 - [src/widget/core/rollout.js](src/widget/core/rollout.js)
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js)
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js)
-- [src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js)
+- [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/themes/current-adapter.js](src/widget/themes/current-adapter.js)
 - [src/widget/themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js)
 

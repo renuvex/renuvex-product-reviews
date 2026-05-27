@@ -34,7 +34,7 @@ source_files:
   - "src/widget/core/slot-position.js"
   - "src/widget/core/badge.js"
   - "src/widget/product-widget/title-finder.js"
-  - "src/widget/product-widget/rating-badge.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/product-widget/render.js"
   - "src/widget/listing-badges/inject.js"
 ---
@@ -158,7 +158,7 @@ slots are not available.
 - [src/widget/core/slot-position.js](src/widget/core/slot-position.js)
 - [src/widget/core/badge.js](src/widget/core/badge.js)
 - [src/widget/product-widget/title-finder.js](src/widget/product-widget/title-finder.js)
-- [src/widget/product-widget/rating-badge.js](src/widget/product-widget/rating-badge.js)
+- [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js)
 

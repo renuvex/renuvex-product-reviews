@@ -32,7 +32,7 @@ source_files:
   - "src/widget/surfaces/reviews-main.surface.js"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/product-widget/render.js"
-  - "src/widget/product-widget/rating-badge.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/themes/current-adapter.js"

@@ -8,6 +8,7 @@
 
 import { setLastClickedSlug } from './core/state.js';
 import { extractSlug } from './core/helpers.js';
+import { removeOwnedSlots } from './core/slot.js';
 
 var modalClickAttached = false;
 
@@ -43,8 +44,18 @@ function cleanupStaleRatingBadge() {
   try {
     if (location.pathname === lastPathname) return;
     lastPathname = location.pathname;
-    var oldBadge = document.getElementById('renuvex-pr-rating-badge');
-    if (oldBadge) oldBadge.remove();
+
+    if (typeof window.__renuvexPrCleanupPdpBadge === 'function') {
+      window.__renuvexPrCleanupPdpBadge();
+      return;
+    }
+
+    removeOwnedSlots('product-title-rating');
+    var legacyBadge = document.getElementById('renuvex-pr-rating-badge');
+    if (legacyBadge) legacyBadge.remove();
+    document.querySelectorAll('.renuvex-pr-rating-badge--pdp').forEach(function (node) {
+      node.remove();
+    });
     var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
     if (oldJsonLd) oldJsonLd.remove();
   } catch (_) {}

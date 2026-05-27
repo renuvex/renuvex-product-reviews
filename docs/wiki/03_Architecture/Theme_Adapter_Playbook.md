@@ -28,7 +28,8 @@ source_files:
   - "src/widget/themes/ozy/theme.js"
   - "src/widget/themes/generic/adapter.js"
   - "src/widget/listing-badges/inject.js"
-  - "src/widget/product-widget/rating-badge.js"
+  - "src/widget/rating-badge/index.js"
+  - "src/widget/rating-badge/inject.js"
   - "src/widget/product-widget/styles.js"
   - "src/widget/product-widget/render.js"
 ---

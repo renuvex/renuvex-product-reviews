@@ -1,6 +1,12 @@
-// product-widget/rating-badge.js — Ürün başlığının altına rating badge + JSON-LD inject
+// rating-badge/inject.js — PDP rating badge DOM injection + JSON-LD writer.
+//
+// Moved here from src/widget/product-widget/rating-badge.js (ADR_0024) to
+// live alongside the new rating-badge surface entry (src/widget/rating-badge/
+// index.js). Function signature unchanged so SPA cleanup helpers and the new
+// entry both call it the same way. title-finder.js stays in product-widget/
+// because findProductTitleEl is also used by review section render path.
 
-import { findProductTitleEl } from './title-finder.js';
+import { findProductTitleEl } from '../product-widget/title-finder.js';
 import { partialStarsHTML, buildRatingA11yLabel } from '../core/helpers.js';
 // Boyut haritası tek kaynak — hem PDP başlık rozeti hem listing kartları
 // aynı SIZE_MAP'i kullanır; merchant'ın badge.size seçimi her iki yüzeye uygulanır.
@@ -15,8 +21,35 @@ import { getThemeAdapter, isAutoPlacementEnabled } from '../themes/current-adapt
 var ratingBadgeRemovalObserver = null;
 var ratingBadgePositionObserver = null;
 
+export function cleanupPdpRatingBadgeDom() {
+  if (ratingBadgeRemovalObserver) {
+    ratingBadgeRemovalObserver.disconnect();
+    ratingBadgeRemovalObserver = null;
+  }
+  if (ratingBadgePositionObserver) {
+    ratingBadgePositionObserver.disconnect();
+    ratingBadgePositionObserver = null;
+  }
+
+  removeOwnedSlots('product-title-rating');
+
+  var legacyBadge = document.getElementById('renuvex-pr-rating-badge');
+  if (legacyBadge) legacyBadge.remove();
+
+  document.querySelectorAll('.renuvex-pr-rating-badge--pdp').forEach(function (node) {
+    node.remove();
+  });
+
+  var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
+  if (oldJsonLd) oldJsonLd.remove();
+}
+
+if (typeof window !== 'undefined') {
+  window.__renuvexPrCleanupPdpBadge = cleanupPdpRatingBadgeDom;
+}
+
 // SVG yıldız dizisi — rating'e göre yarım yıldız desteği (overlay tekniği).
-// iconPair tek kaynaktan ("Ürün Yorumları" → reviewIcon) gelir; render.js geçirir.
+// iconPair tek kaynaktan ("Ürün Yorumları" → reviewIcon) gelir; rating-badge/index.js geçirir.
 // Yıldız boyutu .renuvex-pr-rating-badge scope'undaki CSS variable'dan okunur.
 function buildStars(rating, iconPair) {
   return partialStarsHTML(rating, iconPair);
@@ -34,23 +67,10 @@ function getProductBadgeMountPoint(titleEl) {
 }
 
 export function injectRatingBadge(avgRating, totalCount, productName, badgeSettings, iconPair, productId, selfHealAttempt) {
-  if (ratingBadgeRemovalObserver) {
-    ratingBadgeRemovalObserver.disconnect();
-    ratingBadgeRemovalObserver = null;
-  }
-  if (ratingBadgePositionObserver) {
-    ratingBadgePositionObserver.disconnect();
-    ratingBadgePositionObserver = null;
-  }
-
   // Önceki üründen kalan eski badge'i temizle. Cleanup, ADR_0022 gate'inden
   // ÖNCE çalışır: bir önceki sayfada placement açıkken inject olmuş eski bir
   // badge varsa, gate kapanmış olsa bile temizlenmesi gerek.
-  removeOwnedSlots('product-title-rating');
-  // Static id kaldırıldı (duplicate-id riski) — class ile fallback temizlik.
-  var oldBadge = document.querySelector('.renuvex-pr-rating-badge--pdp');
-  if (oldBadge) oldBadge.remove();
-
+  cleanupPdpRatingBadgeDom();
   // ADR_0022 — Placement allowlist. Unknown themes (or any state where
   // `adapterMatchedBy !== 'theme_id'`) silently skip auto-placement. The
   // explicit-mount review section continues to render via its own opt-in
@@ -73,8 +93,6 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
 
   // JSON-LD structured data — Google rich snippet (badge devre dışı olsa bile render edilmeli,
   // ama burada zaten enabled !== false yolundayız)
-  var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
-  if (oldJsonLd) oldJsonLd.remove();
   var jsonLdEl = document.createElement('script');
   jsonLdEl.id = 'renuvex-pr-jsonld';
   jsonLdEl.type = 'application/ld+json';

@@ -21,6 +21,7 @@ source_files:
   - "src/widget/index.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/core/settings.js"
+  - "src/widget/rating-badge/index.js"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
   - "src/app/api/public/reviews/route.ts"
@@ -35,13 +36,14 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 
 ## Current footprint
 - Phase 3 local build output on 2026-05-17: `public/widget.js` is a classic compatibility loader (~1.6 KB), `public/widget-runtime/runtime.js` is a tiny stable shim, the active ESM entry is content-hashed (`runtime-*.js`, ~9.6 KB), and heavy PDP/product rendering is behind lazy ESM chunks.
-- `public/widget-runtime/build-manifest.json` records output bytes and import kinds. In the local build, the runtime entry has dynamic imports for product bootstrap, listing badges, and preview/product render.
+- `public/widget-runtime/build-manifest.json` records output bytes and import kinds. In the local build, the runtime entry has dynamic imports for rating badge, product bootstrap, listing badges, and preview/product render.
 - The deployed pre-Phase-2 `https://new-ikas-app.vercel.app/widget.js?...` response measured `177763` bytes on 2026-05-15. Re-measure after deployment before claiming live performance improvement.
-- Initial requests on PDP: 2 (`/api/public/settings`, `/api/public/reviews`). Edge-cached `s-maxage=60, stale-while-revalidate=300`.
+- Initial requests on PDP with a review mount: settings, ratings, reviews, and photoStrip. Badge-only PDPs use settings + ratings and skip the review render/BIG chunks plus reviews/photoStrip APIs (ADR_0024).
 - A PDP that also has product carousels mounts the listing-badge surface alongside reviews-main; `core/settings.js` shares one in-flight settings request across both surfaces, so `/api/public/settings` is fetched once, not twice (fixed 2026-05-17).
 - Initial requests on listing page: 1 (`/api/public/ratings-by-slug` — bulk).
 - Image upload: client-direct to Cloudinary; no proxy through our server.
 - 2026-05-24 (ADR_0019): read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` instead of inlining the full `<path>` per star. Measured before the change on the live dev store: ~76 KB of duplicated `<path>` data on a busy PDP (10 reviews) and ~4.6 KB per listing badge (linear in catalog size). The sprite defines the geometry once, so each star becomes a small `<use>` ref. Re-measure live DOM path bytes after deploy.
+- 2026-05-27 (ADR_0024): PDP title badge is separated into a `rating-badge-*` lazy chunk. If the merchant omits `<div data-renuvex-widget="reviews"></div>`, the storefront avoids review render/BIG chunks and the reviews/photoStrip API calls.
 
 ## 2026-05-15 Live Observations
 
