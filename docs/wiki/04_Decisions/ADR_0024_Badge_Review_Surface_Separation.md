@@ -49,13 +49,14 @@ The PDP rating badge is now its own storefront surface.
 - `rating-badge/index.js` owns settings fetch, badge enabled gate, `isAutoPlacementEnabled()` gate, one-product `/api/public/ratings` fetch, and the final call into `injectRatingBadge`.
 - `rating-badge/inject.js` owns PDP badge DOM + JSON-LD cleanup and injection.
 - `product-widget/render.js` no longer injects the PDP badge or derives a rating summary from the full reviews payload.
-- `product-widget/bootstrap.js` now returns before `fetchReviews` / `fetchPhotoStripReviews` when the explicit reviews mount is absent.
+- `product-widget/bootstrap.js` now returns before `fetchReviews` / `fetchPhotoStripReviews` when the explicit reviews mount is absent, and dynamically imports `render.js` only after that mount check and the review fetches. This import boundary is required; a static `render.js` import pulls the review content chunk back into the bootstrap path.
 - `loader.js` keeps the 2-second listing-badges fallback but adds a cheap DOM candidate guard so clean PDPs do not eagerly load the listing-badges chunk.
 
 ## Reasoning
 - The review section and the badge have different ownership: the review section is explicit-mount, shadow-isolated, and heavy; the badge is auto-placed, light DOM, and small.
 - The existing `/api/public/ratings` endpoint is the right data source for the badge-only path. It avoids mining a title badge summary from the full reviews response.
 - Cleanup must belong to the badge surface. If review bootstrap removes badge DOM or JSON-LD, it races the independent badge surface and can remove the result after the badge renders.
+- The review bootstrap chunk must stay light. Mount gating alone is not enough if bootstrap statically imports the review renderer, because the browser downloads the heavy render chunk before the function can return.
 - JSON-LD stays with the badge feature because AggregateRating is only valid when the rating summary exists and is rendered by the badge path.
 - Old content-hashed runtime files are not manually deleted. `scripts/build-widget.mjs` intentionally keeps unreferenced immutable assets for seven days so cached loaders do not 404 during deploy overlap.
 
