@@ -1,4 +1,4 @@
-// product-widget/styles.js — Theme-agnostic review widget CSS
+// reviews-section/styles.js — Theme-agnostic review widget CSS
 //
 // Her UI elemanı kendi spesifik CSS değişkeniyle renklendirilir.
 // Fallback'ler sabit hex/rgba default'larına (#111111, #ffffff, #e5e7eb vb.)

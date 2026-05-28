@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/wizard-state.js
+// reviews-section/review-form-modal/wizard-state.js
 // Wizard'ın step state ve geçiş logic'i. Step renderer'larından bağımsız —
 // state burada, görsel adımlarda. Bir step input alır, state'e yazar,
 // goNext()'le bir sonraki adıma geçer.

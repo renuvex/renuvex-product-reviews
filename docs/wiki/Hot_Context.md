@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-28
+last_verified: 2026-05-28
 confidence: high
 tags:
   - hot-context
@@ -55,20 +55,20 @@ source_files:
   - "src/widget/core/slot.js"
   - "src/widget/core/slot-position.js"
   - "src/widget/core/namespace.js"
-  - "src/widget/product-widget/title-finder.js"
+  - "src/widget/core/product-title.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/surfaces/rating-badge.surface.js"
-  - "src/widget/product-widget/bootstrap.js"
-  - "src/widget/product-widget/reviews-api.js"
-  - "src/widget/product-widget/render.js"
-  - "src/widget/product-widget/styles.js"
-  - "src/widget/product-widget/review-form-modal/steps/step-rating.js"
+  - "src/widget/reviews-section/bootstrap.js"
+  - "src/widget/reviews-section/reviews-api.js"
+  - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/styles.js"
+  - "src/widget/reviews-section/review-form-modal/steps/step-rating.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/generic/adapter.js"
   - "src/widget/core/rollout.js"
   - "src/widget/listing-badges/inject.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/render.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/core/settings.js"
   - "src/models/auth-token/manager.ts"
@@ -90,12 +90,13 @@ source_files:
 - 2026-05-19/24: Rating visuals + badge architecture + X-app resilience + owned-slot guards + SVG sprite (ADRs 0016-0019).
 - 2026-05-23: Theme sync split from script injection; uses `listStorefront.themes[].isMainTheme` + stable `themeId`. Vercel cron daily 03:00 UTC.
 - 2026-05-24/25: Renuvex hard-rename complete (`renuvex-pr` everywhere); external rename in progress; production widget domain stays `new-ikas-app.vercel.app`.
-- 2026-05-25: Review section opt-in via `<div data-renuvex-widget="reviews">`. [[Theme_Adapter_Playbook]] records Ozy spec; shared review CSS in `product-widget/styles.js`.
+- 2026-05-25: Review section opt-in via `<div data-renuvex-widget="reviews">`. [[Theme_Adapter_Playbook]] records Ozy spec; shared review CSS in `reviews-section/styles.js`.
 - 2026-05-26: [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] — review/lightbox/wizard in open Shadow DOM; host-theme CSS bleed closed.
 - 2026-05-27: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] — `autoPlacementEnabled` / `reviewsMountEnabled` runtime flags gate badge + review surfaces; only stable `themeId` matches unlock auto-placement. `/api/public/settings` lazy theme resync (30 min stale, Next.js `after()`); ikas has no theme webhook. Cross-merchant `themeId` stability empirically verified.
 - 2026-05-27: [[ADR_0023_Widget_Lifecycle_Gating_Contract]] — three-layer gating model (always-load bootstrap / context-driven chunks / settings+capability gates) formalized with 8-step new-widget checklist. listing-badges top-level `isAutoPlacementEnabled()` gate fix.
 - 2026-05-27: [[ADR_0024_Badge_Review_Surface_Separation]] - PDP badge is now an independent product surface + `rating-badge-*` lazy chunk; badge-only PDPs skip review render/BIG chunks and review/photoStrip APIs when the explicit reviews mount is absent.
-- 2026-05-27: ADR_0024 follow-up hardened boundaries: review/photoStrip fetch helpers moved to `product-widget/reviews-api.js`, the legacy listing fallback now probes product-card-like candidates instead of any link, and widget error forwarding now captures script/chunk resource-load failures with route/visibility/online context.
+- 2026-05-27: ADR_0024 follow-up hardened boundaries: review/photoStrip fetch helpers moved to `reviews-section/reviews-api.js`, the legacy listing fallback now probes product-card-like candidates instead of any link, and widget error forwarding now captures script/chunk resource-load failures with route/visibility/online context.
+- 2026-05-28: Review-section implementation now lives under `src/widget/reviews-section/`; shared PDP title placement helper moved to `src/widget/core/product-title.js`. Public script URL, review mount contract, settings schema, backend APIs, and ikas integration are unchanged.
 
 ## Current Risks / Open Questions
 - Verify deploy/cache, re-measure widget size, and document disabling native theme reviews.

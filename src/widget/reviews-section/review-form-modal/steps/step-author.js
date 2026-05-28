@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/steps/step-author.js
+// reviews-section/review-form-modal/steps/step-author.js
 // Step 4 — Hakkınızda: Ad (zorunlu) + E-posta (opsiyonel) + Gönder.
 // input'lar üstte, KVKK metni ortada, büyük submit alta gizli
 // (footer'daki "Sonraki" yerine submit-CTA kullanılır).

@@ -30,7 +30,7 @@ The second-brain setup template names reusable agent procedures under `08_Prompt
 The `qa` widget id is registered in `WidgetDef`, but the storefront and submission flow are unclear from the codebase scan. **Before adding any DB tables**, decide: separate `Question` model, or reuse `Review` with a `kind` column? Will customers answer or only the merchant?
 
 ## Carousel / Popup widgets
-`carousel` and `popup` widget ids exist in `WidgetDef`. Need to confirm whether they ship today or are scaffolds. Read [src/widget/product-widget/](src/widget/product-widget/) and [src/widget/listing-badges/](src/widget/listing-badges/) before extending.
+`carousel` and `popup` widget ids exist in `WidgetDef`. Need to confirm whether they ship today or are scaffolds. Read [src/widget/reviews-section/](src/widget/reviews-section/) and [src/widget/listing-badges/](src/widget/listing-badges/) before extending.
 
 ## Yotpo-style modular loader decisions
 The 2026-05-15 Protein Ocean/Yotpo research supports a one-loader/many-widget-modules architecture. Before implementing it, decide:

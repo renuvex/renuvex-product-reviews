@@ -19,7 +19,7 @@ related:
   - "[[Widget_Performance]]"
 source_files:
   - "src/widget/index.js"
-  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/listing-badges/index.js"
   - "scripts/build-widget.mjs"
 ---
@@ -260,7 +260,7 @@ No Yotpo runtime exception was observed.
 - Live page inspected: `https://proteinocean.com/whey-protein`
 - Official ikas Storefront API docs: [Storefronts](https://ikas.dev/docs/api/admin-api/storefronts)
 - Official ikas Storefront Events docs: [Quick Start](https://builders.ikas.com/docs/storefront-events/quick-start)
-- Related local source: [src/widget/index.js](src/widget/index.js), [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js), [scripts/build-widget.mjs](scripts/build-widget.mjs)
+- Related local source: [src/widget/index.js](src/widget/index.js), [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js), [scripts/build-widget.mjs](scripts/build-widget.mjs)
 
 ## Obsidian Links
 

@@ -35,10 +35,10 @@ Example: a user opens a photo review on a product page. For a short comment, the
 ## Root Cause
 The short-comment behavior is expected: [styles.js](src/widget/themes/ozy/styles.js) makes the mobile `.renuvex-pr-modal-wrap` a fixed fullscreen scroll container. If its content is shorter than `100dvh`, there is nothing to scroll.
 
-The long-comment pull-to-refresh behavior was a real containment gap. [review-modal.js](src/widget/product-widget/review-modal.js) locked only `document.body` with `overflow:hidden`. Mobile Chrome pull-to-refresh is rooted above the modal's internal overflow container, so body overflow alone is not always enough when a fixed modal scroll container reaches its top boundary.
+The long-comment pull-to-refresh behavior was a real containment gap. [review-modal.js](src/widget/reviews-section/review-modal.js) locked only `document.body` with `overflow:hidden`. Mobile Chrome pull-to-refresh is rooted above the modal's internal overflow container, so body overflow alone is not always enough when a fixed modal scroll container reaches its top boundary.
 
 ## Fix
-[review-modal.js](src/widget/product-widget/review-modal.js) now snapshots and restores a broader root scroll-lock state:
+[review-modal.js](src/widget/reviews-section/review-modal.js) now snapshots and restores a broader root scroll-lock state:
 
 - previous `html` and `body` inline `overflow` / `overscroll-behavior-y`
 - previous body `padding-right`
@@ -56,7 +56,7 @@ This keeps short comments non-scrollable when they genuinely fit, keeps long com
 Follow-up: Android Chrome browser chrome state during long-to-short review switching is tracked separately in [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]. Android now relies on root `overscroll-behavior-y:none` without fixed-body positioning, while iOS/WebKit keeps fixed-body locking.
 
 ## Files Changed
-- [review-modal.js](src/widget/product-widget/review-modal.js)
+- [review-modal.js](src/widget/reviews-section/review-modal.js)
 - [widget.js](public/widget.js)
 - [Product_Review_Lightbox.md](docs/wiki/08_Widgets/Product_Review_Lightbox.md)
 - [Bug_Index.md](docs/wiki/05_Bugs_And_Fixes/Bug_Index.md)

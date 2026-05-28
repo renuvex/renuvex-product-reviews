@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/modal-shell.js
+// reviews-section/review-form-modal/modal-shell.js
 // Wizard modal'ın görsel kabuğu — backdrop, modal kutusu, close butonu, ESC,
 // outside-click, body scroll lock. Step içeriğinden bağımsız: shell yalnızca
 // "modal aç/kapat" sözleşmesini sağlar; içeriği `body` parametresiyle alır.

@@ -74,10 +74,10 @@ Yotpo ve Judge.me canlı mağazalarında DevTools ile yapılan gözlem: strip 10
 ## Related Source Files
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts) — `limit` query param (1-30 clamp)
 - [src/widget/core/state.js](src/widget/core/state.js) — `photoStripReviews` state + setter
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — explicit mount gate + initial photo strip fetch orchestration
-- [src/widget/product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js) — `fetchPhotoStripReviews`, `PHOTO_STRIP_LIMIT = 15`
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — strip render bloğu state'ten okur
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js) — lightbox stripReviews üzerinde navigate
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) — explicit mount gate + initial photo strip fetch orchestration
+- [src/widget/reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) — `fetchPhotoStripReviews`, `PHOTO_STRIP_LIMIT = 15`
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — strip render bloğu state'ten okur
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js) — lightbox stripReviews üzerinde navigate
 
 ## Related Notes
 - [[Decision_Index]]

@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/progress-bar.js
+// reviews-section/review-form-modal/progress-bar.js
 // Modal alt footer'ı: [Geri] [progress segments] [Atla | Sonraki]
 //
 // Mimari: footer'ın yan slot'larında her zaman TEK buton elementi var.

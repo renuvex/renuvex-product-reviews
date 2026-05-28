@@ -20,7 +20,7 @@ source_files:
   - "src/widget/core/health.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/rating-badge/inject.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/render.js"
 ---
 
 # Bug — Listing badge "missing_after_render" false positive

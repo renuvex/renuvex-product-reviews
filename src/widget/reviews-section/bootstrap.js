@@ -1,4 +1,4 @@
-// product-widget/bootstrap.js - reviews mount gate and PDP render orchestration.
+// reviews-section/bootstrap.js - reviews mount gate and PDP render orchestration.
 
 import { fetchSettings } from '../core/settings.js';
 import { createReviewsFetchError, fetchPhotoStripReviews, fetchReviews } from './reviews-api.js';

@@ -1,4 +1,4 @@
-// product-widget/review-modal.js — Fotoğraflı yorum detay modalı
+// reviews-section/review-modal.js — Fotoğraflı yorum detay modalı
 
 import {
   starsHTML,

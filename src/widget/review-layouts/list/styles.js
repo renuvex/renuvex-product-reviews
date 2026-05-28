@@ -4,7 +4,7 @@
 // Mobile: dikey diziliş (yazar → içerik → foto).
 //
 // Dikey gap: orta kolon uniform gap kullanmaz, her child kendi margin-top'unu
-// token ile alır (--renuvex-pr-gap-tight/normal/loose). Sözleşme: product-widget/styles.js
+// token ile alır (--renuvex-pr-gap-tight/normal/loose). Sözleşme: reviews-section/styles.js
 // üst yorum bloğu. Yeni satır eklerken magic number yazma — ilişki tipine göre
 // token seç.
 

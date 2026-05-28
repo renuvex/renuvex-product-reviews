@@ -7,7 +7,7 @@
 // Masonry için CSS columns parent'a (#renuvex-reviews-widget) :has() ile uygulanır.
 
 import { starsHTML, formatDate, getFirstTrustedReviewImage, GALLERY_TILE_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
-import { openReviewModal } from '../../product-widget/review-modal.js';
+import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { GALLERY_CSS } from './styles.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';

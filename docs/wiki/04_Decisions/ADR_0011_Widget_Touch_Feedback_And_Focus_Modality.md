@@ -47,8 +47,8 @@ Adopt a four-layer canonical contract enforced widget-wide rather than per-compo
 
 ### Consumers updated in this decision
 - Filter dropdown ([actions-block.js](src/widget/summary-layouts/shared/actions-block.js)) routes its close-handler `restoreFocus` decision through `wasLastInputKeyboard()` (mode `'auto'`). Escape closes still restore unconditionally, since Escape is by definition a keyboard event.
-- Wizard modal ([modal-shell.js](src/widget/product-widget/review-form-modal/modal-shell.js)) captures the modality at open time and only restores focus on close if the open was keyboard-originated.
-- Wizard CSS ([styles.js](src/widget/product-widget/review-form-modal/styles.js)) drops the legacy `:focus { outline:none }` reset on inputs/textareas — modern browsers no longer paint that ring for pointer/touch under `:focus-visible` semantics.
+- Wizard modal ([modal-shell.js](src/widget/reviews-section/review-form-modal/modal-shell.js)) captures the modality at open time and only restores focus on close if the open was keyboard-originated.
+- Wizard CSS ([styles.js](src/widget/reviews-section/review-form-modal/styles.js)) drops the legacy `:focus { outline:none }` reset on inputs/textareas — modern browsers no longer paint that ring for pointer/touch under `:focus-visible` semantics.
 
 ## Alternatives Considered
 - **Per-component fixes (rejected).** Adds a hand-maintained list of selectors for every new widget. Worked for the gallery layout originally, but the inconsistency across the bundle is exactly the smell that drove this ADR.
@@ -72,8 +72,8 @@ Adopt a four-layer canonical contract enforced widget-wide rather than per-compo
 - [input-modality.js](src/widget/shared/input-modality.js)
 - [index.js](src/widget/index.js)
 - [actions-block.js](src/widget/summary-layouts/shared/actions-block.js)
-- [modal-shell.js](src/widget/product-widget/review-form-modal/modal-shell.js)
-- [styles.js](src/widget/product-widget/review-form-modal/styles.js)
+- [modal-shell.js](src/widget/reviews-section/review-form-modal/modal-shell.js)
+- [styles.js](src/widget/reviews-section/review-form-modal/styles.js)
 - [widget.js](public/widget.js)
 
 ## Obsidian Links

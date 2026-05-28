@@ -5,12 +5,12 @@
 
 var reviewsMainPromise = null;
 var listingBadgesPromise = null;
-var productRenderPromise = null;
+var reviewsRenderPromise = null;
 var ratingBadgePromise = null;
 
 export function loadReviewsMainModule() {
   if (!reviewsMainPromise) {
-    reviewsMainPromise = import('../product-widget/bootstrap.js');
+    reviewsMainPromise = import('../reviews-section/bootstrap.js');
   }
   return reviewsMainPromise;
 }
@@ -22,11 +22,11 @@ export function loadListingBadgesModule() {
   return listingBadgesPromise;
 }
 
-export function loadProductRenderModule() {
-  if (!productRenderPromise) {
-    productRenderPromise = import('../product-widget/render.js');
+export function loadReviewsRenderModule() {
+  if (!reviewsRenderPromise) {
+    reviewsRenderPromise = import('../reviews-section/render.js');
   }
-  return productRenderPromise;
+  return reviewsRenderPromise;
 }
 
 // ADR_0024: rating badge surface is independent of reviews-main so the BIG

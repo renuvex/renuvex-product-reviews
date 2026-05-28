@@ -22,11 +22,11 @@ related:
   - "[[Ikas_Storefront_Script_Capabilities]]"
 source_files:
   - "src/widget/core/shadow.js"
-  - "src/widget/product-widget/render.js"
-  - "src/widget/product-widget/review-modal.js"
-  - "src/widget/product-widget/review-form-modal/modal-shell.js"
-  - "src/widget/product-widget/review-form-modal/index.js"
-  - "src/widget/product-widget/review-form-modal/steps/step-author.js"
+  - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/review-modal.js"
+  - "src/widget/reviews-section/review-form-modal/modal-shell.js"
+  - "src/widget/reviews-section/review-form-modal/index.js"
+  - "src/widget/reviews-section/review-form-modal/steps/step-author.js"
   - "src/widget/icons/star-sprite.js"
   - "src/widget/core/helpers.js"
   - "public/widget-runtime/__fixtures__/ozy-hostile.html"
@@ -48,8 +48,8 @@ The migration is the foundation for the supported/unsupported‑theme allowlist 
 Three self-contained review surfaces render inside their own **open Shadow DOM roots**, each with a `:host` reset and the necessary CSS injected into the root (not `document.head`):
 
 1. **Review section** — the existing light-DOM container `#renuvex-reviews` becomes the shadow host (keeps its id). The light-DOM host is intentionally preserved so the PDP rating badge's scroll-to-reviews lookup (`document.getElementById('renuvex-reviews-widget') || document.getElementById('renuvex-reviews')`, rating-badge.js), the health probe, and the mutation observer continue to work unchanged. The `#renuvex-reviews-widget` `<section>` and all review/summary/layout DOM render inside the shadow root.
-2. **Photo lightbox** (`product-widget/review-modal.js`) — appends a new bare `<div data-renuvex-shadow-overlay>` to `document.body`, attaches an open shadow root, and renders the overlay inside it. The host is removed on close.
-3. **Review-form wizard** (`product-widget/review-form-modal/modal-shell.js`) — same pattern, its own body-level shadow host.
+2. **Photo lightbox** (`reviews-section/review-modal.js`) — appends a new bare `<div data-renuvex-shadow-overlay>` to `document.body`, attaches an open shadow root, and renders the overlay inside it. The host is removed on close.
+3. **Review-form wizard** (`reviews-section/review-form-modal/modal-shell.js`) — same pattern, its own body-level shadow host.
 
 Badges (PDP rating badge, listing badges) and structured data (JSON-LD aggregateRating, written to `document.head` by `rating-badge.js:59`) **stay in light DOM, untouched**. Badges are inline and should inherit theme typography per [[ADR_0017_Badge_Architecture]]; JSON-LD must be crawlable.
 
@@ -138,11 +138,11 @@ Lesson recorded so we don't repeat it: when isolating something into Shadow DOM,
 
 ## Related Source Files
 - [src/widget/core/shadow.js](src/widget/core/shadow.js)
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js)
-- [src/widget/product-widget/review-form-modal/modal-shell.js](src/widget/product-widget/review-form-modal/modal-shell.js)
-- [src/widget/product-widget/review-form-modal/index.js](src/widget/product-widget/review-form-modal/index.js)
-- [src/widget/product-widget/review-form-modal/steps/step-author.js](src/widget/product-widget/review-form-modal/steps/step-author.js)
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js)
+- [src/widget/reviews-section/review-form-modal/modal-shell.js](src/widget/reviews-section/review-form-modal/modal-shell.js)
+- [src/widget/reviews-section/review-form-modal/index.js](src/widget/reviews-section/review-form-modal/index.js)
+- [src/widget/reviews-section/review-form-modal/steps/step-author.js](src/widget/reviews-section/review-form-modal/steps/step-author.js)
 - [src/widget/icons/star-sprite.js](src/widget/icons/star-sprite.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
 - [public/widget-runtime/__fixtures__/ozy-hostile.html](public/widget-runtime/__fixtures__/ozy-hostile.html)

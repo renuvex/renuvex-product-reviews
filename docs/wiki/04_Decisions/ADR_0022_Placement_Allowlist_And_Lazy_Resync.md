@@ -31,7 +31,7 @@ source_files:
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/listing-badges/inject.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/render.js"
 ---
 
 # ADR 0022: Placement Allowlist and Storefront-Driven Theme Resync
@@ -100,7 +100,7 @@ The widget runtime consumes the flags through new getters in `themes/current-ada
 Gating points:
 - `rating-badge/index.js renderRatingBadge` and `rating-badge/inject.js injectRatingBadge` — early-return when `!isAutoPlacementEnabled()`, BEFORE rating fetch, DOM probe, badge style injection, or JSON-LD write. JSON-LD aggregateRating is part of the badge feature today; treating placement-off as "no badge surface at all" keeps the contract consistent.
 - `listing-badges/inject.js` `reserveBadgeSlots`, `injectBadges`, `injectModalBadge` — early-return when `!isAutoPlacementEnabled()`. `observer.js`'s lazy listing-badge render also no-ops because the underlying functions return immediately.
-- `product-widget/render.js` `findReviewsMount` path — guarded by `isReviewsMountEnabled()` for defense in depth. Today the function already returns `null` when no `data-renuvex-widget="reviews"` element exists; the gate is structural protection for the future.
+- `reviews-section/render.js` `findReviewsMount` path — guarded by `isReviewsMountEnabled()` for defense in depth. Today the function already returns `null` when no `data-renuvex-widget="reviews"` element exists; the gate is structural protection for the future.
 
 ### Layer 2 — Storefront-driven lazy resync
 
@@ -172,7 +172,7 @@ Without one of these signals, tuning is premature — there is no production tra
 - [src/widget/themes/current-adapter.js](src/widget/themes/current-adapter.js) — flag setters/getters
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js) — PDP badge gate
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js) — listing badge gate
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — review section gate (defense in depth)
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — review section gate (defense in depth)
 
 ## Obsidian Links
 - [[Decision_Index]]

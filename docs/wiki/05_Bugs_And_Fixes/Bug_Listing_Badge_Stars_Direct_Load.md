@@ -22,7 +22,7 @@ source_files:
   - "src/widget/core/badge.js"
   - "src/widget/core/helpers.js"
   - "src/widget/themes/ozy/styles.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/render.js"
   - "src/widget/listing-badges/index.js"
 ---
 
@@ -105,7 +105,7 @@ Requires `pnpm build:widget` to land in `public/widget.js`.
 - [src/widget/core/badge.js](src/widget/core/badge.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
 - [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js)
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js)
 
 ## Obsidian Links

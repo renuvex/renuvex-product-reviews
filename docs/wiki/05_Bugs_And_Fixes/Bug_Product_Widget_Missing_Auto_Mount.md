@@ -34,16 +34,16 @@ After deploy, the product detail review area and the rating badge under the prod
 1. The widget script loads on a product detail page and detects the product correctly.
 2. `/api/public/settings` and `/api/public/reviews` can still return usable data.
 3. The merchant theme does not include `#ikas-reviews-anchor`, or the anchor is removed by a theme/template change.
-4. [render.js](src/widget/product-widget/render.js) used to return early when the anchor was missing.
+4. [render.js](src/widget/reviews-section/render.js) used to return early when the anchor was missing.
 5. Because the return happened before `injectRatingBadge(...)`, both the review block and the product-title badge disappeared together.
 
 ## Root Cause
-[render.js](src/widget/product-widget/render.js) treated `#ikas-reviews-anchor` as mandatory. The widget was therefore coupled to a manually present theme anchor even though the script itself is auto-injected into storefronts.
+[render.js](src/widget/reviews-section/render.js) treated `#ikas-reviews-anchor` as mandatory. The widget was therefore coupled to a manually present theme anchor even though the script itself is auto-injected into storefronts.
 
 ## Fix
 Historical 2026-05-11 fix, now superseded by the 2026-05-25 opt-in mount contract:
 
-[render.js](src/widget/product-widget/render.js) now calls `getOrCreateReviewsAnchor()`:
+[render.js](src/widget/reviews-section/render.js) now calls `getOrCreateReviewsAnchor()`:
 
 - If `#ikas-reviews-anchor` exists, it uses it.
 - If not, it creates the anchor with `data-renuvex-auto-anchor="1"`.
@@ -53,7 +53,7 @@ Historical 2026-05-11 fix, now superseded by the 2026-05-25 opt-in mount contrac
 This keeps existing merchant-provided anchors compatible while making the PDP review block self-mounting.
 
 ## Files Changed
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
 - [public/widget.js](public/widget.js)
 
 ## Prevention
@@ -69,4 +69,4 @@ This keeps existing merchant-provided anchors compatible while making the PDP re
 
 ## Change Log
 - 2026-05-25: Marked the self-mounting behavior as superseded by the opt-in review mount contract and independent PDP badge injection.
-- 2026-05-11: Fixed by adding self-mounting fallback anchor creation in [render.js](src/widget/product-widget/render.js).
+- 2026-05-11: Fixed by adding self-mounting fallback anchor creation in [render.js](src/widget/reviews-section/render.js).

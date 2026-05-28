@@ -53,26 +53,26 @@ After:
 - `width`/`height` gives the browser a stable box before the image decodes.
 
 ## Root Cause
-- [render.js](src/widget/product-widget/render.js) created photo strip images without responsive image metadata.
+- [render.js](src/widget/reviews-section/render.js) created photo strip images without responsive image metadata.
 - [card/index.js](src/widget/review-layouts/card/index.js) and [list/index.js](src/widget/review-layouts/list/index.js) had the same gap.
 - [gallery/index.js](src/widget/review-layouts/gallery/index.js) had `loading="lazy"` but no `srcset` or explicit dimensions.
-- [review-modal.js](src/widget/product-widget/review-modal.js) optimized mini thumbnails but did not provide responsive attrs or dimensions.
+- [review-modal.js](src/widget/reviews-section/review-modal.js) optimized mini thumbnails but did not provide responsive attrs or dimensions.
 - [helpers.js](src/widget/core/helpers.js) had width-specific Cloudinary optimization but no helper for producing a matched `src` + `srcset` pair.
 
 ## Fix
 - [helpers.js](src/widget/core/helpers.js) now exposes `buildResponsiveImgAttrs(url, width)`, returning `src` plus a `1x, 2x` Cloudinary `srcset`.
-- [render.js](src/widget/product-widget/render.js) applies `srcset`, `decoding`, and explicit dimensions to strip thumbnails; first 3 are eager, the rest lazy.
+- [render.js](src/widget/reviews-section/render.js) applies `srcset`, `decoding`, and explicit dimensions to strip thumbnails; first 3 are eager, the rest lazy.
 - [card/index.js](src/widget/review-layouts/card/index.js), [list/index.js](src/widget/review-layouts/list/index.js), and [gallery/index.js](src/widget/review-layouts/gallery/index.js) apply lazy loading, async decoding, `srcset`, and dimensions to review thumbnails.
-- [review-modal.js](src/widget/product-widget/review-modal.js) applies responsive attrs to lightbox mini thumbnails and explicit dimensions to the main image. Main image is not lazy-loaded.
+- [review-modal.js](src/widget/reviews-section/review-modal.js) applies responsive attrs to lightbox mini thumbnails and explicit dimensions to the main image. Main image is not lazy-loaded.
 - [public/widget.js](public/widget.js) was regenerated with `pnpm build:widget`.
 
 ## Files Changed
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
 - [src/widget/review-layouts/card/index.js](src/widget/review-layouts/card/index.js)
 - [src/widget/review-layouts/list/index.js](src/widget/review-layouts/list/index.js)
 - [src/widget/review-layouts/gallery/index.js](src/widget/review-layouts/gallery/index.js)
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js)
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js)
 - [public/widget.js](public/widget.js)
 
 ## Expected Gain

@@ -60,9 +60,9 @@ related:
 |---|---|---|
 | Bundle build (esbuild, IIFE, minified) | ✅ | [scripts/build-widget.mjs](scripts/build-widget.mjs) |
 | Widget bootstrap / mutation observer (SPA themes) | ✅ | [src/widget/index.js](src/widget/index.js), [observer.js](src/widget/observer.js) |
-| Product review widget (form, list, summary) | ✅ | [src/widget/product-widget/](src/widget/product-widget/) |
-| Review form modal (multi-step wizard) | ✅ | [src/widget/product-widget/review-form-modal/](src/widget/product-widget/review-form-modal/) |
-| Review detail lightbox (photo modal) | ✅ with open audit risks | [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), [[Product_Review_Lightbox]], [[Bug_Review_Detail_Lightbox_Risks]] |
+| Product review widget (form, list, summary) | ✅ | [src/widget/reviews-section/](src/widget/reviews-section/) |
+| Review form modal (multi-step wizard) | ✅ | [src/widget/reviews-section/review-form-modal/](src/widget/reviews-section/review-form-modal/) |
+| Review detail lightbox (photo modal) | ✅ with open audit risks | [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), [[Product_Review_Lightbox]], [[Bug_Review_Detail_Lightbox_Risks]] |
 | Summary layouts (classic/compact/hero/minimal/split) | ✅ | [src/widget/summary-layouts/](src/widget/summary-layouts/) |
 | Review layouts (card/gallery/list) | ✅ | [src/widget/review-layouts/](src/widget/review-layouts/) |
 | Listing-page rating badges | ✅ | [src/widget/listing-badges/](src/widget/listing-badges/) |
@@ -98,4 +98,4 @@ related:
 - [[Backend_API_Map]]
 
 ## Change Log
-- 2026-05-10: Added review detail lightbox to the storefront widget feature inventory and linked its open audit risks. Related source: [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].
+- 2026-05-10: Added review detail lightbox to the storefront widget feature inventory and linked its open audit risks. Related source: [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

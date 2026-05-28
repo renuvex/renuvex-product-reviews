@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/steps/step-content.js
+// reviews-section/review-form-modal/steps/step-content.js
 // Step 3 — Yorum içeriği: opsiyonel başlık + zorunlu textarea.
 // Tek odak (textarea), başlık küçük bir input olarak üstte.
 // Sonraki butonu yorum boşken disabled — footer üzerinden kontrol edilir.

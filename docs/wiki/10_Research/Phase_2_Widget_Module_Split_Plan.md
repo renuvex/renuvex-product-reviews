@@ -31,7 +31,7 @@ source_files:
   - "src/widget/surfaces/index.js"
   - "src/widget/surfaces/reviews-main.surface.js"
   - "src/widget/surfaces/listing-badge.surface.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/render.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/inject.js"
@@ -131,7 +131,7 @@ Build evidence from `pnpm build:widget`:
 - Runtime manifest has 2 static imports and 3 dynamic imports from the runtime
   entry: product bootstrap, listing badges, and preview/product render.
 - Listing badge chunk imports only shared core/theme chunks; it does not import
-  the product-widget bootstrap/render entry chunks.
+  the reviews-section bootstrap/render entry chunks.
 
 Checks run:
 - `pnpm build:widget` passed.

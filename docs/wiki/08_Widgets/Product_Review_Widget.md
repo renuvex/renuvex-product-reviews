@@ -41,18 +41,18 @@ Recurring categories:
 4. `render.js` composes summary + reviews + CTA. Review fetch errors render a retryable error state and do not reuse the empty-review UI. State stored in [core/state.js](src/widget/core/state.js).
 5. CTA opens the multi-step submission wizard.
 
-Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merchant/theme-provided mount point `<div data-renuvex-widget="reviews"></div>`. If the mount is missing, the review section does **not** render — placement is opt-in (no auto-create). The PDP rating badge is a separate "badge" feature: it auto-places on the product title and is gated only by the badge widget toggle, so it shows independently of the review-section mount. The review section root is `#renuvex-reviews-widget` (inner container `#renuvex-reviews`); the PDP badge scroll target is `#renuvex-reviews`. `data-renuvex-widget="<type>"` is the canonical public mount scheme for all widgets (e.g. a future carousel uses `data-renuvex-widget="carousel"`). Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
+Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merchant/theme-provided mount point `<div data-renuvex-widget="reviews"></div>`. If the mount is missing, the review section does **not** render — placement is opt-in (no auto-create). The PDP rating badge is a separate "badge" feature: it auto-places on the product title and is gated only by the badge widget toggle, so it shows independently of the review-section mount. The review section root is `#renuvex-reviews-widget` (inner container `#renuvex-reviews`); the PDP badge scroll target is `#renuvex-reviews`. `data-renuvex-widget="<type>"` is the canonical public mount scheme for all widgets (e.g. a future carousel uses `data-renuvex-widget="carousel"`). Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 
 ## Photo review detail lightbox
-- Detail lightbox source: [review-modal.js](src/widget/product-widget/review-modal.js). Full note: [[Product_Review_Lightbox]].
-- Entry points include review images inside card/list/gallery layouts and the top photo strip rendered by [render.js](src/widget/product-widget/render.js).
+- Detail lightbox source: [review-modal.js](src/widget/reviews-section/review-modal.js). Full note: [[Product_Review_Lightbox]].
+- Entry points include review images inside card/list/gallery layouts and the top photo strip rendered by [render.js](src/widget/reviews-section/render.js).
 - All photo entry points use trusted image helpers; third-party `https://` URLs and `data:image` payloads are not rendered on storefronts.
 - In gallery layout, long photo-backed reviews can use the lightbox for full detail; long photo-less reviews expand inline and must not open the photo-only lightbox.
-- This lightbox is separate from the submission wizard under [review-form-modal/](src/widget/product-widget/review-form-modal/).
+- This lightbox is separate from the submission wizard under [review-form-modal/](src/widget/reviews-section/review-form-modal/).
 - Open audit risks are tracked in [[Bug_Review_Detail_Lightbox_Risks]].
 
 ## Submission flow (modal)
-- Steps managed in [product-widget/review-form-modal/wizard-state.js](src/widget/product-widget/review-form-modal/wizard-state.js).
+- Steps managed in [reviews-section/review-form-modal/wizard-state.js](src/widget/reviews-section/review-form-modal/wizard-state.js).
 - The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Focus moves into the active step on open/step change and returns to the opening control on close. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary under `review_images/stores/<storeId>`.
 - Photo step allows **parallel uploads** — the add button stays enabled while existing uploads are in flight. Each pending upload is tracked independently in `pendingImages`. The submission step blocks submit with a "fotoğraflar yükleniyor" message until every pending upload resolves. Upper bound `MAX_PHOTOS=3` is enforced across completed + pending so parallel selection never exceeds the cap.
@@ -72,7 +72,7 @@ Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merch
 - Full doc: [[Photo_Strip]]. Decision: [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
 
 ## Related Source Files
-- [src/widget/product-widget/](src/widget/product-widget/)
+- [src/widget/reviews-section/](src/widget/reviews-section/)
 - [src/widget/summary-layouts/](src/widget/summary-layouts/)
 - [src/widget/review-layouts/](src/widget/review-layouts/)
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
@@ -93,14 +93,14 @@ Mount behavior: [render.js](src/widget/product-widget/render.js) prefers a merch
 - [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 
 ## Change Log
-- 2026-05-27: ADR_0024 follow-up moved review/photoStrip fetch helpers into [reviews-api.js](src/widget/product-widget/reviews-api.js). `bootstrap.js` is now review mount orchestration, while `render.js` uses the same fetch helper for retry/filter/sort/load-more interactions.
+- 2026-05-27: ADR_0024 follow-up moved review/photoStrip fetch helpers into [reviews-api.js](src/widget/reviews-section/reviews-api.js). `bootstrap.js` is now review mount orchestration, while `render.js` uses the same fetch helper for retry/filter/sort/load-more interactions.
 - 2026-05-25: Review-section placement became opt-in via `<div data-renuvex-widget="reviews"></div>`. Missing mount now means no review section; the PDP title badge remains independent and is controlled by the `badge` widget toggle.
-- 2026-05-12: Photo step now allows parallel uploads — add button stays enabled while existing uploads are in flight (the previous silent block was confusing when users returned to step 2 after the auto-jump). Auto-jump narrowed to the truly first photo (no completed, no pending). MAX_PHOTOS=3 cap enforced across completed + pending. Source: [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
+- 2026-05-12: Photo step now allows parallel uploads — add button stays enabled while existing uploads are in flight (the previous silent block was confusing when users returned to step 2 after the auto-jump). Auto-jump narrowed to the truly first photo (no completed, no pending). MAX_PHOTOS=3 cap enforced across completed + pending. Source: [step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js).
 - 2026-05-12: Documented review submission wizard accessibility fix: focus trap, active-step focus reset, focus restore on close, keyboard-accessible photo upload trigger, and visible focus outlines. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
 - 2026-05-11: Documented the then-current self-mounting PDP review anchor fallback after fixing deploy/theme cases where missing `#ikas-reviews-anchor` hid both the review block and product-title badge. Superseded by the 2026-05-25 opt-in review mount contract. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 - 2026-05-11: Documented retryable review fetch error state after separating API/network failures from valid empty review lists. Related bug: [[Bug_Review_Fetch_Error_Empty_State]].
-- 2026-05-11: Photo strip decoupled from main reviews fetch — dedicated `hasImages=true&limit=15&orderBy=newest` call, cap 15, newest-first rotation. Lightbox now navigates strip dataset, closing the paged-slice navigation risk. Related ADR: [[ADR_0007_Photo_Strip_Cap_And_Rotation]]. Related note: [[Photo_Strip]]. Source: [reviews-api.js](src/widget/product-widget/reviews-api.js), [bootstrap.js](src/widget/product-widget/bootstrap.js), [render.js](src/widget/product-widget/render.js), [state.js](src/widget/core/state.js), [route.ts](src/app/api/public/reviews/route.ts).
+- 2026-05-11: Photo strip decoupled from main reviews fetch — dedicated `hasImages=true&limit=15&orderBy=newest` call, cap 15, newest-first rotation. Lightbox now navigates strip dataset, closing the paged-slice navigation risk. Related ADR: [[ADR_0007_Photo_Strip_Cap_And_Rotation]]. Related note: [[Photo_Strip]]. Source: [reviews-api.js](src/widget/reviews-section/reviews-api.js), [bootstrap.js](src/widget/reviews-section/bootstrap.js), [render.js](src/widget/reviews-section/render.js), [state.js](src/widget/core/state.js), [route.ts](src/app/api/public/reviews/route.ts).
 - 2026-05-10: Documented the trusted review image URL policy in the product review widget submission and display flow. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-05: Documented modal-only review submission after removing the legacy inline/page form and `reviewFormStyle` setting.
 - 2026-05-10: Updated gallery long-text behavior documentation after fixing photo-less reviews to expand inline instead of opening the photo-only lightbox. Related bug: [[Bug_Review_Detail_Lightbox_Risks]].
-- 2026-05-10: Split documentation for the photo review detail lightbox from the multi-step review submission modal and linked open audit risks. Related source: [review-modal.js](src/widget/product-widget/review-modal.js), related note: [[Product_Review_Lightbox]].
+- 2026-05-10: Split documentation for the photo review detail lightbox from the multi-step review submission modal and linked open audit risks. Related source: [review-modal.js](src/widget/reviews-section/review-modal.js), related note: [[Product_Review_Lightbox]].

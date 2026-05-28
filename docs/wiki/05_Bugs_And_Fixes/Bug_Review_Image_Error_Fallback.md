@@ -50,8 +50,8 @@ After the fix:
 Üçüncü senaryo: Network/CDN flaky — bazı bölgelerde geçici 502/503; mevcut davranışta retry yok, kırık ikon kalır.
 
 ## Root Cause
-- [render.js:498-505](src/widget/product-widget/render.js) — strip thumbnail `<img>` oluşturulurken `onerror` yok.
-- [review-modal.js:104-109](src/widget/product-widget/review-modal.js) — lightbox ana görsel `mainImg` da aynı şekilde.
+- [render.js:498-505](src/widget/reviews-section/render.js) — strip thumbnail `<img>` oluşturulurken `onerror` yok.
+- [review-modal.js:104-109](src/widget/reviews-section/review-modal.js) — lightbox ana görsel `mainImg` da aynı şekilde.
 - [card/index.js:99-107](src/widget/review-layouts/card/index.js), [list/index.js:113-122](src/widget/review-layouts/list/index.js), [gallery/index.js:111-117](src/widget/review-layouts/gallery/index.js) — diğer layout'lar da.
 - `getTrustedReviewImages()` ([helpers.js](src/widget/core/helpers.js)) URL **pattern** doğruluyor ama **asset varlığını** doğrulayamaz — bunun için ya HEAD request ya da `<img>` `onload`/`onerror` callback gerekir.
 
@@ -59,9 +59,9 @@ After the fix:
 - [helpers.js](src/widget/core/helpers.js) — iki yeni export:
   - `attachImageErrorHandler(img, onFail)` — `<img>` error event'inde caller'ın callback'ini bir kez (`{ once: true }`) çalıştırır, ayrıca `console.warn` ile log basar.
   - `hideOnImageError(img)` — convenience: kırık görseli `display:none` ile gizler. Thumbnail bağlamında uygun.
-- [render.js](src/widget/product-widget/render.js) — strip thumbnail için `hideOnImageError`.
+- [render.js](src/widget/reviews-section/render.js) — strip thumbnail için `hideOnImageError`.
 - [card/index.js](src/widget/review-layouts/card/index.js), [list/index.js](src/widget/review-layouts/list/index.js), [gallery/index.js](src/widget/review-layouts/gallery/index.js) — review thumbnail'leri için `hideOnImageError`.
-- [review-modal.js](src/widget/product-widget/review-modal.js):
+- [review-modal.js](src/widget/reviews-section/review-modal.js):
   - Mini şerit thumbnail'leri: `hideOnImageError`.
   - Ana görsel: `attachImageErrorHandler` ile özel callback — `mainImg` gizlenir, yerine `.renuvex-pr-modal-img-error` placeholder eklenir; lightbox navigasyonu (prev/next/swipe/thumbnail row) etkilenmez.
 - [themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — `.renuvex-pr-modal-img-error` CSS: koyu zemin, ortalanmış metin.
@@ -70,11 +70,11 @@ After the fix:
 
 ## Files Changed
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `attachImageErrorHandler` + `hideOnImageError`
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
 - [src/widget/review-layouts/card/index.js](src/widget/review-layouts/card/index.js)
 - [src/widget/review-layouts/list/index.js](src/widget/review-layouts/list/index.js)
 - [src/widget/review-layouts/gallery/index.js](src/widget/review-layouts/gallery/index.js)
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js)
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js)
 - [src/widget/themes/ozy/styles.js](src/widget/themes/ozy/styles.js) — `.renuvex-pr-modal-img-error`
 - [public/widget.js](public/widget.js)
 

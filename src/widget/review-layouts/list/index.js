@@ -4,7 +4,7 @@
 // Mobile (<600px) dikey diziliş — styles.js'te tanımlı.
 
 import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
-import { openReviewModal } from '../../product-widget/review-modal.js';
+import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { LIST_CSS } from './styles.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';

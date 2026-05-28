@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/index.js
+// reviews-section/review-form-modal/index.js
 // Yorum yazma wizard modal'ı — public API + step orchestrator.
 // Step sırası: rating → photos → content (title+comment) → author.
 // Step 4 submit işini step-author yapar; başarı sonrası teşekkür ekranı.

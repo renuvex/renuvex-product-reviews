@@ -74,8 +74,8 @@ If the build-time inject is empty (deploy config error), a single `console.error
 ## Related Source Files
 - [scripts/build-widget.mjs](scripts/build-widget.mjs) — `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__` inject
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — single-source cloud name, fail-closed startup check
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — image policy machinery removed
-- [src/widget/product-widget/review-form-modal/steps/step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js) — `setTrustedReviewImageCloudName` çağrısı kaldırıldı
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) — image policy machinery removed
+- [src/widget/reviews-section/review-form-modal/steps/step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js) — `setTrustedReviewImageCloudName` çağrısı kaldırıldı
 - [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts) — `imagePolicy` response field'ı kaldırıldı
 - [src/lib/review-images.ts](src/lib/review-images.ts) — server-side env var path (değişmedi)
 

@@ -20,7 +20,7 @@ related:
 source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
   - "src/widget/rating-badge/inject.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/render.js"
   - "src/widget/core/badge.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/inject.js"
@@ -152,7 +152,7 @@ fields stay exactly where merchants already set them.
 ## Related Source Files
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
 - [src/widget/core/badge.js](src/widget/core/badge.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js)

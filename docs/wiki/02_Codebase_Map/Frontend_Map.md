@@ -99,7 +99,7 @@ This pattern keeps preview pixel-identical to production widget without duplicat
 The storefront widget is an entirely different runtime — vanilla JS, IIFE, IE11+ish. See [[Widget_Files_Map]] for the full layout. Quick orientation:
 
 - Entry: [src/widget/index.js](src/widget/index.js) → bootstrap, attach observer + events
-- Renders: `product-widget`, `listing-badges`, layouts under `review-layouts/` and `summary-layouts/`
+- Renders: `reviews-section`, `listing-badges`, layouts under `review-layouts/` and `summary-layouts/`
 - Built to: [public/widget.js](public/widget.js) via [scripts/build-widget.mjs](scripts/build-widget.mjs)
 
 ## Notes

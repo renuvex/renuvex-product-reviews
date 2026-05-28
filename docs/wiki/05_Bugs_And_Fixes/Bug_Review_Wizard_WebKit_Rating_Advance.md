@@ -17,8 +17,8 @@ related:
   - "[[Bug_Review_Wizard_Focus_Trap_Accessibility]]"
   - "[[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]]"
 source_files:
-  - "src/widget/product-widget/review-form-modal/steps/step-rating.js"
-  - "src/widget/product-widget/review-form-modal/index.js"
+  - "src/widget/reviews-section/review-form-modal/steps/step-rating.js"
+  - "src/widget/reviews-section/review-form-modal/index.js"
   - "public/widget.js"
   - "public/widget-runtime/runtime.js"
 ---
@@ -54,7 +54,7 @@ fragile part.
 - Clear the pending advance timer when the step is destroyed.
 
 ## Verification
-- `node --check src/widget/product-widget/review-form-modal/steps/step-rating.js`
+- `node --check src/widget/reviews-section/review-form-modal/steps/step-rating.js`
 - `pnpm build:widget`
 - Local-build browser verification on the live dev storefront:
   - WebKit iPhone 11: tapping the fifth star changed step 1 to step 2.

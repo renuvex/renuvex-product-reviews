@@ -30,8 +30,8 @@ source_files:
   - "src/widget/listing-badges/inject.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
-  - "src/widget/product-widget/styles.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/styles.js"
+  - "src/widget/reviews-section/render.js"
 ---
 
 # Theme Adapter Playbook
@@ -45,7 +45,7 @@ ikas does not provide a reliable public DOM slot contract today. Direct ikas fee
 - Common code owns rendering, icons, colors, review data, owned-slot wrappers, duplicate guards, self-heal, and position guards.
 - Theme adapters own selectors, allowlists, blocklists, product-title lookup, listing-title lookup, quick-view lookup, and optional mount-point overrides.
 - Theme-specific selectors must stay inside `themes/<key>/theme.js` and `themes/<key>/adapter.js`; do not move Ozy selectors into the generic adapter.
-- Base review widget CSS is theme-agnostic and lives in `product-widget/styles.js`. Theme folders should contain only selector/adapter logic or real theme override styles.
+- Base review widget CSS is theme-agnostic and lives in `reviews-section/styles.js`. Theme folders should contain only selector/adapter logic or real theme override styles.
 
 ## Current Ozy Spec
 - Theme name: Ozy.
@@ -95,7 +95,7 @@ Key takeaways:
 - [src/widget/themes/current-adapter.js](src/widget/themes/current-adapter.js)
 - [src/widget/themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js)
 - [src/widget/themes/ozy/theme.js](src/widget/themes/ozy/theme.js)
-- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js)
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js)
 
 ## Obsidian Links
 - [[Ikas_Theme_Limitations]]

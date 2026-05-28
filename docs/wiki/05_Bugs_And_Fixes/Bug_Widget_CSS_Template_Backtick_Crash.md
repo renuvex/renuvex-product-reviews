@@ -59,7 +59,7 @@ The source now contains only the template literal opener and closer backticks fo
 - `pnpm build:widget` passed and regenerated [public/widget.js](public/widget.js).
 - `node --check public/widget.js` passed.
 - `pnpm exec tsc --noEmit` passed.
-- `pnpm exec eslint src/widget/themes/ozy/styles.js src/widget/product-widget/review-modal.js` passed.
+- `pnpm exec eslint src/widget/themes/ozy/styles.js src/widget/reviews-section/review-modal.js` passed.
 - Live `widget.js` changed from the old build timestamp `2026-05-11T16:37:01.138Z` to the rebuilt timestamp `2026-05-11T16:57:25.370Z`.
 - Live API checks returned valid data:
   - `/api/public/settings?publicApiKey=02786d4b-a09b-4b36-ad8c-56e6d396f6fd` returned `200`.

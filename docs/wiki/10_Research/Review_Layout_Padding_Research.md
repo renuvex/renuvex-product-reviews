@@ -214,7 +214,7 @@ Mevcut durum **uygundur**:
 
 ## 8. Source Files
 
-- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js) — base `.renuvex-pr-review`, mobile padding block
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — base `.renuvex-pr-review`, mobile padding block
 - [src/widget/review-layouts/card/index.js](src/widget/review-layouts/card/index.js) — card render
 - [src/widget/review-layouts/list/styles.js](src/widget/review-layouts/list/styles.js) — list CSS
 - [src/widget/review-layouts/gallery/styles.js](src/widget/review-layouts/gallery/styles.js) — gallery CSS

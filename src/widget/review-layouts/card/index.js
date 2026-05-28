@@ -5,7 +5,7 @@
 // CSS .renuvex-pr-review* sınıfları base styles.js'te; layout-spesifik override yok.
 
 import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
-import { openReviewModal } from '../../product-widget/review-modal.js';
+import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { currentSettings } from '../../core/state.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';
 

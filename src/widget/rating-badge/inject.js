@@ -1,12 +1,9 @@
 // rating-badge/inject.js — PDP rating badge DOM injection + JSON-LD writer.
 //
-// Moved here from src/widget/product-widget/rating-badge.js (ADR_0024) to
-// live alongside the new rating-badge surface entry (src/widget/rating-badge/
-// index.js). Function signature unchanged so SPA cleanup helpers and the new
-// entry both call it the same way. title-finder.js stays in product-widget/
-// because findProductTitleEl is also used by review section render path.
+// Shared with the rating-badge surface entry. The product title finder lives in
+// core because PDP title placement is a cross-surface concern.
 
-import { findProductTitleEl } from '../product-widget/title-finder.js';
+import { findProductTitleEl } from '../core/product-title.js';
 import { partialStarsHTML, buildRatingA11yLabel } from '../core/helpers.js';
 // Boyut haritası tek kaynak — hem PDP başlık rozeti hem listing kartları
 // aynı SIZE_MAP'i kullanır; merchant'ın badge.size seçimi her iki yüzeye uygulanır.

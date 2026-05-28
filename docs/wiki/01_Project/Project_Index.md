@@ -62,7 +62,7 @@ related:
 - DOM observer → [src/widget/observer.js](src/widget/observer.js)
 - Events → [src/widget/events.js](src/widget/events.js)
 - Icons registry API → [src/widget/icons/index.js](src/widget/icons/index.js)
-- Product widget bootstrap/render → [src/widget/product-widget/](src/widget/product-widget/)
+- Review section bootstrap/render → [src/widget/reviews-section/](src/widget/reviews-section/)
 - Listing badges → [src/widget/listing-badges/](src/widget/listing-badges/)
 - Review layouts → [src/widget/review-layouts/](src/widget/review-layouts/)
 - Summary layouts → [src/widget/summary-layouts/](src/widget/summary-layouts/)

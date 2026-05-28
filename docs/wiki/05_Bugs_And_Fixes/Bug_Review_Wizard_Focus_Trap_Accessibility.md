@@ -37,13 +37,13 @@ Example scenario:
 4. Focus can leave the wizard and reach page links/buttons behind the overlay, so keyboard users can interact with the storefront while the modal is visually active.
 
 ## Root Cause
-[modal-shell.js](src/widget/product-widget/review-form-modal/modal-shell.js) set `role="dialog"` and `aria-modal="true"`, but only handled `Escape`. It did not:
+[modal-shell.js](src/widget/reviews-section/review-form-modal/modal-shell.js) set `role="dialog"` and `aria-modal="true"`, but only handled `Escape`. It did not:
 - capture the opening trigger for focus restoration,
 - move initial focus into the wizard,
 - trap `Tab` / `Shift+Tab` inside the overlay,
 - restore focus on close.
 
-[styles.js](src/widget/product-widget/review-form-modal/styles.js) also removed input outlines on focus and did not provide a replacement `:focus-visible` style. Step 2 used a clickable label with a hidden file input for photo upload, which was weaker for keyboard access than a real button trigger.
+[styles.js](src/widget/reviews-section/review-form-modal/styles.js) also removed input outlines on focus and did not provide a replacement `:focus-visible` style. Step 2 used a clickable label with a hidden file input for photo upload, which was weaker for keyboard access than a real button trigger.
 
 ## Fix
 The wizard shell now owns modal focus management:
@@ -64,11 +64,11 @@ The tuning:
 - The `:focus-visible` outline on `.renuvex-pr-fwizard-input` and `.renuvex-pr-fwizard-textarea` was removed; inputs rely on the native caret. Buttons keep their outline.
 
 ## Files Changed
-- [modal-shell.js](src/widget/product-widget/review-form-modal/modal-shell.js)
-- [index.js](src/widget/product-widget/review-form-modal/index.js)
-- [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js)
-- [step-rating.js](src/widget/product-widget/review-form-modal/steps/step-rating.js)
-- [styles.js](src/widget/product-widget/review-form-modal/styles.js)
+- [modal-shell.js](src/widget/reviews-section/review-form-modal/modal-shell.js)
+- [index.js](src/widget/reviews-section/review-form-modal/index.js)
+- [step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js)
+- [step-rating.js](src/widget/reviews-section/review-form-modal/steps/step-rating.js)
+- [styles.js](src/widget/reviews-section/review-form-modal/styles.js)
 - [widget.js](public/widget.js)
 
 ## Prevention

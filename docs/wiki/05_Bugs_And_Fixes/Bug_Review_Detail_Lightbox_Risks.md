@@ -40,32 +40,32 @@ Fixed in the 2026-05-11 lightbox pass:
 
 ## Root Cause
 - Fixed root cause: [gallery/index.js](src/widget/review-layouts/gallery/index.js) opened the detail lightbox for "read more" even when the review had no valid image.
-- Fixed root cause: [review-modal.js](src/widget/product-widget/review-modal.js) assumed the caller was opening a photo-backed review and did not guard an empty image list before creating the main image.
+- Fixed root cause: [review-modal.js](src/widget/reviews-section/review-modal.js) assumed the caller was opening a photo-backed review and did not guard an empty image list before creating the main image.
 - Fixed root cause: [route.ts](src/app/api/public/reviews/route.ts) persisted `images` arrays without host allowlisting or normalizing them to known Cloudinary assets.
 - Fixed root cause: widget image display used ad hoc URL prefix checks instead of a single trusted review image helper.
-- Fixed root cause: [render.js](src/widget/product-widget/render.js) passed the current `reviews` page or `moreData.data.reviews` page slice to lightbox calls instead of one canonical loaded collection.
-- Fixed root cause: [review-modal.js](src/widget/product-widget/review-modal.js) directly cleared body inline styles on close instead of restoring captured previous values.
-- Fixed root cause: [review-modal.js](src/widget/product-widget/review-modal.js) unconditionally called `history.go(-1)` on modal close.
+- Fixed root cause: [render.js](src/widget/reviews-section/render.js) passed the current `reviews` page or `moreData.data.reviews` page slice to lightbox calls instead of one canonical loaded collection.
+- Fixed root cause: [review-modal.js](src/widget/reviews-section/review-modal.js) directly cleared body inline styles on close instead of restoring captured previous values.
+- Fixed root cause: [review-modal.js](src/widget/reviews-section/review-modal.js) unconditionally called `history.go(-1)` on modal close.
 
 ## Fix
 Fixed:
 - [gallery/index.js](src/widget/review-layouts/gallery/index.js) now derives `hasMedia` from the first valid image URL, opens the lightbox only for photo-backed reviews, and uses inline expand/collapse for photo-less long comments and replies.
-- [review-modal.js](src/widget/product-widget/review-modal.js) now centralizes valid image filtering, returns early when the review has no valid image, and normalizes missing `clickedUrl` to photo index `0`.
+- [review-modal.js](src/widget/reviews-section/review-modal.js) now centralizes valid image filtering, returns early when the review has no valid image, and normalizes missing `clickedUrl` to photo index `0`.
 - [src/lib/review-images.ts](src/lib/review-images.ts) defines the server-side trusted Cloudinary URL policy for review images.
 - [route.ts](src/app/api/public/reviews/route.ts) rejects untrusted image payloads on POST and filters legacy stored images on GET.
 - [helpers.js](src/widget/core/helpers.js) exposes `getTrustedReviewImages()` and `getFirstTrustedReviewImage()` so all storefront renderers share the same policy.
-- [review-modal.js](src/widget/product-widget/review-modal.js) now snapshots and restores body inline scroll styles before and after modal lock.
-- [review-modal.js](src/widget/product-widget/review-modal.js) now separates browser-back close from UI close: back consumes the modal popstate, while UI close avoids `history.go(-1)` and only replaces a still-current widget-owned modal state.
+- [review-modal.js](src/widget/reviews-section/review-modal.js) now snapshots and restores body inline scroll styles before and after modal lock.
+- [review-modal.js](src/widget/reviews-section/review-modal.js) now separates browser-back close from UI close: back consumes the modal popstate, while UI close avoids `history.go(-1)` and only replaces a still-current widget-owned modal state.
 - [state.js](src/widget/core/state.js) now stores `loadedLightboxReviews` as a stable array reference with reset/append helpers.
-- [render.js](src/widget/product-widget/render.js) resets `loadedLightboxReviews` on full render and appends load-more results before rendering new cards, so all existing and new card/list/gallery handlers receive the same loaded collection.
+- [render.js](src/widget/reviews-section/render.js) resets `loadedLightboxReviews` on full render and appends load-more results before rendering new cards, so all existing and new card/list/gallery handlers receive the same loaded collection.
 - [review-layouts/index.js](src/widget/review-layouts/index.js) documents the layout contract as the active sort/filter loaded collection instead of the active page slice.
 - [public/widget.js](public/widget.js) was regenerated with `pnpm build:widget`.
 
 ## Files Changed
 - [gallery/index.js](src/widget/review-layouts/gallery/index.js)
-- [review-modal.js](src/widget/product-widget/review-modal.js)
+- [review-modal.js](src/widget/reviews-section/review-modal.js)
 - [state.js](src/widget/core/state.js)
-- [render.js](src/widget/product-widget/render.js)
+- [render.js](src/widget/reviews-section/render.js)
 - [review-layouts/index.js](src/widget/review-layouts/index.js)
 - [review-images.ts](src/lib/review-images.ts)
 - [route.ts](src/app/api/public/reviews/route.ts)

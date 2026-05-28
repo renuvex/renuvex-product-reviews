@@ -298,7 +298,7 @@ is set, and deployed transfer-size re-measurement.
 - [src/widget/surfaces/reviews-main.surface.js](src/widget/surfaces/reviews-main.surface.js)
 - [src/widget/surfaces/listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js)
 - [src/widget/events.js](src/widget/events.js)
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js)
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js)
 - [src/widget/themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js)
 - [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json)
 

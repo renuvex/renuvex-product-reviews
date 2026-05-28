@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-28
+last_verified: 2026-05-28
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -20,10 +20,10 @@ source_files:
   - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
-  - "src/widget/product-widget/bootstrap.js"
-  - "src/widget/product-widget/reviews-api.js"
-  - "src/widget/product-widget/render.js"
-  - "src/widget/product-widget/styles.js"
+  - "src/widget/reviews-section/bootstrap.js"
+  - "src/widget/reviews-section/reviews-api.js"
+  - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/styles.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/themes/current-adapter.js"
@@ -44,7 +44,7 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `product-widget/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `product-widget/styles.js`, not inside a theme adapter folder.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `reviews-section/styles.js`, not inside a theme adapter folder.
 
 ## Tree
 
@@ -72,15 +72,15 @@ src/widget/
 │  ├─ state.js                    # Module-level mutable state (currentSettings, currentProductId, ...)
 │  ├─ fetch.js                    # API helpers (calls /api/public/*)
 │  ├─ cache.js                    # sessionStorage wrapper with in-memory fallback (cacheGet/cacheSet)
+│  ├─ product-title.js            # Shared PDP title finder for badge placement and adapters
 │  ├─ helpers.js                  # Misc utilities + trusted review image URL helpers
 │  └─ badge.js                    # Generic badge primitive
 │
-├─ product-widget/
+├─ reviews-section/
 │  ├─ bootstrap.js                # Reviews section entry: settings, mount gate, initial fetch orchestration
 │  ├─ reviews-api.js              # Reviews/photoStrip fetch helpers and explicit fetch-error result
 │  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA)
 │  ├─ styles.js                  # Shared Renuvex review widget CSS
-│  ├─ title-finder.js             # Heuristic to locate product title in any theme
 │  ├─ review-modal.js             # Photo review detail lightbox
 │  └─ review-form-modal/
 │     ├─ index.js                 # Modal entry
@@ -144,7 +144,7 @@ src/widget/
 - ⚠️ When you add a new layout, declare `supports` keys for everything any setting could check. Otherwise admin shows fields that have no effect.
 
 ### Theme variant
-Runtime theme selection is not a per-theme bundle split. The live widget receives `runtime.themeAdapterKey/source` from public settings and selects the adapter through `themes/current-adapter.js`. The historical `--theme=new-theme` build alias still exists in [scripts/build-widget.mjs](scripts/build-widget.mjs), but it is not the current adapter model. Base review widget CSS now imports from `product-widget/styles.js`; `themes/ozy/styles.js` is only a compatibility re-export / future Ozy override placeholder.
+Runtime theme selection is not a per-theme bundle split. The live widget receives `runtime.themeAdapterKey/source` from public settings and selects the adapter through `themes/current-adapter.js`. The historical `--theme=new-theme` build alias still exists in [scripts/build-widget.mjs](scripts/build-widget.mjs), but it is not the current adapter model. Base review widget CSS now imports from `reviews-section/styles.js`; `themes/ozy/styles.js` is only a compatibility re-export / future Ozy override placeholder.
 
 ## What lives in `public/`
 - [public/widget.js](public/widget.js) — built classic loader (committed). Don't hand-edit.
@@ -155,7 +155,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 
 ## Notes
 - `core/state.js` holds module-level mutable state (`currentSettings`, `currentProductId`, `currentReviewsData`, ...). Acceptable because the widget is a single-page-singleton. When refactoring, treat these as the runtime state — re-renders must consume them.
-- Review submission is modal-only. The legacy inline/page form was removed from `src/widget/product-widget/`; all write CTAs open `review-form-modal/`.
+- Review submission is modal-only. The legacy inline/page form was removed from `src/widget/reviews-section/`; all write CTAs open `review-form-modal/`.
 - `review-modal.js` is the photo review detail lightbox, not the review submission wizard. Keep this distinction clear when changing modal behavior. See [[Product_Review_Lightbox]].
 - Review/rating and filter icons are split under `src/widget/icons/`. Import new code from [icons/index.js](src/widget/icons/index.js); [icons.js](src/widget/icons.js) remains only as a compatibility re-export.
 - Review image rendering must go through `getTrustedReviewImages()` / `getFirstTrustedReviewImage()` in [helpers.js](src/widget/core/helpers.js). Do not add layout-local `https://` or `data:image` checks.
@@ -181,12 +181,13 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
-- 2026-05-27: Added [product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js) to make the product-widget folder boundary explicit: `bootstrap.js` owns review mount orchestration, `reviews-api.js` owns review/photoStrip data access, and `render.js` owns review-section UI interactions.
+- 2026-05-28: Renamed the broad PDP implementation folder to [reviews-section/](src/widget/reviews-section/) and moved the shared PDP title finder to [core/product-title.js](src/widget/core/product-title.js). Public widget mount/API contracts stayed unchanged.
+- 2026-05-27: Added [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) to make the reviews-section folder boundary explicit: `bootstrap.js` owns review mount orchestration, `reviews-api.js` owns review/photoStrip data access, and `render.js` owns review-section UI interactions.
 - 2026-05-24: Added [icons/star-sprite.js](src/widget/icons/star-sprite.js) — read-only rating stars render via a single injected SVG `<symbol>` sprite referenced by `<use>` instead of inlining `<path>` per star. Renderers (`partialStarsHTML`, `starsHTML`, `renderStarRow`) call `ensureStarSprite` + emit `starUseSvg`; `ICONS` strings stay the single source (admin preview + sprite both derive from them). Related: [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-18: Added [core/link-scope.js](src/widget/core/link-scope.js) so listing badges and the MutationObserver share scoped link discovery; active builds no longer use whole-document `document.querySelectorAll('a[href]')` for listing re-render checks.
 - 2026-05-17: Listing badge files now use canonical ikas product ids from Storefront Events for rating fetches; slug remains DOM fallback only. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Phase 2 module split implemented and verified. `public/widget.js` is the classic loader, `public/widget-runtime/*` contains ESM runtime/chunks, and lazy boundaries live in `core/lazy-modules.js`.
 - 2026-05-12: Split the storefront icon registry into [review-icons.js](src/widget/icons/review-icons.js), [filter-icons.js](src/widget/icons/filter-icons.js), and [icons/index.js](src/widget/icons/index.js). [icons.js](src/widget/icons.js) now remains as a compatibility re-export.
 - 2026-05-10: Documented the trusted review image helpers in [helpers.js](src/widget/core/helpers.js). Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
-- 2026-05-05: Removed the legacy inline/page review form from the widget source map. Review submission is now modal-only via [review-form-modal/](src/widget/product-widget/review-form-modal/). Related source: [render.js](src/widget/product-widget/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
-- 2026-05-10: Corrected `review-modal.js` from "multi-step review modal" to photo review detail lightbox and linked [[Product_Review_Lightbox]]. Related source: [review-modal.js](src/widget/product-widget/review-modal.js).
+- 2026-05-05: Removed the legacy inline/page review form from the widget source map. Review submission is now modal-only via [review-form-modal/](src/widget/reviews-section/review-form-modal/). Related source: [render.js](src/widget/reviews-section/render.js), [write-action.js](src/widget/summary-layouts/shared/write-action.js).
+- 2026-05-10: Corrected `review-modal.js` from "multi-step review modal" to photo review detail lightbox and linked [[Product_Review_Lightbox]]. Related source: [review-modal.js](src/widget/reviews-section/review-modal.js).

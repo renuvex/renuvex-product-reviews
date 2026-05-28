@@ -1,6 +1,6 @@
 // surfaces/reviews-main.surface.js - PDP review block surface descriptor.
 //
-// Phase 2: the descriptor is intentionally light. The product-widget module is
+// Phase 2: the descriptor is intentionally light. The reviews-section module is
 // imported only when a product context is detected.
 
 import { loadReviewsMainModule } from '../core/lazy-modules.js';

@@ -63,7 +63,7 @@ Conventional Commits — `<type>(<scope>): <summary>` (max 72 chars, imperative)
 ## Investigation order for "widget doesn't show on theme X"
 1. Was the script actually injected? Check `StoreSettings.storefrontScripts`.
 2. Did `bootstrap.js` detect the product? Add log.
-3. Did `title-finder.js` find an anchor? Add log.
+3. Did `product-title.js` find an anchor? Add log.
 
 ## Investigation order for token-related bugs
 1. Is `AuthToken` row present for the merchant?

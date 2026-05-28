@@ -43,7 +43,7 @@ related:
 - The settings update protocol: admin posts `RENUVEX_PR_SETTINGS_UPDATE`, widget posts back `RENUVEX_PR_WIDGET_READY`.
 
 ### Review detail lightbox
-- Use `/preview` to open the photo strip and click a review image. The lightbox path is [review-modal.js](src/widget/product-widget/review-modal.js), not the submission wizard.
+- Use `/preview` to open the photo strip and click a review image. The lightbox path is [review-modal.js](src/widget/reviews-section/review-modal.js), not the submission wizard.
 - Test both first-page reviews and reviews inserted by "Daha Fazla Goster"; caller-provided review slices affect previous/next navigation.
 - Test gallery layout long-text reviews with no images; this is tracked in [[Bug_Review_Detail_Lightbox_Risks]].
 - Check body scroll lock interactions against real storefront drawers or menus, not only the preview iframe.
@@ -95,4 +95,4 @@ Operational reference: [[Sentry_Operations]] (org `renuvex`, project `renuvex-pr
 
 ## Change Log
 - 2026-05-25: Fixed three Sentry-surfaced issues — removed the token-leaking `/callback` console.log, changed `TokenHelpers.setToken` throw→return (the throw became an `unhandledrejection`), and guarded the dashboard `HomePage` init against an unhandled `/api/admin/settings` 401. Documented the `search_issues` under-count gotcha. Sources: [src/app/callback/page.tsx](src/app/callback/page.tsx), [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts), [src/components/home-page/index.tsx](src/components/home-page/index.tsx).
-- 2026-05-10: Added debugging checklist for the photo review detail lightbox and its current open risks. Related source: [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].
+- 2026-05-10: Added debugging checklist for the photo review detail lightbox and its current open risks. Related source: [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

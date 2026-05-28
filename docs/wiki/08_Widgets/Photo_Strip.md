@@ -48,7 +48,7 @@ related:
   - `.renuvex-pr-photo-strip` — yatay flex container, `overflow-x:auto`
   - `.renuvex-pr-photo-strip-thumb` — tek thumbnail (`<img>`)
   - `.renuvex-pr-photo-strip-arrow-prev` / `.renuvex-pr-photo-strip-arrow-next` — desktop ok butonları
-- CSS dosyası: [product-widget/styles.js](src/widget/product-widget/styles.js)
+- CSS dosyası: [reviews-section/styles.js](src/widget/reviews-section/styles.js)
 - Mobile (`@media max-width:600px`) — arrow butonları `display:none`; sadece touch swipe.
 
 ## Admin ayarları
@@ -88,13 +88,13 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - **U4:** Arrow butonları başta/sonda `disabled` durumuna geçmiyor.
 
 ## Related Source Files
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — strip render bloğu
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — explicit mount gate + initial parallel fetch orchestration
-- [src/widget/product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js) — `fetchPhotoStripReviews`, `PHOTO_STRIP_LIMIT`
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — strip render bloğu
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) — explicit mount gate + initial parallel fetch orchestration
+- [src/widget/reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) — `fetchPhotoStripReviews`, `PHOTO_STRIP_LIMIT`
 - [src/widget/core/state.js](src/widget/core/state.js) — `photoStripReviews` state
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js) — lightbox navigation
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js) — lightbox navigation
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `getTrustedReviewImages`, `optimizeImageUrl`, `buildResponsiveImgAttrs`
-- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js) — strip CSS
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — strip CSS
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts) — `limit` query param (1-30 clamp)
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) — admin settings
 
@@ -114,8 +114,8 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 ## Change Log
 - 2026-05-27: ADR_0024 follow-up moved `fetchPhotoStripReviews` and `PHOTO_STRIP_LIMIT` from `bootstrap.js` to `reviews-api.js`. `bootstrap.js` now only triggers the initial fetch after the explicit reviews mount exists; badge-only PDPs do not call photoStrip.
 - 2026-05-11: K2 kapandi. Photo strip and review thumbnail render paths now use `hideOnImageError(img)` so broken image assets collapse instead of showing browser broken-image icons. Related bug: [[Bug_Review_Image_Error_Fallback]].
-- 2026-05-11: K3 yapısal olarak kapandı ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Cloud name widget'ta tek kaynak — build-time inject. Settings response'undan `imagePolicy` kaldırıldı, runtime cache + setter + warn helper silindi (~90 satır). Kaynak: [scripts/build-widget.mjs](scripts/build-widget.mjs), [helpers.js](src/widget/core/helpers.js), [bootstrap.js](src/widget/product-widget/bootstrap.js), [settings/route.ts](src/app/api/public/settings/route.ts), [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js).
+- 2026-05-11: K3 yapısal olarak kapandı ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Cloud name widget'ta tek kaynak — build-time inject. Settings response'undan `imagePolicy` kaldırıldı, runtime cache + setter + warn helper silindi (~90 satır). Kaynak: [scripts/build-widget.mjs](scripts/build-widget.mjs), [helpers.js](src/widget/core/helpers.js), [bootstrap.js](src/widget/reviews-section/bootstrap.js), [settings/route.ts](src/app/api/public/settings/route.ts), [step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js).
 - 2026-05-11: K3 ilk fix. Trusted image policy build-time public cloud fallback, last-valid widget cache ve settings `stale-if-error` ile dayanıklı hale getirildi. (Aynı gün ADR_0008 ile değiştirildi — defansif runtime katmanları gereksiz hale geldi.) İlgili bug: [[Bug_Cloud_Name_Silent_Image_Filter]].
 - 2026-05-11: P2 kapandı. Photo strip, card/list/gallery thumbnails ve lightbox mini thumbnail'leri responsive `srcset`, native lazy/eager policy, async decoding ve explicit dimensions kullanıyor. Lightbox ana görsel eager kaldı, 1200 px default Cloudinary varyantıyla explicit dimensions aldı. İlgili bug: [[Bug_Photo_Strip_Lazy_Loading_And_Srcset]].
-- 2026-05-11: `optimizeImageUrl` parametreli imzaya geçirildi (`url, width`); her çağrı yeri display boyutuna uygun width geçiyor — strip 300, gallery tile 600, lightbox mini 200, lightbox ana 1200 (default). Strip thumbnail transferi ~%85 azaldı. P1 + M3 kapandı. İlgili kaynak: [helpers.js](src/widget/core/helpers.js), [render.js](src/widget/product-widget/render.js), [card/index.js](src/widget/review-layouts/card/index.js), [list/index.js](src/widget/review-layouts/list/index.js), [gallery/index.js](src/widget/review-layouts/gallery/index.js), [review-modal.js](src/widget/product-widget/review-modal.js).
-- 2026-05-11: Sayfa oluşturuldu. Cap 15 + newest-first rotation kararıyla birlikte ([[ADR_0007_Photo_Strip_Cap_And_Rotation]]) strip ana liste'den bağımsızlaştırıldı; load-more sonrası stale state (K1) ve lightbox dead-end (K1.b) kapatıldı. İlgili kaynak: [bootstrap.js](src/widget/product-widget/bootstrap.js), [render.js](src/widget/product-widget/render.js), [state.js](src/widget/core/state.js).
+- 2026-05-11: `optimizeImageUrl` parametreli imzaya geçirildi (`url, width`); her çağrı yeri display boyutuna uygun width geçiyor — strip 300, gallery tile 600, lightbox mini 200, lightbox ana 1200 (default). Strip thumbnail transferi ~%85 azaldı. P1 + M3 kapandı. İlgili kaynak: [helpers.js](src/widget/core/helpers.js), [render.js](src/widget/reviews-section/render.js), [card/index.js](src/widget/review-layouts/card/index.js), [list/index.js](src/widget/review-layouts/list/index.js), [gallery/index.js](src/widget/review-layouts/gallery/index.js), [review-modal.js](src/widget/reviews-section/review-modal.js).
+- 2026-05-11: Sayfa oluşturuldu. Cap 15 + newest-first rotation kararıyla birlikte ([[ADR_0007_Photo_Strip_Cap_And_Rotation]]) strip ana liste'den bağımsızlaştırıldı; load-more sonrası stale state (K1) ve lightbox dead-end (K1.b) kapatıldı. İlgili kaynak: [bootstrap.js](src/widget/reviews-section/bootstrap.js), [render.js](src/widget/reviews-section/render.js), [state.js](src/widget/core/state.js).

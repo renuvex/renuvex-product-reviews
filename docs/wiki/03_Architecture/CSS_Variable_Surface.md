@@ -20,8 +20,8 @@ related:
   - "[[ADR_0017_Badge_Architecture]]"
   - "[[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]"
 source_files:
-  - "src/widget/product-widget/render.js"
-  - "src/widget/product-widget/styles.js"
+  - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/styles.js"
   - "src/widget/core/helpers.js"
   - "src/widget/core/badge.js"
   - "src/widget/listing-badges/index.js"
@@ -32,7 +32,7 @@ source_files:
   - "src/widget/review-layouts/card/index.js"
   - "src/widget/review-layouts/list/styles.js"
   - "src/widget/review-layouts/gallery/styles.js"
-  - "src/widget/product-widget/review-form-modal/styles.js"
+  - "src/widget/reviews-section/review-form-modal/styles.js"
 ---
 
 # CSS Variable Surface
@@ -47,7 +47,7 @@ The variables fall into two scope tiers (see "Scope tiers" below). Most live on 
 | Tier | Where set | Where readable | Examples |
 |---|---|---|---|
 | **Global (`:root`)** | `document.documentElement` via `listing-badges/index.js setProperty` (one var only) | Anywhere in the document AND inside any shadow root (custom properties inherit across shadow boundary, ADR_0021) | `--renuvex-pr-review-star-color` |
-| **Widget root** | `#renuvex-reviews-widget` rule in `CLASSIC_CSS` (`product-widget/styles.js`) AND `render.js` `applyVars` / `applyLayoutSizeOverrides` via `root.style.setProperty` | Inside the review section shadow tree (declared on the widget root inside the shadow) | `--renuvex-pr-gap-tight`, `--renuvex-pr-title-size`, `--renuvex-pr-radius`, `--renuvex-pr-bar-fill`, ~70 others |
+| **Widget root** | `#renuvex-reviews-widget` rule in `CLASSIC_CSS` (`reviews-section/styles.js`) AND `render.js` `applyVars` / `applyLayoutSizeOverrides` via `root.style.setProperty` | Inside the review section shadow tree (declared on the widget root inside the shadow) | `--renuvex-pr-gap-tight`, `--renuvex-pr-title-size`, `--renuvex-pr-radius`, `--renuvex-pr-bar-fill`, ~70 others |
 | **Component-scope (badge)** | `<style id="renuvex-pr-badge-tokens">` in head via `core/badge.js ensureBadgeTokens` (selector: `.renuvex-pr-rating-badge`) | Inside any element matching `.renuvex-pr-rating-badge` | `--renuvex-pr-badge-icon-size`, `--renuvex-pr-badge-text-size` |
 | **Layout-local (`.renuvex-pr-summary`)** | `summary` rule in `CLASSIC_CSS` | Inside `.renuvex-pr-summary` block only | `--renuvex-pr-col-label`, `--renuvex-pr-col-count`, `--renuvex-pr-col-gap`, `--renuvex-pr-summary-max` |
 
@@ -74,7 +74,7 @@ ADR_0016: star color is the one global rating visual; both badge and review surf
 | `--renuvex-pr-pad-summary-mobile` | 16px | Mobile summary padding |
 | `--renuvex-pr-pad-review-mobile` | 16px | Mobile review padding |
 
-Defined in the widget-root rule inside `CLASSIC_CSS`. Tokens enforce a finite spacing vocabulary; see the long comment block at the top of `product-widget/styles.js` for the contract.
+Defined in the widget-root rule inside `CLASSIC_CSS`. Tokens enforce a finite spacing vocabulary; see the long comment block at the top of `reviews-section/styles.js` for the contract.
 
 ### Sizing tokens (widget-root scope, set by `applyVars`)
 Set on the widget root in `render.js applyVars` based on merchant size choice (small / medium / large) via `SIZE_PRESETS`. Each layout (hero/compact/minimal/split) can override via `applyLayoutSizeOverrides`.
@@ -150,7 +150,7 @@ Per-element color variables. Each maps to a specific UI element so a merchant ca
 | `--renuvex-pr-compact-star-size` | `summary-layouts/compact/styles.js` | Compact layout star size |
 
 ### Form wizard (review submission UI)
-All defined in `product-widget/review-form-modal/styles.js`. Live inside the wizard's own Shadow DOM root (ADR_0021).
+All defined in `reviews-section/review-form-modal/styles.js`. Live inside the wizard's own Shadow DOM root (ADR_0021).
 
 | Variable | Purpose |
 |---|---|
@@ -224,14 +224,14 @@ Widget runtime (settings.js)
 - Variable count today: ~90. Adding more is cheap; removing existing ones requires a grep across `src/widget/` to make sure no consumer reads them with a fallback the new code did not set.
 
 ## Related Source Files
-- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js) — `CLASSIC_CSS` + spacing token doc block + widget-root declarations
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — `applyVars` / `applyLayoutSizeOverrides`
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — `CLASSIC_CSS` + spacing token doc block + widget-root declarations
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — `applyVars` / `applyLayoutSizeOverrides`
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `PARTIAL_STARS_CSS` + badge token defaults
 - [src/widget/core/badge.js](src/widget/core/badge.js) — `ensureBadgeTokens` runtime override
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js) — `--renuvex-pr-review-star-color` global setter
 - [src/widget/summary-layouts/](src/widget/summary-layouts/) — per-layout local variables
 - [src/widget/review-layouts/](src/widget/review-layouts/) — review layout sizing
-- [src/widget/product-widget/review-form-modal/styles.js](src/widget/product-widget/review-form-modal/styles.js) — wizard tokens (FWIZARD_CSS)
+- [src/widget/reviews-section/review-form-modal/styles.js](src/widget/reviews-section/review-form-modal/styles.js) — wizard tokens (FWIZARD_CSS)
 
 ## Obsidian Links
 - [[Index]]

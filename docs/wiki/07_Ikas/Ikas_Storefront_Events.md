@@ -21,7 +21,7 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
-  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/reviews-section/bootstrap.js"
 ---
 
 # ikas Storefront Events
@@ -235,7 +235,7 @@ This matches the current project pattern: the widget reads `publicApiKey` from i
 - The widget subscribes to `IkasEvents` for `PRODUCT_VIEW`, `VIEW_LISTING`, `VIEW_SEARCH_RESULTS`, and `PAGE_VIEW` in [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js) — the single subscription point since ADR_0013 Phase 1 (the old `events.js` subscription was moved there).
 - Runtime audit (2026-05-17) confirmed `VIEW_LISTING` is emitted on category pages and carries `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` with the same product id/name/slug shape. The widget uses those product ids for canonical listing/search badge reads.
 - The official docs confirm `PAGE_VIEW` and `PRODUCT_VIEW`, which the widget depends on for product detection and listing-badge rendering.
-- `PAGE_VIEW` + `IKAS_PAGE_TYPE` should be the canonical way to know the current page type, replacing URL/DOM heuristics in [bootstrap.js](src/widget/product-widget/bootstrap.js).
+- `PAGE_VIEW` + `IKAS_PAGE_TYPE` should be the canonical way to know the current page type, replacing URL/DOM heuristics in [bootstrap.js](src/widget/reviews-section/bootstrap.js).
 - `PRODUCT_VIEW.data.productDetail.id` is the official, supported product identity source — preferred over the `__NEXT_DATA__` / URL regex fallbacks in `getProductFromPage()`.
 - For the modular loader architecture ([[Yotpo_Style_Widget_Modular_Architecture]]), Storefront Events is the page/product context layer; the loader subscribes once and routes events to widget modules.
 

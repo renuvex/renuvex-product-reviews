@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/steps/step-rating.js
+// reviews-section/review-form-modal/steps/step-rating.js
 // Step 1 — Yıldız seçimi.
 // Hover'da yıldızlar dolar, tıklayınca seçili kalır,
 // tıklamadan sonra otomatik bir sonraki step'e geçer (auto-advance).

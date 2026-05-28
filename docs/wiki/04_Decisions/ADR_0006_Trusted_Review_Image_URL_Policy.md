@@ -63,8 +63,8 @@ The durable boundary must be server-side because public storefront clients are n
 - [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts)
 - [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
-- [src/widget/product-widget/review-form-modal/steps/step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js)
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js)
+- [src/widget/reviews-section/review-form-modal/steps/step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js)
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js)
 - [next.config.js](next.config.js)
 
 ## Related Notes

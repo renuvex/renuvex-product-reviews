@@ -408,5 +408,5 @@ export function hideOnImageError(img) {
 
 // renderStars / ensureStarStyles / STAR_COLOR removed during the Shadow DOM
 // migration. The new wizard step-rating builds its own button-based stars in
-// product-widget/review-form-modal/steps/step-rating.js; head-injected CSS
+// reviews-section/review-form-modal/steps/step-rating.js; head-injected CSS
 // from the old helpers would not reach inside a shadow root anyway.

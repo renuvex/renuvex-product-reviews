@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/steps/step-photos.js
+// reviews-section/review-form-modal/steps/step-photos.js
 // Step 2 — Fotoğraf yükleme (opsiyonel).
 // Başlık + alt başlık + çerçeveli kart + büyük "Fotoğraf Ekle"
 // butonu + thumbnail önizleme. Cloudinary upload akışı wizard içinde izole.

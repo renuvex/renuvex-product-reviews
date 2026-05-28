@@ -31,8 +31,8 @@ source_files:
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
-  - "src/widget/product-widget/bootstrap.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/bootstrap.js"
+  - "src/widget/reviews-section/render.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/themes/current-adapter.js"
@@ -192,8 +192,8 @@ When adding a new widget surface, follow this checklist:
 - [src/widget/surfaces/index.js](src/widget/surfaces/index.js) — `registerCoreSurfaces`
 - [src/widget/surfaces/reviews-main.surface.js](src/widget/surfaces/reviews-main.surface.js) — reviews surface descriptor
 - [src/widget/surfaces/listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js) — listing badge surface descriptor
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) — PDP entry function, settings + reviews-enabled gate
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js) — review section render and opt-in mount gate
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) — PDP entry function, settings + reviews-enabled gate
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — review section render and opt-in mount gate
 - [src/widget/surfaces/rating-badge.surface.js](src/widget/surfaces/rating-badge.surface.js) — PDP badge surface descriptor
 - [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js) — PDP badge entry function, settings/capability gates, ratings fetch
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js) — PDP badge DOM injection, cleanup, JSON-LD writer

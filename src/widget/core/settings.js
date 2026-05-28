@@ -1,7 +1,7 @@
 // core/settings.js - public widget settings fetch/cache.
 //
 // Shared by product reviews and listing badges. Keeping this out of
-// product-widget/bootstrap.js prevents listing-only pages from loading the full
+// reviews-section/bootstrap.js prevents listing-only pages from loading the full
 // review widget chunk just to read settings.
 
 import { PUBLIC_API_KEY, API_BASE } from './config.js';

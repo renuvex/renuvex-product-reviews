@@ -19,7 +19,7 @@ related:
   - "[[Product_Review_Widget]]"
 source_files:
   - "src/widget/summary-layouts/shared/actions-block.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/render.js"
   - "public/widget.js"
   - "public/widget-runtime/runtime.js"
 ---

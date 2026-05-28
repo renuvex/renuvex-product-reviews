@@ -22,7 +22,7 @@ related:
 # Product Rating Badge
 
 ## Summary
-Small inline star rating and count shown on the product detail page near the product title. The surface entry is [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js), DOM injection lives in [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js), and placement uses [title-finder.js](src/widget/product-widget/title-finder.js).
+Small inline star rating and count shown on the product detail page near the product title. The surface entry is [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js), DOM injection lives in [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js), and placement uses [product-title.js](src/widget/core/product-title.js).
 
 ## Settings (`badge` widgetId)
 Settings live under `WidgetSettings.settings` with `widgetId='badge'`. Source schema: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).
@@ -41,13 +41,13 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 
 ## Where it appears
 - Product detail page only.
-- Anchored next to the product title via title-finder heuristic.
+- Anchored next to the product title via product-title heuristic.
 - Updated when the product detail loads or SPA-nav fires the observer.
 - The product-title badge is a separate `badge` feature and its own lazy surface. It auto-places on the product title and is gated by the `badge` widget toggle plus `autoPlacementEnabled`, not by the review-section mount.
 - The review section is opt-in through `<div data-renuvex-widget="reviews"></div>`. If that mount is missing, the review section does not render, but the PDP title badge can still render. Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 
 ## Notes
-- If a merchant theme has unusual title markup, the badge may attach to the wrong element. The fix is in [title-finder.js](src/widget/product-widget/title-finder.js).
+- If a merchant theme has unusual title markup, the badge may attach to the wrong element. The fix is in [product-title.js](src/widget/core/product-title.js).
 - The badge uses `/api/public/ratings?productIds=<id>` instead of the full review payload. That keeps badge-only PDPs off the heavy review-section fetch/render path. See [[ADR_0024_Badge_Review_Surface_Separation]].
 - Star glyphs render via a shared SVG `<symbol>` sprite (`<use>` into `#renuvex-pr-icon-sprite`), not inline `<path>`. The badge is a real link named by an sr-only `aria-labelledby` span (no `role="figure"`, no static `id`); alignment comes from `data-renuvex-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
 
@@ -55,7 +55,7 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js)
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/surfaces/rating-badge.surface.js](src/widget/surfaces/rating-badge.surface.js)
-- [src/widget/product-widget/title-finder.js](src/widget/product-widget/title-finder.js)
+- [src/widget/core/product-title.js](src/widget/core/product-title.js)
 - [src/widget/core/state.js](src/widget/core/state.js)
 
 ## Obsidian Links

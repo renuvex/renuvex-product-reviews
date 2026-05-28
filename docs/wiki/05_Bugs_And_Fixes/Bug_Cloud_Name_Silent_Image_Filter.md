@@ -43,7 +43,7 @@ There is one important nuance: if `/api/public/settings` returned no response at
 
 ## Root Cause
 - [helpers.js](src/widget/core/helpers.js) initialized the trusted review image cloud name as `null` and accepted only runtime settings as the source of truth.
-- [bootstrap.js](src/widget/product-widget/bootstrap.js) kept settings in a short-lived cache and did not keep image policy as a separate durable contract.
+- [bootstrap.js](src/widget/reviews-section/bootstrap.js) kept settings in a short-lived cache and did not keep image policy as a separate durable contract.
 - Expired stale settings were cleared before a network retry finished, weakening outage tolerance.
 - [settings/route.ts](src/app/api/public/settings/route.ts) returned `imagePolicy.cloudName` but did not log when the server-side Cloudinary cloud config was missing.
 
@@ -64,7 +64,7 @@ There is one important nuance: if `/api/public/settings` returned no response at
 ## Files Changed
 - [scripts/build-widget.mjs](scripts/build-widget.mjs)
 - [helpers.js](src/widget/core/helpers.js)
-- [bootstrap.js](src/widget/product-widget/bootstrap.js)
+- [bootstrap.js](src/widget/reviews-section/bootstrap.js)
 - [settings/route.ts](src/app/api/public/settings/route.ts)
 - [widget.js](public/widget.js)
 - Documentation updates under `docs/wiki`.

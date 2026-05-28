@@ -13,7 +13,7 @@ import {
 } from './core/storefront-context.js';
 import { mountMatching } from './core/registry.js';
 import { registerCoreSurfaces } from './surfaces/index.js';
-import { loadListingBadgesModule, loadProductRenderModule, loadReviewsMainModule } from './core/lazy-modules.js';
+import { loadListingBadgesModule, loadReviewsRenderModule, loadReviewsMainModule } from './core/lazy-modules.js';
 import {
   dispatchPreviewSettingsUpdated,
   isPreviewSettingsUpdateMessage,
@@ -180,7 +180,7 @@ function onPreviewMessage(event) {
   lastPreviewSettingsFingerprint = fingerprint;
   lastPreviewSettingsAt = now;
   var merged = Object.assign({}, currentSettings, s);
-  loadProductRenderModule().then(function (mod) {
+  loadReviewsRenderModule().then(function (mod) {
     mod.render(currentProductId, merged, currentReviewsData, currentProductName, currentOrderBy, currentPage);
     dispatchPreviewSettingsUpdated(merged);
   }).catch(function (err) {

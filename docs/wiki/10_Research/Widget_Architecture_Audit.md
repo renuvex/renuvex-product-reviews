@@ -30,7 +30,7 @@ source_files:
   - "src/widget/events.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/listing-badges/collect.js"
-  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/review-layouts/list/index.js"
   - "src/widget/review-layouts/card/index.js"
   - "src/widget/themes/current-adapter.js"
@@ -104,7 +104,7 @@ kabul edilmedi, dosya:satır okundu). `tsc --noEmit` + `build:widget` temiz.
 ## Kapsam Notu
 
 İncelenen: widget runtime (loader/registry/storefront-context/surfaces/observer/
-events), listing-badge ve product-widget render yolu, public widget endpoint'leri
+events), listing-badge ve reviews-section render yolu, public widget endpoint'leri
 (`settings`, `reviews`, `ratings`, `ratings-by-slug`, `widget-error`, `upload/*`),
 ikas StorefrontJSScript injection, widget-ilişkili Prisma modelleri, cache/deploy
 header'ları. Kapsam dışı: admin panel UX, auth/mail/lisans sistemleri, widget'la

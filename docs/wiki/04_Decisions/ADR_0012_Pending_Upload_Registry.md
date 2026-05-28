@@ -88,7 +88,7 @@ Two cron slots, both daily-or-slower: daily maintenance (`0 3 * * *`, pending cl
 - 24-hour TTL eliminates the in-flight race by construction.
 - Daily cadence shortens orphan storage life from up to 7 days to up to 48 hours.
 - Pattern generalizes: any future feature (Q&A photos, profile uploads) drops in by reusing the registry and the same lifecycle.
-- Bundle growth: ~80 bytes (one fetch call in [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js)).
+- Bundle growth: ~80 bytes (one fetch call in [step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js)).
 - Free-tier compatible across Vercel Hobby, Supabase free, and Cloudinary free.
 
 **Negative / accepted trade-offs**
@@ -106,7 +106,7 @@ Two cron slots, both daily-or-slower: daily maintenance (`0 3 * * *`, pending cl
 - [api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts)
 - [cleanup-pending-uploads.ts](src/lib/cleanup-pending-uploads.ts)
 - [api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
-- [step-photos.js](src/widget/product-widget/review-form-modal/steps/step-photos.js)
+- [step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js)
 - [vercel.json](vercel.json)
 
 ## Obsidian Links

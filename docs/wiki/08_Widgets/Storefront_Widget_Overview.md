@@ -21,7 +21,7 @@ source_files:
   - "src/widget/loader.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/rating-badge/index.js"
-  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/listing-badges/index.js"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"

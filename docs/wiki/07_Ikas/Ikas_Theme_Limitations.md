@@ -23,10 +23,10 @@ source_files:
   - "src/app/api/public/settings/route.ts"
   - "src/widget/themes/"
   - "src/widget/core/settings.js"
-  - "src/widget/product-widget/title-finder.js"
+  - "src/widget/core/product-title.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/themes/current-adapter.js"
-  - "src/widget/product-widget/styles.js"
+  - "src/widget/reviews-section/styles.js"
 ---
 
 # ikas Theme Limitations
@@ -65,10 +65,10 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - [src/widget/themes/ozy/](src/widget/themes/ozy/) - Ozy selectors, adapter behavior, and optional Ozy-specific style overrides.
 - [src/widget/themes/generic/](src/widget/themes/generic/) - conservative fallback adapter for unknown active themes.
 - [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts) - resolves Admin API storefront/theme metadata into public runtime adapter metadata.
-- [src/widget/product-widget/title-finder.js](src/widget/product-widget/title-finder.js) - generic heuristic to locate product title.
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) - product detection fallback.
+- [src/widget/core/product-title.js](src/widget/core/product-title.js) - generic heuristic to locate product title.
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) - product detection fallback.
 - [src/widget/listing-badges/collect.js](src/widget/listing-badges/collect.js) - listing card discovery.
-- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js) - shared Renuvex review widget CSS; this is intentionally outside theme adapter folders.
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) - shared Renuvex review widget CSS; this is intentionally outside theme adapter folders.
 
 ## Known Constraints / TODO
 - No structured theme widget surface or stable DOM mount point from ikas is confirmed today.
@@ -130,7 +130,7 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
 - Storefront Events remain the primary context source. `listStorefront.themes[].isMainTheme` can only help select an adapter; it does not replace runtime placement checks.
 
 ## Notes
-- When a merchant reports "widget doesn't show", check in order: script injection, public settings/API calls, Storefront Events/product context, then placement/title-finder.
+- When a merchant reports "widget doesn't show", check in order: script injection, public settings/API calls, Storefront Events/product context, then placement/product-title.
 - Document new theme quirks as they are encountered: theme name, symptom, selector/adapter workaround, and verification URL.
 
 ## Related Source Files
@@ -139,9 +139,9 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
 - [src/lib/storefront-theme-sync.ts](src/lib/storefront-theme-sync.ts)
 - [src/app/api/admin/storefront-theme/sync/route.ts](src/app/api/admin/storefront-theme/sync/route.ts)
 - [src/widget/themes/](src/widget/themes/)
-- [src/widget/product-widget/styles.js](src/widget/product-widget/styles.js)
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js)
-- [src/widget/product-widget/title-finder.js](src/widget/product-widget/title-finder.js)
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js)
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js)
+- [src/widget/core/product-title.js](src/widget/core/product-title.js)
 - [src/widget/observer.js](src/widget/observer.js)
 
 ## Obsidian Links

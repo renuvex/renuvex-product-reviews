@@ -28,9 +28,9 @@ related:
 
 ### "Widget doesn't appear on theme X"
 **Signal:** widget shows on theme A but not on theme B.
-**Cause:** product detection or title-finder heuristics fail on the new theme's DOM structure.
+**Cause:** product detection or product-title heuristics fail on the new theme's DOM structure.
 **Mitigation:**
-- Inspect [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js) and [title-finder.js](src/widget/product-widget/title-finder.js).
+- Inspect [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) and [product-title.js](src/widget/core/product-title.js).
 - Add the theme's quirks via the `themes/` system rather than scattering selectors.
 
 ### Listing badge appears in the wrong section

@@ -35,14 +35,14 @@ The photo review lightbox sits outside the normal widget render tree. Preview mo
 
 ## Fix
 - [src/widget/index.js](src/widget/index.js) now includes the merged settings in `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event detail.
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js) now keeps the active review and active settings in the `openReviewModal` closure. Review/photo navigation threads that state through `rebuildModal`, and settings updates re-render the full right pane through `updateRight`.
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js) updates both stars and `merchantReplyLabel` through `updateRight`, removing the `data-rating` DOM-as-state workaround.
-- [src/widget/product-widget/review-form-modal/steps/step-rating.js](src/widget/product-widget/review-form-modal/steps/step-rating.js) also consumes the event detail settings payload to avoid the same stale-settings risk in the submission wizard rating step.
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js) now keeps the active review and active settings in the `openReviewModal` closure. Review/photo navigation threads that state through `rebuildModal`, and settings updates re-render the full right pane through `updateRight`.
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js) updates both stars and `merchantReplyLabel` through `updateRight`, removing the `data-rating` DOM-as-state workaround.
+- [src/widget/reviews-section/review-form-modal/steps/step-rating.js](src/widget/reviews-section/review-form-modal/steps/step-rating.js) also consumes the event detail settings payload to avoid the same stale-settings risk in the submission wizard rating step.
 
 ## Files Changed
 - [src/widget/index.js](src/widget/index.js)
-- [src/widget/product-widget/review-modal.js](src/widget/product-widget/review-modal.js)
-- [src/widget/product-widget/review-form-modal/steps/step-rating.js](src/widget/product-widget/review-form-modal/steps/step-rating.js)
+- [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js)
+- [src/widget/reviews-section/review-form-modal/steps/step-rating.js](src/widget/reviews-section/review-form-modal/steps/step-rating.js)
 - [public/widget.js](public/widget.js)
 
 ## Prevention

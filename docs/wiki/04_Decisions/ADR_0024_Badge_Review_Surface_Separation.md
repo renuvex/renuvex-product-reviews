@@ -25,9 +25,9 @@ source_files:
   - "src/widget/surfaces/rating-badge.surface.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/surfaces/index.js"
-  - "src/widget/product-widget/bootstrap.js"
-  - "src/widget/product-widget/reviews-api.js"
-  - "src/widget/product-widget/render.js"
+  - "src/widget/reviews-section/bootstrap.js"
+  - "src/widget/reviews-section/reviews-api.js"
+  - "src/widget/reviews-section/render.js"
   - "src/widget/events.js"
   - "src/widget/loader.js"
   - "public/widget-runtime/build-manifest.json"
@@ -49,9 +49,9 @@ The PDP rating badge is now its own storefront surface.
 - `rating-badge.surface.js` detects `ctx.trigger === 'product'` and loads a dedicated `rating-badge-*` chunk.
 - `rating-badge/index.js` owns settings fetch, badge enabled gate, `isAutoPlacementEnabled()` gate, one-product `/api/public/ratings` fetch, and the final call into `injectRatingBadge`.
 - `rating-badge/inject.js` owns PDP badge DOM + JSON-LD cleanup and injection.
-- `product-widget/render.js` no longer injects the PDP badge or derives a rating summary from the full reviews payload.
-- `product-widget/bootstrap.js` now returns before `fetchReviews` / `fetchPhotoStripReviews` when the explicit reviews mount is absent, and dynamically imports `render.js` only after that mount check and the review fetches. This import boundary is required; a static `render.js` import pulls the review content chunk back into the bootstrap path.
-- `product-widget/reviews-api.js` owns shared review/photoStrip fetch helpers and the explicit review-fetch error result, so `bootstrap.js` remains orchestration and `render.js` can reuse the same data contract.
+- `reviews-section/render.js` no longer injects the PDP badge or derives a rating summary from the full reviews payload.
+- `reviews-section/bootstrap.js` now returns before `fetchReviews` / `fetchPhotoStripReviews` when the explicit reviews mount is absent, and dynamically imports `render.js` only after that mount check and the review fetches. This import boundary is required; a static `render.js` import pulls the review content chunk back into the bootstrap path.
+- `reviews-section/reviews-api.js` owns shared review/photoStrip fetch helpers and the explicit review-fetch error result, so `bootstrap.js` remains orchestration and `render.js` can reuse the same data contract.
 - `loader.js` keeps the 2-second listing-badges fallback but requires product-card-like DOM candidates (same-origin product-like link + nearby image, at least two unique products) so clean PDPs do not eagerly load the listing-badges chunk.
 
 ## Reasoning
@@ -86,8 +86,8 @@ The PDP rating badge is now its own storefront surface.
 - [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js)
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)
 - [src/widget/surfaces/rating-badge.surface.js](src/widget/surfaces/rating-badge.surface.js)
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js)
-- [src/widget/product-widget/reviews-api.js](src/widget/product-widget/reviews-api.js)
-- [src/widget/product-widget/render.js](src/widget/product-widget/render.js)
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js)
+- [src/widget/reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js)
+- [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
 - [src/widget/events.js](src/widget/events.js)
 - [src/widget/loader.js](src/widget/loader.js)

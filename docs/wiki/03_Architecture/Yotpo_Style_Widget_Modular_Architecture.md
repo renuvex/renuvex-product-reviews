@@ -29,7 +29,7 @@ source_files:
   - "src/widget/core/config.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/core/settings.js"
-  - "src/widget/product-widget/bootstrap.js"
+  - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/themes/ozy/adapter.js"
   - "public/widget.js"
@@ -63,7 +63,7 @@ Current source entry points:
 
 - [src/widget/index.js](src/widget/index.js)
 - [src/widget/core/config.js](src/widget/core/config.js)
-- [src/widget/product-widget/bootstrap.js](src/widget/product-widget/bootstrap.js)
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js)
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js)
 
 ## Why Change
@@ -119,7 +119,7 @@ Initial registry candidates:
 | Registry key | Purpose | Current equivalent |
 |---|---|---|
 | `rating-badge` | PDP title rating summary | `rating-badge/inject.js` |
-| `reviews-main` | PDP summary, filters, reviews, write CTA | `product-widget/render.js` |
+| `reviews-main` | PDP summary, filters, reviews, write CTA | `reviews-section/render.js` |
 | `listing-badge` | collection/search product cards | `listing-badges/*` |
 | `review-form` | multi-step review submission modal | `review-form-modal/*` |
 | `media-gallery` | photo strip and photo lightbox | `Photo_Strip`, `Product_Review_Lightbox` |

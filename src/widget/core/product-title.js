@@ -1,4 +1,4 @@
-// product-widget/title-finder.js - finds the PDP product title element.
+// core/product-title.js - finds the PDP product title element.
 // Theme adapters get the first chance; generic text/h1 matching is fallback.
 
 import { getThemeAdapter } from '../themes/current-adapter.js';

@@ -1,4 +1,4 @@
-// product-widget/review-form-modal/styles.js
+// reviews-section/review-form-modal/styles.js
 // Yorum yazma wizard modal'ı — bağımsız stil dosyası.
 // Tüm class'lar 'renuvex-pr-fwizard-' prefix'iyle, mevcut review-modal'dan tamamen
 // izole. CSS variable'ları da kendi seti (--renuvex-pr-fwizard-*) → tema güncellenince

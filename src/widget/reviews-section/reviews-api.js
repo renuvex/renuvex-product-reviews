@@ -1,4 +1,4 @@
-// product-widget/reviews-api.js - public reviews data helpers.
+// reviews-section/reviews-api.js - public reviews data helpers.
 //
 // Kept separate from bootstrap/render so orchestration and UI code can share
 // review fetching without creating a bootstrap <-> render ownership cycle.

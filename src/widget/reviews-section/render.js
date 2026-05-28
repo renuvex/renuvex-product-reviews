@@ -1,4 +1,4 @@
-// product-widget/render.js — Ana widget render fonksiyonu
+// reviews-section/render.js — Ana widget render fonksiyonu
 
 import { getFirstTrustedReviewImage, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
 import { fetchReviews, isReviewsFetchError } from './reviews-api.js';
