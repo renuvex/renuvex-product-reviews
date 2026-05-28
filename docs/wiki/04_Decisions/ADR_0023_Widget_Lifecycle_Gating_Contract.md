@@ -20,6 +20,7 @@ related:
   - "[[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]"
   - "[[Widget_Architecture]]"
   - "[[CSS_Variable_Surface]]"
+  - "[[Test_Strategy]]"
 source_files:
   - "src/widget/index.js"
   - "src/widget/loader.js"
@@ -37,7 +38,12 @@ source_files:
   - "src/widget/listing-badges/inject.js"
   - "src/widget/themes/current-adapter.js"
   - "tests/widget-network-smoke.spec.ts"
+  - "tests/widget-runtime-smoke.spec.ts"
+  - "tests/widget-interaction-smoke.spec.ts"
+  - "tests/admin-preview-smoke.spec.ts"
+  - "tests/unit/storefront-theme.test.ts"
   - "playwright.widget.config.ts"
+  - "vitest.config.ts"
   - ".github/workflows/widget-smoke.yml"
 ---
 
@@ -180,6 +186,7 @@ When adding a new widget surface, follow this checklist:
 
 ## Verification
 - CI/browser contract: `pnpm test:widget-smoke` exercises the built public loader/runtime shape and asserts the Layer 2 / Layer 3 network outcomes for the main surfaces.
+- Broader quality gate: `pnpm test:ci` adds layout/runtime, lightbox/wizard, admin preview/settings, and storefront theme-state tests around this ADR. New surfaces should update the relevant layer in [[Test_Strategy]].
 - Manual smoke test per gate:
   - Disable review widget → confirm `render.js` chunk + BIG chunk not in network tab, `/api/public/reviews` not called.
   - Disable badge widget → confirm `/api/public/ratings` not called on category page, no DOM probe.

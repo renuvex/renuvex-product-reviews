@@ -11,8 +11,14 @@
     "build:widget": "node scripts/build-widget.mjs",
     "build:widget:watch": "node scripts/build-widget.mjs --watch",
     "build:widget:new-theme": "node scripts/build-widget.mjs --theme=new-theme",
-    "test:widget-smoke": "playwright test --config=playwright.widget.config.ts",
-    "test:widget-smoke:headed": "playwright test --config=playwright.widget.config.ts --headed",
+    "check:widget-js": "node scripts/check-widget-runtime.mjs",
+    "test:widget-smoke": "playwright test --config=playwright.widget.config.ts tests/widget-network-smoke.spec.ts",
+    "test:widget-runtime": "playwright test --config=playwright.widget.config.ts tests/widget-runtime-smoke.spec.ts",
+    "test:widget-interactions": "playwright test --config=playwright.widget.config.ts tests/widget-interaction-smoke.spec.ts",
+    "test:admin-preview": "playwright test --config=playwright.widget.config.ts tests/admin-preview-smoke.spec.ts",
+    "test:unit": "vitest run --config=vitest.config.ts",
+    "test:ci": "pnpm test:unit && pnpm test:widget-smoke && pnpm test:widget-runtime && pnpm test:widget-interactions && pnpm test:admin-preview",
+    "test:widget-smoke:headed": "playwright test --config=playwright.widget.config.ts tests/widget-network-smoke.spec.ts --headed",
     "build:watch": "tsc --watch",
     "prisma:init": "prisma generate && prisma db push --accept-data-loss",
     "prisma:generate": "prisma generate",
@@ -73,7 +79,8 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "prisma": "^6.14.0",
     "tw-animate-css": "^1.3.7",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   },
   "prettier": {
     "semi": true,

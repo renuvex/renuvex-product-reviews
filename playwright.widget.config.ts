@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: /widget-network-smoke\.spec\.ts/,
+  testMatch: /(?:widget|admin)-.*\.spec\.ts/,
   timeout: 30_000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,

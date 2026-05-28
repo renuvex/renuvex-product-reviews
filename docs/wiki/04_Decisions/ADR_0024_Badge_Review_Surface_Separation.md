@@ -19,6 +19,7 @@ related:
   - "[[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]"
   - "[[ADR_0023_Widget_Lifecycle_Gating_Contract]]"
   - "[[Widget_Performance]]"
+  - "[[Test_Strategy]]"
 source_files:
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
@@ -31,6 +32,8 @@ source_files:
   - "src/widget/events.js"
   - "src/widget/loader.js"
   - "tests/widget-network-smoke.spec.ts"
+  - "tests/widget-runtime-smoke.spec.ts"
+  - "tests/widget-interaction-smoke.spec.ts"
   - "playwright.widget.config.ts"
   - ".github/workflows/widget-smoke.yml"
   - "public/widget-runtime/build-manifest.json"
@@ -83,6 +86,7 @@ The PDP rating badge is now its own storefront surface.
 - `rg "injectRatingBadge\\(" src/widget` shows only `rating-badge/inject.js` definition/self-heal and `rating-badge/index.js` caller.
 - `public/widget-runtime/build-manifest.json` includes `entryPoint: "src/widget/rating-badge/index.js"` for the active `rating-badge-*` chunk.
 - `pnpm test:widget-smoke` covers the browser-visible ADR contract: mount present loads review APIs/render chunk; mount absent keeps badge/JSON-LD and skips review APIs/render chunk; badge disabled skips `/api/public/ratings`; unsupported auto-placement skips badge/JSON-LD while explicit reviews still render.
+- `pnpm test:widget-runtime` and `pnpm test:widget-interactions` add review-section render/layout and lightbox/wizard coverage around the same split, so review-section changes do not accidentally re-couple badge behavior.
 - `pnpm build:widget`, `node --check public/widget.js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check`.
 - Smoke scenarios: Ozy PDP with mount, Ozy PDP without mount, badge disabled, unsupported/generic theme, SPA PDP-to-PDP navigation, and clean PDP listing fallback.
 

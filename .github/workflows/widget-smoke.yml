@@ -1,4 +1,4 @@
-name: Widget Smoke
+name: Quality Gate
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  widget-smoke:
+  quality-gate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,11 +35,11 @@ jobs:
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run widget network smoke tests
-        run: pnpm test:widget-smoke
+      - name: Run unit and browser smoke tests
+        run: pnpm test:ci
 
-      - name: Syntax check generated loader
-        run: node --check public/widget.js
+      - name: Syntax check generated widget assets
+        run: pnpm check:widget-js
 
       - name: Typecheck
         run: pnpm exec tsc --noEmit

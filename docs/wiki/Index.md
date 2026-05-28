@@ -44,6 +44,7 @@ source_files: []
 | Database task | [[Database_Map]], [[Database_Schema]] | [[Decision_Index]] | `prisma/schema.prisma`, `prisma/migrations/*` |
 | Auth / ikas install task | [[Auth_And_Installation_Flow]], [[Ikas_OAuth_Installation_Notes]] | [[Security_And_Rate_Limits]], [[ADR_0004_Ikas_Integration_Strategy]] | OAuth/API helper files |
 | Deployment / observability task | [[Deployment_Notes]], [[Sentry_Operations]] | [[Config_And_Env_Map]], [[Caching_And_Performance]] | `next.config.js`, `vercel.json`, Sentry config files |
+| Automated test / CI task | [[Test_Strategy]], [[Widget_Architecture]] | [[Backend_API_Map]], [[Widget_Performance]] | `tests/*`, `.github/workflows/*`, `package.json` |
 | Recurring bug | [[Bug_Index]], [[Recurring_Problems]] | Relevant bug note, [[Problem_Resolution_Prompt]] | Related source files in the bug note |
 | Architecture change | [[System_Architecture]], [[Decision_Index]] | Relevant ADRs | Affected modules and config |
 | Wiki maintenance | [[Agent_Rules]], [[Wiki_Maintenance_Prompt]] | [[Documentation_Update_Prompt]], [[Log]] | `docs/wiki/**`, `scripts/wiki-*` |
@@ -68,6 +69,7 @@ source_files: []
 - [[Security_And_Rate_Limits]]
 - [[Deployment_Notes]]
 - [[Sentry_Operations]]
+- [[Test_Strategy]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Theme_Adapter_Playbook]]
 
@@ -171,4 +173,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-05-25 (added theme adapter playbook and refreshed routing)
+**Last Updated:** 2026-05-28 (added test strategy routing and refreshed CI coverage)

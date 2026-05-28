@@ -3,7 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-28
+last_verified: 2026-05-28
 tags:
   - dependencies
 related:
@@ -94,8 +95,15 @@ related:
 | `eslint`, `eslint-config-next`, `eslint-plugin-react-hooks` | Linting |
 | `@typescript-eslint/eslint-plugin`, `parser` | TS rules |
 
+## Testing
+
+| Package | Used for |
+|---|---|
+| `@playwright/test` | Browser smoke tests for built storefront widget assets, admin preview fixture, lightbox/wizard flows, and network/chunk contracts |
+| `vitest` | Node unit tests for public API routes and pure storefront theme-state helpers |
+
 ## Notes
-- Notable absent: testing libs (vitest/jest/playwright), date-fns. Tests are an open gap — see [[Open_Questions]].
+- Notable absent: date-fns. The main automated test gap is no longer "no test runner"; remaining gaps are live-auth ikas dashboard smoke, live post-deploy storefront smoke, Sentry health checks, and future transfer-size budgets. See [[Test_Strategy]].
 - `moment` is large; if size matters, it's an easy candidate to replace with native `Date`/`Intl` or date-fns.
 - `radix-ui` (the umbrella package) AND individual `@radix-ui/react-*` packages are both listed. The umbrella may be redundant — verify before next dep cleanup.
 - Pin `pnpm` to `10.4.1` via `packageManager` field — keep that aligned across machines.

@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-28
+last_verified: 2026-05-28
 confidence: medium
 tags:
   - questions
@@ -107,8 +107,10 @@ Current scope: `read_orders,write_orders,read_products,read_inventories,write_in
 ## Profanity filter
 Hard-coded list in [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts). Maintainable? Move to config or Redis? Add per-merchant blocklist?
 
-## Test coverage
-No tests visible in repo. Highest-risk surface is the public POST `/api/public/reviews`. At minimum, validation matrix + profanity + rate-limit happy path / 429 path.
+## Test coverage - partially resolved, ongoing by feature
+The old "no tests visible" gap is superseded by [[Test_Strategy]]. Current automation covers widget network/chunk contracts, layout/runtime smoke, lightbox + review wizard flows, admin preview/settings behavior, public API route branches, and storefront theme-state helpers.
+
+Still open: real authenticated ikas dashboard iframe smoke, live post-deploy dev-store smoke, Sentry post-deploy health checks, transfer-size budgets, and new-feature-specific coverage for future carousel/FAQ/Q&A/popup surfaces.
 
 ## Theme variant strategy
 `pnpm build:widget --theme=new-theme` produces a separate bundle. How is the right theme bundle picked at runtime? Is `widget-new-theme.js` ever auto-injected, or is it manual? See [scripts/build-widget.mjs](scripts/build-widget.mjs).

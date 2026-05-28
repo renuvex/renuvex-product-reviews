@@ -19,10 +19,19 @@ related:
   - "[[Bug_Lightbox_Tablet_Viewport_And_Scroll]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
+  - "[[Test_Strategy]]"
 source_files:
   - "scripts/build-widget.mjs"
+  - "scripts/check-widget-runtime.mjs"
   - "playwright.widget.config.ts"
+  - "vitest.config.ts"
+  - "tests/widget-harness.ts"
   - "tests/widget-network-smoke.spec.ts"
+  - "tests/widget-runtime-smoke.spec.ts"
+  - "tests/widget-interaction-smoke.spec.ts"
+  - "tests/admin-preview-smoke.spec.ts"
+  - "tests/unit/public-api-routes.test.ts"
+  - "tests/unit/storefront-theme.test.ts"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
@@ -195,7 +204,9 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - `pnpm test:widget-smoke` runs Playwright against the built public widget assets (`public/widget.js` + `public/widget-runtime/*`) instead of importing source modules directly.
 - The test fixture serves the loader/runtime from a fake widget origin and an ikas-like merchant page from a fake merchant origin, then intercepts public API calls. This verifies the browser-visible network contract, CORS behavior, dynamic import boundaries, DOM output, and manifest entry points.
 - Covered scenarios: review mount present, review mount absent, badge disabled, unsupported auto-placement with explicit review mount, and generic-link pages where the legacy listing fallback must not load `listing-badges-*`.
-- `.github/workflows/widget-smoke.yml` runs the same smoke tests on pull requests and pushes to `main` after `pnpm build:widget`, then runs the static gates (`node --check`, `tsc`, `lint`, `git diff --check`). Wiki audit remains a local gate because this repo intentionally ignores local agent rule files such as `AGENTS.md`.
+- Additional Playwright suites cover layout/render pairwise smoke (`pnpm test:widget-runtime`), lightbox + review wizard flows (`pnpm test:widget-interactions`), and admin preview/settings behavior (`pnpm test:admin-preview`). Vitest covers public API routes and storefront theme-state helpers (`pnpm test:unit`).
+- `pnpm test:ci` runs the automated browser + unit layers together. `.github/workflows/widget-smoke.yml` runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs `tsc`, `lint`, and `git diff --check`. Wiki audit remains a local gate because this repo intentionally ignores local agent rule files such as `AGENTS.md`.
+- See [[Test_Strategy]] for the layer-by-layer contract and what still requires manual-auth or live post-deploy smoke.
 
 ## Notes
 - The widget is the **highest-leverage code surface** in the codebase (every storefront load executes it). Bundle size and TTI matter.
@@ -223,6 +234,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Product_Review_Lightbox]]
 - [[Listing_Rating_Widget]]
 - [[Widget_Customization]]
+- [[Test_Strategy]]
 - [[ADR_0002_Widget_Injection_Strategy]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
@@ -233,6 +245,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-28: Expanded automated quality gates from network-only smoke to layered Playwright + Vitest coverage: widget runtime layouts, lightbox/wizard flows, admin preview/settings, public API routes, and theme-state helpers. CI now runs `pnpm test:ci` plus generated widget syntax checks.
 - 2026-05-28: Renamed the review-section implementation to `src/widget/reviews-section/` and moved the shared PDP title finder to `src/widget/core/product-title.js`. Public script URL, mount contract, settings schema, backend APIs, and ikas integration are unchanged.
 - 2026-05-28: Added `pnpm test:widget-smoke` and the `Widget Smoke` GitHub Actions workflow. The gate protects the ADR_0023/ADR_0024 network contract by exercising the deployed public loader/runtime shape in a browser fixture.
 - 2026-05-27: Follow-up hardening after [[ADR_0024_Badge_Review_Surface_Separation]]. Review/photoStrip API helpers moved from `reviews-section/bootstrap.js` to `reviews-section/reviews-api.js`, so bootstrap remains mount-gate orchestration and `render.js` can reuse the same fetch contract without importing bootstrap. The 2-second listing fallback in `loader.js` now probes for product-card-like candidates instead of any generic link. Widget error forwarding now captures script/chunk resource-load errors and route/visibility/online context to diagnose rare DevTools "error script" reports.

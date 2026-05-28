@@ -20,6 +20,14 @@ source_files:
 
 # Project Log
 
+## 2026-05-28 - test | Full widget/app quality gate expansion
+- Summary: Expanded automated coverage from network-only widget smoke to layered Playwright + Vitest quality gates.
+- Reason: The project needed repeatable coverage for layout combinations, lightbox/wizard flows, admin preview/settings behavior, public APIs, and theme-state fail-closed rules without depending on production ikas auth, Cloudinary, Sentry, or DB credentials.
+- Key source changes: `tests/widget-harness.ts`, `tests/widget-runtime-smoke.spec.ts`, `tests/widget-interaction-smoke.spec.ts`, `tests/admin-preview-smoke.spec.ts`, `tests/unit/public-api-routes.test.ts`, `tests/unit/storefront-theme.test.ts`, `vitest.config.ts`, `scripts/check-widget-runtime.mjs`, `package.json`, `playwright.widget.config.ts`, and `.github/workflows/widget-smoke.yml`.
+- Public behavior: no merchant API, widget settings schema, Prisma schema, ikas integration, or storefront mount contract changes.
+- Verification: `pnpm build:widget`, `pnpm test:ci`, `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check`.
+- Updated wiki: [[Test_Strategy]] (new), [[Index]], [[Widget_Architecture]], [[Widget_Performance]], [[Dependency_Map]], [[Open_Questions]], [[Hot_Context]], [[Log]].
+
 ## 2026-05-28 - test | Widget network/chunk smoke CI
 - Summary: Added `pnpm test:widget-smoke` plus the `Widget Smoke` GitHub Actions workflow.
 - Reason: ADR_0023/ADR_0024 moved the widget to a lazy-surface architecture, but the most important guarantees are browser-visible network outcomes: which chunks and APIs load under mount-present, mount-absent, badge-disabled, unsupported-theme, and generic-link-page scenarios. Those guarantees now run as an executable CI gate instead of living only in manual Network-tab checks.
