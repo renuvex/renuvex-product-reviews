@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-28
+last_verified: 2026-05-28
 confidence: high
 tags:
   - adr
@@ -36,6 +36,9 @@ source_files:
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/themes/current-adapter.js"
+  - "tests/widget-network-smoke.spec.ts"
+  - "playwright.widget.config.ts"
+  - ".github/workflows/widget-smoke.yml"
 ---
 
 # ADR 0023: Widget Lifecycle Gating Contract
@@ -176,13 +179,14 @@ When adding a new widget surface, follow this checklist:
 - [[ADR_0024_Badge_Review_Surface_Separation]] retroactively applies this contract to the PDP badge: the badge is now a normal product surface descriptor instead of a special branch inside the review render path.
 
 ## Verification
+- CI/browser contract: `pnpm test:widget-smoke` exercises the built public loader/runtime shape and asserts the Layer 2 / Layer 3 network outcomes for the main surfaces.
 - Manual smoke test per gate:
   - Disable review widget → confirm `render.js` chunk + BIG chunk not in network tab, `/api/public/reviews` not called.
   - Disable badge widget → confirm `/api/public/ratings` not called on category page, no DOM probe.
   - Unsupported theme (any non-Ozy) → confirm same as disabled badge, plus PDP review section still renders if `<div data-renuvex-widget="reviews">` exists.
 - New widget addition follows the 8-step checklist above; reviewer sign-off checks against this ADR.
 - Wiki audit: `node scripts/wiki-audit.mjs --changed-source-check` passes.
-- Build: `pnpm build:widget`, `pnpm exec tsc --noEmit`, `pnpm lint` pass.
+- Build/static: `pnpm build:widget`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check` pass.
 
 ## Related Source Files
 - [src/widget/index.js](src/widget/index.js) — entry point (Layer 1 init)

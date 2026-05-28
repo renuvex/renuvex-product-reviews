@@ -25,6 +25,9 @@ related:
   - "[[Theme_Adapter_Playbook]]"
 source_files:
   - "package.json"
+  - "playwright.widget.config.ts"
+  - "tests/widget-network-smoke.spec.ts"
+  - ".github/workflows/widget-smoke.yml"
   - "prisma/schema.prisma"
   - "src/widget/index.js"
   - "src/widget/observer.js"
@@ -78,10 +81,10 @@ source_files:
 
 ## Current Focus
 - ikas review/rating app: admin, storefront widget, badges, reviews, uploads, moderation, settings preview.
-- Current focus: storefront resilience, theme adapters, and external rename follow-through.
+- Current focus: storefront resilience, theme adapters, and widget CI coverage.
 
 ## Must Know
-- Source/config/tests/runtime are source of truth; wiki is routing.
+- Source/config/tests/runtime win; wiki routes.
 - Prompt procedures live in `09_Prompts`; do not create `08_Prompts`.
 - Do not document secrets; env names/purposes are acceptable.
 - `package.json` pins Next.js `16.2.1`; older Next.js 15 docs are stale unless re-verified.
@@ -89,7 +92,6 @@ source_files:
 ## Recent Important Changes
 - 2026-05-19/24: Rating visuals + badge architecture + X-app resilience + owned-slot guards + SVG sprite (ADRs 0016-0019).
 - 2026-05-23: Theme sync split from script injection; uses `listStorefront.themes[].isMainTheme` + stable `themeId`. Vercel cron daily 03:00 UTC.
-- 2026-05-24/25: Renuvex hard-rename complete (`renuvex-pr` everywhere); external rename in progress; production widget domain stays `new-ikas-app.vercel.app`.
 - 2026-05-25: Review section opt-in via `<div data-renuvex-widget="reviews">`. [[Theme_Adapter_Playbook]] records Ozy spec; shared review CSS in `reviews-section/styles.js`.
 - 2026-05-26: [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] — review/lightbox/wizard in open Shadow DOM; host-theme CSS bleed closed.
 - 2026-05-27: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] — `autoPlacementEnabled` / `reviewsMountEnabled` runtime flags gate badge + review surfaces; only stable `themeId` matches unlock auto-placement. `/api/public/settings` lazy theme resync (30 min stale, Next.js `after()`); ikas has no theme webhook. Cross-merchant `themeId` stability empirically verified.
@@ -97,16 +99,18 @@ source_files:
 - 2026-05-27: [[ADR_0024_Badge_Review_Surface_Separation]] - PDP badge is now an independent product surface + `rating-badge-*` lazy chunk; badge-only PDPs skip review render/BIG chunks and review/photoStrip APIs when the explicit reviews mount is absent.
 - 2026-05-27: ADR_0024 follow-up hardened boundaries: review/photoStrip fetch helpers moved to `reviews-section/reviews-api.js`, the legacy listing fallback now probes product-card-like candidates instead of any link, and widget error forwarding now captures script/chunk resource-load failures with route/visibility/online context.
 - 2026-05-28: Review-section implementation now lives under `src/widget/reviews-section/`; shared PDP title placement helper moved to `src/widget/core/product-title.js`. Public script URL, review mount contract, settings schema, backend APIs, and ikas integration are unchanged.
+- 2026-05-28: `pnpm test:widget-smoke` + `Widget Smoke` GitHub Actions workflow now protect the widget network/chunk contract in CI using built public widget assets, not source imports.
 
 ## Current Risks / Open Questions
 - Verify deploy/cache, re-measure widget size, and document disabling native theme reviews.
 - Theme adapters use Admin API `listStorefront.themes[].isMainTheme`; no runtime DOM mount-point contract exists.
 - ikas Studio `data-*` anchors are planned but not reliable/broadly deployed yet, so adapters remain the placement fallback layer.
-- Daily cron can delay pending theme verification unless sub-daily cron or a delayed queue is added (post-ADR_0022 the public settings lazy resync softens this for any merchant with storefront traffic).
-- ikas has no `store/theme/*` webhook scope; lazy resync is the workaround. Open a feature request to ikas; if shipped, layer it as a third sync trigger.
-- First storefront visitor after a theme change can still see one stale-cache cycle of badge state; documented as accepted trade-off in [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].
+- Daily cron can delay pending theme verification; public settings lazy resync softens this for merchants with storefront traffic.
+- ikas has no `store/theme/*` webhook; lazy resync is the workaround.
+- First visitor after a theme change can see one stale-cache cycle of badge state; accepted in [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]].
 - Admin warning UI for unsupported themes deferred; the runtime signal exists, the dashboard surface does not.
-- Structured data, review-request emails, CSV import/export, analytics, localization, and test coverage remain gaps.
+- Widget smoke CI now covers the main network/chunk contract, but it does not replace live post-deploy smoke on the dev storefront after runtime-affecting widget changes.
+- Structured data, review-request emails, CSV import/export, analytics, localization, and broader tests remain gaps.
 
 ## Read Next
 - [[Current_Status]]

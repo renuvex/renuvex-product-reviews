@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-28
+last_verified: 2026-05-28
 confidence: high
 tags:
   - widget
@@ -17,6 +17,9 @@ related:
   - "[[Yotpo_Protein_Ocean_Widget_Research]]"
 source_files:
   - "scripts/build-widget.mjs"
+  - "playwright.widget.config.ts"
+  - "tests/widget-network-smoke.spec.ts"
+  - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
   - "src/widget/loader.js"
@@ -48,6 +51,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-05-24 (ADR_0019): read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` instead of inlining the full `<path>` per star. Measured before the change on the live dev store: ~76 KB of duplicated `<path>` data on a busy PDP (10 reviews) and ~4.6 KB per listing badge (linear in catalog size). The sprite defines the geometry once, so each star becomes a small `<use>` ref. Re-measure live DOM path bytes after deploy.
 - 2026-05-27 (ADR_0024): PDP title badge is separated into a `rating-badge-*` lazy chunk. If the merchant omits `<div data-renuvex-widget="reviews"></div>`, the storefront avoids review render/BIG chunks and the reviews/photoStrip API calls. `reviews-section/bootstrap.js` must not statically import `render.js`; it dynamically imports the renderer only after the explicit mount check and review fetch path.
 - 2026-05-27 follow-up: review/photoStrip fetch helpers live in `reviews-section/reviews-api.js`, not bootstrap. The 2-second listing fallback in `loader.js` now requires product-card-like DOM candidates (same-origin product-like links with nearby images) before loading the listing-badges entry chunk, reducing false-positive loads on clean PDPs.
+- 2026-05-28 CI guard: `pnpm test:widget-smoke` is now the executable network/chunk contract. It asserts that badge-only PDPs skip `render-*` and `/api/public/reviews`, badge-disabled PDPs skip `/api/public/ratings`, unsupported auto-placement skips badge/JSON-LD while explicit reviews still render, and generic-link pages do not trigger the listing fallback chunk.
 
 ## 2026-05-15 Live Observations
 
@@ -79,9 +83,10 @@ Yotpo/Protein Ocean reference:
 - Adding `<link>` or `<style>` elements that block paint — inject styles at end of body or via `adoptedStyleSheets`.
 - Polling. Use the existing MutationObserver pattern.
 
-## Measurement ideas (not yet wired)
+## Measurement ideas
 - Add a `?w=<bundle-version>` to widget script src and report a Vercel Analytics event on first run, including bundle size + first-render time.
 - Lighthouse CI for a representative storefront page.
+- Extend `tests/widget-network-smoke.spec.ts` with transfer-size budgets once the live CDN headers are stable enough to avoid noisy CI failures.
 
 ## Notes
 - When adding a feature, ask: "Does this need to ship to every page, or only to PDPs?" Listing-only / PDP-only branches matter.

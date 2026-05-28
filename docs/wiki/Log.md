@@ -20,6 +20,14 @@ source_files:
 
 # Project Log
 
+## 2026-05-28 - test | Widget network/chunk smoke CI
+- Summary: Added `pnpm test:widget-smoke` plus the `Widget Smoke` GitHub Actions workflow.
+- Reason: ADR_0023/ADR_0024 moved the widget to a lazy-surface architecture, but the most important guarantees are browser-visible network outcomes: which chunks and APIs load under mount-present, mount-absent, badge-disabled, unsupported-theme, and generic-link-page scenarios. Those guarantees now run as an executable CI gate instead of living only in manual Network-tab checks.
+- Key source changes: `tests/widget-network-smoke.spec.ts`, `playwright.widget.config.ts`, `.github/workflows/widget-smoke.yml`, `package.json`, and `pnpm-lock.yaml`.
+- Public behavior: no runtime merchant API, settings schema, backend API, Prisma, or ikas integration changes.
+- Verification: `pnpm test:widget-smoke` passed locally; full static/build/wiki verification is tracked in the implementing commit.
+- Updated wiki: [[Widget_Architecture]], [[Widget_Performance]], [[ADR_0023_Widget_Lifecycle_Gating_Contract]], [[ADR_0024_Badge_Review_Surface_Separation]], [[Hot_Context]], [[Log]].
+
 ## 2026-05-28 - refactor | Rename reviews section module
 - Summary: Renamed the broad PDP review implementation module to `src/widget/reviews-section/` and moved the shared PDP title placement helper to `src/widget/core/product-title.js`.
 - Reason: The badge/review/listing split from [[ADR_0024_Badge_Review_Surface_Separation]] left the old folder name broader than its responsibility. The new hierarchy makes review-section, rating-badge, listing-badges, shared core helpers, and future mount-based surfaces easier to reason about.

@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-28
+last_verified: 2026-05-28
 confidence: high
 tags:
   - adr
@@ -30,6 +30,9 @@ source_files:
   - "src/widget/reviews-section/render.js"
   - "src/widget/events.js"
   - "src/widget/loader.js"
+  - "tests/widget-network-smoke.spec.ts"
+  - "playwright.widget.config.ts"
+  - ".github/workflows/widget-smoke.yml"
   - "public/widget-runtime/build-manifest.json"
 ---
 
@@ -79,6 +82,7 @@ The PDP rating badge is now its own storefront surface.
 ## Verification
 - `rg "injectRatingBadge\\(" src/widget` shows only `rating-badge/inject.js` definition/self-heal and `rating-badge/index.js` caller.
 - `public/widget-runtime/build-manifest.json` includes `entryPoint: "src/widget/rating-badge/index.js"` for the active `rating-badge-*` chunk.
+- `pnpm test:widget-smoke` covers the browser-visible ADR contract: mount present loads review APIs/render chunk; mount absent keeps badge/JSON-LD and skips review APIs/render chunk; badge disabled skips `/api/public/ratings`; unsupported auto-placement skips badge/JSON-LD while explicit reviews still render.
 - `pnpm build:widget`, `node --check public/widget.js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check`.
 - Smoke scenarios: Ozy PDP with mount, Ozy PDP without mount, badge disabled, unsupported/generic theme, SPA PDP-to-PDP navigation, and clean PDP listing fallback.
 

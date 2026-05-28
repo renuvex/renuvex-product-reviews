@@ -21,6 +21,9 @@ related:
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
 source_files:
   - "scripts/build-widget.mjs"
+  - "playwright.widget.config.ts"
+  - "tests/widget-network-smoke.spec.ts"
+  - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
   - "src/widget/loader.js"
@@ -188,6 +191,12 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - Validation: post-build `node --check` for the classic loader plus esbuild ESM
   bundling and `public/widget-runtime/build-manifest.json` output metadata.
 
+## CI smoke gate
+- `pnpm test:widget-smoke` runs Playwright against the built public widget assets (`public/widget.js` + `public/widget-runtime/*`) instead of importing source modules directly.
+- The test fixture serves the loader/runtime from a fake widget origin and an ikas-like merchant page from a fake merchant origin, then intercepts public API calls. This verifies the browser-visible network contract, CORS behavior, dynamic import boundaries, DOM output, and manifest entry points.
+- Covered scenarios: review mount present, review mount absent, badge disabled, unsupported auto-placement with explicit review mount, and generic-link pages where the legacy listing fallback must not load `listing-badges-*`.
+- `.github/workflows/widget-smoke.yml` runs the same smoke tests on pull requests and pushes to `main` after `pnpm build:widget`, then runs the static gates (`node --check`, `tsc`, `lint`, `git diff --check`, wiki audit).
+
 ## Notes
 - The widget is the **highest-leverage code surface** in the codebase (every storefront load executes it). Bundle size and TTI matter.
 - Don't introduce a framework (React, Preact, Lit) without an explicit ADR. The vanilla approach is a deliberate trade-off — see [[ADR_0002_Widget_Injection_Strategy]].
@@ -225,6 +234,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 
 ## Change Log
 - 2026-05-28: Renamed the review-section implementation to `src/widget/reviews-section/` and moved the shared PDP title finder to `src/widget/core/product-title.js`. Public script URL, mount contract, settings schema, backend APIs, and ikas integration are unchanged.
+- 2026-05-28: Added `pnpm test:widget-smoke` and the `Widget Smoke` GitHub Actions workflow. The gate protects the ADR_0023/ADR_0024 network contract by exercising the deployed public loader/runtime shape in a browser fixture.
 - 2026-05-27: Follow-up hardening after [[ADR_0024_Badge_Review_Surface_Separation]]. Review/photoStrip API helpers moved from `reviews-section/bootstrap.js` to `reviews-section/reviews-api.js`, so bootstrap remains mount-gate orchestration and `render.js` can reuse the same fetch contract without importing bootstrap. The 2-second listing fallback in `loader.js` now probes for product-card-like candidates instead of any generic link. Widget error forwarding now captures script/chunk resource-load errors and route/visibility/online context to diagnose rare DevTools "error script" reports.
 - 2026-05-25: `probeWidgetVisibility` now evaluates the live owned node at probe time (via a `resolveCurrent` resolver at each call site) instead of the originally injected element, fixing a high-volume false-positive `missing_after_render` that fired after the one-shot self-heal / theme re-render swapped the badge element. Root cause proven mount-mode-independent and verified on the dev store. The bounded one-shot self-heal was left unchanged. See [[Bug_Listing_Badge_Missing_After_Render]].
 - 2026-05-25: Renuvex hard namespace cleanup completed for source and active generated widget assets. Preview events use `RENUVEX_PR_*`, health global is `window.__RENUVEX_PRODUCT_REVIEWS__`, and build defines are `__RENUVEX_PR_*`.

@@ -8,6 +8,7 @@
 
 # testing
 /coverage
+/test-results/
 .playwright-mcp/
 
 # next.js
@@ -73,6 +74,9 @@ AGENTS.md
 .codex
 .gemini
 .github
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
 .goosehints
 .idx
 .junie
