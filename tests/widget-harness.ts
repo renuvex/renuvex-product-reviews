@@ -29,6 +29,16 @@ export type RequestLog = {
   consoleErrors: string[];
 };
 
+export type WidgetNetworkSummary = {
+  scriptCount: number;
+  assetBytes: number;
+  settingsCalls: number;
+  ratingsCalls: number;
+  ratingSlugCalls: number;
+  reviewsCalls: number;
+  chunks: string[];
+};
+
 function jsHeaders(): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -157,6 +167,15 @@ export function ratingsResponse(): unknown {
         avg: '4.8',
         count: 12,
       },
+    },
+  };
+}
+
+function ratingsBySlugResponse(): unknown {
+  return {
+    data: {
+      'premium-shorts': { avg: '4.8', count: 12 },
+      'linen-shirt': { avg: '4.6', count: 7 },
     },
   };
 }
@@ -291,6 +310,84 @@ export async function setupGenericLinksPage(page: Page): Promise<RequestLog> {
   return log;
 }
 
+export async function setupProductListingFallbackPage(page: Page, options: SmokeOptions = {}): Promise<RequestLog> {
+  const log = createRequestLog(page);
+  await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
+  await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
+  await page.route('https://res.cloudinary.com/**', fulfillImage);
+  await page.route(`${WIDGET_ORIGIN}/api/public/settings**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: jsonHeaders(),
+      body: JSON.stringify(settingsResponse(options)),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/ratings-by-slug**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: jsonHeaders(),
+      body: JSON.stringify(ratingsBySlugResponse()),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/ratings**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: jsonHeaders(),
+      body: JSON.stringify(ratingsResponse()),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {
+    await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
+  });
+  await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: productListingFallbackHtml(),
+    });
+  });
+  return log;
+}
+
+export async function setupExternalProductLikeLinksPage(page: Page): Promise<RequestLog> {
+  const log = createRequestLog(page);
+  await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
+  await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
+  await page.route('https://res.cloudinary.com/**', fulfillImage);
+  await page.route(`${WIDGET_ORIGIN}/api/public/settings**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: jsonHeaders(),
+      body: JSON.stringify(settingsResponse({})),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/ratings**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: jsonHeaders(),
+      body: JSON.stringify(ratingsResponse()),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/ratings-by-slug**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: jsonHeaders(),
+      body: JSON.stringify(ratingsBySlugResponse()),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {
+    await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
+  });
+  await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: externalProductLikeLinksHtml(),
+    });
+  });
+  return log;
+}
+
 function createRequestLog(page: Page): RequestLog {
   const log: RequestLog = { urls: [], consoleErrors: [] };
   page.on('request', (request) => {
@@ -345,6 +442,68 @@ function productHtml(mountReviews: boolean): string {
         <h1>${PRODUCT_NAME}</h1>
         <p>CI product page.</p>
         ${mountReviews ? '<div data-renuvex-widget="reviews"></div>' : ''}
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+function productListingFallbackHtml(): string {
+  return `<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <title>Listing</title>
+    <script src="${WIDGET_ORIGIN}/widget.js?publicApiKey=${PUBLIC_KEY}" data-renuvex-app="product-reviews"></script>
+  </head>
+  <body>
+    <main>
+      <section class="listing-grid">
+        <article class="product-card">
+          <a href="/premium-shorts">
+            <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/listing-1.jpg" alt="">
+            <h2>Premium Shorts</h2>
+          </a>
+        </article>
+        <article class="product-card">
+          <a href="/linen-shirt">
+            <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/listing-2.jpg" alt="">
+            <h2>Linen Shirt</h2>
+          </a>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+function externalProductLikeLinksHtml(): string {
+  return `<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <title>External Links</title>
+    <script src="${WIDGET_ORIGIN}/widget.js?publicApiKey=${PUBLIC_KEY}" data-renuvex-app="product-reviews"></script>
+  </head>
+  <body>
+    <main>
+      <section>
+        <a href="https://other-store.test/premium-shorts">
+          <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/external-1.jpg" alt="">
+          External premium shorts
+        </a>
+        <a href="https://other-store.test/linen-shirt">
+          <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/external-2.jpg" alt="">
+          External linen shirt
+        </a>
+        <a href="/cart">
+          <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/cart.jpg" alt="">
+          Cart
+        </a>
+        <a href="/account">
+          <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/account.jpg" alt="">
+          Account
+        </a>
       </section>
     </main>
   </body>
@@ -410,6 +569,38 @@ export async function hasReviewsWidget(page: Page): Promise<boolean> {
 
 export function widgetErrors(log: RequestLog): string[] {
   return log.consoleErrors.filter((message) => message.includes('[renuvex-pr]') || message.includes('Failed to load'));
+}
+
+export async function summarizeWidgetNetwork(log: RequestLog): Promise<WidgetNetworkSummary> {
+  const assetUrls = Array.from(new Set(log.urls.filter((url) => {
+    return url.startsWith(`${WIDGET_ORIGIN}/widget.js`) || url.startsWith(`${WIDGET_ORIGIN}/widget-runtime/`);
+  })));
+  let assetBytes = 0;
+  for (const assetUrl of assetUrls) {
+    const url = new URL(assetUrl);
+    const publicPath = url.pathname.replace(/^\/+/, '').replace(/\//g, path.sep);
+    const filePath = path.join(process.cwd(), 'public', publicPath);
+    try {
+      const body = await readFile(filePath);
+      assetBytes += body.byteLength;
+    } catch {
+      // Ignore non-local assets; this summary is evidence, not a hard budget gate.
+    }
+  }
+  return {
+    scriptCount: assetUrls.length,
+    assetBytes,
+    settingsCalls: countUrls(log, '/api/public/settings'),
+    ratingsCalls: countUrls(log, '/api/public/ratings?'),
+    ratingSlugCalls: countUrls(log, '/api/public/ratings-by-slug'),
+    reviewsCalls: countUrls(log, '/api/public/reviews?'),
+    chunks: assetUrls
+      .map((url) => {
+        const match = url.match(/\/widget-runtime\/chunks\/([^/?]+)/);
+        return match ? match[1] : null;
+      })
+      .filter((chunk): chunk is string => !!chunk),
+  };
 }
 
 export async function hasInReviewsShadow(page: Page, selector: string): Promise<boolean> {

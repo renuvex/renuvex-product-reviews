@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-05-28 - test | Review API and runtime evidence expansion
+- Summary: Deepened the quality gate around the highest-risk public review API and the widget fallback/performance evidence paths.
+- Reason: The first quality-gate pass covered major surfaces, but `/api/public/reviews` still needed edge-case coverage for validation, profanity, rate limits, trusted image policy, target verification, approval modes, and GET filter behavior. Listing fallback also needed a positive product-listing case, not only generic-link negatives.
+- Key source changes: `tests/unit/public-api-routes.test.ts`, `tests/widget-harness.ts`, `tests/widget-network-smoke.spec.ts`, `.github/pull_request_template.md`, [[Test_Strategy]], [[Widget_Performance]], and [[Structured_Data_And_Rich_Snippets]].
+- Public behavior: no merchant API, widget settings schema, Prisma schema, ikas integration, or storefront mount contract changes.
+- Verification: tracked in the implementing commit; expected gate is `pnpm test:ci`, `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check`.
+
 ## 2026-05-28 - test | Full widget/app quality gate expansion
 - Summary: Expanded automated coverage from network-only widget smoke to layered Playwright + Vitest quality gates.
 - Reason: The project needed repeatable coverage for layout combinations, lightbox/wizard flows, admin preview/settings behavior, public APIs, and theme-state fail-closed rules without depending on production ikas auth, Cloudinary, Sentry, or DB credentials.

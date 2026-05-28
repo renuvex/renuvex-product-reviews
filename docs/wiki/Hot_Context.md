@@ -70,13 +70,14 @@ source_files:
 - 2026-05-27: ADRs 0022-0024 added placement allowlist, lifecycle gating, independent `rating-badge-*`, review/photoStrip helper split, stricter listing fallback, and script/chunk error forwarding.
 - 2026-05-28: Review-section implementation moved to `src/widget/reviews-section/`; shared PDP title helper moved to `src/widget/core/product-title.js`.
 - 2026-05-28: [[Test_Strategy]] now defines `pnpm test:ci`: widget network, runtime layouts, lightbox/wizard, admin preview/settings, and public API/theme-state unit tests. GitHub Actions workflow is `Quality Gate`.
+- 2026-05-28: Review API tests now cover validation, profanity, rate-limit, image policy, target verification, approval modes, GET filters, and cache behavior. Widget network smoke also records local transfer evidence and tests both negative and positive listing fallback paths.
 
 ## Current Risks / Open Questions
 - Re-measure deployed widget size and keep doing live post-deploy smoke on the dev storefront after runtime-affecting widget changes.
 - Theme adapters depend on Admin API `listStorefront.themes[].isMainTheme`; ikas has no theme webhook, so lazy resync remains the workaround.
 - Admin warning UI for unsupported themes is deferred; the runtime signal exists, the dashboard surface does not.
-- CI covers mockable widget/admin/API/theme contracts; real authenticated ikas dashboard smoke, Sentry post-deploy health, and transfer-size budgets remain gaps.
-- Structured data, review-request emails, CSV import/export, analytics, and localization remain roadmap gaps.
+- CI covers mockable widget/admin/API/theme contracts; real authenticated ikas dashboard smoke, Sentry post-deploy health, hard transfer-size budgets, and Google Rich Results verification remain gaps.
+- Review-request emails, CSV import/export, analytics, and localization remain roadmap gaps.
 
 ## Read Next
 - [[Current_Status]]

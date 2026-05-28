@@ -71,6 +71,8 @@ vi.mock('@sentry/nextjs', () => ({
 }));
 
 const OZY_THEME_ID = '57225e07-aa38-4d38-9688-f6730ee16143';
+const VALID_REVIEW_IMAGE_URL = 'https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/review-a.jpg';
+const SECOND_VALID_REVIEW_IMAGE_URL = 'https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/review-b.png';
 
 function stableOzyThemeState() {
   const now = new Date().toISOString();
@@ -99,9 +101,63 @@ function stableOzyThemeState() {
   };
 }
 
+function setCloudinaryEnv() {
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'renuvex';
+  delete process.env.CLOUDINARY_CLOUD_NAME;
+}
+
+function validReviewPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    storeId: 'store-1',
+    productId: 'product-1',
+    author: 'Mert',
+    rating: 5,
+    title: 'Great',
+    comment: 'Works well',
+    images: [],
+    ...overrides,
+  };
+}
+
+function setupVerifiedReviewTarget(autoApprove: unknown = 'manual') {
+  redisMock.incr.mockResolvedValue(1);
+  prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
+  prismaMock.productSnapshot.findUnique.mockResolvedValue({
+    productId: 'product-1',
+    slug: 'premium-shorts',
+    name: 'Premium Shorts',
+  });
+  prismaMock.widgetSettings.findUnique.mockResolvedValue({
+    settings: { autoApprove },
+  });
+  prismaMock.review.create.mockImplementation(async (args) => ({
+    id: 'review-created',
+    status: args.data.status,
+  }));
+  prismaMock.$transaction.mockImplementation(async (callback) => callback({
+    review: prismaMock.review,
+    pendingReviewImage: prismaMock.pendingReviewImage,
+  }));
+}
+
+async function postPublicReview(payload: unknown, headers: Record<string, string> = {}) {
+  const { POST } = await import('@/app/api/public/reviews/route');
+  return POST(new Request('https://app.test/api/public/reviews', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-forwarded-for': '203.0.113.5',
+      ...headers,
+    },
+    body: JSON.stringify(payload),
+  }));
+}
+
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  delete process.env.CLOUDINARY_CLOUD_NAME;
   prismaMock.storeSettings.findUnique.mockReset();
   prismaMock.widgetSettings.findMany.mockReset();
   prismaMock.widgetSettings.findUnique.mockReset();
@@ -246,6 +302,76 @@ describe('/api/public/ratings', () => {
 });
 
 describe('/api/public/reviews', () => {
+  it('rejects invalid JSON review submit bodies before rate limit or storage', async () => {
+    const { POST } = await import('@/app/api/public/reviews/route');
+
+    const response = await POST(new Request('https://app.test/api/public/reviews', {
+      method: 'POST',
+      body: 'not-json',
+      headers: { 'x-forwarded-for': '203.0.113.5' },
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBeTruthy();
+    expect(redisMock.incr).not.toHaveBeenCalled();
+    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects syntactically invalid review submits before rate limit or storage', async () => {
+    const cases = [
+      validReviewPayload({ storeId: '' }),
+      validReviewPayload({ productId: '' }),
+      validReviewPayload({ author: '' }),
+      validReviewPayload({ rating: 0 }),
+      validReviewPayload({ rating: 6 }),
+      validReviewPayload({ rating: 4.5 }),
+      validReviewPayload({ title: 'x'.repeat(61) }),
+      validReviewPayload({ comment: 'x'.repeat(2001) }),
+    ];
+
+    for (const payload of cases) {
+      vi.clearAllMocks();
+      const response = await postPublicReview(payload);
+
+      expect(response.status).toBe(400);
+      expect(redisMock.incr).not.toHaveBeenCalled();
+      expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.review.create).not.toHaveBeenCalled();
+    }
+  });
+
+  it('rejects profanity before rate limit or storage', async () => {
+    const response = await postPublicReview(validReviewPayload({
+      title: 'Great',
+      comment: 'This is shit',
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBeTruthy();
+    expect(redisMock.incr).not.toHaveBeenCalled();
+    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+  });
+
+  it('rate limits valid review submits before image validation and target lookup', async () => {
+    redisMock.incr.mockResolvedValue(4);
+
+    const response = await postPublicReview(validReviewPayload({
+      images: [VALID_REVIEW_IMAGE_URL],
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body.error).toBeTruthy();
+    expect(redisMock.incr).toHaveBeenCalledWith('renuvex_pr_rl:203.0.113.5');
+    expect(redisMock.expire).not.toHaveBeenCalled();
+    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+  });
+
   it('rejects missing public review query params before querying storage', async () => {
     const { GET } = await import('@/app/api/public/reviews/route');
 
@@ -307,6 +433,67 @@ describe('/api/public/reviews', () => {
     }));
   });
 
+  it('applies review GET pagination, sorting, rating, and trusted image filters', async () => {
+    setCloudinaryEnv();
+    prismaMock.review.findMany.mockResolvedValue([]);
+    prismaMock.review.count.mockResolvedValue(0);
+    prismaMock.review.groupBy.mockResolvedValue([]);
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&page=2&limit=99&orderBy=lowest&rating=4&hasImages=true'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('s-maxage=60, stale-while-revalidate=300');
+    expect(prismaMock.review.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        storeId: 'store-1',
+        productId: 'product-1',
+        status: 'approved',
+        rating: 4,
+        AND: [
+          { images: { contains: 'https://res.cloudinary.com/renuvex/image/upload/' } },
+          { images: { contains: '/review_images/stores/store-1/' } },
+        ],
+      }),
+      orderBy: { rating: 'asc' },
+      take: 30,
+      skip: 30,
+    }));
+    expect(body.data).toEqual(expect.objectContaining({
+      reviews: [],
+      totalCount: 0,
+      allCount: 0,
+      page: 2,
+      totalPages: 0,
+      hasMore: false,
+      avgRating: null,
+    }));
+  });
+
+  it('uses a safe empty image filter when hasImages is requested without Cloudinary config', async () => {
+    prismaMock.review.findMany.mockResolvedValue([]);
+    prismaMock.review.count.mockResolvedValue(0);
+    prismaMock.review.groupBy.mockResolvedValue([]);
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&hasImages=true&rating=not-a-number&orderBy=highest&limit=0&page=-5'));
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.review.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        storeId: 'store-1',
+        productId: 'product-1',
+        status: 'approved',
+        id: '__missing_cloudinary_cloud_name__',
+      }),
+      orderBy: { rating: 'desc' },
+      take: 1,
+      skip: 0,
+    }));
+    expect(prismaMock.review.findMany.mock.calls[0][0].where.rating).toBeUndefined();
+  });
+
   it('creates pending or approved reviews according to autoApprove settings without real DB writes', async () => {
     redisMock.incr.mockResolvedValue(1);
     prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
@@ -355,6 +542,115 @@ describe('/api/public/reviews', () => {
     }));
     expect(body).toEqual({ message: 'Yorum alındı', data: { id: 'review-created', status: 'approved' } });
     expect(prismaMock.pendingReviewImage.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['manual default', undefined, 5, 'pending'],
+    ['manual string', 'manual', 5, 'pending'],
+    ['boolean false', false, 5, 'pending'],
+    ['all string', 'all', 1, 'approved'],
+    ['boolean true', true, 1, 'approved'],
+    ['5stars below threshold', '5stars', 4, 'pending'],
+    ['5stars threshold', '5stars', 5, 'approved'],
+    ['4plus below threshold', '4plus', 3, 'pending'],
+    ['4plus threshold', '4plus', 4, 'approved'],
+  ])('applies autoApprove mode %s', async (_label, autoApprove, rating, expectedStatus) => {
+    setupVerifiedReviewTarget(autoApprove);
+
+    const response = await postPublicReview(validReviewPayload({ rating }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(prismaMock.review.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: expectedStatus,
+        rating,
+      }),
+    }));
+    expect(body.data.status).toBe(expectedStatus);
+  });
+
+  it('rejects unverified public review targets after rate limit and before write', async () => {
+    redisMock.incr.mockResolvedValue(1);
+    prismaMock.storeSettings.findUnique.mockResolvedValue(null);
+    prismaMock.productSnapshot.findUnique.mockResolvedValue(null);
+
+    const response = await postPublicReview(validReviewPayload());
+
+    expect(response.status).toBe(400);
+    expect(redisMock.expire).toHaveBeenCalledWith('renuvex_pr_rl:203.0.113.5', 600);
+    expect(prismaMock.storeSettings.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { storeId: 'store-1' },
+    }));
+    expect(prismaMock.productSnapshot.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
+    }));
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid image payloads before target lookup', async () => {
+    const invalidImagePayloads = [
+      validReviewPayload({ images: 'not-array' }),
+      validReviewPayload({ images: [VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL, VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL] }),
+      validReviewPayload({ images: ['https://example.com/review.jpg'] }),
+      validReviewPayload({ images: ['https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/other-store/review-a.jpg'] }),
+      validReviewPayload({ images: ['https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/review-a.svg'] }),
+    ];
+
+    for (const payload of invalidImagePayloads) {
+      vi.clearAllMocks();
+      setCloudinaryEnv();
+      redisMock.incr.mockResolvedValue(1);
+      const response = await postPublicReview(payload);
+
+      expect(response.status).toBe(400);
+      expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.review.create).not.toHaveBeenCalled();
+    }
+  });
+
+  it('returns a server error for image submits when Cloudinary config is missing', async () => {
+    redisMock.incr.mockResolvedValue(1);
+
+    const response = await postPublicReview(validReviewPayload({
+      images: [VALID_REVIEW_IMAGE_URL],
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.error).toBeTruthy();
+    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+  });
+
+  it('stores trusted review images and clears consumed pending image records', async () => {
+    setCloudinaryEnv();
+    setupVerifiedReviewTarget('all');
+
+    const response = await postPublicReview(validReviewPayload({
+      images: [VALID_REVIEW_IMAGE_URL, VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL],
+    }));
+
+    expect(response.status).toBe(201);
+    expect(redisMock.expire).toHaveBeenCalledWith('renuvex_pr_rl:203.0.113.5', 600);
+    expect(prismaMock.review.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        images: JSON.stringify([VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL]),
+        status: 'approved',
+      }),
+    }));
+    expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({
+      where: {
+        publicId: {
+          in: [
+            'review_images/stores/store-1/review-a',
+            'review_images/stores/store-1/review-b',
+          ],
+        },
+        storeId: 'store-1',
+      },
+    });
   });
 });
 

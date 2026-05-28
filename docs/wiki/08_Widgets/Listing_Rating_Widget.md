@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-20
-last_verified: 2026-05-20
+updated: 2026-05-28
+last_verified: 2026-05-28
 confidence: high
 tags:
   - widget
@@ -37,6 +37,8 @@ source_files:
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/ozy/adapter.js"
   - "src/widget/themes/ozy/theme.js"
+  - "tests/widget-network-smoke.spec.ts"
+  - "tests/widget-harness.ts"
 ---
 
 # Listing Rating Widget
@@ -125,6 +127,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - 2026-05-19: Listing badge star icon + color are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) instead of a hardcoded `star:classic` and the dead `badge.color`. `index.js` parses the icon and sets the star color CSS variables on the listing path itself, so cold listing entry shows the correct icon/color without depending on the PDP `render.js`. `iconPair` is threaded through `injectBadges` → `createBadgeEl`. See [[ADR_0016_Rating_Visual_System]].
 - 2026-05-18: Post-deploy live retest on `dev-mertcopper.ikas.shop` confirmed `runtime-2RGD2H4S.js`, visible listing badges on `/clothing` desktop/mobile, and zero widget-sourced `document.querySelectorAll('a[href]')` calls.
 - 2026-05-18: Follow-up O8 live test found the MutationObserver still calling whole-document `document.querySelectorAll('a[href]')` from the runtime. Fixed by sharing scoped link discovery through `core/link-scope.js`; active generated runtime now avoids that scan.
+- 2026-05-28: `pnpm test:widget-smoke` now covers both sides of the fallback contract: generic/external/system link pages must not load `listing-badges-*`, while product-like listing DOM must load the fallback chunk and call the slug ratings endpoint.
 - 2026-05-18: Reduced listing badge layout shift and DOM scan cost. `dom.js` now scopes candidate link discovery to theme product containers/main content, and `index.js`/`inject.js` reserve invisible badge slots while ratings are in flight before replacing them with real badges.
 - 2026-05-17: Listing/search badges now prefer canonical product-id rating reads via `/api/public/ratings?productIds=...`. `ratings-by-slug` remains only as DOM fallback. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: DOM fallback now uses `ProductSnapshot` before legacy slug reads, backed by ikas product webhooks/backfill.

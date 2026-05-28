@@ -21,7 +21,7 @@ source_files:
   - "playwright.widget.config.ts"
   - "vitest.config.ts"
   - "tests/widget-harness.ts"
-  - "tests/widget-network-smoke.spec.ts"
+- "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
   - ".github/workflows/widget-smoke.yml"
@@ -58,6 +58,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-05-27 follow-up: review/photoStrip fetch helpers live in `reviews-section/reviews-api.js`, not bootstrap. The 2-second listing fallback in `loader.js` now requires product-card-like DOM candidates (same-origin product-like links with nearby images) before loading the listing-badges entry chunk, reducing false-positive loads on clean PDPs.
 - 2026-05-28 CI guard: `pnpm test:widget-smoke` is the executable network/chunk contract. It asserts that badge-only PDPs skip `render-*` and `/api/public/reviews`, badge-disabled PDPs skip `/api/public/ratings`, unsupported auto-placement skips badge/JSON-LD while explicit reviews still render, and generic-link pages do not trigger the listing fallback chunk.
 - 2026-05-28 quality gate expansion: `pnpm test:ci` now adds runtime layout smoke, lightbox/wizard flows, admin preview/settings checks, and public API/theme-state unit tests around the network contract. This catches regressions in behavior and lazy boundaries but does not enforce byte budgets yet.
+- 2026-05-28 transfer evidence: `pnpm test:widget-smoke` attaches `widget-transfer-evidence.json` for mount-present/mount-absent and badge-on/badge-off local harness scenarios. This is evidence for regressions and review, not a hard CDN transfer-size budget.
 
 ## 2026-05-15 Live Observations
 
@@ -92,7 +93,7 @@ Yotpo/Protein Ocean reference:
 ## Measurement ideas
 - Add a `?w=<bundle-version>` to widget script src and report a Vercel Analytics event on first run, including bundle size + first-render time.
 - Lighthouse CI for a representative storefront page.
-- Extend the Playwright smoke tests with transfer-size budgets once the live CDN headers are stable enough to avoid noisy CI failures.
+- Promote the current transfer evidence attachment to hard budgets only after live CDN headers and gzip/brotli variance are measured over multiple deploys.
 
 ## Notes
 - When adding a feature, ask: "Does this need to ship to every page, or only to PDPs?" Listing-only / PDP-only branches matter.

@@ -9,8 +9,11 @@ import {
   hasPdpBadge,
   hasReviewsWidget,
   hasRuntime,
+  setupExternalProductLikeLinksPage,
   setupGenericLinksPage,
+  setupProductListingFallbackPage,
   setupWidgetRoutes,
+  summarizeWidgetNetwork,
   waitForWidgetIdle,
   widgetErrors,
 } from './widget-harness';
@@ -108,4 +111,65 @@ test('generic link pages do not trigger the legacy listing fallback chunk', asyn
   expect(countUrls(log, '/api/public/ratings')).toBe(0);
   expect(countUrls(log, '/api/public/reviews?')).toBe(0);
   expect(widgetErrors(log)).toEqual([]);
+});
+
+test('external and system links with media do not trigger the listing fallback chunk', async ({ page }) => {
+  const log = await setupExternalProductLikeLinksPage(page);
+  await page.goto(`${MERCHANT_ORIGIN}/external-links`);
+  await page.waitForTimeout(2400);
+
+  expect(hasRuntime(log)).toBe(true);
+  expect(hasChunk(log, 'listing-badges-')).toBe(false);
+  expect(countUrls(log, '/api/public/settings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('product-like listing DOM triggers the fallback chunk and slug ratings call', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page);
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 5000 }).toBe(1);
+
+  expect(hasRuntime(log)).toBe(true);
+  expect(hasChunk(log, 'listing-badges-')).toBe(true);
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
+  expect(countUrls(log, '/api/public/reviews?')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('records local widget transfer evidence without enforcing byte budgets', async ({ browser }, testInfo) => {
+  async function measure(name: string, options: Parameters<typeof setupWidgetRoutes>[1]) {
+    const context = await browser.newContext({ serviceWorkers: 'block' });
+    const page = await context.newPage();
+    const log = await setupWidgetRoutes(page, options);
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    if (options?.mountReviews === false) {
+      await waitForWidgetIdle(page);
+    } else {
+      await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+    }
+    const summary = await summarizeWidgetNetwork(log);
+    await context.close();
+    return [name, summary] as const;
+  }
+
+  const entries = await Promise.all([
+    measure('mount-present badge-on', { badgeEnabled: true, mountReviews: true }),
+    measure('mount-absent badge-on', { badgeEnabled: true, mountReviews: false }),
+    measure('mount-present badge-off', { badgeEnabled: false, mountReviews: true }),
+    measure('mount-absent badge-off', { badgeEnabled: false, mountReviews: false }),
+  ]);
+  const table = Object.fromEntries(entries);
+
+  await testInfo.attach('widget-transfer-evidence.json', {
+    contentType: 'application/json',
+    body: JSON.stringify(table, null, 2),
+  });
+
+  expect(table['mount-present badge-on'].reviewsCalls).toBeGreaterThan(0);
+  expect(table['mount-absent badge-on'].reviewsCalls).toBe(0);
+  expect(table['mount-present badge-off'].ratingsCalls).toBe(0);
+  expect(table['mount-absent badge-on'].assetBytes).toBeLessThan(table['mount-present badge-on'].assetBytes);
 });
