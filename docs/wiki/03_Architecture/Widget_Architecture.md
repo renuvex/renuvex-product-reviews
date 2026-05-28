@@ -195,7 +195,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - `pnpm test:widget-smoke` runs Playwright against the built public widget assets (`public/widget.js` + `public/widget-runtime/*`) instead of importing source modules directly.
 - The test fixture serves the loader/runtime from a fake widget origin and an ikas-like merchant page from a fake merchant origin, then intercepts public API calls. This verifies the browser-visible network contract, CORS behavior, dynamic import boundaries, DOM output, and manifest entry points.
 - Covered scenarios: review mount present, review mount absent, badge disabled, unsupported auto-placement with explicit review mount, and generic-link pages where the legacy listing fallback must not load `listing-badges-*`.
-- `.github/workflows/widget-smoke.yml` runs the same smoke tests on pull requests and pushes to `main` after `pnpm build:widget`, then runs the static gates (`node --check`, `tsc`, `lint`, `git diff --check`, wiki audit).
+- `.github/workflows/widget-smoke.yml` runs the same smoke tests on pull requests and pushes to `main` after `pnpm build:widget`, then runs the static gates (`node --check`, `tsc`, `lint`, `git diff --check`). Wiki audit remains a local gate because this repo intentionally ignores local agent rule files such as `AGENTS.md`.
 
 ## Notes
 - The widget is the **highest-leverage code surface** in the codebase (every storefront load executes it). Bundle size and TTI matter.

@@ -49,6 +49,3 @@ jobs:
 
       - name: Diff whitespace check
         run: git diff --check
-
-      - name: Wiki audit
-        run: node scripts/wiki-audit.mjs --changed-source-check
