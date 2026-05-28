@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-26
-updated: 2026-05-26
-last_verified: 2026-05-26
+updated: 2026-05-28
+last_verified: 2026-05-28
 confidence: high
 tags:
   - adr
@@ -20,6 +20,7 @@ related:
   - "[[Ikas_Theme_Limitations]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Ikas_Storefront_Script_Capabilities]]"
+  - "[[Test_Strategy]]"
 source_files:
   - "src/widget/core/shadow.js"
   - "src/widget/reviews-section/render.js"
@@ -29,7 +30,6 @@ source_files:
   - "src/widget/reviews-section/review-form-modal/steps/step-author.js"
   - "src/widget/icons/star-sprite.js"
   - "src/widget/core/helpers.js"
-  - "public/widget-runtime/__fixtures__/ozy-hostile.html"
 ---
 
 # ADR 0021: Shadow DOM Isolation of Review Surfaces
@@ -116,10 +116,10 @@ Inside an open shadow root, `document.activeElement` returns the *host*, not the
 - The badge subsystem, JSON-LD, owned slots, position guards, mutation observer, health probes, and storefront-events context remain unchanged.
 - Per-theme adapter work (the supported/unsupported allowlist + `autoPlacementEnabled` / `reviewsMountEnabled` policy, [[Open_Questions]]) is now decoupled from CSS isolation. The placement axis can ship independently in a subsequent change.
 - New surfaces that should be theme-isolated must call `attachShadowHost` (or `createOverlayShadowHost` for body-level overlays) + `injectShadowStyles` + `registerSpriteRoot`; new inline surfaces that should inherit theme typography (badges) stay in light DOM.
-- A committed dev fixture (`public/widget-runtime/__fixtures__/ozy-hostile.html`) reproduces the Mine theme bleed plus several worst-case host rules; it's served by `next dev` at `/widget-runtime/__fixtures__/ozy-hostile.html` for MCP-driven verification and future per-theme smoke tests.
+- The original committed public dev fixture for hostile-theme checks was removed on 2026-05-28. Future hostile-theme regression checks should live in Playwright/mock storefront fixtures, not under `public/widget-runtime`, so test pages are not deployed as public runtime assets.
 
 ## Verification
-Pre-commit verification (see plan file `tamam-faka-bu-commit-greedy-axolotl.md` for the full checklist) — `pnpm build:widget`, `pnpm dev`, load the fixture via MCP browser tools, assert thumbnail size + shadow isolation + lightbox/wizard focus-trap parity, then `pnpm lint`.
+Pre-commit verification for the original migration used `pnpm build:widget`, `pnpm dev`, a hostile-theme fixture, shadow isolation assertions, lightbox/wizard focus-trap parity, and `pnpm lint`. Current regression coverage should use the Playwright/mock-storefront strategy in [[Test_Strategy]].
 
 ## Follow-up: PDP badge regression fix (2026-05-26)
 The initial migration broke an implicit contract that pre-migration code carried in `core/badge.js`'s comment:
@@ -145,7 +145,8 @@ Lesson recorded so we don't repeat it: when isolating something into Shadow DOM,
 - [src/widget/reviews-section/review-form-modal/steps/step-author.js](src/widget/reviews-section/review-form-modal/steps/step-author.js)
 - [src/widget/icons/star-sprite.js](src/widget/icons/star-sprite.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
-- [public/widget-runtime/__fixtures__/ozy-hostile.html](public/widget-runtime/__fixtures__/ozy-hostile.html)
+- [tests/widget-harness.ts](tests/widget-harness.ts)
+- [docs/wiki/03_Architecture/Test_Strategy.md](docs/wiki/03_Architecture/Test_Strategy.md)
 
 ## Obsidian Links
 - [[Decision_Index]]
