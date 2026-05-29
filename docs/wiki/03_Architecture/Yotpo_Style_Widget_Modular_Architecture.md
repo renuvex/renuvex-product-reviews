@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-15
-updated: 2026-05-17
-last_verified: 2026-05-17
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - architecture
@@ -31,6 +31,8 @@ source_files:
   - "src/widget/core/settings.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/listing-badges/index.js"
+  - "src/widget/structured-data/index.js"
+  - "src/widget/structured-data/jsonld.js"
   - "src/widget/themes/ozy/adapter.js"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
@@ -124,7 +126,7 @@ Initial registry candidates:
 | `review-form` | multi-step review submission modal | `review-form-modal/*` |
 | `media-gallery` | photo strip and photo lightbox | `Photo_Strip`, `Product_Review_Lightbox` |
 | `questions-answers` | product Q&A | not production-complete |
-| `schema` | Product/AggregateRating JSON-LD | `rating-badge/inject.js` today |
+| `schema` | Product/AggregateRating JSON-LD | `structured-data/jsonld.js` |
 
 ## Placeholder Contract
 

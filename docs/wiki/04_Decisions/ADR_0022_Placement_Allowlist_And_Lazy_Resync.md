@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - adr
@@ -30,6 +30,7 @@ source_files:
   - "src/widget/themes/current-adapter.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
+  - "src/widget/structured-data/index.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/reviews-section/render.js"
 ---
@@ -98,7 +99,8 @@ Default fallback (`FALLBACK_RUNTIME`, used when metadata is missing): both flags
 The widget runtime consumes the flags through new getters in `themes/current-adapter.js` (`isAutoPlacementEnabled()` / `isReviewsMountEnabled()`). `settings.js` `applyRuntimeSettings` calls the matching setters alongside `setThemeAdapterKey`.
 
 Gating points:
-- `rating-badge/index.js renderRatingBadge` and `rating-badge/inject.js injectRatingBadge` — early-return when `!isAutoPlacementEnabled()`, BEFORE rating fetch, DOM probe, badge style injection, or JSON-LD write. JSON-LD aggregateRating is part of the badge feature today; treating placement-off as "no badge surface at all" keeps the contract consistent.
+- `rating-badge/index.js renderRatingBadge` and `rating-badge/inject.js injectRatingBadge` — early-return when `!isAutoPlacementEnabled()`, BEFORE rating fetch, DOM probe, or badge style injection.
+- `structured-data/index.js renderStructuredData` — separate SEO surface. It can emit JSON-LD on unsupported auto-placement themes only when an explicit review mount renders visible rating content; unsupported + no visible review/rating surface returns early.
 - `listing-badges/inject.js` `reserveBadgeSlots`, `injectBadges`, `injectModalBadge` — early-return when `!isAutoPlacementEnabled()`. `observer.js`'s lazy listing-badge render also no-ops because the underlying functions return immediately.
 - `reviews-section/render.js` `findReviewsMount` path — guarded by `isReviewsMountEnabled()` for defense in depth. Today the function already returns `null` when no `data-renuvex-widget="reviews"` element exists; the gate is structural protection for the future.
 

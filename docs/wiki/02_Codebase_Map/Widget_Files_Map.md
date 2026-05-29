@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -15,6 +15,7 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
+  - "src/widget/core/rating-summary.js"
   - "src/widget/core/link-scope.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
@@ -26,6 +27,8 @@ source_files:
   - "src/widget/reviews-section/styles.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
+  - "src/widget/structured-data/index.js"
+  - "src/widget/structured-data/jsonld.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/ozy/adapter.js"
   - "src/widget/themes/ozy/theme.js"
@@ -44,7 +47,7 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `reviews-section/styles.js`, not inside a theme adapter folder.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `reviews-section/styles.js`, not inside a theme adapter folder.
 
 ## Tree
 
@@ -74,6 +77,7 @@ src/widget/
 │  ├─ cache.js                    # sessionStorage wrapper with in-memory fallback (cacheGet/cacheSet)
 │  ├─ product-title.js            # Shared PDP title finder for badge placement and adapters
 │  ├─ helpers.js                  # Misc utilities + trusted review image URL helpers
+│  ├─ rating-summary.js           # Shared one-product approved rating summary fetch/cache
 │  └─ badge.js                    # Generic badge primitive
 │
 ├─ reviews-section/
@@ -92,7 +96,11 @@ src/widget/
 │
 ├─ rating-badge/
 │  ├─ index.js                    # PDP badge surface entry: settings gates + ratings fetch
-│  └─ inject.js                   # PDP title badge DOM + JSON-LD injection and cleanup
+│  └─ inject.js                   # PDP title badge DOM injection and cleanup
+│
+├─ structured-data/
+│  ├─ index.js                    # Product AggregateRating JSON-LD surface entry
+│  └─ jsonld.js                   # Owned JSON-LD builder, injection, cleanup
 │
 ├─ listing-badges/
 │  ├─ index.js                    # Bootstrap (find product cards on listing pages)

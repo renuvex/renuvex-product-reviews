@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-26
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - adr
@@ -23,6 +23,7 @@ related:
   - "[[Test_Strategy]]"
 source_files:
   - "src/widget/core/shadow.js"
+  - "src/widget/structured-data/jsonld.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/review-modal.js"
   - "src/widget/reviews-section/review-form-modal/modal-shell.js"
@@ -51,7 +52,7 @@ Three self-contained review surfaces render inside their own **open Shadow DOM r
 2. **Photo lightbox** (`reviews-section/review-modal.js`) — appends a new bare `<div data-renuvex-shadow-overlay>` to `document.body`, attaches an open shadow root, and renders the overlay inside it. The host is removed on close.
 3. **Review-form wizard** (`reviews-section/review-form-modal/modal-shell.js`) — same pattern, its own body-level shadow host.
 
-Badges (PDP rating badge, listing badges) and structured data (JSON-LD aggregateRating, written to `document.head` by `rating-badge.js:59`) **stay in light DOM, untouched**. Badges are inline and should inherit theme typography per [[ADR_0017_Badge_Architecture]]; JSON-LD must be crawlable.
+Badges (PDP rating badge, listing badges) and structured data (JSON-LD aggregateRating, written to `document.head` by `structured-data/jsonld.js`) **stay in light DOM, untouched**. Badges are inline and should inherit theme typography per [[ADR_0017_Badge_Architecture]]; JSON-LD must be crawlable.
 
 ### Shared primitives (`src/widget/core/shadow.js`)
 - `attachShadowHost(hostEl)` — idempotent open `attachShadow`.

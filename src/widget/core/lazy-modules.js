@@ -7,6 +7,7 @@ var reviewsMainPromise = null;
 var listingBadgesPromise = null;
 var reviewsRenderPromise = null;
 var ratingBadgePromise = null;
+var structuredDataPromise = null;
 
 export function loadReviewsMainModule() {
   if (!reviewsMainPromise) {
@@ -37,4 +38,11 @@ export function loadRatingBadgeModule() {
     ratingBadgePromise = import('../rating-badge/index.js');
   }
   return ratingBadgePromise;
+}
+
+export function loadStructuredDataModule() {
+  if (!structuredDataPromise) {
+    structuredDataPromise = import('../structured-data/index.js');
+  }
+  return structuredDataPromise;
 }

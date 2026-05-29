@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - widget
@@ -42,6 +42,7 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
+  - "src/widget/core/rating-summary.js"
   - "src/widget/core/link-scope.js"
   - "src/widget/core/health.js"
   - "src/widget/observer.js"
@@ -51,6 +52,9 @@ source_files:
   - "src/widget/reviews-section/styles.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
+  - "src/widget/structured-data/index.js"
+  - "src/widget/structured-data/jsonld.js"
+  - "src/widget/surfaces/structured-data.surface.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
   - "src/widget/themes/current-adapter.js"
@@ -91,9 +95,10 @@ deployment before claiming live performance improvement.
 | [src/widget/index.js](src/widget/index.js) | Thin entry. Side-effect inits (ADR_0011 order) + preview/prod branch. Delegates to `loader.js`. |
 | [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Wires context → registry (ADR_0013). |
 | [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). |
-| [core/registry.js](src/widget/core/registry.js) | Surface registry (`rating-badge`, `reviews-main`, `listing-badge`) with guarded async mounts. |
-| [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for reviews, listing, badge, and preview render modules. |
+| [core/registry.js](src/widget/core/registry.js) | Surface registry (`rating-badge`, `reviews-main`, `structured-data`, `listing-badge`) with guarded async mounts. |
+| [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for reviews, listing, badge, structured-data, and preview render modules. |
 | [core/settings.js](src/widget/core/settings.js) | Shared public settings fetch/cache used by lazy modules without pulling PDP render code. |
+| [core/rating-summary.js](src/widget/core/rating-summary.js) | Shared one-product approved rating summary fetch used by visual badge and structured-data surfaces without duplicate API calls. |
 | [core/health.js](src/widget/core/health.js) | Runtime health marker, visibility telemetry, and bounded one-shot DOM-removal self-heal helpers for badge surfaces. |
 | [surfaces/](src/widget/surfaces/) | Thin surface descriptors (`detect`/`mount`) that lazy-load implementation modules. |
 | [core/config.js](src/widget/core/config.js) | `PUBLIC_API_KEY` and `API_BASE` parsed from own `<script src>`. |
@@ -104,7 +109,8 @@ deployment before claiming live performance improvement.
 | [icons/](src/widget/icons/) | Public icon API plus split review/rating and filter icon registries shared by runtime and admin preview. |
 | [observer.js](src/widget/observer.js) | MutationObserver to re-render listing badges on SPA theme nav; uses scoped listing link discovery instead of whole-document link scans. |
 | [events.js](src/widget/events.js) | SPA history patch (stale rating-badge cleanup) + quick-view modal badge plumbing. IkasEvents handling moved to `core/storefront-context.js` (ADR_0013). |
-| [rating-badge/](src/widget/rating-badge/) | Independent PDP rating badge surface. Fetches one-product rating summaries and owns badge DOM + JSON-LD cleanup. |
+| [rating-badge/](src/widget/rating-badge/) | Independent PDP rating badge surface. Fetches one-product rating summaries and owns only visual badge DOM cleanup/injection. |
+| [structured-data/](src/widget/structured-data/) | Independent Product `AggregateRating` JSON-LD surface. Emits only when the rich-snippet toggle, approved ratings, and visible/expected Renuvex rating content gates pass. |
 | [reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) | Reviews section entry. Fetches settings, checks the explicit reviews mount, fetches initial review/photo-strip data, then dynamically imports `render.js`. |
 | [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) | Shared reviews/photoStrip fetch helpers, cache handling, preview fallback, and explicit review-fetch error result. |
 | [reviews-section/render.js](src/widget/reviews-section/render.js) | Compose summary + reviews + modal CTA based on settings; handles filter/sort/load-more fetches through `reviews-api.js`. |
@@ -140,7 +146,7 @@ index.js  (error-reporter / base-reset / input-modality side-effects)
 loader.js
   ├── if preview: startPreview() -> RENUVEX_PR_SETTINGS_UPDATE listener; bootstrap('mock-product')
   └── else: startWidget()
-        ├── registerCoreSurfaces()      (rating-badge, reviews-main, listing-badge)
+        ├── registerCoreSurfaces()      (rating-badge, reviews-main, structured-data, listing-badge)
         ├── initStorefrontContext()     (subscribe window.IkasEvents + DOM fallback)
         ├── attachHistoryListener / attachModalBadgeListener / startMutationObserver
         └── onProductView / onPageView  → registry.mountMatching(context)
@@ -149,8 +155,15 @@ loader.js
 rating-badge/index.js
   ├── fetch /api/public/settings  (cached)
   ├── settings + theme auto-placement gates
-  ├── fetch /api/public/ratings?productIds=<one>
-  └── rating-badge/inject.js (badge DOM + JSON-LD)
+  ├── core/rating-summary.js fetch /api/public/ratings?productIds=<one>
+  └── rating-badge/inject.js (visual badge DOM)
+
+        ▼ (productView context → structured-data surface)
+structured-data/index.js
+  ├── fetch /api/public/settings  (cached)
+  ├── richSnippetsEnabled + visible rating/review surface gates
+  ├── core/rating-summary.js shared summary promise/cache
+  └── structured-data/jsonld.js (owned Product AggregateRating JSON-LD)
 
         ▼ (productView context → reviews-main surface)
 reviews-section/bootstrap.js

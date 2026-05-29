@@ -55,6 +55,7 @@ function settingsResponse(scenario) {
         reviewIcon: 'star',
         reviewStarColor: '#f59e0b',
         writeButtonText: 'Yorum Yap',
+        richSnippetsEnabled: true,
       },
     },
     runtime: {
@@ -363,9 +364,9 @@ function validate(results) {
   if (!byName['mount-absent badge-on'].dom.badge) errors.push('mount-absent badge-on must still render PDP badge');
   if (byName['mount-absent badge-on'].dom.jsonLdCount !== 1) errors.push('mount-absent badge-on must produce one JSON-LD script');
 
-  if (byName['mount-present badge-off'].apiCalls.ratings !== 0) errors.push('mount-present badge-off must skip ratings API');
+  if (byName['mount-present badge-off'].apiCalls.ratings !== 1) errors.push('mount-present badge-off must call ratings API for structured data');
   if (byName['mount-present badge-off'].dom.badge) errors.push('mount-present badge-off must not render PDP badge');
-  if (byName['mount-present badge-off'].dom.jsonLdCount !== 0) errors.push('mount-present badge-off must not emit JSON-LD');
+  if (byName['mount-present badge-off'].dom.jsonLdCount !== 1) errors.push('mount-present badge-off must emit JSON-LD when reviews render');
 
   if (byName['mount-absent badge-off'].apiCalls.ratings !== 0) errors.push('mount-absent badge-off must skip ratings API');
   if (byName['mount-absent badge-off'].apiCalls.reviews !== 0) errors.push('mount-absent badge-off must skip reviews API');

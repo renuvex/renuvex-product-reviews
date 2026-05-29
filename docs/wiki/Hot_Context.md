@@ -38,9 +38,12 @@ source_files:
   - "src/widget/loader.js"
   - "src/widget/listing-badges/fallback-candidates.js"
   - "src/widget/core/settings.js"
+  - "src/widget/core/rating-summary.js"
   - "src/widget/core/product-title.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
+  - "src/widget/structured-data/index.js"
+  - "src/widget/structured-data/jsonld.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
@@ -76,6 +79,7 @@ source_files:
 - 2026-05-28: [[Test_Strategy]] now defines `pnpm test:ci`: widget network, runtime layouts, lightbox/wizard, admin preview/settings, and public API/theme-state unit tests. GitHub Actions workflow is `Quality Gate`.
 - 2026-05-28: Review API tests now cover validation, profanity, rate-limit, image policy, target verification, approval modes, GET filters, and cache behavior. Widget network smoke also records local transfer evidence and tests both negative and positive listing fallback paths.
 - 2026-05-29: Production evidence guardrails added: `pnpm measure:deployed-widget`, `pnpm verify:deployed-jsonld`, `listing-badges/fallback-candidates.js`, and `tests/unit/widget-surface-contracts.test.ts`. Evidence notes live in [[Widget_Transfer_Measurement_2026-05-29]] and [[Structured_Data_Verification_2026-05-29]].
+- 2026-05-29: Product `AggregateRating` JSON-LD moved out of `rating-badge` into an independent `structured-data` surface. `Ürün Yorumları` now has `SEO` → `Google Rich Snippets` (`richSnippetsEnabled`, default `true`); badge disabled no longer disables JSON-LD when the explicit review section is visible.
 
 ## Current Risks / Open Questions
 - Keep doing live post-deploy smoke on the dev storefront after runtime-affecting widget changes; deployed measurement scripts are evidence, not a full merchant-flow replacement.

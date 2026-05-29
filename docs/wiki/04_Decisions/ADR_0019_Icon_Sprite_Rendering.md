@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-24
-updated: 2026-05-24
-last_verified: 2026-05-24
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - adr
@@ -26,6 +26,7 @@ source_files:
   - "src/widget/core/helpers.js"
   - "src/widget/core/badge.js"
   - "src/widget/rating-badge/inject.js"
+  - "src/widget/structured-data/jsonld.js"
   - "src/widget/summary-layouts/shared/bar-chart.js"
   - "src/widget/summary-layouts/classic/index.js"
 ---
@@ -111,7 +112,7 @@ only the two star symbols and never clobbers the one-off icon symbols.
 - Star geometry now depends on `#renuvex-pr-icon-sprite` existing in the DOM. `ensureStarSprite` runs synchronously inside every read-only renderer before its `<use>` markup is inserted, so the dependency is satisfied by construction; there is no flag/gate to retire.
 - Theme-agnostic: the sprite lives in shared `icons/` core, not in any theme adapter or per-theme bundle. **Future themes beyond ozy inherit it automatically** — a new theme implements only DOM mount/selectors (see [[ADR_0017_Badge_Architecture]] / current-adapter), never icon rendering.
 - Generic one-off symbol ids include source length plus two independent hash passes, and injected symbols carry a source key. The icon set is still trusted/local, but this avoids silent reuse if the helper is later called with a different SVG that collides with an existing id.
-- SEO unaffected: the `AggregateRating` JSON-LD in [rating-badge.js](src/widget/rating-badge/inject.js) is independent of the visual DOM.
+- SEO unaffected: the `AggregateRating` JSON-LD in [structured-data/jsonld.js](src/widget/structured-data/jsonld.js) is independent of the visual icon DOM.
 - **Amends [[ADR_0017_Badge_Architecture]]** for the PDP badge: its "every badge gets `role=figure` + `aria-label`", static badge id, and inline `justify-content` are superseded here (link role, `aria-labelledby` sr-only, `data-renuvex-align`). The listing badge's `role="figure"` and `pointer-events:none` card-link behavior are unchanged.
 - ADR_0020 later removed the legacy namespace aliases; active sprite, badge, and slot markers are Renuvex-only.
 - After any `src/widget` edit, run `pnpm build:widget` (HMR does not rebundle the widget).

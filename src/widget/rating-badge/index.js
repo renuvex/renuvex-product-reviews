@@ -20,8 +20,7 @@
 //    in depth; injectRatingBadge also enforces this.
 // 3. No mount/anchor gate — badge is auto-placed by definition.
 
-import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
-import { fetchWithTimeout } from '../core/fetch.js';
+import { fetchRatingSummary } from '../core/rating-summary.js';
 import { fetchSettings } from '../core/settings.js';
 import { getIconFromSettings } from '../icons/index.js';
 import { isAutoPlacementEnabled } from '../themes/current-adapter.js';
@@ -39,31 +38,6 @@ function currentPathname() {
     return window.location && window.location.pathname ? window.location.pathname : '';
   } catch (_) {
     return '';
-  }
-}
-
-// Fetch rating summary { avg, count } for ONE productId from the existing
-// /api/public/ratings endpoint (also used by listing-badges). Returns null on
-// failure so the caller can skip badge gracefully.
-async function fetchRatingSummary(productId) {
-  if (!productId) return null;
-  try {
-    var url = API_BASE + '/api/public/ratings?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
-      '&productIds=' + encodeURIComponent(productId);
-    var res = await fetchWithTimeout(url);
-    if (!res.ok) return null;
-    var json = await res.json();
-    var record = json && json.data && json.data[productId];
-    if (!record) return null;
-    // The endpoint returns { avg: string '4.5', count: int }. Normalize for
-    // injectRatingBadge which accepts avg as a string-or-number and count as
-    // a number. Treat 0-count as "no badge" because injectRatingBadge skips
-    // anyway when !avgRating, but be explicit so the gate is readable.
-    if (!record.count || record.count <= 0) return null;
-    return { avg: record.avg, count: record.count };
-  } catch (err) {
-    console.error('[renuvex-pr] rating badge summary fetch failed:', err);
-    return null;
   }
 }
 

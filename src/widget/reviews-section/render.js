@@ -108,7 +108,7 @@ function findReviewsMount() {
 // ADR_0024: getRatingSummary() was here; removed with the badge inject call
 // below. The rating badge surface now derives its avg/count from the LIGHT
 // /api/public/ratings endpoint instead of mining it out of the full reviews
-// payload — see src/widget/rating-badge/index.js fetchRatingSummary.
+// payload — see src/widget/core/rating-summary.js fetchRatingSummary.
 
 function getOrCreateReviewsSlot(anchorEl, productId) {
   var slot = anchorEl.querySelector('[data-renuvex-slot="product-reviews"]');

@@ -30,6 +30,7 @@ test('manifest points at the current widget surface hierarchy', async () => {
   expect(entryPoints).toContain('src/widget/reviews-section/bootstrap.js');
   expect(entryPoints).toContain('src/widget/reviews-section/render.js');
   expect(entryPoints).toContain('src/widget/rating-badge/index.js');
+  expect(entryPoints).toContain('src/widget/structured-data/index.js');
   expect(entryPoints.some((entryPoint) => entryPoint?.includes('product-widget'))).toBe(false);
 });
 
@@ -42,6 +43,7 @@ test('review mount present loads reviews, photo strip, badge, and render chunk',
   expect(await hasJsonLd(page)).toBe(true);
   expect(hasRuntime(log)).toBe(true);
   expect(hasChunk(log, 'rating-badge-')).toBe(true);
+  expect(hasChunk(log, 'structured-data-')).toBe(true);
   expect(hasChunk(log, 'bootstrap-')).toBe(true);
   expect(hasChunk(log, 'render-')).toBe(true);
   expect(countUrls(log, '/api/public/settings')).toBe(1);
@@ -60,6 +62,7 @@ test('review mount absent keeps badge but skips review render chunk and review A
   expect(await hasJsonLd(page)).toBe(true);
   expect(await hasReviewsWidget(page)).toBe(false);
   expect(hasChunk(log, 'rating-badge-')).toBe(true);
+  expect(hasChunk(log, 'structured-data-')).toBe(true);
   expect(hasChunk(log, 'bootstrap-')).toBe(true);
   expect(hasChunk(log, 'render-')).toBe(false);
   expect(countUrls(log, '/api/public/settings')).toBe(1);
@@ -68,23 +71,24 @@ test('review mount absent keeps badge but skips review render chunk and review A
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('badge disabled skips ratings, badge DOM, and JSON-LD while reviews still render', async ({ page }) => {
+test('badge disabled skips badge DOM but keeps JSON-LD when reviews still render', async ({ page }) => {
   const log = await setupWidgetRoutes(page, { badgeEnabled: false, mountReviews: true });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await waitForWidgetIdle(page);
 
   expect(await hasPdpBadge(page)).toBe(false);
-  expect(await hasJsonLd(page)).toBe(false);
+  expect(await hasJsonLd(page)).toBe(true);
   expect(hasChunk(log, 'rating-badge-')).toBe(true);
+  expect(hasChunk(log, 'structured-data-')).toBe(true);
   expect(hasChunk(log, 'render-')).toBe(true);
   expect(countUrls(log, '/api/public/settings')).toBe(1);
-  expect(countUrls(log, '/api/public/ratings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
   expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('unsupported theme keeps auto-placement closed but explicit review mount works', async ({ page }) => {
+test('unsupported theme keeps auto-placement closed but explicit review mount keeps JSON-LD', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     badgeEnabled: true,
     mountReviews: true,
@@ -95,11 +99,65 @@ test('unsupported theme keeps auto-placement closed but explicit review mount wo
   await waitForWidgetIdle(page);
 
   expect(await hasPdpBadge(page)).toBe(false);
+  expect(await hasJsonLd(page)).toBe(true);
+  expect(hasChunk(log, 'rating-badge-')).toBe(true);
+  expect(hasChunk(log, 'structured-data-')).toBe(true);
+  expect(hasChunk(log, 'render-')).toBe(true);
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
+  expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('badge disabled and review mount absent produce no JSON-LD or ratings fetch', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, { badgeEnabled: false, mountReviews: false });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await waitForWidgetIdle(page);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(await hasReviewsWidget(page)).toBe(false);
   expect(await hasJsonLd(page)).toBe(false);
   expect(hasChunk(log, 'rating-badge-')).toBe(true);
-  expect(hasChunk(log, 'render-')).toBe(true);
+  expect(hasChunk(log, 'structured-data-')).toBe(true);
+  expect(hasChunk(log, 'render-')).toBe(false);
   expect(countUrls(log, '/api/public/ratings')).toBe(0);
+  expect(countUrls(log, '/api/public/reviews?')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('rich snippets toggle disables JSON-LD without disabling visual badge', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    reviewsSettings: { richSnippetsEnabled: false },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasPdpBadge(page)).toBe(true);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await waitForWidgetIdle(page);
+
+  expect(await hasJsonLd(page)).toBe(false);
+  expect(hasChunk(log, 'rating-badge-')).toBe(true);
+  expect(hasChunk(log, 'structured-data-')).toBe(true);
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
   expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('products without approved reviews do not emit badge or JSON-LD', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    approvedReviewCount: 0,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await waitForWidgetIdle(page);
+
+  expect(await hasPdpBadge(page)).toBe(false);
+  expect(await hasJsonLd(page)).toBe(false);
+  expect(hasChunk(log, 'structured-data-')).toBe(true);
+  expect(countUrls(log, '/api/public/ratings')).toBe(1);
+  expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(1);
   expect(widgetErrors(log)).toEqual([]);
 });
 
@@ -209,6 +267,7 @@ test('records local widget transfer evidence without enforcing byte budgets', as
 
   expect(table['mount-present badge-on'].reviewsCalls).toBeGreaterThan(0);
   expect(table['mount-absent badge-on'].reviewsCalls).toBe(0);
-  expect(table['mount-present badge-off'].ratingsCalls).toBe(0);
+  expect(table['mount-present badge-off'].ratingsCalls).toBe(1);
+  expect(table['mount-absent badge-off'].ratingsCalls).toBe(0);
   expect(table['mount-absent badge-on'].assetBytes).toBeLessThan(table['mount-present badge-on'].assetBytes);
 });

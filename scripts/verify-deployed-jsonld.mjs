@@ -8,9 +8,12 @@ const PRODUCT_ID = 'product-1';
 const PRODUCT_NAME = 'Premium';
 
 const controlledScenarios = [
-  { key: 'controlled badge enabled', badgeEnabled: true, autoPlacementEnabled: true, expectJsonLd: true },
-  { key: 'controlled badge disabled', badgeEnabled: false, autoPlacementEnabled: true, expectJsonLd: false },
-  { key: 'controlled unsupported theme', badgeEnabled: true, autoPlacementEnabled: false, expectJsonLd: false },
+  { key: 'controlled badge enabled + review mount present', badgeEnabled: true, mountReviews: true, autoPlacementEnabled: true, richSnippetsEnabled: true, expectJsonLd: true },
+  { key: 'controlled badge enabled + review mount absent', badgeEnabled: true, mountReviews: false, autoPlacementEnabled: true, richSnippetsEnabled: true, expectJsonLd: true },
+  { key: 'controlled badge disabled + review mount present', badgeEnabled: false, mountReviews: true, autoPlacementEnabled: true, richSnippetsEnabled: true, expectJsonLd: true },
+  { key: 'controlled badge disabled + review mount absent', badgeEnabled: false, mountReviews: false, autoPlacementEnabled: true, richSnippetsEnabled: true, expectJsonLd: false },
+  { key: 'controlled unsupported theme + review mount present', badgeEnabled: true, mountReviews: true, autoPlacementEnabled: false, richSnippetsEnabled: true, expectJsonLd: true },
+  { key: 'controlled rich snippets disabled', badgeEnabled: true, mountReviews: true, autoPlacementEnabled: true, richSnippetsEnabled: false, expectJsonLd: false },
 ];
 
 function jsonHeaders() {
@@ -39,6 +42,7 @@ function settingsResponse(scenario) {
         showPhotoGallery: true,
         reviewIcon: 'star',
         reviewStarColor: '#f59e0b',
+        richSnippetsEnabled: scenario.richSnippetsEnabled !== false,
       },
     },
     runtime: {
@@ -74,7 +78,7 @@ function reviewsResponse() {
   };
 }
 
-function productHtml() {
+function productHtml(scenario) {
   return `<!doctype html>
 <html lang="tr">
   <head>
@@ -102,7 +106,7 @@ function productHtml() {
     <main>
       <section class="product-detail">
         <h1>${PRODUCT_NAME}</h1>
-        <div data-renuvex-widget="reviews"></div>
+        ${scenario.mountReviews === false ? '' : '<div data-renuvex-widget="reviews"></div>'}
       </section>
     </main>
   </body>
@@ -133,7 +137,7 @@ async function configureControlledRoutes(page, scenario) {
     });
   });
   await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
-    await route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: productHtml() });
+    await route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: productHtml(scenario) });
   });
 }
 

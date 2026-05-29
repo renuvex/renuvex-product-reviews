@@ -30,7 +30,7 @@ source_files:
 The measurement is evidence, not a CI byte budget. It proves the important ADR_0024 relative behavior:
 
 - removing the explicit review mount skips the `render-*` chunk and `/api/public/reviews`,
-- disabling the badge skips `/api/public/ratings` and JSON-LD,
+- disabling the visual badge skips badge DOM. After the 2026-05-29 structured-data split, `/api/public/ratings` may still be called for JSON-LD when an explicit review section is visible,
 - cache headers for content-hashed runtime/chunks are immutable.
 
 ## Command
@@ -60,8 +60,8 @@ Measured at `2026-05-29T13:12:38.998Z`.
 
 - `render-Z3MCWG6Z.js` is present only when the explicit review mount exists. This is the intended review-section lazy boundary.
 - `/api/public/reviews` is called only when the explicit review mount exists. Photo strip and review fetches remain review-section concerns.
-- `/api/public/ratings` is called only when the badge is enabled.
-- JSON-LD is emitted only on badge-enabled paths with a rating summary.
+- This captured result predates the structured-data split. In the new contract, `/api/public/ratings` is still skipped when badge is disabled and the review mount is absent, but badge-disabled + review-mounted PDPs call ratings once so the structured-data surface can emit JSON-LD.
+- JSON-LD is emitted on eligible visible rating/review paths with a rating summary, not only on visual-badge-enabled paths.
 - `widget.js` used `Cache-Control: public, max-age=300, must-revalidate`.
 - Content-hashed runtime/chunks used `Cache-Control: public, max-age=31536000, immutable`.
 

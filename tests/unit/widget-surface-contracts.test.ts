@@ -22,6 +22,14 @@ const SURFACE_TEST_CONTRACTS: Record<string, { layers: string[]; tests: string[]
     layers: ['network'],
     tests: ['tests/widget-network-smoke.spec.ts'],
   },
+  'structured-data': {
+    layers: ['network', 'unit', 'deployed-verifier'],
+    tests: [
+      'tests/widget-network-smoke.spec.ts',
+      'tests/unit/structured-data-jsonld.test.ts',
+      'scripts/verify-deployed-jsonld.mjs',
+    ],
+  },
 };
 
 function surfaceKeys(): string[] {
@@ -39,7 +47,7 @@ function surfaceKeys(): string[] {
 describe('widget surface test contracts', () => {
   test('each registered surface has an explicit test-layer contract', () => {
     const keys = surfaceKeys();
-    expect(keys).toEqual(['listing-badge', 'rating-badge', 'reviews-main']);
+    expect(keys).toEqual(['listing-badge', 'rating-badge', 'reviews-main', 'structured-data']);
     for (const key of keys) {
       expect(SURFACE_TEST_CONTRACTS[key], `missing SURFACE_TEST_CONTRACTS entry for ${key}`).toBeDefined();
     }

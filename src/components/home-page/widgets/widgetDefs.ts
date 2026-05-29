@@ -280,6 +280,12 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
+        title: 'SEO',
+        fields: [
+          { type: 'toggle', key: 'richSnippetsEnabled', label: 'Google Rich Snippets', default: true },
+        ],
+      },
+      {
         // Widget davranışı toggle'ları — en sona, kullanıcı genelde önce
         // tasarımı yapar, sonra "neyi göster/gizle, otomatik onayla mı" karar verir.
         title: 'Ayarlar',

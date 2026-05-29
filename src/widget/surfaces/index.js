@@ -12,9 +12,11 @@ import { register } from '../core/registry.js';
 import { ratingBadgeSurface } from './rating-badge.surface.js';
 import { reviewsMainSurface } from './reviews-main.surface.js';
 import { listingBadgeSurface } from './listing-badge.surface.js';
+import { structuredDataSurface } from './structured-data.surface.js';
 
 export function registerCoreSurfaces() {
   register(ratingBadgeSurface);
   register(reviewsMainSurface);
+  register(structuredDataSurface);
   register(listingBadgeSurface);
 }

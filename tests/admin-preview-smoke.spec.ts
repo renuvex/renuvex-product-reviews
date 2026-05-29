@@ -53,6 +53,7 @@ test('admin widget schema stays aligned with summary and review layout registrie
   const thumbnailSizeField = fields.find((field) => field.key === 'thumbnailSize');
   const recommendationField = fields.find((field) => field.key === 'showRecommendation');
   const barFillField = fields.find((field) => field.key === 'barFillColor');
+  const richSnippetsField = fields.find((field) => field.key === 'richSnippetsEnabled');
 
   expect(summaryLayoutField?.type).toBe('select');
   expect(reviewLayoutField?.type).toBe('select');
@@ -70,6 +71,11 @@ test('admin widget schema stays aligned with summary and review layout registrie
   expect(thumbnailSizeField?.showWhen).toEqual({ layoutKey: 'reviewLayout', supports: 'thumbnailSize' });
   expect(recommendationField?.showWhen).toEqual({ layoutKey: 'summaryLayout', supports: 'recommendation' });
   expect(barFillField?.showWhen).toEqual({ layoutKey: 'summaryLayout', supports: 'barChart' });
+  expect(richSnippetsField).toEqual(expect.objectContaining({
+    type: 'toggle',
+    label: 'Google Rich Snippets',
+    default: true,
+  }));
 });
 
 async function readLayoutRegistryKeys(relativePath: string): Promise<string[]> {

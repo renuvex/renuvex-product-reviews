@@ -23,6 +23,7 @@ export interface ReviewsSettings {
   enabled?: boolean;
   title?: string;
   autoApprove?: AutoApproveMode;
+  richSnippetsEnabled?: boolean;
 }
 
 export interface BadgeSettings {

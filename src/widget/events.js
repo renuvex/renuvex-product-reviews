@@ -4,7 +4,7 @@
 // işleme artık core/storefront-context.js içindedir (ADR_0013). Bu dosyada
 // yalnızca IkasEvents'ten BAĞIMSIZ olan iki parça kalır:
 //   - attachModalBadgeListener: quick-view modal için son tıklanan ürün slug'ı
-//   - attachHistoryListener:    SPA navigasyonunda eski rating badge'i temizler
+//   - attachHistoryListener:    SPA navigasyonunda eski PDP badge/schema'yı temizler
 
 import { setLastClickedSlug } from './core/state.js';
 import { extractSlug } from './core/helpers.js';
@@ -47,17 +47,21 @@ function cleanupStaleRatingBadge() {
 
     if (typeof window.__renuvexPrCleanupPdpBadge === 'function') {
       window.__renuvexPrCleanupPdpBadge();
-      return;
+    } else {
+      removeOwnedSlots('product-title-rating');
+      var legacyBadge = document.getElementById('renuvex-pr-rating-badge');
+      if (legacyBadge) legacyBadge.remove();
+      document.querySelectorAll('.renuvex-pr-rating-badge--pdp').forEach(function (node) {
+        node.remove();
+      });
     }
 
-    removeOwnedSlots('product-title-rating');
-    var legacyBadge = document.getElementById('renuvex-pr-rating-badge');
-    if (legacyBadge) legacyBadge.remove();
-    document.querySelectorAll('.renuvex-pr-rating-badge--pdp').forEach(function (node) {
-      node.remove();
-    });
-    var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
-    if (oldJsonLd) oldJsonLd.remove();
+    if (typeof window.__renuvexPrCleanupStructuredData === 'function') {
+      window.__renuvexPrCleanupStructuredData();
+    } else {
+      var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
+      if (oldJsonLd) oldJsonLd.remove();
+    }
   } catch (_) {}
 }
 

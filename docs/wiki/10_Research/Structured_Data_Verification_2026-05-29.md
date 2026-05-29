@@ -17,26 +17,30 @@ related:
   - "[[Test_Strategy]]"
 source_files:
   - "scripts/verify-deployed-jsonld.mjs"
-  - "src/widget/rating-badge/index.js"
-  - "src/widget/rating-badge/inject.js"
+  - "src/widget/structured-data/index.js"
+  - "src/widget/structured-data/jsonld.js"
+  - "src/widget/core/rating-summary.js"
   - "tests/widget-network-smoke.spec.ts"
 ---
 
 # Structured Data Verification - 2026-05-29
 
 ## Summary
-`pnpm verify:deployed-jsonld` loaded the deployed widget from `https://new-ikas-app.vercel.app` in a controlled Playwright harness and mocked public API responses. This verifies the browser runtime contract without changing production DB/admin settings.
+`pnpm verify:deployed-jsonld` loads the deployed widget from `https://new-ikas-app.vercel.app` in a controlled Playwright harness and mocks public API responses. This verifies the browser runtime contract without changing production DB/admin settings.
+
+Note: the measured result below was captured before the 2026-05-29 structured-data split. The script contract has since been updated so JSON-LD is owned by the independent `structured-data` surface and can render when the visual badge is disabled but an explicit review section is visible. Re-run the command after the structured-data deployment and append a fresh result table.
 
 The script validates:
 
-- exactly one `#renuvex-pr-jsonld` script on the active badge path,
+- exactly one `#renuvex-pr-jsonld` script on eligible visible rating/review paths,
 - parseable JSON,
 - `@type: Product`,
 - `aggregateRating.@type: AggregateRating`,
 - `aggregateRating.ratingValue` between 1 and 5,
 - positive integer `aggregateRating.reviewCount`,
-- no JSON-LD when the badge is disabled,
-- no JSON-LD when auto placement is unsupported.
+- JSON-LD when badge is disabled but an explicit review mount renders visible ratings,
+- no JSON-LD when both visual badge and explicit review section are absent,
+- no JSON-LD when the rich snippets setting is disabled.
 
 ## Command
 
@@ -59,6 +63,17 @@ Measured at `2026-05-29T13:50:42.840Z`.
 | controlled badge enabled | `https://merchant-seo.test/premium-shorts` | 1 | pass |
 | controlled badge disabled | `https://merchant-seo.test/premium-shorts` | 0 | pass |
 | controlled unsupported theme | `https://merchant-seo.test/premium-shorts` | 0 | pass |
+
+Superseded expectation after structured-data split:
+
+| Scenario | Expected JSON-LD |
+|---|---:|
+| badge enabled + review mount present | 1 |
+| badge enabled + review mount absent | 1 |
+| badge disabled + review mount present | 1 |
+| badge disabled + review mount absent | 0 |
+| unsupported auto-placement + review mount present | 1 |
+| rich snippets disabled | 0 |
 
 Verifier note: the harness waits for `#renuvex-pr-jsonld` on scenarios where JSON-LD is expected, instead of treating `document.readyState === "complete"` as enough. This avoids false negatives when the deployed widget loads lazy chunks after the page document has already completed.
 

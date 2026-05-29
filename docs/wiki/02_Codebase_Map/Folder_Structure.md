@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-28
+updated: 2026-05-29
 tags:
   - structure
 related:
@@ -124,9 +124,11 @@ renuvex-product-reviews/
 │     │  ├─ fetch.js
 │     │  ├─ helpers.js
 │     │  ├─ product-title.js     # Heuristic: locate product title in arbitrary themes
+│     │  ├─ rating-summary.js    # Shared one-product approved rating summary fetch/cache
 │     │  └─ state.js             # Module-level mutable state (current product, settings, etc.)
 │     ├─ listing-badges/         # Inject ★ badges into product cards on listing pages
-│     ├─ rating-badge/           # PDP title badge surface entry + DOM/JSON-LD injection
+│     ├─ rating-badge/           # PDP title badge surface entry + DOM injection
+│     ├─ structured-data/        # Product AggregateRating JSON-LD surface
 │     ├─ reviews-section/
 │     │  ├─ bootstrap.js
 │     │  ├─ render.js

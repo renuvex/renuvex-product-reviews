@@ -34,6 +34,7 @@ source_files:
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
+  - "tests/unit/structured-data-jsonld.test.ts"
   - "docs/wiki/08_Widgets/Structured_Data_And_Rich_Snippets.md"
   - "docs/wiki/10_Research/Widget_Transfer_Measurement_2026-05-29.md"
   - "docs/wiki/10_Research/Structured_Data_Verification_2026-05-29.md"
@@ -59,7 +60,7 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 
 | Layer | Command | Scope |
 |---|---|---|
-| Widget network/chunk smoke | `pnpm test:widget-smoke` | Built `public/widget.js` and content-hashed runtime chunks; validates API fan-out, lazy chunk boundaries, badge disabled behavior, unsupported theme fail-closed behavior, listing fallback gating, and local transfer evidence without byte-budget gating. |
+| Widget network/chunk smoke | `pnpm test:widget-smoke` | Built `public/widget.js` and content-hashed runtime chunks; validates API fan-out, lazy chunk boundaries, badge/review/structured-data combinations, unsupported theme behavior, listing fallback gating, and local transfer evidence without byte-budget gating. |
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), photo strip toggles, badge/JSON-LD presence, and unexpected console errors. |
 | Storefront interactions | `pnpm test:widget-interactions` | Photo-strip lightbox, review-image lightbox, keyboard close, review wizard validation, step flow, and mocked review submit. |
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
@@ -73,7 +74,7 @@ These commands are not hard byte-budget gates. They produce repeatable productio
 | Command | Scope |
 |---|---|
 | `pnpm measure:deployed-widget` | Loads deployed `widget.js` and immutable `widget-runtime/*` chunks from `https://new-ikas-app.vercel.app`, mocks merchant HTML plus `/api/public/*`, and reports script count, chunk list, encoded transfer bytes, decoded bytes, API calls, and cache/content-encoding headers for mount-present/mount-absent and badge-on/badge-off combinations. |
-| `pnpm verify:deployed-jsonld` | Loads the deployed widget in a controlled browser harness and verifies the JSON-LD runtime contract: active badge path emits one parseable `Product` + `AggregateRating`, badge-disabled and unsupported-theme paths emit none. `SEO_PDP_URL=<public-url>` switches it to a real public PDP URL check. |
+| `pnpm verify:deployed-jsonld` | Loads the deployed widget in a controlled browser harness and verifies the JSON-LD runtime contract: visible rating/review paths emit one parseable `Product` + `AggregateRating`, no-visible-surface and rich-snippet-disabled paths emit none. `SEO_PDP_URL=<public-url>` switches it to a real public PDP URL check. |
 
 Record notable evidence in `docs/wiki/10_Research/` instead of adding brittle byte thresholds immediately.
 

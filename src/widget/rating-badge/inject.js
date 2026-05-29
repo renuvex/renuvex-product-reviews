@@ -1,4 +1,4 @@
-// rating-badge/inject.js — PDP rating badge DOM injection + JSON-LD writer.
+// rating-badge/inject.js — PDP rating badge DOM injection.
 //
 // Shared with the rating-badge surface entry. The product title finder lives in
 // core because PDP title placement is a cross-surface concern.
@@ -36,9 +36,6 @@ export function cleanupPdpRatingBadgeDom() {
   document.querySelectorAll('.renuvex-pr-rating-badge--pdp').forEach(function (node) {
     node.remove();
   });
-
-  var oldJsonLd = document.getElementById('renuvex-pr-jsonld');
-  if (oldJsonLd) oldJsonLd.remove();
 }
 
 if (typeof window !== 'undefined') {
@@ -72,9 +69,9 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // `adapterMatchedBy !== 'theme_id'`) silently skip auto-placement. The
   // explicit-mount review section continues to render via its own opt-in
   // path; only the heuristic PDP/listing/modal badges are gated here.
-  // Skip after cleanup but BEFORE any DOM probe / style injection / JSON-LD
-  // write so "placement off" means "no badge surface at all", matching the
-  // contract documented in ADR_0022.
+  // Skip after cleanup but BEFORE any DOM probe / style injection so
+  // "placement off" means "no badge surface at all", matching the contract
+  // documented in ADR_0022. JSON-LD is owned by structured-data now.
   if (!isAutoPlacementEnabled()) return;
 
   if (!avgRating) return;
@@ -87,26 +84,6 @@ export function injectRatingBadge(avgRating, totalCount, productName, badgeSetti
   // hiçbir başka yoldan head'e gelmiyor → badge yıldızları boyutsuz patlar.
   // Idempotent; her render'da güvenle çağrılabilir.
   ensureBadgeStyles();
-
-  // JSON-LD structured data — Google rich snippet (badge devre dışı olsa bile render edilmeli,
-  // ama burada zaten enabled !== false yolundayız)
-  var jsonLdEl = document.createElement('script');
-  jsonLdEl.id = 'renuvex-pr-jsonld';
-  jsonLdEl.type = 'application/ld+json';
-  jsonLdEl.textContent = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    'name': productName || document.title,
-    'url': window.location.href,
-    'aggregateRating': {
-      '@type': 'AggregateRating',
-      'ratingValue': avgRating,
-      'reviewCount': totalCount,
-      'bestRating': '5',
-      'worstRating': '1',
-    },
-  });
-  document.head.appendChild(jsonLdEl);
 
   var titleEl = findProductTitleEl(productName);
   if (!titleEl || !titleEl.parentNode) {

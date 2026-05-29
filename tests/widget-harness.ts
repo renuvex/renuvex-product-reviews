@@ -24,6 +24,7 @@ export type SmokeOptions = {
   reviewsSettings?: Record<string, unknown>;
   badgeSettings?: Record<string, unknown>;
   hasMore?: boolean;
+  approvedReviewCount?: number;
 };
 
 export type RequestLog = {
@@ -75,6 +76,7 @@ export function baseReviewsSettings(overrides: Record<string, unknown> = {}): Re
     showPhotoGallery: true,
     showPhotoGalleryTitle: true,
     showRecommendation: true,
+    richSnippetsEnabled: true,
     reviewIcon: 'star',
     reviewStarColor: '#f59e0b',
     writeButtonText: 'Yorum Yap',
@@ -172,25 +174,27 @@ function reviewRows(_hasImages: boolean, storeId = PUBLIC_KEY): Array<Record<str
   ];
 }
 
-export function reviewsResponse(hasImages: boolean, hasMore = false, storeId = PUBLIC_KEY): unknown {
+export function reviewsResponse(hasImages: boolean, hasMore = false, storeId = PUBLIC_KEY, approvedReviewCount = 12): unknown {
+  const hasApprovedReviews = approvedReviewCount > 0;
   return {
     data: {
-      reviews: reviewRows(hasImages, storeId),
-      allCount: 12,
-      totalCount: 12,
-      ratingCounts: [0, 0, 1, 2, 9],
-      avgRating: '4.8',
+      reviews: hasApprovedReviews ? reviewRows(hasImages, storeId) : [],
+      allCount: approvedReviewCount,
+      totalCount: approvedReviewCount,
+      ratingCounts: hasApprovedReviews ? [0, 0, 1, 2, 9] : [0, 0, 0, 0, 0],
+      avgRating: hasApprovedReviews ? '4.8' : '0.0',
       hasMore,
     },
   };
 }
 
-export function ratingsResponse(): unknown {
+export function ratingsResponse(options: SmokeOptions = {}): unknown {
+  const count = options.approvedReviewCount ?? 12;
   return {
     data: {
       [PRODUCT_ID]: {
-        avg: '4.8',
-        count: 12,
+        avg: count > 0 ? '4.8' : '0.0',
+        count,
       },
     },
   };
@@ -234,7 +238,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(ratingsResponse()),
+      body: JSON.stringify(ratingsResponse(options)),
     });
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/reviews**`, async (route) => {
@@ -250,7 +254,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(reviewsResponse(url.searchParams.get('hasImages') === 'true', options.hasMore === true)),
+      body: JSON.stringify(reviewsResponse(url.searchParams.get('hasImages') === 'true', options.hasMore === true, PUBLIC_KEY, options.approvedReviewCount ?? 12)),
     });
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {

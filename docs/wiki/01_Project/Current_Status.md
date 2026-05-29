@@ -3,7 +3,7 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
+updated: 2026-05-29
 last_verified: 2026-05-25
 confidence: high
 source_files: []
@@ -88,7 +88,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 ## Next Recommended Steps
 1. Verify product webhook registration/backfill on the dev store after deploy, then run `/api/admin/sync-products` once for existing merchants.
 2. After deploy, verify `/widget.js`, hashed runtime/chunk cache headers, `/api/admin/daily-maintenance`, `/api/admin/reconcile-storefront-scripts`, and dev-store PDP/category/search behavior; then re-measure deployed widget transfer size.
-3. Clarify structured-data strategy and validate Google rich snippet behavior.
+3. After the structured-data deploy, re-run `pnpm verify:deployed-jsonld` and Google Rich Results Test on a public PDP with approved reviews.
 4. Implement review-request email flow (post-purchase delay + token-gated submit URL).
 5. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
 6. Add CSV import/export for reviews.
@@ -96,7 +96,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 8. Consider tests for the public submission endpoint (highest blast-radius surface).
 
 ## Last Updated
-2026-05-25
+2026-05-29
 
 ## Change Log
 - 2026-05-25: Renuvex Product Reviews hard namespace cleanup and opt-in review mount contract are current. Source and active generated widget assets use `renuvex-pr` / `renuvex_pr`; historical `ikr` / `yorum-paneli` notes remain only in old ADRs/bug history.

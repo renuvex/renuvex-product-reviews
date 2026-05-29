@@ -18,6 +18,7 @@ export async function GET() {
       autoApprove: 'manual',
       size: 'medium',
       thumbnailSize: 'medium',
+      richSnippetsEnabled: true,
     },
     badge: {
       enabled: true,

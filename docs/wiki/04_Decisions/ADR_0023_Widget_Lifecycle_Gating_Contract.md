@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - adr
@@ -28,10 +28,14 @@ source_files:
   - "src/widget/core/lazy-modules.js"
   - "src/widget/surfaces/index.js"
   - "src/widget/surfaces/rating-badge.surface.js"
+  - "src/widget/surfaces/structured-data.surface.js"
   - "src/widget/surfaces/reviews-main.surface.js"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
+  - "src/widget/structured-data/index.js"
+  - "src/widget/structured-data/jsonld.js"
+  - "src/widget/core/rating-summary.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/listing-badges/index.js"
@@ -92,7 +96,8 @@ Every widget surface follows the same three-layer gating model. The layers are o
 | Surface | Disabled in admin (`enabled=false`) | Unsupported theme (`autoPlacementEnabled=false`) | No mount (opt-in surfaces only) |
 |---|---|---|---|
 | Review section (PDP) | render.js chunk, BIG content chunk (~158 KB), `/api/public/reviews` request, Shadow DOM creation | n/a (review section is opt-in, not auto-placed) | bootstrap returns before reviews/photoStrip fetch and render chunk load |
-| PDP rating badge | `/api/public/ratings` request, JSON-LD inject, title selector queries, badge mount | Same as disabled (ADR_0022 gate is at the rating-badge entry and inject layers) | n/a (auto-placed) |
+| PDP rating badge | `/api/public/ratings` request, title selector queries, badge mount | Same as disabled (ADR_0022 gate is at the rating-badge entry and inject layers) | n/a (auto-placed) |
+| Structured data | `/api/public/ratings` request, JSON-LD inject, visible-surface wait | Can still render if an explicit review mount renders visible rating content; without a visible/expected rating surface it returns early | no JSON-LD unless another visible/expected rating surface exists |
 | Listing badges | `/api/public/ratings` request, `collectProductTargets()` DOM walk, all badge placeholders + slots | Same as disabled (ADR_0022 top-level gate added 2026-05-27) | n/a (auto-placed) |
 | Modal badge (quick-view) | Same path as listing badge | Same | n/a |
 
@@ -203,11 +208,15 @@ When adding a new widget surface, follow this checklist:
 - [src/widget/surfaces/index.js](src/widget/surfaces/index.js) — `registerCoreSurfaces`
 - [src/widget/surfaces/reviews-main.surface.js](src/widget/surfaces/reviews-main.surface.js) — reviews surface descriptor
 - [src/widget/surfaces/listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js) — listing badge surface descriptor
+- [src/widget/surfaces/structured-data.surface.js](src/widget/surfaces/structured-data.surface.js) — Product AggregateRating surface descriptor
 - [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) — PDP entry function, settings + reviews-enabled gate
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — review section render and opt-in mount gate
 - [src/widget/surfaces/rating-badge.surface.js](src/widget/surfaces/rating-badge.surface.js) — PDP badge surface descriptor
 - [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js) — PDP badge entry function, settings/capability gates, ratings fetch
-- [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js) — PDP badge DOM injection, cleanup, JSON-LD writer
+- [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js) — PDP badge DOM injection and cleanup
+- [src/widget/structured-data/index.js](src/widget/structured-data/index.js) — JSON-LD entry function, settings/visibility gates, rating summary fetch
+- [src/widget/structured-data/jsonld.js](src/widget/structured-data/jsonld.js) — Product AggregateRating JSON-LD builder, injection, cleanup
+- [src/widget/core/rating-summary.js](src/widget/core/rating-summary.js) — shared one-product rating summary fetch/cache
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js) — listing entry function, all-gates
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js) — defense-in-depth gates at injection points
 - [src/widget/themes/current-adapter.js](src/widget/themes/current-adapter.js) — `isAutoPlacementEnabled` / `isReviewsMountEnabled` getters

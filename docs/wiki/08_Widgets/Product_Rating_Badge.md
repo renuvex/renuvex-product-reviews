@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
-last_verified: 2026-05-25
+updated: 2026-05-29
+last_verified: 2026-05-29
 tags:
   - widget
   - badge
@@ -22,7 +22,7 @@ related:
 # Product Rating Badge
 
 ## Summary
-Small inline star rating and count shown on the product detail page near the product title. The surface entry is [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js), DOM injection lives in [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js), and placement uses [product-title.js](src/widget/core/product-title.js).
+Small inline star rating and count shown on the product detail page near the product title. The surface entry is [src/widget/rating-badge/index.js](src/widget/rating-badge/index.js), DOM injection lives in [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js), and placement uses [product-title.js](src/widget/core/product-title.js). Product `AggregateRating` JSON-LD is no longer owned by this badge; it lives in the independent [[Structured_Data_And_Rich_Snippets]] surface.
 
 ## Settings (`badge` widgetId)
 Settings live under `WidgetSettings.settings` with `widgetId='badge'`. Source schema: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).
@@ -65,7 +65,8 @@ and passes it into `injectRatingBadge`; the star color is applied through the
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 
 ## Change Log
-- 2026-05-27: [[ADR_0024_Badge_Review_Surface_Separation]] split the PDP badge into its own product surface and lazy chunk. It now fetches summary data through `/api/public/ratings` and owns stale badge/JSON-LD cleanup.
+- 2026-05-29: JSON-LD moved out of the badge into `structured-data/`; badge cleanup now owns only visual badge DOM.
+- 2026-05-27: [[ADR_0024_Badge_Review_Surface_Separation]] split the PDP badge into its own product surface and lazy chunk. It now fetches summary data through `/api/public/ratings`.
 - 2026-05-25: PDP title badge was decoupled from the review-section mount. It injects before the opt-in `<div data-renuvex-widget="reviews"></div>` check and remains controlled by the `badge` widget toggle.
 - 2026-05-24: Stars now render via the shared SVG `<symbol>` sprite (`<use>`); the PDP badge dropped `role="figure"`, the static `static id`, and the inline `justify-content` for a link role + sr-only `aria-labelledby` + `data-renuvex-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-19: Star icon + color removed from the `badge` widget; they are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`). Fixed the icon-parse bug - the PDP badge no longer passes an unparsed `type:style` value to `getIconStyle`, so non-`star` icons (heart, leaf, crown, ...) render correctly. See [[ADR_0016_Rating_Visual_System]].
