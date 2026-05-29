@@ -9,6 +9,7 @@
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 import { iconUseSvg, registerSpriteRoot, unregisterSpriteRoot } from '../../icons/star-sprite.js';
 import { createOverlayShadowHost, injectShadowStyles, getActiveElementWithin, HOST_RESET_CSS } from '../../core/shadow.js';
+import { BASE_RESET_CSS } from '../../shared/base-reset.js';
 import { FWIZARD_CSS } from './styles.js';
 
 export function createWizardShell(opts) {
@@ -190,8 +191,11 @@ export function createWizardShell(opts) {
     // Isolate the wizard in its own body-level shadow root. Host-theme CSS
     // cannot reach inside; FWIZARD_CSS is injected into the root; sprite
     // <use> refs resolve via a mirror of the global sprite (registered below).
+    // BASE_RESET_CSS mirrors the section/lightbox surfaces so the wizard gets the
+    // full ADR_0011 touch contract (touch-action:manipulation + deterministic
+    // :active press dip), not just the tap-highlight reset HOST_RESET_CSS carries.
     shadow = createOverlayShadowHost();
-    injectShadowStyles(shadow.root, HOST_RESET_CSS + FWIZARD_CSS);
+    injectShadowStyles(shadow.root, HOST_RESET_CSS + BASE_RESET_CSS + FWIZARD_CSS);
     shadow.root.appendChild(overlay);
     registerSpriteRoot(shadow.root);
     lockBodyScroll();

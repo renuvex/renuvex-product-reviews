@@ -20,6 +20,14 @@ source_files:
 
 # Project Log
 
+## 2026-05-29 - fix | Wizard touch-contract parity (BASE_RESET in wizard shadow)
+- Summary: Added `BASE_RESET_CSS` to the review-form wizard shadow injection (`modal-shell.js` → `HOST_RESET_CSS + BASE_RESET_CSS + FWIZARD_CSS`), matching the section and lightbox surfaces.
+- Reason: The prior tap-highlight fix removed the wizard's blue flash but left its buttons with no press-state feedback on mobile (the flash had implicitly served that role) and without `touch-action:manipulation`. The wizard was the only review shadow surface missing `BASE_RESET_CSS`.
+- Effect: Wizard buttons now get the full [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]] contract — deterministic `:active{opacity:0.85}` press dip (the intended replacement for the removed flash), `touch-action:manipulation` (no double-tap-zoom on rapid star taps), and `-webkit-touch-callout:none`. `user-select:none` is scoped to buttons/`[role]`, so input/textarea text selection is unaffected. All three review shadow surfaces now carry the identical touch contract.
+- Key source changes: `src/widget/reviews-section/review-form-modal/modal-shell.js`; rebuilt `public/widget.js` + `public/widget-runtime/*` (deploy serves committed assets). [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]].
+- Public behavior: no merchant API, settings schema, Prisma, ikas integration, or mount contract changes. Wizard button `:active` visual now dims slightly on press (intended parity).
+- Verification: `pnpm build:widget`, `pnpm test:widget-interactions` (wizard included), `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, `node scripts/wiki-audit.mjs --changed-source-check`.
+
 ## 2026-05-29 - fix | Wizard mobile tap-highlight regression (shadow reset altitude)
 - Summary: Added `-webkit-tap-highlight-color:transparent` to `HOST_RESET_CSS` so the mobile blue tap-highlight stays suppressed inside every review shadow surface, including the review-form wizard.
 - Reason: [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] injected the wizard shadow root with `HOST_RESET_CSS + FWIZARD_CSS` only, omitting `BASE_RESET_CSS` (which carries the [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]] tap-highlight reset). The review section and lightbox include `BASE_RESET_CSS`; the wizard did not, so tapping wizard fields on mobile showed the browser default blue flash — a light↔shadow asymmetry regression, not an intended re-enable.

@@ -1,11 +1,11 @@
 {
-  "builtAt": "2026-05-29T18:48:37.851Z",
+  "builtAt": "2026-05-29T18:57:35.129Z",
   "theme": "default",
-  "entry": "widget-runtime/runtime-3KN45XLY.js",
+  "entry": "widget-runtime/runtime-RF7NIWLF.js",
   "stableEntry": "widget-runtime/runtime.js",
   "outputs": [
     {
-      "file": "widget-runtime/runtime-3KN45XLY.js",
+      "file": "widget-runtime/runtime-RF7NIWLF.js",
       "bytes": 13279,
       "entryPoint": "src/widget/index.js",
       "imports": [
@@ -22,7 +22,7 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-VXNLO5AO.js",
+          "path": "public/widget-runtime/chunks/chunk-ORRZOZGH.js",
           "kind": "import-statement"
         },
         {
@@ -30,19 +30,19 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/bootstrap-BLE67AZB.js",
+          "path": "public/widget-runtime/chunks/bootstrap-FGTJ5M7H.js",
           "kind": "dynamic-import"
         },
         {
-          "path": "public/widget-runtime/chunks/listing-badges-CW62M533.js",
+          "path": "public/widget-runtime/chunks/listing-badges-XQMRNLB3.js",
           "kind": "dynamic-import"
         },
         {
-          "path": "public/widget-runtime/chunks/render-PH2EWEKW.js",
+          "path": "public/widget-runtime/chunks/render-UGKAPIWJ.js",
           "kind": "dynamic-import"
         },
         {
-          "path": "public/widget-runtime/chunks/rating-badge-HVT5WYHN.js",
+          "path": "public/widget-runtime/chunks/rating-badge-6O2VCJGM.js",
           "kind": "dynamic-import"
         },
         {
@@ -52,8 +52,8 @@
       ]
     },
     {
-      "file": "widget-runtime/chunks/render-PH2EWEKW.js",
-      "bytes": 156099,
+      "file": "widget-runtime/chunks/render-UGKAPIWJ.js",
+      "bytes": 156102,
       "entryPoint": "src/widget/reviews-section/render.js",
       "imports": [
         {
@@ -69,7 +69,7 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-VXNLO5AO.js",
+          "path": "public/widget-runtime/chunks/chunk-ORRZOZGH.js",
           "kind": "import-statement"
         },
         {
@@ -89,7 +89,7 @@
       "imports": []
     },
     {
-      "file": "widget-runtime/chunks/bootstrap-BLE67AZB.js",
+      "file": "widget-runtime/chunks/bootstrap-FGTJ5M7H.js",
       "bytes": 1011,
       "entryPoint": "src/widget/reviews-section/bootstrap.js",
       "imports": [
@@ -114,7 +114,7 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/render-PH2EWEKW.js",
+          "path": "public/widget-runtime/chunks/render-UGKAPIWJ.js",
           "kind": "dynamic-import"
         }
       ]
@@ -135,7 +135,7 @@
       ]
     },
     {
-      "file": "widget-runtime/chunks/listing-badges-CW62M533.js",
+      "file": "widget-runtime/chunks/listing-badges-XQMRNLB3.js",
       "bytes": 10128,
       "entryPoint": "src/widget/listing-badges/index.js",
       "imports": [
@@ -148,11 +148,11 @@
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-ZJY5VNRM.js",
+          "path": "public/widget-runtime/chunks/chunk-XCAQFCMW.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-VXNLO5AO.js",
+          "path": "public/widget-runtime/chunks/chunk-ORRZOZGH.js",
           "kind": "import-statement"
         },
         {
@@ -182,16 +182,16 @@
       "imports": []
     },
     {
-      "file": "widget-runtime/chunks/rating-badge-HVT5WYHN.js",
+      "file": "widget-runtime/chunks/rating-badge-6O2VCJGM.js",
       "bytes": 4170,
       "entryPoint": "src/widget/rating-badge/index.js",
       "imports": [
         {
-          "path": "public/widget-runtime/chunks/chunk-ZJY5VNRM.js",
+          "path": "public/widget-runtime/chunks/chunk-XCAQFCMW.js",
           "kind": "import-statement"
         },
         {
-          "path": "public/widget-runtime/chunks/chunk-VXNLO5AO.js",
+          "path": "public/widget-runtime/chunks/chunk-ORRZOZGH.js",
           "kind": "import-statement"
         },
         {
@@ -213,18 +213,18 @@
       ]
     },
     {
-      "file": "widget-runtime/chunks/chunk-ZJY5VNRM.js",
+      "file": "widget-runtime/chunks/chunk-XCAQFCMW.js",
       "bytes": 4160,
       "entryPoint": null,
       "imports": [
         {
-          "path": "public/widget-runtime/chunks/chunk-VXNLO5AO.js",
+          "path": "public/widget-runtime/chunks/chunk-ORRZOZGH.js",
           "kind": "import-statement"
         }
       ]
     },
     {
-      "file": "widget-runtime/chunks/chunk-VXNLO5AO.js",
+      "file": "widget-runtime/chunks/chunk-ORRZOZGH.js",
       "bytes": 27522,
       "entryPoint": null,
       "imports": [
