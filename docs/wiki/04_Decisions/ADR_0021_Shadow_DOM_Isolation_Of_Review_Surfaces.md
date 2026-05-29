@@ -141,6 +141,13 @@ Confirmed via MCP on `https://dev-mertcopper.ikas.shop/premium-shortsg` (no quer
 
 Lesson recorded so we don't repeat it: when isolating something into Shadow DOM, audit which light-DOM consumers were depending on the previously-leaking head injection. The two are not symmetric: shadow rules can't reach light DOM, AND light DOM loses any rules the shadow injection used to also put in head as a side effect.
 
+## Follow-up: review-form wizard tap-highlight regression fix (2026-05-29)
+A second instance of the same light↔shadow asymmetry, in the other direction. The wizard shadow root is injected with `HOST_RESET_CSS + FWIZARD_CSS` only (`modal-shell.js open()`), omitting `BASE_RESET_CSS`. The review section (`render.js`) and lightbox (`review-modal.js`) both include `BASE_RESET_CSS`, which carries the [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]] `-webkit-tap-highlight-color:transparent` rule. With it absent from the wizard, tapping wizard fields/buttons on mobile showed the browser's default blue tap-highlight again — a regression from this migration, not an intended re-enable.
+
+**Fix:** `-webkit-tap-highlight-color:transparent` was added to `HOST_RESET_CSS` in `core/shadow.js` rather than only patching the wizard with `BASE_RESET_CSS`. The property is **inherited**, so setting it on `:host` cascades to every element in every shadow surface (section, lightbox, wizard, and any future surface) regardless of class. `BASE_RESET_CSS` keeps its `renuvex-pr-` class-prefix scoping because it is also injected into `document.head` (light DOM, via `ensureBaseReset`) where it must not touch merchant elements; inside a shadow root that constraint does not exist, so the host-level reset is the correct altitude. The remaining `BASE_RESET_CSS` contract (`touch-action:manipulation`, `:active` opacity dip on buttons) is still wizard-absent and tracked as an optional parity follow-up.
+
+Same lesson, restated: a reset that **every** shadow surface needs belongs at `:host` in `HOST_RESET_CSS`, not duplicated across per-surface injections where one can forget it (the wizard did).
+
 ## Related Source Files
 - [src/widget/core/shadow.js](src/widget/core/shadow.js)
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)

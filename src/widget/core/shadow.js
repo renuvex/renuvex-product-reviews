@@ -15,8 +15,17 @@
 // :host reset. `inherit` re-admits the host page's body typography (parity with
 // the pre-shadow light-DOM behavior); selector-targeted theme rules cannot reach
 // inside :host regardless.
+//
+// `-webkit-tap-highlight-color:transparent` is the ADR_0011 mobile contract applied
+// at the shadow root: it is an INHERITED property, so setting it on :host cascades to
+// every element in the shadow tree (classed or not, now or future). This lives here
+// rather than only in BASE_RESET_CSS because BASE_RESET is class-prefix scoped for the
+// light-DOM head injection (it must not touch merchant DOM); inside a shadow root that
+// constraint is gone and the host-level reset is the robust fix. Without it, any shadow
+// surface that omits BASE_RESET_CSS (the review-form wizard did) shows the browser's
+// blue tap flash again — the light<->shadow asymmetry called out in ADR_0021.
 export var HOST_RESET_CSS =
-  ':host{display:block;box-sizing:border-box;font-family:inherit;color:inherit;line-height:inherit;font-size:inherit;letter-spacing:inherit;text-align:start;}' +
+  ':host{display:block;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:inherit;color:inherit;line-height:inherit;font-size:inherit;letter-spacing:inherit;text-align:start;}' +
   ':host *,:host *::before,:host *::after{box-sizing:border-box;}';
 
 // Attach (or reuse) an open shadow root on an existing light-DOM host element.

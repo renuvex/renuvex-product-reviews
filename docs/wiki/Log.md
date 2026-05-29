@@ -20,6 +20,15 @@ source_files:
 
 # Project Log
 
+## 2026-05-29 - fix | Wizard mobile tap-highlight regression (shadow reset altitude)
+- Summary: Added `-webkit-tap-highlight-color:transparent` to `HOST_RESET_CSS` so the mobile blue tap-highlight stays suppressed inside every review shadow surface, including the review-form wizard.
+- Reason: [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] injected the wizard shadow root with `HOST_RESET_CSS + FWIZARD_CSS` only, omitting `BASE_RESET_CSS` (which carries the [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]] tap-highlight reset). The review section and lightbox include `BASE_RESET_CSS`; the wizard did not, so tapping wizard fields on mobile showed the browser default blue flash — a light↔shadow asymmetry regression, not an intended re-enable.
+- Fix rationale: placed the reset at `:host` (an inherited property → cascades to all shadow descendants, classed or not, current or future) instead of only patching the wizard. This closes the asymmetry at the source: `HOST_RESET_CSS` is injected into every shadow surface by construction. `BASE_RESET_CSS` keeps class-prefix scoping because it also injects into `document.head` (must not touch merchant DOM).
+- Key source changes: `src/widget/core/shadow.js`; rebuilt `public/widget.js` + `public/widget-runtime/*` (deploy serves committed assets — `pnpm build` runs `next build`, not `build:widget`). [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]].
+- Public behavior: no merchant API, widget settings schema, Prisma schema, ikas integration, or storefront mount contract changes. Mobile-only visual fix inside the wizard shadow surface.
+- Verification: `pnpm build:widget`, `pnpm test:widget-interactions` (3/3, wizard included), `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, `node scripts/wiki-audit.mjs --changed-source-check`.
+- Follow-up (optional parity): wizard still lacks the rest of the BASE_RESET contract (`touch-action:manipulation` + `:active` opacity dip on buttons); revisit if button press-feedback parity matters.
+
 ## 2026-05-29 - test | Hostile host-theme CSS isolation regression
 - Summary: Added an automated regression that pins the [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] guarantee — host-theme selector CSS cannot cross the review shadow boundary.
 - Reason: ADR_0021's whole point (the 2026-05-25 "Mine" theme `img{width:100%!important}` thumbnail blow-up) had no executable regression after the original hostile-theme fixture was removed on 2026-05-28. Coverage proved "renders in shadow" (presence) but not "survives hostile host CSS".
