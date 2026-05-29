@@ -25,6 +25,13 @@ export type SmokeOptions = {
   badgeSettings?: Record<string, unknown>;
   hasMore?: boolean;
   approvedReviewCount?: number;
+  /**
+   * Hostile host-theme CSS injected into the merchant page <head>. When set, the page
+   * also renders a light-DOM control image (`.renuvex-iso-control`) inside a 600px box so
+   * a test can prove the rule is live in light DOM while the shadow-isolated review surface
+   * stays unaffected. Reproduces the 2026-05-25 "Mine" theme thumbnail blow-up (ADR_0021).
+   */
+  hostileThemeCss?: string;
 };
 
 export type RequestLog = {
@@ -268,7 +275,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
     await route.fulfill({
       status: 200,
       contentType: 'text/html; charset=utf-8',
-      body: productHtml(options.mountReviews !== false),
+      body: productHtml(options.mountReviews !== false, options.hostileThemeCss),
     });
   });
   return log;
@@ -457,12 +464,21 @@ async function fulfillImage(route: Route): Promise<void> {
   });
 }
 
-function productHtml(mountReviews: boolean): string {
+function productHtml(mountReviews: boolean, hostileThemeCss?: string): string {
+  const hostileStyle = hostileThemeCss
+    ? `<style data-test-hostile-theme>${hostileThemeCss}</style>`
+    : '';
+  // Light-DOM control: the hostile rule (e.g. img{width:100%!important}) balloons this to
+  // its 600px container, proving the rule is live so the shadow assertion can't false-pass.
+  const controlBlock = hostileThemeCss
+    ? `<div style="width:600px"><img class="renuvex-iso-control" width="40" height="40" src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/iso-control.jpg" alt=""></div>`
+    : '';
   return `<!doctype html>
 <html lang="tr">
   <head>
     <meta charset="utf-8">
     <title>${PRODUCT_NAME}</title>
+    ${hostileStyle}
     <script>
       window.IkasEvents = {
         subscribe: function (subscription) {
@@ -486,6 +502,7 @@ function productHtml(mountReviews: boolean): string {
       <section class="product-detail">
         <h1>${PRODUCT_NAME}</h1>
         <p>CI product page.</p>
+        ${controlBlock}
         ${mountReviews ? '<div data-renuvex-widget="reviews"></div>' : ''}
       </section>
     </main>
@@ -745,6 +762,24 @@ export async function textInReviewsShadow(page: Page, selector: string): Promise
     const container = slot?.querySelector('#renuvex-reviews');
     const root = container?.shadowRoot || null;
     return root?.querySelector(selector)?.textContent?.trim() || '';
+  }, selector);
+}
+
+export async function widthInReviewsShadow(page: Page, selector: string): Promise<number> {
+  return page.evaluate((selector) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const el = root?.querySelector(selector) as HTMLElement | null;
+    return el ? el.getBoundingClientRect().width : 0;
+  }, selector);
+}
+
+export async function elementWidth(page: Page, selector: string): Promise<number> {
+  return page.evaluate((selector) => {
+    const el = document.querySelector(selector) as HTMLElement | null;
+    return el ? el.getBoundingClientRect().width : 0;
   }, selector);
 }
 

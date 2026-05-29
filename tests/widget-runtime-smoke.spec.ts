@@ -3,6 +3,7 @@ import {
   MERCHANT_ORIGIN,
   clickInReviewsShadow,
   countInReviewsShadow,
+  elementWidth,
   hasInReviewsShadow,
   hasJsonLd,
   hasPdpBadge,
@@ -11,6 +12,7 @@ import {
   textInReviewsShadow,
   waitForWidgetIdle,
   widgetErrors,
+  widthInReviewsShadow,
 } from './widget-harness';
 
 type LayoutCase = {
@@ -126,5 +128,35 @@ test('photo gallery toggle removes strip without breaking reviews', async ({ pag
 
   expect(await hasInReviewsShadow(page, '.renuvex-pr-photo-section')).toBe(false);
   expect(await countInReviewsShadow(page, '.renuvex-pr-review-card')).toBeGreaterThanOrEqual(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+// Regression for the 2026-05-25 "Mine" theme bug: `.hOHcRx img{width:100%!important}` blew up
+// review thumbnails to ~1200px. ADR_0021 moved the review surface into an open Shadow DOM so
+// selector-targeted host CSS can no longer cross the boundary. This pins that guarantee.
+test('hostile host-theme img rule cannot cross the review shadow boundary', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+    hostileThemeCss: 'img{width:100%!important;max-width:none!important;height:auto!important}',
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb')).toBeGreaterThanOrEqual(1);
+  await waitForWidgetIdle(page);
+
+  // The hostile rule IS live: the light-DOM control image ballooned to its 600px container.
+  // Without this, a shadow assertion could false-pass if the rule never applied.
+  const controlWidth = await elementWidth(page, '.renuvex-iso-control');
+  expect(controlWidth).toBeGreaterThan(400);
+
+  // The review thumbnail lives inside the shadow root, so the same rule cannot reach it.
+  // It stays at its widget-defined size (medium thumbnail = 110px), far below the control.
+  const thumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+  expect(thumbWidth).toBeGreaterThan(0);
+  expect(thumbWidth).toBeLessThan(200);
+  expect(thumbWidth).toBeLessThan(controlWidth / 2);
+
   expect(widgetErrors(log)).toEqual([]);
 });

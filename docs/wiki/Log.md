@@ -20,6 +20,14 @@ source_files:
 
 # Project Log
 
+## 2026-05-29 - test | Hostile host-theme CSS isolation regression
+- Summary: Added an automated regression that pins the [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]] guarantee — host-theme selector CSS cannot cross the review shadow boundary.
+- Reason: ADR_0021's whole point (the 2026-05-25 "Mine" theme `img{width:100%!important}` thumbnail blow-up) had no executable regression after the original hostile-theme fixture was removed on 2026-05-28. Coverage proved "renders in shadow" (presence) but not "survives hostile host CSS".
+- Key source changes: `tests/widget-harness.ts` (new `hostileThemeCss` option + light-DOM control image + `widthInReviewsShadow`/`elementWidth` helpers), `tests/widget-runtime-smoke.spec.ts` (new test), [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]], [[Test_Strategy]].
+- Test contract: inject `img{width:100%!important}`; assert the light-DOM control image balloons to its 600px container (rule is live), then assert the shadow-hosted `.renuvex-pr-photo-strip-thumb` stays at its widget size (~110px medium preset), proving the boundary holds.
+- Public behavior: no merchant API, widget settings schema, Prisma schema, ikas integration, runtime widget code, or storefront mount contract changes — test-only.
+- Verification: `pnpm build:widget`, the new `pnpm test:widget-runtime` case (passed locally), `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check`.
+
 ## 2026-05-29 - fix | Accept lazy_storefront sync reason + theme-clone evidence
 - Summary: Added `lazy_storefront` to the `isStorefrontThemeSyncReason` parser whitelist and recorded the Ozy → "Ozy 2" theme-clone identity test as wiki evidence.
 - Reason: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] introduced the `lazy_storefront` reason and its TypeScript union, but `isStorefrontThemeSyncReason` (used by `parseStorefrontThemeState`) never accepted it, so a persisted state with `reason: 'lazy_storefront'` lost its reason on parse and could read back as another reason. The clone case was also the one theme mutation not yet verified against the allowlist.

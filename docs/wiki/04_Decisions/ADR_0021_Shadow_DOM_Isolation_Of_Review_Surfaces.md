@@ -31,6 +31,8 @@ source_files:
   - "src/widget/reviews-section/review-form-modal/steps/step-author.js"
   - "src/widget/icons/star-sprite.js"
   - "src/widget/core/helpers.js"
+  - "tests/widget-runtime-smoke.spec.ts"
+  - "tests/widget-harness.ts"
 ---
 
 # ADR 0021: Shadow DOM Isolation of Review Surfaces
@@ -122,6 +124,8 @@ Inside an open shadow root, `document.activeElement` returns the *host*, not the
 ## Verification
 Pre-commit verification for the original migration used `pnpm build:widget`, `pnpm dev`, a hostile-theme fixture, shadow isolation assertions, lightbox/wizard focus-trap parity, and `pnpm lint`. Current regression coverage should use the Playwright/mock-storefront strategy in [[Test_Strategy]].
 
+An explicit hostile-CSS regression now lives in `tests/widget-runtime-smoke.spec.ts` ("hostile host-theme img rule cannot cross the review shadow boundary"). It injects `img{width:100%!important}` into the mock merchant page, asserts a light-DOM control image balloons to its 600px container (proving the rule is live), then asserts the shadow-hosted `.renuvex-pr-photo-strip-thumb` stays at its widget size (~110px medium preset, far below the control). This is the automated form of the 2026-05-25 "Mine" theme reproduction; the harness gains a `hostileThemeCss` option in `tests/widget-harness.ts` for future hostile-theme cases.
+
 ## Follow-up: PDP badge regression fix (2026-05-26)
 The initial migration broke an implicit contract that pre-migration code carried in `core/badge.js`'s comment:
 
@@ -146,6 +150,7 @@ Lesson recorded so we don't repeat it: when isolating something into Shadow DOM,
 - [src/widget/reviews-section/review-form-modal/steps/step-author.js](src/widget/reviews-section/review-form-modal/steps/step-author.js)
 - [src/widget/icons/star-sprite.js](src/widget/icons/star-sprite.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
+- [tests/widget-runtime-smoke.spec.ts](tests/widget-runtime-smoke.spec.ts)
 - [tests/widget-harness.ts](tests/widget-harness.ts)
 - [docs/wiki/03_Architecture/Test_Strategy.md](docs/wiki/03_Architecture/Test_Strategy.md)
 
