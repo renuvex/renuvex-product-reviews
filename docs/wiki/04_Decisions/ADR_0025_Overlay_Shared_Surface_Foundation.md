@@ -101,8 +101,10 @@ explicit, user-confirmed decision.
 - `tests/unit/widget-surface-contracts.test.ts` "overlay shared-surface contract": the body
   scroll lock and the focus-trap **primitives** are defined only in their shared modules, and
   both overlays import them and do **not** re-define `lockBodyScroll` / `unlockBodyScroll` /
-  `getFocusableElements` / `isVisibleFocusable`. This is the rule that fails the build the next
-  time a surface tries to grow its own copy.
+  `getFocusableElements` / `isVisibleFocusable`; the back-button history
+  (`pushModalHistoryEntry` / `restoreModalHistoryEntry`) likewise lives only in
+  `core/modal-history.js`, and both overlays consume it without a raw `history.pushState`. This
+  is the rule that fails the build the next time a surface tries to grow its own copy.
 - `tests/widget-interaction-smoke.spec.ts` asserts that opening either overlay locks scroll on
   **both** `<html>` and `<body>` and restores on close — the exact part the old wizard lock
   omitted (it fails on the pre-fix code, passes now).
@@ -114,9 +116,12 @@ explicit, user-confirmed decision.
 - Adding a new overlay concern means adding one shared module; the contract test fails if a
   surface re-implements it. A new body-level overlay opts into Tier 2 by importing the shared
   modules.
-- Back-button history is still wired per-surface (lightbox via `core/modal-history.js`; wizard
-  via its own `index.js` block). Unifying the wizard onto `modal-history.js` is a low-priority
-  follow-up — both work today, and the contract test does not require it.
+- Back-button history is unified: both overlays use `core/modal-history.js` (lightbox in
+  `review-modal.js`, wizard in `review-form-modal/index.js`), enforced by the contract test. The
+  wizard moved off its own `pushState` + `history.back()` to the shared id-based `replaceState`
+  strategy — quieter (no `popstate` side-effect on a merchant theme's SPA router) and consistent
+  with the lightbox. Accepted trade-off: after a manual close the first phone-back press is a
+  no-op (same URL) before the page leaves, matching the lightbox's existing behavior.
 
 ## Verification
 `pnpm build:widget`, `pnpm test:unit` (contract invariant), `pnpm test:widget-interactions`

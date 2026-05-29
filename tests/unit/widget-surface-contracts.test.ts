@@ -108,4 +108,20 @@ describe('overlay shared-surface contract', () => {
       expect(src, `${name} must not re-define isVisibleFocusable`).not.toMatch(/function\s+isVisibleFocusable\s*\(/);
     }
   });
+
+  test('back-button history is defined only in core/modal-history.js and consumed by both overlays', () => {
+    const mod = readWidget('core/modal-history.js');
+    expect(mod).toMatch(/export function pushModalHistoryEntry\s*\(/);
+    expect(mod).toMatch(/export function restoreModalHistoryEntry\s*\(/);
+    // The wizard's history wiring lives in its orchestrator (index.js), not modal-shell.js.
+    const historyConsumers: Record<string, string> = {
+      lightbox: 'reviews-section/review-modal.js',
+      wizard: 'reviews-section/review-form-modal/index.js',
+    };
+    for (const [name, rel] of Object.entries(historyConsumers)) {
+      const src = readWidget(rel);
+      expect(src, `${name} must import shared modal-history`).toMatch(/core\/modal-history\.js/);
+      expect(src, `${name} must not push its own history entry (use the shared module)`).not.toMatch(/history\.pushState\s*\(/);
+    }
+  });
 });

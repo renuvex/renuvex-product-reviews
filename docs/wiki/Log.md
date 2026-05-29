@@ -20,6 +20,14 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - refactor | Unify wizard back-button history onto shared module
+- Summary: Moved the review-form wizard's back-button history from its own `index.js` block to the shared `core/modal-history.js` (the lightbox already used it), and extended the overlay contract invariant to enforce history sharing too.
+- Reason: Completes the [[ADR_0025_Overlay_Shared_Surface_Foundation]] unification — history was the last duplicated/divergent overlay concern. The wizard used `pushState({renuvexPrReviewModal})` + `history.back()`; the shared module uses an id-based entry + `replaceState`.
+- Behavior note: back button still CLOSES the wizard (no step-back change). The one observable difference: the shared `replaceState` cleanup is quieter — it does not fire `popstate` on a merchant theme's SPA router (the wizard's old `history.back()` did, a latent risk). Accepted trade-off: after a manual close the first phone-back press is a no-op (same URL) before the page leaves, matching the lightbox's existing behavior. User-confirmed.
+- Key source changes: `src/widget/reviews-section/review-form-modal/index.js` (uses `pushModalHistoryEntry`/`restoreModalHistoryEntry`), `tests/unit/widget-surface-contracts.test.ts` (history added to the overlay shared-surface contract). Rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Public behavior: no merchant API, settings schema, Prisma, ikas integration, or mount contract changes. Mobile back-button still closes the wizard.
+- Verification: `pnpm build:widget`, `pnpm test:unit` (47/47, incl. the new history contract), `pnpm test:widget-interactions` (4/4), `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, `node scripts/wiki-audit.mjs --changed-source-check`.
+
 ## 2026-05-30 - refactor | Overlay shared-surface foundation (fixes wizard scroll lock)
 - Summary: Extracted the duplicated/divergent shell concerns of the two body-level overlays into shared modules and added an enforced contract invariant. Fixes the review-form wizard failing to lock background scroll on some themes / mobile.
 - Reason: The wizard had its own weaker `lockBodyScroll` (only `body{overflow:hidden}`, no `!important`, no `<html>`, no iOS `position:fixed`), so on themes whose scroll container is `<html>` (or that override `body` overflow) and on iOS the storefront scrolled behind the open wizard. The photo lightbox already had a robust theme-agnostic lock. Inspection found the duplication spanned scroll lock (divergent), the focus toolkit (verbatim copy), back-button history, and `overscroll-behavior` (wizard had none). Same asymmetry class as the tap-highlight regression — a surface drifting from a shared concern.

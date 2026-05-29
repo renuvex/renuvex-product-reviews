@@ -6,6 +6,7 @@
 // Bağımsızlık sözleşmesi: review-modal ile import / class / variable çakışması yok.
 
 import { createWizardShell } from './modal-shell.js';
+import { pushModalHistoryEntry, restoreModalHistoryEntry } from '../../core/modal-history.js';
 import { createWizardState, TOTAL_STEPS } from './wizard-state.js';
 import { createProgressBar } from './progress-bar.js';
 import { createStepRating } from './steps/step-rating.js';
@@ -68,11 +69,11 @@ export function openReviewFormModal(opts) {
   var shell = createWizardShell({
     onClose: function () {
       window.removeEventListener('popstate', onPopState);
-      // Eğer X butonuyla veya ESC ile kapandıysa (back button değilse), 
-      // eklediğimiz history state'i temizle.
-      if (window.history.state && window.history.state.renuvexPrReviewModal) {
-        window.history.back();
-      }
+      // Manual close (X / ESC): neutralize the pushed history entry via the shared
+      // modal-history module. It uses replaceState (no popstate side-effect on a
+      // merchant theme's SPA router). On a back-button close the entry is already
+      // gone, so isCurrentModalHistoryEntry fails and this safely no-ops.
+      restoreModalHistoryEntry(modalHistoryEntry);
 
       // Bellek temizliği: Tüm blob URL'lerini serbest bırak
       Object.keys(persistentBlobMap).forEach(function (k) {
@@ -85,8 +86,9 @@ export function openReviewFormModal(opts) {
   });
 
   // ─── History Management (Mobil Geri Tuşu Desteği) ───
-  var modalHistoryState = { renuvexPrReviewModal: true };
-  window.history.pushState(modalHistoryState, null, '');
+  // Shared id-based entry (core/modal-history.js) so the wizard matches the lightbox
+  // and avoids history.back()'s popstate side-effect on merchant theme SPA routers.
+  var modalHistoryEntry = pushModalHistoryEntry();
 
   var onPopState = function (e) {
     // Tarayıcı geri tuşuna basıldığında modalı kapat
