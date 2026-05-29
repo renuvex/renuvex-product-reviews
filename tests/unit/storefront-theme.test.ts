@@ -46,6 +46,22 @@ describe('storefront theme state parsing', () => {
     expect(state?.pending).toBeNull();
   });
 
+  it('preserves lazy storefront sync reason when parsing v2 state', () => {
+    const state = parseStorefrontThemeState({
+      schemaVersion: 2,
+      syncStatus: 'stable',
+      stable: metadata(),
+      pending: null,
+      lastCheckedAt: '2026-05-29T13:54:38.515Z',
+      lastChangedAt: '2026-05-29T00:38:11.811Z',
+      verificationDueAt: null,
+      verifiedAt: '2026-05-29T02:12:40.317Z',
+      reason: 'lazy_storefront',
+    });
+
+    expect(state?.reason).toBe('lazy_storefront');
+  });
+
   it('promotes legacy metadata shape into stable schema v2 state', () => {
     const state = parseStorefrontThemeState(metadata({ detectedAt: '2026-05-20T00:00:00.000Z' }));
 
@@ -163,5 +179,47 @@ describe('storefront theme state transitions', () => {
     expect(resolved.activeThemeName).toBe('Custom merchant name');
     expect(resolved.themeAdapterKey).toBe('ozy');
     expect(resolved.adapterMatchedBy).toBe('theme_id');
+  });
+
+  it('keeps cloned Ozy themes on the Ozy adapter while tracking the new storefront theme instance', () => {
+    const first = buildStorefrontThemeState(null, metadata({
+      activeThemeName: 'Ozy',
+      activeStorefrontThemeId: 'ed18b5f8-4599-498b-9f1c-4919a411b060',
+      mainStorefrontThemeId: 'ed18b5f8-4599-498b-9f1c-4919a411b060',
+      activeThemeVersionId: '5ecd7d44-3748-41b3-82e2-b3d3e54955bd',
+    }), {
+      now: new Date('2026-05-29T00:27:46.535Z'),
+      reason: 'lazy_storefront',
+    });
+
+    const cloned = metadata({
+      activeThemeName: 'Ozy 2',
+      activeStorefrontThemeId: '2c972e10-216f-4286-9f94-9f3f0ccc7119',
+      mainStorefrontThemeId: '2c972e10-216f-4286-9f94-9f3f0ccc7119',
+      activeThemeVersionId: '5ecd7d44-3748-41b3-82e2-b3d3e54955bd',
+    });
+
+    const pending = buildStorefrontThemeState(first, cloned, {
+      now: new Date('2026-05-29T00:38:11.811Z'),
+      reason: 'lazy_storefront',
+      verificationDelayMs: 5 * 60 * 1000,
+    });
+    const promoted = buildStorefrontThemeState(pending, cloned, {
+      now: new Date('2026-05-29T13:54:38.515Z'),
+      reason: 'lazy_storefront',
+      promotePending: true,
+    });
+
+    expect(pending.syncStatus).toBe('pending_verification');
+    expect(pending.pending?.activeThemeId).toBe(OZY_THEME_ID);
+    expect(pending.pending?.activeStorefrontThemeId).toBe('2c972e10-216f-4286-9f94-9f3f0ccc7119');
+
+    expect(promoted.syncStatus).toBe('stable');
+    expect(promoted.stable?.activeThemeId).toBe(OZY_THEME_ID);
+    expect(promoted.stable?.activeThemeVersionId).toBe('5ecd7d44-3748-41b3-82e2-b3d3e54955bd');
+    expect(promoted.stable?.activeThemeName).toBe('Ozy 2');
+    expect(promoted.stable?.themeAdapterKey).toBe('ozy');
+    expect(promoted.stable?.adapterMatchedBy).toBe('theme_id');
+    expect(buildPublicThemeRuntime(promoted).autoPlacementEnabled).toBe(true);
   });
 });

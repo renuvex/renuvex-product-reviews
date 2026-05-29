@@ -244,7 +244,13 @@ export function parseStorefrontThemeState(value: unknown): StorefrontThemeState 
 }
 
 function isStorefrontThemeSyncReason(value: unknown): value is StorefrontThemeSyncReason {
-  return value === 'install' || value === 'manual' || value === 'dashboard_open' || value === 'settings_save' || value === 'cron' || value === 'verification';
+  return value === 'install' ||
+    value === 'manual' ||
+    value === 'dashboard_open' ||
+    value === 'settings_save' ||
+    value === 'cron' ||
+    value === 'verification' ||
+    value === 'lazy_storefront';
 }
 
 function metadataIdentity(metadata: StorefrontThemeMetadata | null) {

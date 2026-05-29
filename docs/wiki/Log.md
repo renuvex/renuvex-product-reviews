@@ -20,6 +20,14 @@ source_files:
 
 # Project Log
 
+## 2026-05-29 - fix | Accept lazy_storefront sync reason + theme-clone evidence
+- Summary: Added `lazy_storefront` to the `isStorefrontThemeSyncReason` parser whitelist and recorded the Ozy → "Ozy 2" theme-clone identity test as wiki evidence.
+- Reason: [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] introduced the `lazy_storefront` reason and its TypeScript union, but `isStorefrontThemeSyncReason` (used by `parseStorefrontThemeState`) never accepted it, so a persisted state with `reason: 'lazy_storefront'` lost its reason on parse and could read back as another reason. The clone case was also the one theme mutation not yet verified against the allowlist.
+- Key source changes: `src/lib/storefront-theme.ts`, `tests/unit/storefront-theme.test.ts`, [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]], [[Ikas_Theme_Limitations]].
+- Evidence: Ozy → "Ozy 2" clone on Merchant A (dev-mertcopper) kept `activeThemeId: 57225e07-aa38-4d38-9688-f6730ee16143` and `activeThemeVersionId: 5ecd7d44-3748-41b3-82e2-b3d3e54955bd` identical, so the adapter still resolves `ozy` via `adapterMatchedBy: 'theme_id'` and `autoPlacementEnabled` stays `true`; only `activeThemeName`, `activeStorefrontThemeId`, and `mainStorefrontThemeId` (`ed18b5f8-...` → `2c972e10-...`) changed. Confirms the allowlist must key on `activeThemeId`, not the per-merchant storefront-theme instance id.
+- Public behavior: no merchant API, widget settings schema, Prisma schema, ikas integration, or storefront mount contract changes. Adapter selection was already correct in practice; the fix restores the persisted `reason` value for telemetry/debugging.
+- Verification: `pnpm test:unit`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check`.
+
 ## 2026-05-29 - feat | Structured data surface and Google Rich Snippets toggle
 - Summary: Moved Product `AggregateRating` JSON-LD out of the visual PDP badge into an independent `structured-data` surface and added `Ürün Yorumları` → `SEO` → `Google Rich Snippets` (`richSnippetsEnabled`, default `true`).
 - Reason: Google rich snippets are an SEO concern, not a badge styling concern. Badge disabled should only hide visual badges; JSON-LD should still render when an explicit review section is visible and approved rating data exists.

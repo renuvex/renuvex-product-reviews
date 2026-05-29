@@ -65,6 +65,8 @@ Three additional in-session controlled tests on Merchant A confirmed:
 - **Theme switch + return** (Ares → The Nile → Ares) restores the original ids: merchant-level theme records persist across selection.
 - **Theme version upgrade** changes ONLY `activeThemeVersionId`; `activeThemeId`, `activeStorefrontThemeId`, and `mainStorefrontThemeId` are stable.
 
+- **Theme clone** (Ozy -> "Ozy 2", tested 2026-05-29) preserves `activeThemeId: 57225e07-aa38-4d38-9688-f6730ee16143` and `activeThemeVersionId: 5ecd7d44-3748-41b3-82e2-b3d3e54955bd`, while changing `activeThemeName`, `activeStorefrontThemeId`, and `mainStorefrontThemeId`. This confirms clone creates a new per-merchant storefront theme instance without changing the stable catalog theme id used for adapter allowlisting.
+
 Independent verification on Merchant B's install: Ozy mapped via `THEME_ADAPTER_BY_THEME_ID[57225e07-aa38-4d38-9688-f6730ee16143]` produced `adapterSource: 'auto'` + `adapterMatchedBy: 'theme_id'`, confirming the lookup is cross-merchant correct.
 
 **Conclusion:** `activeThemeId` is the stable catalog id, identical across merchants and immutable across version upgrades. It is the correct allowlist key.

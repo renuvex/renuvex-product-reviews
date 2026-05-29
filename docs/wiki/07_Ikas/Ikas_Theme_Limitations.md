@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - ikas
@@ -87,7 +87,7 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
 
 **There is no `store/theme/*` (or storefront/script) webhook scope.** The Admin API exposes 55 total operations; storefront theme events are not among them. The merchant-facing "Bildirim Adresi" panel covers billing notifications and the app-uninstall notification only — not theme changes. Shopify's equivalent `THEMES_PUBLISH` webhook does not have an ikas counterpart. A feature request to ikas is parallel work; in the meantime [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] uses the public `/api/public/settings` endpoint as a third sync trigger (`reason: 'lazy_storefront'`) to keep `StoreSettings.storefrontTheme` fresh between dashboard opens / daily cron without merchant action.
 
-## Unknown-theme behavior and CSS isolation (verified 2026-05-25 → 2026-05-27)
+## Unknown-theme behavior and CSS isolation (verified 2026-05-25 → 2026-05-29)
 - **Identity tracking is correct.** Adapter selection follows the stable `themeId`, not the
   editable theme name. Renames (`Siva` → `Siva test` on 2026-05-25, `Ares` → `dsfdf` on
   2026-05-27) did not change the resolved adapter because `themeId` and the rest of the
@@ -106,6 +106,16 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
   Ares on Merchant A flipped only `activeThemeVersionId` (`3ba12649...` → `fcfdf2b5...`);
   `activeThemeId`, `activeStorefrontThemeId`, and `mainStorefrontThemeId` all stable. The
   rename tracer ("dsfdf") survived the upgrade, confirming ikas did not replace the record.
+- **Theme clone preserves `activeThemeId` + `activeThemeVersionId`.** 2026-05-29 controlled
+  test — cloning Ozy to "Ozy 2" on Merchant A (dev-mertcopper) left `activeThemeId`
+  (`57225e07-aa38-4d38-9688-f6730ee16143`) and `activeThemeVersionId`
+  (`5ecd7d44-3748-41b3-82e2-b3d3e54955bd`) identical, so the adapter still resolved to `ozy`
+  via `adapterMatchedBy: 'theme_id'` and `autoPlacementEnabled` stayed `true`. Only
+  `activeThemeName`, `activeStorefrontThemeId`, and `mainStorefrontThemeId`
+  (`ed18b5f8-...` → `2c972e10-...`) changed — a clone mints a new per-merchant
+  storefront-theme instance, not a new catalog theme id. Keying the allowlist on
+  `activeStorefrontThemeId` would have dropped Ozy support after the clone; keying on
+  `activeThemeId` does not.
 - **`generic_unknown` now hides auto-placement** (resolved 2026-05-27 by ADR_0022). PDP / listing /
   modal badges respect `runtime.autoPlacementEnabled`. The explicit-mount review section is
   unaffected — it continues to render on any theme via `data-renuvex-widget="reviews"` plus
