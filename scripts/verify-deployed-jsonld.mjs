@@ -137,12 +137,18 @@ async function configureControlledRoutes(page, scenario) {
   });
 }
 
-async function waitForWidget(page) {
+async function waitForWidget(page, options = {}) {
+  const expectJsonLd = Boolean(options.expectJsonLd);
   await page.waitForLoadState('domcontentloaded');
-  await page.waitForFunction(() => {
-    return !!document.querySelector('[data-renuvex-slot="product-title-rating"] .renuvex-pr-rating-badge--pdp') ||
-      document.readyState === 'complete';
-  }, null, { timeout: 7000 }).catch(() => {});
+
+  if (expectJsonLd) {
+    await page.waitForFunction(() => {
+      return !!document.querySelector('#renuvex-pr-jsonld');
+    }, null, { timeout: 10000 }).catch(() => {});
+    return;
+  }
+
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
   await page.waitForTimeout(1000);
 }
 
@@ -173,7 +179,7 @@ async function runControlledScenario(browser, scenario) {
   const page = await context.newPage();
   await configureControlledRoutes(page, scenario);
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`, { waitUntil: 'domcontentloaded' });
-  await waitForWidget(page);
+  await waitForWidget(page, { expectJsonLd: scenario.expectJsonLd });
   const state = await readJsonLdState(page);
   await context.close();
 
@@ -207,7 +213,7 @@ async function runRealUrl(browser, url) {
   const context = await browser.newContext({ serviceWorkers: 'block' });
   const page = await context.newPage();
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await waitForWidget(page);
+  await waitForWidget(page, { expectJsonLd: true });
   const state = await readJsonLdState(page);
   await context.close();
 

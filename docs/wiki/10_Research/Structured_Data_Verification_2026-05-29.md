@@ -52,13 +52,15 @@ node scripts/verify-deployed-jsonld.mjs
 
 ## Result
 
-Measured at `2026-05-29T13:13:09.316Z`.
+Measured at `2026-05-29T13:50:42.840Z`.
 
 | Scenario | URL | JSON-LD count | Result |
 |---|---|---:|---|
 | controlled badge enabled | `https://merchant-seo.test/premium-shorts` | 1 | pass |
 | controlled badge disabled | `https://merchant-seo.test/premium-shorts` | 0 | pass |
 | controlled unsupported theme | `https://merchant-seo.test/premium-shorts` | 0 | pass |
+
+Verifier note: the harness waits for `#renuvex-pr-jsonld` on scenarios where JSON-LD is expected, instead of treating `document.readyState === "complete"` as enough. This avoids false negatives when the deployed widget loads lazy chunks after the page document has already completed.
 
 Active-path parsed payload:
 
