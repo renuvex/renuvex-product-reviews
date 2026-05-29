@@ -65,7 +65,7 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
 | Unit/API/theme state | `pnpm test:unit` | Public API route behavior, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, and storefront theme stable/pending/generic/fail-closed helpers. |
 
-`pnpm test:ci` runs the five layers together. `.github/workflows/widget-smoke.yml` runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
+`pnpm test:ci` runs the five layers together. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
 
 ## Evidence Commands
 These commands are not hard byte-budget gates. They produce repeatable production evidence for review, deploy notes, and future budget calibration:
