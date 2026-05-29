@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - log
@@ -19,6 +19,15 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-29 - test | Production evidence and surface contract guardrails
+- Summary: Added repeatable production-evidence commands for deployed widget transfer size and JSON-LD behavior, extracted the listing fallback DOM candidate probe into a testable module, and added a unit-level surface test contract gate.
+- Reason: Runtime behavior should not rely on manual Network-tab interpretation. The project now has scripts that load deployed widget assets while mocking merchant/API data, plus a contract that fails when a new widget surface is added without a declared test layer.
+- Key source changes: `scripts/measure-deployed-widget-network.mjs`, `scripts/verify-deployed-jsonld.mjs`, `src/widget/listing-badges/fallback-candidates.js`, `tests/unit/widget-surface-contracts.test.ts`, `tests/widget-harness.ts`, `tests/widget-network-smoke.spec.ts`, and `.github/pull_request_template.md`.
+- Evidence: [[Widget_Transfer_Measurement_2026-05-29]] and [[Structured_Data_Verification_2026-05-29]].
+- Public behavior: no merchant API, widget settings schema, Prisma schema, ikas integration, or storefront mount contract changes. Generated widget runtime changed because `loader.js` now imports the fallback candidate helper.
+- Verification: `pnpm build:widget`, `pnpm test:unit`, `pnpm test:widget-smoke`, `pnpm measure:deployed-widget`, and `pnpm verify:deployed-jsonld` passed during implementation; full gate is tracked in the implementing commit.
+- Follow-up: Deployed transfer evidence shows current PDP `PAGE_VIEW` still loads the listing-badges entry chunk. The fallback timer is now deterministic and tested; page-type routing optimization is a separate future change.
 
 ## 2026-05-28 - test | Review API and runtime evidence expansion
 - Summary: Deepened the quality gate around the highest-risk public review API and the widget fallback/performance evidence paths.

@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: high
 tags:
   - hot-context
@@ -30,9 +30,13 @@ source_files:
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/storefront-theme.test.ts"
+  - "tests/unit/widget-surface-contracts.test.ts"
   - "scripts/check-widget-runtime.mjs"
+  - "scripts/measure-deployed-widget-network.mjs"
+  - "scripts/verify-deployed-jsonld.mjs"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/loader.js"
+  - "src/widget/listing-badges/fallback-candidates.js"
   - "src/widget/core/settings.js"
   - "src/widget/core/product-title.js"
   - "src/widget/rating-badge/index.js"
@@ -71,12 +75,14 @@ source_files:
 - 2026-05-28: Review-section implementation moved to `src/widget/reviews-section/`; shared PDP title helper moved to `src/widget/core/product-title.js`.
 - 2026-05-28: [[Test_Strategy]] now defines `pnpm test:ci`: widget network, runtime layouts, lightbox/wizard, admin preview/settings, and public API/theme-state unit tests. GitHub Actions workflow is `Quality Gate`.
 - 2026-05-28: Review API tests now cover validation, profanity, rate-limit, image policy, target verification, approval modes, GET filters, and cache behavior. Widget network smoke also records local transfer evidence and tests both negative and positive listing fallback paths.
+- 2026-05-29: Production evidence guardrails added: `pnpm measure:deployed-widget`, `pnpm verify:deployed-jsonld`, `listing-badges/fallback-candidates.js`, and `tests/unit/widget-surface-contracts.test.ts`. Evidence notes live in [[Widget_Transfer_Measurement_2026-05-29]] and [[Structured_Data_Verification_2026-05-29]].
 
 ## Current Risks / Open Questions
-- Re-measure deployed widget size and keep doing live post-deploy smoke on the dev storefront after runtime-affecting widget changes.
+- Keep doing live post-deploy smoke on the dev storefront after runtime-affecting widget changes; deployed measurement scripts are evidence, not a full merchant-flow replacement.
+- Production transfer evidence shows the current deployed PDP `PAGE_VIEW` path still loads `listing-badges-*`; the fallback timer is deterministic/tested, but page-type routing optimization is a separate future decision.
 - Theme adapters depend on Admin API `listStorefront.themes[].isMainTheme`; ikas has no theme webhook, so lazy resync remains the workaround.
 - Admin warning UI for unsupported themes is deferred; the runtime signal exists, the dashboard surface does not.
-- CI covers mockable widget/admin/API/theme contracts; real authenticated ikas dashboard smoke, Sentry post-deploy health, hard transfer-size budgets, and Google Rich Results verification remain gaps.
+- CI covers mockable widget/admin/API/theme contracts; real authenticated ikas dashboard smoke, Sentry post-deploy health, hard transfer-size budgets, and manual Google Rich Results URL verification remain gaps.
 - Review-request emails, CSV import/export, analytics, and localization remain roadmap gaps.
 
 ## Read Next

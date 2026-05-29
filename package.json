@@ -12,6 +12,8 @@
     "build:widget:watch": "node scripts/build-widget.mjs --watch",
     "build:widget:new-theme": "node scripts/build-widget.mjs --theme=new-theme",
     "check:widget-js": "node scripts/check-widget-runtime.mjs",
+    "measure:deployed-widget": "node scripts/measure-deployed-widget-network.mjs",
+    "verify:deployed-jsonld": "node scripts/verify-deployed-jsonld.mjs",
     "test:widget-smoke": "playwright test --config=playwright.widget.config.ts tests/widget-network-smoke.spec.ts",
     "test:widget-runtime": "playwright test --config=playwright.widget.config.ts tests/widget-runtime-smoke.spec.ts",
     "test:widget-interactions": "playwright test --config=playwright.widget.config.ts tests/widget-interaction-smoke.spec.ts",

@@ -11,7 +11,10 @@ import {
   hasRuntime,
   setupExternalProductLikeLinksPage,
   setupGenericLinksPage,
+  setupNavFooterProductLikeLinksPage,
+  setupProductLikeLinksWithoutMediaPage,
   setupProductListingFallbackPage,
+  setupSingleProductLikeLinkPage,
   setupWidgetRoutes,
   summarizeWidgetNetwork,
   waitForWidgetIdle,
@@ -122,6 +125,42 @@ test('external and system links with media do not trigger the listing fallback c
   expect(hasChunk(log, 'listing-badges-')).toBe(false);
   expect(countUrls(log, '/api/public/settings')).toBe(0);
   expect(countUrls(log, '/api/public/ratings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('a single product-like link with media does not trigger the listing fallback chunk', async ({ page }) => {
+  const log = await setupSingleProductLikeLinkPage(page);
+  await page.goto(`${MERCHANT_ORIGIN}/single-product-link`);
+  await page.waitForTimeout(2400);
+
+  expect(hasRuntime(log)).toBe(true);
+  expect(hasChunk(log, 'listing-badges-')).toBe(false);
+  expect(countUrls(log, '/api/public/settings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('nav and footer product-like links with media do not trigger the listing fallback chunk', async ({ page }) => {
+  const log = await setupNavFooterProductLikeLinksPage(page);
+  await page.goto(`${MERCHANT_ORIGIN}/nav-footer-links`);
+  await page.waitForTimeout(2400);
+
+  expect(hasRuntime(log)).toBe(true);
+  expect(hasChunk(log, 'listing-badges-')).toBe(false);
+  expect(countUrls(log, '/api/public/settings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('product-like links without nearby media do not trigger the listing fallback chunk', async ({ page }) => {
+  const log = await setupProductLikeLinksWithoutMediaPage(page);
+  await page.goto(`${MERCHANT_ORIGIN}/no-media-product-links`);
+  await page.waitForTimeout(2400);
+
+  expect(hasRuntime(log)).toBe(true);
+  expect(hasChunk(log, 'listing-badges-')).toBe(false);
+  expect(countUrls(log, '/api/public/settings')).toBe(0);
   expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
   expect(widgetErrors(log)).toEqual([]);
 });

@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-05-29
+last_verified: 2026-05-29
 confidence: medium
 tags:
   - seo
@@ -16,10 +16,12 @@ related:
   - "[[Roadmap]]"
   - "[[Test_Strategy]]"
 source_files:
+  - "scripts/verify-deployed-jsonld.mjs"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
+  - "docs/wiki/10_Research/Structured_Data_Verification_2026-05-29.md"
 ---
 
 # Structured Data & Rich Snippets
@@ -49,17 +51,32 @@ The JSON-LD writer lives with `rating-badge/inject.js`, not the review section. 
 - `pnpm test:widget-smoke` verifies JSON-LD exists when the PDP badge path is active.
 - `pnpm test:widget-smoke` verifies JSON-LD is absent when the badge is disabled or auto-placement is unsupported.
 - `pnpm test:widget-runtime` verifies JSON-LD presence across representative review section layout combinations.
+- `pnpm verify:deployed-jsonld` loads the deployed widget from `https://new-ikas-app.vercel.app` in a controlled browser harness, mocks public API responses, and verifies exactly one parseable `Product` JSON-LD object with `AggregateRating` on the active badge path. It also verifies badge-disabled and unsupported-theme paths emit no JSON-LD.
 
 These tests prove the browser runtime contract. They do not prove Google indexing behavior.
+
+## Google Guidance
+The runtime strategy is consistent with Google's current JavaScript structured-data guidance:
+
+- Google Search can process structured data that is present in the rendered DOM after JavaScript execution.
+- Google recommends testing JavaScript-generated structured data with the URL mode of the Rich Results Test, because code-input testing has JavaScript limitations such as CORS.
+- Product snippets require `Product` markup with one of `review`, `aggregateRating`, or `offers`; this widget emits `aggregateRating` only when a trusted non-zero rating summary exists.
+
+Official references:
+
+- https://developers.google.com/search/docs/appearance/structured-data/generate-structured-data-with-javascript
+- https://developers.google.com/search/docs/appearance/structured-data/product-snippet
+- https://support.google.com/webmasters/answer/7445569
 
 ## Live SEO Verification Playbook
 Use this after a production deploy that changes rating-badge, settings, product identity, or JSON-LD behavior:
 
 1. Open a public PDP with approved reviews and visible PDP badge.
 2. In DevTools, confirm one `<script id="renuvex-pr-jsonld" type="application/ld+json">` exists after widget idle.
-3. Paste the public PDP URL into Google Rich Results Test: https://search.google.com/test/rich-results
-4. Confirm Google renders the page and sees Product `aggregateRating`.
-5. Record the URL, deploy hash, widget runtime hash, result, and date in [[Log]] or a dedicated SEO verification note.
+3. Run `pnpm verify:deployed-jsonld` for the controlled deployed harness, or `SEO_PDP_URL=<public-pdp-url> pnpm verify:deployed-jsonld` for a real URL-level check.
+4. Paste the public PDP URL into Google Rich Results Test: https://search.google.com/test/rich-results
+5. Confirm Google renders the page and sees Product `aggregateRating`.
+6. Record the URL, deploy hash, widget runtime hash, result, and date in [[Structured_Data_Verification_2026-05-29]] or a new dated SEO verification note.
 
 If Google does not see client-injected JSON-LD reliably, revisit the hybrid/server-rendered option.
 

@@ -1,4 +1,5 @@
 import { type Page, type Route } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -7,6 +8,7 @@ export const MERCHANT_ORIGIN = 'https://merchant.test';
 export const PUBLIC_KEY = 'ci-public-key';
 export const PRODUCT_ID = 'product-1';
 export const PRODUCT_NAME = 'Premium';
+export const REVIEW_CLOUD_NAME = resolveReviewCloudName();
 
 export type RuntimeOptions = {
   autoPlacementEnabled?: boolean;
@@ -105,8 +107,31 @@ export function settingsResponse(options: SmokeOptions): unknown {
   };
 }
 
+function readEnvFileValue(filePath: string, key: string): string {
+  try {
+    const body = readFileSync(filePath, 'utf8');
+    const pattern = new RegExp(`^\\s*${key}\\s*=\\s*(.*)\\s*$`, 'm');
+    const match = body.match(pattern);
+    if (!match) return '';
+    return match[1].trim().replace(/^['"]|['"]$/g, '');
+  } catch {
+    return '';
+  }
+}
+
+function resolveReviewCloudName(): string {
+  const raw = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+    process.env.CLOUDINARY_CLOUD_NAME ||
+    readEnvFileValue(path.join(process.cwd(), '.env.local'), 'NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') ||
+    readEnvFileValue(path.join(process.cwd(), '.env.local'), 'CLOUDINARY_CLOUD_NAME') ||
+    readEnvFileValue(path.join(process.cwd(), '.env'), 'NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') ||
+    readEnvFileValue(path.join(process.cwd(), '.env'), 'CLOUDINARY_CLOUD_NAME') ||
+    'renuvex';
+  return /^[A-Za-z0-9_-]+$/.test(raw) ? raw : 'renuvex';
+}
+
 function reviewImage(name: string, storeId = PUBLIC_KEY): string {
-  return `https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${storeId}/${name}.jpg`;
+  return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${storeId}/${name}.jpg`;
 }
 
 function reviewRows(_hasImages: boolean, storeId = PUBLIC_KEY): Array<Record<string, unknown>> {
@@ -350,6 +375,22 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
 }
 
 export async function setupExternalProductLikeLinksPage(page: Page): Promise<RequestLog> {
+  return setupListingProbePage(page, externalProductLikeLinksHtml());
+}
+
+export async function setupSingleProductLikeLinkPage(page: Page): Promise<RequestLog> {
+  return setupListingProbePage(page, singleProductLikeLinkHtml());
+}
+
+export async function setupNavFooterProductLikeLinksPage(page: Page): Promise<RequestLog> {
+  return setupListingProbePage(page, navFooterProductLikeLinksHtml());
+}
+
+export async function setupProductLikeLinksWithoutMediaPage(page: Page): Promise<RequestLog> {
+  return setupListingProbePage(page, productLikeLinksWithoutMediaHtml());
+}
+
+async function setupListingProbePage(page: Page, body: string): Promise<RequestLog> {
   const log = createRequestLog(page);
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
@@ -382,7 +423,7 @@ export async function setupExternalProductLikeLinksPage(page: Page): Promise<Req
     await route.fulfill({
       status: 200,
       contentType: 'text/html; charset=utf-8',
-      body: externalProductLikeLinksHtml(),
+      body,
     });
   });
   return log;
@@ -461,13 +502,13 @@ function productListingFallbackHtml(): string {
       <section class="listing-grid">
         <article class="product-card">
           <a href="/premium-shorts">
-            <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/listing-1.jpg" alt="">
+            <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/listing-1.jpg" alt="">
             <h2>Premium Shorts</h2>
           </a>
         </article>
         <article class="product-card">
           <a href="/linen-shirt">
-            <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/listing-2.jpg" alt="">
+            <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/listing-2.jpg" alt="">
             <h2>Linen Shirt</h2>
           </a>
         </article>
@@ -489,21 +530,91 @@ function externalProductLikeLinksHtml(): string {
     <main>
       <section>
         <a href="https://other-store.test/premium-shorts">
-          <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/external-1.jpg" alt="">
+          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/external-1.jpg" alt="">
           External premium shorts
         </a>
         <a href="https://other-store.test/linen-shirt">
-          <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/external-2.jpg" alt="">
+          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/external-2.jpg" alt="">
           External linen shirt
         </a>
         <a href="/cart">
-          <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/cart.jpg" alt="">
+          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/cart.jpg" alt="">
           Cart
         </a>
         <a href="/account">
-          <img src="https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/${PUBLIC_KEY}/account.jpg" alt="">
+          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/account.jpg" alt="">
           Account
         </a>
+      </section>
+    </main>
+</body>
+</html>`;
+}
+
+function singleProductLikeLinkHtml(): string {
+  return `<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <title>Single Product Link</title>
+    <script src="${WIDGET_ORIGIN}/widget.js?publicApiKey=${PUBLIC_KEY}" data-renuvex-app="product-reviews"></script>
+  </head>
+  <body>
+    <main>
+      <section>
+        <a href="/premium-shorts">
+          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/single-1.jpg" alt="">
+          Premium Shorts
+        </a>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+function navFooterProductLikeLinksHtml(): string {
+  return `<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <title>Nav Footer Links</title>
+    <script src="${WIDGET_ORIGIN}/widget.js?publicApiKey=${PUBLIC_KEY}" data-renuvex-app="product-reviews"></script>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="/premium-shorts">
+          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/nav-1.jpg" alt="">
+          Premium Shorts
+        </a>
+      </nav>
+    </header>
+    <main>
+      <p>Content without product cards.</p>
+    </main>
+    <footer>
+      <a href="/linen-shirt">
+        <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/footer-1.jpg" alt="">
+        Linen Shirt
+      </a>
+    </footer>
+  </body>
+</html>`;
+}
+
+function productLikeLinksWithoutMediaHtml(): string {
+  return `<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <title>No Media Product Links</title>
+    <script src="${WIDGET_ORIGIN}/widget.js?publicApiKey=${PUBLIC_KEY}" data-renuvex-app="product-reviews"></script>
+  </head>
+  <body>
+    <main>
+      <section>
+        <a href="/premium-shorts">Premium Shorts</a>
+        <a href="/linen-shirt">Linen Shirt</a>
       </section>
     </main>
   </body>
