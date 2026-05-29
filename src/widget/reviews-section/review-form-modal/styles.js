@@ -15,6 +15,7 @@ export var FWIZARD_CSS = `
   .renuvex-pr-fwizard-overlay{
     position:fixed;
     inset:0;
+    overscroll-behavior:contain;
     z-index:99999;
     display:flex;
     align-items:center;
@@ -107,6 +108,8 @@ export var FWIZARD_CSS = `
   .renuvex-pr-fwizard-step-wrap{
     flex:1 1 auto;
     overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
     padding:48px 24px 32px;
     display:flex;
     flex-direction:column;

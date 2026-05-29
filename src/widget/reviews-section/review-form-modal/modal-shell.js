@@ -8,8 +8,10 @@
 
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 import { iconUseSvg, registerSpriteRoot, unregisterSpriteRoot } from '../../icons/star-sprite.js';
-import { createOverlayShadowHost, injectShadowStyles, getActiveElementWithin, HOST_RESET_CSS } from '../../core/shadow.js';
+import { createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../../core/shadow.js';
 import { BASE_RESET_CSS } from '../../shared/base-reset.js';
+import { lockBodyScroll, restoreBodyScroll } from '../../core/body-scroll-lock.js';
+import { getReturnFocusElement, restoreFocus, focusFirst, trapFocus } from '../../shared/focus-trap.js';
 import { FWIZARD_CSS } from './styles.js';
 
 export function createWizardShell(opts) {
@@ -50,95 +52,16 @@ export function createWizardShell(opts) {
   // ediyoruz (Tab akışı sürsün). Pointer/touch ile açıldıysa odağı doğal
   // olarak bırakıyoruz — yoksa mobilde trigger butonda sticky focus kalır.
   var openedByKeyboard = false;
-  var prevBodyOverflow = '';
-  var prevBodyPaddingRight = '';
 
-  function getReturnFocusElement() {
-    var el = document.activeElement;
-    if (!el || el === document.body || el === document.documentElement) return null;
-    return el;
-  }
-
-  function restoreFocus(el) {
-    // isConnected (not document.contains) so focus works inside a shadow root.
-    if (!el || !el.isConnected || typeof el.focus !== 'function') return;
-    try {
-      el.focus({ preventScroll: true });
-    } catch (_) {
-      try { el.focus(); } catch (_) {}
-    }
-  }
-
-  function isVisibleFocusable(el) {
-    if (!el || el.disabled) return false;
-    if (el.getAttribute('aria-hidden') === 'true') return false;
-    var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
-    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
-    return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-  }
-
-  function getFocusableElements(container) {
-    var selector = [
-      'a[href]',
-      'button:not([disabled])',
-      'input:not([disabled])',
-      'select:not([disabled])',
-      'textarea:not([disabled])',
-      '[tabindex]:not([tabindex="-1"])',
-    ].join(',');
-    return Array.prototype.slice.call(container.querySelectorAll(selector)).filter(isVisibleFocusable);
-  }
-
+  // Wizard-specific focus entry: prefer the first STEP control (inside `content`)
+  // over the close button, falling back to the overlay. Delegates to the shared
+  // focus-trap module so the toolkit is not duplicated.
   function focusFirstWizardControl() {
-    var contentFocusables = getFocusableElements(content);
-    var allFocusables = getFocusableElements(overlay);
-    var target = contentFocusables[0] || allFocusables[0] || overlay;
-    restoreFocus(target);
+    focusFirst(content, overlay);
   }
 
   function trapWizardFocus(e) {
-    if (e.key !== 'Tab') return;
-    var focusables = getFocusableElements(overlay);
-    if (!focusables.length) {
-      e.preventDefault();
-      restoreFocus(overlay);
-      return;
-    }
-
-    var first = focusables[0];
-    var last = focusables[focusables.length - 1];
-    // Inside an open shadow root document.activeElement is the host, not the
-    // focused control; read the root's activeElement so trap math is correct.
-    var active = getActiveElementWithin(shadow && shadow.root);
-
-    if (!overlay.contains(active)) {
-      e.preventDefault();
-      restoreFocus(first);
-      return;
-    }
-
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      restoreFocus(last);
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      restoreFocus(first);
-    }
-  }
-
-  function lockBodyScroll() {
-    var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    prevBodyOverflow = document.body.style.overflow;
-    prevBodyPaddingRight = document.body.style.paddingRight;
-    document.body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = scrollbarWidth + 'px';
-    }
-  }
-
-  function unlockBodyScroll() {
-    document.body.style.overflow = prevBodyOverflow;
-    document.body.style.paddingRight = prevBodyPaddingRight;
+    trapFocus(e, overlay, shadow && shadow.root);
   }
 
   function close() {
@@ -158,7 +81,7 @@ export function createWizardShell(opts) {
       } else if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
       }
-      unlockBodyScroll();
+      restoreBodyScroll();
       // Sadece klavye kaynaklı açılışlarda odağı iade et.
       if (openedByKeyboard) restoreFocus(returnFocusEl);
       try { onClose(); } catch (e) { /* sessiz */ }

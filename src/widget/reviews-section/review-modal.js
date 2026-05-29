@@ -15,213 +15,16 @@ import { currentSettings } from '../core/state.js';
 import {
   RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
 } from '../core/namespace.js';
-import { createOverlayShadowHost, injectShadowStyles, getActiveElementWithin, HOST_RESET_CSS } from '../core/shadow.js';
+import { createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../core/shadow.js';
 import { CLASSIC_CSS } from './styles.js';
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot, unregisterSpriteRoot } from '../icons/star-sprite.js';
+import { lockBodyScroll, restoreBodyScroll } from '../core/body-scroll-lock.js';
+import { getReturnFocusElement, restoreFocus, focusFirst, trapFocus } from '../shared/focus-trap.js';
+import { pushModalHistoryEntry, restoreModalHistoryEntry } from '../core/modal-history.js';
 
 function getValidImages(review) {
   return getTrustedReviewImages(review);
-}
-
-function captureBodyScrollState() {
-  var bodyStyle = document.body.style;
-  var rootStyle = document.documentElement.style;
-  return {
-    scrollX: window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
-    scrollY: window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
-    fixedBodyLock: false,
-    bodyOverflow: bodyStyle.getPropertyValue('overflow'),
-    bodyOverflowPriority: bodyStyle.getPropertyPriority('overflow'),
-    bodyPaddingRight: bodyStyle.getPropertyValue('padding-right'),
-    bodyPaddingRightPriority: bodyStyle.getPropertyPriority('padding-right'),
-    bodyPosition: bodyStyle.getPropertyValue('position'),
-    bodyPositionPriority: bodyStyle.getPropertyPriority('position'),
-    bodyTop: bodyStyle.getPropertyValue('top'),
-    bodyTopPriority: bodyStyle.getPropertyPriority('top'),
-    bodyLeft: bodyStyle.getPropertyValue('left'),
-    bodyLeftPriority: bodyStyle.getPropertyPriority('left'),
-    bodyRight: bodyStyle.getPropertyValue('right'),
-    bodyRightPriority: bodyStyle.getPropertyPriority('right'),
-    bodyWidth: bodyStyle.getPropertyValue('width'),
-    bodyWidthPriority: bodyStyle.getPropertyPriority('width'),
-    bodyOverscrollBehaviorY: bodyStyle.getPropertyValue('overscroll-behavior-y'),
-    bodyOverscrollBehaviorYPriority: bodyStyle.getPropertyPriority('overscroll-behavior-y'),
-    rootOverflow: rootStyle.getPropertyValue('overflow'),
-    rootOverflowPriority: rootStyle.getPropertyPriority('overflow'),
-    rootOverscrollBehaviorY: rootStyle.getPropertyValue('overscroll-behavior-y'),
-    rootOverscrollBehaviorYPriority: rootStyle.getPropertyPriority('overscroll-behavior-y'),
-  };
-}
-
-function restoreStyleProperty(style, propertyName, value, priority) {
-  if (value) {
-    style.setProperty(propertyName, value, priority || '');
-  } else {
-    style.removeProperty(propertyName);
-  }
-}
-
-function shouldUseFixedBodyLock() {
-  if (typeof navigator === 'undefined') return false;
-  var platform = navigator.platform || '';
-  var ua = navigator.userAgent || '';
-  var maxTouchPoints = navigator.maxTouchPoints || 0;
-  var isIOS = /iP(ad|hone|od)/.test(platform) || (platform === 'MacIntel' && maxTouchPoints > 1);
-  return isIOS && /AppleWebKit/i.test(ua);
-}
-
-function lockBodyScroll() {
-  var previousState = captureBodyScrollState();
-  var bodyStyle = document.body.style;
-  var rootStyle = document.documentElement.style;
-  var scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-  var isBodyAlreadyFixed = window.getComputedStyle(document.body).position === 'fixed';
-  var shouldFixBody = shouldUseFixedBodyLock() && !isBodyAlreadyFixed;
-
-  if (scrollbarWidth > 0) {
-    var currentPaddingRight = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
-    bodyStyle.setProperty('padding-right', (currentPaddingRight + scrollbarWidth) + 'px', 'important');
-  }
-  rootStyle.setProperty('overflow', 'hidden', 'important');
-  rootStyle.setProperty('overscroll-behavior-y', 'none', 'important');
-  bodyStyle.setProperty('overflow', 'hidden', 'important');
-  bodyStyle.setProperty('overscroll-behavior-y', 'none', 'important');
-
-  if (shouldFixBody) {
-    previousState.fixedBodyLock = true;
-    bodyStyle.setProperty('position', 'fixed', 'important');
-    bodyStyle.setProperty('top', (-previousState.scrollY) + 'px', 'important');
-    bodyStyle.setProperty('left', (-previousState.scrollX) + 'px', 'important');
-    bodyStyle.setProperty('right', '0', 'important');
-    bodyStyle.setProperty('width', '100%', 'important');
-  }
-
-  return previousState;
-}
-
-function restoreBodyScroll(previousState) {
-  if (!previousState) return;
-  var bodyStyle = document.body.style;
-  var rootStyle = document.documentElement.style;
-  restoreStyleProperty(rootStyle, 'overflow', previousState.rootOverflow, previousState.rootOverflowPriority);
-  restoreStyleProperty(rootStyle, 'overscroll-behavior-y', previousState.rootOverscrollBehaviorY, previousState.rootOverscrollBehaviorYPriority);
-  restoreStyleProperty(bodyStyle, 'overflow', previousState.bodyOverflow, previousState.bodyOverflowPriority);
-  restoreStyleProperty(bodyStyle, 'padding-right', previousState.bodyPaddingRight, previousState.bodyPaddingRightPriority);
-  restoreStyleProperty(bodyStyle, 'overscroll-behavior-y', previousState.bodyOverscrollBehaviorY, previousState.bodyOverscrollBehaviorYPriority);
-  restoreStyleProperty(bodyStyle, 'position', previousState.bodyPosition, previousState.bodyPositionPriority);
-  restoreStyleProperty(bodyStyle, 'top', previousState.bodyTop, previousState.bodyTopPriority);
-  restoreStyleProperty(bodyStyle, 'left', previousState.bodyLeft, previousState.bodyLeftPriority);
-  restoreStyleProperty(bodyStyle, 'right', previousState.bodyRight, previousState.bodyRightPriority);
-  restoreStyleProperty(bodyStyle, 'width', previousState.bodyWidth, previousState.bodyWidthPriority);
-  if (previousState.fixedBodyLock) {
-    window.scrollTo(previousState.scrollX, previousState.scrollY);
-  }
-}
-
-function getReturnFocusElement() {
-  var el = document.activeElement;
-  if (!el || el === document.body || el === document.documentElement) return null;
-  return el;
-}
-
-function restoreFocus(el) {
-  // isConnected (not document.contains) so focus works for elements living
-  // inside a shadow root, which document.contains() reports as not present.
-  if (!el || !el.isConnected || typeof el.focus !== 'function') return;
-  try {
-    el.focus({ preventScroll: true });
-  } catch (_) {
-    try { el.focus(); } catch (_) {}
-  }
-}
-
-function isVisibleFocusable(el) {
-  if (!el || el.disabled) return false;
-  if (el.getAttribute('aria-hidden') === 'true') return false;
-  return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-}
-
-function getFocusableElements(container) {
-  var selector = [
-    'a[href]',
-    'button:not([disabled])',
-    'input:not([disabled])',
-    'select:not([disabled])',
-    'textarea:not([disabled])',
-    '[tabindex]:not([tabindex="-1"])',
-  ].join(',');
-  return Array.prototype.slice.call(container.querySelectorAll(selector)).filter(isVisibleFocusable);
-}
-
-function focusFirstModalControl(container) {
-  var focusables = getFocusableElements(container);
-  var target = focusables[0] || container.querySelector('[role="dialog"]') || container;
-  restoreFocus(target);
-}
-
-function trapModalFocus(e, container, root) {
-  if (e.key !== 'Tab') return;
-  var focusables = getFocusableElements(container);
-  if (!focusables.length) {
-    e.preventDefault();
-    focusFirstModalControl(container);
-    return;
-  }
-
-  var first = focusables[0];
-  var last = focusables[focusables.length - 1];
-  // Inside an open shadow root document.activeElement is the host, not the
-  // focused control; read the root's activeElement so trap math is correct.
-  var active = getActiveElementWithin(root);
-
-  if (!container.contains(active)) {
-    e.preventDefault();
-    restoreFocus(first);
-    return;
-  }
-
-  if (e.shiftKey && active === first) {
-    e.preventDefault();
-    restoreFocus(last);
-  } else if (!e.shiftKey && active === last) {
-    e.preventDefault();
-    restoreFocus(first);
-  }
-}
-
-function createModalHistoryEntry() {
-  var entry = {
-    id: 'renuvex-pr-modal-' + Date.now() + '-' + Math.random().toString(36).slice(2),
-    previousState: null,
-    pushed: false,
-    url: window.location.href,
-  };
-
-  try {
-    entry.previousState = history.state;
-    history.pushState({ renuvexPrModal: entry.id }, '', entry.url);
-    entry.pushed = true;
-  } catch (_) {}
-
-  return entry;
-}
-
-function isCurrentModalHistoryEntry(entry) {
-  return !!(
-    entry &&
-    entry.pushed &&
-    window.location.href === entry.url &&
-    history.state &&
-    history.state.renuvexPrModal === entry.id
-  );
-}
-
-function restoreModalHistoryEntry(entry) {
-  if (!isCurrentModalHistoryEntry(entry)) return;
-  try {
-    history.replaceState(entry.previousState, '', entry.url);
-  } catch (_) {}
 }
 
 function closeModal(host, onKeyDown, onPopState, bodyScrollState, returnFocusEl) {
@@ -555,7 +358,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   var shadow = null;
   var returnFocusEl = getReturnFocusElement();
   var bodyScrollState = lockBodyScroll();
-  var modalHistoryEntry = createModalHistoryEntry();
+  var modalHistoryEntry = pushModalHistoryEntry();
   var modalState = {
     currentReview: r,
     currentSettings: currentSettings,
@@ -586,7 +389,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
       requestClose();
       return;
     }
-    trapModalFocus(e, overlay, shadow && shadow.root);
+    trapFocus(e, overlay, shadow && shadow.root);
   }
 
   function requestClose() {
@@ -633,5 +436,5 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   shadow.root.appendChild(overlay);
   // Mirror the icon sprite so star/icon <use> refs resolve inside this shadow.
   registerSpriteRoot(shadow.root);
-  focusFirstModalControl(overlay);
+  focusFirst(overlay);
 }

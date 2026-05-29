@@ -150,6 +150,8 @@ A second instance of the same light↔shadow asymmetry, in the other direction. 
 
 Same lesson, restated: a reset that **every** shadow surface needs belongs at `:host` in `HOST_RESET_CSS`, not duplicated across per-surface injections where one can forget it (the wizard did).
 
+The scroll-lock instance of this same light↔shadow / per-surface asymmetry (the wizard carried a weaker `body`-only scroll lock while the lightbox had a robust one) is resolved structurally in [[ADR_0025_Overlay_Shared_Surface_Foundation]] — the cross-cutting overlay concerns move into shared modules consumed by both overlays, enforced by a contract-test invariant so the next surface cannot drift to its own copy.
+
 ## Related Source Files
 - [src/widget/core/shadow.js](src/widget/core/shadow.js)
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js)
