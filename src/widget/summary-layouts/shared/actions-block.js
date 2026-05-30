@@ -2,7 +2,7 @@
 // Actions row — Yorum Yap butonu + filtre dropdown.
 // Tüm summary layout'ları bu shared parçayı kullanır.
 
-import { registerPopover, notifyOpening } from './popover-registry.js';
+import { registerPopover, notifyOpening, swallowNextDismissClick } from './popover-registry.js';
 import { getFilterIconSvg } from '../../icons/index.js';
 import { iconUseSvg } from '../../icons/star-sprite.js';
 import { currentSettings } from '../../core/state.js';
@@ -63,6 +63,7 @@ export function buildActionsBlock(opts) {
         try { filterBtn.focus(); } catch (_) {}
       }
     }
+    return wasOpen;
   }
   function openFilter() {
     notifyOpening(filterRegistration);
@@ -96,6 +97,10 @@ export function buildActionsBlock(opts) {
       if (activated) return;
       activated = true;
       isActivatingOption = true;
+      // Pointer/touch selection closes the menu on pointerdown; swallow the trailing
+      // click so it cannot fall through to an element (e.g. a photo-strip thumbnail)
+      // sitting under the now-closed menu. Keyboard activation has no trailing click.
+      if (restoreFocus !== true) swallowNextDismissClick();
       closeFilter({ restoreFocus: restoreFocus });
       onSortChange(opt[0], isPhotos);
       setTimeout(function () {

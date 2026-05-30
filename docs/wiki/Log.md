@@ -20,6 +20,14 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - fix | Filter dropdown light-dismiss under Shadow DOM
+- Summary: Fixed the classic review summary filter dropdown after Shadow DOM isolation — it stayed open on re-tap, and a dismiss/option tap over the photo strip opened a thumbnail's lightbox. See [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].
+- Reason: `summary-layouts/shared/popover-registry.js` ran light-dismiss from a `document`-level click listener using `event.target`. For clicks inside the review-section shadow root, `event.target` retargets to the host (`#renuvex-reviews`), so `contains()` checks were always false → every click closed the menu (the trigger's `onclick` then reopened it → stuck open), and the dismiss/`pointerdown`-activation click fell through to `.renuvex-pr-photo-strip-thumb`. Same isolation-asymmetry class as tap-highlight / scroll-lock.
+- Key source changes: `src/widget/summary-layouts/shared/popover-registry.js` (use `event.composedPath()` for membership; swallow the dismiss click; `swallowNextDismissClick()` one-shot for pointer activation), `src/widget/summary-layouts/shared/actions-block.js` (`closeFilter` returns `wasOpen`; `activateOption` arms the swallow for pointer/touch). Regression test in `tests/widget-interaction-smoke.spec.ts`. Rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Public behavior: filter dropdown toggles correctly again; a light-dismiss tap only closes the menu (no longer double-activates the element under it). No API/settings/schema/mount changes.
+- Verification: `pnpm build:widget`, `pnpm test:widget-interactions` (5/5, incl. new filter test), `pnpm test:widget-runtime` (8/8), `pnpm test:unit`, `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, `node scripts/wiki-audit.mjs --changed-source-check`.
+- Prevention: any `document`/`window` handler targeting Shadow-DOM UI must use `composedPath()`, not `event.target` (which retargets to the host) — the popover analogue of the focus-trap `getActiveElementWithin` lesson.
+
 ## 2026-05-30 - refactor | Unify wizard back-button history onto shared module
 - Summary: Moved the review-form wizard's back-button history from its own `index.js` block to the shared `core/modal-history.js` (the lightbox already used it), and extended the overlay contract invariant to enforce history sharing too.
 - Reason: Completes the [[ADR_0025_Overlay_Shared_Surface_Foundation]] unification — history was the last duplicated/divergent overlay concern. The wizard used `pushState({renuvexPrReviewModal})` + `history.back()`; the shared module uses an id-based entry + `replaceState`.

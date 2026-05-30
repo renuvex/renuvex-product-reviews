@@ -4,6 +4,7 @@ import {
   clickInOverlay,
   clickInReviewsShadow,
   fillInOverlay,
+  hasInReviewsShadow,
   hasOverlay,
   hasReviewsWidget,
   isOverlayControlDisabled,
@@ -124,6 +125,37 @@ test('opening an overlay locks scroll on both <html> and <body>', async ({ page 
   const lightboxRestored = await overflow();
   expect(lightboxRestored.html).not.toBe('hidden');
   expect(lightboxRestored.body).not.toBe('hidden');
+
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+// Regression for the filter dropdown after Shadow DOM isolation (ADR_0021/ADR_0025). The
+// light-dismiss listener lives on `document`, where a click inside the shadow root has its
+// target retargeted to the host — popover-registry now uses composedPath so the filter
+// toggles correctly, and it swallows the dismiss click so tapping the photo strip under an
+// open menu only closes the menu instead of also opening the lightbox.
+test('classic summary filter toggles on re-tap and dismiss does not open the lightbox', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  // Open, then re-tap the trigger → it must CLOSE (was stuck open after isolation).
+  await clickInReviewsShadow(page, '.renuvex-pr-filter-btn');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-filter-btn');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(false);
+
+  // Open again, then tap a photo-strip thumbnail (outside the menu): the tap dismisses the
+  // menu and must NOT also open the lightbox.
+  await clickInReviewsShadow(page, '.renuvex-pr-filter-btn');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(false);
+  expect(await hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
 
   expect(widgetErrors(log)).toEqual([]);
 });

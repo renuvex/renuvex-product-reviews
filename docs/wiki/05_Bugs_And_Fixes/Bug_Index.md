@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
+updated: 2026-05-30
 tags:
   - bugs
 related:
@@ -21,6 +21,7 @@ related:
 - _None tracked._
 
 ## Recently fixed (verify periodically)
+- 2026-05-30 - [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] - After Shadow DOM isolation, the classic summary filter dropdown stayed open on re-tap, and a dismiss/option tap over the photo strip opened a thumbnail's lightbox. Root cause: `popover-registry`'s `document`-level light-dismiss read a retargeted `e.target` (always the shadow host `#renuvex-reviews`), so every click read as "outside". Fixed with `event.composedPath()` membership + swallowing the dismiss/activation click.
 - 2026-05-25 - [[Bug_Listing_Badge_Missing_After_Render]] - Sentry RENUVEX-PRODUCT-REVIEWS-6 (~93 events, `listing-badge` / `missing_after_render`) was a false positive: the 350ms visibility probe held a stale reference to the pre-self-heal badge element while a healthy replacement was present. Fixed by having `probeWidgetVisibility` re-resolve the live owned node at probe time (resolvers at all call sites); mount-mode-independent (A/B proven), verified on the dev store (1/session → 0). Intentional one-shot self-heal left unchanged.
 - 2026-05-24 - [[Bug_Review_Wizard_WebKit_Rating_Advance]] - A real iPhone 11 Safari test could leave the review wizard waiting on step 1 after tapping a star. Fixed by making rating activation pointer/touch-safe and by sending the auto-advance request through the wizard state machine instead of dropping it on a one-shot `canNavigate()` check.
 - 2026-05-24 - [[Bug_Filter_Menu_WebKit_Tap_Activation]] - iOS Safari/WebKit closed the review filter menu on tap without firing the option activation path, so the review list did not change. Fixed with pointer-safe menu item activation plus explicit next-state fetch values.
@@ -45,6 +46,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-30: Added [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] after the filter dropdown's light-dismiss broke under Shadow DOM — the `document`-level click listener's `e.target` retargets to the shadow host, so the menu closed on every click (toggle stuck open) and the dismiss/option click fell through to a photo-strip thumbnail. Fixed with `event.composedPath()` membership + dismiss-click swallow.
 - 2026-05-25: Added [[Bug_Listing_Badge_Missing_After_Render]] after proving via live Playwright repro + A/B test that the high-volume `missing_after_render` Sentry events were a stale-probe-reference false positive, not a broken badge.
 - 2026-05-24: Added [[Bug_Review_Wizard_WebKit_Rating_Advance]] after a physical iPhone 11 Safari test showed the review wizard could wait on the rating step while newer iPhone Safari tests worked.
 - 2026-05-24: Added [[Bug_Filter_Menu_WebKit_Tap_Activation]] after WebKit/iPhone testing reproduced menu-close-without-sort behavior while Android worked.
