@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-05-30
+last_verified: 2026-05-30
 confidence: high
 tags:
   - log
@@ -19,6 +19,14 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-30 - fix | Icon sprite stripped inner <rect> dims (image-icon frame) + Phosphor wizard icons
+- Summary: The review wizard's "Fotoğraf Ekle" icon rendered without its square frame; root cause was the icon sprite globally stripping `width`/`height`. Fixed, and swapped the wizard photo/plus icons to Phosphor to match the badge/filter family. See [[Bug_Icon_Sprite_Inner_Dimension_Strip]].
+- Reason: `icons/star-sprite.js` `svgStringToSymbol` removed the root `<svg>`'s `width`/`height` with global (`/g`) regexes, which also deleted them from the image icon's frame `<rect width height>` → a 0×0 rect renders nothing. Latent since the unified `<symbol>`/`<use>` sprite was introduced; invisible until now because every other widget icon is `<path>`/`<circle>`/`<line>` based.
+- Key source changes: `src/widget/icons/star-sprite.js` (scope the strip to the root `<svg>` opening tag only; `export svgStringToSymbol` for unit testing), `src/widget/reviews-section/review-form-modal/steps/step-photos.js` (Phosphor 256-grid `PHOTO_ICON`/`PLUS_ICON` inline path data, single source of truth in `updateAddButton()`, removed the duplicate initial `innerHTML` render). New unit test `tests/unit/widget-icon-sprite.test.ts`. Rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Public behavior: the add-photo icon now shows its full frame; the icon family is consistent (Phosphor) across badge/filter/wizard. No API/settings/schema/mount changes.
+- Verification: `pnpm build:widget`, `pnpm check:widget-js` (18/18), `pnpm test:unit` (51/51 incl. new sprite regression), `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test:widget-interactions` (5/5 incl. review wizard). Confirmed the rebuilt render chunk carries the Phosphor `image`/`plus` paths and no longer the old Lucide `image` polyline.
+- Prevention: sprite/symbol transforms must scope attribute edits to the root tag, never globally across inner geometry; the unit test pins inner `<rect width height>` survival + byte-identical path-icon output.
 
 ## 2026-05-30 - fix | Filter dropdown light-dismiss under Shadow DOM
 - Summary: Fixed the classic review summary filter dropdown after Shadow DOM isolation — it stayed open on re-tap, and a dismiss/option tap over the photo strip opened a thumbnail's lightbox. See [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].

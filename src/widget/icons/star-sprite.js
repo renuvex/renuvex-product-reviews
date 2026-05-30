@@ -38,16 +38,24 @@ function getAttr(svgString, attr) {
 
 // Convert one trusted SVG string into a <symbol> with the given id. Keeps viewBox
 // + fill/stroke presentation attrs (so the geometry renders identically); drops
-// xmlns/aria-hidden/width/height (the wrapping sprite carries xmlns; the outer
-// <svg> at each use site carries size + aria-hidden).
-function svgStringToSymbol(svgString, symbolId) {
+// xmlns/aria-hidden/width/height FROM THE ROOT <svg> ONLY (the wrapping sprite
+// carries xmlns; the outer <svg> at each use site carries size + aria-hidden).
+//
+// The root-only scope matters: a global width/height strip also deletes the
+// dimensions of inner geometry such as <rect width height> (the photo/image
+// icon's frame), erasing the shape. Path/circle/line icons (stars, filter) carry
+// no inner width/height, so their symbol output is unchanged by this scoping.
+export function svgStringToSymbol(svgString, symbolId) {
   if (typeof svgString !== 'string') return '';
   return svgString
-    .replace(/^\s*<svg\b/, '<symbol id="' + symbolId + '"')
-    .replace(/\s+xmlns="[^"]*"/g, '')
-    .replace(/\s+aria-hidden="[^"]*"/g, '')
-    .replace(/\s+width="[^"]*"/g, '')
-    .replace(/\s+height="[^"]*"/g, '')
+    .replace(/^\s*<svg\b([^>]*)>/, function (_match, rootAttrs) {
+      var cleaned = rootAttrs
+        .replace(/\s+xmlns="[^"]*"/g, '')
+        .replace(/\s+aria-hidden="[^"]*"/g, '')
+        .replace(/\s+width="[^"]*"/g, '')
+        .replace(/\s+height="[^"]*"/g, '');
+      return '<symbol id="' + symbolId + '"' + cleaned + '>';
+    })
     .replace(/<\/svg>\s*$/, '</symbol>');
 }
 

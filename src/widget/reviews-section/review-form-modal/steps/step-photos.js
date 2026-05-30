@@ -11,6 +11,13 @@ import { iconUseSvg } from '../../../icons/star-sprite.js';
 var MAX_PHOTOS = 3;
 var MAX_BYTES = 10 * 1024 * 1024;
 
+// Phosphor Icons (regular weight, 256 grid) — inline path data, matching the
+// badge/filter icon family. No icon package is bundled (MIT: Phosphor Icons).
+// Rendered via iconUseSvg() (sprite + <use>); the frame <rect width height>
+// relies on the root-only attr strip in star-sprite.js svgStringToSymbol().
+var PHOTO_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="96" cy="96" r="16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M56.69,216,166.34,106.34a8,8,0,0,1,11.32,0L216,144.69" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>';
+var PLUS_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><line x1="40" y1="128" x2="216" y2="128" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="128" y1="40" x2="128" y2="216" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>';
+
 export function createStepPhotos(state, opts) {
   opts = opts || {};
   var isExiting = false; // Geçiş başladığında UI güncellemesini durdurmak için bayrak
@@ -39,9 +46,9 @@ export function createStepPhotos(state, opts) {
   uploadLabel.type = 'button';
   uploadLabel.className = 'renuvex-pr-fwizard-photo-add';
   uploadLabel.setAttribute('aria-label', 'Fotoğraf ekle');
-  uploadLabel.innerHTML =
-    iconUseSvg('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>') +
-    '<span>Fotoğraf Ekle</span>';
+  // Button content (icon + label, and the compact "+" swap) is owned by
+  // updateAddButton(), which syncUI() invokes synchronously below before the
+  // element is shown — single source of truth, so no inline markup here.
 
   var fileInput = document.createElement('input');
   fileInput.type = 'file';
@@ -152,9 +159,6 @@ export function createStepPhotos(state, opts) {
       }
     };
   }
-
-  var PHOTO_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
-  var PLUS_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
 
   function updateAddButton() {
     var completedCount = (state.get().images || []).length;
