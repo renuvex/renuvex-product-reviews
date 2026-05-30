@@ -20,6 +20,11 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - fix | Overlays focus the dialog on open (first Tab → star 1; no lightbox arrow ring)
+- Follow-up to [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]]. Two user-reported nits: (1) the wizard's first Tab landed on star 2 (focus was auto-placed on star 1 at open); (2) opening a photo from the strip lit a focus ring on a lightbox nav arrow. Both overlays now focus the **dialog container** (`role=dialog`) on open instead of the first control; the wizard close button is appended last so the first Tab lands on star 1.
+- Key source changes: `review-form-modal/modal-shell.js` (open focuses `overlay`; close button appended after content; removed a now-dead `focusFirstControl` export that referenced the renamed open-focus function — it threw a ReferenceError that briefly stopped the wizard opening), `reviews-section/review-modal.js` (lightbox focuses `modalWrap`). Regression test updated (first Tab → 1st star). Rebuilt `public/*`.
+- Verification: Playwright (wizard open→dialog, first Tab→star1, ←/→ roam, Esc→trigger; lightbox open→`modalWrap` role=dialog, not a nav arrow), `pnpm test:widget-interactions` (7/7), `pnpm test:widget-runtime` (8/8), `pnpm test:unit` (54/54), `pnpm exec tsc --noEmit`, `pnpm lint`.
+
 ## 2026-05-30 - fix | Wizard stars Tab-navigable + clean close focus (a11y revision)
 - Revision of the same-day [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]] after user testing. Two changes: (1) the strict single-Tab-stop radiogroup (roving `tabindex`) was reverted — all 5 stars are Tab stops again so **Tab moves between them**, with ←/→/↑/↓ as an additional method; (2) the ESC "momentary focus" was fixed — `modal-shell.js close()` now moves focus out **immediately** (keyboard → trigger, pointer → blur) instead of after the 200 ms fade, so no focus ring lingers on a star while the modal closes.
 - Key source changes: `steps/step-rating.js` (removed roving `updateRoving`; `selectRating` no longer manages tabindex; all stars stay Tab-focusable), `review-form-modal/modal-shell.js` (immediate focus-out in `close()`). Regression test in `widget-interaction-smoke.spec.ts` updated (Tab now → next star). Rebuilt `public/*`.

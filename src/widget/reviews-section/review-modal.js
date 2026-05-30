@@ -21,7 +21,7 @@ import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot, unregisterSpriteRoot, iconUseNode } from '../icons/star-sprite.js';
 import { UI_CLOSE, UI_CARET_LEFT, UI_CARET_RIGHT } from '../icons/index.js';
 import { lockBodyScroll, restoreBodyScroll } from '../core/body-scroll-lock.js';
-import { getReturnFocusElement, restoreFocus, focusFirst, trapFocus } from '../shared/focus-trap.js';
+import { getReturnFocusElement, restoreFocus, trapFocus } from '../shared/focus-trap.js';
 import { pushModalHistoryEntry, restoreModalHistoryEntry } from '../core/modal-history.js';
 
 function getValidImages(review) {
@@ -441,5 +441,8 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   shadow.root.appendChild(overlay);
   // Mirror the icon sprite so star/icon <use> refs resolve inside this shadow.
   registerSpriteRoot(shadow.root);
-  focusFirst(overlay);
+  // Focus the dialog container (role=dialog) itself, NOT the first control, so opening
+  // via a photo-strip thumbnail (or any click) does not show a focus ring on a nav arrow.
+  // Tab then navigates the lightbox controls.
+  restoreFocus(modalWrap);
 }

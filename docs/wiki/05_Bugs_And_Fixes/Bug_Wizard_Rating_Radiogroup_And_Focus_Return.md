@@ -50,8 +50,12 @@ star), and pressing **Esc** did not return focus to the "Yorum Yap" trigger — 
 ## Fix (final — see Follow-up for the revision)
 - **`step-rating.js` — stars are keyboard-navigable both ways.** All 5 stars stay in the Tab
   order (Tab moves between them) AND `←/→/↑/↓` + `Home/End` move + select; `Enter/Space`/tap
-  select **and** advance. Focus enters on the 1st star on open. (`selectRating` = state + visual;
-  `activateRating` = select + advance.)
+  select **and** advance. (`selectRating` = state + visual; `activateRating` = select + advance.)
+- **Open focuses the dialog, not a control.** `modal-shell.js open()` focuses the overlay
+  (`role="dialog"`) and the close button is appended LAST (end of tab order), so no control shows
+  a ring on open and the **first Tab lands on star 1** (not star 2). The lightbox
+  (`review-modal.js`) likewise focuses its `modalWrap` dialog on open, so opening a photo from the
+  strip no longer lights a focus ring on a nav arrow.
 - **`focus-trap.js` — `getReturnFocusElement()` is now shadow-aware.** A `deepActiveElement()`
   walk drills through `shadowRoot.activeElement` chains to capture the real focused control, so
   the trigger is restored on close. Benefits the lightbox too.
@@ -69,19 +73,28 @@ roving was removed — all stars are Tab stops again, with arrow keys as an addi
 close path was also refined to move focus out immediately (above) so the fade-out no longer shows
 a momentary focus ring.
 
+A second pass: the user noted the first Tab landed on star **2** (focus was auto-placed on star 1
+at open) and that opening a photo lit a ring on a lightbox nav arrow. Fix: both overlays now focus
+the **dialog container** on open instead of the first control, and the wizard close button moved to
+the end of the tab order — so the first Tab lands on star 1 and the lightbox shows no arrow ring.
+(Removing the renamed `focusFirstWizardControl` had left a dead `focusFirstControl` export
+referencing it → a ReferenceError that briefly stopped the wizard opening; the dead export was
+removed.)
+
 ## Files Changed
 - `src/widget/reviews-section/review-form-modal/steps/step-rating.js`
-- `src/widget/reviews-section/review-form-modal/modal-shell.js`
+- `src/widget/reviews-section/review-form-modal/modal-shell.js` (focus dialog on open; close
+  appended last; immediate focus-out on close; removed the dead `focusFirstControl` export)
+- `src/widget/reviews-section/review-modal.js` (lightbox focuses its dialog on open)
 - `src/widget/shared/focus-trap.js`
-- `tests/widget-interaction-smoke.spec.ts` (regression: keyboard open → focus on 1st star;
-  `ArrowRight` → 2nd star; `Tab` → 3rd star (stars navigable both ways); `Esc` returns focus to
-  `.renuvex-pr-write-btn`)
+- `tests/widget-interaction-smoke.spec.ts` (regression: keyboard open → first `Tab` → 1st star;
+  `ArrowRight` → 2nd star; `Tab` → 3rd star; `Esc` returns focus to `.renuvex-pr-write-btn`)
 - Rebuilt `public/widget.js` + `public/widget-runtime/*`
 
 ## Verification
-- Playwright + real Chromium: `open → "1 yıldız"`, arrows roam (2↔3), `Tab → "2/3 yıldız"`
-  (Tab also moves between stars), `Esc → renuvex-pr-write-btn` focused **immediately** (no
-  lingering star focus ring during the fade; pointer-opened blurs to body).
+- Playwright + real Chromium: wizard `open → dialog focused`, first `Tab → "1 yıldız"`, `←/→`
+  roam (2↔3), `Esc → renuvex-pr-write-btn` **immediately** (no lingering ring; pointer blurs to
+  body). Lightbox `open → modalWrap (role=dialog)` focused, not a nav arrow.
 - `pnpm test:widget-interactions` (7/7 incl. the a11y regression), `pnpm test:widget-runtime`
   (8/8), `pnpm test:unit` (54/54), `pnpm check:widget-js` (18/18), `pnpm exec tsc --noEmit`, `pnpm lint`.
 

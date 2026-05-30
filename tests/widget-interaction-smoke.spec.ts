@@ -231,10 +231,14 @@ test('rating stars: Tab + arrow navigation, and Esc returns focus to the trigger
     return el ? (el.getAttribute('aria-label') || el.className) : null;
   });
 
+  // On open the dialog itself holds focus (no star pre-focused), so the FIRST Tab lands on
+  // star 1 — not star 2.
+  await page.keyboard.press('Tab');
   await expect.poll(wizardActiveLabel).toBe('1 yıldız');
+  // Arrow keys move within the star group.
   await page.keyboard.press('ArrowRight');
   await expect.poll(wizardActiveLabel).toBe('2 yıldız');
-  // Tab also moves between stars (each star is in the Tab order).
+  // Tab continues to the next star.
   await page.keyboard.press('Tab');
   await expect.poll(wizardActiveLabel).toBe('3 yıldız');
 

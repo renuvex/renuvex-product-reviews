@@ -12,7 +12,7 @@ import { UI_CLOSE } from '../../icons/index.js';
 import { createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../../core/shadow.js';
 import { BASE_RESET_CSS } from '../../shared/base-reset.js';
 import { lockBodyScroll, restoreBodyScroll } from '../../core/body-scroll-lock.js';
-import { getReturnFocusElement, restoreFocus, focusFirst, trapFocus } from '../../shared/focus-trap.js';
+import { getReturnFocusElement, restoreFocus, trapFocus } from '../../shared/focus-trap.js';
 import { FWIZARD_CSS } from './styles.js';
 
 export function createWizardShell(opts) {
@@ -33,6 +33,13 @@ export function createWizardShell(opts) {
   modal.className = 'renuvex-pr-fwizard';
   overlay.appendChild(modal);
 
+  var content = document.createElement('div');
+  content.className = 'renuvex-pr-fwizard-content';
+  modal.appendChild(content);
+
+  // Close button is appended LAST so it sits at the END of the tab order — the first Tab
+  // into the dialog lands on the first step control (e.g. the 1st rating star), not the X.
+  // It stays visually top-right (position:absolute), so DOM order does not affect layout.
   var closeBtn = document.createElement('button');
   closeBtn.className = 'renuvex-pr-fwizard-close';
   closeBtn.type = 'button';
@@ -40,10 +47,6 @@ export function createWizardShell(opts) {
   var closeIcon = iconUseNode(UI_CLOSE);
   if (closeIcon) closeBtn.appendChild(closeIcon);
   modal.appendChild(closeBtn);
-
-  var content = document.createElement('div');
-  content.className = 'renuvex-pr-fwizard-content';
-  modal.appendChild(content);
 
   // ─── State & cleanup ──────────────────────────────────────────────
   var isClosed = false;
@@ -54,11 +57,11 @@ export function createWizardShell(opts) {
   // olarak bırakıyoruz — yoksa mobilde trigger butonda sticky focus kalır.
   var openedByKeyboard = false;
 
-  // Wizard-specific focus entry: prefer the first STEP control (inside `content`)
-  // over the close button, falling back to the overlay. Delegates to the shared
-  // focus-trap module so the toolkit is not duplicated.
-  function focusFirstWizardControl() {
-    focusFirst(content, overlay);
+  // On open, focus the dialog container (role=dialog) itself — NOT a step control — so no
+  // control shows a focus ring on open and the first Tab lands on the first step control
+  // (e.g. the 1st rating star); the close button is last in the tab order (appended last).
+  function focusDialog() {
+    restoreFocus(overlay);
   }
 
   function trapWizardFocus(e) {
@@ -136,7 +139,7 @@ export function createWizardShell(opts) {
     // Fade-in için bir tick bekle (DOM ekleme sonrası class transition tetiklensin)
     requestAnimationFrame(function () {
       overlay.classList.add('renuvex-pr-fwizard-open');
-      focusFirstWizardControl();
+      focusDialog();
     });
   }
 
@@ -185,7 +188,6 @@ export function createWizardShell(opts) {
     setStepAttr: function (stepNum) {
       modal.setAttribute('data-step', String(stepNum));
     },
-    focusFirstControl: focusFirstWizardControl,
     showToast: showToast,
   };
 }
