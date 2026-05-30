@@ -41,7 +41,7 @@ export var LIST_CSS = `
     width:100%;max-width:var(--renuvex-pr-list-photo-w,120px);aspect-ratio:3/4;object-fit:cover;
     border-radius:var(--renuvex-pr-radius,6px);
     border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
-    cursor:zoom-in;
+    cursor:pointer;
   }
   /* Desktop: sadece ilk foto görünür (sağ kolonda tek delil görseli). DOM'da
      tüm fotolar var, modal için kullanılır. Mobile'da kuralın aktif olmaması

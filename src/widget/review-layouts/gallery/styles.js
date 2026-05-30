@@ -96,7 +96,7 @@ export var GALLERY_CSS = `
     user-select:none;-webkit-user-select:none;
   }
   .renuvex-pr-review-gallery-media{
-    cursor:zoom-in;
+    cursor:pointer;
   }
   /* Reply full-width: foto+metin altında her iki kolona yayılır */
   .renuvex-pr-review-gallery-reply{
