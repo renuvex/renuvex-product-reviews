@@ -20,6 +20,10 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - fix | Suppress dialog focus-ring on reopen; drop photo-strip arrow shadow
+- Two small widget polish items reported by the user. (1) After focusing the dialog container on open (a11y), the browser painted a `:focus-visible` outline around the whole lightbox/wizard frame on each (re)open once the keyboard had been used — added `:focus{outline:none}` on `.renuvex-pr-modal-wrap` (lightbox) and `.renuvex-pr-fwizard-overlay` (wizard), which are programmatic focus targets, not tabbed-to controls. (2) Removed the `box-shadow` behind the desktop photo-strip arrows per request; the hover scale animation (transform + transition) stays.
+- Files: `reviews-section/styles.js` (modal-wrap `:focus` outline:none; photo-strip-arrow `box-shadow` removed from base + hover), `review-form-modal/styles.js` (overlay `:focus` outline:none). Rebuilt `public/*`. Verified with Playwright screenshots (reopen-after-Tab shows no frame ring; arrows render flat) + `pnpm test:widget-interactions` (7/7), `pnpm test:widget-runtime` (8/8), `pnpm check:widget-js` (18/18), `pnpm exec tsc --noEmit`, `pnpm lint`.
+
 ## 2026-05-30 - fix | Overlays focus the dialog on open (first Tab → star 1; no lightbox arrow ring)
 - Follow-up to [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]]. Two user-reported nits: (1) the wizard's first Tab landed on star 2 (focus was auto-placed on star 1 at open); (2) opening a photo from the strip lit a focus ring on a lightbox nav arrow. Both overlays now focus the **dialog container** (`role=dialog`) on open instead of the first control; the wizard close button is appended last so the first Tab lands on star 1.
 - Key source changes: `review-form-modal/modal-shell.js` (open focuses `overlay`; close button appended after content; removed a now-dead `focusFirstControl` export that referenced the renamed open-focus function — it threw a ReferenceError that briefly stopped the wizard opening), `reviews-section/review-modal.js` (lightbox focuses `modalWrap`). Regression test updated (first Tab → 1st star). Rebuilt `public/*`.

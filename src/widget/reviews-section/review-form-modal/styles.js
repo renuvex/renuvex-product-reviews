@@ -26,6 +26,8 @@ export var FWIZARD_CSS = `
     opacity:0;
     transition:opacity 0.2s ease;
   }
+  /* Overlay is the programmatic open-focus target (role=dialog); no visible ring needed. */
+  .renuvex-pr-fwizard-overlay:focus,.renuvex-pr-fwizard-overlay:focus-visible{outline:none;}
   .renuvex-pr-fwizard-overlay.renuvex-pr-fwizard-open{
     opacity:1;
   }

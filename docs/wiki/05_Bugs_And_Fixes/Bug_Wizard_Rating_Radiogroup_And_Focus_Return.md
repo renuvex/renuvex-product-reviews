@@ -55,7 +55,9 @@ star), and pressing **Esc** did not return focus to the "Yorum Yap" trigger — 
   (`role="dialog"`) and the close button is appended LAST (end of tab order), so no control shows
   a ring on open and the **first Tab lands on star 1** (not star 2). The lightbox
   (`review-modal.js`) likewise focuses its `modalWrap` dialog on open, so opening a photo from the
-  strip no longer lights a focus ring on a nav arrow.
+  strip no longer lights a focus ring on a nav arrow. Both dialog containers also carry
+  `:focus{outline:none}` — otherwise, once the user has used the keyboard, the browser paints a
+  `:focus-visible` ring around the whole dialog on each (re)open of this programmatic focus target.
 - **`focus-trap.js` — `getReturnFocusElement()` is now shadow-aware.** A `deepActiveElement()`
   walk drills through `shadowRoot.activeElement` chains to capture the real focused control, so
   the trigger is restored on close. Benefits the lightbox too.

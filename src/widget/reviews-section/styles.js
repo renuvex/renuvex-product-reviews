@@ -185,8 +185,8 @@ ${PARTIAL_STARS_CSS}
      (satır 266 ve 268). Bu ölü duplicate kurallar temizlendi.
      .renuvex-pr-photo-thumb hiçbir DOM tarafından kullanılmıyordu — silindi. */
 
-  .renuvex-pr-photo-strip-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:var(--renuvex-pr-photo-arrow-bg,#fff);border:1px solid var(--renuvex-pr-photo-arrow-border,rgba(0,0,0,0.12));border-radius:var(--renuvex-pr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--renuvex-pr-photo-arrow-text,#111111);box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s ease;}
-  @media(hover:hover){.renuvex-pr-photo-strip-arrow:hover{background:var(--renuvex-pr-photo-arrow-bg,#fff);transform:translateY(-50%) scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,0.12);}}
+  .renuvex-pr-photo-strip-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:var(--renuvex-pr-photo-arrow-bg,#fff);border:1px solid var(--renuvex-pr-photo-arrow-border,rgba(0,0,0,0.12));border-radius:var(--renuvex-pr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--renuvex-pr-photo-arrow-text,#111111);transition:all 0.2s ease;}
+  @media(hover:hover){.renuvex-pr-photo-strip-arrow:hover{background:var(--renuvex-pr-photo-arrow-bg,#fff);transform:translateY(-50%) scale(1.08);}}
   .renuvex-pr-photo-strip-arrow-prev{left:-16px;}
   .renuvex-pr-photo-strip-arrow-next{right:-16px;}
   .renuvex-pr-photo-strip-arrow svg{width:18px;height:18px;}
@@ -244,6 +244,10 @@ ${PARTIAL_STARS_CSS}
      kaynağı yine üstteki sözleşme yorumudur. */
   .renuvex-pr-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.50);overscroll-behavior:contain;--renuvex-pr-gap-tight:4px;--renuvex-pr-gap-normal:8px;--renuvex-pr-gap-loose:16px;--renuvex-pr-gap-section:24px;}
   .renuvex-pr-modal-wrap{position:relative;width:100%;max-width:813px;}
+  /* The dialog container is focused programmatically on open (for screen readers); it is not a
+     control the user tabs to, so suppress the focus ring that would otherwise outline the whole
+     modal on every reopen after any keyboard use. */
+  .renuvex-pr-modal-wrap:focus,.renuvex-pr-modal-wrap:focus-visible{outline:none;}
   .renuvex-pr-photo-section{margin:24px 0 32px;padding:0 var(--renuvex-pr-pad-review-mobile);display:block;}
   .renuvex-pr-photo-strip-container{position:relative;}
   /* Desktop: ok'lar icin negatif margin. Mobile'da ok yok, margin gerekmez. */
