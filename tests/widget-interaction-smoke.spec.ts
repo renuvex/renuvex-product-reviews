@@ -200,11 +200,11 @@ test('photo-strip + lightbox icons instance their sprite symbol (non-empty geome
   expect(widgetErrors(log)).toEqual([]);
 });
 
-// Accessibility regression: the rating step is a WAI-ARIA radiogroup. The 5 stars must be
-// a SINGLE Tab stop (arrow keys roam the group), and closing must return focus to the
-// "Yorum Yap" trigger. Previously every star was its own Tab stop and Esc lost focus because
-// getReturnFocusElement read the shadow HOST (not the real trigger inside the review shadow).
-test('rating radiogroup: single Tab stop + arrow nav, and Esc returns focus to the trigger', async ({ page }) => {
+// Accessibility regression: the rating stars must be keyboard-navigable — BOTH Tab and the
+// arrow keys move between them — and closing must return focus to the "Yorum Yap" trigger.
+// Esc previously lost focus because getReturnFocusElement read the shadow HOST, not the real
+// trigger inside the review shadow.
+test('rating stars: Tab + arrow navigation, and Esc returns focus to the trigger', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
     reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
@@ -234,9 +234,9 @@ test('rating radiogroup: single Tab stop + arrow nav, and Esc returns focus to t
   await expect.poll(wizardActiveLabel).toBe('1 yıldız');
   await page.keyboard.press('ArrowRight');
   await expect.poll(wizardActiveLabel).toBe('2 yıldız');
-  // Tab must leave the star group as one stop (not advance to "3 yıldız").
+  // Tab also moves between stars (each star is in the Tab order).
   await page.keyboard.press('Tab');
-  expect(await wizardActiveLabel()).not.toMatch(/yıldız/);
+  await expect.poll(wizardActiveLabel).toBe('3 yıldız');
 
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);

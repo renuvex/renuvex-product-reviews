@@ -82,7 +82,7 @@ source_files:
 - 2026-05-29: Product `AggregateRating` JSON-LD moved out of `rating-badge` into an independent `structured-data` surface. `Ürün Yorumları` now has `SEO` → `Google Rich Snippets` (`richSnippetsEnabled`, default `true`); badge disabled no longer disables JSON-LD when the explicit review section is visible.
 - 2026-05-30: Overlay shared-surface foundation ([[ADR_0025_Overlay_Shared_Surface_Foundation]]). The two body-level overlays (lightbox, wizard) share `core/body-scroll-lock.js` (ref-counted), `shared/focus-trap.js`, `core/modal-history.js`; tap-highlight reset in `HOST_RESET_CSS`. Fixed the wizard's weak `body`-only scroll lock; a `widget-surface-contracts.test.ts` invariant prevents recurrence.
 - 2026-05-30: Widget icons fully on Phosphor (`icons/ui-icons.js`); no off-family widget glyph remains. `iconUseNode` must HTML-parse (not `image/svg+xml`+`importNode`) or `<use>` icons paint blank in shadow trees ([[Bug_Icon_Use_Node_Blank_Glyphs]]).
-- 2026-05-30: Wizard a11y — rating `radiogroup` is one Tab stop with ←/→ roving; `shared/focus-trap.js` `getReturnFocusElement` is now shadow-aware (drills shadow roots) and the trap excludes `tabindex<0` ([[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]]).
+- 2026-05-30: Wizard a11y — rating stars navigable by Tab AND ←/→; `close()` moves focus out immediately (keyboard→trigger, pointer→blur) so the fade shows no lingering ring; `getReturnFocusElement` is shadow-aware, trap excludes `tabindex<0` ([[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]]).
 
 ## Current Risks / Open Questions
 - Keep doing live post-deploy smoke on the dev storefront after runtime-affecting widget changes; deployed measurement scripts are evidence, not a full merchant-flow replacement.

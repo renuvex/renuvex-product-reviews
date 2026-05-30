@@ -54,17 +54,11 @@ export function createStepRating(state, opts) {
     });
   }
 
-  // Roving tabindex (WAI-ARIA radiogroup): exactly ONE star sits in the Tab order;
-  // ←/→/↑/↓ + Home/End move between stars, Enter/Space (or tap) selects + advances.
-  // Keeps the 5 stars as a single Tab stop instead of five separate ones.
-  function updateRoving(idx) {
-    stars.forEach(function (btn, i) { btn.tabIndex = i === idx ? 0 : -1; });
-  }
-
+  // All stars stay in the Tab order so Tab moves between them; ←/→/↑/↓ + Home/End also
+  // move + select, and Enter/Space (or tap) selects + advances.
   function selectRating(value) {
     state.set({ rating: value });
     applyVisual(value);
-    updateRoving(value - 1);
   }
 
   function focusStar(value) {
@@ -139,8 +133,6 @@ export function createStepRating(state, opts) {
 
   // İlk render: state'te zaten rating varsa onu göster (geri-ileri gezintiyle gelirse)
   applyVisual(state.get().rating);
-  // Roving tabindex başlangıcı: seçili yıldız (yoksa 1.) tek Tab durağı olsun.
-  updateRoving(state.get().rating > 0 ? state.get().rating - 1 : 0);
 
   // Preview modunda ikon değişikliğini modal açıkken yansıt
   var lastPreviewSettings = null;

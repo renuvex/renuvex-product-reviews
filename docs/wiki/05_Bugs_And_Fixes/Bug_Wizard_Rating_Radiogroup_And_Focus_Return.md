@@ -47,36 +47,46 @@ star), and pressing **Esc** did not return focus to the "Yorum Yap" trigger — 
    (the host is not focusable), so on close focus fell to `<body>` instead of returning to the
    "Yorum Yap" button. (Same flaw affected the lightbox, whose trigger is also shadow-hosted.)
 
-## Fix
-- **`step-rating.js` — roving tabindex.** Exactly one star is in the Tab order (`tabindex=0`,
-  the selected one or the 1st); the rest are `tabindex=-1`. `←/→/↑/↓` + `Home/End` move focus and
-  select (no auto-advance); `Enter/Space` and tap select **and** advance (unchanged). Focus still
-  enters on the 1st star on open (product choice). Split `selectRating()` (state + visual + roving)
-  from `activateRating()` (select + advance).
+## Fix (final — see Follow-up for the revision)
+- **`step-rating.js` — stars are keyboard-navigable both ways.** All 5 stars stay in the Tab
+  order (Tab moves between them) AND `←/→/↑/↓` + `Home/End` move + select; `Enter/Space`/tap
+  select **and** advance. Focus enters on the 1st star on open. (`selectRating` = state + visual;
+  `activateRating` = select + advance.)
 - **`focus-trap.js` — `getReturnFocusElement()` is now shadow-aware.** A `deepActiveElement()`
   walk drills through `shadowRoot.activeElement` chains to capture the real focused control, so
   the trigger is restored on close. Benefits the lightbox too.
-- **`focus-trap.js` — `isVisibleFocusable()` excludes `tabindex < 0`.** Without this the trap's
-  `getFocusableElements` still matched the roving-inactive `tabindex="-1"` stars (via
-  `button:not([disabled])`), corrupting first/last math so Tab could escape the overlay. Now the
-  trap counts only genuinely tabbable controls.
+- **`modal-shell.js` — `close()` moves focus out immediately**, not after the 200 ms fade: a
+  keyboard-opened wizard restores focus to the trigger right away; a pointer-opened one blurs the
+  active control. This kills the lingering focus ring on the rating star during the fade-out
+  ("anlık odak").
+- **`focus-trap.js` — `isVisibleFocusable()` excludes `tabindex < 0`** (general correctness: a
+  control not in the Tab order must not count toward the trap's first/last).
+
+## Follow-up (2026-05-30, revised after user testing)
+A first pass made the radiogroup a **strict single Tab stop** (roving `tabindex`, arrow-only
+between stars). On testing, the user preferred **Tab to also move between the stars**, so the
+roving was removed — all stars are Tab stops again, with arrow keys as an additional method. The
+close path was also refined to move focus out immediately (above) so the fade-out no longer shows
+a momentary focus ring.
 
 ## Files Changed
 - `src/widget/reviews-section/review-form-modal/steps/step-rating.js`
+- `src/widget/reviews-section/review-form-modal/modal-shell.js`
 - `src/widget/shared/focus-trap.js`
-- `tests/widget-interaction-smoke.spec.ts` (regression: open via keyboard → focus on 1st star;
-  `ArrowRight` → 2nd star; `Tab` leaves the group as one stop; `Esc` returns focus to
+- `tests/widget-interaction-smoke.spec.ts` (regression: keyboard open → focus on 1st star;
+  `ArrowRight` → 2nd star; `Tab` → 3rd star (stars navigable both ways); `Esc` returns focus to
   `.renuvex-pr-write-btn`)
 - Rebuilt `public/widget.js` + `public/widget-runtime/*`
 
 ## Verification
-- Playwright + real Chromium: `open → "1 yıldız"`, arrows roam (2↔3), `Tab → "Kapat"` (single
-  stop, not "3 yıldız"), `Esc → renuvex-pr-write-btn` focused.
-- `pnpm test:widget-interactions` (7/7 incl. the new a11y regression), `pnpm test:widget-runtime`
+- Playwright + real Chromium: `open → "1 yıldız"`, arrows roam (2↔3), `Tab → "2/3 yıldız"`
+  (Tab also moves between stars), `Esc → renuvex-pr-write-btn` focused **immediately** (no
+  lingering star focus ring during the fade; pointer-opened blurs to body).
+- `pnpm test:widget-interactions` (7/7 incl. the a11y regression), `pnpm test:widget-runtime`
   (8/8), `pnpm test:unit` (54/54), `pnpm check:widget-js` (18/18), `pnpm exec tsc --noEmit`, `pnpm lint`.
 
 ## Prevention
-- Roving tabindex is the contract for any future radio/option group in the widget.
 - Overlay focus return must use a shadow-aware deep-active-element lookup (triggers live in
-  shadow roots). The focus trap must exclude `tabindex < 0` controls.
-- The regression test pins single-Tab-stop + arrow nav + Esc focus return.
+  shadow roots); move focus out on close **before** the fade so no ring lingers. The focus trap
+  must exclude `tabindex < 0` controls.
+- The regression test pins Tab + arrow star navigation and Esc focus return.

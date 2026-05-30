@@ -71,6 +71,18 @@ export function createWizardShell(opts) {
     document.removeEventListener('keydown', onKeyDown);
     overlay.removeEventListener('click', onOverlayClick);
     closeBtn.removeEventListener('click', close);
+    // Move focus out NOW (not after the fade) so the closing modal does not show a
+    // lingering focus ring on the active control during the 200ms fade-out. Keyboard
+    // opens return focus to the trigger; pointer opens just blur the active control
+    // (no sticky focus on the trigger for mouse/touch).
+    if (openedByKeyboard) {
+      restoreFocus(returnFocusEl);
+    } else {
+      var activeInShadow = shadow && shadow.root ? shadow.root.activeElement : null;
+      if (activeInShadow && typeof activeInShadow.blur === 'function') {
+        try { activeInShadow.blur(); } catch (_) {}
+      }
+    }
     // Fade-out animasyonu
     overlay.classList.remove('renuvex-pr-fwizard-open');
     setTimeout(function () {
@@ -83,8 +95,6 @@ export function createWizardShell(opts) {
         overlay.parentNode.removeChild(overlay);
       }
       restoreBodyScroll();
-      // Sadece klavye kaynaklı açılışlarda odağı iade et.
-      if (openedByKeyboard) restoreFocus(returnFocusEl);
       try { onClose(); } catch (e) { /* sessiz */ }
     }, 200); // CSS transition süresiyle eşleşmeli
   }

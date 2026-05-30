@@ -20,6 +20,11 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - fix | Wizard stars Tab-navigable + clean close focus (a11y revision)
+- Revision of the same-day [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]] after user testing. Two changes: (1) the strict single-Tab-stop radiogroup (roving `tabindex`) was reverted — all 5 stars are Tab stops again so **Tab moves between them**, with ←/→/↑/↓ as an additional method; (2) the ESC "momentary focus" was fixed — `modal-shell.js close()` now moves focus out **immediately** (keyboard → trigger, pointer → blur) instead of after the 200 ms fade, so no focus ring lingers on a star while the modal closes.
+- Key source changes: `steps/step-rating.js` (removed roving `updateRoving`; `selectRating` no longer manages tabindex; all stars stay Tab-focusable), `review-form-modal/modal-shell.js` (immediate focus-out in `close()`). Regression test in `widget-interaction-smoke.spec.ts` updated (Tab now → next star). Rebuilt `public/*`.
+- Verification: Playwright (open→1st star, ←/→ roam, Tab→next star, Esc→trigger immediately / pointer→blur), `pnpm test:widget-interactions` (7/7), `pnpm test:widget-runtime` (8/8), `pnpm test:unit` (54/54), `pnpm exec tsc --noEmit`, `pnpm lint`.
+
 ## 2026-05-30 - fix | Wizard rating radiogroup (roving tabindex) + shadow-aware focus return
 - Summary: User a11y report — in the wizard, Tab stepped through all 5 rating stars (one stop each) and Esc didn't return focus to the "Yorum Yap" trigger. Made the star `radiogroup` a single Tab stop with arrow-key roving, and fixed focus-return for shadow-hosted triggers. See [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]].
 - Reason: the `role=radio` stars all had default `tabindex=0` (WAI-ARIA radiogroup should be one Tab stop + ←/→ roving); and `getReturnFocusElement()` read `document.activeElement`, which is the shadow HOST for a trigger inside a shadow root — so `restoreFocus(host)` no-op'd and focus fell to `<body>` on close.
