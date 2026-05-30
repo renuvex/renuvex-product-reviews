@@ -20,6 +20,14 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - fix | Wizard rating radiogroup (roving tabindex) + shadow-aware focus return
+- Summary: User a11y report — in the wizard, Tab stepped through all 5 rating stars (one stop each) and Esc didn't return focus to the "Yorum Yap" trigger. Made the star `radiogroup` a single Tab stop with arrow-key roving, and fixed focus-return for shadow-hosted triggers. See [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]].
+- Reason: the `role=radio` stars all had default `tabindex=0` (WAI-ARIA radiogroup should be one Tab stop + ←/→ roving); and `getReturnFocusElement()` read `document.activeElement`, which is the shadow HOST for a trigger inside a shadow root — so `restoreFocus(host)` no-op'd and focus fell to `<body>` on close.
+- Key source changes: `steps/step-rating.js` (roving tabindex; ←/→/↑/↓ + Home/End move + select without advancing; Enter/Space/tap select + advance; focus still enters on the 1st star). `shared/focus-trap.js` (`getReturnFocusElement` drills shadow roots via `deepActiveElement`; `isVisibleFocusable` excludes `tabindex<0` so roving-inactive radios don't corrupt the trap's first/last and let Tab escape). `focus-trap.js` is shared, so the lightbox's focus return is hardened too. Rebuilt `public/*`.
+- Public behavior: keyboard users Tab once into the star group then use arrows; Enter/tap selects + advances; closing returns focus to the trigger. Pointer/touch behavior unchanged.
+- Verification: Playwright (open→1st star, arrows roam, Tab=single stop, Esc→trigger), `pnpm test:widget-interactions` (7/7 incl. new a11y regression), `pnpm test:widget-runtime` (8/8), `pnpm test:unit` (54/54), `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, `pnpm lint`.
+- Prevention: regression test pins the radiogroup + focus-return contract; roving tabindex is the pattern for future option groups; overlay focus return must be shadow-aware.
+
 ## 2026-05-30 - fix | Show wizard back-arrow caret on mobile
 - The review-wizard "Geri" button's caret was missing on the mobile/narrow footer layout — hidden by a pre-existing `.renuvex-pr-fwizard-footer-back > svg{display:none}` rule (old "text-only Geri on mobile" design). Desktop already showed it. For icon consistency across viewports after the Phosphor unification, removed that rule so "‹ Geri" shows everywhere.
 - CSS-only in `src/widget/reviews-section/review-form-modal/styles.js`; rebuilt `public/*`. Verified on a 390px viewport (back-arrow `svg` display:block, `getBBox()` > 0, visible "‹ Geri") plus `pnpm test:widget-interactions` (6/6), `pnpm test:widget-runtime` (8/8), `pnpm lint`.

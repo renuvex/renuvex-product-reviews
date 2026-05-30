@@ -199,3 +199,55 @@ test('photo-strip + lightbox icons instance their sprite symbol (non-empty geome
 
   expect(widgetErrors(log)).toEqual([]);
 });
+
+// Accessibility regression: the rating step is a WAI-ARIA radiogroup. The 5 stars must be
+// a SINGLE Tab stop (arrow keys roam the group), and closing must return focus to the
+// "Yorum Yap" trigger. Previously every star was its own Tab stop and Esc lost focus because
+// getReturnFocusElement read the shadow HOST (not the real trigger inside the review shadow).
+test('rating radiogroup: single Tab stop + arrow nav, and Esc returns focus to the trigger', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  // Open via keyboard so the focus-return path is exercised.
+  await page.evaluate(() => {
+    const a = document.querySelector('[data-renuvex-widget="reviews"]');
+    const c = a?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (c as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    (root?.querySelector('.renuvex-pr-write-btn') as HTMLElement | null)?.focus();
+  });
+  await page.keyboard.press('Enter');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+
+  const wizardActiveLabel = () => page.evaluate(() => {
+    const host = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .find((h) => (h as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot?.querySelector('.renuvex-pr-fwizard-overlay'));
+    const root = host ? (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot : null;
+    const el = root?.activeElement as HTMLElement | null;
+    return el ? (el.getAttribute('aria-label') || el.className) : null;
+  });
+
+  await expect.poll(wizardActiveLabel).toBe('1 yıldız');
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(wizardActiveLabel).toBe('2 yıldız');
+  // Tab must leave the star group as one stop (not advance to "3 yıldız").
+  await page.keyboard.press('Tab');
+  expect(await wizardActiveLabel()).not.toMatch(/yıldız/);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
+  const restored = await page.evaluate(() => {
+    const a = document.querySelector('[data-renuvex-widget="reviews"]');
+    const c = a?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (c as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    const el = root?.activeElement as HTMLElement | null;
+    return el ? el.className : null;
+  });
+  expect(restored).toContain('renuvex-pr-write-btn');
+
+  expect(widgetErrors(log)).toEqual([]);
+});

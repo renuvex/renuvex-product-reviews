@@ -54,13 +54,30 @@ export function createStepRating(state, opts) {
     });
   }
 
+  // Roving tabindex (WAI-ARIA radiogroup): exactly ONE star sits in the Tab order;
+  // ←/→/↑/↓ + Home/End move between stars, Enter/Space (or tap) selects + advances.
+  // Keeps the 5 stars as a single Tab stop instead of five separate ones.
+  function updateRoving(idx) {
+    stars.forEach(function (btn, i) { btn.tabIndex = i === idx ? 0 : -1; });
+  }
+
+  function selectRating(value) {
+    state.set({ rating: value });
+    applyVisual(value);
+    updateRoving(value - 1);
+  }
+
+  function focusStar(value) {
+    var btn = stars[value - 1];
+    if (btn) { try { btn.focus(); } catch (_) {} }
+  }
+
   function activateRating(value, e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
     if (isAdvancing) return;
     isAdvancing = true;
-    state.set({ rating: value });
-    applyVisual(value);
+    selectRating(value);
 
     if (advanceTimer) clearTimeout(advanceTimer);
     advanceTimer = setTimeout(function () {
@@ -100,7 +117,16 @@ export function createStepRating(state, opts) {
         activateRating(value, e);
       });
       btn.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') activateRating(value, e);
+        if (e.key === 'Enter' || e.key === ' ') { activateRating(value, e); return; }
+        var target = 0;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowUp') target = Math.min(5, value + 1);
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') target = Math.max(1, value - 1);
+        else if (e.key === 'Home') target = 1;
+        else if (e.key === 'End') target = 5;
+        if (!target) return;
+        e.preventDefault();
+        selectRating(target);
+        focusStar(target);
       });
       btn.addEventListener('click', function (e) {
         activateRating(value, e);
@@ -113,6 +139,8 @@ export function createStepRating(state, opts) {
 
   // İlk render: state'te zaten rating varsa onu göster (geri-ileri gezintiyle gelirse)
   applyVisual(state.get().rating);
+  // Roving tabindex başlangıcı: seçili yıldız (yoksa 1.) tek Tab durağı olsun.
+  updateRoving(state.get().rating > 0 ? state.get().rating - 1 : 0);
 
   // Preview modunda ikon değişikliğini modal açıkken yansıt
   var lastPreviewSettings = null;

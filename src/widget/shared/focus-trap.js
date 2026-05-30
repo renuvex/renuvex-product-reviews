@@ -9,8 +9,20 @@
 
 import { getActiveElementWithin } from '../core/shadow.js';
 
-export function getReturnFocusElement() {
+// Deepest focused element, drilling through shadow boundaries. `document.activeElement`
+// only reports the OUTERMOST shadow host, so a trigger living inside a shadow root (e.g.
+// the review section's "Yorum Yap" button) would otherwise be captured as the host — which
+// is not focusable, so focus is lost on close instead of returning to the trigger.
+function deepActiveElement() {
   var el = document.activeElement;
+  while (el && el.shadowRoot && el.shadowRoot.activeElement) {
+    el = el.shadowRoot.activeElement;
+  }
+  return el;
+}
+
+export function getReturnFocusElement() {
+  var el = deepActiveElement();
   if (!el || el === document.body || el === document.documentElement) return null;
   return el;
 }
@@ -29,6 +41,10 @@ export function restoreFocus(el) {
 export function isVisibleFocusable(el) {
   if (!el || el.disabled) return false;
   if (el.getAttribute('aria-hidden') === 'true') return false;
+  // Exclude roving-tabindex inactive controls (e.g. the rating stars' non-current
+  // radios are tabindex="-1"): they are programmatically focusable but NOT in the Tab
+  // order, so the trap's first/last math must skip them or Tab can escape the overlay.
+  if (typeof el.tabIndex === 'number' && el.tabIndex < 0) return false;
   return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
 }
 
