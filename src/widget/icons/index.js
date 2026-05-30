@@ -20,6 +20,7 @@ export {
 export {
   UI_CARET_LEFT,
   UI_CARET_RIGHT,
+  UI_CARET_DOWN,
   UI_CLOSE,
   PHOTO_ICON,
   PLUS_ICON,

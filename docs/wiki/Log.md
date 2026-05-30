@@ -20,6 +20,10 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - style | Filter "lines" + compact chevron → Phosphor (widget now fully Phosphor)
+- Converted the two glyphs left off-family after the unification: the filter default `lines` icon (was Google Material Symbols, 960-grid fill path) and the compact summary dropdown chevron (was a custom 14×8 path). Both are now Phosphor — added `UI_CARET_DOWN` to `icons/ui-icons.js`, inlined the Phosphor `lines` markup in `filter-icons.js`, removed the now-unused Material Symbols grid + corrected the source credit to Phosphor-only. No off-family widget glyph remains (admin `lucide-react` is a separate React surface).
+- The filter icon has one source: admin (`IconSelect.tsx`/`widgetDefs.ts`) and storefront (`actions-block.js`) both read `getFilterIconSvg`, so the swap covers both. Rebuilt `public/*`. Verified: `build:widget`, `check:widget-js` 18/18, `tsc`, `lint`, live chunks carry the new Phosphor paths (no old Material Symbols / custom chevron).
+
 ## 2026-05-30 - refactor | Unify storefront widget icons on Phosphor
 - Summary: Converted the remaining off-family widget "chrome" glyphs to the Phosphor icon family for visual consistency — wizard back-arrow + close + thumbnail-remove, lightbox close (desktop + mobile) + prev/next, and photo-strip prev/next. Builds on the same-day [[Bug_Icon_Sprite_Inner_Dimension_Strip]] sprite fix that made `<rect>`-framed icons safe.
 - Reason: stars/filter (and the just-migrated wizard photo/plus) were Phosphor 256-grid, but the wizard back/close were Lucide 24-grid and the lightbox/photo-strip/thumbnail-remove controls were Unicode text glyphs (`✕`, `‹`, `›`). Mixed families + heavier glyph weights looked inconsistent.

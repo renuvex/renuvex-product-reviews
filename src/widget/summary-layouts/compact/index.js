@@ -9,6 +9,7 @@ import { openWriteForm } from '../shared/write-action.js';
 import { registerPopover, notifyOpening } from '../shared/popover-registry.js';
 import { partialStarsHTML } from '../../core/helpers.js';
 import { starUseSvg, iconUseSvg } from '../../icons/star-sprite.js';
+import { UI_CARET_DOWN } from '../../icons/index.js';
 import { currentSettings } from '../../core/state.js';
 import { COMPACT_CSS } from './styles.js';
 
@@ -59,7 +60,7 @@ export function render(opts) {
     '<span class="renuvex-pr-compact-trigger-stars">' + partialStarsHTML(avgRatingVal, iconPair) + '</span>' +
     '<span class="renuvex-pr-compact-trigger-text">' + allCount.toLocaleString('tr-TR') + ' Yorum</span>' +
     '<span class="renuvex-pr-compact-chevron">' +
-      iconUseSvg('<svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7.11 5.16L2.16 0.21L0.75 1.62L7.11 7.98L13.48 1.62L12.06 0.21L7.11 5.16Z" fill="currentColor"/></svg>') +
+      iconUseSvg(UI_CARET_DOWN) +
     '</span>';
   triggerWrap.appendChild(trigger);
   header.appendChild(triggerWrap);

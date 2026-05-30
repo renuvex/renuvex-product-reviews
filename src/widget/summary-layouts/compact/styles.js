@@ -43,6 +43,7 @@ export var COMPACT_CSS = `
     color:var(--renuvex-pr-header-count,var(--renuvex-pr-text,rgba(0,0,0,1)));
     transition:transform 200ms cubic-bezier(0.4,0,0.2,1);
   }
+  .renuvex-pr-compact-chevron svg{width:14px;height:14px;}
   .renuvex-pr-compact-trigger[aria-expanded="true"] .renuvex-pr-compact-chevron{transform:rotate(180deg);}
 
   .renuvex-pr-compact-actions-slot{
