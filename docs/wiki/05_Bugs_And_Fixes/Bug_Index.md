@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-30
+updated: 2026-05-31
 tags:
   - bugs
 related:
@@ -21,7 +21,8 @@ related:
 - _None tracked._
 
 ## Recently fixed (verify periodically)
-- 2026-05-30 - [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]] - In the wizard, Tab stepped through all 5 rating stars (each a Tab stop) and Esc didn't return focus to the "Yorum Yap" trigger. Causes: the `role=radiogroup` stars all had default `tabindex=0` (WAI-ARIA wants one Tab stop + arrow roving); and `getReturnFocusElement()` read `document.activeElement` = the shadow HOST (not the shadow-hosted trigger), so `restoreFocus` no-op'd and focus fell to body. Fixed with roving tabindex + arrow-key nav in `step-rating.js`, a shadow-aware deep-active-element lookup, and excluding `tabindex<0` from the focus trap. Shared `focus-trap.js` fix also hardens the lightbox's focus return.
+- 2026-05-31 - [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]] follow-up - Verified and fixed initial `Shift+Tab` focus escape after opening the wizard or photo lightbox. Cause: dialog containers with `tabindex="-1"` were focused inside the trap but omitted from tabbable first/last math. `trapFocus()` now routes non-tabbable in-trap focus into the tabbable cycle; interaction smoke pins both overlays.
+- 2026-05-30 - [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]] - In the wizard, Tab stepped through all 5 rating stars and Esc didn't return focus to the "Yorum Yap" trigger. Final behavior after user testing keeps all stars Tab-focusable and adds arrow-key navigation; `getReturnFocusElement()` is shadow-aware, close moves focus out before fade, and overlays focus their dialog containers on open so first Tab lands predictably.
 - 2026-05-30 - [[Bug_Icon_Use_Node_Blank_Glyphs]] - After the Phosphor unification, the caret/X icons inserted via `appendChild(iconUseNode(...))` (lightbox close + nav, photo-strip arrows, wizard close, thumbnail-remove) rendered as **blank buttons** (box present + clickable, no glyph). Root cause: `iconUseNode` built the `<svg><use>` via `DOMParser('image/svg+xml')` + `importNode`; such a `<use>` never instances its sprite `<symbol>` once moved into a live shadow tree (non-zero rect but empty `getBBox()`). HTML-parsed icons (filter, compact chevron, wizard back, stars) were fine. All behavior tests passed because the buttons still clicked. Fixed by HTML-parsing in `iconUseNode`; added a `getBBox()` geometry regression.
 - 2026-05-30 - [[Bug_Icon_Sprite_Inner_Dimension_Strip]] - The review wizard's "Fotoğraf Ekle" icon rendered without its square frame (only the inner lens + mountain line showed). Root cause: `icons/star-sprite.js` `svgStringToSymbol` stripped `width`/`height` with global regexes, deleting them from the image icon's frame `<rect width height>` (a 0×0 rect renders nothing) — latent since the `<symbol>`/`<use>` sprite was introduced, invisible because every other icon is `<path>`/`<circle>`/`<line>` based. Fixed by scoping the strip to the root `<svg>` tag only (path-icon output byte-identical); also swapped the wizard photo/plus icons to Phosphor to match the badge/filter family.
 - 2026-05-30 - [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] - After Shadow DOM isolation, the classic summary filter dropdown stayed open on re-tap, and a dismiss/option tap over the photo strip opened a thumbnail's lightbox. Root cause: `popover-registry`'s `document`-level light-dismiss read a retargeted `e.target` (always the shadow host `#renuvex-reviews`), so every click read as "outside". Fixed with `event.composedPath()` membership + swallowing the dismiss/activation click.

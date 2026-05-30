@@ -3,8 +3,8 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-30
-updated: 2026-05-30
-last_verified: 2026-05-30
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: high
 tags:
   - bug
@@ -19,6 +19,9 @@ related:
   - "[[ADR_0025_Overlay_Shared_Surface_Foundation]]"
 source_files:
   - "src/widget/reviews-section/review-form-modal/steps/step-rating.js"
+  - "src/widget/reviews-section/review-form-modal/modal-shell.js"
+  - "src/widget/reviews-section/review-modal.js"
+  - "src/widget/reviews-section/styles.js"
   - "src/widget/shared/focus-trap.js"
   - "tests/widget-interaction-smoke.spec.ts"
 ---
@@ -83,12 +86,43 @@ the end of the tab order — so the first Tab lands on star 1 and the lightbox s
 referencing it → a ReferenceError that briefly stopped the wizard opening; the dead export was
 removed.)
 
+## Follow-up (2026-05-31, initial Shift+Tab trap escape)
+A follow-up audit found a narrow regression from the dialog-container focus change above.
+Immediately after opening an overlay, before the user Tabbed to a real control, first
+`Shift+Tab` escaped both body-level shadow overlays.
+
+Temporary Playwright repro before the fix confirmed the failure: after initial `Shift+Tab`,
+`root.activeElement` was `null` and `document.activeElement` was the body-level overlay host.
+
+Root cause:
+- Wizard focus was on the trap container itself (`.renuvex-pr-fwizard-overlay`, `tabindex="-1"`).
+- Lightbox focus was on a non-tabbable dialog wrapper inside the trap container
+  (`.renuvex-pr-modal-wrap`, `tabindex="-1"`).
+- `trapFocus()` only wrapped when focus was outside the container, on the first tabbable, or on the
+  last tabbable. It did not handle focus that was inside the trap but not part of the Tab order.
+
+Fix: `trapFocus()` now treats any active element inside the trap that is not in
+`getFocusableElements(container)` as a programmatic dialog focus target. First `Tab` moves to the
+first tabbable control; first `Shift+Tab` moves to the last. This covers both the wizard's focused
+overlay and the lightbox's focused inner dialog wrapper without reverting the "focus dialog on
+open" behavior.
+
+Regression test: `tests/widget-interaction-smoke.spec.ts` opens both the wizard and lightbox,
+sends `Shift+Tab` as the first keyboard action, and asserts focus remains inside the overlay on
+the close button.
+
+Minor cleanup in the same pass: corrected the stale roving-tabindex comment in `focus-trap.js`
+and removed dead `font-size` rules from icon-only photo-strip and lightbox navigation buttons.
+
 ## Files Changed
 - `src/widget/reviews-section/review-form-modal/steps/step-rating.js`
 - `src/widget/reviews-section/review-form-modal/modal-shell.js` (focus dialog on open; close
   appended last; immediate focus-out on close; removed the dead `focusFirstControl` export)
 - `src/widget/reviews-section/review-modal.js` (lightbox focuses its dialog on open)
 - `src/widget/shared/focus-trap.js`
+- `src/widget/reviews-section/styles.js` (dead `font-size` cleanup for icon-only arrows)
+- `tests/widget-interaction-smoke.spec.ts` also covers initial `Shift+Tab` staying trapped for
+  both wizard and lightbox.
 - `tests/widget-interaction-smoke.spec.ts` (regression: keyboard open → first `Tab` → 1st star;
   `ArrowRight` → 2nd star; `Tab` → 3rd star; `Esc` returns focus to `.renuvex-pr-write-btn`)
 - Rebuilt `public/widget.js` + `public/widget-runtime/*`
@@ -97,11 +131,15 @@ removed.)
 - Playwright + real Chromium: wizard `open → dialog focused`, first `Tab → "1 yıldız"`, `←/→`
   roam (2↔3), `Esc → renuvex-pr-write-btn` **immediately** (no lingering ring; pointer blurs to
   body). Lightbox `open → modalWrap (role=dialog)` focused, not a nav arrow.
-- `pnpm test:widget-interactions` (7/7 incl. the a11y regression), `pnpm test:widget-runtime`
+- 2026-05-31: `pnpm test:widget-interactions` (8/8 incl. initial Shift+Tab regression),
+  `pnpm test:widget-runtime`
   (8/8), `pnpm test:unit` (54/54), `pnpm check:widget-js` (18/18), `pnpm exec tsc --noEmit`, `pnpm lint`.
 
 ## Prevention
 - Overlay focus return must use a shadow-aware deep-active-element lookup (triggers live in
   shadow roots); move focus out on close **before** the fade so no ring lingers. The focus trap
   must exclude `tabindex < 0` controls.
-- The regression test pins Tab + arrow star navigation and Esc focus return.
+- If focus is inside the trap but not in the tabbable list, the next Tab/Shift+Tab must enter the
+  cycle explicitly; dialog containers focused with `tabindex="-1"` are not native Tab stops.
+- Regression tests pin Tab + arrow star navigation, Esc focus return, and initial Shift+Tab wrap
+  for both body-level overlays.

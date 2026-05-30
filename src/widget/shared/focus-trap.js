@@ -41,9 +41,8 @@ export function restoreFocus(el) {
 export function isVisibleFocusable(el) {
   if (!el || el.disabled) return false;
   if (el.getAttribute('aria-hidden') === 'true') return false;
-  // Exclude roving-tabindex inactive controls (e.g. the rating stars' non-current
-  // radios are tabindex="-1"): they are programmatically focusable but NOT in the Tab
-  // order, so the trap's first/last math must skip them or Tab can escape the overlay.
+  // Programmatically focusable controls with tabindex="-1" are not in the Tab order,
+  // so first/last trap math must skip them.
   if (typeof el.tabIndex === 'number' && el.tabIndex < 0) return false;
   return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
 }
@@ -62,8 +61,6 @@ export function getFocusableElements(container) {
 
 // Focus the first focusable control inside `primary`; if none and a `fallback`
 // container is given, try that; otherwise focus the container element itself.
-// (Lightbox calls focusFirst(overlay); wizard calls focusFirst(content, overlay) so the
-// first STEP control is focused before the close button.)
 export function focusFirst(primary, fallback) {
   var container = primary;
   var focusables = getFocusableElements(primary);
@@ -95,6 +92,15 @@ export function trapFocus(e, container, root) {
   if (!container.contains(active)) {
     e.preventDefault();
     restoreFocus(first);
+    return;
+  }
+
+  // Dialog containers are focused with tabindex="-1" on open to avoid showing a
+  // ring on the first control. They live inside the trap but are not Tab stops,
+  // so the first Tab/Shift+Tab must enter the tabbable cycle deterministically.
+  if (focusables.indexOf(active) === -1) {
+    e.preventDefault();
+    restoreFocus(e.shiftKey ? last : first);
     return;
   }
 

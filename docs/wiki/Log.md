@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-30
-last_verified: 2026-05-30
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: high
 tags:
   - log
@@ -19,6 +19,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-05-31 - fix | Trap initial Shift+Tab in body-level overlays
+- Summary: Fixed a verified focus-trap regression after the wizard/lightbox started focusing dialog containers on open. First `Shift+Tab` immediately after opening the wizard or photo lightbox escaped the shadow overlay because the active element was inside the trap but not in its tabbable list.
+- Key source changes: `src/widget/shared/focus-trap.js` now routes non-tabbable in-trap focus targets into the tabbable cycle (`Tab` -> first, `Shift+Tab` -> last). `tests/widget-interaction-smoke.spec.ts` covers wizard + lightbox initial `Shift+Tab`. Also corrected the stale roving-tabindex comment and removed dead icon-only arrow `font-size` CSS in `reviews-section/styles.js`. Rebuilt `public/widget.js` and `public/widget-runtime/*`.
+- Verification: temporary Playwright repro failed before the fix for both overlays; after the fix `pnpm test:widget-interactions` passed 8/8. Also passed `pnpm test:widget-runtime` (8/8), `pnpm test:unit` (54/54), `pnpm check:widget-js` (18/18), `pnpm exec tsc --noEmit`, `pnpm lint`, and `git diff --check`.
+- Updated wiki: [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]], [[Hot_Context]], [[Bug_Index]]
 
 ## 2026-05-30 - fix | Suppress dialog focus-ring on reopen; drop photo-strip arrow shadow
 - Two small widget polish items reported by the user. (1) After focusing the dialog container on open (a11y), the browser painted a `:focus-visible` outline around the whole lightbox/wizard frame on each (re)open once the keyboard had been used — added `:focus{outline:none}` on `.renuvex-pr-modal-wrap` (lightbox) and `.renuvex-pr-fwizard-overlay` (wizard), which are programmatic focus targets, not tabbed-to controls. (2) Removed the `box-shadow` behind the desktop photo-strip arrows per request; the hover scale animation (transform + transition) stays.

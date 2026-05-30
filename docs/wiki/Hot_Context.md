@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-30
-last_verified: 2026-05-30
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: high
 tags:
   - hot-context
@@ -62,8 +62,8 @@ source_files:
 # Hot Context
 
 ## Current Focus
-- ikas review/rating app: admin, storefront widget, badges, reviews, uploads, moderation, settings preview.
-- Current focus: storefront resilience, theme adapters, and automated quality gates.
+- ikas review/rating app: admin, storefront widget, badges, reviews, uploads, moderation.
+- Focus: storefront resilience, theme adapters, automated quality gates.
 
 ## Must Know
 - Source/config/tests/runtime win; wiki routes.
@@ -84,13 +84,15 @@ source_files:
 - 2026-05-30: Widget icons fully on Phosphor (`icons/ui-icons.js`); no off-family widget glyph remains. `iconUseNode` must HTML-parse (not `image/svg+xml`+`importNode`) or `<use>` icons paint blank in shadow trees ([[Bug_Icon_Use_Node_Blank_Glyphs]]).
 - 2026-05-30: Wizard/lightbox a11y — overlays focus the dialog on open, not a control (wizard first Tab → star 1, close button last; lightbox no nav-arrow ring); stars navigable by Tab + ←/→; `close()` moves focus out immediately ([[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]]).
 
+- 2026-05-31: Initial `Shift+Tab` now stays trapped in wizard/lightbox; `focus-trap.js` handles non-tabbable dialog focus and interaction smoke pins both.
+
 ## Current Risks / Open Questions
 - Keep doing live post-deploy smoke on the dev storefront after runtime-affecting widget changes; deployed measurement scripts are evidence, not a full merchant-flow replacement.
 - Production transfer evidence shows the current deployed PDP `PAGE_VIEW` path still loads `listing-badges-*`; the fallback timer is deterministic/tested, but page-type routing optimization is a separate future decision.
 - Theme adapters depend on Admin API `listStorefront.themes[].isMainTheme`; ikas has no theme webhook, so lazy resync remains the workaround.
 - Admin warning UI for unsupported themes is deferred; the runtime signal exists, the dashboard surface does not.
-- CI covers mockable widget/admin/API/theme contracts; real authenticated ikas dashboard smoke, Sentry post-deploy health, hard transfer-size budgets, and manual Google Rich Results URL verification remain gaps.
-- Review-request emails, CSV import/export, analytics, and localization remain roadmap gaps.
+- Gaps: authenticated ikas dashboard smoke, Sentry post-deploy health, hard transfer budgets, manual Google Rich Results checks.
+- Email, CSV import/export, analytics, localization remain roadmap gaps.
 
 ## Read Next
 - [[Current_Status]]

@@ -185,7 +185,7 @@ ${PARTIAL_STARS_CSS}
      (satır 266 ve 268). Bu ölü duplicate kurallar temizlendi.
      .renuvex-pr-photo-thumb hiçbir DOM tarafından kullanılmıyordu — silindi. */
 
-  .renuvex-pr-photo-strip-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:var(--renuvex-pr-photo-arrow-bg,#fff);border:1px solid var(--renuvex-pr-photo-arrow-border,rgba(0,0,0,0.12));border-radius:var(--renuvex-pr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--renuvex-pr-photo-arrow-text,#111111);transition:all 0.2s ease;}
+  .renuvex-pr-photo-strip-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:var(--renuvex-pr-photo-arrow-bg,#fff);border:1px solid var(--renuvex-pr-photo-arrow-border,rgba(0,0,0,0.12));border-radius:var(--renuvex-pr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--renuvex-pr-photo-arrow-text,#111111);transition:all 0.2s ease;}
   @media(hover:hover){.renuvex-pr-photo-strip-arrow:hover{background:var(--renuvex-pr-photo-arrow-bg,#fff);transform:translateY(-50%) scale(1.08);}}
   /* Keep ONLY the hover scale animation on the strip arrows — opt out of the global button
      press-dim (base-reset active opacity .85) so pressing them no longer fades them. The
@@ -286,7 +286,7 @@ ${PARTIAL_STARS_CSS}
   @media(max-width:640px){.renuvex-pr-modal-close{display:none;}}
   .renuvex-pr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;z-index:2;}
   @media(hover:hover){.renuvex-pr-modal-close-mobile:hover{opacity:0.85;}}
-  .renuvex-pr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:#00000059;border:1px solid #ffffff33;box-sizing:border-box;color:#ffffff;width:36px;height:36px;border-radius:var(--renuvex-pr-radius,6px);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
+  .renuvex-pr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:#00000059;border:1px solid #ffffff33;box-sizing:border-box;color:#ffffff;width:36px;height:36px;border-radius:var(--renuvex-pr-radius,6px);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
   @media(hover:hover){.renuvex-pr-modal-nav:hover{opacity:0.85;}}
   .renuvex-pr-modal-nav-prev{left:10px;}
   .renuvex-pr-modal-nav-next{right:10px;}

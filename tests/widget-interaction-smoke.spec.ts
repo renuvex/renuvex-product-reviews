@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
   MERCHANT_ORIGIN,
   clickInOverlay,
@@ -12,6 +12,22 @@ import {
   textInOverlay,
   widgetErrors,
 } from './widget-harness';
+
+function overlayActiveState(page: Page, overlaySelector: string) {
+  return page.evaluate((overlaySelector) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    const overlay = root?.querySelector(overlaySelector) as HTMLElement | null;
+    const active = root?.activeElement as HTMLElement | null;
+    return {
+      ariaLabel: active?.getAttribute('aria-label') || null,
+      className: active && typeof active.className === 'string' ? active.className : '',
+      insideOverlay: !!(overlay && active && overlay.contains(active)),
+    };
+  }, overlaySelector);
+}
 
 test('photo strip lightbox opens, navigates, and closes without console errors', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
@@ -77,6 +93,44 @@ test('review wizard validates required fields and submits through mocked public 
   expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn')).toBe(false);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-thanks')).toBe(true);
+
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('initial Shift+Tab stays trapped in wizard and lightbox dialogs', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await expect.poll(() => overlayActiveState(page, '.renuvex-pr-fwizard-overlay')).toMatchObject({
+    insideOverlay: true,
+  });
+  await page.keyboard.press('Shift+Tab');
+  await expect.poll(() => overlayActiveState(page, '.renuvex-pr-fwizard-overlay')).toMatchObject({
+    ariaLabel: 'Kapat',
+    insideOverlay: true,
+  });
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
+
+  await clickInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await expect.poll(() => overlayActiveState(page, '.renuvex-pr-modal-overlay')).toMatchObject({
+    insideOverlay: true,
+  });
+  await page.keyboard.press('Shift+Tab');
+  await expect.poll(() => overlayActiveState(page, '.renuvex-pr-modal-overlay')).toMatchObject({
+    ariaLabel: 'Kapat',
+    insideOverlay: true,
+  });
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
 
   expect(widgetErrors(log)).toEqual([]);
 });
