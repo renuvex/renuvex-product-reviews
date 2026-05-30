@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-05-30
+last_verified: 2026-05-30
 confidence: medium
 tags:
   - questions
@@ -16,7 +16,11 @@ related:
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[Ikas_Storefront_Script_Capabilities]]"
   - "[[Widget_Architecture_Audit]]"
-source_files: []
+  - "[[Widget_Transfer_Measurement_2026-05-29]]"
+source_files:
+  - "src/widget/loader.js"
+  - "src/widget/surfaces/listing-badge.surface.js"
+  - "src/widget/listing-badges/fallback-candidates.js"
 ---
 
 # Open Questions
@@ -134,6 +138,29 @@ Discovered while reconciling existing AI rule files (see [[Existing_AI_Rules_And
 - **OAuth scope justification** — existing `/CLAUDE.md` doesn't justify the broad scope (`read_orders,write_orders,read_products,read_inventories,write_inventories`). For ikas App Store submission, we'll need to pare it down — see [[Ikas_App_Store_Requirements]].
 - **`@ikas/admin-api-client` v2** — existing rules / docs assume v2 GraphQL client API (`ikasClient.queries.<name>()`). Pinned at `^2.0.11`. If a major version bump is published, the wrapper API may change.
 - **`pnpm apply:ai-rules` workflow** — Ruler is configured but `.ruler/` only contains `ruler.toml` (no source `.md` file). The Ruler source appears to be `/AGENTS.md` (root). Confirm by reading Ruler docs or running `pnpm apply:ai-rules` and seeing what it does.
+
+## PDP loads listing-badges chunk via PAGE_VIEW — page-type routing deferred
+On deployed PDPs the browser still downloads the `listing-badges-*` chunk even though no
+listing badges are rendered there. Confirmed by deployed evidence in
+[[Widget_Transfer_Measurement_2026-05-29]] (all four PDP scenarios loaded
+`listing-badges-*`).
+
+- **Root cause (verified in code):** ikas fires both `PRODUCT_VIEW` and `PAGE_VIEW` on a
+  PDP. `PAGE_VIEW` routes to `mountMatching({ trigger: 'page' })` in
+  [src/widget/loader.js](src/widget/loader.js). `listingBadgeSurface.detect` matches on
+  `trigger === 'page'` **without inspecting `ctx.pageType`**
+  ([src/widget/surfaces/listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js)),
+  so the surface mounts and `loadListingBadgesModule()` runs on product pages too.
+- **NOT the 2s fallback timer.** The `setTimeout` fallback in `loader.js` is gated by
+  `hasListingFallbackCandidates()` and is covered by deterministic negative/positive tests.
+  This is the `PAGE_VIEW` surface path, a separate mechanism.
+- **Impact:** a few KB of extra JS downloaded; the chunk's own settings/theme/placement
+  gates prevent any badge from actually rendering on the PDP. Functional, not visual — a
+  performance/cleanliness gap, not a bug.
+- **Possible fix to evaluate later:** make `listingBadgeSurface.detect` (or the
+  `onPageView` routing) page-type aware so a product/PDP `pageType` does not mount the
+  listing surface. Re-run `pnpm measure:deployed-widget` afterward to confirm the chunk
+  drops from clean PDPs and that real category/search listings still render badges.
 
 ## Obsidian Links
 - [[Current_Status]]
