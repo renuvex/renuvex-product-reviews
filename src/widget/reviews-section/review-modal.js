@@ -18,7 +18,8 @@ import {
 import { createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../core/shadow.js';
 import { CLASSIC_CSS } from './styles.js';
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
-import { registerSpriteRoot, unregisterSpriteRoot } from '../icons/star-sprite.js';
+import { registerSpriteRoot, unregisterSpriteRoot, iconUseNode } from '../icons/star-sprite.js';
+import { UI_CLOSE, UI_CARET_LEFT, UI_CARET_RIGHT } from '../icons/index.js';
 import { lockBodyScroll, restoreBodyScroll } from '../core/body-scroll-lock.js';
 import { getReturnFocusElement, restoreFocus, focusFirst, trapFocus } from '../shared/focus-trap.js';
 import { pushModalHistoryEntry, restoreModalHistoryEntry } from '../core/modal-history.js';
@@ -152,7 +153,8 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
 
   var mobileClose = document.createElement('button');
   mobileClose.className = 'renuvex-pr-modal-close-mobile';
-  mobileClose.textContent = '✕';
+  var mobileCloseIcon = iconUseNode(UI_CLOSE);
+  if (mobileCloseIcon) mobileClose.appendChild(mobileCloseIcon);
   mobileClose.setAttribute('aria-label', 'Kapat');
   mobileClose.onclick = function(e) { e.stopPropagation(); requestClose(); };
   left.appendChild(mobileClose);
@@ -233,7 +235,8 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   if (hasPrev) {
     var prevBtn = document.createElement('button');
     prevBtn.className = 'renuvex-pr-modal-nav renuvex-pr-modal-nav-prev';
-    prevBtn.innerHTML = '&#8249;';
+    var prevIcon = iconUseNode(UI_CARET_LEFT);
+    if (prevIcon) prevBtn.appendChild(prevIcon);
     prevBtn.setAttribute('aria-label', 'Önceki');
     prevBtn.onclick = function(e) {
       e.stopPropagation();
@@ -251,7 +254,8 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   if (hasNext) {
     var nextBtn = document.createElement('button');
     nextBtn.className = 'renuvex-pr-modal-nav renuvex-pr-modal-nav-next';
-    nextBtn.innerHTML = '&#8250;';
+    var nextIcon = iconUseNode(UI_CARET_RIGHT);
+    if (nextIcon) nextBtn.appendChild(nextIcon);
     nextBtn.setAttribute('aria-label', 'Sonraki');
     nextBtn.onclick = function(e) {
       e.stopPropagation();
@@ -422,7 +426,8 @@ export function openReviewModal(r, clickedUrl, allReviews) {
 
   var closeBtn = document.createElement('button');
   closeBtn.className = 'renuvex-pr-modal-close';
-  closeBtn.textContent = '✕';
+  var closeIcon = iconUseNode(UI_CLOSE);
+  if (closeIcon) closeBtn.appendChild(closeIcon);
   closeBtn.setAttribute('aria-label', 'Kapat');
   closeBtn.onclick = function(e) { e.stopPropagation(); requestClose(); };
   modalWrap.appendChild(closeBtn);

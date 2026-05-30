@@ -189,6 +189,7 @@ ${PARTIAL_STARS_CSS}
   @media(hover:hover){.renuvex-pr-photo-strip-arrow:hover{background:var(--renuvex-pr-photo-arrow-bg,#fff);transform:translateY(-50%) scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,0.12);}}
   .renuvex-pr-photo-strip-arrow-prev{left:-16px;}
   .renuvex-pr-photo-strip-arrow-next{right:-16px;}
+  .renuvex-pr-photo-strip-arrow svg{width:18px;height:18px;}
   @media(max-width:600px){.renuvex-pr-photo-strip-arrow{display:none;}}
 
   /* Yorumlar */
@@ -281,6 +282,8 @@ ${PARTIAL_STARS_CSS}
   @media(hover:hover){.renuvex-pr-modal-nav:hover{opacity:0.85;}}
   .renuvex-pr-modal-nav-prev{left:10px;}
   .renuvex-pr-modal-nav-next{right:10px;}
+  .renuvex-pr-modal-nav svg{width:18px;height:18px;}
+  .renuvex-pr-modal-close svg,.renuvex-pr-modal-close-mobile svg{width:14px;height:14px;}
   .renuvex-pr-modal-thumbs{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;padding:0 12px;}
   .renuvex-pr-modal-thumb{width:52px;height:52px;object-fit:cover;border-radius:var(--renuvex-pr-radius,6px);cursor:pointer;border:2px solid transparent;opacity:0.7;}
   .renuvex-pr-modal-thumb-active{border-color:#fff;opacity:1;}

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { svgStringToSymbol } from '../../src/widget/icons/star-sprite.js';
+import { svgStringToSymbol, iconUseNode } from '../../src/widget/icons/star-sprite.js';
+import { UI_CARET_LEFT, UI_CARET_RIGHT, UI_CLOSE, PHOTO_ICON, PLUS_ICON } from '../../src/widget/icons/index.js';
 
 // Regression guard for the icon sprite conversion. ALL widget icons (stars, filter,
 // photo/plus) are injected once as a <symbol> and referenced via <use>. The conversion
@@ -45,5 +46,29 @@ describe('svgStringToSymbol (icon sprite conversion)', () => {
 
   test('non-string input returns empty string', () => {
     expect(svgStringToSymbol(null as unknown as string, 'x')).toBe('');
+  });
+});
+
+// The widget's chrome glyphs (caret/close) and content icons (photo/plus) share one Phosphor
+// family in icons/ui-icons.js. Guard the family invariants + the lossless sprite conversion.
+describe('shared UI icons (Phosphor family)', () => {
+  test('every UI glyph is Phosphor 256-grid, stroke-16, currentColor', () => {
+    for (const svg of [UI_CARET_LEFT, UI_CARET_RIGHT, UI_CLOSE, PHOTO_ICON, PLUS_ICON]) {
+      expect(svg).toContain('viewBox="0 0 256 256"');
+      expect(svg).toContain('stroke="currentColor"');
+      expect(svg).toContain('stroke-width="16"');
+    }
+  });
+
+  test('caret/close conversion preserves geometry (line/polyline carry no inner dims)', () => {
+    expect(svgStringToSymbol(UI_CARET_LEFT, 'c')).toContain('<polyline points="160 208 80 128 160 48"');
+    expect(svgStringToSymbol(UI_CARET_RIGHT, 'c')).toContain('<polyline points="96 48 176 128 96 208"');
+    const x = svgStringToSymbol(UI_CLOSE, 'x');
+    expect(x).toContain('<line x1="200" y1="56" x2="56" y2="200"');
+    expect(x).toContain('<line x1="200" y1="200" x2="56" y2="56"');
+  });
+
+  test('iconUseNode is SSR-safe (returns null without a DOM)', () => {
+    expect(iconUseNode(UI_CLOSE)).toBeNull();
   });
 });

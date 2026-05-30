@@ -6,17 +6,11 @@
 import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';
 import { isTrustedReviewImageUrl } from '../../../core/helpers.js';
-import { iconUseSvg } from '../../../icons/star-sprite.js';
+import { iconUseSvg, iconUseNode } from '../../../icons/star-sprite.js';
+import { PHOTO_ICON, PLUS_ICON, UI_CLOSE } from '../../../icons/index.js';
 
 var MAX_PHOTOS = 3;
 var MAX_BYTES = 10 * 1024 * 1024;
-
-// Phosphor Icons (regular weight, 256 grid) — inline path data, matching the
-// badge/filter icon family. No icon package is bundled (MIT: Phosphor Icons).
-// Rendered via iconUseSvg() (sprite + <use>); the frame <rect width height>
-// relies on the root-only attr strip in star-sprite.js svgStringToSymbol().
-var PHOTO_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="96" cy="96" r="16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path d="M56.69,216,166.34,106.34a8,8,0,0,1,11.32,0L216,144.69" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>';
-var PLUS_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><line x1="40" y1="128" x2="216" y2="128" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="128" y1="40" x2="128" y2="216" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>';
 
 export function createStepPhotos(state, opts) {
   opts = opts || {};
@@ -109,7 +103,9 @@ export function createStepPhotos(state, opts) {
     var removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'renuvex-pr-fwizard-photo-remove';
-    removeBtn.innerHTML = '&#x2715;';
+    removeBtn.setAttribute('aria-label', 'Kaldır');
+    var removeIcon = iconUseNode(UI_CLOSE);
+    if (removeIcon) removeBtn.appendChild(removeIcon);
     node.appendChild(removeBtn);
 
     updateThumbNode(node, item, displayUrl);

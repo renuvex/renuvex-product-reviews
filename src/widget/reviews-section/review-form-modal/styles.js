@@ -67,6 +67,7 @@ export var FWIZARD_CSS = `
     z-index:1;
     transition:background 0.15s, color 0.15s;
   }
+  .renuvex-pr-fwizard-close svg{width:18px;height:18px;}
 
   /* X Butonu Görünürlük Kuralları (Desktop + Mobile) */
   .renuvex-pr-fwizard[data-step="1"] .renuvex-pr-fwizard-close,
@@ -319,6 +320,7 @@ export var FWIZARD_CSS = `
     box-shadow:none;
     padding:0;
   }
+  .renuvex-pr-fwizard-photo-remove svg{width:12px;height:12px;}
 
   /* ─── Step 3: İçerik formu (başlık + textarea) ─── */
   .renuvex-pr-fwizard-content-form{
@@ -483,6 +485,7 @@ export var FWIZARD_CSS = `
   .renuvex-pr-fwizard-footer-back{
     justify-self:start;
   }
+  .renuvex-pr-fwizard-footer-back svg{width:14px;height:14px;}
   .renuvex-pr-fwizard-footer-next,
   .renuvex-pr-fwizard-footer-skip{
     justify-self:end;

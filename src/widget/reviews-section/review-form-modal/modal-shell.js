@@ -7,7 +7,8 @@
 // 'renuvex-pr-fwizard-' prefix'iyle izole.
 
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
-import { iconUseSvg, registerSpriteRoot, unregisterSpriteRoot } from '../../icons/star-sprite.js';
+import { iconUseNode, registerSpriteRoot, unregisterSpriteRoot } from '../../icons/star-sprite.js';
+import { UI_CLOSE } from '../../icons/index.js';
 import { createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../../core/shadow.js';
 import { BASE_RESET_CSS } from '../../shared/base-reset.js';
 import { lockBodyScroll, restoreBodyScroll } from '../../core/body-scroll-lock.js';
@@ -36,8 +37,8 @@ export function createWizardShell(opts) {
   closeBtn.className = 'renuvex-pr-fwizard-close';
   closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', 'Kapat');
-  closeBtn.innerHTML =
-    iconUseSvg('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>');
+  var closeIcon = iconUseNode(UI_CLOSE);
+  if (closeIcon) closeBtn.appendChild(closeIcon);
   modal.appendChild(closeBtn);
 
   var content = document.createElement('div');

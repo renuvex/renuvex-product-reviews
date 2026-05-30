@@ -16,3 +16,11 @@ export {
   getFilterIconSvg,
   getFilterIconOptions,
 } from './filter-icons.js';
+
+export {
+  UI_CARET_LEFT,
+  UI_CARET_RIGHT,
+  UI_CLOSE,
+  PHOTO_ICON,
+  PLUS_ICON,
+} from './ui-icons.js';

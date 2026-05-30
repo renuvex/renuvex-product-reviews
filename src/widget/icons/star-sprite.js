@@ -141,6 +141,23 @@ export function iconUseSvg(svgString, className) {
   return out;
 }
 
+// Like iconUseSvg, but returns a parsed <svg> ELEMENT instead of a string, so callers can
+// appendChild it without assigning to element inner markup. Same sprite/<use> output;
+// returns null when the DOM/parser is unavailable (SSR) or parsing fails.
+export function iconUseNode(svgString, className) {
+  if (typeof document === 'undefined' || typeof DOMParser === 'undefined') return null;
+  var markup = iconUseSvg(svgString, className);
+  if (!markup) return null;
+  try {
+    var parsed = new DOMParser().parseFromString(markup, 'image/svg+xml');
+    var el = parsed && parsed.documentElement;
+    if (!el || String(el.nodeName).toLowerCase() !== 'svg') return null;
+    return document.importNode(el, true);
+  } catch (_) {
+    return null;
+  }
+}
+
 // ── Sprite mirroring into shadow roots ───────────────────────────────────────
 // SVG <use href="#id"> fragment refs resolve only within the same DOM tree.
 // Review/lightbox/wizard surfaces render inside their own shadow roots, so the

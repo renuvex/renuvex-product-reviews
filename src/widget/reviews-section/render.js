@@ -9,7 +9,7 @@ import { openReviewModal } from './review-modal.js';
 // LIGHT /api/public/ratings fetch. This keeps the BIG review-section content
 // chunk out of "badge-enabled, no review mount" pages.
 import { CLASSIC_CSS } from './styles.js';
-import { getIconFromSettings } from '../icons/index.js';
+import { getIconFromSettings, UI_CARET_LEFT, UI_CARET_RIGHT } from '../icons/index.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
 import { openWriteForm } from '../summary-layouts/shared/write-action.js';
@@ -17,7 +17,7 @@ import { createOwnedSlot, setSlotContext } from '../core/slot.js';
 import { probeWidgetVisibility } from '../core/health.js';
 import { attachShadowHost, injectShadowStyles, getOrCreateShadowContent, HOST_RESET_CSS } from '../core/shadow.js';
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
-import { registerSpriteRoot } from '../icons/star-sprite.js';
+import { registerSpriteRoot, iconUseNode } from '../icons/star-sprite.js';
 import { isReviewsMountEnabled } from '../themes/current-adapter.js';
 import {
   renderInProgress, pendingRender,
@@ -685,13 +685,15 @@ export async function render(productId, settings, reviewsData, productName, orde
         // Desktop ok butonları
         var prevArrow = document.createElement('button');
         prevArrow.className = 'renuvex-pr-photo-strip-arrow renuvex-pr-photo-strip-arrow-prev';
-        prevArrow.innerHTML = '&#8249;';
+        var prevArrowIcon = iconUseNode(UI_CARET_LEFT);
+        if (prevArrowIcon) prevArrow.appendChild(prevArrowIcon);
         prevArrow.setAttribute('aria-label', 'Önceki');
         prevArrow.onclick = function () { photoStrip.scrollBy({ left: -200, behavior: 'smooth' }); };
 
         var nextArrow = document.createElement('button');
         nextArrow.className = 'renuvex-pr-photo-strip-arrow renuvex-pr-photo-strip-arrow-next';
-        nextArrow.innerHTML = '&#8250;';
+        var nextArrowIcon = iconUseNode(UI_CARET_RIGHT);
+        if (nextArrowIcon) nextArrow.appendChild(nextArrowIcon);
         nextArrow.setAttribute('aria-label', 'Sonraki');
         nextArrow.onclick = function () { photoStrip.scrollBy({ left: 200, behavior: 'smooth' }); };
 
