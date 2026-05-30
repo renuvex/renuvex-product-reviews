@@ -145,17 +145,17 @@ export function iconUseSvg(svgString, className) {
 // appendChild it without assigning to element inner markup. Same sprite/<use> output;
 // returns null when the DOM/parser is unavailable (SSR) or parsing fails.
 export function iconUseNode(svgString, className) {
-  if (typeof document === 'undefined' || typeof DOMParser === 'undefined') return null;
+  if (typeof document === 'undefined') return null;
   var markup = iconUseSvg(svgString, className);
   if (!markup) return null;
-  try {
-    var parsed = new DOMParser().parseFromString(markup, 'image/svg+xml');
-    var el = parsed && parsed.documentElement;
-    if (!el || String(el.nodeName).toLowerCase() !== 'svg') return null;
-    return document.importNode(el, true);
-  } catch (_) {
-    return null;
-  }
+  // Parse as HTML, NOT image/svg+xml. A <use> element created via
+  // DOMParser('image/svg+xml') + importNode does NOT instance its referenced <symbol>
+  // once the node is moved into a live (shadow) tree — the icon renders blank
+  // (getBBox() empty). HTML parsing builds a <use> that resolves on insertion, exactly
+  // like an innerHTML-set icon (e.g. the filter button), so the glyph paints.
+  var holder = document.createElement('div');
+  holder.insertAdjacentHTML('afterbegin', markup);
+  return holder.firstElementChild;
 }
 
 // ── Sprite mirroring into shadow roots ───────────────────────────────────────

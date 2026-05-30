@@ -20,6 +20,15 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - fix | Phosphor caret/X icons rendered blank (iconUseNode use-instancing)
+- Summary: The Phosphor caret (`‹ › ⌄`) and X icons added in the icon-unification rendered as blank buttons on the storefront (box present + clickable, no glyph). Affected every `appendChild(iconUseNode(...))` site: lightbox close + prev/next, photo-strip arrows, wizard close, thumbnail-remove. See [[Bug_Icon_Use_Node_Blank_Glyphs]].
+- Reason: `iconUseNode` built the `<svg><use href="#sym">` via `DOMParser('image/svg+xml')` + `importNode`. A `<use>` created that way does NOT instance its referenced sprite `<symbol>` once moved into a live (shadow) tree — non-zero bounding rect but empty `getBBox()` → no paint. `iconUseSvg`-string sites (filter, compact chevron, wizard back) and filled stars were unaffected because they are HTML-parsed.
+- Key source changes: `src/widget/icons/star-sprite.js` — `iconUseNode()` now parses the icon markup as HTML (detached `<div>` + `insertAdjacentHTML`, return `firstElementChild`) so the `<use>` resolves on insertion. Rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Why it shipped: the widget smoke/runtime/interaction tests assert behavior + presence (the buttons still click), never rendered geometry. Added a regression in `tests/widget-interaction-smoke.spec.ts` that opens the lightbox and asserts the photo-strip caret + lightbox close `svg.getBBox().width > 0` (fails on the old code).
+- Diagnosis: Playwright + real Chromium screenshots and `getBBox()` comparison; a controlled swatch proved the same symbol `<use>` paints when HTML-parsed but is blank via `image/svg+xml` + `importNode`.
+- Verification: `pnpm build:widget`, `pnpm check:widget-js` (18/18), `pnpm test:unit` (54/54), `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test:widget-interactions` (6/6), `pnpm test:widget-runtime` (8/8); visual confirmation of all caret/X glyphs.
+- Prevention: SVG `<use>` referencing a sprite symbol (for a shadow tree) must be HTML-parsed, not `image/svg+xml` + `importNode`; icon tests must assert `getBBox()`, not just presence.
+
 ## 2026-05-30 - style | Filter "lines" + compact chevron → Phosphor (widget now fully Phosphor)
 - Converted the two glyphs left off-family after the unification: the filter default `lines` icon (was Google Material Symbols, 960-grid fill path) and the compact summary dropdown chevron (was a custom 14×8 path). Both are now Phosphor — added `UI_CARET_DOWN` to `icons/ui-icons.js`, inlined the Phosphor `lines` markup in `filter-icons.js`, removed the now-unused Material Symbols grid + corrected the source credit to Phosphor-only. No off-family widget glyph remains (admin `lucide-react` is a separate React surface).
 - The filter icon has one source: admin (`IconSelect.tsx`/`widgetDefs.ts`) and storefront (`actions-block.js`) both read `getFilterIconSvg`, so the swap covers both. Rebuilt `public/*`. Verified: `build:widget`, `check:widget-js` 18/18, `tsc`, `lint`, live chunks carry the new Phosphor paths (no old Material Symbols / custom chevron).

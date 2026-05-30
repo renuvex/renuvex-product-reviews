@@ -159,3 +159,43 @@ test('classic summary filter toggles on re-tap and dismiss does not open the lig
 
   expect(widgetErrors(log)).toEqual([]);
 });
+
+// Regression: caret/X icons are <use> references to a sprite <symbol>. iconUseNode once
+// built the <svg><use> via DOMParser('image/svg+xml') + importNode; such a <use> does NOT
+// instance its symbol after being moved into a live shadow tree, so the button rendered a
+// blank box (non-zero bounding rect, but getBBox() empty). Behavior tests passed because the
+// buttons still clicked. Assert the glyph actually paints by checking rendered geometry.
+test('photo-strip + lightbox icons instance their sprite symbol (non-empty geometry)', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  const stripIconBBoxWidth = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    const svg = root?.querySelector('.renuvex-pr-photo-strip-arrow-prev svg') as SVGGraphicsElement | null;
+    if (!svg) return -1;
+    try { return svg.getBBox().width; } catch { return 0; }
+  });
+  expect(stripIconBBoxWidth).toBeGreaterThan(0);
+
+  await clickInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+
+  const closeIconBBoxWidth = await page.evaluate(() => {
+    const host = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .find((h) => (h as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot?.querySelector('.renuvex-pr-modal-overlay'));
+    const root = host ? (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot : null;
+    const svg = root?.querySelector('.renuvex-pr-modal-close svg') as SVGGraphicsElement | null;
+    if (!svg) return -1;
+    try { return svg.getBBox().width; } catch { return 0; }
+  });
+  expect(closeIconBBoxWidth).toBeGreaterThan(0);
+
+  expect(widgetErrors(log)).toEqual([]);
+});
