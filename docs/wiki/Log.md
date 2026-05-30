@@ -20,6 +20,10 @@ source_files:
 
 # Project Log
 
+## 2026-05-30 - fix | Show wizard back-arrow caret on mobile
+- The review-wizard "Geri" button's caret was missing on the mobile/narrow footer layout — hidden by a pre-existing `.renuvex-pr-fwizard-footer-back > svg{display:none}` rule (old "text-only Geri on mobile" design). Desktop already showed it. For icon consistency across viewports after the Phosphor unification, removed that rule so "‹ Geri" shows everywhere.
+- CSS-only in `src/widget/reviews-section/review-form-modal/styles.js`; rebuilt `public/*`. Verified on a 390px viewport (back-arrow `svg` display:block, `getBBox()` > 0, visible "‹ Geri") plus `pnpm test:widget-interactions` (6/6), `pnpm test:widget-runtime` (8/8), `pnpm lint`.
+
 ## 2026-05-30 - fix | Phosphor caret/X icons rendered blank (iconUseNode use-instancing)
 - Summary: The Phosphor caret (`‹ › ⌄`) and X icons added in the icon-unification rendered as blank buttons on the storefront (box present + clickable, no glyph). Affected every `appendChild(iconUseNode(...))` site: lightbox close + prev/next, photo-strip arrows, wizard close, thumbnail-remove. See [[Bug_Icon_Use_Node_Blank_Glyphs]].
 - Reason: `iconUseNode` built the `<svg><use href="#sym">` via `DOMParser('image/svg+xml')` + `importNode`. A `<use>` created that way does NOT instance its referenced sprite `<symbol>` once moved into a live (shadow) tree — non-zero bounding rect but empty `getBBox()` → no paint. `iconUseSvg`-string sites (filter, compact chevron, wizard back) and filled stars were unaffected because they are HTML-parsed.

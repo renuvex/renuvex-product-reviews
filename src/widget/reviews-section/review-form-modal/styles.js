@@ -648,17 +648,14 @@ export var FWIZARD_CSS = `
       padding-top:0;
     }
 
-    /* Footer butonları altta, doğal yerde. Geri = sadece "Geri" yazısı,
-       ok ikonu gizli. Atla zaten yazı+ok (desktop ile aynı).
+    /* Footer butonları altta, doğal yerde. Geri = ok + "Geri" yazısı
+       (desktop ile aynı; geri ok'u artık mobile'da da görünür).
        Grid kolonları mobile'da auto/1fr/auto: yan kolonlar buton kadar,
        orta esnek. */
     .renuvex-pr-fwizard-footer{
       padding:20px;
       min-height:80px;
       grid-template-columns:auto 1fr auto;
-    }
-    .renuvex-pr-fwizard-footer-back > svg{
-      display:none;
     }
     /* Sağ slot butonu (Atla / Sonraki) grid item olarak kolonun sağ
        ucuna yaslı dursun. Refactor sonrası eski .footer-right wrapper
