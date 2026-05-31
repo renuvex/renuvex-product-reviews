@@ -3,7 +3,15 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-05-07
-updated: 2026-05-07
+updated: 2026-05-31
+last_verified: 2026-05-31
+confidence: high
+source_files:
+  - "src/widget/reviews-section/styles.js"
+  - "src/widget/review-layouts/card/index.js"
+  - "src/widget/review-layouts/card/styles.js"
+  - "src/widget/review-layouts/list/styles.js"
+  - "src/widget/review-layouts/gallery/styles.js"
 tags:
   - widget
   - review-layout
@@ -99,7 +107,7 @@ Arastirma uc kaynaktan beslendi:
 
 | Layout | Yan Padding | Kaynak | Degerlendirme |
 |---|---|---|---|
-| **card** | `0` (base `.renuvex-pr-review`) | `styles.js` | ❌ Kenara yapisik olabilir |
+| **card** | `0` (card `.renuvex-pr-review`) | `card/styles.js` | ❌ Kenara yapisik olabilir |
 | **list** | `0` (base) | `list/styles.js` | ❌ Grid yapiya uygun degil |
 | **gallery** | `0` (base) | `gallery/styles.js` | ❌ Masonry kolon dengesi riski |
 
@@ -214,8 +222,9 @@ Mevcut durum **uygundur**:
 
 ## 8. Source Files
 
-- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — base `.renuvex-pr-review`, mobile padding block
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — shared review primitives and mobile padding block
 - [src/widget/review-layouts/card/index.js](src/widget/review-layouts/card/index.js) — card render
+- [src/widget/review-layouts/card/styles.js](src/widget/review-layouts/card/styles.js) — card/default review CSS
 - [src/widget/review-layouts/list/styles.js](src/widget/review-layouts/list/styles.js) — list CSS
 - [src/widget/review-layouts/gallery/styles.js](src/widget/review-layouts/gallery/styles.js) — gallery CSS
 
@@ -227,6 +236,7 @@ Mevcut durum **uygundur**:
 
 ## Change Log
 
+- **2026-05-31**: Card/default review visual CSS moved from [reviews-section/styles.js](src/widget/reviews-section/styles.js) to [card/styles.js](src/widget/review-layouts/card/styles.js). Shared review primitives and mobile padding tokens remain in `reviews-section/styles.js`.
 - **2026-05-07**: Rapor olusturuldu. Endustri standartlari (WCAG 2.2, Apple HIG, Material Design), rakip uygulamalar (Loox, Yotpo, Okendo, Judge.me) ve mevcut durum analizi yapildi.
 - **2026-05-07**: Desktop padding onerisi revize edildi. Gorsel testler sonucunda desktop'ta review layout'lara ek yan padding gerekli olmadigi tespit edildi. Widget container `max-width:1200px; margin:auto` icerigi zaten dengeli tutuyor.
 - **2026-05-07**: Mobile padding token'lari ikas temasi ile senkronize edildi. `--renuvex-pr-pad-review-mobile` `10px` -> `16px`. Foto galeri section ve strip padding'leri review token'ina baglandi.

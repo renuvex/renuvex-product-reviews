@@ -31,7 +31,7 @@ export var LIST_CSS = `
   }
   .renuvex-pr-review-list-author-stars{margin-bottom:var(--renuvex-pr-gap-normal);}
   .renuvex-pr-review-list-author-name{font-weight:600;font-style:normal;}
-  .renuvex-pr-review-list-author-date{margin-top:var(--renuvex-pr-gap-tight);font-size:var(--renuvex-pr-review-date-size,12px);color:var(--renuvex-pr-review-date,#5e5e5e);}
+  .renuvex-pr-review-list-author-date{margin-top:var(--renuvex-pr-gap-tight);font-size:var(--renuvex-pr-review-date-size,12px);font-weight:400;color:var(--renuvex-pr-review-date,#5e5e5e);white-space:nowrap;flex-shrink:0;}
   .renuvex-pr-review-list-content{display:flex;flex-direction:column;min-width:0;}
   /* Title artık orta kolonun ilk elemanı; üst margin gerekmez. */
   .renuvex-pr-review-list-title{font-weight:600;font-size:var(--renuvex-pr-review-title-size,16px);color:var(--renuvex-pr-review-title,var(--renuvex-pr-text,rgba(0,0,0,1)));margin:0;}

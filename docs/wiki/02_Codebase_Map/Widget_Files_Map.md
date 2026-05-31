@@ -25,6 +25,7 @@ source_files:
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/styles.js"
+  - "src/widget/review-layouts/card/styles.js"
   - "src/widget/summary-layouts/index.js"
   - "src/widget/summary-layouts/classic/styles.js"
   - "src/widget/rating-badge/index.js"
@@ -49,7 +50,7 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `reviews-section/styles.js`; summary layout-specific CSS lives in `summary-layouts/*/styles.js` (classic/default included). Neither belongs inside a theme adapter folder.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `reviews-section/styles.js`; layout-specific CSS lives in `review-layouts/*/styles.js` and `summary-layouts/*/styles.js` (card/classic defaults included). Neither belongs inside a theme adapter folder.
 
 ## Tree
 
@@ -114,7 +115,7 @@ src/widget/
 ├─ review-layouts/
 │  ├─ index.js                    # Layout registry + meta (`supports` map drives layout-aware settings)
 │  ├─ _shared.js                  # Common review item rendering
-│  ├─ card/                       # ★ default
+│  ├─ card/                       # ★ default (index.js + styles.js)
 │  ├─ gallery/                    # photo-first
 │  └─ list/
 │     ├─ index.js
@@ -191,6 +192,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-05-31: Added [review-layouts/card/styles.js](src/widget/review-layouts/card/styles.js) so card/default review CSS ownership matches list/gallery while shared review primitives remain in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-31: Added [summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) so classic/default summary CSS ownership matches the other summary layout folders while shared review CSS remains in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-28: Renamed the broad PDP implementation folder to [reviews-section/](src/widget/reviews-section/) and moved the shared PDP title finder to [core/product-title.js](src/widget/core/product-title.js). Public widget mount/API contracts stayed unchanged.
 - 2026-05-27: Added [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) to make the reviews-section folder boundary explicit: `bootstrap.js` owns review mount orchestration, `reviews-api.js` owns review/photoStrip data access, and `render.js` owns review-section UI interactions.

@@ -31,6 +31,7 @@ source_files:
   - "src/widget/summary-layouts/minimal/styles.js"
   - "src/widget/summary-layouts/split/styles.js"
   - "src/widget/review-layouts/card/index.js"
+  - "src/widget/review-layouts/card/styles.js"
   - "src/widget/review-layouts/list/styles.js"
   - "src/widget/review-layouts/gallery/styles.js"
   - "src/widget/reviews-section/review-form-modal/styles.js"
@@ -234,7 +235,7 @@ Widget runtime (settings.js)
 - [src/widget/core/badge.js](src/widget/core/badge.js) — `ensureBadgeTokens` runtime override
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js) — `--renuvex-pr-review-star-color` global setter
 - [src/widget/summary-layouts/](src/widget/summary-layouts/) — per-layout local variables
-- [src/widget/review-layouts/](src/widget/review-layouts/) — review layout sizing
+- [src/widget/review-layouts/](src/widget/review-layouts/) — per-layout review sizing and layout-local CSS
 - [src/widget/reviews-section/review-form-modal/styles.js](src/widget/reviews-section/review-form-modal/styles.js) — wizard tokens (FWIZARD_CSS)
 
 ## Obsidian Links

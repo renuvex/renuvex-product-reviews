@@ -1,20 +1,20 @@
 // review-layouts/card/index.js
-// Varsayılan "Kart" tasarımı — eski review-item.js içeriği bu layout'a taşındı.
-// DOM yapısı: yıldız | tarih → başlık → yazar → metin (clamp) → fotoğraf → mağaza yanıtı.
-// Sıralama gallery layout'u ile aynı (endüstri standardı: rating → title → author → body).
-// CSS .renuvex-pr-review* sınıfları base styles.js'te; layout-spesifik override yok.
+// Default "Card" review layout.
+// DOM order: stars/date -> title -> author -> body -> photos -> merchant reply.
+// Card visual CSS lives in styles.js; shared review primitives stay in the base stylesheet.
 
 import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { wireLightboxTrigger } from '../../reviews-section/lightbox-trigger.js';
 import { currentSettings } from '../../core/state.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';
+import { CARD_REVIEW_CSS } from './styles.js';
 
 export var meta = {
   id: 'card',
   name: 'Kart (Varsayılan)',
-  // Kart içi fotoğraflar genel boyut ayarıyla orantılı büyür (--renuvex-pr-card-photo-w).
-  // Thumbnail boyutu kontrolü yalnızca fotoğraf şeridini (photo strip) etkiler.
+  // Card photos scale with the general size preset through --renuvex-pr-card-photo-w.
+  // The thumbnail-size setting only controls the top photo strip.
   sizeOverrides: {
     small:  { '--renuvex-pr-card-photo-w': '80px' },
     medium: { '--renuvex-pr-card-photo-w': '110px' },
@@ -22,15 +22,12 @@ export var meta = {
   },
 };
 
-// Layout-spesifik CSS yok — base styles.js (.renuvex-pr-review*) zaten card tasarımını veriyor.
-// İleride card için override gerekirse styles.js eklenir ve burada export edilir.
-export var css = '';
+export var css = CARD_REVIEW_CSS;
 
 export function render(r, allReviews) {
   var reviewEl = document.createElement('article');
   reviewEl.className = 'renuvex-pr-review renuvex-pr-review-card';
 
-  // Satır 1: yıldız | tarih (sağda)
   var topRow = document.createElement('div');
   topRow.className = 'renuvex-pr-review-top';
 
@@ -50,7 +47,6 @@ export function render(r, allReviews) {
   topRow.appendChild(dateEl);
   reviewEl.appendChild(topRow);
 
-  // Satır 2: başlık (kendi satırında — gallery ile aynı sıralama)
   if (r.title) {
     var titleEl = document.createElement('div');
     titleEl.className = 'renuvex-pr-review-title';
@@ -58,28 +54,22 @@ export function render(r, allReviews) {
     reviewEl.appendChild(titleEl);
   }
 
-  // Satır 3: yazar adı
   var authorEl = document.createElement('div');
   authorEl.className = 'renuvex-pr-author';
   authorEl.textContent = r.author || '';
   reviewEl.appendChild(authorEl);
 
-  // Yorum metni — 4 satırdan uzunsa CSS line-clamp + keyboard-erişilebilir
-  // "Devamını oku" (shared helper, tek kaynak).
   var comment = (r.comment || '').trim();
   if (comment) {
     reviewEl.appendChild(buildClampedBody(comment, 'renuvex-pr-body').fragment);
   }
 
-  // Fotoğraflar
   var trustedImages = getTrustedReviewImages(r);
   if (trustedImages.length) {
     var gallery = document.createElement('div');
     gallery.className = 'renuvex-pr-gallery';
     trustedImages.forEach(function(imgUrl) {
       var imgEl = document.createElement('img');
-      // Kart içi thumbnail 90-140 px gösterilir, 1:1 (styles.js:242 — .renuvex-pr-img).
-      // srcset: 1x/2x retina yedeği. CLS rezervi için width===height (1:1).
       var cardAttrs = buildResponsiveImgAttrs(imgUrl, PHOTO_STRIP_THUMB_WIDTH);
       imgEl.src = cardAttrs.src;
       imgEl.srcset = cardAttrs.srcset;
@@ -98,7 +88,6 @@ export function render(r, allReviews) {
     reviewEl.appendChild(gallery);
   }
 
-  // Mağaza yanıtı — gallery'den sonra
   var replyEl = buildReplyEl(r.merchantReply);
   if (replyEl) reviewEl.appendChild(replyEl);
 

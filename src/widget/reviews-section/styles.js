@@ -172,29 +172,15 @@ ${PARTIAL_STARS_CSS}
   .renuvex-pr-photo-strip-arrow svg{width:18px;height:18px;}
   @media(max-width:600px){.renuvex-pr-photo-strip-arrow{display:none;}}
 
-  /* Yorumlar */
-  /* Card review item — yan padding mobile'da --renuvex-pr-pad-review-mobile uzerinden
-     (mobile bloğunda set edilir). Burada sadece top/bottom; shorthand yerine
-     ayrı property ki mobile yan override'ı specificity savaşında kaybetmesin. */
-  .renuvex-pr-review{padding-top:20px;padding-bottom:20px;border-bottom:1px solid var(--renuvex-pr-review-border,#e5e7eb);}
-  .renuvex-pr-review-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
-  .renuvex-pr-review-top-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  /* Shared review primitives. Layout item structure lives in review-layouts/*/styles.js. */
   .renuvex-pr-review-stars{display:inline-flex;gap:2px;align-items:center;}
   .renuvex-pr-review-stars .renuvex-pr-icon{width:var(--renuvex-pr-star-size,20px);height:var(--renuvex-pr-star-size,20px);}
   .renuvex-pr-stars{display:inline-flex;gap:2px;align-items:center;color:var(--renuvex-pr-review-star-color,#f59e0b);}
   .renuvex-pr-stars .renuvex-pr-icon-filled{color:var(--renuvex-pr-review-star-color,#f59e0b);}
   .renuvex-pr-stars .renuvex-pr-icon-empty{color:var(--renuvex-pr-review-star-color,#f59e0b);}
-  /* Yorum item dikey ritm: stars→title (normal), title→author (normal),
-     author→body (normal), body→reply (loose). Bkz: gap sözleşmesi (üst yorum). */
-  .renuvex-pr-review-title{font-weight:600;font-size:var(--renuvex-pr-review-title-size,16px);color:var(--renuvex-pr-review-title,#111111);margin-top:var(--renuvex-pr-gap-normal);}
-  .renuvex-pr-author{font-size:var(--renuvex-pr-author-size,14px);font-weight:600;font-style:normal;color:var(--renuvex-pr-review-author,#111111);margin-top:var(--renuvex-pr-gap-normal);}
-  .renuvex-pr-date{color:var(--renuvex-pr-review-date,#5e5e5e);font-size:var(--renuvex-pr-review-date-size,12px);font-weight:400;white-space:nowrap;flex-shrink:0;}
-  .renuvex-pr-body{margin-top:var(--renuvex-pr-gap-normal);line-height:1.65;color:var(--renuvex-pr-review-body,#111111);font-size:var(--renuvex-pr-review-text-size,14px);font-weight:400;}
   .renuvex-pr-body-clamped{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
   .renuvex-pr-read-more{display:block;margin-top:var(--renuvex-pr-gap-tight);color:var(--renuvex-pr-review-body,#111111);font-weight:600;cursor:pointer;font-size:var(--renuvex-pr-read-more-size,12px);appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;text-align:left;font-family:inherit;}
   .renuvex-pr-read-more:focus-visible{outline:2px solid var(--renuvex-pr-review-star-color,#f59e0b);outline-offset:2px;border-radius:2px;}
-  .renuvex-pr-gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--renuvex-pr-gap-loose);}
-  .renuvex-pr-img{width:var(--renuvex-pr-card-photo-w,var(--renuvex-pr-thumbnail-size,90px));height:var(--renuvex-pr-card-photo-w,var(--renuvex-pr-thumbnail-size,90px));object-fit:cover;border-radius:var(--renuvex-pr-radius,6px);border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));cursor:pointer;}
   .renuvex-pr-reply{margin-top:var(--renuvex-pr-gap-loose);padding:12px 16px;background:var(--renuvex-pr-reply-bg-color,#f9fafb);border-radius:var(--renuvex-pr-radius,6px);border-left:3px solid var(--renuvex-pr-reply-border,#747474);}
   .renuvex-pr-reply-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .renuvex-pr-reply-label{font-weight:600;font-size:var(--renuvex-pr-reply-name-size,13px);color:var(--renuvex-pr-reply-label,#111111);overflow-wrap:anywhere;}
@@ -338,23 +324,12 @@ ${PARTIAL_STARS_CSS}
       padding-right:var(--renuvex-pr-pad-summary-mobile);
       text-align:center;
     }
-    /* Review item yan padding'i mobile'da --renuvex-pr-pad-review-mobile. Card
-       (.renuvex-pr-review), list (.renuvex-pr-review-list) ve gallery (.renuvex-pr-review-gallery)
-       kendi top/bottom padding'lerini koruyarak yan padding'i variable'dan alir.
-       Shorthand kullanilmadigi icin her layout'un kendi kuralini ezmez. */
-    .renuvex-pr-review,
+    /* List/gallery keep their top/bottom padding while reading shared mobile side padding. */
     .renuvex-pr-review-list,
     .renuvex-pr-review-list.renuvex-pr-review-list--no-media,
     .renuvex-pr-review-gallery{
       padding-left:var(--renuvex-pr-pad-review-mobile);
       padding-right:var(--renuvex-pr-pad-review-mobile);
     }
-    .renuvex-pr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}
-    /* Gallery — fotoğraflı yorumlar strip'i mantığı: flex-wrap:nowrap +
-       overflow-x:auto, thumb'lar flex-shrink:0 ile orjinal boyutta kalıyor,
-       sığmayanlar yatay scroll'da kaydırılıyor. */
-    .renuvex-pr-gallery{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
-    .renuvex-pr-gallery::-webkit-scrollbar{display:none;}
-    .renuvex-pr-img{flex-shrink:0;}
   }
 `;
