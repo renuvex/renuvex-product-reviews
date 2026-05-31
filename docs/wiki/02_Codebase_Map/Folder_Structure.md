@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-29
+updated: 2026-06-01
 tags:
   - structure
 related:
@@ -132,7 +132,8 @@ renuvex-product-reviews/
 │     ├─ reviews-section/
 │     │  ├─ bootstrap.js
 │     │  ├─ render.js
-│     │  ├─ styles.js           # Shared Renuvex review widget CSS
+│     │  ├─ styles.js           # CLASSIC_CSS aggregator for shared review-section CSS
+│     │  ├─ styles/             # base / summary-controls / review-primitives / photo-strip / lightbox CSS
 │     │  ├─ review-form-modal/   # Multi-step submission wizard
 │     │  └─ review-modal.js
 │     ├─ review-layouts/         # card / gallery / list (each with index.js + styles.js)
@@ -154,7 +155,7 @@ renuvex-product-reviews/
 - `widgetDefs.ts` (admin) and `widget-settings.ts` (server) share schema; widget.js receives the same settings via `/api/public/settings`. Don't duplicate — derive.
 - `src/widget/icons/` is the current icon source of truth. Import new code from [src/widget/icons/index.js](src/widget/icons/index.js); [src/widget/icons.js](src/widget/icons.js) exists only as a compatibility re-export.
 - `review-images.ts` is the server-side source of truth for trusted review image URLs. Widget helper logic in `src/widget/core/helpers.js` mirrors this contract for storefront defense in depth.
-- **Theme adapter note**: runtime theme selection is through public settings (`runtime.themeAdapterKey/source`) and `src/widget/themes/current-adapter.js`, not per-theme bundle URLs. Shared review widget CSS lives in `src/widget/reviews-section/styles.js`; `src/widget/themes/ozy/styles.js` is only a compatibility re-export / future Ozy-specific override placeholder. The older `--theme=new-theme` build alias still exists, but it is not the current adapter model. See [[Theme_Adapter_Playbook]].
+- **Theme adapter note**: runtime theme selection is through public settings (`runtime.themeAdapterKey/source`) and `src/widget/themes/current-adapter.js`, not per-theme bundle URLs. `src/widget/reviews-section/styles.js` is the `CLASSIC_CSS` aggregator for shared review-section CSS, with ownership modules under `src/widget/reviews-section/styles/`; `src/widget/themes/ozy/styles.js` is only a compatibility re-export / future Ozy-specific override placeholder. The older `--theme=new-theme` build alias still exists, but it is not the current adapter model. See [[Theme_Adapter_Playbook]].
 
 ## Obsidian Links
 - [[Important_Files]]
@@ -164,6 +165,7 @@ renuvex-product-reviews/
 - [[Widget_Files_Map]]
 
 ## Change Log
+- 2026-06-01: Split shared review-section CSS ownership under `src/widget/reviews-section/styles/` while preserving `src/widget/reviews-section/styles.js` as the stable `CLASSIC_CSS` aggregator.
 - 2026-05-28: Renamed the review-section runtime folder to `src/widget/reviews-section/` and moved the shared PDP title finder to `src/widget/core/product-title.js`.
 - 2026-05-12: Split the widget icon registry into `src/widget/icons/` modules and kept [src/widget/icons.js](src/widget/icons.js) as a compatibility re-export.
 - 2026-05-12: Added `src/widget/shared/` directory with `base-reset.js` and `input-modality.js` — bundle-wide widget utilities introduced by [[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]].

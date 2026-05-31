@@ -3,7 +3,7 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-05-27
+updated: 2026-06-01
 tags:
   - widget
   - reviews
@@ -48,7 +48,7 @@ related:
   - `.renuvex-pr-photo-strip` — yatay flex container, `overflow-x:auto`
   - `.renuvex-pr-photo-strip-thumb` — tek thumbnail (`<img>`)
   - `.renuvex-pr-photo-strip-arrow-prev` / `.renuvex-pr-photo-strip-arrow-next` — desktop ok butonları
-- CSS dosyası: [reviews-section/styles.js](src/widget/reviews-section/styles.js)
+- CSS dosyası: [reviews-section/styles/photo-strip.js](src/widget/reviews-section/styles/photo-strip.js), exported through [reviews-section/styles.js](src/widget/reviews-section/styles.js)
 - Mobile (`@media max-width:600px`) — arrow butonları `display:none`; sadece touch swipe.
 
 ## Admin ayarları
@@ -94,7 +94,8 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [src/widget/core/state.js](src/widget/core/state.js) — `photoStripReviews` state
 - [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js) — lightbox navigation
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `getTrustedReviewImages`, `optimizeImageUrl`, `buildResponsiveImgAttrs`
-- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — strip CSS
+- [src/widget/reviews-section/styles/photo-strip.js](src/widget/reviews-section/styles/photo-strip.js) — strip CSS
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — `CLASSIC_CSS` aggregator that exports the strip CSS
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts) — `limit` query param (1-30 clamp)
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) — admin settings
 

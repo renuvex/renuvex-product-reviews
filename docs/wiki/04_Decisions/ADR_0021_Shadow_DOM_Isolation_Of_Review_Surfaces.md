@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-26
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - adr
@@ -25,6 +25,8 @@ source_files:
   - "src/widget/core/shadow.js"
   - "src/widget/structured-data/jsonld.js"
   - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/styles.js"
+  - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/reviews-section/review-modal.js"
   - "src/widget/reviews-section/review-form-modal/modal-shell.js"
   - "src/widget/reviews-section/review-form-modal/index.js"
@@ -77,7 +79,7 @@ The two overlay roots (lightbox, wizard) don't need this wrapper because they ne
 ### CSS strategy
 - **Style rules don't cross the boundary** → each shadow root carries its own injected `<style>`:
   - Review section: `HOST_RESET_CSS + BASE_RESET_CSS + CLASSIC_CSS + getLayoutsCSS() + getReviewLayoutsCSS()`.
-  - Lightbox: `HOST_RESET_CSS + BASE_RESET_CSS + CLASSIC_CSS` (modal rules + shared icon/star rules are interleaved in `CLASSIC_CSS`; injecting the whole bundle is safer than risky physical extraction and the lightbox shadow ignores selectors it doesn't match).
+  - Lightbox: `HOST_RESET_CSS + BASE_RESET_CSS + CLASSIC_CSS` (`CLASSIC_CSS` aggregates the lightbox module plus the shared icon/star rules the lightbox needs; the lightbox shadow ignores selectors it doesn't match).
   - Wizard: `HOST_RESET_CSS + FWIZARD_CSS` (the wizard's own `.renuvex-pr-fwizard-*` style sheet; no `CLASSIC_CSS` needed because the wizard uses its own button-based star buttons via the icon sprite — see below).
 - **CSS custom properties DO inherit across the boundary** → the ~35 `--renuvex-pr-*` variables set on `document.documentElement` in `render.js` (including the badge-shared `--renuvex-pr-review-star-color`) continue to resolve inside each shadow root with no change.
 - The widget CSS contains no `rem` units, so root-font-size attacks are moot.
@@ -102,7 +104,7 @@ Inside an open shadow root, `document.activeElement` returns the *host*, not the
 - **`<use>` cannot cross a shadow boundary** is the load-bearing constraint that drove the sprite-mirror design; without it, every star and icon inside the shadow would be invisible.
 - **The light-DOM host is non-negotiable for the review section** because the badge scroll-to, observer, slot-position guard, and health probe all key off `#renuvex-reviews`. Keeping the host in light DOM and nesting all content inside its shadow root preserves every external reference unchanged.
 - **`:host { …: inherit }`** is the parity guarantee. The boundary blocks selector-targeted host rules automatically (the win); without re-admitting inherited typography, the section would lose the theme font/color it currently borrows and Ozy would visibly change. With it, only the intended change remains: hostile host CSS like `.hOHcRx img{width:100%!important}` cannot reach inside.
-- **Reusing `CLASSIC_CSS` in the lightbox** trades a few KB of unused review-section selectors for guaranteed correctness — `.renuvex-pr-modal-*` rules are physically interleaved with shared `.renuvex-pr-icon` / `.renuvex-pr-stars` / `PARTIAL_STARS_CSS` rules the lightbox also needs, and an extraction-by-selector is error-prone.
+- **Reusing `CLASSIC_CSS` in the lightbox** trades a few KB of unused review-section selectors for guaranteed correctness. The aggregator includes `styles/lightbox.js`, shared icon rules, shared star rules, and `PARTIAL_STARS_CSS`; injecting the same exported bundle avoids a second modal CSS contract.
 - **MutationObserver mirroring** avoids threading a `root` argument through every icon call site (summary layouts, bar-chart, review-icons, step-rating, photos, progress-bar, etc.), keeps the global sprite as the source of truth, and handles live preview star swaps + lazy one-off symbols automatically.
 
 ## Alternatives Considered

@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -25,6 +25,11 @@ source_files:
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/styles.js"
+  - "src/widget/reviews-section/styles/base.js"
+  - "src/widget/reviews-section/styles/summary-controls.js"
+  - "src/widget/reviews-section/styles/review-primitives.js"
+  - "src/widget/reviews-section/styles/photo-strip.js"
+  - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/review-layouts/card/styles.js"
   - "src/widget/summary-layouts/index.js"
   - "src/widget/summary-layouts/classic/styles.js"
@@ -50,7 +55,7 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. Shared review widget CSS lives in `reviews-section/styles.js`; layout-specific CSS lives in `review-layouts/*/styles.js` and `summary-layouts/*/styles.js` (card/classic defaults included). Neither belongs inside a theme adapter folder.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared review-section CSS ownership lives under `reviews-section/styles/*.js`. Layout-specific CSS lives in `review-layouts/*/styles.js` and `summary-layouts/*/styles.js` (card/classic defaults included). Neither belongs inside a theme adapter folder.
 
 ## Tree
 
@@ -87,7 +92,13 @@ src/widget/
 │  ├─ bootstrap.js                # Reviews section entry: settings, mount gate, initial fetch orchestration
 │  ├─ reviews-api.js              # Reviews/photoStrip fetch helpers and explicit fetch-error result
 │  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA)
-│  ├─ styles.js                  # Shared Renuvex review widget CSS
+│  ├─ styles.js                  # CLASSIC_CSS aggregator for shared review-section CSS
+│  ├─ styles/
+│  │  ├─ base.js                 # Widget root, text safety, icons, mobile padding tokens
+│  │  ├─ summary-controls.js     # Shared bar chart, write action, filter menu
+│  │  ├─ review-primitives.js    # Shared review stars, replies, read-more, states
+│  │  ├─ photo-strip.js          # Photo strip/gallery title, arrows, thumbnails
+│  │  └─ lightbox.js             # Photo review lightbox CSS
 │  ├─ review-modal.js             # Photo review detail lightbox
 │  └─ review-form-modal/
 │     ├─ index.js                 # Modal entry
@@ -155,7 +166,7 @@ src/widget/
 - ⚠️ When you add a new layout, declare `supports` keys for everything any setting could check. Otherwise admin shows fields that have no effect.
 
 ### Theme variant
-Runtime theme selection is not a per-theme bundle split. The live widget receives `runtime.themeAdapterKey/source` from public settings and selects the adapter through `themes/current-adapter.js`. The historical `--theme=new-theme` build alias still exists in [scripts/build-widget.mjs](scripts/build-widget.mjs), but it is not the current adapter model. Base review widget CSS now imports from `reviews-section/styles.js`; `themes/ozy/styles.js` is only a compatibility re-export / future Ozy override placeholder.
+Runtime theme selection is not a per-theme bundle split. The live widget receives `runtime.themeAdapterKey/source` from public settings and selects the adapter through `themes/current-adapter.js`. The historical `--theme=new-theme` build alias still exists in [scripts/build-widget.mjs](scripts/build-widget.mjs), but it is not the current adapter model. Base review widget CSS imports from the `reviews-section/styles.js` aggregator; owned shared modules live under `reviews-section/styles/`. `themes/ozy/styles.js` is only a compatibility re-export / future Ozy override placeholder.
 
 ## What lives in `public/`
 - [public/widget.js](public/widget.js) — built classic loader (committed). Don't hand-edit.
@@ -192,6 +203,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-06-01: Split shared review-section CSS ownership into [reviews-section/styles/](src/widget/reviews-section/styles/) modules while keeping [reviews-section/styles.js](src/widget/reviews-section/styles.js) as the `CLASSIC_CSS` aggregator and preserving injection order.
 - 2026-05-31: Added [review-layouts/card/styles.js](src/widget/review-layouts/card/styles.js) so card/default review CSS ownership matches list/gallery while shared review primitives remain in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-31: Added [summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) so classic/default summary CSS ownership matches the other summary layout folders while shared review CSS remains in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-28: Renamed the broad PDP implementation folder to [reviews-section/](src/widget/reviews-section/) and moved the shared PDP title finder to [core/product-title.js](src/widget/core/product-title.js). Public widget mount/API contracts stayed unchanged.

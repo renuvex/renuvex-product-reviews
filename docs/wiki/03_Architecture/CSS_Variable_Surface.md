@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - widget
@@ -22,6 +22,11 @@ related:
 source_files:
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/styles.js"
+  - "src/widget/reviews-section/styles/base.js"
+  - "src/widget/reviews-section/styles/summary-controls.js"
+  - "src/widget/reviews-section/styles/review-primitives.js"
+  - "src/widget/reviews-section/styles/photo-strip.js"
+  - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/summary-layouts/classic/styles.js"
   - "src/widget/core/helpers.js"
   - "src/widget/core/badge.js"
@@ -40,6 +45,8 @@ source_files:
 # CSS Variable Surface
 
 ## Summary
+`reviews-section/styles.js` exports the stable `CLASSIC_CSS` aggregator; shared CSS ownership is split under `reviews-section/styles/*.js`.
+
 The Renuvex widget exposes ~90 CSS custom properties under the `--renuvex-pr-*` namespace. They are the runtime contract between merchant settings (color / size / spacing config) and the DOM. This page is the durable index — what exists, where it is set, where it is read, what scope it lives in, and how to add a new one without breaking the contract.
 
 The variables fall into two scope tiers (see "Scope tiers" below). Most live on the widget root (`#renuvex-reviews-widget`) or inside a Shadow DOM via custom-property inheritance; a small set lives on `document.documentElement` (global) and a single component-scope set lives on `.renuvex-pr-rating-badge` for badge sizing.
@@ -49,7 +56,7 @@ The variables fall into two scope tiers (see "Scope tiers" below). Most live on 
 | Tier | Where set | Where readable | Examples |
 |---|---|---|---|
 | **Global (`:root`)** | `document.documentElement` via `listing-badges/index.js setProperty` (one var only) | Anywhere in the document AND inside any shadow root (custom properties inherit across shadow boundary, ADR_0021) | `--renuvex-pr-review-star-color` |
-| **Widget root** | `#renuvex-reviews-widget` rule in `CLASSIC_CSS` (`reviews-section/styles.js`) AND `render.js` `applyVars` / `applyLayoutSizeOverrides` via `root.style.setProperty` | Inside the review section shadow tree (declared on the widget root inside the shadow) | `--renuvex-pr-gap-tight`, `--renuvex-pr-title-size`, `--renuvex-pr-radius`, `--renuvex-pr-bar-fill`, ~70 others |
+| **Widget root** | `#renuvex-reviews-widget` rule in `CLASSIC_CSS` via `reviews-section/styles/base.js` AND `render.js` `applyVars` / `applyLayoutSizeOverrides` via `root.style.setProperty` | Inside the review section shadow tree (declared on the widget root inside the shadow) | `--renuvex-pr-gap-tight`, `--renuvex-pr-title-size`, `--renuvex-pr-radius`, `--renuvex-pr-bar-fill`, ~70 others |
 | **Component-scope (badge)** | `<style id="renuvex-pr-badge-tokens">` in head via `core/badge.js ensureBadgeTokens` (selector: `.renuvex-pr-rating-badge`) | Inside any element matching `.renuvex-pr-rating-badge` | `--renuvex-pr-badge-icon-size`, `--renuvex-pr-badge-text-size` |
 | **Layout-local (`.renuvex-pr-summary`)** | default summary rule in `summary-layouts/classic/styles.js`; other summary layouts override in their own `styles.js` files | Inside `.renuvex-pr-summary` block only | `--renuvex-pr-col-label`, `--renuvex-pr-col-count`, `--renuvex-pr-col-gap`, `--renuvex-pr-summary-max` |
 
@@ -76,7 +83,7 @@ ADR_0016: star color is the one global rating visual; both badge and review surf
 | `--renuvex-pr-pad-summary-mobile` | 16px | Mobile summary padding |
 | `--renuvex-pr-pad-review-mobile` | 16px | Mobile review padding |
 
-Defined in the widget-root rule inside `CLASSIC_CSS`. Tokens enforce a finite spacing vocabulary; see the long comment block at the top of `reviews-section/styles.js` for the contract.
+Defined in the widget-root rule inside `reviews-section/styles/base.js`, then exported through the `CLASSIC_CSS` aggregator. Tokens enforce a finite spacing vocabulary; see the comment block at the top of `base.js` for the contract.
 
 ### Sizing tokens (widget-root scope, set by `applyVars`)
 Set on the widget root in `render.js applyVars` based on merchant size choice (small / medium / large) via `SIZE_PRESETS`. Each layout (hero/compact/minimal/split) can override via `applyLayoutSizeOverrides`.
@@ -137,7 +144,7 @@ Per-element color variables. Each maps to a specific UI element so a merchant ca
 | `--renuvex-pr-star-size` / `--renuvex-pr-avg-star-size` | Star icon sizes inside summary/header |
 
 ### Layout-local (`.renuvex-pr-summary` only)
-The default/classic declarations live in `summary-layouts/classic/styles.js` and are loaded through `getLayoutsCSS()` before other summary layout overrides. Shared summary child components such as bar rows and action rows remain in `reviews-section/styles.js` to preserve cascade order.
+The default/classic declarations live in `summary-layouts/classic/styles.js` and are loaded through `getLayoutsCSS()` before other summary layout overrides. Shared summary child components such as bar rows and action rows live in `reviews-section/styles/summary-controls.js` and are exported before layout CSS through `CLASSIC_CSS`.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -228,7 +235,12 @@ Widget runtime (settings.js)
 - Variable count today: ~90. Adding more is cheap; removing existing ones requires a grep across `src/widget/` to make sure no consumer reads them with a fallback the new code did not set.
 
 ## Related Source Files
-- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — `CLASSIC_CSS`, spacing token doc block, widget-root declarations, and shared summary/review CSS
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — stable `CLASSIC_CSS` aggregator
+- [src/widget/reviews-section/styles/base.js](src/widget/reviews-section/styles/base.js) — widget-root declarations, shared icon/text-safety rules, mobile padding tokens
+- [src/widget/reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) — shared summary bar/action/filter controls
+- [src/widget/reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) — shared review stars, reply, read-more, load-more, state/error/retry CSS
+- [src/widget/reviews-section/styles/photo-strip.js](src/widget/reviews-section/styles/photo-strip.js) — shared photo strip CSS
+- [src/widget/reviews-section/styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) — photo review lightbox CSS
 - [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) — classic/default summary root variables and avg/count/recommend styles
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — `applyVars` / `applyLayoutSizeOverrides`
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `PARTIAL_STARS_CSS` + badge token defaults

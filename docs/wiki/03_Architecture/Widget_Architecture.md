@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - widget
@@ -50,6 +50,11 @@ source_files:
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/styles.js"
+  - "src/widget/reviews-section/styles/base.js"
+  - "src/widget/reviews-section/styles/summary-controls.js"
+  - "src/widget/reviews-section/styles/review-primitives.js"
+  - "src/widget/reviews-section/styles/photo-strip.js"
+  - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/structured-data/index.js"
@@ -122,7 +127,7 @@ deployment before claiming live performance improvement.
 | [summary-layouts/](src/widget/summary-layouts/) | `classic` / `compact` / `hero` / `minimal` / `split` summary layouts. |
 | [themes/current-adapter.js](src/widget/themes/current-adapter.js) | Runtime-selected adapter registry. Defaults to Ozy unless public settings select `generic`. |
 | [themes/generic/](src/widget/themes/generic/) | Conservative unknown-theme adapter; avoids Ozy-specific selectors and relies on generic scoped link/title heuristics. |
-| [reviews-section/styles.js](src/widget/reviews-section/styles.js) | Shared Renuvex review widget CSS. Theme-agnostic; imported by PDP review render. |
+| [reviews-section/styles.js](src/widget/reviews-section/styles.js) | Stable `CLASSIC_CSS` aggregator for shared review-section CSS. Owned CSS modules live under [reviews-section/styles/](src/widget/reviews-section/styles/). |
 | [themes/ozy/](src/widget/themes/ozy/) | Ozy selectors plus fallback adapter. Theme-specific CSS should only live here if it is a real Ozy override. |
 
 ## Lifecycle
@@ -259,6 +264,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-06-01: Split shared review-section CSS into owned modules under [reviews-section/styles/](src/widget/reviews-section/styles/) while preserving the `CLASSIC_CSS` export, shadow injection order, DOM/class names, and public settings contract.
 - 2026-05-31: Review read lifecycle hardening added stale-response guards for sort/filter/retry/load-more and duplicate-id filtering before load-more DOM insertion. Related bug: [[Bug_Review_Read_Lifecycle_Stale_Responses]].
 - 2026-05-28: Expanded automated quality gates from network-only smoke to layered Playwright + Vitest coverage: widget runtime layouts, lightbox/wizard flows, admin preview/settings, public API routes, and theme-state helpers. CI now runs `pnpm test:ci` plus generated widget syntax checks.
 - 2026-05-28: Renamed the review-section implementation to `src/widget/reviews-section/` and moved the shared PDP title finder to `src/widget/core/product-title.js`. Public script URL, mount contract, settings schema, backend APIs, and ikas integration are unchanged.

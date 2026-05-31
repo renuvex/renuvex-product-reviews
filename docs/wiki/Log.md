@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - log
@@ -19,6 +19,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-01 - refactor | Split review-section CSS ownership modules
+- Summary: Split the large shared `reviews-section/styles.js` payload into owned CSS modules without changing DOM structure, class names, public settings, API contracts, or shadow injection order. `reviews-section/styles.js` remains the stable `CLASSIC_CSS` aggregator.
+- Key source changes: Added `styles/base.js`, `summary-controls.js`, `review-primitives.js`, `photo-strip.js`, and `lightbox.js`; rebuilt `public/widget.js` and `public/widget-runtime/*`; removed manifest-unreferenced stale hashed runtime artifacts.
+- Verification: `pnpm build:widget`, `pnpm check:widget-js`, `pnpm test:widget-runtime`, `pnpm test:widget-interactions`, `pnpm test:widget-smoke`, `pnpm lint`, `pnpm exec tsc --noEmit`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check` passed. Wiki audit still reports existing warnings only.
+- Updated wiki: [[Widget_Files_Map]], [[CSS_Variable_Surface]], [[Widget_Architecture]], [[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]], [[Hot_Context]]
 
 ## 2026-05-31 - verify | Post-deploy widget runtime evidence
 - Summary: Post-deploy widget verification confirmed production serves the pushed `runtime-RD6VN5NG.js` build. Clean controlled PDP scenarios no longer load `listing-badges-*`; `render-*` remains gated by the explicit review mount; JSON-LD passes the deployed structured-data contract.

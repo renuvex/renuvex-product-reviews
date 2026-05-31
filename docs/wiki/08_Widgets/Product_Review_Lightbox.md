@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-10
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-01
+last_verified: 2026-06-01
 tags:
   - widget
   - reviews
@@ -30,7 +30,8 @@ The product review lightbox is the photo review detail modal opened from review 
 ## Related Source Files
 - [review-modal.js](src/widget/reviews-section/review-modal.js) - photo review detail lightbox.
 - [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) - shared click/keyboard/ARIA wiring for photo elements that open the lightbox.
-- [styles.js](src/widget/reviews-section/styles.js) - `.renuvex-pr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
+- [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) - `.renuvex-pr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
+- [styles.js](src/widget/reviews-section/styles.js) - `CLASSIC_CSS` aggregator injected into the lightbox shadow root.
 - [render.js](src/widget/reviews-section/render.js) - review layout and photo strip entry points that call `openReviewModal`.
 - [state.js](src/widget/core/state.js) - canonical loaded review collection used by review layout lightbox navigation.
 - [gallery/index.js](src/widget/review-layouts/gallery/index.js) - gallery layout entry points for images and long-text "read more" behavior.
@@ -71,6 +72,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
 
 ## Change Log
+- 2026-06-01: Lightbox CSS ownership moved into [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) while `review-modal.js` continues to inject the stable `CLASSIC_CSS` aggregator.
 - 2026-05-31: Added shared [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) after an audit found photo-strip thumbnails were click-only images. Photo-strip and card/list/gallery lightbox triggers now share keyboard/ARIA wiring, and interaction smoke verifies keyboard open + focus restore from the photo strip. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
 - 2026-05-24/25: Updated preview-event wording for ADR_0020 namespace migration. `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` is the active preview event.
 - 2026-05-12: Fixed preview settings synchronization for an already-open lightbox. The right pane now re-renders from closure state on the preview settings event, covering review icons, merchant reply labels, and future right-pane setting-dependent fields. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].

@@ -68,7 +68,7 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - [src/widget/core/product-title.js](src/widget/core/product-title.js) - generic heuristic to locate product title.
 - [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) - product detection fallback.
 - [src/widget/listing-badges/collect.js](src/widget/listing-badges/collect.js) - listing card discovery.
-- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) - shared Renuvex review widget CSS; this is intentionally outside theme adapter folders.
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) - shared Renuvex review widget CSS aggregator; owned shared modules live under `src/widget/reviews-section/styles/` and remain intentionally outside theme adapter folders.
 
 ## Known Constraints / TODO
 - No structured theme widget surface or stable DOM mount point from ikas is confirmed today.

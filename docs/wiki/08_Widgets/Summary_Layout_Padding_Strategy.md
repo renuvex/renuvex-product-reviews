@@ -3,11 +3,13 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-07
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 source_files:
   - "src/widget/reviews-section/styles.js"
+  - "src/widget/reviews-section/styles/base.js"
+  - "src/widget/reviews-section/styles/summary-controls.js"
   - "src/widget/summary-layouts/classic/styles.js"
   - "src/widget/summary-layouts/classic/index.js"
   - "src/widget/summary-layouts/compact/styles.js"
@@ -32,7 +34,7 @@ related:
 
 Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin padding, margin ve baslik hizalama stratejisi. Bu sayfa, 2026-05-31 itibariyla gecerli olan guncel durumu dokumante eder.
 
-Classic/default summary root CSS now lives in `summary-layouts/classic/styles.js`. Shared child CSS such as bar rows, action rows, filters, photo strip, review layouts, and modals stays in `reviews-section/styles.js`.
+Classic/default summary root CSS now lives in `summary-layouts/classic/styles.js`. Shared child CSS such as bar rows, action rows, and filters lives in `reviews-section/styles/summary-controls.js`; shared root/mobile tokens live in `reviews-section/styles/base.js`. `reviews-section/styles.js` keeps the stable `CLASSIC_CSS` aggregation contract.
 
 ## Design Principles
 
@@ -71,7 +73,7 @@ Classic/default summary root CSS now lives in `summary-layouts/classic/styles.js
 | `--renuvex-pr-pad-review-mobile` | `16px` | Review item'larin (card/list/gallery) mobile yan padding'i |
 | `--renuvex-pr-col-gap` | `4px` | Bar/action column gap for the default summary; split can override through its own layout CSS. |
 
-Default summary root variables live in [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js). Shared widget/mobile padding tokens still live in [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js).
+Default summary root variables live in [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js). Shared widget/mobile padding tokens live in [src/widget/reviews-section/styles/base.js](src/widget/reviews-section/styles/base.js).
 
 ## Baslik Hizalama
 
@@ -112,7 +114,9 @@ Sistemde iki ana breakpoint yaklasimi vardir:
 
 ## Source Files
 
-- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — shared widget CSS, base `.renuvex-pr-title`, shared summary child components, mobile review/title padding
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — stable `CLASSIC_CSS` aggregator
+- [src/widget/reviews-section/styles/base.js](src/widget/reviews-section/styles/base.js) — base `.renuvex-pr-title`, widget root tokens, mobile review/title padding
+- [src/widget/reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) — shared bar chart, action row, and filter menu CSS
 - [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) — classic/default summary root, title, avg/count/recommend styles
 - [src/widget/summary-layouts/classic/index.js](src/widget/summary-layouts/classic/index.js) — classic render
 - [src/widget/summary-layouts/compact/styles.js](src/widget/summary-layouts/compact/styles.js) — compact header + panel padding
@@ -122,7 +126,8 @@ Sistemde iki ana breakpoint yaklasimi vardir:
 
 ## Change Log
 
-- **2026-05-31**: Classic/default summary root, title, avg/count/recommend CSS moved from [reviews-section/styles.js](src/widget/reviews-section/styles.js) to [classic/styles.js](src/widget/summary-layouts/classic/styles.js). Shared bar/action/filter/photo/review/modal CSS remains in `reviews-section/styles.js` to preserve cascade order.
+- **2026-06-01**: Shared summary-control CSS ownership split into [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js), while base/mobile tokens moved under [reviews-section/styles/base.js](src/widget/reviews-section/styles/base.js). `CLASSIC_CSS` export and injection order are unchanged.
+- **2026-05-31**: Classic/default summary root, title, avg/count/recommend CSS moved from [reviews-section/styles.js](src/widget/reviews-section/styles.js) to [classic/styles.js](src/widget/summary-layouts/classic/styles.js). At that point shared bar/action/filter/photo/review/modal CSS remained in `reviews-section/styles.js`; the 2026-06-01 split kept the same exported `CLASSIC_CSS` order.
 - **2026-05-07**: Spacing ve Hizalama Guncellemesi.
   - Summary block'lar arasi dikey bosluk (gap) `12px` -> `20px` yapildi (Classic ve Split Mobile).
   - Split layout tablet breakpoint'i `601px` -> `769px` yapildi (Tablette dikey dizilim icin).

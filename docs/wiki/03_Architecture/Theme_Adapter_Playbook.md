@@ -45,7 +45,7 @@ ikas does not provide a reliable public DOM slot contract today. Direct ikas fee
 - Common code owns rendering, icons, colors, review data, owned-slot wrappers, duplicate guards, self-heal, and position guards.
 - Theme adapters own selectors, allowlists, blocklists, product-title lookup, listing-title lookup, quick-view lookup, and optional mount-point overrides.
 - Theme-specific selectors must stay inside `themes/<key>/theme.js` and `themes/<key>/adapter.js`; do not move Ozy selectors into the generic adapter.
-- Base review widget CSS is theme-agnostic and lives in `reviews-section/styles.js`. Theme folders should contain only selector/adapter logic or real theme override styles.
+- Base review widget CSS is theme-agnostic and is exported from `reviews-section/styles.js`; owned shared modules live under `reviews-section/styles/`. Theme folders should contain only selector/adapter logic or real theme override styles.
 
 ## Current Ozy Spec
 - Theme name: Ozy.
