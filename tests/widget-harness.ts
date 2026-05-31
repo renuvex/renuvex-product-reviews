@@ -16,11 +16,19 @@ export type RuntimeOptions = {
   themeAdapterKey?: string;
 };
 
+export type IkasEventSequenceItem = {
+  type: string;
+  data?: Record<string, unknown>;
+  delayMs?: number;
+};
+
 export type SmokeOptions = {
   badgeEnabled?: boolean;
   reviewsEnabled?: boolean;
   mountReviews?: boolean;
   runtime?: RuntimeOptions;
+  ikasEvents?: IkasEventSequenceItem[];
+  ikasEventMode?: 'async' | 'sync';
   reviewsSettings?: Record<string, unknown>;
   badgeSettings?: Record<string, unknown>;
   hasMore?: boolean;
@@ -205,6 +213,10 @@ export function ratingsResponse(options: SmokeOptions = {}): unknown {
         avg: count > 0 ? '4.8' : '0.0',
         count,
       },
+      'product-2': {
+        avg: count > 0 ? '4.6' : '0.0',
+        count: count > 0 ? 7 : 0,
+      },
     },
   };
 }
@@ -285,7 +297,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
     await route.fulfill({
       status: 200,
       contentType: 'text/html; charset=utf-8',
-      body: productHtml(options.mountReviews !== false, options.hostileThemeCss),
+      body: productHtml(options),
     });
   });
   return log;
@@ -389,7 +401,7 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
     await route.fulfill({
       status: 200,
       contentType: 'text/html; charset=utf-8',
-      body: productListingFallbackHtml(),
+      body: productListingFallbackHtml(options),
     });
   });
   return log;
@@ -474,37 +486,90 @@ async function fulfillImage(route: Route): Promise<void> {
   });
 }
 
-function productHtml(mountReviews: boolean, hostileThemeCss?: string): string {
-  const hostileStyle = hostileThemeCss
-    ? `<style data-test-hostile-theme>${hostileThemeCss}</style>`
+function defaultProductEvents(): IkasEventSequenceItem[] {
+  return [
+    {
+      type: 'PRODUCT_VIEW',
+      data: { productDetail: { id: PRODUCT_ID, name: PRODUCT_NAME } },
+    },
+    {
+      type: 'PAGE_VIEW',
+      data: { pageType: 'PRODUCT' },
+    },
+  ];
+}
+
+export function listingIkasEvents(): IkasEventSequenceItem[] {
+  return [
+    {
+      type: 'PAGE_VIEW',
+      data: { pageType: 'CATEGORY' },
+    },
+    {
+      type: 'VIEW_LISTING',
+      data: {
+        productDetails: [
+          { id: PRODUCT_ID, name: 'Premium Shorts', slug: 'premium-shorts' },
+          { id: 'product-2', name: 'Linen Shirt', slug: 'linen-shirt' },
+        ],
+      },
+    },
+  ];
+}
+
+function ikasEventsScript(events: IkasEventSequenceItem[], mode: 'async' | 'sync' = 'async'): string {
+  const normalized = events.map((event) => ({
+    type: event.type,
+    data: event.data || {},
+    delayMs: event.delayMs || 0,
+  }));
+  return `<script>
+      (function () {
+        var events = ${JSON.stringify(normalized)};
+        var subscriptions = [];
+        function emit(event) {
+          subscriptions.slice().forEach(function (subscription) {
+            subscription.callback(event);
+          });
+        }
+        window.__renuvexEmitIkasEvent = emit;
+        window.IkasEvents = {
+          subscribe: function (subscription) {
+            subscriptions.push(subscription);
+            var elapsed = 0;
+            events.forEach(function (event) {
+              if (${JSON.stringify(mode)} === 'sync' && !event.delayMs) {
+                emit({ type: event.type, data: event.data });
+                return;
+              }
+              elapsed += event.delayMs || 0;
+              setTimeout(function () {
+                emit({ type: event.type, data: event.data });
+              }, elapsed);
+            });
+          }
+        };
+      })();
+    </script>`;
+}
+
+function productHtml(options: SmokeOptions): string {
+  const hostileStyle = options.hostileThemeCss
+    ? `<style data-test-hostile-theme>${options.hostileThemeCss}</style>`
     : '';
   // Light-DOM control: the hostile rule (e.g. img{width:100%!important}) balloons this to
   // its 600px container, proving the rule is live so the shadow assertion can't false-pass.
-  const controlBlock = hostileThemeCss
+  const controlBlock = options.hostileThemeCss
     ? `<div style="width:600px"><img class="renuvex-iso-control" width="40" height="40" src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/iso-control.jpg" alt=""></div>`
     : '';
+  const events = options.ikasEvents || defaultProductEvents();
   return `<!doctype html>
 <html lang="tr">
   <head>
     <meta charset="utf-8">
     <title>${PRODUCT_NAME}</title>
     ${hostileStyle}
-    <script>
-      window.IkasEvents = {
-        subscribe: function (subscription) {
-          setTimeout(function () {
-            subscription.callback({
-              type: 'PRODUCT_VIEW',
-              data: { productDetail: { id: '${PRODUCT_ID}', name: '${PRODUCT_NAME}' } }
-            });
-            subscription.callback({
-              type: 'PAGE_VIEW',
-              data: { pageType: 'PRODUCT' }
-            });
-          }, 0);
-        }
-      };
-    </script>
+    ${ikasEventsScript(events, options.ikasEventMode)}
     <script src="${WIDGET_ORIGIN}/widget.js?publicApiKey=${PUBLIC_KEY}" data-renuvex-app="product-reviews"></script>
   </head>
   <body>
@@ -513,19 +578,23 @@ function productHtml(mountReviews: boolean, hostileThemeCss?: string): string {
         <h1>${PRODUCT_NAME}</h1>
         <p>CI product page.</p>
         ${controlBlock}
-        ${mountReviews ? '<div data-renuvex-widget="reviews"></div>' : ''}
+        ${options.mountReviews !== false ? '<div data-renuvex-widget="reviews"></div>' : ''}
       </section>
     </main>
   </body>
 </html>`;
 }
 
-function productListingFallbackHtml(): string {
+function productListingFallbackHtml(options: SmokeOptions = {}): string {
+  const eventsScript = options.ikasEvents
+    ? ikasEventsScript(options.ikasEvents, options.ikasEventMode)
+    : '';
   return `<!doctype html>
 <html lang="tr">
   <head>
     <meta charset="utf-8">
     <title>Listing</title>
+    ${eventsScript}
     <script src="${WIDGET_ORIGIN}/widget.js?publicApiKey=${PUBLIC_KEY}" data-renuvex-app="product-reviews"></script>
   </head>
   <body>
@@ -697,6 +766,22 @@ export async function hasPdpBadge(page: Page): Promise<boolean> {
 
 export async function hasJsonLd(page: Page): Promise<boolean> {
   return page.evaluate(() => !!document.getElementById('renuvex-pr-jsonld'));
+}
+
+export async function countJsonLd(page: Page): Promise<number> {
+  return page.evaluate(() => document.querySelectorAll('#renuvex-pr-jsonld').length);
+}
+
+export async function countPdpBadges(page: Page): Promise<number> {
+  return page.evaluate(() => document.querySelectorAll('[data-renuvex-slot="product-title-rating"] .renuvex-pr-rating-badge--pdp').length);
+}
+
+export async function countListingBadges(page: Page): Promise<number> {
+  return page.evaluate(() => document.querySelectorAll('[data-renuvex-slot="listing-rating"]').length);
+}
+
+export async function countListingPlaceholders(page: Page): Promise<number> {
+  return page.evaluate(() => document.querySelectorAll('[data-renuvex-slot="listing-rating-placeholder"]').length);
 }
 
 export async function hasReviewsWidget(page: Page): Promise<boolean> {
@@ -872,5 +957,6 @@ declare global {
     __ikasPreviewBaseUrl?: string;
     __renuvexProductReviewsPreviewSettings?: string;
     __ikasPreviewSettings?: string;
+    __renuvexEmitIkasEvent?: (event: { type: string; data?: Record<string, unknown> }) => void;
   }
 }

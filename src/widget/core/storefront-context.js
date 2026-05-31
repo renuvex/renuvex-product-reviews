@@ -41,6 +41,7 @@ var subscribed = false;
 
 var latestProduct = null;   // { id, name } | null — son bilinen ürün
 var latestPage = null;      // { pageType } | null — son bilinen sayfa
+var latestListing = null;   // { eventType, products } | null — son bilinen listing/search
 
 var productViewSubs = [];
 var pageViewSubs = [];
@@ -83,6 +84,9 @@ export function onPageView(cb) {
 export function onListingView(cb) {
   if (typeof cb !== 'function') return;
   listingViewSubs.push(cb);
+  if (latestListing) {
+    try { cb(latestListing); } catch (err) { console.error('[renuvex-pr] onListingView replay error:', err); }
+  }
 }
 
 // Son bilinen ürün — events öncelikli, yoksa DOM heuristic fallback.
@@ -182,6 +186,7 @@ function emitPageView(page) {
 }
 
 function emitListingView(listing) {
+  latestListing = listing;
   listingViewSubs.forEach(function (cb) {
     try { cb(listing); } catch (err) { console.error('[renuvex-pr] onListingView callback error:', err); }
   });

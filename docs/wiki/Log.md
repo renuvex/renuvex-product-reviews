@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-05-31 - fix | Replay synchronous listing/search context
+- Summary: Widget loader/surface lifecycle audit found one verified production bug: if ikas `VIEW_LISTING` / `VIEW_SEARCH_RESULTS` was emitted synchronously during `IkasEvents.subscribe()`, `storefront-context.js` mapped the product data before `loader.js` registered `onListingView()`, so the listing surface mount trigger was lost.
+- Key source changes: `src/widget/core/storefront-context.js` now stores `latestListing` and replays it to late listing subscribers, matching the existing product/page replay contract. `tests/widget-harness.ts` gained test-only IkasEvents sequencing controls. `tests/widget-network-smoke.spec.ts` now pins synchronous listing replay, duplicate product idempotency, PDP listing side-effect boundaries, listing event ordering, and fail-closed listing gates. Rebuilt `public/widget.js` and `public/widget-runtime/*`.
+- Verification: New Playwright proof test failed before the fix (`ratings?` call stayed 0 for synchronous listing-only delivery). After the fix the lifecycle group passed 7/7.
+- Updated wiki: [[Bug_Widget_Listing_Event_Replay]], [[Bug_Index]], [[Hot_Context]], [[Test_Strategy]]
+
 ## 2026-05-31 - fix | Keyboard-enable photo-strip lightbox triggers
 - Summary: Wizard + lightbox lifecycle/accessibility audit found one verified issue: photo-strip thumbnails opened the lightbox only by pointer click. They were plain clickable `<img>` elements with no `role`, no `tabindex`, and no keyboard activation, while card/list/gallery review images already had keyboard semantics.
 - Key source changes: Added `src/widget/reviews-section/lightbox-trigger.js` as the single trigger contract for lightbox photo elements, wired photo-strip thumbnails through it, and moved card/list/gallery image triggers to the same helper. Updated the wizard step-focus comment to match current dialog-open focus behavior. Rebuilt `public/widget.js` and `public/widget-runtime/*`.

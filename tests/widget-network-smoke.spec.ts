@@ -3,12 +3,19 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   MERCHANT_ORIGIN,
+  PRODUCT_ID,
+  PRODUCT_NAME,
+  countJsonLd,
+  countListingBadges,
+  countListingPlaceholders,
+  countPdpBadges,
   countUrls,
   hasChunk,
   hasJsonLd,
   hasPdpBadge,
   hasReviewsWidget,
   hasRuntime,
+  listingIkasEvents,
   setupExternalProductLikeLinksPage,
   setupGenericLinksPage,
   setupNavFooterProductLikeLinksPage,
@@ -50,6 +57,40 @@ test('review mount present loads reviews, photo strip, badge, and render chunk',
   expect(countUrls(log, '/api/public/ratings')).toBe(1);
   expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
   expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('hasImages=true'))).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('duplicate product contexts stay idempotent across PDP surfaces', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    ikasEvents: [
+      { type: 'PRODUCT_VIEW', data: { productDetail: { id: PRODUCT_ID, name: PRODUCT_NAME } } },
+      { type: 'PRODUCT_VIEW', data: { productDetail: { id: PRODUCT_ID, name: PRODUCT_NAME } } },
+      { type: 'PAGE_VIEW', data: { pageType: 'PRODUCT' } },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await waitForWidgetIdle(page);
+
+  expect(await countPdpBadges(page)).toBe(1);
+  expect(await countJsonLd(page)).toBe(1);
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(countUrls(log, '/api/public/ratings?')).toBe(1);
+  expect(countUrls(log, '/api/public/reviews?')).toBe(2);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('product page PAGE_VIEW listing entry stays side-effect free', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: false });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasPdpBadge(page)).toBe(true);
+  await waitForWidgetIdle(page);
+
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(await countListingBadges(page)).toBe(0);
+  expect(await countListingPlaceholders(page)).toBe(0);
   expect(widgetErrors(log)).toEqual([]);
 });
 
@@ -233,6 +274,99 @@ test('product-like listing DOM triggers the fallback chunk and slug ratings call
   expect(countUrls(log, '/api/public/settings')).toBe(1);
   expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
   expect(countUrls(log, '/api/public/reviews?')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('synchronous listing event is replayed after loader subscribes', async ({ page }) => {
+  const listingOnlyEvent = listingIkasEvents().filter((event) => event.type === 'VIEW_LISTING');
+  const log = await setupProductListingFallbackPage(page, {
+    ikasEvents: listingOnlyEvent,
+    ikasEventMode: 'sync',
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+
+  await expect.poll(() => countUrls(log, '/api/public/ratings?'), { timeout: 1500 }).toBe(1);
+  await expect.poll(() => countListingBadges(page), { timeout: 1500 }).toBe(2);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(await countListingPlaceholders(page)).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('listing page stays idempotent when product data arrives before PAGE_VIEW', async ({ page }) => {
+  const events = listingIkasEvents();
+  const pageEvent = events.find((event) => event.type === 'PAGE_VIEW');
+  const listingEvent = events.find((event) => event.type === 'VIEW_LISTING');
+  if (!pageEvent || !listingEvent) throw new Error('Missing listing lifecycle test events');
+  const log = await setupProductListingFallbackPage(page, {
+    ikasEvents: [
+      { ...listingEvent },
+      { ...pageEvent, delayMs: 20 },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+
+  await expect.poll(() => countListingBadges(page), { timeout: 3000 }).toBe(2);
+  await waitForWidgetIdle(page);
+
+  expect(await countListingBadges(page)).toBe(2);
+  expect(await countListingPlaceholders(page)).toBe(0);
+  expect(countUrls(log, '/api/public/ratings?')).toBe(1);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('listing page stays idempotent when PAGE_VIEW arrives before product data', async ({ page }) => {
+  const events = listingIkasEvents();
+  const pageEvent = events.find((event) => event.type === 'PAGE_VIEW');
+  const listingEvent = events.find((event) => event.type === 'VIEW_LISTING');
+  if (!pageEvent || !listingEvent) throw new Error('Missing listing lifecycle test events');
+  const log = await setupProductListingFallbackPage(page, {
+    ikasEvents: [
+      { ...pageEvent },
+      { ...listingEvent, delayMs: 20 },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+
+  await expect.poll(() => countListingBadges(page), { timeout: 3000 }).toBe(2);
+  await waitForWidgetIdle(page);
+
+  expect(await countListingBadges(page)).toBe(2);
+  expect(await countListingPlaceholders(page)).toBe(0);
+  expect(countUrls(log, '/api/public/ratings?')).toBeLessThanOrEqual(1);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBeLessThanOrEqual(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('unsupported theme listing lifecycle stays fail-closed before DOM and rating work', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ikasEvents: listingIkasEvents(),
+    runtime: { themeAdapterKey: 'generic', autoPlacementEnabled: false, reviewsMountEnabled: true },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await waitForWidgetIdle(page);
+
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(countUrls(log, '/api/public/ratings?')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(await countListingBadges(page)).toBe(0);
+  expect(await countListingPlaceholders(page)).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('badge-disabled listing lifecycle stays fail-closed before DOM and rating work', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    badgeEnabled: false,
+    ikasEvents: listingIkasEvents(),
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await waitForWidgetIdle(page);
+
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(countUrls(log, '/api/public/ratings?')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(await countListingBadges(page)).toBe(0);
+  expect(await countListingPlaceholders(page)).toBe(0);
   expect(widgetErrors(log)).toEqual([]);
 });
 

@@ -38,6 +38,7 @@ source_files:
   - "docs/wiki/08_Widgets/Structured_Data_And_Rich_Snippets.md"
   - "docs/wiki/10_Research/Widget_Transfer_Measurement_2026-05-29.md"
   - "docs/wiki/10_Research/Structured_Data_Verification_2026-05-29.md"
+  - "src/widget/core/storefront-context.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/review-modal.js"
@@ -71,6 +72,8 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains the final trusted Cloudinary URL instead of a local `blob:` preview URL.
 
 Widget runtime smoke also pins the storefront review read contract: late sort/filter/load-more responses cannot mutate a newer active selection, overlapping load-more rows do not duplicate DOM cards, review fetch failures stay distinct from real empty states, the photo strip remains a bootstrap-owned dataset, and card/list/gallery layouts render only trusted tenant image URLs.
+
+Widget network smoke also pins storefront loader lifecycle contracts: duplicate `PRODUCT_VIEW` events stay idempotent, synchronous listing/search events replay after loader subscription, PDP `PAGE_VIEW` does not create listing side effects, listing product data remains DOM-idempotent before/after `PAGE_VIEW`, and unsupported-theme or badge-disabled listing flows stop before rating fetches or DOM insertion.
 
 ## Evidence Commands
 These commands are not hard byte-budget gates. They produce repeatable production evidence for review, deploy notes, and future budget calibration:
