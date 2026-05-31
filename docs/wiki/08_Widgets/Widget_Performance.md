@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - widget
@@ -71,6 +71,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-05-29 fallback determinism: the legacy 2-second listing fallback candidate probe lives in `listing-badges/fallback-candidates.js` and is covered by negative tests for generic links, external links, nav/footer links, one product-like link, and product-like links without nearby media. Positive product-card DOM still loads the listing chunk and calls `ratings-by-slug`.
 - 2026-05-29 surface contract gate: `tests/unit/widget-surface-contracts.test.ts` fails if a new `src/widget/surfaces/*.surface.js` file is added without declaring which test layer covers it.
 - 2026-05-31 clean PDP routing: `PRODUCT` `PAGE_VIEW` no longer loads the `listing-badges-*` entry chunk on clean PDPs. The listing surface accepts page events only for listing-like page types (`INDEX`, `CATEGORY`, `BRAND`, `SEARCH`), while observer and fallback probes ignore widget-owned hash/query links such as the PDP badge's `#renuvex-reviews` anchor. Listing event and product-card fallback paths remain covered by network smoke.
+- 2026-06-01 `PAGE_VIEW` semantic dedupe: same-page duplicate `PAGE_VIEW` events inside 800 ms are still suppressed, but distinct fast transitions are no longer delayed until the 2-second listing fallback. The network smoke suite covers both outcomes.
 
 ## 2026-05-15 Live Observations
 

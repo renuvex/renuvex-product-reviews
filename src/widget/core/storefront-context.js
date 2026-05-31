@@ -14,7 +14,7 @@
 
 import { PUBLIC_API_KEY } from './config.js';
 import { cacheSet } from './cache.js';
-import { ls, renuvexPrProductMap, renuvexPrSlugMap } from './state.js';
+import { renuvexPrProductMap, renuvexPrSlugMap } from './state.js';
 
 // ── Olay tipi sabitleri — TEK kaynak ─────────────────────────────────────────
 // Resmî olay tipleri (IKAS_EVENT_TYPE): PAGE_VIEW, PRODUCT_VIEW, ADD_TO_CART,
@@ -42,6 +42,10 @@ var subscribed = false;
 var latestProduct = null;   // { id, name } | null — son bilinen ürün
 var latestPage = null;      // { pageType } | null — son bilinen sayfa
 var latestListing = null;   // { eventType, products } | null — son bilinen listing/search
+
+var PAGE_VIEW_DEDUPE_MS = 800;
+var lastPageViewKey = null;
+var lastPageViewAt = 0;
 
 var productViewSubs = [];
 var pageViewSubs = [];
@@ -160,13 +164,43 @@ function handleIkasEvent(event) {
   }
 
   if (event.type === IKAS_EVENT.PAGE_VIEW) {
-    // 800ms içinde gelen ikinci PAGE_VIEW'ı yoksay — ikas ilk girişte çift tetikliyor
-    var now = Date.now();
-    if (ls.lastPageView && now - ls.lastPageView < 800) return;
-    ls.lastPageView = now;
-    latestPage = { pageType: (event.data && event.data.pageType) || null };
+    var page = buildPageContext(event);
+    if (isDuplicatePageView(page)) return;
+    latestPage = page;
     emitPageView(latestPage);
     return;
+  }
+}
+
+function buildPageContext(event) {
+  return {
+    pageType: (event.data && event.data.pageType) || null,
+    routeKey: getCurrentRouteKey(),
+  };
+}
+
+function isDuplicatePageView(page) {
+  var now = Date.now();
+  var key = buildPageViewKey(page);
+  if (lastPageViewKey === key && lastPageViewAt && now - lastPageViewAt < PAGE_VIEW_DEDUPE_MS) {
+    return true;
+  }
+  lastPageViewKey = key;
+  lastPageViewAt = now;
+  return false;
+}
+
+function buildPageViewKey(page) {
+  var pageType = page && page.pageType ? String(page.pageType).toUpperCase() : '';
+  var routeKey = page && page.routeKey ? page.routeKey : '';
+  return pageType + '|' + routeKey;
+}
+
+function getCurrentRouteKey() {
+  try {
+    return window.location.pathname + window.location.search;
+  } catch (_) {
+    return '';
   }
 }
 

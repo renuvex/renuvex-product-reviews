@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-31
+updated: 2026-06-01
 tags:
   - bugs
 related:
@@ -21,6 +21,7 @@ related:
 - _None tracked._
 
 ## Recently fixed (verify periodically)
+- 2026-06-01 - [[Bug_Widget_Page_View_Semantic_Dedupe]] - Widget loader lifecycle follow-up verified and fixed a `PAGE_VIEW` dedupe bug: the previous global 800 ms timestamp debounce suppressed a real `PRODUCT` to `CATEGORY` transition when events arrived close together. `storefront-context.js` now dedupes by normalized `pageType` plus route key, and network smoke pins both distinct-transition pass-through and same-page duplicate suppression.
 - 2026-05-31 - [[Bug_Widget_Listing_Event_Replay]] - Widget loader lifecycle audit verified and fixed a listing/search event replay gap: synchronous `VIEW_LISTING` / `VIEW_SEARCH_RESULTS` emitted during `IkasEvents.subscribe()` could map product context before `onListingView()` was registered, so the listing surface was not mounted until a later page event or fallback. `storefront-context.js` now replays latest listing context like product/page, and network smoke pins duplicate product idempotency, PDP side-effect boundaries, listing event ordering, and fail-closed listing gates.
 - 2026-05-31 - [[Bug_Review_Read_Lifecycle_Stale_Responses]] - Review read lifecycle audit verified and fixed three storefront regressions: slower sort/filter responses could overwrite newer selections, stale load-more completions could advance the active sorted page, and overlapping load-more ids duplicated DOM cards. Runtime smoke now pins stale-response guards, duplicate filtering, retry recovery, photo-strip independence, and trusted image layout rendering.
 - 2026-05-31 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]] - Verified and fixed two photo upload lifecycle bugs: close-before-upload-complete now revokes local blob previews, and deleting one pending photo no longer aborts later selected uploads. Removal now batches state cleanup before blob revoke to avoid stale image load errors.
@@ -54,6 +55,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-06-01: Added [[Bug_Widget_Page_View_Semantic_Dedupe]] after a focused browser proof showed the global `PAGE_VIEW` timestamp debounce could suppress a real fast page transition. Fixed with semantic page-key dedupe in `storefront-context.js`.
 - 2026-05-31: Added [[Bug_Widget_Listing_Event_Replay]] after the widget loader/surface lifecycle audit proved synchronous listing/search events could be lost before loader subscription. Fixed with `latestListing` replay and network smoke coverage for event ordering, duplicate product contexts, PDP listing side-effect boundaries, and fail-closed listing gates.
 - 2026-05-31: Added [[Bug_Review_Read_Lifecycle_Stale_Responses]] after the review read lifecycle audit proved stale sort/filter responses, stale load-more completions, and overlapping load-more ids could corrupt the active storefront review list.
 - 2026-05-31: Added [[Bug_Review_Wizard_Photo_Upload_Lifecycle]] after the upload lifecycle audit proved pending blob previews leaked on close and deleting one pending upload aborted the rest of the selected batch.

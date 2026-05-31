@@ -100,7 +100,6 @@ export var ls = {
   inProgress:   false,
   queued:       false,
   navCleanup:   false,
-  lastPageView: 0,
 };
 
 // VIEW_LISTING'den gelen slug→name map

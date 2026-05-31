@@ -95,6 +95,40 @@ test('clean product PAGE_VIEW skips listing entry and side effects', async ({ pa
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('distinct PAGE_VIEW transitions inside the debounce window still start listing lifecycle', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ikasEvents: [
+      { type: 'PAGE_VIEW', data: { pageType: 'PRODUCT' } },
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' }, delayMs: 20 },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 1500 }).toBe(1);
+
+  expect(hasChunk(log, 'listing-badges-')).toBe(true);
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('duplicate same-page PAGE_VIEW inside the debounce window remains idempotent', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, {
+    ikasEvents: [
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' } },
+      { type: 'PAGE_VIEW', data: { pageType: 'CATEGORY' }, delayMs: 20 },
+    ],
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 1500 }).toBe(1);
+  await page.waitForTimeout(1000);
+
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(1);
+  expect(hasChunk(log, 'listing-badges-')).toBe(true);
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('review mount absent keeps badge but skips review render chunk and review APIs', async ({ page }) => {
   const log = await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: false });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);

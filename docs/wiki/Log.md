@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-01 - fix | Use semantic PAGE_VIEW dedupe
+- Summary: Fixed a verified widget loader lifecycle bug where the global 800 ms `PAGE_VIEW` debounce could suppress a real fast transition such as `PRODUCT -> CATEGORY`, delaying listing lifecycle until the DOM fallback path.
+- Key source changes: `src/widget/core/storefront-context.js` now dedupes `PAGE_VIEW` by normalized `pageType + pathname/search`; `lastPageView` was removed from listing badge render state; `tests/widget-network-smoke.spec.ts` pins both distinct-transition pass-through and same-page duplicate suppression. Rebuilt `public/widget.js` and `public/widget-runtime/*`.
+- Verification: The proof test failed before the fix (`/api/public/ratings-by-slug` stayed 0 inside the 1.5 second window). After the fix, the targeted pair passed, `pnpm test:widget-smoke` passed 24/24, `pnpm test:widget-runtime` passed 16/16, `pnpm test:widget-interactions` passed 12/12, `pnpm test:admin-preview` passed 2/2, `pnpm test:unit` passed 54/54, and static gates (`check:widget-js`, TypeScript, lint, diff, wiki audit) passed. Wiki audit has existing warnings only.
+- Updated wiki: [[Bug_Widget_Page_View_Semantic_Dedupe]], [[Bug_Index]], [[Hot_Context]], [[Test_Strategy]], [[Widget_Architecture]], [[Widget_Performance]]
+
 ## 2026-06-01 - refactor | Split review-section CSS ownership modules
 - Summary: Split the large shared `reviews-section/styles.js` payload into owned CSS modules without changing DOM structure, class names, public settings, API contracts, or shadow injection order. `reviews-section/styles.js` remains the stable `CLASSIC_CSS` aggregator.
 - Key source changes: Added `styles/base.js`, `summary-controls.js`, `review-primitives.js`, `photo-strip.js`, and `lightbox.js`; rebuilt `public/widget.js` and `public/widget-runtime/*`; removed manifest-unreferenced stale hashed runtime artifacts.

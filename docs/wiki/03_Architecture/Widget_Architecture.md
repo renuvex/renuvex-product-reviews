@@ -99,7 +99,7 @@ deployment before claiming live performance improvement.
 |---|---|
 | [src/widget/index.js](src/widget/index.js) | Thin entry. Side-effect inits (ADR_0011 order) + preview/prod branch. Delegates to `loader.js`. |
 | [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Wires context → registry (ADR_0013). |
-| [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). |
+| [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). `PAGE_VIEW` duplicates are suppressed by semantic `pageType + pathname/search`, not by global time alone. |
 | [core/registry.js](src/widget/core/registry.js) | Surface registry (`rating-badge`, `reviews-main`, `structured-data`, `listing-badge`) with guarded async mounts. |
 | [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for reviews, listing, badge, structured-data, and preview render modules. |
 | [core/settings.js](src/widget/core/settings.js) | Shared public settings fetch/cache used by lazy modules without pulling PDP render code. |
@@ -264,6 +264,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-06-01: Fixed `PAGE_VIEW` lifecycle dedupe so same-page duplicate events inside 800 ms are suppressed, while distinct fast transitions such as `PRODUCT -> CATEGORY` still reach the surface registry immediately. Related bug: [[Bug_Widget_Page_View_Semantic_Dedupe]].
 - 2026-06-01: Split shared review-section CSS into owned modules under [reviews-section/styles/](src/widget/reviews-section/styles/) while preserving the `CLASSIC_CSS` export, shadow injection order, DOM/class names, and public settings contract.
 - 2026-05-31: Review read lifecycle hardening added stale-response guards for sort/filter/retry/load-more and duplicate-id filtering before load-more DOM insertion. Related bug: [[Bug_Review_Read_Lifecycle_Stale_Responses]].
 - 2026-05-28: Expanded automated quality gates from network-only smoke to layered Playwright + Vitest coverage: widget runtime layouts, lightbox/wizard flows, admin preview/settings, public API routes, and theme-state helpers. CI now runs `pnpm test:ci` plus generated widget syntax checks.
