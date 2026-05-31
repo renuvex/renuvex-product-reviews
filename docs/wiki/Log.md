@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-05-31 - perf | Skip listing entry on clean PDP PAGE_VIEW
+- Summary: Separate widget performance phase closed the known clean-PDP transfer waste: `PRODUCT` `PAGE_VIEW` was still loading the listing-badges entry chunk, and the PDP badge's own `#renuvex-reviews` link could be misread as a listing/product candidate by observer fallback logic.
+- Key source changes: `src/widget/surfaces/listing-badge.surface.js` now gates page-triggered listing badge loads to listing-like page types (`INDEX`, `CATEGORY`, `BRAND`, `SEARCH`). `src/widget/observer.js` and `src/widget/listing-badges/fallback-candidates.js` ignore widget-owned hash/query links before product-link detection. `tests/widget-network-smoke.spec.ts` now asserts clean PDPs skip `listing-badges-*`, `/api/public/ratings-by-slug`, listing badge DOM, and placeholders. Rebuilt `public/widget.js` and `public/widget-runtime/*`.
+- Verification: The new proof test failed before the source fix because `listing-badges-*` loaded on clean PDP. After the fix: targeted lifecycle/performance group passed 7/7, `pnpm test:widget-smoke` passed 22/22, `pnpm test:widget-runtime` passed 16/16, `pnpm test:unit` passed 54/54, `pnpm check:widget-js` passed 18/18, plus TypeScript, lint, and whitespace gates passed.
+- Updated wiki: [[Hot_Context]], [[Widget_Performance]], [[Widget_Transfer_Measurement_2026-05-29]], [[Test_Strategy]]
+
 ## 2026-05-31 - fix | Replay synchronous listing/search context
 - Summary: Widget loader/surface lifecycle audit found one verified production bug: if ikas `VIEW_LISTING` / `VIEW_SEARCH_RESULTS` was emitted synchronously during `IkasEvents.subscribe()`, `storefront-context.js` mapped the product data before `loader.js` registered `onListingView()`, so the listing surface mount trigger was lost.
 - Key source changes: `src/widget/core/storefront-context.js` now stores `latestListing` and replays it to late listing subscribers, matching the existing product/page replay contract. `tests/widget-harness.ts` gained test-only IkasEvents sequencing controls. `tests/widget-network-smoke.spec.ts` now pins synchronous listing replay, duplicate product idempotency, PDP listing side-effect boundaries, listing event ordering, and fail-closed listing gates. Rebuilt `public/widget.js` and `public/widget-runtime/*`.

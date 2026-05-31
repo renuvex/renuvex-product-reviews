@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: high
 tags:
   - widget
@@ -30,10 +30,12 @@ source_files:
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
   - "src/widget/loader.js"
+  - "src/widget/observer.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/core/settings.js"
   - "src/widget/core/rating-summary.js"
   - "src/widget/listing-badges/fallback-candidates.js"
+  - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/structured-data/index.js"
   - "src/widget/reviews-section/bootstrap.js"
@@ -68,6 +70,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-05-29 deployed evidence: `pnpm measure:deployed-widget` measures the real deployed `https://new-ikas-app.vercel.app/widget.js` and immutable runtime chunks while mocking merchant HTML and `/api/public/*` responses. Latest controlled run is recorded in [[Widget_Transfer_Measurement_2026-05-29]]. It confirms the review render chunk and reviews API calls are skipped when the explicit review mount is absent. After the structured-data split, badge-disabled + review-mounted PDPs still call `/api/public/ratings` once for JSON-LD; badge-disabled + mount-absent PDPs skip ratings and JSON-LD.
 - 2026-05-29 fallback determinism: the legacy 2-second listing fallback candidate probe lives in `listing-badges/fallback-candidates.js` and is covered by negative tests for generic links, external links, nav/footer links, one product-like link, and product-like links without nearby media. Positive product-card DOM still loads the listing chunk and calls `ratings-by-slug`.
 - 2026-05-29 surface contract gate: `tests/unit/widget-surface-contracts.test.ts` fails if a new `src/widget/surfaces/*.surface.js` file is added without declaring which test layer covers it.
+- 2026-05-31 clean PDP routing: `PRODUCT` `PAGE_VIEW` no longer loads the `listing-badges-*` entry chunk on clean PDPs. The listing surface accepts page events only for listing-like page types (`INDEX`, `CATEGORY`, `BRAND`, `SEARCH`), while observer and fallback probes ignore widget-owned hash/query links such as the PDP badge's `#renuvex-reviews` anchor. Listing event and product-card fallback paths remain covered by network smoke.
 
 ## 2026-05-15 Live Observations
 

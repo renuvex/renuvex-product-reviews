@@ -37,6 +37,10 @@ function hasNearbyImage(anchor) {
 }
 
 function isIgnoredListingScope(anchor) {
+  var href = anchor && anchor.getAttribute ? anchor.getAttribute('href') || '' : '';
+  if (href.charAt(0) === '#' || href.charAt(0) === '?') return true;
+  if (anchor && anchor.closest && anchor.closest('[data-renuvex-slot],[data-renuvex-listing-badge],#renuvex-pr-reviews-widget,#renuvex-pr-rating-badge')) return true;
+
   var el = anchor;
   while (el && el !== document.body) {
     var tag = el.tagName ? el.tagName.toLowerCase() : '';

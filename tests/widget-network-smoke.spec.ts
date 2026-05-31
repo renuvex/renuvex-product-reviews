@@ -82,12 +82,13 @@ test('duplicate product contexts stay idempotent across PDP surfaces', async ({ 
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('product page PAGE_VIEW listing entry stays side-effect free', async ({ page }) => {
+test('clean product PAGE_VIEW skips listing entry and side effects', async ({ page }) => {
   const log = await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: false });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasPdpBadge(page)).toBe(true);
-  await waitForWidgetIdle(page);
+  await page.waitForTimeout(2400);
 
+  expect(hasChunk(log, 'listing-badges-')).toBe(false);
   expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
   expect(await countListingBadges(page)).toBe(0);
   expect(await countListingPlaceholders(page)).toBe(0);

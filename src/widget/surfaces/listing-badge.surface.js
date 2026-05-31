@@ -1,6 +1,6 @@
 // surfaces/listing-badge.surface.js - listing badge surface descriptor.
 //
-// Phase 2: the listing badge module is lazy-loaded for page/listing contexts.
+// Phase 2: the listing badge module is lazy-loaded for listing-like page/listing contexts.
 // The verified ikas events are:
 // - VIEW_LISTING: category productDetails[]
 // - VIEW_SEARCH_RESULTS: search productDetails[]
@@ -8,10 +8,23 @@
 import { ls } from '../core/state.js';
 import { loadListingBadgesModule } from '../core/lazy-modules.js';
 
+var LISTING_PAGE_TYPES = {
+  INDEX: true,
+  CATEGORY: true,
+  BRAND: true,
+  SEARCH: true,
+};
+
+function isListingPageType(pageType) {
+  if (!pageType) return false;
+  return !!LISTING_PAGE_TYPES[String(pageType).toUpperCase()];
+}
+
 export var listingBadgeSurface = {
   key: 'listing-badge',
   detect: function (ctx) {
-    return ctx.trigger === 'page' || ctx.trigger === 'listing-products';
+    return ctx.trigger === 'listing-products' ||
+      (ctx.trigger === 'page' && isListingPageType(ctx.pageType));
   },
   mount: function (ctx) {
     if (ctx.trigger === 'page') {

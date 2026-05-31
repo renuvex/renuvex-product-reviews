@@ -3,8 +3,8 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-05-29
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: high
 tags:
   - widget
@@ -18,7 +18,9 @@ source_files:
   - "scripts/measure-deployed-widget-network.mjs"
   - "tests/widget-network-smoke.spec.ts"
   - "src/widget/loader.js"
+  - "src/widget/observer.js"
   - "src/widget/listing-badges/fallback-candidates.js"
+  - "src/widget/surfaces/listing-badge.surface.js"
   - "public/widget-runtime/build-manifest.json"
 ---
 
@@ -68,6 +70,10 @@ Measured at `2026-05-29T13:12:38.998Z`.
 ## Observation
 
 The controlled PDP still loaded `listing-badges-22AODA5U.js` in all four scenarios. This is not the legacy 2-second fallback timer; the fallback timer is now covered by deterministic negative/positive tests. This comes from the current deployed `PAGE_VIEW` surface path and should be treated as a separate future page-type routing optimization if the team wants clean PDPs to avoid the listing entry chunk entirely.
+
+## 2026-05-31 Follow-up
+
+The page-type routing optimization has been implemented in source and local browser tests: clean `PRODUCT` `PAGE_VIEW` skips the listing entry chunk and side effects, while listing events and product-card fallback still load listing badges when appropriate. The fix also excludes widget-owned hash/query links from observer and fallback listing probes. Re-run `pnpm measure:deployed-widget` after deployment before replacing the 2026-05-29 deployed measurement table.
 
 ## Next Measurement
 

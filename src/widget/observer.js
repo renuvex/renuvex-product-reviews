@@ -26,6 +26,9 @@ function getObserverListingScopes() {
 function hasUnbadgedListingLinks() {
   return collectLinksFromScopes(getObserverListingScopes()).some(function(a) {
     if (a.getAttribute('data-renuvex-badge')) return false;
+    var href = a.getAttribute('href') || '';
+    if (href.charAt(0) === '#' || href.charAt(0) === '?') return false;
+    if (a.closest('[data-renuvex-slot],[data-renuvex-listing-badge],#renuvex-pr-reviews-widget,#renuvex-pr-rating-badge')) return false;
     var path = extractSlug(a.href);
     return path && path.length >= 3 && !SYSTEM_SLUGS.test(path);
   });
