@@ -3,7 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-27
+updated: 2026-05-31
+last_verified: 2026-05-31
 tags:
   - widget
   - reviews
@@ -45,7 +46,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 
 ## Photo review detail lightbox
 - Detail lightbox source: [review-modal.js](src/widget/reviews-section/review-modal.js). Full note: [[Product_Review_Lightbox]].
-- Entry points include review images inside card/list/gallery layouts and the top photo strip rendered by [render.js](src/widget/reviews-section/render.js).
+- Entry points include review images inside card/list/gallery layouts and the top photo strip rendered by [render.js](src/widget/reviews-section/render.js). All photo lightbox entry points use [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) so click, `Enter` / `Space`, `role="button"`, `tabindex="0"`, label, and focus-return behavior stay consistent.
 - All photo entry points use trusted image helpers; third-party `https://` URLs and `data:image` payloads are not rendered on storefronts.
 - In gallery layout, long photo-backed reviews can use the lightbox for full detail; long photo-less reviews expand inline and must not open the photo-only lightbox.
 - This lightbox is separate from the submission wizard under [review-form-modal/](src/widget/reviews-section/review-form-modal/).
@@ -53,7 +54,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 
 ## Submission flow (modal)
 - Steps managed in [reviews-section/review-form-modal/wizard-state.js](src/widget/reviews-section/review-form-modal/wizard-state.js).
-- The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Focus moves into the active step on open/step change and returns to the opening control on close. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]].
+- The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Open focuses the dialog container, first `Tab` enters the active step, step changes do not auto-focus inputs, and close returns focus to the opening control for keyboard opens. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]] and [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary under `review_images/stores/<storeId>`.
 - Photo step allows **parallel uploads** — the add button stays enabled while existing uploads are in flight. Each pending upload is tracked independently in `pendingImages`. The submission step blocks submit with a "fotoğraflar yükleniyor" message until every pending upload resolves. Upper bound `MAX_PHOTOS=3` is enforced across completed + pending so parallel selection never exceeds the cap.
 - Auto-jump to the next step fires only on the user's first real photo action (no completed, no pending). Returning to the photo step to add more keeps the user on that step.
@@ -73,6 +74,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 
 ## Related Source Files
 - [src/widget/reviews-section/](src/widget/reviews-section/)
+- [src/widget/reviews-section/lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js)
 - [src/widget/summary-layouts/](src/widget/summary-layouts/)
 - [src/widget/review-layouts/](src/widget/review-layouts/)
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
@@ -93,6 +95,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 
 ## Change Log
+- 2026-05-31: Wizard/lightbox lifecycle audit found the photo-strip lightbox thumbnails were click-only images. Added shared `wireLightboxTrigger()` and moved card/list/gallery triggers to it; interaction smoke now verifies keyboard open and focus restore from the photo strip.
 - 2026-05-27: ADR_0024 follow-up moved review/photoStrip fetch helpers into [reviews-api.js](src/widget/reviews-section/reviews-api.js). `bootstrap.js` is now review mount orchestration, while `render.js` uses the same fetch helper for retry/filter/sort/load-more interactions.
 - 2026-05-25: Review-section placement became opt-in via `<div data-renuvex-widget="reviews"></div>`. Missing mount now means no review section; the PDP title badge remains independent and is controlled by the `badge` widget toggle.
 - 2026-05-12: Photo step now allows parallel uploads — add button stays enabled while existing uploads are in flight (the previous silent block was confusing when users returned to step 2 after the auto-jump). Auto-jump narrowed to the truly first photo (no completed, no pending). MAX_PHOTOS=3 cap enforced across completed + pending. Source: [step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js).

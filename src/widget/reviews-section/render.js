@@ -3,6 +3,7 @@
 import { getFirstTrustedReviewImage, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
 import { fetchReviews, isReviewsFetchError } from './reviews-api.js';
 import { openReviewModal } from './review-modal.js';
+import { wireLightboxTrigger } from './lightbox-trigger.js';
 // ADR_0024: PDP rating badge is now its own surface (src/widget/rating-badge/)
 // and renders independently of the review section. render() no longer injects
 // the badge — the rating-badge surface does it via its own lazy chunk with a
@@ -676,7 +677,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           // Lightbox navigasyonu strip dataset'i içinde gezer — load-more sonrası
           // ana liste değişse bile lightbox tutarlı kalır (K1.b çözümü).
           (function (url, review) {
-            thumb.onclick = function () { openReviewModal(review, url, stripReviews); };
+            wireLightboxTrigger(thumb, function () { openReviewModal(review, url, stripReviews); });
           })(firstImg, r);
           photoStrip.appendChild(thumb);
           thumbCount++;

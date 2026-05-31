@@ -185,8 +185,8 @@ export function openReviewFormModal(opts) {
     // Adım değişimlerinde otomatik focus yok — Next butonu odakta kalır,
     // kullanıcı Tab ile yeni adıma giriş yapar. Aksi halde adım 3/4'te ilk
     // input'a focus düşmesi mobil klavyeyi tetikliyor ve klavye odak çerçevesi
-    // her geçişte titriyor. Modal ilk açıldığında shell zaten ilk kontrolü
-    // odaklıyor.
+    // her geçişte titriyor. Modal ilk açıldığında shell dialog container'ına
+    // focus verir; kullanıcı ilk Tab ile adıma girer.
   }
 
   var isThanksShowing = false;

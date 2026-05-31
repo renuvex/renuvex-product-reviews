@@ -29,6 +29,21 @@ function overlayActiveState(page: Page, overlaySelector: string) {
   }, overlaySelector);
 }
 
+function reviewsActiveState(page: Page) {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    const active = root?.activeElement as HTMLElement | null;
+    return {
+      ariaLabel: active?.getAttribute('aria-label') || null,
+      className: active && typeof active.className === 'string' ? active.className : '',
+      role: active?.getAttribute('role') || null,
+      tabIndex: active?.tabIndex ?? null,
+    };
+  });
+}
+
 test('photo strip lightbox opens, navigates, and closes without console errors', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
@@ -46,6 +61,39 @@ test('photo strip lightbox opens, navigates, and closes without console errors',
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
   await clickInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-close');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
+
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('photo strip thumbnails open the lightbox from keyboard and restore focus', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    (root?.querySelector('.renuvex-pr-photo-strip-thumb') as HTMLElement | null)?.focus();
+  });
+  await expect.poll(() => reviewsActiveState(page)).toMatchObject({
+    ariaLabel: 'Yorum fotoğrafını büyüt',
+    className: 'renuvex-pr-photo-strip-thumb',
+    role: 'button',
+    tabIndex: 0,
+  });
+
+  await page.keyboard.press('Enter');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
+  await expect.poll(() => reviewsActiveState(page)).toMatchObject({
+    className: 'renuvex-pr-photo-strip-thumb',
+  });
 
   expect(widgetErrors(log)).toEqual([]);
 });

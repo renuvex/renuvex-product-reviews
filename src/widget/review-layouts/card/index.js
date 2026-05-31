@@ -6,6 +6,7 @@
 
 import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
+import { wireLightboxTrigger } from '../../reviews-section/lightbox-trigger.js';
 import { currentSettings } from '../../core/state.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';
 
@@ -89,16 +90,8 @@ export function render(r, allReviews) {
       imgEl.className = 'renuvex-pr-img';
       hideOnImageError(imgEl);
       imgEl.setAttribute('data-renuvex-img-url', imgUrl);
-      // Keyboard-erişilebilir lightbox tetiği (img tıklaması klavyeyle çalışmıyordu).
-      imgEl.setAttribute('role', 'button');
-      imgEl.setAttribute('tabindex', '0');
-      imgEl.setAttribute('aria-label', 'Yorum fotoğrafını büyüt');
       (function(url) {
-        var open = function() { openReviewModal(r, url, allReviews); };
-        imgEl.onclick = open;
-        imgEl.onkeydown = function(e) {
-          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); open(); }
-        };
+        wireLightboxTrigger(imgEl, function() { openReviewModal(r, url, allReviews); });
       })(imgUrl);
       gallery.appendChild(imgEl);
     });

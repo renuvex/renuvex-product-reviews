@@ -3,7 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-10
-updated: 2026-05-24
+updated: 2026-05-31
+last_verified: 2026-05-31
 tags:
   - widget
   - reviews
@@ -28,6 +29,7 @@ The product review lightbox is the photo review detail modal opened from review 
 
 ## Related Source Files
 - [review-modal.js](src/widget/reviews-section/review-modal.js) - photo review detail lightbox.
+- [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) - shared click/keyboard/ARIA wiring for photo elements that open the lightbox.
 - [styles.js](src/widget/reviews-section/styles.js) - `.renuvex-pr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
 - [render.js](src/widget/reviews-section/render.js) - review layout and photo strip entry points that call `openReviewModal`.
 - [state.js](src/widget/core/state.js) - canonical loaded review collection used by review layout lightbox navigation.
@@ -60,6 +62,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - Body scroll locking snapshots previous inline `html` / `body` scroll containment styles, body fixed-position fields, padding compensation, and scroll position before locking. Close restores the previous inline values and scroll position. Android/modern Chrome relies on root overflow plus `overscroll-behavior-y:none`; iOS/WebKit keeps fixed-body locking because that platform needs stronger background-scroll containment.
 - Browser back support uses a widget-owned modal history state. Browser back closes the modal through `popstate`; normal UI close does not call `history.go(-1)` and only replaces the widget-owned state when it is still current.
 - The lightbox wrapper exposes dialog semantics (`role="dialog"`, `aria-modal="true"`), moves focus into the modal on open, traps `Tab` / `Shift+Tab` inside the overlay, and restores previous focus on close.
+- All storefront photo elements that open the lightbox must use `wireLightboxTrigger()`: photo-strip thumbnails and card/list/gallery review images expose `role="button"`, `tabindex="0"`, a shared accessible label, and `Enter` / `Space` activation. This prevents a click-only trigger from bypassing the modal's keyboard contract.
 - Responsive layout is split by modal readability, not only by a generic mobile breakpoint: `801px+` keeps the desktop two-column shell with the 438 px media column, `641px-800px` uses a stacked tablet/landscape shell with capped media height and full-width text, and `640px` and below keeps the fullscreen mobile shell.
 - Mobile height uses a `100vh` fallback followed by `100svh` and `100dvh` so modern Android and iOS browsers can size the fullscreen shell against small/dynamic viewport units when browser chrome is visible or changing.
 - Scroll containment is explicit on the overlay, desktop right panel, tablet wrapper, and mobile wrapper. While the modal is open, root `html` / `body` also receive `overscroll-behavior-y:none`; iOS/WebKit uses fixed-body locking so long-comment top-boundary pulls do not leak into page refresh.
@@ -68,6 +71,7 @@ The product review lightbox is the photo review detail modal opened from review 
 - In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
 
 ## Change Log
+- 2026-05-31: Added shared [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) after an audit found photo-strip thumbnails were click-only images. Photo-strip and card/list/gallery lightbox triggers now share keyboard/ARIA wiring, and interaction smoke verifies keyboard open + focus restore from the photo strip. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
 - 2026-05-24/25: Updated preview-event wording for ADR_0020 namespace migration. `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` is the active preview event.
 - 2026-05-12: Fixed preview settings synchronization for an already-open lightbox. The right pane now re-renders from closure state on the preview settings event, covering review icons, merchant reply labels, and future right-pane setting-dependent fields. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
 - 2026-05-12: Changed the main lightbox image from `cover` to `contain` on the existing dark media background so customer review photos are shown without crop; preview thumbnails remain `cover`.

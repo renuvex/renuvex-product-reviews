@@ -8,6 +8,7 @@
 
 import { starsHTML, formatDate, getFirstTrustedReviewImage, GALLERY_TILE_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
+import { wireLightboxTrigger } from '../../reviews-section/lightbox-trigger.js';
 import { currentSettings } from '../../core/state.js';
 import { GALLERY_CSS } from './styles.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';
@@ -98,14 +99,7 @@ export function render(r, allReviews) {
     imgEl.height = Math.round(GALLERY_TILE_WIDTH * 4 / 3);
     hideOnImageError(imgEl);
     imgEl.setAttribute('data-renuvex-img-url', firstImg);
-    imgEl.setAttribute('role', 'button');
-    imgEl.setAttribute('tabindex', '0');
-    imgEl.setAttribute('aria-label', 'Yorum fotoğrafını büyüt');
-    var openGalleryImg = function() { openReviewModal(r, firstImg, allReviews); };
-    imgEl.onclick = openGalleryImg;
-    imgEl.onkeydown = function(e) {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); openGalleryImg(); }
-    };
+    wireLightboxTrigger(imgEl, function() { openReviewModal(r, firstImg, allReviews); });
     mediaWrap.appendChild(imgEl);
     reviewEl.appendChild(mediaWrap);
   }

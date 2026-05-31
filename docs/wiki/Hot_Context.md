@@ -47,6 +47,7 @@ source_files:
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/lightbox-trigger.js"
   - "src/widget/reviews-section/styles.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/generic/adapter.js"
@@ -77,18 +78,18 @@ source_files:
 - 2026-05-27: ADRs 0022-0024 added placement allowlist, lifecycle gating, independent `rating-badge-*`, review/photoStrip helper split, stricter listing fallback, and script/chunk error forwarding.
 - 2026-05-28: Review-section implementation moved to `src/widget/reviews-section/`; shared PDP title helper moved to `src/widget/core/product-title.js`.
 - 2026-05-28: [[Test_Strategy]] now defines `pnpm test:ci`: widget network, runtime layouts, lightbox/wizard, admin preview/settings, and public API/theme-state unit tests. GitHub Actions workflow is `Quality Gate`.
-- 2026-05-28: Review API tests now cover validation, profanity, rate-limit, image policy, target verification, approval modes, GET filters, and cache behavior. Widget network smoke also records local transfer evidence and tests both negative and positive listing fallback paths.
-- 2026-05-29: Production evidence guardrails added: `pnpm measure:deployed-widget`, `pnpm verify:deployed-jsonld`, `listing-badges/fallback-candidates.js`, and `tests/unit/widget-surface-contracts.test.ts`. Evidence notes live in [[Widget_Transfer_Measurement_2026-05-29]] and [[Structured_Data_Verification_2026-05-29]].
+- 2026-05-29: Production evidence guardrails: `pnpm measure:deployed-widget`, `pnpm verify:deployed-jsonld`, listing fallback candidates, and widget surface contracts.
 - 2026-05-29: Product `AggregateRating` JSON-LD moved out of `rating-badge` into an independent `structured-data` surface. `Ürün Yorumları` now has `SEO` → `Google Rich Snippets` (`richSnippetsEnabled`, default `true`); badge disabled no longer disables JSON-LD when the explicit review section is visible.
 - 2026-05-30: Overlay shared-surface foundation ([[ADR_0025_Overlay_Shared_Surface_Foundation]]). The two body-level overlays (lightbox, wizard) share `core/body-scroll-lock.js` (ref-counted), `shared/focus-trap.js`, `core/modal-history.js`; tap-highlight reset in `HOST_RESET_CSS`. Fixed the wizard's weak `body`-only scroll lock; a `widget-surface-contracts.test.ts` invariant prevents recurrence.
 - 2026-05-30: Widget icons fully on Phosphor (`icons/ui-icons.js`); no off-family widget glyph remains. `iconUseNode` must HTML-parse (not `image/svg+xml`+`importNode`) or `<use>` icons paint blank in shadow trees ([[Bug_Icon_Use_Node_Blank_Glyphs]]).
 - 2026-05-30: Wizard/lightbox a11y — overlays focus the dialog on open, not a control (wizard first Tab → star 1, close button last; lightbox no nav-arrow ring); stars navigable by Tab + ←/→; `close()` moves focus out immediately ([[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]]).
 
 - 2026-05-31: Initial `Shift+Tab` now stays trapped in wizard/lightbox; `focus-trap.js` handles non-tabbable dialog focus and interaction smoke pins both.
+- 2026-05-31: Photo-strip thumbnails now share `wireLightboxTrigger()` with card/list/gallery review images, so all lightbox photo triggers expose keyboard/ARIA semantics and focus restore.
 
 ## Current Risks / Open Questions
-- Keep doing live post-deploy smoke on the dev storefront after runtime-affecting widget changes; deployed measurement scripts are evidence, not a full merchant-flow replacement.
-- Production transfer evidence shows the current deployed PDP `PAGE_VIEW` path still loads `listing-badges-*`; the fallback timer is deterministic/tested, but page-type routing optimization is a separate future decision.
+- Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.
+- Deployed PDP `PAGE_VIEW` still loads `listing-badges-*`; page-type routing optimization is separate.
 - Theme adapters depend on Admin API `listStorefront.themes[].isMainTheme`; ikas has no theme webhook, so lazy resync remains the workaround.
 - Admin warning UI for unsupported themes is deferred; the runtime signal exists, the dashboard surface does not.
 - Gaps: authenticated ikas dashboard smoke, Sentry post-deploy health, hard transfer budgets, manual Google Rich Results checks.

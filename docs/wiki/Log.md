@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-05-31 - fix | Keyboard-enable photo-strip lightbox triggers
+- Summary: Wizard + lightbox lifecycle/accessibility audit found one verified issue: photo-strip thumbnails opened the lightbox only by pointer click. They were plain clickable `<img>` elements with no `role`, no `tabindex`, and no keyboard activation, while card/list/gallery review images already had keyboard semantics.
+- Key source changes: Added `src/widget/reviews-section/lightbox-trigger.js` as the single trigger contract for lightbox photo elements, wired photo-strip thumbnails through it, and moved card/list/gallery image triggers to the same helper. Updated the wizard step-focus comment to match current dialog-open focus behavior. Rebuilt `public/widget.js` and `public/widget-runtime/*`.
+- Verification: Added a failing Playwright regression first; it showed the photo-strip thumbnail could not hold focus and had null role/label/tabIndex. After the fix, the new test passed and full `pnpm test:widget-interactions` passed 9/9.
+- Updated wiki: [[Bug_Lightbox_Focus_Trap_Accessibility]], [[Product_Review_Lightbox]], [[Product_Review_Widget]], [[Bug_Index]], [[Hot_Context]]
+
 ## 2026-05-31 - fix | Trap initial Shift+Tab in body-level overlays
 - Summary: Fixed a verified focus-trap regression after the wizard/lightbox started focusing dialog containers on open. First `Shift+Tab` immediately after opening the wizard or photo lightbox escaped the shadow overlay because the active element was inside the trap but not in its tabbable list.
 - Key source changes: `src/widget/shared/focus-trap.js` now routes non-tabbable in-trap focus targets into the tabbable cycle (`Tab` -> first, `Shift+Tab` -> last). `tests/widget-interaction-smoke.spec.ts` covers wizard + lightbox initial `Shift+Tab`. Also corrected the stale roving-tabindex comment and removed dead icon-only arrow `font-size` CSS in `reviews-section/styles.js`. Rebuilt `public/widget.js` and `public/widget-runtime/*`.
