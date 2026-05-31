@@ -3,8 +3,8 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: medium
 tags:
   - bugs
@@ -24,6 +24,9 @@ source_files: []
 - Move long context into a dedicated `Bug_<title>.md` file under this folder.
 
 ## Log
+
+### 2026-05-31
+- Widget - Review Wizard Photo Upload Lifecycle - Pending local preview blobs are revoked on wizard close, deleting one pending photo no longer aborts later selected uploads, and remove cleanup updates state before revoking object URLs. [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ### 2026-05-12
 - Widget - Lightbox Preview Settings Sync - Open photo lightbox preview updates now re-render the full right pane from closure state, so review icon and merchant reply label changes apply without closing the modal. [[Bug_Lightbox_Preview_Settings_Sync]]

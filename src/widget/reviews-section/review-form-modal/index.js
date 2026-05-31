@@ -27,6 +27,7 @@ function renderStep(stepNum, state, stepOpts) {
     canNavigate: stepOpts.canNavigate,
     blobMap: stepOpts.blobMap,
     urlToFinger: stepOpts.urlToFinger,
+    revokeBlobUrl: stepOpts.revokeBlobUrl,
     showToast: stepOpts.showToast,
   });
   if (stepNum === 3) return createStepContent(state, {
@@ -65,6 +66,30 @@ export function openReviewFormModal(opts) {
 
   var persistentBlobMap = {};
   var persistentUrlToFinger = {};
+  var revokedBlobUrls = {};
+
+  function revokeBlobUrl(url) {
+    if (!url || typeof url !== 'string' || !url.startsWith('blob:') || revokedBlobUrls[url]) return;
+    revokedBlobUrls[url] = true;
+    try { URL.revokeObjectURL(url); } catch (_) { /* sessiz */ }
+  }
+
+  function revokeAllBlobUrls() {
+    Object.keys(persistentUrlToFinger).forEach(function (url) {
+      revokeBlobUrl(url);
+    });
+    Object.keys(persistentBlobMap).forEach(function (cloudUrl) {
+      revokeBlobUrl(persistentBlobMap[cloudUrl]);
+    });
+
+    var snapshot = state.get();
+    (snapshot.pendingImages || []).forEach(function (item) {
+      revokeBlobUrl(item && item.url);
+    });
+    (snapshot.images || []).forEach(function (url) {
+      revokeBlobUrl(url);
+    });
+  }
 
   var shell = createWizardShell({
     onClose: function () {
@@ -76,10 +101,7 @@ export function openReviewFormModal(opts) {
       restoreModalHistoryEntry(modalHistoryEntry);
 
       // Bellek temizliği: Tüm blob URL'lerini serbest bırak
-      Object.keys(persistentBlobMap).forEach(function (k) {
-        var b = persistentBlobMap[k];
-        if (b && b.startsWith('blob:')) URL.revokeObjectURL(b);
-      });
+      revokeAllBlobUrls();
       if (opts.onClose) opts.onClose();
     },
     allowOutsideClose: false,
@@ -145,6 +167,7 @@ export function openReviewFormModal(opts) {
       canNavigate: function () { return animPhase === 'idle'; },
       blobMap: persistentBlobMap,
       urlToFinger: persistentUrlToFinger,
+      revokeBlobUrl: revokeBlobUrl,
       onValidityChange: function (valid) {
         progress.setNextDisabled(!valid);
       },

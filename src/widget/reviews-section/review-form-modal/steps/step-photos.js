@@ -60,6 +60,12 @@ export function createStepPhotos(state, opts) {
 
   root.appendChild(card);
 
+  var revokeBlobUrl = opts.revokeBlobUrl || function (url) {
+    if (url && typeof url === 'string' && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+  };
+
   var blobMap = opts.blobMap || {}; // cloudUrl -> localBlobUrl haritalaması (flaş etkisini önlemek için)
   var urlToFinger = opts.urlToFinger || {}; // blobUrl veya cloudUrl -> parmak izi (silme anında fingerprint kaldırmak için)
 
@@ -136,23 +142,26 @@ export function createStepPhotos(state, opts) {
       // urlToFinger haritasından bak (hem blob hem cloud URL'ler kayıtlı)
       // item.file fallback olarak kalır (ekstra güvence)
       var finger = urlToFinger[item.url] || (item.file ? (item.file.name + '_' + item.file.size) : null);
-      if (item.url.startsWith('blob:')) {
-        URL.revokeObjectURL(item.url);
-      }
+      var mappedBlobUrl = blobMap[item.url];
+      var patch = {};
 
       // Parmak izini silsin (persistence hafızadan çıkar)
       if (finger) {
-        var fings = (state.get().fingerprints || []).filter(function (f) { return f !== finger; });
-        state.set({ fingerprints: fings });
+        patch.fingerprints = (state.get().fingerprints || []).filter(function (f) { return f !== finger; });
       }
 
       if (item.isPending) {
-        var p = (state.get().pendingImages || []).filter(function (x) { return x.url !== item.url; });
-        state.set({ pendingImages: p });
+        patch.pendingImages = (state.get().pendingImages || []).filter(function (x) { return x.url !== item.url; });
       } else {
-        var imgs = (state.get().images || []).filter(function (x) { return x !== item.url; });
-        state.set({ images: imgs });
+        patch.images = (state.get().images || []).filter(function (x) { return x !== item.url; });
       }
+
+      state.set(patch);
+      revokeBlobUrl(item.url);
+      revokeBlobUrl(mappedBlobUrl);
+      delete urlToFinger[item.url];
+      if (mappedBlobUrl) delete urlToFinger[mappedBlobUrl];
+      if (blobMap[item.url]) delete blobMap[item.url];
     };
   }
 
@@ -288,8 +297,8 @@ export function createStepPhotos(state, opts) {
             // KRİTİK KONTROL: Kullanıcı bu yükleme sürerken görseli silmiş mi?
             var stillPending = (state.get().pendingImages || []).some(function (p) { return p.url === objUrl; });
             if (!stillPending) {
-              console.log('[renuvex-pr] Upload finished but image was already deleted by user. Aborting state update.');
-              return;
+              console.log('[renuvex-pr] Upload finished but image was already deleted by user. Skipping state update.');
+              continue;
             }
 
             // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir

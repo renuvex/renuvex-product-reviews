@@ -16,6 +16,7 @@ related:
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
   - "[[Bug_Review_Wizard_Focus_Trap_Accessibility]]"
+  - "[[Bug_Review_Wizard_Photo_Upload_Lifecycle]]"
 ---
 
 # Product Review Widget
@@ -57,6 +58,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Open focuses the dialog container, first `Tab` enters the active step, step changes do not auto-focus inputs, and close returns focus to the opening control for keyboard opens. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]] and [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary under `review_images/stores/<storeId>`.
 - Photo step allows **parallel uploads** — the add button stays enabled while existing uploads are in flight. Each pending upload is tracked independently in `pendingImages`. The submission step blocks submit with a "fotoğraflar yükleniyor" message until every pending upload resolves. Upper bound `MAX_PHOTOS=3` is enforced across completed + pending so parallel selection never exceeds the cap.
+- Local preview `blob:` URLs are owned by the modal lifecycle: pending, completed-preview-map, and preview-mode blobs are revoked on close. Removing a photo updates wizard state before revoking the local URL, and deleting one pending upload skips only that upload's state update instead of aborting the rest of the selected batch. Related bug: [[Bug_Review_Wizard_Photo_Upload_Lifecycle]].
 - Auto-jump to the next step fires only on the user's first real photo action (no completed, no pending). Returning to the photo step to add more keeps the user on that step.
 - On submit → `POST /api/public/reviews`; image URLs are validated against the trusted Cloudinary policy before storage, then status is set by auto-approve mode.
 - The legacy inline/page form was removed; all review CTAs open the multi-step modal.
@@ -93,8 +95,10 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 - [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
+- [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-05-31: Fixed review wizard photo upload lifecycle defects: closing during a pending upload now revokes local blob previews, removing a pending photo no longer aborts later selected uploads, and removal state is batched before blob revoke to avoid stale image loads. Related bug: [[Bug_Review_Wizard_Photo_Upload_Lifecycle]].
 - 2026-05-31: Wizard/lightbox lifecycle audit found the photo-strip lightbox thumbnails were click-only images. Added shared `wireLightboxTrigger()` and moved card/list/gallery triggers to it; interaction smoke now verifies keyboard open and focus restore from the photo strip.
 - 2026-05-27: ADR_0024 follow-up moved review/photoStrip fetch helpers into [reviews-api.js](src/widget/reviews-section/reviews-api.js). `bootstrap.js` is now review mount orchestration, while `render.js` uses the same fetch helper for retry/filter/sort/load-more interactions.
 - 2026-05-25: Review-section placement became opt-in via `<div data-renuvex-widget="reviews"></div>`. Missing mount now means no review section; the PDP title badge remains independent and is controlled by the `badge` widget toggle.
