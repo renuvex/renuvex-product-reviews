@@ -198,6 +198,100 @@ test('review wizard validates required fields and submits through mocked public 
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('photo upload submit waits for completion and posts trusted image URLs', async ({ page }) => {
+  const uploadedUrl = `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/submit-photo.jpg`;
+  const submittedBodies: Array<Record<string, unknown>> = [];
+  const registerBodies: Array<Record<string, unknown>> = [];
+  let uploadRequests = 0;
+  let releaseUpload: () => void = () => {};
+  const uploadGate = new Promise<void>((resolve) => {
+    releaseUpload = resolve;
+  });
+
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+    reviewSubmitHandler: async (route) => {
+      submittedBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
+      await route.fulfill({
+        status: 201,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ message: 'Yorum alindi', data: { id: 'submitted-review', status: 'pending' } }),
+      });
+    },
+  });
+
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/sign**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        signature: 'ci-signature',
+        timestamp: 1790000000,
+        cloud_name: REVIEW_CLOUD_NAME,
+        api_key: 'ci-api-key',
+        folder: `review_images/stores/${PUBLIC_KEY}`,
+      }),
+    });
+  });
+  await page.route('https://api.cloudinary.com/v1_1/**', async (route) => {
+    uploadRequests += 1;
+    await uploadGate;
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ secure_url: uploadedUrl }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/register**`, async (route) => {
+    registerBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(true);
+
+  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[type="file"]', {
+    name: 'submit-photo.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
+  });
+  await expect.poll(() => uploadRequests).toBe(1);
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
+
+  await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-textarea', 'Photo upload contract check.');
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-next');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-author')).toBe(true);
+  await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-author input[type="text"]', 'Mert');
+  expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn')).toBe(true);
+
+  releaseUpload();
+  await expect.poll(() => isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn')).toBe(false);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-thanks')).toBe(true);
+
+  expect(registerBodies).toEqual([{ storeId: PUBLIC_KEY, secureUrl: uploadedUrl }]);
+  expect(submittedBodies).toHaveLength(1);
+  expect(submittedBodies[0]).toMatchObject({
+    storeId: PUBLIC_KEY,
+    productId: 'product-1',
+    author: 'Mert',
+    comment: 'Photo upload contract check.',
+    rating: 5,
+    images: [uploadedUrl],
+  });
+  expect((submittedBodies[0].images as string[]).every((url) => !url.startsWith('blob:'))).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('closing wizard during a pending photo upload revokes local blob previews', async ({ page }) => {
   await page.addInitScript(() => {
     const win = window as Window & {

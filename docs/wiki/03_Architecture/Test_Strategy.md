@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: high
 tags:
   - testing
@@ -68,6 +68,8 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 
 `pnpm test:ci` runs the five layers together. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
 
+Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains the final trusted Cloudinary URL instead of a local `blob:` preview URL.
+
 ## Evidence Commands
 These commands are not hard byte-budget gates. They produce repeatable production evidence for review, deploy notes, and future budget calibration:
 
@@ -92,6 +94,8 @@ The highest-risk public write surface is `POST /api/public/reviews`. Unit tests 
 - approval policy modes (`manual`, `all`, `5stars`, `4plus`, and boolean legacy values).
 
 `GET /api/public/reviews` tests cover pagination clamp, sorting, rating filters, `hasImages=true`, safe missing-Cloudinary behavior, cache headers, author masking, rating distribution, and approved-only reads.
+
+The browser interaction layer verifies the upload-to-submit bridge separately: after Cloudinary returns a tenant-scoped trusted URL, `/api/public/upload/register` receives `{storeId, secureUrl}` and `/api/public/reviews` receives that URL in `images`.
 
 ## Combination Strategy
 The suite uses risk-based pairwise coverage instead of a full cartesian matrix. Full cartesian layout x icon x color x toggle x theme coverage would become slow and noisy. New layout or surface work should add the smallest matrix that covers:

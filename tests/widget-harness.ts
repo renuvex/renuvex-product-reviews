@@ -25,6 +25,7 @@ export type SmokeOptions = {
   badgeSettings?: Record<string, unknown>;
   hasMore?: boolean;
   approvedReviewCount?: number;
+  reviewSubmitHandler?: (route: Route) => Promise<void>;
   /**
    * Hostile host-theme CSS injected into the merchant page <head>. When set, the page
    * also renders a light-DOM control image (`.renuvex-iso-control`) inside a 600px box so
@@ -250,6 +251,10 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/reviews**`, async (route) => {
     if (route.request().method() === 'POST') {
+      if (options.reviewSubmitHandler) {
+        await options.reviewSubmitHandler(route);
+        return;
+      }
       await route.fulfill({
         status: 201,
         headers: jsonHeaders(),
