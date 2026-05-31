@@ -3,8 +3,8 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-05-29
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: high
 tags:
   - seo
@@ -28,7 +28,7 @@ source_files:
 ## Summary
 `pnpm verify:deployed-jsonld` loads the deployed widget from `https://new-ikas-app.vercel.app` in a controlled Playwright harness and mocks public API responses. This verifies the browser runtime contract without changing production DB/admin settings.
 
-Note: the measured result below was captured before the 2026-05-29 structured-data split. The script contract has since been updated so JSON-LD is owned by the independent `structured-data` surface and can render when the visual badge is disabled but an explicit review section is visible. Re-run the command after the structured-data deployment and append a fresh result table.
+The 2026-05-29 result below is kept as historical evidence. The 2026-05-31 result verifies the current deployed structured-data contract after the independent `structured-data` surface shipped.
 
 The script validates:
 
@@ -74,6 +74,21 @@ Superseded expectation after structured-data split:
 | badge disabled + review mount absent | 0 |
 | unsupported auto-placement + review mount present | 1 |
 | rich snippets disabled | 0 |
+
+## 2026-05-31 Deployed Result
+
+Measured at `2026-05-31T12:41:46.402Z`.
+
+| Scenario | URL | JSON-LD count | Result |
+|---|---|---:|---|
+| controlled badge enabled + review mount present | `https://merchant-seo.test/premium-shorts` | 1 | pass |
+| controlled badge enabled + review mount absent | `https://merchant-seo.test/premium-shorts` | 1 | pass |
+| controlled badge disabled + review mount present | `https://merchant-seo.test/premium-shorts` | 1 | pass |
+| controlled badge disabled + review mount absent | `https://merchant-seo.test/premium-shorts` | 0 | pass |
+| controlled unsupported theme + review mount present | `https://merchant-seo.test/premium-shorts` | 1 | pass |
+| controlled rich snippets disabled | `https://merchant-seo.test/premium-shorts` | 0 | pass |
+
+The parsed active-path payload is a `Product` with `AggregateRating` (`ratingValue: 4.8`, `reviewCount: 12`) and no verifier errors.
 
 Verifier note: the harness waits for `#renuvex-pr-jsonld` on scenarios where JSON-LD is expected, instead of treating `document.readyState === "complete"` as enough. This avoids false negatives when the deployed widget loads lazy chunks after the page document has already completed.
 

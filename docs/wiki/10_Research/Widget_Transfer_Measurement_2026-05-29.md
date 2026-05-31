@@ -73,7 +73,18 @@ The controlled PDP still loaded `listing-badges-22AODA5U.js` in all four scenari
 
 ## 2026-05-31 Follow-up
 
-The page-type routing optimization has been implemented in source and local browser tests: clean `PRODUCT` `PAGE_VIEW` skips the listing entry chunk and side effects, while listing events and product-card fallback still load listing badges when appropriate. The fix also excludes widget-owned hash/query links from observer and fallback listing probes. Re-run `pnpm measure:deployed-widget` after deployment before replacing the 2026-05-29 deployed measurement table.
+The page-type routing optimization has been deployed and measured. The deployed manifest matches local `widget-runtime/runtime-RD6VN5NG.js` (`builtAt: 2026-05-31T12:27:48.041Z`), so the measurement below is for the pushed runtime.
+
+Measured at `2026-05-31T12:41:31.066Z`.
+
+| Scenario | Scripts | Encoded bytes | Decoded bytes | API calls | Key chunks |
+|---|---:|---:|---:|---|---|
+| mount-present badge-on | 16 | 72694 | 229468 | settings:1, ratings:1, reviews:2, error:0 | `bootstrap-LCS3KZGO.js`, `rating-badge-2XFTJ6HD.js`, `render-COB6DU5Z.js`, `structured-data-NBSCHLVK.js` |
+| mount-absent badge-on | 15 | 31938 | 73335 | settings:1, ratings:1, reviews:0, error:0 | `bootstrap-LCS3KZGO.js`, `rating-badge-2XFTJ6HD.js`, `structured-data-NBSCHLVK.js` |
+| mount-present badge-off | 16 | 72692 | 229468 | settings:1, ratings:1, reviews:2, error:0 | `bootstrap-LCS3KZGO.js`, `rating-badge-2XFTJ6HD.js`, `render-COB6DU5Z.js`, `structured-data-NBSCHLVK.js` |
+| mount-absent badge-off | 15 | 31927 | 73335 | settings:1, ratings:0, reviews:0, error:0 | `bootstrap-LCS3KZGO.js`, `rating-badge-2XFTJ6HD.js`, `structured-data-NBSCHLVK.js` |
+
+`listing-badges-*` is absent from all four controlled PDP scenarios. The review render chunk still appears only when the explicit review mount exists, and content-hashed runtime/chunks still use immutable cache headers. Sentry MCP search for `environment:prod level:error` in the last hour returned no error events for `renuvex-product-reviews`.
 
 ## Next Measurement
 

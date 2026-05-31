@@ -20,6 +20,11 @@ source_files:
 
 # Project Log
 
+## 2026-05-31 - verify | Post-deploy widget runtime evidence
+- Summary: Post-deploy widget verification confirmed production serves the pushed `runtime-RD6VN5NG.js` build. Clean controlled PDP scenarios no longer load `listing-badges-*`; `render-*` remains gated by the explicit review mount; JSON-LD passes the deployed structured-data contract.
+- Verification: `pnpm measure:deployed-widget` measured `2026-05-31T12:41:31.066Z`; all four PDP scenarios excluded `listing-badges-*` and had `widgetError:0`. `pnpm verify:deployed-jsonld` measured `2026-05-31T12:41:46.402Z`; all six controlled JSON-LD scenarios passed. Sentry MCP search for `environment:prod level:error` over the last hour returned no events.
+- Updated wiki: [[Widget_Transfer_Measurement_2026-05-29]], [[Structured_Data_Verification_2026-05-29]]
+
 ## 2026-05-31 - perf | Skip listing entry on clean PDP PAGE_VIEW
 - Summary: Separate widget performance phase closed the known clean-PDP transfer waste: `PRODUCT` `PAGE_VIEW` was still loading the listing-badges entry chunk, and the PDP badge's own `#renuvex-reviews` link could be misread as a listing/product candidate by observer fallback logic.
 - Key source changes: `src/widget/surfaces/listing-badge.surface.js` now gates page-triggered listing badge loads to listing-like page types (`INDEX`, `CATEGORY`, `BRAND`, `SEARCH`). `src/widget/observer.js` and `src/widget/listing-badges/fallback-candidates.js` ignore widget-owned hash/query links before product-link detection. `tests/widget-network-smoke.spec.ts` now asserts clean PDPs skip `listing-badges-*`, `/api/public/ratings-by-slug`, listing badge DOM, and placeholders. Rebuilt `public/widget.js` and `public/widget-runtime/*`.
