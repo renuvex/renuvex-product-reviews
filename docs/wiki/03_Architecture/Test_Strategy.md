@@ -70,6 +70,8 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 
 Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains the final trusted Cloudinary URL instead of a local `blob:` preview URL.
 
+Widget runtime smoke also pins the storefront review read contract: late sort/filter/load-more responses cannot mutate a newer active selection, overlapping load-more rows do not duplicate DOM cards, review fetch failures stay distinct from real empty states, the photo strip remains a bootstrap-owned dataset, and card/list/gallery layouts render only trusted tenant image URLs.
+
 ## Evidence Commands
 These commands are not hard byte-budget gates. They produce repeatable production evidence for review, deploy notes, and future budget calibration:
 

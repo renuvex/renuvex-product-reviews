@@ -27,7 +27,7 @@ import {
   setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
   setCurrentReviewsData,
   photoStripReviews, loadedLightboxReviews,
-  setLoadedLightboxReviews, appendLoadedLightboxReviews,
+  setLoadedLightboxReviews, getNewLoadedLightboxReviews, appendLoadedLightboxReviews,
 } from '../core/state.js';
 
 // ─── CSS değişkenleri ────────────────────────────────────────────────────────
@@ -166,6 +166,23 @@ var SIZE_PRESETS = {
 };
 
 var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
+var reviewRequestSeq = 0;
+
+function beginReviewRequest() {
+  reviewRequestSeq++;
+  return reviewRequestSeq;
+}
+
+function isCurrentReviewRequest(token, expected) {
+  if (token !== reviewRequestSeq) return false;
+  if (!expected) return true;
+  if (expected.productId !== undefined && currentProductId !== expected.productId) return false;
+  if (expected.orderBy !== undefined && currentOrderBy !== expected.orderBy) return false;
+  if (expected.page !== undefined && currentPage !== expected.page) return false;
+  if (expected.ratingFilter !== undefined && currentRatingFilter !== expected.ratingFilter) return false;
+  if (expected.hasImages !== undefined && currentHasImages !== expected.hasImages) return false;
+  return true;
+}
 
 function buildReviewsErrorState(message, onRetry) {
   var wrap = document.createElement('div');
@@ -548,7 +565,18 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       if (hasReviewsFetchError) {
         widget.appendChild(buildReviewsErrorState(data.message, async function () {
+          var token = beginReviewRequest();
+          var productIdSnapshot = currentProductId;
+          var orderBySnapshot = currentOrderBy;
+          var ratingFilterSnapshot = currentRatingFilter;
+          var hasImagesSnapshot = currentHasImages;
           var retried = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
+          if (!isCurrentReviewRequest(token, {
+            productId: productIdSnapshot,
+            orderBy: orderBySnapshot,
+            ratingFilter: ratingFilterSnapshot,
+            hasImages: hasImagesSnapshot,
+          })) return;
           await render(currentProductId, currentSettings, retried, currentProductName, currentOrderBy, 1, currentBadgeSettings);
         }));
         contentEl.appendChild(widget);
@@ -586,13 +614,27 @@ export async function render(productId, settings, reviewsData, productName, orde
           currentOrderBy: currentOrderBy,
           currentHasImages: currentHasImages,
           onFilterChange: async function (starVal) {
+            var token = beginReviewRequest();
             var nextRatingFilter = currentRatingFilter === starVal ? null : starVal;
+            var productIdSnapshot = currentProductId;
+            var orderBySnapshot = currentOrderBy;
+            var hasImagesSnapshot = currentHasImages;
             setCurrentRatingFilter(nextRatingFilter);
             setCurrentPage(1);
             var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, nextRatingFilter, currentHasImages);
+            if (!isCurrentReviewRequest(token, {
+              productId: productIdSnapshot,
+              orderBy: orderBySnapshot,
+              page: 1,
+              ratingFilter: nextRatingFilter,
+              hasImages: hasImagesSnapshot,
+            })) return;
             await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
           },
           onSortChange: async function (orderBy, isPhotos) {
+            var token = beginReviewRequest();
+            var productIdSnapshot = currentProductId;
+            var ratingFilterSnapshot = currentRatingFilter;
             setCurrentPage(1);
             var nextOrderBy = orderBy;
             var nextHasImages = false;
@@ -603,6 +645,13 @@ export async function render(productId, settings, reviewsData, productName, orde
             setCurrentHasImages(nextHasImages);
             setCurrentOrderBy(nextOrderBy);
             var newData = await fetchReviews(currentProductId, nextOrderBy, 1, currentRatingFilter, nextHasImages);
+            if (!isCurrentReviewRequest(token, {
+              productId: productIdSnapshot,
+              orderBy: nextOrderBy,
+              page: 1,
+              ratingFilter: ratingFilterSnapshot,
+              hasImages: nextHasImages,
+            })) return;
             await render(currentProductId, currentSettings, newData, currentProductName, nextOrderBy, 1);
           },
         });
@@ -726,13 +775,27 @@ export async function render(productId, settings, reviewsData, productName, orde
         loadMoreBtn.onclick = async function () {
           loadMoreBtn.disabled = true;
           loadMoreBtn.textContent = 'Yükleniyor...';
-          var nextPage = currentPage + 1;
-          var moreData = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentHasImages);
+          var token = beginReviewRequest();
+          var productIdSnapshot = currentProductId;
+          var orderBySnapshot = currentOrderBy;
+          var pageSnapshot = currentPage;
+          var ratingFilterSnapshot = currentRatingFilter;
+          var hasImagesSnapshot = currentHasImages;
+          var nextPage = pageSnapshot + 1;
+          var moreData = await fetchReviews(productIdSnapshot, orderBySnapshot, nextPage, ratingFilterSnapshot, hasImagesSnapshot);
+          if (!isCurrentReviewRequest(token, {
+            productId: productIdSnapshot,
+            orderBy: orderBySnapshot,
+            page: pageSnapshot,
+            ratingFilter: ratingFilterSnapshot,
+            hasImages: hasImagesSnapshot,
+          })) return;
           if (moreData && !isReviewsFetchError(moreData) && moreData.data && Array.isArray(moreData.data.reviews)) {
-            appendLoadedLightboxReviews(moreData.data.reviews);
+            var newReviews = getNewLoadedLightboxReviews(moreData.data.reviews);
+            appendLoadedLightboxReviews(newReviews);
             setCurrentPage(nextPage);
             var moreReviewLayout = getReviewLayout(currentSettings.reviewLayout);
-            moreData.data.reviews.forEach(function (r) {
+            newReviews.forEach(function (r) {
               widget.insertBefore(moreReviewLayout.render(r, loadedLightboxReviews), loadMoreBtn);
             });
             if (!moreData.data.hasMore) loadMoreBtn.remove();

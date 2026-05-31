@@ -203,6 +203,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.
 - Review fetch failures use stale cached review data when available; without stale data, `reviews-api.js fetchReviews()` returns an explicit error result so `render.js` can show a retryable error state instead of an empty list.
+- Review UI interactions in `render.js` guard async sort/filter/retry/load-more responses with a request token and active state snapshot; late responses cannot mutate a newer active selection. Load-more also compares returned ids against the active loaded review collection before inserting DOM nodes.
 - No localStorage caching today (could be added for repeat visits).
 
 ## Build
@@ -258,6 +259,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-05-31: Review read lifecycle hardening added stale-response guards for sort/filter/retry/load-more and duplicate-id filtering before load-more DOM insertion. Related bug: [[Bug_Review_Read_Lifecycle_Stale_Responses]].
 - 2026-05-28: Expanded automated quality gates from network-only smoke to layered Playwright + Vitest coverage: widget runtime layouts, lightbox/wizard flows, admin preview/settings, public API routes, and theme-state helpers. CI now runs `pnpm test:ci` plus generated widget syntax checks.
 - 2026-05-28: Renamed the review-section implementation to `src/widget/reviews-section/` and moved the shared PDP title finder to `src/widget/core/product-title.js`. Public script URL, mount contract, settings schema, backend APIs, and ikas integration are unchanged.
 - 2026-05-28: Added `pnpm test:widget-smoke` and the `Widget Smoke` GitHub Actions workflow. The gate protects the ADR_0023/ADR_0024 network contract by exercising the deployed public loader/runtime shape in a browser fixture.

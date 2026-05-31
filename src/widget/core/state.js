@@ -63,6 +63,27 @@ export function setLoadedLightboxReviews(v) {
   replaceLoadedLightboxReviews(dedupeReviews(v));
 }
 
+export function getNewLoadedLightboxReviews(v) {
+  var source = Array.isArray(v) ? v : [];
+  var seen = {};
+  var result = [];
+
+  loadedLightboxReviews.forEach(function (review) {
+    var key = getReviewIdentity(review);
+    if (key) seen[key] = true;
+  });
+
+  source.forEach(function (review) {
+    if (!review) return;
+    var key = getReviewIdentity(review);
+    if (key && seen[key]) return;
+    if (key) seen[key] = true;
+    result.push(review);
+  });
+
+  return result;
+}
+
 export function appendLoadedLightboxReviews(v) {
   replaceLoadedLightboxReviews(dedupeReviews(loadedLightboxReviews.concat(Array.isArray(v) ? v : [])));
 }

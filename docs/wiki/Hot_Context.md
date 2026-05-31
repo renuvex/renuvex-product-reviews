@@ -86,6 +86,7 @@ source_files:
 
 - 2026-05-31: Initial `Shift+Tab` now stays trapped in wizard/lightbox; `focus-trap.js` handles non-tabbable dialog focus and interaction smoke pins both.
 - 2026-05-31: Photo-strip thumbnails now share `wireLightboxTrigger()` with card/list/gallery review images, so all lightbox photo triggers expose keyboard/ARIA semantics and focus restore.
+- 2026-05-31: Review read lifecycle audit fixed stale storefront responses: sort/filter/load-more now use request-token + state-snapshot guards, and load-more inserts only new ids. Runtime smoke pins stale overwrite/page skip, duplicate DOM insertion, retry recovery, strip independence, and trusted image rendering.
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.

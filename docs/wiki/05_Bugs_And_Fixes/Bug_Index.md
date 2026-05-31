@@ -21,6 +21,7 @@ related:
 - _None tracked._
 
 ## Recently fixed (verify periodically)
+- 2026-05-31 - [[Bug_Review_Read_Lifecycle_Stale_Responses]] - Review read lifecycle audit verified and fixed three storefront regressions: slower sort/filter responses could overwrite newer selections, stale load-more completions could advance the active sorted page, and overlapping load-more ids duplicated DOM cards. Runtime smoke now pins stale-response guards, duplicate filtering, retry recovery, photo-strip independence, and trusted image layout rendering.
 - 2026-05-31 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]] - Verified and fixed two photo upload lifecycle bugs: close-before-upload-complete now revokes local blob previews, and deleting one pending photo no longer aborts later selected uploads. Removal now batches state cleanup before blob revoke to avoid stale image load errors.
 - 2026-05-31 - [[Bug_Lightbox_Focus_Trap_Accessibility]] follow-up - Verified and fixed photo-strip thumbnails being click-only lightbox triggers. `wireLightboxTrigger()` now centralizes photo lightbox trigger ARIA + `tabindex` + `Enter`/`Space` activation across photo strip and card/list/gallery layouts; interaction smoke pins keyboard open and focus restore from the strip.
 - 2026-05-31 - [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]] follow-up - Verified and fixed initial `Shift+Tab` focus escape after opening the wizard or photo lightbox. Cause: dialog containers with `tabindex="-1"` were focused inside the trap but omitted from tabbable first/last math. `trapFocus()` now routes non-tabbable in-trap focus into the tabbable cycle; interaction smoke pins both overlays.
@@ -52,6 +53,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-05-31: Added [[Bug_Review_Read_Lifecycle_Stale_Responses]] after the review read lifecycle audit proved stale sort/filter responses, stale load-more completions, and overlapping load-more ids could corrupt the active storefront review list.
 - 2026-05-31: Added [[Bug_Review_Wizard_Photo_Upload_Lifecycle]] after the upload lifecycle audit proved pending blob previews leaked on close and deleting one pending upload aborted the rest of the selected batch.
 - 2026-05-31: Updated [[Bug_Lightbox_Focus_Trap_Accessibility]] after the wizard/lightbox lifecycle audit proved photo-strip thumbnails were not keyboard lightbox triggers, while card/list/gallery images already were. Fixed with shared `wireLightboxTrigger()` and a photo-strip keyboard/focus-restore regression.
 - 2026-05-30: Added [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]] after a user a11y report (Tab stepping through all 5 stars; Esc not returning focus to the trigger). Verified the behavior with Playwright, root-caused to non-roving radiogroup tabindex + a shadow-host `document.activeElement` read in `getReturnFocusElement`, fixed both + excluded `tabindex<0` from the trap, and added a keyboard a11y regression.

@@ -25,6 +25,7 @@ export type SmokeOptions = {
   badgeSettings?: Record<string, unknown>;
   hasMore?: boolean;
   approvedReviewCount?: number;
+  reviewsGetHandler?: (route: Route) => Promise<void>;
   reviewSubmitHandler?: (route: Route) => Promise<void>;
   /**
    * Hostile host-theme CSS injected into the merchant page <head>. When set, the page
@@ -260,6 +261,10 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
         headers: jsonHeaders(),
         body: JSON.stringify({ message: 'Yorum alindi', data: { id: 'submitted-review', status: 'pending' } }),
       });
+      return;
+    }
+    if (options.reviewsGetHandler) {
+      await options.reviewsGetHandler(route);
       return;
     }
     const url = new URL(route.request().url());
