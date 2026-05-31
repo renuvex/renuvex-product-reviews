@@ -52,6 +52,7 @@ source_files:
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/lightbox-trigger.js"
   - "src/widget/reviews-section/styles.js"
+  - "src/widget/summary-layouts/classic/styles.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/generic/adapter.js"
   - "src/lib/storefront-theme.ts"
@@ -90,6 +91,7 @@ source_files:
 - 2026-05-31: Review read lifecycle audit fixed stale storefront responses: sort/filter/load-more now use request-token + state-snapshot guards, and load-more inserts only new ids. Runtime smoke pins stale overwrite/page skip, duplicate DOM insertion, retry recovery, strip independence, and trusted image rendering.
 - 2026-05-31: Widget loader lifecycle audit fixed synchronous listing/search replay via `latestListing`; network smoke pins event ordering, PDP side-effect boundaries, and fail-closed listing gates.
 - 2026-05-31: Clean PDP `PAGE_VIEW` now skips the listing-badges entry chunk. Listing `PAGE_VIEW` detection is page-type gated, and observer/fallback probes ignore widget-owned hash/query links.
+- 2026-05-31: Classic CSS now lives in `summary-layouts/classic/styles.js`; shared CSS stays in `reviews-section/styles.js`.
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.

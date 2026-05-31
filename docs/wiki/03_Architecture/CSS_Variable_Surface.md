@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-05-31
+last_verified: 2026-05-31
 confidence: high
 tags:
   - widget
@@ -22,6 +22,7 @@ related:
 source_files:
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/styles.js"
+  - "src/widget/summary-layouts/classic/styles.js"
   - "src/widget/core/helpers.js"
   - "src/widget/core/badge.js"
   - "src/widget/listing-badges/index.js"
@@ -49,7 +50,7 @@ The variables fall into two scope tiers (see "Scope tiers" below). Most live on 
 | **Global (`:root`)** | `document.documentElement` via `listing-badges/index.js setProperty` (one var only) | Anywhere in the document AND inside any shadow root (custom properties inherit across shadow boundary, ADR_0021) | `--renuvex-pr-review-star-color` |
 | **Widget root** | `#renuvex-reviews-widget` rule in `CLASSIC_CSS` (`reviews-section/styles.js`) AND `render.js` `applyVars` / `applyLayoutSizeOverrides` via `root.style.setProperty` | Inside the review section shadow tree (declared on the widget root inside the shadow) | `--renuvex-pr-gap-tight`, `--renuvex-pr-title-size`, `--renuvex-pr-radius`, `--renuvex-pr-bar-fill`, ~70 others |
 | **Component-scope (badge)** | `<style id="renuvex-pr-badge-tokens">` in head via `core/badge.js ensureBadgeTokens` (selector: `.renuvex-pr-rating-badge`) | Inside any element matching `.renuvex-pr-rating-badge` | `--renuvex-pr-badge-icon-size`, `--renuvex-pr-badge-text-size` |
-| **Layout-local (`.renuvex-pr-summary`)** | `summary` rule in `CLASSIC_CSS` | Inside `.renuvex-pr-summary` block only | `--renuvex-pr-col-label`, `--renuvex-pr-col-count`, `--renuvex-pr-col-gap`, `--renuvex-pr-summary-max` |
+| **Layout-local (`.renuvex-pr-summary`)** | default summary rule in `summary-layouts/classic/styles.js`; other summary layouts override in their own `styles.js` files | Inside `.renuvex-pr-summary` block only | `--renuvex-pr-col-label`, `--renuvex-pr-col-count`, `--renuvex-pr-col-gap`, `--renuvex-pr-summary-max` |
 
 Custom properties **inherit across the Shadow DOM boundary** (ADR_0021). That is why a token set on `document.documentElement` is readable inside `#renuvex-reviews-widget`'s shadow root, and why the badge tokens declared in head via a class selector (`.renuvex-pr-rating-badge { --renuvex-pr-badge-icon-size: ... }`) work for badges that sit in light DOM. Style RULES do not cross the boundary; tokens DO.
 
@@ -135,6 +136,8 @@ Per-element color variables. Each maps to a specific UI element so a merchant ca
 | `--renuvex-pr-star-size` / `--renuvex-pr-avg-star-size` | Star icon sizes inside summary/header |
 
 ### Layout-local (`.renuvex-pr-summary` only)
+The default/classic declarations live in `summary-layouts/classic/styles.js` and are loaded through `getLayoutsCSS()` before other summary layout overrides. Shared summary child components such as bar rows and action rows remain in `reviews-section/styles.js` to preserve cascade order.
+
 | Variable | Default | Purpose |
 |---|---|---|
 | `--renuvex-pr-col-label` | 104px | Bar chart label column width |
@@ -196,7 +199,7 @@ Widget runtime (settings.js)
    - Used only inside the form wizard? → Inside `FWIZARD_CSS` (lives in the wizard shadow root).
 
 2. **Declare a sensible default** in the same rule, NOT in `:root`.
-   - Pattern: `.renuvex-pr-summary { --renuvex-pr-col-label: 104px; }` not `:root{--renuvex-pr-col-label: 104px;}`.
+   - Pattern: `.renuvex-pr-summary { --renuvex-pr-col-label: 104px; }` in the owning layout stylesheet, not `:root{--renuvex-pr-col-label: 104px;}`.
    - Component-scope declarations isolate the token; `:root` declarations bleed into the entire host page namespace and risk collision (the badge tokens use a class selector specifically for this reason).
 
 3. **Consume via `var(--renuvex-pr-<name>, <fallback>)`** in every reader.
@@ -224,7 +227,8 @@ Widget runtime (settings.js)
 - Variable count today: ~90. Adding more is cheap; removing existing ones requires a grep across `src/widget/` to make sure no consumer reads them with a fallback the new code did not set.
 
 ## Related Source Files
-- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — `CLASSIC_CSS` + spacing token doc block + widget-root declarations
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — `CLASSIC_CSS`, spacing token doc block, widget-root declarations, and shared summary/review CSS
+- [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) — classic/default summary root variables and avg/count/recommend styles
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — `applyVars` / `applyLayoutSizeOverrides`
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `PARTIAL_STARS_CSS` + badge token defaults
 - [src/widget/core/badge.js](src/widget/core/badge.js) — `ensureBadgeTokens` runtime override

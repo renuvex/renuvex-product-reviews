@@ -6,11 +6,14 @@ import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
 import { ensureStarSprite, starUseSvg } from '../../icons/star-sprite.js';
+import { CLASSIC_SUMMARY_CSS } from './styles.js';
 
 export var meta = {
   id: 'classic',
   name: 'Klasik (Açık)',
 };
+
+export var css = CLASSIC_SUMMARY_CSS;
 
 export function render(opts) {
   var widget = opts.widget;

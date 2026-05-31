@@ -76,9 +76,6 @@ export var CLASSIC_CSS = `
   .renuvex-pr-modal-author,
   .renuvex-pr-modal-reply-text{overflow-wrap:anywhere;}
   .renuvex-pr-title{font-size:var(--renuvex-pr-title-size,24px);font-weight:500;text-align:left;margin-bottom:12px;color:var(--renuvex-pr-header-title,#111111);overflow-wrap:anywhere;}
-  /* Classic layout basligi ortali — classic disindaki layout'lar sola yasli */
-  .renuvex-pr-title-classic{text-align:center;}
-
   /* ─── SVG ICON WRAPPER ───────────────────────────────────────────────
      .renuvex-pr-icon span'ı SVG'yi sarar. Boyut parent'tan (em veya inline style) gelir,
      SVG de ona göre ölçeklenir. color → fill (currentColor) — yani renk
@@ -88,31 +85,10 @@ export var CLASSIC_CSS = `
 
 ${PARTIAL_STARS_CSS}
 
-  /* ─── SUMMARY LAYOUT ────────────────────────────────────────────────
-     Her blok bağımsız — sıra/gizleme CSS ile kolayca değiştirilebilir.
-     Kolon genişlikleri CSS variable ile paylaşılır (label/count sütunları).
-     Bu sayede bar-row ve actions-row aynı hizada kalır. */
-  .renuvex-pr-summary{
-    --renuvex-pr-col-label:104px;
-    --renuvex-pr-col-count:60px;
-    --renuvex-pr-col-gap:4px;
-    --renuvex-pr-summary-max:340px;
-    display:flex;flex-direction:column;align-items:center;gap:20px;
-    padding:16px 28px 24px;border-radius:var(--renuvex-pr-radius,6px);margin:0 auto 24px;
-  }
+  /* Shared summary components. Layout root/avg/count/recommend defaults live in
+     summary-layouts/classic/styles.js. Shared child components stay here so bar
+     rows and action rows keep their original cascade order. */
   .renuvex-pr-summary-block{display:flex;flex-direction:column;align-items:center;width:100%;max-width:var(--renuvex-pr-summary-max);}
-
-  /* Blok: Ortalama puan (büyük) */
-  .renuvex-pr-summary-avg{flex-direction:row;gap:8px;max-width:none;width:auto;}
-  .renuvex-pr-avg-star{width:var(--renuvex-pr-avg-star-size,52px);height:var(--renuvex-pr-avg-star-size,52px);color:var(--renuvex-pr-review-star-color,#f59e0b);line-height:1;}
-  .renuvex-pr-avg-num{font-size:var(--renuvex-pr-avg-rating-size,46px);font-weight:500;line-height:1;color:var(--renuvex-pr-header-avg,#111111);}
-
-  /* Blok: Toplam yorum sayısı */
-  .renuvex-pr-summary-count{font-size:var(--renuvex-pr-review-count-size,16px);color:var(--renuvex-pr-header-count,#111111);white-space:nowrap;font-weight:400;max-width:none;width:auto;}
-
-  /* Blok: Tavsiye yüzdesi */
-  .renuvex-pr-summary-recommend{display:block;font-size:var(--renuvex-pr-recommend-size,14px);color:var(--renuvex-pr-header-recommend,#111111);text-align:center;max-width:none;width:auto;}
-  .renuvex-pr-recommend-pct{font-weight:700;color:var(--renuvex-pr-header-recommend,#111111);margin-right:3px;}
 
   /* Blok: Bar chart — her satır 3 kolon (label | track | count) */
   /* Bar chart — flex layout. Track her satırda sabit genişlik (label+count
@@ -343,7 +319,7 @@ ${PARTIAL_STARS_CSS}
        --renuvex-pr-pad-review-mobile:  yorum listesi container'i (#renuvex-reviews)
        Ileride admin panelinden degistirmek icin: settings -> CSS variable. */
     #renuvex-reviews-widget{padding-left:0;padding-right:0;}
-    /* Summary yan padding'i .renuvex-pr-summary mobile bloguna eklendi (--renuvex-pr-pad-summary-mobile) */
+    /* Summary mobile padding lives with default summary root CSS in summary-layouts/classic/styles.js. */
     /* Review layoutlari widget direct child — her item kendi yan padding'ini
        --renuvex-pr-pad-review-mobile uzerinden alir. #renuvex-reviews container'ina
        padding vermek yerine item class'larina vermek gerek cunku review'lar
@@ -355,8 +331,6 @@ ${PARTIAL_STARS_CSS}
       padding-right:var(--renuvex-pr-pad-review-mobile);
       box-sizing:border-box;
     }
-    /* Yan padding --renuvex-pr-pad-summary-mobile uzerinden; top/bottom 16px sabit */
-    .renuvex-pr-summary{padding:16px var(--renuvex-pr-pad-summary-mobile);gap:14px;--renuvex-pr-col-label:92px;--renuvex-pr-col-count:32px;}
     /* Widget basligi summary'nin disinda, widget direct child — kendi yan
        padding'ini ayni variable'dan alir (summary ile hizali kalsin). */
     .renuvex-pr-title{

@@ -3,7 +3,17 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-07
-updated: 2026-05-07
+updated: 2026-05-31
+last_verified: 2026-05-31
+confidence: high
+source_files:
+  - "src/widget/reviews-section/styles.js"
+  - "src/widget/summary-layouts/classic/styles.js"
+  - "src/widget/summary-layouts/classic/index.js"
+  - "src/widget/summary-layouts/compact/styles.js"
+  - "src/widget/summary-layouts/hero/styles.js"
+  - "src/widget/summary-layouts/minimal/styles.js"
+  - "src/widget/summary-layouts/split/styles.js"
 tags:
   - widget
   - layout
@@ -20,13 +30,15 @@ related:
 
 ## Summary
 
-Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin padding, margin ve baslik hizalama stratejisi. Bu sayfa, 2026-05-07 tarihli duzeltmelerden sonra gecerli olan guncel durumu dokumante eder.
+Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin padding, margin ve baslik hizalama stratejisi. Bu sayfa, 2026-05-31 itibariyla gecerli olan guncel durumu dokumante eder.
+
+Classic/default summary root CSS now lives in `summary-layouts/classic/styles.js`. Shared child CSS such as bar rows, action rows, filters, photo strip, review layouts, and modals stays in `reviews-section/styles.js`.
 
 ## Design Principles
 
 1. **Tutarlilik**: Tum layout'lar ayni padding/margin dilini konusur. Magic number yerine token ve ortak kural.
 2. **Desktop yan padding birligi**: Dar ekranlarda ve farkli temalarda icerik kenara yapismasin.
-3. **Baslik hizalama birligi**: Tum layout'larda baslik sola yasli (mobile'da da).
+3. **Baslik hizalama birligi**: Classic default title is centered; compact, hero, minimal, and split keep left alignment with layout-local overrides.
 4. **Mobile/desktop ayrimi**: Tek breakpoint (`600px`) uzerinden. Mobile'da `var(--renuvex-pr-pad-summary-mobile)` kullanilir.
 
 ## Padding Reference Table
@@ -35,7 +47,7 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 
 | Layout | `.renuvex-pr-summary` Padding | Panel/Inner Padding | Baslik Hizasi | Not |
 |---|---|---|---|---|
-| `classic` | `16px 28px 24px` | — (summary = panel) | sol | Base layout, en fazla padding |
+| `classic` | `16px 28px 24px` | — (summary = panel) | ortada | Base/default layout, en fazla padding |
 | `compact` | `0 16px` | `16px 28px 24px` (panel) | sol | Header+trigger padding `0`, summary yan padding `16px` |
 | `hero` | `12px 8px` | — | sol | 2026-05-07: yan padding `0` -> `16px` -> `8px` |
 | `minimal` | `8px` | — | sol | 2026-05-07: yan padding `0` -> `16px` -> `8px` |
@@ -45,7 +57,7 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 
 | Layout | `.renuvex-pr-summary` Padding | Baslik Hizasi | Gap (Vertical) |
 |---|---|---|---|
-| `classic` | `16px 16px` | ortada | `20px` |
+| `classic` | `16px 16px` | ortada | `14px` |
 | `compact` | `16px 16px` | sol | `20px` (header-to-panel) |
 | `hero` | `16px 16px` | sol | `12px` |
 | `minimal` | `16px 16px` | sol | `12px` |
@@ -57,9 +69,9 @@ Tüm summary layout'lar (`classic`, `compact`, `hero`, `minimal`, `split`) icin 
 |---|---|---|
 | `--renuvex-pr-pad-summary-mobile` | `16px` | Tum summary layout'larin mobile yan padding'i |
 | `--renuvex-pr-pad-review-mobile` | `16px` | Review item'larin (card/list/gallery) mobile yan padding'i |
-| `--renuvex-pr-col-gap` | `20px` | Summary block'lar arasi dikey bosluk (Classic/Split Mobile) |
+| `--renuvex-pr-col-gap` | `4px` | Bar/action column gap for the default summary; split can override through its own layout CSS. |
 
-Tanim yeri: [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js).
+Default summary root variables live in [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js). Shared widget/mobile padding tokens still live in [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js).
 
 ## Baslik Hizalama
 
@@ -79,11 +91,12 @@ Mobile override:
 }
 ```
 
-Layout-spesifik baslik override'lari (hepsi `text-align: left`):
-- `.renuvex-pr-title-compact` — [compact/styles.js](src/widget/summary-layouts/compact/styles.js)
-- `.renuvex-pr-title-hero` — [hero/styles.js](src/widget/summary-layouts/hero/styles.js)
-- `.renuvex-pr-title-minimal` — [minimal/styles.js](src/widget/summary-layouts/minimal/styles.js)
-- `.renuvex-pr-title-split` — [split/styles.js](src/widget/summary-layouts/split/styles.js)
+Layout-spesifik baslik override'lari:
+- `.renuvex-pr-title-classic` — [classic/styles.js](src/widget/summary-layouts/classic/styles.js), centered default/classic title.
+- `.renuvex-pr-title-compact` — [compact/styles.js](src/widget/summary-layouts/compact/styles.js), left aligned.
+- `.renuvex-pr-title-hero` — [hero/styles.js](src/widget/summary-layouts/hero/styles.js), left aligned.
+- `.renuvex-pr-title-minimal` — [minimal/styles.js](src/widget/summary-layouts/minimal/styles.js), left aligned.
+- `.renuvex-pr-title-split` — [split/styles.js](src/widget/summary-layouts/split/styles.js), left aligned on desktop and centered at its split mobile breakpoint.
 
 ## Breakpoint
 
@@ -99,7 +112,8 @@ Sistemde iki ana breakpoint yaklasimi vardir:
 
 ## Source Files
 
-- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — base `.renuvex-pr-summary`, `.renuvex-pr-title`, mobile block
+- [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — shared widget CSS, base `.renuvex-pr-title`, shared summary child components, mobile review/title padding
+- [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) — classic/default summary root, title, avg/count/recommend styles
 - [src/widget/summary-layouts/classic/index.js](src/widget/summary-layouts/classic/index.js) — classic render
 - [src/widget/summary-layouts/compact/styles.js](src/widget/summary-layouts/compact/styles.js) — compact header + panel padding
 - [src/widget/summary-layouts/hero/styles.js](src/widget/summary-layouts/hero/styles.js) — hero padding
@@ -108,6 +122,7 @@ Sistemde iki ana breakpoint yaklasimi vardir:
 
 ## Change Log
 
+- **2026-05-31**: Classic/default summary root, title, avg/count/recommend CSS moved from [reviews-section/styles.js](src/widget/reviews-section/styles.js) to [classic/styles.js](src/widget/summary-layouts/classic/styles.js). Shared bar/action/filter/photo/review/modal CSS remains in `reviews-section/styles.js` to preserve cascade order.
 - **2026-05-07**: Spacing ve Hizalama Guncellemesi.
   - Summary block'lar arasi dikey bosluk (gap) `12px` -> `20px` yapildi (Classic ve Split Mobile).
   - Split layout tablet breakpoint'i `601px` -> `769px` yapildi (Tablette dikey dizilim icin).
