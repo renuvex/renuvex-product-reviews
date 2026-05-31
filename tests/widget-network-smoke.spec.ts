@@ -327,6 +327,50 @@ test('synchronous listing event is replayed after loader subscribes', async ({ p
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('listing badge slots mount as title siblings instead of inside title elements', async ({ page }) => {
+  const listingOnlyEvent = listingIkasEvents().filter((event) => event.type === 'VIEW_LISTING');
+  const log = await setupProductListingFallbackPage(page, {
+    ikasEvents: listingOnlyEvent,
+    ikasEventMode: 'sync',
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+
+  await expect.poll(() => countListingBadges(page), { timeout: 1500 }).toBe(2);
+  const placements = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll('.product-card')).map((card) => {
+      const title = card.querySelector('h2');
+      const slot = card.querySelector('[data-renuvex-slot="listing-rating"]');
+      return {
+        hasTitle: !!title,
+        hasSlot: !!slot,
+        titleContainsSlot: !!(title && slot && title.contains(slot)),
+        sameParent: !!(title && slot && title.parentElement === slot.parentElement),
+        immediatelyAfterTitle: !!(title && slot && title.nextSibling === slot),
+      };
+    });
+  });
+
+  expect(placements).toEqual([
+    {
+      hasTitle: true,
+      hasSlot: true,
+      titleContainsSlot: false,
+      sameParent: true,
+      immediatelyAfterTitle: true,
+    },
+    {
+      hasTitle: true,
+      hasSlot: true,
+      titleContainsSlot: false,
+      sameParent: true,
+      immediatelyAfterTitle: true,
+    },
+  ]);
+  expect(countUrls(log, '/api/public/ratings?')).toBe(1);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('listing page stays idempotent when product data arrives before PAGE_VIEW', async ({ page }) => {
   const events = listingIkasEvents();
   const pageEvent = events.find((event) => event.type === 'PAGE_VIEW');

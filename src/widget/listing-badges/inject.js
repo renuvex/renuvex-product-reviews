@@ -4,7 +4,6 @@ import { extractSlug } from '../core/helpers.js';
 import { createBadgeEl, createBadgePlaceholderEl } from '../core/badge.js';
 import { getThemeAdapter, isAutoPlacementEnabled } from '../themes/current-adapter.js';
 import { lastClickedSlug } from '../core/state.js';
-import { isSiblingMountEnabled } from '../core/rollout.js';
 import { probeWidgetVisibility, watchOneTimeRemoval } from '../core/health.js';
 import { getAfterElementMountPoint, placeOwnedSlot, watchOwnedSlotPosition } from '../core/slot-position.js';
 import { collectListingLinks, isVisibleForBadge } from './dom.js';
@@ -34,22 +33,17 @@ export function disconnectListingBadgeRemovalObservers() {
   listingBadgePositionObservers = [];
 }
 
-// resolveMount — listing badge için yerleştirme hedefi.
-// Sıra (ADR_0017 draft):
-//   1. Adapter `getListingBadgeMountPoint(titleEl)` override eder → o eleman.
-//   2. isSiblingMountEnabled() true → titleEl'in next sibling'i (h2'nin yanına, dışına).
-//   3. Aksi halde → titleEl içine (legacy davranış, h2 içinde div).
-// Allowlist gate'i (core/rollout.js) deploy 1'de yalnızca dev store'u sibling'e
-// alır; üretim default olarak legacy yolda kalır (deploy 2'de default flip).
+// resolveMount — listing badge placement target.
+// ADR_0017 canonical path: adapter override first, otherwise title sibling.
+// Do not reintroduce merchant/publicApiKey gates here; theme-specific exceptions
+// belong in getListingBadgeMountPoint().
 function resolveMount(titleEl) {
   var adapter = getThemeAdapter();
   var custom = adapter.getListingBadgeMountPoint(titleEl);
   if (custom && custom.parent) return custom;
   if (custom) return { parent: custom, beforeEl: null, position: 'before' };
-  if (isSiblingMountEnabled() && titleEl && titleEl.parentNode) {
-    return getAfterElementMountPoint(titleEl);
-  }
-  return { parent: titleEl, beforeEl: null, position: 'before' };
+  if (titleEl && titleEl.parentNode) return getAfterElementMountPoint(titleEl);
+  return null;
 }
 
 var TITLE_CLASS_SELECTOR = '[class*="productTitle"],[class*="productName"],[class*="product_title"],[class*="product_name"],[class*="product-title"],[class*="product-name"]';
@@ -246,6 +240,7 @@ export function injectBadgeOnLink(a, rating, productName, currentSlug, iconPair)
     var nameEl = findTitleEl(a, productName);
     if (!nameEl) return;
     var mountNested = resolveMount(nameEl);
+    if (!mountNested) return;
     if (mountNested.parent && hasOwnedListingBadge(mountNested.parent, slug)) return;
     var nestedBadge = replacePlaceholderOrPlace(mountNested, createListingBadge(rating, getJustify(nameEl), iconPair, slug), slug);
     if (nestedBadge) {

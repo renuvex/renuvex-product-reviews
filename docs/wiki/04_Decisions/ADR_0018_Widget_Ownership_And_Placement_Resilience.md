@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-24
-updated: 2026-05-24
-last_verified: 2026-05-24
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - adr
@@ -131,9 +131,10 @@ slots are not available.
   not only on broad badge classes.
 - The PDP badge has a bounded post-render position guard. This handles normal
   async script timing without creating a permanent DOM fight with another app.
-- Listing/home/search badge placeholders and rendered badges carry slug
-  context and use the same bounded guard. The existing sibling-mount rollout
-  gate remains unchanged; this ADR does not flip global listing placement.
+  - Listing/home/search badge placeholders and rendered badges carry slug
+    context and use the same bounded guard. Listing placement remains governed
+    by [[ADR_0017_Badge_Architecture]]; theme-specific exceptions belong in
+    adapter mount-point overrides.
 - New PDP theme support should add `findProductTitle()` and, when needed,
   `getProductBadgeMountPoint()` to the adapter. The shared guard then protects
   the returned mount point for the app-owned slot.

@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - widget
@@ -29,7 +29,6 @@ source_files:
   - "src/widget/core/badge.js"
   - "src/widget/core/helpers.js"
   - "src/widget/core/link-scope.js"
-  - "src/widget/core/rollout.js"
   - "src/widget/observer.js"
   - "src/widget/core/storefront-context.js"
   - "src/app/api/public/ratings/route.ts"
@@ -76,6 +75,7 @@ Star+count badge injected into product cards on collection / search / category p
 - DOM discovery is scoped to theme product containers first, then `main/[role=main]` fallback; it no longer starts from every link in the whole document.
 - MutationObserver re-render checks use the same scoped discovery path, so lazy product-card changes do not trigger a whole-document `document.querySelectorAll('a[href]')` scan.
 - Badge slots are reserved before rating data finishes loading and replaced in place when real ratings arrive, reducing listing-card layout shift.
+- Listing badge slots mount as siblings immediately after product title elements by default. There is no publicApiKey allowlist or legacy in-title branch; supported theme exceptions must use the adapter mount-point override.
 
 ## Settings
 Listing badges have no dedicated `widgetId`. Visibility is gated by the `badge`
@@ -123,6 +123,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-06-01: Completed ADR_0017 listing mount rollout cleanup. Removed the temporary publicApiKey gate and legacy in-`<h2>` mount branch; browser coverage now pins that listing badge slots mount as title siblings and keep one bulk ratings request.
 - 2026-05-24/25: Listing badge stars now render via the shared SVG `<symbol>` sprite (`<use>`) instead of inline `<path>` (~4.6 KB/badge of duplicated path data removed); the badge is labelled via an sr-only `aria-labelledby` span and aligned via `data-renuvex-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-19: Listing badge star icon + color are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) instead of a hardcoded `star:classic` and the dead `badge.color`. `index.js` parses the icon and sets the star color CSS variables on the listing path itself, so cold listing entry shows the correct icon/color without depending on the PDP `render.js`. `iconPair` is threaded through `injectBadges` → `createBadgeEl`. See [[ADR_0016_Rating_Visual_System]].
 - 2026-05-18: Post-deploy live retest on `dev-mertcopper.ikas.shop` confirmed `runtime-2RGD2H4S.js`, visible listing badges on `/clothing` desktop/mobile, and zero widget-sourced `document.querySelectorAll('a[href]')` calls.

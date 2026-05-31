@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-25
-updated: 2026-05-27
-last_verified: 2026-05-27
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - widget
@@ -57,7 +57,7 @@ ikas does not provide a reliable public DOM slot contract today. Direct ikas fee
 - Listing allowlist containers: `.category-products-main`, `.products-slider-main`, `.infinite-scroll-component`, `[class*="product-list"]`, `.single-product-container-main`, `.product-block-container`.
 - Listing blocklist areas: header/nav, cart/basket, banner/hero/slider/marquee, and non-title links inside the single-product section.
 - PDP badge mount: after the adapter-selected product title.
-- Listing badge mount: no Ozy-specific override today; the shared rollout gate decides sibling vs legacy mount.
+- Listing badge mount: no Ozy-specific override today; common code mounts the badge as a title sibling, and real theme exceptions belong in `getListingBadgeMountPoint(titleEl)`.
 - Known risks: broad `[class*="product-list"]`, old storefront markup can still contain `#ikas-reviews-anchor`, and new merchant sections may reuse product-like classes outside real product cards.
 
 ## New Theme Checklist

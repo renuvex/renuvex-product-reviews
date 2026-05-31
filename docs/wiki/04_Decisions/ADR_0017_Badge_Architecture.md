@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-20
-updated: 2026-05-20
-last_verified: 2026-05-20
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - adr
@@ -24,7 +24,6 @@ source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
   - "src/widget/core/badge.js"
   - "src/widget/core/helpers.js"
-  - "src/widget/core/rollout.js"
   - "src/widget/listing-badges/inject.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/rating-badge/inject.js"
@@ -79,7 +78,7 @@ The badge subsystem follows four rules. None of them touch the visual identity
 fixed by [[ADR_0016_Rating_Visual_System]] — that system (icon, color,
 half-star engine) remains untouched.
 
-### 1. Mount: sibling of title, with an adapter override and an emergency flag
+### 1. Mount: sibling of title, with an adapter override
 
 The listing badge is **inserted as a sibling of the product title element**,
 not inside it. The PDP badge was already a sibling. Resolution order:
@@ -88,18 +87,15 @@ not inside it. The PDP badge was already a sibling. Resolution order:
    pins a specific element, use it. Default returns `null`.
 2. `titleEl.parentNode.insertBefore(badge, titleEl.nextSibling)` — sibling
    mount, the default.
-3. `window.RENUVEX_PR_BADGE_MOUNT_LEGACY === true` — debug-only escape hatch back to
-   the in-`<h2>` mount. Not exposed to merchants; for incident recovery from
-   the browser console.
 
 **No automatic fallback heuristic.** If a theme breaks under sibling mount,
 the fix is to extend `getListingBadgeMountPoint` on the adapter, not to layer
 conditional retries in `inject.js`.
 
-Phase 2 of the rollout shipped with a publicApiKey allowlist gate
-([src/widget/core/rollout.js](src/widget/core/rollout.js) `isSiblingMountEnabled`)
-so production stores stayed on the legacy in-`<h2>` mount while the dev store
-exercised the new path; see Consequences for the rollout sequence.
+The temporary publicApiKey rollout gate used during Phase 2 was removed on
+2026-06-01 after sibling mount was covered by browser regression tests. Current
+production code has no merchant allowlist or legacy in-`<h2>` branch for this
+placement decision.
 
 ### 2. Styling: class-first, with minimal inline
 
@@ -172,9 +168,8 @@ Click behavior is part of the surface contract and **not merchant-tunable**:
 Each rule corresponds to a structural risk surfaced in the audit:
 
 - **Sibling mount** removes the HTML5-validity concern and ends typography
-  inheritance from the theme `<h2>`. The adapter override and emergency flag
-  cover the long tail of unusual themes without forcing two parallel mount
-  paths into the main code.
+  inheritance from the theme `<h2>`. The adapter override covers the long tail
+  of unusual themes without forcing two parallel mount paths into the main code.
 - **Class-first styling** turns the badge into a stable CSS target. Themes
   can override `.renuvex-pr-rating-badge .renuvex-pr-rating-badge__label` if they need to;
   inline styles previously made that impossible without `!important` wars.
@@ -228,14 +223,11 @@ Each rule corresponds to a structural risk surfaced in the audit:
   that returns `null`, so call sites in `listing-badges/inject.js` can call
   it without null checks. ADR_0016's "adapters never touch visuals" rule is
   preserved — this method answers "where" only.
-- Sibling mount shipped behind a publicApiKey allowlist gate in
-  [src/widget/core/rollout.js](src/widget/core/rollout.js)
-  (`isSiblingMountEnabled`). Phase 2 deploy plan:
-  - Deploy 1 (PR-2 landed): code in production, gate ON for dev store only.
-    48-72h Sentry + visual + CLS monitoring on `dev-mertcopper.ikas.shop`.
-  - Deploy 2 (~3-7 days): flip default — sibling for everyone; allowlist
-    becomes a `LEGACY_MOUNT_OPT_OUT` opt-out for any tenant that needs it.
-  - Deploy 3 (~2 sprints): remove the legacy mount path from `resolveMount`.
+- Sibling mount originally shipped behind a publicApiKey allowlist gate for
+  Phase 2 monitoring. The rollout completed on 2026-06-01: the gate and legacy
+  in-`<h2>` branch were removed, and the browser suite now pins that listing
+  badge slots mount as title siblings. Theme-specific exceptions must use the
+  adapter `getListingBadgeMountPoint(titleEl)` hook.
 - Component-scope CSS variables (`--renuvex-pr-badge-icon-size`,
   `--renuvex-pr-badge-text-size`) live on `.renuvex-pr-rating-badge`. `:root` remains
   reserved for ADR_0016's `--renuvex-pr-review-star-color`. Future variants
@@ -256,7 +248,6 @@ Each rule corresponds to a structural risk surfaced in the audit:
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)
 - [src/widget/core/badge.js](src/widget/core/badge.js)
 - [src/widget/core/helpers.js](src/widget/core/helpers.js)
-- [src/widget/core/rollout.js](src/widget/core/rollout.js)
 - [src/widget/listing-badges/inject.js](src/widget/listing-badges/inject.js)
 - [src/widget/listing-badges/index.js](src/widget/listing-badges/index.js)
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js)

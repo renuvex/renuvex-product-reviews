@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-01 - refactor | Remove listing badge mount rollout gate
+- Summary: Completed the ADR_0017 listing mount cleanup. The temporary publicApiKey allowlist and legacy in-`<h2>` branch are gone; listing badge slots now mount as title siblings by default, with theme-specific exceptions handled only through adapter mount-point overrides.
+- Key source changes: Deleted `src/widget/core/rollout.js`, simplified `src/widget/listing-badges/inject.js resolveMount()` to adapter override then sibling mount, and added a browser regression in `tests/widget-network-smoke.spec.ts` proving slots are siblings of product titles and still use one bulk ratings request. Rebuilt `public/widget.js` and `public/widget-runtime/*`; removed stale runtime hash artifacts.
+- Verification: Targeted Playwright test failed before rebuilding the fixed runtime with the old in-title placement, then passed after the source/build update. Full validation is recorded in the task closeout.
+- Updated wiki: [[ADR_0017_Badge_Architecture]], [[Decision_Index]], [[Listing_Rating_Widget]], [[Theme_Adapter_Playbook]], [[Hot_Context]]
+
 ## 2026-06-01 - fix | Use semantic PAGE_VIEW dedupe
 - Summary: Fixed a verified widget loader lifecycle bug where the global 800 ms `PAGE_VIEW` debounce could suppress a real fast transition such as `PRODUCT -> CATEGORY`, delaying listing lifecycle until the DOM fallback path.
 - Key source changes: `src/widget/core/storefront-context.js` now dedupes `PAGE_VIEW` by normalized `pageType + pathname/search`; `lastPageView` was removed from listing badge render state; `tests/widget-network-smoke.spec.ts` pins both distinct-transition pass-through and same-page duplicate suppression. Rebuilt `public/widget.js` and `public/widget-runtime/*`.
