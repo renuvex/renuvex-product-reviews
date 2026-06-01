@@ -18,12 +18,12 @@ export var LIGHTBOX_CSS = `
   .renuvex-pr-modal-close,
   .renuvex-pr-modal-close-mobile{background:#00000080;border:1px solid #ffffff33;box-sizing:border-box;color:#ffffff;font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:var(--renuvex-pr-radius,6px);width:32px;height:32px;align-items:center;justify-content:center;}
   .renuvex-pr-modal-close{position:absolute;top:-42px;right:0;display:flex;z-index:100000;}
-  @media(hover:hover){.renuvex-pr-modal-close:hover{opacity:0.85;}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-modal-close:hover{opacity:0.85;}}
   @media(max-width:640px){.renuvex-pr-modal-close{display:none;}}
   .renuvex-pr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;z-index:2;}
-  @media(hover:hover){.renuvex-pr-modal-close-mobile:hover{opacity:0.85;}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-modal-close-mobile:hover{opacity:0.85;}}
   .renuvex-pr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:#00000059;border:1px solid #ffffff33;box-sizing:border-box;color:#ffffff;width:36px;height:36px;border-radius:var(--renuvex-pr-radius,6px);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
-  @media(hover:hover){.renuvex-pr-modal-nav:hover{opacity:0.85;}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-modal-nav:hover{opacity:0.85;}}
   .renuvex-pr-modal-nav-prev{left:10px;}
   .renuvex-pr-modal-nav-next{right:10px;}
   .renuvex-pr-modal-nav svg{width:18px;height:18px;}

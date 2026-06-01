@@ -1,5 +1,5 @@
 /* Renuvex Product Reviews ESM runtime | theme: default */
-import{a as Ae,d as Qe}from"./chunk-FW6W6ZQL.js";import{b as Lr,c as Ie}from"./chunk-ZM24JLBV.js";import{A as ar,B as nr,a as U,b as er,c as Q,d as ee,e as O,f as P,g as Kr,h as Le,j as Er,k as Jr,l as rr,m as Ne,n as Zr,o as $r,p as Qr,q as et,r as rt,s as tt,t as at,v as nt,w as it,x as ot,y as lt,z as tr}from"./chunk-NQF4A7IV.js";import{A as he,B as lr,C as V,D as pr,E as ur,F as Tr,G as Ar,H as ae,I as xt,J as ne,K as ft,L as gt,c as Sr,e as ge,f as W,g as ue,h as q,i as Ce,j as ir,k as Ge,l as pt,m as Pe,n as or,o as ut,p as ke,q as dt,r as st,t as vt,u as de,v as Re,x as ct,y as se,z as mt}from"./chunk-FTLIXH7I.js";import{a as Xe}from"./chunk-GSBAPHFO.js";import{a as fe,b as We,c as qe,k as ht,l as Se}from"./chunk-YCWIZ2SG.js";var Be=":host{display:block;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:inherit;color:inherit;line-height:inherit;font-size:inherit;letter-spacing:inherit;text-align:start;}:host *,:host *::before,:host *::after{box-sizing:border-box;}";function bt(e){return e?e.shadowRoot||e.attachShadow({mode:"open"}):null}function Me(e,r){if(e){var t=e.querySelector("style[data-renuvex-shadow-style]");t||(t=document.createElement("style"),t.setAttribute("data-renuvex-shadow-style",""),e.appendChild(t)),t.textContent=r||""}}function dr(){var e=document.createElement("div");e.setAttribute("data-renuvex-shadow-overlay",""),document.body.appendChild(e);var r=e.attachShadow({mode:"open"});return{host:e,root:r}}function wt(e){var r=document.activeElement;return e&&r===e.host&&e.activeElement||r}function yt(e){if(!e)return null;var r=e.querySelector("[data-renuvex-shadow-content]");return r||(r=document.createElement("div"),r.setAttribute("data-renuvex-shadow-content",""),e.appendChild(r),r)}var zt=`
+import{a as Ae,d as Qe}from"./chunk-FW6W6ZQL.js";import{b as Lr,c as Ie}from"./chunk-ZM24JLBV.js";import{A as ar,B as nr,a as U,b as er,c as Q,d as ee,e as O,f as P,g as Kr,h as Le,j as Er,k as Jr,l as rr,m as Ne,n as Zr,o as $r,p as Qr,q as et,r as rt,s as tt,t as at,v as nt,w as it,x as ot,y as lt,z as tr}from"./chunk-NQF4A7IV.js";import{A as he,B as lr,C as V,D as pr,E as ur,F as Tr,G as Ar,H as ae,I as xt,J as ne,K as ft,L as gt,c as Sr,e as ge,f as W,g as ue,h as q,i as Ce,j as ir,k as Ge,l as pt,m as Pe,n as or,o as ut,p as ke,q as dt,r as st,t as vt,u as de,v as Re,x as ct,y as se,z as mt}from"./chunk-4LLXXU5B.js";import{a as Xe}from"./chunk-GSBAPHFO.js";import{a as fe,b as We,c as qe,k as ht,l as Se}from"./chunk-YCWIZ2SG.js";var Be=":host{display:block;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:inherit;color:inherit;line-height:inherit;font-size:inherit;letter-spacing:inherit;text-align:start;}:host *,:host *::before,:host *::after{box-sizing:border-box;}";function bt(e){return e?e.shadowRoot||e.attachShadow({mode:"open"}):null}function Me(e,r){if(e){var t=e.querySelector("style[data-renuvex-shadow-style]");t||(t=document.createElement("style"),t.setAttribute("data-renuvex-shadow-style",""),e.appendChild(t)),t.textContent=r||""}}function dr(){var e=document.createElement("div");e.setAttribute("data-renuvex-shadow-overlay",""),document.body.appendChild(e);var r=e.attachShadow({mode:"open"});return{host:e,root:r}}function wt(e){var r=document.activeElement;return e&&r===e.host&&e.activeElement||r}function yt(e){if(!e)return null;var r=e.querySelector("[data-renuvex-shadow-content]");return r||(r=document.createElement("div"),r.setAttribute("data-renuvex-shadow-content",""),e.appendChild(r),r)}var zt=`
   /* Review widget frame. Full-bleed so a merchant theme container cannot trap
      the review surface inside arbitrary side padding. */
   #renuvex-reviews-widget{color:#111111;background:transparent;border:1px solid var(--renuvex-pr-widget-border,transparent);width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-top:40px;margin-bottom:40px;padding:40px 16px;box-sizing:border-box;--renuvex-pr-gap-tight:4px;--renuvex-pr-gap-normal:8px;--renuvex-pr-gap-loose:16px;--renuvex-pr-gap-section:24px;--renuvex-pr-pad-summary-mobile:16px;--renuvex-pr-pad-review-mobile:16px;}
@@ -55,7 +55,7 @@ import{a as Ae,d as Qe}from"./chunk-FW6W6ZQL.js";import{b as Lr,c as Ie}from"./c
     cursor:pointer;border-radius:var(--renuvex-pr-radius,6px);padding:3px 6px;
     box-sizing:border-box;position:relative;
   }
-  @media(hover:hover){.renuvex-pr-bar-row:hover{background:var(--renuvex-pr-bar-hover-bg,rgba(17,17,17,0.07));}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-bar-row:hover{background:var(--renuvex-pr-bar-hover-bg,rgba(17,17,17,0.07));}}
   .renuvex-pr-bar-row:focus-visible{outline:2px solid var(--renuvex-pr-filter-focus-ring,rgba(17,17,17,0.55));outline-offset:2px;}
   .renuvex-pr-bar-active{background:var(--renuvex-pr-bar-hover-bg,rgba(17,17,17,0.07))!important;}
   .renuvex-pr-bar-label{flex:0 0 var(--renuvex-pr-col-label);display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-size:var(--renuvex-pr-bar-label-size,16px);color:#111111;}
@@ -71,7 +71,7 @@ import{a as Ae,d as Qe}from"./chunk-FW6W6ZQL.js";import{b as Lr,c as Ie}from"./c
     box-sizing:border-box;
   }
   .renuvex-pr-write-btn{flex:1 1 auto;min-width:0;min-height:36px;background:var(--renuvex-pr-btn-bg,#111111);color:var(--renuvex-pr-btn-text,#ffffff);padding:10px 24px;border-radius:var(--renuvex-pr-radius,6px);cursor:pointer;border:1px solid var(--renuvex-pr-btn-border,#111111);font-weight:500;font-size:var(--renuvex-pr-btn-text-size,14px);white-space:nowrap;transition:opacity 0.15s;}
-  @media(hover:hover){.renuvex-pr-write-btn:hover{opacity:0.92;}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-write-btn:hover{opacity:0.92;}}
   .renuvex-pr-filter-wrap{flex:0 0 var(--renuvex-pr-col-count);position:relative;display:flex;justify-content:flex-end;align-items:stretch;}
   .renuvex-pr-filter-btn{display:flex;align-items:center;justify-content:center;width:36px;min-height:36px;height:auto;border-radius:var(--renuvex-pr-radius,6px);border:1px solid var(--renuvex-pr-filter-btn-border,#111111);background:var(--renuvex-pr-filter-btn-bg,transparent);color:var(--renuvex-pr-filter-btn-text,#111111);cursor:pointer;}
   .renuvex-pr-filter-btn svg{width:16px;height:16px;flex-shrink:0;}
@@ -83,7 +83,7 @@ import{a as Ae,d as Qe}from"./chunk-FW6W6ZQL.js";import{b as Lr,c as Ie}from"./c
   .renuvex-pr-filter-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--renuvex-pr-filter-menu-bg,#ffffff);border:1px solid var(--renuvex-pr-filter-menu-border,#e5e7eb);border-radius:var(--renuvex-pr-radius,6px);box-shadow:0 4px 16px rgba(0,0,0,0.08);min-width:180px;overflow:hidden;z-index:999;visibility:hidden;opacity:0;pointer-events:none;transform-origin:top right;}
   .renuvex-pr-filter-menu.renuvex-pr-open{visibility:visible;pointer-events:auto;animation:renuvex-pr-grow-out 200ms ease-in-out forwards;}
   .renuvex-pr-filter-item{display:block;width:100%;text-align:left;padding:10px 16px;font:inherit;font-size:var(--renuvex-pr-filter-text-size,14px);color:var(--renuvex-pr-filter-item-text,#111111);background:transparent;border:0;cursor:pointer;}
-  @media(hover:hover){.renuvex-pr-filter-item:hover{background:var(--renuvex-pr-filter-item-hover-bg,rgba(17,17,17,0.07));}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-filter-item:hover{background:var(--renuvex-pr-filter-item-hover-bg,rgba(17,17,17,0.07));}}
   .renuvex-pr-filter-item-active{font-weight:700;color:var(--renuvex-pr-filter-item-active,#111111);}
   .renuvex-pr-filter-btn:focus-visible,
   .renuvex-pr-filter-item:focus-visible{outline:2px solid var(--renuvex-pr-filter-focus-ring,rgba(17,17,17,0.55));outline-offset:2px;}
@@ -100,7 +100,7 @@ import{a as Ae,d as Qe}from"./chunk-FW6W6ZQL.js";import{b as Lr,c as Ie}from"./c
   .renuvex-pr-photo-strip-wrap{position:relative;}
 
   .renuvex-pr-photo-strip-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:var(--renuvex-pr-photo-arrow-bg,#fff);border:1px solid var(--renuvex-pr-photo-arrow-border,rgba(0,0,0,0.12));border-radius:var(--renuvex-pr-radius,6px);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--renuvex-pr-photo-arrow-text,#111111);transition:all 0.2s ease;}
-  @media(hover:hover){.renuvex-pr-photo-strip-arrow:hover{background:var(--renuvex-pr-photo-arrow-bg,#fff);transform:translateY(-50%) scale(1.08);}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-photo-strip-arrow:hover{background:var(--renuvex-pr-photo-arrow-bg,#fff);transform:translateY(-50%) scale(1.08);}}
   button.renuvex-pr-photo-strip-arrow:active{opacity:1;}
   .renuvex-pr-photo-strip-arrow-prev{left:-16px;}
   .renuvex-pr-photo-strip-arrow-next{right:-16px;}
@@ -115,7 +115,7 @@ import{a as Ae,d as Qe}from"./chunk-FW6W6ZQL.js";import{b as Lr,c as Ie}from"./c
   .renuvex-pr-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px 0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .renuvex-pr-photo-strip::-webkit-scrollbar{display:none;}
   .renuvex-pr-photo-strip-thumb{flex:0 0 var(--renuvex-pr-thumbnail-size,90px);width:var(--renuvex-pr-thumbnail-size,90px);height:auto;aspect-ratio:var(--renuvex-pr-photo-thumb-aspect,1/1);border-radius:var(--renuvex-pr-radius,8px);object-fit:cover;cursor:pointer;transition:transform 0.2s ease;border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));}
-  @media(hover:hover){.renuvex-pr-photo-strip-thumb:hover{transform:translateY(-2px);}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-photo-strip-thumb:hover{transform:translateY(-2px);}}
   .renuvex-pr-photo-strip-wrap{position:relative;display:block;}
 `;var Et=`
   .renuvex-pr-review-stars{display:inline-flex;gap:2px;align-items:center;}
@@ -157,12 +157,12 @@ import{a as Ae,d as Qe}from"./chunk-FW6W6ZQL.js";import{b as Lr,c as Ie}from"./c
   .renuvex-pr-modal-close,
   .renuvex-pr-modal-close-mobile{background:#00000080;border:1px solid #ffffff33;box-sizing:border-box;color:#ffffff;font-size:14px;cursor:pointer;line-height:1;padding:0;border-radius:var(--renuvex-pr-radius,6px);width:32px;height:32px;align-items:center;justify-content:center;}
   .renuvex-pr-modal-close{position:absolute;top:-42px;right:0;display:flex;z-index:100000;}
-  @media(hover:hover){.renuvex-pr-modal-close:hover{opacity:0.85;}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-modal-close:hover{opacity:0.85;}}
   @media(max-width:640px){.renuvex-pr-modal-close{display:none;}}
   .renuvex-pr-modal-close-mobile{display:none;position:absolute;top:12px;right:12px;z-index:2;}
-  @media(hover:hover){.renuvex-pr-modal-close-mobile:hover{opacity:0.85;}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-modal-close-mobile:hover{opacity:0.85;}}
   .renuvex-pr-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:#00000059;border:1px solid #ffffff33;box-sizing:border-box;color:#ffffff;width:36px;height:36px;border-radius:var(--renuvex-pr-radius,6px);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
-  @media(hover:hover){.renuvex-pr-modal-nav:hover{opacity:0.85;}}
+  @media(hover:hover) and (pointer:fine){.renuvex-pr-modal-nav:hover{opacity:0.85;}}
   .renuvex-pr-modal-nav-prev{left:10px;}
   .renuvex-pr-modal-nav-next{right:10px;}
   .renuvex-pr-modal-nav svg{width:18px;height:18px;}

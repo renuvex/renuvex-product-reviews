@@ -32,6 +32,7 @@ source_files:
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
   - "tests/unit/widget-popover-registry.test.ts"
+  - "tests/unit/widget-hover-gating.test.ts"
   - "scripts/check-widget-runtime.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
@@ -98,10 +99,12 @@ source_files:
 - 2026-06-01: `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared CSS ownership moved to `styles/{base,summary-controls,review-primitives,photo-strip,lightbox}.js`.
 - 2026-06-01: `PAGE_VIEW` debounce is semantic, not global time-only. `storefront-context.js` dedupes same `pageType + pathname/search` events within 800 ms but lets distinct fast transitions such as `PRODUCT -> CATEGORY` start listing lifecycle immediately.
 - 2026-06-01: Listing badge sibling mount is the default contract. The temporary publicApiKey rollout gate and legacy in-title branch were removed; adapter overrides are the only exception path.
-- 2026-06-01: `reviews-section/render.js` split into `render/*.js`. Phase 1 extracted pure builders (`theme-vars,size-presets,states,photo-strip,request-token`); Phase 2 extracted the render-rerunning handlers (retry/filter/sort) into `render/handlers.js` `createReviewHandlers({render})` — render injected via DI so no circular import; state read stays live via ESM bindings. render.js 832→407 lines. Load-more stays inline (incremental DOM insert, not a re-render). Behavior-preserving (unit 54 + widget-runtime 16 + admin-preview 2 + interactions 12 + smoke 25 unchanged).
+- 2026-06-01: `reviews-section/render.js` split into `render/*.js`. Phase 1 extracted pure builders (`theme-vars,size-presets,states,photo-strip,request-token`); Phase 2 extracted the render-rerunning handlers (retry/filter/sort) into `render/handlers.js` `createReviewHandlers({render})` — render injected via DI so no circular import; state read stays live via ESM bindings. render.js 832→407 lines. Load-more stays inline (incremental DOM insert, not a re-render). Behavior-preserving; full widget suite unchanged.
 
 - 2026-06-01: Review wizard close (X) color is derived from `formBgColor`, not `formPrimaryTextColor`. `theme-vars.js` chooses `#111111` or `#ffffff` by contrast and derives hover background from that safe control color; interaction smoke pins the real shadow-DOM close/hover styles.
 - 2026-06-01: Summary interaction contract hardened. `popover-registry.js` now returns `{ unregister, notifyOpening }` handles, purges disconnected entries after summary re-renders, and requires registered `close()` functions to return `wasOpen`; bar chart rows expose button semantics (`role=button`, `aria-pressed`, Enter/Space) and bar counts use tabular numbers plus an elastic minimum count column. Unit/runtime/interaction tests pin popover lifecycle, keyboard rating filters, badge/summary isolation, and large localized count rendering.
+
+- 2026-06-01: Decorative review-surface hovers gate on `@media (hover:hover) and (pointer:fine)`, not bare `(hover:hover)` — fixes compact-mobile sticky-hover on the full-width "Yorum Yap" button; real `hover:none` phones unaffected. Guard `tests/unit/widget-hover-gating.test.ts`; wizard/PDP-badge hovers follow-up.
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.
