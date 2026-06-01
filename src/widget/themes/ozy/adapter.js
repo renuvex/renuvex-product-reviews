@@ -73,9 +73,9 @@ export var ozyThemeAdapter = {
 
   // Optional badge mount-point override for themes whose card layout breaks
   // the default sibling-of-title placement. Ozy works fine with the default
-  // (returns null → caller falls back to sibling or legacy per rollout gate),
+  // (returns null → caller falls back to the title sibling mount in inject.js),
   // but this surface is here so future themes can pin a specific element
-  // without touching listing-badges/inject.js. See ADR_0017 draft.
+  // without touching listing-badges/inject.js. See ADR_0017.
   getListingBadgeMountPoint: function (_titleEl) {
     return null;
   },
