@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-01 - polish | Pin widget icon registry Phosphor invariants
+- Summary: Normalized the only remaining stroke-weight mismatch in the widget icon registry: `clover.empty` now uses Phosphor regular `stroke-width="16"`. Added unit guardrails proving every shipped review, filter, and UI chrome SVG stays on the Phosphor 256-grid `currentColor` system, with no legacy Lucide 24-grid or Unicode X/arrow glyphs.
+- Key source changes: `src/widget/icons/review-icons.js` changes the clover outline stroke from 12 to 16. `tests/unit/widget-icon-sprite.test.ts` now enumerates `ICONS`, `FILTER_ICONS`, and `ui-icons.js` exports to enforce grid/color/stroke/legacy-glyph invariants. Rebuilt `public/widget.js` + `public/widget-runtime/*`; removed stale runtime hash artifacts.
+- Verification: `pnpm build:widget`, `pnpm check:widget-js`, `pnpm test:unit` (58/58), `pnpm test:widget-interactions` (13/13), `pnpm test:widget-runtime` (16/16), `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check` passed before commit. Wiki audit reported 0 errors and existing repo-wide warnings.
+- Updated wiki: [[Widget_Architecture]], [[Widget_Files_Map]], [[Test_Strategy]]
+
 ## 2026-06-01 - polish | Derive wizard close control color from form background
 - Summary: Decoupled the review wizard close (X) control from `formPrimaryTextColor`. The close icon and hover background are now deterministic contrast derivatives of `formBgColor`, so the system control stays readable on both light and dark form backgrounds without adding another admin color field.
 - Key source changes: `src/widget/reviews-section/render/theme-vars.js` adds pure contrast helpers and maps `--renuvex-pr-fwizard-close-text` / `--renuvex-pr-fwizard-close-hover-bg` from `formBgColor`; `src/widget/reviews-section/review-form-modal/styles.js` keeps hover color on the close token instead of switching back to wizard text. Added `tests/unit/widget-theme-vars.test.ts` and a shadow-DOM interaction smoke for the real close/hover style. Rebuilt `public/widget.js` + `public/widget-runtime/*`; removed stale runtime hash artifacts.

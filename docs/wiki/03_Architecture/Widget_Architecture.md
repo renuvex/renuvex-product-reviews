@@ -32,6 +32,7 @@ source_files:
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/storefront-theme.test.ts"
+  - "tests/unit/widget-icon-sprite.test.ts"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
@@ -62,6 +63,11 @@ source_files:
   - "src/widget/surfaces/structured-data.surface.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
+  - "src/widget/icons/index.js"
+  - "src/widget/icons/review-icons.js"
+  - "src/widget/icons/filter-icons.js"
+  - "src/widget/icons/ui-icons.js"
+  - "src/widget/icons/star-sprite.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/generic/adapter.js"
   - "src/widget/themes/ozy/adapter.js"
@@ -234,7 +240,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - Browser conflict hardening is diagnostic and bounded: badge render paths report visibility/dom-conflict events and try one remount if a rendered badge node is removed; they do not loop against aggressive third-party scripts. The visibility probe re-resolves the **current** owned node when it fires (not the originally injected reference), so a self-heal/theme re-render that swaps the element does not produce a false `missing_after_render`. See [[Bug_Listing_Badge_Missing_After_Render]].
 - The widget assumes a single product per page on PDP. Multi-product pages (looks/sets) would need a redesign.
 - Review submission has a single runtime path: all write CTAs open the multi-step modal. The legacy inline/page form path was removed to reduce storefront bundle complexity.
-- Icon selection is centralized under [src/widget/icons/](src/widget/icons/): review/rating icons live in `review-icons.js`, filter button icons live in `filter-icons.js`, and consumers import through `icons/index.js`. The old [icons.js](src/widget/icons.js) file is a compatibility re-export only.
+- Icon selection is centralized under [src/widget/icons/](src/widget/icons/): review/rating icons live in `review-icons.js`, filter button icons live in `filter-icons.js`, UI chrome icons live in `ui-icons.js`, and consumers import through `icons/index.js`. The old [icons.js](src/widget/icons.js) file is a compatibility re-export only. `tests/unit/widget-icon-sprite.test.ts` pins the registry to Phosphor 256-grid, `currentColor`, regular stroke weight, and no legacy Lucide/Unicode X/arrow glyphs.
 - The photo review detail lightbox has its own runtime path and risk profile; see [[Product_Review_Lightbox]] and [[Bug_Review_Detail_Lightbox_Risks]] before changing image navigation, responsive breakpoints, viewport sizing, scroll containment, body scroll locking, focus management, or history behavior. Card/list/gallery navigation is scoped to the active sort/filter state's loaded review collection; the lightbox does not fetch unloaded pages by itself.
 - Lightbox layout uses a three-tier responsive contract in the Ozy theme: desktop two-column at `801px+`, stacked tablet/landscape at `641px-800px`, and fullscreen mobile at `640px` and below with `vh` / `svh` / `dvh` viewport-unit fallbacks.
 - Review image rendering depends on a trusted Cloudinary cloud policy. The cloud name is a build-time constant injected by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`. It is not threaded through settings, no runtime setter exists, and there is no per-store image-policy cache. Settings endpoint outages cannot remove images. Layout code should use `getTrustedReviewImages()` instead of local URL prefix checks. See [[ADR_0006_Trusted_Review_Image_URL_Policy]], [[ADR_0008_Cloud_Name_Build_Time_Only]], and [[Bug_Cloud_Name_Silent_Image_Filter]].

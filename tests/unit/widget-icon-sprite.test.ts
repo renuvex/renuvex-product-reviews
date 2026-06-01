@@ -1,6 +1,30 @@
 import { describe, expect, test } from 'vitest';
 import { svgStringToSymbol, iconUseNode } from '../../src/widget/icons/star-sprite.js';
-import { UI_CARET_LEFT, UI_CARET_RIGHT, UI_CLOSE, PHOTO_ICON, PLUS_ICON } from '../../src/widget/icons/index.js';
+import {
+  FILTER_ICONS,
+  ICONS,
+  UI_CARET_LEFT,
+  UI_CARET_RIGHT,
+  UI_CLOSE,
+  PHOTO_ICON,
+  PLUS_ICON,
+} from '../../src/widget/icons/index.js';
+
+function allRegistrySvgs(): string[] {
+  const reviewSvgs = Object.values(ICONS as Record<string, { styles: Record<string, { filled: string; empty: string }> }>)
+    .flatMap((icon) => Object.values(icon.styles))
+    .flatMap((style) => [style.filled, style.empty]);
+  const filterSvgs = Object.values(FILTER_ICONS as Record<string, { svg: string }>).map((icon) => icon.svg);
+  return [
+    ...reviewSvgs,
+    ...filterSvgs,
+    UI_CARET_LEFT,
+    UI_CARET_RIGHT,
+    UI_CLOSE,
+    PHOTO_ICON,
+    PLUS_ICON,
+  ];
+}
 
 // Regression guard for the icon sprite conversion. ALL widget icons (stars, filter,
 // photo/plus) are injected once as a <symbol> and referenced via <use>. The conversion
@@ -70,5 +94,30 @@ describe('shared UI icons (Phosphor family)', () => {
 
   test('iconUseNode is SSR-safe (returns null without a DOM)', () => {
     expect(iconUseNode(UI_CLOSE)).toBeNull();
+  });
+});
+
+describe('widget icon registry invariants', () => {
+  test('all shipped widget icon SVGs stay on the Phosphor 256-grid currentColor system', () => {
+    for (const svg of allRegistrySvgs()) {
+      expect(svg).toContain('viewBox="0 0 256 256"');
+      expect(svg).toContain('currentColor');
+      expect(svg).not.toContain('viewBox="0 0 24');
+      expect(svg).not.toContain('width="24"');
+      expect(svg).not.toContain('height="24"');
+      expect(svg).not.toContain('✕');
+      expect(svg).not.toContain('‹');
+      expect(svg).not.toContain('›');
+      expect(svg).not.toContain('&#8249');
+      expect(svg).not.toContain('&#8250');
+      expect(svg.toLowerCase()).not.toContain('lucide');
+    }
+  });
+
+  test('all stroked widget icon SVGs use Phosphor regular stroke weight', () => {
+    for (const svg of allRegistrySvgs()) {
+      const strokeWidths = Array.from(svg.matchAll(/stroke-width="([^"]+)"/g)).map((match) => match[1]);
+      expect(strokeWidths.every((width) => width === '16')).toBe(true);
+    }
   });
 });
