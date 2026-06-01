@@ -138,11 +138,11 @@ function hasOwnedListingSlot(parent, slug, productId) {
 function replacePlaceholderOrPlace(mountPoint, badge, slug) {
   if (!mountPoint || !mountPoint.parent) return null;
   var placeholder = findOwnedListingNode(mountPoint.parent, 'listing-rating-placeholder', slug, null);
-  if (placeholder) {
-    placeholder.replaceWith(badge);
-  } else {
-    placeOwnedSlot(badge, mountPoint);
-  }
+  // Swap the badge into the placeholder's spot when one exists, then a single
+  // idempotent placeOwnedSlot guarantees the mountPoint position: it re-anchors
+  // if the DOM shifted between reserve and inject, and no-ops when already in
+  // place (core/slot-position.js isExpectedPosition early-return).
+  if (placeholder) placeholder.replaceWith(badge);
   placeOwnedSlot(badge, mountPoint);
   return badge;
 }
