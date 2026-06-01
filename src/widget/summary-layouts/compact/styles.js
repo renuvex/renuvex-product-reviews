@@ -23,6 +23,13 @@ export var COMPACT_CSS = `
     background:transparent;border:0;padding:0;cursor:pointer;
     font-family:inherit;color:inherit;flex:0 0 auto;
   }
+  /* The trigger wraps the rating stars + count (content, not a plain button surface), so
+     the global press-dim (base-reset \`button:active{opacity:.85}\`) would dim that content
+     on tap while the chart opens — read as an unwanted hover. The chevron rotation + panel
+     toggle ARE the affordance, so opt the trigger out. Element-qualified to tie base-reset's
+     \`button[class^="renuvex-pr-"]:active\` and win by source order (layout CSS is concatenated
+     after BASE_RESET_CSS in render.js). */
+  button.renuvex-pr-compact-trigger:active{opacity:1;}
   .renuvex-pr-compact-trigger-stars{display:inline-flex;gap:2px;flex-shrink:0;}
   /* Compact trigger yildizlari kendi degiskeni; global bar-label-size'i etkilemez.
      Fallback bar-label-size, eski davranista geri donus icin. */

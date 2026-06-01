@@ -776,3 +776,44 @@ test('rating stars: Tab + arrow navigation, and Esc returns focus to the trigger
 
   expect(widgetErrors(log)).toEqual([]);
 });
+
+// Regression: the compact summary trigger wraps the rating stars + count (content). The
+// global press-feedback (base-reset `button:active{opacity:.85}`) used to dim that whole
+// trigger on tap while the bar chart opened — read as an unwanted hover on the stars/count.
+// The trigger now opts out of the press-dim (chevron rotation + panel toggle are the
+// affordance). Assert the rating content stays at full opacity while the trigger is pressed.
+test('compact summary trigger keeps its rating content at full opacity while pressed', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'compact', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  const triggerCenter = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as (Element & { shadowRoot: ShadowRoot | null }) | null)?.shadowRoot || null;
+    const el = root?.querySelector<HTMLElement>('.renuvex-pr-compact-trigger') || null;
+    if (!el) throw new Error('Missing compact trigger');
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+
+  const triggerOpacity = () => page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as (Element & { shadowRoot: ShadowRoot | null }) | null)?.shadowRoot || null;
+    const el = root?.querySelector<HTMLElement>('.renuvex-pr-compact-trigger') || null;
+    return el ? getComputedStyle(el).opacity : null;
+  });
+
+  // Hold the press so :active is active during the measurement.
+  await page.mouse.move(triggerCenter.x, triggerCenter.y);
+  await page.mouse.down();
+  expect(await triggerOpacity()).toBe('1'); // was '0.85' before the opt-out
+  await page.mouse.up();
+
+  expect(widgetErrors(log)).toEqual([]);
+});
