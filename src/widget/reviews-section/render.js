@@ -277,6 +277,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         var layout = getLayout(settings.summaryLayout);
         var summary = layout.render({
           widget: widget,
+          productId: productId,
           data: data,
           settings: settings,
           iconPair: iconPair,

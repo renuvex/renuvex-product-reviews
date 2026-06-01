@@ -280,6 +280,31 @@ test('compact summary filter panel remains interactive after render', async ({ p
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('compact mobile rating bar filter keeps panel open until trigger closes it', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'compact', reviewLayout: 'list' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-compact-trigger');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(true);
+
+  await clickInReviewsShadow(page, '.renuvex-pr-compact-panel .renuvex-pr-bar-track');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(true);
+  await expect.poll(async () => {
+    const rows = await barRowsState(page);
+    return rows[0]?.ariaPressed || '';
+  }).toBe('true');
+
+  await clickInReviewsShadow(page, '.renuvex-pr-compact-trigger');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(false);
+
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('photo gallery toggle removes strip without breaking reviews', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,

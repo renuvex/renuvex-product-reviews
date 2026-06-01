@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-06-02
+last_verified: 2026-06-02
 confidence: high
 tags:
   - widget
@@ -61,6 +61,7 @@ source_files:
   - "src/widget/summary-layouts/shared/bar-chart.js"
   - "src/widget/summary-layouts/shared/actions-block.js"
   - "src/widget/summary-layouts/shared/popover-registry.js"
+  - "src/widget/summary-layouts/compact/index.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/structured-data/index.js"
@@ -209,6 +210,7 @@ Each layout registers `supports: { title: true, photoStrip: false, ... }` in its
 - Every registered `close()` function must return `true` only when it closed an open popover and `false` when the popover was already closed. The dismiss-click swallow logic depends on this boolean.
 - Pointer/touch filter option activation closes on `pointerdown` for WebKit reliability, then calls `swallowNextDismissGesture(scope)`: the trailing click is swallowed, and `base-reset.js` uses the scoped `[data-renuvex-pr-dismiss-gesture]` attribute to temporarily neutralize pointer/active state on controls exposed under the closing menu. This is scoped to the current review shadow content and does not disable normal ADR_0011 `:active` feedback for real future taps.
 - Rating bar rows in `summary-layouts/shared/bar-chart.js` are interactive toggle controls: `role=button`, `tabindex=0`, `aria-pressed`, and Enter/Space activation. A selected rating bar filters the review list but keeps the PDP badge count, summary total, and bar distribution tied to the unfiltered rating summary/all-count contract.
+- Compact summary uses two different panel contracts: desktop is a registered popover with light-dismiss, while mobile is a flow accordion. On mobile, rating-bar filters may re-render the review section but the accordion stays open until the user closes it with the compact trigger/chevron.
 - Bar chart count cells use tabular numbers and an elastic minimum width. `--renuvex-pr-col-count` remains the layout-local minimum column token; long localized counts can grow without forcing the track to overlap text.
 
 ## Preview mode protocol

@@ -26,8 +26,16 @@ export var meta = {
 
 export var css = COMPACT_CSS;
 
+var MOBILE_PANEL_STATE_FALLBACK_KEY = '__unknown_product__';
+var mobilePanelOpenByProduct = Object.create(null);
+
+function getMobilePanelStateKey(productId) {
+  return productId ? String(productId) : MOBILE_PANEL_STATE_FALLBACK_KEY;
+}
+
 export function render(opts) {
   var widget = opts.widget;
+  var productId = opts.productId;
   var settings = opts.settings;
   var iconPair = opts.iconPair;
   var allCount = opts.allCount;
@@ -38,6 +46,7 @@ export function render(opts) {
   var currentHasImages = opts.currentHasImages;
   var onFilterChange = opts.onFilterChange;
   var onSortChange = opts.onSortChange;
+  var mobilePanelStateKey = getMobilePanelStateKey(productId);
 
   var summary = document.createElement('div');
   summary.className = 'renuvex-pr-summary renuvex-pr-summary-compact';
@@ -110,7 +119,15 @@ export function render(opts) {
     allCount: allCount,
     iconPair: iconPair,
     currentRatingFilter: currentRatingFilter,
-    onFilterChange: onFilterChange,
+    onFilterChange: function(starVal) {
+      // Mobile compact is a flow accordion, not a dismissible popover. A rating
+      // filter re-renders the whole review section, so keep the accordion open
+      // until the user closes it with the compact trigger.
+      if (isMobilePanelMode() && panel.classList.contains('renuvex-pr-open')) {
+        mobilePanelOpenByProduct[mobilePanelStateKey] = true;
+      }
+      onFilterChange(starVal);
+    },
   }));
 
   panel.appendChild(panelInner);
@@ -120,15 +137,24 @@ export function render(opts) {
   var mql = typeof window !== 'undefined' && window.matchMedia
     ? window.matchMedia('(max-width:600px)')
     : null;
+  function isMobilePanelMode() {
+    return !!(mql && mql.matches);
+  }
+  function setPanelOpen(isOpen) {
+    if (isOpen) panel.classList.add('renuvex-pr-open');
+    else panel.classList.remove('renuvex-pr-open');
+    panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  }
   function placePanel(isMobile) {
     var targetParent = isMobile ? summary : triggerWrap;
     if (panel.parentNode === targetParent) return;
+    var hadParent = !!panel.parentNode;
     // Eşik geçişinde state karışmasın — açıksa kapat (CSS değişiyor)
     if (panel.classList.contains('renuvex-pr-open')) {
-      panel.classList.remove('renuvex-pr-open');
-      panel.setAttribute('aria-hidden', 'true');
-      trigger.setAttribute('aria-expanded', 'false');
+      setPanelOpen(false);
     }
+    if (hadParent) mobilePanelOpenByProduct[mobilePanelStateKey] = false;
     targetParent.appendChild(panel);
   }
   placePanel(mql ? mql.matches : false);
@@ -155,18 +181,16 @@ export function render(opts) {
   // true döner (dismiss-swallow buna bağlı). Zaten kapalıysa false.
   function closePanel() {
     var wasOpen = panel.classList.contains('renuvex-pr-open');
-    panel.classList.remove('renuvex-pr-open');
-    panel.setAttribute('aria-hidden', 'true');
-    trigger.setAttribute('aria-expanded', 'false');
+    setPanelOpen(false);
+    if (isMobilePanelMode()) mobilePanelOpenByProduct[mobilePanelStateKey] = false;
     return wasOpen;
   }
   function openPanel() {
     // Desktop popover'da: diğer açık popover'ları kapat (one-at-a-time).
     // Mobile accordion'da kayıt yapılmadığı için panelRegistration null → no-op.
     if (panelRegistration) panelRegistration.notifyOpening();
-    panel.classList.add('renuvex-pr-open');
-    panel.setAttribute('aria-hidden', 'false');
-    trigger.setAttribute('aria-expanded', 'true');
+    setPanelOpen(true);
+    if (isMobilePanelMode()) mobilePanelOpenByProduct[mobilePanelStateKey] = true;
   }
   trigger.onclick = function() {
     if (panel.classList.contains('renuvex-pr-open')) closePanel();
@@ -192,6 +216,12 @@ export function render(opts) {
     var onSyncChange = function(e) { syncRegistration(e.matches); };
     if (mql.addEventListener) mql.addEventListener('change', onSyncChange);
     else if (mql.addListener) mql.addListener(onSyncChange);
+  }
+
+  // Mobile accordion stays open across review-section re-renders until the
+  // user closes it with the compact trigger. Desktop stays a popover.
+  if (isMobilePanelMode() && mobilePanelOpenByProduct[mobilePanelStateKey]) {
+    setPanelOpen(true);
   }
 
   // showRecommendation hâlâ destekli — panel altında küçük metin

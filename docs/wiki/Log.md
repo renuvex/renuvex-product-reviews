@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-06-02
+last_verified: 2026-06-02
 confidence: high
 tags:
   - log
@@ -19,6 +19,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-02 - fix | Preserve compact mobile rating panel after bar filter
+- Summary: Fixed compact summary mobile behavior so tapping a rating bar/track applies the rating filter without collapsing the mobile accordion. Desktop compact remains a popover with light-dismiss; the mobile accordion stays open across review-section re-renders until the user closes it via the compact trigger/chevron.
+- Key source changes: `src/widget/summary-layouts/compact/index.js` owns the mobile-only open state keyed by product id; `src/widget/reviews-section/render.js` passes `productId` into summary layout render options. Added runtime smoke coverage in `tests/widget-runtime-smoke.spec.ts` and rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Verification: The new targeted Playwright test failed before the source/build update at the expected assertion (panel closed after bar-track filter), then passed after the fix and widget rebuild.
+- Updated wiki: [[Widget_Architecture]], [[Test_Strategy]]
 
 ## 2026-06-01 - fix | Shield filter option taps from mobile press-through
 - Summary: Fixed the physical-mobile follow-up where tapping a summary filter option could close the menu on `pointerdown` and let same-gesture compat mouse/active state visually press the exposed "Yorum Yap" button underneath. This does not disable mobile press feedback globally: `base-reset.js` keeps the ADR_0011 `:active` contract, while `popover-registry.js` adds a short-lived scoped `[data-renuvex-pr-dismiss-gesture]` shield only for pointer/touch option activation.
