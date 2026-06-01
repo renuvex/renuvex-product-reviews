@@ -237,6 +237,37 @@ test('photo gallery toggle removes strip without breaking reviews', async ({ pag
   expect(widgetErrors(log)).toEqual([]);
 });
 
+for (const photoLayout of [
+  { reviewLayout: 'list' as const, itemPhotoSelector: '.renuvex-pr-review-list-media img' },
+  { reviewLayout: 'gallery' as const, itemPhotoSelector: '.renuvex-pr-review-gallery-media img' },
+]) {
+  test(`${photoLayout.reviewLayout} photo strip thumbnail size follows the photo gallery setting`, async ({ page }) => {
+    const log = await setupWidgetRoutes(page, {
+      mountReviews: true,
+      reviewsSettings: {
+        summaryLayout: 'classic',
+        reviewLayout: photoLayout.reviewLayout,
+        size: 'small',
+        thumbnailSize: 'large',
+      },
+    });
+
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+    await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb')).toBeGreaterThanOrEqual(1);
+    await waitForWidgetIdle(page);
+
+    const stripThumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+    const itemPhotoWidth = await widthInReviewsShadow(page, photoLayout.itemPhotoSelector);
+
+    expect(stripThumbWidth).toBeGreaterThan(130);
+    expect(stripThumbWidth).toBeLessThan(150);
+    expect(itemPhotoWidth).toBeGreaterThan(70);
+    expect(itemPhotoWidth).toBeLessThan(90);
+    expect(widgetErrors(log)).toEqual([]);
+  });
+}
+
 test('sort responses cannot overwrite the newest selected order', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,

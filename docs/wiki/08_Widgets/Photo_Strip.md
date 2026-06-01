@@ -29,7 +29,7 @@ related:
 - **Sıralama: newest-first rotation.** Yeni onaylı fotoğraflı yorum geldiğinde 1 dakikalık `REVIEWS_CACHE_TTL` sonrası strip başına eklenir; en eski düşer.
 - **Bağımsızlık:** Sort/filter (newest/highest/lowest/rating) ve "Daha Fazla Göster" değişikliklerinde strip re-fetch yapmaz. Yalnızca explicit review mount varsa `bootstrap.js` başlangıçta `reviews-api.js` helper'ını çağırır ve strip tek seferlik doldurulur.
 - **Filter görünürlüğü:** Kullanıcı "Fotoğraflı" filtresini aktif ederse (`currentHasImages === true`) strip gizlenir — odak filtrelenmiş listeye verilir.
-- **Gallery layout:** `:has(.renuvex-pr-review-gallery)` CSS selektörüyle strip tamamen gizlenir ([gallery/styles.js](src/widget/review-layouts/gallery/styles.js)).
+- **Gallery layout:** `:has(.renuvex-pr-review-gallery)` CSS selector keeps the strip outside the masonry column flow as a full-width row ([gallery/styles.js](src/widget/review-layouts/gallery/styles.js)).
 - **Layout uyumu:** Card layout'ta thumbnail aspect 1:1, list/gallery'de 3:4 — `--renuvex-pr-photo-thumb-aspect` CSS değişkeniyle render anında set edilir.
 
 ## Veri akışı
@@ -59,7 +59,7 @@ Aşağıdaki ayarlar `widgetDefs.ts`'ten gelir ve strip'i etkiler:
 - `photoTitleColor`, `photoTitleSize` — başlık tipografisi
 - `photoArrowBg`, `photoArrowText`, `photoArrowBorder` — arrow buton görünümü
 - `photoImageBorder` — thumbnail kenarı
-- `thumbnailSize` (`small` / `medium` / `large` → 80/110/140 px)
+- `thumbnailSize` (`small` / `medium` / `large` -> 80/110/140 px) - top photo strip thumbnail display size in every review layout
 - `reviewLayout` — aspect ratio'yu dolaylı belirler
 
 > Cap (15) admin tarafından değiştirilemez. Bu bilinçli bir karardır; bkz [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
@@ -113,6 +113,7 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [[Bug_Review_Image_Error_Fallback]]
 
 ## Change Log
+- 2026-06-01: Fixed [[Bug_Photo_Strip_Thumbnail_Size_Contract]]. The top photo strip thumbnail width now always follows `thumbnailSize`; list/gallery review item photos remain tied to widget `size`.
 - 2026-05-27: ADR_0024 follow-up moved `fetchPhotoStripReviews` and `PHOTO_STRIP_LIMIT` from `bootstrap.js` to `reviews-api.js`. `bootstrap.js` now only triggers the initial fetch after the explicit reviews mount exists; badge-only PDPs do not call photoStrip.
 - 2026-05-11: K2 kapandi. Photo strip and review thumbnail render paths now use `hideOnImageError(img)` so broken image assets collapse instead of showing browser broken-image icons. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - 2026-05-11: K3 yapısal olarak kapandı ([[ADR_0008_Cloud_Name_Build_Time_Only]]). Cloud name widget'ta tek kaynak — build-time inject. Settings response'undan `imagePolicy` kaldırıldı, runtime cache + setter + warn helper silindi (~90 satır). Kaynak: [scripts/build-widget.mjs](scripts/build-widget.mjs), [helpers.js](src/widget/core/helpers.js), [bootstrap.js](src/widget/reviews-section/bootstrap.js), [settings/route.ts](src/app/api/public/settings/route.ts), [step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js).

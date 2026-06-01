@@ -129,6 +129,7 @@ Per-element color variables. Each maps to a specific UI element so a merchant ca
 | `--renuvex-pr-filter-menu-bg` / `--renuvex-pr-filter-menu-border` | Filter dropdown |
 | `--renuvex-pr-filter-item-text` / `--renuvex-pr-filter-item-hover-bg` / `--renuvex-pr-filter-item-active` / `--renuvex-pr-filter-focus-ring` | Filter dropdown items |
 | `--renuvex-pr-review-author` / `--renuvex-pr-review-body` / `--renuvex-pr-review-title` / `--renuvex-pr-review-date` / `--renuvex-pr-review-border` | Review item parts |
+| `--renuvex-pr-state-text` | Empty/non-error state message color; derived from `reviewBodyColor` at 65% alpha, not exposed as a separate admin color |
 | `--renuvex-pr-reply-label` / `--renuvex-pr-reply-text` / `--renuvex-pr-reply-bg-color` / `--renuvex-pr-reply-border` | Merchant reply block |
 | `--renuvex-pr-photo-arrow-bg` / `--renuvex-pr-photo-arrow-border` / `--renuvex-pr-photo-arrow-text` / `--renuvex-pr-photo-image-border` / `--renuvex-pr-photo-title` | Photo lightbox |
 | `--renuvex-pr-bg` / `--renuvex-pr-border` | Legacy generic background / border |
@@ -140,7 +141,7 @@ Per-element color variables. Each maps to a specific UI element so a merchant ca
 | `--renuvex-pr-card-photo-w` | Card layout photo width |
 | `--renuvex-pr-list-photo-w` / `--renuvex-pr-list-photo-w-mobile` | List layout photo width (desktop + mobile) |
 | `--renuvex-pr-gallery-photo-w` / `--renuvex-pr-gallery-photo-w-mobile` | Gallery layout photo width (desktop + mobile) |
-| `--renuvex-pr-thumbnail-size` | Generic thumbnail size |
+| `--renuvex-pr-thumbnail-size` | Top photo strip thumbnail display size (`thumbnailSize` setting: 80 / 110 / 140 px) |
 | `--renuvex-pr-star-size` / `--renuvex-pr-avg-star-size` | Star icon sizes inside summary/header |
 
 ### Layout-local (`.renuvex-pr-summary` only)
@@ -242,6 +243,7 @@ Widget runtime (settings.js)
 - [src/widget/reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) — shared review stars, reply, read-more, load-more, state/error/retry CSS
 - [src/widget/reviews-section/styles/photo-strip.js](src/widget/reviews-section/styles/photo-strip.js) — shared photo strip CSS
 - [src/widget/reviews-section/styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) — photo review lightbox CSS
+- [src/widget/reviews-section/render/theme-vars.js](src/widget/reviews-section/render/theme-vars.js) — merchant color settings mapped to widget-root CSS variables
 - [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) — classic/default summary root variables and avg/count/recommend styles
 - [src/widget/reviews-section/render.js](src/widget/reviews-section/render.js) — `applyVars` / `applyLayoutSizeOverrides`
 - [src/widget/core/helpers.js](src/widget/core/helpers.js) — `PARTIAL_STARS_CSS` + badge token defaults

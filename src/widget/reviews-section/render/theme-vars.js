@@ -100,6 +100,7 @@ export function applyManualTheme(root, settings) {
   var reviewDateColor = settings.reviewDateColor || '#5e5e5e';
   var reviewBodyColor = settings.reviewBodyColor || '#111111';
   var reviewBorderColor = settings.reviewBorderColor || '#e5e7eb';
+  var stateTextColor = hexToRgba(reviewBodyColor, 0.65);
 
   // Grup 7 — Mağaza Yanıtı
   var replyBgVar = settings.replyBgColor || '#f9fafb';
@@ -179,6 +180,7 @@ export function applyManualTheme(root, settings) {
     '--renuvex-pr-review-date': reviewDateColor,
     '--renuvex-pr-review-body': reviewBodyColor,
     '--renuvex-pr-review-border': reviewBorderColor,
+    '--renuvex-pr-state-text': stateTextColor,
     '--renuvex-pr-review-star-color': reviewStarColor,
 
     // Grup 7 — Mağaza Yanıtı

@@ -20,6 +20,22 @@ function collectThemeVars(settings: Record<string, unknown>): Map<string, string
 }
 
 describe('widget review form theme variables', () => {
+  test('empty review state text follows the muted review body color', () => {
+    const lightVars = collectThemeVars({
+      reviewBodyColor: '#111111',
+    });
+
+    expect(lightVars.get('--renuvex-pr-review-body')).toBe('#111111');
+    expect(lightVars.get('--renuvex-pr-state-text')).toBe('rgba(17,17,17,0.65)');
+
+    const darkVars = collectThemeVars({
+      reviewBodyColor: '#ffffff',
+    });
+
+    expect(darkVars.get('--renuvex-pr-review-body')).toBe('#ffffff');
+    expect(darkVars.get('--renuvex-pr-state-text')).toBe('rgba(255,255,255,0.65)');
+  });
+
   test('wizard close color follows the form background instead of primary text', () => {
     const lightVars = collectThemeVars({
       formBgColor: '#ffffff',

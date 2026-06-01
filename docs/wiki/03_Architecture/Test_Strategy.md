@@ -78,9 +78,11 @@ Storefront interactions also pin the photo-upload submit bridge: pending uploads
 
 Storefront interactions and unit tests also pin review form wizard close-control contrast: `theme-vars.js` derives the close icon color and hover background from `formBgColor`, and the browser test verifies the real shadow-DOM button stays readable even when `formPrimaryTextColor` matches a dark form background.
 
+Unit tests pin the review-section empty-state text color contract: `theme-vars.js` derives `--renuvex-pr-state-text` from `reviewBodyColor`, so "no reviews yet" follows the merchant's review text color family without adding a separate admin color setting.
+
 Unit tests also pin widget icon registry invariants: all shipped review, filter, and UI chrome SVGs must stay on the Phosphor 256-grid `currentColor` system, stroked icons must use regular `stroke-width="16"`, and legacy Lucide 24-grid or Unicode X/arrow glyphs are rejected.
 
-Widget runtime smoke also pins the storefront review read contract: late sort/filter/load-more responses cannot mutate a newer active selection, overlapping load-more rows do not duplicate DOM cards, review fetch failures stay distinct from real empty states, the photo strip remains a bootstrap-owned dataset, and card/list/gallery layouts render only trusted tenant image URLs.
+Widget runtime smoke also pins the storefront review read contract: late sort/filter/load-more responses cannot mutate a newer active selection, overlapping load-more rows do not duplicate DOM cards, review fetch failures stay distinct from real empty states, the photo strip remains a bootstrap-owned dataset, card/list/gallery layouts render only trusted tenant image URLs, and list/gallery photo-strip thumbnails follow `thumbnailSize` while their review item photos continue to follow general widget `size`.
 
 Widget network smoke also pins storefront loader lifecycle contracts: duplicate `PRODUCT_VIEW` events stay idempotent, synchronous listing/search events replay after loader subscription, clean PDP `PAGE_VIEW` skips the listing entry chunk and side effects, semantic `PAGE_VIEW` dedupe suppresses same-page duplicates without suppressing distinct fast transitions, listing product data remains DOM-idempotent before/after `PAGE_VIEW`, and unsupported-theme or badge-disabled listing flows stop before rating fetches or DOM insertion.
 

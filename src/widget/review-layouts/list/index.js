@@ -15,9 +15,9 @@ export var meta = {
   name: 'Liste',
   // Bkz: review-layouts/index.js — supports sözleşmesi.
   supports: {},
-  // Foto kolonu genel size ayarıyla orantılı büyüsün — küçük yazıda büyük foto
-  // patlamasın, büyük yazıda foto sönük kalmasın. Card'ın bağımsız thumbnail
-  // ayarı var; list/gallery için tek genel size kontrolü yeter.
+  // Review item photo column scales with the general widget size. The top
+  // "Fotoğraflı Yorumlar" strip is a separate gallery surface and follows
+  // thumbnailSize through --renuvex-pr-thumbnail-size.
   // --renuvex-pr-list-photo-w        : desktop sağ kolon foto genişliği (3:4 portre)
   // --renuvex-pr-list-photo-w-mobile : mobile, metin altına düşen foto genişliği (3:4 portre)
   sizeOverrides: {

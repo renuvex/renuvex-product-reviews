@@ -25,6 +25,9 @@ source_files: []
 
 ## Log
 
+### 2026-06-01
+- Widget - Photo Strip Thumbnail Size Contract - "Fotoğraf Galeri Boyutu" now controls the top photo strip thumbnail size in card/list/gallery; list/gallery review item photos still follow general widget size. [[Bug_Photo_Strip_Thumbnail_Size_Contract]]
+
 ### 2026-05-31
 - Widget - Review Wizard Photo Upload Lifecycle - Pending local preview blobs are revoked on wizard close, deleting one pending photo no longer aborts later selected uploads, and remove cleanup updates state before revoking object URLs. [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 

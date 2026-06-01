@@ -20,6 +20,18 @@ source_files:
 
 # Project Log
 
+## 2026-06-01 - fix | Restore photo strip thumbnail size contract
+- Summary: Fixed a settings-contract bug where list/gallery review layouts exposed "Fotoğraf Galeri Boyutu" but runtime overwrote the top photo strip thumbnail width with the layout item-photo width from `size`. The strip now always follows `thumbnailSize`; list/gallery item photos still follow widget `size`.
+- Key source changes: `src/widget/reviews-section/render.js` no longer overrides `thumbPx` from review layout `sizeOverrides`. `src/widget/review-layouts/list/index.js` and `src/widget/review-layouts/gallery/index.js` comments clarify strip-vs-item-photo ownership. `tests/widget-runtime-smoke.spec.ts` pins list/gallery behavior with `size: small` and `thumbnailSize: large`.
+- Verification: targeted runtime proof failed before the fix (strip width 80px), then passed after source/build update. `pnpm build:widget`, `pnpm check:widget-js`, `pnpm test:unit` (59/59), `pnpm test:widget-runtime` (18/18), `pnpm test:widget-smoke` (25/25), `pnpm test:admin-preview` (2/2), `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check` passed. Wiki audit reported 0 errors and existing repo-wide warnings.
+- Updated wiki: [[Bug_Photo_Strip_Thumbnail_Size_Contract]], [[Bug_Index]], [[Solved_Issues]], [[Photo_Strip]], [[CSS_Variable_Surface]], [[Test_Strategy]]
+
+## 2026-06-01 - polish | Derive review empty-state text color
+- Summary: Replaced the fixed gray `.renuvex-pr-state-msg` color used by "Henüz yorum yok." with the internal `--renuvex-pr-state-text` token. The token is derived from `reviewBodyColor` at 65% alpha, so the empty state follows the configured review text color family without adding a new admin color setting.
+- Key source changes: `src/widget/reviews-section/render/theme-vars.js` now emits `--renuvex-pr-state-text`; `src/widget/reviews-section/styles/review-primitives.js` consumes it with a fixed fallback; `tests/unit/widget-theme-vars.test.ts` pins light/dark derivation.
+- Verification: `pnpm build:widget`, `pnpm check:widget-js`, `pnpm test:unit` (59/59), `pnpm test:widget-runtime` (16/16), `pnpm test:widget-smoke` (25/25), `pnpm exec tsc --noEmit`, `pnpm lint`, `git diff --check`, and `node scripts/wiki-audit.mjs --changed-source-check` passed. Wiki audit reported 0 errors and existing repo-wide warnings.
+- Updated wiki: [[CSS_Variable_Surface]], [[Test_Strategy]]
+
 ## 2026-06-01 - chore | Remove unreachable review "loading" state
 - Summary: Removed the "Yorumlar yükleniyor..." loading placeholder from the review section render. It was dead UI: review data is fetched in `bootstrap.js` BEFORE `render()` is called, and inside `render()` the loading node was inserted and then cleared in the same synchronous tick (no `await` between), so the browser never painted it. The empty/error/disabled states are unaffected.
 - Key source changes: `src/widget/reviews-section/render.js` drops the `loadingMsg` creation + `contentEl.replaceChildren(loadingMsg)` (the very next `contentEl.replaceChildren()` already clears content, so behavior is identical). `src/widget/reviews-section/styles/review-primitives.js` drops the now-unused `.renuvex-pr-state-loading` rule; `.renuvex-pr-state-msg` stays (used by "Henüz yorum yok"). Rebuilt `public/widget.js` + `public/widget-runtime/*`; removed stale runtime hash artifacts.

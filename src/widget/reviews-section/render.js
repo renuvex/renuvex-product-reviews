@@ -114,20 +114,10 @@ export async function render(productId, settings, reviewsData, productName, orde
 
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
 
-    // Boyut preset'inden değerleri oku
+    // Widget size drives typography and layout-local review item media.
+    // thumbnailSize drives only the top "Fotoğraflı Yorumlar" strip thumbnails.
     var sz = SIZE_PRESETS[settings.size] || SIZE_PRESETS.medium;
     var thumbPx = THUMBNAIL_PRESETS[settings.thumbnailSize] || THUMBNAIL_PRESETS.medium;
-
-    // Liste ve Galeri gibi tasarımlarda, üst galeri şeridi (thumbPx) boyutu
-    // layout'un kendi fotoğraf genişliğinden beslenmeli (tutarlılık için).
-    var reviewLayout = getReviewLayout(settings.reviewLayout);
-    if (reviewLayout.meta && reviewLayout.meta.sizeOverrides && reviewLayout.meta.sizeOverrides[settings.size]) {
-      var overrides = reviewLayout.meta.sizeOverrides[settings.size];
-      var layoutPhotoW = overrides['--renuvex-pr-list-photo-w'] || overrides['--renuvex-pr-gallery-photo-w'];
-      if (layoutPhotoW) {
-        thumbPx = parseInt(layoutPhotoW);
-      }
-    }
 
     root.style.setProperty('--renuvex-pr-title-size', sz.titleSize + 'px');
     root.style.setProperty('--renuvex-pr-review-text-size', sz.reviewTextSize + 'px');
