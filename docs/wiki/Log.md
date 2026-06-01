@@ -20,6 +20,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-01 - chore | Remove unreachable review "loading" state
+- Summary: Removed the "Yorumlar yükleniyor..." loading placeholder from the review section render. It was dead UI: review data is fetched in `bootstrap.js` BEFORE `render()` is called, and inside `render()` the loading node was inserted and then cleared in the same synchronous tick (no `await` between), so the browser never painted it. The empty/error/disabled states are unaffected.
+- Key source changes: `src/widget/reviews-section/render.js` drops the `loadingMsg` creation + `contentEl.replaceChildren(loadingMsg)` (the very next `contentEl.replaceChildren()` already clears content, so behavior is identical). `src/widget/reviews-section/styles/review-primitives.js` drops the now-unused `.renuvex-pr-state-loading` rule; `.renuvex-pr-state-msg` stays (used by "Henüz yorum yok"). Rebuilt `public/widget.js` + `public/widget-runtime/*`; removed stale runtime hash artifacts.
+- Verification: `pnpm build:widget`, `pnpm lint`, `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, `git diff --check` clean; full suite green and unchanged — unit 58, widget-runtime 16, admin-preview 2, widget-interactions 13, widget-network-smoke 25.
+
 ## 2026-06-01 - polish | Pin widget icon registry Phosphor invariants
 - Summary: Normalized the only remaining stroke-weight mismatch in the widget icon registry: `clover.empty` now uses Phosphor regular `stroke-width="16"`. Added unit guardrails proving every shipped review, filter, and UI chrome SVG stays on the Phosphor 256-grid `currentColor` system, with no legacy Lucide 24-grid or Unicode X/arrow glyphs.
 - Key source changes: `src/widget/icons/review-icons.js` changes the clover outline stroke from 12 to 16. `tests/unit/widget-icon-sprite.test.ts` now enumerates `ICONS`, `FILTER_ICONS`, and `ui-icons.js` exports to enforce grid/color/stroke/legacy-glyph invariants. Rebuilt `public/widget.js` + `public/widget-runtime/*`; removed stale runtime hash artifacts.

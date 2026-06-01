@@ -21,7 +21,6 @@ export var REVIEW_PRIMITIVES_CSS = `
   .renuvex-pr-load-more:disabled{opacity:.6;cursor:not-allowed;}
 
   .renuvex-pr-state-msg{text-align:center;color:rgba(17,17,17,0.45);font-size:14px;padding:30px 0;}
-  .renuvex-pr-state-loading{padding:40px;}
   .renuvex-pr-state-error{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#991b1b;}
   .renuvex-pr-state-error-text{max-width:360px;line-height:1.45;}
   .renuvex-pr-state-retry{padding:9px 22px;border:1px solid var(--renuvex-pr-load-more-border,#111111);border-radius:var(--renuvex-pr-radius,6px);background:var(--renuvex-pr-load-more-bg,#ffffff);color:var(--renuvex-pr-load-more-text,#111111);font-size:var(--renuvex-pr-load-more-size,14px);cursor:pointer;}

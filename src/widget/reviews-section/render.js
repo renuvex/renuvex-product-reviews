@@ -215,11 +215,6 @@ export async function render(productId, settings, reviewsData, productName, orde
       return;
     }
 
-    var loadingMsg = document.createElement('p');
-    loadingMsg.className = 'renuvex-pr-state-msg renuvex-pr-state-loading';
-    loadingMsg.textContent = 'Yorumlar yükleniyor...';
-    contentEl.replaceChildren(loadingMsg);
-
     try {
       var data = reviewsData || {};
       var hasReviewsFetchError = isReviewsFetchError(data);
