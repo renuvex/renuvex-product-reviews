@@ -96,6 +96,8 @@ source_files:
 - 2026-06-01: Listing badge sibling mount is the default contract. The temporary publicApiKey rollout gate and legacy in-title branch were removed; adapter overrides are the only exception path.
 - 2026-06-01: `reviews-section/render.js` split into `render/*.js`. Phase 1 extracted pure builders (`theme-vars,size-presets,states,photo-strip,request-token`); Phase 2 extracted the render-rerunning handlers (retry/filter/sort) into `render/handlers.js` `createReviewHandlers({render})` — render injected via DI so no circular import; state read stays live via ESM bindings. render.js 832→407 lines. Load-more stays inline (incremental DOM insert, not a re-render). Behavior-preserving (unit 54 + widget-runtime 16 + admin-preview 2 + interactions 12 + smoke 25 unchanged).
 
+- 2026-06-01: Review wizard close (X) color is derived from `formBgColor`, not `formPrimaryTextColor`. `theme-vars.js` chooses `#111111` or `#ffffff` by contrast and derives hover background from that safe control color; interaction smoke pins the real shadow-DOM close/hover styles.
+
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.
 - Theme adapters depend on Admin API `listStorefront.themes[].isMainTheme`; ikas has no theme webhook, so lazy resync remains the workaround.

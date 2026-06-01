@@ -1,0 +1,50 @@
+import { describe, expect, test } from 'vitest';
+import {
+  applyManualTheme,
+  getControlHoverBackground,
+  getReadableControlColor,
+} from '../../src/widget/reviews-section/render/theme-vars.js';
+
+function collectThemeVars(settings: Record<string, unknown>): Map<string, string> {
+  const values = new Map<string, string>();
+  const root = {
+    style: {
+      setProperty(name: string, value: string) {
+        values.set(name, value);
+      },
+    },
+  };
+
+  applyManualTheme(root, settings);
+  return values;
+}
+
+describe('widget review form theme variables', () => {
+  test('wizard close color follows the form background instead of primary text', () => {
+    const lightVars = collectThemeVars({
+      formBgColor: '#ffffff',
+      formPrimaryTextColor: '#ffffff',
+    });
+
+    expect(lightVars.get('--renuvex-pr-fwizard-text')).toBe('#ffffff');
+    expect(lightVars.get('--renuvex-pr-fwizard-close-text')).toBe('#111111');
+    expect(lightVars.get('--renuvex-pr-fwizard-close-hover-bg')).toBe('rgba(17,17,17,0.06)');
+
+    const darkVars = collectThemeVars({
+      formBgColor: '#111111',
+      formPrimaryTextColor: '#111111',
+    });
+
+    expect(darkVars.get('--renuvex-pr-fwizard-text')).toBe('#111111');
+    expect(darkVars.get('--renuvex-pr-fwizard-close-text')).toBe('#ffffff');
+    expect(darkVars.get('--renuvex-pr-fwizard-close-hover-bg')).toBe('rgba(255,255,255,0.1)');
+  });
+
+  test('readable control helpers use deterministic fallback colors', () => {
+    expect(getReadableControlColor('#ffffff')).toBe('#111111');
+    expect(getReadableControlColor('#111111')).toBe('#ffffff');
+    expect(getReadableControlColor('not-a-color')).toBe('#111111');
+    expect(getControlHoverBackground('#ffffff')).toBe('rgba(255,255,255,0.1)');
+    expect(getControlHoverBackground('#111111')).toBe('rgba(17,17,17,0.06)');
+  });
+});

@@ -35,6 +35,7 @@ source_files:
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
   - "tests/unit/structured-data-jsonld.test.ts"
+  - "tests/unit/widget-theme-vars.test.ts"
   - "docs/wiki/08_Widgets/Structured_Data_And_Rich_Snippets.md"
   - "docs/wiki/10_Research/Widget_Transfer_Measurement_2026-05-29.md"
   - "docs/wiki/10_Research/Structured_Data_Verification_2026-05-29.md"
@@ -43,6 +44,7 @@ source_files:
   - "src/widget/core/storefront-context.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/render/theme-vars.js"
   - "src/widget/reviews-section/review-modal.js"
   - "src/widget/reviews-section/review-form-modal/index.js"
   - "src/widget/listing-badges/fallback-candidates.js"
@@ -72,6 +74,8 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 `pnpm test:ci` runs the five layers together. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
 
 Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains the final trusted Cloudinary URL instead of a local `blob:` preview URL.
+
+Storefront interactions and unit tests also pin review form wizard close-control contrast: `theme-vars.js` derives the close icon color and hover background from `formBgColor`, and the browser test verifies the real shadow-DOM button stays readable even when `formPrimaryTextColor` matches a dark form background.
 
 Widget runtime smoke also pins the storefront review read contract: late sort/filter/load-more responses cannot mutate a newer active selection, overlapping load-more rows do not duplicate DOM cards, review fetch failures stay distinct from real empty states, the photo strip remains a bootstrap-owned dataset, and card/list/gallery layouts render only trusted tenant image URLs.
 

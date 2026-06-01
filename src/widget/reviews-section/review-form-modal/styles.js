@@ -85,7 +85,7 @@ export var FWIZARD_CSS = `
   @media(hover:hover){
     .renuvex-pr-fwizard-close:hover{
       background:var(--renuvex-pr-fwizard-close-hover-bg, rgba(0,0,0,0.05));
-      color:var(--renuvex-pr-fwizard-text, #111111);
+      color:var(--renuvex-pr-fwizard-close-text, #111111);
     }
   }
 

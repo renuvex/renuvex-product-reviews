@@ -162,6 +162,7 @@ The default/classic declarations live in `summary-layouts/classic/styles.js` and
 
 ### Form wizard (review submission UI)
 All defined in `reviews-section/review-form-modal/styles.js`. Live inside the wizard's own Shadow DOM root (ADR_0021).
+`--renuvex-pr-fwizard-close-text` and `--renuvex-pr-fwizard-close-hover-bg` are produced by `reviews-section/render/theme-vars.js` from `formBgColor` contrast, not from `formPrimaryTextColor`.
 
 | Variable | Purpose |
 |---|---|

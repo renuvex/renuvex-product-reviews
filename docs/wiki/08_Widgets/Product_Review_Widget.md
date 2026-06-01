@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-01
+last_verified: 2026-06-01
 tags:
   - widget
   - reviews
@@ -54,6 +54,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Open audit risks are tracked in [[Bug_Review_Detail_Lightbox_Risks]].
 
 ## Submission flow (modal)
+- The wizard close (X) control is not a primary-text color consumer. [theme-vars.js](src/widget/reviews-section/render/theme-vars.js) derives `--renuvex-pr-fwizard-close-text` and `--renuvex-pr-fwizard-close-hover-bg` from `formBgColor` so the close control stays readable on light or dark form backgrounds.
 - Steps managed in [reviews-section/review-form-modal/wizard-state.js](src/widget/reviews-section/review-form-modal/wizard-state.js).
 - The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Open focuses the dialog container, first `Tab` enters the active step, step changes do not auto-focus inputs, and close returns focus to the opening control for keyboard opens. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]] and [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary under `review_images/stores/<storeId>`.
@@ -98,6 +99,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-01: Review wizard close (X) color and hover background now derive from the form background color (`formBgColor`) instead of `formPrimaryTextColor`; interaction smoke pins the actual shadow-DOM color and hover result.
 - 2026-05-31: Fixed review wizard photo upload lifecycle defects: closing during a pending upload now revokes local blob previews, removing a pending photo no longer aborts later selected uploads, and removal state is batched before blob revoke to avoid stale image loads. Related bug: [[Bug_Review_Wizard_Photo_Upload_Lifecycle]].
 - 2026-05-31: Wizard/lightbox lifecycle audit found the photo-strip lightbox thumbnails were click-only images. Added shared `wireLightboxTrigger()` and moved card/list/gallery triggers to it; interaction smoke now verifies keyboard open and focus restore from the photo strip.
 - 2026-05-27: ADR_0024 follow-up moved review/photoStrip fetch helpers into [reviews-api.js](src/widget/reviews-section/reviews-api.js). `bootstrap.js` is now review mount orchestration, while `render.js` uses the same fetch helper for retry/filter/sort/load-more interactions.

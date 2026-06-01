@@ -97,6 +97,34 @@ async function countInOverlay(page: Page, overlaySelector: string, selector: str
   }, { overlaySelector, selector });
 }
 
+async function styleInOverlay(page: Page, overlaySelector: string, selector: string, properties: string[]) {
+  return page.evaluate(({ overlaySelector, selector, properties }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    const el = root?.querySelector<HTMLElement>(selector);
+    if (!el) throw new Error(`Missing overlay selector: ${selector}`);
+    const style = getComputedStyle(el);
+    return Object.fromEntries(properties.map((property) => [property, style.getPropertyValue(property)]));
+  }, { overlaySelector, selector, properties });
+}
+
+async function hoverInOverlay(page: Page, overlaySelector: string, selector: string) {
+  const box = await page.evaluate(({ overlaySelector, selector }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    const el = root?.querySelector<HTMLElement>(selector);
+    if (!el) throw new Error(`Missing overlay selector: ${selector}`);
+    var rect = el.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  }, { overlaySelector, selector });
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+}
+
 test('photo strip lightbox opens, navigates, and closes without console errors', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
@@ -194,6 +222,44 @@ test('review wizard validates required fields and submits through mocked public 
   expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn')).toBe(false);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-thanks')).toBe(true);
+
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('wizard close control derives icon and hover colors from form background', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      formBgColor: '#111111',
+      formPrimaryTextColor: '#111111',
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+
+  const rootVars = await page.evaluate(() => ({
+    closeText: getComputedStyle(document.documentElement).getPropertyValue('--renuvex-pr-fwizard-close-text').trim(),
+    closeHoverBg: getComputedStyle(document.documentElement).getPropertyValue('--renuvex-pr-fwizard-close-hover-bg').trim(),
+  }));
+  expect(rootVars).toEqual({
+    closeText: '#ffffff',
+    closeHoverBg: 'rgba(255,255,255,0.1)',
+  });
+
+  await expect.poll(() => styleInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close', ['color']))
+    .toMatchObject({ color: 'rgb(255, 255, 255)' });
+
+  await hoverInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close');
+  await expect.poll(() => styleInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close', ['color', 'background-color']))
+    .toMatchObject({
+      color: 'rgb(255, 255, 255)',
+      'background-color': 'rgba(255, 255, 255, 0.1)',
+    });
 
   expect(widgetErrors(log)).toEqual([]);
 });

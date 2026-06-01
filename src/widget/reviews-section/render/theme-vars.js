@@ -17,6 +17,48 @@ export function hexToRgba(hex, alpha) {
   return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 }
 
+function parseHexRgb(hex) {
+  var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})?$/.exec(hex || '');
+  if (!m) return null;
+  return {
+    r: parseInt(m[1], 16),
+    g: parseInt(m[2], 16),
+    b: parseInt(m[3], 16),
+  };
+}
+
+function channelToLinear(value) {
+  var normalized = value / 255;
+  return normalized <= 0.03928
+    ? normalized / 12.92
+    : Math.pow((normalized + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(rgb) {
+  return (0.2126 * channelToLinear(rgb.r)) +
+    (0.7152 * channelToLinear(rgb.g)) +
+    (0.0722 * channelToLinear(rgb.b));
+}
+
+function contrastRatio(a, b) {
+  var l1 = relativeLuminance(a);
+  var l2 = relativeLuminance(b);
+  var light = Math.max(l1, l2);
+  var dark = Math.min(l1, l2);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+export function getReadableControlColor(backgroundHex) {
+  var bg = parseHexRgb(backgroundHex) || parseHexRgb('#ffffff');
+  var dark = parseHexRgb('#111111');
+  var light = parseHexRgb('#ffffff');
+  return contrastRatio(dark, bg) >= contrastRatio(light, bg) ? '#111111' : '#ffffff';
+}
+
+export function getControlHoverBackground(controlColor) {
+  return hexToRgba(controlColor, controlColor === '#ffffff' ? 0.1 : 0.06);
+}
+
 export function applyManualTheme(root, settings) {
   // Grup 1 — Genel
   // Widget container background/border always transparent (store theme owns it).
@@ -91,6 +133,8 @@ export function applyManualTheme(root, settings) {
   var formBtnDisabledBg = hexToRgba(formBtnBg, 0.18);
   var formBtnDisabledText = hexToRgba(formBtnText, 0.85);
   var formSubtleBg = hexToRgba(formPrimary, 0.06);
+  var formCloseText = getReadableControlColor(formBg);
+  var formCloseHoverBg = getControlHoverBackground(formCloseText);
 
   // Grup 11 — Daha Fazla Göster
   var loadMoreBg = settings.loadMoreBgColor || '#ffffff';
@@ -158,8 +202,8 @@ export function applyManualTheme(root, settings) {
     '--renuvex-pr-fwizard-input-text': inputTextVar,
     '--renuvex-pr-fwizard-input-border': inputBorderVar,
     '--renuvex-pr-fwizard-placeholder': placeholderColor,
-    '--renuvex-pr-fwizard-close-text': formPrimary,
-    '--renuvex-pr-fwizard-close-hover-bg': formSubtleBg,
+    '--renuvex-pr-fwizard-close-text': formCloseText,
+    '--renuvex-pr-fwizard-close-hover-bg': formCloseHoverBg,
     '--renuvex-pr-fwizard-progress-bg': formSubtleBg,
     '--renuvex-pr-fwizard-progress-active': formStepBarColor,
     '--renuvex-pr-fwizard-btn-bg': formBtnBg,
