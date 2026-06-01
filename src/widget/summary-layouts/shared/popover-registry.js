@@ -15,7 +15,10 @@
 // photo-strip thumbnail (or any control) under an open menu just closes the menu instead of
 // also activating that element (opening the lightbox). Pointer-driven option activation
 // (which closes the menu on `pointerdown`, before the trailing `click`) arms the same
-// one-shot swallow so its trailing click cannot fall through either.
+// one-shot swallow so its trailing click cannot fall through either. On real phones, the
+// same gesture can also synthesize compat mouse events after the popover disappeared; the
+// optional gesture shield scopes a short-lived pointer/active suppression to the review
+// shadow content so those stray events cannot visually press an exposed control underneath.
 //
 // Lifecycle contract (see docs/wiki/03_Architecture/Widget_Architecture.md):
 //   - registerPopover(opts) returns a HANDLE { unregister, notifyOpening } — never a bare
@@ -30,9 +33,13 @@
 //   - opts.close() MUST return true only if the popover was actually open (and is now
 //     closed), false otherwise. The dismiss-swallow logic depends on this boolean.
 
+var GESTURE_SHIELD_ATTR = 'data-renuvex-pr-dismiss-gesture';
+
 var registered = []; // [{ trigger, element, close }]
 var listenersAttached = false;
 var swallowNextClick = false;
+var shieldScopes = [];
+var shieldTimer = null;
 
 function eventPathHas(e, node) {
   if (!node) return false;
@@ -54,11 +61,32 @@ function purgeDisconnected() {
   return registered;
 }
 
+function armGestureShield(scope) {
+  if (!scope || typeof scope.setAttribute !== 'function') return;
+  if (shieldScopes.indexOf(scope) === -1) shieldScopes.push(scope);
+  scope.setAttribute(GESTURE_SHIELD_ATTR, '');
+}
+
+function clearGestureShield() {
+  for (var i = 0; i < shieldScopes.length; i++) {
+    var scope = shieldScopes[i];
+    if (scope && typeof scope.removeAttribute === 'function') {
+      scope.removeAttribute(GESTURE_SHIELD_ATTR);
+    }
+  }
+  shieldScopes = [];
+  if (shieldTimer && typeof clearTimeout === 'function') {
+    clearTimeout(shieldTimer);
+  }
+  shieldTimer = null;
+}
+
 function handleDocClick(e) {
   // A pointerdown-driven option activation already closed the menu; swallow the trailing
   // click so it does not reach whatever is now under the pointer (e.g. a thumbnail).
   if (swallowNextClick) {
     swallowNextClick = false;
+    clearGestureShield();
     e.preventDefault();
     e.stopPropagation();
     return;
@@ -97,15 +125,35 @@ function ensureListeners() {
   listenersAttached = true;
 }
 
+function armNextDismiss(scope) {
+  ensureListeners();
+  swallowNextClick = true;
+  armGestureShield(scope);
+  if (shieldTimer && typeof clearTimeout === 'function') {
+    clearTimeout(shieldTimer);
+  }
+  if (typeof setTimeout === 'function') {
+    shieldTimer = setTimeout(function () {
+      swallowNextClick = false;
+      clearGestureShield();
+    }, 700);
+  }
+}
+
 // Arm a one-shot swallow of the next document click. Called by a popover that activates +
 // closes on `pointerdown` (before the click fires) so the trailing click cannot fall
 // through to an element under the now-closed popover. Auto-disarms if no click follows
 // (e.g. a canceled tap) so a later, unrelated click is not eaten.
 export function swallowNextDismissClick() {
-  swallowNextClick = true;
-  if (typeof setTimeout === 'function') {
-    setTimeout(function () { swallowNextClick = false; }, 700);
-  }
+  armNextDismiss();
+}
+
+// Pointer/touch option activation can also leak compat mouse/active state to the control
+// revealed under the now-closed menu before the trailing click is swallowed. Scope the
+// temporary shield to the review shadow content wrapper so true future taps keep normal
+// ADR_0011 press feedback, while same-gesture stray events cannot press through.
+export function swallowNextDismissGesture(scope) {
+  armNextDismiss(scope);
 }
 
 export function registerPopover(opts) {

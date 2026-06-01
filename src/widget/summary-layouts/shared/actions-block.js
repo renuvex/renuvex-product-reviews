@@ -2,7 +2,7 @@
 // Actions row — Yorum Yap butonu + filtre dropdown.
 // Tüm summary layout'ları bu shared parçayı kullanır.
 
-import { registerPopover, swallowNextDismissClick } from './popover-registry.js';
+import { registerPopover, swallowNextDismissGesture } from './popover-registry.js';
 import { getFilterIconSvg } from '../../icons/index.js';
 import { iconUseSvg } from '../../icons/star-sprite.js';
 import { currentSettings } from '../../core/state.js';
@@ -49,6 +49,9 @@ export function buildActionsBlock(opts) {
     ['photos', 'Fotoğraflı', true],
   ];
   var isActivatingOption = false;
+  function getGestureShieldScope() {
+    return (widget && widget.parentNode) || widget || null;
+  }
   // Pointer-vs-keyboard origin: restore focus to the trigger only when the
   // close was driven by keyboard. Pointer/touch closes leave focus alone so
   // the mobile button does not retain a stuck pressed/focus appearance.
@@ -98,9 +101,9 @@ export function buildActionsBlock(opts) {
       activated = true;
       isActivatingOption = true;
       // Pointer/touch selection closes the menu on pointerdown; swallow the trailing
-      // click so it cannot fall through to an element (e.g. a photo-strip thumbnail)
-      // sitting under the now-closed menu. Keyboard activation has no trailing click.
-      if (restoreFocus !== true) swallowNextDismissClick();
+      // click and shield exposed controls from same-gesture compat mouse/active state.
+      // Keyboard activation has no trailing pointer/click sequence.
+      if (restoreFocus !== true) swallowNextDismissGesture(getGestureShieldScope());
       closeFilter({ restoreFocus: restoreFocus });
       onSortChange(opt[0], isPhotos);
       setTimeout(function () {

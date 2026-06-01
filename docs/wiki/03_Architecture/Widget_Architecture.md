@@ -57,6 +57,7 @@ source_files:
   - "src/widget/reviews-section/styles/review-primitives.js"
   - "src/widget/reviews-section/styles/photo-strip.js"
   - "src/widget/reviews-section/styles/lightbox.js"
+  - "src/widget/shared/base-reset.js"
   - "src/widget/summary-layouts/shared/bar-chart.js"
   - "src/widget/summary-layouts/shared/actions-block.js"
   - "src/widget/summary-layouts/shared/popover-registry.js"
@@ -206,6 +207,7 @@ Each layout registers `supports: { title: true, photoStrip: false, ... }` in its
 
 - `summary-layouts/shared/popover-registry.js` owns light-dismiss and one-at-a-time behavior for summary popovers. `registerPopover(opts)` returns a handle `{ unregister, notifyOpening }`; consumers call `handle.notifyOpening()` when opening and `handle.unregister()` only at a real teardown point. One-shot producers such as the shared filter menu do not unregister on dismiss; stale entries are purged centrally once their DOM is disconnected by a full summary re-render.
 - Every registered `close()` function must return `true` only when it closed an open popover and `false` when the popover was already closed. The dismiss-click swallow logic depends on this boolean.
+- Pointer/touch filter option activation closes on `pointerdown` for WebKit reliability, then calls `swallowNextDismissGesture(scope)`: the trailing click is swallowed, and `base-reset.js` uses the scoped `[data-renuvex-pr-dismiss-gesture]` attribute to temporarily neutralize pointer/active state on controls exposed under the closing menu. This is scoped to the current review shadow content and does not disable normal ADR_0011 `:active` feedback for real future taps.
 - Rating bar rows in `summary-layouts/shared/bar-chart.js` are interactive toggle controls: `role=button`, `tabindex=0`, `aria-pressed`, and Enter/Space activation. A selected rating bar filters the review list but keeps the PDP badge count, summary total, and bar distribution tied to the unfiltered rating summary/all-count contract.
 - Bar chart count cells use tabular numbers and an elastic minimum width. `--renuvex-pr-col-count` remains the layout-local minimum column token; long localized counts can grow without forcing the track to overlap text.
 

@@ -11,9 +11,17 @@ type EventLike = {
 type ListenerMap = Record<string, (event: EventLike) => void>;
 
 function fakeNode(isConnected = true) {
+  const attrs = new Set<string>();
   return {
     isConnected,
     contains: vi.fn(() => false),
+    hasAttribute: (name: string) => attrs.has(name),
+    removeAttribute: vi.fn((name: string) => {
+      attrs.delete(name);
+    }),
+    setAttribute: vi.fn((name: string) => {
+      attrs.add(name);
+    }),
   };
 }
 
@@ -87,6 +95,28 @@ describe('widget popover registry contract', () => {
 
     expect(staleClose).not.toHaveBeenCalled();
     expect(liveClose).toHaveBeenCalledTimes(1);
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
+  test('pointer activation gesture shield is scoped and cleared by swallowed click', async () => {
+    const { registry, listeners } = await loadRegistry();
+    const scope = fakeNode();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    registry.swallowNextDismissGesture(scope);
+
+    expect(scope.hasAttribute('data-renuvex-pr-dismiss-gesture')).toBe(true);
+
+    listeners.click({
+      composedPath: () => [],
+      target: {},
+      preventDefault,
+      stopPropagation,
+    });
+
+    expect(scope.hasAttribute('data-renuvex-pr-dismiss-gesture')).toBe(false);
     expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(stopPropagation).toHaveBeenCalledTimes(1);
   });

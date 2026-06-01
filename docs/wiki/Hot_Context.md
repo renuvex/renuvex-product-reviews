@@ -65,6 +65,7 @@ source_files:
   - "src/widget/reviews-section/styles/review-primitives.js"
   - "src/widget/reviews-section/styles/photo-strip.js"
   - "src/widget/reviews-section/styles/lightbox.js"
+  - "src/widget/shared/base-reset.js"
   - "src/widget/summary-layouts/shared/bar-chart.js"
   - "src/widget/summary-layouts/shared/actions-block.js"
   - "src/widget/summary-layouts/shared/popover-registry.js"
@@ -104,7 +105,8 @@ source_files:
 - 2026-06-01: Review wizard close (X) color is derived from `formBgColor`, not `formPrimaryTextColor`. `theme-vars.js` chooses `#111111` or `#ffffff` by contrast and derives hover background from that safe control color; interaction smoke pins the real shadow-DOM close/hover styles.
 - 2026-06-01: Summary interaction contract hardened. `popover-registry.js` now returns `{ unregister, notifyOpening }` handles, purges disconnected entries after summary re-renders, and requires registered `close()` functions to return `wasOpen`; bar chart rows expose button semantics (`role=button`, `aria-pressed`, Enter/Space) and bar counts use tabular numbers plus an elastic minimum count column. Unit/runtime/interaction tests pin popover lifecycle, keyboard rating filters, badge/summary isolation, and large localized count rendering.
 
-- 2026-06-01: Decorative review-surface hovers gate on `@media (hover:hover) and (pointer:fine)`, not bare `(hover:hover)` — fixes compact-mobile sticky-hover on the full-width "Yorum Yap" button; real `hover:none` phones unaffected. Guard `tests/unit/widget-hover-gating.test.ts`; wizard/PDP-badge hovers follow-up.
+- 2026-06-01: Decorative review-surface hovers now require `(hover:hover) and (pointer:fine)`; fixes compact-mobile sticky hover on "Yorum Yap". Guard: `tests/unit/widget-hover-gating.test.ts`.
+- 2026-06-01: Physical-mobile filter tap follow-up: scoped shield prevents same-gesture compat events pressing exposed "Yorum Yap"; normal ADR_0011 `:active` remains.
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.

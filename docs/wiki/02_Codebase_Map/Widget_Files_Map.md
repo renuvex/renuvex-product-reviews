@@ -36,6 +36,7 @@ source_files:
   - "src/widget/reviews-section/styles/review-primitives.js"
   - "src/widget/reviews-section/styles/photo-strip.js"
   - "src/widget/reviews-section/styles/lightbox.js"
+  - "src/widget/shared/base-reset.js"
   - "src/widget/review-layouts/card/styles.js"
   - "src/widget/summary-layouts/index.js"
   - "src/widget/summary-layouts/shared/bar-chart.js"
@@ -220,6 +221,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 
 ## Change Log
 - 2026-06-01: Hardened summary shared primitives: [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) now exposes a handle lifecycle contract, [summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js) exposes keyboard/ARIA toggle semantics, and [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) owns bar focus/count resilience.
+- 2026-06-01: Added same-gesture press-through shielding to [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) and [shared/base-reset.js](src/widget/shared/base-reset.js): filter option pointer/touch activation keeps normal future `:active` feedback but temporarily blocks controls exposed under the dismissed menu.
 - 2026-06-01: Split shared review-section CSS ownership into [reviews-section/styles/](src/widget/reviews-section/styles/) modules while keeping [reviews-section/styles.js](src/widget/reviews-section/styles.js) as the `CLASSIC_CSS` aggregator and preserving injection order.
 - 2026-05-31: Added [review-layouts/card/styles.js](src/widget/review-layouts/card/styles.js) so card/default review CSS ownership matches list/gallery while shared review primitives remain in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-31: Added [summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) so classic/default summary CSS ownership matches the other summary layout folders while shared review CSS remains in [reviews-section/styles.js](src/widget/reviews-section/styles.js).

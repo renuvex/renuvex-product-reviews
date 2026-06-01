@@ -37,6 +37,7 @@ Adopt a four-layer canonical contract enforced widget-wide rather than per-compo
 2. **Controlled `:active` feedback** replaces the disabled tap highlight. Buttons / `[role="button"]` / `[role="menuitem"]` get a deterministic `opacity: 0.85` dip. Two opt-in utility classes (`.renuvex-pr-press-dim`, `.renuvex-pr-press-scale`) cover non-button interactives (image thumbs, photo strip items).
 3. **Focus outlines are scoped to `:focus-visible`**, never `:focus`. Modern browsers (Safari 15.4+, Chrome 86+, Firefox 85+) suppress `:focus-visible` for pointer/touch automatically, so the focus ring only appears for keyboard users.
 4. **A global "last input modality" tracker** decides whether to restore focus to the opening trigger when a popover or modal closes. Keyboard-originated opens restore focus (Tab continuity). Pointer/touch-originated opens leave focus alone (no sticky pressed/focus look on mobile). One module owns this signal — every popover, dropdown, menu, and modal asks `wasLastInputKeyboard()` instead of tracking origin per component.
+5. **Same-gesture popover shields are scoped, not global.** Controls keep normal `:active` feedback on real taps. When a popover option intentionally closes on `pointerdown`, `popover-registry.js` may arm a short-lived `[data-renuvex-pr-dismiss-gesture]` shield on the review shadow content wrapper. That shield neutralizes pointer/active state on controls exposed under the dismissed popover only until the trailing click is swallowed or the fallback timer expires.
 
 ### Architectural shape
 - New `src/widget/shared/` directory holds bundle-wide utilities.
@@ -46,7 +47,7 @@ Adopt a four-layer canonical contract enforced widget-wide rather than per-compo
 - Per-surface CSS files no longer need their own tap-highlight reset. New widgets following the `renuvex-pr-` naming convention inherit the contract automatically.
 
 ### Consumers updated in this decision
-- Filter dropdown ([actions-block.js](src/widget/summary-layouts/shared/actions-block.js)) routes its close-handler `restoreFocus` decision through `wasLastInputKeyboard()` (mode `'auto'`). Escape closes still restore unconditionally, since Escape is by definition a keyboard event.
+- Filter dropdown ([actions-block.js](src/widget/summary-layouts/shared/actions-block.js)) routes its close-handler `restoreFocus` decision through `wasLastInputKeyboard()` (mode `'auto'`). Escape closes still restore unconditionally, since Escape is by definition a keyboard event. Pointer/touch option activation uses the popover registry's same-gesture shield so compat mouse/active events cannot visually press the "Yorum Yap" button exposed under the closing menu.
 - Wizard modal ([modal-shell.js](src/widget/reviews-section/review-form-modal/modal-shell.js)) captures the modality at open time and only restores focus on close if the open was keyboard-originated.
 - Wizard CSS ([styles.js](src/widget/reviews-section/review-form-modal/styles.js)) drops the legacy `:focus { outline:none }` reset on inputs/textareas — modern browsers no longer paint that ring for pointer/touch under `:focus-visible` semantics.
 
@@ -72,6 +73,7 @@ Adopt a four-layer canonical contract enforced widget-wide rather than per-compo
 - [input-modality.js](src/widget/shared/input-modality.js)
 - [index.js](src/widget/index.js)
 - [actions-block.js](src/widget/summary-layouts/shared/actions-block.js)
+- [popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js)
 - [modal-shell.js](src/widget/reviews-section/review-form-modal/modal-shell.js)
 - [styles.js](src/widget/reviews-section/review-form-modal/styles.js)
 - [widget.js](public/widget.js)

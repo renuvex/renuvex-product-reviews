@@ -3,8 +3,8 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-30
-updated: 2026-05-30
-last_verified: 2026-05-30
+updated: 2026-06-01
+last_verified: 2026-06-01
 confidence: high
 tags:
   - bug
@@ -20,6 +20,8 @@ related:
 source_files:
   - "src/widget/summary-layouts/shared/popover-registry.js"
   - "src/widget/summary-layouts/shared/actions-block.js"
+  - "src/widget/shared/base-reset.js"
+  - "tests/unit/widget-popover-registry.test.ts"
   - "tests/widget-interaction-smoke.spec.ts"
 ---
 
@@ -80,6 +82,13 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
   `actions-block.js` `activateOption` on pointer/touch selection (which closes on
   `pointerdown`), so the trailing `click` cannot fall through to a thumbnail. Auto-disarms
   after 700 ms if no click follows.
+- **2026-06-01 follow-up for physical mobile:** the same pointer/touch option activation now
+  arms `swallowNextDismissGesture(scope)`. Besides swallowing the trailing click, it scopes a
+  short-lived `[data-renuvex-pr-dismiss-gesture]` shield to the review shadow content wrapper.
+  `base-reset.js` uses that scoped attribute to temporarily neutralize pointer/active state on
+  controls exposed under the dismissed menu. This preserves normal ADR_0011 `:active` feedback
+  for real taps on "Yorum Yap"; it only blocks same-gesture compat events leaking from the
+  filter option tap.
 
 `actions-block.js`: `closeFilter()` returns `wasOpen`; `activateOption` calls
 `swallowNextDismissClick()` for pointer activations (not keyboard, which has no trailing click).
@@ -87,8 +96,11 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
 ## Files Changed
 - `src/widget/summary-layouts/shared/popover-registry.js`
 - `src/widget/summary-layouts/shared/actions-block.js`
+- `src/widget/shared/base-reset.js`
+- `tests/unit/widget-popover-registry.test.ts`
 - `tests/widget-interaction-smoke.spec.ts` (regression: classic filter toggles on re-tap; an
-  outside tap on a photo thumbnail dismisses the menu without opening the lightbox)
+  outside tap on a photo thumbnail dismisses the menu without opening the lightbox; pointer
+  option activation shields the write button from same-gesture press-through)
 - Rebuilt `public/widget.js` + `public/widget-runtime/*`
 
 ## Verification

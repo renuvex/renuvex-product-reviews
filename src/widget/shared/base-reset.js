@@ -22,7 +22,15 @@ var BASE_RESET_CSS = [
     '[class^="renuvex-pr-"][role="menuitem"]:active,[class*=" renuvex-pr-"][role="menuitem"]:active,[class^="renuvex-pr-"][role="menuitem"]:active,[class*=" renuvex-pr-"][role="menuitem"]:active' +
     '{opacity:0.85;}',
 
-  // 4) Utility classes for non-button interactives.
+  // 4) Same-gesture shield for popovers that close on pointerdown. It does not remove
+  // ADR_0011 press feedback globally; it only neutralizes controls under the dismissed
+  // popover until the trailing click is swallowed (or the short fallback timer expires).
+  '[data-renuvex-pr-dismiss-gesture] button[class^="renuvex-pr-"],[data-renuvex-pr-dismiss-gesture] button[class*=" renuvex-pr-"],' +
+    '[data-renuvex-pr-dismiss-gesture] [class^="renuvex-pr-"][role="button"],[data-renuvex-pr-dismiss-gesture] [class*=" renuvex-pr-"][role="button"],' +
+    '[data-renuvex-pr-dismiss-gesture] [class^="renuvex-pr-"][role="menuitem"],[data-renuvex-pr-dismiss-gesture] [class*=" renuvex-pr-"][role="menuitem"]' +
+    '{pointer-events:none;opacity:1!important;}',
+
+  // 5) Utility classes for non-button interactives.
   '.renuvex-pr-press-dim:active,.renuvex-pr-press-dim:active{opacity:0.85;}',
   '.renuvex-pr-press-scale,.renuvex-pr-press-scale{transition:transform 90ms ease-out;}',
   '.renuvex-pr-press-scale:active,.renuvex-pr-press-scale:active{transform:scale(0.97);}',

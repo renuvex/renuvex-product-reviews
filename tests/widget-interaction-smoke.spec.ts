@@ -681,6 +681,74 @@ test('filter popover light-dismiss survives a summary re-render (no registry lea
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('filter pointer activation shields write button from same-gesture press-through', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  await clickInReviewsShadow(page, '.renuvex-pr-filter-btn');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(true);
+
+  const armed = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    const item = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-filter-item') || [])
+      .find((el) => (el.textContent || '').trim() === 'En Yüksek Puan');
+    if (!root || !item) throw new Error('Missing filter item');
+
+    const event = typeof PointerEvent === 'function'
+      ? new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerType: 'touch' })
+      : new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
+    item.dispatchEvent(event);
+
+    const content = root.querySelector<HTMLElement>('[data-renuvex-shadow-content]');
+    const writeBtn = root.querySelector<HTMLElement>('.renuvex-pr-write-btn');
+    const writeStyle = writeBtn ? getComputedStyle(writeBtn) : null;
+    return {
+      shielded: content?.hasAttribute('data-renuvex-pr-dismiss-gesture') || false,
+      menuOpen: !!root.querySelector('.renuvex-pr-filter-menu.renuvex-pr-open'),
+      pointerEvents: writeStyle?.pointerEvents || '',
+      opacity: writeStyle?.opacity || '',
+    };
+  });
+
+  expect(armed).toEqual({
+    shielded: true,
+    menuOpen: false,
+    pointerEvents: 'none',
+    opacity: '1',
+  });
+
+  const cleared = await page.evaluate(() => {
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    const content = root?.querySelector<HTMLElement>('[data-renuvex-shadow-content]');
+    const writeBtn = root?.querySelector<HTMLElement>('.renuvex-pr-write-btn');
+    return {
+      shielded: content?.hasAttribute('data-renuvex-pr-dismiss-gesture') || false,
+      pointerEvents: writeBtn ? getComputedStyle(writeBtn).pointerEvents : '',
+    };
+  });
+
+  expect(cleared).toEqual({ shielded: false, pointerEvents: 'auto' });
+  expect(await hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
+  await expect.poll(() => page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    return (root?.querySelector<HTMLElement>('.renuvex-pr-filter-item-active')?.textContent || '').trim();
+  })).toBe('En Yüksek Puan');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 // Regression: caret/X icons are <use> references to a sprite <symbol>. iconUseNode once
 // built the <svg><use> via DOMParser('image/svg+xml') + importNode; such a <use> does NOT
 // instance its symbol after being moved into a live shadow tree, so the button rendered a
