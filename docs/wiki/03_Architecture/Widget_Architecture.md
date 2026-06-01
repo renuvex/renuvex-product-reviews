@@ -33,6 +33,7 @@ source_files:
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-icon-sprite.test.ts"
+  - "tests/unit/widget-popover-registry.test.ts"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
@@ -56,6 +57,9 @@ source_files:
   - "src/widget/reviews-section/styles/review-primitives.js"
   - "src/widget/reviews-section/styles/photo-strip.js"
   - "src/widget/reviews-section/styles/lightbox.js"
+  - "src/widget/summary-layouts/shared/bar-chart.js"
+  - "src/widget/summary-layouts/shared/actions-block.js"
+  - "src/widget/summary-layouts/shared/popover-registry.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
   - "src/widget/structured-data/index.js"
@@ -131,6 +135,7 @@ deployment before claiming live performance improvement.
 | [listing-badges/](src/widget/listing-badges/) | Listing-page badge bootstrap, scoped link discovery, bulk fetch, slot reservation, injection. |
 | [review-layouts/](src/widget/review-layouts/) | `card` / `gallery` / `list` review item layouts (registry in `index.js`). |
 | [summary-layouts/](src/widget/summary-layouts/) | `classic` / `compact` / `hero` / `minimal` / `split` summary layouts. |
+| [summary-layouts/shared/](src/widget/summary-layouts/shared/) | Shared summary primitives: rating bar chart, write/filter actions, write-form opener, and popover registry. |
 | [themes/current-adapter.js](src/widget/themes/current-adapter.js) | Runtime-selected adapter registry. Defaults to Ozy unless public settings select `generic`. |
 | [themes/generic/](src/widget/themes/generic/) | Conservative unknown-theme adapter; avoids Ozy-specific selectors and relies on generic scoped link/title heuristics. |
 | [reviews-section/styles.js](src/widget/reviews-section/styles.js) | Stable `CLASSIC_CSS` aggregator for shared review-section CSS. Owned CSS modules live under [reviews-section/styles/](src/widget/reviews-section/styles/). |
@@ -196,6 +201,13 @@ verified live on the dev store on 2026-05-17 (browser + Sentry post-test); see
 ## Layout-aware settings (key concept)
 
 Each layout registers `supports: { title: true, photoStrip: false, ... }` in its layout `index.js`. Admin settings panel uses `showWhen: { layoutKey, supports }` in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) to hide irrelevant fields. This means **adding a new setting often means deciding which layouts support it** — not editing settings rendering code.
+
+## Summary interaction contracts
+
+- `summary-layouts/shared/popover-registry.js` owns light-dismiss and one-at-a-time behavior for summary popovers. `registerPopover(opts)` returns a handle `{ unregister, notifyOpening }`; consumers call `handle.notifyOpening()` when opening and `handle.unregister()` only at a real teardown point. One-shot producers such as the shared filter menu do not unregister on dismiss; stale entries are purged centrally once their DOM is disconnected by a full summary re-render.
+- Every registered `close()` function must return `true` only when it closed an open popover and `false` when the popover was already closed. The dismiss-click swallow logic depends on this boolean.
+- Rating bar rows in `summary-layouts/shared/bar-chart.js` are interactive toggle controls: `role=button`, `tabindex=0`, `aria-pressed`, and Enter/Space activation. A selected rating bar filters the review list but keeps the PDP badge count, summary total, and bar distribution tied to the unfiltered rating summary/all-count contract.
+- Bar chart count cells use tabular numbers and an elastic minimum width. `--renuvex-pr-col-count` remains the layout-local minimum column token; long localized counts can grow without forcing the track to overlap text.
 
 ## Preview mode protocol
 
@@ -270,6 +282,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-06-01: Hardened summary interaction contracts: popover registry handles now own `notifyOpening` identity and real teardown, disconnected entries are purged after summary re-renders, rating bar rows are keyboard/ARIA toggle controls, and count columns use tabular numbers with elastic minimum width. Related bug: [[Bug_Summary_Popover_Registry_Lifecycle_Contract]].
 - 2026-06-01: Fixed `PAGE_VIEW` lifecycle dedupe so same-page duplicate events inside 800 ms are suppressed, while distinct fast transitions such as `PRODUCT -> CATEGORY` still reach the surface registry immediately. Related bug: [[Bug_Widget_Page_View_Semantic_Dedupe]].
 - 2026-06-01: Split shared review-section CSS into owned modules under [reviews-section/styles/](src/widget/reviews-section/styles/) while preserving the `CLASSIC_CSS` export, shadow injection order, DOM/class names, and public settings contract.
 - 2026-05-31: Review read lifecycle hardening added stale-response guards for sort/filter/retry/load-more and duplicate-id filtering before load-more DOM insertion. Related bug: [[Bug_Review_Read_Lifecycle_Stale_Responses]].

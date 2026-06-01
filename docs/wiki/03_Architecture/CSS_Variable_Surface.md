@@ -150,9 +150,13 @@ The default/classic declarations live in `summary-layouts/classic/styles.js` and
 | Variable | Default | Purpose |
 |---|---|---|
 | `--renuvex-pr-col-label` | 104px | Bar chart label column width |
-| `--renuvex-pr-col-count` | 60px | Bar chart count column width |
+| `--renuvex-pr-col-count` | 60px desktop / 48px classic mobile | Minimum bar chart count column width; count text can grow beyond this with tabular numbers for large localized values |
 | `--renuvex-pr-col-gap` | 4px | Inter-column gap |
 | `--renuvex-pr-summary-max` | 340px | Summary block max-width |
+
+`reviews-section/styles/summary-controls.js` treats `--renuvex-pr-col-count` as a minimum, not
+an exact clamp. `.renuvex-pr-bar-count` uses `font-variant-numeric: tabular-nums` and can grow
+to fit values such as `(10.000)` while the bar track remains the flexible column.
 
 ### Layout-specific (per summary layout)
 | Variable | Defined in | Purpose |

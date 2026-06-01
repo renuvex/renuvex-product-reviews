@@ -2,7 +2,7 @@
 // Actions row — Yorum Yap butonu + filtre dropdown.
 // Tüm summary layout'ları bu shared parçayı kullanır.
 
-import { registerPopover, notifyOpening, swallowNextDismissClick } from './popover-registry.js';
+import { registerPopover, swallowNextDismissClick } from './popover-registry.js';
 import { getFilterIconSvg } from '../../icons/index.js';
 import { iconUseSvg } from '../../icons/star-sprite.js';
 import { currentSettings } from '../../core/state.js';
@@ -66,7 +66,7 @@ export function buildActionsBlock(opts) {
     return wasOpen;
   }
   function openFilter() {
-    notifyOpening(filterRegistration);
+    filterRegistration.notifyOpening();
     filterMenu.classList.add('renuvex-pr-open');
     filterBtn.classList.add('renuvex-pr-filter-btn-active');
     filterBtn.setAttribute('aria-expanded', 'true');
@@ -154,6 +154,10 @@ export function buildActionsBlock(opts) {
   });
 
   // Filter her zaman popover (overlay) — desktop ve mobile'da light dismiss.
+  // NOT: buildActionsBlock tek-seferlik üretici, gerçek teardown noktası yok →
+  // unregister BİLEREK çağrılmaz (dismiss'te çıkarsa sonraki açılışta light-dismiss
+  // ölür). Eski entry'ler, summary yeniden render edilince filterMenu DOM'dan
+  // koptuğunda registry'nin purgeDisconnected'ı tarafından merkezî olarak düşürülür.
   var filterRegistration = registerPopover({
     trigger: filterWrap,
     element: filterMenu,

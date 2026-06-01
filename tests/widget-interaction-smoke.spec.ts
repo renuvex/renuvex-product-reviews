@@ -629,6 +629,58 @@ test('classic summary filter toggles on re-tap and dismiss does not open the lig
   expect(widgetErrors(log)).toEqual([]);
 });
 
+// Regression for the popover-registry lifecycle/contract rework. A full re-render (sort)
+// rebuilds the actions block and registers a NEW filter popover while the one-shot producer
+// never unregisters the old one; the registry must reclaim the disconnected old entry
+// (purgeDisconnected) so the live filter's light-dismiss still works exactly once. The
+// registry array is module-local and intentionally NOT exported, so this is proven at the
+// behavior level: after a sort-driven re-render, opening the freshly-mounted filter and
+// tapping outside must dismiss ONLY the menu (no lightbox), with no console error — a leaked
+// registry of stale entries would corrupt that single dismiss pass.
+test('filter popover light-dismiss survives a summary re-render (no registry leak)', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  // Trigger a full re-render via a sort selection (rebuilds the actions block → a new
+  // registerPopover; the previous filterMenu is detached, leaving a disconnected entry).
+  await clickInReviewsShadow(page, '.renuvex-pr-filter-btn');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(true);
+  await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    const item = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-filter-item') || [])
+      .find((el) => (el.textContent || '').trim() === 'En Yüksek Puan');
+    if (!item) throw new Error('Missing sort item: En Yüksek Puan');
+    item.focus();
+    item.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  });
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(false);
+  // The summary is rebuilt — the new hidden menu marks the selected sort as active.
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-btn')).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
+    const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
+    return (root?.querySelector<HTMLElement>('.renuvex-pr-filter-item-active')?.textContent || '').trim();
+  })).toBe('En Yüksek Puan');
+
+  // The freshly-mounted filter's light-dismiss must still work: open, then tap a photo-strip
+  // thumbnail outside the menu → the tap dismisses ONLY the menu, never opening the lightbox.
+  await clickInReviewsShadow(page, '.renuvex-pr-filter-btn');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(false);
+  expect(await hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
+
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 // Regression: caret/X icons are <use> references to a sprite <symbol>. iconUseNode once
 // built the <svg><use> via DOMParser('image/svg+xml') + importNode; such a <use> does NOT
 // instance its symbol after being moved into a live shadow tree, so the button rendered a

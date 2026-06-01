@@ -16,8 +16,21 @@
 // also activating that element (opening the lightbox). Pointer-driven option activation
 // (which closes the menu on `pointerdown`, before the trailing `click`) arms the same
 // one-shot swallow so its trailing click cannot fall through either.
+//
+// Lifecycle contract (see docs/wiki/03_Architecture/Widget_Architecture.md):
+//   - registerPopover(opts) returns a HANDLE { unregister, notifyOpening } — never a bare
+//     function. Consumers call handle.notifyOpening() on open and handle.unregister() ONLY
+//     at a real teardown point (e.g. compact's media-query swap). One-shot producers with
+//     no owner (the filter dropdown built fresh on every summary render) must NOT unregister
+//     on dismiss — that would remove the still-mounted popover and kill light-dismiss on the
+//     next open. Their stale entries are reclaimed centrally instead (purgeDisconnected:
+//     once the old shadow content is replaced, entry.element.isConnected becomes false and
+//     the entry is dropped on the next registry pass). This is defense-in-depth, not a
+//     substitute for unregister at genuine teardown points.
+//   - opts.close() MUST return true only if the popover was actually open (and is now
+//     closed), false otherwise. The dismiss-swallow logic depends on this boolean.
 
-var registered = []; // { trigger, element, close }
+var registered = []; // [{ trigger, element, close }]
 var listenersAttached = false;
 var swallowNextClick = false;
 
@@ -30,6 +43,17 @@ function eventPathHas(e, node) {
   return node.contains(e.target);
 }
 
+// Drop entries whose popover element has left the DOM (old shadow content replaced on a
+// re-render). Keeps the registry from growing across summary rebuilds even when a one-shot
+// producer never calls unregister. Returns the live entry list.
+function purgeDisconnected() {
+  for (var i = registered.length - 1; i >= 0; i--) {
+    var el = registered[i].element;
+    if (el && el.isConnected === false) registered.splice(i, 1);
+  }
+  return registered;
+}
+
 function handleDocClick(e) {
   // A pointerdown-driven option activation already closed the menu; swallow the trailing
   // click so it does not reach whatever is now under the pointer (e.g. a thumbnail).
@@ -40,9 +64,10 @@ function handleDocClick(e) {
     return;
   }
 
+  var live = purgeDisconnected();
   var dismissed = false;
-  for (var i = registered.length - 1; i >= 0; i--) {
-    var p = registered[i];
+  for (var i = live.length - 1; i >= 0; i--) {
+    var p = live[i];
     // Click on the trigger → its own toggle handler manages open/close.
     if (eventPathHas(e, p.trigger)) continue;
     // Click inside the popover → keep it open.
@@ -61,7 +86,8 @@ function handleDocClick(e) {
 
 function handleKeydown(e) {
   if (e.key !== 'Escape') return;
-  for (var i = registered.length - 1; i >= 0; i--) registered[i].close();
+  var live = purgeDisconnected();
+  for (var i = live.length - 1; i >= 0; i--) live[i].close();
 }
 
 function ensureListeners() {
@@ -69,14 +95,6 @@ function ensureListeners() {
   document.addEventListener('click', handleDocClick, true);
   document.addEventListener('keydown', handleKeydown);
   listenersAttached = true;
-}
-
-// One-at-a-time: closing other popovers when one opens. Called by a trigger handler as
-// the "I am opening" signal.
-export function notifyOpening(self) {
-  for (var i = 0; i < registered.length; i++) {
-    if (registered[i] !== self) registered[i].close();
-  }
 }
 
 // Arm a one-shot swallow of the next document click. Called by a popover that activates +
@@ -94,8 +112,20 @@ export function registerPopover(opts) {
   ensureListeners();
   var entry = { trigger: opts.trigger, element: opts.element, close: opts.close };
   registered.push(entry);
-  return function unregister() {
-    var idx = registered.indexOf(entry);
-    if (idx !== -1) registered.splice(idx, 1);
+  return {
+    // Remove this popover from the registry. Call only at a real teardown point.
+    unregister: function () {
+      var idx = registered.indexOf(entry);
+      if (idx !== -1) registered.splice(idx, 1);
+    },
+    // One-at-a-time: closing every OTHER registered popover as this one opens.
+    // Compares by entry reference (closure) so the caller never has to thread an
+    // identity argument — fixes the old notifyOpening(fn) vs entry mismatch.
+    notifyOpening: function () {
+      var live = purgeDisconnected();
+      for (var i = 0; i < live.length; i++) {
+        if (live[i] !== entry) live[i].close();
+      }
+    },
   };
 }

@@ -38,6 +38,9 @@ source_files:
   - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/review-layouts/card/styles.js"
   - "src/widget/summary-layouts/index.js"
+  - "src/widget/summary-layouts/shared/bar-chart.js"
+  - "src/widget/summary-layouts/shared/actions-block.js"
+  - "src/widget/summary-layouts/shared/popover-registry.js"
   - "src/widget/summary-layouts/classic/styles.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/rating-badge/inject.js"
@@ -108,7 +111,7 @@ src/widget/
 │  ├─ styles.js                  # CLASSIC_CSS aggregator for shared review-section CSS
 │  ├─ styles/
 │  │  ├─ base.js                 # Widget root, text safety, icons, mobile padding tokens
-│  │  ├─ summary-controls.js     # Shared bar chart, write action, filter menu
+│  │  ├─ summary-controls.js     # Shared bar chart, write action, filter menu, rating-bar focus/count CSS
 │  │  ├─ review-primitives.js    # Shared review stars, replies, read-more, states
 │  │  ├─ photo-strip.js          # Photo strip/gallery title, arrows, thumbnails
 │  │  └─ lightbox.js             # Photo review lightbox CSS
@@ -147,7 +150,7 @@ src/widget/
 │
 ├─ summary-layouts/
 │  ├─ index.js                    # Layout registry + meta (used by `layoutKey + supports`)
-│  ├─ shared/                     # Common summary primitives (rating bar chart, etc.)
+│  ├─ shared/                     # Common summary primitives (rating bar chart, actions, popover registry)
 │  ├─ classic/                    # default summary layout (index.js + styles.js)
 │  ├─ compact/
 │  ├─ hero/
@@ -216,6 +219,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-06-01: Hardened summary shared primitives: [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) now exposes a handle lifecycle contract, [summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js) exposes keyboard/ARIA toggle semantics, and [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) owns bar focus/count resilience.
 - 2026-06-01: Split shared review-section CSS ownership into [reviews-section/styles/](src/widget/reviews-section/styles/) modules while keeping [reviews-section/styles.js](src/widget/reviews-section/styles.js) as the `CLASSIC_CSS` aggregator and preserving injection order.
 - 2026-05-31: Added [review-layouts/card/styles.js](src/widget/review-layouts/card/styles.js) so card/default review CSS ownership matches list/gallery while shared review primitives remain in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-31: Added [summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) so classic/default summary CSS ownership matches the other summary layout folders while shared review CSS remains in [reviews-section/styles.js](src/widget/reviews-section/styles.js).

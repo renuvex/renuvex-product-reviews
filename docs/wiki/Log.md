@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-01 - fix | Harden summary popover and rating bar contracts
+- Summary: Fixed the summary popover registry lifecycle/contract bug and hardened the rating bar chart interaction surface. `registerPopover()` now returns a handle with `notifyOpening()` / `unregister()`, disconnected popovers are purged after summary re-renders, and registered `close()` functions consistently return `wasOpen`. Rating bar rows are keyboard-reachable toggle buttons (`role=button`, `aria-pressed`, Enter/Space), and bar count columns use tabular numbers with an elastic minimum width for large localized counts.
+- Key source changes: `src/widget/summary-layouts/shared/popover-registry.js`, `src/widget/summary-layouts/shared/actions-block.js`, `src/widget/summary-layouts/compact/index.js`, `src/widget/summary-layouts/shared/bar-chart.js`, `src/widget/reviews-section/styles/summary-controls.js`, `src/widget/summary-layouts/classic/styles.js`. Added `tests/unit/widget-popover-registry.test.ts`, runtime bar chart keyboard/isolation/count coverage, and an interaction smoke for filter light-dismiss after a summary re-render. Rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Verification: Passed `pnpm build:widget`, `pnpm check:widget-js`, `pnpm test:unit`, `pnpm test:widget-runtime`, `pnpm test:widget-interactions`, `pnpm test:widget-smoke`, `pnpm test:admin-preview`, `pnpm exec tsc --noEmit`, `pnpm lint`, and `git diff --check`. `node scripts/wiki-audit.mjs --changed-source-check` completed with 0 errors and the repo's existing warning backlog.
+- Updated wiki: [[Bug_Summary_Popover_Registry_Lifecycle_Contract]], [[Bug_Index]], [[Hot_Context]], [[Widget_Architecture]], [[Widget_Files_Map]], [[CSS_Variable_Surface]], [[Test_Strategy]]
+
 ## 2026-06-01 - fix | Restore photo strip thumbnail size contract
 - Summary: Fixed a settings-contract bug where list/gallery review layouts exposed "Fotoğraf Galeri Boyutu" but runtime overwrote the top photo strip thumbnail width with the layout item-photo width from `size`. The strip now always follows `thumbnailSize`; list/gallery item photos still follow widget `size`.
 - Key source changes: `src/widget/reviews-section/render.js` no longer overrides `thumbPx` from review layout `sizeOverrides`. `src/widget/review-layouts/list/index.js` and `src/widget/review-layouts/gallery/index.js` comments clarify strip-vs-item-photo ownership. `tests/widget-runtime-smoke.spec.ts` pins list/gallery behavior with `size: small` and `thumbnailSize: large`.

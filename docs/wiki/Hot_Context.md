@@ -31,6 +31,7 @@ source_files:
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
+  - "tests/unit/widget-popover-registry.test.ts"
   - "scripts/check-widget-runtime.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
@@ -63,6 +64,9 @@ source_files:
   - "src/widget/reviews-section/styles/review-primitives.js"
   - "src/widget/reviews-section/styles/photo-strip.js"
   - "src/widget/reviews-section/styles/lightbox.js"
+  - "src/widget/summary-layouts/shared/bar-chart.js"
+  - "src/widget/summary-layouts/shared/actions-block.js"
+  - "src/widget/summary-layouts/shared/popover-registry.js"
   - "src/widget/summary-layouts/classic/styles.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/themes/generic/adapter.js"
@@ -97,6 +101,7 @@ source_files:
 - 2026-06-01: `reviews-section/render.js` split into `render/*.js`. Phase 1 extracted pure builders (`theme-vars,size-presets,states,photo-strip,request-token`); Phase 2 extracted the render-rerunning handlers (retry/filter/sort) into `render/handlers.js` `createReviewHandlers({render})` — render injected via DI so no circular import; state read stays live via ESM bindings. render.js 832→407 lines. Load-more stays inline (incremental DOM insert, not a re-render). Behavior-preserving (unit 54 + widget-runtime 16 + admin-preview 2 + interactions 12 + smoke 25 unchanged).
 
 - 2026-06-01: Review wizard close (X) color is derived from `formBgColor`, not `formPrimaryTextColor`. `theme-vars.js` chooses `#111111` or `#ffffff` by contrast and derives hover background from that safe control color; interaction smoke pins the real shadow-DOM close/hover styles.
+- 2026-06-01: Summary interaction contract hardened. `popover-registry.js` now returns `{ unregister, notifyOpening }` handles, purges disconnected entries after summary re-renders, and requires registered `close()` functions to return `wasOpen`; bar chart rows expose button semantics (`role=button`, `aria-pressed`, Enter/Space) and bar counts use tabular numbers plus an elastic minimum count column. Unit/runtime/interaction tests pin popover lifecycle, keyboard rating filters, badge/summary isolation, and large localized count rendering.
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.

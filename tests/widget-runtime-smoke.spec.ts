@@ -98,16 +98,19 @@ function runtimeReview(input: RuntimeReview): Record<string, unknown> {
   };
 }
 
-function reviewsPayload(reviews: RuntimeReview[], options: { allCount?: number; hasMore?: boolean } = {}): unknown {
+function reviewsPayload(
+  reviews: RuntimeReview[],
+  options: { allCount?: number; totalCount?: number; ratingCounts?: number[]; avgRating?: string; hasMore?: boolean } = {},
+): unknown {
   const allCount = options.allCount ?? Math.max(reviews.length, 1);
-  const ratingCounts = [0, 0, 0, 0, allCount];
+  const ratingCounts = options.ratingCounts ?? [0, 0, 0, 0, allCount];
   return {
     data: {
       reviews: reviews.map(runtimeReview),
       allCount,
-      totalCount: allCount,
+      totalCount: options.totalCount ?? allCount,
       ratingCounts,
-      avgRating: allCount > 0 ? '5.0' : '0.0',
+      avgRating: options.avgRating ?? (allCount > 0 ? '5.0' : '0.0'),
       hasMore: options.hasMore === true,
     },
   };
@@ -148,6 +151,65 @@ async function reviewTitles(page: Page): Promise<string[]> {
     return Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-review-title,.renuvex-pr-review-list-title,.renuvex-pr-review-gallery-title') || [])
       .map((el) => el.textContent?.trim() || '')
       .filter(Boolean);
+  });
+}
+
+async function pdpBadgeText(page: Page): Promise<string> {
+  return page.evaluate(() => document.querySelector('[data-renuvex-slot="product-title-rating"]')?.textContent?.trim() || '');
+}
+
+async function focusBarRow(page: Page, index: number): Promise<void> {
+  await page.evaluate((index) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const row = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-bar-row') || [])[index];
+    if (!row) throw new Error(`Missing bar row index: ${index}`);
+    row.focus();
+  }, index);
+}
+
+async function barRowsState(page: Page): Promise<Array<{ ariaPressed: string | null; ariaLabel: string | null; count: string; fillWidth: string }>> {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    return Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-bar-row') || []).map((row) => ({
+      ariaPressed: row.getAttribute('aria-pressed'),
+      ariaLabel: row.getAttribute('aria-label'),
+      count: row.querySelector<HTMLElement>('.renuvex-pr-bar-count')?.textContent?.trim() || '',
+      fillWidth: (row.querySelector<HTMLElement>('.renuvex-pr-bar-fill')?.style.width || ''),
+    }));
+  });
+}
+
+async function firstBarCountMetrics(page: Page): Promise<{
+  text: string;
+  width: number;
+  scrollWidth: number;
+  trackWidth: number;
+  fontVariantNumeric: string;
+  fontFeatureSettings: string;
+}> {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const count = root?.querySelector<HTMLElement>('.renuvex-pr-bar-count');
+    const track = root?.querySelector<HTMLElement>('.renuvex-pr-bar-track');
+    if (!count || !track) throw new Error('Missing bar count or track');
+    const countStyle = getComputedStyle(count);
+    return {
+      text: count.textContent?.trim() || '',
+      width: count.getBoundingClientRect().width,
+      scrollWidth: count.scrollWidth,
+      trackWidth: track.getBoundingClientRect().width,
+      fontVariantNumeric: countStyle.fontVariantNumeric,
+      fontFeatureSettings: countStyle.fontFeatureSettings,
+    };
   });
 }
 
@@ -267,6 +329,105 @@ for (const photoLayout of [
     expect(widgetErrors(log)).toEqual([]);
   });
 }
+
+test('rating bar chart filters from keyboard without changing badge or summary totals', async ({ page }) => {
+  const ratingCounts = [0, 0, 1, 2, 9];
+  const allCount = 12;
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    badgeEnabled: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      const hasImages = url.searchParams.get('hasImages') === 'true';
+      const rating = url.searchParams.get('rating');
+
+      if (hasImages) {
+        await fulfillJson(route, reviewsPayload([
+          { id: 'strip-keyboard', title: 'Strip Keyboard', images: [trustedReviewImage('strip-keyboard')] },
+        ], { allCount, totalCount: 1, ratingCounts, avgRating: '4.8' }));
+        return;
+      }
+
+      if (rating === '5') {
+        await fulfillJson(route, reviewsPayload([
+          { id: 'filtered-five', rating: 5, title: 'Only five star review' },
+        ], { allCount, totalCount: 9, ratingCounts, avgRating: '4.8' }));
+        return;
+      }
+
+      await fulfillJson(route, reviewsPayload([
+        { id: 'all-five', rating: 5, title: 'All five star review' },
+        { id: 'all-four', rating: 4, title: 'All four star review' },
+        { id: 'all-three', rating: 3, title: 'All three star review' },
+      ], { allCount, totalCount: allCount, ratingCounts, avgRating: '4.8' }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasPdpBadge(page)).toBe(true);
+  await expect.poll(() => reviewTitles(page)).toEqual(['All five star review', 'All four star review', 'All three star review']);
+
+  const initialBadgeText = await pdpBadgeText(page);
+  const initialSummaryCount = await textInReviewsShadow(page, '.renuvex-pr-summary-count');
+  const initialBars = await barRowsState(page);
+
+  expect(initialSummaryCount).toBe('12 Yorum');
+  expect(initialBars.map((row) => row.count)).toEqual(['(9)', '(2)', '(1)', '(0)', '(0)']);
+  expect(initialBars[0].ariaPressed).toBe('false');
+  expect(initialBars[0].ariaLabel).toContain('5 yıldız');
+
+  await focusBarRow(page, 0);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => reviewTitles(page)).toEqual(['Only five star review']);
+
+  const filteredBars = await barRowsState(page);
+  expect(filteredBars.map((row) => row.count)).toEqual(initialBars.map((row) => row.count));
+  expect(filteredBars[0].ariaPressed).toBe('true');
+  expect(filteredBars[0].ariaLabel).toContain('filtreyi kaldır');
+  expect(await pdpBadgeText(page)).toBe(initialBadgeText);
+  expect(await textInReviewsShadow(page, '.renuvex-pr-summary-count')).toBe(initialSummaryCount);
+
+  await focusBarRow(page, 0);
+  await page.keyboard.press('Space');
+  await expect.poll(() => reviewTitles(page)).toEqual(['All five star review', 'All four star review', 'All three star review']);
+  expect((await barRowsState(page))[0].ariaPressed).toBe('false');
+  expect(await pdpBadgeText(page)).toBe(initialBadgeText);
+  expect(await textInReviewsShadow(page, '.renuvex-pr-summary-count')).toBe(initialSummaryCount);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('rating bar count column fits large localized counts on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      const hasImages = url.searchParams.get('hasImages') === 'true';
+
+      if (hasImages) {
+        await fulfillJson(route, reviewsPayload([], { allCount: 10000, totalCount: 0, ratingCounts: [0, 0, 0, 0, 10000], avgRating: '5.0' }));
+        return;
+      }
+
+      await fulfillJson(route, reviewsPayload([
+        { id: 'large-count', rating: 5, title: 'Large count review' },
+      ], { allCount: 10000, totalCount: 10000, ratingCounts: [0, 0, 0, 0, 10000], avgRating: '5.0' }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => barRowsState(page)).toHaveLength(5);
+
+  const metrics = await firstBarCountMetrics(page);
+  expect(metrics.text).toBe('(10.000)');
+  expect(metrics.width + 1).toBeGreaterThanOrEqual(metrics.scrollWidth);
+  expect(metrics.trackWidth).toBeGreaterThan(20);
+  expect(metrics.fontVariantNumeric === 'tabular-nums' || metrics.fontFeatureSettings.includes('tnum')).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
 
 test('sort responses cannot overwrite the newest selected order', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {

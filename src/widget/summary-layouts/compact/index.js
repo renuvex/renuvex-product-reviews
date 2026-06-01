@@ -6,7 +6,7 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
-import { registerPopover, notifyOpening } from '../shared/popover-registry.js';
+import { registerPopover } from '../shared/popover-registry.js';
 import { partialStarsHTML } from '../../core/helpers.js';
 import { starUseSvg, iconUseSvg } from '../../icons/star-sprite.js';
 import { UI_CARET_DOWN } from '../../icons/index.js';
@@ -151,15 +151,19 @@ export function render(opts) {
   }
 
   // ─── Toggle davranışı ───────────────────────────────────────
+  // close() popover-registry kontratı: yalnızca GERÇEKTEN açıkken kapatıldıysa
+  // true döner (dismiss-swallow buna bağlı). Zaten kapalıysa false.
   function closePanel() {
+    var wasOpen = panel.classList.contains('renuvex-pr-open');
     panel.classList.remove('renuvex-pr-open');
     panel.setAttribute('aria-hidden', 'true');
     trigger.setAttribute('aria-expanded', 'false');
+    return wasOpen;
   }
   function openPanel() {
     // Desktop popover'da: diğer açık popover'ları kapat (one-at-a-time).
-    // Mobile accordion'da kayıt yapılmadığı için no-op gibi davranır.
-    notifyOpening(panelRegistration);
+    // Mobile accordion'da kayıt yapılmadığı için panelRegistration null → no-op.
+    if (panelRegistration) panelRegistration.notifyOpening();
     panel.classList.add('renuvex-pr-open');
     panel.setAttribute('aria-hidden', 'false');
     trigger.setAttribute('aria-expanded', 'true');
@@ -174,7 +178,7 @@ export function render(opts) {
   // sadece chevron ile manuel toggle (Endüstri standardı).
   var panelRegistration = null;
   function syncRegistration(isMobile) {
-    if (panelRegistration) { panelRegistration(); panelRegistration = null; }
+    if (panelRegistration) { panelRegistration.unregister(); panelRegistration = null; }
     if (!isMobile) {
       panelRegistration = registerPopover({
         trigger: triggerWrap,
