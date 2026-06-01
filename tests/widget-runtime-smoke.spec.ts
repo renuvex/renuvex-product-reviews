@@ -185,6 +185,23 @@ async function barRowsState(page: Page): Promise<Array<{ ariaPressed: string | n
   });
 }
 
+async function compactPanelMotionState(page: Page): Promise<{ animationName: string; transitionProperty: string; maxHeight: string }> {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const panel = root?.querySelector<HTMLElement>('.renuvex-pr-compact-panel.renuvex-pr-open');
+    if (!panel) throw new Error('Missing open compact panel');
+    const style = getComputedStyle(panel);
+    return {
+      animationName: style.animationName,
+      transitionProperty: style.transitionProperty,
+      maxHeight: style.maxHeight,
+    };
+  });
+}
+
 async function firstBarCountMetrics(page: Page): Promise<{
   text: string;
   width: number;
@@ -298,6 +315,13 @@ test('compact mobile rating bar filter keeps panel open until trigger closes it'
     const rows = await barRowsState(page);
     return rows[0]?.ariaPressed || '';
   }).toBe('true');
+  await expect.poll(async () => {
+    const motion = await compactPanelMotionState(page);
+    return motion.animationName;
+  }).toBe('none');
+  const motion = await compactPanelMotionState(page);
+  expect(motion.transitionProperty).toContain('max-height');
+  expect(motion.maxHeight).not.toBe('0px');
 
   await clickInReviewsShadow(page, '.renuvex-pr-compact-trigger');
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(false);

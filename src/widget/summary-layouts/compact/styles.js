@@ -81,7 +81,6 @@ export var COMPACT_CSS = `
   }
   .renuvex-pr-compact-panel.renuvex-pr-open{
     visibility:visible;pointer-events:auto;
-    animation:renuvex-pr-grow-out 200ms ease-in-out forwards;
   }
 
   .renuvex-pr-compact-panel-inner{
@@ -110,6 +109,7 @@ export var COMPACT_CSS = `
   /* Desktop: summary padding sıfır — trigger sola yaslı */
   @media(min-width:601px){
     .renuvex-pr-summary-compact{display:flex;flex-direction:column;width:100%;gap:8px;padding:0;}
+    .renuvex-pr-compact-panel.renuvex-pr-open{animation:renuvex-pr-grow-out 200ms ease-in-out forwards;}
   }
 
   @media(max-width:600px){

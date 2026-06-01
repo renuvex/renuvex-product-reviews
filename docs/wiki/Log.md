@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-02 - fix | Keep compact mobile bar chart from replaying popover animation
+- Summary: Fixed the follow-up compact-mobile motion issue where the panel stayed open after a rating-bar filter, but the bar chart visually disappeared/reappeared. Root cause was the desktop popover `renuvex-pr-grow-out` animation living on the shared `.renuvex-pr-compact-panel.renuvex-pr-open` rule, so mobile accordion redraws replayed the desktop opacity/scale animation.
+- Key source changes: `src/widget/summary-layouts/compact/styles.js` now scopes the grow-out animation to desktop (`min-width:601px`); mobile compact keeps only its `max-height` accordion transition. The runtime smoke test now asserts the mobile open panel has `animation-name:none` after bar-track filtering while retaining the accordion transition. Rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Verification: The strengthened targeted Playwright test failed before the CSS fix with `animation-name: renuvex-pr-grow-out`, then passed after the fix and widget rebuild.
+- Updated wiki: [[Widget_Architecture]], [[Test_Strategy]]
+
 ## 2026-06-02 - fix | Preserve compact mobile rating panel after bar filter
 - Summary: Fixed compact summary mobile behavior so tapping a rating bar/track applies the rating filter without collapsing the mobile accordion. Desktop compact remains a popover with light-dismiss; the mobile accordion stays open across review-section re-renders until the user closes it via the compact trigger/chevron.
 - Key source changes: `src/widget/summary-layouts/compact/index.js` owns the mobile-only open state keyed by product id; `src/widget/reviews-section/render.js` passes `productId` into summary layout render options. Added runtime smoke coverage in `tests/widget-runtime-smoke.spec.ts` and rebuilt `public/widget.js` + `public/widget-runtime/*`.
