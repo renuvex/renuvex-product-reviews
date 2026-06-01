@@ -24,11 +24,12 @@ import { SIZE_PRESETS, THUMBNAIL_PRESETS } from './render/size-presets.js';
 import { buildDisabledStateEl, buildReviewsErrorState } from './render/states.js';
 import { applyManualTheme } from './render/theme-vars.js';
 import { buildPhotoStrip } from './render/photo-strip.js';
+import { createReviewHandlers } from './render/handlers.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
-  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentBadgeSettings, currentProductName,
-  setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
+  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings,
+  setCurrentOrderBy, setCurrentPage, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
   setCurrentReviewsData,
   photoStripReviews, loadedLightboxReviews,
   setLoadedLightboxReviews, getNewLoadedLightboxReviews, appendLoadedLightboxReviews,
@@ -83,6 +84,13 @@ export async function render(productId, settings, reviewsData, productName, orde
   if (orderBy) setCurrentOrderBy(orderBy);
   if (page) setCurrentPage(page);
   if (reviewsData !== null && reviewsData !== undefined) setCurrentReviewsData(reviewsData);
+
+  // Review interaction handlers (retry/filter/sort) are produced by a DI factory
+  // that re-runs THIS render via injection — render/handlers.js never imports
+  // render.js, so there is no circular import. The handlers read live state +
+  // the shared request token, so behavior is identical to the former inline
+  // closures.
+  var handlers = createReviewHandlers({ render: render });
 
   try {
     // Başlık görünürlüğü:
@@ -258,21 +266,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       }
 
       if (hasReviewsFetchError) {
-        widget.appendChild(buildReviewsErrorState(data.message, async function () {
-          var token = beginReviewRequest();
-          var productIdSnapshot = currentProductId;
-          var orderBySnapshot = currentOrderBy;
-          var ratingFilterSnapshot = currentRatingFilter;
-          var hasImagesSnapshot = currentHasImages;
-          var retried = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
-          if (!isCurrentReviewRequest(token, {
-            productId: productIdSnapshot,
-            orderBy: orderBySnapshot,
-            ratingFilter: ratingFilterSnapshot,
-            hasImages: hasImagesSnapshot,
-          })) return;
-          await render(currentProductId, currentSettings, retried, currentProductName, currentOrderBy, 1, currentBadgeSettings);
-        }));
+        widget.appendChild(buildReviewsErrorState(data.message, handlers.onRetry));
         contentEl.appendChild(widget);
         // Mirror the global icon sprite into the shadow root so <use href="#id">
         // can resolve to cloned <symbol>s (sprite refs don't cross shadow).
@@ -307,47 +301,8 @@ export async function render(productId, settings, reviewsData, productName, orde
           currentRatingFilter: currentRatingFilter,
           currentOrderBy: currentOrderBy,
           currentHasImages: currentHasImages,
-          onFilterChange: async function (starVal) {
-            var token = beginReviewRequest();
-            var nextRatingFilter = currentRatingFilter === starVal ? null : starVal;
-            var productIdSnapshot = currentProductId;
-            var orderBySnapshot = currentOrderBy;
-            var hasImagesSnapshot = currentHasImages;
-            setCurrentRatingFilter(nextRatingFilter);
-            setCurrentPage(1);
-            var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, nextRatingFilter, currentHasImages);
-            if (!isCurrentReviewRequest(token, {
-              productId: productIdSnapshot,
-              orderBy: orderBySnapshot,
-              page: 1,
-              ratingFilter: nextRatingFilter,
-              hasImages: hasImagesSnapshot,
-            })) return;
-            await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
-          },
-          onSortChange: async function (orderBy, isPhotos) {
-            var token = beginReviewRequest();
-            var productIdSnapshot = currentProductId;
-            var ratingFilterSnapshot = currentRatingFilter;
-            setCurrentPage(1);
-            var nextOrderBy = orderBy;
-            var nextHasImages = false;
-            if (isPhotos) {
-              nextHasImages = true;
-              nextOrderBy = 'newest';
-            }
-            setCurrentHasImages(nextHasImages);
-            setCurrentOrderBy(nextOrderBy);
-            var newData = await fetchReviews(currentProductId, nextOrderBy, 1, currentRatingFilter, nextHasImages);
-            if (!isCurrentReviewRequest(token, {
-              productId: productIdSnapshot,
-              orderBy: nextOrderBy,
-              page: 1,
-              ratingFilter: ratingFilterSnapshot,
-              hasImages: nextHasImages,
-            })) return;
-            await render(currentProductId, currentSettings, newData, currentProductName, nextOrderBy, 1);
-          },
+          onFilterChange: handlers.onFilterChange,
+          onSortChange: handlers.onSortChange,
         });
         widget.appendChild(summary);
       } else {
