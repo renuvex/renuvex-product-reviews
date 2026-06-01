@@ -24,6 +24,11 @@ source_files:
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/render/theme-vars.js"
+  - "src/widget/reviews-section/render/size-presets.js"
+  - "src/widget/reviews-section/render/states.js"
+  - "src/widget/reviews-section/render/photo-strip.js"
+  - "src/widget/reviews-section/render/request-token.js"
   - "src/widget/reviews-section/styles.js"
   - "src/widget/reviews-section/styles/base.js"
   - "src/widget/reviews-section/styles/summary-controls.js"
@@ -55,7 +60,7 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared review-section CSS ownership lives under `reviews-section/styles/*.js`. Layout-specific CSS lives in `review-layouts/*/styles.js` and `summary-layouts/*/styles.js` (card/classic defaults included). Neither belongs inside a theme adapter folder.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. `reviews-section/render.js` is the top-level render orchestrator; its pure builders (theme CSS vars, size presets, non-list states, photo strip, request race-token) live under `reviews-section/render/*.js` — extracted to shrink the orchestrator without touching the recursive handler/state flow. `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared review-section CSS ownership lives under `reviews-section/styles/*.js`. Layout-specific CSS lives in `review-layouts/*/styles.js` and `summary-layouts/*/styles.js` (card/classic defaults included). Neither belongs inside a theme adapter folder.
 
 ## Tree
 
@@ -91,7 +96,13 @@ src/widget/
 ├─ reviews-section/
 │  ├─ bootstrap.js                # Reviews section entry: settings, mount gate, initial fetch orchestration
 │  ├─ reviews-api.js              # Reviews/photoStrip fetch helpers and explicit fetch-error result
-│  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA)
+│  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA). Imports pure builders from render/*.
+│  ├─ render/                     # Pure builders/helpers extracted from render.js (no render() call inside)
+│  │  ├─ theme-vars.js            # applyManualTheme + hexToRgba: admin color settings → --renuvex-pr-* CSS vars
+│  │  ├─ size-presets.js          # SIZE_PRESETS + THUMBNAIL_PRESETS tables
+│  │  ├─ states.js                # buildDisabledStateEl + buildReviewsErrorState (non-list state DOM)
+│  │  ├─ photo-strip.js           # buildPhotoStrip(opts): photo strip section (openReviewModal/wireLightboxTrigger via DI)
+│  │  └─ request-token.js         # reviewRequestSeq race-token (beginReviewRequest/isCurrentReviewRequest)
 │  ├─ styles.js                  # CLASSIC_CSS aggregator for shared review-section CSS
 │  ├─ styles/
 │  │  ├─ base.js                 # Widget root, text safety, icons, mobile padding tokens

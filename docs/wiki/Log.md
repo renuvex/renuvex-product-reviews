@@ -20,6 +20,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-01 - refactor | Split review render.js — Phase 1 (pure builders)
+- Summary: Reduced `src/widget/reviews-section/render.js` from 832 to 452 lines by extracting render()-independent pure builders into a new `reviews-section/render/` submodule folder, mirroring the `review-form-modal/` thin-orchestrator precedent. Behavior-preserving: no DOM/class/CSS output change; the recursive handler/state flow and the `reviewRequestSeq` race-token contract are untouched (token centralized in `render/request-token.js`). Handler extraction (DI factory) is a deliberately deferred Phase 2.
+- Key source changes: New `render/{theme-vars,size-presets,states,photo-strip,request-token}.js`; `render.js` now imports them. `photo-strip.js` exposes `buildPhotoStrip(opts)` with `openReviewModal`/`wireLightboxTrigger` passed via DI to avoid a render↔modal cycle. Rebuilt `public/widget.js` + `public/widget-runtime/*`; removed stale runtime hash artifacts.
+- Verification: `pnpm build:widget`, `pnpm lint`, `pnpm check:widget-js` clean; full suite unchanged — unit 54, widget-runtime 16, widget-interactions 12, widget-network-smoke 25 (107 total) all green before and after.
+
 ## 2026-06-01 - refactor | Remove listing badge mount rollout gate
 - Summary: Completed the ADR_0017 listing mount cleanup. The temporary publicApiKey allowlist and legacy in-`<h2>` branch are gone; listing badge slots now mount as title siblings by default, with theme-specific exceptions handled only through adapter mount-point overrides.
 - Key source changes: Deleted `src/widget/core/rollout.js`, simplified `src/widget/listing-badges/inject.js resolveMount()` to adapter override then sibling mount, and added a browser regression in `tests/widget-network-smoke.spec.ts` proving slots are siblings of product titles and still use one bulk ratings request. Rebuilt `public/widget.js` and `public/widget-runtime/*`; removed stale runtime hash artifacts.

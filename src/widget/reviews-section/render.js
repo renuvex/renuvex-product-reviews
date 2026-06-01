@@ -1,6 +1,5 @@
 // reviews-section/render.js — Ana widget render fonksiyonu
 
-import { getFirstTrustedReviewImage, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
 import { fetchReviews, isReviewsFetchError } from './reviews-api.js';
 import { openReviewModal } from './review-modal.js';
 import { wireLightboxTrigger } from './lightbox-trigger.js';
@@ -10,7 +9,7 @@ import { wireLightboxTrigger } from './lightbox-trigger.js';
 // LIGHT /api/public/ratings fetch. This keeps the BIG review-section content
 // chunk out of "badge-enabled, no review mount" pages.
 import { CLASSIC_CSS } from './styles.js';
-import { getIconFromSettings, UI_CARET_LEFT, UI_CARET_RIGHT } from '../icons/index.js';
+import { getIconFromSettings } from '../icons/index.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
 import { openWriteForm } from '../summary-layouts/shared/write-action.js';
@@ -18,8 +17,13 @@ import { createOwnedSlot, setSlotContext } from '../core/slot.js';
 import { probeWidgetVisibility } from '../core/health.js';
 import { attachShadowHost, injectShadowStyles, getOrCreateShadowContent, HOST_RESET_CSS } from '../core/shadow.js';
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
-import { registerSpriteRoot, iconUseNode } from '../icons/star-sprite.js';
+import { registerSpriteRoot } from '../icons/star-sprite.js';
 import { isReviewsMountEnabled } from '../themes/current-adapter.js';
+import { beginReviewRequest, isCurrentReviewRequest } from './render/request-token.js';
+import { SIZE_PRESETS, THUMBNAIL_PRESETS } from './render/size-presets.js';
+import { buildDisabledStateEl, buildReviewsErrorState } from './render/states.js';
+import { applyManualTheme } from './render/theme-vars.js';
+import { buildPhotoStrip } from './render/photo-strip.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -29,65 +33,6 @@ import {
   photoStripReviews, loadedLightboxReviews,
   setLoadedLightboxReviews, getNewLoadedLightboxReviews, appendLoadedLightboxReviews,
 } from '../core/state.js';
-
-// ─── CSS değişkenleri ────────────────────────────────────────────────────────
-// Her UI elemanı kendi spesifik CSS değişkeniyle renklendirilir. Eski genel
-// tema token'ları (--renuvex-pr-bg, --renuvex-pr-text vb.) kaldırıldı; her renk doğrudan
-// schema'daki karşılığından veya sabit default'tan gelir.
-
-// Yardımcı: hex → rgba string (alpha verilerek). Structural translucency
-// (hover bg, border, track) türevleri için kullanılır.
-// 6-char (#rrggbb) ve 8-char (#rrggbbaa) hex destekler.
-function hexToRgba(hex, alpha) {
-  var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})?$/.exec(hex);
-  if (!m) return 'rgba(0,0,0,' + alpha + ')';
-  var r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
-  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-}
-
-// Disabled-state placeholder (admin preview when settings.enabled === false).
-// Built via DOM (not an HTML string) so it can render inside the shadow root.
-function buildDisabledStateEl(radius) {
-  var box = document.createElement('div');
-  box.style.cssText =
-    'padding:40px 20px;margin-top:24px;text-align:center;color:#6e6d7a;font-family:Inter,sans-serif;' +
-    'border:1px dashed #e3e1e5;border-radius:' + radius + 'px;background:#fafafa;display:flex;' +
-    'flex-direction:column;align-items:center;justify-content:center;gap:8px;';
-
-  var NS = 'http://www.w3.org/2000/svg';
-  var svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('width', '32');
-  svg.setAttribute('height', '32');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '2');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-  svg.style.cssText = 'color:#6e6d7a;margin-bottom:4px;';
-  var path = document.createElementNS(NS, 'path');
-  path.setAttribute('d', 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24');
-  var line = document.createElementNS(NS, 'line');
-  line.setAttribute('x1', '1');
-  line.setAttribute('y1', '1');
-  line.setAttribute('x2', '23');
-  line.setAttribute('y2', '23');
-  svg.appendChild(path);
-  svg.appendChild(line);
-
-  var titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-weight:500;font-size:18px;color:#1a191a;letter-spacing:-0.01em;';
-  titleEl.textContent = 'Widget şu anda Pasif durumda';
-
-  var descEl = document.createElement('div');
-  descEl.style.cssText = 'font-size:16px;color:#6e6d7a;max-width:380px;line-height:1.5;';
-  descEl.textContent = 'Canlı mağazanızda müşterileriniz hiçbir yorum alanı görmeyecektir.';
-
-  box.appendChild(svg);
-  box.appendChild(titleEl);
-  box.appendChild(descEl);
-  return box;
-}
 
 // Review section mount is OPT-IN: it renders only where the merchant places
 // `<div data-renuvex-widget="reviews"></div>` in the theme. There is no
@@ -124,257 +69,6 @@ function getOrCreateReviewsSlot(anchorEl, productId) {
   setSlotContext(slot, { surface: 'reviews', productId: productId || '' });
   return slot;
 }
-
-// ─── Boyut Preset'leri ─────────────────────────────────────────────────────
-// Küçük / Orta / Büyük — tüm font ve ikon boyutlarını tek seçimle belirler.
-// Thumbnail boyutu ayrı preset (thumbnailSize).
-
-var SIZE_PRESETS = {
-  small: {
-    titleSize: 20, reviewTextSize: 12, reviewTitleSize: 14, authorSize: 12,
-    replyNameSize: 12, replyTextSize: 12, photoTitleSize: 14,
-    avgRatingSize: 36, avgStarSize: 48, reviewCountSize: 16, recommendSize: 12,
-    compactCountSize: 14,
-    btnTextSize: 12, barLabelSize: 18, barCountSize: 12,
-    reviewDateSize: 10, filterTextSize: 12, loadMoreSize: 12,
-    readMoreSize: 10, reviewStarSize: 18,
-    minimalAvgSize: 18,
-    heroAvgSize: 74,
-  },
-  medium: {
-    titleSize: 24, reviewTextSize: 14, reviewTitleSize: 16, authorSize: 14,
-    replyNameSize: 13, replyTextSize: 13, photoTitleSize: 16,
-    avgRatingSize: 46, avgStarSize: 58, reviewCountSize: 20, recommendSize: 14,
-    compactCountSize: 16,
-    btnTextSize: 14, barLabelSize: 22, barCountSize: 14,
-    reviewDateSize: 12, filterTextSize: 14, loadMoreSize: 14,
-    readMoreSize: 12, reviewStarSize: 22,
-    minimalAvgSize: 22,
-    heroAvgSize: 90,
-  },
-  large: {
-    titleSize: 28, reviewTextSize: 16, reviewTitleSize: 18, authorSize: 16,
-    replyNameSize: 15, replyTextSize: 15, photoTitleSize: 18,
-    avgRatingSize: 56, avgStarSize: 68, reviewCountSize: 22, recommendSize: 16,
-    compactCountSize: 18,
-    btnTextSize: 16, barLabelSize: 26, barCountSize: 16,
-    reviewDateSize: 14, filterTextSize: 16, loadMoreSize: 16,
-    readMoreSize: 14, reviewStarSize: 26,
-    minimalAvgSize: 26,
-    heroAvgSize: 106,
-  },
-};
-
-var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
-var reviewRequestSeq = 0;
-
-function beginReviewRequest() {
-  reviewRequestSeq++;
-  return reviewRequestSeq;
-}
-
-function isCurrentReviewRequest(token, expected) {
-  if (token !== reviewRequestSeq) return false;
-  if (!expected) return true;
-  if (expected.productId !== undefined && currentProductId !== expected.productId) return false;
-  if (expected.orderBy !== undefined && currentOrderBy !== expected.orderBy) return false;
-  if (expected.page !== undefined && currentPage !== expected.page) return false;
-  if (expected.ratingFilter !== undefined && currentRatingFilter !== expected.ratingFilter) return false;
-  if (expected.hasImages !== undefined && currentHasImages !== expected.hasImages) return false;
-  return true;
-}
-
-function buildReviewsErrorState(message, onRetry) {
-  var wrap = document.createElement('div');
-  wrap.className = 'renuvex-pr-state-msg renuvex-pr-state-error';
-  wrap.setAttribute('role', 'status');
-  wrap.setAttribute('aria-live', 'polite');
-
-  var text = document.createElement('div');
-  text.className = 'renuvex-pr-state-error-text';
-  text.textContent = message || 'Yorumlar şu anda yüklenemiyor.';
-  wrap.appendChild(text);
-
-  var retryBtn = document.createElement('button');
-  retryBtn.type = 'button';
-  retryBtn.className = 'renuvex-pr-state-retry';
-  retryBtn.textContent = 'Tekrar Dene';
-  retryBtn.onclick = async function () {
-    retryBtn.disabled = true;
-    retryBtn.textContent = 'Tekrar deneniyor...';
-    await onRetry();
-  };
-  wrap.appendChild(retryBtn);
-
-  return wrap;
-}
-
-function applyManualTheme(root, settings) {
-  // Grup 1 — Genel
-  // Widget container background/border always transparent (store theme owns it).
-
-  // Grup 2 — Başlık & Özet
-  var headerTitle = settings.headerTitleColor || '#111111';
-  var headerAvg = settings.headerAvgColor || '#111111';
-  var headerCount = settings.headerCountColor || '#111111';
-  var headerRecommend = settings.headerRecommendColor || '#111111';
-
-  // Grup 3 — Puan Dağılımı
-  var barFill = settings.barFillColor || '#111111';
-  var barTrack = settings.barTrackColor || '#e5e7eb';
-  // Bar track stays independent so chart contrast can be tuned separately.
-  var barCount = settings.barCountColor || '#111111';
-  var barHoverBg = hexToRgba(barFill, 0.06);
-
-  // Grup 6 — Yorum Kartı (reviewStarColor önce tanımlanmalı)
-  var reviewStarColor = settings.reviewStarColor || '#f59e0b';
-
-  // Grup 4 — Butonlar
-  var btnBg = settings.btnBgColor || '#111111';
-  var btnText = settings.btnTextColor || '#ffffff';
-  var btnBorder = settings.btnBorderColor || '#111111';
-  var filterBg = settings.filterBtnBgColor || '#111111';
-  var filterText = settings.filterBtnTextColor || '#ffffff';
-  var filterBorder = settings.filterBtnBorderColor || '#111111';
-
-  // Grup 5 — Filtre Menüsü
-  var filterMenuBg = settings.filterMenuBgColor || '#ffffff';
-  var filterMenuBorder = settings.filterMenuBorderColor || '#e5e7eb';
-  var filterItemText = settings.filterItemTextColor || '#111111';
-  var filterItemHoverBg = settings.filterItemHoverBgColor || '#f3f4f6';
-  var filterItemActive = settings.filterItemActiveColor || '#111111';
-
-  // Grup 6 — Yorum Kartı (reviewStarColor yukarıda Grup 3'te tanımlandı)
-  var reviewTitleColor = settings.reviewTitleColor || '#111111';
-  var reviewAuthorColor = settings.reviewAuthorColor || '#111111';
-  var reviewDateColor = settings.reviewDateColor || '#5e5e5e';
-  var reviewBodyColor = settings.reviewBodyColor || '#111111';
-  var reviewBorderColor = settings.reviewBorderColor || '#e5e7eb';
-
-  // Grup 7 — Mağaza Yanıtı
-  var replyBgVar = settings.replyBgColor || '#f9fafb';
-  var replyBorderVar = settings.replyBorderColor || '#747474';
-  var replyLabelColor = settings.replyLabelColor || '#111111';
-  var replyTextVar = settings.replyTextColor || '#111111';
-
-  // Grup 9 — Fotoğraf Galerisi
-  var photoTitle = settings.photoTitleColor || '#111111';
-  var photoImageBorder = hexToRgba('#111111', 0.05);
-  var photoArrowBg = settings.photoArrowBgColor || '#ffffff';
-  var photoArrowText = settings.photoArrowTextColor || '#111111';
-  var photoArrowBorder = hexToRgba('#111111', 0.12);
-
-  // Group 10 - Review form
-  // Form tokens drive the modal review wizard.
-  // The overlay color is intentionally not mapped here; it stays fixed.
-  // Primary / secondary split: primary = titles, inputs; secondary = subtitles,
-  // labels, notice, placeholder. Both opaque — no alpha derivatives.
-  var formBg = settings.formBgColor || '#ffffff';
-  var formPrimary = settings.formPrimaryTextColor || '#111111';
-  var formSecondary = settings.formSecondaryTextColor || '#3b3b3b';
-  var inputTextVar = settings.inputTextColor || formPrimary;
-  var inputBorderVar = settings.inputBorderColor || '#d1d5db';
-  var placeholderColor = settings.placeholderColor || '#9ca3af';
-  var formStepBarColor = settings.formStepBarColor || '#111111';
-  var formBtnBg = settings.formBtnBgColor || '#111111';
-  var formBtnText = settings.formBtnTextColor || '#ffffff';
-  var formBtnBorder = settings.formBtnBorderColor || '#111111';
-  var formNavHoverBg = hexToRgba(formBtnBg, 0.06);
-  var formBtnDisabledBg = hexToRgba(formBtnBg, 0.18);
-  var formBtnDisabledText = hexToRgba(formBtnText, 0.85);
-  var formSubtleBg = hexToRgba(formPrimary, 0.06);
-
-  // Grup 11 — Daha Fazla Göster
-  var loadMoreBg = settings.loadMoreBgColor || '#ffffff';
-  var loadMoreText = settings.loadMoreTextColor || '#111111';
-  var loadMoreBorder = settings.loadMoreBorderColor || '#111111';
-
-  var vars = {
-    // Grup 1 — Genel
-    '--renuvex-pr-widget-bg': '#ffffff00',
-    '--renuvex-pr-widget-border': '#ffffff00',
-
-    // Grup 2 — Başlık & Özet
-    '--renuvex-pr-header-title': headerTitle,
-    '--renuvex-pr-header-avg': headerAvg,
-    '--renuvex-pr-header-count': headerCount,
-    '--renuvex-pr-header-recommend': headerRecommend,
-
-    // Grup 3 — Puan Dağılımı
-    '--renuvex-pr-bar-fill': barFill,
-    '--renuvex-pr-bar-track': barTrack,
-    '--renuvex-pr-bar-count': barCount,
-    '--renuvex-pr-bar-hover-bg': barHoverBg,
-
-    // Grup 4 — Butonlar
-    '--renuvex-pr-btn-bg': btnBg,
-    '--renuvex-pr-btn-text': btnText,
-    '--renuvex-pr-btn-border': btnBorder,
-    '--renuvex-pr-filter-btn-bg': filterBg,
-    '--renuvex-pr-filter-btn-text': filterText,
-    '--renuvex-pr-filter-btn-border': filterBorder,
-
-    // Grup 5 — Filtre Menüsü
-    '--renuvex-pr-filter-menu-bg': filterMenuBg,
-    '--renuvex-pr-filter-menu-border': filterMenuBorder,
-    '--renuvex-pr-filter-item-text': filterItemText,
-    '--renuvex-pr-filter-item-hover-bg': filterItemHoverBg,
-    '--renuvex-pr-filter-item-active': filterItemActive,
-
-    // Grup 6 — Yorum Kartı
-    '--renuvex-pr-review-title': reviewTitleColor,
-    '--renuvex-pr-review-author': reviewAuthorColor,
-    '--renuvex-pr-review-date': reviewDateColor,
-    '--renuvex-pr-review-body': reviewBodyColor,
-    '--renuvex-pr-review-border': reviewBorderColor,
-    '--renuvex-pr-review-star-color': reviewStarColor,
-
-    // Grup 7 — Mağaza Yanıtı
-    '--renuvex-pr-reply-bg-color': replyBgVar,
-    '--renuvex-pr-reply-border': replyBorderVar,
-    '--renuvex-pr-reply-label': replyLabelColor,
-    '--renuvex-pr-reply-text': replyTextVar,
-
-    // Grup 9 — Fotoğraf Galerisi
-    '--renuvex-pr-photo-title': photoTitle,
-    '--renuvex-pr-photo-image-border': photoImageBorder,
-    '--renuvex-pr-photo-arrow-bg': photoArrowBg,
-    '--renuvex-pr-photo-arrow-text': photoArrowText,
-    '--renuvex-pr-photo-arrow-border': photoArrowBorder,
-
-    // Grup 10 — Form wizard
-    '--renuvex-pr-fwizard-bg': formBg,
-    '--renuvex-pr-fwizard-text': formPrimary,
-    '--renuvex-pr-fwizard-secondary-text': formSecondary,
-    '--renuvex-pr-fwizard-input-bg': formBg,
-    '--renuvex-pr-fwizard-input-text': inputTextVar,
-    '--renuvex-pr-fwizard-input-border': inputBorderVar,
-    '--renuvex-pr-fwizard-placeholder': placeholderColor,
-    '--renuvex-pr-fwizard-close-text': formPrimary,
-    '--renuvex-pr-fwizard-close-hover-bg': formSubtleBg,
-    '--renuvex-pr-fwizard-progress-bg': formSubtleBg,
-    '--renuvex-pr-fwizard-progress-active': formStepBarColor,
-    '--renuvex-pr-fwizard-btn-bg': formBtnBg,
-    '--renuvex-pr-fwizard-btn-text': formBtnText,
-    '--renuvex-pr-fwizard-btn-border': formBtnBorder,
-    '--renuvex-pr-fwizard-btn-disabled-bg': formBtnDisabledBg,
-    '--renuvex-pr-fwizard-btn-disabled-text': formBtnDisabledText,
-    '--renuvex-pr-fwizard-nav-hover-bg': formNavHoverBg,
-
-    // Grup 11 — Daha Fazla Göster
-    '--renuvex-pr-load-more-bg': loadMoreBg,
-    '--renuvex-pr-load-more-text': loadMoreText,
-    '--renuvex-pr-load-more-border': loadMoreBorder,
-  };
-
-  Object.keys(vars).forEach(function (k) { root.style.setProperty(k, vars[k]); });
-
-  if (typeof window !== 'undefined' && window.__ikasPreviewMode && document.body) {
-    document.body.style.background = 'transparent';
-    document.documentElement.style.background = 'transparent';
-  }
-}
-
 
 export async function render(productId, settings, reviewsData, productName, orderBy, page, badgeSettings) {
   if (renderInProgress) {
@@ -670,91 +364,17 @@ export async function render(productId, settings, reviewsData, productName, orde
       // `hasImages=true&limit=15&orderBy=newest` ile dolduruldu. Filtreden
       // ("Fotoğraflı" sort) ve load-more'dan bağımsız; sadece cache TTL (1 dk)
       // sonra arka planda yenilenir (Strateji A — newest-first rotation).
-      // ADR_0007: sabit 15 cap, admin ayarı yok.
-      var stripReviews = (photoStripReviews || []).filter(function (r) {
-        return getTrustedReviewImages(r).length > 0;
+      // ADR_0007: sabit 15 cap, admin ayarı yok. buildPhotoStrip null dönerse
+      // (galeri kapalı / foto filtresi aktif / foto yok) hiç eklenmez.
+      var photoSection = buildPhotoStrip({
+        settings: settings,
+        root: root,
+        currentHasImages: currentHasImages,
+        photoStripReviews: photoStripReviews,
+        openReviewModal: openReviewModal,
+        wireLightboxTrigger: wireLightboxTrigger,
       });
-      if (settings.showPhotoGallery !== false && !currentHasImages && stripReviews.length > 0) {
-        var photoSection = document.createElement('div');
-        photoSection.className = 'renuvex-pr-photo-section';
-
-        // Strip üstündeki başlık — admin paneldeki "Genel → Görsel Galeri Başlığı"
-        // ile özelleştirilebilir; toggle (showPhotoGalleryTitle) kapalıysa hiç render edilmez.
-        // Boyut --renuvex-pr-photo-title-size, renk --renuvex-pr-photo-title CSS variable üzerinden.
-        if (settings.showPhotoGalleryTitle !== false) {
-          var photoTitleText = (settings.photoGalleryTitle || '').trim() || 'Fotoğraflı Yorumlar';
-          var photoTitle = document.createElement('div');
-          photoTitle.className = 'renuvex-pr-photo-title';
-          photoTitle.textContent = photoTitleText;
-          photoSection.appendChild(photoTitle);
-        }
-
-        // Thumbnail aspect ratio review layout'a göre otomatik:
-        // card review fotoları 1:1 → strip de kare; list/gallery review fotoları
-        // 3:4 portre → strip de portre. Tutarlı görsel akış.
-        var thumbAspect = settings.reviewLayout === 'card' ? '1/1' : '3/4';
-        root.style.setProperty('--renuvex-pr-photo-thumb-aspect', thumbAspect);
-
-        var photoStrip = document.createElement('div');
-        photoStrip.className = 'renuvex-pr-photo-strip';
-
-        // Backend cap=15 garantili; defansif iç sınır da 15.
-        // `<img>` width/height attribute'ları CSS `--renuvex-pr-photo-thumb-aspect` ile uyumlu
-        // olmalı (card: 1/1, list/gallery: 3/4) — CLS rezervi tarayıcı tarafından doğru
-        // hesaplanır. width PHOTO_STRIP_THUMB_WIDTH (300); height layout'a göre.
-        var stripWidth = PHOTO_STRIP_THUMB_WIDTH;
-        var stripHeight = settings.reviewLayout === 'card' ? PHOTO_STRIP_THUMB_WIDTH : Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3);
-        var thumbCount = 0;
-        stripReviews.forEach(function (r) {
-          if (thumbCount >= 15) return;
-          var firstImg = getFirstTrustedReviewImage(r);
-          if (!firstImg) return;
-          var thumb = document.createElement('img');
-          var attrs = buildResponsiveImgAttrs(firstImg, PHOTO_STRIP_THUMB_WIDTH);
-          thumb.src = attrs.src;
-          thumb.srcset = attrs.srcset;
-          // İlk 3 thumbnail above-the-fold ihtimaline karşı eager; gerisi lazy.
-          // Strip her zaman summary altında; mobile'da bazen ilk render'da kısmen
-          // viewport içinde olabiliyor — eager kuyruğu çok küçük tuttuk.
-          thumb.loading = thumbCount < 3 ? 'eager' : 'lazy';
-          thumb.decoding = 'async';
-          thumb.width = stripWidth;
-          thumb.height = stripHeight;
-          thumb.className = 'renuvex-pr-photo-strip-thumb';
-          thumb.alt = 'Yorum fotoğrafı';
-          hideOnImageError(thumb);
-          // Lightbox navigasyonu strip dataset'i içinde gezer — load-more sonrası
-          // ana liste değişse bile lightbox tutarlı kalır (K1.b çözümü).
-          (function (url, review) {
-            wireLightboxTrigger(thumb, function () { openReviewModal(review, url, stripReviews); });
-          })(firstImg, r);
-          photoStrip.appendChild(thumb);
-          thumbCount++;
-        });
-
-        // Desktop ok butonları
-        var prevArrow = document.createElement('button');
-        prevArrow.className = 'renuvex-pr-photo-strip-arrow renuvex-pr-photo-strip-arrow-prev';
-        var prevArrowIcon = iconUseNode(UI_CARET_LEFT);
-        if (prevArrowIcon) prevArrow.appendChild(prevArrowIcon);
-        prevArrow.setAttribute('aria-label', 'Önceki');
-        prevArrow.onclick = function () { photoStrip.scrollBy({ left: -200, behavior: 'smooth' }); };
-
-        var nextArrow = document.createElement('button');
-        nextArrow.className = 'renuvex-pr-photo-strip-arrow renuvex-pr-photo-strip-arrow-next';
-        var nextArrowIcon = iconUseNode(UI_CARET_RIGHT);
-        if (nextArrowIcon) nextArrow.appendChild(nextArrowIcon);
-        nextArrow.setAttribute('aria-label', 'Sonraki');
-        nextArrow.onclick = function () { photoStrip.scrollBy({ left: 200, behavior: 'smooth' }); };
-
-        var stripWrap = document.createElement('div');
-        stripWrap.className = 'renuvex-pr-photo-strip-wrap';
-        stripWrap.appendChild(prevArrow);
-        stripWrap.appendChild(photoStrip);
-        stripWrap.appendChild(nextArrow);
-        photoSection.appendChild(stripWrap);
-        widget.appendChild(photoSection);
-      }
+      if (photoSection) widget.appendChild(photoSection);
 
       if (reviews.length === 0) {
         var empty = document.createElement('p');

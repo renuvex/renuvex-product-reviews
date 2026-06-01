@@ -50,6 +50,11 @@ source_files:
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/render/theme-vars.js"
+  - "src/widget/reviews-section/render/photo-strip.js"
+  - "src/widget/reviews-section/render/states.js"
+  - "src/widget/reviews-section/render/request-token.js"
+  - "src/widget/reviews-section/render/size-presets.js"
   - "src/widget/reviews-section/lightbox-trigger.js"
   - "src/widget/reviews-section/styles.js"
   - "src/widget/reviews-section/styles/base.js"
@@ -88,6 +93,7 @@ source_files:
 - 2026-06-01: `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared CSS ownership moved to `styles/{base,summary-controls,review-primitives,photo-strip,lightbox}.js`.
 - 2026-06-01: `PAGE_VIEW` debounce is semantic, not global time-only. `storefront-context.js` dedupes same `pageType + pathname/search` events within 800 ms but lets distinct fast transitions such as `PRODUCT -> CATEGORY` start listing lifecycle immediately.
 - 2026-06-01: Listing badge sibling mount is the default contract. The temporary publicApiKey rollout gate and legacy in-title branch were removed; adapter overrides are the only exception path.
+- 2026-06-01: `reviews-section/render.js` shrunk 832→452 lines (Phase 1) by extracting pure builders to `render/{theme-vars,size-presets,states,photo-strip,request-token}.js`. Behavior-preserving (107 tests unchanged); recursive handler/state flow stays in render.js — handler split is a deferred Phase 2.
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.

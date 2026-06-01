@@ -1,0 +1,184 @@
+// reviews-section/render/theme-vars.js — admin color settings -> CSS variables.
+//
+// Maps the merchant's admin color settings onto --renuvex-pr-* CSS custom
+// properties on document.documentElement. The variables inherit across the
+// review section's shadow boundary, so setting them on :root still reaches the
+// shadow-isolated review content. Each UI element reads its own specific
+// variable; there are no generic theme tokens. Pure function — no DOM build, no
+// render() call.
+
+// Yardimci: hex -> rgba string (alpha verilerek). Structural translucency
+// (hover bg, border, track) turevleri icin kullanilir.
+// 6-char (#rrggbb) ve 8-char (#rrggbbaa) hex destekler.
+export function hexToRgba(hex, alpha) {
+  var m = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})?$/.exec(hex);
+  if (!m) return 'rgba(0,0,0,' + alpha + ')';
+  var r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+export function applyManualTheme(root, settings) {
+  // Grup 1 — Genel
+  // Widget container background/border always transparent (store theme owns it).
+
+  // Grup 2 — Başlık & Özet
+  var headerTitle = settings.headerTitleColor || '#111111';
+  var headerAvg = settings.headerAvgColor || '#111111';
+  var headerCount = settings.headerCountColor || '#111111';
+  var headerRecommend = settings.headerRecommendColor || '#111111';
+
+  // Grup 3 — Puan Dağılımı
+  var barFill = settings.barFillColor || '#111111';
+  var barTrack = settings.barTrackColor || '#e5e7eb';
+  // Bar track stays independent so chart contrast can be tuned separately.
+  var barCount = settings.barCountColor || '#111111';
+  var barHoverBg = hexToRgba(barFill, 0.06);
+
+  // Grup 6 — Yorum Kartı (reviewStarColor önce tanımlanmalı)
+  var reviewStarColor = settings.reviewStarColor || '#f59e0b';
+
+  // Grup 4 — Butonlar
+  var btnBg = settings.btnBgColor || '#111111';
+  var btnText = settings.btnTextColor || '#ffffff';
+  var btnBorder = settings.btnBorderColor || '#111111';
+  var filterBg = settings.filterBtnBgColor || '#111111';
+  var filterText = settings.filterBtnTextColor || '#ffffff';
+  var filterBorder = settings.filterBtnBorderColor || '#111111';
+
+  // Grup 5 — Filtre Menüsü
+  var filterMenuBg = settings.filterMenuBgColor || '#ffffff';
+  var filterMenuBorder = settings.filterMenuBorderColor || '#e5e7eb';
+  var filterItemText = settings.filterItemTextColor || '#111111';
+  var filterItemHoverBg = settings.filterItemHoverBgColor || '#f3f4f6';
+  var filterItemActive = settings.filterItemActiveColor || '#111111';
+
+  // Grup 6 — Yorum Kartı (reviewStarColor yukarıda Grup 3'te tanımlandı)
+  var reviewTitleColor = settings.reviewTitleColor || '#111111';
+  var reviewAuthorColor = settings.reviewAuthorColor || '#111111';
+  var reviewDateColor = settings.reviewDateColor || '#5e5e5e';
+  var reviewBodyColor = settings.reviewBodyColor || '#111111';
+  var reviewBorderColor = settings.reviewBorderColor || '#e5e7eb';
+
+  // Grup 7 — Mağaza Yanıtı
+  var replyBgVar = settings.replyBgColor || '#f9fafb';
+  var replyBorderVar = settings.replyBorderColor || '#747474';
+  var replyLabelColor = settings.replyLabelColor || '#111111';
+  var replyTextVar = settings.replyTextColor || '#111111';
+
+  // Grup 9 — Fotoğraf Galerisi
+  var photoTitle = settings.photoTitleColor || '#111111';
+  var photoImageBorder = hexToRgba('#111111', 0.05);
+  var photoArrowBg = settings.photoArrowBgColor || '#ffffff';
+  var photoArrowText = settings.photoArrowTextColor || '#111111';
+  var photoArrowBorder = hexToRgba('#111111', 0.12);
+
+  // Group 10 - Review form
+  // Form tokens drive the modal review wizard.
+  // The overlay color is intentionally not mapped here; it stays fixed.
+  // Primary / secondary split: primary = titles, inputs; secondary = subtitles,
+  // labels, notice, placeholder. Both opaque — no alpha derivatives.
+  var formBg = settings.formBgColor || '#ffffff';
+  var formPrimary = settings.formPrimaryTextColor || '#111111';
+  var formSecondary = settings.formSecondaryTextColor || '#3b3b3b';
+  var inputTextVar = settings.inputTextColor || formPrimary;
+  var inputBorderVar = settings.inputBorderColor || '#d1d5db';
+  var placeholderColor = settings.placeholderColor || '#9ca3af';
+  var formStepBarColor = settings.formStepBarColor || '#111111';
+  var formBtnBg = settings.formBtnBgColor || '#111111';
+  var formBtnText = settings.formBtnTextColor || '#ffffff';
+  var formBtnBorder = settings.formBtnBorderColor || '#111111';
+  var formNavHoverBg = hexToRgba(formBtnBg, 0.06);
+  var formBtnDisabledBg = hexToRgba(formBtnBg, 0.18);
+  var formBtnDisabledText = hexToRgba(formBtnText, 0.85);
+  var formSubtleBg = hexToRgba(formPrimary, 0.06);
+
+  // Grup 11 — Daha Fazla Göster
+  var loadMoreBg = settings.loadMoreBgColor || '#ffffff';
+  var loadMoreText = settings.loadMoreTextColor || '#111111';
+  var loadMoreBorder = settings.loadMoreBorderColor || '#111111';
+
+  var vars = {
+    // Grup 1 — Genel
+    '--renuvex-pr-widget-bg': '#ffffff00',
+    '--renuvex-pr-widget-border': '#ffffff00',
+
+    // Grup 2 — Başlık & Özet
+    '--renuvex-pr-header-title': headerTitle,
+    '--renuvex-pr-header-avg': headerAvg,
+    '--renuvex-pr-header-count': headerCount,
+    '--renuvex-pr-header-recommend': headerRecommend,
+
+    // Grup 3 — Puan Dağılımı
+    '--renuvex-pr-bar-fill': barFill,
+    '--renuvex-pr-bar-track': barTrack,
+    '--renuvex-pr-bar-count': barCount,
+    '--renuvex-pr-bar-hover-bg': barHoverBg,
+
+    // Grup 4 — Butonlar
+    '--renuvex-pr-btn-bg': btnBg,
+    '--renuvex-pr-btn-text': btnText,
+    '--renuvex-pr-btn-border': btnBorder,
+    '--renuvex-pr-filter-btn-bg': filterBg,
+    '--renuvex-pr-filter-btn-text': filterText,
+    '--renuvex-pr-filter-btn-border': filterBorder,
+
+    // Grup 5 — Filtre Menüsü
+    '--renuvex-pr-filter-menu-bg': filterMenuBg,
+    '--renuvex-pr-filter-menu-border': filterMenuBorder,
+    '--renuvex-pr-filter-item-text': filterItemText,
+    '--renuvex-pr-filter-item-hover-bg': filterItemHoverBg,
+    '--renuvex-pr-filter-item-active': filterItemActive,
+
+    // Grup 6 — Yorum Kartı
+    '--renuvex-pr-review-title': reviewTitleColor,
+    '--renuvex-pr-review-author': reviewAuthorColor,
+    '--renuvex-pr-review-date': reviewDateColor,
+    '--renuvex-pr-review-body': reviewBodyColor,
+    '--renuvex-pr-review-border': reviewBorderColor,
+    '--renuvex-pr-review-star-color': reviewStarColor,
+
+    // Grup 7 — Mağaza Yanıtı
+    '--renuvex-pr-reply-bg-color': replyBgVar,
+    '--renuvex-pr-reply-border': replyBorderVar,
+    '--renuvex-pr-reply-label': replyLabelColor,
+    '--renuvex-pr-reply-text': replyTextVar,
+
+    // Grup 9 — Fotoğraf Galerisi
+    '--renuvex-pr-photo-title': photoTitle,
+    '--renuvex-pr-photo-image-border': photoImageBorder,
+    '--renuvex-pr-photo-arrow-bg': photoArrowBg,
+    '--renuvex-pr-photo-arrow-text': photoArrowText,
+    '--renuvex-pr-photo-arrow-border': photoArrowBorder,
+
+    // Grup 10 — Form wizard
+    '--renuvex-pr-fwizard-bg': formBg,
+    '--renuvex-pr-fwizard-text': formPrimary,
+    '--renuvex-pr-fwizard-secondary-text': formSecondary,
+    '--renuvex-pr-fwizard-input-bg': formBg,
+    '--renuvex-pr-fwizard-input-text': inputTextVar,
+    '--renuvex-pr-fwizard-input-border': inputBorderVar,
+    '--renuvex-pr-fwizard-placeholder': placeholderColor,
+    '--renuvex-pr-fwizard-close-text': formPrimary,
+    '--renuvex-pr-fwizard-close-hover-bg': formSubtleBg,
+    '--renuvex-pr-fwizard-progress-bg': formSubtleBg,
+    '--renuvex-pr-fwizard-progress-active': formStepBarColor,
+    '--renuvex-pr-fwizard-btn-bg': formBtnBg,
+    '--renuvex-pr-fwizard-btn-text': formBtnText,
+    '--renuvex-pr-fwizard-btn-border': formBtnBorder,
+    '--renuvex-pr-fwizard-btn-disabled-bg': formBtnDisabledBg,
+    '--renuvex-pr-fwizard-btn-disabled-text': formBtnDisabledText,
+    '--renuvex-pr-fwizard-nav-hover-bg': formNavHoverBg,
+
+    // Grup 11 — Daha Fazla Göster
+    '--renuvex-pr-load-more-bg': loadMoreBg,
+    '--renuvex-pr-load-more-text': loadMoreText,
+    '--renuvex-pr-load-more-border': loadMoreBorder,
+  };
+
+  Object.keys(vars).forEach(function (k) { root.style.setProperty(k, vars[k]); });
+
+  if (typeof window !== 'undefined' && window.__ikasPreviewMode && document.body) {
+    document.body.style.background = 'transparent';
+    document.documentElement.style.background = 'transparent';
+  }
+}
