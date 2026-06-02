@@ -453,6 +453,36 @@ test('compact summary filter panel remains interactive after render', async ({ p
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('compact summary panel exposes an accessible dialog name', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'compact', reviewLayout: 'list' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-compact-trigger');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(true);
+
+  const panelA11y = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const panel = root?.querySelector('.renuvex-pr-compact-panel') as HTMLElement | null;
+    return {
+      label: panel?.getAttribute('aria-label') || '',
+      role: panel?.getAttribute('role') || '',
+    };
+  });
+
+  expect(panelA11y).toEqual({
+    label: 'Puan dağılımı',
+    role: 'dialog',
+  });
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 for (const layoutCase of LAYOUT_MATRIX) {
   test(`${layoutCase.name} desktop mouse filter can reopen immediately after sort`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });

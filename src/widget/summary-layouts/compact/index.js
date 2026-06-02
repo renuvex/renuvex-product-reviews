@@ -99,6 +99,7 @@ export function render(opts) {
   var panel = document.createElement('div');
   panel.className = 'renuvex-pr-compact-panel';
   panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'Puan dağılımı');
   panel.setAttribute('aria-hidden', 'true');
 
   var panelInner = document.createElement('div');
