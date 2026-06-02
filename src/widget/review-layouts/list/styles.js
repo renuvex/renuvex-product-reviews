@@ -36,9 +36,11 @@ export var LIST_CSS = `
   /* Title artık orta kolonun ilk elemanı; üst margin gerekmez. */
   .renuvex-pr-review-list-title{font-weight:600;font-size:var(--renuvex-pr-review-title-size,16px);color:var(--renuvex-pr-review-title,var(--renuvex-pr-text,rgba(0,0,0,1)));margin:0;}
   .renuvex-pr-review-list-body{margin-top:var(--renuvex-pr-gap-normal);line-height:1.6;color:var(--renuvex-pr-review-body,var(--renuvex-pr-text,rgba(0,0,0,1)));font-size:var(--renuvex-pr-review-text-size,14px);}
-  .renuvex-pr-review-list-media{display:flex;justify-content:flex-end;}
+  .renuvex-pr-review-list-media{display:flex;justify-content:flex-end;align-items:flex-start;}
   .renuvex-pr-review-list-media img{
-    width:100%;max-width:var(--renuvex-pr-list-photo-w,120px);aspect-ratio:3/4;object-fit:cover;
+    display:block;flex:0 0 auto;
+    width:var(--renuvex-pr-list-photo-w,120px);height:var(--renuvex-pr-list-photo-h,160px);max-width:100%;
+    aspect-ratio:3/4;object-fit:cover;
     border-radius:var(--renuvex-pr-radius,6px);
     border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
     cursor:pointer;
@@ -86,7 +88,9 @@ export var LIST_CSS = `
     .renuvex-pr-review-list-media::-webkit-scrollbar{display:none;}
     .renuvex-pr-review-list-media img{
       flex-shrink:0;
-      max-width:var(--renuvex-pr-list-photo-w-mobile,100px);
+      width:var(--renuvex-pr-list-photo-w-mobile,100px);
+      height:var(--renuvex-pr-list-photo-h-mobile,133.33px);
+      max-width:none;
       aspect-ratio:3/4;
       display:block;
     }

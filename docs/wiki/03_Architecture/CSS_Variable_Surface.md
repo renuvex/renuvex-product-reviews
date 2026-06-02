@@ -139,7 +139,7 @@ Per-element color variables. Each maps to a specific UI element so a merchant ca
 |---|---|
 | `--renuvex-pr-photo-thumb-aspect` | Photo strip thumbnail aspect ratio |
 | `--renuvex-pr-card-photo-w` | Card layout photo width |
-| `--renuvex-pr-list-photo-w` / `--renuvex-pr-list-photo-w-mobile` | List layout photo width (desktop + mobile) |
+| `--renuvex-pr-list-photo-w` / `--renuvex-pr-list-photo-h` / `--renuvex-pr-list-photo-w-mobile` / `--renuvex-pr-list-photo-h-mobile` | List layout review item photo box (desktop + mobile, fixed 3:4 portrait) |
 | `--renuvex-pr-gallery-photo-w` / `--renuvex-pr-gallery-photo-w-mobile` | Gallery layout photo width (desktop + mobile) |
 | `--renuvex-pr-thumbnail-size` | Top photo strip thumbnail display size (`thumbnailSize` setting: 80 / 110 / 140 px) |
 | `--renuvex-pr-star-size` / `--renuvex-pr-avg-star-size` | Star icon sizes inside summary/header |

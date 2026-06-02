@@ -127,6 +127,19 @@ async function fulfillJson(route: Route, body: unknown, status = 200): Promise<v
   });
 }
 
+async function dimensionsInReviewsShadow(page: Page, selector: string): Promise<{ width: number; height: number }> {
+  return page.evaluate((selector) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const el = root?.querySelector(selector) as HTMLElement | null;
+    if (!el) return { width: 0, height: 0 };
+    const rect = el.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }, selector);
+}
+
 async function clickFilterItemAt(page: Page, index: number): Promise<void> {
   await page.evaluate((index) => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
@@ -627,6 +640,50 @@ for (const photoLayout of [
     expect(widgetErrors(log)).toEqual([]);
   });
 }
+
+test('list review item photo keeps the medium 3:4 portrait box in a tall row', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'list',
+      size: 'medium',
+      thumbnailSize: 'medium',
+    },
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.get('hasImages') === 'true') {
+        await fulfillJson(route, reviewsPayload([
+          { id: 'strip-list-photo', title: 'Strip photo', images: [trustedReviewImage('strip-list-photo')] },
+        ], { allCount: 1, totalCount: 1 }));
+        return;
+      }
+
+      await fulfillJson(route, reviewsPayload([
+        {
+          id: 'list-photo-tall-row',
+          title: 'List photo tall row',
+          comment: Array(45).fill('Long review body').join(' '),
+          images: [trustedReviewImage('list-photo-tall-row')],
+          merchantReply: Array(18).fill('Merchant reply').join(' '),
+        },
+      ], { allCount: 1, totalCount: 1 }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-review-list-media img')).toBe(1);
+  await waitForWidgetIdle(page);
+
+  const box = await dimensionsInReviewsShadow(page, '.renuvex-pr-review-list-media img');
+
+  expect(box.width).toBeGreaterThan(105);
+  expect(box.width).toBeLessThan(115);
+  expect(box.height).toBeGreaterThan(142);
+  expect(box.height).toBeLessThan(152);
+  expect(widgetErrors(log)).toEqual([]);
+});
 
 test('rating bar chart filters from keyboard without changing badge or summary totals', async ({ page }) => {
   const ratingCounts = [0, 0, 1, 2, 9];

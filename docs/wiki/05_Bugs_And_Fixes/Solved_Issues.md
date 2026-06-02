@@ -3,8 +3,8 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-02
+last_verified: 2026-06-02
 confidence: medium
 tags:
   - bugs
@@ -24,6 +24,9 @@ source_files: []
 - Move long context into a dedicated `Bug_<title>.md` file under this folder.
 
 ## Log
+
+### 2026-06-02
+- Widget - List Review Photo Height Stretch - List layout review item photos now own both width and height via layout-local CSS variables, keeping the default medium box around `110 x 146.67px` instead of `110 x 400px`. [[Bug_List_Review_Photo_Height_Stretch]]
 
 ### 2026-06-01
 - Widget - Photo Strip Thumbnail Size Contract - "Fotoğraf Galeri Boyutu" now controls the top photo strip thumbnail size in card/list/gallery; list/gallery review item photos still follow general widget size. [[Bug_Photo_Strip_Thumbnail_Size_Contract]]

@@ -35,7 +35,7 @@ Before the fix:
 
 After the fix:
 - The top photo strip thumbnail size always follows `thumbnailSize` (`small` / `medium` / `large` -> 80 / 110 / 140 px).
-- List/gallery review item photos still follow the general widget `size` through their layout-local `--renuvex-pr-list-photo-w` and `--renuvex-pr-gallery-photo-w` variables.
+- List/gallery review item photos still follow the general widget `size` through layout-local item-photo variables; list owns a fixed 3:4 width/height pair, while gallery owns its photo column width.
 - The strip aspect ratio remains layout-aware: card is 1:1; list/gallery are 3:4.
 
 ## Proof

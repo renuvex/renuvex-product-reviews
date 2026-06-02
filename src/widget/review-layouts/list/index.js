@@ -18,12 +18,12 @@ export var meta = {
   // Review item photo column scales with the general widget size. The top
   // "Fotoğraflı Yorumlar" strip is a separate gallery surface and follows
   // thumbnailSize through --renuvex-pr-thumbnail-size.
-  // --renuvex-pr-list-photo-w        : desktop sağ kolon foto genişliği (3:4 portre)
-  // --renuvex-pr-list-photo-w-mobile : mobile, metin altına düşen foto genişliği (3:4 portre)
+  // --renuvex-pr-list-photo-w / h        : desktop sağ kolon foto kutusu (3:4 portre)
+  // --renuvex-pr-list-photo-w / h-mobile : mobile, metin altına düşen foto kutusu (3:4 portre)
   sizeOverrides: {
-    small:  { '--renuvex-pr-list-photo-w':  '80px', '--renuvex-pr-list-photo-w-mobile':  '80px' },
-    medium: { '--renuvex-pr-list-photo-w': '110px', '--renuvex-pr-list-photo-w-mobile': '100px' },
-    large:  { '--renuvex-pr-list-photo-w': '140px', '--renuvex-pr-list-photo-w-mobile': '110px' },
+    small:  { '--renuvex-pr-list-photo-w':  '80px', '--renuvex-pr-list-photo-h': '106.67px', '--renuvex-pr-list-photo-w-mobile':  '80px', '--renuvex-pr-list-photo-h-mobile': '106.67px' },
+    medium: { '--renuvex-pr-list-photo-w': '110px', '--renuvex-pr-list-photo-h': '146.67px', '--renuvex-pr-list-photo-w-mobile': '100px', '--renuvex-pr-list-photo-h-mobile': '133.33px' },
+    large:  { '--renuvex-pr-list-photo-w': '140px', '--renuvex-pr-list-photo-h': '186.67px', '--renuvex-pr-list-photo-w-mobile': '110px', '--renuvex-pr-list-photo-h-mobile': '146.67px' },
   },
 };
 
