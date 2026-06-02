@@ -5,6 +5,7 @@ import {
   ICONS,
   UI_CARET_LEFT,
   UI_CARET_RIGHT,
+  UI_CARET_DOWN,
   UI_CLOSE,
   PHOTO_ICON,
   PLUS_ICON,
@@ -20,6 +21,7 @@ function allRegistrySvgs(): string[] {
     ...filterSvgs,
     UI_CARET_LEFT,
     UI_CARET_RIGHT,
+    UI_CARET_DOWN,
     UI_CLOSE,
     PHOTO_ICON,
     PLUS_ICON,
@@ -76,17 +78,21 @@ describe('svgStringToSymbol (icon sprite conversion)', () => {
 // The widget's chrome glyphs (caret/close) and content icons (photo/plus) share one Phosphor
 // family in icons/ui-icons.js. Guard the family invariants + the lossless sprite conversion.
 describe('shared UI icons (Phosphor family)', () => {
-  test('every UI glyph is Phosphor 256-grid, stroke-16, currentColor', () => {
+  test('every UI glyph is Phosphor 256-grid with documented stroke weight and currentColor', () => {
     for (const svg of [UI_CARET_LEFT, UI_CARET_RIGHT, UI_CLOSE, PHOTO_ICON, PLUS_ICON]) {
       expect(svg).toContain('viewBox="0 0 256 256"');
       expect(svg).toContain('stroke="currentColor"');
       expect(svg).toContain('stroke-width="16"');
     }
+    expect(UI_CARET_DOWN).toContain('viewBox="0 0 256 256"');
+    expect(UI_CARET_DOWN).toContain('stroke="currentColor"');
+    expect(UI_CARET_DOWN).toContain('stroke-width="24"');
   });
 
   test('caret/close conversion preserves geometry (line/polyline carry no inner dims)', () => {
     expect(svgStringToSymbol(UI_CARET_LEFT, 'c')).toContain('<polyline points="160 208 80 128 160 48"');
     expect(svgStringToSymbol(UI_CARET_RIGHT, 'c')).toContain('<polyline points="96 48 176 128 96 208"');
+    expect(svgStringToSymbol(UI_CARET_DOWN, 'c')).toContain('<polyline points="208 96 128 176 48 96"');
     const x = svgStringToSymbol(UI_CLOSE, 'x');
     expect(x).toContain('<line x1="200" y1="56" x2="56" y2="200"');
     expect(x).toContain('<line x1="200" y1="200" x2="56" y2="56"');
@@ -103,8 +109,8 @@ describe('widget icon registry invariants', () => {
       expect(svg).toContain('viewBox="0 0 256 256"');
       expect(svg).toContain('currentColor');
       expect(svg).not.toContain('viewBox="0 0 24');
-      expect(svg).not.toContain('width="24"');
-      expect(svg).not.toContain('height="24"');
+      expect(svg).not.toMatch(/\swidth="24"/);
+      expect(svg).not.toMatch(/\sheight="24"/);
       expect(svg).not.toContain('✕');
       expect(svg).not.toContain('‹');
       expect(svg).not.toContain('›');
@@ -114,10 +120,11 @@ describe('widget icon registry invariants', () => {
     }
   });
 
-  test('all stroked widget icon SVGs use Phosphor regular stroke weight', () => {
+  test('all stroked widget icon SVGs use the documented Phosphor stroke weight', () => {
     for (const svg of allRegistrySvgs()) {
       const strokeWidths = Array.from(svg.matchAll(/stroke-width="([^"]+)"/g)).map((match) => match[1]);
-      expect(strokeWidths.every((width) => width === '16')).toBe(true);
+      const expectedStrokeWidth = svg === UI_CARET_DOWN ? '24' : '16';
+      expect(strokeWidths.every((width) => width === expectedStrokeWidth)).toBe(true);
     }
   });
 });

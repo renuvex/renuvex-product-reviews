@@ -4,7 +4,7 @@
 // Phosphor family as the rating/filter icons. Inline path data only — no icon package is
 // bundled. Source: Phosphor Icons - MIT.
 //
-// Conventions: viewBox 0 0 256 256, stroke-width 16, stroke="currentColor" (so each call
+// Conventions: viewBox 0 0 256 256, stroke="currentColor" (so each call
 // site's `color` drives the icon), and NO width/height — every consumer sizes the icon via
 // CSS (mirror `.renuvex-pr-fwizard-photo-add svg { width; height }`). Rendered through
 // iconUseSvg()/iconUseNode() (shared <symbol>/<use> sprite).
@@ -15,8 +15,9 @@ export var UI_CARET_LEFT =
 export var UI_CARET_RIGHT =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><polyline points="96 48 176 128 96 208" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>';
 
+// Compact summary only. It is rotated 180deg for the open/up state by compact CSS.
 export var UI_CARET_DOWN =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><polyline points="208 96 128 176 48 96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>';
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><polyline points="208 96 128 176 48 96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"/></svg>';
 
 export var UI_CLOSE =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><line x1="200" y1="56" x2="56" y2="200" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><line x1="200" y1="200" x2="56" y2="56" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/></svg>';
