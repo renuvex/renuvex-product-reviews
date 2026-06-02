@@ -69,7 +69,7 @@ export function render(opts) {
   var writeBtn = actions.querySelector('.renuvex-pr-write-btn');
 
   var actionsSlot = document.createElement('div');
-  actionsSlot.className = 'renuvex-pr-hero-actions renuvex-pr-desktop-only';
+  actionsSlot.className = 'renuvex-pr-hero-actions renuvex-pr-hero-desktop-only';
   if (writeBtn) actionsSlot.appendChild(writeBtn);
   if (filterWrap) actionsSlot.appendChild(filterWrap);
   summary.appendChild(actionsSlot);

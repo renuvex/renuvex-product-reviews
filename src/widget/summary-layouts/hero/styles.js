@@ -42,7 +42,7 @@ export var HERO_CSS = `
   .renuvex-pr-hero-actions{
     display:flex;align-items:center;gap:var(--renuvex-pr-col-gap,8px);flex:0 0 auto;
   }
-  .renuvex-pr-desktop-only{display:flex;}
+  .renuvex-pr-hero-desktop-only{display:flex;}
 
   @media(max-width:600px){
     .renuvex-pr-summary-hero{
@@ -53,7 +53,7 @@ export var HERO_CSS = `
     .renuvex-pr-hero-avg{font-size:calc(var(--renuvex-pr-hero-avg-size,90px) * 0.65);letter-spacing:-1px;}
     .renuvex-pr-hero-meta-row{width:auto;gap:8px;}
 
-    .renuvex-pr-desktop-only{display:none !important;}
+    .renuvex-pr-hero-desktop-only{display:none !important;}
 
     /* Filter ve Yorum Yap butonu yan yana */
     .renuvex-pr-hero-write-row{display:flex;width:100%;gap:8px;align-items:stretch;}
