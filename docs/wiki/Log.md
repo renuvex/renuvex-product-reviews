@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-02 - fix | Restore desktop mouse filter reopen after sort render
+- Summary: Fixed the desktop follow-up where selecting a summary filter option and immediately trying to reopen the filter could leave the button temporarily non-interactive (`pointer-events:none`, no pointer cursor). The bug was not compact-specific: a targeted runtime proof failed across classic, compact, hero, minimal, and split because mouse option activation reused the mobile `pointerdown` gesture shield before the sort-triggered render.
+- Key source changes: `src/widget/summary-layouts/shared/actions-block.js` now ignores mouse `pointerdown` and lets desktop mouse selection activate on the normal `click` event; touch/pen still activate on `pointerdown` and keep the scoped gesture shield. Removed the now-unused `swallowNextDismissClick()` export from `src/widget/summary-layouts/shared/popover-registry.js`. Added runtime coverage for immediate desktop filter reopen across all summary layouts and rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Verification target: runtime smoke must prove every summary layout keeps the filter button at `cursor:pointer` / `pointer-events:auto`, no gesture shield is armed by mouse `pointerdown`, and the filter reopens immediately after the sort render; existing mobile shield tests must still pass.
+- Updated wiki: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]], [[Bug_Index]], [[Widget_Architecture]], [[Test_Strategy]]
+
 ## 2026-06-02 - fix | Harden compact rating dim state and loader deploy propagation
 - Summary: Followed up the deployed compact-mobile rating flash report. Vercel confirmed production was already serving commit `142707d8` and `runtime-P3VKNO5E.js`, so the deploy was not missed. Hardened the remaining weak points: inactive filtered rating rows now use an explicit `.renuvex-pr-bar-dimmed` CSS state class with `opacity:0.35!important`, and stable widget entrypoints now revalidate on reload instead of staying behind the previous 5-minute client cache window.
 - Key source changes: `summary-layouts/shared/bar-chart.js`, `reviews-section/styles/summary-controls.js`, `tests/widget-runtime-smoke.spec.ts`, `tests/unit/widget-asset-cache.test.ts`, `vercel.json`, `scripts/build-widget.mjs`; rebuilt `public/widget.js` + `public/widget-runtime/*`.

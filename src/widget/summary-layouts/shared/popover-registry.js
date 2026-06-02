@@ -13,7 +13,7 @@
 //
 // Light-dismiss must ONLY dismiss: the dismiss click is swallowed so a tap that lands on a
 // photo-strip thumbnail (or any control) under an open menu just closes the menu instead of
-// also activating that element (opening the lightbox). Pointer-driven option activation
+// also activating that element (opening the lightbox). Touch/pen option activation
 // (which closes the menu on `pointerdown`, before the trailing `click`) arms the same
 // one-shot swallow so its trailing click cannot fall through either. On real phones, the
 // same gesture can also synthesize compat mouse events after the popover disappeared; the
@@ -82,7 +82,7 @@ function clearGestureShield() {
 }
 
 function handleDocClick(e) {
-  // A pointerdown-driven option activation already closed the menu; swallow the trailing
+  // A touch/pen option activation already closed the menu; swallow the trailing
   // click so it does not reach whatever is now under the pointer (e.g. a thumbnail).
   if (swallowNextClick) {
     swallowNextClick = false;
@@ -140,15 +140,7 @@ function armNextDismiss(scope) {
   }
 }
 
-// Arm a one-shot swallow of the next document click. Called by a popover that activates +
-// closes on `pointerdown` (before the click fires) so the trailing click cannot fall
-// through to an element under the now-closed popover. Auto-disarms if no click follows
-// (e.g. a canceled tap) so a later, unrelated click is not eaten.
-export function swallowNextDismissClick() {
-  armNextDismiss();
-}
-
-// Pointer/touch option activation can also leak compat mouse/active state to the control
+// Touch/pen option activation can also leak compat mouse/active state to the control
 // revealed under the now-closed menu before the trailing click is swallowed. Scope the
 // temporary shield to the review shadow content wrapper so true future taps keep normal
 // ADR_0011 press feedback, while same-gesture stray events cannot press through.

@@ -52,6 +52,20 @@ export function buildActionsBlock(opts) {
   function getGestureShieldScope() {
     return (widget && widget.parentNode) || widget || null;
   }
+  function armDismissAfterPointerActivation(e, restoreFocus) {
+    if (restoreFocus === true || !e) return;
+    if (e.type === 'touchstart') {
+      swallowNextDismissGesture(getGestureShieldScope());
+      return;
+    }
+    if (e.type === 'pointerdown') {
+      var pointerType = e.pointerType || '';
+      if (pointerType && pointerType !== 'mouse') {
+        swallowNextDismissGesture(getGestureShieldScope());
+      }
+      return;
+    }
+  }
   // Pointer-vs-keyboard origin: restore focus to the trigger only when the
   // close was driven by keyboard. Pointer/touch closes leave focus alone so
   // the mobile button does not retain a stuck pressed/focus appearance.
@@ -100,10 +114,11 @@ export function buildActionsBlock(opts) {
       if (activated) return;
       activated = true;
       isActivatingOption = true;
-      // Pointer/touch selection closes the menu on pointerdown; swallow the trailing
-      // click and shield exposed controls from same-gesture compat mouse/active state.
-      // Keyboard activation has no trailing pointer/click sequence.
-      if (restoreFocus !== true) swallowNextDismissGesture(getGestureShieldScope());
+      // Touch/pen selection closes the menu on pointerdown; the registry swallows the
+      // trailing compat click and briefly shields exposed controls from active-state bleed.
+      // Mouse selection stays on the normal click event, so there is no trailing click to
+      // swallow after render and desktop users can immediately reopen the filter.
+      armDismissAfterPointerActivation(e, restoreFocus);
       closeFilter({ restoreFocus: restoreFocus });
       onSortChange(opt[0], isPhotos);
       setTimeout(function () {
@@ -113,6 +128,7 @@ export function buildActionsBlock(opts) {
     }
     item.addEventListener('pointerdown', function (e) {
       if (e.button !== undefined && e.button !== 0) return;
+      if (e.pointerType === 'mouse') return;
       activateOption(e, false);
     });
     if (typeof window !== 'undefined' && !window.PointerEvent) {
@@ -120,10 +136,6 @@ export function buildActionsBlock(opts) {
         activateOption(e, false);
       }, { passive: false });
     }
-    item.addEventListener('mousedown', function (e) {
-      if (e.button !== undefined && e.button !== 0) return;
-      activateOption(e, false);
-    });
     item.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') activateOption(e, true);
     });

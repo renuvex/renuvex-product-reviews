@@ -229,6 +229,98 @@ async function clickFilterItemByText(page: Page, text: string): Promise<void> {
   }, text);
 }
 
+async function openVisibleFilter(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const isVisible = (el: HTMLElement) => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    };
+    const filterBtn = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-filter-btn') || []).find(isVisible);
+    if (!filterBtn) throw new Error('Missing visible filter button');
+    filterBtn.click();
+  });
+}
+
+async function desktopMousePointerDownFilterItem(page: Page, text: string): Promise<{
+  activeText: string;
+  cursor: string;
+  menuOpen: boolean;
+  pointerEvents: string;
+  shielded: boolean;
+}> {
+  return page.evaluate((text) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const content = root?.querySelector<HTMLElement>('[data-renuvex-shadow-content]');
+    const item = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-filter-menu.renuvex-pr-open .renuvex-pr-filter-item') || [])
+      .find((el) => (el.textContent || '').trim() === text);
+    if (!item) throw new Error(`Missing open filter item: ${text}`);
+    const event = typeof PointerEvent === 'function'
+      ? new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' })
+      : new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+    item.dispatchEvent(event);
+    const filterBtn = root?.querySelector<HTMLElement>('.renuvex-pr-filter-btn');
+    const btnStyle = filterBtn ? getComputedStyle(filterBtn) : null;
+    return {
+      activeText: (root?.querySelector<HTMLElement>('.renuvex-pr-filter-item-active')?.textContent || '').trim(),
+      cursor: btnStyle?.cursor || '',
+      menuOpen: !!root?.querySelector('.renuvex-pr-filter-menu.renuvex-pr-open'),
+      pointerEvents: btnStyle?.pointerEvents || '',
+      shielded: content?.hasAttribute('data-renuvex-pr-dismiss-gesture') || false,
+    };
+  }, text);
+}
+
+async function clickOpenFilterItemByText(page: Page, text: string): Promise<void> {
+  await page.evaluate((text) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const item = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-filter-menu.renuvex-pr-open .renuvex-pr-filter-item') || [])
+      .find((el) => (el.textContent || '').trim() === text);
+    if (!item) throw new Error(`Missing open filter item: ${text}`);
+    item.click();
+  }, text);
+}
+
+async function filterReopenState(page: Page): Promise<{
+  activeText: string;
+  cursor: string;
+  menuOpen: boolean;
+  pointerEvents: string;
+  shielded: boolean;
+}> {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const isVisible = (el: HTMLElement) => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    };
+    const filterBtn = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-filter-btn') || []).find(isVisible);
+    const content = root?.querySelector<HTMLElement>('[data-renuvex-shadow-content]');
+    const btnStyle = filterBtn ? getComputedStyle(filterBtn) : null;
+    return {
+      activeText: (root?.querySelector<HTMLElement>('.renuvex-pr-filter-item-active')?.textContent || '').trim(),
+      cursor: btnStyle?.cursor || '',
+      menuOpen: !!root?.querySelector('.renuvex-pr-filter-menu.renuvex-pr-open'),
+      pointerEvents: btnStyle?.pointerEvents || '',
+      shielded: content?.hasAttribute('data-renuvex-pr-dismiss-gesture') || false,
+    };
+  });
+}
+
 async function activateFilterItemByTextAndReadInactiveBarState(page: Page, text: string): Promise<{ shielded: boolean; opacity: string; pointerEvents: string }> {
   return page.evaluate((text) => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
@@ -347,6 +439,54 @@ test('compact summary filter panel remains interactive after render', async ({ p
 
   expect(widgetErrors(log)).toEqual([]);
 });
+
+for (const layoutCase of LAYOUT_MATRIX) {
+  test(`${layoutCase.name} desktop mouse filter can reopen immediately after sort`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const log = await setupWidgetRoutes(page, {
+      mountReviews: true,
+      reviewsSettings: {
+        summaryLayout: layoutCase.summaryLayout,
+        reviewLayout: layoutCase.reviewLayout,
+      },
+    });
+
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+    await openVisibleFilter(page);
+    await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(true);
+
+    const afterMousePointerDown = await desktopMousePointerDownFilterItem(page, 'En Yüksek Puan');
+    expect(afterMousePointerDown).toMatchObject({
+      activeText: 'En Yeni',
+      cursor: 'pointer',
+      menuOpen: true,
+      pointerEvents: 'auto',
+      shielded: false,
+    });
+
+    await clickOpenFilterItemByText(page, 'En Yüksek Puan');
+    await expect.poll(() => filterReopenState(page)).toMatchObject({
+      activeText: 'En Yüksek Puan',
+      cursor: 'pointer',
+      menuOpen: false,
+      pointerEvents: 'auto',
+      shielded: false,
+    });
+
+    await openVisibleFilter(page);
+    await expect.poll(() => filterReopenState(page)).toMatchObject({
+      activeText: 'En Yüksek Puan',
+      cursor: 'pointer',
+      menuOpen: true,
+      pointerEvents: 'auto',
+      shielded: false,
+    });
+
+    expect(widgetErrors(log)).toEqual([]);
+  });
+}
 
 test('compact mobile rating bar filter keeps panel open until trigger closes it', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

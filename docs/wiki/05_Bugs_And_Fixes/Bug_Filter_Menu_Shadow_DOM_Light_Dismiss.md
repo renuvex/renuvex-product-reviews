@@ -83,11 +83,11 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
 - **Swallow the dismiss click**: when an outside click closes an *open* popover, call
   `preventDefault()` + `stopPropagation()` so the tap only dismisses and does not also activate
   the element under it. `close()` now returns `wasOpen` so this only fires for a real dismiss.
-- **One-shot swallow for pointer activation**: `swallowNextDismissClick()` is armed by
-  `actions-block.js` `activateOption` on pointer/touch selection (which closes on
-  `pointerdown`), so the trailing `click` cannot fall through to a thumbnail. Auto-disarms
-  after 700 ms if no click follows.
-- **2026-06-01 follow-up for physical mobile:** the same pointer/touch option activation now
+- **Touch/pen gesture swallow**: `actions-block.js` activates touch/pen selection on
+  `pointerdown`, then arms `swallowNextDismissGesture(scope)` so the trailing compat `click`
+  cannot fall through to a thumbnail or write button. Auto-disarms after 700 ms if no click
+  follows.
+- **2026-06-01 follow-up for physical mobile:** the same touch/pen option activation now
   arms `swallowNextDismissGesture(scope)`. Besides swallowing the trailing click, it scopes a
   short-lived `[data-renuvex-pr-dismiss-gesture]` shield to the review shadow content wrapper.
   `base-reset.js` uses that scoped attribute to temporarily neutralize pointer/active state on
@@ -109,9 +109,15 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
   revalidate on every reload (`max-age=0, must-revalidate`) while hashed runtime/chunks remain
   immutable. This removes the 5-minute stable-loader client-cache window that could keep an old
   buggy loader/runtime path visible immediately after a bugfix deploy.
+- **2026-06-02 desktop follow-up:** desktop mouse option selection no longer activates on
+  `pointerdown`. The browser-native mouse path now activates on the normal `click` event, so
+  there is no post-render trailing click/shield window that can leave the shared filter button
+  temporarily at `pointer-events:none`. Touch and pen keep the `pointerdown` path for WebKit /
+  physical-mobile reliability.
 
 `actions-block.js`: `closeFilter()` returns `wasOpen`; `activateOption` calls
-`swallowNextDismissClick()` for pointer activations (not keyboard, which has no trailing click).
+`swallowNextDismissGesture()` only for touch/pen pointer activations (not keyboard or desktop
+mouse click activation).
 
 ## Files Changed
 - `src/widget/summary-layouts/shared/popover-registry.js`
@@ -122,7 +128,9 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
   outside tap on a photo thumbnail dismisses the menu without opening the lightbox; pointer
   option activation shields the write button from same-gesture press-through)
 - `tests/widget-runtime-smoke.spec.ts` (regression: compact mobile rating filter + filter
-  option activation keeps inactive bar rows dim while the gesture shield blocks pointers)
+  option activation keeps inactive bar rows dim while the gesture shield blocks pointers;
+  all summary layouts keep desktop mouse filter options on click activation and can reopen the
+  filter immediately after a sort render)
 - Rebuilt `public/widget.js` + `public/widget-runtime/*`
 
 ## Verification
@@ -137,6 +145,11 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
   `/widget.js` imported `runtime-P3VKNO5E.js`, and live runtime chunks contained the bar-row
   exclusion. Runtime smoke now also requires dimmed rows to carry `.renuvex-pr-bar-dimmed` and
   computed `opacity:0.35`; unit tests pin the stable-loader no-cache/revalidate contract.
+- 2026-06-02 desktop follow-up: the new runtime matrix failed before the source/build update
+  across classic, compact, hero, minimal, and split with `shielded:true` and
+  `pointer-events:none` after a mouse `pointerdown` on a filter item. After changing mouse
+  selection to normal `click` activation and rebuilding the widget, all five layout cases pass
+  and can reopen the filter immediately after the sort render.
 - Manual on the live dev storefront: classic summary filter opens over the photo strip,
   re-tap closes, and tapping the photo strip while open only dismisses (no lightbox).
 

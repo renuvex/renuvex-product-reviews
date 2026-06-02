@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-06-02
+last_verified: 2026-06-02
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -220,8 +220,9 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-06-02: Clarified shared filter action semantics: touch/pen filter options activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so filters can reopen immediately after sort-triggered summary renders.
 - 2026-06-01: Hardened summary shared primitives: [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) now exposes a handle lifecycle contract, [summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js) exposes keyboard/ARIA toggle semantics, and [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) owns bar focus/count resilience.
-- 2026-06-01: Added same-gesture press-through shielding to [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) and [shared/base-reset.js](src/widget/shared/base-reset.js): filter option pointer/touch activation keeps normal future `:active` feedback but temporarily blocks controls exposed under the dismissed menu.
+- 2026-06-01: Added same-gesture press-through shielding to [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) and [shared/base-reset.js](src/widget/shared/base-reset.js): touch/pen filter option activation keeps normal future `:active` feedback but temporarily blocks controls exposed under the dismissed menu.
 - 2026-06-01: Split shared review-section CSS ownership into [reviews-section/styles/](src/widget/reviews-section/styles/) modules while keeping [reviews-section/styles.js](src/widget/reviews-section/styles.js) as the `CLASSIC_CSS` aggregator and preserving injection order.
 - 2026-05-31: Added [review-layouts/card/styles.js](src/widget/review-layouts/card/styles.js) so card/default review CSS ownership matches list/gallery while shared review primitives remain in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-31: Added [summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) so classic/default summary CSS ownership matches the other summary layout folders while shared review CSS remains in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
