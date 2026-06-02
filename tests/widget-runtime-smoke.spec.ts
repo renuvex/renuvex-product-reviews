@@ -185,7 +185,7 @@ async function barRowsState(page: Page): Promise<Array<{ ariaPressed: string | n
   });
 }
 
-async function compactPanelMotionState(page: Page): Promise<{ animationName: string; transitionProperty: string; maxHeight: string }> {
+async function compactPanelMotionState(page: Page): Promise<{ animationName: string; position: string; transitionProperty: string; maxHeight: string }> {
   return page.evaluate(() => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
     const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
@@ -196,10 +196,26 @@ async function compactPanelMotionState(page: Page): Promise<{ animationName: str
     const style = getComputedStyle(panel);
     return {
       animationName: style.animationName,
+      position: style.position,
       transitionProperty: style.transitionProperty,
       maxHeight: style.maxHeight,
     };
   });
+}
+
+async function clickFilterItemByText(page: Page, text: string): Promise<void> {
+  await page.evaluate((text) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const filterBtn = root?.querySelector<HTMLElement>('.renuvex-pr-filter-btn');
+    filterBtn?.click();
+    const item = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-filter-item') || [])
+      .find((el) => (el.textContent || '').trim() === text);
+    if (!item) throw new Error(`Missing filter item: ${text}`);
+    item.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerType: 'touch' }));
+  }, text);
 }
 
 async function firstBarCountMetrics(page: Page): Promise<{
@@ -320,11 +336,48 @@ test('compact mobile rating bar filter keeps panel open until trigger closes it'
     return motion.animationName;
   }).toBe('none');
   const motion = await compactPanelMotionState(page);
+  expect(motion.position).toBe('static');
   expect(motion.transitionProperty).toContain('max-height');
   expect(motion.maxHeight).not.toBe('0px');
 
   await clickInReviewsShadow(page, '.renuvex-pr-compact-trigger');
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(false);
+
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('compact mobile keeps bar panel stable when sort changes after rating filter', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'compact', reviewLayout: 'list' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-compact-trigger');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(true);
+
+  await clickInReviewsShadow(page, '.renuvex-pr-compact-panel .renuvex-pr-bar-track');
+  await expect.poll(async () => {
+    const rows = await barRowsState(page);
+    return rows[0]?.ariaPressed || '';
+  }).toBe('true');
+
+  await clickFilterItemByText(page, 'En Yüksek Puan');
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(false);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(true);
+  await expect.poll(async () => {
+    const rows = await barRowsState(page);
+    return rows[0]?.ariaPressed || '';
+  }).toBe('true');
+  await expect.poll(async () => {
+    const motion = await compactPanelMotionState(page);
+    return motion.animationName;
+  }).toBe('none');
+  const motion = await compactPanelMotionState(page);
+  expect(motion.position).toBe('static');
+  expect(motion.transitionProperty).toContain('max-height');
 
   expect(widgetErrors(log)).toEqual([]);
 });
