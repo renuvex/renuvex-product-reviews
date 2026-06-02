@@ -33,6 +33,27 @@ function getMobilePanelStateKey(productId) {
   return productId ? String(productId) : MOBILE_PANEL_STATE_FALLBACK_KEY;
 }
 
+// Compact renders fresh on every review-section re-render (rating filter, sort,
+// preview update). Each render builds a new MediaQueryList; without teardown its
+// 'change' listener — and the detached panel/trigger DOM the closure retains —
+// would accumulate for the page's lifetime. There is exactly ONE compact summary
+// live at a time (render.js replaces the section content), so a single
+// module-scoped handle is enough: detach the previous render's listener before
+// attaching the current one.
+var activeMediaQuery = null;
+var activeMediaListener = null;
+
+function detachActiveMediaListener() {
+  if (!activeMediaQuery || !activeMediaListener) return;
+  if (activeMediaQuery.removeEventListener) {
+    activeMediaQuery.removeEventListener('change', activeMediaListener);
+  } else if (activeMediaQuery.removeListener) {
+    activeMediaQuery.removeListener(activeMediaListener); // Safari <14 fallback
+  }
+  activeMediaQuery = null;
+  activeMediaListener = null;
+}
+
 export function render(opts) {
   var widget = opts.widget;
   var productId = opts.productId;
@@ -159,11 +180,6 @@ export function render(opts) {
     targetParent.appendChild(panel);
   }
   placePanel(mql ? mql.matches : false);
-  if (mql) {
-    var onMqlChange = function(e) { placePanel(e.matches); };
-    if (mql.addEventListener) mql.addEventListener('change', onMqlChange);
-    else if (mql.addListener) mql.addListener(onMqlChange); // Safari <14 fallback
-  }
 
   // Mobile-only write satırı — header'daki butonun ikinci kopyası, CSS ile sadece mobile'da gözükür
   if (writeBtn) {
@@ -213,10 +229,21 @@ export function render(opts) {
     }
   }
   syncRegistration(mql ? mql.matches : false);
+  // One 'change' listener drives both the placement swap and the registry sync,
+  // in the original order (placePanel then syncRegistration). Detach the previous
+  // render's listener first so listeners + detached panel DOM never pile up across
+  // re-renders. placePanel/syncRegistration are defined above, so the combined
+  // handler must be attached here (not at the initial placePanel call).
+  detachActiveMediaListener();
   if (mql) {
-    var onSyncChange = function(e) { syncRegistration(e.matches); };
-    if (mql.addEventListener) mql.addEventListener('change', onSyncChange);
-    else if (mql.addListener) mql.addListener(onSyncChange);
+    var onMediaChange = function(e) {
+      placePanel(e.matches);
+      syncRegistration(e.matches);
+    };
+    if (mql.addEventListener) mql.addEventListener('change', onMediaChange);
+    else if (mql.addListener) mql.addListener(onMediaChange); // Safari <14 fallback
+    activeMediaQuery = mql;
+    activeMediaListener = onMediaChange;
   }
 
   // Mobile accordion stays open across review-section re-renders until the
