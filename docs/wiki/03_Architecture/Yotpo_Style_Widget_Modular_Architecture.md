@@ -284,7 +284,7 @@ race.
 
 Closeout record: [[Phase_3_Widget_Lifecycle_Hardening]].
 
-Implemented by 2026-05-17 (commit `1700d789`): short-cache loader/shim, immutable
+Implemented by 2026-05-17 (commit `1700d789`, cache policy updated 2026-06-02): revalidated stable loader/shim, immutable
 hashed runtime and chunks, non-destructive create/update-only StorefrontJSScript
 lifecycle, daily script reconcile for storefronts created after install, stale
 `--theme` alias cleanup, and canonical product identity via

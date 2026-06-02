@@ -3,7 +3,7 @@
 //
 // Phase 2 output model:
 // - public/widget.js remains the classic ikas StorefrontJSScript entry.
-// - public/widget-runtime/runtime.js is a short-cache compatibility shim.
+// - public/widget-runtime/runtime.js is a revalidated compatibility shim.
 // - public/widget-runtime/runtime-*.js and chunks/* are immutable ESM assets.
 
 import * as esbuild from 'esbuild';
@@ -178,8 +178,9 @@ function writeStableRuntimeShim(runtimeEntry) {
 // Bounded retention for old content-hashed runtime/chunk files. They are
 // immutable, so a browser/CDN holding an older widget.js loader may still
 // import an old hash for a short window after a deploy — deleting it
-// immediately would 404 the runtime. widget.js is served
-// `max-age=300, must-revalidate`, so that window is minutes; old unreferenced
+// immediately would 404 the runtime. widget.js and the stable runtime shim are
+// served with `max-age=0, must-revalidate`, but already-open tabs or intermediary
+// caches can still reference the previous hash briefly; old unreferenced
 // files are kept RUNTIME_RETENTION_DAYS (a large margin) then pruned so
 // public/widget-runtime/ does not grow without bound.
 //

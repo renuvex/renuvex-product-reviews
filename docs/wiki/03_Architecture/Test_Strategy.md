@@ -38,6 +38,8 @@ source_files:
   - "tests/unit/widget-icon-sprite.test.ts"
   - "tests/unit/widget-theme-vars.test.ts"
   - "tests/unit/widget-popover-registry.test.ts"
+  - "tests/unit/widget-asset-cache.test.ts"
+  - "vercel.json"
   - "docs/wiki/08_Widgets/Structured_Data_And_Rich_Snippets.md"
   - "docs/wiki/10_Research/Widget_Transfer_Measurement_2026-05-29.md"
   - "docs/wiki/10_Research/Structured_Data_Verification_2026-05-29.md"
@@ -71,7 +73,7 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, photo strip toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |
 | Storefront interactions | `pnpm test:widget-interactions` | Photo-strip lightbox, review-image lightbox, summary filter/popover light-dismiss, keyboard close, review wizard validation, step flow, mocked review submit, and body-scroll-lock regression (opening either overlay locks scroll on BOTH `<html>` and `<body>` and restores on close — ADR_0025). |
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
-| Unit/API/theme state | `pnpm test:unit` | Public API route behavior, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). |
+| Unit/API/theme state | `pnpm test:unit` | Public API route behavior, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). |
 
 `pnpm test:ci` runs the five layers together. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
 
@@ -87,7 +89,9 @@ Unit tests also pin widget icon registry invariants: all shipped review, filter,
 
 Widget runtime smoke also pins the storefront review read contract: late sort/filter/load-more responses cannot mutate a newer active selection, overlapping load-more rows do not duplicate DOM cards, review fetch failures stay distinct from real empty states, the photo strip remains a bootstrap-owned dataset, card/list/gallery layouts render only trusted tenant image URLs, and list/gallery photo-strip thumbnails follow `thumbnailSize` while their review item photos continue to follow general widget `size`.
 
-Widget runtime and interaction smoke also pin summary rating-bar contracts: keyboard Enter/Space activates bar filters, `aria-pressed` reflects active rating state, badge count / summary total / bar distribution stay unfiltered while the review list changes, compact mobile keeps its accordion open after bar-track filter renders until the user closes it with the compact trigger, mobile compact uses no desktop grow-out animation (`animation-name:none`) while retaining its `max-height` accordion transition, dimmed inactive rating rows stay dim during pointer-driven filter option shielding, large localized counts fit the count column, and filter light-dismiss still works after a sort-driven full summary re-render.
+Widget runtime and interaction smoke also pin summary rating-bar contracts: keyboard Enter/Space activates bar filters, `aria-pressed` reflects active rating state, badge count / summary total / bar distribution stay unfiltered while the review list changes, compact mobile keeps its accordion open after bar-track filter renders until the user closes it with the compact trigger, mobile compact uses no desktop grow-out animation (`animation-name:none`) while retaining its `max-height` accordion transition, dimmed inactive rating rows keep the `.renuvex-pr-bar-dimmed` state class and computed `opacity:0.35` during pointer-driven filter option shielding, large localized counts fit the count column, and filter light-dismiss still works after a sort-driven full summary re-render.
+
+Unit tests also pin storefront widget asset cache headers: stable `/widget.js` and `/widget-runtime/runtime.js` must revalidate on reload (`max-age=0, must-revalidate`), while content-hashed runtime entries and chunks stay one-year immutable.
 
 The same interaction layer pins that pointer/touch filter option activation cannot visually press through to the write button exposed under the dismissed menu.
 

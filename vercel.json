@@ -13,11 +13,11 @@
   "headers": [
     {
       "source": "/widget.js",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
       "source": "/widget-runtime/runtime.js",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
       "source": "/widget-runtime/runtime-:hash.js",

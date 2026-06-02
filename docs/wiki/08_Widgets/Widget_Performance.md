@@ -81,7 +81,7 @@ Dev store smoke test:
 - homepage DOM had listing badges mounted
 - product page DOM had `#ikas-reviews-widget` and `#ikas-reviews-anchor`
 - public settings, reviews, and ratings endpoints returned 200
-- deployed widget response header was `Cache-Control: public, max-age=0, must-revalidate` — **superseded 2026-05-17**: `vercel.json` now sets short-cache loader/shim plus immutable content-hashed runtime/chunks; see [[Caching_And_Performance]]
+- deployed widget response header was `Cache-Control: public, max-age=0, must-revalidate` — **current again as of 2026-06-02 for stable entrypoints**: `vercel.json` now revalidates `/widget.js` and `/widget-runtime/runtime.js` while keeping content-hashed runtime/chunks immutable; see [[Caching_And_Performance]]
 
 Yotpo/Protein Ocean reference:
 

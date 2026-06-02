@@ -23,7 +23,9 @@ export function buildBarChart(opts) {
     var pct = allCount > 0 ? Math.round((cnt / allCount) * 100) : 0;
     var isActive = currentFilter === si;
     var row = document.createElement('div');
-    row.className = 'renuvex-pr-bar-row' + (isActive ? ' renuvex-pr-bar-active' : '');
+    row.className = 'renuvex-pr-bar-row' +
+      (isActive ? ' renuvex-pr-bar-active' : '') +
+      (currentFilter && !isActive ? ' renuvex-pr-bar-dimmed' : '');
     row.setAttribute('role', 'button');
     row.setAttribute('tabindex', '0');
     row.setAttribute('aria-pressed', isActive ? 'true' : 'false');
@@ -31,7 +33,6 @@ export function buildBarChart(opts) {
       'aria-label',
       si + ' yıldız, ' + cnt.toLocaleString('tr-TR') + ' yorum, ' + (isActive ? 'filtreyi kaldır' : 'filtrele')
     );
-    if (currentFilter && !isActive) row.style.opacity = '0.35';
 
     var starsHtml = '';
     for (var s = 1; s <= 5; s++) {

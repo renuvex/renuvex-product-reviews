@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-18
+updated: 2026-06-02
 tags:
   - performance
   - caching
@@ -13,6 +13,15 @@ related:
   - "[[System_Architecture]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
+source_files:
+  - "vercel.json"
+  - "scripts/build-widget.mjs"
+  - "src/widget/core/cache.js"
+  - "src/app/api/public/settings/route.ts"
+  - "src/app/api/public/reviews/route.ts"
+  - "src/app/api/public/ratings/route.ts"
+  - "src/app/api/public/ratings-by-slug/route.ts"
+  - "tests/unit/widget-asset-cache.test.ts"
 ---
 
 # Caching & Performance
@@ -41,25 +50,26 @@ Default header value: `s-maxage=60, stale-while-revalidate=300`.
 
 ## Static widget assets (Vercel CDN headers)
 
-`public/widget.js`, the short-cache `public/widget-runtime/runtime.js` compatibility
+`public/widget.js`, the revalidated `public/widget-runtime/runtime.js` compatibility
 shim, the content-hashed runtime entry, and the content-hashed chunks are served
 by Vercel's static layer.
 `vercel.json` `headers` sets a three-tier `Cache-Control` policy:
 
 | Asset | `Cache-Control` | Rationale |
 |---|---|---|
-| `/widget.js` | `public, max-age=300, must-revalidate` | Stable URL the ikas StorefrontJSScript record points to — widget code deploys must propagate. |
-| `/widget-runtime/runtime.js` | `public, max-age=300, must-revalidate` | Stable compatibility shim for older cached loaders. |
+| `/widget.js` | `public, max-age=0, must-revalidate` | Stable URL the ikas StorefrontJSScript record points to. It must revalidate on reload so bugfix deploys can propagate immediately while the heavy content-hashed runtime stays immutable. |
+| `/widget-runtime/runtime.js` | `public, max-age=0, must-revalidate` | Stable compatibility shim for older cached loaders; it follows the loader revalidation policy. |
 | `/widget-runtime/runtime-*.js` | `public, max-age=31536000, immutable` | Content-hashed runtime entry; current `widget.js` imports this direct path. |
 | `/widget-runtime/chunks/*` | `public, max-age=31536000, immutable` | Content-hashed filenames — a code change yields a new filename, so old chunks are safe to cache for a year. |
 
-A widget code deploy reaches returning visitors within ~5 minutes (the
-loader/shim `max-age`). The runtime entry and chunks are content-hashed and
-immutable; their hashes exclude volatile build timestamps, and the build script
-keeps old hashed runtime/chunk files in place so a cached `widget.js` does not
-point at a missing asset after deploy. `runtime.js` remains only as a stable
-compatibility shim. This static-asset policy is independent of the API edge
-cache above and does not affect moderation latency.
+On page reload, a widget code deploy revalidates the stable loader/shim instead
+of waiting behind a client-side `max-age` window. The runtime entry and chunks
+are content-hashed and immutable; their hashes exclude volatile build timestamps,
+and the build script keeps old hashed runtime/chunk files in place so an already
+open tab or intermediary cache holding a previous `widget.js` does not point at a
+missing asset after deploy. `runtime.js` remains only as a stable compatibility
+shim. This static-asset policy is independent of the API edge cache above and
+does not affect moderation latency.
 
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
@@ -112,8 +122,9 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-06-02: Changed the stable storefront loader and stable runtime shim cache headers from `max-age=300` to `max-age=0, must-revalidate`; content-hashed runtime/chunk assets remain one-year immutable. This keeps widget bugfix deploy propagation immediate on reload without giving up immutable cache performance for heavy assets.
 - 2026-05-18: Reduced widget-side stale settings tolerance from 7 days to 24 hours. Transient settings outages still have a same-tab fallback, but merchant changes cannot remain hidden behind a week-long stale cache.
-- 2026-05-17: Runtime versioning completed: production builds emit a content-hashed `runtime-*.js`, `widget.js` imports that direct path, and stable `runtime.js` remains a short-cache shim for older cached loaders. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.
+- 2026-05-17: Runtime versioning completed: production builds emit a content-hashed `runtime-*.js`, `widget.js` imports that direct path, and stable `runtime.js` remains a revalidated compatibility shim for older cached loaders. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.
 - 2026-05-17: Added `/api/public/ratings` product-id endpoint and `[storeId, productId, status]` hot-path index for canonical listing/search badge reads. Related: [[ADR_0015_Canonical_Product_Identity]].
-- 2026-05-17: Added the "Static widget assets" section — `vercel.json` `headers` now sets a three-tier `Cache-Control` split (short-cache loader/runtime, `immutable` content-hashed chunks). Refreshed the stale pre-Phase-2 bundle-size note. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.
+- 2026-05-17: Added the "Static widget assets" section — `vercel.json` `headers` now sets a three-tier `Cache-Control` split (revalidated stable loader/runtime, `immutable` content-hashed chunks). Refreshed the stale pre-Phase-2 bundle-size note. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.
 - 2026-05-11: Documented public settings `stale-if-error=604800` and 7-day widget stale settings tolerance. A separate legacy image-policy cache was added on 2026-05-11 then removed the same day by [[ADR_0008_Cloud_Name_Build_Time_Only]] — cloud name is now a build-time constant and no runtime image-policy cache exists. Related bug: [[Bug_Cloud_Name_Silent_Image_Filter]].

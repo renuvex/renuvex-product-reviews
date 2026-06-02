@@ -239,9 +239,9 @@ Two residual operational items remain: authenticated cron run after `CRON_SECRET
 is set, and deployed transfer-size re-measurement.
 
 
-- Done — 2026-05-17: `vercel.json` `headers` sets `/widget.js` and the stable
-  `/widget-runtime/runtime.js` compatibility shim to `max-age=300,
-  must-revalidate`; content-hashed `/widget-runtime/runtime-*.js` and
+- Done — 2026-05-17, updated 2026-06-02: `vercel.json` `headers` sets
+  `/widget.js` and the stable `/widget-runtime/runtime.js` compatibility shim
+  to `max-age=0, must-revalidate`; content-hashed `/widget-runtime/runtime-*.js` and
   `/widget-runtime/chunks/*` are `max-age=31536000, immutable`. See
   [[Caching_And_Performance]].
 - Done — 2026-05-17: ikas script lifecycle is non-destructive. The source no

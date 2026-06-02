@@ -22,6 +22,7 @@ related:
   - "[[Test_Strategy]]"
 source_files:
   - "scripts/build-widget.mjs"
+  - "vercel.json"
   - "scripts/check-widget-runtime.mjs"
   - "playwright.widget.config.ts"
   - "vitest.config.ts"
@@ -34,6 +35,7 @@ source_files:
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-icon-sprite.test.ts"
   - "tests/unit/widget-popover-registry.test.ts"
+  - "tests/unit/widget-asset-cache.test.ts"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/classic-loader.js"
   - "src/widget/index.js"
@@ -209,7 +211,7 @@ Each layout registers `supports: { title: true, photoStrip: false, ... }` in its
 - `summary-layouts/shared/popover-registry.js` owns light-dismiss and one-at-a-time behavior for summary popovers. `registerPopover(opts)` returns a handle `{ unregister, notifyOpening }`; consumers call `handle.notifyOpening()` when opening and `handle.unregister()` only at a real teardown point. One-shot producers such as the shared filter menu do not unregister on dismiss; stale entries are purged centrally once their DOM is disconnected by a full summary re-render.
 - Every registered `close()` function must return `true` only when it closed an open popover and `false` when the popover was already closed. The dismiss-click swallow logic depends on this boolean.
 - Pointer/touch filter option activation closes on `pointerdown` for WebKit reliability, then calls `swallowNextDismissGesture(scope)`: the trailing click is swallowed, and `base-reset.js` uses the scoped `[data-renuvex-pr-dismiss-gesture]` attribute to temporarily neutralize pointer/active state on controls exposed under the closing menu. Pointer blocking is broad, but forced `opacity:1` is deliberately narrower so stateful controls such as dimmed rating bar rows keep their selected-filter opacity. This is scoped to the current review shadow content and does not disable normal ADR_0011 `:active` feedback for real future taps.
-- Rating bar rows in `summary-layouts/shared/bar-chart.js` are interactive toggle controls: `role=button`, `tabindex=0`, `aria-pressed`, and Enter/Space activation. A selected rating bar filters the review list but keeps the PDP badge count, summary total, and bar distribution tied to the unfiltered rating summary/all-count contract.
+- Rating bar rows in `summary-layouts/shared/bar-chart.js` are interactive toggle controls: `role=button`, `tabindex=0`, `aria-pressed`, and Enter/Space activation. A selected rating bar filters the review list but keeps the PDP badge count, summary total, and bar distribution tied to the unfiltered rating summary/all-count contract. Inactive rows use the explicit `.renuvex-pr-bar-dimmed` visual state class instead of inline opacity so shared gesture/reset CSS cannot accidentally erase the selected-filter visual state.
 - Compact summary uses two different panel contracts: desktop is a registered popover with light-dismiss and grow-out animation, while mobile is a flow accordion. On mobile, rating-bar filters may re-render the review section but the accordion stays open until the user closes it with the compact trigger/chevron; the desktop grow-out animation is disabled so the bar chart does not flicker during filter redraws.
 - Bar chart count cells use tabular numbers and an elastic minimum width. `--renuvex-pr-col-count` remains the layout-local minimum column token; long localized counts can grow without forcing the track to overlap text.
 
@@ -286,6 +288,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-06-02: Strengthened compact/mobile rating-bar visual state: inactive filtered rows now use the explicit `.renuvex-pr-bar-dimmed` CSS state class, and stable widget entrypoints revalidate on reload while hashed runtime chunks stay immutable. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].
 - 2026-06-01: Hardened summary interaction contracts: popover registry handles now own `notifyOpening` identity and real teardown, disconnected entries are purged after summary re-renders, rating bar rows are keyboard/ARIA toggle controls, and count columns use tabular numbers with elastic minimum width. Related bug: [[Bug_Summary_Popover_Registry_Lifecycle_Contract]].
 - 2026-06-01: Fixed `PAGE_VIEW` lifecycle dedupe so same-page duplicate events inside 800 ms are suppressed, while distinct fast transitions such as `PRODUCT -> CATEGORY` still reach the surface registry immediately. Related bug: [[Bug_Widget_Page_View_Semantic_Dedupe]].
 - 2026-06-01: Split shared review-section CSS into owned modules under [reviews-section/styles/](src/widget/reviews-section/styles/) while preserving the `CLASSIC_CSS` export, shadow injection order, DOM/class names, and public settings contract.
@@ -299,7 +302,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - 2026-05-23: Added runtime health marker, badge visibility probes, widget-error health telemetry, and one-shot badge self-heal for third-party DOM removal; the build now injects a widget version marker.
 - 2026-05-18: Listing badge hardening reduced CLS and DOM scan cost: candidate links and the MutationObserver re-render gate are scoped to theme containers/main content, and invisible badge slots are reserved while rating data loads.
 - 2026-05-18: Reduced widget settings stale tolerance from 7 days to 24 hours in `core/settings.js`.
-- 2026-05-17: Phase 3 source hardening implemented: `widget.js` now points at a content-hashed ESM runtime, stable `runtime.js` remains as a short-cache shim, script lifecycle is create/update-only, and hidden listing links are filtered before badge injection.
+- 2026-05-17: Phase 3 source hardening implemented: `widget.js` now points at a content-hashed ESM runtime, stable `runtime.js` remains as a revalidated compatibility shim, script lifecycle is create/update-only, and hidden listing links are filtered before badge injection.
 - 2026-05-17: Phase 2 module split verified live on the dev store — PDP/category/search cold entries, PDP↔PDP SPA navigation, and a mobile spot check passed; Sentry post-test check clean. Phase 2 is closed. `core/settings.js` now shares one in-flight settings request between the reviews-main and listing-badge surfaces, so a PDP with product carousels fetches settings once instead of twice. See [[Phase_2_Widget_Module_Split_Plan]].
 - 2026-05-17: Phase 2 module split implementation started. Build output is now a classic `public/widget.js` loader plus ESM `public/widget-runtime/*` chunks; async lazy surface mounts, `VIEW_SEARCH_RESULTS`, shared settings, and the Ozy fallback adapter are implemented.
 - 2026-05-16: Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] — internal loader + surface registry + single Storefront Events context module. New files: `loader.js`, `core/storefront-context.js`, `core/registry.js`, `surfaces/*`. `index.js` is now a thin entry; `events.js` keeps only the SPA history patch + modal badge plumbing; `getProductFromPage` removed from `bootstrap.js`. Build output stays a single IIFE — no ESM/splitting/lazy-load. Verified via `pnpm build:widget` + `/preview` smoke test; live storefront verification pending deploy.

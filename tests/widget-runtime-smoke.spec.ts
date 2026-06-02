@@ -170,7 +170,15 @@ async function focusBarRow(page: Page, index: number): Promise<void> {
   }, index);
 }
 
-async function barRowsState(page: Page): Promise<Array<{ ariaPressed: string | null; ariaLabel: string | null; count: string; fillWidth: string }>> {
+async function barRowsState(page: Page): Promise<Array<{
+  ariaPressed: string | null;
+  ariaLabel: string | null;
+  className: string;
+  count: string;
+  fillWidth: string;
+  opacity: string;
+  pointerEvents: string;
+}>> {
   return page.evaluate(() => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
     const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
@@ -179,8 +187,11 @@ async function barRowsState(page: Page): Promise<Array<{ ariaPressed: string | n
     return Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-bar-row') || []).map((row) => ({
       ariaPressed: row.getAttribute('aria-pressed'),
       ariaLabel: row.getAttribute('aria-label'),
+      className: row.className,
       count: row.querySelector<HTMLElement>('.renuvex-pr-bar-count')?.textContent?.trim() || '',
       fillWidth: (row.querySelector<HTMLElement>('.renuvex-pr-bar-fill')?.style.width || ''),
+      opacity: getComputedStyle(row).opacity,
+      pointerEvents: getComputedStyle(row).pointerEvents,
     }));
   });
 }
@@ -356,6 +367,14 @@ test('compact mobile rating bar filter keeps panel open until trigger closes it'
     return rows[0]?.ariaPressed || '';
   }).toBe('true');
   await expect.poll(async () => {
+    const rows = await barRowsState(page);
+    return rows.slice(1).every((row) =>
+      row.className.includes('renuvex-pr-bar-dimmed') &&
+      row.opacity === '0.35' &&
+      row.pointerEvents === 'auto'
+    );
+  }).toBe(true);
+  await expect.poll(async () => {
     const motion = await compactPanelMotionState(page);
     return motion.animationName;
   }).toBe('none');
@@ -400,6 +419,14 @@ test('compact mobile keeps bar panel stable when sort changes after rating filte
     const rows = await barRowsState(page);
     return rows[0]?.ariaPressed || '';
   }).toBe('true');
+  await expect.poll(async () => {
+    const rows = await barRowsState(page);
+    return rows.slice(1).every((row) =>
+      row.className.includes('renuvex-pr-bar-dimmed') &&
+      row.opacity === '0.35' &&
+      row.pointerEvents === 'none'
+    );
+  }).toBe(true);
   await expect.poll(async () => {
     const motion = await compactPanelMotionState(page);
     return motion.animationName;

@@ -101,8 +101,8 @@ least one tracked script id.
 - Production widget builds emit a content-hashed `runtime-*.js`; old hashed assets
   are not deleted, so a cached `widget.js` referencing an older hash does not 404.
 - `vercel.json` `headers`:
-  - `/widget.js` → `public, max-age=300, must-revalidate`
-  - `/widget-runtime/runtime.js` (compatibility shim) → `public, max-age=300, must-revalidate`
+  - `/widget.js` → `public, max-age=0, must-revalidate` (updated 2026-06-02)
+  - `/widget-runtime/runtime.js` (compatibility shim) → `public, max-age=0, must-revalidate` (updated 2026-06-02)
   - `/widget-runtime/runtime-:hash.js` → `public, max-age=31536000, immutable`
   - `/widget-runtime/chunks/:path*` → `public, max-age=31536000, immutable`
 
@@ -154,7 +154,8 @@ work; no blocking widget error observed.
 
 - Mobile viewport: `/clothing` and `/premium-shorts` retested — badges rendered,
   widget API calls `200`.
-- Cache headers verified live and match `vercel.json`:
+- Cache headers verified live on 2026-05-18 and matched `vercel.json` at that time
+  (stable entrypoint TTL changed later on 2026-06-02):
   - `/widget.js` → `public, max-age=300, must-revalidate`
   - `/widget-runtime/runtime.js` → `public, max-age=300, must-revalidate`
   - hashed runtime/chunk → `public, max-age=31536000, immutable`

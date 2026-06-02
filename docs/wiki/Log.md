@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-02 - fix | Harden compact rating dim state and loader deploy propagation
+- Summary: Followed up the deployed compact-mobile rating flash report. Vercel confirmed production was already serving commit `142707d8` and `runtime-P3VKNO5E.js`, so the deploy was not missed. Hardened the remaining weak points: inactive filtered rating rows now use an explicit `.renuvex-pr-bar-dimmed` CSS state class with `opacity:0.35!important`, and stable widget entrypoints now revalidate on reload instead of staying behind the previous 5-minute client cache window.
+- Key source changes: `summary-layouts/shared/bar-chart.js`, `reviews-section/styles/summary-controls.js`, `tests/widget-runtime-smoke.spec.ts`, `tests/unit/widget-asset-cache.test.ts`, `vercel.json`, `scripts/build-widget.mjs`; rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Verification target: runtime smoke must prove dimmed rows keep the state class and computed opacity during pointer-driven filter option shielding; unit tests pin stable loader/shim cache headers vs immutable hashed runtime/chunks.
+- Updated wiki: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]], [[Bug_Index]], [[Widget_Architecture]], [[Caching_And_Performance]], [[Test_Strategy]]
+
 ## 2026-06-02 - fix | Preserve compact rating dim state during filter shield
 - Summary: Fixed the physical-mobile compact follow-up where selecting a rating, then choosing a filter option, made the inactive rating rows flash from their intentional dim state to full opacity. Root cause was the same-gesture dismiss shield applying `opacity:1!important` to every `[role="button"]`; bar chart rows are `role="button"` and carry selected-filter opacity state.
 - Key source changes: `src/widget/shared/base-reset.js` now keeps broad `pointer-events:none` shielding but excludes `.renuvex-pr-bar-row` from the forced opacity reset. `tests/widget-runtime-smoke.spec.ts` pins the exact mobile moment: shield armed, inactive bar row remains `opacity:0.35`, pointer events are blocked. Rebuilt `public/widget.js` + `public/widget-runtime/*`.

@@ -21,7 +21,11 @@ source_files:
   - "src/widget/summary-layouts/shared/popover-registry.js"
   - "src/widget/summary-layouts/shared/actions-block.js"
   - "src/widget/shared/base-reset.js"
+  - "src/widget/summary-layouts/shared/bar-chart.js"
+  - "src/widget/reviews-section/styles/summary-controls.js"
+  - "vercel.json"
   - "tests/unit/widget-popover-registry.test.ts"
+  - "tests/unit/widget-asset-cache.test.ts"
   - "tests/widget-interaction-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
 ---
@@ -97,6 +101,14 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
   broader opacity reset made those inactive rows flash back to full opacity while choosing a
   filter option. The shield still blocks pointer/click-through on the rows; it just preserves
   their selected-filter visual state.
+- **2026-06-02 deployment follow-up:** Vercel confirmed production was serving commit
+  `142707d8` and the new content-hashed runtime, so the remaining post-deploy report was not a
+  missed Git/Vercel deployment. Two durable hardening steps were added: inactive filtered bar
+  rows now use the explicit `.renuvex-pr-bar-dimmed` CSS state class (`opacity:0.35!important`)
+  instead of inline opacity, and stable widget entrypoints (`/widget.js`, `/widget-runtime/runtime.js`)
+  revalidate on every reload (`max-age=0, must-revalidate`) while hashed runtime/chunks remain
+  immutable. This removes the 5-minute stable-loader client-cache window that could keep an old
+  buggy loader/runtime path visible immediately after a bugfix deploy.
 
 `actions-block.js`: `closeFilter()` returns `wasOpen`; `activateOption` calls
 `swallowNextDismissClick()` for pointer activations (not keyboard, which has no trailing click).
@@ -120,6 +132,11 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
 - 2026-06-02 compact-mobile follow-up: targeted runtime proof failed before the fix with
   inactive bar row `opacity: 1` while the dismiss shield was armed, then passed after narrowing
   the shield opacity reset (`opacity: 0.35`, `pointer-events: none`).
+- 2026-06-02 deployment follow-up: Vercel MCP showed production deployment
+  `dpl_Bn5P63cq5gqR51GZBs9SZjKFVknM` on commit `142707d8` was `READY`; live
+  `/widget.js` imported `runtime-P3VKNO5E.js`, and live runtime chunks contained the bar-row
+  exclusion. Runtime smoke now also requires dimmed rows to carry `.renuvex-pr-bar-dimmed` and
+  computed `opacity:0.35`; unit tests pin the stable-loader no-cache/revalidate contract.
 - Manual on the live dev storefront: classic summary filter opens over the photo strip,
   re-tap closes, and tapping the photo strip while open only dismisses (no lightbox).
 
