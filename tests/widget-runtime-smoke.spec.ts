@@ -218,6 +218,30 @@ async function clickFilterItemByText(page: Page, text: string): Promise<void> {
   }, text);
 }
 
+async function activateFilterItemByTextAndReadInactiveBarState(page: Page, text: string): Promise<{ shielded: boolean; opacity: string; pointerEvents: string }> {
+  return page.evaluate((text) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const filterBtn = root?.querySelector<HTMLElement>('.renuvex-pr-filter-btn');
+    filterBtn?.click();
+    const item = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-filter-item') || [])
+      .find((el) => (el.textContent || '').trim() === text);
+    const inactiveRow = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-bar-row') || [])
+      .find((el) => el.getAttribute('aria-pressed') === 'false');
+    const content = root?.querySelector<HTMLElement>('[data-renuvex-shadow-content]');
+    if (!item || !inactiveRow || !content) throw new Error('Missing filter item, inactive bar row, or shadow content');
+    item.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerType: 'touch' }));
+    const rowStyle = getComputedStyle(inactiveRow);
+    return {
+      shielded: content.hasAttribute('data-renuvex-pr-dismiss-gesture'),
+      opacity: rowStyle.opacity,
+      pointerEvents: rowStyle.pointerEvents,
+    };
+  }, text);
+}
+
 async function firstBarCountMetrics(page: Page): Promise<{
   text: string;
   width: number;
@@ -364,7 +388,12 @@ test('compact mobile keeps bar panel stable when sort changes after rating filte
     return rows[0]?.ariaPressed || '';
   }).toBe('true');
 
-  await clickFilterItemByText(page, 'En Yüksek Puan');
+  const shieldedInactiveBar = await activateFilterItemByTextAndReadInactiveBarState(page, 'En Yüksek Puan');
+  expect(shieldedInactiveBar).toEqual({
+    shielded: true,
+    opacity: '0.35',
+    pointerEvents: 'none',
+  });
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(false);
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(true);
   await expect.poll(async () => {

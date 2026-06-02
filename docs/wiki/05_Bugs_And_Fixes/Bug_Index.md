@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-01
+updated: 2026-06-02
 tags:
   - bugs
 related:
@@ -21,6 +21,7 @@ related:
 - _None tracked._
 
 ## Recently fixed (verify periodically)
+- 2026-06-02 - [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] follow-up - Physical mobile testing showed the same-gesture dismiss shield was visually over-broad: after a compact mobile rating was selected, choosing a filter option made inactive rating rows flash from their intentional `opacity:0.35` dim state to full opacity. Fixed by keeping pointer blocking broad while excluding `.renuvex-pr-bar-row` from the forced `opacity:1` reset; runtime smoke pins `opacity:0.35` + `pointer-events:none` during the shield.
 - 2026-06-01 - [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] follow-up - Physical mobile testing showed the trailing click swallow was not enough: after a filter option closed the menu on `pointerdown`, same-gesture compat mouse/active state could visually press the exposed "Yorum Yap" button underneath. Fixed with a scoped `[data-renuvex-pr-dismiss-gesture]` shield that preserves normal ADR_0011 press feedback for real future taps.
 - 2026-06-01 - [[Bug_Summary_Popover_Registry_Lifecycle_Contract]] - Verified and fixed a summary popover registry lifecycle/contract bug: full summary re-renders could leave detached filter-menu entries registered, `notifyOpening` callers passed unregister functions while the registry compared entry objects, and the compact panel did not return the required `wasOpen` boolean. The registry now exposes a handle API, purges disconnected entries, and pins the contract with unit + interaction tests.
 - 2026-06-01 - [[Bug_Photo_Strip_Thumbnail_Size_Contract]] - Verified and fixed a photo strip settings-contract bug: list/gallery layouts exposed "Fotoğraf Galeri Boyutu" but runtime overwrote the strip thumbnail size with widget-size layout photo widths. `thumbnailSize` now controls the top strip in every review layout; list/gallery item photos still follow widget `size`.
@@ -58,6 +59,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-06-02: Updated [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] after physical mobile testing proved the scoped dismiss shield preserved click safety but overrode compact bar-row filter opacity. Fixed by narrowing only the forced opacity reset, not the pointer shield.
 - 2026-06-01: Updated [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]] after physical mobile testing proved filter option taps could still leak same-gesture compat `:active` state into the exposed write button. Fixed by adding a scoped popover gesture shield instead of disabling mobile press feedback globally.
 - 2026-06-01: Added [[Bug_Summary_Popover_Registry_Lifecycle_Contract]] after the bar chart / summary interaction audit proved the popover registry had a handle/entry identity mismatch, stale disconnected entries after summary re-renders, and an inconsistent compact `close()` boolean contract.
 - 2026-06-01: Added [[Bug_Photo_Strip_Thumbnail_Size_Contract]] after a runtime proof showed list/gallery layouts ignored the visible "Fotoğraf Galeri Boyutu" setting for the top photo strip. Fixed by keeping `--renuvex-pr-thumbnail-size` tied to `thumbnailSize` and pinning list/gallery strip-vs-item-photo sizes in browser tests.

@@ -25,10 +25,16 @@ var BASE_RESET_CSS = [
   // 4) Same-gesture shield for popovers that close on pointerdown. It does not remove
   // ADR_0011 press feedback globally; it only neutralizes controls under the dismissed
   // popover until the trailing click is swallowed (or the short fallback timer expires).
+  // Pointer blocking is broad, but visual opacity reset is narrower: rating bar rows carry
+  // their own selected-filter opacity state and must not flash back to full opacity.
   '[data-renuvex-pr-dismiss-gesture] button[class^="renuvex-pr-"],[data-renuvex-pr-dismiss-gesture] button[class*=" renuvex-pr-"],' +
     '[data-renuvex-pr-dismiss-gesture] [class^="renuvex-pr-"][role="button"],[data-renuvex-pr-dismiss-gesture] [class*=" renuvex-pr-"][role="button"],' +
     '[data-renuvex-pr-dismiss-gesture] [class^="renuvex-pr-"][role="menuitem"],[data-renuvex-pr-dismiss-gesture] [class*=" renuvex-pr-"][role="menuitem"]' +
-    '{pointer-events:none;opacity:1!important;}',
+    '{pointer-events:none;}',
+  '[data-renuvex-pr-dismiss-gesture] button[class^="renuvex-pr-"],[data-renuvex-pr-dismiss-gesture] button[class*=" renuvex-pr-"],' +
+    '[data-renuvex-pr-dismiss-gesture] [class^="renuvex-pr-"][role="menuitem"],[data-renuvex-pr-dismiss-gesture] [class*=" renuvex-pr-"][role="menuitem"],' +
+    '[data-renuvex-pr-dismiss-gesture] [class^="renuvex-pr-"][role="button"]:not(.renuvex-pr-bar-row),[data-renuvex-pr-dismiss-gesture] [class*=" renuvex-pr-"][role="button"]:not(.renuvex-pr-bar-row)' +
+    '{opacity:1!important;}',
 
   // 5) Utility classes for non-button interactives.
   '.renuvex-pr-press-dim:active,.renuvex-pr-press-dim:active{opacity:0.85;}',

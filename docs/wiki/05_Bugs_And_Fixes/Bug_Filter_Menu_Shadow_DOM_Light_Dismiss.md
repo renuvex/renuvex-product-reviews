@@ -3,8 +3,8 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-30
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-06-02
+last_verified: 2026-06-02
 confidence: high
 tags:
   - bug
@@ -23,6 +23,7 @@ source_files:
   - "src/widget/shared/base-reset.js"
   - "tests/unit/widget-popover-registry.test.ts"
   - "tests/widget-interaction-smoke.spec.ts"
+  - "tests/widget-runtime-smoke.spec.ts"
 ---
 
 # Bug - Filter Menu Shadow DOM Light Dismiss
@@ -89,6 +90,13 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
   controls exposed under the dismissed menu. This preserves normal ADR_0011 `:active` feedback
   for real taps on "Yorum Yap"; it only blocks same-gesture compat events leaking from the
   filter option tap.
+- **2026-06-02 follow-up for compact mobile rating bars:** the gesture shield's pointer block
+  stays broad, but the forced `opacity:1!important` reset is no longer applied to
+  `.renuvex-pr-bar-row`. Rating bar rows are stateful controls: when a rating filter is active,
+  inactive rows intentionally render at `opacity:0.35`. Physical mobile testing showed the
+  broader opacity reset made those inactive rows flash back to full opacity while choosing a
+  filter option. The shield still blocks pointer/click-through on the rows; it just preserves
+  their selected-filter visual state.
 
 `actions-block.js`: `closeFilter()` returns `wasOpen`; `activateOption` calls
 `swallowNextDismissClick()` for pointer activations (not keyboard, which has no trailing click).
@@ -101,12 +109,17 @@ This is the same class as the other isolation asymmetries (tap-highlight, scroll
 - `tests/widget-interaction-smoke.spec.ts` (regression: classic filter toggles on re-tap; an
   outside tap on a photo thumbnail dismisses the menu without opening the lightbox; pointer
   option activation shields the write button from same-gesture press-through)
+- `tests/widget-runtime-smoke.spec.ts` (regression: compact mobile rating filter + filter
+  option activation keeps inactive bar rows dim while the gesture shield blocks pointers)
 - Rebuilt `public/widget.js` + `public/widget-runtime/*`
 
 ## Verification
 - `pnpm build:widget`, `pnpm test:widget-interactions` (5/5, incl. the new filter test),
   `pnpm test:widget-runtime` (8/8, compact filter unaffected), `pnpm test:unit`,
   `pnpm exec tsc --noEmit`, `pnpm lint`.
+- 2026-06-02 compact-mobile follow-up: targeted runtime proof failed before the fix with
+  inactive bar row `opacity: 1` while the dismiss shield was armed, then passed after narrowing
+  the shield opacity reset (`opacity: 0.35`, `pointer-events: none`).
 - Manual on the live dev storefront: classic summary filter opens over the photo strip,
   re-tap closes, and tapping the photo strip while open only dismisses (no lightbox).
 

@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-02 - fix | Preserve compact rating dim state during filter shield
+- Summary: Fixed the physical-mobile compact follow-up where selecting a rating, then choosing a filter option, made the inactive rating rows flash from their intentional dim state to full opacity. Root cause was the same-gesture dismiss shield applying `opacity:1!important` to every `[role="button"]`; bar chart rows are `role="button"` and carry selected-filter opacity state.
+- Key source changes: `src/widget/shared/base-reset.js` now keeps broad `pointer-events:none` shielding but excludes `.renuvex-pr-bar-row` from the forced opacity reset. `tests/widget-runtime-smoke.spec.ts` pins the exact mobile moment: shield armed, inactive bar row remains `opacity:0.35`, pointer events are blocked. Rebuilt `public/widget.js` + `public/widget-runtime/*`.
+- Verification: Targeted runtime proof failed before the fix with `opacity:1`, then passed after the shield split.
+- Updated wiki: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]], [[Bug_Index]], [[Widget_Architecture]], [[Test_Strategy]]
+
 ## 2026-06-02 - fix | Keep compact mobile bar chart from replaying popover animation
 - Summary: Fixed the follow-up compact-mobile motion issue where the panel stayed open after a rating-bar filter, but the bar chart visually disappeared/reappeared. Root cause was the desktop popover `renuvex-pr-grow-out` animation living on the shared `.renuvex-pr-compact-panel.renuvex-pr-open` rule, so mobile accordion redraws replayed the desktop opacity/scale animation.
 - Key source changes: `src/widget/summary-layouts/compact/styles.js` now scopes the grow-out animation to desktop (`min-width:601px`); mobile compact keeps only its `max-height` accordion transition. The runtime smoke test now asserts the mobile open panel has `animation-name:none` after bar-track filtering while retaining the accordion transition. Rebuilt `public/widget.js` + `public/widget-runtime/*`.
