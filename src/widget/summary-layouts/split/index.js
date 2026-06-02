@@ -2,8 +2,8 @@
 // Yatay 3 kolon layout (Premium stil):
 // SOL: yıldızlar + ortalama "X out of 5" + toplam yorum sayısı
 // ORTA: bar chart
-// SAĞ: filter butonu + write butonu (dikey)
-// Mobile (<768): 3 kolon alt alta diziliyor.
+// SAĞ: write + filter butonu yan yana (yatay), dikey ortalı
+// Mobile (<768): kolonlar classic stack olarak alt alta diziliyor.
 
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
@@ -69,9 +69,11 @@ export function render(opts) {
   }));
   summary.appendChild(mid);
 
-  // ─── SAĞ: filter (üstte) + write (altta) ──────────────────────
+  // ─── SAĞ: write (solda) + filter (sağda), yan yana ────────────
   // buildActionsBlock döndürür: actionsBlock { write-btn, filter-wrap }
-  // Bunları parçalayıp sağ kolona dikey diziyoruz.
+  // Bunları parçalayıp sağ kolona yatay diziyoruz: desktop'ta
+  // .renuvex-pr-split-right flex-direction:row + align-self:center (dikey
+  // ortalı); mobilde de row, max-340 ortalı (styles.js).
   var actions = buildActionsBlock({
     widget: widget,
     currentOrderBy: currentOrderBy,
