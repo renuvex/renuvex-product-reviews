@@ -22,13 +22,14 @@ import { registerSpriteRoot, unregisterSpriteRoot, iconUseNode } from '../icons/
 import { UI_CLOSE, UI_CARET_LEFT, UI_CARET_RIGHT } from '../icons/index.js';
 import { lockBodyScroll, restoreBodyScroll } from '../core/body-scroll-lock.js';
 import { getReturnFocusElement, restoreFocus, trapFocus } from '../shared/focus-trap.js';
+import { wasLastInputKeyboard } from '../shared/input-modality.js';
 import { pushModalHistoryEntry, restoreModalHistoryEntry } from '../core/modal-history.js';
 
 function getValidImages(review) {
   return getTrustedReviewImages(review);
 }
 
-function closeModal(host, onKeyDown, onPopState, bodyScrollState, returnFocusEl) {
+function closeModal(host, onKeyDown, onPopState, bodyScrollState, returnFocusEl, openedByKeyboard) {
   restoreBodyScroll(bodyScrollState);
   document.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('popstate', onPopState);
@@ -36,7 +37,12 @@ function closeModal(host, onKeyDown, onPopState, bodyScrollState, returnFocusEl)
   // removing the body-level shadow host disposes the overlay + its shadow root.
   if (host && host.shadowRoot) unregisterSpriteRoot(host.shadowRoot);
   if (host && host.parentNode) host.parentNode.removeChild(host);
-  restoreFocus(returnFocusEl);
+  // Keyboard opens return focus to the trigger (so Tab continues from where it left
+  // off); pointer/touch opens do NOT — otherwise closing with Esc after a mouse/tap
+  // open leaves a focus ring stuck on the photo trigger. Removing the shadow host
+  // above already blurs focus to <body>, so we simply skip the restore for pointer
+  // opens. Mirrors the review wizard contract (review-form-modal/modal-shell.js).
+  if (openedByKeyboard) restoreFocus(returnFocusEl);
 }
 
 function buildRight(r) {
@@ -361,6 +367,10 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   var closed = false;
   var shadow = null;
   var returnFocusEl = getReturnFocusElement();
+  // Capture HOW the lightbox was opened (keyboard vs pointer) at open time, not at
+  // close time — Esc itself flips the global modality flag to keyboard, so reading it
+  // on close would always look like keyboard. Used by closeModal to decide focus return.
+  var openedByKeyboard = wasLastInputKeyboard();
   var bodyScrollState = lockBodyScroll();
   var modalHistoryEntry = pushModalHistoryEntry();
   var modalState = {
@@ -385,7 +395,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
     if (closed) return;
     closed = true;
     window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-    closeModal(shadow && shadow.host, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
+    closeModal(shadow && shadow.host, onKeyDown, onPopState, bodyScrollState, returnFocusEl, openedByKeyboard);
   }
 
   function onKeyDown(e) {
@@ -400,7 +410,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
     if (closed) return;
     closed = true;
     window.removeEventListener(RENUVEX_PR_SETTINGS_UPDATED_PREVIEW, onSettingsUpdate);
-    closeModal(shadow && shadow.host, onKeyDown, onPopState, bodyScrollState, returnFocusEl);
+    closeModal(shadow && shadow.host, onKeyDown, onPopState, bodyScrollState, returnFocusEl, openedByKeyboard);
     restoreModalHistoryEntry(modalHistoryEntry);
   }
 

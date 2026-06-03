@@ -195,6 +195,31 @@ test('review card image opens the lightbox and Escape closes it', async ({ page 
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('pointer-opened lightbox leaves no focus ring on the trigger after Escape', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  // No keyboard navigation has happened (a mouse/touch shopper), so opening the
+  // lightbox is a pointer open. Closing with Esc must NOT return focus to the photo
+  // trigger — otherwise a :focus-visible ring stays stuck on the thumbnail (the
+  // reported bug). Keyboard opens still restore focus (covered by the test above).
+  await clickInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
+
+  // Pointer open => focus is not restored, so the reviews shadow root has no focused
+  // element (focus fell back to <body> when the overlay host was removed).
+  expect(await reviewsActiveState(page)).toMatchObject({ className: '', ariaLabel: null, role: null });
+
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('review wizard validates required fields and submits through mocked public API', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,

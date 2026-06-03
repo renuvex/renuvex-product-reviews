@@ -108,8 +108,6 @@ export var GALLERY_CSS = `
     border-radius:var(--renuvex-pr-radius,6px);
     border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
   }
-  /* Lightbox tetikleyicisi; klavye odak halkası widget geneliyle tutarlı, içe offset. */
-  .renuvex-pr-review-gallery-media img:focus-visible{outline:2px solid var(--renuvex-pr-review-star-color,#f59e0b);outline-offset:-2px;}
   @media (max-width:600px){
     #renuvex-reviews-widget:has(.renuvex-pr-review-gallery){
       column-count:1;
