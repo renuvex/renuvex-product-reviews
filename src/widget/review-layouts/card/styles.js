@@ -19,6 +19,9 @@ export var CARD_REVIEW_CSS = `
 
   .renuvex-pr-review .renuvex-pr-gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--renuvex-pr-gap-loose);}
   .renuvex-pr-review .renuvex-pr-img{width:var(--renuvex-pr-card-photo-w,var(--renuvex-pr-thumbnail-size,90px));height:var(--renuvex-pr-card-photo-w,var(--renuvex-pr-thumbnail-size,90px));object-fit:cover;border-radius:var(--renuvex-pr-radius,6px);border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));cursor:pointer;}
+  /* Lightbox tetikleyicisi; klavye odak halkası widget geneliyle tutarlı, içe offset
+     (mobil yatay galeri kaydırma kenarında kırpılmayı önler). */
+  .renuvex-pr-review .renuvex-pr-img:focus-visible{outline:2px solid var(--renuvex-pr-review-star-color,#f59e0b);outline-offset:-2px;}
 
   @media(max-width:600px){
     .renuvex-pr-review-top-left{flex-direction:column;align-items:flex-start;gap:4px;}

@@ -45,6 +45,9 @@ export var LIST_CSS = `
     border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
     cursor:pointer;
   }
+  /* Lightbox tetikleyicisi; klavye odak halkası widget geneliyle tutarlı, içe offset
+     (mobil yatay foto strip kaydırma kenarında kırpılmayı önler). */
+  .renuvex-pr-review-list-media img:focus-visible{outline:2px solid var(--renuvex-pr-review-star-color,#f59e0b);outline-offset:-2px;}
   /* Desktop: sadece ilk foto görünür (sağ kolonda tek delil görseli). DOM'da
      tüm fotolar var, modal için kullanılır. Mobile'da kuralın aktif olmaması
      için min-width:601 media query içinde tanımlandı — böylece mobile strip
