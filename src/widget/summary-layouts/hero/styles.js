@@ -47,6 +47,8 @@ export var HERO_CSS = `
   @media(max-width:600px){
     .renuvex-pr-summary-hero{
       flex-wrap:wrap;gap:16px;
+      /* Mobilde yatay padding'i summary gutter token'ına hizala (review listesiyle aynı 16px) */
+      padding-left:var(--renuvex-pr-pad-summary-mobile);padding-right:var(--renuvex-pr-pad-summary-mobile);
     }
     .renuvex-pr-hero-info{gap:12px;justify-content:flex-start;width:100%;}
     .renuvex-pr-hero-rating-col{flex-direction:row;align-items:center;gap:16px;}

@@ -42,6 +42,8 @@ export var MINIMAL_CSS = `
   @media(max-width:600px){
     .renuvex-pr-summary-minimal{
       flex-wrap:wrap;gap:12px;
+      /* Mobilde yatay padding'i summary gutter token'ına hizala (review listesiyle aynı 16px) */
+      padding-left:var(--renuvex-pr-pad-summary-mobile);padding-right:var(--renuvex-pr-pad-summary-mobile);
     }
     .renuvex-pr-minimal-info{flex:1 1 auto;}
     .renuvex-pr-minimal-actions{flex:0 0 auto;}
