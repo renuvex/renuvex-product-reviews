@@ -27,6 +27,7 @@ import * as compact from './compact/index.js';
 import * as split from './split/index.js';
 import * as minimal from './minimal/index.js';
 import * as hero from './hero/index.js';
+import { SUMMARY_BASE_CSS } from './shared/summary-base.js';
 
 export var LAYOUTS = {
   classic: classic,
@@ -40,10 +41,14 @@ export function getLayout(id) {
   return LAYOUTS[id] || LAYOUTS.classic;
 }
 
-// Tüm layout'ların opsiyonel CSS string'lerini birleştir — ana inject ile beraber yüklenir.
-// Sadece aktif layout'un class'ları DOM'a yazıldığı için gizli layout CSS'leri etki etmez.
+// Shared summary base first (root container + grid tokens + avg/count/recommend
+// typography), then each layout's optional CSS. Base BEFORE the per-layout
+// overrides preserves the cascade order — equal-specificity
+// .renuvex-pr-summary-<id> rules win by source order. Only the active layout's
+// classes hit the DOM, so hidden layout CSS has no effect.
 export function getLayoutsCSS() {
-  return Object.keys(LAYOUTS)
+  var layoutCSS = Object.keys(LAYOUTS)
     .map(function(k) { return LAYOUTS[k].css || ''; })
     .join('\n');
+  return SUMMARY_BASE_CSS + '\n' + layoutCSS;
 }
