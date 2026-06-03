@@ -92,6 +92,7 @@ export function render(r, allReviews) {
     var mediaCol = document.createElement('div');
     mediaCol.className = 'renuvex-pr-review-list-media';
     trustedImages.forEach(function(imgUrl) {
+      // alt kasıtlı yok: wireLightboxTrigger role=button + aria-label verir (erişilebilir ad orada).
       var imgEl = document.createElement('img');
       // Liste sağ kolonu ~90 px, mobile yatay strip aspect 3:4 (styles.js:90).
       // srcset: 1x/2x retina yedeği. width/height 3:4 oranına uyumlu.

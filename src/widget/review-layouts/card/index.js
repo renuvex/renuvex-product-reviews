@@ -69,6 +69,7 @@ export function render(r, allReviews) {
     var gallery = document.createElement('div');
     gallery.className = 'renuvex-pr-gallery';
     trustedImages.forEach(function(imgUrl) {
+      // alt kasıtlı yok: wireLightboxTrigger role=button + aria-label verir (erişilebilir ad orada).
       var imgEl = document.createElement('img');
       var cardAttrs = buildResponsiveImgAttrs(imgUrl, PHOTO_STRIP_THUMB_WIDTH);
       imgEl.src = cardAttrs.src;

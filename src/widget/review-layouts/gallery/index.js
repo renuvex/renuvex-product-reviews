@@ -87,6 +87,7 @@ export function render(r, allReviews) {
   if (hasMedia) {
     var mediaWrap = document.createElement('div');
     mediaWrap.className = 'renuvex-pr-review-gallery-media';
+    // alt kasıtlı yok: wireLightboxTrigger role=button + aria-label verir (erişilebilir ad orada).
     var imgEl = document.createElement('img');
     // Gallery masonry tile 200-400 px, aspect 3:4 (styles.js).
     // srcset: 1x/2x retina yedeği; width/height 3:4 CLS rezervi.
