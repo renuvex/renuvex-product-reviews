@@ -71,6 +71,30 @@ export var COMPACT_CSS = `
   .renuvex-pr-compact-write-row{display:none;}
   .renuvex-pr-compact-write-row .renuvex-pr-write-btn{flex:1 1 auto;justify-content:center;}
 
+  /* ─── Büyük boyut: hero/minimal deseni ───────────────────────────────
+     size=large iken header dikeye geçer; aksiyonlar (Yorum Yap + filtre) trigger'ın
+     ALTINA tam-genişlik tek satıra iner — filtre Yorum Yap'ın sağında (hero mobil deseni).
+     Sıkışık tek-satır header yerine. data-renuvex-size render.js'te #renuvex-reviews-widget'a
+     yazılır. Specificity (0,2-3,0) mobil kuralları ezer; !important gerekmez. */
+  [data-renuvex-size="large"] .renuvex-pr-compact-header{
+    flex-direction:column;align-items:stretch;gap:12px;
+  }
+  [data-renuvex-size="large"] .renuvex-pr-compact-trigger-wrap{
+    flex:0 0 auto;width:100%;
+  }
+  [data-renuvex-size="large"] .renuvex-pr-compact-actions-slot{
+    width:100%;display:flex;gap:8px;align-items:stretch;justify-content:flex-start;
+  }
+  [data-renuvex-size="large"] .renuvex-pr-compact-actions-slot .renuvex-pr-write-btn{
+    display:flex;flex:1 1 auto;justify-content:center;
+  }
+  [data-renuvex-size="large"] .renuvex-pr-compact-actions-slot .renuvex-pr-filter-wrap{
+    flex:0 0 auto;display:flex;
+  }
+  [data-renuvex-size="large"] .renuvex-pr-compact-write-row{
+    display:none;
+  }
+
   /* ─── POPOVER ─────────────────────────────────────────────────
      Premium tarzda: scale(0.7) translateY(-20px) → scale(1), opacity 0 → 1.
      200ms ease-in-out, forwards (son state'te kalır). */

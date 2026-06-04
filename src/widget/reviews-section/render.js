@@ -223,6 +223,10 @@ export async function render(productId, settings, reviewsData, productName, orde
       widget.setAttribute('aria-label', 'Ürün yorumları');
       widget.className = 'renuvex-pr-reviews-widget';
       widget.setAttribute('data-renuvex-surface', 'reviews');
+      // Size'ı layout'ların yakalayabilmesi için attribute olarak da yaz (CSS değişkenleri
+      // tipografiyi sürer; bu attribute boyuta-bağlı YERLEŞİM kararlarını mümkün kılar —
+      // ör. compact large'da aksiyonları alta alma). Bkz compact/styles.js [data-renuvex-size].
+      widget.setAttribute('data-renuvex-size', settings.size || 'medium');
       if (productId) {
         widget.setAttribute('data-renuvex-product-id', String(productId));
       }
