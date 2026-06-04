@@ -143,6 +143,22 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   mainImg.width = LIGHTBOX_MAIN_WIDTH;
   mainImg.height = Math.round(LIGHTBOX_MAIN_WIDTH * 4 / 3);
   mainImg.alt = 'Yorum fotoğrafı';
+  // İlk açılışta (next/prev animasyonu yokken) büyük 1200px görsel taze yüklenir ve
+  // thumbnail 300/600px olduğu için cache'te yoktur → koyu #222 zemin üzerine aniden
+  // "pop" eder (flash). Yüklenene kadar gizle, hazır olunca yumuşak fade ile göster.
+  // Navigasyonun kendi slide+fade animasyonu var (animClass), ona dokunma.
+  if (!animClass) {
+    mainImg.classList.add('renuvex-pr-modal-img-loading');
+    var revealMainImg = function () { mainImg.classList.remove('renuvex-pr-modal-img-loading'); };
+    if (mainImg.complete && mainImg.naturalWidth > 0) {
+      revealMainImg();
+    } else {
+      mainImg.addEventListener('load', revealMainImg, { once: true });
+      // Hata durumunda error-handler görseli zaten gizler; yine de loading class'ını
+      // kaldır ki opacity:0 ile takılı kalmasın.
+      mainImg.addEventListener('error', revealMainImg, { once: true });
+    }
+  }
   // Lightbox ana görsel için thumbnail'lerden farklı davranış — boş bırakmak
   // UX'i bozar. Görsel yüklenemediğinde yerine "Görsel yüklenemedi" placeholder'ı
   // konur; lightbox prev/next/swipe navigasyonu çalışmaya devam eder.

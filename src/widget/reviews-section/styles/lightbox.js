@@ -9,7 +9,10 @@ export var LIGHTBOX_CSS = `
 
   .renuvex-pr-modal{background:#ffffff;color:#111111;border-radius:calc(var(--renuvex-pr-radius, 8px) * 1.5);overflow:hidden;display:flex;width:100%;height:584px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .renuvex-pr-modal-left{flex:0 0 438px;background:#222;position:relative;overflow:hidden;}
-  .renuvex-pr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:block;background:#222;}
+  .renuvex-pr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:block;background:#222;transition:opacity 0.25s ease;}
+  /* İlk açılışta görsel yüklenene kadar opacity:0; load/error'da class kalkar ve yukarıdaki
+     transition ile yumuşak fade-in olur (koyu zemine ani "pop"/flash yerine). */
+  .renuvex-pr-modal-img-loading{opacity:0;}
   .renuvex-pr-modal-img-error{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;color:#cccccc;background:#222;font-size:14px;line-height:1.4;text-align:center;}
   .renuvex-pr-modal-img-enter-right{animation:renuvexPrSlideInRight 0.2s ease forwards;}
   .renuvex-pr-modal-img-enter-left{animation:renuvexPrSlideInLeft 0.2s ease forwards;}

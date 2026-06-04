@@ -29,6 +29,10 @@ export var PHOTO_STRIP_CSS = `
   .renuvex-pr-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px 0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .renuvex-pr-photo-strip::-webkit-scrollbar{display:none;}
   .renuvex-pr-photo-strip-thumb{flex:0 0 var(--renuvex-pr-thumbnail-size,90px);width:var(--renuvex-pr-thumbnail-size,90px);height:auto;aspect-ratio:var(--renuvex-pr-photo-thumb-aspect,1/1);border-radius:var(--renuvex-pr-radius,8px);object-fit:cover;cursor:pointer;transition:transform 0.2s ease;border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));}
+  /* Foto tetikleyicisi role=button olduğu için BASE_RESET'in ADR_0011 press-dim'ini
+     (opacity:0.85) miras alıyor; bu, bir foto üzerinde "flash" gibi okunuyor — lightbox'ın
+     açılması zaten geri bildirim. Press-dim'i kaldır (role=button kuralını !important ile ez). */
+  .renuvex-pr-photo-strip-thumb:active{opacity:1 !important;}
   @media(hover:hover) and (pointer:fine){.renuvex-pr-photo-strip-thumb:hover{transform:translateY(-2px);}}
   .renuvex-pr-photo-strip-wrap{position:relative;display:block;}
 `;
