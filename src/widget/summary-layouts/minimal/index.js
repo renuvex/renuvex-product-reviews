@@ -7,7 +7,6 @@
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
 import { partialStarsHTML } from '../../core/helpers.js';
-import { currentSettings } from '../../core/state.js';
 import { MINIMAL_CSS } from './styles.js';
 
 export var meta = {
@@ -75,17 +74,24 @@ export function render(opts) {
   if (filterWrap) actionsSlot.appendChild(filterWrap);
   summary.appendChild(actionsSlot);
 
-  // ─── Mobile-only write satırı (CSS ile sadece <600 görünür) ────
-  if (writeBtn) {
-    var writeBtnMobile = document.createElement('button');
-    writeBtnMobile.className = 'renuvex-pr-write-btn';
-    writeBtnMobile.textContent = (currentSettings && currentSettings.writeButtonText) || 'Yorum Yap';
-    writeBtnMobile.onclick = openWriteForm;
-    var writeRow = document.createElement('div');
-    writeRow.className = 'renuvex-pr-minimal-write-row';
-    writeRow.appendChild(writeBtnMobile);
-    summary.appendChild(writeRow);
-  }
+  // ─── Mobile-only write + filter satırı (CSS ile sadece <600 görünür) ────
+  // Hero ile aynı desen: mobilde filtre yalnız kalıp sol-alt köşede orphan
+  // olmasın diye "Yorum Yap" ile aynı satıra alınır. Desktop minimal-actions
+  // mobilde gizlenir (styles.js). buildActionsBlock ayrı bir instance döndürür.
+  var mobileActions = buildActionsBlock({
+    widget: widget,
+    currentOrderBy: currentOrderBy,
+    currentHasImages: currentHasImages,
+    onWriteClick: openWriteForm,
+    onSortChange: onSortChange,
+  });
+  var mFilter = mobileActions.querySelector('.renuvex-pr-filter-wrap');
+  var mWrite = mobileActions.querySelector('.renuvex-pr-write-btn');
+  var writeRow = document.createElement('div');
+  writeRow.className = 'renuvex-pr-minimal-write-row';
+  if (mWrite) writeRow.appendChild(mWrite);
+  if (mFilter) writeRow.appendChild(mFilter);
+  summary.appendChild(writeRow);
 
   return summary;
 }

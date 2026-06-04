@@ -49,12 +49,13 @@ export var MINIMAL_CSS = `
       padding-left:var(--renuvex-pr-pad-summary-mobile);padding-right:var(--renuvex-pr-pad-summary-mobile);
     }
     .renuvex-pr-minimal-info{flex:1 1 auto;}
-    .renuvex-pr-minimal-actions{flex:0 0 auto;}
-    /* Filter info'nun yaninda kalir (sag ust kose), Yorum Yap full-genislik
-       alta tek basina duser. Hero ve minimal'in kompakt karakterine uygun. */
-    .renuvex-pr-minimal-actions .renuvex-pr-write-btn{display:none;}
-    .renuvex-pr-minimal-write-row{display:flex;width:100%;}
+    /* Mobilde desktop sağ-üst aksiyonlarını gizle; filtre + Yorum Yap alt satıra
+       BİRLİKTE iner (hero deseni) — filtre tek başına sol-alta orphan düşmez. */
+    .renuvex-pr-minimal-actions{display:none;}
+    .renuvex-pr-minimal-write-row{display:flex;width:100%;gap:8px;align-items:stretch;}
     .renuvex-pr-minimal-write-row .renuvex-pr-write-btn{flex:1 1 auto;justify-content:center;}
+    .renuvex-pr-minimal-write-row .renuvex-pr-filter-wrap{flex:0 0 auto;display:flex;}
+    .renuvex-pr-minimal-write-row .renuvex-pr-filter-btn{height:100%;aspect-ratio:1/1;}
   }
   @media(min-width:601px){
     .renuvex-pr-minimal-write-row{display:none;}
