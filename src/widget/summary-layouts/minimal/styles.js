@@ -14,7 +14,9 @@ export var MINIMAL_CSS = `
     display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;
   }
   .renuvex-pr-minimal-row{
-    display:flex;align-items:center;gap:8px;
+    /* flex-wrap: sayaç (sayı+etiket) sığmazsa bütün halinde alt satıra iner —
+       yıldız/avg üst satırda kalır, ifade ortasından bölünmez. */
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   }
   .renuvex-pr-minimal-avg{
     font-size:var(--renuvex-pr-minimal-avg-size,22px);
@@ -32,7 +34,8 @@ export var MINIMAL_CSS = `
   .renuvex-pr-minimal-count{
     font-size:var(--renuvex-pr-recommend-size,14px);
     color:var(--renuvex-pr-header-count,var(--renuvex-pr-text,rgba(0,0,0,1)));
-    font-weight:400;line-height:1.2;
+    /* overflow-wrap: aşırı dar kapsayıcıda tek uzun kelime bile taşmadan kırılır. */
+    font-weight:400;line-height:1.2;overflow-wrap:anywhere;
   }
 
   .renuvex-pr-minimal-actions{

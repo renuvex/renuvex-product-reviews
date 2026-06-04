@@ -21,7 +21,9 @@ export var COMPACT_CSS = `
   .renuvex-pr-compact-trigger{
     display:flex;align-items:center;gap:10px;
     background:transparent;border:0;padding:0;cursor:pointer;
-    font-family:inherit;color:inherit;flex:0 0 auto;
+    /* flex:0 1 auto + min-width:0: sığmazsa trigger küçülebilir; içindeki metin
+       ellipsis ile kısalır (yıldız + chevron flex-shrink:0 ile sabit kalır). */
+    font-family:inherit;color:inherit;flex:0 1 auto;min-width:0;
   }
   /* The trigger wraps the rating stars + count (content, not a plain button surface), so
      the global press-dim (base-reset \`button:active{opacity:.85}\`) would dim that content
@@ -42,7 +44,8 @@ export var COMPACT_CSS = `
   .renuvex-pr-compact-trigger-text{
     font-size:var(--renuvex-pr-compact-count-size,16px);
     color:var(--renuvex-pr-header-count,var(--renuvex-pr-text,rgba(0,0,0,1)));
-    font-weight:500;white-space:nowrap;
+    /* Tek-satır trigger: sığmazsa taşmak/çakışmak yerine "…" ile kısalır. */
+    font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
   }
   .renuvex-pr-compact-chevron{
     display:inline-flex;align-items:center;justify-content:center;

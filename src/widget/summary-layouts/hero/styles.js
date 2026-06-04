@@ -7,6 +7,9 @@ export var HERO_CSS = `
   .renuvex-pr-title-hero{text-align:left;}
 
   .renuvex-pr-summary-hero{
+    /* container-type: dev avg sayısının kapsayıcı genişliğine göre (viewport değil)
+       küçülebilmesi için container-query bağlamı kurar. Bkz .renuvex-pr-hero-avg clamp. */
+    container-type:inline-size;
     display:flex;flex-direction:row;align-items:center;justify-content:space-between;
     gap:24px;width:100%;max-width:none;padding:12px 8px;
   }
@@ -18,10 +21,15 @@ export var HERO_CSS = `
     display:flex;flex-direction:row;align-items:center;gap:20px;
   }
   .renuvex-pr-hero-meta-row{
-    display:flex;flex-direction:row;align-items:center;gap:8px;
+    /* flex-wrap: dar kapsayıcıda sayaç yıldızların altına bütün halinde iner —
+       "Yorum Yap" butonuyla çakışmaz, ifade ortasından bölünmez. */
+    display:flex;flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;
   }
   .renuvex-pr-hero-avg{
-    font-size:var(--renuvex-pr-hero-avg-size,90px);
+    /* Kapsayıcı-duyarlı boyut: geniş kolonda size preset'i (büyük=106px) tavan,
+       dar kolonda 44px'e kadar küçülür (16cqi) → sayaca/aksiyonlara yer açılır.
+       cqi = .renuvex-pr-summary-hero inline genişliğinin %1'i. */
+    font-size:clamp(44px, 14cqi, var(--renuvex-pr-hero-avg-size,90px));
     color:var(--renuvex-pr-header-avg,var(--renuvex-pr-text,rgba(0,0,0,1)));
     font-weight:700;line-height:1;letter-spacing:-2px;
   }
@@ -36,7 +44,8 @@ export var HERO_CSS = `
   .renuvex-pr-hero-count{
     font-size:var(--renuvex-pr-recommend-size,14px);
     color:var(--renuvex-pr-header-count,var(--renuvex-pr-text,rgba(0,0,0,0.6)));
-    font-weight:400;line-height:1;
+    /* overflow-wrap: aşırı dar kapsayıcıda tek uzun kelime bile taşmadan kırılır. */
+    font-weight:400;line-height:1;overflow-wrap:anywhere;
   }
 
   .renuvex-pr-hero-actions{
