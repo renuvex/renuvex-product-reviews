@@ -118,6 +118,13 @@ export async function render(productId, settings, reviewsData, productName, orde
     // thumbnailSize drives only the top "Fotoğraflı Yorumlar" strip thumbnails.
     var sz = SIZE_PRESETS[settings.size] || SIZE_PRESETS.medium;
     var thumbPx = THUMBNAIL_PRESETS[settings.thumbnailSize] || THUMBNAIL_PRESETS.medium;
+    // Photo strip (Fotoğraflı Yorumlar) thumbnail boyutu: list/gallery 3:4 PORTRE
+    // olduğundan "Büyük" (140px) fazla yer kaplıyor → bu iki layout'ta büyük boyu
+    // 110px'e (medium) sınırla; 3:4 ile yükseklik 146.66px olur. Card 1:1 kare
+    // olduğundan büyük=140 aynen kalır. Yalnız büyük etkilenir (orta/küçük değişmez).
+    if (settings.thumbnailSize === 'large' && (settings.reviewLayout === 'list' || settings.reviewLayout === 'gallery')) {
+      thumbPx = THUMBNAIL_PRESETS.medium;
+    }
 
     root.style.setProperty('--renuvex-pr-title-size', sz.titleSize + 'px');
     root.style.setProperty('--renuvex-pr-review-text-size', sz.reviewTextSize + 'px');
