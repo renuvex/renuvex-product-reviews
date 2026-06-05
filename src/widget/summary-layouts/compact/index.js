@@ -91,6 +91,17 @@ export function render(opts) {
     '<span class="renuvex-pr-compact-chevron">' +
       iconUseSvg(UI_CARET_DOWN) +
     '</span>';
+  // Sayaç + chevron'u tek gruba al (DOM ile, innerHTML'e dokunmadan): trigger sarınca
+  // ikisi BİRLİKTE yıldızların altına iner — chevron tek başına alt satıra düşmez.
+  var countTextEl = trigger.querySelector('.renuvex-pr-compact-trigger-text');
+  var countChevronEl = trigger.querySelector('.renuvex-pr-compact-chevron');
+  if (countTextEl && countChevronEl) {
+    var countGroupEl = document.createElement('span');
+    countGroupEl.className = 'renuvex-pr-compact-trigger-count';
+    trigger.insertBefore(countGroupEl, countTextEl);
+    countGroupEl.appendChild(countTextEl);
+    countGroupEl.appendChild(countChevronEl);
+  }
   triggerWrap.appendChild(trigger);
   header.appendChild(triggerWrap);
 

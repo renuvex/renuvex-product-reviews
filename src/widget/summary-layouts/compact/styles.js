@@ -43,6 +43,12 @@ export var COMPACT_CSS = `
     height:var(--renuvex-pr-compact-star-size,var(--renuvex-pr-bar-label-size,20px));
     color:var(--renuvex-pr-review-star-color,#f59e0b);line-height:1;
   }
+  /* Sayaç + chevron grubu — trigger sarınca İKİSİ BİRLİKTE yıldızların altına iner;
+     chevron tek başına ayrı satıra düşmez. Grup tam-genişlik slotta olduğunda
+     metin tek satıra sığar, chevron metnin yanında kalır. */
+  .renuvex-pr-compact-trigger-count{
+    display:inline-flex;align-items:center;gap:8px;min-width:0;
+  }
   .renuvex-pr-compact-trigger-text{
     font-size:var(--renuvex-pr-compact-count-size,16px);
     color:var(--renuvex-pr-header-count,var(--renuvex-pr-text,rgba(0,0,0,1)));
