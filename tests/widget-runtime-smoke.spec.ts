@@ -663,12 +663,8 @@ for (const photoLayout of [
     const stripThumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
     const itemPhotoWidth = await widthInReviewsShadow(page, photoLayout.itemPhotoSelector);
 
-    // Photo strip follows thumbnailSize (not the global size:small) — at size:small the
-    // item photo is 80px while the strip is the thumbnailSize-derived value. For list/gallery
-    // (3:4 portrait) the "large" strip thumb is capped to 110px (see render.js); only card
-    // (1:1) keeps 140. So 'large' here resolves to ~110px, still clearly != the 80px item.
-    expect(stripThumbWidth).toBeGreaterThan(105);
-    expect(stripThumbWidth).toBeLessThan(115);
+    expect(stripThumbWidth).toBeGreaterThan(130);
+    expect(stripThumbWidth).toBeLessThan(150);
     expect(itemPhotoWidth).toBeGreaterThan(70);
     expect(itemPhotoWidth).toBeLessThan(90);
     expect(widgetErrors(log)).toEqual([]);
