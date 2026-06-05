@@ -18,6 +18,7 @@ export var css = HERO_CSS;
 
 export function render(opts) {
   var widget = opts.widget;
+  var settings = opts.settings;
   var iconPair = opts.iconPair;
   var allCount = opts.allCount;
   var avgRatingVal = opts.avgRatingVal;
@@ -50,7 +51,7 @@ export function render(opts) {
 
   var count = document.createElement('div');
   count.className = 'renuvex-pr-hero-count';
-  count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
+  count.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
   metaRow.appendChild(count);
 
   ratingCol.appendChild(metaRow);

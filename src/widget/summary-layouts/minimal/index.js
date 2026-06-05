@@ -20,6 +20,7 @@ export var css = MINIMAL_CSS;
 
 export function render(opts) {
   var widget = opts.widget;
+  var settings = opts.settings;
   var iconPair = opts.iconPair;
   var allCount = opts.allCount;
   var avgRatingVal = opts.avgRatingVal;
@@ -50,7 +51,7 @@ export function render(opts) {
   // Count artik avg+stars ile ayni satirda — "4.5 ★★★★★ 8 Yorum"
   var count = document.createElement('span');
   count.className = 'renuvex-pr-minimal-count';
-  count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
+  count.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
   topRow.appendChild(count);
 
   info.appendChild(topRow);

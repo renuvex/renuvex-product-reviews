@@ -48,7 +48,7 @@ export function render(opts) {
   // Toplam yorum sayısı
   var countBlock = document.createElement('div');
   countBlock.className = 'renuvex-pr-summary-block renuvex-pr-summary-count';
-  countBlock.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
+  countBlock.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
   summary.appendChild(countBlock);
 
   // Tavsiye yüzdesi (opsiyonel)

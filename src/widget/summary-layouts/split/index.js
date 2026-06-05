@@ -52,7 +52,7 @@ export function render(opts) {
   // Classic ile birebir ayni tipografi icin .renuvex-pr-summary-count kullanilir.
   // Boyut/renk/weight degisiklikleri otomatik split'e de yansir — tek kaynak.
   count.className = 'renuvex-pr-summary-block renuvex-pr-summary-count renuvex-pr-split-left-count';
-  count.textContent = allCount.toLocaleString('tr-TR') + ' Yorum';
+  count.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
   left.appendChild(count);
 
   summary.appendChild(left);

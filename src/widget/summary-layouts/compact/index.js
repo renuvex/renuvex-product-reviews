@@ -87,7 +87,7 @@ export function render(opts) {
 
   trigger.innerHTML =
     '<span class="renuvex-pr-compact-trigger-stars">' + partialStarsHTML(avgRatingVal, iconPair) + '</span>' +
-    '<span class="renuvex-pr-compact-trigger-text">' + allCount.toLocaleString('tr-TR') + ' Yorum</span>' +
+    '<span class="renuvex-pr-compact-trigger-text">' + allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum') + '</span>' +
     '<span class="renuvex-pr-compact-chevron">' +
       iconUseSvg(UI_CARET_DOWN) +
     '</span>';

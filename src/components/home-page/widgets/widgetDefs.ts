@@ -273,6 +273,10 @@ export const WIDGETS: WidgetDef[] = [
           // 'Yorum Yap' fallback'i kullanılır. Tüm summary layout'ları + empty
           // state + mobile alt-row same key'i okur.
           { type: 'text',   key: 'writeButtonText',      label: 'Yorum Yap Butonu Metni', placeholder: 'Yorum Yap', default: 'Yorum Yap', maxLength: 25 },
+          // "X Yorum" sayacındaki etiket kelimesi (ör. "Yorum" → "Değerlendirme").
+          // Boş bırakılırsa render tarafında 'Yorum' fallback'i kullanılır. 5 summary
+          // layout'u da aynı key'i okur (settings.countLabel).
+          { type: 'text',   key: 'countLabel',           label: 'Yorum Sayısı Etiketi', placeholder: 'Yorum', default: 'Yorum', maxLength: 20 },
           // Mağaza yanıtı bloğunun üstündeki rol etiketi. Hem inline reply (_shared.js)
           // hem modal lightbox (review-modal.js) aynı anahtarı okur. currentSettings
           // global state'ten geliyor; settings yoksa 'Mağaza Sahibi' fallback'i kullanılır.
