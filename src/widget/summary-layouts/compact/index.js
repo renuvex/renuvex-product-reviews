@@ -10,7 +10,6 @@ import { registerPopover } from '../shared/popover-registry.js';
 import { partialStarsHTML } from '../../core/helpers.js';
 import { starUseSvg, iconUseSvg } from '../../icons/star-sprite.js';
 import { UI_CARET_DOWN } from '../../icons/index.js';
-import { currentSettings } from '../../core/state.js';
 import { COMPACT_CSS } from './styles.js';
 
 export var meta = {
@@ -181,17 +180,23 @@ export function render(opts) {
   }
   placePanel(mql ? mql.matches : false);
 
-  // Mobile-only write satırı — header'daki butonun ikinci kopyası, CSS ile sadece mobile'da gözükür
-  if (writeBtn) {
-    var writeBtnMobile = document.createElement('button');
-    writeBtnMobile.className = 'renuvex-pr-write-btn';
-    writeBtnMobile.textContent = (currentSettings && currentSettings.writeButtonText) || 'Yorum Yap';
-    writeBtnMobile.onclick = openWriteForm;
-    var writeRow = document.createElement('div');
-    writeRow.className = 'renuvex-pr-compact-write-row';
-    writeRow.appendChild(writeBtnMobile);
-    summary.appendChild(writeRow);
-  }
+  // Mobile-only write + filter satırı — hero/minimal mobil deseni: filtre Yorum Yap'ın
+  // yanında alta iner (header actions-slot mobilde gizlenir; styles.js). Desktop original
+  // kalır. buildActionsBlock ayrı bir instance döndürür (header'dakini etkilemez).
+  var mobileActions = buildActionsBlock({
+    widget: widget,
+    currentOrderBy: currentOrderBy,
+    currentHasImages: currentHasImages,
+    onWriteClick: openWriteForm,
+    onSortChange: onSortChange,
+  });
+  var mFilter = mobileActions.querySelector('.renuvex-pr-filter-wrap');
+  var mWrite = mobileActions.querySelector('.renuvex-pr-write-btn');
+  var writeRow = document.createElement('div');
+  writeRow.className = 'renuvex-pr-compact-write-row';
+  if (mWrite) writeRow.appendChild(mWrite);
+  if (mFilter) writeRow.appendChild(mFilter);
+  summary.appendChild(writeRow);
 
   // ─── Toggle davranışı ───────────────────────────────────────
   // close() popover-registry kontratı: yalnızca GERÇEKTEN açıkken kapatıldıysa
