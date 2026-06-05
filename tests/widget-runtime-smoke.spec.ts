@@ -671,6 +671,41 @@ for (const photoLayout of [
   });
 }
 
+// Layout-aware mobile fix: for list/gallery (3:4 portrait) the in-review item photo
+// shrinks on mobile (-w-mobile sizeOverrides), so the top photo strip thumb must shrink
+// to match — otherwise the strip looks bigger than the review photos on mobile.
+for (const photoLayout of [
+  { reviewLayout: 'list' as const, itemPhotoSelector: '.renuvex-pr-review-list-media img' },
+  { reviewLayout: 'gallery' as const, itemPhotoSelector: '.renuvex-pr-review-gallery-media img' },
+]) {
+  test(`${photoLayout.reviewLayout} photo strip thumb matches the item photo size on mobile`, async ({ page }) => {
+    const log = await setupWidgetRoutes(page, {
+      mountReviews: true,
+      reviewsSettings: {
+        summaryLayout: 'classic',
+        reviewLayout: photoLayout.reviewLayout,
+        size: 'large',
+        thumbnailSize: 'large',
+      },
+    });
+
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb')).toBeGreaterThanOrEqual(1);
+    await waitForWidgetIdle(page);
+
+    const stripThumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+    const itemPhotoWidth = await widthInReviewsShadow(page, photoLayout.itemPhotoSelector);
+
+    // Equal on mobile (large -> 110px for both); card is unaffected (no -w-mobile shrink).
+    expect(Math.abs(stripThumbWidth - itemPhotoWidth)).toBeLessThanOrEqual(1);
+    expect(stripThumbWidth).toBeGreaterThan(105);
+    expect(stripThumbWidth).toBeLessThan(115);
+    expect(widgetErrors(log)).toEqual([]);
+  });
+}
+
 test('list review item photo keeps the medium 3:4 portrait box in a tall row', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,

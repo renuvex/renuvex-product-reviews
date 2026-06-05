@@ -20,7 +20,7 @@ import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot } from '../icons/star-sprite.js';
 import { isReviewsMountEnabled } from '../themes/current-adapter.js';
 import { beginReviewRequest, isCurrentReviewRequest } from './render/request-token.js';
-import { SIZE_PRESETS, THUMBNAIL_PRESETS } from './render/size-presets.js';
+import { SIZE_PRESETS, THUMBNAIL_PRESETS, THUMBNAIL_PRESETS_MOBILE } from './render/size-presets.js';
 import { buildDisabledStateEl, buildReviewsErrorState } from './render/states.js';
 import { applyManualTheme } from './render/theme-vars.js';
 import { buildPhotoStrip } from './render/photo-strip.js';
@@ -118,6 +118,13 @@ export async function render(productId, settings, reviewsData, productName, orde
     // thumbnailSize drives only the top "Fotoğraflı Yorumlar" strip thumbnails.
     var sz = SIZE_PRESETS[settings.size] || SIZE_PRESETS.medium;
     var thumbPx = THUMBNAIL_PRESETS[settings.thumbnailSize] || THUMBNAIL_PRESETS.medium;
+    // Mobil photo strip thumbnail: list/gallery'de yorum-içi görsel mobilde küçüldüğü
+    // için (3:4 portre) strip de aynı değere insin → mobilde EŞİT. card (1:1) item'ı
+    // mobilde küçülmez, o yüzden masaüstü değeriyle (thumbPx) aynı kalır.
+    var thumbPxMobile = thumbPx;
+    if (settings.reviewLayout === 'list' || settings.reviewLayout === 'gallery') {
+      thumbPxMobile = THUMBNAIL_PRESETS_MOBILE[settings.thumbnailSize] || THUMBNAIL_PRESETS_MOBILE.medium;
+    }
 
     root.style.setProperty('--renuvex-pr-title-size', sz.titleSize + 'px');
     root.style.setProperty('--renuvex-pr-review-text-size', sz.reviewTextSize + 'px');
@@ -142,6 +149,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--renuvex-pr-load-more-size', sz.loadMoreSize + 'px');
     root.style.setProperty('--renuvex-pr-read-more-size', sz.readMoreSize + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size', thumbPx + 'px');
+    root.style.setProperty('--renuvex-pr-thumbnail-size-mobile', thumbPxMobile + 'px');
 
     // Yıldız rengi tek kaynak: tüm rating yüzeyleri (özet, liste, rozetler)
     // --renuvex-pr-review-star-color'dan beslenir; boş yıldız da aynı renkte outline.

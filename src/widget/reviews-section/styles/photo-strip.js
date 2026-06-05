@@ -29,6 +29,15 @@ export var PHOTO_STRIP_CSS = `
   .renuvex-pr-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px 0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .renuvex-pr-photo-strip::-webkit-scrollbar{display:none;}
   .renuvex-pr-photo-strip-thumb{flex:0 0 var(--renuvex-pr-thumbnail-size,90px);width:var(--renuvex-pr-thumbnail-size,90px);height:auto;aspect-ratio:var(--renuvex-pr-photo-thumb-aspect,1/1);border-radius:var(--renuvex-pr-radius,8px);object-fit:cover;cursor:pointer;transition:transform 0.2s ease;border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));}
+  /* Mobil: list/gallery'de strip thumbnail, yorum-içi görsele EŞİTLENİR (o görseller
+     mobilde küçülüyor). card'da --renuvex-pr-thumbnail-size-mobile === masaüstü değeri
+     olduğundan değişmez. Breakpoint 600px — yorum-içi görsellerle senkron. */
+  @media(max-width:600px){
+    .renuvex-pr-photo-strip-thumb{
+      flex-basis:var(--renuvex-pr-thumbnail-size-mobile,var(--renuvex-pr-thumbnail-size,90px));
+      width:var(--renuvex-pr-thumbnail-size-mobile,var(--renuvex-pr-thumbnail-size,90px));
+    }
+  }
   /* Foto tetikleyicisi role=button olduğu için BASE_RESET'in ADR_0011 press-dim'ini
      (opacity:0.85) miras alıyor; bu, bir foto üzerinde "flash" gibi okunuyor — lightbox'ın
      açılması zaten geri bildirim. Press-dim'i kaldır (role=button kuralını !important ile ez). */

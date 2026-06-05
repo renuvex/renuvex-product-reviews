@@ -42,3 +42,10 @@ export var SIZE_PRESETS = {
 };
 
 export var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
+
+// Mobil photo strip thumbnail — YALNIZ list/gallery (3:4 portre) için. Bu layout'ların
+// yorum-içi görseli mobilde küçülüyor (review-layouts/*/index.js -mobile sizeOverrides:
+// small 80 / medium 100 / large 110); photo strip de aynı değere insin ki mobilde
+// strip ile yorum-içi görsel EŞİT olsun. card (1:1) item'ı mobilde küçülmez → bu
+// tabloyu kullanmaz, masaüstü THUMBNAIL_PRESETS değeriyle sabit kalır.
+export var THUMBNAIL_PRESETS_MOBILE = { small: 80, medium: 100, large: 110 };
