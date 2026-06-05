@@ -32,7 +32,7 @@ export var MINIMAL_CSS = `
     width:var(--renuvex-pr-bar-label-size,20px);height:var(--renuvex-pr-bar-label-size,20px);
   }
   .renuvex-pr-minimal-count{
-    font-size:var(--renuvex-pr-recommend-size,14px);
+    font-size:var(--renuvex-pr-minimal-count-size,16px);
     color:var(--renuvex-pr-header-count,var(--renuvex-pr-text,rgba(0,0,0,1)));
     /* overflow-wrap: aşırı dar kapsayıcıda tek uzun kelime bile taşmadan kırılır. */
     font-weight:400;line-height:1.2;overflow-wrap:anywhere;

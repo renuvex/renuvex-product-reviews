@@ -16,6 +16,7 @@ export var SIZE_PRESETS = {
     readMoreSize: 10, reviewStarSize: 18,
     minimalAvgSize: 18,
     heroAvgSize: 74,
+    minimalCountSize: 14, heroCountSize: 14,
   },
   medium: {
     titleSize: 24, reviewTextSize: 14, reviewTitleSize: 16, authorSize: 14,
@@ -27,6 +28,7 @@ export var SIZE_PRESETS = {
     readMoreSize: 12, reviewStarSize: 22,
     minimalAvgSize: 22,
     heroAvgSize: 90,
+    minimalCountSize: 16, heroCountSize: 16,
   },
   large: {
     titleSize: 28, reviewTextSize: 16, reviewTitleSize: 18, authorSize: 16,
@@ -38,6 +40,7 @@ export var SIZE_PRESETS = {
     readMoreSize: 14, reviewStarSize: 26,
     minimalAvgSize: 26,
     heroAvgSize: 106,
+    minimalCountSize: 18, heroCountSize: 18,
   },
 };
 

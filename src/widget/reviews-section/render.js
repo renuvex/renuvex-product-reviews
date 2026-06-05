@@ -143,6 +143,10 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--renuvex-pr-bar-label-size', sz.barLabelSize + 'px');
     root.style.setProperty('--renuvex-pr-minimal-avg-size', sz.minimalAvgSize + 'px');
     root.style.setProperty('--renuvex-pr-hero-avg-size', sz.heroAvgSize + 'px');
+    // minimal/hero sayaç boyutu — her layout kendi izole değişkeni (recommend-size'ı
+    // paylaşmaktan çıkarıldı). 14/16/18. avg gibi layout-spesifik tek kaynak.
+    root.style.setProperty('--renuvex-pr-minimal-count-size', sz.minimalCountSize + 'px');
+    root.style.setProperty('--renuvex-pr-hero-count-size', sz.heroCountSize + 'px');
     root.style.setProperty('--renuvex-pr-bar-count-size', sz.barCountSize + 'px');
     root.style.setProperty('--renuvex-pr-review-date-size', sz.reviewDateSize + 'px');
     root.style.setProperty('--renuvex-pr-filter-text-size', sz.filterTextSize + 'px');

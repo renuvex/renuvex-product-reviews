@@ -42,7 +42,7 @@ export var HERO_CSS = `
     width:var(--renuvex-pr-bar-label-size,22px);height:var(--renuvex-pr-bar-label-size,22px);
   }
   .renuvex-pr-hero-count{
-    font-size:var(--renuvex-pr-recommend-size,14px);
+    font-size:var(--renuvex-pr-hero-count-size,16px);
     color:var(--renuvex-pr-header-count,var(--renuvex-pr-text,rgba(0,0,0,0.6)));
     /* overflow-wrap: aşırı dar kapsayıcıda tek uzun kelime bile taşmadan kırılır. */
     font-weight:400;line-height:1;overflow-wrap:anywhere;
