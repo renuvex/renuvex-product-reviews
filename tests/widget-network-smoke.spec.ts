@@ -1,10 +1,12 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   MERCHANT_ORIGIN,
+  PUBLIC_KEY,
   PRODUCT_ID,
   PRODUCT_NAME,
+  REVIEW_CLOUD_NAME,
   countJsonLd,
   countListingBadges,
   countListingPlaceholders,
@@ -27,6 +29,67 @@ import {
   waitForWidgetIdle,
   widgetErrors,
 } from './widget-harness';
+
+function jsonHeaders(): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+  };
+}
+
+function trustedReviewImage(name: string): string {
+  return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/${name}.jpg`;
+}
+
+function reviewPayload(
+  reviews: Array<Record<string, unknown>>,
+  options: { allCount?: number; totalCount?: number; ratingCounts?: number[]; avgRating?: string; hasMore?: boolean } = {},
+): unknown {
+  const allCount = options.allCount ?? reviews.length;
+  return {
+    data: {
+      reviews,
+      allCount,
+      totalCount: options.totalCount ?? allCount,
+      ratingCounts: options.ratingCounts ?? [0, 0, 0, 0, allCount],
+      avgRating: options.avgRating ?? (allCount > 0 ? '5.0' : '0.0'),
+      hasMore: options.hasMore ?? false,
+    },
+  };
+}
+
+async function fulfillJson(route: Route, body: unknown): Promise<void> {
+  await route.fulfill({
+    status: 200,
+    headers: jsonHeaders(),
+    body: JSON.stringify(body),
+  });
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function reviewsWidgetState(page: Page): Promise<{
+  productId: string;
+  emptyText: string;
+  photoThumbs: number;
+  reviewCards: number;
+}> {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const widget = root?.querySelector('#renuvex-reviews-widget');
+    return {
+      productId: widget?.getAttribute('data-renuvex-product-id') || '',
+      emptyText: root?.querySelector('.renuvex-pr-state-msg')?.textContent?.trim() || '',
+      photoThumbs: root?.querySelectorAll('.renuvex-pr-photo-strip-thumb').length || 0,
+      reviewCards: root?.querySelectorAll('.renuvex-pr-review').length || 0,
+    };
+  });
+}
 
 test('manifest points at the current widget surface hierarchy', async () => {
   const manifestPath = path.join(process.cwd(), 'public', 'widget-runtime', 'build-manifest.json');
@@ -79,6 +142,83 @@ test('duplicate product contexts stay idempotent across PDP surfaces', async ({ 
   expect(countUrls(log, '/api/public/settings')).toBe(1);
   expect(countUrls(log, '/api/public/ratings?')).toBe(1);
   expect(countUrls(log, '/api/public/reviews?')).toBe(2);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('late review mount replays only the reviews-main surface', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    reviewsMountDelayMs: 250,
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasPdpBadge(page)).toBe(true);
+  await expect.poll(() => hasReviewsWidget(page), { timeout: 3000 }).toBe(true);
+  await waitForWidgetIdle(page);
+
+  expect(await countPdpBadges(page)).toBe(1);
+  expect(countUrls(log, '/api/public/ratings?')).toBe(1);
+  expect(countUrls(log, '/api/public/reviews?')).toBe(2);
+  expect(hasChunk(log, 'render-')).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('stale product bootstrap cannot overwrite the current review widget', async ({ page }) => {
+  const currentReview = {
+    id: 'current-review',
+    rating: 5,
+    title: 'Current review',
+    comment: 'Current product review.',
+    author: 'Mert',
+    createdAt: '2026-06-06T00:00:00.000Z',
+    images: [trustedReviewImage('current-review')],
+    merchantReply: null,
+    recommendation: true,
+  };
+  const stalePhotoReview = {
+    id: 'old-photo-review',
+    rating: 5,
+    title: 'Old photo',
+    comment: 'Old product photo review.',
+    author: 'Ada',
+    createdAt: '2026-06-05T00:00:00.000Z',
+    images: [trustedReviewImage('old-photo-review')],
+    merchantReply: null,
+    recommendation: true,
+  };
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    ikasEvents: [
+      { type: 'PRODUCT_VIEW', data: { productDetail: { id: 'old-product', name: 'Old Product' } } },
+      { type: 'PRODUCT_VIEW', data: { productDetail: { id: PRODUCT_ID, name: PRODUCT_NAME } }, delayMs: 100 },
+      { type: 'PAGE_VIEW', data: { pageType: 'PRODUCT' } },
+    ],
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      const productId = url.searchParams.get('productId');
+      const hasImages = url.searchParams.get('hasImages') === 'true';
+      if (productId === 'old-product') {
+        await wait(300);
+        await fulfillJson(route, hasImages
+          ? reviewPayload([stalePhotoReview], { allCount: 1, totalCount: 1 })
+          : reviewPayload([], { allCount: 0, totalCount: 0, ratingCounts: [0, 0, 0, 0, 0], avgRating: '0.0' }));
+        return;
+      }
+      await wait(20);
+      await fulfillJson(route, reviewPayload([currentReview], { allCount: 1, totalCount: 1 }));
+    },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await waitForWidgetIdle(page);
+
+  const state = await reviewsWidgetState(page);
+  expect(state.productId).toBe(PRODUCT_ID);
+  expect(state.emptyText).toBe('');
+  expect(state.reviewCards).toBeGreaterThanOrEqual(1);
+  expect(state.photoThumbs).toBeGreaterThanOrEqual(1);
+  expect(countUrls(log, '/api/public/reviews?')).toBe(4);
   expect(widgetErrors(log)).toEqual([]);
 });
 

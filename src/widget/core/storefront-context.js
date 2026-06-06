@@ -12,8 +12,6 @@
 //   https://builders.ikas.com/docs/storefront-events
 //   Bkz. docs/wiki/07_Ikas/Ikas_Storefront_Events.md ve ADR_0013.
 
-import { PUBLIC_API_KEY } from './config.js';
-import { cacheSet } from './cache.js';
 import { renuvexPrProductMap, renuvexPrSlugMap } from './state.js';
 
 // ── Olay tipi sabitleri — TEK kaynak ─────────────────────────────────────────
@@ -157,7 +155,6 @@ function handleIkasEvent(event) {
     var productId = pd && pd.id;
     var productName = pd && pd.name;
     if (productId) {
-      cacheSet('renuvex_pr_reviews_' + PUBLIC_API_KEY + '_' + productId, '');
       emitProductView({ id: productId, name: productName || null });
     }
     return;

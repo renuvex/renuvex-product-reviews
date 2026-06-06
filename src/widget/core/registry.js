@@ -21,11 +21,40 @@ export function getSurfaces() {
   return surfaces.slice();
 }
 
+function findSurfaceByKey(key) {
+  for (var i = 0; i < surfaces.length; i++) {
+    if (surfaces[i].key === key) return surfaces[i];
+  }
+  return null;
+}
+
 function handleMountResult(surface, result) {
   if (!result || typeof result.then !== 'function') return;
   result.catch(function (err) {
     console.error('[renuvex-pr] surface mount error (' + surface.key + '):', err);
   });
+}
+
+export function mountSurfaceByKey(key, context) {
+  var surface = findSurfaceByKey(key);
+  if (!surface) return false;
+
+  var matched = false;
+  try {
+    matched = !!surface.detect(context);
+  } catch (err) {
+    console.error('[renuvex-pr] surface detect error (' + surface.key + '):', err);
+    return false;
+  }
+  if (!matched) return false;
+
+  try {
+    handleMountResult(surface, surface.mount(context));
+    return true;
+  } catch (err) {
+    console.error('[renuvex-pr] surface mount error (' + surface.key + '):', err);
+    return false;
+  }
 }
 
 // Mount every surface whose detect() passes for the given context.

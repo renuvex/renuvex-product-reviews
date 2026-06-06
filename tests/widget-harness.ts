@@ -26,6 +26,7 @@ export type SmokeOptions = {
   badgeEnabled?: boolean;
   reviewsEnabled?: boolean;
   mountReviews?: boolean;
+  reviewsMountDelayMs?: number;
   runtime?: RuntimeOptions;
   ikasEvents?: IkasEventSequenceItem[];
   ikasEventMode?: 'async' | 'sync';
@@ -568,6 +569,17 @@ function productHtml(options: SmokeOptions): string {
     ? `<div style="width:600px"><img class="renuvex-iso-control" width="40" height="40" src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/iso-control.jpg" alt=""></div>`
     : '';
   const events = options.ikasEvents || defaultProductEvents();
+  const reviewMountHtml = options.mountReviews === false
+    ? ''
+    : typeof options.reviewsMountDelayMs === 'number'
+      ? `<script>
+          setTimeout(function () {
+            var mount = document.createElement('div');
+            mount.setAttribute('data-renuvex-widget', 'reviews');
+            document.querySelector('.product-detail').appendChild(mount);
+          }, ${Math.max(0, Math.round(options.reviewsMountDelayMs))});
+        </script>`
+      : '<div data-renuvex-widget="reviews"></div>';
   return `<!doctype html>
 <html lang="tr">
   <head>
@@ -583,7 +595,7 @@ function productHtml(options: SmokeOptions): string {
         <h1>${PRODUCT_NAME}</h1>
         <p>CI product page.</p>
         ${controlBlock}
-        ${options.mountReviews !== false ? '<div data-renuvex-widget="reviews"></div>' : ''}
+        ${reviewMountHtml}
       </section>
     </main>
   </body>

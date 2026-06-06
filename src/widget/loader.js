@@ -7,11 +7,12 @@ import { attachHistoryListener, attachModalBadgeListener } from './events.js';
 import { startMutationObserver } from './observer.js';
 import {
   initStorefrontContext,
+  getProductContext,
   onProductView,
   onPageView,
   onListingView,
 } from './core/storefront-context.js';
-import { mountMatching } from './core/registry.js';
+import { mountMatching, mountSurfaceByKey } from './core/registry.js';
 import { registerCoreSurfaces } from './surfaces/index.js';
 import { loadListingBadgesModule, loadReviewsRenderModule, loadReviewsMainModule } from './core/lazy-modules.js';
 import { hasListingFallbackCandidates } from './listing-badges/fallback-candidates.js';
@@ -32,11 +33,73 @@ import {
 
 var lastPreviewSettingsFingerprint = '';
 var lastPreviewSettingsAt = 0;
+var reviewMountReplayObserver = null;
 
 function renderListingBadgesFallback() {
   return loadListingBadgesModule().then(function (mod) {
     mod.renderListingBadges();
   });
+}
+
+function collectReviewMountsFromNode(node, mounts) {
+  if (!node || node.nodeType !== 1) return;
+  if (node.matches && node.matches('[data-renuvex-widget="reviews"]')) {
+    mounts.push(node);
+  }
+  if (node.querySelectorAll) {
+    node.querySelectorAll('[data-renuvex-widget="reviews"]').forEach(function (mount) {
+      mounts.push(mount);
+    });
+  }
+}
+
+function hasRenderedReviewsWidget(anchorEl, productId) {
+  var slot = anchorEl && anchorEl.querySelector ? anchorEl.querySelector('[data-renuvex-slot="product-reviews"]') : null;
+  var container = slot && slot.querySelector ? slot.querySelector('#renuvex-reviews') : null;
+  var root = container && container.shadowRoot;
+  var widget = root && root.querySelector ? root.querySelector('#renuvex-reviews-widget') : null;
+  if (!widget) return false;
+  return !productId || widget.getAttribute('data-renuvex-product-id') === String(productId);
+}
+
+function replayReviewsMainForMount(anchorEl, attempt) {
+  attempt = attempt || 0;
+  if (!anchorEl || !anchorEl.isConnected || anchorEl.__renuvexPrReviewsReplayDone) return;
+  if (attempt === 0 && anchorEl.__renuvexPrReviewsReplayInProgress) return;
+  var product = getProductContext();
+  if (!product || !product.id) return;
+
+  anchorEl.__renuvexPrReviewsReplayInProgress = true;
+  mountSurfaceByKey('reviews-main', { trigger: 'product', product: product });
+  setTimeout(function () {
+    if (!anchorEl.isConnected) return;
+    if (hasRenderedReviewsWidget(anchorEl, product.id)) {
+      anchorEl.__renuvexPrReviewsReplayDone = true;
+      anchorEl.__renuvexPrReviewsReplayInProgress = false;
+      return;
+    }
+    if (attempt < 6) {
+      replayReviewsMainForMount(anchorEl, attempt + 1);
+      return;
+    }
+    anchorEl.__renuvexPrReviewsReplayInProgress = false;
+  }, 150);
+}
+
+function startReviewMountReplayObserver() {
+  if (reviewMountReplayObserver || typeof MutationObserver === 'undefined') return;
+  if (!document.body) return;
+
+  reviewMountReplayObserver = new MutationObserver(function (mutations) {
+    mutations.forEach(function (mutation) {
+      var mounts = [];
+      Array.from(mutation.addedNodes).forEach(function (node) {
+        collectReviewMountsFromNode(node, mounts);
+      });
+      mounts.forEach(replayReviewsMainForMount);
+    });
+  });
+  reviewMountReplayObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 function initWidget() {
@@ -53,6 +116,7 @@ function initWidget() {
 
   // 4) Product sliders / infinite-scroll content need a small always-on observer.
   startMutationObserver();
+  startReviewMountReplayObserver();
 
   // 5) Context -> registry routing.
   onProductView(function (product) {

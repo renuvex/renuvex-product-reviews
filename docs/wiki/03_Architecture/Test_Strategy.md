@@ -46,6 +46,8 @@ source_files:
   - "docs/wiki/10_Research/Structured_Data_Verification_2026-05-29.md"
   - "src/widget/observer.js"
   - "src/widget/surfaces/listing-badge.surface.js"
+  - "src/widget/core/registry.js"
+  - "src/widget/core/state.js"
   - "src/widget/core/storefront-context.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
@@ -98,7 +100,7 @@ Unit tests also pin storefront widget asset cache headers: stable `/widget.js` a
 
 The same interaction layer pins that touch/pen filter option activation cannot visually press through to the write button exposed under the dismissed menu.
 
-Widget network smoke also pins storefront loader lifecycle contracts: duplicate `PRODUCT_VIEW` events stay idempotent, synchronous listing/search events replay after loader subscription, clean PDP `PAGE_VIEW` skips the listing entry chunk and side effects, semantic `PAGE_VIEW` dedupe suppresses same-page duplicates without suppressing distinct fast transitions, listing product data remains DOM-idempotent before/after `PAGE_VIEW`, and unsupported-theme or badge-disabled listing flows stop before rating fetches or DOM insertion.
+Widget network smoke also pins storefront loader lifecycle contracts: duplicate `PRODUCT_VIEW` events stay idempotent, synchronous listing/search events replay after loader subscription, late explicit review mounts replay only the `reviews-main` surface with the latest product context, mount-absent PDPs keep the badge-only no-review-fetch contract, stale previous-product review bootstrap completions cannot overwrite the active PDP, clean PDP `PAGE_VIEW` skips the listing entry chunk and side effects, semantic `PAGE_VIEW` dedupe suppresses same-page duplicates without suppressing distinct fast transitions, listing product data remains DOM-idempotent before/after `PAGE_VIEW`, and unsupported-theme or badge-disabled listing flows stop before rating fetches or DOM insertion.
 
 ## Evidence Commands
 These commands are not hard byte-budget gates. They produce repeatable production evidence for review, deploy notes, and future budget calibration:

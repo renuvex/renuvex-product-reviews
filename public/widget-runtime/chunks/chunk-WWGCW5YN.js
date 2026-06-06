@@ -1,0 +1,2 @@
+/* Renuvex Product Reviews ESM runtime | theme: default */
+var c={};function i(t){try{return sessionStorage.getItem(t)}catch(e){return c[t]||null}}function a(t,e){try{sessionStorage.setItem(t,e)}catch(r){c[t]=e}}function u(t,e,r){var n=new AbortController,o=setTimeout(function(){n.abort()},r||8e3);return fetch(t,Object.assign({},e,{signal:n.signal})).finally(function(){clearTimeout(o)})}export{i as a,a as b,u as c};

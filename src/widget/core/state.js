@@ -29,6 +29,17 @@ export function setCurrentProductName(v) { currentProductName = v; }
 export function setCurrentReviewsData(v) { currentReviewsData = v; }
 export function setPhotoStripReviews(v) { photoStripReviews = Array.isArray(v) ? v : []; }
 
+export function resetReviewStateForProduct(productId) {
+  currentOrderBy = 'newest';
+  currentPage = 1;
+  currentRatingFilter = null;
+  currentHasImages = false;
+  currentProductId = productId || null;
+  currentReviewsData = null;
+  photoStripReviews = [];
+  replaceLoadedLightboxReviews([]);
+}
+
 function getReviewIdentity(review) {
   if (!review || typeof review !== 'object') return '';
   if (review.id !== undefined && review.id !== null) return 'id:' + String(review.id);

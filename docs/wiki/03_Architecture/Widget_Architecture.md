@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-02
-last_verified: 2026-06-02
+updated: 2026-06-06
+last_verified: 2026-06-06
 confidence: high
 tags:
   - widget
@@ -112,9 +112,9 @@ deployment before claiming live performance improvement.
 | Module | Purpose |
 |---|---|
 | [src/widget/index.js](src/widget/index.js) | Thin entry. Side-effect inits (ADR_0011 order) + preview/prod branch. Delegates to `loader.js`. |
-| [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Wires context → registry (ADR_0013). |
+| [loader.js](src/widget/loader.js) | Orchestration. `startWidget()` (prod) / `startPreview()` (admin iframe). Wires context -> registry (ADR_0013) and replays only `reviews-main` when an explicit review mount is inserted after the latest product context. |
 | [core/storefront-context.js](src/widget/core/storefront-context.js) | Single owner of `window.IkasEvents` subscription; exposes page/product context (`onProductView`/`onPageView`) + DOM fallback (ADR_0013). `PAGE_VIEW` duplicates are suppressed by semantic `pageType + pathname/search`, not by global time alone. |
-| [core/registry.js](src/widget/core/registry.js) | Surface registry (`rating-badge`, `reviews-main`, `structured-data`, `listing-badge`) with guarded async mounts. |
+| [core/registry.js](src/widget/core/registry.js) | Surface registry (`rating-badge`, `reviews-main`, `structured-data`, `listing-badge`) with guarded async mounts plus key-targeted mounting for explicit review-mount replay. |
 | [core/lazy-modules.js](src/widget/core/lazy-modules.js) | Dynamic import boundary owner for reviews, listing, badge, structured-data, and preview render modules. |
 | [core/settings.js](src/widget/core/settings.js) | Shared public settings fetch/cache used by lazy modules without pulling PDP render code. |
 | [core/rating-summary.js](src/widget/core/rating-summary.js) | Shared one-product approved rating summary fetch used by visual badge and structured-data surfaces without duplicate API calls. |
@@ -130,7 +130,7 @@ deployment before claiming live performance improvement.
 | [events.js](src/widget/events.js) | SPA history patch (stale rating-badge cleanup) + quick-view modal badge plumbing. IkasEvents handling moved to `core/storefront-context.js` (ADR_0013). |
 | [rating-badge/](src/widget/rating-badge/) | Independent PDP rating badge surface. Fetches one-product rating summaries and owns only visual badge DOM cleanup/injection. |
 | [structured-data/](src/widget/structured-data/) | Independent Product `AggregateRating` JSON-LD surface. Emits only when the rich-snippet toggle, approved ratings, and visible/expected Renuvex rating content gates pass. |
-| [reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) | Reviews section entry. Fetches settings, checks the explicit reviews mount, fetches initial review/photo-strip data, then dynamically imports `render.js`. |
+| [reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) | Reviews section entry. Fetches settings, checks the explicit reviews mount, resets per-product review state, fetches initial review/photo-strip data, guards each async boundary against stale product/path bootstraps, then dynamically imports `render.js`. |
 | [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) | Shared reviews/photoStrip fetch helpers, cache handling, preview fallback, and explicit review-fetch error result. |
 | [reviews-section/render.js](src/widget/reviews-section/render.js) | Compose summary + reviews + modal CTA based on settings; handles filter/sort/load-more fetches through `reviews-api.js`. |
 | [core/product-title.js](src/widget/core/product-title.js) | Heuristic to find product title element across themes. |
@@ -194,6 +194,14 @@ reviews-section/bootstrap.js
   └── dynamic import render.js (chooses layouts from settings)
 ```
 
+PDP review lifecycle note: the explicit review mount can arrive after a
+`PRODUCT_VIEW` event during SPA navigation. `loader.js` watches for that mount
+and replays only the `reviews-main` surface with the latest product context;
+`rating-badge`, `structured-data`, and listing surfaces are not replayed. Inside
+`reviews-section/bootstrap.js`, a product/path bootstrap guard and per-product
+state reset protect the initial reviews/photo-strip fetch from stale previous
+product completions.
+
 Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] introduced the loader +
 surface registry + Storefront Events context layer. Phase 2 implementation landed
 on 2026-05-17: build output now uses a classic compatibility loader plus ESM
@@ -229,6 +237,7 @@ admin iframe          widget.js (preview)
 Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts). It loads `widget.js?publicApiKey=preview&v=<timestamp>` (timestamp busts cache so admin sees fresh code on each open).
 
 ## Caching strategy
+- `PRODUCT_VIEW` does not invalidate review browser cache directly. Review cache keys and the 60 second TTL contract are owned by `reviews-api.js`; `storefront-context.js` must not write non-matching base keys or add broad prefix invalidation without a separate cache-contract change.
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.
 - Review fetch failures use stale cached review data when available; without stale data, `reviews-api.js fetchReviews()` returns an explicit error result so `render.js` can show a retryable error state instead of an empty list.
