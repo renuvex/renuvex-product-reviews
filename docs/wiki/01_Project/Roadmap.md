@@ -3,7 +3,7 @@ type: roadmap
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-06-06
 tags:
   - roadmap
 related:
@@ -25,7 +25,7 @@ Living roadmap. Order is rough priority, not committed dates. Tweak as decisions
 - **Analytics tab** — review volume per week, average rating trend, response rate, conversion uplift (long-term — needs storefront analytics integration).
 
 ## Mid Term
-- **Multi-language widget UI** — storefront copy currently Turkish-only; storefront-aware locale (ikas storefront locale → widget i18n key).
+- **Multi-language widget UI** — storefront copy currently Turkish-only; storefront-aware locale (ikas storefront locale → widget i18n key). No i18n layer exists yet: ALL strings are hardcoded TR including ~25 `aria-label`s, and browser auto-translate skips `aria-label` — so accessibility text needs an explicit i18n migration (sr-only text + `aria-labelledby` where it must survive translation). Scope detail: [[Open_Questions]].
 - **Photo gallery improvements** — lightbox, lazy loading review thumbnails on listing pages.
 - **Email notifications to merchant** on new pending review.
 - **Webhook-based product rename sync** — currently `productName` is captured at submit time; product renames don't propagate.

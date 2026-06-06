@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-31
-last_verified: 2026-05-31
+updated: 2026-06-06
+last_verified: 2026-06-06
 confidence: medium
 tags:
   - questions
@@ -21,6 +21,9 @@ source_files:
   - "src/widget/loader.js"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/listing-badges/fallback-candidates.js"
+  - "src/widget/core/helpers.js"
+  - "src/widget/core/badge.js"
+  - "src/widget/summary-layouts/shared/bar-chart.js"
 ---
 
 # Open Questions
@@ -146,6 +149,43 @@ fallback probes ignore widget-owned hash/query links. The proof lives in
 [[Widget_Performance]], [[Test_Strategy]], and [[Widget_Transfer_Measurement_2026-05-29]].
 After deployment, re-run `pnpm measure:deployed-widget` to replace the older deployed
 measurement table with live evidence.
+
+## Widget i18n / accessibility-string localization — scope detail for "Multi-language widget UI"
+Concrete gap found 2026-06-06; enriches the [[Roadmap]] Mid-Term "Multi-language widget UI" item.
+
+**There is NO i18n layer today.** Every storefront string is hardcoded Turkish in the widget
+bundle, except ~5 merchant-editable settings labels (`countLabel`, `writeButtonText`, `title`,
+`photoGalleryTitle`, `merchantReplyLabel`). So a future "language option" would NOT auto-translate
+anything — it needs a real i18n refactor (a `{ tr, en, … }` string table + `t(key)` lookup + a
+language source, e.g. the ikas storefront locale).
+
+**Accessibility (aria) strings are the hardest part and the easiest to forget:**
+- ~25 `aria-label`s are hardcoded Turkish — e.g. `'Kapat' / 'Önceki' / 'Sonraki'`
+  ([review-modal.js](src/widget/reviews-section/review-modal.js)), `'Filtrele'`
+  ([actions-block.js](src/widget/summary-layouts/shared/actions-block.js)), `'Puan dağılımı'`
+  ([compact/index.js](src/widget/summary-layouts/compact/index.js)), the review-form wizard
+  ([progress-bar.js](src/widget/reviews-section/review-form-modal/progress-bar.js) + `steps/*`),
+  photo-strip arrows ([render/photo-strip.js](src/widget/reviews-section/render/photo-strip.js)).
+- **Browser auto-translate (Google Translate etc.) does NOT translate the `aria-label` attribute** —
+  it only reaches visible text and `aria-labelledby`-referenced real text. So even a visitor running
+  page translation keeps Turkish screen-reader labels. The codebase already knows this: the rating
+  badge uses a real sr-only text node + `aria-labelledby` ("translation-tool friendly, unlike
+  aria-label" — `buildRatingA11yLabel` in [helpers.js](src/widget/core/helpers.js),
+  [badge.js](src/widget/core/badge.js)); the review-section controls do NOT follow that pattern
+  (note: even the badge's sr-only text is still hardcoded TR, so it is browser-translatable but not
+  app-localized).
+- The bar-chart aria is now partly dynamic (binds `currentSettings.countLabel` —
+  [bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js)), but the surrounding words
+  (`'yıldız' / 'filtrele' / 'filtreyi kaldır'`) are still hardcoded TR.
+
+**Decide when the feature is picked up:**
+1. Adopt an i18n string table + `t(key)` and migrate ALL strings (visible + the ~25 aria) — not
+   visible-only, or screen readers fall behind the visible UI.
+2. Where the accessible name must survive browser translation, reuse the sr-only-text +
+   `aria-labelledby` pattern (already proven in the badge) instead of `aria-label`.
+3. Language source: ikas storefront locale (ties into the **Multi-storefront settings** question
+   above + the Roadmap per-storefront item) vs a merchant admin select. Merchant labels
+   (`countLabel` etc.) are single-value today; per-language values would need the same i18n layer.
 
 ## Obsidian Links
 - [[Current_Status]]
