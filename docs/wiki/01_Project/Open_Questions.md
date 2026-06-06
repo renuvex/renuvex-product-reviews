@@ -96,6 +96,14 @@ category-page product arrays. `VIEW_LISTING` is **runtime-verified** (Phase 1 au
   harden the `VIEW_CATEGORY` + DOM fallback path.
 - Detail: [[Widget_Architecture_Audit]] (O6), [[Ikas_Storefront_Events]].
 
+## ikas SPA lifecycle / mount contract — ikas-blocked (PDP review race)
+The PDP review SPA-navigation race ([[Bug_PDP_Review_Lifecycle_SPA_Race]]) was fixed
+**defensively** because ikas guarantees neither a post-render "page ready" lifecycle hook,
+nor a `PRODUCT_VIEW`↔DOM ordering, nor a stable mount anchor. Consolidated questions to ask
+ikas (SPA ready signal, event↔DOM ordering, official mount slots, custom-block render timing,
+router-change subscription, `VIEW_LISTING` status) live in [[Ikas_Lifecycle_Mount_Questions]]
+with per-question answer slots to fill when ikas replies.
+
 ## Structured data injection mechanism
 Two approaches for JSON-LD aggregateRating:
 1. Widget.js writes a `<script type="application/ld+json">` into the product DOM. Pro: zero theme changes. Con: bots might not execute JS / late.
