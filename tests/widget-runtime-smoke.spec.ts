@@ -483,6 +483,34 @@ test('compact summary panel exposes an accessible dialog name', async ({ page })
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('compact summary count label renders as text, not HTML', async ({ page }) => {
+  const countLabel = '<svg data-x=x></svg>';
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'compact', reviewLayout: 'list', countLabel },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  const triggerTextState = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const triggerText = root?.querySelector('.renuvex-pr-compact-trigger-text') as HTMLElement | null;
+    return {
+      parsedSvgCount: triggerText?.querySelectorAll('svg').length ?? -1,
+      text: triggerText?.textContent || '',
+    };
+  });
+
+  expect(triggerTextState.parsedSvgCount).toBe(0);
+  expect(triggerTextState.text).toContain(countLabel);
+  expect(triggerTextState.text.endsWith(` ${countLabel}`)).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 for (const layoutCase of LAYOUT_MATRIX) {
   test(`${layoutCase.name} desktop mouse filter can reopen immediately after sort`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });

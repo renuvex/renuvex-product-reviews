@@ -87,7 +87,7 @@ export function render(opts) {
 
   trigger.innerHTML =
     '<span class="renuvex-pr-compact-trigger-stars">' + partialStarsHTML(avgRatingVal, iconPair) + '</span>' +
-    '<span class="renuvex-pr-compact-trigger-text">' + allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum') + '</span>' +
+    '<span class="renuvex-pr-compact-trigger-text"></span>' +
     '<span class="renuvex-pr-compact-chevron">' +
       iconUseSvg(UI_CARET_DOWN) +
     '</span>';
@@ -95,6 +95,9 @@ export function render(opts) {
   // ikisi BİRLİKTE yıldızların altına iner — chevron tek başına alt satıra düşmez.
   var countTextEl = trigger.querySelector('.renuvex-pr-compact-trigger-text');
   var countChevronEl = trigger.querySelector('.renuvex-pr-compact-chevron');
+  if (countTextEl) {
+    countTextEl.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
+  }
   if (countTextEl && countChevronEl) {
     var countGroupEl = document.createElement('span');
     countGroupEl.className = 'renuvex-pr-compact-trigger-count';
