@@ -107,6 +107,24 @@ async function countNestedInOverlay(page: Page, overlaySelector: string, selecto
   }, { overlaySelector, selector, nestedSelector });
 }
 
+async function overflowMetricsInOverlay(page: Page, overlaySelector: string, selector: string) {
+  return page.evaluate(({ overlaySelector, selector }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    const wrap = root?.querySelector<HTMLElement>('.renuvex-pr-fwizard-step-wrap');
+    const el = root?.querySelector<HTMLElement>(selector);
+    if (!wrap || !el) throw new Error(`Missing overlay selector: ${selector}`);
+    return {
+      elementClientWidth: el.clientWidth,
+      elementScrollWidth: el.scrollWidth,
+      wrapClientWidth: wrap.clientWidth,
+      wrapScrollWidth: wrap.scrollWidth,
+    };
+  }, { overlaySelector, selector });
+}
+
 async function styleInOverlay(page: Page, overlaySelector: string, selector: string, properties: string[]) {
   return page.evaluate(({ overlaySelector, selector, properties }) => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
@@ -337,6 +355,49 @@ test('review wizard whitespace-only step copy falls back to defaults', async ({ 
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-next');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-author')).toBe(true);
   expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Hakkınızda');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('review wizard step copy wraps long unbroken words without horizontal overflow', async ({ page }) => {
+  const longTitle = 'X'.repeat(60);
+  const longSubtitle = 'Y'.repeat(90);
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      formStepRatingTitle: longTitle,
+      formStepPhotosTitle: longTitle,
+      formStepPhotosSubtitle: longSubtitle,
+    },
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe(longTitle);
+  let metrics = await overflowMetricsInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title');
+  expect(metrics.elementScrollWidth).toBeLessThanOrEqual(metrics.elementClientWidth + 1);
+  expect(metrics.wrapScrollWidth).toBeLessThanOrEqual(metrics.wrapClientWidth + 1);
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe(longTitle);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-subtitle')).toBe(longSubtitle);
+
+  metrics = await overflowMetricsInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title');
+  expect(metrics.elementScrollWidth).toBeLessThanOrEqual(metrics.elementClientWidth + 1);
+  expect(metrics.wrapScrollWidth).toBeLessThanOrEqual(metrics.wrapClientWidth + 1);
+
+  metrics = await overflowMetricsInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-subtitle');
+  expect(metrics.elementScrollWidth).toBeLessThanOrEqual(metrics.elementClientWidth + 1);
+  expect(metrics.wrapScrollWidth).toBeLessThanOrEqual(metrics.wrapClientWidth + 1);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);

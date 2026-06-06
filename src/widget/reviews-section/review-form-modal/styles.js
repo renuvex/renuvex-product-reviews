@@ -124,6 +124,8 @@ export var FWIZARD_CSS = `
   /* Step kart — her adımın temel layout'u */
   .renuvex-pr-fwizard-step{
     width:100%;
+    min-width:0;
+    box-sizing:border-box;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -152,10 +154,17 @@ export var FWIZARD_CSS = `
 
   /* Step başlığı — varsayılan (step 1: yıldız) */
   .renuvex-pr-fwizard-step-title{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
     font-size:18px;
     font-weight:500;
     color:var(--renuvex-pr-fwizard-text, rgb(17,17,17));
     line-height:1.3;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:break-word;
   }
 
   /* Büyük başlık varyantı — step 2/3/4 başlıkları daha güçlü
@@ -168,11 +177,18 @@ export var FWIZARD_CSS = `
 
   /* Step alt başlığı — başlığın hemen altında, daha sönük */
   .renuvex-pr-fwizard-step-subtitle{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
     margin-top:-20px;
     font-size:16px;
     font-weight:400;
     color:var(--renuvex-pr-fwizard-secondary-text, #6b7280);
     line-height:1.4;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:break-word;
   }
 
   /* Teşekkür Ekranı Özel (Extra Large) */

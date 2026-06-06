@@ -84,7 +84,7 @@ Storefront interactions also pin the photo-upload submit bridge: pending uploads
 
 Storefront interactions and unit tests also pin review form wizard close-control contrast: `theme-vars.js` derives the close icon color and hover background from `formBgColor`, and the browser test verifies the real shadow-DOM button stays readable even when `formPrimaryTextColor` matches a dark form background.
 
-Storefront interactions, admin preview schema tests, and unit tests also pin review form wizard copy settings: `Metin > Yorum Formu` nested fields traverse defaults/sanitize/validate, custom step titles and the photo subtitle render as literal text, and whitespace-only values fall back to defaults.
+Storefront interactions, admin preview schema tests, and unit tests also pin review form wizard copy settings: `Metin > Yorum Formu` nested fields traverse defaults/sanitize/validate, custom step titles and the photo subtitle render as literal text, whitespace-only values fall back to defaults, and long unbroken words wrap without horizontal modal overflow.
 
 Unit tests pin the review-section empty-state text color contract: `theme-vars.js` derives `--renuvex-pr-state-text` from `reviewBodyColor`, so "no reviews yet" follows the merchant's review text color family without adding a separate admin color setting.
 
