@@ -11,6 +11,7 @@ import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';
 import { extractSlug } from '../../../core/helpers.js';
 import { validateStep } from '../wizard-state.js';
+import { reviewFormCopy } from '../copy.js';
 
 var NAME_MAX = 40;
 
@@ -25,7 +26,7 @@ export function createStepAuthor(state, opts) {
   // Başlık
   var title = document.createElement('div');
   title.className = 'renuvex-pr-fwizard-step-title renuvex-pr-fwizard-step-title--lg';
-  title.textContent = 'Hakkınızda';
+  title.textContent = reviewFormCopy('formStepAuthorTitle');
   root.appendChild(title);
 
   // Form alanı

@@ -97,6 +97,11 @@ export function baseReviewsSettings(overrides: Record<string, unknown> = {}): Re
     reviewIcon: 'star',
     reviewStarColor: '#f59e0b',
     writeButtonText: 'Yorum Yap',
+    formStepRatingTitle: 'Bu ürünü nasıl değerlendirirsiniz?',
+    formStepPhotosTitle: 'Fotoğraflı değerlendirme',
+    formStepPhotosSubtitle: 'Fotoğraf ekleyebilirsiniz.',
+    formStepContentTitle: 'Deneyiminizi anlatın',
+    formStepAuthorTitle: 'Hakkınızda',
     ...overrides,
   };
 }

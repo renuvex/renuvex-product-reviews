@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { WIDGETS } from '../src/components/home-page/widgets/widgetDefs';
+import { WIDGETS, collectSettingFields } from '../src/components/home-page/widgets/widgetDefs';
 import {
   MERCHANT_ORIGIN,
   dispatchPreviewSettingsUpdate,
@@ -47,13 +47,15 @@ test('admin widget schema stays aligned with summary and review layout registrie
   const reviewsWidget = WIDGETS.find((widget) => widget.id === 'reviews');
   expect(reviewsWidget).toBeTruthy();
 
-  const fields = (reviewsWidget?.settings || []).flatMap((group) => group.fields);
+  const fields = collectSettingFields(reviewsWidget?.settings || []);
   const summaryLayoutField = fields.find((field) => field.key === 'summaryLayout');
   const reviewLayoutField = fields.find((field) => field.key === 'reviewLayout');
   const thumbnailSizeField = fields.find((field) => field.key === 'thumbnailSize');
   const recommendationField = fields.find((field) => field.key === 'showRecommendation');
   const barFillField = fields.find((field) => field.key === 'barFillColor');
   const richSnippetsField = fields.find((field) => field.key === 'richSnippetsEnabled');
+  const textGroup = reviewsWidget?.settings.find((group) => group.title === 'Metin');
+  const reviewFormTextGroup = textGroup?.subGroups?.find((group) => group.title === 'Yorum Formu');
 
   expect(summaryLayoutField?.type).toBe('select');
   expect(reviewLayoutField?.type).toBe('select');
@@ -75,6 +77,17 @@ test('admin widget schema stays aligned with summary and review layout registrie
     type: 'toggle',
     label: 'Google Rich Snippets',
     default: true,
+  }));
+  expect(reviewFormTextGroup?.fields.map((field) => field.key)).toEqual([
+    'formStepRatingTitle',
+    'formStepPhotosTitle',
+    'formStepPhotosSubtitle',
+    'formStepContentTitle',
+    'formStepAuthorTitle',
+  ]);
+  expect(fields.find((field) => field.key === 'formStepPhotosSubtitle')).toEqual(expect.objectContaining({
+    type: 'text',
+    maxLength: 90,
   }));
 });
 

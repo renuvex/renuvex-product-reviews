@@ -97,6 +97,16 @@ async function countInOverlay(page: Page, overlaySelector: string, selector: str
   }, { overlaySelector, selector });
 }
 
+async function countNestedInOverlay(page: Page, overlaySelector: string, selector: string, nestedSelector: string) {
+  return page.evaluate(({ overlaySelector, selector, nestedSelector }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    return root?.querySelector(selector)?.querySelectorAll(nestedSelector).length ?? -1;
+  }, { overlaySelector, selector, nestedSelector });
+}
+
 async function styleInOverlay(page: Page, overlaySelector: string, selector: string, properties: string[]) {
   return page.evaluate(({ overlaySelector, selector, properties }) => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
@@ -248,6 +258,88 @@ test('review wizard validates required fields and submits through mocked public 
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-thanks')).toBe(true);
 
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('review wizard uses merchant step copy as safe text', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      formStepRatingTitle: '<b>Puanınızı seçin</b>',
+      formStepPhotosTitle: 'Fotoğraf ekleri',
+      formStepPhotosSubtitle: '<i>Fotoğraf eklemek isteğe bağlıdır.</i>',
+      formStepContentTitle: 'Yorumunuzu yazın',
+      formStepAuthorTitle: 'Bilgileriniz',
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('<b>Puanınızı seçin</b>');
+  expect(await countNestedInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title', 'b')).toBe(0);
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Fotoğraf ekleri');
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-subtitle')).toBe('<i>Fotoğraf eklemek isteğe bağlıdır.</i>');
+  expect(await countNestedInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-subtitle', 'i')).toBe(0);
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-skip');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Yorumunuzu yazın');
+
+  await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-textarea', 'Custom copy check.');
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-next');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-author')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Bilgileriniz');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('review wizard whitespace-only step copy falls back to defaults', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      formStepRatingTitle: '   ',
+      formStepPhotosTitle: '   ',
+      formStepPhotosSubtitle: '   ',
+      formStepContentTitle: '   ',
+      formStepAuthorTitle: '   ',
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Bu ürünü nasıl değerlendirirsiniz?');
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Fotoğraflı değerlendirme');
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-subtitle')).toBe('Fotoğraf ekleyebilirsiniz.');
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-skip');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Deneyiminizi anlatın');
+
+  await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-textarea', 'Fallback copy check.');
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-next');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-author')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Hakkınızda');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 

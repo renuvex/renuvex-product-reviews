@@ -11,7 +11,7 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, sp } from '@/lib/design-tokens';
-import { SettingsGroup, SettingField } from '../widgetDefs';
+import { SettingsGroup, SettingField, collectSettingFields } from '../widgetDefs';
 import { WidgetSettingsDraft } from './WidgetEditor';
 import { IconSelect } from './IconSelect';
 import { ColorPickerField } from './ColorPickerField';
@@ -74,12 +74,10 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
 
   const executeReset = () => {
     const defaults: WidgetSettingsDraft = {};
-    groups.forEach(group => {
-      group.fields.forEach(field => {
-        if (field.default !== undefined) {
-          defaults[field.key] = field.default;
-        }
-      });
+    collectSettingFields(groups).forEach(field => {
+      if (field.default !== undefined) {
+        defaults[field.key] = field.default;
+      }
     });
 
     onChange({ ...settings, ...defaults });
@@ -102,10 +100,17 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
     return !field.showWhen.notIn.includes(dep as string | number | boolean);
   };
 
-  const getVisibleGroups = (list: SettingsGroup[]) =>
+  const getVisibleGroups = (list: SettingsGroup[]): SettingsGroup[] =>
     list
-      .map(group => ({ ...group, fields: group.fields.filter(isFieldVisible) }))
-      .filter(group => group.fields.length > 0);
+      .map(group => {
+        const visibleSubGroups = group.subGroups ? getVisibleGroups(group.subGroups) : undefined;
+        return {
+          ...group,
+          fields: group.fields.filter(isFieldVisible),
+          subGroups: visibleSubGroups && visibleSubGroups.length > 0 ? visibleSubGroups : undefined,
+        };
+      })
+      .filter(group => group.fields.length > 0 || Boolean(group.subGroups?.length));
 
   const renderFields = (group: SettingsGroup, padded = false) => {
     const fields = group.fields;
@@ -143,6 +148,7 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
         ...(padded ? { padding: `${sp[6]}px ${sp[3]}px` } : {}),
       }}>
         {groupedElements}
+        {group.subGroups && group.subGroups.length > 0 ? renderAccordion(group.subGroups) : null}
       </div>
     );
   };

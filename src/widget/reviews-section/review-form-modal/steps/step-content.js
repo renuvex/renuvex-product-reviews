@@ -3,6 +3,7 @@
 // Tek odak (textarea), başlık küçük bir input olarak üstte.
 // Sonraki butonu yorum boşken disabled — footer üzerinden kontrol edilir.
 import { validateStep } from '../wizard-state.js';
+import { reviewFormCopy } from '../copy.js';
 
 var COMMENT_MAX = 2000;
 var TITLE_MAX = 60;
@@ -17,7 +18,7 @@ export function createStepContent(state, opts) {
   // Başlık
   var heading = document.createElement('div');
   heading.className = 'renuvex-pr-fwizard-step-title renuvex-pr-fwizard-step-title--lg';
-  heading.textContent = 'Deneyiminizi anlatın';
+  heading.textContent = reviewFormCopy('formStepContentTitle');
   root.appendChild(heading);
 
   // Form alanı

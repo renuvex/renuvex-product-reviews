@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-06-06
+last_verified: 2026-06-06
 confidence: high
 tags:
   - hot-context
@@ -33,6 +33,7 @@ source_files:
   - "tests/unit/widget-surface-contracts.test.ts"
   - "tests/unit/widget-popover-registry.test.ts"
   - "tests/unit/widget-hover-gating.test.ts"
+  - "tests/unit/widget-settings.test.ts"
   - "scripts/check-widget-runtime.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
@@ -58,6 +59,7 @@ source_files:
   - "src/widget/reviews-section/render/states.js"
   - "src/widget/reviews-section/render/request-token.js"
   - "src/widget/reviews-section/render/size-presets.js"
+  - "src/widget/reviews-section/review-form-modal/copy.js"
   - "src/widget/reviews-section/lightbox-trigger.js"
   - "src/widget/reviews-section/styles.js"
   - "src/widget/reviews-section/styles/base.js"
@@ -79,12 +81,14 @@ source_files:
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/widget-error/route.ts"
   - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
+  - "src/lib/widget-settings.ts"
 ---
 
 # Hot Context
 
 ## Current Focus
-- ikas review/rating app: admin, storefront widget, badges, reviews, uploads, moderation.
+- ikas review/rating app: admin, storefront widget, badges, uploads, moderation.
 
 ## Must Know
 - Source/config/tests/runtime win; wiki routes.
@@ -107,12 +111,12 @@ source_files:
 
 - 2026-06-01: Decorative review-surface hovers now require `(hover:hover) and (pointer:fine)`; fixes compact-mobile sticky hover on "Yorum Yap". Guard: `tests/unit/widget-hover-gating.test.ts`.
 - 2026-06-01: Physical-mobile filter tap follow-up: scoped shield prevents same-gesture compat events pressing exposed "Yorum Yap"; normal ADR_0011 `:active` remains.
+- 2026-06-06: Review wizard step copy is merchant-editable under `Metin > Yorum Formu`. `SettingsGroup.subGroups` remains flat saved keys, traversal goes through `collectSettingFields(...)`, and storefront copy uses `review-form-modal/copy.js` + `textContent` with whitespace fallback.
 
 ## Current Risks / Open Questions
-- Keep live post-deploy smoke after runtime widget changes; deployed measurement scripts are evidence, not a merchant-flow replacement.
-- Theme adapters depend on Admin API `listStorefront.themes[].isMainTheme`; ikas has no theme webhook, so lazy resync remains the workaround.
-- Admin warning UI for unsupported themes is deferred; the runtime signal exists, the dashboard surface does not.
-- Gaps: authenticated ikas dashboard smoke, Sentry post-deploy health, hard transfer budgets, manual Google Rich Results checks.
+- Keep live post-deploy smoke after runtime widget changes.
+- Theme adapters still depend on Admin API `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
+- Deferred gaps: unsupported-theme admin warning UI, authenticated ikas dashboard smoke, Sentry post-deploy health.
 
 ## Read Next
 - [[Current_Status]]

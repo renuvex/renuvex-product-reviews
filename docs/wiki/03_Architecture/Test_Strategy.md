@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-06-02
-last_verified: 2026-06-02
+updated: 2026-06-06
+last_verified: 2026-06-06
 confidence: high
 tags:
   - testing
@@ -39,6 +39,7 @@ source_files:
   - "tests/unit/widget-theme-vars.test.ts"
   - "tests/unit/widget-popover-registry.test.ts"
   - "tests/unit/widget-asset-cache.test.ts"
+  - "tests/unit/widget-settings.test.ts"
   - "vercel.json"
   - "docs/wiki/08_Widgets/Structured_Data_And_Rich_Snippets.md"
   - "docs/wiki/10_Research/Widget_Transfer_Measurement_2026-05-29.md"
@@ -82,6 +83,8 @@ Storefront interactions, runtime smoke, and unit tests also pin the summary filt
 Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains the final trusted Cloudinary URL instead of a local `blob:` preview URL.
 
 Storefront interactions and unit tests also pin review form wizard close-control contrast: `theme-vars.js` derives the close icon color and hover background from `formBgColor`, and the browser test verifies the real shadow-DOM button stays readable even when `formPrimaryTextColor` matches a dark form background.
+
+Storefront interactions, admin preview schema tests, and unit tests also pin review form wizard copy settings: `Metin > Yorum Formu` nested fields traverse defaults/sanitize/validate, custom step titles and the photo subtitle render as literal text, and whitespace-only values fall back to defaults.
 
 Unit tests pin the review-section empty-state text color contract: `theme-vars.js` derives `--renuvex-pr-state-text` from `reviewBodyColor`, so "no reviews yet" follows the merchant's review text color family without adding a separate admin color setting.
 

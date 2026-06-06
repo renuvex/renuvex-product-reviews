@@ -5,7 +5,7 @@ import { ArrowLeft, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity, shadows } from '@/lib/design-tokens';
-import { WidgetDef } from '../widgetDefs';
+import { WidgetDef, collectSettingFields } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
 import { ColorPickerField } from './ColorPickerField';
 
@@ -37,10 +37,8 @@ function PreviewBackgroundInfo() {
 // DB'den gelen savedSettings ile override et (eksik key'ler default'tan gelir)
 function mergeWithDefaults(widget: WidgetDef, savedSettings: WidgetSettingsDraft): WidgetSettingsDraft {
   const defaults: WidgetSettingsDraft = {};
-  for (const group of widget.settings) {
-    for (const field of group.fields) {
-      defaults[field.key] = field.default;
-    }
+  for (const field of collectSettingFields(widget.settings)) {
+    defaults[field.key] = field.default;
   }
   return { ...defaults, ...savedSettings };
 }

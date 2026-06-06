@@ -16,6 +16,7 @@ import { currentSettings } from '../../../core/state.js';
 import {
   RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
 } from '../../../core/namespace.js';
+import { reviewFormCopy } from '../copy.js';
 
 export function createStepRating(state, opts) {
   opts = opts || {};
@@ -28,7 +29,7 @@ export function createStepRating(state, opts) {
   // Başlık
   var title = document.createElement('div');
   title.className = 'renuvex-pr-fwizard-step-title';
-  title.textContent = 'Bu ürünü nasıl değerlendirirsiniz?';
+  title.textContent = reviewFormCopy('formStepRatingTitle');
   root.appendChild(title);
 
   // Yıldız sırası

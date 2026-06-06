@@ -52,6 +52,20 @@ export interface SettingsGroup {
   title: string;
   isColor?: boolean; // true → "Renkler" kategorisi altında listelenir, false/undefined → ana panelde
   fields: SettingField[];
+  subGroups?: SettingsGroup[];
+}
+
+export function collectSettingFields(groups: SettingsGroup[]): SettingField[] {
+  const fields: SettingField[] = [];
+
+  for (const group of groups) {
+    fields.push(...group.fields);
+    if (group.subGroups?.length) {
+      fields.push(...collectSettingFields(group.subGroups));
+    }
+  }
+
+  return fields;
 }
 
 // ─── Widget definition ───────────────────────────────────────────────────────
@@ -281,6 +295,18 @@ export const WIDGETS: WidgetDef[] = [
           // hem modal lightbox (review-modal.js) aynı anahtarı okur. currentSettings
           // global state'ten geliyor; settings yoksa 'Mağaza Sahibi' fallback'i kullanılır.
           { type: 'text',   key: 'merchantReplyLabel',   label: 'Mağaza Yanıtı Etiketi', placeholder: 'Mağaza Sahibi', default: 'Mağaza Sahibi', maxLength: 30 },
+        ],
+        subGroups: [
+          {
+            title: 'Yorum Formu',
+            fields: [
+              { type: 'text', key: 'formStepRatingTitle',    label: 'Adım 1 Başlığı',    placeholder: 'Bu ürünü nasıl değerlendirirsiniz?', default: 'Bu ürünü nasıl değerlendirirsiniz?', maxLength: 60 },
+              { type: 'text', key: 'formStepPhotosTitle',    label: 'Adım 2 Başlığı',    placeholder: 'Fotoğraflı değerlendirme',           default: 'Fotoğraflı değerlendirme',           maxLength: 60 },
+              { type: 'text', key: 'formStepPhotosSubtitle', label: 'Adım 2 Alt Başlığı', placeholder: 'Fotoğraf ekleyebilirsiniz.',        default: 'Fotoğraf ekleyebilirsiniz.',        maxLength: 90 },
+              { type: 'text', key: 'formStepContentTitle',   label: 'Adım 3 Başlığı',    placeholder: 'Deneyiminizi anlatın',              default: 'Deneyiminizi anlatın',              maxLength: 60 },
+              { type: 'text', key: 'formStepAuthorTitle',    label: 'Adım 4 Başlığı',    placeholder: 'Hakkınızda',                       default: 'Hakkınızda',                       maxLength: 60 },
+            ],
+          },
         ],
       },
       {

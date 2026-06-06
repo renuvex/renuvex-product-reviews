@@ -8,6 +8,7 @@ import { fetchWithTimeout } from '../../../core/fetch.js';
 import { isTrustedReviewImageUrl } from '../../../core/helpers.js';
 import { iconUseSvg, iconUseNode } from '../../../icons/star-sprite.js';
 import { PHOTO_ICON, PLUS_ICON, UI_CLOSE } from '../../../icons/index.js';
+import { reviewFormCopy } from '../copy.js';
 
 var MAX_PHOTOS = 3;
 var MAX_BYTES = 10 * 1024 * 1024;
@@ -21,13 +22,13 @@ export function createStepPhotos(state, opts) {
   // Başlık
   var title = document.createElement('div');
   title.className = 'renuvex-pr-fwizard-step-title renuvex-pr-fwizard-step-title--lg';
-  title.textContent = 'Fotoğraflı değerlendirme';
+  title.textContent = reviewFormCopy('formStepPhotosTitle');
   root.appendChild(title);
 
   // Alt başlık
   var subtitle = document.createElement('div');
   subtitle.className = 'renuvex-pr-fwizard-step-subtitle';
-  subtitle.textContent = 'Fotoğraf ekleyebilirsiniz.';
+  subtitle.textContent = reviewFormCopy('formStepPhotosSubtitle');
   root.appendChild(subtitle);
 
   // Çerçeveli kart — upload butonu ve önizlemeler burada
