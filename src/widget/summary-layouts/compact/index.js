@@ -7,7 +7,7 @@ import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
 import { registerPopover } from '../shared/popover-registry.js';
-import { partialStarsHTML } from '../../core/helpers.js';
+import { partialStarsHTML, settingText } from '../../core/helpers.js';
 import { starUseSvg, iconUseSvg } from '../../icons/star-sprite.js';
 import { UI_CARET_DOWN } from '../../icons/index.js';
 import { COMPACT_CSS } from './styles.js';
@@ -96,7 +96,7 @@ export function render(opts) {
   var countTextEl = trigger.querySelector('.renuvex-pr-compact-trigger-text');
   var countChevronEl = trigger.querySelector('.renuvex-pr-compact-chevron');
   if (countTextEl) {
-    countTextEl.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
+    countTextEl.textContent = allCount.toLocaleString('tr-TR') + ' ' + settingText(settings.countLabel, 'Yorum');
   }
   if (countTextEl && countChevronEl) {
     var countGroupEl = document.createElement('span');

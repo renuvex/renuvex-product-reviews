@@ -6,6 +6,7 @@ import { registerPopover, swallowNextDismissGesture } from './popover-registry.j
 import { getFilterIconSvg } from '../../icons/index.js';
 import { iconUseSvg } from '../../icons/star-sprite.js';
 import { currentSettings } from '../../core/state.js';
+import { settingText } from '../../core/helpers.js';
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 
 export function buildActionsBlock(opts) {
@@ -21,7 +22,7 @@ export function buildActionsBlock(opts) {
   var writeBtn = document.createElement('button');
   writeBtn.className = 'renuvex-pr-write-btn';
   // Buton metni admin "Yorum Yap Butonu Metni" alanından gelir; boşsa fallback.
-  writeBtn.textContent = (currentSettings && currentSettings.writeButtonText) || 'Yorum Yap';
+  writeBtn.textContent = settingText(currentSettings && currentSettings.writeButtonText, 'Yorum Yap');
   writeBtn.onclick = onWriteClick;
   actionsBlock.appendChild(writeBtn);
 

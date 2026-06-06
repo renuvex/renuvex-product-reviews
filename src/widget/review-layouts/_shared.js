@@ -3,6 +3,7 @@
 // Tek yerden yönetilir, layout dosyaları sadece append eder.
 
 import { currentSettings } from '../core/state.js';
+import { settingText } from '../core/helpers.js';
 
 // Clamp'lı gövde + "Devamını oku/Daha az göster" — tüm review layout'ları (card/
 // list/gallery) için tek kaynak. read-more KEYBOARD-ERİŞİLEBİLİR <button>'dır
@@ -61,7 +62,7 @@ export function buildReplyEl(merchantReply, onReadMore) {
   replyHeader.className = 'renuvex-pr-reply-header';
   var replyLabel = document.createElement('span');
   replyLabel.className = 'renuvex-pr-reply-label';
-  replyLabel.textContent = (currentSettings && currentSettings.merchantReplyLabel) || 'Mağaza Sahibi';
+  replyLabel.textContent = settingText(currentSettings && currentSettings.merchantReplyLabel, 'Mağaza Sahibi');
   replyHeader.appendChild(replyLabel);
   replyEl.appendChild(replyHeader);
 

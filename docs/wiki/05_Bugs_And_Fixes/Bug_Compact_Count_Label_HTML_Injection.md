@@ -16,7 +16,14 @@ related:
   - "[[Bug_Index]]"
   - "[[Test_Strategy]]"
 source_files:
+  - "src/widget/core/helpers.js"
   - "src/widget/summary-layouts/compact/index.js"
+  - "src/widget/summary-layouts/shared/actions-block.js"
+  - "src/widget/summary-layouts/shared/bar-chart.js"
+  - "src/widget/review-layouts/_shared.js"
+  - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/render/photo-strip.js"
+  - "src/widget/reviews-section/review-modal.js"
   - "tests/widget-runtime-smoke.spec.ts"
 ---
 
@@ -47,12 +54,15 @@ The compact trigger needs trusted SVG markup for the rating stars and caret, so 
 ## Fix
 - Kept the trusted star/caret SVG fragments in the existing `innerHTML` path.
 - Changed the dynamic count label span to be populated through `textContent`.
+- Added a shared `settingText(value, fallback)` helper for merchant-editable widget labels so whitespace-only values fall back consistently before being written to the DOM.
 - Added runtime smoke coverage proving compact count labels remain literal text and do not create nested SVG/HTML elements.
+- Added runtime smoke coverage proving whitespace-only merchant text settings fall back for the widget title, count label, write button, photo-strip title, merchant reply label, and rating-bar label.
 
 ## Prevention
-- Merchant-editable text must be written with `textContent` or equivalent escaping.
+- Merchant-editable text must be normalized with `settingText(...)` when it has a default fallback, then written with `textContent` or equivalent escaping.
 - If a layout still needs `innerHTML` for trusted icon markup, keep merchant text out of the HTML string and set it on a separate DOM node.
-- Keep the compact count-label regression in `tests/widget-runtime-smoke.spec.ts`.
+- Keep the compact count-label and merchant-text fallback regressions in `tests/widget-runtime-smoke.spec.ts`.
 
 ## Change Log
 - 2026-06-06: Fixed compact summary count label rendering so merchant-editable labels are text-only, matching the other summary layouts.
+- 2026-06-06: Centralized merchant-text fallback normalization through `settingText(...)` so whitespace-only labels do not render as blank storefront copy.

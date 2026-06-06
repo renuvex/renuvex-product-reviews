@@ -8,6 +8,11 @@ import { PUBLIC_API_KEY } from './config.js';
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
+export function settingText(value, fallback) {
+  var text = typeof value === 'string' ? value.trim() : '';
+  return text || fallback;
+}
+
 export function extractSlug(url) {
   try {
     return new URL(url, window.location.origin).pathname.replace(/^\//, '').split('?')[0].split('/')[0];

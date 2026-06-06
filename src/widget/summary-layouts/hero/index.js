@@ -4,7 +4,7 @@
 
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
-import { partialStarsHTML } from '../../core/helpers.js';
+import { partialStarsHTML, settingText } from '../../core/helpers.js';
 import { HERO_CSS } from './styles.js';
 
 export var meta = {
@@ -51,7 +51,7 @@ export function render(opts) {
 
   var count = document.createElement('div');
   count.className = 'renuvex-pr-hero-count';
-  count.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
+  count.textContent = allCount.toLocaleString('tr-TR') + ' ' + settingText(settings.countLabel, 'Yorum');
   metaRow.appendChild(count);
 
   ratingCol.appendChild(metaRow);

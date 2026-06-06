@@ -5,6 +5,7 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
+import { settingText } from '../../core/helpers.js';
 import { ensureStarSprite, starUseSvg } from '../../icons/star-sprite.js';
 import { CLASSIC_SUMMARY_CSS } from './styles.js';
 
@@ -48,7 +49,7 @@ export function render(opts) {
   // Toplam yorum sayısı
   var countBlock = document.createElement('div');
   countBlock.className = 'renuvex-pr-summary-block renuvex-pr-summary-count';
-  countBlock.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
+  countBlock.textContent = allCount.toLocaleString('tr-TR') + ' ' + settingText(settings.countLabel, 'Yorum');
   summary.appendChild(countBlock);
 
   // Tavsiye yüzdesi (opsiyonel)

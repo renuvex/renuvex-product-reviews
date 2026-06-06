@@ -10,6 +10,7 @@ import {
   buildResponsiveImgAttrs,
   attachImageErrorHandler,
   hideOnImageError,
+  settingText,
 } from '../core/helpers.js';
 import { currentSettings } from '../core/state.js';
 import {
@@ -88,7 +89,7 @@ function buildRight(r) {
   replyEl.className = 'renuvex-pr-modal-reply';
   var replyLabel = document.createElement('div');
   replyLabel.className = 'renuvex-pr-modal-reply-label';
-  replyLabel.textContent = (currentSettings && currentSettings.merchantReplyLabel) || 'Mağaza Sahibi';
+  replyLabel.textContent = settingText(currentSettings && currentSettings.merchantReplyLabel, 'Mağaza Sahibi');
   var replyText = document.createElement('div');
   replyText.className = 'renuvex-pr-modal-reply-text';
   replyText.textContent = r.merchantReply || '';
@@ -121,7 +122,7 @@ function updateRight(right, r, settings) {
 
   var replyEl = scrollContent.querySelector('.renuvex-pr-modal-reply');
   replyEl.querySelector('.renuvex-pr-modal-reply-label').textContent =
-    (activeSettings && activeSettings.merchantReplyLabel) || 'Mağaza Sahibi';
+    settingText(activeSettings && activeSettings.merchantReplyLabel, 'Mağaza Sahibi');
   replyEl.querySelector('.renuvex-pr-modal-reply-text').textContent = r.merchantReply || '';
   replyEl.style.display = r.merchantReply ? '' : 'none';
 

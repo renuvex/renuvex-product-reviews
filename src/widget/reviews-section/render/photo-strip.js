@@ -17,6 +17,7 @@ import {
   PHOTO_STRIP_THUMB_WIDTH,
   buildResponsiveImgAttrs,
   hideOnImageError,
+  settingText,
 } from '../../core/helpers.js';
 import { iconUseNode } from '../../icons/star-sprite.js';
 import { UI_CARET_LEFT, UI_CARET_RIGHT } from '../../icons/index.js';
@@ -43,7 +44,7 @@ export function buildPhotoStrip(opts) {
   // ile özelleştirilebilir; toggle (showPhotoGalleryTitle) kapalıysa hiç render edilmez.
   // Boyut --renuvex-pr-photo-title-size, renk --renuvex-pr-photo-title CSS variable üzerinden.
   if (settings.showPhotoGalleryTitle !== false) {
-    var photoTitleText = (settings.photoGalleryTitle || '').trim() || 'Fotoğraflı Yorumlar';
+    var photoTitleText = settingText(settings.photoGalleryTitle, 'Fotoğraflı Yorumlar');
     var photoTitle = document.createElement('div');
     photoTitle.className = 'renuvex-pr-photo-title';
     photoTitle.textContent = photoTitleText;

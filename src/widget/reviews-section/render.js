@@ -19,6 +19,7 @@ import { attachShadowHost, injectShadowStyles, getOrCreateShadowContent, HOST_RE
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot } from '../icons/star-sprite.js';
 import { isReviewsMountEnabled } from '../themes/current-adapter.js';
+import { settingText } from '../core/helpers.js';
 import { beginReviewRequest, isCurrentReviewRequest } from './render/request-token.js';
 import { SIZE_PRESETS, THUMBNAIL_PRESETS, THUMBNAIL_PRESETS_MOBILE } from './render/size-presets.js';
 import { buildDisabledStateEl, buildReviewsErrorState } from './render/states.js';
@@ -101,7 +102,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     var titleLayout = getLayout(settings.summaryLayout);
     var layoutSupportsTitle = !(titleLayout.meta && titleLayout.meta.supports && titleLayout.meta.supports.title === false);
     var userShowsTitle = settings.showTitle !== false;
-    var titleValue = (settings.title || '').trim() || 'Müşteri Yorumları';
+    var titleValue = settingText(settings.title, 'Müşteri Yorumları');
     var title = (layoutSupportsTitle && userShowsTitle) ? titleValue : '';
 
     var root = document.documentElement;
@@ -308,7 +309,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         var emptyWriteBtn = document.createElement('button');
         emptyWriteBtn.className = 'renuvex-pr-write-btn';
         emptyWriteBtn.style.cssText = 'display:block;margin:16px auto 0;';
-        emptyWriteBtn.textContent = settings.writeButtonText || 'Yorum Yap';
+        emptyWriteBtn.textContent = settingText(settings.writeButtonText, 'Yorum Yap');
         emptyWriteBtn.onclick = openWriteForm;
         widget.appendChild(emptyWriteBtn);
       }

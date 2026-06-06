@@ -511,6 +511,49 @@ test('compact summary count label renders as text, not HTML', async ({ page }) =
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('merchant text settings trim whitespace before falling back', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'compact',
+      reviewLayout: 'list',
+      title: '   ',
+      photoGalleryTitle: '   ',
+      writeButtonText: '   ',
+      countLabel: '   ',
+      merchantReplyLabel: '   ',
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-photo-title')).toBe(true);
+
+  const labels = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    return {
+      title: root?.querySelector('.renuvex-pr-title')?.textContent?.trim() || '',
+      count: root?.querySelector('.renuvex-pr-compact-trigger-text')?.textContent?.trim() || '',
+      write: root?.querySelector('.renuvex-pr-write-btn')?.textContent?.trim() || '',
+      photoTitle: root?.querySelector('.renuvex-pr-photo-title')?.textContent?.trim() || '',
+      replyLabel: root?.querySelector('.renuvex-pr-reply-label')?.textContent?.trim() || '',
+      barLabel: root?.querySelector('.renuvex-pr-bar-row')?.getAttribute('aria-label') || '',
+    };
+  });
+
+  expect(labels.title).toBe('Müşteri Yorumları');
+  expect(labels.count).toMatch(/^\d+ Yorum$/);
+  expect(labels.write).toBe('Yorum Yap');
+  expect(labels.photoTitle).toBe('Fotoğraflı Yorumlar');
+  expect(labels.replyLabel).toBe('Mağaza Sahibi');
+  expect(labels.barLabel).toContain('Yorum');
+  expect(labels.barLabel).not.toContain('   ');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 for (const layoutCase of LAYOUT_MATRIX) {
   test(`${layoutCase.name} desktop mouse filter can reopen immediately after sort`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });

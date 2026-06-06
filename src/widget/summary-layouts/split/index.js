@@ -8,6 +8,7 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
+import { settingText } from '../../core/helpers.js';
 import { ensureStarSprite, starUseSvg } from '../../icons/star-sprite.js';
 import { SPLIT_CSS } from './styles.js';
 
@@ -52,7 +53,7 @@ export function render(opts) {
   // Classic ile birebir ayni tipografi icin .renuvex-pr-summary-count kullanilir.
   // Boyut/renk/weight degisiklikleri otomatik split'e de yansir — tek kaynak.
   count.className = 'renuvex-pr-summary-block renuvex-pr-summary-count renuvex-pr-split-left-count';
-  count.textContent = allCount.toLocaleString('tr-TR') + ' ' + (settings.countLabel || 'Yorum');
+  count.textContent = allCount.toLocaleString('tr-TR') + ' ' + settingText(settings.countLabel, 'Yorum');
   left.appendChild(count);
 
   summary.appendChild(left);
