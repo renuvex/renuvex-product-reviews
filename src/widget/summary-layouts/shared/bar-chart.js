@@ -4,6 +4,7 @@
 // Satıra tıklayınca veya klavyeden Enter/Space ile rating filtresi toggle olur.
 
 import { ensureStarSprite, starUseSvg } from '../../icons/star-sprite.js';
+import { currentSettings } from '../../core/state.js';
 
 export function buildBarChart(opts) {
   var ratingCounts = opts.ratingCounts;
@@ -31,7 +32,7 @@ export function buildBarChart(opts) {
     row.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     row.setAttribute(
       'aria-label',
-      si + ' yıldız, ' + cnt.toLocaleString('tr-TR') + ' yorum, ' + (isActive ? 'filtreyi kaldır' : 'filtrele')
+      si + ' yıldız, ' + cnt.toLocaleString('tr-TR') + ' ' + ((currentSettings && currentSettings.countLabel) || 'Yorum') + ', ' + (isActive ? 'filtreyi kaldır' : 'filtrele')
     );
 
     var starsHtml = '';
