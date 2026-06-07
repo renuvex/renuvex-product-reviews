@@ -116,7 +116,7 @@ code run together, so a migration must not break the old code.
 - `Review.images` is **legacy TEXT containing `JSON.stringify(string[])`**. New writes keep it as a compatibility mirror; public image display reads `ReviewMedia` first and falls back to the legacy mirror during transition/backfill.
 - `Review.hasImages` is the indexed public photo-review facet. Do not reintroduce `Review.images contains` for public filters.
 - `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`.
-- `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill`.
+- `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>`; the script rejects placeholder cloud names.
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
 - `StoreSettings.storefrontTheme` stores non-sensitive active storefront/theme sync state resolved from `listStorefront.themes[].isMainTheme`. Current app-layer shape is `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`; public settings expose only the stable `runtime.themeAdapterKey/source` to select Ozy vs generic adapter.

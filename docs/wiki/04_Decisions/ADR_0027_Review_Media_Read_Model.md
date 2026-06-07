@@ -66,7 +66,7 @@ Add a normalized media read model while keeping the public API response shape st
 
 ## Consequences
 - New write paths that attach or detach review media must keep `Review.hasImages`, `ReviewMedia`, and `ProductReviewSummary.photoReviewCount` consistent.
-- After migration deploy, run `pnpm reviews:media:backfill` to populate `ReviewMedia` and repair legacy rows.
+- After migration deploy, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>` to populate `ReviewMedia` and repair legacy rows. The script rejects placeholder cloud names so it cannot silently backfill against the wrong trusted tenant policy.
 - Monthly Cloudinary fallback cleanup should prefer `ReviewMedia.publicId`; legacy `Review.images` remains only a transition fallback.
 - Cursor/keyset pagination remains a future public API performance phase.
 

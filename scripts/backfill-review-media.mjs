@@ -1,6 +1,7 @@
 // Backfill normalized ReviewMedia rows from legacy Review.images.
 // Usage:
 //   pnpm reviews:media:backfill
+//   pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>
 //   pnpm reviews:media:backfill --storeId=<merchantId>
 //   pnpm reviews:media:backfill --storeId=<merchantId> --productId=<ikasProductId>
 
@@ -15,8 +16,9 @@ function argValue(name) {
   return process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length)?.trim() || null;
 }
 
-function configuredCloudName() {
-  const cloudName = (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || '').trim();
+function configuredCloudName(explicitCloudName) {
+  const cloudName = (explicitCloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || '').trim();
+  if (cloudName === 'your_cloud_name' || cloudName === 'your-cloud-name') return null;
   return /^[A-Za-z0-9_-]+$/.test(cloudName) ? cloudName : null;
 }
 
@@ -153,11 +155,12 @@ async function repairPhotoReviewCounts(storeId, productId) {
 async function run() {
   const storeId = argValue('storeId');
   const productId = argValue('productId');
+  const explicitCloudName = argValue('cloudName');
   if (productId && !storeId) throw new Error('--productId requires --storeId');
 
-  const cloudName = configuredCloudName();
+  const cloudName = configuredCloudName(explicitCloudName);
   if (!cloudName) {
-    throw new Error('Cloudinary cloud name is required; refusing to backfill ReviewMedia with an unknown trusted tenant policy.');
+    throw new Error('A real Cloudinary cloud name is required; refusing to backfill ReviewMedia with an unknown or placeholder trusted tenant policy.');
   }
 
   const where = scopeWhere(storeId, productId);

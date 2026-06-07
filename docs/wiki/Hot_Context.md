@@ -121,7 +121,7 @@ source_files:
 - 2026-06-06: ikas confirmed Storefront Events are not DOM-ready signals and `VIEW_LISTING.productDetails[]` is usable. PDP reviews stay deterministic by replaying only late `reviews-main` mounts and product/path-guarding stale bootstraps.
 - 2026-06-06: Public rating/summary aggregates use `ProductReviewSummary`; raw `Review` stays source of truth and `pnpm reviews:summaries:rebuild` repairs it. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 
-- 2026-06-07: Public photo-review reads use indexed `Review.hasImages` plus normalized `ReviewMedia`; `pnpm reviews:media:backfill` repairs legacy rows. See [[ADR_0027_Review_Media_Read_Model]].
+- 2026-06-07: Public photo-review reads use indexed `Review.hasImages` plus normalized `ReviewMedia`; `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>` repairs legacy rows and rejects placeholder cloud names. See [[ADR_0027_Review_Media_Read_Model]].
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes.
