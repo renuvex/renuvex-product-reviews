@@ -98,6 +98,7 @@
       "@parcel/watcher",
       "@prisma/client",
       "@prisma/engines",
+      "@sentry/cli",
       "@tailwindcss/oxide",
       "esbuild",
       "prisma",

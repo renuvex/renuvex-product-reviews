@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-05-27
+updated: 2026-06-07
 tags:
   - sentry
   - observability
@@ -65,8 +65,14 @@ Sentry is the observability surface for the Next.js panel app. The organization 
 
 `.env.sentry-build-plugin` and `.sentryclirc` are listed in `.gitignore`. Never commit either.
 
+`SENTRY_AUTH_TOKEN` must be minted for the same Sentry organization as `SENTRY_ORG`.
+If Vercel build logs show `Using organization <other-org> (embedded in token)`
+followed by `Project not found`, the deployment can still succeed but Sentry
+release/source-map upload should be treated as failed until the token is rotated.
+
 ## Operational Notes
 - Source maps upload during the Vercel build via `@sentry/webpack-plugin` (wrapper of `withSentryConfig`). The build log line **"Created release ..."** followed by sourcemap upload lines is the canonical success signal. Absence of those lines means stack traces will be minified in Sentry.
+- `@sentry/cli` is approved in `package.json` `pnpm.onlyBuiltDependencies`. If Vercel logs `Ignored build scripts: @sentry/cli`, the source-map upload install path is not in the expected state.
 - Vercel "Redeploy" without a new commit will re-run with current env, but **will not include code changes not yet pushed**. Always commit Sentry config changes before redeploying.
 - Multiple org auth tokens exist for the project (wizard generates one per run). Keep one for local (`.env.sentry-build-plugin`) and one for Vercel CI; revoke unused ones in Settings → Organization Tokens.
 - Sentry MCP token persists in `C:\Users\mertw\.sentry\cli.db`. It auto-refreshes; do not commit the file.

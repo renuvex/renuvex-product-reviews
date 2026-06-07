@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
+updated: 2026-06-07
 tags:
   - config
   - env
@@ -73,6 +73,8 @@ related:
 | `SENTRY_AUTH_TOKEN` | Build-time token for source map upload and release creation. | `.env.sentry-build-plugin` (local, gitignored) + Vercel (Production + Preview, Sensitive) |
 | `SENTRY_ORG` | `renuvex`. | Injected automatically by Vercel-Sentry integration or read by [next.config.js](next.config.js) |
 | `SENTRY_PROJECT` | Sentry project slug. Defaults to `renuvex-product-reviews` in local config. | Injected automatically by Vercel-Sentry integration or read by [next.config.js](next.config.js) |
+
+`SENTRY_AUTH_TOKEN` must belong to the same Sentry organization as `SENTRY_ORG`; otherwise release/source-map upload can fail even when the app deployment succeeds.
 
 See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the full contract.
 

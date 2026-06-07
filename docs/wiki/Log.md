@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-02
-last_verified: 2026-06-02
+updated: 2026-06-07
+last_verified: 2026-06-07
 confidence: high
 tags:
   - log
@@ -19,6 +19,11 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-07 - ops | Sentry release/source-map upload guard documented
+- Summary: Audited the Vercel/Sentry release upload path after the product summary read-model deploy. The app deployment and runtime checks were healthy, but build logs showed `sentry-cli` preferring a token embedded for `mert-copper` while repo config targets `renuvex/renuvex-product-reviews`, causing release/source-map upload to fail with `Project not found`.
+- Change: Approved `@sentry/cli` in `package.json` `pnpm.onlyBuiltDependencies` so Vercel installs stay deterministic, and documented the stricter org-token contract in [[Sentry_Operations]] and [[Config_And_Env_Map]].
+- Follow-up: Rotate/update Vercel `SENTRY_AUTH_TOKEN` to a token minted for the `renuvex` organization, then redeploy and verify the build log contains the Sentry release and sourcemap upload success lines.
 
 ## 2026-06-02 - fix | Restore desktop mouse filter reopen after sort render
 - Summary: Fixed the desktop follow-up where selecting a summary filter option and immediately trying to reopen the filter could leave the button temporarily non-interactive (`pointer-events:none`, no pointer cursor). The bug was not compact-specific: a targeted runtime proof failed across classic, compact, hero, minimal, and split because mouse option activation reused the mobile `pointerdown` gesture shield before the sort-triggered render.
