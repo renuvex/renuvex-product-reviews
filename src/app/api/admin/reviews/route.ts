@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { getConfiguredCloudinaryCloudName, parseStoredReviewImages } from '@/lib/review-images';
+import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
+
+const REVIEW_NOT_FOUND = 'review-not-found';
 
 /**
  * Handle GET requests: Fetch reviews for the authenticated merchant (paginated)
@@ -69,11 +72,23 @@ export async function DELETE(request: Request) {
     }
 
     try {
-      await prisma.review.delete({
-        where: { id, storeId: user.merchantId },
+      await prisma.$transaction(async (tx) => {
+        const existing = await tx.review.findFirst({
+          where: { id, storeId: user.merchantId },
+        });
+        if (!existing) throw new Error(REVIEW_NOT_FOUND);
+
+        await tx.review.delete({
+          where: { id },
+        });
+        await applyReviewSummaryVisibilityChange(tx, existing, null);
       });
       return NextResponse.json({ message: 'Review deleted' });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message !== REVIEW_NOT_FOUND) {
+        console.error('Error deleting review:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+      }
       return NextResponse.json({ error: 'Review not found or unauthorized' }, { status: 404 });
     }
   } catch (error) {
@@ -108,15 +123,28 @@ export async function PUT(request: Request) {
     }
 
     try {
-      const updatedReview = await prisma.review.update({
-        where: { id, storeId: user.merchantId },
-        data: {
-          ...(status !== undefined && { status }),
-          ...(merchantReply !== undefined && { merchantReply }),
-        },
+      const updatedReview = await prisma.$transaction(async (tx) => {
+        const existing = await tx.review.findFirst({
+          where: { id, storeId: user.merchantId },
+        });
+        if (!existing) throw new Error(REVIEW_NOT_FOUND);
+
+        const updated = await tx.review.update({
+          where: { id },
+          data: {
+            ...(status !== undefined && { status }),
+            ...(merchantReply !== undefined && { merchantReply }),
+          },
+        });
+        await applyReviewSummaryVisibilityChange(tx, existing, updated);
+        return updated;
       });
       return NextResponse.json({ data: updatedReview });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message !== REVIEW_NOT_FOUND) {
+        console.error('Error updating review:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+      }
       return NextResponse.json({ error: 'Review not found or unauthorized' }, { status: 404 });
     }
   } catch (error) {

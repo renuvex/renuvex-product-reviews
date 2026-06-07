@@ -32,6 +32,7 @@ source_files:
   - "tests/widget-interaction-smoke.spec.ts"
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
+  - "tests/unit/review-summary.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
   - "tests/unit/structured-data-jsonld.test.ts"
@@ -76,7 +77,7 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, photo strip toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |
 | Storefront interactions | `pnpm test:widget-interactions` | Photo-strip lightbox, review-image lightbox, summary filter/popover light-dismiss, keyboard close, review wizard validation, step flow, mocked review submit, and body-scroll-lock regression (opening either overlay locks scroll on BOTH `<html>` and `<body>` and restores on close — ADR_0025). |
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
-| Unit/API/theme state | `pnpm test:unit` | Public API route behavior, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). |
+| Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). |
 
 `pnpm test:ci` runs the five layers together. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
 
@@ -125,7 +126,9 @@ The highest-risk public write surface is `POST /api/public/reviews`. Unit tests 
 - store/product target verification before write,
 - approval policy modes (`manual`, `all`, `5stars`, `4plus`, and boolean legacy values).
 
-`GET /api/public/reviews` tests cover pagination clamp, sorting, rating filters, `hasImages=true`, safe missing-Cloudinary behavior, cache headers, author masking, rating distribution, and approved-only reads.
+`GET /api/public/reviews` tests cover pagination clamp, sorting, rating filters, `hasImages=true`, safe missing-Cloudinary behavior, cache headers, author masking, approved-only reads, and the unchanged response shape while unfiltered `allCount` / `avgRating` / `ratingCounts` come from `ProductReviewSummary`.
+
+Product review summary unit coverage pins `ProductReviewSummary` creation, decrement, merchant-reply no-op behavior, exact repair recompute, `/api/public/ratings` summary reads without raw `Review.groupBy()`, and admin status-transition writes. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 
 The browser interaction layer verifies the upload-to-submit bridge separately: after Cloudinary returns a tenant-scoped trusted URL, `/api/public/upload/register` receives `{storeId, secureUrl}` and `/api/public/reviews` receives that URL in `images`.
 

@@ -44,6 +44,26 @@ model Review {
   @@index([storeId, slug, status])
 }
 
+model ProductReviewSummary {
+  id               String    @id @default(uuid())
+  storeId          String
+  productId        String
+  approvedCount    Int       @default(0)
+  ratingSum        Int       @default(0)
+  averageRating    Float     @default(0)
+  rating1Count     Int       @default(0)
+  rating2Count     Int       @default(0)
+  rating3Count     Int       @default(0)
+  rating4Count     Int       @default(0)
+  rating5Count     Int       @default(0)
+  photoReviewCount Int       @default(0)
+  lastReviewAt     DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([storeId, productId])
+}
+
 model StoreSettings {
   id                String   @id @default(uuid())
   storeId           String   @unique

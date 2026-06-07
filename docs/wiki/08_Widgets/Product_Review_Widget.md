@@ -3,8 +3,9 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-06-06
+last_verified: 2026-06-06
+confidence: high
 tags:
   - widget
   - reviews
@@ -15,8 +16,17 @@ related:
   - "[[Photo_Strip]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
+  - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
   - "[[Bug_Review_Wizard_Focus_Trap_Accessibility]]"
   - "[[Bug_Review_Wizard_Photo_Upload_Lifecycle]]"
+source_files:
+  - "src/widget/reviews-section/bootstrap.js"
+  - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/reviews-api.js"
+  - "src/app/api/public/reviews/route.ts"
+  - "src/app/api/public/ratings/route.ts"
+  - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/lib/review-summary.ts"
 ---
 
 # Product Review Widget
@@ -68,7 +78,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Pagination: 10 per page (server-side); `limit` query param clamped 1-30 for ad-hoc fetches (photo strip uses 15).
 - Sort: `newest` / `highest` / `lowest`.
 - Filter: by rating (1..5), by `hasImages=true`.
-- Bar chart in summary uses `ratingCounts` returned by `/api/public/reviews` (filter-independent).
+- Bar chart in summary uses filter-independent `ratingCounts` returned by `/api/public/reviews`. Those aggregate fields (`allCount`, `avgRating`, `ratingCounts`) come from the backend `ProductReviewSummary` read model; the visible review list and filtered `totalCount` still come from `Review` rows. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 
 ## Photo strip
 - Dedicated horizontal strip above the review list, populated by a separate `hasImages=true&limit=15&orderBy=newest` fetch, independent of sort/filter/load-more.
@@ -81,8 +91,11 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [src/widget/summary-layouts/](src/widget/summary-layouts/)
 - [src/widget/review-layouts/](src/widget/review-layouts/)
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
+- [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)
+- [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
 - [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts)
 - [src/lib/review-images.ts](src/lib/review-images.ts)
+- [src/lib/review-summary.ts](src/lib/review-summary.ts)
 
 ## Obsidian Links
 - [[Storefront_Widget_Overview]]
@@ -94,11 +107,13 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Listing_Rating_Widget]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
+- [[ADR_0026_Product_Review_Summary_Read_Model]]
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 - [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-06: Public summary aggregates (`allCount`, `avgRating`, `ratingCounts`) now read from `ProductReviewSummary`; review rows, filter/sort/load-more, and response shape remain unchanged. Related ADR: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-06-01: Review wizard close (X) color and hover background now derive from the form background color (`formBgColor`) instead of `formPrimaryTextColor`; interaction smoke pins the actual shadow-DOM color and hover result.
 - 2026-05-31: Fixed review wizard photo upload lifecycle defects: closing during a pending upload now revokes local blob previews, removing a pending photo no longer aborts later selected uploads, and removal state is batched before blob revoke to avoid stale image loads. Related bug: [[Bug_Review_Wizard_Photo_Upload_Lifecycle]].
 - 2026-05-31: Wizard/lightbox lifecycle audit found the photo-strip lightbox thumbnails were click-only images. Added shared `wireLightboxTrigger()` and moved card/list/gallery triggers to it; interaction smoke now verifies keyboard open and focus restore from the photo strip.

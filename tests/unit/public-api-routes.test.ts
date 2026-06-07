@@ -11,11 +11,23 @@ const prismaMock = vi.hoisted(() => ({
   },
   productSnapshot: {
     findUnique: vi.fn(),
+    findMany: vi.fn(),
+  },
+  productReviewSummary: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    upsert: vi.fn(),
   },
   review: {
     findMany: vi.fn(),
     count: vi.fn(),
     groupBy: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    aggregate: vi.fn(),
     create: vi.fn(),
   },
   pendingReviewImage: {
@@ -32,6 +44,7 @@ const redisMock = vi.hoisted(() => ({
   expire: vi.fn(),
 }));
 const sentryCaptureExceptionMock = vi.hoisted(() => vi.fn());
+const getUserFromRequestMock = vi.hoisted(() => vi.fn());
 
 vi.mock('next/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('next/server')>();
@@ -43,6 +56,10 @@ vi.mock('next/server', async (importOriginal) => {
 
 vi.mock('@/lib/prisma', () => ({
   prisma: prismaMock,
+}));
+
+vi.mock('@/lib/auth-helpers', () => ({
+  getUserFromRequest: getUserFromRequestMock,
 }));
 
 vi.mock('@/lib/storefront-theme-sync', () => ({
@@ -119,6 +136,27 @@ function validReviewPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function summaryRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'summary-1',
+    storeId: 'store-1',
+    productId: 'product-1',
+    approvedCount: 1,
+    ratingSum: 5,
+    averageRating: 5,
+    rating1Count: 0,
+    rating2Count: 0,
+    rating3Count: 0,
+    rating4Count: 0,
+    rating5Count: 1,
+    photoReviewCount: 0,
+    lastReviewAt: new Date('2026-05-28T00:00:00.000Z'),
+    createdAt: new Date('2026-05-28T00:00:00.000Z'),
+    updatedAt: new Date('2026-05-28T00:00:00.000Z'),
+    ...overrides,
+  };
+}
+
 function setupVerifiedReviewTarget(autoApprove: unknown = 'manual') {
   redisMock.incr.mockResolvedValue(1);
   prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
@@ -133,9 +171,15 @@ function setupVerifiedReviewTarget(autoApprove: unknown = 'manual') {
   prismaMock.review.create.mockImplementation(async (args) => ({
     id: 'review-created',
     status: args.data.status,
+    storeId: args.data.storeId,
+    productId: args.data.productId,
+    rating: args.data.rating,
+    images: args.data.images,
+    createdAt: new Date('2026-05-28T00:00:00.000Z'),
   }));
   prismaMock.$transaction.mockImplementation(async (callback) => callback({
     review: prismaMock.review,
+    productReviewSummary: prismaMock.productReviewSummary,
     pendingReviewImage: prismaMock.pendingReviewImage,
   }));
 }
@@ -162,9 +206,19 @@ beforeEach(() => {
   prismaMock.widgetSettings.findMany.mockReset();
   prismaMock.widgetSettings.findUnique.mockReset();
   prismaMock.productSnapshot.findUnique.mockReset();
+  prismaMock.productSnapshot.findMany.mockReset();
+  prismaMock.productReviewSummary.findMany.mockReset();
+  prismaMock.productReviewSummary.findUnique.mockReset();
+  prismaMock.productReviewSummary.create.mockReset();
+  prismaMock.productReviewSummary.update.mockReset();
+  prismaMock.productReviewSummary.upsert.mockReset();
   prismaMock.review.findMany.mockReset();
   prismaMock.review.count.mockReset();
   prismaMock.review.groupBy.mockReset();
+  prismaMock.review.findFirst.mockReset();
+  prismaMock.review.update.mockReset();
+  prismaMock.review.delete.mockReset();
+  prismaMock.review.aggregate.mockReset();
   prismaMock.review.create.mockReset();
   prismaMock.pendingReviewImage.deleteMany.mockReset();
   prismaMock.$transaction.mockReset();
@@ -175,6 +229,7 @@ beforeEach(() => {
   redisMock.incr.mockReset();
   redisMock.expire.mockReset();
   sentryCaptureExceptionMock.mockReset();
+  getUserFromRequestMock.mockReset();
 });
 
 describe('/api/public/settings', () => {
@@ -243,21 +298,14 @@ describe('/api/public/ratings', () => {
     expect(body).toEqual({ data: {} });
     expect(checkFixedWindowRateLimitMock).not.toHaveBeenCalled();
     expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
+    expect(prismaMock.productReviewSummary.findMany).not.toHaveBeenCalled();
   });
 
   it('dedupes product ids, checks rate limit, and formats averages', async () => {
     checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
-    prismaMock.review.groupBy.mockResolvedValue([
-      {
-        productId: 'product-1',
-        _avg: { rating: 4.5 },
-        _count: { rating: 8 },
-      },
-      {
-        productId: 'product-2',
-        _avg: { rating: 5 },
-        _count: { rating: 1 },
-      },
+    prismaMock.productReviewSummary.findMany.mockResolvedValue([
+      summaryRow({ productId: 'product-1', approvedCount: 8, ratingSum: 36, averageRating: 4.5 }),
+      summaryRow({ id: 'summary-2', productId: 'product-2', approvedCount: 1, ratingSum: 5, averageRating: 5 }),
     ]);
     const { GET } = await import('@/app/api/public/ratings/route');
 
@@ -271,14 +319,13 @@ describe('/api/public/ratings', () => {
       windowSec: 60,
       label: 'public-ratings',
     }));
-    expect(prismaMock.review.groupBy).toHaveBeenCalledWith(expect.objectContaining({
-      by: ['productId'],
+    expect(prismaMock.productReviewSummary.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         storeId: 'store-1',
         productId: { in: ['product-1', 'product-2'] },
-        status: 'approved',
       }),
     }));
+    expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
     expect(body).toEqual({
       data: {
         'product-1': { avg: '4.5', count: 8 },
@@ -298,6 +345,40 @@ describe('/api/public/ratings', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(body).toEqual({ data: {} });
     expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
+    expect(prismaMock.productReviewSummary.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('/api/public/ratings-by-slug', () => {
+  it('resolves current product ids by slug and reads aggregate summaries', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true });
+    prismaMock.productSnapshot.findMany.mockResolvedValue([
+      { slug: 'premium-shorts', productId: 'product-1' },
+      { slug: 'linen-shirt', productId: 'product-2' },
+    ]);
+    prismaMock.productReviewSummary.findMany.mockResolvedValue([
+      summaryRow({ productId: 'product-1', approvedCount: 12, ratingSum: 57, averageRating: 4.75 }),
+      summaryRow({ id: 'summary-2', productId: 'product-2', approvedCount: 2, ratingSum: 8, averageRating: 4 }),
+    ]);
+    const { GET } = await import('@/app/api/public/ratings-by-slug/route');
+
+    const response = await GET(new Request('https://app.test/api/public/ratings-by-slug?storeId=store-1&slugs=premium-shorts,linen-shirt'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.productReviewSummary.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        storeId: 'store-1',
+        productId: { in: ['product-1', 'product-2'] },
+      },
+    }));
+    expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
+    expect(body).toEqual({
+      data: {
+        'premium-shorts': { avg: '4.8', count: 12 },
+        'linen-shirt': { avg: '4.0', count: 2 },
+      },
+    });
   });
 });
 
@@ -383,6 +464,7 @@ describe('/api/public/reviews', () => {
     expect(prismaMock.review.findMany).not.toHaveBeenCalled();
     expect(prismaMock.review.count).not.toHaveBeenCalled();
     expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
+    expect(prismaMock.productReviewSummary.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns approved reviews with rating distribution and pagination', async () => {
@@ -399,9 +481,7 @@ describe('/api/public/reviews', () => {
       },
     ]);
     prismaMock.review.count.mockResolvedValue(1);
-    prismaMock.review.groupBy.mockResolvedValue([
-      { rating: 5, _count: { rating: 1 }, _sum: { rating: 5 } },
-    ]);
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow());
     const { GET } = await import('@/app/api/public/reviews/route');
 
     const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1'));
@@ -418,6 +498,10 @@ describe('/api/public/reviews', () => {
       take: 10,
       skip: 0,
     }));
+    expect(prismaMock.productReviewSummary.findUnique).toHaveBeenCalledWith({
+      where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
+    });
+    expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
     expect(body.data).toEqual(expect.objectContaining({
       allCount: 1,
       totalCount: 1,
@@ -437,7 +521,7 @@ describe('/api/public/reviews', () => {
     setCloudinaryEnv();
     prismaMock.review.findMany.mockResolvedValue([]);
     prismaMock.review.count.mockResolvedValue(0);
-    prismaMock.review.groupBy.mockResolvedValue([]);
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(null);
     const { GET } = await import('@/app/api/public/reviews/route');
 
     const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&page=2&limit=99&orderBy=lowest&rating=4&hasImages=true'));
@@ -474,7 +558,7 @@ describe('/api/public/reviews', () => {
   it('uses a safe empty image filter when hasImages is requested without Cloudinary config', async () => {
     prismaMock.review.findMany.mockResolvedValue([]);
     prismaMock.review.count.mockResolvedValue(0);
-    prismaMock.review.groupBy.mockResolvedValue([]);
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(null);
     const { GET } = await import('@/app/api/public/reviews/route');
 
     const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&hasImages=true&rating=not-a-number&orderBy=highest&limit=0&page=-5'));
@@ -508,9 +592,15 @@ describe('/api/public/reviews', () => {
     prismaMock.review.create.mockResolvedValue({
       id: 'review-created',
       status: 'approved',
+      storeId: 'store-1',
+      productId: 'product-1',
+      rating: 5,
+      images: null,
+      createdAt: new Date('2026-05-28T00:00:00.000Z'),
     });
     prismaMock.$transaction.mockImplementation(async (callback) => callback({
       review: prismaMock.review,
+      productReviewSummary: prismaMock.productReviewSummary,
       pendingReviewImage: prismaMock.pendingReviewImage,
     }));
     const { POST } = await import('@/app/api/public/reviews/route');
@@ -541,6 +631,22 @@ describe('/api/public/reviews', () => {
       }),
     }));
     expect(body).toEqual({ message: 'Yorum alındı', data: { id: 'review-created', status: 'approved' } });
+    expect(prismaMock.productReviewSummary.create).not.toHaveBeenCalled();
+    expect(prismaMock.productReviewSummary.upsert).toHaveBeenCalledWith({
+      where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
+      create: expect.objectContaining({
+        storeId: 'store-1',
+        productId: 'product-1',
+        approvedCount: 1,
+        ratingSum: 5,
+        rating5Count: 1,
+      }),
+      update: expect.objectContaining({
+        approvedCount: { increment: 1 },
+        ratingSum: { increment: 5 },
+        rating5Count: { increment: 1 },
+      }),
+    });
     expect(prismaMock.pendingReviewImage.deleteMany).not.toHaveBeenCalled();
   });
 
@@ -651,6 +757,88 @@ describe('/api/public/reviews', () => {
         storeId: 'store-1',
       },
     });
+  });
+});
+
+describe('/api/admin/reviews', () => {
+  it('updates product summary when a review becomes approved', async () => {
+    getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    prismaMock.review.findFirst.mockResolvedValue({
+      id: 'review-1',
+      storeId: 'store-1',
+      productId: 'product-1',
+      rating: 4,
+      status: 'pending',
+      images: null,
+      createdAt: new Date('2026-05-27T00:00:00.000Z'),
+    });
+    prismaMock.review.update.mockResolvedValue({
+      id: 'review-1',
+      storeId: 'store-1',
+      productId: 'product-1',
+      rating: 4,
+      status: 'approved',
+      images: null,
+      createdAt: new Date('2026-05-27T00:00:00.000Z'),
+    });
+    prismaMock.$transaction.mockImplementation(async (callback) => callback({
+      review: prismaMock.review,
+      productReviewSummary: prismaMock.productReviewSummary,
+    }));
+    const { PUT } = await import('@/app/api/admin/reviews/route');
+
+    const response = await PUT(new Request('https://app.test/api/admin/reviews', {
+      method: 'PUT',
+      body: JSON.stringify({ id: 'review-1', status: 'approved' }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.productReviewSummary.create).not.toHaveBeenCalled();
+    expect(prismaMock.productReviewSummary.upsert).toHaveBeenCalledWith({
+      where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
+      create: expect.objectContaining({
+        storeId: 'store-1',
+        productId: 'product-1',
+        approvedCount: 1,
+        ratingSum: 4,
+        rating4Count: 1,
+      }),
+      update: expect.objectContaining({
+        approvedCount: { increment: 1 },
+        ratingSum: { increment: 4 },
+        rating4Count: { increment: 1 },
+      }),
+    });
+  });
+
+  it('does not touch product summary for merchant reply only updates', async () => {
+    getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    const review = {
+      id: 'review-1',
+      storeId: 'store-1',
+      productId: 'product-1',
+      rating: 5,
+      status: 'approved',
+      images: null,
+      createdAt: new Date('2026-05-27T00:00:00.000Z'),
+    };
+    prismaMock.review.findFirst.mockResolvedValue(review);
+    prismaMock.review.update.mockResolvedValue({ ...review, merchantReply: 'Thanks' });
+    prismaMock.$transaction.mockImplementation(async (callback) => callback({
+      review: prismaMock.review,
+      productReviewSummary: prismaMock.productReviewSummary,
+    }));
+    const { PUT } = await import('@/app/api/admin/reviews/route');
+
+    const response = await PUT(new Request('https://app.test/api/admin/reviews', {
+      method: 'PUT',
+      body: JSON.stringify({ id: 'review-1', merchantReply: 'Thanks' }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.productReviewSummary.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.productReviewSummary.create).not.toHaveBeenCalled();
+    expect(prismaMock.productReviewSummary.update).not.toHaveBeenCalled();
   });
 });
 

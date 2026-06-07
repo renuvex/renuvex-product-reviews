@@ -44,7 +44,7 @@ related:
 - **Be careful:** Preview-only controls can use this component without writing to `WidgetSettings`; keep DB persistence decisions in the caller. Do not re-enable user-facing alpha unless the UX for transparent defaults is redesigned.
 
 ### [prisma/schema.prisma](prisma/schema.prisma)
-- **What:** 4 models — `AuthToken`, `Review`, `StoreSettings`, `WidgetSettings`.
+- **What:** Core Prisma models including `AuthToken`, `Review`, `ProductReviewSummary`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, and `PendingReviewImage`.
 - **Why it matters:** Touched by every feature. `Review` has tuned indexes for common widget query shapes (`storeId+status+slug`, `storeId+productId`).
 - **Be careful:**
   - When adding indexes, check [prisma/migrations/20260404170403_cleanup_redundant_indexes/](prisma/migrations/20260404170403_cleanup_redundant_indexes/) — there's a history of churn here.
@@ -80,7 +80,7 @@ related:
 ## Public-facing surface
 
 ### [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
-- **What:** GET (paginated reviews + rating distribution, explicit public field whitelist) and POST (submit, with StoreSettings/ProductSnapshot target verification, profanity + rate limit + auto-approve mode).
+- **What:** GET (paginated review rows + `ProductReviewSummary` distribution, explicit public field whitelist) and POST (submit, with StoreSettings/ProductSnapshot target verification, profanity + rate limit + auto-approve mode).
 - **Be careful:**
   - **Highest-blast-radius surface in the app.** It's CORS-open and accepts user content from anywhere on the internet.
   - Profanity list is hard-coded in the file; updating means redeploy.

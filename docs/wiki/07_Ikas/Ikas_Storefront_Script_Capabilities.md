@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-15
-updated: 2026-05-25
-last_verified: 2026-05-25
+updated: 2026-06-06
+last_verified: 2026-06-06
 confidence: high
 tags:
   - ikas
@@ -18,6 +18,7 @@ related:
   - "[[ADR_0002_Widget_Injection_Strategy]]"
   - "[[Ikas_API_Notes]]"
   - "[[Theme_Adapter_Playbook]]"
+  - "[[Ikas_Lifecycle_Mount_Questions]]"
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/ikas-client/v1-graphql-requests.ts"
@@ -30,6 +31,9 @@ source_files:
   - "src/lib/storefront-scripts.ts"
   - "src/lib/storefront-widget-url.ts"
   - "src/lib/storefront-theme.ts"
+  - "src/widget/loader.js"
+  - "src/widget/events.js"
+  - "src/widget/reviews-section/bootstrap.js"
 ---
 
 # ikas Storefront Script Capabilities
@@ -123,6 +127,19 @@ This section records a direct answer from an ikas developer about storefront scr
 Direct ikas developer feedback: there is no dedicated active-theme detector. However, calling `listStorefront` and selecting the theme where `themes[].isMainTheme` is `true` can be used to identify the published theme/storefront context. Treat this as an Admin/API-side signal for adapter selection, not as a storefront runtime DOM or mount-point contract.
 
 Schema verification on 2026-05-23 confirmed `isMainTheme` belongs to the nested `StorefrontTheme` type, not directly to `Storefront`. The current generated query requests `mainStorefrontThemeId` and `themes { id name themeId themeVersionId isMainTheme deleted }`. The app resolves this into `StoreSettings.storefrontTheme` and exposes only non-sensitive runtime adapter metadata through `/api/public/settings`.
+
+### Lifecycle / mount follow-up - 2026-06-06
+
+Direct ikas developer feedback confirmed that Storefront Events are generally analytics-oriented.
+`PAGE_VIEW` / `PRODUCT_VIEW` do not guarantee DOM readiness, custom HTML block readiness, or
+event-to-DOM ordering during SPA navigation. ikas also confirmed there is no official router
+subscription beyond these events today. Official page-injection / placement points are planned, but
+not near-term.
+
+Implication: the storefront widget must remain defensive when injecting into merchant/theme DOM.
+The correct current pattern is event-sourced context plus DOM observation for late anchors and stale
+async guards for product navigation races. See [[Ikas_Lifecycle_Mount_Questions]] and
+[[Bug_PDP_Review_Lifecycle_SPA_Race]].
 
 ### Implications for this project
 

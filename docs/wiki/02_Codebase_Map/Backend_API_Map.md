@@ -3,7 +3,9 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-23
+updated: 2026-06-06
+last_verified: 2026-06-06
+confidence: high
 tags:
   - api
   - routes
@@ -15,6 +17,14 @@ related:
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
+  - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
+source_files:
+  - "src/app/api/admin/reviews/route.ts"
+  - "src/app/api/public/reviews/route.ts"
+  - "src/app/api/public/ratings/route.ts"
+  - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/lib/review-summary.ts"
+  - "scripts/rebuild-product-review-summaries.mjs"
 ---
 
 # Backend / API Map
@@ -53,10 +63,10 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | Method + Path | Source | Purpose |
 |---|---|---|
 | OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
-| GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit` | [route.ts](src/app/api/public/reviews/route.ts) | Approved reviews + rating distribution with explicit public field whitelist. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]]) |
+| GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]]) |
 | POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + trusted image URLs + auto-approve). Client `slug`/`productName`/`email` are ignored. |
-| GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
-| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
+| GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
+| GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read `ProductReviewSummary` by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/upload/sign` body `{ storeId }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload scoped to `review_images/stores/<storeId>` after StoreSettings verification |
 | POST `/api/public/upload/register` body `{ storeId, secureUrl }` | [route.ts](src/app/api/public/upload/register/route.ts) | Register a completed tenant-scoped Cloudinary upload in `PendingReviewImage` for cleanup |
@@ -110,7 +120,9 @@ Detail in [[Security_And_Rate_Limits]].
 - [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts)
 - [src/lib/cors.ts](src/lib/cors.ts)
 - [src/lib/review-images.ts](src/lib/review-images.ts)
+- [src/lib/review-summary.ts](src/lib/review-summary.ts)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
+- [scripts/rebuild-product-review-summaries.mjs](scripts/rebuild-product-review-summaries.mjs)
 
 ## Obsidian Links
 - [[API_Design]]
@@ -120,8 +132,10 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Database_Schema]]
 - [[Widget_Architecture_Audit]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
+- [[ADR_0026_Product_Review_Summary_Read_Model]]
 
 ## Change Log
+- 2026-06-06: Public rating/summary aggregate reads moved to `ProductReviewSummary`; `/api/public/reviews` still reads list rows from `Review`, and unresolved slug fallback still has a legacy raw-review path. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Added `/api/admin/storefront-theme/sync` and split lightweight theme sync from StorefrontJSScript repair. `/api/admin/daily-maintenance` runs theme verification in batches; current Vercel config is daily-compatible, while sub-daily operation requires a plan/queue that supports it.
 - 2026-05-18: D3 scoped Cloudinary review-image uploads by tenant. `/api/public/upload/sign` now signs only `review_images/stores/<storeId>`, `/api/public/upload/register` requires `storeId`, and review image reads/writes reject cross-tenant Cloudinary paths.
 - 2026-05-18: Added shared Upstash fixed-window read rate limit to `/api/public/ratings` and `/api/public/ratings-by-slug` (300/min/IP) to protect rating badge APIs from query-variant abuse.

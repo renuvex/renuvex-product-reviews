@@ -3,7 +3,9 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-02
+updated: 2026-06-06
+last_verified: 2026-06-06
+confidence: high
 tags:
   - performance
   - caching
@@ -13,9 +15,13 @@ related:
   - "[[System_Architecture]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
+  - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
 source_files:
+  - "prisma/schema.prisma"
   - "vercel.json"
   - "scripts/build-widget.mjs"
+  - "scripts/rebuild-product-review-summaries.mjs"
+  - "src/lib/review-summary.ts"
   - "src/widget/core/cache.js"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/reviews/route.ts"
@@ -38,6 +44,8 @@ Set on:
 - `GET /api/public/settings` — widget config
 
 Default header value: `s-maxage=60, stale-while-revalidate=300`.
+
+2026-06-06 update: public rating badge, structured-data, and review summary distribution values are now backed by `ProductReviewSummary`; the `/api/public/reviews` list rows still come from `Review`.
 - 60s fresh window
 - 300s SWR — stale responses served while revalidation runs in the background
 
@@ -81,6 +89,9 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - Public reviews: covered by `[storeId, productId]`.
 - Listing badges: primary product-id path covered by `[storeId, productId, status]`; legacy slug fallback covered by `[storeId, slug, status]`.
 - Admin filtered list: covered by `[storeId, status]`.
+
+`ProductReviewSummary` owns the hot aggregate read path for `/api/public/ratings`, resolved `/api/public/ratings-by-slug`, and unfiltered review summary distribution. Future high-read widgets should add explicit read models instead of public fan-out over raw review aggregates.
+
 - The migration history shows we cleaned up redundant indexes once already — be selective.
 
 ## ikas API calls
@@ -120,8 +131,10 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[Widget_Performance]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 - [[ADR_0015_Canonical_Product_Identity]]
+- [[ADR_0026_Product_Review_Summary_Read_Model]]
 
 ## Change Log
+- 2026-06-06: Public rating badge, structured-data, and unfiltered review summary aggregates moved to `ProductReviewSummary`; list rows and filtered counts still use `Review`. Future high-read widgets should define explicit read models before adding public fan-out.
 - 2026-06-02: Changed the stable storefront loader and stable runtime shim cache headers from `max-age=300` to `max-age=0, must-revalidate`; content-hashed runtime/chunk assets remain one-year immutable. This keeps widget bugfix deploy propagation immediate on reload without giving up immutable cache performance for heavy assets.
 - 2026-05-18: Reduced widget-side stale settings tolerance from 7 days to 24 hours. Transient settings outages still have a same-tab fallback, but merchant changes cannot remain hidden behind a week-long stale cache.
 - 2026-05-17: Runtime versioning completed: production builds emit a content-hashed `runtime-*.js`, `widget.js` imports that direct path, and stable `runtime.js` remains a revalidated compatibility shim for older cached loaders. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.

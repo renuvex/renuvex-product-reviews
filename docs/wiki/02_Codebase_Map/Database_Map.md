@@ -3,7 +3,9 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-23
+updated: 2026-06-06
+last_verified: 2026-06-06
+confidence: high
 tags:
   - database
   - prisma
@@ -12,19 +14,25 @@ related:
   - "[[Index]]"
   - "[[Database_Schema]]"
   - "[[Important_Files]]"
+  - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
+source_files:
+  - "prisma/schema.prisma"
+  - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
+  - "src/lib/review-summary.ts"
+  - "scripts/rebuild-product-review-summaries.mjs"
 ---
 
 # Database Map
 
 ## Summary
-Postgres (Supabase) accessed via Prisma. Six models: `AuthToken`, `Review`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, `PendingReviewImage`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
+Postgres (Supabase) accessed via Prisma. Seven models: `AuthToken`, `Review`, `ProductReviewSummary`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, `PendingReviewImage`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
 
 ## Files
 
 | File | Role |
 |---|---|
 | [prisma/schema.prisma](prisma/schema.prisma) | Schema source |
-| [prisma/migrations/](prisma/migrations/) | Migration history (29+ files, 2026-03 → 2026-05) |
+| [prisma/migrations/](prisma/migrations/) | Migration history (29+ files, 2026-03 → 2026-06) |
 | [src/lib/prisma.ts](src/lib/prisma.ts) | Prisma client singleton |
 | [src/models/auth-token/index.ts](src/models/auth-token/index.ts) | `AuthToken` interface |
 | [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts) | `AuthTokenManager.{get,put,delete}` |
@@ -35,6 +43,7 @@ Postgres (Supabase) accessed via Prisma. Six models: `AuthToken`, `Review`, `Sto
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow |
+| `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, and summary distribution |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` and non-sensitive `storefrontTheme: Json` sync state |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
 | `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
@@ -49,6 +58,9 @@ On `Review`:
 `[storeId, productId, status]` also covers the leftmost `(storeId, productId)` prefix, and `[storeId, slug, status]` covers `(storeId, slug)`. The old two-column prefix indexes were removed in `20260518130000_drop_redundant_review_indexes` to reduce write amplification on the highest-write table.
 
 The migrations show iterative tuning: redundant indexes have been cleaned up more than once. Before adding a new index, scan `prisma/migrations/*` for past attempts.
+
+On `ProductReviewSummary`:
+- unique `[storeId, productId]` — public badge, structured-data, `/api/public/ratings`, and review summary distribution read this aggregate row instead of recomputing from raw `Review.groupBy()` on every storefront request.
 
 ## Migration workflow
 - Local dev: `pnpm prisma:migrate` (creates + applies migration)
@@ -86,8 +98,11 @@ code run together, so a migration must not break the old code.
 - `add_*_color_setting`, `remove_*_color_setting` — settings churn (visible in last week)
 - `add_review_title`, `add_review_comment_length_limit`, `add_merchant_reply_length_limit` — review schema growth
 
+- `add_product_review_summary` — product-level aggregate read model for public rating/summary reads
+
 ## Notes
 - `Review.images` is **TEXT containing `JSON.stringify(string[])`**, not a relation. Parsing happens at the API layer with try/catch.
+- `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`.
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
 - `StoreSettings.storefrontTheme` stores non-sensitive active storefront/theme sync state resolved from `listStorefront.themes[].isMainTheme`. Current app-layer shape is `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`; public settings expose only the stable `runtime.themeAdapterKey/source` to select Ozy vs generic adapter.
@@ -103,8 +118,10 @@ code run together, so a migration must not break the old code.
 - [[Database_Schema]]
 - [[Auth_And_Installation_Flow]]
 - [[ADR_0003_Review_Data_Model]]
+- [[ADR_0026_Product_Review_Summary_Read_Model]]
 
 ## Change Log
+- 2026-06-06: Added `ProductReviewSummary` to the model map and documented that public rating/summary aggregates now read from this per-product read model. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Changed `StoreSettings.storefrontTheme` semantics from flat metadata to a backwards-compatible v2 stable/pending sync state; no schema migration required.
 - 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.
 - 2026-05-18: Added `PendingReviewImage.storeId` for D3 tenant-scoped Cloudinary upload tracking.

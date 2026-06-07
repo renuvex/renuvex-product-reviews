@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-16
-updated: 2026-05-19
-last_verified: 2026-05-19
+updated: 2026-06-06
+last_verified: 2026-06-06
 confidence: high
 tags:
   - ikas
@@ -17,8 +17,11 @@ related:
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[Widget_Architecture]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
+  - "[[Ikas_Lifecycle_Mount_Questions]]"
 source_files:
   - "src/widget/core/storefront-context.js"
+  - "src/widget/loader.js"
+  - "src/widget/events.js"
   - "src/widget/listing-badges/collect.js"
   - "src/widget/listing-badges/ratings.js"
   - "src/widget/reviews-section/bootstrap.js"
@@ -32,6 +35,8 @@ ikas Storefront Events is the official ikas-supported mechanism for receiving pa
 
 Per direct ikas developer feedback (2026-05-16, see [[Ikas_Storefront_Script_Capabilities]]), this is the **recommended source of page/product context** — ikas does NOT currently provide official stable ids or `data-*` attributes for page areas. This project should treat Storefront Events as the primary context source and DOM heuristics as a temporary fallback only.
 
+Per direct ikas developer feedback on 2026-06-06 (see [[Ikas_Lifecycle_Mount_Questions]]), these events are analytics-oriented context events. They do **not** guarantee that the destination page DOM, theme sections, or merchant custom HTML blocks have been committed when `PAGE_VIEW` / `PRODUCT_VIEW` fires. ikas also provides no official router subscription beyond these events today. Storefront widgets that inject into host DOM must therefore combine events with DOM observation and stale async guards.
+
 Official docs:
 - Quick Start: <https://builders.ikas.com/docs/storefront-events/quick-start>
 - Event Types: <https://builders.ikas.com/docs/storefront-events/events>
@@ -40,9 +45,9 @@ Official docs:
 2026-05-17 recheck: the builders docs HTML was fetchable and contained the key
 tokens `IkasEvents`, `IKAS_EVENT_TYPE`, `IKAS_PAGE_TYPE`, `PAGE_VIEW`,
 `PRODUCT_VIEW`, `VIEW_CATEGORY`, and `VIEW_SEARCH_RESULTS`. This confirms the
-documentation direction, but it still does not prove what the dev storefront emits
-at runtime. Treat exact payload fields and `VIEW_LISTING` compatibility as runtime
-verification items.
+documentation direction, but it still does not prove every runtime payload field.
+2026-06-06 ikas developer feedback confirmed `VIEW_LISTING` + `productDetails[]`
+is usable even though the public docs list does not mention it.
 
 ## How It Works
 
@@ -115,15 +120,17 @@ probe during the ADR_0013 Phase 1 audit (see [[Phase_1_Widget_Runtime_Audit]]).
 |---|---|---|
 | `PAGE_VIEW` | `url`, `pageType`, `customer` | `pageType` ∈ `INDEX`, `PRODUCT`, `CATEGORY`, `SEARCH`. ikas double-fires `PAGE_VIEW` on first entry — the widget guards it with an 800 ms window. |
 | `PRODUCT_VIEW` | `productDetail` (`id`, `name`, …) | Matches the official example. |
-| `VIEW_LISTING` | `productDetails[]` (each with `id`, `name`, `slug` or `metaData.slug`) | Fires on category pages. **Real runtime event** despite being absent from the official docs list. `id` is used for canonical listing badge rating reads. |
+| `VIEW_LISTING` | `productDetails[]` (each with `id`, `name`, `slug` or `metaData.slug`) | Fires on category pages. **Real runtime event** despite being absent from the official docs list; **ikas-confirmed usable 2026-06-06** (see [[Ikas_Lifecycle_Mount_Questions]]). `id` is used for canonical listing badge rating reads. |
 | `VIEW_CATEGORY` | `categoryPath`, `category` | Fires alongside `VIEW_LISTING` on category pages; carries **no** product array. |
 | `VIEW_SEARCH_RESULTS` | `searchKeyword`, `productDetails[]` (same product id/name/slug shape as listing) | Fires on search pages; this — not `VIEW_LISTING` — carries the search product array. |
 | `SEARCH` | `searchKeyword` | Fires on search submit; no product array. |
 
 Key conclusions:
-- **`VIEW_LISTING` is valid at runtime.** The official docs event list is
-  incomplete, not contradictory. The widget's `IKAS_EVENT.LISTING_VIEW =
-  'VIEW_LISTING'` (`core/storefront-context.js`) is correct.
+- **`VIEW_LISTING` is valid and ikas-sanctioned.** It is runtime-verified and
+  ikas confirmed on 2026-06-06 that `VIEW_LISTING.productDetails[]` can be used.
+  The official docs event list is incomplete, not contradictory. The widget's
+  `IKAS_EVENT.LISTING_VIEW = 'VIEW_LISTING'` (`core/storefront-context.js`) is
+  correct.
 - **Category vs search asymmetry:** category product arrays arrive via
   `VIEW_LISTING`; search product arrays via `VIEW_SEARCH_RESULTS`. The widget
   handles both and maps their product ids to the visible slugs for listing badge
@@ -234,7 +241,7 @@ This matches the current project pattern: the widget reads `publicApiKey` from i
 
 - The widget subscribes to `IkasEvents` for `PRODUCT_VIEW`, `VIEW_LISTING`, `VIEW_SEARCH_RESULTS`, and `PAGE_VIEW` in [src/widget/core/storefront-context.js](src/widget/core/storefront-context.js) — the single subscription point since ADR_0013 Phase 1 (the old `events.js` subscription was moved there).
 - Runtime audit (2026-05-17) confirmed `VIEW_LISTING` is emitted on category pages and carries `productDetails[]`; search pages emit `VIEW_SEARCH_RESULTS` with the same product id/name/slug shape. The widget uses those product ids for canonical listing/search badge reads.
-- The official docs confirm `PAGE_VIEW` and `PRODUCT_VIEW`, which the widget depends on for product detection and listing-badge rendering.
+- The official docs confirm `PAGE_VIEW` and `PRODUCT_VIEW`, which the widget depends on for product detection and listing-badge rendering. ikas confirmed these are not DOM-ready signals; review injection must still wait for the explicit mount when it arrives after the event.
 - `PAGE_VIEW` + `IKAS_PAGE_TYPE` should be the canonical way to know the current page type, replacing URL/DOM heuristics in [bootstrap.js](src/widget/reviews-section/bootstrap.js).
 - `PRODUCT_VIEW.data.productDetail.id` is the official, supported product identity source — preferred over the `__NEXT_DATA__` / URL regex fallbacks in `getProductFromPage()`.
 - For the modular loader architecture ([[Yotpo_Style_Widget_Modular_Architecture]]), Storefront Events is the page/product context layer; the loader subscribes once and routes events to widget modules.
@@ -244,16 +251,14 @@ This matches the current project pattern: the widget reads `publicApiKey` from i
 Updated 2026-05-17 after the Phase 1 runtime audit ([[Phase_1_Widget_Runtime_Audit]]).
 
 - ~~Does `PAGE_VIEW.data` include the page type?~~ **Resolved** — `data.pageType` (`INDEX | PRODUCT | CATEGORY | SEARCH`).
-- ~~Is `VIEW_LISTING` a valid runtime event type?~~ **Resolved** — yes, emitted on category pages with `productDetails[]`.
+- ~~Is `VIEW_LISTING` a valid runtime event type?~~ **Resolved** — yes, emitted on category pages with `productDetails[]`; ikas confirmed it is usable on 2026-06-06.
 - ~~Does the category/search listing payload include product details?~~ **Resolved** — category via `VIEW_LISTING.data.productDetails[]`, search via `VIEW_SEARCH_RESULTS.data.productDetails[]`.
 - Are `IKAS_EVENT_TYPE` and `IKAS_PAGE_TYPE` exposed as runtime globals, or must consumers compare against literal strings? Still unverified — the widget uses frozen literal-string constants either way (`core/storefront-context.js`).
 - The cold-vs-SPA listing render difference behind [[Bug_Listing_Badge_Stars_Direct_Load]] turned out to be a CSS-injection-path issue (PDP-only `#renuvex-pr-styles`), not an event-sequence issue — now fixed.
-- **Contract risk — `VIEW_LISTING` is undocumented.** It is runtime-verified (above), but
-  the official docs list `VIEW_CATEGORY` / `VIEW_SEARCH_RESULTS`, not `VIEW_LISTING`. The
-  widget depends on it for category-page product arrays, so ikas renaming/removing it
-  would silently break event-sourced listing badges. Tracked as audit finding O6
-  ([[Widget_Architecture_Audit]], [[Open_Questions]]) — needs ikas confirmation that
-  `VIEW_LISTING` is a supported, stable event.
+- ~~Contract risk: `VIEW_LISTING` is undocumented.~~ **Resolved 2026-06-06** via direct
+  ikas developer feedback: `VIEW_LISTING` + `productDetails[]` can be used. Keep this
+  note because the public docs are still incomplete, but no code fallback change is
+  required from this answer.
 
 ## Obsidian Links
 

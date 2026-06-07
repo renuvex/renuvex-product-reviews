@@ -24,6 +24,7 @@ related:
   - "[[Widget_Architecture]]"
   - "[[Test_Strategy]]"
   - "[[ADR_0024_Badge_Review_Surface_Separation]]"
+  - "[[Ikas_Lifecycle_Mount_Questions]]"
 ---
 
 # Bug: PDP Review Lifecycle SPA Race
@@ -47,6 +48,17 @@ A second race existed in the initial bootstrap path. Sort/filter/load-more reque
 - `reviews-section/bootstrap.js` uses a module-local bootstrap token plus pathname/current-product guard after every async boundary before state writes or render.
 - `core/state.js` exposes a per-product review state reset used only by the current bootstrap.
 - The dead base-key review cache write in `storefront-context.js` was removed because it did not match the real suffix-bearing review cache keys.
+
+## Platform Confirmation
+Direct ikas developer feedback on 2026-06-06 confirmed this was not a guaranteed platform ordering
+case the widget could rely on. Storefront Events are analytics-oriented; `PRODUCT_VIEW` /
+`PAGE_VIEW` do not guarantee destination DOM readiness or merchant custom HTML block readiness during
+SPA navigation, and there is no official router subscription beyond those events. `VIEW_LISTING` +
+`productDetails[]` was confirmed usable for listing pages. See [[Ikas_Lifecycle_Mount_Questions]].
+
+Therefore the defensive architecture used here is still required: product context comes from
+Storefront Events, while review injection waits for the explicit mount and stale async bootstrap
+results are ignored.
 
 ## Prevention
 - `tests/widget-network-smoke.spec.ts` now covers late review mount replay, stale product bootstrap overwrite prevention, and the unchanged mount-absent badge-only contract.

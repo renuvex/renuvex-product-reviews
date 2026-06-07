@@ -5,7 +5,7 @@ status: active
 created: 2026-06-06
 updated: 2026-06-06
 last_verified: 2026-06-06
-confidence: low
+confidence: high
 tags:
   - ikas
   - storefront
@@ -28,8 +28,12 @@ source_files:
 # ikas Lifecycle & Mount Contract — Questions to ikas
 
 ## Status
-**Drafted 2026-06-06 — not yet sent to ikas.** Each question has an `Answer (ikas):` slot to
-fill when a reply arrives. Until answered, treat every assumption below as **unconfirmed**.
+**Asked + answered 2026-06-06** (public ikas developer community). ikas confirmed the Storefront
+Events are **analytics-oriented**, so DOM-readiness / ordering / custom-block timing are **not
+guaranteed** (Q1/Q2/Q4); there is **no** official route-change API beyond the events (Q5); and
+`VIEW_LISTING` + `productDetails[]` **is usable** (Q6 — resolved). Official page-injection /
+placement points are on the roadmap but **not near-term** (Q3). **Net: the defensive fix is the
+required approach — there is no platform guarantee to simplify toward today.**
 
 ## Why we are asking (context)
 Our storefront review widget is injected via a storefront script. It reads page/product context
@@ -94,14 +98,18 @@ On client-side navigation, is there an official event/callback that fires **afte
 page's DOM (theme sections **and** merchant custom HTML blocks) is fully rendered? `PAGE_VIEW` /
 `PRODUCT_VIEW` appear to fire on route/context change, not after the body is committed.
 - **If yes →** we mount on that signal and drop the DOM-waiting observer.
-- **Answer (ikas):** _Pending._
+- **Answer (ikas, 2026-06-06): No.** The Storefront Events are *"genelde analitik için
+  kullanılıyor"* — no post-render "page ready" signal is provided or guaranteed. → Keep the
+  `MutationObserver` late-mount; there is no platform ready-signal to switch to.
 
 ### Q2 — Event ↔ DOM ordering guarantee
 When `PRODUCT_VIEW` fires on SPA navigation, is the product page body **guaranteed** to already be in
 the DOM? Our runtime observation: **not guaranteed** — the event can precede the DOM. Can you confirm
 the intended/contractual ordering?
 - **If "event may precede DOM" is expected →** confirms our observer approach is the right pattern.
-- **Answer (ikas):** _Pending._
+- **Answer (ikas, 2026-06-06): Not guaranteed.** Confirmed — the events are analytics-grade, so
+  `PRODUCT_VIEW` may fire **before** the DOM is committed. → Our runtime observation was correct; the
+  observer + stale-request guard are required.
 
 ### Q3 — Stable mount anchor / official DOM hooks
 Are there (or planned) **official, stable** DOM hooks — documented `data-*` attributes or named
@@ -109,7 +117,12 @@ regions/slots — for app scripts to locate page areas (e.g. the product-title r
 slot for an injected block)? We currently rely on DOM heuristics + a merchant-placed block because no
 official slots exist (per ikas feedback 2026-05-16, see [[Ikas_Storefront_Script_Capabilities]]).
 - **If yes/roadmap →** we target the stable anchor instead of heuristics + manual merchant mount.
-- **Answer (ikas):** _Pending._
+- **Answer (ikas, 2026-05-16 + 2026-06-06):** No official slots/anchors today (2026-05-16).
+  **2026-06-06 update:** ikas confirmed official page-injection / placement points are **planned**
+  (*"sayfaya injection vs için geliştirmelerimiz olacak belirli yerlere koymanız için"*) but
+  *"biraz daha zamanı var"* — **no near-term ETA**. → Keep the merchant-placed container +
+  heuristics; plan a future migration when it ships. (This question was dropped from the public ask
+  since it was already answered 2026-05-16; the roadmap line above is the new datapoint.)
 
 ### Q4 — Custom HTML block render timing
 For a merchant-placed **custom HTML block** on a product page, on SPA navigation is that block
@@ -117,14 +130,18 @@ guaranteed present in the DOM at a defined point relative to `PRODUCT_VIEW`? Or 
 lazily / below-the-fold / after the event? (This is the exact element whose late insertion caused our
 race.)
 - **If a defined timing exists →** we can bound/await it deterministically.
-- **Answer (ikas):** _Pending._
+- **Answer (ikas, 2026-06-06): Not guaranteed.** Part of the *"1, 2 ve 3 garanti değil"* answer — a
+  merchant/theme custom HTML block has **no** guaranteed presence/timing relative to `PRODUCT_VIEW`.
+  → The DOM-waiting observer is the correct approach.
 
 ### Q5 — Client-side route-change subscription
 Is there an official API to subscribe to **client-side route changes** (the storefront router), so an
 app can react to navigation without patching `history.pushState` / `popstate`? (We currently patch
 History API in `events.js` to clean up stale PDP badges across SPA nav.)
 - **If yes →** we replace the History-API patch with the official subscription.
-- **Answer (ikas):** _Pending._
+- **Answer (ikas, 2026-06-06): No.** *"Bu eventler dışında bir desteğimiz bulunmuyor."* No official
+  route-change / router subscription beyond Storefront Events. → Keep the `history.pushState` /
+  `popstate` patch in `events.js`; there is no official alternative.
 
 ### Q6 — `VIEW_LISTING` support status (pre-existing open question)
 Is `VIEW_LISTING` a **supported, stable** Storefront Event? It fires on category pages with
@@ -132,7 +149,9 @@ Is `VIEW_LISTING` a **supported, stable** Storefront Event? It fires on category
 `VIEW_SEARCH_RESULTS`). If it is not guaranteed, what is the documented way to read the category
 product array? (Mirrors the existing [[Open_Questions]] item.)
 - **If unsupported →** we harden the `VIEW_CATEGORY` + DOM-slug fallback.
-- **Answer (ikas):** _Pending._
+- **Answer (ikas, 2026-06-06): RESOLVED — supported.** *"Bunu kullanabilirsiniz, productDetails
+  array'i evet kullanılabilir."* `VIEW_LISTING` + `productDetails[]` is ikas-sanctioned. → Downgrade
+  the VIEW_LISTING risk; treat it as supported, not just runtime-verified.
 
 ## How answers would change our code
 - **Q1/Q2/Q4 = "yes, deterministic ready/timing"** → the late-mount `MutationObserver` +
@@ -145,8 +164,10 @@ product array? (Mirrors the existing [[Open_Questions]] item.)
 - **Q5 = "router API"** → drop the `history.pushState` monkey-patch in `events.js`.
 - **Q6 = "unsupported"** → strengthen the category fallback path.
 
-Until answered, the **defensive fix stays** — it is correct and deterministic regardless of the
-platform answers; these only let us simplify.
+**Answered 2026-06-06 — the defensive fix is confirmed as the required approach.** ikas guarantees
+none of the timing/ordering/mount signals (Q1/Q2/Q3/Q4) and offers no route API (Q5), so there is
+**nothing to simplify toward** today. The only change is Q6: `VIEW_LISTING` is now ikas-sanctioned.
+Re-evaluate Q3 (official injection / placement points) when ikas ships the roadmapped feature.
 
 ## Obsidian Links
 - [[Ikas_Storefront_Events]]

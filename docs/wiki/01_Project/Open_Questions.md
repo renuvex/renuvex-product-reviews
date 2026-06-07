@@ -19,6 +19,7 @@ related:
   - "[[Widget_Transfer_Measurement_2026-05-29]]"
 source_files:
   - "src/widget/loader.js"
+  - "src/widget/core/storefront-context.js"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/listing-badges/fallback-candidates.js"
   - "src/widget/core/helpers.js"
@@ -83,26 +84,25 @@ to use a pull-model lazy resync instead. Open a feature request to ikas; if a th
 webhook ships, layer it as a third sync trigger (`reason: 'webhook'`) alongside the
 existing lazy resync path.
 
-## `VIEW_LISTING` undocumented ikas event — ikas-blocked (audit finding O6)
+## `VIEW_LISTING` undocumented ikas event — RESOLVED 2026-06-06 (audit finding O6)
 `core/storefront-context.js` depends on the `VIEW_LISTING` Storefront Event for
-category-page product arrays. `VIEW_LISTING` is **runtime-verified** (Phase 1 audit) but is
-**not in the official Storefront Events docs** (which list `VIEW_CATEGORY` /
-`VIEW_SEARCH_RESULTS`, not `VIEW_LISTING`).
-- **Risk:** it works today, but it is not a documented contract — ikas could rename/remove
-  it without notice; category listing badges would then stop populating from events
-  (the DOM-slug fallback only partially covers this).
-- **To unblock — ask ikas:** is `VIEW_LISTING` a supported, stable event? If not, what is
-  the documented way to read the category product array? If ikas will not guarantee it,
-  harden the `VIEW_CATEGORY` + DOM fallback path.
+category-page product arrays. `VIEW_LISTING` is **runtime-verified** (Phase 1 audit) and is now
+**ikas-sanctioned** even though it is still absent from the public docs list.
+- **RESOLVED 2026-06-06:** ikas developer confirmed `VIEW_LISTING` + its `productDetails[]` array is
+  supported/usable. No category fallback hardening is required from this answer; keep the note only
+  because the public docs remain incomplete. See [[Ikas_Lifecycle_Mount_Questions]] (Q6).
 - Detail: [[Widget_Architecture_Audit]] (O6), [[Ikas_Storefront_Events]].
 
-## ikas SPA lifecycle / mount contract — ikas-blocked (PDP review race)
+## ikas SPA lifecycle / mount contract — ANSWERED 2026-06-06 (PDP review race)
 The PDP review SPA-navigation race ([[Bug_PDP_Review_Lifecycle_SPA_Race]]) was fixed
 **defensively** because ikas guarantees neither a post-render "page ready" lifecycle hook,
 nor a `PRODUCT_VIEW`↔DOM ordering, nor a stable mount anchor. Consolidated questions to ask
 ikas (SPA ready signal, event↔DOM ordering, official mount slots, custom-block render timing,
-router-change subscription, `VIEW_LISTING` status) live in [[Ikas_Lifecycle_Mount_Questions]]
-with per-question answer slots to fill when ikas replies.
+router-change subscription, `VIEW_LISTING` status) + ikas's answers live in
+[[Ikas_Lifecycle_Mount_Questions]]. **Answered 2026-06-06:** ikas confirmed the events are
+analytics-grade with **no** DOM-readiness / ordering / custom-block-timing guarantee and **no**
+route-change API, so the defensive fix is required; `VIEW_LISTING` + `productDetails[]` is confirmed
+usable; official page-injection points are roadmapped but not near-term.
 
 ## Structured data injection mechanism
 Two approaches for JSON-LD aggregateRating:

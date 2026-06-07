@@ -21,14 +21,17 @@ related:
   - "[[Test_Strategy]]"
 source_files:
   - "package.json"
+  - "prisma/schema.prisma"
   - "playwright.widget.config.ts"
   - "vitest.config.ts"
+  - "scripts/rebuild-product-review-summaries.mjs"
   - "tests/widget-harness.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
+  - "tests/unit/review-summary.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
   - "tests/unit/widget-popover-registry.test.ts"
@@ -85,6 +88,7 @@ source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
   - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
   - "src/lib/widget-settings.ts"
+  - "src/lib/review-summary.ts"
 ---
 
 # Hot Context
@@ -114,7 +118,8 @@ source_files:
 - 2026-06-01: Decorative review-surface hovers now require `(hover:hover) and (pointer:fine)`; fixes compact-mobile sticky hover on "Yorum Yap". Guard: `tests/unit/widget-hover-gating.test.ts`.
 - 2026-06-01: Physical-mobile filter tap follow-up: scoped shield prevents same-gesture compat events pressing exposed "Yorum Yap"; normal ADR_0011 `:active` remains.
 - 2026-06-06: Review wizard step copy is merchant-editable under `Metin > Yorum Formu`. `SettingsGroup.subGroups` remains flat saved keys, traversal goes through `collectSettingFields(...)`, and storefront copy uses `review-form-modal/copy.js` + `textContent` with whitespace fallback.
-- 2026-06-06: PDP review lifecycle is deterministic across SPA navigation: late explicit mounts replay only `reviews-main`, stale initial bootstraps are product/path guarded, and badge-only PDP remains lightweight.
+- 2026-06-06: ikas confirmed Storefront Events are not DOM-ready signals and `VIEW_LISTING.productDetails[]` is usable. PDP reviews stay deterministic by replaying only late `reviews-main` mounts and product/path-guarding stale bootstraps.
+- 2026-06-06: Public rating/summary aggregates moved to `ProductReviewSummary` read model. Raw `Review` remains source of truth; submit/moderation/delete paths update summaries transactionally, and `pnpm reviews:summaries:rebuild` can repair/backfill. Future high-read widgets/features should define aggregate read models before adding public fan-out. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes.

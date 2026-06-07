@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { checkFixedWindowRateLimit, getClientIp } from '@/lib/public-rate-limit';
+import { publicRatingFromSummary } from '@/lib/review-summary';
 
 const RATINGS_RATE_LIMIT_MAX = 300;
 const RATINGS_RATE_LIMIT_WINDOW_SEC = 60;
@@ -85,20 +86,17 @@ export async function GET(request: Request) {
 
     const resolvedProductIds = Array.from(new Set(Object.values(slugToProductId)));
     if (resolvedProductIds.length > 0) {
-      const productRows = await prisma.review.groupBy({
-        by: ['productId'],
+      const productRows = await prisma.productReviewSummary.findMany({
         where: {
           storeId,
           productId: { in: resolvedProductIds },
-          status: 'approved',
         },
-        _avg: { rating: true },
-        _count: { rating: true },
       });
 
       const productRatings: Record<string, { avg: string; count: number }> = {};
       for (const row of productRows) {
-        productRatings[row.productId] = { avg: (row._avg.rating ?? 0).toFixed(1), count: row._count.rating };
+        const rating = publicRatingFromSummary(row);
+        if (rating) productRatings[row.productId] = rating;
       }
 
       for (const slug of Object.keys(slugToProductId)) {

@@ -239,6 +239,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 ## Caching strategy
 - `PRODUCT_VIEW` does not invalidate review browser cache directly. Review cache keys and the 60 second TTL contract are owned by `reviews-api.js`; `storefront-context.js` must not write non-matching base keys or add broad prefix invalidation without a separate cache-contract change.
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
+- Public badge, structured-data, and review summary distribution reads use the backend `ProductReviewSummary` read model. Widget response fields stay the same, but new high-read widget surfaces should prefer explicit aggregate/read-model endpoints over repeated raw `Review.groupBy()` scans. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.
 - Review fetch failures use stale cached review data when available; without stale data, `reviews-api.js fetchReviews()` returns an explicit error result so `render.js` can show a retryable error state instead of an empty list.
 - Review UI interactions in `render.js` guard async sort/filter/retry/load-more responses with a request token and active state snapshot; late responses cannot mutate a newer active selection. Load-more also compares returned ids against the active loaded review collection before inserting DOM nodes.
@@ -297,6 +298,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-06-06: Public rating/summary aggregate reads moved to the backend `ProductReviewSummary` read model. Widget response contracts are unchanged; future high-read surfaces should define their aggregate read model before adding public fan-out. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-06-02: Corrected shared summary filter pointer semantics after desktop testing: touch/pen filter options still activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so every summary layout can reopen the filter immediately after a sort-triggered render. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].
 - 2026-06-02: Strengthened compact/mobile rating-bar visual state: inactive filtered rows now use the explicit `.renuvex-pr-bar-dimmed` CSS state class, and stable widget entrypoints revalidate on reload while hashed runtime chunks stay immutable. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].
 - 2026-06-01: Hardened summary interaction contracts: popover registry handles now own `notifyOpening` identity and real teardown, disconnected entries are purged after summary re-renders, rating bar rows are keyboard/ARIA toggle controls, and count columns use tabular numbers with elastic minimum width. Related bug: [[Bug_Summary_Popover_Registry_Lifecycle_Contract]].

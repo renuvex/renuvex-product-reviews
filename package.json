@@ -26,6 +26,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "reviews:summaries:rebuild": "node scripts/rebuild-product-review-summaries.mjs",
     "apply:ai-rules": "npx @intellectronica/ruler apply"
   },
   "packageManager": "pnpm@10.4.1",

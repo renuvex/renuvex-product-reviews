@@ -35,7 +35,7 @@ renuvex-product-reviews/
 ├─ @types/                       # Local ambient TS types
 │
 ├─ prisma/
-│  ├─ schema.prisma              # 4 models: AuthToken, Review, StoreSettings, WidgetSettings
+│  ├─ schema.prisma              # Prisma models: auth, reviews, product summaries, settings, product snapshots, uploads
 │  └─ migrations/                # 29+ migrations, 2026-03 → 2026-05; iterative widget settings churn
 │
 ├─ public/

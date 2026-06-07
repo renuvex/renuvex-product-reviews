@@ -3,7 +3,9 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-23
+updated: 2026-06-06
+last_verified: 2026-06-06
+confidence: high
 tags:
   - database
   - prisma
@@ -14,12 +16,17 @@ related:
   - "[[ADR_0003_Review_Data_Model]]"
   - "[[ADR_0012_Pending_Upload_Registry]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
+  - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
+source_files:
+  - "prisma/schema.prisma"
+  - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
+  - "src/lib/review-summary.ts"
 ---
 
 # Database Schema
 
 ## Summary
-PostgreSQL via Prisma. Six models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
+PostgreSQL via Prisma. Seven models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
 
 ## Models
 
@@ -73,8 +80,39 @@ in migration `20260518130000_drop_redundant_review_indexes`.
 
 Common queries:
 - Public: `findMany({ storeId, productId, status: 'approved' })` + ordering + filters
-- Public listing badges: primary `groupBy({ by: ['productId'], where: { storeId, productId: { in: ids }, status: 'approved' } })`; legacy fallback `findMany({ storeId, slug: { in: slugs }, status: 'approved' })`
+- Public listing/PDP badges and summary distribution: `ProductReviewSummary` by `(storeId, productId)`
+- Public slug fallback: resolve current `ProductSnapshot` slug to product id, then read `ProductReviewSummary`; legacy direct slug read remains last resort for unresolved slugs
 - Admin: `findMany({ storeId, status? })` ordered by `createdAt desc`
+
+### `ProductReviewSummary`
+Product-level aggregate read model for public storefront rating surfaces. Raw `Review` rows remain the source of truth.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String `@id @default(uuid())` | |
+| `storeId` | String | Equals `merchantId` |
+| `productId` | String | ikas product id |
+| `approvedCount` | Int | Public approved review count |
+| `ratingSum` | Int | Sum of approved ratings; used to format average |
+| `averageRating` | Float | Stored derived value for read-model completeness |
+| `rating1Count` ... `rating5Count` | Int | Bar chart/rating distribution buckets |
+| `photoReviewCount` | Int | Future media-surface aggregate; `Review.images` is still TEXT JSON in this phase |
+| `lastReviewAt` | DateTime? | Latest approved review timestamp |
+| `createdAt`, `updatedAt` | DateTime | |
+
+Constraints:
+- `@@unique([storeId, productId])`
+
+Maintained by:
+- `/api/public/reviews` POST when a review is auto-approved
+- `/api/admin/reviews` PUT when status transitions change public visibility
+- `/api/admin/reviews` DELETE when an approved review is hard-deleted
+- `scripts/rebuild-product-review-summaries.mjs` for repair/backfill
+
+Read by:
+- `/api/public/ratings`
+- `/api/public/ratings-by-slug` after `ProductSnapshot` resolution
+- `/api/public/reviews` for unfiltered `allCount`, `avgRating`, and `ratingCounts`
 
 ### `StoreSettings`
 Per-merchant config. One row per merchant, created on OAuth callback.
@@ -176,6 +214,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-06-06: Added `ProductReviewSummary` as the product-level aggregate read model for public rating badge, structured-data, and review summary distribution reads. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Upgraded `StoreSettings.storefrontTheme` app-layer shape to v2 stable/pending sync state; no DB migration needed because the column remains nullable JSON.
 - 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.
 - 2026-05-18: Added nullable `PendingReviewImage.storeId` plus `[storeId, createdAt]` for D3 tenant-scoped Cloudinary uploads. New writes always set `storeId`; nullable exists for safe migration over old rows.

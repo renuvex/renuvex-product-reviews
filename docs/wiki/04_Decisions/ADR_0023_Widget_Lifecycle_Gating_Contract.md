@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-06-06
+last_verified: 2026-06-06
 confidence: high
 tags:
   - adr
@@ -18,6 +18,7 @@ related:
   - "[[ADR_0017_Badge_Architecture]]"
   - "[[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]"
   - "[[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]"
+  - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
   - "[[Widget_Architecture]]"
   - "[[CSS_Variable_Surface]]"
   - "[[Test_Strategy]]"
@@ -164,6 +165,8 @@ When adding a new widget surface, follow this checklist:
 7. **Document new CSS variables** in [[CSS_Variable_Surface]] following the playbook there.
 
 8. **Add a new theme adapter method** to the adapter contract in `themes/current-adapter.js ADAPTER_DEFAULTS` IF this widget needs theme-specific selectors. Update Ozy and generic adapters.
+
+9. **Define aggregate read models before adding high-read public fan-out.** If the widget needs storefront counts, averages, distributions, or other repeated product/store summaries, add or reuse a backend read model instead of scanning raw source tables from every public request. Review rating surfaces use `ProductReviewSummary`; see [[ADR_0026_Product_Review_Summary_Read_Model]].
 
 ## Reasoning
 - **Three-layer model matches what every major review app does** (Yotpo, Okendo, Loox, Stamped, Judge.me): single bootstrap, lazy chunks per surface, settings-driven gating inside. We are converging on the industry pattern, not innovating away from it.

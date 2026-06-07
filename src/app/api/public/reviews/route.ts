@@ -9,6 +9,7 @@ import {
   parseStoredReviewImages,
   sanitizeReviewImageUrls,
 } from '@/lib/review-images';
+import { applyReviewSummaryVisibilityChange, summaryStats } from '@/lib/review-summary';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -167,30 +168,15 @@ export async function GET(req: Request) {
     };
 
     // Filtreden bağımsız — bar chart için tüm approved yorumların dağılımı
-    const baseWhere = { storeId, productId, status: 'approved' };
+    const summaryWhere = { storeId, productId };
 
-    const [reviews, totalCount, ratingGroups] = await Promise.all([
+    const [reviews, totalCount, summary] = await Promise.all([
       prisma.review.findMany({ where, orderBy, take: limit, skip, select: PUBLIC_REVIEW_SELECT }),
       prisma.review.count({ where }),
-      prisma.review.groupBy({
-        by: ['rating'],
-        where: baseWhere,
-        _count: { rating: true },
-        _sum: { rating: true },
-      }),
+      prisma.productReviewSummary.findUnique({ where: { storeId_productId: summaryWhere } }),
     ]);
 
-    const ratingCounts = [0, 0, 0, 0, 0];
-    let ratingSum = 0;
-    let allCount = 0;
-    ratingGroups.forEach((g: any) => {
-      if (g.rating >= 1 && g.rating <= 5) {
-        ratingCounts[g.rating - 1] = g._count.rating;
-        ratingSum += g._sum.rating ?? 0;
-        allCount += g._count.rating;
-      }
-    });
-    const avgRating = allCount > 0 ? (ratingSum / allCount).toFixed(1) : null;
+    const { allCount, ratingCounts, avgRating } = summaryStats(summary);
 
     const formattedReviews = reviews.map((review) => formatPublicReview(review, cloudName, storeId));
 
@@ -326,6 +312,8 @@ export async function POST(request: Request) {
           where: { publicId: { in: committedPublicIds }, storeId: storeIdText },
         });
       }
+
+      await applyReviewSummaryVisibilityChange(tx, null, created);
 
       return created;
     });
