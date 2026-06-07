@@ -62,6 +62,7 @@ source_files:
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/widget-error/route.ts"
   - "src/lib/storefront-theme.ts"
+  - "src/lib/review-media.ts"
 ---
 
 # Test Strategy
@@ -126,9 +127,9 @@ The highest-risk public write surface is `POST /api/public/reviews`. Unit tests 
 - store/product target verification before write,
 - approval policy modes (`manual`, `all`, `5stars`, `4plus`, and boolean legacy values).
 
-`GET /api/public/reviews` tests cover pagination clamp, sorting, rating filters, `hasImages=true`, safe missing-Cloudinary behavior, cache headers, author masking, approved-only reads, and the unchanged response shape while unfiltered `allCount` / `avgRating` / `ratingCounts` come from `ProductReviewSummary`.
+`GET /api/public/reviews` tests cover pagination clamp, sorting, rating filters, indexed `hasImages=true`, media-first image formatting with legacy fallback, cache headers, author masking, approved-only reads, and the unchanged response shape while unfiltered `allCount` / `avgRating` / `ratingCounts` come from `ProductReviewSummary`.
 
-Product review summary unit coverage pins `ProductReviewSummary` creation, decrement, merchant-reply no-op behavior, exact repair recompute, `/api/public/ratings` summary reads without raw `Review.groupBy()`, and admin status-transition writes. See [[ADR_0026_Product_Review_Summary_Read_Model]].
+Product review summary unit coverage pins `ProductReviewSummary` creation, decrement, `hasImages` photo-count deltas, merchant-reply no-op behavior, exact repair recompute, `/api/public/ratings` summary reads without raw `Review.groupBy()`, and admin status-transition writes. Public review submit tests also pin `ReviewMedia` creation and admin status tests pin media visibility changes. See [[ADR_0026_Product_Review_Summary_Read_Model]] and [[ADR_0027_Review_Media_Read_Model]].
 
 The browser interaction layer verifies the upload-to-submit bridge separately: after Cloudinary returns a tenant-scoped trusted URL, `/api/public/upload/register` receives `{storeId, secureUrl}` and `/api/public/reviews` receives that URL in `images`.
 

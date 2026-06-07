@@ -16,7 +16,8 @@ import { getConfiguredCloudinaryCloudName, getReviewImagePublicId, parseStoredRe
 //   - Paginates Cloudinary listing via next_cursor — no 500-asset cap.
 //   - Only considers assets older than ORPHAN_AGE_DAYS so in-flight uploads
 //     and recently-committed reviews cannot race against the diff.
-//   - Compares Cloudinary listing against Review.images source of truth.
+//   - Compares Cloudinary listing against ReviewMedia, with Review.images as
+//     a legacy transition fallback.
 //   - Deletes orphans in batches of 100 (Cloudinary delete cap).
 
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -48,12 +49,21 @@ export async function GET(request: Request) {
       api_secret: apiSecret,
     });
 
-    // 1. Build the set of publicIds currently used by approved/pending Reviews.
+    // 1. Build the set of publicIds currently attached to reviews.
+    const usedPublicIds = new Set<string>();
+    const mediaRows = await prisma.reviewMedia.findMany({
+      select: { publicId: true },
+    });
+    for (const row of mediaRows) {
+      if (row.publicId) usedPublicIds.add(row.publicId);
+    }
+
+    // Legacy transition fallback: pre-ReviewMedia rows may still only have
+    // Review.images until the media backfill has run.
     const reviews = await prisma.review.findMany({
       where: { images: { not: null } },
       select: { storeId: true, images: true },
     });
-    const usedPublicIds = new Set<string>();
     for (const review of reviews) {
       if (!review.images) continue;
       const urls = parseStoredReviewImages(review.images, cloudName, review.storeId);

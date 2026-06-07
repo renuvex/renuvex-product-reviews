@@ -126,6 +126,25 @@ describe('review summary read model', () => {
     expect(client.productReviewSummary.update).not.toHaveBeenCalled();
   });
 
+  it('uses the indexed hasImages flag for photo review summary deltas', async () => {
+    const client = fakeClient();
+    client.productReviewSummary.findUnique.mockResolvedValue(null);
+
+    await applyReviewSummaryVisibilityChange(asReviewSummaryClient(client), null, approvedReview({ hasImages: true }));
+
+    expect(client.productReviewSummary.upsert).toHaveBeenCalledWith({
+      where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
+      create: expect.objectContaining({
+        approvedCount: 1,
+        photoReviewCount: 1,
+      }),
+      update: expect.objectContaining({
+        approvedCount: { increment: 1 },
+        photoReviewCount: { increment: 1 },
+      }),
+    });
+  });
+
   it('recomputes one product summary exactly from approved review rows', async () => {
     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'renuvex';
     const client = fakeClient();

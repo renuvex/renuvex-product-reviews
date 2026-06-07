@@ -27,6 +27,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "reviews:summaries:rebuild": "node scripts/rebuild-product-review-summaries.mjs",
+    "reviews:media:backfill": "node scripts/backfill-review-media.mjs",
     "apply:ai-rules": "npx @intellectronica/ruler apply"
   },
   "packageManager": "pnpm@10.4.1",

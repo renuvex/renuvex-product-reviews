@@ -21,6 +21,8 @@ source_files:
   - "vercel.json"
   - "scripts/build-widget.mjs"
   - "scripts/rebuild-product-review-summaries.mjs"
+  - "scripts/backfill-review-media.mjs"
+  - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/widget/core/cache.js"
   - "src/app/api/public/settings/route.ts"
@@ -46,6 +48,7 @@ Set on:
 Default header value: `s-maxage=60, stale-while-revalidate=300`.
 
 2026-06-06 update: public rating badge, structured-data, and review summary distribution values are now backed by `ProductReviewSummary`; the `/api/public/reviews` list rows still come from `Review`.
+2026-06-07 update: public `hasImages=true` reads now use indexed `Review.hasImages`, and review image display reads normalized `ReviewMedia` before falling back to legacy `Review.images`.
 - 60s fresh window
 - 300s SWR — stale responses served while revalidation runs in the background
 
@@ -87,10 +90,12 @@ Settings have a 5-minute fresh window in the widget and a 24-hour stale toleranc
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
 - Public reviews: covered by `[storeId, productId]`.
+- Public photo reviews/photo strip: covered by the partial `Review(storeId, productId, createdAt) where status='approved' and hasImages=true` index; do not use `Review.images contains` text scans.
 - Listing badges: primary product-id path covered by `[storeId, productId, status]`; legacy slug fallback covered by `[storeId, slug, status]`.
 - Admin filtered list: covered by `[storeId, status]`.
 
 `ProductReviewSummary` owns the hot aggregate read path for `/api/public/ratings`, resolved `/api/public/ratings-by-slug`, and unfiltered review summary distribution. Future high-read widgets should add explicit read models instead of public fan-out over raw review aggregates.
+`ReviewMedia` owns normalized review image rows, while `Review.hasImages` owns the hot photo-review filter. Future media-heavy widgets should read structured media rows rather than parsing legacy `Review.images`.
 
 - The migration history shows we cleaned up redundant indexes once already — be selective.
 
@@ -122,6 +127,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)
 - [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
 - [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts)
+- [src/lib/review-media.ts](src/lib/review-media.ts)
 - [src/widget/core/cache.js](src/widget/core/cache.js)
 
 ## Obsidian Links
@@ -132,8 +138,10 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 - [[ADR_0015_Canonical_Product_Identity]]
 - [[ADR_0026_Product_Review_Summary_Read_Model]]
+- [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-06-07: Public photo-review filtering moved from `Review.images` text matching to indexed `Review.hasImages`; normalized image rows live in `ReviewMedia`. See [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-06: Public rating badge, structured-data, and unfiltered review summary aggregates moved to `ProductReviewSummary`; list rows and filtered counts still use `Review`. Future high-read widgets should define explicit read models before adding public fan-out.
 - 2026-06-02: Changed the stable storefront loader and stable runtime shim cache headers from `max-age=300` to `max-age=0, must-revalidate`; content-hashed runtime/chunk assets remain one-year immutable. This keeps widget bugfix deploy propagation immediate on reload without giving up immutable cache performance for heavy assets.
 - 2026-05-18: Reduced widget-side stale settings tolerance from 7 days to 24 hours. Transient settings outages still have a same-tab fallback, but merchant changes cannot remain hidden behind a week-long stale cache.

@@ -45,6 +45,8 @@ related:
 | [[ADR_0025_Overlay_Shared_Surface_Foundation]] | Cross-cutting overlay concerns (robust body scroll lock, focus trap, back-button history) extracted into shared modules — `core/body-scroll-lock.js` (ref-counted, locks `<html>`+`<body>` + iOS `position:fixed`), `shared/focus-trap.js`, `core/modal-history.js` — consumed by BOTH body-level overlays (photo lightbox, review-form wizard), enforced by a `widget-surface-contracts.test.ts` invariant. Fixes the wizard's weaker theme-dependent scroll lock (storefront scrolled behind the open wizard on `<html>`-scrolling/`!important` themes and on iOS). A `createOverlaySurface()` controller was considered and rejected as over-abstraction for two divergent overlays; shared modules + contract test deliver the "ortak/kişisel" separation and the anti-recurrence guarantee. | Accepted |
 | [[ADR_0026_Product_Review_Summary_Read_Model]] | `ProductReviewSummary` is the product-level aggregate read model for public badge, structured-data, and review summary distribution reads. Raw `Review` remains source of truth; submit/moderation/delete paths update the summary in the same transaction, and a repair script can rebuild summaries from approved reviews. | Accepted |
 
+| [[ADR_0027_Review_Media_Read_Model]] | `ReviewMedia` stores trusted review image rows and `Review.hasImages` is the indexed public photo-review facet. `Review.images` remains a legacy mirror while backfill/transition completes. | Accepted |
+
 ## Superseded / Deprecated
 *(none yet)*
 
@@ -61,6 +63,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-06-07: Added [[ADR_0027_Review_Media_Read_Model]] - public photo-review filters now use indexed `Review.hasImages` and review images are normalized into `ReviewMedia`; legacy `Review.images` remains as a compatibility mirror.
 - 2026-06-06: Added [[ADR_0026_Product_Review_Summary_Read_Model]] — public rating/summary reads now use `ProductReviewSummary` instead of recomputing badge/summary aggregates from raw `Review.groupBy()` on every storefront request. Raw `Review` remains source of truth; write paths update the read model transactionally and a repair script can rebuild it.
 - 2026-06-01: Completed the [[ADR_0017_Badge_Architecture]] listing mount rollout cleanup — removed the temporary publicApiKey gate and legacy in-`<h2>` branch. Listing badge slots now mount as title siblings by default; theme-specific exceptions belong in `getListingBadgeMountPoint(titleEl)`.
 - 2026-05-30: Added [[ADR_0025_Overlay_Shared_Surface_Foundation]] — extracted the duplicated/divergent shell concerns of the two body-level overlays into shared modules (`core/body-scroll-lock.js`, `shared/focus-trap.js`, `core/modal-history.js`) and added an `overlay shared-surface contract` invariant test. Fixes the review-form wizard's weaker `body`-only scroll lock that let the storefront scroll behind the open wizard on themes whose scroll container is `<html>` (or that override `body` overflow) and on iOS; the wizard now uses the lightbox's robust lock and gains `overscroll-behavior:contain`. The originally approved `createOverlaySurface()` controller was rejected during implementation as over-abstraction for two genuinely divergent overlays.

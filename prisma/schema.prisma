@@ -33,15 +33,34 @@ model Review {
   status        String   @default("pending")
   merchantReply String?  @db.VarChar(2000)
   images        String?
+  hasImages     Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   productName   String?
   slug          String
   title         String?
+  media         ReviewMedia[]
 
   @@index([storeId, productId, status])
   @@index([storeId, status])
   @@index([storeId, slug, status])
+}
+
+model ReviewMedia {
+  id        String   @id @default(uuid())
+  reviewId  String
+  storeId   String
+  productId String
+  url       String   @db.VarChar(2048)
+  publicId  String   @unique @db.VarChar(512)
+  position  Int
+  visible   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, position])
+  @@index([reviewId, position])
+  @@index([storeId, productId, visible, createdAt])
 }
 
 model ProductReviewSummary {

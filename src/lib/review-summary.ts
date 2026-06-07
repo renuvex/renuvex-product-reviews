@@ -11,6 +11,7 @@ export type ReviewSummaryReview = {
   rating: number;
   status: string;
   images?: string | null;
+  hasImages?: boolean | null;
   createdAt?: Date | string | null;
 };
 
@@ -48,6 +49,7 @@ function ratingBucketKey(rating: number): keyof Pick<
 }
 
 function reviewHasTrustedImages(review: ReviewSummaryReview): boolean {
+  if (review.hasImages === true) return true;
   return parseStoredReviewImages(review.images, getConfiguredCloudinaryCloudName(), review.storeId).length > 0;
 }
 
@@ -229,7 +231,7 @@ export async function applyReviewSummaryVisibilityChange(
 export async function recomputeProductReviewSummary(client: SummaryClient, storeId: string, productId: string) {
   const reviews = await client.review.findMany({
     where: { storeId, productId, status: APPROVED_REVIEW_STATUS },
-    select: { storeId: true, productId: true, rating: true, status: true, images: true, createdAt: true },
+    select: { storeId: true, productId: true, rating: true, status: true, images: true, hasImages: true, createdAt: true },
   });
 
   const exact = emptyDelta(storeId, productId);

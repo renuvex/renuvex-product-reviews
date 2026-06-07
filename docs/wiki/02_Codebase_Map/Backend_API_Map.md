@@ -23,8 +23,10 @@ source_files:
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
+  - "scripts/backfill-review-media.mjs"
 ---
 
 # Backend / API Map
@@ -63,8 +65,8 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | Method + Path | Source | Purpose |
 |---|---|---|
 | OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
-| GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]]) |
-| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + trusted image URLs + auto-approve). Client `slug`/`productName`/`email` are ignored. |
+| GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. `hasImages=true` uses indexed `Review.hasImages`; response `images` reads `ReviewMedia` first with legacy `Review.images` fallback. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]]) |
+| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + trusted image URLs + auto-approve). Writes `Review`, legacy `Review.images`, `Review.hasImages`, `ReviewMedia`, pending upload cleanup, and summary update transactionally. Client `slug`/`productName`/`email` are ignored. |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
 | GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read `ProductReviewSummary` by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
@@ -113,6 +115,8 @@ Detail in [[Security_And_Rate_Limits]].
 - **There is no `/api/admin/auth/me` style endpoint.** The JWT itself carries everything. If the UI needs more, it calls `/api/ikas/get-merchant`.
 - **Cron routes must be authenticated.** Always set `CRON_SECRET` in deploy env. Cron routes now refuse to run without it.
 - **Review image URLs are policy-controlled.** Public review writes and reads must use [src/lib/review-images.ts](src/lib/review-images.ts); widget renderers consume the matching cloud name from the build-time injected constant (see [[ADR_0008_Cloud_Name_Build_Time_Only]]).
+- **Photo-review filtering is indexed.** Public `hasImages=true` must use `Review.hasImages`; do not reintroduce `Review.images contains` string filters.
+- **Cloudinary used-image cleanup is media-first.** `/api/admin/cleanup-images` prefers `ReviewMedia.publicId`; legacy `Review.images` remains a transition fallback until the media backfill is complete everywhere.
 - **Status enums are strings, not Prisma enums.** `'pending' | 'approved' | 'rejected'` lives in code, not in the DB schema. If you add a state, search for the literals to update everywhere.
 
 ## Related Source Files
@@ -120,6 +124,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts)
 - [src/lib/cors.ts](src/lib/cors.ts)
 - [src/lib/review-images.ts](src/lib/review-images.ts)
+- [src/lib/review-media.ts](src/lib/review-media.ts)
 - [src/lib/review-summary.ts](src/lib/review-summary.ts)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - [scripts/rebuild-product-review-summaries.mjs](scripts/rebuild-product-review-summaries.mjs)
@@ -133,8 +138,10 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Widget_Architecture_Audit]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0026_Product_Review_Summary_Read_Model]]
+- [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-06-07: Public review media reads now use indexed `Review.hasImages` and normalized `ReviewMedia`; response shape is unchanged. Related: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-06: Public rating/summary aggregate reads moved to `ProductReviewSummary`; `/api/public/reviews` still reads list rows from `Review`, and unresolved slug fallback still has a legacy raw-review path. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Added `/api/admin/storefront-theme/sync` and split lightweight theme sync from StorefrontJSScript repair. `/api/admin/daily-maintenance` runs theme verification in batches; current Vercel config is daily-compatible, while sub-daily operation requires a plan/queue that supports it.
 - 2026-05-18: D3 scoped Cloudinary review-image uploads by tenant. `/api/public/upload/sign` now signs only `review_images/stores/<storeId>`, `/api/public/upload/register` requires `storeId`, and review image reads/writes reject cross-tenant Cloudinary paths.

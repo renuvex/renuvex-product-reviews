@@ -33,6 +33,7 @@ related:
 - **Layout uyumu:** Card layout'ta thumbnail aspect 1:1, list/gallery'de 3:4 — `--renuvex-pr-photo-thumb-aspect` CSS değişkeniyle render anında set edilir.
 
 ## Veri akışı
+2026-06-07 media read-model note: the public request shape is unchanged (`hasImages=true&limit=15&orderBy=newest`), but the backend now filters via indexed `Review.hasImages` and formats the returned `images` array from `ReviewMedia` first with legacy `Review.images` fallback. See [[ADR_0027_Review_Media_Read_Model]].
 1. `bootstrap.js` explicit review mount'u doğruladıktan sonra `reviews-api.js` üzerinden ürün sayfasında iki paralel istek atar:
    - Ana liste: `/api/public/reviews?orderBy=newest&page=1`
    - Photo strip: `/api/public/reviews?hasImages=true&orderBy=newest&limit=15`
@@ -97,6 +98,7 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [src/widget/reviews-section/styles/photo-strip.js](src/widget/reviews-section/styles/photo-strip.js) — strip CSS
 - [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — `CLASSIC_CSS` aggregator that exports the strip CSS
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts) — `limit` query param (1-30 clamp)
+- [src/lib/review-media.ts](src/lib/review-media.ts) - normalized review image formatting source
 - [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) — admin settings
 
 ## Obsidian Links
@@ -108,11 +110,13 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
+- [[ADR_0027_Review_Media_Read_Model]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 - [[Bug_Review_Image_Error_Fallback]]
 
 ## Change Log
+- 2026-06-07: Photo strip keeps the same public request contract, but backend photo filtering now uses indexed `Review.hasImages` and response images prefer `ReviewMedia`. Related ADR: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-01: Fixed [[Bug_Photo_Strip_Thumbnail_Size_Contract]]. The top photo strip thumbnail width now always follows `thumbnailSize`; list/gallery review item photos remain tied to widget `size`.
 - 2026-05-27: ADR_0024 follow-up moved `fetchPhotoStripReviews` and `PHOTO_STRIP_LIMIT` from `bootstrap.js` to `reviews-api.js`. `bootstrap.js` now only triggers the initial fetch after the explicit reviews mount exists; badge-only PDPs do not call photoStrip.
 - 2026-05-11: K2 kapandi. Photo strip and review thumbnail render paths now use `hideOnImageError(img)` so broken image assets collapse instead of showing browser broken-image icons. Related bug: [[Bug_Review_Image_Error_Fallback]].

@@ -45,6 +45,8 @@ source_files:
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/lib/review-media.ts"
+  - "scripts/backfill-review-media.mjs"
   - "docs/wiki/10_Research/Widget_Transfer_Measurement_2026-05-29.md"
 ---
 
@@ -72,6 +74,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-05-29 surface contract gate: `tests/unit/widget-surface-contracts.test.ts` fails if a new `src/widget/surfaces/*.surface.js` file is added without declaring which test layer covers it.
 - 2026-05-31 clean PDP routing: `PRODUCT` `PAGE_VIEW` no longer loads the `listing-badges-*` entry chunk on clean PDPs. The listing surface accepts page events only for listing-like page types (`INDEX`, `CATEGORY`, `BRAND`, `SEARCH`), while observer and fallback probes ignore widget-owned hash/query links such as the PDP badge's `#renuvex-reviews` anchor. Listing event and product-card fallback paths remain covered by network smoke.
 - 2026-06-01 `PAGE_VIEW` semantic dedupe: same-page duplicate `PAGE_VIEW` events inside 800 ms are still suppressed, but distinct fast transitions are no longer delayed until the 2-second listing fallback. The network smoke suite covers both outcomes.
+- 2026-06-07 media read path: widget request/response shape is unchanged, but public `hasImages=true` reads now use indexed `Review.hasImages` and images are formatted from normalized `ReviewMedia` first. This is a backend read-path optimization for photo strip / photo filter scale, not a widget bundle change.
 
 ## 2026-05-15 Live Observations
 
@@ -95,6 +98,7 @@ Yotpo/Protein Ocean reference:
 - **Edge cache TTL**: currently 60s. Trade-off vs moderation latency. Don't lower without reason; consider raising for read-heavy merchants.
 - **Listing-page badges**: bulk endpoint with single round-trip — preserve this pattern when adding features.
 - **Image transformations**: prefer Cloudinary URL params (`f_auto,q_auto,w_400`) over post-load resizing.
+- **Media read model**: future media-heavy widgets should read `ReviewMedia` or a dedicated read model, not parse `Review.images` text.
 - **Module split**: current Phase 2 work uses one classic ikas-compatible loader plus lazy ESM modules. New major surfaces such as Q&A, media gallery upgrades, review summaries, analytics, and schema should follow the same loader/registry pattern.
 
 ## Anti-patterns to avoid
@@ -119,10 +123,12 @@ Yotpo/Protein Ocean reference:
 - [src/widget/](src/widget/)
 - [public/widget.js](public/widget.js)
 - [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json)
+- [src/lib/review-media.ts](src/lib/review-media.ts)
 
 ## Obsidian Links
 - [[Caching_And_Performance]]
 - [[Widget_Architecture]]
+- [[ADR_0027_Review_Media_Read_Model]]
 - [[Test_Strategy]]
 - [[Storefront_Widget_Overview]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]

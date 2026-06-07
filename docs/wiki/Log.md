@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-07 - performance | Normalize review media reads
+- Summary: Moved public photo-review filtering away from legacy `Review.images` text matching. `Review.hasImages` is now the indexed public photo-review facet, and normalized `ReviewMedia` rows store trusted image URLs, publicIds, positions, and visibility.
+- Key source changes: `prisma/schema.prisma`, `src/lib/review-media.ts`, `src/app/api/public/reviews/route.ts`, `src/app/api/admin/reviews/route.ts`, `src/app/api/admin/cleanup-images/route.ts`, and `scripts/backfill-review-media.mjs`.
+- Verification target: unit tests pin media writes, indexed `hasImages=true` reads, media-first public image formatting, admin visibility transitions, and `ProductReviewSummary.photoReviewCount` deltas. After deploy, run `pnpm reviews:media:backfill` and verify Supabase schema/index/media-count consistency.
+- Updated wiki: [[ADR_0027_Review_Media_Read_Model]], [[Database_Map]], [[Database_Schema]], [[Backend_API_Map]], [[Caching_And_Performance]], [[Product_Review_Widget]], [[Photo_Strip]], [[Widget_Performance]], [[Test_Strategy]], [[Hot_Context]]
+
 ## 2026-06-07 - ops | Sentry release/source-map upload guard documented
 - Summary: Audited the Vercel/Sentry release upload path after the product summary read-model deploy. The app deployment and runtime checks were healthy, but build logs showed `sentry-cli` preferring a token embedded for `mert-copper` while repo config targets `renuvex/renuvex-product-reviews`, causing release/source-map upload to fail with `Project not found`.
 - Change: Approved `@sentry/cli` in `package.json` `pnpm.onlyBuiltDependencies` so Vercel installs stay deterministic, and documented the stricter org-token contract in [[Sentry_Operations]] and [[Config_And_Env_Map]].

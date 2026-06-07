@@ -56,13 +56,13 @@ Add `ProductReviewSummary` as a per `(storeId, productId)` aggregate read model:
 ## Alternatives Considered
 - Keep using `Review.groupBy()` on public reads: simpler, but scales public reads with raw review volume.
 - Add Redis read-through cache first: useful later, but cache misses still hit the same aggregate scans and invalidation becomes harder.
-- Move immediately to `ReviewMedia` and cursor pagination: correct future work, but too large for the first aggregate phase.
+- Move immediately to `ReviewMedia` and cursor pagination: correct future work, but too large for the first aggregate phase. `ReviewMedia` was later implemented by [[ADR_0027_Review_Media_Read_Model]]; cursor/keyset pagination remains separate.
 - Database triggers: centralizes consistency, but hides application intent and complicates Prisma/unit testing. Application transaction helpers are explicit and testable.
 
 ## Consequences
 - New write paths that change review public visibility must call the summary helper in the same transaction.
 - A summary repair script is part of operations and should be run after suspicious imports/manual DB edits.
-- `photoReviewCount` exists for future media surfaces, but `Review.images` remains TEXT JSON in this phase. A later `ReviewMedia` or indexed `hasImages` phase should replace string-based image filtering.
+- `photoReviewCount` exists for media surfaces. `ReviewMedia` and indexed `Review.hasImages` were added later in [[ADR_0027_Review_Media_Read_Model]], replacing string-based image filtering.
 - Cursor/keyset pagination remains a future public API performance phase; this ADR does not change the current response shape.
 
 ## Related Source Files
@@ -73,9 +73,11 @@ Add `ProductReviewSummary` as a per `(storeId, productId)` aggregate read model:
 - [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
 - [src/app/api/admin/reviews/route.ts](src/app/api/admin/reviews/route.ts)
 - [scripts/rebuild-product-review-summaries.mjs](scripts/rebuild-product-review-summaries.mjs)
+- [scripts/backfill-review-media.mjs](scripts/backfill-review-media.mjs)
 
 ## Related Notes
 - [[Database_Schema]]
 - [[Database_Map]]
 - [[Backend_API_Map]]
 - [[Test_Strategy]]
+- [[ADR_0027_Review_Media_Read_Model]]

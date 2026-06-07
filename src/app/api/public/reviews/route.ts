@@ -4,11 +4,10 @@ import { withCors, corsOptions } from '@/lib/cors';
 import { Redis } from '@upstash/redis';
 import {
   getConfiguredCloudinaryCloudName,
-  getReviewImageFolder,
   getReviewImagePublicId,
-  parseStoredReviewImages,
   sanitizeReviewImageUrls,
 } from '@/lib/review-images';
+import { buildReviewMediaCreateManyData, publicImagesFromMediaOrLegacy, type PublicReviewMediaRow } from '@/lib/review-media';
 import { applyReviewSummaryVisibilityChange, summaryStats } from '@/lib/review-summary';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
@@ -27,6 +26,11 @@ const PUBLIC_REVIEW_SELECT = {
   author: true,
   merchantReply: true,
   images: true,
+  media: {
+    where: { visible: true },
+    orderBy: { position: 'asc' as const },
+    select: { url: true, position: true },
+  },
   createdAt: true,
 } as const;
 
@@ -38,6 +42,7 @@ type PublicReviewRow = {
   author: string;
   merchantReply: string | null;
   images: string | null;
+  media?: PublicReviewMediaRow[];
   createdAt: Date;
 };
 
@@ -109,7 +114,7 @@ function formatPublicReview(review: PublicReviewRow, cloudName: string | null, s
     comment: review.comment,
     author: maskAuthor(review.author),
     merchantReply: review.merchantReply,
-    images: parseStoredReviewImages(review.images, cloudName, storeId),
+    images: publicImagesFromMediaOrLegacy(review.media, review.images, cloudName, storeId),
     createdAt: review.createdAt.toISOString(),
   };
 }
@@ -148,23 +153,13 @@ export async function GET(req: Request) {
     const ratingFilter = ratingParam ? parseInt(ratingParam, 10) : null;
     const hasImagesFilter = searchParams.get('hasImages') === 'true';
     const cloudName = getConfiguredCloudinaryCloudName();
-    const imageFolder = getReviewImageFolder(storeId);
 
     const where = {
       storeId,
       productId,
       status: 'approved',
       ...(ratingFilter && ratingFilter >= 1 && ratingFilter <= 5 ? { rating: ratingFilter } : {}),
-      ...(hasImagesFilter
-        ? cloudName && imageFolder
-          ? {
-              AND: [
-                { images: { contains: `https://res.cloudinary.com/${cloudName}/image/upload/` } },
-                { images: { contains: `/${imageFolder}/` } },
-              ],
-            }
-          : { id: '__missing_cloudinary_cloud_name__' }
-        : {}),
+      ...(hasImagesFilter ? { hasImages: true } : {}),
     };
 
     // Filtreden bağımsız — bar chart için tüm approved yorumların dağılımı
@@ -303,9 +298,25 @@ export async function POST(request: Request) {
           author: authorText,
           email: '',
           images: imageResult.urls.length ? JSON.stringify(imageResult.urls) : null,
+          hasImages: imageResult.urls.length > 0,
           status: initialStatus,
         },
       });
+
+      const mediaRows = buildReviewMediaCreateManyData({
+        urls: imageResult.urls,
+        cloudName,
+        storeId: storeIdText,
+        productId: productIdText,
+        reviewId: created.id,
+        visible: initialStatus === 'approved',
+      });
+      if (mediaRows.length > 0) {
+        await tx.reviewMedia.createMany({
+          data: mediaRows,
+          skipDuplicates: true,
+        });
+      }
 
       if (committedPublicIds.length > 0) {
         await tx.pendingReviewImage.deleteMany({

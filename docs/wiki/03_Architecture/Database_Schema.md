@@ -20,13 +20,15 @@ related:
 source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
+  - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
+  - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
 ---
 
 # Database Schema
 
 ## Summary
-PostgreSQL via Prisma. Seven models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
+PostgreSQL via Prisma. Eight models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
 
 ## Models
 
@@ -63,16 +65,19 @@ Customer reviews. Public storefront submits; admin moderates.
 | `email` | String? | Optional |
 | `status` | String `@default("pending")` | `pending` / `approved` / `rejected` (string literals, not enum) |
 | `merchantReply` | String? `@db.VarChar(2000)` | Capped |
-| `images` | String? | TEXT containing `JSON.stringify(string[])` |
+| `images` | String? | Legacy TEXT containing `JSON.stringify(string[])`; kept as compatibility mirror |
+| `hasImages` | Boolean | Indexed public photo-review facet; do not replace with text search |
 | `createdAt`, `updatedAt` | DateTime | |
 | `productName` | String? | Snapshot at submit time (not synced if product later renamed) |
 | `slug` | String | Required since 2026-04-04 migration |
 | `title` | String? | Optional, max 60 chars |
+| `media` | `ReviewMedia[]` | Normalized trusted image rows |
 
 Indexes:
 - `[storeId, productId, status]`
 - `[storeId, status]`
 - `[storeId, slug, status]`
+- partial `[storeId, productId, createdAt] where status='approved' and hasImages=true`
 
 The two wider composite indexes also cover the old `(storeId, productId)` and
 `(storeId, slug)` prefix lookups, so the standalone prefix indexes were removed
@@ -83,6 +88,32 @@ Common queries:
 - Public listing/PDP badges and summary distribution: `ProductReviewSummary` by `(storeId, productId)`
 - Public slug fallback: resolve current `ProductSnapshot` slug to product id, then read `ProductReviewSummary`; legacy direct slug read remains last resort for unresolved slugs
 - Admin: `findMany({ storeId, status? })` ordered by `createdAt desc`
+
+### `ReviewMedia`
+Normalized review image rows. `Review.images` remains as a legacy mirror, but new public image reads prefer this table.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String `@id @default(uuid())` | |
+| `reviewId` | String | FK to `Review.id`; cascades on review delete |
+| `storeId` | String | Denormalized tenant key for media queries and cleanup |
+| `productId` | String | Denormalized ikas product id for product media queries |
+| `url` | String `@db.VarChar(2048)` | Trusted Cloudinary URL |
+| `publicId` | String `@unique @db.VarChar(512)` | Cloudinary public id; cleanup source of truth |
+| `position` | Int | Stable per-review display order |
+| `visible` | Boolean | Mirrors review public visibility; pending/rejected media stays hidden |
+| `createdAt` | DateTime | |
+
+Indexes:
+- unique `[reviewId, position]`
+- `[reviewId, position]`
+- `[storeId, productId, visible, createdAt]`
+
+Maintained by:
+- `/api/public/reviews` POST for new trusted review images
+- `/api/admin/reviews` PUT when status transitions change public visibility
+- `Review` cascade on DELETE
+- `scripts/backfill-review-media.mjs` for legacy/import repair
 
 ### `ProductReviewSummary`
 Product-level aggregate read model for public storefront rating surfaces. Raw `Review` rows remain the source of truth.
@@ -96,7 +127,7 @@ Product-level aggregate read model for public storefront rating surfaces. Raw `R
 | `ratingSum` | Int | Sum of approved ratings; used to format average |
 | `averageRating` | Float | Stored derived value for read-model completeness |
 | `rating1Count` ... `rating5Count` | Int | Bar chart/rating distribution buckets |
-| `photoReviewCount` | Int | Future media-surface aggregate; `Review.images` is still TEXT JSON in this phase |
+| `photoReviewCount` | Int | Approved review count where `Review.hasImages=true`; repaired by `pnpm reviews:media:backfill` when legacy rows are normalized |
 | `lastReviewAt` | DateTime? | Latest approved review timestamp |
 | `createdAt`, `updatedAt` | DateTime | |
 
@@ -108,6 +139,7 @@ Maintained by:
 - `/api/admin/reviews` PUT when status transitions change public visibility
 - `/api/admin/reviews` DELETE when an approved review is hard-deleted
 - `scripts/rebuild-product-review-summaries.mjs` for repair/backfill
+- `scripts/backfill-review-media.mjs` repairs only `photoReviewCount` after media normalization
 
 Read by:
 - `/api/public/ratings`
@@ -197,7 +229,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 
 ## Notes
 - **JSON columns** (`settings`, `storefrontScripts`, `storefrontTheme`) are not validated at the DB layer. All validation must live in app code. Don't trust their shape after manual DB edits.
-- `Review.images` could be a separate `ReviewImage` table; today it's TEXT JSON for simplicity. Migrate when image features grow (lightbox, ordering, alt text).
+- `Review.images` is now a legacy mirror. The normalized media model is `ReviewMedia`, and public photo filters should use `Review.hasImages`.
 - No soft-delete. `prisma.review.delete` is hard delete.
 
 ## Related Source Files
@@ -210,10 +242,12 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Database_Map]]
 - [[ADR_0003_Review_Data_Model]]
 - [[ADR_0012_Pending_Upload_Registry]]
+- [[ADR_0027_Review_Media_Read_Model]]
 - [[Auth_And_Installation_Flow]]
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-06-07: Added `Review.hasImages` and `ReviewMedia` for indexed public photo-review filters and normalized trusted media rows. Related: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-06: Added `ProductReviewSummary` as the product-level aggregate read model for public rating badge, structured-data, and review summary distribution reads. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Upgraded `StoreSettings.storefrontTheme` app-layer shape to v2 stable/pending sync state; no DB migration needed because the column remains nullable JSON.
 - 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.

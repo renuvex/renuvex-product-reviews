@@ -136,6 +136,12 @@ export async function PUT(request: Request) {
             ...(merchantReply !== undefined && { merchantReply }),
           },
         });
+        if (status !== undefined && existing.status !== updated.status) {
+          await tx.reviewMedia.updateMany({
+            where: { reviewId: id },
+            data: { visible: updated.status === 'approved' },
+          });
+        }
         await applyReviewSummaryVisibilityChange(tx, existing, updated);
         return updated;
       });

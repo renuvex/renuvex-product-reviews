@@ -18,14 +18,17 @@ related:
 source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
+  - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
+  - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
+  - "scripts/backfill-review-media.mjs"
 ---
 
 # Database Map
 
 ## Summary
-Postgres (Supabase) accessed via Prisma. Seven models: `AuthToken`, `Review`, `ProductReviewSummary`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, `PendingReviewImage`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
+Postgres (Supabase) accessed via Prisma. Eight models: `AuthToken`, `Review`, `ReviewMedia`, `ProductReviewSummary`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, `PendingReviewImage`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
 
 ## Files
 
@@ -43,6 +46,7 @@ Postgres (Supabase) accessed via Prisma. Seven models: `AuthToken`, `Review`, `P
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow |
+| `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted review image rows; public photo filters use `Review.hasImages` and media display reads this table before legacy `Review.images` fallback |
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, and summary distribution |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` and non-sensitive `storefrontTheme: Json` sync state |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
@@ -61,6 +65,14 @@ The migrations show iterative tuning: redundant indexes have been cleaned up mor
 
 On `ProductReviewSummary`:
 - unique `[storeId, productId]` — public badge, structured-data, `/api/public/ratings`, and review summary distribution read this aggregate row instead of recomputing from raw `Review.groupBy()` on every storefront request.
+
+On `ReviewMedia`:
+- unique `publicId` - one Cloudinary asset belongs to one committed review image.
+- unique `[reviewId, position]` plus `[reviewId, position]` index - stable per-review image ordering.
+- `[storeId, productId, visible, createdAt]` - future media-gallery/photo-strip reads and tenant-scoped cleanup/reporting.
+
+On `Review` media reads:
+- partial `[storeId, productId, createdAt] where status='approved' and hasImages=true` - public photo-review list/photo strip hot path.
 
 ## Migration workflow
 - Local dev: `pnpm prisma:migrate` (creates + applies migration)
@@ -101,8 +113,10 @@ code run together, so a migration must not break the old code.
 - `add_product_review_summary` — product-level aggregate read model for public rating/summary reads
 
 ## Notes
-- `Review.images` is **TEXT containing `JSON.stringify(string[])`**, not a relation. Parsing happens at the API layer with try/catch.
+- `Review.images` is **legacy TEXT containing `JSON.stringify(string[])`**. New writes keep it as a compatibility mirror; public image display reads `ReviewMedia` first and falls back to the legacy mirror during transition/backfill.
+- `Review.hasImages` is the indexed public photo-review facet. Do not reintroduce `Review.images contains` for public filters.
 - `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`.
+- `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill`.
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
 - `StoreSettings.storefrontTheme` stores non-sensitive active storefront/theme sync state resolved from `listStorefront.themes[].isMainTheme`. Current app-layer shape is `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`; public settings expose only the stable `runtime.themeAdapterKey/source` to select Ozy vs generic adapter.
@@ -112,6 +126,7 @@ code run together, so a migration must not break the old code.
 - [prisma/schema.prisma](prisma/schema.prisma)
 - [prisma/migrations/](prisma/migrations/)
 - [src/lib/prisma.ts](src/lib/prisma.ts)
+- [src/lib/review-media.ts](src/lib/review-media.ts)
 - [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts)
 
 ## Obsidian Links
@@ -119,8 +134,10 @@ code run together, so a migration must not break the old code.
 - [[Auth_And_Installation_Flow]]
 - [[ADR_0003_Review_Data_Model]]
 - [[ADR_0026_Product_Review_Summary_Read_Model]]
+- [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-06-07: Added `Review.hasImages` and `ReviewMedia` as the normalized media read model for indexed public photo-review filters; `Review.images` remains a legacy mirror. See [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-06: Added `ProductReviewSummary` to the model map and documented that public rating/summary aggregates now read from this per-product read model. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Changed `StoreSettings.storefrontTheme` semantics from flat metadata to a backwards-compatible v2 stable/pending sync state; no schema migration required.
 - 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.
