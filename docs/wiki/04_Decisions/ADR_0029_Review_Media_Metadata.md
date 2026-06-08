@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-08
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-06-09
+last_verified: 2026-06-09
 confidence: high
 tags:
   - adr
@@ -72,6 +72,38 @@ Cloudinary upload responses include signed asset metadata. Public read paths sho
 - The cron backfill's first production run is also the definitive proof of production Cloudinary api_key health: success advances rows to `complete`; a stale key surfaces as a counted error in the `daily-maintenance` `errors[]` response with zero row corruption.
 - `Review.images` remains a legacy mirror; do not remove it until a later expand/contract cleanup proves no runtime or ops fallback still depends on it.
 - Cleanup hardening, AI moderation, video support, and design consumption of metadata remain separate phases.
+
+## Scale Evolution — Authoritative Metadata Source
+Honest trade-off in the current write path: the Cloudinary upload-response **signature covers
+`public_id`+`version`, not `width/height/bytes`**. A client could therefore replay a real asset's
+signature with forged dimensions. Impact is **low and self-inflicted** — only that review's own
+image box renders slightly wrong on the merchant's own storefront; values are clamped positive
+INT32 and used as numeric attributes (no injection, no cross-tenant/security effect), and
+`metadataSource` provenance records that the row is client-sourced. Acceptable at current scale.
+
+At large scale (thousands of stores, 1M+ review images) the industry-standard target is
+**authoritative metadata server-to-server**, with the client value treated as a discardable hint.
+The three sources **compose** (not mutually exclusive):
+
+| Source | Latency | Cost at scale | Trust | Role |
+|---|---|---|---|---|
+| (A) client upload-response | instant | ~zero | low (forgeable) | provisional hint |
+| (B) Admin-API pull / cron | delayed (cron cadence) | **high** — 1 outbound call/image + Admin-API rate limits | high | reconciliation / legacy / safety-net |
+| (C) webhook push (`notification_url`) | near-instant | **~zero** — inbound, no polling | high (signed, S2S) | **primary authoritative at scale** |
+
+- Cost (cheap→expensive at scale): **C ≈ A < B.**
+- Performance (fast + trusted): **C > A (untrusted) > B.**
+- Hot path: all three are read-model writes → zero storefront-read latency.
+
+**Mature target: (C) webhook = primary authoritative + (B) cron = pull safety-net for missed
+webhooks/legacy + (A) optional instant hint.** Today we run A + B (B is both authoritative and
+safety-net — sufficient now, but slow/API-heavy as the sole path at 1M+). Adding (C) and demoting
+(B) to safety-net is the correct scale evolution. Cheap interim step (no webhook): extend
+`reviewMediaMetadataBackfillWhere` to re-verify `metadataSource='upload_response'` rows once via the
+Admin API (today it skips `complete` rows, so a forged-`complete` row is not auto-corrected).
+
+Revisit when approaching scale; **not a launch blocker** (cosmetic, self-inflicted). See
+[[Open_Questions]] and [[Roadmap]].
 
 ## Related Source Files
 - [prisma/schema.prisma](prisma/schema.prisma)

@@ -195,6 +195,19 @@ language source, e.g. the ikas storefront locale).
    above + the Roadmap per-storefront item) vs a merchant admin select. Merchant labels
    (`countLabel` etc.) are single-value today; per-language values would need the same i18n layer.
 
+## Authoritative review-media metadata source — revisit at scale
+The review-media metadata write path trusts the Cloudinary upload-response (signature covers
+`public_id`+`version`, **not** dimensions), so a client can forge its own image's `width/height/bytes`
+— **cosmetic, self-inflicted, no security / cross-tenant effect** (clamped ints, numeric attributes).
+The daily-maintenance cron (`admin_api`) is authoritative for `pending`/`partial` rows but currently
+**skips `complete` rows**, so a forged-`complete` row is not auto-corrected today.
+- **Decide at scale (thousands of stores / 1M+ images):** add a Cloudinary upload **webhook**
+  (`notification_url`, server-to-server, signed) as the **primary** authoritative source + keep the
+  cron pull as the **safety-net**; or, cheaper interim, extend the cron to re-verify
+  `upload_response` rows once via the Admin API.
+- **Not a launch blocker.** Full cost/performance analysis of the three sources (A client / B cron /
+  C webhook): [[ADR_0029_Review_Media_Metadata]] (Scale Evolution).
+
 ## Obsidian Links
 - [[Current_Status]]
 - [[Roadmap]]

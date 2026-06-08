@@ -3,7 +3,7 @@ type: roadmap
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-06-06
+updated: 2026-06-09
 tags:
   - roadmap
 related:
@@ -44,6 +44,7 @@ Living roadmap. Order is rough priority, not committed dates. Tweak as decisions
 - Move profanity list to a config file (and consider Postgres ILIKE-based filter for scale)
 - Review CORS policy — currently `Access-Control-Allow-Origin: *`; OK for read endpoints, consider tightening POST endpoints
 - Revisit OAuth scope (`read_orders,write_orders,read_products,read_inventories,write_inventories`) — does the app actually need write_orders/write_inventories?
+- **Authoritative review-media metadata at scale** — client upload-response dimensions are forgeable (cosmetic/self-inflicted, not a security issue); at thousands of stores / 1M+ images add a Cloudinary upload **webhook** (signed, server-to-server) as the authoritative source, with the daily-maintenance cron pull demoted to safety-net. Detail: [[ADR_0029_Review_Media_Metadata]] (Scale Evolution).
 
 ## Obsidian Links
 - [[Current_Status]]
