@@ -37,6 +37,11 @@ related:
 | `CLIENT_SECRET` | ikas app client secret. **Also signs JWTs.** Single secret for both — be careful about rotation. |
 | `SECRET_COOKIE_PASSWORD` | iron-session encryption key (long random string) |
 
+### Public review cursors
+| Var | Purpose |
+|---|---|
+| `REVIEW_CURSOR_SECRET` | Server-only HMAC key for `GET /api/public/reviews` cursor signatures. Required in Vercel Production/Preview before signed review cursor deployment; never expose as `NEXT_PUBLIC_*`. |
+
 ### Database
 | Var | Purpose |
 |---|---|

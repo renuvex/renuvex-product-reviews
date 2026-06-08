@@ -130,7 +130,7 @@ The highest-risk public write surface is `POST /api/public/reviews`. Unit tests 
 - store/product target verification before write,
 - approval policy modes (`manual`, `all`, `5stars`, `4plus`, and boolean legacy values).
 
-`GET /api/public/reviews` tests cover pagination clamp, deterministic sorting, cursor/keyset pagination without Prisma `skip`, cursor context rejection, rating filters, indexed `hasImages=true`, media-first image formatting with legacy fallback, cache headers, author masking, approved-only reads, and the unchanged response shape while unfiltered `allCount` / `avgRating` / `ratingCounts` come from `ProductReviewSummary`.
+`GET /api/public/reviews` tests cover pagination clamp, deterministic sorting, cursor/keyset pagination without Prisma `skip`, signed cursor integrity (tampered and unsigned cursors return `400` before review reads), cursor context rejection, rating filters, indexed `hasImages=true`, media-first image formatting with legacy fallback, cache headers, author masking, approved-only reads, and the unchanged response shape while unfiltered `allCount` / `avgRating` / `ratingCounts` come from `ProductReviewSummary`.
 
 Product review summary unit coverage pins `ProductReviewSummary` creation, decrement, `hasImages` photo-count deltas, merchant-reply no-op behavior, exact repair recompute, `/api/public/ratings` summary reads without raw `Review.groupBy()`, and admin status-transition writes. Public review submit tests also pin `ReviewMedia` creation and admin status tests pin media visibility changes. See [[ADR_0026_Product_Review_Summary_Read_Model]] and [[ADR_0027_Review_Media_Read_Model]].
 

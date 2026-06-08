@@ -47,7 +47,8 @@ Keep the public response shape backwards-compatible, but add cursor/keyset pagin
 - Responses include `data.nextCursor` while preserving `reviews`, `totalCount`, `allCount`, `page`, `totalPages`, `hasMore`, `ratingCounts`, and `avgRating`.
 - Legacy `page/limit` requests still work. The first page also returns `nextCursor`, so new widgets can switch load-more to cursor without breaking old consumers.
 - Cursor requests do not pass Prisma `skip`; they use keyset `OR` conditions and `limit + 1`.
-- Cursor payloads are base64url JSON bookmarks, not secrets. They include store/product/sort/filter context and the last visible row values so reuse across a different query returns `400`.
+- Cursor values are opaque base64url JSON envelopes: `{ p, s }`. `p` is the pagination bookmark and query context; `s` is an HMAC-SHA256 signature over the canonical payload using server-only `REVIEW_CURSOR_SECRET`.
+- Cursor payloads include store/product/sort/filter context and the last visible row values. Reuse across a different query returns `400`; tampering with the payload or sending an old unsigned cursor also returns `400`.
 - Deterministic order is now:
   - `newest`: `createdAt desc, id desc`
   - `highest`: `rating desc, createdAt desc, id desc`
@@ -70,13 +71,14 @@ The older `Review_approved_hasImages_product_createdAt_idx` remains in place for
 - Keyset pagination keeps load-more cost stable as page depth grows.
 - Keeping `page` preserves compatibility with old clients and future numbered pagination UI discussions.
 - Adding `id` as the final tie-breaker makes slices deterministic even when many reviews share the same timestamp or rating.
-- The cursor is opaque to clients but intentionally not encrypted or signed because it contains only public pagination bookmark values; context validation prevents accidental cross-query reuse.
+- The cursor is opaque to clients and signed, not encrypted. It still contains only public pagination bookmark values, but the signature prevents clients from fabricating or modifying bookmarks.
 - The change is additive: no public API fields are removed and no database column/table is dropped.
 
 ## Alternatives Considered
 - Keep offset pagination until performance symptoms appear: simpler, but this leaves a known scaling issue on the main public review list path.
 - Replace the API with cursor-only pagination: cleaner API, but breaking for any existing page-based consumer and premature while numbered pagination remains a possible future UI.
-- Sign or encrypt cursors: not necessary for public review bookmarks and adds secret/key rotation operational weight. If cursor payloads later include private fields, revisit this.
+- Encrypt cursors: not necessary for public review bookmarks. Signing is sufficient because the payload is not secret; it only needs integrity protection.
+- Reuse `CLIENT_SECRET` for cursor HMAC: rejected to avoid coupling review pagination to ikas OAuth/JWT secret rotation. `REVIEW_CURSOR_SECRET` is separate and server-only.
 - Add rating-specific photo indexes now: not needed for the current widget photo filter, which forces `orderBy=newest`; add only with production query evidence.
 
 ## Consequences
@@ -84,6 +86,7 @@ The older `Review_approved_hasImages_product_createdAt_idx` remains in place for
 - Widget tests must prove load-more sends `cursor` when available, resets cursor on sort/filter, rejects stale load-more responses, and keeps duplicate review guards.
 - Count queries (`totalCount`, `totalPages`) are intentionally still present for response compatibility. A later count-read optimization should be its own phase.
 - Numbered pagination UI is not implemented by this ADR. If added, it should use the preserved `page` contract or a separate anchor model.
+- `REVIEW_CURSOR_SECRET` must be present in Vercel Production/Preview before deploying signed cursor code. Existing unsigned cursors are short-lived load-more bookmarks and are intentionally not accepted after this change.
 
 ## Related Source Files
 - [prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql](prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql)

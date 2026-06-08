@@ -116,7 +116,7 @@ source_files:
 - 2026-06-06: Public rating/summary aggregates use `ProductReviewSummary`; raw `Review` stays source of truth and `pnpm reviews:summaries:rebuild` repairs it. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 
 - 2026-06-08: Photo reads use `Review.hasImages` + `ReviewMedia`; legacy media reconciliation copied 10 available assets, dropped 30 missing source URLs, and left zero global legacy URLs. See [[Legacy_Review_Media_Reconciliation]].
-- 2026-06-08: Review list load-more uses cursor/keyset pagination via `data.nextCursor`; legacy `page/limit` remains for compatibility and future numbered pagination. Cursor requests do not use Prisma `skip`. See [[ADR_0028_Review_Cursor_Pagination]].
+- 2026-06-08: Review list load-more uses signed cursor/keyset pagination via `data.nextCursor`; legacy `page/limit` remains for compatibility and future numbered pagination. Cursor requests do not use Prisma `skip`; tampered/unsigned/context-mismatched cursors return `400`. `REVIEW_CURSOR_SECRET` is required in server env. See [[ADR_0028_Review_Cursor_Pagination]].
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes.

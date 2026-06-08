@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-08 - security | Sign public review cursors
+- Summary: Hardened `GET /api/public/reviews` cursor pagination by wrapping cursor payloads in an HMAC-SHA256 signed `{ p, s }` envelope. Cursor values remain opaque public bookmarks, but clients can no longer fabricate or mutate them.
+- Key source changes: `src/app/api/public/reviews/route.ts` signs generated `nextCursor` values with server-only `REVIEW_CURSOR_SECRET`, rejects tampered/unsigned cursors with `400`, and keeps the existing query-context mismatch guard. Public response shape and widget load-more behavior stay unchanged.
+- Verification target: unit/API coverage pins valid signed cursor load-more, tampered cursor rejection, unsigned legacy cursor rejection, context mismatch rejection, and skip-free cursor reads.
+- Updated wiki: [[ADR_0028_Review_Cursor_Pagination]], [[Backend_API_Map]], [[Config_And_Env_Map]], [[Security_And_Rate_Limits]], [[Test_Strategy]], [[Hot_Context]]
+
 ## 2026-06-08 - performance | Add review cursor pagination
 - Summary: Moved storefront review list load-more from offset-only reads to cursor/keyset pagination while preserving the existing public response shape and legacy `page/limit` compatibility.
 - Key source changes: `GET /api/public/reviews` now returns `data.nextCursor`, validates cursor query context, uses deterministic `createdAt/id` and `rating/createdAt/id` ordering, and does not pass Prisma `skip` on cursor requests. The widget stores `currentNextCursor`, uses cursor for load-more when available, resets it on sort/filter/retry/product changes, and keeps page fallback for old responses.

@@ -101,6 +101,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 ## Secrets handling
 - Single secret (`CLIENT_SECRET`) for ikas OAuth + JWT. Rotation invalidates JWTs (acceptable — short-lived).
 - `SECRET_COOKIE_PASSWORD` for iron-session.
+- `REVIEW_CURSOR_SECRET` signs public review cursors (HMAC-SHA256); server-only and separate from `CLIENT_SECRET`.
 - `CLOUDINARY_API_SECRET`, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only.
 - ⚠️ Never log secrets or full tokens. Code uses `console.error('[scope] ERROR', err)` patterns — keep err objects from leaking sensitive headers.
 - ⚠️ The `/callback` client page receives the session JWT as a URL query param. A `console.log('OAuth callback params:', params.toString())` that printed it to the browser console was removed — never re-add param logging there. See [[Auth_And_Installation_Flow]].

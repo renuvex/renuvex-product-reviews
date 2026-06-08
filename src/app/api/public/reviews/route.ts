@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
@@ -64,11 +65,44 @@ type ReviewCursorPayload = {
   values: ReviewCursorValues;
 };
 
+type SignedReviewCursorPayload = {
+  p: ReviewCursorPayload;
+  s: string;
+};
+
 const REVIEW_ORDER_BY: Record<ReviewOrderByKey, Array<Record<string, 'asc' | 'desc'>>> = {
   newest: [{ createdAt: 'desc' }, { id: 'desc' }],
   highest: [{ rating: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
   lowest: [{ rating: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
 };
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map((item) => stableStringify(item)).join(',') + ']';
+  const record = value as Record<string, unknown>;
+  return '{' + Object.keys(record).sort().map((key) => JSON.stringify(key) + ':' + stableStringify(record[key])).join(',') + '}';
+}
+
+function getReviewCursorSecret(): string {
+  const configured = process.env.REVIEW_CURSOR_SECRET?.trim();
+  if (configured) return configured;
+  if (process.env.NODE_ENV === 'test') return 'test-review-cursor-secret-not-for-production';
+  throw new Error('REVIEW_CURSOR_SECRET is not configured');
+}
+
+function signReviewCursorPayload(payload: ReviewCursorPayload): string {
+  return createHmac('sha256', getReviewCursorSecret())
+    .update(stableStringify(payload), 'utf8')
+    .digest('base64url');
+}
+
+function isValidCursorSignature(payload: ReviewCursorPayload, signature: string): boolean {
+  if (!signature) return false;
+  const expected = signReviewCursorPayload(payload);
+  const expectedBuffer = Buffer.from(expected, 'utf8');
+  const actualBuffer = Buffer.from(signature, 'utf8');
+  return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
+}
 
 // Profanity filtresi — Türkçe ve İngilizce yaygın küfürler
 const PROFANITY_LIST = [
@@ -124,6 +158,24 @@ function normalizeRatingFilter(value: string | null): number | null {
   return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : null;
 }
 
+function parseReviewCursorPayload(parsed: unknown): ReviewCursorPayload | null {
+  const payload = parsed as Partial<ReviewCursorPayload> | null;
+  if (!payload || payload.v !== 1) return null;
+  if (payload.orderBy !== 'newest' && payload.orderBy !== 'highest' && payload.orderBy !== 'lowest') return null;
+  if (typeof payload.storeId !== 'string' || !payload.storeId) return null;
+  if (typeof payload.productId !== 'string' || !payload.productId) return null;
+  const parsedRatingFilter = payload.ratingFilter;
+  if (parsedRatingFilter !== null) {
+    if (typeof parsedRatingFilter !== 'number' || !Number.isInteger(parsedRatingFilter) || parsedRatingFilter < 1 || parsedRatingFilter > 5) return null;
+  }
+  if (typeof payload.hasImages !== 'boolean') return null;
+  if (!payload.values || typeof payload.values.createdAt !== 'string' || typeof payload.values.id !== 'string' || !payload.values.id) return null;
+  const createdAt = new Date(payload.values.createdAt);
+  if (Number.isNaN(createdAt.getTime())) return null;
+  if (payload.orderBy !== 'newest' && !(Number.isInteger(payload.values.rating) && payload.values.rating! >= 1 && payload.values.rating! <= 5)) return null;
+  return payload as ReviewCursorPayload;
+}
+
 function encodeReviewCursor(input: {
   storeId: string;
   productId: string;
@@ -145,28 +197,22 @@ function encodeReviewCursor(input: {
       ...(input.orderBy === 'newest' ? {} : { rating: input.review.rating }),
     },
   };
+  const signedPayload: SignedReviewCursorPayload = {
+    p: payload,
+    s: signReviewCursorPayload(payload),
+  };
 
-  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  return Buffer.from(JSON.stringify(signedPayload), 'utf8').toString('base64url');
 }
 
 function decodeReviewCursor(raw: string | null): ReviewCursorPayload | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Partial<ReviewCursorPayload>;
-    if (!parsed || parsed.v !== 1) return null;
-    if (parsed.orderBy !== 'newest' && parsed.orderBy !== 'highest' && parsed.orderBy !== 'lowest') return null;
-    if (typeof parsed.storeId !== 'string' || !parsed.storeId) return null;
-    if (typeof parsed.productId !== 'string' || !parsed.productId) return null;
-    const parsedRatingFilter = parsed.ratingFilter;
-    if (parsedRatingFilter !== null) {
-      if (typeof parsedRatingFilter !== 'number' || !Number.isInteger(parsedRatingFilter) || parsedRatingFilter < 1 || parsedRatingFilter > 5) return null;
-    }
-    if (typeof parsed.hasImages !== 'boolean') return null;
-    if (!parsed.values || typeof parsed.values.createdAt !== 'string' || typeof parsed.values.id !== 'string' || !parsed.values.id) return null;
-    const createdAt = new Date(parsed.values.createdAt);
-    if (Number.isNaN(createdAt.getTime())) return null;
-    if (parsed.orderBy !== 'newest' && !(Number.isInteger(parsed.values.rating) && parsed.values.rating! >= 1 && parsed.values.rating! <= 5)) return null;
-    return parsed as ReviewCursorPayload;
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Partial<SignedReviewCursorPayload>;
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.s !== 'string') return null;
+    const payload = parseReviewCursorPayload(parsed.p);
+    if (!payload || !isValidCursorSignature(payload, parsed.s)) return null;
+    return payload;
   } catch {
     return null;
   }

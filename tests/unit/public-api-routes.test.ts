@@ -208,6 +208,7 @@ async function postPublicReview(payload: unknown, headers: Record<string, string
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  process.env.REVIEW_CURSOR_SECRET = 'unit-test-review-cursor-secret';
   delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   delete process.env.CLOUDINARY_CLOUD_NAME;
   prismaMock.storeSettings.findUnique.mockReset();
@@ -690,6 +691,54 @@ describe('/api/public/reviews', () => {
       { createdAt: { lt: firstReview.createdAt } },
       { createdAt: firstReview.createdAt, id: { lt: firstReview.id } },
     ]);
+  });
+
+  it('rejects tampered or unsigned review cursors before querying reviews', async () => {
+    const firstReview = {
+      id: 'review-newest-1',
+      rating: 5,
+      title: 'Newest 1',
+      comment: 'First visible review.',
+      author: 'Mert Copper',
+      merchantReply: null,
+      images: null,
+      createdAt: new Date('2026-06-08T12:00:00.000Z'),
+    };
+    prismaMock.review.findMany.mockResolvedValueOnce([firstReview]);
+    prismaMock.review.count.mockResolvedValue(2);
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 2, ratingSum: 9, rating4Count: 1, rating5Count: 1 }));
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const firstResponse = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&limit=1'));
+    const firstBody = await firstResponse.json();
+    const cursor = firstBody.data.nextCursor;
+    const signedEnvelope = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+
+    expect(firstResponse.status).toBe(200);
+    expect(signedEnvelope).toEqual(expect.objectContaining({
+      p: expect.objectContaining({ v: 1, productId: 'product-1' }),
+      s: expect.any(String),
+    }));
+
+    signedEnvelope.p.values.id = 'review-newest-tampered';
+    const tamperedCursor = Buffer.from(JSON.stringify(signedEnvelope), 'utf8').toString('base64url');
+
+    prismaMock.review.findMany.mockClear();
+    const tamperedResponse = await GET(new Request(`https://app.test/api/public/reviews?storeId=store-1&productId=product-1&limit=1&cursor=${encodeURIComponent(tamperedCursor)}`));
+    const tamperedBody = await tamperedResponse.json();
+
+    expect(tamperedResponse.status).toBe(400);
+    expect(tamperedBody.error).toBeTruthy();
+    expect(prismaMock.review.findMany).not.toHaveBeenCalled();
+
+    const unsignedLegacyCursor = Buffer.from(JSON.stringify(signedEnvelope.p), 'utf8').toString('base64url');
+
+    const unsignedResponse = await GET(new Request(`https://app.test/api/public/reviews?storeId=store-1&productId=product-1&limit=1&cursor=${encodeURIComponent(unsignedLegacyCursor)}`));
+    const unsignedBody = await unsignedResponse.json();
+
+    expect(unsignedResponse.status).toBe(400);
+    expect(unsignedBody.error).toBeTruthy();
+    expect(prismaMock.review.findMany).not.toHaveBeenCalled();
   });
 
   it('keeps rating/photo cursor context and rejects cursor reuse across filters', async () => {
