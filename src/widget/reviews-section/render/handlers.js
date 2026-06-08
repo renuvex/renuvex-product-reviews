@@ -21,6 +21,7 @@ import {
   currentOrderBy, currentRatingFilter, currentHasImages,
   currentProductId, currentSettings, currentBadgeSettings, currentProductName,
   setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages,
+  setCurrentNextCursor,
 } from '../../core/state.js';
 
 // opts: { render } — render injected so this module never imports render.js.
@@ -33,6 +34,7 @@ export function createReviewHandlers(opts) {
     var orderBySnapshot = currentOrderBy;
     var ratingFilterSnapshot = currentRatingFilter;
     var hasImagesSnapshot = currentHasImages;
+    setCurrentNextCursor(null);
     var retried = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
     if (!isCurrentReviewRequest(token, {
       productId: productIdSnapshot,
@@ -51,6 +53,7 @@ export function createReviewHandlers(opts) {
     var hasImagesSnapshot = currentHasImages;
     setCurrentRatingFilter(nextRatingFilter);
     setCurrentPage(1);
+    setCurrentNextCursor(null);
     var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, nextRatingFilter, currentHasImages);
     if (!isCurrentReviewRequest(token, {
       productId: productIdSnapshot,
@@ -67,6 +70,7 @@ export function createReviewHandlers(opts) {
     var productIdSnapshot = currentProductId;
     var ratingFilterSnapshot = currentRatingFilter;
     setCurrentPage(1);
+    setCurrentNextCursor(null);
     var nextOrderBy = orderBy;
     var nextHasImages = false;
     if (isPhotos) {

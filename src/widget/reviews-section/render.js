@@ -29,9 +29,9 @@ import { createReviewHandlers } from './render/handlers.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
-  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings,
+  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentNextCursor,
   setCurrentOrderBy, setCurrentPage, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
-  setCurrentReviewsData,
+  setCurrentReviewsData, setCurrentNextCursor,
   photoStripReviews, loadedLightboxReviews,
   setLoadedLightboxReviews, getNewLoadedLightboxReviews, appendLoadedLightboxReviews,
 } from '../core/state.js';
@@ -84,7 +84,10 @@ export async function render(productId, settings, reviewsData, productName, orde
   setCurrentProductName(productName);
   if (orderBy) setCurrentOrderBy(orderBy);
   if (page) setCurrentPage(page);
-  if (reviewsData !== null && reviewsData !== undefined) setCurrentReviewsData(reviewsData);
+  if (reviewsData !== null && reviewsData !== undefined) {
+    setCurrentReviewsData(reviewsData);
+    setCurrentNextCursor(reviewsData && reviewsData.data ? reviewsData.data.nextCursor : null);
+  }
 
   // Review interaction handlers (retry/filter/sort) are produced by a DI factory
   // that re-runs THIS render via injection — render/handlers.js never imports
@@ -355,19 +358,22 @@ export async function render(productId, settings, reviewsData, productName, orde
           var pageSnapshot = currentPage;
           var ratingFilterSnapshot = currentRatingFilter;
           var hasImagesSnapshot = currentHasImages;
+          var nextCursorSnapshot = currentNextCursor;
           var nextPage = pageSnapshot + 1;
-          var moreData = await fetchReviews(productIdSnapshot, orderBySnapshot, nextPage, ratingFilterSnapshot, hasImagesSnapshot);
+          var moreData = await fetchReviews(productIdSnapshot, orderBySnapshot, nextPage, ratingFilterSnapshot, hasImagesSnapshot, null, nextCursorSnapshot);
           if (!isCurrentReviewRequest(token, {
             productId: productIdSnapshot,
             orderBy: orderBySnapshot,
             page: pageSnapshot,
             ratingFilter: ratingFilterSnapshot,
             hasImages: hasImagesSnapshot,
+            nextCursor: nextCursorSnapshot,
           })) return;
           if (moreData && !isReviewsFetchError(moreData) && moreData.data && Array.isArray(moreData.data.reviews)) {
             var newReviews = getNewLoadedLightboxReviews(moreData.data.reviews);
             appendLoadedLightboxReviews(newReviews);
             setCurrentPage(nextPage);
+            setCurrentNextCursor(moreData.data.nextCursor || null);
             var moreReviewLayout = getReviewLayout(currentSettings.reviewLayout);
             newReviews.forEach(function (r) {
               widget.insertBefore(moreReviewLayout.render(r, loadedLightboxReviews), loadMoreBtn);

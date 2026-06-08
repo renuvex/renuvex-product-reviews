@@ -46,6 +46,30 @@ type PublicReviewRow = {
   createdAt: Date;
 };
 
+type ReviewOrderByKey = 'newest' | 'highest' | 'lowest';
+
+type ReviewCursorValues = {
+  createdAt: string;
+  id: string;
+  rating?: number;
+};
+
+type ReviewCursorPayload = {
+  v: 1;
+  storeId: string;
+  productId: string;
+  orderBy: ReviewOrderByKey;
+  ratingFilter: number | null;
+  hasImages: boolean;
+  values: ReviewCursorValues;
+};
+
+const REVIEW_ORDER_BY: Record<ReviewOrderByKey, Array<Record<string, 'asc' | 'desc'>>> = {
+  newest: [{ createdAt: 'desc' }, { id: 'desc' }],
+  highest: [{ rating: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+  lowest: [{ rating: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
+};
+
 // Profanity filtresi — Türkçe ve İngilizce yaygın küfürler
 const PROFANITY_LIST = [
   'sik', 'orospu', 'göt', 'got', 'amk', 'bok', 'yarrak', 'oç', 'piç', 'pic',
@@ -82,6 +106,107 @@ function optionalString(value: unknown, maxLength: number): string | null {
   const text = value.trim();
   if (!text) return null;
   return text.length <= maxLength ? text : null;
+}
+
+function positiveIntParam(value: string | null, fallback: number, max?: number): number {
+  const parsed = parseInt(value ?? '', 10);
+  const normalized = Number.isFinite(parsed) ? Math.max(1, parsed) : fallback;
+  return max ? Math.min(max, normalized) : normalized;
+}
+
+function normalizeReviewOrderBy(value: string | null): ReviewOrderByKey {
+  if (value === 'highest' || value === 'lowest') return value;
+  return 'newest';
+}
+
+function normalizeRatingFilter(value: string | null): number | null {
+  const parsed = value ? parseInt(value, 10) : NaN;
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : null;
+}
+
+function encodeReviewCursor(input: {
+  storeId: string;
+  productId: string;
+  orderBy: ReviewOrderByKey;
+  ratingFilter: number | null;
+  hasImages: boolean;
+  review: Pick<PublicReviewRow, 'id' | 'rating' | 'createdAt'>;
+}): string {
+  const payload: ReviewCursorPayload = {
+    v: 1,
+    storeId: input.storeId,
+    productId: input.productId,
+    orderBy: input.orderBy,
+    ratingFilter: input.ratingFilter,
+    hasImages: input.hasImages,
+    values: {
+      createdAt: input.review.createdAt.toISOString(),
+      id: input.review.id,
+      ...(input.orderBy === 'newest' ? {} : { rating: input.review.rating }),
+    },
+  };
+
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+function decodeReviewCursor(raw: string | null): ReviewCursorPayload | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Partial<ReviewCursorPayload>;
+    if (!parsed || parsed.v !== 1) return null;
+    if (parsed.orderBy !== 'newest' && parsed.orderBy !== 'highest' && parsed.orderBy !== 'lowest') return null;
+    if (typeof parsed.storeId !== 'string' || !parsed.storeId) return null;
+    if (typeof parsed.productId !== 'string' || !parsed.productId) return null;
+    const parsedRatingFilter = parsed.ratingFilter;
+    if (parsedRatingFilter !== null) {
+      if (typeof parsedRatingFilter !== 'number' || !Number.isInteger(parsedRatingFilter) || parsedRatingFilter < 1 || parsedRatingFilter > 5) return null;
+    }
+    if (typeof parsed.hasImages !== 'boolean') return null;
+    if (!parsed.values || typeof parsed.values.createdAt !== 'string' || typeof parsed.values.id !== 'string' || !parsed.values.id) return null;
+    const createdAt = new Date(parsed.values.createdAt);
+    if (Number.isNaN(createdAt.getTime())) return null;
+    if (parsed.orderBy !== 'newest' && !(Number.isInteger(parsed.values.rating) && parsed.values.rating! >= 1 && parsed.values.rating! <= 5)) return null;
+    return parsed as ReviewCursorPayload;
+  } catch {
+    return null;
+  }
+}
+
+function cursorMatchesQuery(cursor: ReviewCursorPayload, input: {
+  storeId: string;
+  productId: string;
+  orderBy: ReviewOrderByKey;
+  ratingFilter: number | null;
+  hasImages: boolean;
+}) {
+  return (
+    cursor.storeId === input.storeId &&
+    cursor.productId === input.productId &&
+    cursor.orderBy === input.orderBy &&
+    cursor.ratingFilter === input.ratingFilter &&
+    cursor.hasImages === input.hasImages
+  );
+}
+
+function buildCursorWhere(cursor: ReviewCursorPayload) {
+  const createdAt = new Date(cursor.values.createdAt);
+  if (cursor.orderBy === 'newest') {
+    return {
+      OR: [
+        { createdAt: { lt: createdAt } },
+        { createdAt, id: { lt: cursor.values.id } },
+      ],
+    };
+  }
+
+  const rating = cursor.values.rating!;
+  return {
+    OR: [
+      { rating: cursor.orderBy === 'highest' ? { lt: rating } : { gt: rating } },
+      { rating, createdAt: { lt: createdAt } },
+      { rating, createdAt, id: { lt: cursor.values.id } },
+    ],
+  };
 }
 
 async function checkRateLimit(ip: string): Promise<boolean> {
@@ -136,43 +261,56 @@ export async function GET(req: Request) {
       return withCors(NextResponse.json({ error: 'Eksik parametre' }, { status: 400 }));
     }
 
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+    const page = positiveIntParam(searchParams.get('page'), 1);
     // limit: ana liste için 10 (default); photo-strip newest-first fetch için 15.
     // 1-30 aralığında clamp — kötüye kullanım önlemi.
-    const limitParam = parseInt(searchParams.get('limit') ?? '10', 10);
-    const limit = Number.isFinite(limitParam) ? Math.min(30, Math.max(1, limitParam)) : 10;
+    const limit = positiveIntParam(searchParams.get('limit'), 10, 30);
     const skip = (page - 1) * limit;
 
-    const orderByParam = searchParams.get('orderBy') ?? 'newest';
-    const orderBy =
-      orderByParam === 'highest' ? { rating: 'desc' as const } :
-      orderByParam === 'lowest'  ? { rating: 'asc'  as const } :
-                                   { createdAt: 'desc' as const };
-
-    const ratingParam = searchParams.get('rating');
-    const ratingFilter = ratingParam ? parseInt(ratingParam, 10) : null;
+    const orderByKey = normalizeReviewOrderBy(searchParams.get('orderBy'));
+    const orderBy = REVIEW_ORDER_BY[orderByKey];
+    const ratingFilter = normalizeRatingFilter(searchParams.get('rating'));
     const hasImagesFilter = searchParams.get('hasImages') === 'true';
+    const rawCursor = searchParams.get('cursor');
+    const cursor = decodeReviewCursor(rawCursor);
+    if (rawCursor !== null && !cursor) {
+      return withCors(NextResponse.json({ error: 'Geçersiz cursor' }, { status: 400 }));
+    }
+    if (cursor && !cursorMatchesQuery(cursor, { storeId, productId, orderBy: orderByKey, ratingFilter, hasImages: hasImagesFilter })) {
+      return withCors(NextResponse.json({ error: 'Cursor bu sorgu ile uyumlu değil' }, { status: 400 }));
+    }
     const cloudName = getConfiguredCloudinaryCloudName();
 
-    const where = {
+    const baseWhere = {
       storeId,
       productId,
       status: 'approved',
-      ...(ratingFilter && ratingFilter >= 1 && ratingFilter <= 5 ? { rating: ratingFilter } : {}),
+      ...(ratingFilter ? { rating: ratingFilter } : {}),
       ...(hasImagesFilter ? { hasImages: true } : {}),
     };
+    const listWhere = cursor ? { ...baseWhere, ...buildCursorWhere(cursor) } : baseWhere;
 
     // Filtreden bağımsız — bar chart için tüm approved yorumların dağılımı
     const summaryWhere = { storeId, productId };
 
-    const [reviews, totalCount, summary] = await Promise.all([
-      prisma.review.findMany({ where, orderBy, take: limit, skip, select: PUBLIC_REVIEW_SELECT }),
-      prisma.review.count({ where }),
+    const reviewsPromise = cursor
+      ? prisma.review.findMany({ where: listWhere, orderBy, take: limit + 1, select: PUBLIC_REVIEW_SELECT })
+      : prisma.review.findMany({ where: listWhere, orderBy, take: limit, skip, select: PUBLIC_REVIEW_SELECT });
+
+    const [reviewsWithExtra, totalCount, summary] = await Promise.all([
+      reviewsPromise,
+      prisma.review.count({ where: baseWhere }),
       prisma.productReviewSummary.findUnique({ where: { storeId_productId: summaryWhere } }),
     ]);
 
     const { allCount, ratingCounts, avgRating } = summaryStats(summary);
 
+    const reviews = cursor ? reviewsWithExtra.slice(0, limit) : reviewsWithExtra;
+    const hasMore = cursor ? reviewsWithExtra.length > limit : page * limit < totalCount;
+    const lastVisibleReview = reviews[reviews.length - 1];
+    const nextCursor = hasMore && lastVisibleReview
+      ? encodeReviewCursor({ storeId, productId, orderBy: orderByKey, ratingFilter, hasImages: hasImagesFilter, review: lastVisibleReview })
+      : null;
     const formattedReviews = reviews.map((review) => formatPublicReview(review, cloudName, storeId));
 
     const res = withCors(NextResponse.json({
@@ -182,7 +320,8 @@ export async function GET(req: Request) {
         allCount,
         page,
         totalPages: Math.ceil(totalCount / limit),
-        hasMore: page * limit < totalCount,
+        hasMore,
+        nextCursor,
         ratingCounts,
         avgRating,
       },

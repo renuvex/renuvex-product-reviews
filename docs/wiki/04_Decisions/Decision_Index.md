@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-01
+updated: 2026-06-08
 tags:
   - adr
   - decisions
@@ -46,6 +46,7 @@ related:
 | [[ADR_0026_Product_Review_Summary_Read_Model]] | `ProductReviewSummary` is the product-level aggregate read model for public badge, structured-data, and review summary distribution reads. Raw `Review` remains source of truth; submit/moderation/delete paths update the summary in the same transaction, and a repair script can rebuild summaries from approved reviews. | Accepted |
 
 | [[ADR_0027_Review_Media_Read_Model]] | `ReviewMedia` stores trusted review image rows and `Review.hasImages` is the indexed public photo-review facet. `Review.images` remains a legacy mirror while backfill/transition completes. | Accepted |
+| [[ADR_0028_Review_Cursor_Pagination]] | Public review list load-more uses cursor/keyset pagination while preserving legacy `page/limit` response compatibility. | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -63,6 +64,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-06-08: Added [[ADR_0028_Review_Cursor_Pagination]] - `GET /api/public/reviews` now returns `nextCursor`; widget load-more uses cursor/keyset reads when available and falls back to legacy page requests for compatibility.
 - 2026-06-07: Added [[ADR_0027_Review_Media_Read_Model]] - public photo-review filters now use indexed `Review.hasImages` and review images are normalized into `ReviewMedia`; legacy `Review.images` remains as a compatibility mirror.
 - 2026-06-06: Added [[ADR_0026_Product_Review_Summary_Read_Model]] — public rating/summary reads now use `ProductReviewSummary` instead of recomputing badge/summary aggregates from raw `Review.groupBy()` on every storefront request. Raw `Review` remains source of truth; write paths update the read model transactionally and a repair script can rebuild it.
 - 2026-06-01: Completed the [[ADR_0017_Badge_Architecture]] listing mount rollout cleanup — removed the temporary publicApiKey gate and legacy in-`<h2>` branch. Listing badge slots now mount as title siblings by default; theme-specific exceptions belong in `getListingBadgeMountPoint(titleEl)`.

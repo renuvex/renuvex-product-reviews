@@ -99,6 +99,7 @@ Yotpo/Protein Ocean reference:
 - **Listing-page badges**: bulk endpoint with single round-trip — preserve this pattern when adding features.
 - **Image transformations**: prefer Cloudinary URL params (`f_auto,q_auto,w_400`) over post-load resizing.
 - **Media read model**: future media-heavy widgets should read `ReviewMedia` or a dedicated read model, not parse `Review.images` text.
+- **Review list pagination**: load-more should use `nextCursor` / cursor requests. Keep legacy `page` only for compatibility or explicit numbered pagination UI.
 - **Module split**: current Phase 2 work uses one classic ikas-compatible loader plus lazy ESM modules. New major surfaces such as Q&A, media gallery upgrades, review summaries, analytics, and schema should follow the same loader/registry pattern.
 
 ## Anti-patterns to avoid
@@ -124,11 +125,13 @@ Yotpo/Protein Ocean reference:
 - [public/widget.js](public/widget.js)
 - [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json)
 - [src/lib/review-media.ts](src/lib/review-media.ts)
+- [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
 
 ## Obsidian Links
 - [[Caching_And_Performance]]
 - [[Widget_Architecture]]
 - [[ADR_0027_Review_Media_Read_Model]]
+- [[ADR_0028_Review_Cursor_Pagination]]
 - [[Test_Strategy]]
 - [[Storefront_Widget_Overview]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]

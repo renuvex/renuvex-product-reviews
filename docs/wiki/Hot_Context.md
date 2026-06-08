@@ -105,25 +105,18 @@ source_files:
 - `package.json` pins Next.js `16.2.1`; older Next.js 15 docs are stale unless re-verified.
 
 ## Recent Important Changes
-- 2026-05-25 to 2026-05-29: Review section became explicit-mount, Shadow DOM isolated, lifecycle-gated, independently structured-data aware, and covered by layered widget tests plus post-deploy evidence scripts.
-- 2026-05-30: Lightbox/wizard share overlay primitives; widget icons are Phosphor, `iconUseNode` must HTML-parse, and dialog/rating focus behavior is pinned.
-- 2026-05-31: Widget audits fixed initial `Shift+Tab`, keyboard photo-strip lightbox triggers, stale review responses, duplicate load-more ids, synchronous listing replay, and clean-PDP listing chunk waste.
-- 2026-05-31: Classic/default summary CSS moved to `summary-layouts/classic/styles.js`; card/default review CSS moved to `review-layouts/card/styles.js`.
-- 2026-06-01: `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared CSS ownership moved to `styles/{base,summary-controls,review-primitives,photo-strip,lightbox}.js`.
-- 2026-06-01: `PAGE_VIEW` debounce is semantic, not global time-only. `storefront-context.js` dedupes same `pageType + pathname/search` events within 800 ms but lets distinct fast transitions such as `PRODUCT -> CATEGORY` start listing lifecycle immediately.
+- 2026-05-25 to 2026-06-01: Review section became explicit-mount, Shadow DOM isolated, lifecycle-gated, structured-data aware, and backed by layered widget tests.
+- 2026-06-01: Widget CSS ownership is split: classic/card layout styles own layout visuals; `reviews-section/styles.js` aggregates shared CSS modules.
+- 2026-06-01: `PAGE_VIEW` dedupe is semantic (`pageType + pathname/search`), so distinct fast transitions still run.
 - 2026-06-01: Listing badge sibling mount is the default contract. The temporary publicApiKey rollout gate and legacy in-title branch were removed; adapter overrides are the only exception path.
-- 2026-06-01: `reviews-section/render.js` split into pure `render/*.js` builders and DI-based retry/filter/sort handlers; load-more stays inline for incremental DOM insert.
-
-- 2026-06-01: Review wizard close (X) color is derived from `formBgColor`, not `formPrimaryTextColor`. `theme-vars.js` chooses `#111111` or `#ffffff` by contrast and derives hover background from that safe control color; interaction smoke pins the real shadow-DOM close/hover styles.
-- 2026-06-01: Summary popovers use handle-based lifecycle cleanup; bar rows expose button semantics and counts use elastic tabular columns. Tests pin lifecycle, keyboard filters, badge/summary isolation, and large counts.
-
-- 2026-06-01: Decorative review-surface hovers now require `(hover:hover) and (pointer:fine)`; fixes compact-mobile sticky hover on "Yorum Yap". Guard: `tests/unit/widget-hover-gating.test.ts`.
-- 2026-06-01: Physical-mobile filter tap follow-up: scoped shield prevents same-gesture compat events pressing exposed "Yorum Yap"; normal ADR_0011 `:active` remains.
-- 2026-06-06: Review wizard step copy is merchant-editable under `Metin > Yorum Formu`. `SettingsGroup.subGroups` remains flat saved keys, traversal goes through `collectSettingFields(...)`, and storefront copy uses `review-form-modal/copy.js` + `textContent` with whitespace fallback.
+- 2026-06-01: `reviews-section/render.js` uses pure `render/*.js` builders + DI handlers; load-more stays inline for incremental DOM insert.
+- 2026-06-01: Wizard close color derives from `formBgColor`; summary popovers, bar a11y/counts, hover gating, and mobile tap shields are pinned by tests.
+- 2026-06-06: Review wizard step copy is merchant-editable under `Metin > Yorum Formu`; nested settings stay flat saved keys.
 - 2026-06-06: ikas confirmed Storefront Events are not DOM-ready signals and `VIEW_LISTING.productDetails[]` is usable. PDP reviews stay deterministic by replaying only late `reviews-main` mounts and product/path-guarding stale bootstraps.
 - 2026-06-06: Public rating/summary aggregates use `ProductReviewSummary`; raw `Review` stays source of truth and `pnpm reviews:summaries:rebuild` repairs it. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 
 - 2026-06-08: Photo reads use `Review.hasImages` + `ReviewMedia`; legacy media reconciliation copied 10 available assets, dropped 30 missing source URLs, and left zero global legacy URLs. See [[Legacy_Review_Media_Reconciliation]].
+- 2026-06-08: Review list load-more uses cursor/keyset pagination via `data.nextCursor`; legacy `page/limit` remains for compatibility and future numbered pagination. Cursor requests do not use Prisma `skip`. See [[ADR_0028_Review_Cursor_Pagination]].
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes.

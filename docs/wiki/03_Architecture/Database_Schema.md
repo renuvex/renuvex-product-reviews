@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - database
@@ -17,10 +17,12 @@ related:
   - "[[ADR_0012_Pending_Upload_Registry]]"
   - "[[ADR_0015_Canonical_Product_Identity]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
+  - "[[ADR_0028_Review_Cursor_Pagination]]"
 source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
+  - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
 ---
@@ -78,13 +80,17 @@ Indexes:
 - `[storeId, status]`
 - `[storeId, slug, status]`
 - partial `[storeId, productId, createdAt] where status='approved' and hasImages=true`
+- partial `[storeId, productId, createdAt desc, id desc] where status='approved'`
+- partial `[storeId, productId, rating desc, createdAt desc, id desc] where status='approved'`
+- partial `[storeId, productId, rating asc, createdAt desc, id desc] where status='approved'`
+- partial `[storeId, productId, createdAt desc, id desc] where status='approved' and hasImages=true`
 
 The two wider composite indexes also cover the old `(storeId, productId)` and
 `(storeId, slug)` prefix lookups, so the standalone prefix indexes were removed
 in migration `20260518130000_drop_redundant_review_indexes`.
 
 Common queries:
-- Public: `findMany({ storeId, productId, status: 'approved' })` + ordering + filters
+- Public: `findMany({ storeId, productId, status: 'approved' })` + deterministic ordering + filters. Legacy `page/limit` is supported; widget load-more uses `nextCursor` keyset pagination when available.
 - Public listing/PDP badges and summary distribution: `ProductReviewSummary` by `(storeId, productId)`
 - Public slug fallback: resolve current `ProductSnapshot` slug to product id, then read `ProductReviewSummary`; legacy direct slug read remains last resort for unresolved slugs
 - Admin: `findMany({ storeId, status? })` ordered by `createdAt desc`
@@ -248,6 +254,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 
 ## Change Log
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` for indexed public photo-review filters and normalized trusted media rows. Related: [[ADR_0027_Review_Media_Read_Model]].
+- 2026-06-08: Added partial review cursor indexes and moved widget load-more to cursor/keyset pagination while preserving legacy page reads. Related: [[ADR_0028_Review_Cursor_Pagination]].
 - 2026-06-06: Added `ProductReviewSummary` as the product-level aggregate read model for public rating badge, structured-data, and review summary distribution reads. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Upgraded `StoreSettings.storefrontTheme` app-layer shape to v2 stable/pending sync state; no DB migration needed because the column remains nullable JSON.
 - 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.

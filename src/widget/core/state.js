@@ -10,6 +10,7 @@ export var currentSettings = null;
 export var currentBadgeSettings = null;
 export var currentProductName = null;
 export var currentReviewsData = null;
+export var currentNextCursor = null;
 export var loadedLightboxReviews = [];
 
 // Fotoğraf şeridi için ayrı dataset — bootstrap'ta `hasImages=true&limit=15&orderBy=newest`
@@ -27,6 +28,7 @@ export function setCurrentSettings(v) { currentSettings = v; }
 export function setCurrentBadgeSettings(v) { currentBadgeSettings = v; }
 export function setCurrentProductName(v) { currentProductName = v; }
 export function setCurrentReviewsData(v) { currentReviewsData = v; }
+export function setCurrentNextCursor(v) { currentNextCursor = v || null; }
 export function setPhotoStripReviews(v) { photoStripReviews = Array.isArray(v) ? v : []; }
 
 export function resetReviewStateForProduct(productId) {
@@ -36,6 +38,7 @@ export function resetReviewStateForProduct(productId) {
   currentHasImages = false;
   currentProductId = productId || null;
   currentReviewsData = null;
+  currentNextCursor = null;
   photoStripReviews = [];
   replaceLoadedLightboxReviews([]);
 }

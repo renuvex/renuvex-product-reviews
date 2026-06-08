@@ -15,10 +15,12 @@ related:
   - "[[Database_Schema]]"
   - "[[Important_Files]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
+  - "[[ADR_0028_Review_Cursor_Pagination]]"
 source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
+  - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
@@ -75,6 +77,12 @@ On `ReviewMedia`:
 
 On `Review` media reads:
 - partial `[storeId, productId, createdAt] where status='approved' and hasImages=true` - public photo-review list/photo strip hot path.
+
+On `Review` cursor pagination:
+- partial `[storeId, productId, createdAt desc, id desc] where status='approved'` - public `newest` review list/load-more.
+- partial `[storeId, productId, rating desc, createdAt desc, id desc] where status='approved'` - public `highest` review list/load-more.
+- partial `[storeId, productId, rating asc, createdAt desc, id desc] where status='approved'` - public `lowest` review list/load-more.
+- partial `[storeId, productId, createdAt desc, id desc] where status='approved' and hasImages=true` - photo-review newest cursor path. The older photo index without `id` remains until production unused-index evidence supports cleanup.
 
 ## Migration workflow
 - Local dev: `pnpm prisma:migrate` (creates + applies migration)
@@ -145,6 +153,7 @@ code run together, so a migration must not break the old code.
 ## Change Log
 - 2026-06-08: Applied test-store legacy review media reconciliation. Copied 10 available old global assets, dropped 30 missing source URLs with explicit cleanup, and verified zero remaining global `review_images/...` URLs. See [[Legacy_Review_Media_Reconciliation]].
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` as the normalized media read model for indexed public photo-review filters; `Review.images` remains a legacy mirror. See [[ADR_0027_Review_Media_Read_Model]].
+- 2026-06-08: Added review-list cursor indexes for keyset pagination while keeping legacy `page/limit` compatibility. See [[ADR_0028_Review_Cursor_Pagination]].
 - 2026-06-06: Added `ProductReviewSummary` to the model map and documented that public rating/summary aggregates now read from this per-product read model. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Changed `StoreSettings.storefrontTheme` semantics from flat metadata to a backwards-compatible v2 stable/pending sync state; no schema migration required.
 - 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.

@@ -100,7 +100,7 @@ function runtimeReview(input: RuntimeReview): Record<string, unknown> {
 
 function reviewsPayload(
   reviews: RuntimeReview[],
-  options: { allCount?: number; totalCount?: number; ratingCounts?: number[]; avgRating?: string; hasMore?: boolean } = {},
+  options: { allCount?: number; totalCount?: number; ratingCounts?: number[]; avgRating?: string; hasMore?: boolean; nextCursor?: string | null } = {},
 ): unknown {
   const allCount = options.allCount ?? Math.max(reviews.length, 1);
   const ratingCounts = options.ratingCounts ?? [0, 0, 0, 0, allCount];
@@ -112,6 +112,7 @@ function reviewsPayload(
       ratingCounts,
       avgRating: options.avgRating ?? (allCount > 0 ? '5.0' : '0.0'),
       hasMore: options.hasMore === true,
+      nextCursor: options.nextCursor ?? null,
     },
   };
 }
@@ -1014,6 +1015,46 @@ test('stale load-more completion cannot advance the active sorted page', async (
 
   await clickInReviewsShadow(page, '.renuvex-pr-load-more');
   await expect.poll(() => lowestLoadMorePages[0] || '').toBe('2');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('load-more requests the next batch with the API cursor when available', async ({ page }) => {
+  const cursorRequests: string[] = [];
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      const hasImages = url.searchParams.get('hasImages') === 'true';
+      const cursor = url.searchParams.get('cursor');
+
+      if (hasImages) {
+        await fulfillJson(route, reviewsPayload([
+          { id: 'strip-1', title: 'Strip Photo', images: [trustedReviewImage('strip-1')] },
+        ]));
+        return;
+      }
+
+      if (cursor) {
+        cursorRequests.push(cursor);
+        await fulfillJson(route, reviewsPayload([{ id: 'cursor-page-2-review', title: 'Cursor page 2' }], { hasMore: false }));
+        return;
+      }
+
+      await fulfillJson(route, reviewsPayload([{ id: 'cursor-page-1-review', title: 'Cursor page 1' }], {
+        hasMore: true,
+        nextCursor: 'cursor-page-2',
+      }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => reviewTitles(page)).toEqual(['Cursor page 1']);
+
+  await clickInReviewsShadow(page, '.renuvex-pr-load-more');
+  await expect.poll(() => cursorRequests).toEqual(['cursor-page-2']);
+  await expect.poll(() => reviewTitles(page)).toEqual(['Cursor page 1', 'Cursor page 2']);
   expect(widgetErrors(log)).toEqual([]);
 });
 

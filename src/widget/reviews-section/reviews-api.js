@@ -22,7 +22,7 @@ export function isReviewsFetchError(value) {
   return !!(value && value.type === REVIEWS_FETCH_ERROR);
 }
 
-export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages, limit) {
+export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages, limit, cursor) {
   if (window.__ikasPreviewMode) {
     try {
       var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
@@ -36,7 +36,8 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
   orderBy = orderBy || 'newest';
   page = page || 1;
   var limitKey = limit ? '_l' + limit : '';
-  var key = 'renuvex_pr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + limitKey;
+  var cursorKey = cursor ? '_c' + cursor : '';
+  var key = 'renuvex_pr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + limitKey + cursorKey;
   var staleReviews = null;
   var cached = cacheGet(key);
 
@@ -60,7 +61,8 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
       '&page=' + encodeURIComponent(page) +
       (ratingFilter ? '&rating=' + encodeURIComponent(ratingFilter) : '') +
       (hasImages ? '&hasImages=true' : '') +
-      (limit ? '&limit=' + encodeURIComponent(limit) : '');
+      (limit ? '&limit=' + encodeURIComponent(limit) : '') +
+      (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
     var res = await fetchWithTimeout(url);
     if (!res.ok) return staleReviews || createReviewsFetchError();
     var data = await res.json();

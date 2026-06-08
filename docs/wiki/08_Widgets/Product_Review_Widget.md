@@ -81,6 +81,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Filter: by rating (1..5), by `hasImages=true`. Backend uses indexed `Review.hasImages`; it must not scan legacy `Review.images` text.
 - Bar chart in summary uses filter-independent `ratingCounts` returned by `/api/public/reviews`. Those aggregate fields (`allCount`, `avgRating`, `ratingCounts`) come from the backend `ProductReviewSummary` read model; the visible review list and filtered `totalCount` still come from `Review` rows. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - Review response `images` is still a string array for widget compatibility. The API now reads normalized `ReviewMedia` rows first and falls back to legacy `Review.images` during migration/backfill. See [[ADR_0027_Review_Media_Read_Model]].
+- Load-more: the first page uses the legacy `page=1` request and stores `data.nextCursor`; subsequent "Daha Fazla Goster" requests use `cursor` when available and fall back to `page + 1` only for backwards compatibility. Sort/filter/retry/product changes reset the cursor. See [[ADR_0028_Review_Cursor_Pagination]].
 
 ## Photo strip
 - Dedicated horizontal strip above the review list, populated by a separate `hasImages=true&limit=15&orderBy=newest` fetch, independent of sort/filter/load-more.
@@ -118,6 +119,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 
 ## Change Log
 - 2026-06-07: Public `hasImages=true` filtering now uses indexed `Review.hasImages`, and response images read `ReviewMedia` first with legacy fallback. Widget response shape is unchanged. Related ADR: [[ADR_0027_Review_Media_Read_Model]].
+- 2026-06-08: Review list load-more now uses cursor/keyset pagination when the API returns `nextCursor`; legacy page fallback remains. Related ADR: [[ADR_0028_Review_Cursor_Pagination]].
 - 2026-06-06: Public summary aggregates (`allCount`, `avgRating`, `ratingCounts`) now read from `ProductReviewSummary`; review rows, filter/sort/load-more, and response shape remain unchanged. Related ADR: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-06-01: Review wizard close (X) color and hover background now derive from the form background color (`formBgColor`) instead of `formPrimaryTextColor`; interaction smoke pins the actual shadow-DOM color and hover result.
 - 2026-05-31: Fixed review wizard photo upload lifecycle defects: closing during a pending upload now revokes local blob previews, removing a pending photo no longer aborts later selected uploads, and removal state is batched before blob revoke to avoid stale image loads. Related bug: [[Bug_Review_Wizard_Photo_Upload_Lifecycle]].

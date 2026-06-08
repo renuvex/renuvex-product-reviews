@@ -9,7 +9,7 @@
 // matches (e.g. productId changed underneath).
 
 import {
-  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId,
+  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentNextCursor,
 } from '../../core/state.js';
 
 var reviewRequestSeq = 0;
@@ -27,5 +27,6 @@ export function isCurrentReviewRequest(token, expected) {
   if (expected.page !== undefined && currentPage !== expected.page) return false;
   if (expected.ratingFilter !== undefined && currentRatingFilter !== expected.ratingFilter) return false;
   if (expected.hasImages !== undefined && currentHasImages !== expected.hasImages) return false;
+  if (expected.nextCursor !== undefined && currentNextCursor !== expected.nextCursor) return false;
   return true;
 }

@@ -506,7 +506,7 @@ describe('/api/public/reviews', () => {
         productId: 'product-1',
         status: 'approved',
       }),
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: 10,
       skip: 0,
     }));
@@ -520,6 +520,7 @@ describe('/api/public/reviews', () => {
       avgRating: '5.0',
       ratingCounts: [0, 0, 0, 0, 1],
       hasMore: false,
+      nextCursor: null,
     }));
     expect(body.data.reviews[0]).toEqual(expect.objectContaining({
       id: 'review-1',
@@ -586,7 +587,7 @@ describe('/api/public/reviews', () => {
         rating: 4,
         hasImages: true,
       }),
-      orderBy: { rating: 'asc' },
+      orderBy: [{ rating: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
       take: 30,
       skip: 30,
     }));
@@ -617,11 +618,144 @@ describe('/api/public/reviews', () => {
         status: 'approved',
         hasImages: true,
       }),
-      orderBy: { rating: 'desc' },
+      orderBy: [{ rating: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
       take: 1,
       skip: 0,
     }));
     expect(prismaMock.review.findMany.mock.calls[0][0].where.rating).toBeUndefined();
+  });
+
+  it('returns a cursor from the legacy first page and uses keyset pagination without skip', async () => {
+    const firstReview = {
+      id: 'review-newest-1',
+      rating: 5,
+      title: 'Newest 1',
+      comment: 'First visible review.',
+      author: 'Mert Copper',
+      merchantReply: null,
+      images: null,
+      createdAt: new Date('2026-06-08T12:00:00.000Z'),
+    };
+    const secondReview = {
+      id: 'review-newest-2',
+      rating: 4,
+      title: 'Newest 2',
+      comment: 'Second visible review.',
+      author: 'Ada Copper',
+      merchantReply: null,
+      images: null,
+      createdAt: new Date('2026-06-08T11:00:00.000Z'),
+    };
+    prismaMock.review.findMany
+      .mockResolvedValueOnce([firstReview])
+      .mockResolvedValueOnce([secondReview]);
+    prismaMock.review.count.mockResolvedValue(2);
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 2, ratingSum: 9, rating4Count: 1, rating5Count: 1 }));
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const firstResponse = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&limit=1'));
+    const firstBody = await firstResponse.json();
+    const cursor = firstBody.data.nextCursor;
+
+    expect(firstResponse.status).toBe(200);
+    expect(typeof cursor).toBe('string');
+    expect(firstBody.data).toEqual(expect.objectContaining({
+      hasMore: true,
+      page: 1,
+      totalPages: 2,
+    }));
+    expect(prismaMock.review.findMany.mock.calls[0][0]).toEqual(expect.objectContaining({
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 1,
+      skip: 0,
+    }));
+
+    const secondResponse = await GET(new Request(`https://app.test/api/public/reviews?storeId=store-1&productId=product-1&limit=1&cursor=${encodeURIComponent(cursor)}`));
+    const secondBody = await secondResponse.json();
+    const secondFindArgs = prismaMock.review.findMany.mock.calls[1][0];
+
+    expect(secondResponse.status).toBe(200);
+    expect(secondBody.data).toEqual(expect.objectContaining({
+      hasMore: false,
+      nextCursor: null,
+      page: 1,
+    }));
+    expect(secondBody.data.reviews[0]).toEqual(expect.objectContaining({ id: 'review-newest-2' }));
+    expect(secondFindArgs).toEqual(expect.objectContaining({
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 2,
+    }));
+    expect(secondFindArgs).not.toHaveProperty('skip');
+    expect(secondFindArgs.where.OR).toEqual([
+      { createdAt: { lt: firstReview.createdAt } },
+      { createdAt: firstReview.createdAt, id: { lt: firstReview.id } },
+    ]);
+  });
+
+  it('keeps rating/photo cursor context and rejects cursor reuse across filters', async () => {
+    const firstReview = {
+      id: 'review-highest-1',
+      rating: 4,
+      title: 'Highest 1',
+      comment: 'First highest review.',
+      author: 'Mert Copper',
+      merchantReply: null,
+      images: null,
+      createdAt: new Date('2026-06-08T12:00:00.000Z'),
+    };
+    const secondReview = {
+      id: 'review-highest-2',
+      rating: 4,
+      title: 'Highest 2',
+      comment: 'Second highest review.',
+      author: 'Ada Copper',
+      merchantReply: null,
+      images: null,
+      createdAt: new Date('2026-06-08T11:00:00.000Z'),
+    };
+    prismaMock.review.findMany
+      .mockResolvedValueOnce([firstReview])
+      .mockResolvedValueOnce([secondReview]);
+    prismaMock.review.count.mockResolvedValue(2);
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 2, ratingSum: 8, rating4Count: 2, photoReviewCount: 2 }));
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const firstResponse = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&orderBy=highest&rating=4&hasImages=true&limit=1'));
+    const firstBody = await firstResponse.json();
+    const cursor = firstBody.data.nextCursor;
+
+    expect(firstResponse.status).toBe(200);
+    expect(typeof cursor).toBe('string');
+
+    const secondResponse = await GET(new Request(`https://app.test/api/public/reviews?storeId=store-1&productId=product-1&orderBy=highest&rating=4&hasImages=true&limit=1&cursor=${encodeURIComponent(cursor)}`));
+    const secondFindArgs = prismaMock.review.findMany.mock.calls[1][0];
+
+    expect(secondResponse.status).toBe(200);
+    expect(secondFindArgs).toEqual(expect.objectContaining({
+      orderBy: [{ rating: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+      take: 2,
+    }));
+    expect(secondFindArgs).not.toHaveProperty('skip');
+    expect(secondFindArgs.where).toEqual(expect.objectContaining({
+      storeId: 'store-1',
+      productId: 'product-1',
+      status: 'approved',
+      rating: 4,
+      hasImages: true,
+    }));
+    expect(secondFindArgs.where.OR).toEqual([
+      { rating: { lt: firstReview.rating } },
+      { rating: firstReview.rating, createdAt: { lt: firstReview.createdAt } },
+      { rating: firstReview.rating, createdAt: firstReview.createdAt, id: { lt: firstReview.id } },
+    ]);
+
+    prismaMock.review.findMany.mockClear();
+    const mismatchResponse = await GET(new Request(`https://app.test/api/public/reviews?storeId=store-1&productId=product-1&orderBy=highest&rating=4&limit=1&cursor=${encodeURIComponent(cursor)}`));
+    const mismatchBody = await mismatchResponse.json();
+
+    expect(mismatchResponse.status).toBe(400);
+    expect(mismatchBody.error).toBeTruthy();
+    expect(prismaMock.review.findMany).not.toHaveBeenCalled();
   });
 
   it('creates pending or approved reviews according to autoApprove settings without real DB writes', async () => {

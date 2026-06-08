@@ -20,6 +20,13 @@ source_files:
 
 # Project Log
 
+## 2026-06-08 - performance | Add review cursor pagination
+- Summary: Moved storefront review list load-more from offset-only reads to cursor/keyset pagination while preserving the existing public response shape and legacy `page/limit` compatibility.
+- Key source changes: `GET /api/public/reviews` now returns `data.nextCursor`, validates cursor query context, uses deterministic `createdAt/id` and `rating/createdAt/id` ordering, and does not pass Prisma `skip` on cursor requests. The widget stores `currentNextCursor`, uses cursor for load-more when available, resets it on sort/filter/retry/product changes, and keeps page fallback for old responses.
+- Database: Added partial approved-review cursor indexes in `20260608120000_add_review_cursor_indexes`; the older photo index remains until production unused-index evidence supports cleanup.
+- Verification target: unit/API tests pin legacy page compatibility, cursor context rejection, and skip-free cursor reads; widget runtime smoke pins cursor load-more, stale load-more rejection, and duplicate id guards.
+- Updated wiki: [[ADR_0028_Review_Cursor_Pagination]], [[Backend_API_Map]], [[Database_Map]], [[Database_Schema]], [[Caching_And_Performance]], [[Product_Review_Widget]], [[Widget_Performance]], [[Test_Strategy]], [[Hot_Context]]
+
 ## 2026-06-08 - ops | Add legacy review media reconciliation audit
 - Summary: Added read-only legacy media audit and copy-first reconciliation scripts for old global Cloudinary review image paths, then applied the test-store reconciliation. The trusted storefront policy remains tenant-scoped; global `review_images/...` paths are not added to the public trusted-image allowlist.
 - Current evidence: Initial audit found 30 non-empty legacy `Review.images` rows, 43 URLs, 3 tenant-scoped trusted URLs already normalized into `ReviewMedia`, and 40 old global URLs across 27 approved reviews. Apply copied 10 available legacy assets, dropped 30 missing Cloudinary source URLs with explicit `--dropMissingLegacy`, repaired 1 summary row, and post-apply audit shows 13 tenant-scoped URLs, 13 `ReviewMedia` rows, zero global legacy URLs, zero orphan media, and zero summary mismatches.

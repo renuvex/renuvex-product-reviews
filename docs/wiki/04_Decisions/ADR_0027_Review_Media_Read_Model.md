@@ -67,14 +67,14 @@ Add a normalized media read model while keeping the public API response shape st
 - Keep `Review.images` TEXT and add a trigram/GIN-like text index: still encodes application semantics inside a serialized blob and does not give cleanup or future media widgets a durable media entity.
 - Query `ReviewMedia` relation filters only and skip `Review.hasImages`: normalized, but the current public review list still pages over `Review`; the boolean facet keeps the existing list query simple and indexable.
 - Drop `Review.images` immediately: breaking and unnecessary. Expand/contract should happen only after a later cleanup phase proves no runtime or ops fallback uses the legacy mirror.
-- Move to cursor pagination in the same phase: correct future work, but separable from the media data model and not needed to remove the text-scan filter.
+- Move to cursor pagination in the same phase: correct future work, but separable from the media data model and not needed to remove the text-scan filter. It was later implemented by [[ADR_0028_Review_Cursor_Pagination]].
 
 ## Consequences
 - New write paths that attach or detach review media must keep `Review.hasImages`, `ReviewMedia`, and `ProductReviewSummary.photoReviewCount` consistent.
 - After migration deploy, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>` to populate `ReviewMedia` and repair legacy rows. The script rejects placeholder cloud names so it cannot silently backfill against the wrong trusted tenant policy.
 - If `Review.images` still contains old global `review_images/...` URLs, run `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and then use the copy-first reconciliation flow documented in [[Legacy_Review_Media_Reconciliation]]. Do not expand the trusted-image policy to accept global paths.
 - Monthly Cloudinary fallback cleanup should prefer `ReviewMedia.publicId`; legacy `Review.images` remains only a transition fallback.
-- Cursor/keyset pagination remains a future public API performance phase.
+- Review-list cursor/keyset pagination is now handled by [[ADR_0028_Review_Cursor_Pagination]].
 
 ## Legacy Reconciliation Status
 2026-06-08 initial audit with `--cloudName=dtn7jhhuy` found 30 non-empty legacy `Review.images` rows, 43 total legacy URLs, 3 tenant-scoped trusted URLs already normalized into `ReviewMedia`, and 40 old global `review_images/...` URLs across 27 approved reviews. Duplicate public IDs, orphan `ReviewMedia`, and summary photo-count mismatches were all zero.
