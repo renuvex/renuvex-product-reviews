@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createHash } from 'crypto';
 
 const prismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
@@ -37,6 +38,8 @@ const prismaMock = vi.hoisted(() => ({
     deleteMany: vi.fn(),
   },
   pendingReviewImage: {
+    findMany: vi.fn(),
+    upsert: vi.fn(),
     deleteMany: vi.fn(),
   },
 }));
@@ -129,6 +132,12 @@ function setCloudinaryEnv() {
   delete process.env.CLOUDINARY_CLOUD_NAME;
 }
 
+function cloudinaryResponseSignature(publicId: string, version: string, apiSecret: string) {
+  return createHash('sha1')
+    .update(`public_id=${publicId}&version=${version}${apiSecret}`, 'utf8')
+    .digest('hex');
+}
+
 function validReviewPayload(overrides: Record<string, unknown> = {}) {
   return {
     storeId: 'store-1',
@@ -216,6 +225,7 @@ beforeEach(() => {
   process.env.REVIEW_CURSOR_SECRET = 'unit-test-review-cursor-secret';
   delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   delete process.env.CLOUDINARY_CLOUD_NAME;
+  delete process.env.CLOUDINARY_API_SECRET;
   prismaMock.storeSettings.findUnique.mockReset();
   prismaMock.widgetSettings.findMany.mockReset();
   prismaMock.widgetSettings.findUnique.mockReset();
@@ -238,6 +248,9 @@ beforeEach(() => {
   prismaMock.reviewMedia.updateMany.mockReset();
   prismaMock.reviewMedia.findMany.mockReset();
   prismaMock.reviewMedia.deleteMany.mockReset();
+  prismaMock.pendingReviewImage.findMany.mockReset();
+  prismaMock.pendingReviewImage.findMany.mockResolvedValue([]);
+  prismaMock.pendingReviewImage.upsert.mockReset();
   prismaMock.pendingReviewImage.deleteMany.mockReset();
   prismaMock.$transaction.mockReset();
   afterMock.mockClear();
@@ -400,6 +413,130 @@ describe('/api/public/ratings-by-slug', () => {
   });
 });
 
+describe('/api/public/upload/register', () => {
+  it('stores verified Cloudinary upload metadata on the pending image row', async () => {
+    setCloudinaryEnv();
+    process.env.CLOUDINARY_API_SECRET = 'unit-cloudinary-secret';
+    redisMock.incr.mockResolvedValue(1);
+    prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
+    prismaMock.pendingReviewImage.upsert.mockResolvedValue({});
+    const publicId = 'review_images/stores/store-1/review-a';
+    const version = '1790000000';
+    const { POST } = await import('@/app/api/public/upload/register/route');
+
+    const response = await POST(new Request('https://app.test/api/public/upload/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
+      body: JSON.stringify({
+        storeId: 'store-1',
+        secureUrl: VALID_REVIEW_IMAGE_URL,
+        metadata: {
+          assetId: 'asset-123',
+          publicId,
+          version,
+          resourceType: 'image',
+          format: 'jpg',
+          width: 1200,
+          height: 1600,
+          bytes: 450000,
+          signature: cloudinaryResponseSignature(publicId, version, 'unit-cloudinary-secret'),
+        },
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.pendingReviewImage.upsert).toHaveBeenCalledWith({
+      where: { publicId },
+      update: expect.objectContaining({
+        assetId: 'asset-123',
+        version,
+        resourceType: 'image',
+        format: 'jpg',
+        mimeType: 'image/jpeg',
+        width: 1200,
+        height: 1600,
+        bytes: 450000,
+        metadataSource: 'upload_response',
+        metadataStatus: 'complete',
+        metadataFetchedAt: expect.any(Date),
+      }),
+      create: expect.objectContaining({
+        publicId,
+        storeId: 'store-1',
+        assetId: 'asset-123',
+        metadataStatus: 'complete',
+      }),
+    });
+  });
+
+  it('keeps register backwards compatible when metadata is absent', async () => {
+    setCloudinaryEnv();
+    redisMock.incr.mockResolvedValue(1);
+    prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
+    prismaMock.pendingReviewImage.upsert.mockResolvedValue({});
+    const { POST } = await import('@/app/api/public/upload/register/route');
+
+    const response = await POST(new Request('https://app.test/api/public/upload/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
+      body: JSON.stringify({ storeId: 'store-1', secureUrl: VALID_REVIEW_IMAGE_URL }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.pendingReviewImage.upsert).toHaveBeenCalledWith({
+      where: { publicId: 'review_images/stores/store-1/review-a' },
+      update: {},
+      create: {
+        publicId: 'review_images/stores/store-1/review-a',
+        storeId: 'store-1',
+        ipHash: expect.any(String),
+      },
+    });
+  });
+
+  it('does not trust metadata when the Cloudinary upload signature is invalid', async () => {
+    setCloudinaryEnv();
+    process.env.CLOUDINARY_API_SECRET = 'unit-cloudinary-secret';
+    redisMock.incr.mockResolvedValue(1);
+    prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
+    prismaMock.pendingReviewImage.upsert.mockResolvedValue({});
+    const publicId = 'review_images/stores/store-1/review-a';
+    const { POST } = await import('@/app/api/public/upload/register/route');
+
+    const response = await POST(new Request('https://app.test/api/public/upload/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
+      body: JSON.stringify({
+        storeId: 'store-1',
+        secureUrl: VALID_REVIEW_IMAGE_URL,
+        metadata: {
+          publicId,
+          version: '1790000000',
+          resourceType: 'image',
+          format: 'jpg',
+          width: 1200,
+          height: 1600,
+          bytes: 450000,
+          signature: 'bad-signature',
+        },
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.pendingReviewImage.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      update: expect.objectContaining({
+        metadataSource: 'upload_response',
+        metadataStatus: 'invalid_signature',
+        metadataFetchedAt: expect.any(Date),
+      }),
+      create: expect.objectContaining({
+        publicId,
+        metadataStatus: 'invalid_signature',
+      }),
+    }));
+  });
+});
+
 describe('/api/public/reviews', () => {
   it('rejects invalid JSON review submit bodies before rate limit or storage', async () => {
     const { POST } = await import('@/app/api/public/reviews/route');
@@ -548,8 +685,8 @@ describe('/api/public/reviews', () => {
         merchantReply: null,
         images: JSON.stringify(['https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/legacy.jpg']),
         media: [
-          { url: SECOND_VALID_REVIEW_IMAGE_URL, position: 1 },
-          { url: VALID_REVIEW_IMAGE_URL, position: 0 },
+          { url: SECOND_VALID_REVIEW_IMAGE_URL, position: 1, width: null, height: null, format: null, mimeType: null, bytes: null },
+          { url: VALID_REVIEW_IMAGE_URL, position: 0, width: 1200, height: 1600, format: 'jpg', mimeType: 'image/jpeg', bytes: 450000 },
         ],
         createdAt: new Date('2026-05-28T00:00:00.000Z'),
       },
@@ -571,6 +708,24 @@ describe('/api/public/reviews', () => {
     }));
     expect(prismaMock.review.count).not.toHaveBeenCalled();
     expect(body.data.reviews[0].images).toEqual([VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL]);
+    expect(body.data.reviews[0].media).toEqual([
+      expect.objectContaining({
+        url: VALID_REVIEW_IMAGE_URL,
+        thumbnailUrl: 'https://res.cloudinary.com/renuvex/image/upload/c_fill,g_auto,w_320,h_427,q_auto,f_auto/v1/review_images/stores/store-1/review-a.jpg',
+        position: 0,
+        width: 1200,
+        height: 1600,
+        format: 'jpg',
+        mimeType: 'image/jpeg',
+        bytes: 450000,
+      }),
+      expect.objectContaining({
+        url: SECOND_VALID_REVIEW_IMAGE_URL,
+        position: 1,
+        width: null,
+        height: null,
+      }),
+    ]);
   });
 
   it('applies review GET pagination, sorting, rating, and trusted image filters', async () => {
@@ -978,6 +1133,22 @@ describe('/api/public/reviews', () => {
   it('stores trusted review images and clears consumed pending image records', async () => {
     setCloudinaryEnv();
     setupVerifiedReviewTarget('all');
+    prismaMock.pendingReviewImage.findMany.mockResolvedValue([
+      {
+        publicId: 'review_images/stores/store-1/review-a',
+        assetId: 'asset-a',
+        version: '1790000000',
+        resourceType: 'image',
+        format: 'jpg',
+        mimeType: 'image/jpeg',
+        width: 1200,
+        height: 1600,
+        bytes: 450000,
+        metadataSource: 'upload_response',
+        metadataStatus: 'complete',
+        metadataFetchedAt: new Date('2026-06-08T00:00:00.000Z'),
+      },
+    ]);
 
     const response = await postPublicReview(validReviewPayload({
       images: [VALID_REVIEW_IMAGE_URL, VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL],
@@ -992,6 +1163,31 @@ describe('/api/public/reviews', () => {
         status: 'approved',
       }),
     }));
+    expect(prismaMock.pendingReviewImage.findMany).toHaveBeenCalledWith({
+      where: {
+        publicId: {
+          in: [
+            'review_images/stores/store-1/review-a',
+            'review_images/stores/store-1/review-b',
+          ],
+        },
+        storeId: 'store-1',
+      },
+      select: {
+        publicId: true,
+        assetId: true,
+        version: true,
+        resourceType: true,
+        format: true,
+        mimeType: true,
+        width: true,
+        height: true,
+        bytes: true,
+        metadataSource: true,
+        metadataStatus: true,
+        metadataFetchedAt: true,
+      },
+    });
     expect(prismaMock.reviewMedia.createMany).toHaveBeenCalledWith({
       data: [
         expect.objectContaining({
@@ -1000,6 +1196,17 @@ describe('/api/public/reviews', () => {
           productId: 'product-1',
           url: VALID_REVIEW_IMAGE_URL,
           publicId: 'review_images/stores/store-1/review-a',
+          assetId: 'asset-a',
+          version: '1790000000',
+          resourceType: 'image',
+          format: 'jpg',
+          mimeType: 'image/jpeg',
+          width: 1200,
+          height: 1600,
+          bytes: 450000,
+          metadataSource: 'upload_response',
+          metadataStatus: 'complete',
+          metadataFetchedAt: new Date('2026-06-08T00:00:00.000Z'),
           position: 0,
           visible: true,
         }),

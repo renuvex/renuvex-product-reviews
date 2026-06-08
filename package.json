@@ -28,6 +28,7 @@
     "prisma:studio": "prisma studio",
     "reviews:summaries:rebuild": "node scripts/rebuild-product-review-summaries.mjs",
     "reviews:media:backfill": "node scripts/backfill-review-media.mjs",
+    "reviews:media:metadata:backfill": "node scripts/backfill-review-media-metadata.mjs",
     "reviews:media:audit": "node scripts/audit-legacy-review-media.mjs",
     "reviews:media:reconcile": "node scripts/reconcile-legacy-review-media.mjs",
     "apply:ai-rules": "npx @intellectronica/ruler apply"

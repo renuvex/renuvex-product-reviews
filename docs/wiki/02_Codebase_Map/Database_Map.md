@@ -51,7 +51,7 @@ Postgres (Supabase) accessed via Prisma. Eight models: `AuthToken`, `Review`, `R
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow |
-| `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted review image rows; public photo filters use `Review.hasImages` and media display reads this table before legacy `Review.images` fallback |
+| `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted review image rows with Cloudinary metadata; public photo filters use `Review.hasImages` and media display reads this table before legacy `Review.images` fallback |
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` and non-sensitive `storefrontTheme: Json` sync state |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
@@ -75,6 +75,7 @@ On `ReviewMedia`:
 - unique `publicId` - one Cloudinary asset belongs to one committed review image.
 - unique `[reviewId, position]` plus `[reviewId, position]` index - stable per-review image ordering.
 - `[storeId, productId, visible, createdAt]` - future media-gallery/photo-strip reads and tenant-scoped cleanup/reporting.
+- `[metadataStatus, createdAt]` - metadata repair/backfill scans.
 
 On `Review` media reads:
 - partial `[storeId, productId, createdAt] where status='approved' and hasImages=true` - public photo-review list/photo strip hot path.
@@ -128,7 +129,7 @@ code run together, so a migration must not break the old code.
 - `Review.images` is **legacy TEXT containing `JSON.stringify(string[])`**. New writes keep it as a compatibility mirror; public image display reads `ReviewMedia` first and falls back to the legacy mirror during transition/backfill.
 - `Review.hasImages` is the indexed public photo-review facet. Do not reintroduce `Review.images contains` for public filters.
 - `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`. It owns exact public counts for unfiltered, rating-filtered, photo-filtered, and photo+rating-filtered review list responses.
-- `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>`; the script rejects placeholder cloud names.
+- `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>`; the script rejects placeholder cloud names. If media metadata is missing, run `pnpm reviews:media:metadata:backfill --cloudName=<cloudinaryCloudName>` first as dry-run, then add `--apply` after reviewing the plan.
 - Legacy global Cloudinary paths (`review_images/...` without `stores/<storeId>`) are not trusted tenant media. Audit them with `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and reconcile copy-first with `pnpm reviews:media:reconcile --cloudName=<cloudinaryCloudName> --storeId=<merchantId> --allowLegacyGlobal --apply`. Use `--dropMissingLegacy` only for verified missing source assets. See [[Legacy_Review_Media_Reconciliation]].
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
@@ -150,9 +151,11 @@ code run together, so a migration must not break the old code.
 - [[ADR_0003_Review_Data_Model]]
 - [[ADR_0026_Product_Review_Summary_Read_Model]]
 - [[ADR_0027_Review_Media_Read_Model]]
+- [[ADR_0029_Review_Media_Metadata]]
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-08: Added additive Cloudinary metadata fields to `ReviewMedia` and `PendingReviewImage`; public review responses keep `images` and add structured `media[]`. See [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: Extended `ProductReviewSummary` with `photoRating1Count` ... `photoRating5Count` so `/api/public/reviews` can return exact filtered `totalCount` / `totalPages` without raw `Review.count()` on public reads.
 - 2026-06-08: Applied test-store legacy review media reconciliation. Copied 10 available old global assets, dropped 30 missing source URLs with explicit cleanup, and verified zero remaining global `review_images/...` URLs. See [[Legacy_Review_Media_Reconciliation]].
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` as the normalized media read model for indexed public photo-review filters; `Review.images` remains a legacy mirror. See [[ADR_0027_Review_Media_Read_Model]].

@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-08 - performance | Add review media metadata
+- Summary: Added additive Cloudinary metadata fields to `ReviewMedia` and `PendingReviewImage`. Widget upload/register now forwards Cloudinary upload-response metadata; the server verifies the response signature before staging metadata, and review submit carries pending metadata into committed `ReviewMedia` rows.
+- Public contract: `images: string[]` remains unchanged. `/api/public/reviews` now also returns additive `media[]` entries with URL, thumbnail URL, position, and nullable metadata for future media-heavy UI.
+- Operations: Added dry-run-first `pnpm reviews:media:metadata:backfill` to repair existing media rows from Cloudinary Admin API; no storefront GET path calls Cloudinary.
+- Updated wiki: [[ADR_0029_Review_Media_Metadata]], [[Database_Map]], [[Database_Schema]], [[Backend_API_Map]], [[Widget_Performance]], [[Test_Strategy]], [[Hot_Context]]
+
 ## 2026-06-08 - performance | Remove public review count scan
 - Summary: Extended `ProductReviewSummary` with exact photo+rating buckets and moved `/api/public/reviews` `totalCount` / `totalPages` derivation off raw `Review.count()`.
 - Key source changes: Added `photoRating1Count` ... `photoRating5Count` to the summary schema/migration with an in-migration backfill from approved `Review.hasImages=true` rows, updated `src/lib/review-summary.ts` delta/recompute helpers, refreshed `scripts/rebuild-product-review-summaries.mjs`, and changed `GET /api/public/reviews` to call `filteredReviewTotal(...)`.

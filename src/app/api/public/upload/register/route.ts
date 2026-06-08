@@ -9,6 +9,7 @@ import {
   isTrustedReviewImageUrl,
   normalizeReviewImageStoreId,
 } from '@/lib/review-images';
+import { normalizeCloudinaryUploadMetadata } from '@/lib/review-media-metadata';
 
 // Registry endpoint for review-image uploads.
 //
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 }));
     }
 
-    const payload = body as { storeId?: unknown; secureUrl?: unknown };
+    const payload = body as { storeId?: unknown; secureUrl?: unknown; metadata?: unknown };
     const storeId = normalizeReviewImageStoreId(payload?.storeId);
     if (!storeId) {
       return withCors(NextResponse.json({ error: 'Gecersiz magaza.' }, { status: 400 }));
@@ -84,10 +85,16 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Public ID çözümlenemedi.' }, { status: 400 }));
     }
 
+    const metadata = normalizeCloudinaryUploadMetadata(payload.metadata, {
+      expectedPublicId: publicId,
+      apiSecret: process.env.CLOUDINARY_API_SECRET,
+    });
+    const metadataData = metadata ?? {};
+
     await prisma.pendingReviewImage.upsert({
       where: { publicId },
-      update: {}, // do not reset createdAt on retry — keeps cleanup deterministic
-      create: { publicId, storeId, ipHash: hashIp(ip) },
+      update: metadataData,
+      create: { publicId, storeId, ipHash: hashIp(ip), ...metadataData },
     });
 
     return withCors(NextResponse.json({ ok: true }));

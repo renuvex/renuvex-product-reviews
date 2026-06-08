@@ -107,6 +107,16 @@ Normalized review image rows. `Review.images` remains as a legacy mirror, but ne
 | `productId` | String | Denormalized ikas product id for product media queries |
 | `url` | String `@db.VarChar(2048)` | Trusted Cloudinary URL |
 | `publicId` | String `@unique @db.VarChar(512)` | Cloudinary public id; cleanup source of truth |
+| `assetId` | String? `@db.VarChar(128)` | Cloudinary asset id when available |
+| `version` | String? `@db.VarChar(64)` | Cloudinary asset version from upload/Admin API |
+| `resourceType` | String `@default("image") @db.VarChar(32)` | Currently image-only |
+| `format` | String? `@db.VarChar(32)` | Normalized image format (`jpg`, `png`, `webp`, `gif`, `avif`) |
+| `mimeType` | String? `@db.VarChar(128)` | Derived MIME type for the format |
+| `width` / `height` | Int? | Intrinsic image dimensions |
+| `bytes` | Int? | Cloudinary-reported asset size |
+| `metadataSource` | String `@default("unknown") @db.VarChar(64)` | `upload_response`, `admin_api`, or `unknown` |
+| `metadataStatus` | String `@default("pending") @db.VarChar(64)` | `complete`, `partial`, `pending`, `invalid_signature`, `missing_asset` |
+| `metadataFetchedAt` | DateTime? | Last metadata capture/repair time |
 | `position` | Int | Stable per-review display order |
 | `visible` | Boolean | Mirrors review public visibility; pending/rejected media stays hidden |
 | `createdAt` | DateTime | |
@@ -115,12 +125,14 @@ Indexes:
 - unique `[reviewId, position]`
 - `[reviewId, position]`
 - `[storeId, productId, visible, createdAt]`
+- `[metadataStatus, createdAt]` - metadata repair/backfill scans
 
 Maintained by:
 - `/api/public/reviews` POST for new trusted review images
 - `/api/admin/reviews` PUT when status transitions change public visibility
 - `Review` cascade on DELETE
 - `scripts/backfill-review-media.mjs` for legacy/import repair
+- `scripts/backfill-review-media-metadata.mjs` for Cloudinary metadata repair
 
 ### `ProductReviewSummary`
 Product-level aggregate read model for public storefront rating surfaces. Raw `Review` rows remain the source of truth.
@@ -213,18 +225,20 @@ Registry of Cloudinary uploads not yet attached to a `Review`. See [[ADR_0012_Pe
 |---|---|---|
 | `publicId` | String `@id` | Cloudinary `public_id` derived from the upload's `secure_url` |
 | `storeId` | String? | Merchant/tenant that owns the pending upload; nullable only for pre-D3 rows |
+| media metadata fields | mixed | Signed Cloudinary upload response metadata staged until review submit (`assetId`, `version`, `format`, dimensions, bytes, status/source timestamps) |
 | `createdAt` | DateTime `@default(now())` | Used by the cleanup cron's age filter |
 | `ipHash` | String? | sha256(ip).slice(0,32) — optional abuse signal, not user identity |
 
 Indexes:
 - `[createdAt]` — cleanup cron walks this
 - `[storeId, createdAt]` — tenant-scoped pending upload lookup / future tenant cleanup
+- `[metadataStatus, createdAt]` - metadata diagnostics / repair
 
 Lifecycle:
 1. Widget POSTs `{storeId}` to `/api/public/upload/sign`; the endpoint verifies `StoreSettings` and signs `review_images/stores/<storeId>`.
-2. Widget uploads to the signed Cloudinary folder, then POSTs `{storeId, secureUrl}` to `/api/public/upload/register`.
-3. The register endpoint validates the URL against the tenant-scoped trusted policy and upserts a `PendingReviewImage` row with `storeId`.
-4. `/api/public/reviews` POST runs the review insert and `deleteMany({ publicId: { in: ... }, storeId })` inside one `prisma.$transaction`.
+2. Widget uploads to the signed Cloudinary folder, then POSTs `{storeId, secureUrl, metadata?}` to `/api/public/upload/register`.
+3. The register endpoint validates the URL against the tenant-scoped trusted policy, verifies signed Cloudinary upload-response metadata when present, and upserts a `PendingReviewImage` row with `storeId` and metadata status.
+4. `/api/public/reviews` POST reads pending metadata, creates `ReviewMedia`, inserts the review, and deletes `PendingReviewImage` rows inside one `prisma.$transaction`.
 5. `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily; `/api/admin/cleanup-pending-uploads` remains an explicit maintenance endpoint for the same helper. It deletes rows where `createdAt < now - 24h` plus their Cloudinary assets.
 6. Monthly `/api/admin/cleanup-images` is the safety-net fallback for uploads that bypassed the registry — it now paginates Cloudinary via `next_cursor` and only deletes assets older than 30 days.
 
@@ -239,6 +253,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 ## Notes
 - **JSON columns** (`settings`, `storefrontScripts`, `storefrontTheme`) are not validated at the DB layer. All validation must live in app code. Don't trust their shape after manual DB edits.
 - `Review.images` is now a legacy mirror. The normalized media model is `ReviewMedia`, and public photo filters should use `Review.hasImages`.
+- `ReviewMedia` metadata is additive. Public `images: string[]` remains the compatibility contract; `media[]` is an additive structured field for future media-heavy UI.
 - No soft-delete. `prisma.review.delete` is hard delete.
 
 ## Related Source Files
@@ -252,10 +267,12 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[ADR_0003_Review_Data_Model]]
 - [[ADR_0012_Pending_Upload_Registry]]
 - [[ADR_0027_Review_Media_Read_Model]]
+- [[ADR_0029_Review_Media_Metadata]]
 - [[Auth_And_Installation_Flow]]
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-06-08: Added Cloudinary image metadata columns to `ReviewMedia` and `PendingReviewImage`; upload/register now stages verified upload-response metadata and review submit carries it into committed media rows. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: Added `photoRating1Count` ... `photoRating5Count` to `ProductReviewSummary` so public review-list filtered totals come from the read model instead of raw `Review.count()`.
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` for indexed public photo-review filters and normalized trusted media rows. Related: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-08: Added partial review cursor indexes and moved widget load-more to cursor/keyset pagination while preserving legacy page reads. Related: [[ADR_0028_Review_Cursor_Pagination]].

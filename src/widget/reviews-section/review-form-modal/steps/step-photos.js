@@ -318,7 +318,21 @@ export function createStepPhotos(state, opts) {
               fetchWithTimeout(API_BASE + '/api/public/upload/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ storeId: PUBLIC_API_KEY, secureUrl: upData.secure_url }),
+                body: JSON.stringify({
+                  storeId: PUBLIC_API_KEY,
+                  secureUrl: upData.secure_url,
+                  metadata: {
+                    assetId: upData.asset_id,
+                    publicId: upData.public_id,
+                    version: upData.version,
+                    resourceType: upData.resource_type,
+                    format: upData.format,
+                    width: upData.width,
+                    height: upData.height,
+                    bytes: upData.bytes,
+                    signature: upData.signature,
+                  },
+                }),
               }).catch(function () { /* sessiz */ });
             } catch (_) { /* sessiz */ }
           } else {

@@ -47,20 +47,32 @@ model Review {
 }
 
 model ReviewMedia {
-  id        String   @id @default(uuid())
-  reviewId  String
-  storeId   String
-  productId String
-  url       String   @db.VarChar(2048)
-  publicId  String   @unique @db.VarChar(512)
-  position  Int
-  visible   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  id                String   @id @default(uuid())
+  reviewId          String
+  storeId           String
+  productId         String
+  url               String   @db.VarChar(2048)
+  publicId          String   @unique @db.VarChar(512)
+  assetId           String?  @db.VarChar(128)
+  version           String?  @db.VarChar(64)
+  resourceType      String   @default("image") @db.VarChar(32)
+  format            String?  @db.VarChar(32)
+  mimeType          String?  @db.VarChar(128)
+  width             Int?
+  height            Int?
+  bytes             Int?
+  metadataSource    String   @default("unknown") @db.VarChar(64)
+  metadataStatus    String   @default("pending") @db.VarChar(64)
+  metadataFetchedAt DateTime?
+  position          Int
+  visible           Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  review            Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, position])
   @@index([reviewId, position])
   @@index([storeId, productId, visible, createdAt])
+  @@index([metadataStatus, createdAt])
 }
 
 model ProductReviewSummary {
@@ -132,11 +144,23 @@ model ProductSnapshot {
 // rows older than the retention window and deletes the orphaned Cloudinary
 // asset. See ADR_0012 for the rationale.
 model PendingReviewImage {
-  publicId  String   @id
-  storeId   String?
-  createdAt DateTime @default(now())
-  ipHash    String?
+  publicId          String   @id
+  storeId           String?
+  assetId           String?  @db.VarChar(128)
+  version           String?  @db.VarChar(64)
+  resourceType      String   @default("image") @db.VarChar(32)
+  format            String?  @db.VarChar(32)
+  mimeType          String?  @db.VarChar(128)
+  width             Int?
+  height            Int?
+  bytes             Int?
+  metadataSource    String   @default("unknown") @db.VarChar(64)
+  metadataStatus    String   @default("pending") @db.VarChar(64)
+  metadataFetchedAt DateTime?
+  createdAt         DateTime @default(now())
+  ipHash            String?
 
   @@index([createdAt])
   @@index([storeId, createdAt])
+  @@index([metadataStatus, createdAt])
 }

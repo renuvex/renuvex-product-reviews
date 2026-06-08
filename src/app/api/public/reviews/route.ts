@@ -8,7 +8,8 @@ import {
   getReviewImagePublicId,
   sanitizeReviewImageUrls,
 } from '@/lib/review-images';
-import { buildReviewMediaCreateManyData, publicImagesFromMediaOrLegacy, type PublicReviewMediaRow } from '@/lib/review-media';
+import { buildReviewMediaCreateManyData, publicMediaFromMediaOrLegacy, type PublicReviewMediaRow } from '@/lib/review-media';
+import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 import { applyReviewSummaryVisibilityChange, filteredReviewTotal, summaryStats } from '@/lib/review-summary';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
@@ -30,7 +31,15 @@ const PUBLIC_REVIEW_SELECT = {
   media: {
     where: { visible: true },
     orderBy: { position: 'asc' as const },
-    select: { url: true, position: true },
+    select: {
+      url: true,
+      position: true,
+      width: true,
+      height: true,
+      format: true,
+      mimeType: true,
+      bytes: true,
+    },
   },
   createdAt: true,
 } as const;
@@ -45,6 +54,21 @@ type PublicReviewRow = {
   images: string | null;
   media?: PublicReviewMediaRow[];
   createdAt: Date;
+};
+
+type PendingReviewImageMetadataRow = {
+  publicId: string;
+  assetId: string | null;
+  version: string | null;
+  resourceType: string | null;
+  format: string | null;
+  mimeType: string | null;
+  width: number | null;
+  height: number | null;
+  bytes: number | null;
+  metadataSource: string | null;
+  metadataStatus: string | null;
+  metadataFetchedAt: Date | null;
 };
 
 type ReviewOrderByKey = 'newest' | 'highest' | 'lowest';
@@ -278,6 +302,7 @@ async function verifyReviewTarget(storeId: string, productId: string) {
 }
 
 function formatPublicReview(review: PublicReviewRow, cloudName: string | null, storeId: string) {
+  const media = publicMediaFromMediaOrLegacy(review.media, review.images, cloudName, storeId);
   return {
     id: review.id,
     rating: review.rating,
@@ -285,9 +310,30 @@ function formatPublicReview(review: PublicReviewRow, cloudName: string | null, s
     comment: review.comment,
     author: maskAuthor(review.author),
     merchantReply: review.merchantReply,
-    images: publicImagesFromMediaOrLegacy(review.media, review.images, cloudName, storeId),
+    images: media.map((item) => item.url),
+    media,
     createdAt: review.createdAt.toISOString(),
   };
+}
+
+function pendingMetadataMap(rows: PendingReviewImageMetadataRow[]): Map<string, ReviewMediaMetadataWrite> {
+  const metadataByPublicId = new Map<string, ReviewMediaMetadataWrite>();
+  for (const row of rows) {
+    metadataByPublicId.set(row.publicId, {
+      assetId: row.assetId ?? undefined,
+      version: row.version ?? undefined,
+      resourceType: row.resourceType ?? undefined,
+      format: row.format ?? undefined,
+      mimeType: row.mimeType ?? undefined,
+      width: row.width ?? undefined,
+      height: row.height ?? undefined,
+      bytes: row.bytes ?? undefined,
+      metadataSource: row.metadataSource ?? undefined,
+      metadataStatus: row.metadataStatus ?? undefined,
+      metadataFetchedAt: row.metadataFetchedAt ?? undefined,
+    });
+  }
+  return metadataByPublicId;
 }
 
 export async function OPTIONS() {
@@ -488,6 +534,26 @@ export async function POST(request: Request) {
         },
       });
 
+      const pendingMetadata = committedPublicIds.length > 0
+        ? await tx.pendingReviewImage.findMany({
+            where: { publicId: { in: committedPublicIds }, storeId: storeIdText },
+            select: {
+              publicId: true,
+              assetId: true,
+              version: true,
+              resourceType: true,
+              format: true,
+              mimeType: true,
+              width: true,
+              height: true,
+              bytes: true,
+              metadataSource: true,
+              metadataStatus: true,
+              metadataFetchedAt: true,
+            },
+          })
+        : [];
+
       const mediaRows = buildReviewMediaCreateManyData({
         urls: imageResult.urls,
         cloudName,
@@ -495,6 +561,7 @@ export async function POST(request: Request) {
         productId: productIdText,
         reviewId: created.id,
         visible: initialStatus === 'approved',
+        metadataByPublicId: pendingMetadataMap(pendingMetadata),
       });
       if (mediaRows.length > 0) {
         await tx.reviewMedia.createMany({

@@ -15,6 +15,7 @@ related:
   - "[[Widget_Architecture]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
+  - "[[ADR_0029_Review_Media_Metadata]]"
   - "[[Bug_Cloud_Name_Silent_Image_Filter]]"
   - "[[Bug_Review_Image_Error_Fallback]]"
 ---
@@ -33,7 +34,7 @@ related:
 - **Layout uyumu:** Card layout'ta thumbnail aspect 1:1, list/gallery'de 3:4 — `--renuvex-pr-photo-thumb-aspect` CSS değişkeniyle render anında set edilir.
 
 ## Veri akışı
-2026-06-07 media read-model note: the public request shape is unchanged (`hasImages=true&limit=15&orderBy=newest`), but the backend now filters via indexed `Review.hasImages` and formats the returned `images` array from `ReviewMedia` first with legacy `Review.images` fallback. See [[ADR_0027_Review_Media_Read_Model]].
+2026-06-07 media read-model note: the public request shape is unchanged (`hasImages=true&limit=15&orderBy=newest`), but the backend now filters via indexed `Review.hasImages` and formats the returned `images` array from `ReviewMedia` first with legacy `Review.images` fallback. 2026-06-08 metadata note: `/api/public/reviews` may also include additive `media[]` metadata, but photo strip visuals continue to use the same `images` contract. See [[ADR_0027_Review_Media_Read_Model]] and [[ADR_0029_Review_Media_Metadata]].
 1. `bootstrap.js` explicit review mount'u doğruladıktan sonra `reviews-api.js` üzerinden ürün sayfasında iki paralel istek atar:
    - Ana liste: `/api/public/reviews?orderBy=newest&page=1`
    - Photo strip: `/api/public/reviews?hasImages=true&orderBy=newest&limit=15`
@@ -111,11 +112,13 @@ Her bir kritik bulgu için ayrı bug detay sayfası açıldı — kanıt, senary
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
 - [[ADR_0027_Review_Media_Read_Model]]
+- [[ADR_0029_Review_Media_Metadata]]
 - [[Bug_Review_Detail_Lightbox_Risks]]
 - [[Bug_Cloud_Name_Silent_Image_Filter]]
 - [[Bug_Review_Image_Error_Fallback]]
 
 ## Change Log
+- 2026-06-08: Public review responses may include additive `media[]` metadata entries, but photo strip request shape and render behavior stay unchanged. Related ADR: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-07: Photo strip keeps the same public request contract, but backend photo filtering now uses indexed `Review.hasImages` and response images prefer `ReviewMedia`. Related ADR: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-01: Fixed [[Bug_Photo_Strip_Thumbnail_Size_Contract]]. The top photo strip thumbnail width now always follows `thumbnailSize`; list/gallery review item photos remain tied to widget `size`.
 - 2026-05-27: ADR_0024 follow-up moved `fetchPhotoStripReviews` and `PHOTO_STRIP_LIMIT` from `bootstrap.js` to `reviews-api.js`. `bootstrap.js` now only triggers the initial fetch after the explicit reviews mount exists; badge-only PDPs do not call photoStrip.

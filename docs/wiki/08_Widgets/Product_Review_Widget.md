@@ -17,6 +17,7 @@ related:
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0007_Photo_Strip_Cap_And_Rotation]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
+  - "[[ADR_0029_Review_Media_Metadata]]"
   - "[[Bug_Review_Wizard_Focus_Trap_Accessibility]]"
   - "[[Bug_Review_Wizard_Photo_Upload_Lifecycle]]"
 source_files:
@@ -80,7 +81,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Sort: `newest` / `highest` / `lowest`.
 - Filter: by rating (1..5), by `hasImages=true`. Backend uses indexed `Review.hasImages`; it must not scan legacy `Review.images` text.
 - Bar chart in summary uses filter-independent `ratingCounts` returned by `/api/public/reviews`. Aggregate fields (`allCount`, `avgRating`, `ratingCounts`) and exact `totalCount` / `totalPages` for rating/photo filters come from the backend `ProductReviewSummary` read model; only the visible review rows come from `Review`. See [[ADR_0026_Product_Review_Summary_Read_Model]].
-- Review response `images` is still a string array for widget compatibility. The API now reads normalized `ReviewMedia` rows first and falls back to legacy `Review.images` during migration/backfill. See [[ADR_0027_Review_Media_Read_Model]].
+- Review response `images` is still a string array for widget compatibility. The API now reads normalized `ReviewMedia` rows first and falls back to legacy `Review.images` during migration/backfill. Additive `media[]` entries expose thumbnail URL and nullable metadata for future media-heavy layouts; current widget visuals still use the existing image contract. See [[ADR_0027_Review_Media_Read_Model]] and [[ADR_0029_Review_Media_Metadata]].
 - Load-more: the first page uses the legacy `page=1` request and stores `data.nextCursor`; subsequent "Daha Fazla Goster" requests use `cursor` when available and fall back to `page + 1` only for backwards compatibility. Sort/filter/retry/product changes reset the cursor. See [[ADR_0028_Review_Cursor_Pagination]].
 
 ## Photo strip
@@ -113,12 +114,14 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[ADR_0007_Photo_Strip_Cap_And_Rotation]]
 - [[ADR_0026_Product_Review_Summary_Read_Model]]
 - [[ADR_0027_Review_Media_Read_Model]]
+- [[ADR_0029_Review_Media_Metadata]]
 - [[Bug_Product_Widget_Missing_Auto_Mount]]
 - [[Bug_Review_Wizard_Focus_Trap_Accessibility]]
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
 - 2026-06-08: Exact public `totalCount` / `totalPages` for rating/photo filters now come from `ProductReviewSummary` buckets, including `photoRating*Count`; the widget response shape is unchanged and visible rows still come from `Review`.
+- 2026-06-08: Public review responses now include additive `media[]` metadata entries after signed Cloudinary upload-response verification. `images: string[]` remains the widget compatibility contract. Related ADR: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-07: Public `hasImages=true` filtering now uses indexed `Review.hasImages`, and response images read `ReviewMedia` first with legacy fallback. Widget response shape is unchanged. Related ADR: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-08: Review list load-more now uses cursor/keyset pagination when the API returns `nextCursor`; legacy page fallback remains. Related ADR: [[ADR_0028_Review_Cursor_Pagination]].
 - 2026-06-06: Public summary aggregates (`allCount`, `avgRating`, `ratingCounts`) now read from `ProductReviewSummary`; review rows, filter/sort/load-more, and response shape remain unchanged. Related ADR: [[ADR_0026_Product_Review_Summary_Read_Model]].

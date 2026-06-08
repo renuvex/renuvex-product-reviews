@@ -16,6 +16,7 @@ related:
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
   - "[[ADR_0012_Pending_Upload_Registry]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
+  - "[[ADR_0029_Review_Media_Metadata]]"
   - "[[Database_Schema]]"
   - "[[Backend_API_Map]]"
 source_files:
@@ -75,6 +76,7 @@ Add a normalized media read model while keeping the public API response shape st
 - If `Review.images` still contains old global `review_images/...` URLs, run `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and then use the copy-first reconciliation flow documented in [[Legacy_Review_Media_Reconciliation]]. Do not expand the trusted-image policy to accept global paths.
 - Monthly Cloudinary fallback cleanup should prefer `ReviewMedia.publicId`; legacy `Review.images` remains only a transition fallback.
 - Review-list cursor/keyset pagination is now handled by [[ADR_0028_Review_Cursor_Pagination]].
+- Review media dimensions, format, bytes, thumbnail URL exposure, and signed upload-response verification are additive follow-up work covered by [[ADR_0029_Review_Media_Metadata]].
 
 ## Legacy Reconciliation Status
 2026-06-08 initial audit with `--cloudName=dtn7jhhuy` found 30 non-empty legacy `Review.images` rows, 43 total legacy URLs, 3 tenant-scoped trusted URLs already normalized into `ReviewMedia`, and 40 old global `review_images/...` URLs across 27 approved reviews. Duplicate public IDs, orphan `ReviewMedia`, and summary photo-count mismatches were all zero.

@@ -484,7 +484,18 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ secure_url: uploadedUrl }),
+      body: JSON.stringify({
+        secure_url: uploadedUrl,
+        public_id: `review_images/stores/${PUBLIC_KEY}/submit-photo`,
+        version: 1790000001,
+        resource_type: 'image',
+        format: 'jpg',
+        width: 1200,
+        height: 1600,
+        bytes: 450000,
+        asset_id: 'ci-submit-asset',
+        signature: 'ci-upload-response-signature',
+      }),
     });
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/upload/register**`, async (route) => {
@@ -522,7 +533,21 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-thanks')).toBe(true);
 
-  expect(registerBodies).toEqual([{ storeId: PUBLIC_KEY, secureUrl: uploadedUrl }]);
+  expect(registerBodies).toEqual([{
+    storeId: PUBLIC_KEY,
+    secureUrl: uploadedUrl,
+    metadata: {
+      assetId: 'ci-submit-asset',
+      publicId: `review_images/stores/${PUBLIC_KEY}/submit-photo`,
+      version: 1790000001,
+      resourceType: 'image',
+      format: 'jpg',
+      width: 1200,
+      height: 1600,
+      bytes: 450000,
+      signature: 'ci-upload-response-signature',
+    },
+  }]);
   expect(submittedBodies).toHaveLength(1);
   expect(submittedBodies[0]).toMatchObject({
     storeId: PUBLIC_KEY,
@@ -584,7 +609,18 @@ test('closing wizard during a pending photo upload revokes local blob previews',
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ secure_url: uploadedUrl }),
+      body: JSON.stringify({
+        secure_url: uploadedUrl,
+        public_id: `review_images/stores/${PUBLIC_KEY}/pending-close`,
+        version: 1790000002,
+        resource_type: 'image',
+        format: 'jpg',
+        width: 1200,
+        height: 1600,
+        bytes: 450000,
+        asset_id: 'ci-pending-close-asset',
+        signature: 'ci-upload-response-signature',
+      }),
     });
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/upload/register**`, async (route) => {
@@ -649,6 +685,15 @@ test('removing one pending photo does not abort later selected uploads', async (
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify({
         secure_url: `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/multi-${callIndex}.jpg`,
+        public_id: `review_images/stores/${PUBLIC_KEY}/multi-${callIndex}`,
+        version: 1790000100 + callIndex,
+        resource_type: 'image',
+        format: 'jpg',
+        width: 1200,
+        height: 1600,
+        bytes: 450000 + callIndex,
+        asset_id: `ci-multi-${callIndex}-asset`,
+        signature: 'ci-upload-response-signature',
       }),
     });
   });

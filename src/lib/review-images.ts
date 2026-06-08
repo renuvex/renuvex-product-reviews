@@ -2,6 +2,7 @@ const REVIEW_IMAGE_ROOT_FOLDER = 'review_images';
 const REVIEW_IMAGE_TENANT_FOLDER = 'stores';
 const REVIEW_IMAGE_MAX_COUNT = 3;
 const REVIEW_IMAGE_ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']);
+const REVIEW_IMAGE_THUMBNAIL_TRANSFORMATION = 'c_fill,g_auto,w_320,h_427,q_auto,f_auto';
 
 type SanitizeResult =
   | { ok: true; urls: string[] }
@@ -103,4 +104,13 @@ export function getReviewImagePublicId(url: string, cloudName = getConfiguredClo
   if (!isTrustedReviewImageUrl(url, cloudName, storeId)) return null;
   const parts = new URL(url).pathname.split('/').filter(Boolean);
   return parts.slice(4).join('/').replace(/\.[^.]+$/, '');
+}
+
+export function buildReviewImageThumbnailUrl(url: string, cloudName = getConfiguredCloudinaryCloudName(), storeId?: unknown): string | null {
+  if (!isTrustedReviewImageUrl(url, cloudName, storeId)) return null;
+  const parsed = new URL(url);
+  const parts = parsed.pathname.split('/').filter(Boolean);
+  const versionAndPublicPath = parts.slice(3).join('/');
+  parsed.pathname = `/${parts[0]}/image/upload/${REVIEW_IMAGE_THUMBNAIL_TRANSFORMATION}/${versionAndPublicPath}`;
+  return parsed.toString();
 }
