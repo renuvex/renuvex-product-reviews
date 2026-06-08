@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { cleanupPendingUploads } from '@/lib/cleanup-pending-uploads';
 import { reconcileStorefrontScripts } from '@/lib/reconcile-storefront-scripts';
 import { reconcileStorefrontThemes } from '@/lib/storefront-theme-sync';
+import { runReviewMediaMetadataBackfill } from '@/lib/review-media-metadata-backfill';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -29,6 +31,7 @@ export async function GET(request: Request) {
   let pendingUploads = null;
   let storefrontScripts = null;
   let storefrontThemes = null;
+  let reviewMediaMetadata = null;
   const runFullMaintenance = shouldRunFullMaintenance(request);
 
   try {
@@ -55,6 +58,14 @@ export async function GET(request: Request) {
       console.error('[daily-maintenance] reconcile-storefront-scripts failed:', error);
       errors.push({ task: 'reconcile-storefront-scripts', error: message });
     }
+
+    try {
+      reviewMediaMetadata = await runReviewMediaMetadataBackfill(prisma);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      console.error('[daily-maintenance] review-media-metadata-backfill failed:', error);
+      errors.push({ task: 'review-media-metadata-backfill', error: message });
+    }
   }
 
   return NextResponse.json(
@@ -64,6 +75,7 @@ export async function GET(request: Request) {
         storefrontThemes,
         pendingUploads,
         storefrontScripts,
+        reviewMediaMetadata,
         errors,
       },
     },

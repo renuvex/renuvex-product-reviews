@@ -28,6 +28,9 @@ source_files:
   - "src/app/api/public/reviews/route.ts"
   - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"
   - "scripts/backfill-review-media-metadata.mjs"
+  - "src/lib/review-media-metadata-backfill.ts"
+  - "src/app/api/admin/daily-maintenance/route.ts"
+  - "tests/unit/review-media-metadata-backfill.test.ts"
 ---
 
 # ADR_0029 - Review Media Metadata
@@ -47,7 +50,8 @@ Cloudinary upload responses include signed asset metadata. Public read paths sho
 - `/api/public/upload/register` remains backwards compatible with `{storeId, secureUrl}`. If `metadata` is present, the server verifies the Cloudinary upload response signature before persisting dimensions/format/bytes. The verifier accepts Cloudinary's documented SHA-1 default and SHA-256 response-signature variants.
 - `/api/public/reviews` POST copies trusted pending metadata into `ReviewMedia` inside the same transaction that creates `Review`, writes the legacy `Review.images` mirror, deletes pending rows, and updates the summary read model.
 - Public `GET /api/public/reviews` keeps `images: string[]` and adds additive `media[]` objects containing URL, thumbnail URL, position, and nullable metadata. Existing widget consumers can ignore the new field.
-- `scripts/backfill-review-media-metadata.mjs` repairs existing `ReviewMedia` rows from Cloudinary Admin API. It is dry-run by default and requires `--apply` for writes.
+- `scripts/backfill-review-media-metadata.mjs` repairs existing `ReviewMedia` rows from Cloudinary Admin API. It is dry-run by default and requires `--apply` for writes (on-demand/local ops).
+- Existing/legacy rows are also healed **durably and automatically in production**: the daily-maintenance cron calls `runReviewMediaMetadataBackfill` (`src/lib/review-media-metadata-backfill.ts`), which backfills a bounded batch (default 200/run) of non-`complete` rows via the Cloudinary Admin API using the production credentials (same config as `cleanup-images`). This removes the dependency on a manual local script + valid local key. The core loop is dependency-injected and unit-tested; transport/auth errors (e.g. a stale api_key returning 401) are counted but never corrupt a row, and the cron treats `complete`/`missing_asset` as terminal so absent assets are not re-fetched indefinitely.
 
 ## Reasoning
 - Metadata belongs in the application read model, not in public widget runtime calls to Cloudinary. This keeps storefront latency and Cloudinary Admin API rate exposure out of hot reads.
@@ -64,7 +68,8 @@ Cloudinary upload responses include signed asset metadata. Public read paths sho
 
 ## Consequences
 - New image writes should produce `ReviewMedia.metadataStatus='complete'` when the signed upload response contains complete image metadata.
-- Existing rows can be repaired with `pnpm reviews:media:metadata:backfill --cloudName=<cloudinaryCloudName> --apply`.
+- Existing rows are repaired automatically by the daily-maintenance cron (durable, self-healing, production Cloudinary creds); the manual `pnpm reviews:media:metadata:backfill --cloudName=<cloudinaryCloudName> --apply` remains for on-demand/local ops. Both paths share the same allowlists + integer bounds + `admin_api` provenance.
+- The cron backfill's first production run is also the definitive proof of production Cloudinary api_key health: success advances rows to `complete`; a stale key surfaces as a counted error in the `daily-maintenance` `errors[]` response with zero row corruption.
 - `Review.images` remains a legacy mirror; do not remove it until a later expand/contract cleanup proves no runtime or ops fallback still depends on it.
 - Cleanup hardening, AI moderation, video support, and design consumption of metadata remain separate phases.
 
@@ -78,3 +83,5 @@ Cloudinary upload responses include signed asset metadata. Public read paths sho
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
 - [src/widget/reviews-section/review-form-modal/steps/step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js)
 - [scripts/backfill-review-media-metadata.mjs](scripts/backfill-review-media-metadata.mjs)
+- [src/lib/review-media-metadata-backfill.ts](src/lib/review-media-metadata-backfill.ts)
+- [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts)

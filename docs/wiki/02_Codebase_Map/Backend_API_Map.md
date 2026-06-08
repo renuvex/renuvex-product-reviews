@@ -54,7 +54,7 @@ Three groups of API routes:
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
 | POST `/api/admin/storefront-theme/sync` | [route.ts](src/app/api/admin/storefront-theme/sync/route.ts) | Lightweight active theme sync from ikas `listStorefront`; no script create/update |
 | POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and backfill `ProductSnapshot` from ikas `listProduct` |
-| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Vercel cron: daily batch storefront theme verification plus pending upload cleanup + storefront script reconciliation; route also supports lightweight sub-daily theme verification if the deploy plan supports it |
+| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Vercel cron: daily batch storefront theme verification plus pending upload cleanup + storefront script reconciliation + bounded durable `ReviewMedia` metadata backfill (Cloudinary Admin API, self-healing; `src/lib/review-media-metadata-backfill.ts`); route also supports lightweight sub-daily theme verification if the deploy plan supports it |
 | GET `/api/admin/reconcile-storefront-scripts` (Bearer CRON) | [route.ts](src/app/api/admin/reconcile-storefront-scripts/route.ts) | Explicit non-destructive storefront script reconciliation for existing merchants |
 | GET `/api/admin/cleanup-pending-uploads` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts) | Explicit PendingReviewImage cleanup using the same helper as daily maintenance |
 | GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Monthly Cloudinary `review_images/*` fallback scan → delete orphans |
@@ -151,6 +151,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-08: `/api/admin/daily-maintenance` now runs a bounded, durable `ReviewMedia` metadata backfill (`src/lib/review-media-metadata-backfill.ts`) from the Cloudinary Admin API, so existing/legacy rows self-heal in production without a manual local script run. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: `/api/public/upload/register` accepts optional signed Cloudinary upload-response metadata; `/api/public/reviews` POST carries pending metadata into `ReviewMedia`, and GET keeps `images` while adding structured `media[]`. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: `/api/public/reviews` now derives exact filtered `totalCount` / `totalPages` from `ProductReviewSummary` and no longer calls raw `Review.count()` on the public read path.
 - 2026-06-08: Added and applied legacy review media reconciliation operations for the test store. Public API response shape is unchanged; old global Cloudinary paths are copied into tenant-scoped paths, while missing source URLs require explicit cleanup instead of being trusted.
