@@ -21,6 +21,7 @@ source_files:
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
   - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
+  - "prisma/migrations/20260608170000_add_review_summary_photo_rating_counts/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
@@ -51,7 +52,7 @@ Postgres (Supabase) accessed via Prisma. Eight models: `AuthToken`, `Review`, `R
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow |
 | `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted review image rows; public photo filters use `Review.hasImages` and media display reads this table before legacy `Review.images` fallback |
-| `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, and summary distribution |
+| `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` and non-sensitive `storefrontTheme: Json` sync state |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
 | `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
@@ -68,7 +69,7 @@ On `Review`:
 The migrations show iterative tuning: redundant indexes have been cleaned up more than once. Before adding a new index, scan `prisma/migrations/*` for past attempts.
 
 On `ProductReviewSummary`:
-- unique `[storeId, productId]` — public badge, structured-data, `/api/public/ratings`, and review summary distribution read this aggregate row instead of recomputing from raw `Review.groupBy()` on every storefront request.
+- unique `[storeId, productId]` - public badge, structured-data, `/api/public/ratings`, review summary distribution, and `/api/public/reviews` `totalCount` / `totalPages` read this aggregate row instead of recomputing from raw `Review.groupBy()` or `Review.count()` on every storefront request.
 
 On `ReviewMedia`:
 - unique `publicId` - one Cloudinary asset belongs to one committed review image.
@@ -121,11 +122,12 @@ code run together, so a migration must not break the old code.
 - `add_review_title`, `add_review_comment_length_limit`, `add_merchant_reply_length_limit` — review schema growth
 
 - `add_product_review_summary` — product-level aggregate read model for public rating/summary reads
+- `add_review_summary_photo_rating_counts` - exact `hasImages=true&rating=N` count buckets on the existing product summary read model
 
 ## Notes
 - `Review.images` is **legacy TEXT containing `JSON.stringify(string[])`**. New writes keep it as a compatibility mirror; public image display reads `ReviewMedia` first and falls back to the legacy mirror during transition/backfill.
 - `Review.hasImages` is the indexed public photo-review facet. Do not reintroduce `Review.images contains` for public filters.
-- `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`.
+- `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`. It owns exact public counts for unfiltered, rating-filtered, photo-filtered, and photo+rating-filtered review list responses.
 - `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>`; the script rejects placeholder cloud names.
 - Legacy global Cloudinary paths (`review_images/...` without `stores/<storeId>`) are not trusted tenant media. Audit them with `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and reconcile copy-first with `pnpm reviews:media:reconcile --cloudName=<cloudinaryCloudName> --storeId=<merchantId> --allowLegacyGlobal --apply`. Use `--dropMissingLegacy` only for verified missing source assets. See [[Legacy_Review_Media_Reconciliation]].
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
@@ -151,6 +153,7 @@ code run together, so a migration must not break the old code.
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-08: Extended `ProductReviewSummary` with `photoRating1Count` ... `photoRating5Count` so `/api/public/reviews` can return exact filtered `totalCount` / `totalPages` without raw `Review.count()` on public reads.
 - 2026-06-08: Applied test-store legacy review media reconciliation. Copied 10 available old global assets, dropped 30 missing source URLs with explicit cleanup, and verified zero remaining global `review_images/...` URLs. See [[Legacy_Review_Media_Reconciliation]].
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` as the normalized media read model for indexed public photo-review filters; `Review.images` remains a legacy mirror. See [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-08: Added review-list cursor indexes for keyset pagination while keeping legacy `page/limit` compatibility. See [[ADR_0028_Review_Cursor_Pagination]].

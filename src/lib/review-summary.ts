@@ -32,6 +32,11 @@ type SummaryDelta = {
   rating4Count: number;
   rating5Count: number;
   photoReviewCount: number;
+  photoRating1Count: number;
+  photoRating2Count: number;
+  photoRating3Count: number;
+  photoRating4Count: number;
+  photoRating5Count: number;
 };
 
 const ZERO_RATING_COUNTS: [number, number, number, number, number] = [0, 0, 0, 0, 0];
@@ -45,6 +50,18 @@ function ratingBucketKey(rating: number): keyof Pick<
   if (rating === 3) return 'rating3Count';
   if (rating === 4) return 'rating4Count';
   if (rating === 5) return 'rating5Count';
+  return null;
+}
+
+function photoRatingBucketKey(rating: number): keyof Pick<
+  SummaryDelta,
+  'photoRating1Count' | 'photoRating2Count' | 'photoRating3Count' | 'photoRating4Count' | 'photoRating5Count'
+> | null {
+  if (rating === 1) return 'photoRating1Count';
+  if (rating === 2) return 'photoRating2Count';
+  if (rating === 3) return 'photoRating3Count';
+  if (rating === 4) return 'photoRating4Count';
+  if (rating === 5) return 'photoRating5Count';
   return null;
 }
 
@@ -65,6 +82,11 @@ function emptyDelta(storeId: string, productId: string): SummaryDelta {
     rating4Count: 0,
     rating5Count: 0,
     photoReviewCount: 0,
+    photoRating1Count: 0,
+    photoRating2Count: 0,
+    photoRating3Count: 0,
+    photoRating4Count: 0,
+    photoRating5Count: 0,
   };
 }
 
@@ -75,7 +97,11 @@ function addReviewToDelta(delta: SummaryDelta, review: ReviewSummaryReview, dire
   delta.approvedCount += direction;
   delta.ratingSum += review.rating * direction;
   delta[bucketKey] += direction;
-  if (reviewHasTrustedImages(review)) delta.photoReviewCount += direction;
+  if (reviewHasTrustedImages(review)) {
+    const photoBucketKey = photoRatingBucketKey(review.rating);
+    delta.photoReviewCount += direction;
+    if (photoBucketKey) delta[photoBucketKey] += direction;
+  }
 }
 
 function deltaKey(storeId: string, productId: string) {
@@ -91,7 +117,12 @@ function isNoopDelta(delta: SummaryDelta) {
     delta.rating3Count === 0 &&
     delta.rating4Count === 0 &&
     delta.rating5Count === 0 &&
-    delta.photoReviewCount === 0
+    delta.photoReviewCount === 0 &&
+    delta.photoRating1Count === 0 &&
+    delta.photoRating2Count === 0 &&
+    delta.photoRating3Count === 0 &&
+    delta.photoRating4Count === 0 &&
+    delta.photoRating5Count === 0
   );
 }
 
@@ -104,7 +135,12 @@ function hasNegativeCounts(summary: ProductReviewSummary) {
     summary.rating3Count < 0 ||
     summary.rating4Count < 0 ||
     summary.rating5Count < 0 ||
-    summary.photoReviewCount < 0
+    summary.photoReviewCount < 0 ||
+    summary.photoRating1Count < 0 ||
+    summary.photoRating2Count < 0 ||
+    summary.photoRating3Count < 0 ||
+    summary.photoRating4Count < 0 ||
+    summary.photoRating5Count < 0
   );
 }
 
@@ -117,7 +153,12 @@ function hasNegativeDelta(delta: SummaryDelta) {
     delta.rating3Count < 0 ||
     delta.rating4Count < 0 ||
     delta.rating5Count < 0 ||
-    delta.photoReviewCount < 0
+    delta.photoReviewCount < 0 ||
+    delta.photoRating1Count < 0 ||
+    delta.photoRating2Count < 0 ||
+    delta.photoRating3Count < 0 ||
+    delta.photoRating4Count < 0 ||
+    delta.photoRating5Count < 0
   );
 }
 
@@ -131,6 +172,11 @@ function summaryUpdateDataFromDelta(delta: SummaryDelta): Prisma.ProductReviewSu
     rating4Count: { increment: delta.rating4Count },
     rating5Count: { increment: delta.rating5Count },
     photoReviewCount: { increment: delta.photoReviewCount },
+    photoRating1Count: { increment: delta.photoRating1Count },
+    photoRating2Count: { increment: delta.photoRating2Count },
+    photoRating3Count: { increment: delta.photoRating3Count },
+    photoRating4Count: { increment: delta.photoRating4Count },
+    photoRating5Count: { increment: delta.photoRating5Count },
   };
 }
 
@@ -149,6 +195,11 @@ function summaryCreateDataFromDelta(delta: SummaryDelta): Prisma.ProductReviewSu
     rating4Count: Math.max(0, delta.rating4Count),
     rating5Count: Math.max(0, delta.rating5Count),
     photoReviewCount: Math.max(0, delta.photoReviewCount),
+    photoRating1Count: Math.max(0, delta.photoRating1Count),
+    photoRating2Count: Math.max(0, delta.photoRating2Count),
+    photoRating3Count: Math.max(0, delta.photoRating3Count),
+    photoRating4Count: Math.max(0, delta.photoRating4Count),
+    photoRating5Count: Math.max(0, delta.photoRating5Count),
   };
 }
 
@@ -260,9 +311,45 @@ export async function recomputeProductReviewSummary(client: SummaryClient, store
       rating4Count: Math.max(0, exact.rating4Count),
       rating5Count: Math.max(0, exact.rating5Count),
       photoReviewCount: Math.max(0, exact.photoReviewCount),
+      photoRating1Count: Math.max(0, exact.photoRating1Count),
+      photoRating2Count: Math.max(0, exact.photoRating2Count),
+      photoRating3Count: Math.max(0, exact.photoRating3Count),
+      photoRating4Count: Math.max(0, exact.photoRating4Count),
+      photoRating5Count: Math.max(0, exact.photoRating5Count),
       lastReviewAt,
     },
   });
+}
+
+export function filteredReviewTotal(
+  summary: ProductReviewSummary | null | undefined,
+  filters: { ratingFilter?: number | null; hasImagesFilter?: boolean },
+): number {
+  if (!summary || summary.approvedCount <= 0) return 0;
+  const ratingFilter = filters.ratingFilter ?? null;
+  const hasImagesFilter = filters.hasImagesFilter === true;
+
+  if (hasImagesFilter && ratingFilter) {
+    if (ratingFilter === 1) return summary.photoRating1Count;
+    if (ratingFilter === 2) return summary.photoRating2Count;
+    if (ratingFilter === 3) return summary.photoRating3Count;
+    if (ratingFilter === 4) return summary.photoRating4Count;
+    if (ratingFilter === 5) return summary.photoRating5Count;
+    return 0;
+  }
+
+  if (hasImagesFilter) return summary.photoReviewCount;
+
+  if (ratingFilter) {
+    if (ratingFilter === 1) return summary.rating1Count;
+    if (ratingFilter === 2) return summary.rating2Count;
+    if (ratingFilter === 3) return summary.rating3Count;
+    if (ratingFilter === 4) return summary.rating4Count;
+    if (ratingFilter === 5) return summary.rating5Count;
+    return 0;
+  }
+
+  return summary.approvedCount;
 }
 
 export function summaryStats(summary: ProductReviewSummary | null | undefined): ProductReviewSummaryStats {

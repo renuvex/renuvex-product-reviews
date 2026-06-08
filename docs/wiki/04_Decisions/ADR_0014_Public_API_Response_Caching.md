@@ -42,8 +42,10 @@ endpoints, called on essentially every storefront page load:
 - `GET /api/public/ratings-by-slug` — bulk rating summaries for a list of product
   slugs (listing / search / carousel pages).
 
-Each handler queries Supabase Postgres directly. `reviews` runs three Prisma
-queries per request (`findMany`, `count`, `groupBy`). Each response sets
+Each handler queries Supabase Postgres directly. Historically, `reviews` ran
+three Prisma queries per request (`findMany`, `count`, `groupBy`); the current
+read-model path keeps review rows on `findMany` while public aggregates and exact
+filtered totals come from `ProductReviewSummary`. Each response sets
 `Cache-Control: s-maxage=60, stale-while-revalidate=300`, so the Vercel CDN edge
 caches the rendered response.
 

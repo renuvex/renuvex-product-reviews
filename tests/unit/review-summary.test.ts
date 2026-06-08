@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   applyReviewSummaryVisibilityChange,
+  filteredReviewTotal,
   publicRatingFromSummary,
   recomputeProductReviewSummary,
   summaryStats,
@@ -21,6 +22,11 @@ function summary(overrides: Record<string, unknown> = {}) {
     rating4Count: 1,
     rating5Count: 1,
     photoReviewCount: 1,
+    photoRating1Count: 0,
+    photoRating2Count: 0,
+    photoRating3Count: 0,
+    photoRating4Count: 0,
+    photoRating5Count: 1,
     lastReviewAt: new Date('2026-05-28T00:00:00.000Z'),
     createdAt: new Date('2026-05-28T00:00:00.000Z'),
     updatedAt: new Date('2026-05-28T00:00:00.000Z'),
@@ -137,10 +143,12 @@ describe('review summary read model', () => {
       create: expect.objectContaining({
         approvedCount: 1,
         photoReviewCount: 1,
+        photoRating5Count: 1,
       }),
       update: expect.objectContaining({
         approvedCount: { increment: 1 },
         photoReviewCount: { increment: 1 },
+        photoRating5Count: { increment: 1 },
       }),
     });
   });
@@ -168,6 +176,7 @@ describe('review summary read model', () => {
         rating4Count: 1,
         rating5Count: 1,
         photoReviewCount: 1,
+        photoRating5Count: 1,
       }),
       update: expect.objectContaining({
         approvedCount: 2,
@@ -176,8 +185,32 @@ describe('review summary read model', () => {
         rating4Count: 1,
         rating5Count: 1,
         photoReviewCount: 1,
+        photoRating5Count: 1,
       }),
     });
+  });
+
+  it('derives filtered public totals from the summary row', () => {
+    const row = summary({
+      approvedCount: 10,
+      rating1Count: 1,
+      rating2Count: 2,
+      rating3Count: 3,
+      rating4Count: 1,
+      rating5Count: 3,
+      photoReviewCount: 4,
+      photoRating1Count: 1,
+      photoRating2Count: 0,
+      photoRating3Count: 1,
+      photoRating4Count: 0,
+      photoRating5Count: 2,
+    });
+
+    expect(filteredReviewTotal(row, {})).toBe(10);
+    expect(filteredReviewTotal(row, { ratingFilter: 3 })).toBe(3);
+    expect(filteredReviewTotal(row, { hasImagesFilter: true })).toBe(4);
+    expect(filteredReviewTotal(row, { ratingFilter: 5, hasImagesFilter: true })).toBe(2);
+    expect(filteredReviewTotal(null, { ratingFilter: 5, hasImagesFilter: true })).toBe(0);
   });
 
   it('formats public stats without exposing empty summaries', () => {

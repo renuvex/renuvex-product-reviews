@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-06
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - adr
@@ -41,8 +41,9 @@ The widget already separates visual surfaces (`rating-badge`, `reviews-main`, `s
 Add `ProductReviewSummary` as a per `(storeId, productId)` aggregate read model:
 
 - `Review` remains the source of truth.
-- Public badge, structured-data, and review summary distribution read product aggregates from `ProductReviewSummary`.
-- Public review list rows still come from `Review`; filtered `totalCount` remains a scoped `Review.count()` in this phase.
+- Public badge, structured-data, review summary distribution, and review-list `totalCount` / `totalPages` read product aggregates from `ProductReviewSummary`.
+- Public review list rows still come from `Review`; filtered counts are derived from summary buckets instead of a scoped `Review.count()`.
+- The summary stores photo+rating buckets (`photoRating1Count` ... `photoRating5Count`) so `hasImages=true&rating=N` stays exact without scanning raw reviews.
 - Review submit, admin status transitions, and approved review delete update the summary in the same transaction as the raw review change.
 - First-summary writes use `upsert` rather than `findUnique -> create`, so concurrent first approvals for the same product do not fail on the `(storeId, productId)` unique key.
 - A repeatable repair script can rebuild summaries from approved review rows.
@@ -63,6 +64,7 @@ Add `ProductReviewSummary` as a per `(storeId, productId)` aggregate read model:
 - New write paths that change review public visibility must call the summary helper in the same transaction.
 - A summary repair script is part of operations and should be run after suspicious imports/manual DB edits.
 - `photoReviewCount` exists for media surfaces. `ReviewMedia` and indexed `Review.hasImages` were added later in [[ADR_0027_Review_Media_Read_Model]], replacing string-based image filtering.
+- 2026-06-08 follow-up: `photoRating1Count` ... `photoRating5Count` extend the same read model so `/api/public/reviews` can return exact filtered `totalCount` / `totalPages` for rating, photo, and rating+photo filters without calling `Review.count()` on the public hot path.
 - Review-list cursor/keyset pagination is handled separately by [[ADR_0028_Review_Cursor_Pagination]]; this aggregate ADR does not own the visible row pagination contract.
 
 ## Related Source Files

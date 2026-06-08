@@ -71,6 +71,11 @@ function emptySummary(storeId, productId) {
     rating4Count: 0,
     rating5Count: 0,
     photoReviewCount: 0,
+    photoRating1Count: 0,
+    photoRating2Count: 0,
+    photoRating3Count: 0,
+    photoRating4Count: 0,
+    photoRating5Count: 0,
     lastReviewAt: null,
   };
 }
@@ -80,14 +85,18 @@ function addReview(summary, review, cloudName) {
   summary.approvedCount += 1;
   summary.ratingSum += review.rating;
   summary[`rating${review.rating}Count`] += 1;
-  if (parseTrustedImages(review.images, cloudName, summary.storeId).length > 0) summary.photoReviewCount += 1;
+  const hasTrustedImages = review.hasImages === true || parseTrustedImages(review.images, cloudName, summary.storeId).length > 0;
+  if (hasTrustedImages) {
+    summary.photoReviewCount += 1;
+    summary[`photoRating${review.rating}Count`] += 1;
+  }
   if (!summary.lastReviewAt || review.createdAt > summary.lastReviewAt) summary.lastReviewAt = review.createdAt;
 }
 
 async function recomputeOne(storeId, productId, cloudName) {
   const reviews = await prisma.review.findMany({
     where: { storeId, productId, status: 'approved' },
-    select: { rating: true, images: true, createdAt: true },
+    select: { rating: true, images: true, hasImages: true, createdAt: true },
   });
   const summary = emptySummary(storeId, productId);
   for (const review of reviews) addReview(summary, review, cloudName);

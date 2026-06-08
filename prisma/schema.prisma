@@ -23,19 +23,19 @@ model AuthToken {
 }
 
 model Review {
-  id            String   @id @default(uuid())
+  id            String        @id @default(uuid())
   storeId       String
   productId     String
   rating        Int
-  comment       String?  @db.VarChar(2000)
+  comment       String?       @db.VarChar(2000)
   author        String
   email         String?
-  status        String   @default("pending")
-  merchantReply String?  @db.VarChar(2000)
+  status        String        @default("pending")
+  merchantReply String?       @db.VarChar(2000)
   images        String?
-  hasImages     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  hasImages     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   productName   String?
   slug          String
   title         String?
@@ -64,21 +64,26 @@ model ReviewMedia {
 }
 
 model ProductReviewSummary {
-  id               String    @id @default(uuid())
-  storeId          String
-  productId        String
-  approvedCount    Int       @default(0)
-  ratingSum        Int       @default(0)
-  averageRating    Float     @default(0)
-  rating1Count     Int       @default(0)
-  rating2Count     Int       @default(0)
-  rating3Count     Int       @default(0)
-  rating4Count     Int       @default(0)
-  rating5Count     Int       @default(0)
-  photoReviewCount Int       @default(0)
-  lastReviewAt     DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  storeId           String
+  productId         String
+  approvedCount     Int       @default(0)
+  ratingSum         Int       @default(0)
+  averageRating     Float     @default(0)
+  rating1Count      Int       @default(0)
+  rating2Count      Int       @default(0)
+  rating3Count      Int       @default(0)
+  rating4Count      Int       @default(0)
+  rating5Count      Int       @default(0)
+  photoReviewCount  Int       @default(0)
+  photoRating1Count Int       @default(0)
+  photoRating2Count Int       @default(0)
+  photoRating3Count Int       @default(0)
+  photoRating4Count Int       @default(0)
+  photoRating5Count Int       @default(0)
+  lastReviewAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([storeId, productId])
 }

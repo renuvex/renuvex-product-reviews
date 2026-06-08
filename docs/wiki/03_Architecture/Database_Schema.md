@@ -23,6 +23,7 @@ source_files:
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
   - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
+  - "prisma/migrations/20260608170000_add_review_summary_photo_rating_counts/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
 ---
@@ -91,7 +92,7 @@ in migration `20260518130000_drop_redundant_review_indexes`.
 
 Common queries:
 - Public: `findMany({ storeId, productId, status: 'approved' })` + deterministic ordering + filters. Legacy `page/limit` is supported; widget load-more uses `nextCursor` keyset pagination when available.
-- Public listing/PDP badges and summary distribution: `ProductReviewSummary` by `(storeId, productId)`
+- Public listing/PDP badges, summary distribution, and exact review-list totals: `ProductReviewSummary` by `(storeId, productId)`
 - Public slug fallback: resolve current `ProductSnapshot` slug to product id, then read `ProductReviewSummary`; legacy direct slug read remains last resort for unresolved slugs
 - Admin: `findMany({ storeId, status? })` ordered by `createdAt desc`
 
@@ -133,7 +134,8 @@ Product-level aggregate read model for public storefront rating surfaces. Raw `R
 | `ratingSum` | Int | Sum of approved ratings; used to format average |
 | `averageRating` | Float | Stored derived value for read-model completeness |
 | `rating1Count` ... `rating5Count` | Int | Bar chart/rating distribution buckets |
-| `photoReviewCount` | Int | Approved review count where `Review.hasImages=true`; repaired by `pnpm reviews:media:backfill` when legacy rows are normalized |
+| `photoReviewCount` | Int | Approved review count where `Review.hasImages=true`; repaired by summary/media rebuild scripts when legacy rows are normalized |
+| `photoRating1Count` ... `photoRating5Count` | Int | Exact approved photo-review buckets by rating; powers `hasImages=true&rating=N` `totalCount` without raw `Review.count()` |
 | `lastReviewAt` | DateTime? | Latest approved review timestamp |
 | `createdAt`, `updatedAt` | DateTime | |
 
@@ -145,12 +147,13 @@ Maintained by:
 - `/api/admin/reviews` PUT when status transitions change public visibility
 - `/api/admin/reviews` DELETE when an approved review is hard-deleted
 - `scripts/rebuild-product-review-summaries.mjs` for repair/backfill
-- `scripts/backfill-review-media.mjs` repairs only `photoReviewCount` after media normalization
+- `scripts/backfill-review-media.mjs` repairs photo count state after media normalization; `scripts/rebuild-product-review-summaries.mjs` fully rebuilds all summary buckets
+- Migration `20260608170000_add_review_summary_photo_rating_counts` backfills existing summary rows from approved `Review.hasImages=true` rows; rebuild remains the operational repair tool for manual/import drift.
 
 Read by:
 - `/api/public/ratings`
 - `/api/public/ratings-by-slug` after `ProductSnapshot` resolution
-- `/api/public/reviews` for unfiltered `allCount`, `avgRating`, and `ratingCounts`
+- `/api/public/reviews` for unfiltered `allCount`, `avgRating`, `ratingCounts`, and exact `totalCount` / `totalPages` across rating/photo filters
 
 ### `StoreSettings`
 Per-merchant config. One row per merchant, created on OAuth callback.
@@ -253,6 +256,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-06-08: Added `photoRating1Count` ... `photoRating5Count` to `ProductReviewSummary` so public review-list filtered totals come from the read model instead of raw `Review.count()`.
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` for indexed public photo-review filters and normalized trusted media rows. Related: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-08: Added partial review cursor indexes and moved widget load-more to cursor/keyset pagination while preserving legacy page reads. Related: [[ADR_0028_Review_Cursor_Pagination]].
 - 2026-06-06: Added `ProductReviewSummary` as the product-level aggregate read model for public rating badge, structured-data, and review summary distribution reads. See [[ADR_0026_Product_Review_Summary_Read_Model]].

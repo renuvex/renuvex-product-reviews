@@ -58,8 +58,10 @@ prisma/*.db
 
 # AI/IDE tool configs & instructions
 .cursor/
+.agents/
 .mcp.json
 .ruler/
+skills-lock.json
 CLAUDE.md
 AGENTS.md
 .referance.md

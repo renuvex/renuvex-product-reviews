@@ -75,6 +75,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-05-31 clean PDP routing: `PRODUCT` `PAGE_VIEW` no longer loads the `listing-badges-*` entry chunk on clean PDPs. The listing surface accepts page events only for listing-like page types (`INDEX`, `CATEGORY`, `BRAND`, `SEARCH`), while observer and fallback probes ignore widget-owned hash/query links such as the PDP badge's `#renuvex-reviews` anchor. Listing event and product-card fallback paths remain covered by network smoke.
 - 2026-06-01 `PAGE_VIEW` semantic dedupe: same-page duplicate `PAGE_VIEW` events inside 800 ms are still suppressed, but distinct fast transitions are no longer delayed until the 2-second listing fallback. The network smoke suite covers both outcomes.
 - 2026-06-07 media read path: widget request/response shape is unchanged, but public `hasImages=true` reads now use indexed `Review.hasImages` and images are formatted from normalized `ReviewMedia` first. This is a backend read-path optimization for photo strip / photo filter scale, not a widget bundle change.
+- 2026-06-08 filtered count read path: widget request/response shape is unchanged, but `/api/public/reviews` now returns exact `totalCount` / `totalPages` from `ProductReviewSummary` buckets instead of raw `Review.count()`, including rating+photo filter combinations. This is a backend read-path optimization, not a widget bundle change.
 
 ## 2026-05-15 Live Observations
 
@@ -100,6 +101,7 @@ Yotpo/Protein Ocean reference:
 - **Image transformations**: prefer Cloudinary URL params (`f_auto,q_auto,w_400`) over post-load resizing.
 - **Media read model**: future media-heavy widgets should read `ReviewMedia` or a dedicated read model, not parse `Review.images` text.
 - **Review list pagination**: load-more should use `nextCursor` / cursor requests. Keep legacy `page` only for compatibility or explicit numbered pagination UI.
+- **Review list counts**: exact totals should come from `ProductReviewSummary` buckets. Do not add public `Review.count()` fan-out for new storefront filters without first extending the read model.
 - **Module split**: current Phase 2 work uses one classic ikas-compatible loader plus lazy ESM modules. New major surfaces such as Q&A, media gallery upgrades, review summaries, analytics, and schema should follow the same loader/registry pattern.
 
 ## Anti-patterns to avoid

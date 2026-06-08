@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - widget
@@ -79,7 +79,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Pagination: 10 per page (server-side); `limit` query param clamped 1-30 for ad-hoc fetches (photo strip uses 15).
 - Sort: `newest` / `highest` / `lowest`.
 - Filter: by rating (1..5), by `hasImages=true`. Backend uses indexed `Review.hasImages`; it must not scan legacy `Review.images` text.
-- Bar chart in summary uses filter-independent `ratingCounts` returned by `/api/public/reviews`. Those aggregate fields (`allCount`, `avgRating`, `ratingCounts`) come from the backend `ProductReviewSummary` read model; the visible review list and filtered `totalCount` still come from `Review` rows. See [[ADR_0026_Product_Review_Summary_Read_Model]].
+- Bar chart in summary uses filter-independent `ratingCounts` returned by `/api/public/reviews`. Aggregate fields (`allCount`, `avgRating`, `ratingCounts`) and exact `totalCount` / `totalPages` for rating/photo filters come from the backend `ProductReviewSummary` read model; only the visible review rows come from `Review`. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - Review response `images` is still a string array for widget compatibility. The API now reads normalized `ReviewMedia` rows first and falls back to legacy `Review.images` during migration/backfill. See [[ADR_0027_Review_Media_Read_Model]].
 - Load-more: the first page uses the legacy `page=1` request and stores `data.nextCursor`; subsequent "Daha Fazla Goster" requests use `cursor` when available and fall back to `page + 1` only for backwards compatibility. Sort/filter/retry/product changes reset the cursor. See [[ADR_0028_Review_Cursor_Pagination]].
 
@@ -118,6 +118,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-08: Exact public `totalCount` / `totalPages` for rating/photo filters now come from `ProductReviewSummary` buckets, including `photoRating*Count`; the widget response shape is unchanged and visible rows still come from `Review`.
 - 2026-06-07: Public `hasImages=true` filtering now uses indexed `Review.hasImages`, and response images read `ReviewMedia` first with legacy fallback. Widget response shape is unchanged. Related ADR: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-08: Review list load-more now uses cursor/keyset pagination when the API returns `nextCursor`; legacy page fallback remains. Related ADR: [[ADR_0028_Review_Cursor_Pagination]].
 - 2026-06-06: Public summary aggregates (`allCount`, `avgRating`, `ratingCounts`) now read from `ProductReviewSummary`; review rows, filter/sort/load-more, and response shape remain unchanged. Related ADR: [[ADR_0026_Product_Review_Summary_Read_Model]].

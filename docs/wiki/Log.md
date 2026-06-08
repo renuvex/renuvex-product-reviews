@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-08 - performance | Remove public review count scan
+- Summary: Extended `ProductReviewSummary` with exact photo+rating buckets and moved `/api/public/reviews` `totalCount` / `totalPages` derivation off raw `Review.count()`.
+- Key source changes: Added `photoRating1Count` ... `photoRating5Count` to the summary schema/migration with an in-migration backfill from approved `Review.hasImages=true` rows, updated `src/lib/review-summary.ts` delta/recompute helpers, refreshed `scripts/rebuild-product-review-summaries.mjs`, and changed `GET /api/public/reviews` to call `filteredReviewTotal(...)`.
+- Verification target: unit/API tests pin filtered totals from summary buckets and assert the public review GET path does not call `prisma.review.count`; summary tests pin photo+rating deltas, exact recompute, and helper derivation.
+- Updated wiki: [[ADR_0026_Product_Review_Summary_Read_Model]], [[Backend_API_Map]], [[Database_Map]], [[Database_Schema]], [[Caching_And_Performance]], [[Widget_Performance]], [[Test_Strategy]], [[Hot_Context]]
+
 ## 2026-06-08 - security | Sign public review cursors
 - Summary: Hardened `GET /api/public/reviews` cursor pagination by wrapping cursor payloads in an HMAC-SHA256 signed `{ p, s }` envelope. Cursor values remain opaque public bookmarks, but clients can no longer fabricate or mutate them.
 - Key source changes: `src/app/api/public/reviews/route.ts` signs generated `nextCursor` values with server-only `REVIEW_CURSOR_SECRET`, rejects tampered/unsigned cursors with `400`, and keeps the existing query-context mismatch guard. Public response shape and widget load-more behavior stay unchanged.

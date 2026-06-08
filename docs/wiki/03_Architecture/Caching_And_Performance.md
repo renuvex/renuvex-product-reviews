@@ -50,6 +50,7 @@ Default header value: `s-maxage=60, stale-while-revalidate=300`.
 2026-06-06 update: public rating badge, structured-data, and review summary distribution values are now backed by `ProductReviewSummary`; the `/api/public/reviews` list rows still come from `Review`.
 2026-06-07 update: public `hasImages=true` reads now use indexed `Review.hasImages`, and review image display reads normalized `ReviewMedia` before falling back to legacy `Review.images`.
 2026-06-08 update: public review list load-more now uses `nextCursor` keyset pagination when available. Legacy `page/limit` remains for compatibility, but cursor requests do not use Prisma `skip`.
+2026-06-08 update: public review-list `totalCount` / `totalPages` now come from `ProductReviewSummary` buckets, including `photoRating*Count` for `hasImages=true&rating=N`; the public hot path no longer calls raw `Review.count()`.
 - 60s fresh window
 - 300s SWR — stale responses served while revalidation runs in the background
 
@@ -96,7 +97,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - Listing badges: primary product-id path covered by `[storeId, productId, status]`; legacy slug fallback covered by `[storeId, slug, status]`.
 - Admin filtered list: covered by `[storeId, status]`.
 
-`ProductReviewSummary` owns the hot aggregate read path for `/api/public/ratings`, resolved `/api/public/ratings-by-slug`, and unfiltered review summary distribution. Future high-read widgets should add explicit read models instead of public fan-out over raw review aggregates.
+`ProductReviewSummary` owns the hot aggregate read path for `/api/public/ratings`, resolved `/api/public/ratings-by-slug`, unfiltered review summary distribution, and exact review-list totals across rating/photo filters. Future high-read widgets should add explicit read models instead of public fan-out over raw review aggregates.
 `ReviewMedia` owns normalized review image rows, while `Review.hasImages` owns the hot photo-review filter. Future media-heavy widgets should read structured media rows rather than parsing legacy `Review.images`.
 `GET /api/public/reviews` owns row pagination. New infinite-list or load-more consumers should use `nextCursor`; keep `page/limit` only for compatibility or future numbered pagination UI.
 
@@ -144,9 +145,10 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-06-08: Public review-list exact `totalCount` / `totalPages` moved from raw `Review.count()` to `ProductReviewSummary` buckets, preserving response shape while removing the remaining aggregate scan from the public read path.
 - 2026-06-07: Public photo-review filtering moved from `Review.images` text matching to indexed `Review.hasImages`; normalized image rows live in `ReviewMedia`. See [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-08: Public review list load-more moved from offset-only pagination to cursor/keyset pagination while preserving page compatibility. See [[ADR_0028_Review_Cursor_Pagination]].
-- 2026-06-06: Public rating badge, structured-data, and unfiltered review summary aggregates moved to `ProductReviewSummary`; list rows and filtered counts still use `Review`. Future high-read widgets should define explicit read models before adding public fan-out.
+- 2026-06-06: Public rating badge, structured-data, and unfiltered review summary aggregates moved to `ProductReviewSummary`; 2026-06-08 extended it to exact filtered review-list counts. List rows still use `Review`. Future high-read widgets should define explicit read models before adding public fan-out.
 - 2026-06-02: Changed the stable storefront loader and stable runtime shim cache headers from `max-age=300` to `max-age=0, must-revalidate`; content-hashed runtime/chunk assets remain one-year immutable. This keeps widget bugfix deploy propagation immediate on reload without giving up immutable cache performance for heavy assets.
 - 2026-05-18: Reduced widget-side stale settings tolerance from 7 days to 24 hours. Transient settings outages still have a same-tab fallback, but merchant changes cannot remain hidden behind a week-long stale cache.
 - 2026-05-17: Runtime versioning completed: production builds emit a content-hashed `runtime-*.js`, `widget.js` imports that direct path, and stable `runtime.js` remains a revalidated compatibility shim for older cached loaders. Related: [[ADR_0013_Modular_Widget_Loader_Architecture]] Phase 3.

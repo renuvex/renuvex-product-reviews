@@ -9,7 +9,7 @@ import {
   sanitizeReviewImageUrls,
 } from '@/lib/review-images';
 import { buildReviewMediaCreateManyData, publicImagesFromMediaOrLegacy, type PublicReviewMediaRow } from '@/lib/review-media';
-import { applyReviewSummaryVisibilityChange, summaryStats } from '@/lib/review-summary';
+import { applyReviewSummaryVisibilityChange, filteredReviewTotal, summaryStats } from '@/lib/review-summary';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -343,13 +343,13 @@ export async function GET(req: Request) {
       ? prisma.review.findMany({ where: listWhere, orderBy, take: limit + 1, select: PUBLIC_REVIEW_SELECT })
       : prisma.review.findMany({ where: listWhere, orderBy, take: limit, skip, select: PUBLIC_REVIEW_SELECT });
 
-    const [reviewsWithExtra, totalCount, summary] = await Promise.all([
+    const [reviewsWithExtra, summary] = await Promise.all([
       reviewsPromise,
-      prisma.review.count({ where: baseWhere }),
       prisma.productReviewSummary.findUnique({ where: { storeId_productId: summaryWhere } }),
     ]);
 
     const { allCount, ratingCounts, avgRating } = summaryStats(summary);
+    const totalCount = filteredReviewTotal(summary, { ratingFilter, hasImagesFilter });
 
     const reviews = cursor ? reviewsWithExtra.slice(0, limit) : reviewsWithExtra;
     const hasMore = cursor ? reviewsWithExtra.length > limit : page * limit < totalCount;

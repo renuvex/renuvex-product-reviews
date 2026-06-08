@@ -156,6 +156,11 @@ function summaryRow(overrides: Record<string, unknown> = {}) {
     rating4Count: 0,
     rating5Count: 1,
     photoReviewCount: 0,
+    photoRating1Count: 0,
+    photoRating2Count: 0,
+    photoRating3Count: 0,
+    photoRating4Count: 0,
+    photoRating5Count: 0,
     lastReviewAt: new Date('2026-05-28T00:00:00.000Z'),
     createdAt: new Date('2026-05-28T00:00:00.000Z'),
     updatedAt: new Date('2026-05-28T00:00:00.000Z'),
@@ -493,7 +498,6 @@ describe('/api/public/reviews', () => {
         createdAt: new Date('2026-05-28T00:00:00.000Z'),
       },
     ]);
-    prismaMock.review.count.mockResolvedValue(1);
     prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow());
     const { GET } = await import('@/app/api/public/reviews/route');
 
@@ -515,6 +519,7 @@ describe('/api/public/reviews', () => {
       where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
     });
     expect(prismaMock.review.groupBy).not.toHaveBeenCalled();
+    expect(prismaMock.review.count).not.toHaveBeenCalled();
     expect(body.data).toEqual(expect.objectContaining({
       allCount: 1,
       totalCount: 1,
@@ -549,7 +554,6 @@ describe('/api/public/reviews', () => {
         createdAt: new Date('2026-05-28T00:00:00.000Z'),
       },
     ]);
-    prismaMock.review.count.mockResolvedValue(1);
     prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ photoReviewCount: 1 }));
     const { GET } = await import('@/app/api/public/reviews/route');
 
@@ -565,13 +569,13 @@ describe('/api/public/reviews', () => {
         }),
       }),
     }));
+    expect(prismaMock.review.count).not.toHaveBeenCalled();
     expect(body.data.reviews[0].images).toEqual([VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL]);
   });
 
   it('applies review GET pagination, sorting, rating, and trusted image filters', async () => {
     setCloudinaryEnv();
     prismaMock.review.findMany.mockResolvedValue([]);
-    prismaMock.review.count.mockResolvedValue(0);
     prismaMock.productReviewSummary.findUnique.mockResolvedValue(null);
     const { GET } = await import('@/app/api/public/reviews/route');
 
@@ -592,6 +596,7 @@ describe('/api/public/reviews', () => {
       take: 30,
       skip: 30,
     }));
+    expect(prismaMock.review.count).not.toHaveBeenCalled();
     expect(body.data).toEqual(expect.objectContaining({
       reviews: [],
       totalCount: 0,
@@ -605,7 +610,6 @@ describe('/api/public/reviews', () => {
 
   it('uses the indexed image filter when hasImages is requested without Cloudinary config', async () => {
     prismaMock.review.findMany.mockResolvedValue([]);
-    prismaMock.review.count.mockResolvedValue(0);
     prismaMock.productReviewSummary.findUnique.mockResolvedValue(null);
     const { GET } = await import('@/app/api/public/reviews/route');
 
@@ -624,6 +628,7 @@ describe('/api/public/reviews', () => {
       skip: 0,
     }));
     expect(prismaMock.review.findMany.mock.calls[0][0].where.rating).toBeUndefined();
+    expect(prismaMock.review.count).not.toHaveBeenCalled();
   });
 
   it('returns a cursor from the legacy first page and uses keyset pagination without skip', async () => {
@@ -650,7 +655,6 @@ describe('/api/public/reviews', () => {
     prismaMock.review.findMany
       .mockResolvedValueOnce([firstReview])
       .mockResolvedValueOnce([secondReview]);
-    prismaMock.review.count.mockResolvedValue(2);
     prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 2, ratingSum: 9, rating4Count: 1, rating5Count: 1 }));
     const { GET } = await import('@/app/api/public/reviews/route');
 
@@ -691,6 +695,7 @@ describe('/api/public/reviews', () => {
       { createdAt: { lt: firstReview.createdAt } },
       { createdAt: firstReview.createdAt, id: { lt: firstReview.id } },
     ]);
+    expect(prismaMock.review.count).not.toHaveBeenCalled();
   });
 
   it('rejects tampered or unsigned review cursors before querying reviews', async () => {
@@ -705,7 +710,6 @@ describe('/api/public/reviews', () => {
       createdAt: new Date('2026-06-08T12:00:00.000Z'),
     };
     prismaMock.review.findMany.mockResolvedValueOnce([firstReview]);
-    prismaMock.review.count.mockResolvedValue(2);
     prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 2, ratingSum: 9, rating4Count: 1, rating5Count: 1 }));
     const { GET } = await import('@/app/api/public/reviews/route');
 
@@ -739,6 +743,7 @@ describe('/api/public/reviews', () => {
     expect(unsignedResponse.status).toBe(400);
     expect(unsignedBody.error).toBeTruthy();
     expect(prismaMock.review.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.review.count).not.toHaveBeenCalled();
   });
 
   it('keeps rating/photo cursor context and rejects cursor reuse across filters', async () => {
@@ -765,8 +770,13 @@ describe('/api/public/reviews', () => {
     prismaMock.review.findMany
       .mockResolvedValueOnce([firstReview])
       .mockResolvedValueOnce([secondReview]);
-    prismaMock.review.count.mockResolvedValue(2);
-    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 2, ratingSum: 8, rating4Count: 2, photoReviewCount: 2 }));
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({
+      approvedCount: 2,
+      ratingSum: 8,
+      rating4Count: 2,
+      photoReviewCount: 2,
+      photoRating4Count: 2,
+    }));
     const { GET } = await import('@/app/api/public/reviews/route');
 
     const firstResponse = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&orderBy=highest&rating=4&hasImages=true&limit=1'));
@@ -805,6 +815,7 @@ describe('/api/public/reviews', () => {
     expect(mismatchResponse.status).toBe(400);
     expect(mismatchBody.error).toBeTruthy();
     expect(prismaMock.review.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.review.count).not.toHaveBeenCalled();
   });
 
   it('creates pending or approved reviews according to autoApprove settings without real DB writes', async () => {
