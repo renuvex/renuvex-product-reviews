@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - api
@@ -27,6 +27,8 @@ source_files:
   - "src/lib/review-summary.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
   - "scripts/backfill-review-media.mjs"
+  - "scripts/audit-legacy-review-media.mjs"
+  - "scripts/reconcile-legacy-review-media.mjs"
 ---
 
 # Backend / API Map
@@ -117,6 +119,7 @@ Detail in [[Security_And_Rate_Limits]].
 - **Review image URLs are policy-controlled.** Public review writes and reads must use [src/lib/review-images.ts](src/lib/review-images.ts); widget renderers consume the matching cloud name from the build-time injected constant (see [[ADR_0008_Cloud_Name_Build_Time_Only]]).
 - **Photo-review filtering is indexed.** Public `hasImages=true` must use `Review.hasImages`; do not reintroduce `Review.images contains` string filters.
 - **Cloudinary used-image cleanup is media-first.** `/api/admin/cleanup-images` prefers `ReviewMedia.publicId`; legacy `Review.images` remains a transition fallback until the media backfill is complete everywhere.
+- **Legacy global review image paths need copy-first reconciliation.** Do not make `/api/public/reviews` or widget helpers trust old global `review_images/...` URLs. Use `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and the scoped `reviews:media:reconcile` script instead. See [[Legacy_Review_Media_Reconciliation]].
 - **Status enums are strings, not Prisma enums.** `'pending' | 'approved' | 'rejected'` lives in code, not in the DB schema. If you add a state, search for the literals to update everywhere.
 
 ## Related Source Files
@@ -128,6 +131,8 @@ Detail in [[Security_And_Rate_Limits]].
 - [src/lib/review-summary.ts](src/lib/review-summary.ts)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - [scripts/rebuild-product-review-summaries.mjs](scripts/rebuild-product-review-summaries.mjs)
+- [scripts/audit-legacy-review-media.mjs](scripts/audit-legacy-review-media.mjs)
+- [scripts/reconcile-legacy-review-media.mjs](scripts/reconcile-legacy-review-media.mjs)
 
 ## Obsidian Links
 - [[API_Design]]
@@ -139,8 +144,10 @@ Detail in [[Security_And_Rate_Limits]].
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0026_Product_Review_Summary_Read_Model]]
 - [[ADR_0027_Review_Media_Read_Model]]
+- [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-08: Added and applied legacy review media reconciliation operations for the test store. Public API response shape is unchanged; old global Cloudinary paths are copied into tenant-scoped paths, while missing source URLs require explicit cleanup instead of being trusted.
 - 2026-06-07: Public review media reads now use indexed `Review.hasImages` and normalized `ReviewMedia`; response shape is unchanged. Related: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-06: Public rating/summary aggregate reads moved to `ProductReviewSummary`; `/api/public/reviews` still reads list rows from `Review`, and unresolved slug fallback still has a legacy raw-review path. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Added `/api/admin/storefront-theme/sync` and split lightweight theme sync from StorefrontJSScript repair. `/api/admin/daily-maintenance` runs theme verification in batches; current Vercel config is daily-compatible, while sub-daily operation requires a plan/queue that supports it.

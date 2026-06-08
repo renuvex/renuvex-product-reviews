@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-07
-last_verified: 2026-06-07
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - log
@@ -19,6 +19,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-08 - ops | Add legacy review media reconciliation audit
+- Summary: Added read-only legacy media audit and copy-first reconciliation scripts for old global Cloudinary review image paths, then applied the test-store reconciliation. The trusted storefront policy remains tenant-scoped; global `review_images/...` paths are not added to the public trusted-image allowlist.
+- Current evidence: Initial audit found 30 non-empty legacy `Review.images` rows, 43 URLs, 3 tenant-scoped trusted URLs already normalized into `ReviewMedia`, and 40 old global URLs across 27 approved reviews. Apply copied 10 available legacy assets, dropped 30 missing Cloudinary source URLs with explicit `--dropMissingLegacy`, repaired 1 summary row, and post-apply audit shows 13 tenant-scoped URLs, 13 `ReviewMedia` rows, zero global legacy URLs, zero orphan media, and zero summary mismatches.
+- Guardrail: `pnpm reviews:media:reconcile --cloudName=dtn7jhhuy --dryRun` skips global legacy rows without `--allowLegacyGlobal`; after reconciliation, `--allowLegacyGlobal --dryRun` reports `plannedCopies=0`. Placeholder credentials are rejected before mutation, and local `.env.local` can replace placeholder shell env values.
+- Updated wiki: [[Legacy_Review_Media_Reconciliation]], [[ADR_0027_Review_Media_Read_Model]], [[Database_Map]], [[Backend_API_Map]], [[Test_Strategy]], [[Hot_Context]]
 
 ## 2026-06-07 - performance | Normalize review media reads
 - Summary: Moved public photo-review filtering away from legacy `Review.images` text matching. `Review.hasImages` is now the indexed public photo-review facet, and normalized `ReviewMedia` rows store trusted image URLs, publicIds, positions, and visibility.

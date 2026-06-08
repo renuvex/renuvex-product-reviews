@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - testing
@@ -33,6 +33,7 @@ source_files:
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/review-summary.test.ts"
+  - "tests/unit/review-media-reconciliation.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
   - "tests/unit/structured-data-jsonld.test.ts"
@@ -63,6 +64,8 @@ source_files:
   - "src/app/api/public/widget-error/route.ts"
   - "src/lib/storefront-theme.ts"
   - "src/lib/review-media.ts"
+  - "scripts/audit-legacy-review-media.mjs"
+  - "scripts/reconcile-legacy-review-media.mjs"
 ---
 
 # Test Strategy
@@ -130,6 +133,8 @@ The highest-risk public write surface is `POST /api/public/reviews`. Unit tests 
 `GET /api/public/reviews` tests cover pagination clamp, sorting, rating filters, indexed `hasImages=true`, media-first image formatting with legacy fallback, cache headers, author masking, approved-only reads, and the unchanged response shape while unfiltered `allCount` / `avgRating` / `ratingCounts` come from `ProductReviewSummary`.
 
 Product review summary unit coverage pins `ProductReviewSummary` creation, decrement, `hasImages` photo-count deltas, merchant-reply no-op behavior, exact repair recompute, `/api/public/ratings` summary reads without raw `Review.groupBy()`, and admin status-transition writes. Public review submit tests also pin `ReviewMedia` creation and admin status tests pin media visibility changes. See [[ADR_0026_Product_Review_Summary_Read_Model]] and [[ADR_0027_Review_Media_Read_Model]].
+
+Legacy review media reconciliation unit coverage pins the maintenance-script classifier: tenant-scoped URLs are trusted, old global `review_images/...` URLs require copy-first reconciliation, wrong-store/foreign-cloud URLs stay untrusted, target public IDs are deterministic, placeholder Cloudinary API credentials are rejected before apply, and local env files can replace placeholder shell env values. Operational dry-runs are also part of the evidence: after the 2026-06-08 test-store reconciliation, `pnpm reviews:media:reconcile --cloudName=dtn7jhhuy --allowLegacyGlobal --dryRun` must report `plannedCopies=0`. See [[Legacy_Review_Media_Reconciliation]].
 
 The browser interaction layer verifies the upload-to-submit bridge separately: after Cloudinary returns a tenant-scoped trusted URL, `/api/public/upload/register` receives `{storeId, secureUrl}` and `/api/public/reviews` receives that URL in `images`.
 

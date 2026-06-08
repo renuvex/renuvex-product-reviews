@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - database
@@ -23,6 +23,8 @@ source_files:
   - "src/lib/review-summary.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
   - "scripts/backfill-review-media.mjs"
+  - "scripts/audit-legacy-review-media.mjs"
+  - "scripts/reconcile-legacy-review-media.mjs"
 ---
 
 # Database Map
@@ -117,6 +119,7 @@ code run together, so a migration must not break the old code.
 - `Review.hasImages` is the indexed public photo-review facet. Do not reintroduce `Review.images contains` for public filters.
 - `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`.
 - `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>`; the script rejects placeholder cloud names.
+- Legacy global Cloudinary paths (`review_images/...` without `stores/<storeId>`) are not trusted tenant media. Audit them with `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and reconcile copy-first with `pnpm reviews:media:reconcile --cloudName=<cloudinaryCloudName> --storeId=<merchantId> --allowLegacyGlobal --apply`. Use `--dropMissingLegacy` only for verified missing source assets. See [[Legacy_Review_Media_Reconciliation]].
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
 - `StoreSettings.storefrontTheme` stores non-sensitive active storefront/theme sync state resolved from `listStorefront.themes[].isMainTheme`. Current app-layer shape is `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`; public settings expose only the stable `runtime.themeAdapterKey/source` to select Ozy vs generic adapter.
@@ -127,6 +130,8 @@ code run together, so a migration must not break the old code.
 - [prisma/migrations/](prisma/migrations/)
 - [src/lib/prisma.ts](src/lib/prisma.ts)
 - [src/lib/review-media.ts](src/lib/review-media.ts)
+- [scripts/audit-legacy-review-media.mjs](scripts/audit-legacy-review-media.mjs)
+- [scripts/reconcile-legacy-review-media.mjs](scripts/reconcile-legacy-review-media.mjs)
 - [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts)
 
 ## Obsidian Links
@@ -135,8 +140,10 @@ code run together, so a migration must not break the old code.
 - [[ADR_0003_Review_Data_Model]]
 - [[ADR_0026_Product_Review_Summary_Read_Model]]
 - [[ADR_0027_Review_Media_Read_Model]]
+- [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-08: Applied test-store legacy review media reconciliation. Copied 10 available old global assets, dropped 30 missing source URLs with explicit cleanup, and verified zero remaining global `review_images/...` URLs. See [[Legacy_Review_Media_Reconciliation]].
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` as the normalized media read model for indexed public photo-review filters; `Review.images` remains a legacy mirror. See [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-06: Added `ProductReviewSummary` to the model map and documented that public rating/summary aggregates now read from this per-product read model. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Changed `StoreSettings.storefrontTheme` semantics from flat metadata to a backwards-compatible v2 stable/pending sync state; no schema migration required.

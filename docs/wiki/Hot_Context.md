@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - hot-context
@@ -25,6 +25,8 @@ source_files:
   - "playwright.widget.config.ts"
   - "vitest.config.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
+  - "scripts/audit-legacy-review-media.mjs"
+  - "scripts/reconcile-legacy-review-media.mjs"
   - "tests/widget-harness.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
@@ -121,7 +123,7 @@ source_files:
 - 2026-06-06: ikas confirmed Storefront Events are not DOM-ready signals and `VIEW_LISTING.productDetails[]` is usable. PDP reviews stay deterministic by replaying only late `reviews-main` mounts and product/path-guarding stale bootstraps.
 - 2026-06-06: Public rating/summary aggregates use `ProductReviewSummary`; raw `Review` stays source of truth and `pnpm reviews:summaries:rebuild` repairs it. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 
-- 2026-06-07: Public photo-review reads use indexed `Review.hasImages` plus normalized `ReviewMedia`; `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>` repairs legacy rows and rejects placeholder cloud names. See [[ADR_0027_Review_Media_Read_Model]].
+- 2026-06-08: Photo reads use `Review.hasImages` + `ReviewMedia`; legacy media reconciliation copied 10 available assets, dropped 30 missing source URLs, and left zero global legacy URLs. See [[Legacy_Review_Media_Reconciliation]].
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes.

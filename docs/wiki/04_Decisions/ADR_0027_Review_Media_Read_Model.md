@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-07
-updated: 2026-06-07
-last_verified: 2026-06-07
+updated: 2026-06-08
+last_verified: 2026-06-08
 confidence: high
 tags:
   - adr
@@ -27,6 +27,9 @@ source_files:
   - "src/app/api/admin/reviews/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
   - "scripts/backfill-review-media.mjs"
+  - "scripts/audit-legacy-review-media.mjs"
+  - "scripts/reconcile-legacy-review-media.mjs"
+  - "scripts/review-media-reconciliation-lib.mjs"
 ---
 
 # ADR_0027 - Review Media Read Model
@@ -50,6 +53,8 @@ Add a normalized media read model while keeping the public API response shape st
 - Admin status transitions update `ReviewMedia.visible` in the same transaction as the review status and summary update.
 - `Review.images` remains as a legacy mirror for compatibility and migration safety; it is not the long-term query source.
 - `scripts/backfill-review-media.mjs` repairs existing data from trusted legacy image URLs and updates `ProductReviewSummary.photoReviewCount`.
+- `scripts/audit-legacy-review-media.mjs` classifies remaining legacy rows without mutation.
+- `scripts/reconcile-legacy-review-media.mjs` performs copy-first reconciliation for approved legacy global `review_images/...` assets, but only with explicit store scope, `--allowLegacyGlobal`, `--apply`, and real Cloudinary API credentials. Missing source assets stop strict mode; test-store cleanup used the explicit `--dropMissingLegacy` flag.
 
 ## Reasoning
 - Mature review platforms expose media as structured data and support indexed media facets such as "has photos", not text scans over serialized arrays.
@@ -67,8 +72,14 @@ Add a normalized media read model while keeping the public API response shape st
 ## Consequences
 - New write paths that attach or detach review media must keep `Review.hasImages`, `ReviewMedia`, and `ProductReviewSummary.photoReviewCount` consistent.
 - After migration deploy, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>` to populate `ReviewMedia` and repair legacy rows. The script rejects placeholder cloud names so it cannot silently backfill against the wrong trusted tenant policy.
+- If `Review.images` still contains old global `review_images/...` URLs, run `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and then use the copy-first reconciliation flow documented in [[Legacy_Review_Media_Reconciliation]]. Do not expand the trusted-image policy to accept global paths.
 - Monthly Cloudinary fallback cleanup should prefer `ReviewMedia.publicId`; legacy `Review.images` remains only a transition fallback.
 - Cursor/keyset pagination remains a future public API performance phase.
+
+## Legacy Reconciliation Status
+2026-06-08 initial audit with `--cloudName=dtn7jhhuy` found 30 non-empty legacy `Review.images` rows, 43 total legacy URLs, 3 tenant-scoped trusted URLs already normalized into `ReviewMedia`, and 40 old global `review_images/...` URLs across 27 approved reviews. Duplicate public IDs, orphan `ReviewMedia`, and summary photo-count mismatches were all zero.
+
+The test-store apply copied 10 available legacy assets into tenant-scoped paths, dropped 30 missing Cloudinary source URLs with `--dropMissingLegacy`, repaired 1 summary row, and post-apply audit verified 13 tenant-scoped URLs, 13 `ReviewMedia` rows, zero global legacy URLs, zero orphan media, and zero photo-count mismatches.
 
 ## Related Source Files
 - [prisma/schema.prisma](prisma/schema.prisma)
@@ -79,3 +90,6 @@ Add a normalized media read model while keeping the public API response shape st
 - [src/app/api/admin/reviews/route.ts](src/app/api/admin/reviews/route.ts)
 - [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
 - [scripts/backfill-review-media.mjs](scripts/backfill-review-media.mjs)
+- [scripts/audit-legacy-review-media.mjs](scripts/audit-legacy-review-media.mjs)
+- [scripts/reconcile-legacy-review-media.mjs](scripts/reconcile-legacy-review-media.mjs)
+- [scripts/review-media-reconciliation-lib.mjs](scripts/review-media-reconciliation-lib.mjs)
