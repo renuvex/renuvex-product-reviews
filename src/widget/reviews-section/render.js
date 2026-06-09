@@ -26,6 +26,7 @@ import { buildDisabledStateEl, buildReviewsErrorState } from './render/states.js
 import { applyManualTheme } from './render/theme-vars.js';
 import { buildPhotoStrip } from './render/photo-strip.js';
 import { createReviewHandlers } from './render/handlers.js';
+import { buildPaginationControl } from './render/pagination.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -343,8 +344,23 @@ export async function render(productId, settings, reviewsData, productName, orde
         reviews.forEach(function (r) { widget.appendChild(reviewLayout.render(r, loadedLightboxReviews)); });
       }
 
-      // Daha Fazla butonu
-      var hasMore = data.data && data.data.hasMore;
+      // Sayfalama / Daha Fazla — moda göre. numbered: offset tabanlı sayfa kontrolü
+      // (append yok, liste o sayfanın dilimi); loadMore (varsayılan): mevcut
+      // cursor-append "Daha Fazla" butonu.
+      var paginationMode = settings.paginationMode === 'numbered' ? 'numbered' : 'loadMore';
+      if (paginationMode === 'numbered') {
+        var totalPages = (data.data && data.data.totalPages) || 1;
+        if (totalPages > 1) {
+          widget.appendChild(buildPaginationControl({
+            page: (data.data && data.data.page) || currentPage || 1,
+            totalPages: totalPages,
+            onPageChange: handlers.onPageChange,
+          }));
+        }
+      }
+
+      // Daha Fazla butonu (yalnız loadMore modunda)
+      var hasMore = paginationMode === 'loadMore' && data.data && data.data.hasMore;
       if (hasMore) {
         var loadMoreBtn = document.createElement('button');
         loadMoreBtn.className = 'renuvex-pr-load-more';

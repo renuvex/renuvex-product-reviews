@@ -114,6 +114,18 @@ export const WIDGETS: WidgetDef[] = [
             ],
             default: 'card',
           },
+          // Yorum listesi sayfalama tarzı — "Daha Fazla" butonu (varsayılan, cursor-append)
+          // ya da numaralı sayfalama (offset, 1 2 3 …). Görünüm kararı olduğu için Tasarım'da.
+          {
+            type: 'select',
+            key: 'paginationMode',
+            label: 'Yorum Listesi Sayfalama',
+            options: [
+              { value: 'loadMore', label: 'Daha Fazla Butonu' },
+              { value: 'numbered', label: 'Numaralı Sayfalama' },
+            ],
+            default: 'loadMore',
+          },
           // Köşe ovalliği renk değil — şekil. Tasarım grubunda ana panelde
           // diğer tasarım kararlarıyla (layout seçimleri) birlikte durur.
           { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
@@ -264,9 +276,20 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Daha Fazla Göster Butonu',
         isColor: true,
         fields: [
-          { type: 'color', key: 'loadMoreBgColor',     label: 'Arka Plan Rengi', default: '#ffffff' },
-          { type: 'color', key: 'loadMoreTextColor',   label: 'Yazı Rengi',      default: '#111111' },
-          { type: 'color', key: 'loadMoreBorderColor', label: 'Kenarlık Rengi',  default: '#111111' },
+          { type: 'color', key: 'loadMoreBgColor',     label: 'Arka Plan Rengi', default: '#ffffff', showWhen: { key: 'paginationMode', equals: 'loadMore' } },
+          { type: 'color', key: 'loadMoreTextColor',   label: 'Yazı Rengi',      default: '#111111', showWhen: { key: 'paginationMode', equals: 'loadMore' } },
+          { type: 'color', key: 'loadMoreBorderColor', label: 'Kenarlık Rengi',  default: '#111111', showWhen: { key: 'paginationMode', equals: 'loadMore' } },
+        ],
+      },
+      {
+        // Numaralı sayfalama renkleri — yalnız paginationMode === 'numbered' iken görünür.
+        // Aktif sayfa ayrı renk almaz: numara bold + dolu kutu (CSS mevcut renkleri ters çevirir).
+        title: 'Sayfalama',
+        isColor: true,
+        fields: [
+          { type: 'color', key: 'paginationBgColor',     label: 'Buton Arka Planı', default: '#ffffff', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationTextColor',   label: 'Numara Rengi',     default: '#111111', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationBorderColor', label: 'Kenarlık Rengi',   default: '#e5e7eb', showWhen: { key: 'paginationMode', equals: 'numbered' } },
         ],
       },
       {

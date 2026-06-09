@@ -90,5 +90,36 @@ export function createReviewHandlers(opts) {
     await render(currentProductId, currentSettings, newData, currentProductName, nextOrderBy, 1);
   }
 
-  return { onRetry: onRetry, onFilterChange: onFilterChange, onSortChange: onSortChange };
+  // Numbered pagination: jump to an arbitrary page via the OFFSET path (no cursor),
+  // replacing the list with that page's slice. Mirrors onSortChange's token + state
+  // pattern; sort/filter still reset to page 1 through their own handlers.
+  async function onPageChange(nextPage) {
+    var token = beginReviewRequest();
+    var productIdSnapshot = currentProductId;
+    var orderBySnapshot = currentOrderBy;
+    var ratingFilterSnapshot = currentRatingFilter;
+    var hasImagesSnapshot = currentHasImages;
+    // Set page BEFORE fetch so the stale-guard compares against the new page.
+    setCurrentPage(nextPage);
+    setCurrentNextCursor(null);
+    var data = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentHasImages);
+    if (!isCurrentReviewRequest(token, {
+      productId: productIdSnapshot,
+      orderBy: orderBySnapshot,
+      page: nextPage,
+      ratingFilter: ratingFilterSnapshot,
+      hasImages: hasImagesSnapshot,
+    })) return;
+    await render(currentProductId, currentSettings, data, currentProductName, currentOrderBy, nextPage);
+    // Pagination UX: re-anchor the review section to the top so the new page is
+    // read from the start. Skipped inside the admin preview iframe.
+    if (typeof window !== 'undefined' && !window.__ikasPreviewMode) {
+      var anchor = document.getElementById('renuvex-reviews');
+      if (anchor && typeof anchor.scrollIntoView === 'function') {
+        anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }
+
+  return { onRetry: onRetry, onFilterChange: onFilterChange, onSortChange: onSortChange, onPageChange: onPageChange };
 }

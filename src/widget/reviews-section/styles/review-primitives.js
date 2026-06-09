@@ -20,6 +20,17 @@ export var REVIEW_PRIMITIVES_CSS = `
   .renuvex-pr-load-more{display:block;margin:20px auto 0;padding:10px 28px;border:1px solid var(--renuvex-pr-load-more-border,#111111);border-radius:var(--renuvex-pr-radius,6px);background:var(--renuvex-pr-load-more-bg,#ffffff);color:var(--renuvex-pr-load-more-text,#111111);font-size:var(--renuvex-pr-load-more-size,14px);cursor:pointer;}
   .renuvex-pr-load-more:disabled{opacity:.6;cursor:not-allowed;}
 
+  /* Numaralı sayfalama (paginationMode === 'numbered'). Akışta, listenin altında,
+     ortalı — sticky/fixed değil. Aktif sayfa: dolu kutu (renkler ters) + bold. */
+  .renuvex-pr-pagination{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;margin:20px auto 0;}
+  .renuvex-pr-pagination-btn,.renuvex-pr-pagination-arrow{min-width:36px;height:36px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;line-height:1;box-sizing:border-box;border:1px solid var(--renuvex-pr-pagination-border,#e5e7eb);border-radius:var(--renuvex-pr-radius,6px);background:var(--renuvex-pr-pagination-bg,#ffffff);color:var(--renuvex-pr-pagination-text,#111111);font-size:var(--renuvex-pr-load-more-size,14px);font-family:inherit;cursor:pointer;}
+  .renuvex-pr-pagination-btn[aria-current="page"]{background:var(--renuvex-pr-pagination-text,#111111);color:var(--renuvex-pr-pagination-bg,#ffffff);border-color:var(--renuvex-pr-pagination-text,#111111);font-weight:700;cursor:default;}
+  .renuvex-pr-pagination-arrow:disabled{opacity:.45;cursor:not-allowed;}
+  .renuvex-pr-pagination-gap{min-width:24px;text-align:center;color:var(--renuvex-pr-pagination-text,#111111);opacity:.55;user-select:none;}
+  @media (hover:hover) and (pointer:fine){
+    .renuvex-pr-pagination-btn:not([aria-current="page"]):hover,.renuvex-pr-pagination-arrow:not(:disabled):hover{border-color:var(--renuvex-pr-pagination-text,#111111);}
+  }
+
   .renuvex-pr-state-msg{text-align:center;color:var(--renuvex-pr-state-text,rgba(17,17,17,0.65));font-size:14px;padding:30px 0;}
   .renuvex-pr-state-error{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#991b1b;}
   .renuvex-pr-state-error-text{max-width:360px;line-height:1.45;}

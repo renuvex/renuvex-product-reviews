@@ -56,6 +56,23 @@ describe('widget review form theme variables', () => {
     expect(darkVars.get('--renuvex-pr-fwizard-close-hover-bg')).toBe('rgba(255,255,255,0.1)');
   });
 
+  test('pagination vars follow the merchant colors and fall back to schema defaults', () => {
+    const set = collectThemeVars({
+      paginationBgColor: '#fafafa',
+      paginationTextColor: '#222222',
+      paginationBorderColor: '#cccccc',
+    });
+    expect(set.get('--renuvex-pr-pagination-bg')).toBe('#fafafa');
+    expect(set.get('--renuvex-pr-pagination-text')).toBe('#222222');
+    expect(set.get('--renuvex-pr-pagination-border')).toBe('#cccccc');
+
+    // Unset -> fallbacks must equal the widgetDefs defaults (mirror contract).
+    const def = collectThemeVars({});
+    expect(def.get('--renuvex-pr-pagination-bg')).toBe('#ffffff');
+    expect(def.get('--renuvex-pr-pagination-text')).toBe('#111111');
+    expect(def.get('--renuvex-pr-pagination-border')).toBe('#e5e7eb');
+  });
+
   test('readable control helpers use deterministic fallback colors', () => {
     expect(getReadableControlColor('#ffffff')).toBe('#111111');
     expect(getReadableControlColor('#111111')).toBe('#ffffff');
