@@ -208,6 +208,18 @@ The daily-maintenance cron (`admin_api`) is authoritative for `pending`/`partial
 - **Not a launch blocker.** Full cost/performance analysis of the three sources (A client / B cron /
   C webhook): [[ADR_0029_Review_Media_Metadata]] (Scale Evolution).
 
+## Async media pipeline — build trigger + design choices (deferred)
+We deliberately defer the async media pipeline (queue + background workers for media metadata,
+moderation, variants, future video) — the current signed-upload + daily-maintenance cron is
+sufficient at current scale. Full analysis (benefit / mechanism / cost / competitor evidence):
+[[Async_Media_Pipeline]].
+- **Trigger to build (any of):** image moderation before public display, OR video reviews, OR upload
+  volume outgrowing the daily cron cadence.
+- **Open design choices:** queue (Postgres `jobs` table vs Upstash vs QStash); moderation provider
+  (AI add-on with per-image cost vs manual admin queue); publish-gating (review stays `pending` until
+  media passes?); worker model (Vercel cron poll vs event-triggered function).
+- **No ADR yet** — becomes `ADR_00XX` at the build-decision point.
+
 ## Obsidian Links
 - [[Current_Status]]
 - [[Roadmap]]

@@ -36,6 +36,7 @@ Living roadmap. Order is rough priority, not committed dates. Tweak as decisions
 - **Q&A → review request flow** (smart sequencing)
 - **Loyalty/coupon-on-review** integration with ikas discount codes
 - **AI moderation summary** (LLM auto-generates merchant-facing summaries; flags suspicious reviews)
+- **Async media pipeline (image moderation + video foundation)** — queue + background workers to process uploaded media off the upload hot path (authoritative metadata, **image** moderation before public display, variant generation, future video). Distinct from the review-**text** "AI moderation summary" above. Deferred; trigger = image-moderation/video parity or upload volume outgrowing the daily cron. Analysis + cost/competitor evidence: [[Async_Media_Pipeline]].
 - **Theme storefront blocks / sections** — instead of injected JS, register native ikas theme widgets (research [[Ikas_Theme_Limitations]]).
 
 ## Tech Debt / Quality
