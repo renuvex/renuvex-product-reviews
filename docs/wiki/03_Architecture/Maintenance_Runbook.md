@@ -39,26 +39,30 @@ Operational reference for the scheduled background jobs and how their failures s
 Both require `Authorization: Bearer <CRON_SECRET>`.
 
 ## How failures surface (observability)
-Previously a task failure was caught into `errors[]` + an HTTP 500 and **alerted nobody** (Sentry
+A task failure was previously caught into `errors[]` + an HTTP 500 and **alerted nobody** (Sentry
 auto-captures only *unhandled* errors). Closed via `src/lib/cron-observability.ts`:
 - **Per-task failure → `reportCronTaskError()` → `Sentry.captureException`** tagged
-  `source:cron`, `cron:<name>`, `task:<name>`. Creates a Sentry issue (default new-issue alert fires).
-- **Missed / never-ran / overrun → Sentry cron monitor** (`withCronMonitor` → `captureCheckIn`).
-  `daily-maintenance` registers a monitor (slug `daily-maintenance`, schedule `0 3 * * *`, UTC);
-  Sentry raises an issue tagged `monitor.slug` if the run is missed, fails, or exceeds `maxRuntime`.
-  The route catches task errors and returns (does not throw), so the check-in status is set
-  explicitly to `error` when `errors[]` is non-empty, `ok` otherwise.
-- **`cleanup-images` is also monitored** (slug `cleanup-images`, schedule `0 4 1 * *`). A **breaker
-  trip** (G1 empty-used-set / G2 ratio / G3 absolute — see [[ADR_0030_Cleanup_Hardening]]) is
-  surfaced loudly: a rich Sentry issue (`task:breaker-tripped` carrying the reason + scan stats)
-  **and** an `error` check-in, while the HTTP response stays `200` (a controlled protective outcome,
-  not a crash). Every run also writes a `MediaCleanupRun` audit row
+  `source:cron`, `cron:<name>`, `task:<name>`. Creates a Sentry issue → the `source:cron` alert fires.
+- **Cleanup breaker trip → same path**, tagged `task:breaker-tripped`, carrying the reason + scan
+  stats (G1 empty-used-set / G2 ratio / G3 absolute — see [[ADR_0030_Cleanup_Hardening]]). The HTTP
+  response stays `200` (a controlled protective outcome, not a crash); the alert comes from the issue.
+- **"Did the scheduled job run at all?" is intentionally NOT tracked in Sentry.** We dropped the
+  `captureCheckIn` cron monitors: the Sentry plan includes only **one** cron monitor, and serverless
+  check-ins proved noisy/fragile (false "missed" alerts at the tight margin). Use the
+  **Vercel → Crons** dashboard for run history. These crons are idempotent + self-healing, so a single
+  missed run is low-impact.
+- Defense-in-depth stays: the `errors[]` + HTTP 500 (Vercel non-200 cron signal), and every
+  `cleanup-images` run writes a `MediaCleanupRun` audit row
   (`status` ok|tripped|error|skipped + scan/quarantine/sweep counts + `sampleDeleted`).
 
 ## One-time setup (do once in Sentry)
-Route these to a channel (email/Slack):
-1. **Alerts → Create Alert → Issues** filtered on `monitor.slug` (covers missed/failed runs for **both** `daily-maintenance` and `cleanup-images`). Connecting the project-wide source/“All Issues” monitor works too.
-2. **Recommended:** a second Issues alert on `tags source equals cron` — catches every per-task `captureException` **and breaker trips** (`task:breaker-tripped`) regardless of monitor.
+One **Issues** alert covers everything (route it to email/Slack):
+- **Alerts → Create Alert → Issues**, filter `The event's tags match source equals cron` → catches
+  every per-task failure **and** cleanup breaker trips (`task:breaker-tripped`) for both crons.
+- A project-wide "alert on all new issues" rule also works (broader — also catches non-cron app errors).
+- ⚠️ The `source` tag only autocompletes **after** a `source:cron` event has been ingested (i.e. after
+  the first real failure/trip). Until then, type `source` / `cron` manually, or just use the
+  project-wide rule.
 
 Org: `renuvex` (EU, `de.sentry.io`). See [[Sentry_Operations]].
 
@@ -92,17 +96,19 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 | `cleanup-images` `task:breaker-tripped` reason `empty-used-set` (G1) | In-use diff is broken (e.g. `cloudName`/`publicId` regression) — **0 deleted, real photos protected** | **Do not force.** Investigate why `usedCount=0` while `ReviewMedia` has rows; fix the diff, then re-trigger. G1 is never force-overridable. |
 | `cleanup-images` `task:breaker-tripped` reason `ratio …` (G2) / `sweep … > …` (G3) | A genuine bulk cleanup **or** an anomaly | Inspect the latest `MediaCleanupRun` (`candidates`, `sampleDeleted`). If intended, re-run `?force=1`; else fix the cause. |
 | `task:reconcile-storefront-themes` / `reconcile-storefront-scripts` error | ikas token expired / Admin API down | Check ikas auth token + Admin API (see [[Auth_And_Installation_Flow]]) |
-| Monitor `daily-maintenance` / `cleanup-images` **missed** | Vercel cron did not fire / function crashed | Check Vercel → Crons + function logs; confirm `vercel.json` cron + deploy is live |
+| A cron **didn't run** (expected effect missing / Vercel shows a failed run) | Vercel cron did not fire / function crashed | Check **Vercel → Crons** + function logs; confirm `vercel.json` cron + deploy is live. (No Sentry "missed" alert — that detection lives in the Vercel dashboard, not Sentry.) |
 
 ## Notes
-- **Why manual check-ins (not `automaticVercelMonitors`):** `next.config.js` sets
-  `automaticVercelMonitors: true`, but Sentry auto-instruments **only Pages Router** Vercel crons —
-  these are **App Router** route handlers (`src/app/api/.../route.ts`), which it does **not** cover
-  (confirmed in the next.config comment + Sentry docs). Hence the explicit `withCronMonitor` /
-  `captureCheckIn`. If a cron ever moves to the Pages Router, its manual monitor becomes redundant.
+- **Why no Sentry cron monitors:** the Sentry plan includes a single cron monitor, and `captureCheckIn`
+  check-ins from short-lived serverless invocations were noisy/fragile (false "missed" alerts at the
+  tight check-in margin). We alert via `captureException` (task failures + breaker trips) and use the
+  Vercel → Crons dashboard for run history. `next.config.js` still sets `automaticVercelMonitors: true`,
+  but that instruments **Pages Router** crons only — these are App Router handlers, so it is a no-op
+  here. If cron-monitor budget is later expanded, re-introducing `captureCheckIn` is the lever (it
+  lives in `cron-observability.ts` git history, ADR_0030).
 - Observability is **additive** — the existing `errors[]` + HTTP 500 (Vercel non-200 cron signal) stays as defense-in-depth.
 - No secrets/tokens are sent to Sentry (`sendDefaultPii:false`; extras carry only counts + task/cron names).
-- `cleanup-images` now also uses `withCronMonitor` + a circuit-breaker + a `MediaCleanupRun` audit log + two-phase `OrphanImageQuarantine` ([[ADR_0030_Cleanup_Hardening]]). Thresholds are env-tunable (`CLEANUP_MAX_DELETE_ABSOLUTE`=200, `CLEANUP_MAX_DELETE_RATIO`=0.30, `CLEANUP_QUARANTINE_GRACE_DAYS`=7, `CLEANUP_ORPHAN_AGE_DAYS`=30); calibrate from real audit rows.
+- `cleanup-images` uses a circuit-breaker + a `MediaCleanupRun` audit log + two-phase `OrphanImageQuarantine` ([[ADR_0030_Cleanup_Hardening]]). Thresholds are env-tunable (`CLEANUP_MAX_DELETE_ABSOLUTE`=200, `CLEANUP_MAX_DELETE_RATIO`=0.30, `CLEANUP_QUARANTINE_GRACE_DAYS`=7, `CLEANUP_ORPHAN_AGE_DAYS`=30); calibrate from real audit rows.
 
 ## Obsidian Links
 - [[Sentry_Operations]]

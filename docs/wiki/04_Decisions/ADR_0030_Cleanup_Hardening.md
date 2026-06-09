@@ -43,9 +43,9 @@ The delete is **irreversible** (past Cloudinary's backup retention). The whole o
 in-use set being *complete*. If that set is under-populated for any reason — a `cloudName`/`publicId`
 regression, a partial DB read, a bad migration — live customer review photos are flagged as orphans
 and mass-deleted. The 30-day age guard only protects *recent* uploads; a 2-year-old genuine photo is
-not protected by age. Pre-hardening the job had **no upper bound, no audit trail, and no cron
-monitor** (only `captureException`), so a catastrophic mass-delete would be both unstoppable and
-invisible until a merchant noticed missing photos.
+not protected by age. Pre-hardening the job had **no upper bound and no audit trail**, so a
+catastrophic mass-delete would be both unstoppable and invisible until a merchant noticed missing
+photos.
 
 Industry practice for unattended destructive jobs converges on the same controls:
 
@@ -56,8 +56,8 @@ Industry practice for unattended destructive jobs converges on the same controls
 | Storage GC | two-phase mark/sweep + grace | "pending removal", recoverable |
 
 ## Decision
-Two additive tables + a pure, unit-tested safety library, with the route reduced to auth + monitor +
-audit.
+Two additive tables + a pure, unit-tested safety library, with the route reduced to auth + Sentry
+error reporting + audit.
 
 - **`OrphanImageQuarantine`** (two-phase state) and **`MediaCleanupRun`** (audit, one row/run).
 - **Two-phase deletion** (`src/lib/cleanup-orphan-images.ts`):
@@ -78,10 +78,12 @@ audit.
   **never** overrides G1.
 - All thresholds are **env-tunable** (`CLEANUP_ORPHAN_AGE_DAYS`, `CLEANUP_QUARANTINE_GRACE_DAYS`,
   `CLEANUP_MAX_DELETE_RATIO`, `CLEANUP_MIN_SCAN_FOR_RATIO`, `CLEANUP_MAX_DELETE_ABSOLUTE`).
-- The route is wrapped in **`withCronMonitor('cleanup-images', …)`** — this also closes the
-  previously-noted gap that `cleanup-images` had no Sentry cron monitor. A breaker trip raises a rich
-  Sentry issue (`reportCronTaskError`, tags `source:cron`, `task:breaker-tripped`) **and** an `error`
-  check-in, but returns **HTTP 200** (a controlled protective outcome, not a crash).
+- A breaker trip raises a rich Sentry issue via `reportCronTaskError` (`Sentry.captureException`,
+  tags `source:cron`, `task:breaker-tripped`, carrying the reason + scan stats) but returns
+  **HTTP 200** (a controlled protective outcome, not a crash). Sentry cron **check-in monitors** were
+  intentionally not adopted — the plan includes a single monitor and serverless check-ins were
+  noisy/fragile; "did the job run at all" lives in the Vercel → Crons dashboard. See
+  [[Maintenance_Runbook]].
 - Every run persists a `MediaCleanupRun` row: `status` (`ok|tripped|error|skipped`), scan/quarantine/
   sweep counts, `breakerReason`, and `sampleDeleted` (≤ 50 publicIds for forensic recovery).
 

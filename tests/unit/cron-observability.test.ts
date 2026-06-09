@@ -1,18 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Hoisted mocks so the vi.mock factory can reference them.
-const { captureException, captureCheckIn } = vi.hoisted(() => ({
+// Hoisted mock so the vi.mock factory can reference it.
+const { captureException } = vi.hoisted(() => ({
   captureException: vi.fn<(error: unknown, context?: unknown) => void>(),
-  captureCheckIn: vi.fn<(checkIn: unknown, monitorConfig?: unknown) => string>(() => 'checkin-id'),
 }));
 
-vi.mock('@sentry/nextjs', () => ({ captureException, captureCheckIn }));
+vi.mock('@sentry/nextjs', () => ({ captureException }));
 
-import { reportCronTaskError, withCronMonitor } from '@/lib/cron-observability';
+import { reportCronTaskError } from '@/lib/cron-observability';
 
 beforeEach(() => {
   captureException.mockClear();
-  captureCheckIn.mockClear();
 });
 
 describe('reportCronTaskError', () => {
@@ -33,47 +31,12 @@ describe('reportCronTaskError', () => {
     const [err] = captureException.mock.calls[0] as [Error];
     expect(err.message).toBe('string failure');
   });
-});
 
-describe('withCronMonitor', () => {
-  it('sends in_progress (with monitorConfig) then ok when the run has no task errors', async () => {
-    const value = await withCronMonitor('daily-maintenance', { schedule: '0 3 * * *', maxRuntime: 10 }, async () => ({
-      hadErrors: false,
-      value: 'RESPONSE',
-    }));
-
-    expect(value).toBe('RESPONSE');
-    expect(captureCheckIn).toHaveBeenCalledTimes(2);
-    expect(captureCheckIn.mock.calls[0][0]).toMatchObject({ monitorSlug: 'daily-maintenance', status: 'in_progress' });
-    expect(captureCheckIn.mock.calls[0][1]).toMatchObject({
-      schedule: { type: 'crontab', value: '0 3 * * *' },
-      timezone: 'UTC',
-      maxRuntime: 10,
+  it('tags a cleanup breaker trip as task:breaker-tripped under source:cron', () => {
+    reportCronTaskError('cleanup-images', 'breaker-tripped', new Error('cleanup breaker tripped: empty-used-set'), {
+      scanned: 1200,
     });
-    expect(captureCheckIn.mock.calls[1][0]).toMatchObject({
-      checkInId: 'checkin-id',
-      monitorSlug: 'daily-maintenance',
-      status: 'ok',
-    });
-  });
-
-  it('completes the check-in with error status when the run reports task errors', async () => {
-    await withCronMonitor('daily-maintenance', { schedule: '0 3 * * *' }, async () => ({ hadErrors: true, value: 1 }));
-
-    expect(captureCheckIn.mock.calls[1][0]).toMatchObject({ status: 'error' });
-    // Task-level errors are reported separately (reportCronTaskError), not by the monitor itself.
-    expect(captureException).not.toHaveBeenCalled();
-  });
-
-  it('on an unexpected throw: error check-in + captureException + rethrow', async () => {
-    const boom = new Error('boom');
-    await expect(
-      withCronMonitor('daily-maintenance', { schedule: '0 3 * * *' }, async () => {
-        throw boom;
-      }),
-    ).rejects.toBe(boom);
-
-    expect(captureCheckIn.mock.calls[1][0]).toMatchObject({ status: 'error' });
-    expect(captureException).toHaveBeenCalledTimes(1);
+    const [, ctx] = captureException.mock.calls[0] as [Error, { tags: Record<string, unknown> }];
+    expect(ctx.tags).toMatchObject({ source: 'cron', cron: 'cleanup-images', task: 'breaker-tripped' });
   });
 });

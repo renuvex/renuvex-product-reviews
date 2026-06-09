@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { runCleanupImages } from '@/lib/cleanup-orphan-images';
-import { reportCronTaskError, withCronMonitor } from '@/lib/cron-observability';
+import { reportCronTaskError } from '@/lib/cron-observability';
 
 // Monthly fallback orphan cleanup (ADR_0012), hardened per ADR_0030.
 //
@@ -10,8 +10,9 @@ import { reportCronTaskError, withCronMonitor } from '@/lib/cron-observability';
 // (register call failed, legacy uploads, manual ops uploads).
 //
 // Safety (ADR_0030): the orphan diff + two-phase quarantine + circuit-breaker
-// live in src/lib/cleanup-orphan-images.ts. This route only handles auth, the
-// Sentry cron monitor, and persisting the MediaCleanupRun audit row.
+// live in src/lib/cleanup-orphan-images.ts. This route only handles auth, Sentry
+// error reporting (task failures + breaker trips), and persisting the
+// MediaCleanupRun audit row.
 //   - ?force=1 overrides the ratio (G2) and absolute (G3) breakers after a human
 //     has reviewed the audit row. It NEVER overrides the empty-used-set guard (G1).
 
@@ -78,61 +79,58 @@ export async function GET(request: Request) {
   const force = new URL(request.url).searchParams.get('force') === '1';
   const trigger: 'cron' | 'manual' = force ? 'manual' : 'cron';
 
-  return withCronMonitor<NextResponse>('cleanup-images', { schedule: '0 4 1 * *', maxRuntime: 10 }, async () => {
-    const startedAt = new Date();
-    const startMs = Date.now();
+  const startedAt = new Date();
+  const startMs = Date.now();
 
-    try {
-      const result = await runCleanupImages(prisma, { force });
+  try {
+    const result = await runCleanupImages(prisma, { force });
 
-      if (result.status === 'skipped_no_cloudinary_config') {
-        reportCronTaskError('cleanup-images', 'cleanup-images', new Error('Cloudinary config missing'));
-        await persistAudit({ startedAt, startMs, status: 'skipped', trigger, forced: force, error: 'cloudinary_config_missing' });
-        return { hadErrors: true, value: NextResponse.json({ error: 'Cloudinary config missing' }, { status: 500 }) };
-      }
-
-      await persistAudit({
-        startedAt,
-        startMs,
-        status: result.status,
-        trigger,
-        forced: force,
-        scanned: result.scanned,
-        usedCount: result.usedCount,
-        candidates: result.currentOrphans,
-        quarantinedNew: result.quarantinedNew,
-        released: result.released,
-        deleted: result.deleted,
-        breakerTripped: result.breakerTripped,
-        breakerReason: result.breakerReason,
-        sampleDeleted: result.sampleDeleted,
-      });
-
-      if (result.status === 'tripped') {
-        // A trip is a controlled, alert-worthy safety action: surface it loudly
-        // (rich Sentry issue + monitor 'error' via hadErrors) but return 200 — the
-        // function did its job, it just declined to delete.
-        reportCronTaskError(
-          'cleanup-images',
-          'breaker-tripped',
-          new Error(`cleanup breaker tripped: ${result.breakerReason ?? 'unknown'}`),
-          { scanned: result.scanned, usedCount: result.usedCount, currentOrphans: result.currentOrphans, forced: force },
-        );
-      }
-
-      const value = NextResponse.json({
-        message:
-          result.status === 'tripped'
-            ? 'Güvenlik eşiği aşıldı — silme yapılmadı, inceleme gerekli.'
-            : 'Temizleme tamamlandı.',
-        ...result,
-      });
-      return { hadErrors: result.status === 'tripped', value };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown';
-      reportCronTaskError('cleanup-images', 'cleanup-images', error);
-      await persistAudit({ startedAt, startMs, status: 'error', trigger, forced: force, error: message });
-      return { hadErrors: true, value: NextResponse.json({ error: message }, { status: 500 }) };
+    if (result.status === 'skipped_no_cloudinary_config') {
+      reportCronTaskError('cleanup-images', 'cleanup-images', new Error('Cloudinary config missing'));
+      await persistAudit({ startedAt, startMs, status: 'skipped', trigger, forced: force, error: 'cloudinary_config_missing' });
+      return NextResponse.json({ error: 'Cloudinary config missing' }, { status: 500 });
     }
-  });
+
+    await persistAudit({
+      startedAt,
+      startMs,
+      status: result.status,
+      trigger,
+      forced: force,
+      scanned: result.scanned,
+      usedCount: result.usedCount,
+      candidates: result.currentOrphans,
+      quarantinedNew: result.quarantinedNew,
+      released: result.released,
+      deleted: result.deleted,
+      breakerTripped: result.breakerTripped,
+      breakerReason: result.breakerReason,
+      sampleDeleted: result.sampleDeleted,
+    });
+
+    if (result.status === 'tripped') {
+      // A trip is a controlled, alert-worthy safety action: surface it loudly via a
+      // rich Sentry issue (reportCronTaskError, tags source:cron / task:breaker-tripped)
+      // but still return 200 — the function did its job, it just declined to delete.
+      reportCronTaskError(
+        'cleanup-images',
+        'breaker-tripped',
+        new Error(`cleanup breaker tripped: ${result.breakerReason ?? 'unknown'}`),
+        { scanned: result.scanned, usedCount: result.usedCount, currentOrphans: result.currentOrphans, forced: force },
+      );
+    }
+
+    return NextResponse.json({
+      message:
+        result.status === 'tripped'
+          ? 'Güvenlik eşiği aşıldı — silme yapılmadı, inceleme gerekli.'
+          : 'Temizleme tamamlandı.',
+      ...result,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown';
+    reportCronTaskError('cleanup-images', 'cleanup-images', error);
+    await persistAudit({ startedAt, startMs, status: 'error', trigger, forced: force, error: message });
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
