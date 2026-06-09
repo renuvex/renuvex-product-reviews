@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-11
-updated: 2026-06-07
+updated: 2026-06-09
 tags:
   - sentry
   - observability
@@ -44,7 +44,7 @@ Sentry is the observability surface for the Next.js panel app. The organization 
 - `sentry.edge.config.ts` — Edge runtime init.
 - `src/instrumentation-client.ts` — browser init; also exports `onRouterTransitionStart` for App Router navigation traces.
 - `src/app/global-error.tsx` — App Router root error boundary; captures uncaught render errors.
-- `next.config.js` — wrapped with `withSentryConfig`. `widenClientFileUpload: true`, `automaticVercelMonitors: true`, debug-logging tree-shake enabled.
+- `next.config.js` — wrapped with `withSentryConfig`. `widenClientFileUpload: true`, `automaticVercelMonitors: true` (instruments **Pages Router** crons only — the App-Router maintenance crons use a manual cron monitor via `src/lib/cron-observability.ts`; see [[Maintenance_Runbook]]), debug-logging tree-shake enabled.
 
 ## Configuration Contract
 - **DSN**: read from env, never hardcoded.

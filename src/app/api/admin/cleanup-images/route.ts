@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { v2 as cloudinary } from 'cloudinary';
 import { getConfiguredCloudinaryCloudName, getReviewImagePublicId, parseStoredReviewImages } from '@/lib/review-images';
+import { reportCronTaskError } from '@/lib/cron-observability';
 
 // Monthly fallback orphan cleanup (see ADR_0012).
 //
@@ -115,7 +116,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'Temizleme tamamlandı.', scanned, deleted });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
-    console.error('[cleanup-images] ERROR:', error);
+    reportCronTaskError('cleanup-images', 'cleanup-images', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
