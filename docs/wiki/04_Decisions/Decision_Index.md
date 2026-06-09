@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-08
+updated: 2026-06-09
 tags:
   - adr
   - decisions
@@ -48,6 +48,7 @@ related:
 | [[ADR_0027_Review_Media_Read_Model]] | `ReviewMedia` stores trusted review image rows and `Review.hasImages` is the indexed public photo-review facet. `Review.images` remains a legacy mirror while backfill/transition completes. | Accepted |
 | [[ADR_0028_Review_Cursor_Pagination]] | Public review list load-more uses cursor/keyset pagination while preserving legacy `page/limit` response compatibility. | Accepted |
 | [[ADR_0029_Review_Media_Metadata]] | `ReviewMedia` and `PendingReviewImage` carry verified Cloudinary image metadata for future media-heavy widgets while preserving the public `images` contract. | Accepted |
+| [[ADR_0030_Cleanup_Hardening]] | `cleanup-images` orphan deletion is hardened with a circuit-breaker (G1 empty-used-set / G2 30% ratio / G3 200 absolute), two-phase quarantine (mark now, sweep after a grace window), a `MediaCleanupRun` audit log, and a Sentry cron monitor. `?force=1` overrides G2/G3 but never G1. | Accepted |
 
 ## Superseded / Deprecated
 *(none yet)*
@@ -65,6 +66,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-06-09: Added [[ADR_0030_Cleanup_Hardening]] - `cleanup-images` now marks orphans into `OrphanImageQuarantine` (phase 1) and only hard-deletes them after a 7-day grace if still orphaned (phase 2), guarded by a circuit-breaker (G1 empty-used-set non-overridable, G2 30% ratio, G3 200 absolute) with `?force=1` override, a `MediaCleanupRun` audit row per run, and a Sentry cron monitor (`withCronMonitor`). Industry-aligned (MS Entra 500 / octoDNS 30%); first run after deploy marks only.
 - 2026-06-08: Added [[ADR_0029_Review_Media_Metadata]] - review media rows now have additive metadata fields; upload/register verifies signed Cloudinary upload-response metadata, review submit carries it into `ReviewMedia`, and a dry-run-first metadata backfill script repairs existing rows.
 - 2026-06-08: Added [[ADR_0028_Review_Cursor_Pagination]] - `GET /api/public/reviews` now returns `nextCursor`; widget load-more uses cursor/keyset reads when available and falls back to legacy page requests for compatibility.
 - 2026-06-07: Added [[ADR_0027_Review_Media_Read_Model]] - public photo-review filters now use indexed `Review.hasImages` and review images are normalized into `ReviewMedia`; legacy `Review.images` remains as a compatibility mirror.

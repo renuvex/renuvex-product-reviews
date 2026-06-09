@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-06-09
+last_verified: 2026-06-09
 confidence: high
 tags:
   - database
@@ -16,12 +16,15 @@ related:
   - "[[Important_Files]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
   - "[[ADR_0028_Review_Cursor_Pagination]]"
+  - "[[ADR_0030_Cleanup_Hardening]]"
 source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
   - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
   - "prisma/migrations/20260608170000_add_review_summary_photo_rating_counts/migration.sql"
+  - "prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql"
+  - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
@@ -33,7 +36,7 @@ source_files:
 # Database Map
 
 ## Summary
-Postgres (Supabase) accessed via Prisma. Eight models: `AuthToken`, `Review`, `ReviewMedia`, `ProductReviewSummary`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, `PendingReviewImage`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
+Postgres (Supabase) accessed via Prisma. Ten models: `AuthToken`, `Review`, `ReviewMedia`, `ProductReviewSummary`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, `PendingReviewImage`, `MediaCleanupRun`, `OrphanImageQuarantine`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
 
 ## Files
 
@@ -57,6 +60,8 @@ Postgres (Supabase) accessed via Prisma. Eight models: `AuthToken`, `Review`, `R
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
 | `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
 | `PendingReviewImage` | `publicId` | Registry of tenant-scoped Cloudinary uploads not yet attached to a `Review` |
+| `MediaCleanupRun` | `id` (uuid) | Audit log, one row per `cleanup-images` cron run (scan/quarantine/sweep counts, breaker status, `sampleDeleted` sample). See [[ADR_0030_Cleanup_Hardening]] |
+| `OrphanImageQuarantine` | `publicId` | Two-phase orphan-deletion state: orphans are marked here, then hard-deleted only after a grace window if still orphaned. See [[ADR_0030_Cleanup_Hardening]] |
 
 ## Index strategy
 On `Review`:
@@ -152,9 +157,11 @@ code run together, so a migration must not break the old code.
 - [[ADR_0026_Product_Review_Summary_Read_Model]]
 - [[ADR_0027_Review_Media_Read_Model]]
 - [[ADR_0029_Review_Media_Metadata]]
+- [[ADR_0030_Cleanup_Hardening]]
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-09: Added `MediaCleanupRun` (cleanup audit log) and `OrphanImageQuarantine` (two-phase orphan-deletion state) tables; `cleanup-images` now marks-then-sweeps orphans behind a circuit-breaker instead of deleting immediately. Additive, single-deploy migration. See [[ADR_0030_Cleanup_Hardening]] and [[Maintenance_Runbook]].
 - 2026-06-08: Added additive Cloudinary metadata fields to `ReviewMedia` and `PendingReviewImage`; public review responses keep `images` and add structured `media[]`. See [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: Extended `ProductReviewSummary` with `photoRating1Count` ... `photoRating5Count` so `/api/public/reviews` can return exact filtered `totalCount` / `totalPages` without raw `Review.count()` on public reads.
 - 2026-06-08: Applied test-store legacy review media reconciliation. Copied 10 available old global assets, dropped 30 missing source URLs with explicit cleanup, and verified zero remaining global `review_images/...` URLs. See [[Legacy_Review_Media_Reconciliation]].

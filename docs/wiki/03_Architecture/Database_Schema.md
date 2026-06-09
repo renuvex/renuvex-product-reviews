@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-06-09
+last_verified: 2026-06-09
 confidence: high
 tags:
   - database
@@ -18,20 +18,23 @@ related:
   - "[[ADR_0015_Canonical_Product_Identity]]"
   - "[[ADR_0026_Product_Review_Summary_Read_Model]]"
   - "[[ADR_0028_Review_Cursor_Pagination]]"
+  - "[[ADR_0030_Cleanup_Hardening]]"
 source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260606193000_add_product_review_summary/migration.sql"
   - "prisma/migrations/20260607120000_add_review_media_read_model/migration.sql"
   - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
   - "prisma/migrations/20260608170000_add_review_summary_photo_rating_counts/migration.sql"
+  - "prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
+  - "src/lib/cleanup-orphan-images.ts"
 ---
 
 # Database Schema
 
 ## Summary
-PostgreSQL via Prisma. Eight models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
+PostgreSQL via Prisma. Ten models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
 
 ## Models
 
@@ -240,7 +243,52 @@ Lifecycle:
 3. The register endpoint validates the URL against the tenant-scoped trusted policy, verifies signed Cloudinary upload-response metadata when present, and upserts a `PendingReviewImage` row with `storeId` and metadata status.
 4. `/api/public/reviews` POST reads pending metadata, creates `ReviewMedia`, inserts the review, and deletes `PendingReviewImage` rows inside one `prisma.$transaction`.
 5. `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily; `/api/admin/cleanup-pending-uploads` remains an explicit maintenance endpoint for the same helper. It deletes rows where `createdAt < now - 24h` plus their Cloudinary assets.
-6. Monthly `/api/admin/cleanup-images` is the safety-net fallback for uploads that bypassed the registry — it now paginates Cloudinary via `next_cursor` and only deletes assets older than 30 days.
+6. Monthly `/api/admin/cleanup-images` is the safety-net fallback for uploads that bypassed the registry — it paginates Cloudinary via `next_cursor`, only considers assets older than 30 days, and (per [[ADR_0030_Cleanup_Hardening]]) **marks orphans into `OrphanImageQuarantine` and hard-deletes them only after a grace window if still orphaned**, behind a circuit-breaker, writing a `MediaCleanupRun` audit row.
+
+### `MediaCleanupRun`
+Audit log for the `cleanup-images` cron — one row per run. See [[ADR_0030_Cleanup_Hardening]].
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String `@id @default(uuid())` | |
+| `startedAt` | DateTime `@default(now())` | Run start (set explicitly by the route) |
+| `finishedAt` | DateTime? | Run end |
+| `status` | String `@default("ok") @db.VarChar(32)` | `ok` / `tripped` / `error` / `skipped` |
+| `trigger` | String `@default("cron") @db.VarChar(32)` | `cron` / `manual` (manual when `?force=1`) |
+| `scanned` | Int | Cloudinary assets walked |
+| `usedCount` | Int | publicIds in use (ReviewMedia + legacy) |
+| `candidates` | Int | Current orphans flagged this run |
+| `quarantinedNew` | Int | Newly added to quarantine this run |
+| `released` | Int | Un-quarantined (no longer orphan) this run |
+| `deleted` | Int | Hard-deleted (swept) this run |
+| `breakerTripped` | Boolean | Whether a guard tripped |
+| `breakerReason` | String? `@db.VarChar(128)` | e.g. `empty-used-set …` / `ratio …` / `sweep … > …` |
+| `forced` | Boolean | `?force=1` was used |
+| `sampleDeleted` | Json? | Up to ~50 deleted publicIds, for forensic recovery |
+| `error` | String? `@db.VarChar(512)` | Captured message when `status='error'` |
+| `durationMs` | Int? | Wall-clock duration |
+
+Indexes:
+- `[startedAt]`
+- `[status, startedAt]`
+
+### `OrphanImageQuarantine`
+Two-phase orphan-deletion state for `cleanup-images`: an orphan is marked here (phase 1) and only hard-deleted after a grace window if still orphaned (phase 2). See [[ADR_0030_Cleanup_Hardening]].
+
+| Field | Type | Notes |
+|---|---|---|
+| `publicId` | String `@id @db.VarChar(512)` | Cloudinary public id of the quarantined asset |
+| `storeId` | String? | Best-effort tenant scope parsed from the publicId path |
+| `reason` | String `@default("orphan_scan") @db.VarChar(64)` | Why quarantined |
+| `quarantinedAt` | DateTime `@default(now())` | Phase-1 mark time; grace window measured from here (preserved across re-marks) |
+| `lastSeenAt` | DateTime `@default(now())` | Last run it was still seen as an orphan |
+| `scanCount` | Int `@default(1)` | Number of runs it has been flagged |
+
+Indexes:
+- `[quarantinedAt]`
+- `[storeId]`
+
+Maintained by `/api/admin/cleanup-images` (mark / release / sweep) via `src/lib/cleanup-orphan-images.ts`.
 
 ## Conventions
 - All multi-tenant tables key on `storeId` (which is `merchantId`). No table is shared cross-tenant.
@@ -255,6 +303,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - `Review.images` is now a legacy mirror. The normalized media model is `ReviewMedia`, and public photo filters should use `Review.hasImages`.
 - `ReviewMedia` metadata is additive. Public `images: string[]` remains the compatibility contract; `media[]` is an additive structured field for future media-heavy UI.
 - No soft-delete. `prisma.review.delete` is hard delete.
+- Orphan Cloudinary asset deletion **is** two-phase (mark → grace → sweep) via `OrphanImageQuarantine`; this is storage GC, not review soft-delete. See [[ADR_0030_Cleanup_Hardening]].
 
 ## Related Source Files
 - [prisma/schema.prisma](prisma/schema.prisma)
@@ -268,10 +317,12 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[ADR_0012_Pending_Upload_Registry]]
 - [[ADR_0027_Review_Media_Read_Model]]
 - [[ADR_0029_Review_Media_Metadata]]
+- [[ADR_0030_Cleanup_Hardening]]
 - [[Auth_And_Installation_Flow]]
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-06-09: Added `MediaCleanupRun` (cleanup audit log) and `OrphanImageQuarantine` (two-phase orphan-deletion state) models; `cleanup-images` now marks-then-sweeps orphans behind a circuit-breaker. Additive single-deploy migration. See [[ADR_0030_Cleanup_Hardening]].
 - 2026-06-08: Added Cloudinary image metadata columns to `ReviewMedia` and `PendingReviewImage`; upload/register now stages verified upload-response metadata and review submit carries it into committed media rows. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: Added `photoRating1Count` ... `photoRating5Count` to `ProductReviewSummary` so public review-list filtered totals come from the read model instead of raw `Review.count()`.
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` for indexed public photo-review filters and normalized trusted media rows. Related: [[ADR_0027_Review_Media_Read_Model]].

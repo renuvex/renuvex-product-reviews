@@ -1,29 +1,69 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { v2 as cloudinary } from 'cloudinary';
-import { getConfiguredCloudinaryCloudName, getReviewImagePublicId, parseStoredReviewImages } from '@/lib/review-images';
-import { reportCronTaskError } from '@/lib/cron-observability';
+import { runCleanupImages } from '@/lib/cleanup-orphan-images';
+import { reportCronTaskError, withCronMonitor } from '@/lib/cron-observability';
 
-// Monthly fallback orphan cleanup (see ADR_0012).
+// Monthly fallback orphan cleanup (ADR_0012), hardened per ADR_0030.
 //
 // Primary cleanup is /api/admin/cleanup-pending-uploads, driven by the
-// PendingReviewImage registry. That covers the normal lifecycle. This
-// endpoint exists for the edge cases:
-//   - Widget's fire-and-forget register call failed for a successful upload.
-//   - A legacy upload predates the registry contract.
-//   - Manual ops uploads that bypassed the widget.
+// PendingReviewImage registry. This endpoint is the fallback for edge cases
+// (register call failed, legacy uploads, manual ops uploads).
 //
-// Design:
-//   - Paginates Cloudinary listing via next_cursor — no 500-asset cap.
-//   - Only considers assets older than ORPHAN_AGE_DAYS so in-flight uploads
-//     and recently-committed reviews cannot race against the diff.
-//   - Compares Cloudinary listing against ReviewMedia, with Review.images as
-//     a legacy transition fallback.
-//   - Deletes orphans in batches of 100 (Cloudinary delete cap).
+// Safety (ADR_0030): the orphan diff + two-phase quarantine + circuit-breaker
+// live in src/lib/cleanup-orphan-images.ts. This route only handles auth, the
+// Sentry cron monitor, and persisting the MediaCleanupRun audit row.
+//   - ?force=1 overrides the ratio (G2) and absolute (G3) breakers after a human
+//     has reviewed the audit row. It NEVER overrides the empty-used-set guard (G1).
 
 const CRON_SECRET = process.env.CRON_SECRET;
-const ORPHAN_AGE_DAYS = 30;
-const LIST_PAGE_SIZE = 500;
+
+type AuditInput = {
+  startedAt: Date;
+  startMs: number;
+  status: 'ok' | 'tripped' | 'error' | 'skipped';
+  trigger: 'cron' | 'manual';
+  forced: boolean;
+  scanned?: number;
+  usedCount?: number;
+  candidates?: number;
+  quarantinedNew?: number;
+  released?: number;
+  deleted?: number;
+  breakerTripped?: boolean;
+  breakerReason?: string;
+  sampleDeleted?: string[];
+  error?: string;
+};
+
+// Persist one MediaCleanupRun row per execution. Best-effort: an audit failure
+// must never break the cron.
+async function persistAudit(input: AuditInput): Promise<void> {
+  try {
+    const sample = input.sampleDeleted && input.sampleDeleted.length ? input.sampleDeleted : undefined;
+    await prisma.mediaCleanupRun.create({
+      data: {
+        startedAt: input.startedAt,
+        finishedAt: new Date(),
+        durationMs: Date.now() - input.startMs,
+        status: input.status,
+        trigger: input.trigger,
+        forced: input.forced,
+        scanned: input.scanned ?? 0,
+        usedCount: input.usedCount ?? 0,
+        candidates: input.candidates ?? 0,
+        quarantinedNew: input.quarantinedNew ?? 0,
+        released: input.released ?? 0,
+        deleted: input.deleted ?? 0,
+        breakerTripped: input.breakerTripped ?? false,
+        breakerReason: input.breakerReason ? input.breakerReason.slice(0, 128) : null,
+        sampleDeleted: sample,
+        error: input.error ? input.error.slice(0, 512) : null,
+      },
+    });
+  } catch (err) {
+    console.error('[cleanup-images] audit write failed:', err);
+  }
+}
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -35,88 +75,64 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  try {
-    const cloudName = getConfiguredCloudinaryCloudName();
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
-    if (!cloudName || !apiKey || !apiSecret) {
-      console.error('[cleanup-images] Cloudinary config is missing');
-      return NextResponse.json({ error: 'Cloudinary config missing' }, { status: 500 });
-    }
+  const force = new URL(request.url).searchParams.get('force') === '1';
+  const trigger: 'cron' | 'manual' = force ? 'manual' : 'cron';
 
-    cloudinary.config({
-      cloud_name: cloudName,
-      api_key: apiKey,
-      api_secret: apiSecret,
-    });
+  return withCronMonitor<NextResponse>('cleanup-images', { schedule: '0 4 1 * *', maxRuntime: 10 }, async () => {
+    const startedAt = new Date();
+    const startMs = Date.now();
 
-    // 1. Build the set of publicIds currently attached to reviews.
-    const usedPublicIds = new Set<string>();
-    const mediaRows = await prisma.reviewMedia.findMany({
-      select: { publicId: true },
-    });
-    for (const row of mediaRows) {
-      if (row.publicId) usedPublicIds.add(row.publicId);
-    }
+    try {
+      const result = await runCleanupImages(prisma, { force });
 
-    // Legacy transition fallback: pre-ReviewMedia rows may still only have
-    // Review.images until the media backfill has run.
-    const reviews = await prisma.review.findMany({
-      where: { images: { not: null } },
-      select: { storeId: true, images: true },
-    });
-    for (const review of reviews) {
-      if (!review.images) continue;
-      const urls = parseStoredReviewImages(review.images, cloudName, review.storeId);
-      for (const url of urls) {
-        const publicId = getReviewImagePublicId(url, cloudName, review.storeId);
-        if (publicId) usedPublicIds.add(publicId);
+      if (result.status === 'skipped_no_cloudinary_config') {
+        reportCronTaskError('cleanup-images', 'cleanup-images', new Error('Cloudinary config missing'));
+        await persistAudit({ startedAt, startMs, status: 'skipped', trigger, forced: force, error: 'cloudinary_config_missing' });
+        return { hadErrors: true, value: NextResponse.json({ error: 'Cloudinary config missing' }, { status: 500 }) };
       }
-    }
 
-    // 2. Walk the entire review_images/ folder with cursor pagination.
-    const cutoff = Date.now() - ORPHAN_AGE_DAYS * 24 * 60 * 60 * 1000;
-    const orphans: string[] = [];
-    let nextCursor: string | undefined;
-    let scanned = 0;
-    do {
-      const result: { resources: Array<{ public_id: string; created_at: string }>; next_cursor?: string } =
-        await cloudinary.api.resources({
-          type: 'upload',
-          prefix: 'review_images/',
-          max_results: LIST_PAGE_SIZE,
-          next_cursor: nextCursor,
-        });
-      scanned += result.resources.length;
-      for (const asset of result.resources) {
-        if (usedPublicIds.has(asset.public_id)) continue;
-        const createdAt = Date.parse(asset.created_at);
-        if (Number.isFinite(createdAt) && createdAt < cutoff) {
-          orphans.push(asset.public_id);
-        }
+      await persistAudit({
+        startedAt,
+        startMs,
+        status: result.status,
+        trigger,
+        forced: force,
+        scanned: result.scanned,
+        usedCount: result.usedCount,
+        candidates: result.currentOrphans,
+        quarantinedNew: result.quarantinedNew,
+        released: result.released,
+        deleted: result.deleted,
+        breakerTripped: result.breakerTripped,
+        breakerReason: result.breakerReason,
+        sampleDeleted: result.sampleDeleted,
+      });
+
+      if (result.status === 'tripped') {
+        // A trip is a controlled, alert-worthy safety action: surface it loudly
+        // (rich Sentry issue + monitor 'error' via hadErrors) but return 200 — the
+        // function did its job, it just declined to delete.
+        reportCronTaskError(
+          'cleanup-images',
+          'breaker-tripped',
+          new Error(`cleanup breaker tripped: ${result.breakerReason ?? 'unknown'}`),
+          { scanned: result.scanned, usedCount: result.usedCount, currentOrphans: result.currentOrphans, forced: force },
+        );
       }
-      nextCursor = result.next_cursor;
-    } while (nextCursor);
 
-    if (orphans.length === 0) {
-      return NextResponse.json({ message: 'Temizlenecek görsel yok.', scanned, deleted: 0 });
+      const value = NextResponse.json({
+        message:
+          result.status === 'tripped'
+            ? 'Güvenlik eşiği aşıldı — silme yapılmadı, inceleme gerekli.'
+            : 'Temizleme tamamlandı.',
+        ...result,
+      });
+      return { hadErrors: result.status === 'tripped', value };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      reportCronTaskError('cleanup-images', 'cleanup-images', error);
+      await persistAudit({ startedAt, startMs, status: 'error', trigger, forced: force, error: message });
+      return { hadErrors: true, value: NextResponse.json({ error: message }, { status: 500 }) };
     }
-
-    let deleted = 0;
-    for (let i = 0; i < orphans.length; i += 100) {
-      const batch = orphans.slice(i, i + 100);
-      try {
-        await cloudinary.api.delete_resources(batch);
-        deleted += batch.length;
-      } catch (err) {
-        console.error('[cleanup-images] delete batch failed:', err);
-      }
-    }
-
-    return NextResponse.json({ message: 'Temizleme tamamlandı.', scanned, deleted });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown';
-    reportCronTaskError('cleanup-images', 'cleanup-images', error);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  });
 }
