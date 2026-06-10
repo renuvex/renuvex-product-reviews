@@ -283,7 +283,7 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         // Numaralı sayfalama renkleri — yalnız paginationMode === 'numbered' iken görünür.
-        // Aktif sayfa ayrı renk almaz: numara bold + dolu kutu (CSS mevcut renkleri ters çevirir).
+        // Aktif sayfa ayrı renk almaz: dolu kutu (CSS mevcut renkleri ters çevirir).
         title: 'Sayfalama',
         isColor: true,
         fields: [
