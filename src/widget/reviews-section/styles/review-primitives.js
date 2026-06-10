@@ -27,6 +27,7 @@ export var REVIEW_PRIMITIVES_CSS = `
   .renuvex-pr-pagination-btn,.renuvex-pr-pagination-arrow{min-width:36px;height:36px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;line-height:1;box-sizing:border-box;border:1px solid var(--renuvex-pr-pagination-border,#e5e7eb);border-radius:var(--renuvex-pr-radius,6px);background:var(--renuvex-pr-pagination-bg,#ffffff);color:var(--renuvex-pr-pagination-text,#111111);font-size:var(--renuvex-pr-load-more-size,14px);font-family:inherit;cursor:pointer;}
   .renuvex-pr-pagination-btn[aria-current="page"]{background:var(--renuvex-pr-pagination-text,#111111);color:var(--renuvex-pr-pagination-bg,#ffffff);border-color:var(--renuvex-pr-pagination-text,#111111);cursor:default;}
   .renuvex-pr-pagination-arrow:disabled{opacity:.45;cursor:not-allowed;}
+  .renuvex-pr-pagination[aria-busy="true"] button{opacity:.6;cursor:progress;}
   .renuvex-pr-pagination-gap{min-width:24px;text-align:center;color:var(--renuvex-pr-pagination-text,#111111);opacity:.55;user-select:none;}
   @media (hover:hover) and (pointer:fine){
     .renuvex-pr-pagination-btn:not([aria-current="page"]):hover,.renuvex-pr-pagination-arrow:not(:disabled):hover{border-color:var(--renuvex-pr-pagination-text,#111111);}

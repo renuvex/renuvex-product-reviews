@@ -47,6 +47,16 @@ export function buildPaginationControl(opts) {
   nav.className = 'renuvex-pr-pagination';
   nav.setAttribute('aria-label', 'Yorum sayfaları');
 
+  // Loading feedback: the whole control goes disabled + aria-busy the moment a
+  // page is activated. No un-busy path is needed — render() replaces the nav
+  // (success, error state, or a newer superseding request's render).
+  function activate(targetPage) {
+    nav.setAttribute('aria-busy', 'true');
+    var buttons = nav.querySelectorAll('button');
+    for (var i = 0; i < buttons.length; i++) buttons[i].disabled = true;
+    onPageChange(targetPage);
+  }
+
   function makeArrow(label, glyph, targetPage, disabled) {
     var btn = document.createElement('button');
     btn.type = 'button';
@@ -56,7 +66,7 @@ export function buildPaginationControl(opts) {
     if (disabled) {
       btn.disabled = true;
     } else {
-      btn.onclick = function () { onPageChange(targetPage); };
+      btn.onclick = function () { activate(targetPage); };
     }
     return btn;
   }
@@ -81,7 +91,7 @@ export function buildPaginationControl(opts) {
     if (item === page) {
       btn.setAttribute('aria-current', 'page');
     } else {
-      btn.onclick = function () { onPageChange(item); };
+      btn.onclick = function () { activate(item); };
     }
     nav.appendChild(btn);
   });
@@ -89,4 +99,23 @@ export function buildPaginationControl(opts) {
   nav.appendChild(makeArrow('Sonraki sayfa', '›', page + 1, page >= totalPages));
 
   return nav;
+}
+
+// Polite screen-reader announcement for page changes. The live region must
+// EXIST before its text changes to be announced reliably, so it lives as a
+// persistent direct child of the shadow root (replaceChildren only wipes the
+// content wrapper; style/sprite/live-region direct children survive renders).
+export function announcePageChange(sRoot, page) {
+  if (!sRoot) return;
+  var live = sRoot.getElementById && sRoot.getElementById('renuvex-pr-pagination-live');
+  if (!live) {
+    live = document.createElement('div');
+    live.id = 'renuvex-pr-pagination-live';
+    live.setAttribute('role', 'status');
+    live.setAttribute('aria-live', 'polite');
+    // Visually hidden, inline so it never depends on injected CSS.
+    live.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;';
+    sRoot.appendChild(live);
+  }
+  live.textContent = 'Sayfa ' + page;
 }

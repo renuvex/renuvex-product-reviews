@@ -16,6 +16,7 @@
 // discarded by isCurrentReviewRequest exactly as before.
 
 import { fetchReviews } from '../reviews-api.js';
+import { announcePageChange } from './pagination.js';
 import { beginReviewRequest, isCurrentReviewRequest } from './request-token.js';
 import {
   currentOrderBy, currentRatingFilter, currentHasImages,
@@ -111,12 +112,27 @@ export function createReviewHandlers(opts) {
       hasImages: hasImagesSnapshot,
     })) return;
     await render(currentProductId, currentSettings, data, currentProductName, currentOrderBy, nextPage);
+
+    // A11y continuity: render() replaced the DOM, dropping focus to <body>.
+    // Restore it to the NEW active page button (preventScroll so the visual
+    // anchor below stays in charge of scroll) and announce the page politely.
+    // On a fetch error the control is absent (error state rendered) — skip both.
+    var container = document.getElementById('renuvex-reviews');
+    var sRoot = container && container.shadowRoot;
+    var activeBtn = sRoot && sRoot.querySelector && sRoot.querySelector('.renuvex-pr-pagination-btn[aria-current="page"]');
+    if (activeBtn) {
+      try { activeBtn.focus({ preventScroll: true }); } catch (_) { try { activeBtn.focus(); } catch (_) { /* best-effort */ } }
+      announcePageChange(sRoot, nextPage);
+    }
+
     // Pagination UX: re-anchor the review section to the top so the new page is
-    // read from the start. Skipped inside the admin preview iframe.
+    // read from the start. Honors prefers-reduced-motion; skipped inside the
+    // admin preview iframe.
     if (typeof window !== 'undefined' && !window.__ikasPreviewMode) {
       var anchor = document.getElementById('renuvex-reviews');
       if (anchor && typeof anchor.scrollIntoView === 'function') {
-        anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        anchor.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
       }
     }
   }
