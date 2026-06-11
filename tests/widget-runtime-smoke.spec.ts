@@ -508,14 +508,7 @@ for (const emptyCase of [
     await expect.poll(() => hasReviewsWidget(page)).toBe(true);
     await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
 
-    expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-title')).toBe('Bu ürün için henüz yorum yok');
-    expect(await page.evaluate(() => {
-      const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
-      const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
-      const container = slot?.querySelector('#renuvex-reviews');
-      const root = container?.shadowRoot || null;
-      return root?.querySelector('.renuvex-pr-empty-state-title')?.tagName || '';
-    })).toBe('H3');
+    expect(await hasInReviewsShadow(page, '.renuvex-pr-empty-state-title')).toBe(false);
     expect(await countInReviewsShadow(page, '.renuvex-pr-empty-state-stars .renuvex-pr-star-empty')).toBe(5);
     expect(await countInReviewsShadow(page, '.renuvex-pr-empty-state-stars .renuvex-pr-star-full,.renuvex-pr-empty-state-stars .renuvex-pr-star-half')).toBe(0);
     expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-text')).toBe('İlk yorumu yazarak diğer müşterilere yardımcı olun.');
@@ -588,7 +581,7 @@ test('empty product review state uses the selected review icon outline', async (
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('empty state title and description follow merchant settings', async ({ page }) => {
+test('empty state description follows merchant settings', async ({ page }) => {
   const emptyPayload = reviewsPayload([], {
     allCount: 0,
     totalCount: 0,
@@ -600,7 +593,6 @@ test('empty state title and description follow merchant settings', async ({ page
     reviewsSettings: {
       summaryLayout: 'classic',
       reviewLayout: 'card',
-      emptyStateTitle: 'Bu üründe değerlendirme yok',
       emptyStateText: 'Sen başlat, ilk değerlendirmeyi yaz.',
     },
     reviewsGetHandler: async (route) => {
@@ -612,13 +604,12 @@ test('empty state title and description follow merchant settings', async ({ page
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
 
-  expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-title')).toBe('Bu üründe değerlendirme yok');
   expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-text')).toBe('Sen başlat, ilk değerlendirmeyi yaz.');
   expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-cta')).toBe('Yorum Yap');
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('empty state title color follows the merchant title color setting', async ({ page }) => {
+test('section title is left aligned in the empty state', async ({ page }) => {
   const emptyPayload = reviewsPayload([], {
     allCount: 0,
     totalCount: 0,
@@ -627,7 +618,7 @@ test('empty state title color follows the merchant title color setting', async (
   });
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
-    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card', headerTitleColor: '#ff0000' },
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
     reviewsGetHandler: async (route) => {
       await fulfillJson(route, emptyPayload);
     },
@@ -636,15 +627,15 @@ test('empty state title color follows the merchant title color setting', async (
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
 
-  const titleColor = await page.evaluate(() => {
+  const titleAlign = await page.evaluate(() => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
     const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
     const container = slot?.querySelector('#renuvex-reviews');
     const root = container?.shadowRoot || null;
-    const el = root?.querySelector<HTMLElement>('.renuvex-pr-empty-state-title');
-    return el ? getComputedStyle(el).color : '';
+    const el = root?.querySelector<HTMLElement>('.renuvex-pr-title');
+    return el ? getComputedStyle(el).textAlign : '';
   });
-  expect(titleColor).toBe('rgb(255, 0, 0)');
+  expect(titleAlign).toBe('left');
   expect(widgetErrors(log)).toEqual([]);
 });
 

@@ -291,10 +291,10 @@ export async function render(productId, settings, reviewsData, productName, orde
       }
 
       if (allCount === 0) {
+        widget.classList.add('renuvex-pr-reviews-empty');
         widget.appendChild(buildEmptyReviewsState({
           iconPair: iconPair,
           writeButtonText: settingText(settings.writeButtonText, 'Yorum Yap'),
-          emptyStateTitle: settingText(settings.emptyStateTitle, 'Bu ürün için henüz yorum yok'),
           emptyStateText: settingText(settings.emptyStateText, 'İlk yorumu yazarak diğer müşterilere yardımcı olun.'),
           onWriteClick: openWriteForm,
         }));

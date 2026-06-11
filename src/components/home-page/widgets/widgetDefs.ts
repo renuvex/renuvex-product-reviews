@@ -321,11 +321,10 @@ export const WIDGETS: WidgetDef[] = [
           // hem modal lightbox (review-modal.js) aynı anahtarı okur. currentSettings
           // global state'ten geliyor; settings yoksa 'Mağaza Sahibi' fallback'i kullanılır.
           { type: 'text',   key: 'merchantReplyLabel',   label: 'Mağaza Yanıtı Etiketi', placeholder: 'Mağaza Sahibi', default: 'Mağaza Sahibi', maxLength: 30 },
-          // Üründe hiç yorum yokken gösterilen boş-durum başlığı + açıklaması.
-          // CTA butonu (writeButtonText) zaten editable'dı; başlık/metni de aynı
-          // 'Metin' desenine bağlandı. Boş bırakılırsa render tarafında Türkçe
-          // fallback kullanılır (states.js buildEmptyReviewsState).
-          { type: 'text',   key: 'emptyStateTitle',      label: 'Boş Durum Başlığı', placeholder: 'Bu ürün için henüz yorum yok', default: 'Bu ürün için henüz yorum yok', maxLength: 60 },
+          // Üründe hiç yorum yokken gösterilen boş-durum davet metni. Ayrı bir
+          // boş-durum başlığı yok (section başlığı yeterli); sadece bu davet metni
+          // editable. Boşsa render Türkçe fallback'i kullanır
+          // (states.js buildEmptyReviewsState).
           { type: 'text',   key: 'emptyStateText',       label: 'Boş Durum Açıklaması', placeholder: 'İlk yorumu yazarak diğer müşterilere yardımcı olun.', default: 'İlk yorumu yazarak diğer müşterilere yardımcı olun.', maxLength: 120 },
         ],
         subGroups: [
