@@ -398,6 +398,12 @@ async function activateFilterItemByTextAndReadInactiveBarState(page: Page, text:
   }, text);
 }
 
+async function swallowTrailingDismissClick(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+  });
+}
+
 async function firstBarCountMetrics(page: Page): Promise<{
   text: string;
   width: number;
@@ -877,7 +883,14 @@ test('compact mobile keeps bar panel stable when sort changes after rating filte
     opacity: '0.35',
     pointerEvents: 'none',
   });
+  await swallowTrailingDismissClick(page);
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-filter-menu.renuvex-pr-open')).toBe(false);
+  await expect.poll(() => filterReopenState(page)).toMatchObject({
+    activeText: 'En Yüksek Puan',
+    menuOpen: false,
+    pointerEvents: 'auto',
+    shielded: false,
+  });
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-compact-panel.renuvex-pr-open')).toBe(true);
   await expect.poll(async () => {
     const rows = await barRowsState(page);
@@ -888,7 +901,7 @@ test('compact mobile keeps bar panel stable when sort changes after rating filte
     return rows.slice(1).every((row) =>
       row.className.includes('renuvex-pr-bar-dimmed') &&
       row.opacity === '0.35' &&
-      row.pointerEvents === 'none'
+      row.pointerEvents === 'auto'
     );
   }).toBe(true);
   await expect.poll(async () => {

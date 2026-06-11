@@ -3,8 +3,8 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-30
-updated: 2026-06-02
-last_verified: 2026-06-02
+updated: 2026-06-11
+last_verified: 2026-06-11
 confidence: high
 tags:
   - bug
@@ -140,6 +140,10 @@ mouse click activation).
 - 2026-06-02 compact-mobile follow-up: targeted runtime proof failed before the fix with
   inactive bar row `opacity: 1` while the dismiss shield was armed, then passed after narrowing
   the shield opacity reset (`opacity: 0.35`, `pointer-events: none`).
+- 2026-06-11 runtime-test follow-up: the compact-mobile sort-after-rating proof now mirrors the
+  real shield lifecycle. It still asserts the armed touch/pen shield keeps dimmed rows at
+  `opacity:0.35` and `pointer-events:none`, then dispatches the swallowed trailing click and
+  asserts the rows return to `pointer-events:auto` after the shield clears.
 - 2026-06-02 deployment follow-up: Vercel MCP showed production deployment
   `dpl_Bn5P63cq5gqR51GZBs9SZjKFVknM` on commit `142707d8` was `READY`; live
   `/widget.js` imported `runtime-P3VKNO5E.js`, and live runtime chunks contained the bar-row

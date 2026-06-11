@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-06-09
-last_verified: 2026-06-09
+updated: 2026-06-11
+last_verified: 2026-06-11
 confidence: high
 tags:
   - testing
@@ -87,7 +87,7 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 
 `pnpm test:ci` runs the five layers together. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
 
-Storefront interactions, runtime smoke, and unit tests also pin the summary filter same-gesture shield: touch/pen filter option activation closes the menu on `pointerdown`, arms the popover registry shield, keeps the exposed write button at `pointer-events:none` / `opacity:1` for that gesture, keeps selected-filter rating bar dim opacity intact while pointer-blocking bar rows, and clears the shield when the trailing click is swallowed. Desktop mouse option selection is pinned separately to the normal `click` path: every summary layout keeps the filter button at `pointer-events:auto` / `cursor:pointer` and can reopen it immediately after a sort-triggered render. This protects physical mobile compat-event behavior without disabling ADR_0011 `:active` feedback for real future taps or desktop repeat-selection ergonomics.
+Storefront interactions, runtime smoke, and unit tests also pin the summary filter same-gesture shield: touch/pen filter option activation closes the menu on `pointerdown`, arms the popover registry shield, keeps the exposed write button at `pointer-events:none` / `opacity:1` for that gesture, keeps selected-filter rating bar dim opacity intact while pointer-blocking bar rows, and clears the shield when the trailing click is swallowed. Runtime smoke treats that shield as transient: it asserts dimmed rating rows are pointer-blocked while the shield is armed, then simulates the swallowed trailing click and asserts the controls return to `pointer-events:auto`. Desktop mouse option selection is pinned separately to the normal `click` path: every summary layout keeps the filter button at `pointer-events:auto` / `cursor:pointer` and can reopen it immediately after a sort-triggered render. This protects physical mobile compat-event behavior without disabling ADR_0011 `:active` feedback for real future taps or desktop repeat-selection ergonomics.
 
 Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains the final trusted Cloudinary URL instead of a local `blob:` preview URL.
 
