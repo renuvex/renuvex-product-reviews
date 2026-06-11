@@ -6,6 +6,8 @@
 // carry no head-injected CSS. Neither calls render() — the error block's retry
 // handler is passed in by the caller (render.js) to avoid a render<->states cycle.
 
+import { partialStarsHTML } from '../../core/helpers.js';
+
 // Disabled-state placeholder (admin preview when settings.enabled === false).
 // Built via DOM (not an HTML string) so it can render inside the shadow root.
 export function buildDisabledStateEl(radius) {
@@ -55,19 +57,34 @@ export function buildEmptyReviewsState(opts) {
   var wrap = document.createElement('div');
   wrap.className = 'renuvex-pr-empty-state';
 
+  var content = document.createElement('div');
+  content.className = 'renuvex-pr-empty-state-content';
+
+  var title = document.createElement('div');
+  title.className = 'renuvex-pr-empty-state-title';
+  title.textContent = 'Bu ürün için henüz yorum yok';
+  content.appendChild(title);
+
+  var stars = document.createElement('div');
+  stars.className = 'renuvex-pr-empty-state-stars';
+  stars.innerHTML = partialStarsHTML(0, opts.iconPair);
+  content.appendChild(stars);
+
+  var text = document.createElement('p');
+  text.className = 'renuvex-pr-state-msg renuvex-pr-empty-state-text';
+  text.setAttribute('role', 'status');
+  text.setAttribute('aria-live', 'polite');
+  text.textContent = 'İlk yorumu yazarak diğer müşterilere yardımcı olun.';
+  content.appendChild(text);
+
+  wrap.appendChild(content);
+
   var writeBtn = document.createElement('button');
   writeBtn.type = 'button';
   writeBtn.className = 'renuvex-pr-write-btn renuvex-pr-empty-state-cta';
   writeBtn.textContent = opts.writeButtonText || 'Yorum Yap';
   writeBtn.onclick = typeof opts.onWriteClick === 'function' ? opts.onWriteClick : null;
   wrap.appendChild(writeBtn);
-
-  var text = document.createElement('p');
-  text.className = 'renuvex-pr-state-msg renuvex-pr-empty-state-text';
-  text.setAttribute('role', 'status');
-  text.setAttribute('aria-live', 'polite');
-  text.textContent = 'Henüz yorum yok.';
-  wrap.appendChild(text);
 
   return wrap;
 }

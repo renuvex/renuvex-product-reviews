@@ -292,6 +292,7 @@ export async function render(productId, settings, reviewsData, productName, orde
 
       if (allCount === 0) {
         widget.appendChild(buildEmptyReviewsState({
+          iconPair: iconPair,
           writeButtonText: settingText(settings.writeButtonText, 'Yorum Yap'),
           onWriteClick: openWriteForm,
         }));

@@ -141,6 +141,45 @@ async function dimensionsInReviewsShadow(page: Page, selector: string): Promise<
   }, selector);
 }
 
+async function emptyStateLayoutMetrics(page: Page): Promise<{
+  direction: string;
+  contentTextAlign: string;
+  wrapWidth: number;
+  wrapRight: number;
+  wrapCenter: number;
+  contentRight: number;
+  ctaWidth: number;
+  ctaRight: number;
+  ctaCenter: number;
+}> {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const wrap = root?.querySelector<HTMLElement>('.renuvex-pr-empty-state');
+    const content = root?.querySelector<HTMLElement>('.renuvex-pr-empty-state-content');
+    const cta = root?.querySelector<HTMLElement>('.renuvex-pr-empty-state-cta');
+    if (!wrap || !content || !cta) {
+      throw new Error('Missing empty state layout elements');
+    }
+    const wrapRect = wrap.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+    const ctaRect = cta.getBoundingClientRect();
+    return {
+      direction: getComputedStyle(wrap).flexDirection,
+      contentTextAlign: getComputedStyle(content).textAlign,
+      wrapWidth: wrapRect.width,
+      wrapRight: wrapRect.right,
+      wrapCenter: wrapRect.left + wrapRect.width / 2,
+      contentRight: contentRect.right,
+      ctaWidth: ctaRect.width,
+      ctaRight: ctaRect.right,
+      ctaCenter: ctaRect.left + ctaRect.width / 2,
+    };
+  });
+}
+
 async function clickFilterItemAt(page: Page, index: number): Promise<void> {
   await page.evaluate((index) => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
@@ -463,8 +502,11 @@ for (const emptyCase of [
     await expect.poll(() => hasReviewsWidget(page)).toBe(true);
     await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
 
+    expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-title')).toBe('Bu ürün için henüz yorum yok');
+    expect(await countInReviewsShadow(page, '.renuvex-pr-empty-state-stars .renuvex-pr-star-empty')).toBe(5);
+    expect(await countInReviewsShadow(page, '.renuvex-pr-empty-state-stars .renuvex-pr-star-full,.renuvex-pr-empty-state-stars .renuvex-pr-star-half')).toBe(0);
+    expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-text')).toBe('İlk yorumu yazarak diğer müşterilere yardımcı olun.');
     expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-cta')).toBe(emptyCase.ctaText);
-    expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-text')).toBe('Henüz yorum yok.');
     expect(await page.evaluate(() => {
       const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
       const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
@@ -483,6 +525,40 @@ for (const emptyCase of [
     expect(widgetErrors(log)).toEqual([]);
   });
 }
+
+test('empty product review state keeps desktop CTA right and mobile CTA full width', async ({ page }) => {
+  const emptyPayload = reviewsPayload([], {
+    allCount: 0,
+    totalCount: 0,
+    ratingCounts: [0, 0, 0, 0, 0],
+    avgRating: '0.0',
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'hero', reviewLayout: 'gallery' },
+    reviewsGetHandler: async (route) => {
+      await fulfillJson(route, emptyPayload);
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
+
+  const desktop = await emptyStateLayoutMetrics(page);
+  expect(desktop.direction).toBe('row');
+  expect(desktop.contentTextAlign).toBe('left');
+  expect(desktop.ctaRight).toBeGreaterThan(desktop.contentRight);
+  expect(desktop.wrapRight - desktop.ctaRight).toBeLessThanOrEqual(12);
+  expect(desktop.ctaWidth).toBeLessThan(desktop.wrapWidth * 0.5);
+
+  await page.setViewportSize({ width: 390, height: 800 });
+  await expect.poll(async () => (await emptyStateLayoutMetrics(page)).direction).toBe('column');
+  const mobile = await emptyStateLayoutMetrics(page);
+  expect(mobile.ctaWidth).toBeGreaterThan(mobile.wrapWidth * 0.85);
+  expect(Math.abs(mobile.ctaCenter - mobile.wrapCenter)).toBeLessThanOrEqual(2);
+  expect(widgetErrors(log)).toEqual([]);
+});
 
 test('compact summary filter panel remains interactive after render', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
