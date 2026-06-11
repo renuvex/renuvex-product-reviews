@@ -1,10 +1,11 @@
 // reviews-section/render/states.js — non-content state builders.
 //
-// Pure DOM builders for the review section's non-list states: the admin-preview
-// "disabled" placeholder and the fetch-error retry block. Both render inside the
-// review section's shadow root, so they are built via DOM (not HTML strings) and
-// carry no head-injected CSS. Neither calls render() — the error block's retry
-// handler is passed in by the caller (render.js) to avoid a render<->states cycle.
+// Pure DOM builders for the review section's non-list states: admin-preview
+// disabled, product-empty, filtered-empty, and fetch-error. They render inside
+// the review section's shadow root, so they are built via DOM (not HTML strings)
+// and carry no head-injected CSS. Neither calls render() — the error block's
+// retry handler is passed in by the caller (render.js) to avoid a render<->states
+// cycle.
 
 import { partialStarsHTML } from '../../core/helpers.js';
 
@@ -87,6 +88,15 @@ export function buildEmptyReviewsState(opts) {
   wrap.appendChild(writeBtn);
 
   return wrap;
+}
+
+export function buildFilteredEmptyReviewsState() {
+  var text = document.createElement('p');
+  text.className = 'renuvex-pr-state-msg renuvex-pr-filter-empty-state';
+  text.setAttribute('role', 'status');
+  text.setAttribute('aria-live', 'polite');
+  text.textContent = 'Henüz yorum yok.';
+  return text;
 }
 
 export function buildReviewsErrorState(message, onRetry) {

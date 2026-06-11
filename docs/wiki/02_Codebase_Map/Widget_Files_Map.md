@@ -106,7 +106,7 @@ src/widget/
 │  ├─ render/                     # Builders + handlers extracted from render.js
 │  │  ├─ theme-vars.js            # applyManualTheme + hexToRgba: admin color settings → --renuvex-pr-* CSS vars
 │  │  ├─ size-presets.js          # SIZE_PRESETS + THUMBNAIL_PRESETS tables
-│  │  ├─ states.js                # buildDisabledStateEl + buildReviewsErrorState (non-list state DOM)
+│  │  ├─ states.js                # Disabled, product-empty, filtered-empty, and fetch-error DOM builders
 │  │  ├─ photo-strip.js           # buildPhotoStrip(opts): photo strip section (openReviewModal/wireLightboxTrigger via DI)
 │  │  ├─ handlers.js              # createReviewHandlers({render}): retry/filter/sort handlers that re-run render (DI, no cycle)
 │  │  └─ request-token.js         # reviewRequestSeq race-token (beginReviewRequest/isCurrentReviewRequest)

@@ -22,7 +22,7 @@ import { isReviewsMountEnabled } from '../themes/current-adapter.js';
 import { settingText } from '../core/helpers.js';
 import { beginReviewRequest, isCurrentReviewRequest } from './render/request-token.js';
 import { SIZE_PRESETS, THUMBNAIL_PRESETS, THUMBNAIL_PRESETS_MOBILE } from './render/size-presets.js';
-import { buildDisabledStateEl, buildEmptyReviewsState, buildReviewsErrorState } from './render/states.js';
+import { buildDisabledStateEl, buildEmptyReviewsState, buildFilteredEmptyReviewsState, buildReviewsErrorState } from './render/states.js';
 import { applyManualTheme } from './render/theme-vars.js';
 import { buildPhotoStrip } from './render/photo-strip.js';
 import { createReviewHandlers } from './render/handlers.js';
@@ -332,10 +332,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         if (photoSection) widget.appendChild(photoSection);
 
         if (reviews.length === 0) {
-          var empty = document.createElement('p');
-          empty.className = 'renuvex-pr-state-msg';
-          empty.textContent = 'Henüz yorum yok.';
-          widget.appendChild(empty);
+          widget.appendChild(buildFilteredEmptyReviewsState());
         } else {
           var reviewLayout = getReviewLayout(settings.reviewLayout);
           reviews.forEach(function (r) { widget.appendChild(reviewLayout.render(r, loadedLightboxReviews)); });
