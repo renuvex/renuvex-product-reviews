@@ -73,20 +73,23 @@ describe('widget review form theme variables', () => {
     expect(def.get('--renuvex-pr-pagination-border')).toBe('#e5e7eb');
   });
 
-  test('active pagination page uses its own bg with an auto-contrast number color', () => {
-    const dark = collectThemeVars({ paginationActiveBgColor: '#111111' });
-    expect(dark.get('--renuvex-pr-pagination-active-bg')).toBe('#111111');
-    expect(dark.get('--renuvex-pr-pagination-active-text')).toBe('#ffffff'); // readable on dark fill
+  test('active pagination page bg + number are independent explicit settings', () => {
+    const vars = collectThemeVars({
+      paginationActiveBgColor: '#0000ff',
+      paginationActiveTextColor: '#ffff00',
+    });
+    expect(vars.get('--renuvex-pr-pagination-active-bg')).toBe('#0000ff');
+    expect(vars.get('--renuvex-pr-pagination-active-text')).toBe('#ffff00');
 
-    const light = collectThemeVars({ paginationActiveBgColor: '#ffffff' });
-    expect(light.get('--renuvex-pr-pagination-active-bg')).toBe('#ffffff');
-    expect(light.get('--renuvex-pr-pagination-active-text')).toBe('#111111'); // readable on light fill
+    // Default keeps the current filled-dark box / white active number look.
+    const def = collectThemeVars({});
+    expect(def.get('--renuvex-pr-pagination-active-bg')).toBe('#111111');
+    expect(def.get('--renuvex-pr-pagination-active-text')).toBe('#ffffff');
 
-    // Decoupling: changing the (passive) number color must NOT move the active fill,
-    // and the default keeps the current filled-dark look.
-    const decoupled = collectThemeVars({ paginationTextColor: '#ff0000' });
-    expect(decoupled.get('--renuvex-pr-pagination-active-bg')).toBe('#111111');
-    expect(decoupled.get('--renuvex-pr-pagination-active-text')).toBe('#ffffff');
+    // The passive number color (Numara Rengi) does not affect the active number.
+    const passive = collectThemeVars({ paginationTextColor: '#ff0000' });
+    expect(passive.get('--renuvex-pr-pagination-text')).toBe('#ff0000');
+    expect(passive.get('--renuvex-pr-pagination-active-text')).toBe('#ffffff');
   });
 
   test('readable control helpers use deterministic fallback colors', () => {

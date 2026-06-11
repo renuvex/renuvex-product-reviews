@@ -129,7 +129,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
-- 2026-06-09: `Sayfalama` color group gained `paginationActiveBgColor` (active page fill, default `#111111`), decoupled from `paginationTextColor`; the active number color auto-derives for contrast (`getReadableControlColor`) so no separate active-text setting is needed.
+- 2026-06-09: `Sayfalama` color group gained explicit active-page colors — `paginationActiveBgColor` (fill, default `#111111`) and `paginationActiveTextColor` (number, default `#ffffff`) — decoupled from the passive `paginationTextColor`. Every pagination color is an explicit field.
 - 2026-06-09: Added the `paginationMode` design select (Tasarım: `loadMore` | `numbered`) and a `Sayfalama` color group. The load-more and pagination color groups are `showWhen`-gated on `paginationMode`, so only the active mode's colors show in `Renkler`. Schema-driven end-to-end — `widget-settings.ts` (defaults/sanitize/validate) and `SettingsPanel` auto-pick the new fields with no code change. See [[Product_Review_Widget]].
 - 2026-06-06: Added nested `Metin > Yorum Formu` copy settings for review wizard step headings and photo subtitle. Settings traversal is recursive via `collectSettingFields(...)`; storefront copy renders as safe text with whitespace fallback and long-word wrapping.
 - 2026-06-01: Review form wizard close (X) color was decoupled from `formPrimaryTextColor`; runtime derives close icon and hover colors from `formBgColor` with deterministic contrast helpers in `theme-vars.js`.

@@ -283,15 +283,16 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         // Numaralı sayfalama renkleri — yalnız paginationMode === 'numbered' iken görünür.
-        // Aktif sayfa kendi dolgu rengini ('Aktif Sayfa Arka Planı') alır; üstündeki numara
-        // rengi okunabilirlik için otomatik (#fff/#111) türetilir — ayrı ayar yok.
+        // Pasif butonlar (bg / numara / kenarlık) + aktif sayfanın BAĞIMSIZ renkleri
+        // (aktif bg + aktif numara). Her renk açık ayar; otomatik türetme yok.
         title: 'Sayfalama',
         isColor: true,
         fields: [
-          { type: 'color', key: 'paginationBgColor',       label: 'Buton Arka Planı',       default: '#ffffff', showWhen: { key: 'paginationMode', equals: 'numbered' } },
-          { type: 'color', key: 'paginationTextColor',     label: 'Numara Rengi',           default: '#111111', showWhen: { key: 'paginationMode', equals: 'numbered' } },
-          { type: 'color', key: 'paginationActiveBgColor', label: 'Aktif Sayfa Arka Planı', default: '#111111', showWhen: { key: 'paginationMode', equals: 'numbered' } },
-          { type: 'color', key: 'paginationBorderColor',   label: 'Kenarlık Rengi',         default: '#e5e7eb', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationBgColor',         label: 'Buton Arka Planı',       default: '#ffffff', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationTextColor',       label: 'Numara Rengi',           default: '#111111', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationActiveBgColor',   label: 'Aktif Sayfa Arka Planı', default: '#111111', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationActiveTextColor', label: 'Aktif Numara Rengi',     default: '#ffffff', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationBorderColor',     label: 'Kenarlık Rengi',         default: '#e5e7eb', showWhen: { key: 'paginationMode', equals: 'numbered' } },
         ],
       },
       {
