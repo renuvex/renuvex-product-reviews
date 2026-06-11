@@ -1,13 +1,19 @@
 'use client';
 
-import React, { Suspense, lazy, useState, useCallback, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { ArrowLeft, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity, shadows } from '@/lib/design-tokens';
-import { WidgetDef, collectSettingFields } from '../widgetDefs';
+import type { WidgetDef } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
 import { ColorPickerField } from './ColorPickerField';
+import {
+  mergeWithDefaults,
+  sameSettingsDraft,
+  shouldSyncDraftFromSaved,
+  type WidgetSettingsDraft,
+} from './WidgetEditorState';
 
 // Widgets that support iframe preview (real widget.js)
 const IFRAME_PREVIEW_WIDGETS = ['reviews'];
@@ -33,16 +39,6 @@ function PreviewBackgroundInfo() {
   );
 }
 
-// widgetDef'teki default değerlerden başlangıç ayarlarını üret,
-// DB'den gelen savedSettings ile override et (eksik key'ler default'tan gelir)
-function mergeWithDefaults(widget: WidgetDef, savedSettings: WidgetSettingsDraft): WidgetSettingsDraft {
-  const defaults: WidgetSettingsDraft = {};
-  for (const field of collectSettingFields(widget.settings)) {
-    defaults[field.key] = field.default;
-  }
-  return { ...defaults, ...savedSettings };
-}
-
 // ─── Lazy preview map ────────────────────────────────────────────────────────
 // Yeni widget eklenince buraya 1 satır ekle, başka hiçbir şeye dokunma.
 
@@ -52,8 +48,6 @@ const PREVIEW_MAP: Record<string, React.LazyExoticComponent<React.ComponentType<
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-export type WidgetSettingsDraft = Record<string, unknown>;
 
 export interface PreviewProps {
   settings: WidgetSettingsDraft;
@@ -70,7 +64,7 @@ interface WidgetEditorProps {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function isDirty(a: WidgetSettingsDraft, b: WidgetSettingsDraft): boolean {
-  return JSON.stringify(a) !== JSON.stringify(b);
+  return !sameSettingsDraft(a, b);
 }
 
 function isWidgetReadyMessage(data: unknown): boolean {
@@ -96,13 +90,24 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const widgetReadyRef = useRef(false);
   const draftRef = useRef<WidgetSettingsDraft>({});
+  const savedDraft = useMemo(() => mergeWithDefaults(widget, savedSettings), [widget, savedSettings]);
+  const previousSavedDraftRef = useRef<WidgetSettingsDraft>(savedDraft);
+  const previousWidgetIdRef = useRef(widget.id);
   const useIframe = IFRAME_PREVIEW_WIDGETS.includes(widget.id);
 
-  // Widget değişince (başka widgeta geçilirse) draft sıfırla
-  useEffect(() => {
-    setDraft(mergeWithDefaults(widget, savedSettings));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [widget.id]);
+  // Sync late saved settings only while the local draft is still untouched.
+  useLayoutEffect(() => {
+    const previousSavedDraft = previousSavedDraftRef.current;
+    const widgetChanged = previousWidgetIdRef.current !== widget.id;
+
+    previousSavedDraftRef.current = savedDraft;
+    previousWidgetIdRef.current = widget.id;
+
+    setDraft((currentDraft) => {
+      if (!shouldSyncDraftFromSaved(currentDraft, previousSavedDraft, widgetChanged)) return currentDraft;
+      return sameSettingsDraft(currentDraft, savedDraft) ? currentDraft : savedDraft;
+    });
+  }, [savedDraft, widget.id]);
 
   // draft'ı ref'te tut — ready event geldiğinde stale closure olmasın
   useEffect(() => {
@@ -141,7 +146,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
     sessionStorage.setItem(RENUVEX_PR_PREVIEW_SETTINGS_KEY, JSON.stringify(draft));
   }, [draft]);
 
-  const dirty = isDirty(draft, mergeWithDefaults(widget, savedSettings));
+  const dirty = isDirty(draft, savedDraft);
 
   const PreviewComponent = PREVIEW_MAP[widget.id] ?? null;
   const viewportWidth = VIEWPORT_PRESETS.find(v => v.key === viewport)?.width ?? '100%';

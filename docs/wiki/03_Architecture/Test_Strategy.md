@@ -42,6 +42,7 @@ source_files:
   - "tests/unit/widget-popover-registry.test.ts"
   - "tests/unit/widget-asset-cache.test.ts"
   - "tests/unit/widget-settings.test.ts"
+  - "tests/unit/widget-editor-state.test.ts"
   - "tests/unit/layout-contracts.test.ts"
   - "tests/unit/pagination-page-list.test.ts"
   - "vercel.json"
@@ -60,6 +61,8 @@ source_files:
   - "src/widget/reviews-section/review-form-modal/index.js"
   - "src/widget/listing-badges/fallback-candidates.js"
   - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
+  - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
@@ -98,6 +101,8 @@ Storefront interactions, admin preview schema tests, and unit tests also pin rev
 Unit tests pin the review-section empty-state text color contract: `theme-vars.js` derives `--renuvex-pr-state-text` from `reviewBodyColor`, so "no reviews yet" follows the merchant's review text color family without adding a separate admin color setting.
 
 Unit tests also pin widget icon registry invariants: all shipped review, filter, and UI chrome SVGs must stay on the Phosphor 256-grid `currentColor` system, stroked icons use documented Phosphor stroke weights (regular `16`, with the compact-only down caret intentionally `24`), and legacy Lucide 24-grid or Unicode X/arrow glyphs are rejected.
+
+Unit tests also pin admin widget editor draft synchronization: late asynchronous saved settings hydrate the editor draft only while the merchant has not made local edits, equivalent setting objects compare without key-order false dirty states, and switching widgets still resets the draft.
 
 Widget runtime smoke also pins the storefront review read contract: late sort/filter/load-more responses cannot mutate a newer active selection, load-more sends `cursor` when the API returns `nextCursor` and falls back to legacy page requests otherwise, overlapping load-more rows do not duplicate DOM cards, review fetch failures stay distinct from real empty states, the photo strip remains a bootstrap-owned dataset, card/list/gallery layouts render only trusted tenant image URLs, list/gallery photo-strip thumbnails follow `thumbnailSize` while their review item photos continue to follow general widget `size`, and list layout review item photos keep their fixed 3:4 portrait box even in tall rows.
 

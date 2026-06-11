@@ -3,7 +3,7 @@ type: bug
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-06
+updated: 2026-06-12
 tags:
   - bugs
 related:
@@ -21,6 +21,7 @@ related:
 - _None tracked._
 
 ## Recently fixed (verify periodically)
+- 2026-06-12 - [[Bug_Widget_Editor_Late_Settings_Dirty_State]] - Verified and fixed an admin customization dirty-state bug where opening Product Reviews before asynchronous saved settings finished loading could initialize the editor draft from defaults, then mark the screen as unsaved when the real saved settings arrived. The editor now syncs late saved settings only while the local draft is still untouched, preserves real merchant edits, and unit tests pin the draft/saved snapshot contract.
 - 2026-06-06 - [[Bug_PDP_Review_Lifecycle_SPA_Race]] - Verified and fixed a PDP SPA navigation race where `PRODUCT_VIEW` could arrive before the explicit review mount and later stale product bootstrap results could overwrite the active PDP review widget. The loader now replays only `reviews-main` for late explicit review mounts, initial bootstrap is guarded by product/path tokens, and network smoke pins late-mount replay, mount-absent badge-only behavior, and stale bootstrap prevention.
 - 2026-06-06 - [[Bug_Compact_Count_Label_HTML_Injection]] - Verified and fixed a compact summary hardening bug: the merchant-editable `countLabel` was interpolated into the compact trigger's `innerHTML` string while the other summary layouts used `textContent`. The compact layout now keeps trusted star/caret SVG markup in `innerHTML` but writes the dynamic count label through `textContent`; merchant-text fallbacks are normalized through `settingText(...)`, and runtime smoke pins both markup-like labels and whitespace-only labels.
 - 2026-06-02 - [[Bug_List_Review_Photo_Height_Stretch]] - Verified and fixed a list layout review item image sizing bug: medium list photos could render as `110 x 400px` because the layout set width but did not own the rendered height, allowing the image HTML `height=400` metadata to leak into layout. List item photos now use paired width/height CSS variables and runtime smoke pins the medium 3:4 portrait box in tall rows.
@@ -64,6 +65,7 @@ related:
 - 2026-05-10 - [[Bug_Review_Detail_Lightbox_Risks]] - Public review image URLs are now restricted to trusted Cloudinary assets before storage or storefront render.
 
 ## Change Log
+- 2026-06-12: Added [[Bug_Widget_Editor_Late_Settings_Dirty_State]] after a source review proved the admin editor could open with temporary default settings before the saved settings response arrived. Fixed by tracking the previous saved draft snapshot, syncing late saved settings only when the local draft is still untouched, preserving real merchant edits, and pinning the behavior with unit tests.
 - 2026-06-06: Added [[Bug_PDP_Review_Lifecycle_SPA_Race]] after source review and browser regression tests proved a SPA lifecycle race: late explicit review mounts were missed and slow stale product bootstraps could overwrite the current PDP review widget. Fixed with `reviews-main`-only late-mount replay, guarded initial bootstrap, per-product review state reset, and removal of the dead review cache invalidation write.
 - 2026-06-06: Added [[Bug_Compact_Count_Label_HTML_Injection]] after source review showed compact was the only summary layout that rendered the merchant-editable `countLabel` through `innerHTML`. Fixed by moving the dynamic label to `textContent`, adding shared merchant-text fallback normalization, and adding runtime smoke regressions.
 - 2026-06-02: Added [[Bug_List_Review_Photo_Height_Stretch]] after browser proof showed medium list review item photos could render at `110 x 400px` instead of the intended `110 x 146.67px`. Fixed by adding list photo height variables and a tall-row runtime regression.
