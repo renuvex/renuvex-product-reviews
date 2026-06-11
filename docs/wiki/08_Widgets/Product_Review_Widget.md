@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-11
-last_verified: 2026-06-11
+updated: 2026-06-12
+last_verified: 2026-06-12
 confidence: high
 tags:
   - widget
@@ -23,8 +23,10 @@ related:
 source_files:
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/render/size-presets.js"
   - "src/widget/reviews-section/render/states.js"
   - "src/widget/reviews-section/styles/states.js"
+  - "src/widget/reviews-section/styles/review-primitives.js"
   - "src/widget/reviews-section/render/pagination.js"
   - "src/widget/reviews-section/render/handlers.js"
   - "src/widget/reviews-section/reviews-api.js"
@@ -89,6 +91,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Review response `images` is still a string array for widget compatibility. The API now reads normalized `ReviewMedia` rows first and falls back to legacy `Review.images` during migration/backfill. Additive `media[]` entries expose thumbnail URL and nullable metadata for future media-heavy layouts; current widget visuals still use the existing image contract. See [[ADR_0027_Review_Media_Read_Model]] and [[ADR_0029_Review_Media_Metadata]].
 - Load-more: the first page uses the legacy `page=1` request and stores `data.nextCursor`; subsequent "Daha Fazla Goster" requests use `cursor` when available and fall back to `page + 1` only for backwards compatibility. Sort/filter/retry/product changes reset the cursor. See [[ADR_0028_Review_Cursor_Pagination]].
 - **Pagination mode (merchant-selectable, `paginationMode`):** the Tasarım accordion offers `loadMore` (default — the cursor-append "Daha Fazla" button above) or `numbered`. Numbered uses the **offset** path (`page=N`, no cursor) via [render/pagination.js](src/widget/reviews-section/render/pagination.js): `buildPageList` is a pure windowed/ellipsis builder (all pages if `totalPages ≤ 7`, else first/last + current ±1 with `…`); `onPageChange` (in [render/handlers.js](src/widget/reviews-section/render/handlers.js)) re-fetches page N and **replaces** the list (not append), then scrolls the section to top. The control hides when `totalPages ≤ 1`, sits in document flow under the list (not sticky), and sort/filter reset it to page 1. Activating a page disables the whole control (`aria-busy` + dimmed) until the new render replaces it; after render, focus is restored to the new active page button (`preventScroll`, since the full re-render would otherwise drop focus to `<body>`) and a persistent shadow-root live region politely announces "Sayfa N". The scroll-to-top honors `prefers-reduced-motion`. The **active page is a filled box** with its own explicit colors — `paginationActiveBgColor` (fill, default `#111111`) and `paginationActiveTextColor` (number, default `#ffffff`) — independent of the passive `paginationBgColor` / `paginationTextColor`. Every pagination color is an explicit setting (no auto-derivation). Font weight matches the other buttons (the fill is the sole distinction). Colors live in the "Sayfalama" color group (`showWhen paginationMode === 'numbered'`); load-more colors are gated to `loadMore`. Honest trade-off: numbered re-introduces offset cost at deep pages (`totalPages` itself stays cheap from `ProductReviewSummary`). See [[Widget_Customization]] and [[ADR_0028_Review_Cursor_Pagination]].
+- `Widget Boyutu` (`size`) is also the single source for the physical list-pagination controls. It scales the load-more button text, min-height, padding, and top margin, and the numbered pagination button size, padding, gap, ellipsis width, and top margin. No separate pagination-size admin setting exists; mobile/coarse pointer layouts keep a 44px minimum hit target while preserving centered wrap behavior.
 
 ## Photo strip
 - Dedicated horizontal strip above the review list, populated by a separate `hasImages=true&limit=15&orderBy=newest` fetch, independent of sort/filter/load-more.
@@ -126,6 +129,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-12: Load-more and numbered pagination physical control sizes now follow `Widget Boyutu` through shared root CSS variables. The existing `size` setting remains the only size control; mobile/coarse pointer layouts keep a 44px minimum hit target and centered wrapping pagination. Runtime smoke covers load-more sizing, numbered pagination sizing, and mobile overflow.
 - 2026-06-11: Product-empty review UI (`allCount === 0`) moved into `buildEmptyReviewsState()` in [render/states.js](src/widget/reviews-section/render/states.js), then upgraded to the empty-product design: left-aligned semantic `h3` title, 5 empty review icons, explanatory `role="status"` / `aria-live="polite"` text, and a hero/minimal-style CTA (right-aligned on desktop, centered full-width on mobile). Widget-runtime smoke pins the empty-state contract including custom `writeButtonText`, semantic title markup, and responsive CTA layout. The shared `partialStarsHTML()` helper falls back to the default star icon pair when called without an icon pair, so reusable state builders do not render blank decorative icons in standalone use.
 - 2026-06-11: Review-section non-list state CSS moved into [styles/states.js](src/widget/reviews-section/styles/states.js). [styles.js](src/widget/reviews-section/styles.js) remains the `CLASSIC_CSS` aggregator; [styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) now owns only shared review/list primitives plus pagination/load-more primitives.
 - 2026-06-11: Filtered-empty review results now render through `buildFilteredEmptyReviewsState()` with `role="status"` / `aria-live="polite"`. The state remains visually minimal and keeps the summary visible; widget-runtime smoke pins that the rich product-empty CTA does not appear for filter-empty results.

@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-06-12
+last_verified: 2026-06-12
 confidence: high
 tags:
   - widget
@@ -21,6 +21,7 @@ related:
   - "[[ADR_0021_Shadow_DOM_Isolation_Of_Review_Surfaces]]"
 source_files:
   - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/render/size-presets.js"
   - "src/widget/reviews-section/styles.js"
   - "src/widget/reviews-section/styles/base.js"
   - "src/widget/reviews-section/styles/summary-controls.js"
@@ -104,6 +105,8 @@ Set on the widget root in `render.js applyVars` based on merchant size choice (s
 | `--renuvex-pr-recommend-size` | Recommend badge |
 | `--renuvex-pr-btn-text-size` | Write-review button text |
 | `--renuvex-pr-load-more-size` | Load more button text |
+| `--renuvex-pr-load-more-min-height` / `--renuvex-pr-load-more-pad-y` / `--renuvex-pr-load-more-pad-x` | Load more button physical size |
+| `--renuvex-pr-pagination-button-size` / `--renuvex-pr-pagination-pad-x` / `--renuvex-pr-pagination-gap` / `--renuvex-pr-pagination-gap-min` / `--renuvex-pr-pagination-margin-top` | Numbered pagination physical size |
 | `--renuvex-pr-bar-count-size` | Bar chart count text |
 | `--renuvex-pr-bar-label-size` | Bar chart label text |
 | `--renuvex-pr-review-date-size` | Review item date |
@@ -238,13 +241,13 @@ Widget runtime (settings.js)
 
 - ADR_0021 (Shadow DOM isolation) explicitly relies on CSS custom property inheritance crossing the shadow boundary. If a future ADR proposes a different isolation strategy (closed shadow, iframe, etc.), this contract has to be re-evaluated per surface.
 - The badge tokens are the only component-scope tokens that are also live-overridden from JS (`ensureBadgeTokens`). All other tokens are either CSS-declared defaults or `render.js`-applied per-render.
-- Variable count today: ~90. Adding more is cheap; removing existing ones requires a grep across `src/widget/` to make sure no consumer reads them with a fallback the new code did not set.
+- Variable count today: ~100. Adding more is cheap; removing existing ones requires a grep across `src/widget/` to make sure no consumer reads them with a fallback the new code did not set.
 
 ## Related Source Files
 - [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js) — stable `CLASSIC_CSS` aggregator
 - [src/widget/reviews-section/styles/base.js](src/widget/reviews-section/styles/base.js) — widget-root declarations, shared icon/text-safety rules, mobile padding tokens
 - [src/widget/reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) — shared summary bar/action/filter controls
-- [src/widget/reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) — shared review stars, reply, read-more, load-more, state/error/retry CSS
+- [src/widget/reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) — shared review stars, reply, read-more, load-more, pagination CSS
 - [src/widget/reviews-section/styles/photo-strip.js](src/widget/reviews-section/styles/photo-strip.js) — shared photo strip CSS
 - [src/widget/reviews-section/styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) — photo review lightbox CSS
 - [src/widget/reviews-section/render/theme-vars.js](src/widget/reviews-section/render/theme-vars.js) — merchant color settings mapped to widget-root CSS variables

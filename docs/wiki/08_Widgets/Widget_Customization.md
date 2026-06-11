@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-09
-last_verified: 2026-06-09
+updated: 2026-06-12
+last_verified: 2026-06-12
 confidence: high
 source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
@@ -62,6 +62,7 @@ The admin customization panel uses top-level navigation plus focused detail pane
 - Selecting a group opens a dedicated detail panel with a sticky back header.
 - Detail panels can render schema `subGroups` as inner accordions after the group's direct fields. `Metin` uses this for `Yorum Formu`, which owns review wizard step copy without adding another main navigation row.
 - `Renkler` is a dedicated color panel; tapping it shows every color group (Buton, Filtre, Yorum, Mağaza Yanıtı, Form, Daha Fazla Göster Butonu, Sayfalama, …) directly as accordions, with no further nesting. The `Daha Fazla Göster Butonu` and `Sayfalama` (numbered) color groups are mutually gated by `paginationMode` via field-level `showWhen`, so only the active list-pagination mode's colors appear. Each group exposes its own per-field colors — there is no shared `Marka Kimliği` cascade or basic/advanced split.
+- `Widget Boyutu` remains the only size control for storefront review typography and shared controls. It now also scales the physical load-more and numbered-pagination controls through internal CSS variables; no separate "pagination size" setting is exposed.
 
 This keeps the main customization screen shallow and avoids opening large groups inline.
 
@@ -129,6 +130,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 - [[Database_Schema]]
 
 ## Change Log
+- 2026-06-12: `Widget Boyutu` now scales the physical load-more and numbered-pagination controls in addition to typography. No new admin field was added; the behavior is driven by internal widget CSS variables.
 - 2026-06-09: `Sayfalama` color group gained explicit active-page colors — `paginationActiveBgColor` (fill, default `#111111`) and `paginationActiveTextColor` (number, default `#ffffff`) — decoupled from the passive `paginationTextColor`. Every pagination color is an explicit field.
 - 2026-06-09: Added the `paginationMode` design select (Tasarım: `loadMore` | `numbered`) and a `Sayfalama` color group. The load-more and pagination color groups are `showWhen`-gated on `paginationMode`, so only the active mode's colors show in `Renkler`. Schema-driven end-to-end — `widget-settings.ts` (defaults/sanitize/validate) and `SettingsPanel` auto-pick the new fields with no code change. See [[Product_Review_Widget]].
 - 2026-06-06: Added nested `Metin > Yorum Formu` copy settings for review wizard step headings and photo subtitle. Settings traversal is recursive via `collectSettingFields(...)`; storefront copy renders as safe text with whitespace fallback and long-word wrapping.

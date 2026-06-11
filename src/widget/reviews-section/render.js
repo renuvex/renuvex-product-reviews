@@ -156,6 +156,14 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--renuvex-pr-review-date-size', sz.reviewDateSize + 'px');
     root.style.setProperty('--renuvex-pr-filter-text-size', sz.filterTextSize + 'px');
     root.style.setProperty('--renuvex-pr-load-more-size', sz.loadMoreSize + 'px');
+    root.style.setProperty('--renuvex-pr-load-more-min-height', sz.loadMoreMinHeight + 'px');
+    root.style.setProperty('--renuvex-pr-load-more-pad-y', sz.loadMorePadY + 'px');
+    root.style.setProperty('--renuvex-pr-load-more-pad-x', sz.loadMorePadX + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-button-size', sz.paginationButtonSize + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-pad-x', sz.paginationPadX + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-gap', sz.paginationGap + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-margin-top', sz.paginationMarginTop + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-gap-min', sz.paginationGapMin + 'px');
     root.style.setProperty('--renuvex-pr-read-more-size', sz.readMoreSize + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size', thumbPx + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size-mobile', thumbPxMobile + 'px');

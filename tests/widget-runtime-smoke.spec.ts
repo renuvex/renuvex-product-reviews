@@ -81,6 +81,56 @@ type RuntimeReview = {
   recommendation?: boolean;
 };
 
+type ReviewPayloadOptions = {
+  allCount?: number;
+  totalCount?: number;
+  ratingCounts?: number[];
+  avgRating?: string;
+  hasMore?: boolean;
+  nextCursor?: string | null;
+  page?: number;
+  totalPages?: number;
+};
+
+const CONTROL_SIZE_CASES = [
+  {
+    size: 'small',
+    fontSize: 12,
+    loadMoreMinHeight: 36,
+    loadMorePadY: 8,
+    loadMorePadX: 22,
+    paginationButtonSize: 36,
+    paginationPadX: 8,
+    paginationGap: 4,
+    paginationMarginTop: 18,
+    paginationGapMin: 20,
+  },
+  {
+    size: 'medium',
+    fontSize: 14,
+    loadMoreMinHeight: 40,
+    loadMorePadY: 10,
+    loadMorePadX: 28,
+    paginationButtonSize: 40,
+    paginationPadX: 10,
+    paginationGap: 6,
+    paginationMarginTop: 20,
+    paginationGapMin: 24,
+  },
+  {
+    size: 'large',
+    fontSize: 16,
+    loadMoreMinHeight: 44,
+    loadMorePadY: 12,
+    loadMorePadX: 34,
+    paginationButtonSize: 44,
+    paginationPadX: 12,
+    paginationGap: 8,
+    paginationMarginTop: 22,
+    paginationGapMin: 28,
+  },
+] as const;
+
 function trustedReviewImage(name: string, storeId = PUBLIC_KEY): string {
   return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${storeId}/${name}.jpg`;
 }
@@ -100,7 +150,7 @@ function runtimeReview(input: RuntimeReview): Record<string, unknown> {
 
 function reviewsPayload(
   reviews: RuntimeReview[],
-  options: { allCount?: number; totalCount?: number; ratingCounts?: number[]; avgRating?: string; hasMore?: boolean; nextCursor?: string | null } = {},
+  options: ReviewPayloadOptions = {},
 ): unknown {
   const allCount = options.allCount ?? Math.max(reviews.length, 1);
   const ratingCounts = options.ratingCounts ?? [0, 0, 0, 0, allCount];
@@ -113,6 +163,8 @@ function reviewsPayload(
       avgRating: options.avgRating ?? (allCount > 0 ? '5.0' : '0.0'),
       hasMore: options.hasMore === true,
       nextCursor: options.nextCursor ?? null,
+      page: options.page ?? 1,
+      totalPages: options.totalPages ?? 1,
     },
   };
 }
@@ -139,6 +191,80 @@ async function dimensionsInReviewsShadow(page: Page, selector: string): Promise<
     const rect = el.getBoundingClientRect();
     return { width: rect.width, height: rect.height };
   }, selector);
+}
+
+async function controlMetricsInReviewsShadow(page: Page, selector: string): Promise<{
+  fontSize: number;
+  height: number;
+  minHeight: number;
+  marginTop: number;
+  paddingTop: number;
+  paddingRight: number;
+  paddingBottom: number;
+  paddingLeft: number;
+}> {
+  return page.evaluate((selector) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const el = root?.querySelector<HTMLElement>(selector);
+    if (!el) throw new Error(`Missing control: ${selector}`);
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return {
+      fontSize: parseFloat(style.fontSize),
+      height: rect.height,
+      minHeight: parseFloat(style.minHeight),
+      marginTop: parseFloat(style.marginTop),
+      paddingTop: parseFloat(style.paddingTop),
+      paddingRight: parseFloat(style.paddingRight),
+      paddingBottom: parseFloat(style.paddingBottom),
+      paddingLeft: parseFloat(style.paddingLeft),
+    };
+  }, selector);
+}
+
+async function paginationMetricsInReviewsShadow(page: Page): Promise<{
+  buttonFontSize: number;
+  buttonHeight: number;
+  buttonWidth: number;
+  buttonPaddingLeft: number;
+  gap: number;
+  gapMinWidth: number;
+  justifyContent: string;
+  flexWrap: string;
+  marginTop: number;
+  navClientWidth: number;
+  navScrollWidth: number;
+}> {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const nav = root?.querySelector<HTMLElement>('.renuvex-pr-pagination');
+    const button = root?.querySelector<HTMLElement>('.renuvex-pr-pagination-btn');
+    const gap = root?.querySelector<HTMLElement>('.renuvex-pr-pagination-gap');
+    if (!nav || !button || !gap) throw new Error('Missing pagination metrics elements');
+    const navStyle = getComputedStyle(nav);
+    const buttonStyle = getComputedStyle(button);
+    const gapStyle = getComputedStyle(gap);
+    const buttonRect = button.getBoundingClientRect();
+    return {
+      buttonFontSize: parseFloat(buttonStyle.fontSize),
+      buttonHeight: buttonRect.height,
+      buttonWidth: buttonRect.width,
+      buttonPaddingLeft: parseFloat(buttonStyle.paddingLeft),
+      gap: parseFloat(navStyle.columnGap),
+      gapMinWidth: parseFloat(gapStyle.minWidth),
+      justifyContent: navStyle.justifyContent,
+      flexWrap: navStyle.flexWrap,
+      marginTop: parseFloat(navStyle.marginTop),
+      navClientWidth: nav.clientWidth,
+      navScrollWidth: nav.scrollWidth,
+    };
+  });
 }
 
 async function emptyStateLayoutMetrics(page: Page): Promise<{
@@ -770,6 +896,121 @@ test('filtered empty review state keeps summary and announces the empty result w
   expect(await countInReviewsShadow(page, '.renuvex-pr-review-card,.renuvex-pr-review-list,.renuvex-pr-review-gallery')).toBe(0);
   expect(await countInReviewsShadow(page, '.renuvex-pr-load-more')).toBe(0);
   expect(await countInReviewsShadow(page, '.renuvex-pr-pagination')).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+for (const sizeCase of CONTROL_SIZE_CASES) {
+  test(`load-more control scales physical dimensions for ${sizeCase.size} widget size`, async ({ page }) => {
+    const log = await setupWidgetRoutes(page, {
+      mountReviews: true,
+      hasMore: true,
+      reviewsSettings: {
+        paginationMode: 'loadMore',
+        size: sizeCase.size,
+        summaryLayout: 'classic',
+        reviewLayout: 'card',
+      },
+    });
+
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+    await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-load-more')).toBe(1);
+
+    const metrics = await controlMetricsInReviewsShadow(page, '.renuvex-pr-load-more');
+    expect(metrics.fontSize).toBeCloseTo(sizeCase.fontSize, 1);
+    expect(metrics.minHeight).toBeCloseTo(sizeCase.loadMoreMinHeight, 1);
+    expect(metrics.height).toBeGreaterThanOrEqual(sizeCase.loadMoreMinHeight);
+    expect(metrics.paddingTop).toBeCloseTo(sizeCase.loadMorePadY, 1);
+    expect(metrics.paddingBottom).toBeCloseTo(sizeCase.loadMorePadY, 1);
+    expect(metrics.paddingLeft).toBeCloseTo(sizeCase.loadMorePadX, 1);
+    expect(metrics.paddingRight).toBeCloseTo(sizeCase.loadMorePadX, 1);
+    expect(metrics.marginTop).toBeCloseTo(sizeCase.paginationMarginTop, 1);
+    expect(widgetErrors(log)).toEqual([]);
+  });
+
+  test(`numbered pagination scales physical dimensions for ${sizeCase.size} widget size`, async ({ page }) => {
+    const log = await setupWidgetRoutes(page, {
+      mountReviews: true,
+      reviewsSettings: {
+        paginationMode: 'numbered',
+        size: sizeCase.size,
+        summaryLayout: 'classic',
+        reviewLayout: 'card',
+      },
+      reviewsGetHandler: async (route) => {
+        const url = new URL(route.request().url());
+        if (url.searchParams.get('hasImages') === 'true') {
+          await fulfillJson(route, reviewsPayload([]));
+          return;
+        }
+        const pageParam = Number(url.searchParams.get('page') || '1');
+        await fulfillJson(route, reviewsPayload([
+          { id: `numbered-${sizeCase.size}-${pageParam}`, title: `Numbered ${sizeCase.size} page ${pageParam}` },
+        ], {
+          allCount: 90,
+          totalCount: 90,
+          page: pageParam,
+          totalPages: 9,
+        }));
+      },
+    });
+
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+    await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-pagination')).toBe(1);
+
+    const metrics = await paginationMetricsInReviewsShadow(page);
+    expect(metrics.buttonFontSize).toBeCloseTo(sizeCase.fontSize, 1);
+    expect(metrics.buttonHeight).toBeCloseTo(sizeCase.paginationButtonSize, 1);
+    expect(metrics.buttonWidth).toBeGreaterThanOrEqual(sizeCase.paginationButtonSize);
+    expect(metrics.buttonPaddingLeft).toBeCloseTo(sizeCase.paginationPadX, 1);
+    expect(metrics.gap).toBeCloseTo(sizeCase.paginationGap, 1);
+    expect(metrics.gapMinWidth).toBeCloseTo(sizeCase.paginationGapMin, 1);
+    expect(metrics.marginTop).toBeCloseTo(sizeCase.paginationMarginTop, 1);
+    expect(metrics.flexWrap).toBe('wrap');
+    expect(metrics.justifyContent).toBe('center');
+    expect(widgetErrors(log)).toEqual([]);
+  });
+}
+
+test('numbered pagination wraps without horizontal overflow on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 840 });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      paginationMode: 'numbered',
+      size: 'large',
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+    },
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.get('hasImages') === 'true') {
+        await fulfillJson(route, reviewsPayload([]));
+        return;
+      }
+      const pageParam = Number(url.searchParams.get('page') || '1');
+      await fulfillJson(route, reviewsPayload([
+        { id: `numbered-mobile-${pageParam}`, title: `Numbered mobile page ${pageParam}` },
+      ], {
+        allCount: 120,
+        totalCount: 120,
+        page: pageParam,
+        totalPages: 12,
+      }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-pagination')).toBe(1);
+
+  const metrics = await paginationMetricsInReviewsShadow(page);
+  expect(metrics.flexWrap).toBe('wrap');
+  expect(metrics.justifyContent).toBe('center');
+  expect(metrics.navScrollWidth).toBeLessThanOrEqual(metrics.navClientWidth + 1);
+  expect(metrics.buttonHeight).toBeGreaterThanOrEqual(44);
+  expect(metrics.buttonWidth).toBeGreaterThanOrEqual(44);
   expect(widgetErrors(log)).toEqual([]);
 });
 
