@@ -669,6 +669,36 @@ test('empty state description uses the full review body color', async ({ page })
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('empty state description font scales with the widget size setting', async ({ page }) => {
+  const emptyPayload = reviewsPayload([], {
+    allCount: 0,
+    totalCount: 0,
+    ratingCounts: [0, 0, 0, 0, 0],
+    avgRating: '0.0',
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card', size: 'large' },
+    reviewsGetHandler: async (route) => {
+      await fulfillJson(route, emptyPayload);
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
+
+  const fontSize = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const el = root?.querySelector<HTMLElement>('.renuvex-pr-empty-state-text');
+    return el ? getComputedStyle(el).fontSize : '';
+  });
+  expect(fontSize).toBe('16px');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('empty product review state keeps desktop CTA right and mobile CTA full width', async ({ page }) => {
   const emptyPayload = reviewsPayload([], {
     allCount: 0,
