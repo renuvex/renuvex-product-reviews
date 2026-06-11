@@ -526,6 +526,55 @@ for (const emptyCase of [
   });
 }
 
+test('empty product review state uses the selected review icon outline', async ({ page }) => {
+  const emptyPayload = reviewsPayload([], {
+    allCount: 0,
+    totalCount: 0,
+    ratingCounts: [0, 0, 0, 0, 0],
+    avgRating: '0.0',
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      reviewIcon: 'favorite:modern',
+    },
+    reviewsGetHandler: async (route) => {
+      await fulfillJson(route, emptyPayload);
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
+
+  const iconState = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const outlineSymbol = root?.querySelector<SVGSymbolElement>('#renuvex-pr-sym-star-outline');
+    return {
+      emptyCount: root?.querySelectorAll('.renuvex-pr-empty-state-stars .renuvex-pr-star-empty').length || 0,
+      fullCount: root?.querySelectorAll('.renuvex-pr-empty-state-stars .renuvex-pr-star-full,.renuvex-pr-empty-state-stars .renuvex-pr-star-half').length || 0,
+      outlineFill: outlineSymbol?.getAttribute('fill') || '',
+      outlineStroke: outlineSymbol?.getAttribute('stroke') || '',
+      outlinePath: outlineSymbol?.querySelector('path')?.getAttribute('d') || '',
+      useHrefs: Array.from(root?.querySelectorAll<SVGUseElement>('.renuvex-pr-empty-state-stars .renuvex-pr-star-empty use') || [])
+        .map((use) => use.getAttribute('href') || ''),
+    };
+  });
+
+  expect(iconState.emptyCount).toBe(5);
+  expect(iconState.fullCount).toBe(0);
+  expect(iconState.useHrefs).toEqual(Array(5).fill('#renuvex-pr-sym-star-outline'));
+  expect(iconState.outlineFill).toBe('none');
+  expect(iconState.outlineStroke).toBe('currentColor');
+  expect(iconState.outlinePath).toContain('M128,224S24,168,24,102');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('empty product review state keeps desktop CTA right and mobile CTA full width', async ({ page }) => {
   const emptyPayload = reviewsPayload([], {
     allCount: 0,
