@@ -588,6 +588,36 @@ test('empty product review state uses the selected review icon outline', async (
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('empty state title and description follow merchant settings', async ({ page }) => {
+  const emptyPayload = reviewsPayload([], {
+    allCount: 0,
+    totalCount: 0,
+    ratingCounts: [0, 0, 0, 0, 0],
+    avgRating: '0.0',
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      emptyStateTitle: 'Bu üründe değerlendirme yok',
+      emptyStateText: 'Sen başlat, ilk değerlendirmeyi yaz.',
+    },
+    reviewsGetHandler: async (route) => {
+      await fulfillJson(route, emptyPayload);
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
+
+  expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-title')).toBe('Bu üründe değerlendirme yok');
+  expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-text')).toBe('Sen başlat, ilk değerlendirmeyi yaz.');
+  expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-cta')).toBe('Yorum Yap');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('empty product review state keeps desktop CTA right and mobile CTA full width', async ({ page }) => {
   const emptyPayload = reviewsPayload([], {
     allCount: 0,

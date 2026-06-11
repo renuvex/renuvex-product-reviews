@@ -63,7 +63,7 @@ export function buildEmptyReviewsState(opts) {
 
   var title = document.createElement('h3');
   title.className = 'renuvex-pr-empty-state-title';
-  title.textContent = 'Bu ürün için henüz yorum yok';
+  title.textContent = opts.emptyStateTitle || 'Bu ürün için henüz yorum yok';
   content.appendChild(title);
 
   var stars = document.createElement('div');
@@ -75,7 +75,7 @@ export function buildEmptyReviewsState(opts) {
   text.className = 'renuvex-pr-state-msg renuvex-pr-empty-state-text';
   text.setAttribute('role', 'status');
   text.setAttribute('aria-live', 'polite');
-  text.textContent = 'İlk yorumu yazarak diğer müşterilere yardımcı olun.';
+  text.textContent = opts.emptyStateText || 'İlk yorumu yazarak diğer müşterilere yardımcı olun.';
   content.appendChild(text);
 
   wrap.appendChild(content);
