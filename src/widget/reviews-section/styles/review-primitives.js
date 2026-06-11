@@ -19,6 +19,8 @@ export var REVIEW_PRIMITIVES_CSS = `
 
   .renuvex-pr-load-more{display:block;margin:20px auto 0;padding:10px 28px;border:1px solid var(--renuvex-pr-load-more-border,#111111);border-radius:var(--renuvex-pr-radius,6px);background:var(--renuvex-pr-load-more-bg,#ffffff);color:var(--renuvex-pr-load-more-text,#111111);font-size:var(--renuvex-pr-load-more-size,14px);cursor:pointer;}
   .renuvex-pr-load-more:disabled{opacity:.6;cursor:not-allowed;}
+  .renuvex-pr-empty-state{display:block;}
+  .renuvex-pr-empty-state-cta{display:block;margin:16px auto 0;}
 
   /* Numaralı sayfalama (paginationMode === 'numbered'). Akışta, listenin altında,
      ortalı — sticky/fixed değil. Aktif sayfa: dolu kutu (renkler ters); font ağırlığı

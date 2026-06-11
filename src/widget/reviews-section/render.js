@@ -22,7 +22,7 @@ import { isReviewsMountEnabled } from '../themes/current-adapter.js';
 import { settingText } from '../core/helpers.js';
 import { beginReviewRequest, isCurrentReviewRequest } from './render/request-token.js';
 import { SIZE_PRESETS, THUMBNAIL_PRESETS, THUMBNAIL_PRESETS_MOBILE } from './render/size-presets.js';
-import { buildDisabledStateEl, buildReviewsErrorState } from './render/states.js';
+import { buildDisabledStateEl, buildEmptyReviewsState, buildReviewsErrorState } from './render/states.js';
 import { applyManualTheme } from './render/theme-vars.js';
 import { buildPhotoStrip } from './render/photo-strip.js';
 import { createReviewHandlers } from './render/handlers.js';
@@ -290,7 +290,12 @@ export async function render(productId, settings, reviewsData, productName, orde
         avgRatingVal = (s / reviews.length).toFixed(1);
       }
 
-      if (allCount > 0) {
+      if (allCount === 0) {
+        widget.appendChild(buildEmptyReviewsState({
+          writeButtonText: settingText(settings.writeButtonText, 'Yorum Yap'),
+          onWriteClick: openWriteForm,
+        }));
+      } else {
         var layout = getLayout(settings.summaryLayout);
         var summary = layout.render({
           widget: widget,
@@ -308,100 +313,92 @@ export async function render(productId, settings, reviewsData, productName, orde
           onSortChange: handlers.onSortChange,
         });
         widget.appendChild(summary);
-      } else {
-        // Yorum yoksa sadece Yorum Yap butonu göster
-        var emptyWriteBtn = document.createElement('button');
-        emptyWriteBtn.className = 'renuvex-pr-write-btn';
-        emptyWriteBtn.style.cssText = 'display:block;margin:16px auto 0;';
-        emptyWriteBtn.textContent = settingText(settings.writeButtonText, 'Yorum Yap');
-        emptyWriteBtn.onclick = openWriteForm;
-        widget.appendChild(emptyWriteBtn);
-      }
 
-      // Fotoğraf şeridi — state.photoStripReviews bootstrap'ta tek seferlik
-      // `hasImages=true&limit=15&orderBy=newest` ile dolduruldu. Filtreden
-      // ("Fotoğraflı" sort) ve load-more'dan bağımsız; sadece cache TTL (1 dk)
-      // sonra arka planda yenilenir (Strateji A — newest-first rotation).
-      // ADR_0007: sabit 15 cap, admin ayarı yok. buildPhotoStrip null dönerse
-      // (galeri kapalı / foto filtresi aktif / foto yok) hiç eklenmez.
-      var photoSection = buildPhotoStrip({
-        settings: settings,
-        root: root,
-        currentHasImages: currentHasImages,
-        photoStripReviews: photoStripReviews,
-        openReviewModal: openReviewModal,
-        wireLightboxTrigger: wireLightboxTrigger,
-      });
-      if (photoSection) widget.appendChild(photoSection);
+        // Fotoğraf şeridi — state.photoStripReviews bootstrap'ta tek seferlik
+        // `hasImages=true&limit=15&orderBy=newest` ile dolduruldu. Filtreden
+        // ("Fotoğraflı" sort) ve load-more'dan bağımsız; sadece cache TTL (1 dk)
+        // sonra arka planda yenilenir (Strateji A — newest-first rotation).
+        // ADR_0007: sabit 15 cap, admin ayarı yok. buildPhotoStrip null dönerse
+        // (galeri kapalı / foto filtresi aktif / foto yok) hiç eklenmez.
+        var photoSection = buildPhotoStrip({
+          settings: settings,
+          root: root,
+          currentHasImages: currentHasImages,
+          photoStripReviews: photoStripReviews,
+          openReviewModal: openReviewModal,
+          wireLightboxTrigger: wireLightboxTrigger,
+        });
+        if (photoSection) widget.appendChild(photoSection);
 
-      if (reviews.length === 0) {
-        var empty = document.createElement('p');
-        empty.className = 'renuvex-pr-state-msg';
-        empty.textContent = 'Henüz yorum yok.';
-        widget.appendChild(empty);
-      } else {
-        var reviewLayout = getReviewLayout(settings.reviewLayout);
-        reviews.forEach(function (r) { widget.appendChild(reviewLayout.render(r, loadedLightboxReviews)); });
-      }
-
-      // Sayfalama / Daha Fazla — moda göre. numbered: offset tabanlı sayfa kontrolü
-      // (append yok, liste o sayfanın dilimi); loadMore (varsayılan): mevcut
-      // cursor-append "Daha Fazla" butonu.
-      var paginationMode = settings.paginationMode === 'numbered' ? 'numbered' : 'loadMore';
-      if (paginationMode === 'numbered') {
-        var totalPages = (data.data && data.data.totalPages) || 1;
-        if (totalPages > 1) {
-          widget.appendChild(buildPaginationControl({
-            page: (data.data && data.data.page) || currentPage || 1,
-            totalPages: totalPages,
-            onPageChange: handlers.onPageChange,
-          }));
+        if (reviews.length === 0) {
+          var empty = document.createElement('p');
+          empty.className = 'renuvex-pr-state-msg';
+          empty.textContent = 'Henüz yorum yok.';
+          widget.appendChild(empty);
+        } else {
+          var reviewLayout = getReviewLayout(settings.reviewLayout);
+          reviews.forEach(function (r) { widget.appendChild(reviewLayout.render(r, loadedLightboxReviews)); });
         }
-      }
 
-      // Daha Fazla butonu (yalnız loadMore modunda)
-      var hasMore = paginationMode === 'loadMore' && data.data && data.data.hasMore;
-      if (hasMore) {
-        var loadMoreBtn = document.createElement('button');
-        loadMoreBtn.className = 'renuvex-pr-load-more';
-        loadMoreBtn.textContent = 'Daha Fazla Göster';
-        loadMoreBtn.onclick = async function () {
-          loadMoreBtn.disabled = true;
-          loadMoreBtn.textContent = 'Yükleniyor...';
-          var token = beginReviewRequest();
-          var productIdSnapshot = currentProductId;
-          var orderBySnapshot = currentOrderBy;
-          var pageSnapshot = currentPage;
-          var ratingFilterSnapshot = currentRatingFilter;
-          var hasImagesSnapshot = currentHasImages;
-          var nextCursorSnapshot = currentNextCursor;
-          var nextPage = pageSnapshot + 1;
-          var moreData = await fetchReviews(productIdSnapshot, orderBySnapshot, nextPage, ratingFilterSnapshot, hasImagesSnapshot, null, nextCursorSnapshot);
-          if (!isCurrentReviewRequest(token, {
-            productId: productIdSnapshot,
-            orderBy: orderBySnapshot,
-            page: pageSnapshot,
-            ratingFilter: ratingFilterSnapshot,
-            hasImages: hasImagesSnapshot,
-            nextCursor: nextCursorSnapshot,
-          })) return;
-          if (moreData && !isReviewsFetchError(moreData) && moreData.data && Array.isArray(moreData.data.reviews)) {
-            var newReviews = getNewLoadedLightboxReviews(moreData.data.reviews);
-            appendLoadedLightboxReviews(newReviews);
-            setCurrentPage(nextPage);
-            setCurrentNextCursor(moreData.data.nextCursor || null);
-            var moreReviewLayout = getReviewLayout(currentSettings.reviewLayout);
-            newReviews.forEach(function (r) {
-              widget.insertBefore(moreReviewLayout.render(r, loadedLightboxReviews), loadMoreBtn);
-            });
-            if (!moreData.data.hasMore) loadMoreBtn.remove();
-            else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }
-          } else {
-            loadMoreBtn.disabled = false;
-            loadMoreBtn.textContent = 'Tekrar Dene';
+        // Sayfalama / Daha Fazla — moda göre. numbered: offset tabanlı sayfa kontrolü
+        // (append yok, liste o sayfanın dilimi); loadMore (varsayılan): mevcut
+        // cursor-append "Daha Fazla" butonu.
+        var paginationMode = settings.paginationMode === 'numbered' ? 'numbered' : 'loadMore';
+        if (paginationMode === 'numbered') {
+          var totalPages = (data.data && data.data.totalPages) || 1;
+          if (totalPages > 1) {
+            widget.appendChild(buildPaginationControl({
+              page: (data.data && data.data.page) || currentPage || 1,
+              totalPages: totalPages,
+              onPageChange: handlers.onPageChange,
+            }));
           }
-        };
-        widget.appendChild(loadMoreBtn);
+        }
+
+        // Daha Fazla butonu (yalnız loadMore modunda)
+        var hasMore = paginationMode === 'loadMore' && data.data && data.data.hasMore;
+        if (hasMore) {
+          var loadMoreBtn = document.createElement('button');
+          loadMoreBtn.className = 'renuvex-pr-load-more';
+          loadMoreBtn.textContent = 'Daha Fazla Göster';
+          loadMoreBtn.onclick = async function () {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.textContent = 'Yükleniyor...';
+            var token = beginReviewRequest();
+            var productIdSnapshot = currentProductId;
+            var orderBySnapshot = currentOrderBy;
+            var pageSnapshot = currentPage;
+            var ratingFilterSnapshot = currentRatingFilter;
+            var hasImagesSnapshot = currentHasImages;
+            var nextCursorSnapshot = currentNextCursor;
+            var nextPage = pageSnapshot + 1;
+            var moreData = await fetchReviews(productIdSnapshot, orderBySnapshot, nextPage, ratingFilterSnapshot, hasImagesSnapshot, null, nextCursorSnapshot);
+            if (!isCurrentReviewRequest(token, {
+              productId: productIdSnapshot,
+              orderBy: orderBySnapshot,
+              page: pageSnapshot,
+              ratingFilter: ratingFilterSnapshot,
+              hasImages: hasImagesSnapshot,
+              nextCursor: nextCursorSnapshot,
+            })) return;
+            if (moreData && !isReviewsFetchError(moreData) && moreData.data && Array.isArray(moreData.data.reviews)) {
+              var newReviews = getNewLoadedLightboxReviews(moreData.data.reviews);
+              appendLoadedLightboxReviews(newReviews);
+              setCurrentPage(nextPage);
+              setCurrentNextCursor(moreData.data.nextCursor || null);
+              var moreReviewLayout = getReviewLayout(currentSettings.reviewLayout);
+              newReviews.forEach(function (r) {
+                widget.insertBefore(moreReviewLayout.render(r, loadedLightboxReviews), loadMoreBtn);
+              });
+              if (!moreData.data.hasMore) loadMoreBtn.remove();
+              else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }
+            } else {
+              loadMoreBtn.disabled = false;
+              loadMoreBtn.textContent = 'Tekrar Dene';
+            }
+          };
+          widget.appendChild(loadMoreBtn);
+        }
       }
 
       contentEl.appendChild(widget);

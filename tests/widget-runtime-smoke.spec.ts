@@ -440,6 +440,50 @@ for (const layoutCase of LAYOUT_MATRIX) {
   });
 }
 
+for (const emptyCase of [
+  { name: 'default CTA', reviewsSettings: {}, ctaText: 'Yorum Yap' },
+  { name: 'custom CTA', reviewsSettings: { writeButtonText: 'Değerlendir' }, ctaText: 'Değerlendir' },
+]) {
+  test(`empty product review state renders a stable CTA and status message (${emptyCase.name})`, async ({ page }) => {
+    const emptyPayload = reviewsPayload([], {
+      allCount: 0,
+      totalCount: 0,
+      ratingCounts: [0, 0, 0, 0, 0],
+      avgRating: '0.0',
+    });
+    const log = await setupWidgetRoutes(page, {
+      mountReviews: true,
+      reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card', ...emptyCase.reviewsSettings },
+      reviewsGetHandler: async (route) => {
+        await fulfillJson(route, emptyPayload);
+      },
+    });
+
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+    await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
+
+    expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-cta')).toBe(emptyCase.ctaText);
+    expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-text')).toBe('Henüz yorum yok.');
+    expect(await page.evaluate(() => {
+      const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+      const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+      const container = slot?.querySelector('#renuvex-reviews');
+      const root = container?.shadowRoot || null;
+      const text = root?.querySelector('.renuvex-pr-empty-state-text');
+      return {
+        role: text?.getAttribute('role') || '',
+        ariaLive: text?.getAttribute('aria-live') || '',
+      };
+    })).toEqual({ role: 'status', ariaLive: 'polite' });
+    expect(await countInReviewsShadow(page, '.renuvex-pr-summary')).toBe(0);
+    expect(await countInReviewsShadow(page, '.renuvex-pr-review-card,.renuvex-pr-review-list,.renuvex-pr-review-gallery')).toBe(0);
+    expect(await countInReviewsShadow(page, '.renuvex-pr-load-more')).toBe(0);
+    expect(await countInReviewsShadow(page, '.renuvex-pr-pagination')).toBe(0);
+    expect(widgetErrors(log)).toEqual([]);
+  });
+}
+
 test('compact summary filter panel remains interactive after render', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,

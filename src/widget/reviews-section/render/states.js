@@ -50,6 +50,28 @@ export function buildDisabledStateEl(radius) {
   return box;
 }
 
+export function buildEmptyReviewsState(opts) {
+  opts = opts || {};
+  var wrap = document.createElement('div');
+  wrap.className = 'renuvex-pr-empty-state';
+
+  var writeBtn = document.createElement('button');
+  writeBtn.type = 'button';
+  writeBtn.className = 'renuvex-pr-write-btn renuvex-pr-empty-state-cta';
+  writeBtn.textContent = opts.writeButtonText || 'Yorum Yap';
+  writeBtn.onclick = typeof opts.onWriteClick === 'function' ? opts.onWriteClick : null;
+  wrap.appendChild(writeBtn);
+
+  var text = document.createElement('p');
+  text.className = 'renuvex-pr-state-msg renuvex-pr-empty-state-text';
+  text.setAttribute('role', 'status');
+  text.setAttribute('aria-live', 'polite');
+  text.textContent = 'Henüz yorum yok.';
+  wrap.appendChild(text);
+
+  return wrap;
+}
+
 export function buildReviewsErrorState(message, onRetry) {
   var wrap = document.createElement('div');
   wrap.className = 'renuvex-pr-state-msg renuvex-pr-state-error';
