@@ -618,6 +618,36 @@ test('empty state title and description follow merchant settings', async ({ page
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('empty state title color follows the merchant title color setting', async ({ page }) => {
+  const emptyPayload = reviewsPayload([], {
+    allCount: 0,
+    totalCount: 0,
+    ratingCounts: [0, 0, 0, 0, 0],
+    avgRating: '0.0',
+  });
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card', headerTitleColor: '#ff0000' },
+    reviewsGetHandler: async (route) => {
+      await fulfillJson(route, emptyPayload);
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
+
+  const titleColor = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const el = root?.querySelector<HTMLElement>('.renuvex-pr-empty-state-title');
+    return el ? getComputedStyle(el).color : '';
+  });
+  expect(titleColor).toBe('rgb(255, 0, 0)');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('empty product review state keeps desktop CTA right and mobile CTA full width', async ({ page }) => {
   const emptyPayload = reviewsPayload([], {
     allCount: 0,
