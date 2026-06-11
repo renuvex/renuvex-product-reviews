@@ -43,7 +43,8 @@ export function starsHTML(rating, settings) {
 //   iconPair : { filled, empty } — getIconFromSettings'ten gelen SVG çifti
 //   opts     : { sizeStyle? } — inline 'width:Xpx;height:Xpx;' (opsiyonel, normalde CSS'ten gelir)
 export function partialStarsHTML(rating, iconPair, opts) {
-  ensureStarSprite(iconPair);
+  var pair = iconPair && iconPair.filled && iconPair.empty ? iconPair : getIconFromSettings({ reviewIcon: 'star' });
+  ensureStarSprite(pair);
   var r = Math.max(0, Math.min(5, parseFloat(rating) || 0));
   // 0.25/0.75 snap — endüstri standardı (Material UI, Judge.me, Stamped):
   // her yıldız için kesir < 0.25 → boş, 0.25-0.74 → yarım, ≥ 0.75 → dolu.
