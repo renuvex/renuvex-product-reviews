@@ -24,17 +24,27 @@ export function buildBarChart(opts) {
     var cnt = ratingCounts[si - 1] || 0;
     var pct = allCount > 0 ? Math.round((cnt / allCount) * 100) : 0;
     var isActive = currentFilter === si;
+    // Yorumu olmayan bar (cnt === 0) tıklanamaz: o puanı filtrelemek yalnızca
+    // "Henüz yorum yok" gösterirdi. Looox gibi, sadece yorumu olan barlar interaktif.
+    var clickable = cnt > 0;
+    var countLabel = settingText(currentSettings && currentSettings.countLabel, 'Yorum');
     var row = document.createElement('div');
     row.className = 'renuvex-pr-bar-row' +
+      (clickable ? '' : ' renuvex-pr-bar-empty') +
       (isActive ? ' renuvex-pr-bar-active' : '') +
       (currentFilter && !isActive ? ' renuvex-pr-bar-dimmed' : '');
-    row.setAttribute('role', 'button');
-    row.setAttribute('tabindex', '0');
-    row.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    row.setAttribute(
-      'aria-label',
-      si + ' yıldız, ' + cnt.toLocaleString('tr-TR') + ' ' + settingText(currentSettings && currentSettings.countLabel, 'Yorum') + ', ' + (isActive ? 'filtreyi kaldır' : 'filtrele')
-    );
+    if (clickable) {
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      row.setAttribute(
+        'aria-label',
+        si + ' yıldız, ' + cnt.toLocaleString('tr-TR') + ' ' + countLabel + ', ' + (isActive ? 'filtreyi kaldır' : 'filtrele')
+      );
+    } else {
+      // Bilgilendirici satır — buton değil, klavyeyle odaklanmaz, filtre tetiklemez.
+      row.setAttribute('aria-label', si + ' yıldız, 0 ' + countLabel);
+    }
 
     var starsHtml = '';
     for (var s = 1; s <= 5; s++) {
@@ -52,18 +62,20 @@ export function buildBarChart(opts) {
       '<div class="renuvex-pr-bar-track"><div class="renuvex-pr-bar-fill" style="width:' + pct + '%;"></div></div>' +
       '<span class="renuvex-pr-bar-count">(' + cnt.toLocaleString('tr-TR') + ')</span>';
 
-    (function(starVal) {
-      function activate() {
-        onFilterChange(starVal);
-      }
-      row.onclick = activate;
-      row.onkeydown = function(e) {
-        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space' || e.key === 'Spacebar') {
-          e.preventDefault();
-          activate();
+    if (clickable) {
+      (function(starVal) {
+        function activate() {
+          onFilterChange(starVal);
         }
-      };
-    })(si);
+        row.onclick = activate;
+        row.onkeydown = function(e) {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space' || e.key === 'Spacebar') {
+            e.preventDefault();
+            activate();
+          }
+        };
+      })(si);
+    }
 
     bars.appendChild(row);
   }
