@@ -29,6 +29,22 @@ import * as card from './card/index.js';
 import * as list from './list/index.js';
 import * as gallery from './gallery/index.js';
 
+/**
+ * Public review shape consumed by every review layout's `render(r, allReviews)`.
+ * Mirrors the /api/public/reviews row (masked author, trusted image URLs).
+ *
+ * @typedef {Object} Review
+ * @property {string} id
+ * @property {number} rating                 1..5
+ * @property {string|null} [title]
+ * @property {string|null} [comment]
+ * @property {string} author                 Masked display name.
+ * @property {string|null} [merchantReply]
+ * @property {string[]} [images]             Trusted Cloudinary URLs.
+ * @property {Array<Object>} [media]         Additive structured media rows.
+ * @property {string} [createdAt]            ISO timestamp.
+ */
+
 export var LAYOUTS = {
   card: card,
   list: list,

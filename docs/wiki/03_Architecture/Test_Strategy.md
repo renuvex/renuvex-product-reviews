@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-06-09
+last_verified: 2026-06-09
 confidence: high
 tags:
   - testing
@@ -42,6 +42,8 @@ source_files:
   - "tests/unit/widget-popover-registry.test.ts"
   - "tests/unit/widget-asset-cache.test.ts"
   - "tests/unit/widget-settings.test.ts"
+  - "tests/unit/layout-contracts.test.ts"
+  - "tests/unit/pagination-page-list.test.ts"
   - "vercel.json"
   - "docs/wiki/08_Widgets/Structured_Data_And_Rich_Snippets.md"
   - "docs/wiki/10_Research/Widget_Transfer_Measurement_2026-05-29.md"
@@ -166,6 +168,8 @@ When adding a new storefront surface such as carousel, FAQ, popup, Q&A, or anoth
 The PR template repeats this rule as a checklist. If a change intentionally does not need a test update, the PR should state why.
 
 `tests/unit/widget-surface-contracts.test.ts` enforces the surface part of this rule automatically. Every `src/widget/surfaces/*.surface.js` file must have a `SURFACE_TEST_CONTRACTS` entry that names the relevant layer and test files. This is intentionally explicit: adding a new surface without thinking through network/runtime/interaction/admin/unit coverage should fail before merge. The same file also enforces the **overlay shared-surface contract** ([[ADR_0025_Overlay_Shared_Surface_Foundation]]): the body scroll lock and the focus-trap primitives must be defined only in their shared modules (`core/body-scroll-lock.js`, `shared/focus-trap.js`), and both body-level overlays (lightbox, wizard) must import them rather than re-implement — the rule that prevents the next surface from drifting to its own weaker copy.
+
+`tests/unit/layout-contracts.test.ts` extends the same static-invariant approach to the swappable summary/review **layout** system (it reads the layout sources — the modules touch the DOM, so they are not imported). It pins: every layout exports `meta.id` + `render` + `css` and its registry key matches its folder; `meta.supports` declares only known capability keys (so the admin `showWhen` field-hiding contract cannot silently break on a typo); the shared bar chart keeps **zero-review bars non-interactive** (the empty-bar contract — only bars with reviews filter); **no layout interpolates untrusted user/merchant text into `innerHTML`** (the `Bug_Compact_Count_Label_HTML_Injection` class — untrusted text must use `textContent`); and any layout that caps the widget root width for desktop columns must **restore full-bleed on mobile** (the gallery side-padding regression). The render contract itself is documented with a shared JSDoc `@typedef SummaryRenderOpts` / `Review` in the layout registries (IDE/doc-level — `checkJs` is off, so the structural enforcement lives in this test, not `tsc`).
 
 ## Related Source Files
 - [package.json](package.json)

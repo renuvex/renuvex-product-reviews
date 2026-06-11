@@ -29,6 +29,28 @@ import * as minimal from './minimal/index.js';
 import * as hero from './hero/index.js';
 import { SUMMARY_BASE_CSS } from './shared/summary-base.js';
 
+/**
+ * Render input passed to EVERY summary layout's `render(opts)`. Single shared
+ * contract — all layouts must stay in sync with this shape. Documented here as
+ * the source of truth (checkJs is off, so this is IDE/doc-level, not build-
+ * enforced; the layout-contracts.test.ts invariant enforces the structural part).
+ *
+ * @typedef {Object} SummaryRenderOpts
+ * @property {HTMLElement} widget                 Review widget root (<section>).
+ * @property {string} [productId]                 ikas product id.
+ * @property {Object} data                        Raw /api/public/reviews payload.
+ * @property {Object} settings                    Merchant widget settings.
+ * @property {{full:string, outline:string}} iconPair  Resolved star icon pair.
+ * @property {number} allCount                    Total approved review count.
+ * @property {number[]} ratingCounts              [1★..5★] distribution counts.
+ * @property {string|number} avgRatingVal         Formatted average rating.
+ * @property {number|null} currentRatingFilter    Active rating filter (1..5) or null.
+ * @property {string} currentOrderBy              Active sort key (newest/highest/lowest).
+ * @property {boolean} currentHasImages           Photo-only filter active.
+ * @property {(star:number)=>void} onFilterChange Rating-filter toggle handler.
+ * @property {(orderBy:string, isPhotos?:boolean)=>void} onSortChange Sort handler.
+ */
+
 export var LAYOUTS = {
   classic: classic,
   compact: compact,

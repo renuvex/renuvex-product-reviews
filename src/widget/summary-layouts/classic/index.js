@@ -16,6 +16,10 @@ export var meta = {
 
 export var css = CLASSIC_SUMMARY_CSS;
 
+/**
+ * @param {import('../index.js').SummaryRenderOpts} opts
+ * @returns {HTMLElement}
+ */
 export function render(opts) {
   var widget = opts.widget;
   var data = opts.data;

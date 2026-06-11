@@ -24,6 +24,11 @@ export var meta = {
 
 export var css = CARD_REVIEW_CSS;
 
+/**
+ * @param {import('../index.js').Review} r
+ * @param {import('../index.js').Review[]} allReviews
+ * @returns {HTMLElement}
+ */
 export function render(r, allReviews) {
   var reviewEl = document.createElement('article');
   reviewEl.className = 'renuvex-pr-review renuvex-pr-review-card';
