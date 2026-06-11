@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-06-11
+last_verified: 2026-06-11
 confidence: high
 tags:
   - hot-context
@@ -72,6 +72,7 @@ source_files:
   - "src/widget/reviews-section/styles/base.js"
   - "src/widget/reviews-section/styles/summary-controls.js"
   - "src/widget/reviews-section/styles/review-primitives.js"
+  - "src/widget/reviews-section/styles/states.js"
   - "src/widget/reviews-section/styles/photo-strip.js"
   - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/shared/base-reset.js"

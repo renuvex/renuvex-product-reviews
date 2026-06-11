@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-02
-last_verified: 2026-06-02
+updated: 2026-06-11
+last_verified: 2026-06-11
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -34,6 +34,7 @@ source_files:
   - "src/widget/reviews-section/styles/base.js"
   - "src/widget/reviews-section/styles/summary-controls.js"
   - "src/widget/reviews-section/styles/review-primitives.js"
+  - "src/widget/reviews-section/styles/states.js"
   - "src/widget/reviews-section/styles/photo-strip.js"
   - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/shared/base-reset.js"
@@ -113,7 +114,8 @@ src/widget/
 │  ├─ styles/
 │  │  ├─ base.js                 # Widget root, text safety, icons, mobile padding tokens
 │  │  ├─ summary-controls.js     # Shared bar chart, write action, filter menu, rating-bar focus/count CSS
-│  │  ├─ review-primitives.js    # Shared review stars, replies, read-more, states
+│  │  ├─ review-primitives.js    # Shared review stars, replies, read-more, pagination/load-more primitives
+│  │  ├─ states.js               # Non-list state CSS: product-empty, filtered-empty, fetch-error
 │  │  ├─ photo-strip.js          # Photo strip/gallery title, arrows, thumbnails
 │  │  └─ lightbox.js             # Photo review lightbox CSS
 │  ├─ review-modal.js             # Photo review detail lightbox
@@ -220,6 +222,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-06-11: Moved review-section non-list state CSS into [reviews-section/styles/states.js](src/widget/reviews-section/styles/states.js). [reviews-section/styles.js](src/widget/reviews-section/styles.js) remains the `CLASSIC_CSS` aggregator; [reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) no longer owns empty/error state selectors.
 - 2026-06-02: Clarified shared filter action semantics: touch/pen filter options activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so filters can reopen immediately after sort-triggered summary renders.
 - 2026-06-01: Hardened summary shared primitives: [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) now exposes a handle lifecycle contract, [summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js) exposes keyboard/ARIA toggle semantics, and [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) owns bar focus/count resilience.
 - 2026-06-01: Added same-gesture press-through shielding to [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) and [shared/base-reset.js](src/widget/shared/base-reset.js): touch/pen filter option activation keeps normal future `:active` feedback but temporarily blocks controls exposed under the dismissed menu.

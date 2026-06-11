@@ -8,6 +8,7 @@ import { REVIEW_SECTION_BASE_CSS, REVIEW_SECTION_MOBILE_CSS } from './styles/bas
 import { SUMMARY_CONTROLS_CSS } from './styles/summary-controls.js';
 import { PHOTO_STRIP_CSS } from './styles/photo-strip.js';
 import { REVIEW_PRIMITIVES_CSS } from './styles/review-primitives.js';
+import { REVIEW_STATES_CSS } from './styles/states.js';
 import { LIGHTBOX_CSS } from './styles/lightbox.js';
 
 export var CLASSIC_CSS = [
@@ -16,6 +17,7 @@ export var CLASSIC_CSS = [
   SUMMARY_CONTROLS_CSS,
   PHOTO_STRIP_CSS,
   REVIEW_PRIMITIVES_CSS,
+  REVIEW_STATES_CSS,
   LIGHTBOX_CSS,
   REVIEW_SECTION_MOBILE_CSS,
 ].join('\n');

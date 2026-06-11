@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-09
-last_verified: 2026-06-09
+updated: 2026-06-11
+last_verified: 2026-06-11
 confidence: high
 tags:
   - widget
@@ -24,6 +24,7 @@ source_files:
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/render/states.js"
+  - "src/widget/reviews-section/styles/states.js"
   - "src/widget/reviews-section/render/pagination.js"
   - "src/widget/reviews-section/render/handlers.js"
   - "src/widget/reviews-section/reviews-api.js"
@@ -126,6 +127,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 
 ## Change Log
 - 2026-06-11: Product-empty review UI (`allCount === 0`) moved into `buildEmptyReviewsState()` in [render/states.js](src/widget/reviews-section/render/states.js), then upgraded to the empty-product design: left-aligned title, 5 empty review icons, explanatory `role="status"` / `aria-live="polite"` text, and a hero/minimal-style CTA (right-aligned on desktop, centered full-width on mobile). Widget-runtime smoke pins the empty-state contract including custom `writeButtonText` and responsive CTA layout.
+- 2026-06-11: Review-section non-list state CSS moved into [styles/states.js](src/widget/reviews-section/styles/states.js). [styles.js](src/widget/reviews-section/styles.js) remains the `CLASSIC_CSS` aggregator; [styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) now owns only shared review/list primitives plus pagination/load-more primitives.
 - 2026-06-09: Summary bar-chart rows with **zero reviews are no longer clickable/focusable** (no `role="button"`, no hover, `cursor:default`); only bars that have reviews trigger the rating filter, so a click can't land on an empty result. Matches Looox. Source: [summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js).
 - 2026-06-09: Pagination active page gained its own explicit colors — `paginationActiveBgColor` (fill, default `#111111`) and `paginationActiveTextColor` (number, default `#ffffff`) — decoupled from the passive `paginationTextColor`. Previously the active fill was the inverted number color, so changing "Numara Rengi" also moved the active box. Default look is unchanged.
 - 2026-06-09: Numbered-pagination a11y/UX polish: `aria-busy` loading state on activation, focus restored to the new active page button after the re-render, polite "Sayfa N" live-region announcement (persistent shadow-root child), and `prefers-reduced-motion`-aware scroll. Also fixed gallery layout squeezing the control into a column (`column-span:all`).
