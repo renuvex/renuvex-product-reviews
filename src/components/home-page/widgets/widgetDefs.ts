@@ -283,13 +283,15 @@ export const WIDGETS: WidgetDef[] = [
       },
       {
         // Numaralı sayfalama renkleri — yalnız paginationMode === 'numbered' iken görünür.
-        // Aktif sayfa ayrı renk almaz: dolu kutu (CSS mevcut renkleri ters çevirir).
+        // Aktif sayfa kendi dolgu rengini ('Aktif Sayfa Arka Planı') alır; üstündeki numara
+        // rengi okunabilirlik için otomatik (#fff/#111) türetilir — ayrı ayar yok.
         title: 'Sayfalama',
         isColor: true,
         fields: [
-          { type: 'color', key: 'paginationBgColor',     label: 'Buton Arka Planı', default: '#ffffff', showWhen: { key: 'paginationMode', equals: 'numbered' } },
-          { type: 'color', key: 'paginationTextColor',   label: 'Numara Rengi',     default: '#111111', showWhen: { key: 'paginationMode', equals: 'numbered' } },
-          { type: 'color', key: 'paginationBorderColor', label: 'Kenarlık Rengi',   default: '#e5e7eb', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationBgColor',       label: 'Buton Arka Planı',       default: '#ffffff', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationTextColor',     label: 'Numara Rengi',           default: '#111111', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationActiveBgColor', label: 'Aktif Sayfa Arka Planı', default: '#111111', showWhen: { key: 'paginationMode', equals: 'numbered' } },
+          { type: 'color', key: 'paginationBorderColor',   label: 'Kenarlık Rengi',         default: '#e5e7eb', showWhen: { key: 'paginationMode', equals: 'numbered' } },
         ],
       },
       {

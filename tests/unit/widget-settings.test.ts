@@ -26,6 +26,7 @@ describe('widget settings schema traversal', () => {
     expect(defaults.paginationMode).toBe('loadMore');
     expect(defaults.paginationBgColor).toBe('#ffffff');
     expect(defaults.paginationTextColor).toBe('#111111');
+    expect(defaults.paginationActiveBgColor).toBe('#111111');
     expect(defaults.paginationBorderColor).toBe('#e5e7eb');
 
     expect(validateSettings('reviews', { paginationMode: 'numbered' })).toBeNull();

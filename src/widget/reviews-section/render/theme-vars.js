@@ -142,11 +142,15 @@ export function applyManualTheme(root, settings) {
   var loadMoreText = settings.loadMoreTextColor || '#111111';
   var loadMoreBorder = settings.loadMoreBorderColor || '#111111';
 
-  // Grup 12 — Sayfalama (numbered). Aktif sayfa ayrı renk almaz; CSS bu üçünü
-  // ters çevirip dolu kutu yapar. Fallback'ler widgetDefs default'larıyla eşit olmalı.
+  // Grup 12 — Sayfalama (numbered). Aktif sayfa KENDİ dolgu rengini alır
+  // (paginationActiveBgColor); üstündeki numara rengi okunabilirlik için arka plana
+  // göre otomatik türetilir (getReadableControlColor). Böylece Numara Rengi yalnız
+  // pasif butonları etkiler. Fallback'ler widgetDefs default'larıyla eşit olmalı.
   var paginationBg = settings.paginationBgColor || '#ffffff';
   var paginationText = settings.paginationTextColor || '#111111';
   var paginationBorder = settings.paginationBorderColor || '#e5e7eb';
+  var paginationActiveBg = settings.paginationActiveBgColor || '#111111';
+  var paginationActiveText = getReadableControlColor(paginationActiveBg);
 
   var vars = {
     // Grup 1 — Genel
@@ -230,6 +234,8 @@ export function applyManualTheme(root, settings) {
     '--renuvex-pr-pagination-bg': paginationBg,
     '--renuvex-pr-pagination-text': paginationText,
     '--renuvex-pr-pagination-border': paginationBorder,
+    '--renuvex-pr-pagination-active-bg': paginationActiveBg,
+    '--renuvex-pr-pagination-active-text': paginationActiveText,
   };
 
   Object.keys(vars).forEach(function (k) { root.style.setProperty(k, vars[k]); });

@@ -73,6 +73,22 @@ describe('widget review form theme variables', () => {
     expect(def.get('--renuvex-pr-pagination-border')).toBe('#e5e7eb');
   });
 
+  test('active pagination page uses its own bg with an auto-contrast number color', () => {
+    const dark = collectThemeVars({ paginationActiveBgColor: '#111111' });
+    expect(dark.get('--renuvex-pr-pagination-active-bg')).toBe('#111111');
+    expect(dark.get('--renuvex-pr-pagination-active-text')).toBe('#ffffff'); // readable on dark fill
+
+    const light = collectThemeVars({ paginationActiveBgColor: '#ffffff' });
+    expect(light.get('--renuvex-pr-pagination-active-bg')).toBe('#ffffff');
+    expect(light.get('--renuvex-pr-pagination-active-text')).toBe('#111111'); // readable on light fill
+
+    // Decoupling: changing the (passive) number color must NOT move the active fill,
+    // and the default keeps the current filled-dark look.
+    const decoupled = collectThemeVars({ paginationTextColor: '#ff0000' });
+    expect(decoupled.get('--renuvex-pr-pagination-active-bg')).toBe('#111111');
+    expect(decoupled.get('--renuvex-pr-pagination-active-text')).toBe('#ffffff');
+  });
+
   test('readable control helpers use deterministic fallback colors', () => {
     expect(getReadableControlColor('#ffffff')).toBe('#111111');
     expect(getReadableControlColor('#111111')).toBe('#ffffff');
