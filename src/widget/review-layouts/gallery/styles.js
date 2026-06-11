@@ -110,7 +110,17 @@ export var GALLERY_CSS = `
     border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
   }
   @media (max-width:600px){
+    /* Tek kolonda full-bleed'i geri getir. Yukarıdaki masaüstü 2-kolon kuralı kökü
+       max-width:1200/margin:auto ile non-full-bleed yapıyor; bu media-scoped olmadığı
+       için mobilde de geçerli kalıp gallery'yi tema konteynerinin yan padding'ine
+       hapsediyordu (kart/liste full-bleed'ken). Burada full-bleed'i geri vererek
+       item'ın 16px'ini TEK yan boşluk yapıyoruz → kart/liste ile birebir 16px.
+       (base.js'teki full-bleed sözleşmesiyle hizalı.) */
     #renuvex-reviews-widget:has(.renuvex-pr-review-gallery){
+      width:100vw;
+      max-width:100vw;
+      margin-left:calc(50% - 50vw);
+      margin-right:calc(50% - 50vw);
       column-count:1;
       column-gap:0;
     }
