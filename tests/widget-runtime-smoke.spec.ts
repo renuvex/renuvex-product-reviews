@@ -509,6 +509,13 @@ for (const emptyCase of [
     await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-empty-state')).toBe(true);
 
     expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-title')).toBe('Bu ürün için henüz yorum yok');
+    expect(await page.evaluate(() => {
+      const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+      const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+      const container = slot?.querySelector('#renuvex-reviews');
+      const root = container?.shadowRoot || null;
+      return root?.querySelector('.renuvex-pr-empty-state-title')?.tagName || '';
+    })).toBe('H3');
     expect(await countInReviewsShadow(page, '.renuvex-pr-empty-state-stars .renuvex-pr-star-empty')).toBe(5);
     expect(await countInReviewsShadow(page, '.renuvex-pr-empty-state-stars .renuvex-pr-star-full,.renuvex-pr-empty-state-stars .renuvex-pr-star-half')).toBe(0);
     expect(await textInReviewsShadow(page, '.renuvex-pr-empty-state-text')).toBe('İlk yorumu yazarak diğer müşterilere yardımcı olun.');

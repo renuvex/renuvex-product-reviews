@@ -61,7 +61,7 @@ export function buildEmptyReviewsState(opts) {
   var content = document.createElement('div');
   content.className = 'renuvex-pr-empty-state-content';
 
-  var title = document.createElement('div');
+  var title = document.createElement('h3');
   title.className = 'renuvex-pr-empty-state-title';
   title.textContent = 'Bu ürün için henüz yorum yok';
   content.appendChild(title);
