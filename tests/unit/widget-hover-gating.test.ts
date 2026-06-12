@@ -21,6 +21,7 @@ import path from 'node:path';
 // `@media(hover:hover)` or a fully ungated `:hover`.
 
 const STYLE_DIR = path.join(process.cwd(), 'src', 'widget', 'reviews-section', 'styles');
+const REVIEW_FORM_STYLE_PATH = path.join(process.cwd(), 'src', 'widget', 'reviews-section', 'review-form-modal', 'styles.js');
 const GATED = '@media(hover:hover) and (pointer:fine)';
 
 // Decorative-hover CSS modules shipped inside the review shadow surface.
@@ -43,4 +44,17 @@ describe('review-surface decorative hover gating', () => {
       expect(offenders, `ungated decorative :hover in ${file}:\n${offenders.join('\n')}`).toEqual([]);
     });
   }
+});
+
+describe('review wizard nav button hover feedback', () => {
+  const css = readFileSync(REVIEW_FORM_STYLE_PATH, 'utf8');
+
+  test('keeps hover feedback on fine pointers and uses active feedback for touch presses', () => {
+    expect(css).toMatch(
+      /@media\(hover:hover\)\s+and\s+\(pointer:fine\)\s*{\s*\.renuvex-pr-fwizard-nav-btn:hover\s*{\s*background:var\(--renuvex-pr-fwizard-nav-hover-bg,/
+    );
+    expect(css).toMatch(
+      /\.renuvex-pr-fwizard-nav-btn:active\s*{\s*background:var\(--renuvex-pr-fwizard-nav-hover-bg,/
+    );
+  });
 });

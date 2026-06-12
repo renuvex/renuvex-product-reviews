@@ -98,7 +98,7 @@ Storefront interactions, runtime smoke, and unit tests also pin the summary filt
 
 Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains the final trusted Cloudinary URL instead of a local `blob:` preview URL.
 
-Storefront interactions and unit tests also pin review form wizard close-control contrast: `theme-vars.js` derives the close icon color and hover background from `formBgColor`, and the browser test verifies the real shadow-DOM button stays readable even when `formPrimaryTextColor` matches a dark form background.
+Storefront interactions and unit tests also pin review form wizard close-control contrast: `theme-vars.js` derives the close icon color and hover background from `formBgColor`, and the browser test verifies the real shadow-DOM button stays readable even when `formPrimaryTextColor` matches a dark form background. Unit tests also pin wizard nav-button hover gating: desktop hover feedback is limited to fine pointers while the same visual feedback remains available as transient `:active` press feedback on touch devices, preventing sticky mobile hover without changing the design token.
 
 Storefront interactions, admin preview schema tests, and unit tests also pin review form wizard copy settings: `Metin > Yorum Formu` nested fields traverse defaults/sanitize/validate, custom step titles and the photo subtitle render as literal text, whitespace-only values fall back to defaults, and long unbroken words wrap without horizontal modal overflow.
 

@@ -590,7 +590,12 @@ export var FWIZARD_CSS = `
     box-sizing:border-box;
     transition:background 0.15s;
   }
-  .renuvex-pr-fwizard-nav-btn:hover{
+  @media(hover:hover) and (pointer:fine){
+    .renuvex-pr-fwizard-nav-btn:hover{
+      background:var(--renuvex-pr-fwizard-nav-hover-bg, rgba(17,17,17,0.06));
+    }
+  }
+  .renuvex-pr-fwizard-nav-btn:active{
     background:var(--renuvex-pr-fwizard-nav-hover-bg, rgba(17,17,17,0.06));
   }
   .renuvex-pr-fwizard-nav-btn[hidden]{
