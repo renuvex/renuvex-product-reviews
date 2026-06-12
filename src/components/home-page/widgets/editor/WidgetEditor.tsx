@@ -141,7 +141,7 @@ function PreviewLoadOverlay({ status, onRetry }: { status: WidgetPreviewStatus; 
           {isError ? (
             <AlertCircle size={24} color={colors.error} />
           ) : (
-            <Loader2 size={24} color={colors.primary} />
+            <Loader2 className="animate-spin" size={24} color={colors.primary} />
           )}
         </div>
         <div style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, marginBottom: 6 }}>
