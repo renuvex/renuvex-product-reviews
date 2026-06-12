@@ -160,7 +160,6 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--renuvex-pr-load-more-pad-y', sz.loadMorePadY + 'px');
     root.style.setProperty('--renuvex-pr-load-more-pad-x', sz.loadMorePadX + 'px');
     root.style.setProperty('--renuvex-pr-load-more-mobile-min-height', sz.loadMoreMobileMinHeight + 'px');
-    root.style.setProperty('--renuvex-pr-load-more-hit-target', sz.loadMoreHitTarget + 'px');
     root.style.setProperty('--renuvex-pr-pagination-button-size', sz.paginationButtonSize + 'px');
     root.style.setProperty('--renuvex-pr-pagination-pad-x', sz.paginationPadX + 'px');
     root.style.setProperty('--renuvex-pr-pagination-gap', sz.paginationGap + 'px');
@@ -171,7 +170,6 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--renuvex-pr-pagination-mobile-gap', sz.paginationMobileGap + 'px');
     root.style.setProperty('--renuvex-pr-pagination-mobile-margin-top', sz.paginationMobileMarginTop + 'px');
     root.style.setProperty('--renuvex-pr-pagination-mobile-gap-min', sz.paginationMobileGapMin + 'px');
-    root.style.setProperty('--renuvex-pr-pagination-hit-target', sz.paginationHitTarget + 'px');
     root.style.setProperty('--renuvex-pr-read-more-size', sz.readMoreSize + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size', thumbPx + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size-mobile', thumbPxMobile + 'px');

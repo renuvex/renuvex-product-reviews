@@ -100,7 +100,6 @@ const CONTROL_SIZE_CASES = [
     loadMorePadY: 7,
     loadMorePadX: 20,
     loadMoreMobileMinHeight: 36,
-    hitTarget: 44,
     paginationButtonSize: 32,
     paginationPadX: 7,
     paginationGap: 4,
@@ -119,7 +118,6 @@ const CONTROL_SIZE_CASES = [
     loadMorePadY: 8,
     loadMorePadX: 24,
     loadMoreMobileMinHeight: 38,
-    hitTarget: 44,
     paginationButtonSize: 36,
     paginationPadX: 8,
     paginationGap: 5,
@@ -138,7 +136,6 @@ const CONTROL_SIZE_CASES = [
     loadMorePadY: 9,
     loadMorePadX: 28,
     loadMoreMobileMinHeight: 40,
-    hitTarget: 44,
     paginationButtonSize: 40,
     paginationPadX: 10,
     paginationGap: 6,
@@ -1043,7 +1040,7 @@ for (const sizeCase of CONTROL_SIZE_CASES) {
 }
 
 for (const sizeCase of CONTROL_SIZE_CASES) {
-  test(`numbered pagination separates mobile hit target from visible size for ${sizeCase.size}`, async ({ page }) => {
+  test(`numbered pagination uses visible mobile target size for ${sizeCase.size}`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 840 });
     const log = await setupWidgetRoutes(page, {
       mountReviews: true,
@@ -1079,8 +1076,8 @@ for (const sizeCase of CONTROL_SIZE_CASES) {
     expect(metrics.flexWrap).toBe('wrap');
     expect(metrics.justifyContent).toBe('center');
     expect(metrics.navScrollWidth).toBeLessThanOrEqual(metrics.navClientWidth + 1);
-    expect(metrics.buttonHeight).toBeGreaterThanOrEqual(sizeCase.hitTarget);
-    expect(metrics.buttonWidth).toBeGreaterThanOrEqual(sizeCase.hitTarget);
+    expect(metrics.buttonHeight).toBeCloseTo(sizeCase.paginationMobileButtonSize, 1);
+    expect(metrics.buttonWidth).toBeGreaterThanOrEqual(sizeCase.paginationMobileButtonSize);
     expect(metrics.visibleHeight).toBeCloseTo(sizeCase.paginationMobileButtonSize, 1);
     expect(metrics.visibleWidth).toBeGreaterThanOrEqual(sizeCase.paginationMobileButtonSize);
     expect(metrics.buttonFontSize).toBeCloseTo(sizeCase.paginationMobileFontSize, 1);
@@ -1096,7 +1093,7 @@ for (const sizeCase of CONTROL_SIZE_CASES) {
     expect(widgetErrors(log)).toEqual([]);
   });
 
-  test(`load-more separates mobile hit target from visible size for ${sizeCase.size}`, async ({ page }) => {
+  test(`load-more uses visible mobile target size for ${sizeCase.size}`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 840 });
     const log = await setupWidgetRoutes(page, {
       mountReviews: true,
@@ -1114,7 +1111,7 @@ for (const sizeCase of CONTROL_SIZE_CASES) {
     await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-load-more')).toBe(1);
 
     const metrics = await controlMetricsInReviewsShadow(page, '.renuvex-pr-load-more');
-    expect(metrics.height).toBeGreaterThanOrEqual(sizeCase.hitTarget);
+    expect(metrics.height).toBeCloseTo(sizeCase.loadMoreMobileMinHeight, 1);
     expect(metrics.visibleHeight).toBeCloseTo(sizeCase.loadMoreMobileMinHeight, 1);
     expect(metrics.fontSize).toBeCloseTo(sizeCase.fontSize, 1);
     expect(metrics.marginTop).toBeCloseTo(sizeCase.paginationMobileMarginTop, 1);

@@ -67,7 +67,7 @@ The admin customization panel uses top-level navigation plus focused detail pane
 - Selecting a group opens a dedicated detail panel with a sticky back header.
 - Detail panels can render schema `subGroups` as inner accordions after the group's direct fields. `Metin` uses this for `Yorum Formu`, which owns review wizard step copy without adding another main navigation row.
 - `Renkler` is a dedicated color panel; tapping it shows every color group (Buton, Filtre, Yorum, Mağaza Yanıtı, Form, Daha Fazla Göster Butonu, Sayfalama, …) directly as accordions, with no further nesting. The `Daha Fazla Göster Butonu` and `Sayfalama` (numbered) color groups are mutually gated by `paginationMode` via field-level `showWhen`, so only the active list-pagination mode's colors appear. Each group exposes its own per-field colors — there is no shared `Marka Kimliği` cascade or basic/advanced split.
-- `Widget Boyutu` remains the only size control for storefront review typography and shared controls. It also scales load-more and numbered-pagination controls through internal CSS variables; no separate "pagination size" setting is exposed. Mobile pagination separates the visible compact box from the minimum tap target, so small/medium/large stay visually distinct while touch safety remains intact.
+- `Widget Boyutu` remains the only size control for storefront review typography and shared controls. It also scales load-more and numbered-pagination controls through internal CSS variables; no separate "pagination size" setting is exposed. Mobile pagination uses the visible compact box as the clickable target, so small/medium/large stay visually distinct without an invisible tap halo around dense page numbers.
 
 This keeps the main customization screen shallow and avoids opening large groups inline.
 
@@ -154,7 +154,7 @@ contract review.
 - [[Database_Schema]]
 
 ## Change Log
-- 2026-06-12: Review pagination sizing was compacted on desktop and split on mobile into visible box size plus a 44px tap target. No new admin setting was added; `Widget Boyutu` remains the single control.
+- 2026-06-12: Review pagination sizing was compacted on desktop and mobile now uses the visible control box as the clickable target instead of a separate invisible tap halo. No new admin setting was added; `Widget Boyutu` remains the single control.
 - 2026-06-12: `Widget Boyutu` now scales the physical load-more and numbered-pagination controls in addition to typography. No new admin field was added; the behavior is driven by internal widget CSS variables.
 - 2026-06-12: Admin widget settings loading moved from a boolean gate to a tri-state gate. The editor only mounts after a successful settings response; hard settings-fetch errors show an error/retry state with no settings panel, preview iframe, or save button.
 - 2026-06-12: The `reviews` iframe preview gained a separate loading/slow/error overlay with retry. Preview status is independent from settings load status and does not block save.

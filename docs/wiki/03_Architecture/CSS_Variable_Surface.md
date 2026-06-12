@@ -106,9 +106,9 @@ Set on the widget root in `render.js applyVars` based on merchant size choice (s
 | `--renuvex-pr-btn-text-size` | Write-review button text |
 | `--renuvex-pr-load-more-size` | Load more button text |
 | `--renuvex-pr-load-more-min-height` / `--renuvex-pr-load-more-pad-y` / `--renuvex-pr-load-more-pad-x` | Load-more desktop visible box size |
-| `--renuvex-pr-load-more-mobile-min-height` / `--renuvex-pr-load-more-hit-target` | Load-more mobile visible box and tap target |
+| `--renuvex-pr-load-more-mobile-min-height` | Load-more mobile visible/clickable target height |
 | `--renuvex-pr-pagination-button-size` / `--renuvex-pr-pagination-pad-x` / `--renuvex-pr-pagination-gap` / `--renuvex-pr-pagination-gap-min` / `--renuvex-pr-pagination-margin-top` | Numbered pagination desktop visible box size |
-| `--renuvex-pr-pagination-mobile-button-size` / `--renuvex-pr-pagination-mobile-font-size` / `--renuvex-pr-pagination-mobile-gap` / `--renuvex-pr-pagination-mobile-gap-min` / `--renuvex-pr-pagination-mobile-margin-top` / `--renuvex-pr-pagination-hit-target` | Numbered pagination mobile visible box and tap target |
+| `--renuvex-pr-pagination-mobile-button-size` / `--renuvex-pr-pagination-mobile-font-size` / `--renuvex-pr-pagination-mobile-gap` / `--renuvex-pr-pagination-mobile-gap-min` / `--renuvex-pr-pagination-mobile-margin-top` | Numbered pagination mobile visible/clickable target sizing |
 | `--renuvex-pr-bar-count-size` | Bar chart count text |
 | `--renuvex-pr-bar-label-size` | Bar chart label text |
 | `--renuvex-pr-review-date-size` | Review item date |
