@@ -1,7 +1,7 @@
 'use client';
 
-import React, { Suspense, lazy, useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { ArrowLeft, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
+import React, { Suspense, lazy, useState, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
+import { AlertCircle, ArrowLeft, Loader2, RefreshCw, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, opacity, shadows } from '@/lib/design-tokens';
@@ -14,12 +14,20 @@ import {
   shouldSyncDraftFromSaved,
   type WidgetSettingsDraft,
 } from './WidgetEditorState';
+import {
+  INITIAL_WIDGET_PREVIEW_LOAD_STATE,
+  reduceWidgetPreviewLoadState,
+  shouldShowPreviewOverlay,
+  type WidgetPreviewStatus,
+} from './WidgetPreviewLoadState';
 
 // Widgets that support iframe preview (real widget.js)
 const IFRAME_PREVIEW_WIDGETS = ['reviews'];
 const RENUVEX_PR_WIDGET_READY = 'RENUVEX_PR_WIDGET_READY';
 const RENUVEX_PR_SETTINGS_UPDATE = 'RENUVEX_PR_SETTINGS_UPDATE';
 const RENUVEX_PR_PREVIEW_SETTINGS_KEY = 'renuvex_pr_preview_settings';
+const PREVIEW_SLOW_TIMEOUT_MS = 2500;
+const PREVIEW_ERROR_TIMEOUT_MS = 15000;
 
 const VIEWPORT_PRESETS = [
   { key: 'mobile',  label: 'Mobil',   icon: Smartphone, width: 390  },
@@ -80,6 +88,83 @@ function postPreviewSettingsUpdate(targetWindow: Window, settings: WidgetSetting
   targetWindow.postMessage({ type: RENUVEX_PR_SETTINGS_UPDATE, settings }, '*');
 }
 
+function hasRenderedIframePreview(targetWindow: Window | null): boolean {
+  try {
+    const mount = targetWindow?.document.querySelector('[data-renuvex-widget="reviews"]');
+    return Boolean(mount?.shadowRoot?.childNodes.length);
+  } catch {
+    return false;
+  }
+}
+
+function PreviewLoadOverlay({ status, onRetry }: { status: WidgetPreviewStatus; onRetry: () => void }) {
+  const isError = status === 'error';
+  const title = isError
+    ? 'Önizleme yüklenemedi'
+    : status === 'slow'
+      ? 'Önizleme normalden uzun sürüyor...'
+      : 'Önizleme yükleniyor...';
+  const description = isError
+    ? 'Widget önizlemesi hazır olmadı. Ayarları düzenlemeye devam edebilir veya önizlemeyi tekrar deneyebilirsiniz.'
+    : status === 'slow'
+      ? 'Widget dosyaları veya önizleme verileri yavaş yükleniyor. Ayar panelini kullanmaya devam edebilirsiniz.'
+      : 'Widget önizlemesi hazırlanıyor.';
+
+  return (
+    <div
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : 'polite'}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        backgroundColor: 'rgba(255, 255, 255, 0.92)',
+        color: colors.textPrimary,
+        textAlign: 'center',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 360,
+          backgroundColor: colors.bgWhite,
+          border: `1px solid ${isError ? colors.errorBorder : colors.borderDefault}`,
+          borderRadius: radii.lg,
+          boxShadow: shadows.antCard,
+          padding: 20,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+          {isError ? (
+            <AlertCircle size={24} color={colors.error} />
+          ) : (
+            <Loader2 size={24} color={colors.primary} />
+          )}
+        </div>
+        <div style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, marginBottom: 6 }}>
+          {title}
+        </div>
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.normal, marginBottom: isError ? 14 : 0 }}>
+          {description}
+        </p>
+        {isError && (
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{ ...componentStyles.btnPrimary, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <RefreshCw size={14} />
+            Tekrar Dene
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }: WidgetEditorProps) {
@@ -87,9 +172,14 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [previewBgColor, setPreviewBgColor] = useState(DEFAULT_PREVIEW_BG);
+  const [previewLoadState, dispatchPreviewLoadState] = useReducer(
+    reduceWidgetPreviewLoadState,
+    INITIAL_WIDGET_PREVIEW_LOAD_STATE,
+  );
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const widgetReadyRef = useRef(false);
   const draftRef = useRef<WidgetSettingsDraft>({});
+  const previewRequestKeyRef = useRef(previewLoadState.requestKey);
   const savedDraft = useMemo(() => mergeWithDefaults(widget, savedSettings), [widget, savedSettings]);
   const previousSavedDraftRef = useRef<WidgetSettingsDraft>(savedDraft);
   const previousWidgetIdRef = useRef(widget.id);
@@ -114,12 +204,38 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
     draftRef.current = draft;
   }, [draft]);
 
+  useEffect(() => {
+    previewRequestKeyRef.current = previewLoadState.requestKey;
+  }, [previewLoadState.requestKey]);
+
+  useEffect(() => {
+    if (!useIframe) return;
+    const requestKey = previewLoadState.requestKey;
+
+    widgetReadyRef.current = false;
+    dispatchPreviewLoadState({ type: 'start', requestKey });
+
+    const slowTimer = window.setTimeout(() => {
+      dispatchPreviewLoadState({ type: 'slow', requestKey });
+    }, PREVIEW_SLOW_TIMEOUT_MS);
+    const errorTimer = window.setTimeout(() => {
+      dispatchPreviewLoadState({ type: 'error', requestKey });
+    }, PREVIEW_ERROR_TIMEOUT_MS);
+
+    return () => {
+      window.clearTimeout(slowTimer);
+      window.clearTimeout(errorTimer);
+    };
+  }, [useIframe, previewLoadState.requestKey]);
+
   // Widget iframe'i hazır olduğunu bildirdiğinde mevcut draft'ı gönder.
   useEffect(() => {
     if (!useIframe) return;
     function onMessage(event: MessageEvent) {
       if (!isWidgetReadyMessage(event.data)) return;
-      if (widgetReadyRef.current) return;
+      if (event.source !== iframeRef.current?.contentWindow) return;
+      const requestKey = previewRequestKeyRef.current;
+      dispatchPreviewLoadState({ type: 'ready', requestKey });
       widgetReadyRef.current = true;
       if (iframeRef.current?.contentWindow) {
         postPreviewSettingsUpdate(iframeRef.current.contentWindow, draftRef.current);
@@ -154,6 +270,10 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
   const previewBackground = OPAQUE_HEX_COLOR_RE.test(previewBgColor) ? previewBgColor : DEFAULT_PREVIEW_BG;
 
   const iframeSrc = '/preview';
+  const handlePreviewRetry = useCallback(() => {
+    widgetReadyRef.current = false;
+    dispatchPreviewLoadState({ type: 'retry' });
+  }, []);
 
   // Kaydet: draft'ı commit et → parent + DB güncellenir
   const handleSave = useCallback(async () => {
@@ -369,23 +489,34 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
                   overflow: 'hidden',
                   backgroundColor: previewBackground,
                   boxShadow: isDesktopPreview ? 'none' : '0 2px 12px rgba(0,0,0,0.08)',
+                  position: 'relative',
                 }}>
                   <iframe
+                    key={previewLoadState.requestKey}
                     ref={iframeRef}
                     src={iframeSrc}
                     style={{ width: '100%', height: '100%', border: 'none', display: 'block', backgroundColor: 'transparent' }}
                     title="Widget Önizleme"
-                    onLoad={() => {
-                      widgetReadyRef.current = false;
+                    onLoad={(event) => {
+                      const frameWindow = event.currentTarget.contentWindow;
                       // Ready event zaten geldiyse veya gelmezse 100ms sonra fallback gönder.
                       setTimeout(() => {
-                        if (iframeRef.current?.contentWindow) {
+                        if (frameWindow && iframeRef.current?.contentWindow === frameWindow) {
                           widgetReadyRef.current = true;
-                          postPreviewSettingsUpdate(iframeRef.current.contentWindow, draftRef.current);
+                          postPreviewSettingsUpdate(frameWindow, draftRef.current);
+                          if (hasRenderedIframePreview(frameWindow)) {
+                            dispatchPreviewLoadState({ type: 'ready', requestKey: previewRequestKeyRef.current });
+                          }
                         }
                       }, 100);
                     }}
                   />
+                  {shouldShowPreviewOverlay(previewLoadState.status) && (
+                    <PreviewLoadOverlay
+                      status={previewLoadState.status}
+                      onRetry={handlePreviewRetry}
+                    />
+                  )}
                 </div>
               ) : PreviewComponent ? (
                 <Suspense fallback={

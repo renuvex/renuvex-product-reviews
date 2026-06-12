@@ -8,6 +8,8 @@ last_verified: 2026-06-12
 confidence: high
 source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
+  - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
+  - "src/components/home-page/widgets/editor/WidgetPreviewLoadState.ts"
   - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
   - "src/lib/widget-settings.ts"
   - "src/widget/reviews-section/render/theme-vars.js"
@@ -105,7 +107,16 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 
 Preview iframe loading is independent from settings loading. A blank or slow
 preview iframe does not by itself mean widget settings are still loading; the
-settings editor is gated separately by the admin settings fetch status.
+settings editor is gated separately by the admin settings fetch status. The
+`reviews` iframe preview uses its own `loading` / `slow` / `ready` / `error`
+state so slow widget assets show an overlay instead of a blank white panel.
+Preview retry remounts only the iframe preview; it does not change the settings
+draft, dirty state, or save behavior.
+
+The `/preview` route still cache-busts `widget.js` on each preview HTML response
+with its timestamp query. That freshness behavior is intentionally separate from
+the preview loading overlay and should not be changed without a dedicated cache
+contract review.
 
 ## Removing / changing fields
 - **Removing a field**: just delete from `widgetDefs.ts`. `sanitizeSettings` filters unknown keys at read time, so old DB rows still work.
@@ -142,6 +153,7 @@ settings editor is gated separately by the admin settings fetch status.
 ## Change Log
 - 2026-06-12: `Widget Boyutu` now scales the physical load-more and numbered-pagination controls in addition to typography. No new admin field was added; the behavior is driven by internal widget CSS variables.
 - 2026-06-12: Admin widget settings loading moved from a boolean gate to a tri-state gate. The editor only mounts after a successful settings response; hard settings-fetch errors show an error/retry state with no settings panel, preview iframe, or save button.
+- 2026-06-12: The `reviews` iframe preview gained a separate loading/slow/error overlay with retry. Preview status is independent from settings load status and does not block save.
 - 2026-06-09: `Sayfalama` color group gained explicit active-page colors — `paginationActiveBgColor` (fill, default `#111111`) and `paginationActiveTextColor` (number, default `#ffffff`) — decoupled from the passive `paginationTextColor`. Every pagination color is an explicit field.
 - 2026-06-09: Added the `paginationMode` design select (Tasarım: `loadMore` | `numbered`) and a `Sayfalama` color group. The load-more and pagination color groups are `showWhen`-gated on `paginationMode`, so only the active mode's colors show in `Renkler`. Schema-driven end-to-end — `widget-settings.ts` (defaults/sanitize/validate) and `SettingsPanel` auto-pick the new fields with no code change. See [[Product_Review_Widget]].
 - 2026-06-06: Added nested `Metin > Yorum Formu` copy settings for review wizard step headings and photo subtitle. Settings traversal is recursive via `collectSettingFields(...)`; storefront copy renders as safe text with whitespace fallback and long-word wrapping.
