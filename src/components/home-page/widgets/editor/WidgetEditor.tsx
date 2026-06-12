@@ -4,7 +4,7 @@ import React, { Suspense, lazy, useState, useCallback, useEffect, useLayoutEffec
 import { AlertCircle, ArrowLeft, Loader2, RefreshCw, Save, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { InfoTooltip } from './InfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { colors, componentStyles, radii, typography, opacity, shadows } from '@/lib/design-tokens';
+import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
 import type { WidgetDef } from '../widgetDefs';
 import { SettingsPanel } from './SettingsPanel';
 import { ColorPickerField } from './ColorPickerField';
@@ -99,68 +99,53 @@ function hasRenderedIframePreview(targetWindow: Window | null): boolean {
 
 function PreviewLoadOverlay({ status, onRetry }: { status: WidgetPreviewStatus; onRetry: () => void }) {
   const isError = status === 'error';
-  const title = isError
+  // loading -> sade spinner (metin/kart yok); slow & error -> tek satir mesaj.
+  const message = isError
     ? 'Önizleme yüklenemedi'
     : status === 'slow'
       ? 'Önizleme normalden uzun sürüyor...'
-      : 'Önizleme yükleniyor...';
-  const description = isError
-    ? 'Widget önizlemesi hazır olmadı. Ayarları düzenlemeye devam edebilir veya önizlemeyi tekrar deneyebilirsiniz.'
-    : status === 'slow'
-      ? 'Widget dosyaları veya önizleme verileri yavaş yükleniyor. Ayar panelini kullanmaya devam edebilirsiniz.'
-      : 'Widget önizlemesi hazırlanıyor.';
+      : '';
 
   return (
     <div
       role={isError ? 'alert' : 'status'}
       aria-live={isError ? 'assertive' : 'polite'}
+      aria-label={status === 'loading' ? 'Önizleme yükleniyor' : undefined}
       style={{
         position: 'absolute',
         inset: 0,
         zIndex: 1,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 14,
         padding: 24,
         backgroundColor: 'rgba(255, 255, 255, 0.92)',
         color: colors.textPrimary,
         textAlign: 'center',
       }}
     >
-      <div
-        style={{
-          maxWidth: 420,
-          backgroundColor: colors.bgWhite,
-          border: `1px solid ${isError ? colors.errorBorder : colors.borderDefault}`,
-          borderRadius: radii.lg,
-          boxShadow: shadows.antCard,
-          padding: 28,
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          {isError ? (
-            <AlertCircle size={44} color={colors.error} />
-          ) : (
-            <Loader2 className="animate-spin" size={44} color={colors.primary} />
-          )}
+      {isError ? (
+        <AlertCircle size={44} color={colors.error} />
+      ) : (
+        <Loader2 className="animate-spin" size={44} color={colors.primary} />
+      )}
+      {message && (
+        <div style={{ maxWidth: 420, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.medium }}>
+          {message}
         </div>
-        <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.medium, marginBottom: 8 }}>
-          {title}
-        </div>
-        <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.normal, marginBottom: isError ? 18 : 0 }}>
-          {description}
-        </p>
-        {isError && (
-          <button
-            type="button"
-            onClick={onRetry}
-            style={{ ...componentStyles.btnPrimary, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <RefreshCw size={14} />
-            Tekrar Dene
-          </button>
-        )}
-      </div>
+      )}
+      {isError && (
+        <button
+          type="button"
+          onClick={onRetry}
+          style={{ ...componentStyles.btnPrimary, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <RefreshCw size={14} />
+          Tekrar Dene
+        </button>
+      )}
     </div>
   );
 }
