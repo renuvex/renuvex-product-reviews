@@ -129,25 +129,25 @@ function PreviewLoadOverlay({ status, onRetry }: { status: WidgetPreviewStatus; 
     >
       <div
         style={{
-          maxWidth: 360,
+          maxWidth: 420,
           backgroundColor: colors.bgWhite,
           border: `1px solid ${isError ? colors.errorBorder : colors.borderDefault}`,
           borderRadius: radii.lg,
           boxShadow: shadows.antCard,
-          padding: 20,
+          padding: 28,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
           {isError ? (
-            <AlertCircle size={24} color={colors.error} />
+            <AlertCircle size={44} color={colors.error} />
           ) : (
-            <Loader2 className="animate-spin" size={24} color={colors.primary} />
+            <Loader2 className="animate-spin" size={44} color={colors.primary} />
           )}
         </div>
-        <div style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, marginBottom: 6 }}>
+        <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.medium, marginBottom: 8 }}>
           {title}
         </div>
-        <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.normal, marginBottom: isError ? 14 : 0 }}>
+        <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, lineHeight: typography.lineHeight.normal, marginBottom: isError ? 18 : 0 }}>
           {description}
         </p>
         {isError && (
