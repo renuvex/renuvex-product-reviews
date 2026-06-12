@@ -12,7 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { colors, componentStyles, radii, typography, sp } from '@/lib/design-tokens';
 import { SettingsGroup, SettingField, collectSettingFields } from '../widgetDefs';
-import { WidgetSettingsDraft } from './WidgetEditor';
+import type { WidgetSettingsDraft } from './WidgetEditorState';
 import { IconSelect } from './IconSelect';
 import { ColorPickerField } from './ColorPickerField';
 import { InfoTooltip } from './InfoTooltip';
