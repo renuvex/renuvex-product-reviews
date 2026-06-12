@@ -43,6 +43,7 @@ source_files:
   - "tests/unit/widget-asset-cache.test.ts"
   - "tests/unit/widget-settings.test.ts"
   - "tests/unit/widget-editor-state.test.ts"
+  - "tests/unit/widget-settings-load-state.test.ts"
   - "tests/unit/layout-contracts.test.ts"
   - "tests/unit/pagination-page-list.test.ts"
   - "vercel.json"
@@ -63,6 +64,7 @@ source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
   - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
   - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
+  - "src/components/home-page/widgets/editor/WidgetSettingsLoadState.ts"
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
@@ -103,6 +105,8 @@ Unit tests pin the review-section empty-state text color contract: `theme-vars.j
 Unit tests also pin widget icon registry invariants: all shipped review, filter, and UI chrome SVGs must stay on the Phosphor 256-grid `currentColor` system, stroked icons use documented Phosphor stroke weights (regular `16`, with the compact-only down caret intentionally `24`), and legacy Lucide 24-grid or Unicode X/arrow glyphs are rejected.
 
 Unit tests also pin admin widget editor draft synchronization: late asynchronous saved settings hydrate the editor draft only while the merchant has not made local edits, equivalent setting objects compare without key-order false dirty states, and switching widgets still resets the draft.
+
+Unit tests also pin admin widget settings load state: settings start/retry stays `loading`, valid response data moves to `loaded`, failed or malformed responses move to `error`, and `WidgetEditor` is allowed to mount only in the `loaded` state. The visual admin error/retry screen is not covered by `test:admin-preview`; that harness serves `/preview` and does not mount the authenticated admin panel.
 
 Widget runtime smoke also pins the storefront review read contract: late sort/filter/load-more responses cannot mutate a newer active selection, load-more sends `cursor` when the API returns `nextCursor` and falls back to legacy page requests otherwise, overlapping load-more rows do not duplicate DOM cards, review fetch failures stay distinct from real empty states, the photo strip remains a bootstrap-owned dataset, card/list/gallery layouts render only trusted tenant image URLs, list/gallery photo-strip thumbnails follow `thumbnailSize` while their review item photos continue to follow general widget `size`, and list layout review item photos keep their fixed 3:4 portrait box even in tall rows.
 
@@ -158,6 +162,7 @@ The suite uses risk-based pairwise coverage instead of a full cartesian matrix. 
 
 ## What Is Not Automated Yet
 - Real authenticated ikas dashboard iframe flows are not in CI. They still need manual-auth smoke or a future test-auth harness.
+- Admin widget editor skeleton/error/retry screens are not in CI because the current admin preview harness mounts the preview runtime, not the authenticated admin page.
 - Live dev-store post-deploy smoke is not replaced by CI. Runtime-affecting widget changes should still be checked on the dev storefront after deploy.
 - Sentry production health checks are not part of CI. Use Sentry MCP or the dashboard after deploys that change runtime error reporting.
 - Transfer-size budgets are not enforced yet. Current network tests attach local transfer evidence and assert relative behavior, not byte ceilings.

@@ -15,8 +15,11 @@ source_files:
   - "src/components/home-page/widgets/index.tsx"
   - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
   - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
+  - "src/components/home-page/widgets/editor/WidgetSettingsLoadState.ts"
+  - "src/components/home-page/widgets/editor/EditorSettingsError.tsx"
   - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
   - "tests/unit/widget-editor-state.test.ts"
+  - "tests/unit/widget-settings-load-state.test.ts"
 ---
 
 # Widget Editor Late Settings Dirty State
@@ -66,3 +69,32 @@ A defense-in-depth gate (`EditorSkeleton`, commit `e9a9a7a7`) was also added: th
 editor renders a skeleton until settings load, so it never mounts with
 placeholder data — making the false-dirty state structurally impossible, not just
 corrected before paint.
+
+## Follow-up: settings fetch hard-error clobber risk (2026-06-12)
+The first gate used a boolean `settingsLoaded` flag and flipped it in `finally`.
+That fixed the normal late-success path, but it still opened the editor after a
+hard `/api/admin/settings` error. In that path the parent settings map could stay
+`{}`, so the editor could mount with defaults and a merchant save could replace
+the real DB row with default-derived settings.
+
+The gate now uses a tri-state settings load model:
+
+- `loading` shows `EditorSkeleton`.
+- `loaded` is the only state that mounts `WidgetEditor`.
+- `error` shows `EditorSettingsError` with `Geri` and `Tekrar Dene`; the settings
+  panel, preview iframe, and save button are not rendered.
+
+Settings loading is no longer coupled to the reviews list fetch. `HomePage`
+loads `/api/admin/settings` through its own `loadSettings()` try/catch, while the
+reviews list and tab counts keep their existing loading behavior. Retrying the
+error state calls that same settings-only loader.
+
+`WidgetSettingsLoadState.ts` owns the pure status reducer and editor-open
+decision. `tests/unit/widget-settings-load-state.test.ts` pins loading, retry,
+valid success, malformed success, request failure, and "editor opens only when
+loaded" behavior.
+
+Current `tests/admin-preview-smoke.spec.ts` covers the `/preview` widget runtime
+and admin preview messaging, not an authenticated admin panel mount. Skeleton,
+error, and retry screen rendering therefore remain manual-auth or future admin
+harness coverage rather than current CI coverage.

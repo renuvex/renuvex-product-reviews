@@ -7,12 +7,15 @@ import { ReviewsPreview } from './previews/ReviewsPreview';
 import { BadgePreview } from './previews/BadgePreview';
 import { WidgetEditor } from './editor/WidgetEditor';
 import { EditorSkeleton } from './editor/EditorSkeleton';
+import { EditorSettingsError } from './editor/EditorSettingsError';
+import { canOpenWidgetEditor, type WidgetSettingsLoadStatus } from './editor/WidgetSettingsLoadState';
 
 interface WidgetsContainerProps {
   settings: WidgetSettingsMap;
-  settingsLoaded: boolean;
+  settingsStatus: WidgetSettingsLoadStatus;
   onChange: (s: WidgetSettingsMap) => void;
   onSave: (widgetId: string, widgetSettings: Record<string, unknown>) => Promise<void>;
+  onRetrySettings: () => void;
 }
 
 // Test amaçlı placeholder preview
@@ -44,7 +47,7 @@ function getEnabled(settings: WidgetSettingsMap, id: WidgetDef['id']): boolean {
   return false;
 }
 
-export function WidgetsContainer({ settings, settingsLoaded, onChange, onSave }: WidgetsContainerProps) {
+export function WidgetsContainer({ settings, settingsStatus, onChange, onSave, onRetrySettings }: WidgetsContainerProps) {
   const [editingId, setEditingId] = useState<WidgetDef['id'] | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -77,13 +80,19 @@ export function WidgetsContainer({ settings, settingsLoaded, onChange, onSave }:
         display: 'flex',
         flexDirection: 'column',
       }}>
-        {settingsLoaded ? (
+        {canOpenWidgetEditor(settingsStatus) ? (
           <WidgetEditor
             widget={editingWidget}
             savedSettings={editingWidgetSettings}
             saving={saving}
             onCommit={(committed) => handleCommit(editingWidget.id, committed)}
             onBack={() => setEditingId(null)}
+          />
+        ) : settingsStatus === 'error' ? (
+          <EditorSettingsError
+            widget={editingWidget}
+            onBack={() => setEditingId(null)}
+            onRetry={onRetrySettings}
           />
         ) : (
           <EditorSkeleton widget={editingWidget} onBack={() => setEditingId(null)} />

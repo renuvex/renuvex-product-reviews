@@ -77,6 +77,12 @@ This pattern lives in BOTH:
 - `/api/admin/settings` (admin UI consumption)
 - `/api/public/settings` (widget consumption)
 
+The admin editor treats a missing widget row as "use defaults" only after a
+successful `/api/admin/settings` response. While settings are loading it shows an
+editor skeleton; if the settings request fails or returns a malformed payload,
+the customization editor stays closed behind an error/retry state so default
+drafts cannot be saved over the real DB row.
+
 ## Write path (admin)
 ```
 admin UI changes a field
@@ -96,6 +102,10 @@ admin UI changes a field
 - Desktop preview fills the available preview panel width and height without a device-frame shadow, so it behaves like a browser viewport; mobile and tablet keep fixed device widths.
 
 This pattern means the preview is **pixel-identical** to production — same `widget.js` runs in both contexts.
+
+Preview iframe loading is independent from settings loading. A blank or slow
+preview iframe does not by itself mean widget settings are still loading; the
+settings editor is gated separately by the admin settings fetch status.
 
 ## Removing / changing fields
 - **Removing a field**: just delete from `widgetDefs.ts`. `sanitizeSettings` filters unknown keys at read time, so old DB rows still work.
@@ -131,6 +141,7 @@ This pattern means the preview is **pixel-identical** to production — same `wi
 
 ## Change Log
 - 2026-06-12: `Widget Boyutu` now scales the physical load-more and numbered-pagination controls in addition to typography. No new admin field was added; the behavior is driven by internal widget CSS variables.
+- 2026-06-12: Admin widget settings loading moved from a boolean gate to a tri-state gate. The editor only mounts after a successful settings response; hard settings-fetch errors show an error/retry state with no settings panel, preview iframe, or save button.
 - 2026-06-09: `Sayfalama` color group gained explicit active-page colors — `paginationActiveBgColor` (fill, default `#111111`) and `paginationActiveTextColor` (number, default `#ffffff`) — decoupled from the passive `paginationTextColor`. Every pagination color is an explicit field.
 - 2026-06-09: Added the `paginationMode` design select (Tasarım: `loadMore` | `numbered`) and a `Sayfalama` color group. The load-more and pagination color groups are `showWhen`-gated on `paginationMode`, so only the active mode's colors show in `Renkler`. Schema-driven end-to-end — `widget-settings.ts` (defaults/sanitize/validate) and `SettingsPanel` auto-pick the new fields with no code change. See [[Product_Review_Widget]].
 - 2026-06-06: Added nested `Metin > Yorum Formu` copy settings for review wizard step headings and photo subtitle. Settings traversal is recursive via `collectSettingFields(...)`; storefront copy renders as safe text with whitespace fallback and long-word wrapping.

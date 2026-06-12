@@ -10,6 +10,11 @@ import { Review, WidgetSettingsMap, TabKey } from './types';
 import { ReplyDialog } from './ReplyDialog';
 import { ReviewsTab } from './ReviewsTab';
 import { WidgetsContainer } from './widgets';
+import {
+  INITIAL_WIDGET_SETTINGS_LOAD_STATE,
+  reduceWidgetSettingsLoadState,
+  type WidgetSettingsLoadState,
+} from './widgets/editor/WidgetSettingsLoadState';
 
 // Her admin API çağrısından önce taze JWT token al — uzun açık kalan
 // sayfada eski token expire olduğunda 401 alıp "kaydedilemedi" hatası
@@ -32,12 +37,13 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [tabCounts, setTabCounts] = useState<Record<TabKey, number>>({ pending: 0, approved: 0, rejected: 0, all: 0 });
-  const [settings, setSettings] = useState<WidgetSettingsMap>({});
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [settingsLoadState, setSettingsLoadState] = useState<WidgetSettingsLoadState>(INITIAL_WIDGET_SETTINGS_LOAD_STATE);
   const [loading, setLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [replyDialog, setReplyDialog] = useState<{ open: boolean; review: Review | null }>({ open: false, review: null });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const settings = settingsLoadState.settings;
 
   const pageSizeRef = React.useRef(pageSize);
   pageSizeRef.current = pageSize;
@@ -85,26 +91,36 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     }
   }, [token]);
 
+  const loadSettings = useCallback(async () => {
+    if (!token) return;
+
+    setSettingsLoadState(state => reduceWidgetSettingsLoadState(state, { type: 'start' }));
+
+    try {
+      const settingsRes = await axios.get('/api/admin/settings', { headers: await freshAuthHeader(token) });
+      setSettingsLoadState(state => reduceWidgetSettingsLoadState(state, {
+        type: 'success',
+        settings: settingsRes.data?.data,
+      }));
+    } catch (error) {
+      console.error("Widget ayarları çekilirken hata:", error);
+      setSettingsLoadState(state => reduceWidgetSettingsLoadState(state, { type: 'failure' }));
+    }
+  }, [token]);
+
+  const handleSettingsChange = useCallback((nextSettings: WidgetSettingsMap) => {
+    setSettingsLoadState(state => ({
+      ...state,
+      settings: nextSettings,
+    }));
+  }, []);
+
   useEffect(() => {
     if (!token) return;
-    const init = async () => {
-      try {
-        const [, settingsRes] = await Promise.all([
-          fetchReviews('pending', 1),
-          axios.get('/api/admin/settings', { headers: await freshAuthHeader(token) }),
-        ]);
-        if (settingsRes.data?.data) setSettings(settingsRes.data.data as WidgetSettingsMap);
-        fetchAllCounts();
-      } catch (error) {
-        console.error("Panel başlatılırken hata:", error);
-      } finally {
-        // Fetch başarısız olsa bile gate'i aç — o durumda editör {}/default'larla
-        // açılır ve WidgetEditor'daki late-settings sync fix yine korur.
-        setSettingsLoaded(true);
-      }
-    };
-    init();
-  }, [token, fetchReviews, fetchAllCounts]);
+    void fetchReviews('pending', 1);
+    void fetchAllCounts();
+    void loadSettings();
+  }, [token, fetchReviews, fetchAllCounts, loadSettings]);
 
   const handleReviewTabChange = (tab: TabKey) => {
     setActiveTab(tab);
@@ -280,11 +296,12 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         <TabsContent value="widgets" className="m-0 flex-1 min-w-0">
           <WidgetsContainer
             settings={settings}
-            settingsLoaded={settingsLoaded}
-            onChange={setSettings}
+            settingsStatus={settingsLoadState.status}
+            onChange={handleSettingsChange}
             onSave={async (widgetId, widgetSettings) => {
               await saveSettings(widgetId, widgetSettings);
             }}
+            onRetrySettings={loadSettings}
           />
         </TabsContent>
       </Tabs>
