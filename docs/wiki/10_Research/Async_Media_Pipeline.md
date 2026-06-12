@@ -35,6 +35,8 @@ source_files:
 records an *accepted* architectural decision, and we have deliberately chosen to defer building
 this. When we decide to build (queue + moderation choice), this becomes `ADR_00XX_Async_Media_Pipeline`.
 
+**Update (2026-06-12):** the video-reviews trigger is now being acted on. [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] (draft) decides the **media model + video provider** (provider-agnostic `ReviewMedia`; video → Cloudflare Stream; images stay Cloudinary; R2 master included in V1) and uses Stream's signed webhook as the authoritative metadata source. The **queue + worker + moderation-at-scale** layer described on this page remains the separate phase ADR_0031 unblocks — v1 ships with manual admin moderation + Stream's async processing, not a custom queue yet.
+
 ## What it is
 A **queue + background workers** that process uploaded review media *after* the user's upload
 request returns: authoritative metadata, image moderation, variant generation, and (future) video.
