@@ -6,9 +6,11 @@ import { WidgetCard } from './WidgetCard';
 import { ReviewsPreview } from './previews/ReviewsPreview';
 import { BadgePreview } from './previews/BadgePreview';
 import { WidgetEditor } from './editor/WidgetEditor';
+import { EditorSkeleton } from './editor/EditorSkeleton';
 
 interface WidgetsContainerProps {
   settings: WidgetSettingsMap;
+  settingsLoaded: boolean;
   onChange: (s: WidgetSettingsMap) => void;
   onSave: (widgetId: string, widgetSettings: Record<string, unknown>) => Promise<void>;
 }
@@ -42,7 +44,7 @@ function getEnabled(settings: WidgetSettingsMap, id: WidgetDef['id']): boolean {
   return false;
 }
 
-export function WidgetsContainer({ settings, onChange, onSave }: WidgetsContainerProps) {
+export function WidgetsContainer({ settings, settingsLoaded, onChange, onSave }: WidgetsContainerProps) {
   const [editingId, setEditingId] = useState<WidgetDef['id'] | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -75,13 +77,17 @@ export function WidgetsContainer({ settings, onChange, onSave }: WidgetsContaine
         display: 'flex',
         flexDirection: 'column',
       }}>
-        <WidgetEditor
-          widget={editingWidget}
-          savedSettings={editingWidgetSettings}
-          saving={saving}
-          onCommit={(committed) => handleCommit(editingWidget.id, committed)}
-          onBack={() => setEditingId(null)}
-        />
+        {settingsLoaded ? (
+          <WidgetEditor
+            widget={editingWidget}
+            savedSettings={editingWidgetSettings}
+            saving={saving}
+            onCommit={(committed) => handleCommit(editingWidget.id, committed)}
+            onBack={() => setEditingId(null)}
+          />
+        ) : (
+          <EditorSkeleton widget={editingWidget} onBack={() => setEditingId(null)} />
+        )}
       </div>
     );
   }

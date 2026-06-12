@@ -33,6 +33,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const [pageSize, setPageSize] = useState(20);
   const [tabCounts, setTabCounts] = useState<Record<TabKey, number>>({ pending: 0, approved: 0, rejected: 0, all: 0 });
   const [settings, setSettings] = useState<WidgetSettingsMap>({});
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [replyDialog, setReplyDialog] = useState<{ open: boolean; review: Review | null }>({ open: false, review: null });
@@ -96,6 +97,10 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         fetchAllCounts();
       } catch (error) {
         console.error("Panel başlatılırken hata:", error);
+      } finally {
+        // Fetch başarısız olsa bile gate'i aç — o durumda editör {}/default'larla
+        // açılır ve WidgetEditor'daki late-settings sync fix yine korur.
+        setSettingsLoaded(true);
       }
     };
     init();
@@ -275,6 +280,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         <TabsContent value="widgets" className="m-0 flex-1 min-w-0">
           <WidgetsContainer
             settings={settings}
+            settingsLoaded={settingsLoaded}
             onChange={setSettings}
             onSave={async (widgetId, widgetSettings) => {
               await saveSettings(widgetId, widgetSettings);
