@@ -73,23 +73,29 @@ export function EditorSkeleton({ widget, onBack }: EditorSkeletonProps) {
           ))}
         </div>
 
-        {/* Sağ — önizleme alanı: WidgetEditor önizleme overlay'iyle AYNI spinner.
-            Böylece ayar yüklenirken (skeleton) ve önizleme yüklenirken (gerçek
-            editör) sağ taraf kesintisiz aynı görünür — çift loading hissi olmaz. */}
-        <div
-          role="status"
-          aria-label="Ayarlar yükleniyor"
-          style={{
-            flex: 1,
-            backgroundColor: colors.bgPage,
-            borderRadius: radii.lg,
-            border: `1px solid ${colors.borderDefault}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Loader2 className="animate-spin" size={44} color={colors.primary} />
+        {/* Sağ — önizleme alanı. Gerçek editörün önizleme pane'ini birebir aynalar:
+            üstte araç çubuğu yer tutucusu (48px) + altında beyaz zeminde spinner.
+            Böylece spinner, gerçek editördeki overlay spinner'ıyla AYNI konum ve
+            zeminde durur — geçişte zıplama/çift loading hissi olmaz. */}
+        <div style={{
+          flex: 1,
+          backgroundColor: colors.bgPage,
+          borderRadius: radii.lg,
+          border: `1px solid ${colors.borderDefault}`,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* Araç çubuğu yer tutucusu — gerçek önizleme header'ıyla aynı yükseklik (48px) */}
+          <div style={{ minHeight: 48, borderBottom: `1px solid ${colors.borderDefault}`, backgroundColor: colors.bgWhite }} />
+          {/* Spinner alanı — gerçek önizleme içerik zemini gibi beyaz */}
+          <div
+            role="status"
+            aria-label="Ayarlar yükleniyor"
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgWhite }}
+          >
+            <Loader2 className="animate-spin" size={44} color={colors.primary} />
+          </div>
         </div>
       </div>
     </div>
