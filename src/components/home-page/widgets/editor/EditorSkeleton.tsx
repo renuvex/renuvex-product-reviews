@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { colors, componentStyles, radii, typography, opacity } from '@/lib/design-tokens';
 import type { WidgetDef } from '../widgetDefs';
 
@@ -73,19 +73,23 @@ export function EditorSkeleton({ widget, onBack }: EditorSkeletonProps) {
           ))}
         </div>
 
-        {/* Sağ — önizleme skeleton */}
-        <div style={{
-          flex: 1,
-          backgroundColor: colors.bgPage,
-          borderRadius: radii.lg,
-          border: `1px solid ${colors.borderDefault}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: colors.textMuted,
-          fontSize: 28,
-        }}>
-          Ayarlar yükleniyor…
+        {/* Sağ — önizleme alanı: WidgetEditor önizleme overlay'iyle AYNI spinner.
+            Böylece ayar yüklenirken (skeleton) ve önizleme yüklenirken (gerçek
+            editör) sağ taraf kesintisiz aynı görünür — çift loading hissi olmaz. */}
+        <div
+          role="status"
+          aria-label="Ayarlar yükleniyor"
+          style={{
+            flex: 1,
+            backgroundColor: colors.bgPage,
+            borderRadius: radii.lg,
+            border: `1px solid ${colors.borderDefault}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Loader2 className="animate-spin" size={44} color={colors.primary} />
         </div>
       </div>
     </div>
