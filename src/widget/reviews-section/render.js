@@ -159,11 +159,19 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--renuvex-pr-load-more-min-height', sz.loadMoreMinHeight + 'px');
     root.style.setProperty('--renuvex-pr-load-more-pad-y', sz.loadMorePadY + 'px');
     root.style.setProperty('--renuvex-pr-load-more-pad-x', sz.loadMorePadX + 'px');
+    root.style.setProperty('--renuvex-pr-load-more-mobile-min-height', sz.loadMoreMobileMinHeight + 'px');
+    root.style.setProperty('--renuvex-pr-load-more-hit-target', sz.loadMoreHitTarget + 'px');
     root.style.setProperty('--renuvex-pr-pagination-button-size', sz.paginationButtonSize + 'px');
     root.style.setProperty('--renuvex-pr-pagination-pad-x', sz.paginationPadX + 'px');
     root.style.setProperty('--renuvex-pr-pagination-gap', sz.paginationGap + 'px');
     root.style.setProperty('--renuvex-pr-pagination-margin-top', sz.paginationMarginTop + 'px');
     root.style.setProperty('--renuvex-pr-pagination-gap-min', sz.paginationGapMin + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-mobile-button-size', sz.paginationMobileButtonSize + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-mobile-font-size', sz.paginationMobileFontSize + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-mobile-gap', sz.paginationMobileGap + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-mobile-margin-top', sz.paginationMobileMarginTop + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-mobile-gap-min', sz.paginationMobileGapMin + 'px');
+    root.style.setProperty('--renuvex-pr-pagination-hit-target', sz.paginationHitTarget + 'px');
     root.style.setProperty('--renuvex-pr-read-more-size', sz.readMoreSize + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size', thumbPx + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size-mobile', thumbPxMobile + 'px');
@@ -368,10 +376,18 @@ export async function render(productId, settings, reviewsData, productName, orde
         if (hasMore) {
           var loadMoreBtn = document.createElement('button');
           loadMoreBtn.className = 'renuvex-pr-load-more';
-          loadMoreBtn.textContent = 'Daha Fazla Göster';
+          var loadMoreLabel = document.createElement('span');
+          loadMoreLabel.className = 'renuvex-pr-load-more-label';
+          loadMoreLabel.setAttribute('aria-hidden', 'true');
+          loadMoreBtn.appendChild(loadMoreLabel);
+          function setLoadMoreText(text) {
+            loadMoreLabel.textContent = text;
+            loadMoreBtn.setAttribute('aria-label', text);
+          }
+          setLoadMoreText('Daha Fazla Göster');
           loadMoreBtn.onclick = async function () {
             loadMoreBtn.disabled = true;
-            loadMoreBtn.textContent = 'Yükleniyor...';
+            setLoadMoreText('Yükleniyor...');
             var token = beginReviewRequest();
             var productIdSnapshot = currentProductId;
             var orderBySnapshot = currentOrderBy;
@@ -399,10 +415,10 @@ export async function render(productId, settings, reviewsData, productName, orde
                 widget.insertBefore(moreReviewLayout.render(r, loadedLightboxReviews), loadMoreBtn);
               });
               if (!moreData.data.hasMore) loadMoreBtn.remove();
-              else { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Daha Fazla Göster'; }
+              else { loadMoreBtn.disabled = false; setLoadMoreText('Daha Fazla Göster'); }
             } else {
               loadMoreBtn.disabled = false;
-              loadMoreBtn.textContent = 'Tekrar Dene';
+              setLoadMoreText('Tekrar Dene');
             }
           };
           widget.appendChild(loadMoreBtn);

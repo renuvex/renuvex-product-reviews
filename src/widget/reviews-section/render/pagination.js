@@ -57,12 +57,20 @@ export function buildPaginationControl(opts) {
     onPageChange(targetPage);
   }
 
+  function appendVisibleLabel(btn, text) {
+    var labelEl = document.createElement('span');
+    labelEl.className = 'renuvex-pr-pagination-label';
+    labelEl.setAttribute('aria-hidden', 'true');
+    labelEl.textContent = text;
+    btn.appendChild(labelEl);
+  }
+
   function makeArrow(label, glyph, targetPage, disabled) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'renuvex-pr-pagination-arrow';
     btn.setAttribute('aria-label', label);
-    btn.textContent = glyph;
+    appendVisibleLabel(btn, glyph);
     if (disabled) {
       btn.disabled = true;
     } else {
@@ -86,8 +94,8 @@ export function buildPaginationControl(opts) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'renuvex-pr-pagination-btn';
-    btn.textContent = String(item);
     btn.setAttribute('aria-label', 'Sayfa ' + item);
+    appendVisibleLabel(btn, String(item));
     if (item === page) {
       btn.setAttribute('aria-current', 'page');
     } else {
