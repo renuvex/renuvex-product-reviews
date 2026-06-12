@@ -15,6 +15,7 @@ source_files:
   - "src/components/home-page/widgets/index.tsx"
   - "src/components/home-page/widgets/editor/WidgetEditor.tsx"
   - "src/components/home-page/widgets/editor/WidgetEditorState.ts"
+  - "src/components/home-page/widgets/editor/SettingsPanel.tsx"
   - "tests/unit/widget-editor-state.test.ts"
 ---
 
@@ -41,7 +42,27 @@ The dirty comparison now uses stable key-sorted serialization so equivalent sett
 - widget changes still forcing draft sync.
 
 ## Verification
+- `npx tsc --noEmit` (or `pnpm build`) — required for refactors that move/remove exports (see "Follow-up")
 - `pnpm test:unit`
 - `pnpm lint`
 - `node scripts/wiki-audit.mjs --changed-source-check`
 - `git diff --check`
+
+## Follow-up: build break from the type move (2026-06-12)
+The fix moved the `WidgetSettingsDraft` type out of `WidgetEditor.tsx` into
+`WidgetEditorState.ts`, but `SettingsPanel.tsx` kept importing it from
+`WidgetEditor` (which no longer exports it) — a `TS2459` error. `pnpm test:unit`
+(vitest/esbuild strips types) and `pnpm lint` (`eslint src`, not type-aware) both
+passed, so it shipped in `b0928429`. `next.config.js` sets no
+`typescript.ignoreBuildErrors`, so `next build` type-checks by default and the
+Vercel build was broken until follow-up commit `31009465` repointed the import to
+`WidgetEditorState`.
+
+**Lesson:** for any TS/TSX change that moves or removes an export, run
+`npx tsc --noEmit` (or `pnpm build`) before committing — vitest and eslint do not
+catch a broken type import.
+
+A defense-in-depth gate (`EditorSkeleton`, commit `e9a9a7a7`) was also added: the
+editor renders a skeleton until settings load, so it never mounts with
+placeholder data — making the false-dirty state structurally impossible, not just
+corrected before paint.
