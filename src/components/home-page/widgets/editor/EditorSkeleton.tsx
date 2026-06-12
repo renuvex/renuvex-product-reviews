@@ -83,7 +83,7 @@ export function EditorSkeleton({ widget, onBack }: EditorSkeletonProps) {
           alignItems: 'center',
           justifyContent: 'center',
           color: colors.textMuted,
-          fontSize: typography.fontSize.base,
+          fontSize: 28,
         }}>
           Ayarlar yükleniyor…
         </div>
