@@ -6,21 +6,18 @@
 // load-more and only refreshes after the cache TTL (Strateji A — newest-first
 // rotation; ADR_0007: fixed 15 cap, no admin setting).
 //
+// Video-enabled stores populate the same isolated dataset with `hasMedia=true`;
+// the public class/state names stay stable for backwards compatibility.
 // Pure builder: returns the photoSection element, or null when the strip should
 // not render (gallery off, photo filter active, or no photo reviews). It does
 // NOT call render(); openReviewModal + wireLightboxTrigger are injected by the
 // caller (render.js) to keep this module free of a render<->modal cycle.
 
-import {
-  getFirstTrustedReviewImage,
-  getTrustedReviewImages,
-  PHOTO_STRIP_THUMB_WIDTH,
-  buildResponsiveImgAttrs,
-  hideOnImageError,
-  settingText,
-} from '../../core/helpers.js';
+import { PHOTO_STRIP_THUMB_WIDTH, settingText } from '../../core/helpers.js';
+import { getFirstTrustedReviewMedia, getTrustedReviewMedia } from '../../core/review-media.js';
 import { iconUseNode } from '../../icons/star-sprite.js';
 import { UI_CARET_LEFT, UI_CARET_RIGHT } from '../../icons/index.js';
+import { createMediaThumbnail } from '../media-thumbnail.js';
 
 // opts: { settings, root, currentHasImages, openReviewModal, wireLightboxTrigger }
 export function buildPhotoStrip(opts) {
@@ -28,10 +25,9 @@ export function buildPhotoStrip(opts) {
   var root = opts.root;
   var currentHasImages = opts.currentHasImages;
   var openReviewModal = opts.openReviewModal;
-  var wireLightboxTrigger = opts.wireLightboxTrigger;
 
   var stripReviews = (opts.photoStripReviews || []).filter(function (r) {
-    return getTrustedReviewImages(r).length > 0;
+    return getTrustedReviewMedia(r).length > 0;
   });
   if (!(settings.showPhotoGallery !== false && !currentHasImages && stripReviews.length > 0)) {
     return null;
@@ -69,27 +65,19 @@ export function buildPhotoStrip(opts) {
   var thumbCount = 0;
   stripReviews.forEach(function (r) {
     if (thumbCount >= 15) return;
-    var firstImg = getFirstTrustedReviewImage(r);
-    if (!firstImg) return;
-    var thumb = document.createElement('img');
-    var attrs = buildResponsiveImgAttrs(firstImg, PHOTO_STRIP_THUMB_WIDTH);
-    thumb.src = attrs.src;
-    thumb.srcset = attrs.srcset;
-    // İlk 3 thumbnail above-the-fold ihtimaline karşı eager; gerisi lazy.
-    // Strip her zaman summary altında; mobile'da bazen ilk render'da kısmen
-    // viewport içinde olabiliyor — eager kuyruğu çok küçük tuttuk.
-    thumb.loading = thumbCount < 3 ? 'eager' : 'lazy';
-    thumb.decoding = 'async';
-    thumb.width = stripWidth;
-    thumb.height = stripHeight;
-    thumb.className = 'renuvex-pr-photo-strip-thumb';
-    thumb.alt = 'Yorum fotoğrafı';
-    hideOnImageError(thumb);
+    var firstMedia = getFirstTrustedReviewMedia(r);
+    if (!firstMedia) return;
+    var thumb = createMediaThumbnail(firstMedia, {
+      className: 'renuvex-pr-photo-strip-thumb',
+      sourceWidth: PHOTO_STRIP_THUMB_WIDTH,
+      width: stripWidth,
+      height: stripHeight,
+      loading: thumbCount < 3 ? 'eager' : 'lazy',
+      onOpen: function () { openReviewModal(r, firstMedia.url, stripReviews); },
+    });
+    if (!thumb) return;
     // Lightbox navigasyonu strip dataset'i içinde gezer — load-more sonrası
     // ana liste değişse bile lightbox tutarlı kalır (K1.b çözümü).
-    (function (url, review) {
-      wireLightboxTrigger(thumb, function () { openReviewModal(review, url, stripReviews); });
-    })(firstImg, r);
     photoStrip.appendChild(thumb);
     thumbCount++;
   });

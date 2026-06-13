@@ -332,8 +332,10 @@ export const WIDGETS: WidgetDef[] = [
             title: 'Yorum Formu',
             fields: [
               { type: 'text', key: 'formStepRatingTitle',    label: 'Adım 1 Başlığı',    placeholder: 'Bu ürünü nasıl değerlendirirsiniz?', default: 'Bu ürünü nasıl değerlendirirsiniz?', maxLength: 60 },
-              { type: 'text', key: 'formStepPhotosTitle',    label: 'Adım 2 Başlığı',    placeholder: 'Fotoğraflı değerlendirme',           default: 'Fotoğraflı değerlendirme',           maxLength: 60 },
-              { type: 'text', key: 'formStepPhotosSubtitle', label: 'Adım 2 Alt Başlığı', placeholder: 'Fotoğraf ekleyebilirsiniz.',        default: 'Fotoğraf ekleyebilirsiniz.',        maxLength: 90 },
+              { type: 'text', key: 'formStepPhotosTitle',    label: 'Adım 2 Başlığı',    placeholder: 'Fotoğraflı değerlendirme',           default: 'Fotoğraflı değerlendirme',           maxLength: 60, showWhen: { key: 'videoReviewsEnabled', equals: false } },
+              { type: 'text', key: 'formStepPhotosSubtitle', label: 'Adım 2 Alt Başlığı', placeholder: 'Fotoğraf ekleyebilirsiniz.',        default: 'Fotoğraf ekleyebilirsiniz.',        maxLength: 90, showWhen: { key: 'videoReviewsEnabled', equals: false } },
+              { type: 'text', key: 'formStepMediaTitle',     label: 'Adım 2 Başlığı',    placeholder: 'Görsel değerlendirme',              default: 'Görsel değerlendirme',              maxLength: 60, showWhen: { key: 'videoReviewsEnabled', equals: true } },
+              { type: 'text', key: 'formStepMediaSubtitle',  label: 'Adım 2 Alt Başlığı', placeholder: 'Fotoğraf veya video ekleyebilirsiniz.', default: 'Fotoğraf veya video ekleyebilirsiniz.', maxLength: 90, showWhen: { key: 'videoReviewsEnabled', equals: true } },
               { type: 'text', key: 'formStepContentTitle',   label: 'Adım 3 Başlığı',    placeholder: 'Deneyiminizi anlatın',              default: 'Deneyiminizi anlatın',              maxLength: 60 },
               { type: 'text', key: 'formStepAuthorTitle',    label: 'Adım 4 Başlığı',    placeholder: 'Hakkınızda',                       default: 'Hakkınızda',                       maxLength: 60 },
             ],
@@ -352,6 +354,7 @@ export const WIDGETS: WidgetDef[] = [
         title: 'Ayarlar',
         fields: [
           { type: 'toggle', key: 'enabled',     label: 'Widget Aktif',                   default: true },
+          { type: 'toggle', key: 'videoReviewsEnabled', label: 'Video Yorumlarını Etkinleştir', default: false },
           // Otomatik onay eşiği — Endüstri standardı 4 seviyeli radio.
           // submit endpoint'i (/api/public/reviews) yorum yıldızını bu değere
           // göre değerlendirip status'u 'approved' veya 'pending' olarak yazar.

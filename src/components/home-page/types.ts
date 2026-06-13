@@ -1,3 +1,16 @@
+export interface ReviewMedia {
+  id: string;
+  type: 'image' | 'video';
+  url: string | null;
+  posterUrl: string | null;
+  durationMs: number | null;
+  width: number | null;
+  height: number | null;
+  position: number;
+  processingStatus: string;
+  visible: boolean;
+}
+
 export interface Review {
   id: string;
   productId: string;
@@ -8,6 +21,8 @@ export interface Review {
   status: string;
   merchantReply: string | null;
   images: string | null;
+  media?: ReviewMedia[];
+  hasVideo?: boolean;
   createdAt: string;
 }
 
@@ -21,6 +36,7 @@ export type AutoApproveMode = 'manual' | '4plus' | '5stars' | 'all';
 
 export interface ReviewsSettings {
   enabled?: boolean;
+  videoReviewsEnabled?: boolean;
   title?: string;
   autoApprove?: AutoApproveMode;
   richSnippetsEnabled?: boolean;

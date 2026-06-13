@@ -3,7 +3,7 @@
 import { fetchSettings } from '../core/settings.js';
 import { getProductContext } from '../core/storefront-context.js';
 import { resetReviewStateForProduct, setPhotoStripReviews } from '../core/state.js';
-import { createReviewsFetchError, fetchPhotoStripReviews, fetchReviews } from './reviews-api.js';
+import { createReviewsFetchError, fetchMediaStripReviews, fetchPhotoStripReviews, fetchReviews } from './reviews-api.js';
 
 var bootstrapCache = {};
 var bootstrapSeq = 0;
@@ -60,9 +60,12 @@ export async function bootstrap(productId, productName) {
 
     resetReviewStateForProduct(productId);
 
+    var stripFetch = reviewsSettings.videoReviewsEnabled === true
+      ? fetchMediaStripReviews(productId)
+      : fetchPhotoStripReviews(productId);
     var fetchResults = await Promise.all([
       fetchReviews(productId, 'newest', 1, null),
-      fetchPhotoStripReviews(productId),
+      stripFetch,
     ]);
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 

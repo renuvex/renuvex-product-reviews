@@ -48,6 +48,9 @@ export function createWizardState(opts) {
     email: '',
     images: [],
     pendingImages: [],
+    videoUpload: null,
+    videoSubmitted: false,
+    videoEnabled: opts.videoEnabled === true,
     fingerprints: [], // Persistence için: 'name_size' formatında parmak izleri
     productId: opts.productId || '',
     productName: opts.productName || '',

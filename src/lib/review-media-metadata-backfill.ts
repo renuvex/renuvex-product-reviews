@@ -108,6 +108,8 @@ export function metadataFromCloudinaryResource(resource: CloudinaryResourceLike)
 // missing_asset as terminal so absent assets are not re-fetched forever.
 export function reviewMediaMetadataBackfillWhere(storeId?: string): Prisma.ReviewMediaWhereInput {
   return {
+    provider: 'cloudinary',
+    resourceType: 'image',
     ...(storeId ? { storeId } : {}),
     metadataStatus: { notIn: ['complete', 'missing_asset'] },
   };

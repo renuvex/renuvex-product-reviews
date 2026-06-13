@@ -6,9 +6,10 @@
 // Mobile'da da aynı split korunur — foto asla metnin üstüne çıkmaz.
 // Masonry için CSS columns parent'a (#renuvex-reviews-widget) :has() ile uygulanır.
 
-import { starsHTML, formatDate, getFirstTrustedReviewImage, GALLERY_TILE_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
+import { starsHTML, formatDate, GALLERY_TILE_WIDTH } from '../../core/helpers.js';
+import { getFirstTrustedReviewMedia } from '../../core/review-media.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
-import { wireLightboxTrigger } from '../../reviews-section/lightbox-trigger.js';
+import { createMediaThumbnail } from '../../reviews-section/media-thumbnail.js';
 import { currentSettings } from '../../core/state.js';
 import { GALLERY_CSS } from './styles.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';
@@ -33,8 +34,8 @@ export var meta = {
 export var css = GALLERY_CSS;
 
 export function render(r, allReviews) {
-  var firstImg = getFirstTrustedReviewImage(r);
-  var hasMedia = !!firstImg;
+  var firstMedia = getFirstTrustedReviewMedia(r);
+  var hasMedia = !!firstMedia;
 
   var reviewEl = document.createElement('article');
   reviewEl.className = 'renuvex-pr-review-gallery' + (hasMedia ? '' : ' renuvex-pr-review-gallery--no-media');
@@ -76,8 +77,8 @@ export function render(r, allReviews) {
   // açar; foto yoksa kart içinde genişler (shared helper, keyboard-erişilebilir).
   var comment = (r.comment || '').trim();
   if (comment) {
-    content.appendChild(buildClampedBody(comment, 'renuvex-pr-review-gallery-body', firstImg ? {
-      onReadMore: function() { openReviewModal(r, firstImg, allReviews); }
+    content.appendChild(buildClampedBody(comment, 'renuvex-pr-review-gallery-body', firstMedia ? {
+      onReadMore: function() { openReviewModal(r, firstMedia.url, allReviews); }
     } : null).fragment);
   }
 
@@ -87,29 +88,21 @@ export function render(r, allReviews) {
   if (hasMedia) {
     var mediaWrap = document.createElement('div');
     mediaWrap.className = 'renuvex-pr-review-gallery-media';
-    // alt kasıtlı yok: wireLightboxTrigger role=button + aria-label verir (erişilebilir ad orada).
-    var imgEl = document.createElement('img');
-    // Gallery masonry tile 200-400 px, aspect 3:4 (styles.js).
-    // srcset: 1x/2x retina yedeği; width/height 3:4 CLS rezervi.
-    var galleryAttrs = buildResponsiveImgAttrs(firstImg, GALLERY_TILE_WIDTH);
-    imgEl.src = galleryAttrs.src;
-    imgEl.srcset = galleryAttrs.srcset;
-    imgEl.loading = 'lazy';
-    imgEl.decoding = 'async';
-    imgEl.width = GALLERY_TILE_WIDTH;
-    imgEl.height = Math.round(GALLERY_TILE_WIDTH * 4 / 3);
-    hideOnImageError(imgEl);
-    imgEl.setAttribute('data-renuvex-img-url', firstImg);
-    wireLightboxTrigger(imgEl, function() { openReviewModal(r, firstImg, allReviews); });
-    mediaWrap.appendChild(imgEl);
+    var thumb = createMediaThumbnail(firstMedia, {
+      sourceWidth: GALLERY_TILE_WIDTH,
+      width: GALLERY_TILE_WIDTH,
+      height: Math.round(GALLERY_TILE_WIDTH * 4 / 3),
+      onOpen: function() { openReviewModal(r, firstMedia.url, allReviews); },
+    });
+    if (thumb) mediaWrap.appendChild(thumb);
     reviewEl.appendChild(mediaWrap);
   }
 
   // Mağaza yanıtı — full-width, foto+metin altında ayrı satırda.
   // Sol kolonda (340px body) sıkışıyordu, sağda da foto altı boş kalıyordu.
   // Foto yoksa reply "Devamını oku" da shared helper'ın inline davranışını kullanır.
-  var replyEl = buildReplyEl(r.merchantReply, firstImg ? function() {
-    openReviewModal(r, firstImg, allReviews);
+  var replyEl = buildReplyEl(r.merchantReply, firstMedia ? function() {
+    openReviewModal(r, firstMedia.url, allReviews);
   } : null);
   if (replyEl) {
     replyEl.classList.add('renuvex-pr-review-gallery-reply');

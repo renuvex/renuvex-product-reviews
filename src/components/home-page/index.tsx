@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, MessageSquare, Settings } from 'lucide-react';
+import { AlertCircle, CheckCircle2, LoaderCircle, MessageSquare, Settings, X } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
 import { TokenHelpers } from '@/helpers/token-helpers';
-import { Review, WidgetSettingsMap, TabKey } from './types';
+import { Review, ReviewMedia, WidgetSettingsMap, TabKey } from './types';
 import { ReplyDialog } from './ReplyDialog';
 import { ReviewsTab } from './ReviewsTab';
 import { WidgetsContainer } from './widgets';
@@ -39,7 +39,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const [tabCounts, setTabCounts] = useState<Record<TabKey, number>>({ pending: 0, approved: 0, rejected: 0, all: 0 });
   const [settingsLoadState, setSettingsLoadState] = useState<WidgetSettingsLoadState>(INITIAL_WIDGET_SETTINGS_LOAD_STATE);
   const [loading, setLoading] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<{ type: 'image' | 'video'; url: string | null; loading: boolean } | null>(null);
   const [replyDialog, setReplyDialog] = useState<{ open: boolean; review: Review | null }>({ open: false, review: null });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -128,22 +128,37 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    const targetReview = reviews.find(r => r.id === id);
-    const oldStatus = targetReview?.status;
     try {
-      await axios.put('/api/admin/reviews', { id, status: newStatus }, { headers: await freshAuthHeader(token) });
-      toast.success(newStatus === 'approved' ? 'Yorum onaylandı.' : 'Yorum reddedildi.');
-      await fetchReviews(activeTab, page);
-      if (oldStatus && oldStatus !== newStatus) {
-        setTabCounts(prev => ({
-          ...prev,
-          [oldStatus as TabKey]: Math.max(0, prev[oldStatus as TabKey] - 1),
-          [newStatus as TabKey]: prev[newStatus as TabKey] + 1,
-        }));
-      }
+      const response = await axios.put('/api/admin/reviews', { id, status: newStatus }, { headers: await freshAuthHeader(token) });
+      const processing = response.data?.processing === true;
+      toast.success(processing
+        ? 'Video yayına hazırlanıyor. Onay provider işlemi tamamlanınca uygulanacak.'
+        : newStatus === 'approved' ? 'Yorum onaylandı.' : 'Yorum reddedildi.');
+      await Promise.all([fetchReviews(activeTab, page), fetchAllCounts()]);
     } catch (error) {
       console.error("Durum güncellenemedi:", error);
       toast.error("Durum güncellenirken bir hata oluştu, lütfen tekrar deneyin.");
+    }
+  };
+
+  const handleMediaOpen = async (media: ReviewMedia) => {
+    if (media.type === 'image' && media.url) {
+      setMediaPreview({ type: 'image', url: media.url, loading: false });
+      return;
+    }
+    if (media.type !== 'video' || media.processingStatus !== 'ready') return;
+    setMediaPreview({ type: 'video', url: null, loading: true });
+    try {
+      const response = await axios.get(`/api/admin/reviews/video-playback?mediaId=${encodeURIComponent(media.id)}`, {
+        headers: await freshAuthHeader(token),
+      });
+      const url = response.data?.data?.url;
+      if (typeof url !== 'string' || !url) throw new Error('video_playback_url_missing');
+      setMediaPreview({ type: 'video', url, loading: false });
+    } catch (error) {
+      console.error('Video önizlemesi açılamadı:', error);
+      setMediaPreview(null);
+      toast.error('Video önizlemesi açılamadı. Lütfen tekrar deneyin.');
     }
   };
 
@@ -239,11 +254,17 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         </DialogContent>
       </Dialog>
 
-      {lightboxUrl && (
-        <div className="fixed inset-0 bg-black/85 z-[99999] flex items-center justify-center cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
-          <button className="absolute top-4 right-5 text-white text-3xl leading-none bg-transparent border-none cursor-pointer" onClick={() => setLightboxUrl(null)}>✕</button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightboxUrl} alt="Görsel" className="max-w-[90vw] max-h-[90vh] rounded-lg object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
+      {mediaPreview && (
+        <div className="fixed inset-0 bg-black/85 z-[99999] flex items-center justify-center" onClick={() => setMediaPreview(null)} role="dialog" aria-modal="true" aria-label="Yorum medyası önizlemesi">
+          <button type="button" className="absolute top-4 right-5 flex h-10 w-10 items-center justify-center text-white bg-transparent border-none cursor-pointer" aria-label="Kapat" onClick={() => setMediaPreview(null)}><X size={24} /></button>
+          {mediaPreview.loading ? (
+            <div className="flex items-center gap-2 text-white" role="status"><LoaderCircle className="animate-spin" size={22} /> Video hazırlanıyor...</div>
+          ) : mediaPreview.type === 'video' && mediaPreview.url ? (
+            <video src={mediaPreview.url} controls playsInline preload="metadata" className="max-w-[90vw] max-h-[90vh] rounded-lg bg-black shadow-2xl" onClick={(event) => event.stopPropagation()} />
+          ) : mediaPreview.url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mediaPreview.url} alt="Görsel" className="max-w-[90vw] max-h-[90vh] rounded-lg object-contain shadow-2xl" onClick={(event) => event.stopPropagation()} />
+          ) : null}
         </div>
       )}
 
@@ -287,7 +308,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
             onReply={(r) => setReplyDialog({ open: true, review: r })}
             onDeleteReply={handleDeleteReply}
             onDeleteReview={handleDeleteReview}
-            onLightbox={setLightboxUrl}
+            onMediaOpen={handleMediaOpen}
             onPageChange={(p) => fetchReviews(activeTab, p)}
             onPageSizeChange={(size) => { setPageSize(size); fetchReviews(activeTab, 1, size); }}
           />

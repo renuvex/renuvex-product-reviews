@@ -270,7 +270,10 @@ type PrismaForCleanup = Pick<PrismaClient, 'reviewMedia' | 'review' | 'orphanIma
 async function loadUsedPublicIds(prisma: PrismaForCleanup, cloudName: string): Promise<Set<string>> {
   const used = new Set<string>();
 
-  const mediaRows = await prisma.reviewMedia.findMany({ select: { publicId: true } });
+  const mediaRows = await prisma.reviewMedia.findMany({
+    where: { provider: 'cloudinary', resourceType: 'image' },
+    select: { publicId: true },
+  });
   for (const row of mediaRows) {
     if (row.publicId) used.add(row.publicId);
   }
@@ -306,7 +309,9 @@ export function createOrphanCleanupDeps(prisma: PrismaForCleanup): OrphanCleanup
 
   return {
     loadUsedPublicIds: () => loadUsedPublicIds(prisma, cloudName),
-    countReviewMedia: () => prisma.reviewMedia.count(),
+    countReviewMedia: () => prisma.reviewMedia.count({
+      where: { provider: 'cloudinary', resourceType: 'image' },
+    }),
     listAllAssets: async () => {
       const assets: Array<{ publicId: string; createdAt: number }> = [];
       let nextCursor: string | undefined;

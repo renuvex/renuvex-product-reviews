@@ -82,6 +82,8 @@ test('admin widget schema stays aligned with summary and review layout registrie
     'formStepRatingTitle',
     'formStepPhotosTitle',
     'formStepPhotosSubtitle',
+    'formStepMediaTitle',
+    'formStepMediaSubtitle',
     'formStepContentTitle',
     'formStepAuthorTitle',
   ]);

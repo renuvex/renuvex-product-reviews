@@ -103,7 +103,7 @@ export var GALLERY_CSS = `
   .renuvex-pr-review-gallery-reply{
     grid-column:1 / -1;
   }
-  .renuvex-pr-review-gallery-media img{
+  .renuvex-pr-review-gallery-media > *{
     display:block;width:100%;height:auto;
     aspect-ratio:3/4;object-fit:cover;
     border-radius:var(--renuvex-pr-radius,6px);

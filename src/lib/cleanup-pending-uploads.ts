@@ -1,63 +1,116 @@
-import { v2 as cloudinary } from 'cloudinary';
+import { createHash } from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { getConfiguredCloudinaryCloudName } from '@/lib/review-images';
+import { MEDIA_JOB_ACTIONS } from '@/lib/media/constants';
+import { dispatchMediaProviderJob, enqueueMediaProviderJob, failSessionAndQueueCleanup } from '@/lib/media/jobs';
 
 const PENDING_TTL_HOURS = 24;
 const BATCH_SIZE = 200; // safely under Cloudinary's 100/request delete cap x 2 calls
+const CLOUDINARY_DELETE_BATCH_SIZE = 100;
 
 export type CleanupPendingUploadsSummary = {
   message: string;
   deleted?: number;
   deletedRows?: number;
   deletedAssets?: number;
+  queuedImageJobs?: number;
+  queuedImageAssets?: number;
+  queuedVideoJobs?: number;
+  queuedExpiredSessions?: number;
 };
 
-export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSummary> {
-  const cloudName = getConfiguredCloudinaryCloudName();
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error('Cloudinary config missing');
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
   }
+  return chunks;
+}
 
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
-  });
+function cleanupImageDedupeKey(publicIds: string[]) {
+  const digest = createHash('sha256').update(publicIds.join('\0')).digest('hex').slice(0, 48);
+  return `cleanup-image:${digest}`;
+}
 
+export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSummary> {
   const cutoff = new Date(Date.now() - PENDING_TTL_HOURS * 60 * 60 * 1000);
 
-  const expired = await prisma.pendingReviewImage.findMany({
-    where: { createdAt: { lt: cutoff } },
-    take: BATCH_SIZE,
-    select: { publicId: true },
-  });
+  const [expired, expiredSessions] = await Promise.all([
+    prisma.pendingReviewImage.findMany({
+      where: { createdAt: { lt: cutoff } },
+      orderBy: { createdAt: 'asc' },
+      take: BATCH_SIZE,
+      select: {
+        publicId: true,
+        storeId: true,
+        provider: true,
+        providerAssetId: true,
+        uploadSessionId: true,
+        sourceAssetId: true,
+      },
+    }),
+    prisma.videoUploadSession.findMany({
+      where: { expiresAt: { lt: new Date() }, status: { in: ['initiated', 'uploading', 'completing', 'uploaded', 'processing', 'failed'] } },
+      take: BATCH_SIZE,
+    }),
+  ]);
 
-  if (expired.length === 0) {
+  if (expired.length === 0 && expiredSessions.length === 0) {
     return { message: 'No expired pending uploads.', deleted: 0 };
   }
 
-  const publicIds = expired.map((row) => row.publicId);
-  let deletedAssets = 0;
-
-  for (let i = 0; i < publicIds.length; i += 100) {
-    const batch = publicIds.slice(i, i + 100);
-    try {
-      await cloudinary.api.delete_resources(batch);
-      deletedAssets += batch.length;
-    } catch (error) {
-      console.error('[cleanup-pending-uploads] delete batch failed:', error);
-    }
+  const imageIds = expired.filter((row) => row.provider === 'cloudinary').map((row) => row.publicId).sort();
+  const jobs = [];
+  for (const imageChunk of chunk(imageIds, CLOUDINARY_DELETE_BATCH_SIZE)) {
+    const job = await prisma.$transaction((tx) => enqueueMediaProviderJob(tx, {
+      dedupeKey: cleanupImageDedupeKey(imageChunk),
+      provider: 'cloudinary',
+      action: MEDIA_JOB_ACTIONS.cleanupImage,
+      resourceType: 'image',
+      payload: { publicIds: imageChunk },
+    }));
+    jobs.push(job);
   }
 
-  await prisma.pendingReviewImage.deleteMany({
-    where: { publicId: { in: publicIds } },
-  });
+  const videoRows = expired.filter((row) => row.provider === 'cloudflare_stream');
+  const handledSessionIds = new Set<string>();
+  let queuedVideoJobs = 0;
+  let queuedExpiredSessions = 0;
+  for (const row of videoRows) {
+    if (row.uploadSessionId) {
+      handledSessionIds.add(row.uploadSessionId);
+      const job = await failSessionAndQueueCleanup(row.uploadSessionId, 'pending_media_expired');
+      if (job) queuedVideoJobs += 1;
+      continue;
+    }
+    const job = await prisma.$transaction((tx) => enqueueMediaProviderJob(tx, {
+      dedupeKey: `cleanup-video:${row.publicId}`,
+      storeId: row.storeId,
+      provider: 'cloudflare_stream',
+      action: MEDIA_JOB_ACTIONS.cleanupVideo,
+      resourceType: 'video',
+      payload: {
+        streamUid: row.providerAssetId ?? undefined,
+        masterObjectKey: row.sourceAssetId ?? undefined,
+        pendingPublicId: row.publicId,
+      },
+    }));
+    jobs.push(job);
+    queuedVideoJobs += 1;
+  }
+  for (const session of expiredSessions) {
+    if (handledSessionIds.has(session.id)) continue;
+    const job = await failSessionAndQueueCleanup(session.id, 'upload_session_expired');
+    if (job) queuedExpiredSessions += 1;
+  }
+  await Promise.all(jobs.map((job) => dispatchMediaProviderJob(job.id)));
 
   return {
     message: 'Cleanup complete.',
-    deletedRows: publicIds.length,
-    deletedAssets,
+    deletedRows: 0,
+    deletedAssets: 0,
+    queuedImageJobs: Math.ceil(imageIds.length / CLOUDINARY_DELETE_BATCH_SIZE),
+    queuedImageAssets: imageIds.length,
+    queuedVideoJobs,
+    queuedExpiredSessions,
   };
 }

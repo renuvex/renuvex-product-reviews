@@ -3,7 +3,6 @@
 import {
   starsHTML,
   formatDate,
-  getTrustedReviewImages,
   optimizeImageUrl,
   LIGHTBOX_MAIN_WIDTH,
   LIGHTBOX_MINI_THUMB_WIDTH,
@@ -12,6 +11,7 @@ import {
   hideOnImageError,
   settingText,
 } from '../core/helpers.js';
+import { getTrustedReviewMedia } from '../core/review-media.js';
 import { currentSettings } from '../core/state.js';
 import {
   RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
@@ -25,12 +25,21 @@ import { lockBodyScroll, restoreBodyScroll } from '../core/body-scroll-lock.js';
 import { getReturnFocusElement, restoreFocus, trapFocus } from '../shared/focus-trap.js';
 import { wasLastInputKeyboard } from '../shared/input-modality.js';
 import { pushModalHistoryEntry, restoreModalHistoryEntry } from '../core/modal-history.js';
+import { attachReviewVideoPlayback } from './video-playback.js';
 
-function getValidImages(review) {
-  return getTrustedReviewImages(review);
+function getValidMedia(review) {
+  return getTrustedReviewMedia(review);
+}
+
+function cleanupMediaContainer(container) {
+  if (container && typeof container.__renuvexMediaCleanup === 'function') {
+    try { container.__renuvexMediaCleanup(); } catch (_) {}
+    container.__renuvexMediaCleanup = null;
+  }
 }
 
 function closeModal(host, onKeyDown, onPopState, bodyScrollState, returnFocusEl, openedByKeyboard) {
+  if (host && host.shadowRoot) cleanupMediaContainer(host.shadowRoot.querySelector('.renuvex-pr-modal-left'));
   restoreBodyScroll(bodyScrollState);
   document.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('popstate', onPopState);
@@ -130,49 +139,56 @@ function updateRight(right, r, settings) {
 }
 
 function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState) {
-  var images = getValidImages(r);
-  var currentPhotoIdx = Math.max(0, Math.min(photoIdx || 0, images.length - 1));
+  var mediaItems = getValidMedia(r);
+  var currentPhotoIdx = Math.max(0, Math.min(photoIdx || 0, mediaItems.length - 1));
+  var currentMedia = mediaItems[currentPhotoIdx];
 
   var left = document.createElement('div');
   left.className = 'renuvex-pr-modal-left';
 
-  var mainImg = document.createElement('img');
   var animClass = direction === 'next' ? 'renuvex-pr-modal-img-enter-right' : direction === 'prev' ? 'renuvex-pr-modal-img-enter-left' : '';
-  mainImg.className = 'renuvex-pr-modal-main-img' + (animClass ? ' ' + animClass : '');
-  mainImg.src = optimizeImageUrl(images[currentPhotoIdx] || '');
-  mainImg.decoding = 'async';
-  mainImg.width = LIGHTBOX_MAIN_WIDTH;
-  mainImg.height = Math.round(LIGHTBOX_MAIN_WIDTH * 4 / 3);
-  mainImg.alt = 'Yorum fotoğrafı';
-  // İlk açılışta (next/prev animasyonu yokken) büyük 1200px görsel taze yüklenir ve
-  // thumbnail 300/600px olduğu için cache'te yoktur → koyu #222 zemin üzerine aniden
-  // "pop" eder (flash). Yüklenene kadar gizle, hazır olunca yumuşak fade ile göster.
-  // Navigasyonun kendi slide+fade animasyonu var (animClass), ona dokunma.
-  if (!animClass) {
-    mainImg.classList.add('renuvex-pr-modal-img-loading');
-    var revealMainImg = function () { mainImg.classList.remove('renuvex-pr-modal-img-loading'); };
-    if (mainImg.complete && mainImg.naturalWidth > 0) {
-      revealMainImg();
-    } else {
-      mainImg.addEventListener('load', revealMainImg, { once: true });
-      // Hata durumunda error-handler görseli zaten gizler; yine de loading class'ını
-      // kaldır ki opacity:0 ile takılı kalmasın.
-      mainImg.addEventListener('error', revealMainImg, { once: true });
+  if (currentMedia && currentMedia.type === 'video') {
+    var mainVideo = document.createElement('video');
+    mainVideo.className = 'renuvex-pr-modal-main-video' + (animClass ? ' ' + animClass : '');
+    mainVideo.setAttribute('aria-label', 'Yorum videosu');
+    mainVideo.addEventListener('error', function () {
+      if (left.querySelector('.renuvex-pr-modal-img-error')) return;
+      var videoPlaceholder = document.createElement('div');
+      videoPlaceholder.className = 'renuvex-pr-modal-img-error';
+      videoPlaceholder.setAttribute('role', 'status');
+      videoPlaceholder.textContent = 'Bu video şu anda oynatılamıyor.';
+      left.insertBefore(videoPlaceholder, mainVideo);
+    });
+    left.__renuvexMediaCleanup = attachReviewVideoPlayback(mainVideo, currentMedia);
+    left.appendChild(mainVideo);
+  } else {
+    var mainImg = document.createElement('img');
+    mainImg.className = 'renuvex-pr-modal-main-img' + (animClass ? ' ' + animClass : '');
+    mainImg.src = optimizeImageUrl(currentMedia ? currentMedia.url : '');
+    mainImg.decoding = 'async';
+    mainImg.width = LIGHTBOX_MAIN_WIDTH;
+    mainImg.height = Math.round(LIGHTBOX_MAIN_WIDTH * 4 / 3);
+    mainImg.alt = 'Yorum fotoğrafı';
+    if (!animClass) {
+      mainImg.classList.add('renuvex-pr-modal-img-loading');
+      var revealMainImg = function () { mainImg.classList.remove('renuvex-pr-modal-img-loading'); };
+      if (mainImg.complete && mainImg.naturalWidth > 0) revealMainImg();
+      else {
+        mainImg.addEventListener('load', revealMainImg, { once: true });
+        mainImg.addEventListener('error', revealMainImg, { once: true });
+      }
     }
+    attachImageErrorHandler(mainImg, function (img) {
+      img.style.display = 'none';
+      if (left.querySelector('.renuvex-pr-modal-img-error')) return;
+      var placeholder = document.createElement('div');
+      placeholder.className = 'renuvex-pr-modal-img-error';
+      placeholder.setAttribute('role', 'status');
+      placeholder.textContent = 'Bu görsel şu anda yüklenemiyor.';
+      left.insertBefore(placeholder, img);
+    });
+    left.appendChild(mainImg);
   }
-  // Lightbox ana görsel için thumbnail'lerden farklı davranış — boş bırakmak
-  // UX'i bozar. Görsel yüklenemediğinde yerine "Görsel yüklenemedi" placeholder'ı
-  // konur; lightbox prev/next/swipe navigasyonu çalışmaya devam eder.
-  attachImageErrorHandler(mainImg, function (img) {
-    img.style.display = 'none';
-    if (left.querySelector('.renuvex-pr-modal-img-error')) return;
-    var placeholder = document.createElement('div');
-    placeholder.className = 'renuvex-pr-modal-img-error';
-    placeholder.setAttribute('role', 'status');
-    placeholder.textContent = 'Bu görsel şu anda yüklenemiyor.';
-    left.insertBefore(placeholder, img);
-  });
-  left.appendChild(mainImg);
 
   var mobileClose = document.createElement('button');
   mobileClose.className = 'renuvex-pr-modal-close-mobile';
@@ -204,17 +220,18 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
         rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay, modalState);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
-        var prevImages = getValidImages(prevReview);
+        var prevImages = getValidMedia(prevReview);
         rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay, modalState);
       }
     }
   }, { passive: true });
 
 
-  if (images.length > 1) {
+  if (mediaItems.length > 1) {
     var thumbBar = document.createElement('div');
     thumbBar.className = 'renuvex-pr-modal-thumbs';
-    images.forEach(function(url, i) {
+    mediaItems.forEach(function(item, i) {
+      var url = item.type === 'video' ? item.posterUrl : item.url;
       var th = document.createElement('img');
       // Lightbox altı mini şerit 60-80 px — küçük responsive varyant yeter.
       var thumbAttrs = buildResponsiveImgAttrs(url, LIGHTBOX_MINI_THUMB_WIDTH);
@@ -249,7 +266,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   }
 
   var hasPrevPhoto = currentPhotoIdx > 0;
-  var hasNextPhoto = currentPhotoIdx < images.length - 1;
+  var hasNextPhoto = currentPhotoIdx < mediaItems.length - 1;
   var hasPrevReview = reviewIdx > 0;
   var hasNextReview = reviewIdx < reviewsWithPhotos.length - 1;
   var hasPrev = hasPrevPhoto || hasPrevReview;
@@ -267,7 +284,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
         rebuildModal(r, reviewIdx, currentPhotoIdx - 1, reviewsWithPhotos, modal, requestClose, true, 'prev', overlay, modalState);
       } else if (hasPrevReview) {
         var prevReview = reviewsWithPhotos[reviewIdx - 1];
-        var prevImages = getValidImages(prevReview);
+        var prevImages = getValidMedia(prevReview);
         rebuildModal(prevReview, reviewIdx - 1, prevImages.length - 1, reviewsWithPhotos, modal, requestClose, false, 'prev', overlay, modalState);
       }
     };
@@ -299,8 +316,8 @@ function prefetchNeighbors(reviewIdx, reviewsWithPhotos) {
   [-1, 1].forEach(function(offset) {
     var neighbor = reviewsWithPhotos[reviewIdx + offset];
     if (!neighbor) return;
-    var imgs = getValidImages(neighbor);
-    if (imgs[0]) new Image().src = optimizeImageUrl(imgs[0]);
+    var items = getValidMedia(neighbor);
+    if (items[0] && items[0].type === 'image') new Image().src = optimizeImageUrl(items[0].url);
   });
 }
 
@@ -344,11 +361,17 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
   if (modalState) modalState.currentReview = r;
   if (photoOnly) {
     var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState);
-    if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
+    if (modal.firstChild) {
+      cleanupMediaContainer(modal.firstChild);
+      modal.replaceChild(newLeft, modal.firstChild);
+    }
   } else {
     var newLeft = buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState);
     var existingRight = modal.querySelector('.renuvex-pr-modal-right');
-    if (modal.firstChild) modal.replaceChild(newLeft, modal.firstChild);
+    if (modal.firstChild) {
+      cleanupMediaContainer(modal.firstChild);
+      modal.replaceChild(newLeft, modal.firstChild);
+    }
     if (existingRight) {
       updateRight(existingRight, r, modalState && modalState.currentSettings);
     }
@@ -359,11 +382,11 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
 }
 
 export function openReviewModal(r, clickedUrl, allReviews) {
-  var images = getValidImages(r);
+  var images = getValidMedia(r);
   if (!images.length) return;
 
   var reviewsWithPhotos = (allReviews || []).filter(function(rv) {
-    return getValidImages(rv).length > 0;
+    return getValidMedia(rv).length > 0;
   });
 
   var reviewIdx = reviewsWithPhotos.findIndex(function(rv) { return rv === r || rv.id === r.id; });
@@ -372,7 +395,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
     reviewIdx = 0;
   }
 
-  var photoIdx = images.indexOf(clickedUrl);
+  var photoIdx = images.findIndex(function(item) { return item.url === clickedUrl; });
   if (photoIdx < 0) photoIdx = 0;
 
   var overlay = document.createElement('div');
@@ -448,7 +471,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   modalWrap.tabIndex = -1;
   modalWrap.setAttribute('role', 'dialog');
   modalWrap.setAttribute('aria-modal', 'true');
-  modalWrap.setAttribute('aria-label', 'Yorum fotoğrafı detayı');
+  modalWrap.setAttribute('aria-label', 'Yorum medyası detayı');
   modalWrap.appendChild(modal);
 
   var closeBtn = document.createElement('button');

@@ -8,16 +8,21 @@ describe('widget settings schema traversal', () => {
     expect(defaults.formStepRatingTitle).toBe('Bu ürünü nasıl değerlendirirsiniz?');
     expect(defaults.formStepPhotosTitle).toBe('Fotoğraflı değerlendirme');
     expect(defaults.formStepPhotosSubtitle).toBe('Fotoğraf ekleyebilirsiniz.');
+    expect(defaults.formStepMediaTitle).toBe('Görsel değerlendirme');
+    expect(defaults.formStepMediaSubtitle).toBe('Fotoğraf veya video ekleyebilirsiniz.');
+    expect(defaults.videoReviewsEnabled).toBe(false);
     expect(defaults.formStepContentTitle).toBe('Deneyiminizi anlatın');
     expect(defaults.formStepAuthorTitle).toBe('Hakkınızda');
 
     expect(sanitizeSettings('reviews', {
       formStepRatingTitle: 'Puanınızı seçin',
       formStepPhotosSubtitle: 'İsterseniz fotoğraf ekleyin.',
+      formStepMediaSubtitle: 'Fotoğraf ya da kısa video ekleyin.',
       unknownNestedCopy: 'drop-me',
     })).toEqual({
       formStepRatingTitle: 'Puanınızı seçin',
       formStepPhotosSubtitle: 'İsterseniz fotoğraf ekleyin.',
+      formStepMediaSubtitle: 'Fotoğraf ya da kısa video ekleyin.',
     });
   });
 
@@ -48,6 +53,7 @@ describe('widget settings schema traversal', () => {
     expect(validateSettings('reviews', {
       formStepContentTitle: 'x'.repeat(60),
       formStepPhotosSubtitle: 'x'.repeat(90),
+      formStepMediaSubtitle: 'x'.repeat(90),
     })).toBeNull();
 
     expect(validateSettings('reviews', {
@@ -57,5 +63,9 @@ describe('widget settings schema traversal', () => {
     expect(validateSettings('reviews', {
       formStepPhotosSubtitle: 'x'.repeat(91),
     })).toBe('formStepPhotosSubtitle en fazla 90 karakter olmalı');
+
+    expect(validateSettings('reviews', {
+      formStepMediaSubtitle: 'x'.repeat(91),
+    })).toBe('formStepMediaSubtitle en fazla 90 karakter olmalı');
   });
 });

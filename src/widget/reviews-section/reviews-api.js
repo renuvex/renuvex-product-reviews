@@ -22,7 +22,7 @@ export function isReviewsFetchError(value) {
   return !!(value && value.type === REVIEWS_FETCH_ERROR);
 }
 
-export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages, limit, cursor) {
+export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages, limit, cursor, hasMedia) {
   if (window.__ikasPreviewMode) {
     try {
       var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
@@ -37,7 +37,7 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
   page = page || 1;
   var limitKey = limit ? '_l' + limit : '';
   var cursorKey = cursor ? '_c' + cursor : '';
-  var key = 'renuvex_pr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + limitKey + cursorKey;
+  var key = 'renuvex_pr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + '_' + (hasMedia ? '1' : '0') + limitKey + cursorKey;
   var staleReviews = null;
   var cached = cacheGet(key);
 
@@ -61,6 +61,7 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
       '&page=' + encodeURIComponent(page) +
       (ratingFilter ? '&rating=' + encodeURIComponent(ratingFilter) : '') +
       (hasImages ? '&hasImages=true' : '') +
+      (hasMedia ? '&hasMedia=true' : '') +
       (limit ? '&limit=' + encodeURIComponent(limit) : '') +
       (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
     var res = await fetchWithTimeout(url);
@@ -76,6 +77,12 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
 
 export async function fetchPhotoStripReviews(productId) {
   var data = await fetchReviews(productId, 'newest', 1, null, true, PHOTO_STRIP_LIMIT);
+  if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
+  return data.data.reviews;
+}
+
+export async function fetchMediaStripReviews(productId) {
+  var data = await fetchReviews(productId, 'newest', 1, null, false, PHOTO_STRIP_LIMIT, null, true);
   if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
   return data.data.reviews;
 }

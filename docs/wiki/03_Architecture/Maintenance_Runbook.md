@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-06-09
-last_verified: 2026-06-09
+updated: 2026-06-13
+last_verified: 2026-06-13
 confidence: high
 tags:
   - runbook
@@ -23,6 +23,8 @@ source_files:
   - "src/lib/cron-observability.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
+  - "src/app/api/internal/media-jobs/route.ts"
+  - "src/lib/media/jobs.ts"
   - "vercel.json"
 ---
 
@@ -33,7 +35,7 @@ Operational reference for the scheduled background jobs and how their failures s
 ## Cron jobs (`vercel.json`)
 | Cron | Schedule (UTC) | What it does |
 |---|---|---|
-| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, **ReviewMedia metadata backfill** ([[ADR_0029_Review_Media_Metadata]]). |
+| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, **ReviewMedia metadata backfill** ([[ADR_0029_Review_Media_Metadata]]), and video session/job reconciliation when video infrastructure is configured. |
 | `GET /api/admin/cleanup-images` | `0 4 1 * *` (monthly) | Cloudinary `review_images/*` orphan **two-phase** cleanup behind a circuit-breaker (ADR_0012 + [[ADR_0030_Cleanup_Hardening]]): mark orphans → sweep after a 7-day grace if still orphaned. Writes a `MediaCleanupRun` audit row. |
 
 Both require `Authorization: Bearer <CRON_SECRET>`.
@@ -73,6 +75,14 @@ curl -s -H "Authorization: Bearer <CRON_SECRET>" \
 ```
 `<CRON_SECRET>` = Vercel → Project → Settings → Environment Variables → `CRON_SECRET`.
 Read `data.reviewMediaMetadata` (`{status:'ran', completed, ...}`) and `data.errors[]`.
+When video env is configured, also inspect the video maintenance fields for stuck `VideoUploadSession` rows and redispatched/dead `MediaProviderJob` rows. Daily maintenance redispatches due `pending`/`failed` jobs and stale `processing` jobs whose lock has expired; stale jobs must still be idempotent because QStash/background delivery is at-least-once. When video env is missing and the global flag is off, video maintenance may be skipped; that is expected for pre-rollout deployments.
+
+Media provider job worker (QStash target, not for unauthenticated manual browser calls):
+```bash
+# QStash sends a signed POST body: { "jobId": "..." }
+# For local manual debugging, call processMediaProviderJob(jobId) in a controlled script
+# rather than bypassing the QStash signature gate on /api/internal/media-jobs.
+```
 
 Cleanup-images (two-phase — the **first run after a deploy only marks**; deletions begin one grace
 window later):
@@ -93,6 +103,13 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 | `task:review-media-metadata-backfill` + `401 unknown api_key` | Production Cloudinary key stale/rotated | Vercel env → rotate `CLOUDINARY_API_KEY` + `CLOUDINARY_API_SECRET` → redeploy → re-trigger `?full=1` |
 | `reviewMediaMetadata.status:'skipped_no_cloudinary_config'` | Cloudinary env missing in prod | Set `CLOUDINARY_*` env vars → redeploy |
 | `task:cleanup-pending-uploads` / `cleanup-images` error | Cloudinary creds/config or Admin API issue | Verify Cloudinary env + Admin API status |
+| `source:media-job` + `action:prepare_stream` | R2 copy or Stream URL ingest failed | Check R2 master object exists, ingest bucket public URL is reachable, Stream API token scope, and transient ingest cleanup. Retry by resetting/redispatching the `MediaProviderJob` only after confirming the object state. |
+| `source:media-job` + `action:publish_stream` | Stream public/private flip or moderation race | Confirm `Review.moderationVersion` and `MediaProviderLease`. A stale job must converge Stream to the latest DB state and finish `superseded`; it must not remain the final public/private decision. |
+| `source:media-job` + `action:cleanup_video` | R2/Stream delete failed | Cleanup is idempotent and provider-aware. Verify Stream UID and R2 object keys, then retry the job; do not delete DB registry rows before provider cleanup succeeds. |
+| `source:media-job` + `action:cleanup_ingest` | Public ingest deadline check failed or Stream is still downloading | The job checks Stream state before deletion, defers by 30 minutes while the provider is still fetching, and hard-deletes at the application deadline. The R2 24h lifecycle remains the final backstop, not the primary cleanup mechanism. |
+| `source:media-job` + `action:cleanup_image` | Cloudinary pending-image delete failed | Pending registry rows are intentionally kept until the outbox job deletes the provider asset. Verify Cloudinary env/Admin API status, then retry or let daily redispatch pick it up. |
+| Stuck video session (`uploading`/`completing`/`processing`) | Shopper abandoned upload, duplicate complete race, missing webhook, or Stream processing failed silently | Daily reconciliation should redispatch/cleanup. If manual intervention is needed, inspect `VideoUploadSession`, `PendingReviewImage`, and provider state before marking failed. |
+| Public ingest object older than 60 minutes | Stream ready webhook/job missed or Stream is still downloading | Inspect the `cleanup_ingest` job and Stream state. The job should defer while downloading and delete no later than the 23h application deadline; an object reaching the 24h bucket lifecycle indicates the application cleanup path failed. |
 | `cleanup-images` `task:breaker-tripped` reason `empty-used-set` (G1) | In-use diff is broken (e.g. `cloudName`/`publicId` regression) — **0 deleted, real photos protected** | **Do not force.** Investigate why `usedCount=0` while `ReviewMedia` has rows; fix the diff, then re-trigger. G1 is never force-overridable. |
 | `cleanup-images` `task:breaker-tripped` reason `ratio …` (G2) / `sweep … > …` (G3) | A genuine bulk cleanup **or** an anomaly | Inspect the latest `MediaCleanupRun` (`candidates`, `sampleDeleted`). If intended, re-run `?force=1`; else fix the cause. |
 | `task:reconcile-storefront-themes` / `reconcile-storefront-scripts` error | ikas token expired / Admin API down | Check ikas auth token + Admin API (see [[Auth_And_Installation_Flow]]) |
@@ -109,6 +126,8 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 - Observability is **additive** — the existing `errors[]` + HTTP 500 (Vercel non-200 cron signal) stays as defense-in-depth.
 - No secrets/tokens are sent to Sentry (`sendDefaultPii:false`; extras carry only counts + task/cron names).
 - `cleanup-images` uses a circuit-breaker + a `MediaCleanupRun` audit log + two-phase `OrphanImageQuarantine` ([[ADR_0030_Cleanup_Hardening]]). Thresholds are env-tunable (`CLEANUP_MAX_DELETE_ABSOLUTE`=200, `CLEANUP_MAX_DELETE_RATIO`=0.30, `CLEANUP_QUARANTINE_GRACE_DAYS`=7, `CLEANUP_ORPHAN_AGE_DAYS`=30); calibrate from real audit rows.
+- Review media lifecycle is DB-first: `VideoUploadSession`, `PendingReviewImage`, and `MediaProviderJob` are the source of truth; Cloudinary, Cloudflare Stream, and R2 are provider state. Never repair by editing provider state alone without matching DB state.
+- Required Cloudflare setup is manual/operator-owned in V1: private master R2 bucket, public-ingest R2 bucket with 24h lifecycle, CORS exposing `ETag` for multipart uploads, Stream webhook URL, Stream API token, and QStash signing keys. The app does not provision Cloudflare resources automatically.
 
 ## Obsidian Links
 - [[Sentry_Operations]]

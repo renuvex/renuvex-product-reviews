@@ -2,7 +2,7 @@ import React from 'react';
 import { Star } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
-import { Review, TabKey, TABS } from './types';
+import { Review, ReviewMedia, TabKey, TABS } from './types';
 import { ReviewRow } from './ReviewRow';
 
 interface ReviewsTabProps {
@@ -18,7 +18,7 @@ interface ReviewsTabProps {
   onReply: (review: Review) => void;
   onDeleteReply: (id: string) => void;
   onDeleteReview: (id: string) => void;
-  onLightbox: (url: string) => void;
+  onMediaOpen: (media: ReviewMedia) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }
@@ -32,7 +32,7 @@ function renderStars(count: number) {
 export function ReviewsTab({
   activeTab, reviews, loading, page, total, pageSize, tabCounts,
   onTabChange, onStatusChange, onReply, onDeleteReply, onDeleteReview,
-  onLightbox, onPageChange, onPageSizeChange,
+  onMediaOpen, onPageChange, onPageSizeChange,
 }: ReviewsTabProps) {
   const totalPages = Math.ceil(total / pageSize);
 
@@ -95,7 +95,7 @@ export function ReviewsTab({
                   onReply={onReply}
                   onDeleteReply={onDeleteReply}
                   onDeleteReview={onDeleteReview}
-                  onLightbox={onLightbox}
+                  onMediaOpen={onMediaOpen}
                   renderStars={renderStars}
                 />
               ))}

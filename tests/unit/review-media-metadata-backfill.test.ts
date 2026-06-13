@@ -46,11 +46,17 @@ describe('metadataFromCloudinaryResource', () => {
 
 describe('reviewMediaMetadataBackfillWhere', () => {
   it('targets non-terminal rows only', () => {
-    expect(reviewMediaMetadataBackfillWhere()).toEqual({ metadataStatus: { notIn: ['complete', 'missing_asset'] } });
+    expect(reviewMediaMetadataBackfillWhere()).toEqual({
+      provider: 'cloudinary',
+      resourceType: 'image',
+      metadataStatus: { notIn: ['complete', 'missing_asset'] },
+    });
   });
 
   it('scopes by storeId when provided', () => {
     expect(reviewMediaMetadataBackfillWhere('store-1')).toEqual({
+      provider: 'cloudinary',
+      resourceType: 'image',
       storeId: 'store-1',
       metadataStatus: { notIn: ['complete', 'missing_asset'] },
     });

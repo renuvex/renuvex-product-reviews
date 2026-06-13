@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'crypto';
 
 const prismaMock = vi.hoisted(() => ({
+  $queryRaw: vi.fn(),
   $transaction: vi.fn(),
   storeSettings: {
     findUnique: vi.fn(),
@@ -32,6 +33,7 @@ const prismaMock = vi.hoisted(() => ({
     create: vi.fn(),
   },
   reviewMedia: {
+    create: vi.fn(),
     createMany: vi.fn(),
     updateMany: vi.fn(),
     findMany: vi.fn(),
@@ -41,6 +43,13 @@ const prismaMock = vi.hoisted(() => ({
     findMany: vi.fn(),
     upsert: vi.fn(),
     deleteMany: vi.fn(),
+  },
+  videoUploadSession: {
+    findUnique: vi.fn(),
+    updateMany: vi.fn(),
+  },
+  mediaProviderJob: {
+    upsert: vi.fn(),
   },
 }));
 
@@ -203,6 +212,7 @@ function setupVerifiedReviewTarget(autoApprove: unknown = 'manual') {
     reviewMedia: prismaMock.reviewMedia,
     productReviewSummary: prismaMock.productReviewSummary,
     pendingReviewImage: prismaMock.pendingReviewImage,
+    videoUploadSession: prismaMock.videoUploadSession,
   }));
 }
 
@@ -222,10 +232,12 @@ async function postPublicReview(payload: unknown, headers: Record<string, string
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  prismaMock.$queryRaw.mockReset();
   process.env.REVIEW_CURSOR_SECRET = 'unit-test-review-cursor-secret';
   delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   delete process.env.CLOUDINARY_CLOUD_NAME;
   delete process.env.CLOUDINARY_API_SECRET;
+  delete process.env.VIDEO_REVIEWS_ENABLED;
   prismaMock.storeSettings.findUnique.mockReset();
   prismaMock.widgetSettings.findMany.mockReset();
   prismaMock.widgetSettings.findUnique.mockReset();
@@ -244,6 +256,7 @@ beforeEach(() => {
   prismaMock.review.delete.mockReset();
   prismaMock.review.aggregate.mockReset();
   prismaMock.review.create.mockReset();
+  prismaMock.reviewMedia.create.mockReset();
   prismaMock.reviewMedia.createMany.mockReset();
   prismaMock.reviewMedia.updateMany.mockReset();
   prismaMock.reviewMedia.findMany.mockReset();
@@ -252,6 +265,9 @@ beforeEach(() => {
   prismaMock.pendingReviewImage.findMany.mockResolvedValue([]);
   prismaMock.pendingReviewImage.upsert.mockReset();
   prismaMock.pendingReviewImage.deleteMany.mockReset();
+  prismaMock.videoUploadSession.findUnique.mockReset();
+  prismaMock.videoUploadSession.updateMany.mockReset();
+  prismaMock.mediaProviderJob.upsert.mockReset();
   prismaMock.$transaction.mockReset();
   afterMock.mockClear();
   syncStorefrontThemeForTokenMock.mockReset();
@@ -279,6 +295,7 @@ describe('/api/public/settings', () => {
     prismaMock.storeSettings.findUnique.mockResolvedValue({
       storeId: 'store-1',
       storefrontTheme: stableOzyThemeState(),
+      videoMonthlyLimit: 10,
     });
     prismaMock.widgetSettings.findMany.mockResolvedValue([
       {
@@ -287,6 +304,7 @@ describe('/api/public/settings', () => {
           enabled: true,
           summaryLayout: 'compact',
           reviewLayout: 'gallery',
+          videoReviewsEnabled: true,
           unknownKey: 'drop-me',
         },
       },
@@ -306,6 +324,7 @@ describe('/api/public/settings', () => {
     expect(response.status).toBe(200);
     expect(body.widgets.reviews.summaryLayout).toBe('compact');
     expect(body.widgets.reviews.reviewLayout).toBe('gallery');
+    expect(body.widgets.reviews.videoReviewsEnabled).toBe(false);
     expect(body.widgets.reviews.unknownKey).toBeUndefined();
     expect(body.widgets.badge.enabled).toBe(false);
     expect(body.runtime).toEqual({
@@ -315,6 +334,25 @@ describe('/api/public/settings', () => {
       reviewsMountEnabled: true,
     });
     expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it('exposes video capability only when global, merchant, and quota gates are all open', async () => {
+    process.env.VIDEO_REVIEWS_ENABLED = 'true';
+    prismaMock.storeSettings.findUnique.mockResolvedValue({
+      storeId: 'store-1',
+      storefrontTheme: stableOzyThemeState(),
+      videoMonthlyLimit: 10,
+    });
+    prismaMock.widgetSettings.findMany.mockResolvedValue([{
+      widgetId: 'reviews',
+      settings: { videoReviewsEnabled: true },
+    }]);
+    const { GET } = await import('@/app/api/public/settings/route');
+
+    const response = await GET(new Request('https://app.test/api/public/settings?publicApiKey=store-1'));
+    const body = await response.json();
+
+    expect(body.widgets.reviews.videoReviewsEnabled).toBe(true);
   });
 });
 
@@ -701,7 +739,7 @@ describe('/api/public/reviews', () => {
     expect(prismaMock.review.findMany).toHaveBeenCalledWith(expect.objectContaining({
       select: expect.objectContaining({
         media: expect.objectContaining({
-          where: { visible: true },
+          where: { visible: true, processingStatus: 'ready' },
           orderBy: { position: 'asc' },
         }),
       }),
@@ -726,6 +764,53 @@ describe('/api/public/reviews', () => {
         height: null,
       }),
     ]);
+  });
+
+  it('returns normalized Stream video media without exposing provider identity', async () => {
+    const uid = 'stream-video-1';
+    const playbackUrl = `https://customer-test.cloudflarestream.com/${uid}/manifest/video.m3u8`;
+    const posterUrl = `https://customer-test.cloudflarestream.com/${uid}/thumbnails/thumbnail.jpg`;
+    prismaMock.review.findMany.mockResolvedValue([{
+      id: 'review-video',
+      rating: 5,
+      title: 'Video review',
+      comment: 'Works well',
+      author: 'Mert Copper',
+      merchantReply: null,
+      images: null,
+      media: [{
+        url: playbackUrl,
+        position: 0,
+        resourceType: 'video',
+        provider: 'cloudflare_stream',
+        providerAssetId: uid,
+        posterUrl,
+        durationMs: 45_000,
+        width: 1920,
+        height: 1080,
+        format: null,
+        mimeType: 'application/x-mpegURL',
+        bytes: 10_000_000,
+      }],
+      createdAt: new Date('2026-05-28T00:00:00.000Z'),
+    }]);
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow());
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.reviews[0].images).toEqual([]);
+    expect(body.data.reviews[0].media).toEqual([expect.objectContaining({
+      type: 'video',
+      url: playbackUrl,
+      thumbnailUrl: posterUrl,
+      posterUrl,
+      durationMs: 45_000,
+    })]);
+    expect(body.data.reviews[0].media[0]).not.toHaveProperty('provider');
+    expect(body.data.reviews[0].media[0]).not.toHaveProperty('providerAssetId');
   });
 
   it('applies review GET pagination, sorting, rating, and trusted image filters', async () => {
@@ -784,6 +869,47 @@ describe('/api/public/reviews', () => {
     }));
     expect(prismaMock.review.findMany.mock.calls[0][0].where.rating).toBeUndefined();
     expect(prismaMock.review.count).not.toHaveBeenCalled();
+  });
+
+  it('uses the internal media filter for the media strip without changing the public image filter', async () => {
+    prismaMock.review.findMany.mockResolvedValue([]);
+    prismaMock.review.count.mockResolvedValue(2);
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 4, photoReviewCount: 1 }));
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&hasMedia=true&limit=15'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.review.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        storeId: 'store-1',
+        productId: 'product-1',
+        status: 'approved',
+        OR: [{ hasImages: true }, { hasVideo: true }],
+      }),
+      take: 15,
+      skip: 0,
+    }));
+    expect(prismaMock.review.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        storeId: 'store-1',
+        productId: 'product-1',
+        status: 'approved',
+        OR: [{ hasImages: true }, { hasVideo: true }],
+      }),
+    });
+    expect(body.data.totalCount).toBe(2);
+    expect(body.data.allCount).toBe(4);
+  });
+
+  it('rejects conflicting hasImages and hasMedia filters', async () => {
+    const { GET } = await import('@/app/api/public/reviews/route');
+
+    const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&hasImages=true&hasMedia=true'));
+
+    expect(response.status).toBe(400);
+    expect(prismaMock.review.findMany).not.toHaveBeenCalled();
   });
 
   it('returns a cursor from the legacy first page and uses keyset pagination without skip', async () => {
@@ -1234,6 +1360,85 @@ describe('/api/public/reviews', () => {
       },
     });
   });
+
+  it('rejects mixed photo and video review media before creating a review', async () => {
+    setCloudinaryEnv();
+    redisMock.incr.mockResolvedValue(1);
+    const response = await postPublicReview(validReviewPayload({
+      images: [VALID_REVIEW_IMAGE_URL],
+      videoToken: 'v'.repeat(43),
+    }));
+
+    expect(response.status).toBe(400);
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+  });
+
+  it('atomically consumes a ready same-product video and forces moderation', async () => {
+    const videoToken = 'v'.repeat(43);
+    const uid = 'stream-video-1';
+    const playbackUrl = `https://customer-test.cloudflarestream.com/${uid}/manifest/video.m3u8`;
+    const posterUrl = `https://customer-test.cloudflarestream.com/${uid}/thumbnails/thumbnail.jpg`;
+    setupVerifiedReviewTarget('all');
+    prismaMock.videoUploadSession.findUnique.mockResolvedValue({
+      id: 'video-session-1',
+      tokenHash: 'hash',
+      storeId: 'store-1',
+      productId: 'product-1',
+      status: 'ready',
+      mimeType: 'video/mp4',
+      bytes: 12_000_000,
+      fileFingerprint: null,
+      r2UploadId: 'upload-1',
+      masterObjectKey: 'review-videos/stores/store-1/video-session-1/master',
+      ingestObjectKey: null,
+      streamUid: uid,
+      publicId: `cloudflare_stream:${uid}`,
+      playbackUrl,
+      posterUrl,
+      durationMs: 45_000,
+      reservedMonth: new Date('2026-06-01T00:00:00.000Z'),
+      expiresAt: new Date(Date.now() + 60_000),
+      consumedAt: null,
+      errorCode: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 1 });
+
+    const response = await postPublicReview(validReviewPayload({ videoToken }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.data.status).toBe('pending');
+    expect(prismaMock.review.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ hasImages: false, hasVideo: true, status: 'pending' }),
+    }));
+    expect(prismaMock.reviewMedia.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        reviewId: 'review-created',
+        resourceType: 'video',
+        provider: 'cloudflare_stream',
+        providerAssetId: uid,
+        url: playbackUrl,
+        posterUrl,
+        durationMs: 45_000,
+        visible: false,
+      }),
+    });
+    expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({
+      where: { uploadSessionId: 'video-session-1', provider: 'cloudflare_stream', resourceType: 'video' },
+    });
+  });
+
+  it('rejects a video token that is not ready for the same product', async () => {
+    setupVerifiedReviewTarget('manual');
+    prismaMock.videoUploadSession.findUnique.mockResolvedValue(null);
+
+    const response = await postPublicReview(validReviewPayload({ videoToken: 'v'.repeat(43) }));
+
+    expect(response.status).toBe(400);
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+  });
 });
 
 describe('/api/admin/reviews', () => {
@@ -1259,7 +1464,9 @@ describe('/api/admin/reviews', () => {
       hasImages: false,
       createdAt: new Date('2026-05-27T00:00:00.000Z'),
     });
+    prismaMock.$queryRaw.mockResolvedValue([await prismaMock.review.findFirst()]);
     prismaMock.$transaction.mockImplementation(async (callback) => callback({
+      $queryRaw: prismaMock.$queryRaw,
       review: prismaMock.review,
       reviewMedia: prismaMock.reviewMedia,
       productReviewSummary: prismaMock.productReviewSummary,
@@ -1307,8 +1514,10 @@ describe('/api/admin/reviews', () => {
       createdAt: new Date('2026-05-27T00:00:00.000Z'),
     };
     prismaMock.review.findFirst.mockResolvedValue(review);
+    prismaMock.$queryRaw.mockResolvedValue([review]);
     prismaMock.review.update.mockResolvedValue({ ...review, merchantReply: 'Thanks' });
     prismaMock.$transaction.mockImplementation(async (callback) => callback({
+      $queryRaw: prismaMock.$queryRaw,
       review: prismaMock.review,
       reviewMedia: prismaMock.reviewMedia,
       productReviewSummary: prismaMock.productReviewSummary,
@@ -1325,6 +1534,124 @@ describe('/api/admin/reviews', () => {
     expect(prismaMock.productReviewSummary.create).not.toHaveBeenCalled();
     expect(prismaMock.productReviewSummary.update).not.toHaveBeenCalled();
     expect(prismaMock.reviewMedia.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses to approve a video review while Stream processing is incomplete', async () => {
+    getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    prismaMock.review.findFirst.mockResolvedValue({
+      id: 'review-video-1',
+      storeId: 'store-1',
+      productId: 'product-1',
+      rating: 5,
+      status: 'pending',
+      images: null,
+      hasImages: false,
+      hasVideo: true,
+      moderationVersion: 0,
+      createdAt: new Date('2026-06-13T00:00:00.000Z'),
+    });
+    prismaMock.$queryRaw.mockResolvedValue([await prismaMock.review.findFirst()]);
+    prismaMock.reviewMedia.findMany.mockResolvedValue([{
+      id: 'media-video-1',
+      providerAssetId: 'stream-1',
+      processingStatus: 'pending',
+      sourceAssetId: 'review-videos/stores/store-1/session/master',
+    }]);
+    prismaMock.$transaction.mockImplementation(async (callback) => callback({
+      $queryRaw: prismaMock.$queryRaw,
+      review: prismaMock.review,
+      reviewMedia: prismaMock.reviewMedia,
+      mediaProviderJob: prismaMock.mediaProviderJob,
+      productReviewSummary: prismaMock.productReviewSummary,
+    }));
+    const { PUT } = await import('@/app/api/admin/reviews/route');
+
+    const response = await PUT(new Request('https://app.test/api/admin/reviews', {
+      method: 'PUT',
+      body: JSON.stringify({ id: 'review-video-1', status: 'approved' }),
+    }));
+
+    expect(response.status).toBe(409);
+    expect(prismaMock.review.update).not.toHaveBeenCalled();
+    expect(prismaMock.reviewMedia.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.mediaProviderJob.upsert).not.toHaveBeenCalled();
+  });
+
+  it('queues Stream publish instead of immediately approving a ready video review', async () => {
+    getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    prismaMock.review.findFirst.mockResolvedValue({
+      id: 'review-video-1',
+      storeId: 'store-1',
+      productId: 'product-1',
+      rating: 5,
+      status: 'pending',
+      images: null,
+      hasImages: false,
+      hasVideo: true,
+      moderationVersion: 2,
+      createdAt: new Date('2026-06-13T00:00:00.000Z'),
+    });
+    prismaMock.$queryRaw.mockResolvedValue([await prismaMock.review.findFirst()]);
+    prismaMock.review.update.mockResolvedValue({
+      id: 'review-video-1',
+      storeId: 'store-1',
+      productId: 'product-1',
+      rating: 5,
+      status: 'pending',
+      images: null,
+      hasImages: false,
+      hasVideo: true,
+      moderationVersion: 3,
+      createdAt: new Date('2026-06-13T00:00:00.000Z'),
+    });
+    prismaMock.reviewMedia.findMany.mockResolvedValue([{
+      id: 'media-video-1',
+      providerAssetId: 'stream-1',
+      processingStatus: 'ready',
+      sourceAssetId: 'review-videos/stores/store-1/session/master',
+    }]);
+    prismaMock.mediaProviderJob.upsert.mockResolvedValue({ id: 'job-publish-1' });
+    prismaMock.$transaction.mockImplementation(async (callback) => callback({
+      $queryRaw: prismaMock.$queryRaw,
+      review: prismaMock.review,
+      reviewMedia: prismaMock.reviewMedia,
+      mediaProviderJob: prismaMock.mediaProviderJob,
+      productReviewSummary: prismaMock.productReviewSummary,
+    }));
+    const { PUT } = await import('@/app/api/admin/reviews/route');
+
+    const response = await PUT(new Request('https://app.test/api/admin/reviews', {
+      method: 'PUT',
+      body: JSON.stringify({ id: 'review-video-1', status: 'approved', merchantReply: 'Looks good.' }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(202);
+    expect(body.processing).toBe(true);
+    expect(body.data.status).toBe('pending');
+    expect(prismaMock.review.update).toHaveBeenCalledWith({
+      where: { id: 'review-video-1' },
+      data: {
+        status: 'pending',
+        moderationVersion: { increment: 1 },
+        merchantReply: 'Looks good.',
+      },
+    });
+    expect(prismaMock.reviewMedia.updateMany).toHaveBeenCalledWith({
+      where: { reviewId: 'review-video-1', resourceType: 'video' },
+      data: { visible: false },
+    });
+    expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledWith({
+      where: { dedupeKey: 'publish-stream:review-video-1:media-video-1:v3' },
+      create: expect.objectContaining({
+        provider: 'cloudflare_stream',
+        action: 'publish_stream',
+        resourceType: 'video',
+        status: 'pending',
+      }),
+      update: {},
+    });
+    expect(prismaMock.productReviewSummary.upsert).not.toHaveBeenCalled();
   });
 });
 

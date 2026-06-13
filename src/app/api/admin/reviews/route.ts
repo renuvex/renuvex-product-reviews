@@ -3,6 +3,14 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { getConfiguredCloudinaryCloudName, parseStoredReviewImages } from '@/lib/review-images';
 import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
+import { dispatchMediaProviderJob } from '@/lib/media/jobs';
+import {
+  enqueueVideoReviewCleanup,
+  getReviewForModerationUpdate,
+  rejectVideoReview,
+  requestVideoApproval,
+  VideoModerationError,
+} from '@/lib/media/moderation';
 
 const REVIEW_NOT_FOUND = 'review-not-found';
 
@@ -34,6 +42,9 @@ export async function GET(request: Request) {
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
+        include: {
+          media: { orderBy: { position: 'asc' } },
+        },
       }),
       prisma.review.count({ where }),
     ]);
@@ -42,6 +53,18 @@ export async function GET(request: Request) {
     const sanitizedReviews = reviews.map(review => ({
       ...review,
       images: JSON.stringify(parseStoredReviewImages(review.images, cloudName, review.storeId)),
+      media: review.media.map((item) => ({
+        id: item.id,
+        type: item.resourceType === 'video' ? 'video' : 'image',
+        url: item.resourceType === 'image' ? item.url : null,
+        posterUrl: item.posterUrl,
+        durationMs: item.durationMs,
+        width: item.width,
+        height: item.height,
+        position: item.position,
+        processingStatus: item.processingStatus,
+        visible: item.visible,
+      })),
     }));
 
     return NextResponse.json({
@@ -70,19 +93,24 @@ export async function DELETE(request: Request) {
     if (!id) {
       return NextResponse.json({ error: 'Review ID is required' }, { status: 400 });
     }
-
     try {
-      await prisma.$transaction(async (tx) => {
-        const existing = await tx.review.findFirst({
-          where: { id, storeId: user.merchantId },
-        });
+      const jobs = await prisma.$transaction(async (tx) => {
+        const existing = await getReviewForModerationUpdate(tx, id, user.merchantId);
         if (!existing) throw new Error(REVIEW_NOT_FOUND);
+
+        const videoMedia = await tx.reviewMedia.findMany({
+          where: { reviewId: id, resourceType: 'video', provider: 'cloudflare_stream' },
+          select: { id: true, providerAssetId: true, processingStatus: true, sourceAssetId: true },
+        }) ?? [];
+        const cleanupJobs = await enqueueVideoReviewCleanup(tx, existing, videoMedia);
 
         await tx.review.delete({
           where: { id },
         });
         await applyReviewSummaryVisibilityChange(tx, existing, null);
+        return cleanupJobs;
       });
+      await Promise.all(jobs.map((job) => dispatchMediaProviderJob(job.id)));
       return NextResponse.json({ message: 'Review deleted' });
     } catch (error) {
       if (error instanceof Error && error.message !== REVIEW_NOT_FOUND) {
@@ -112,6 +140,9 @@ export async function PUT(request: Request) {
     if (!id) {
       return NextResponse.json({ error: 'Review ID is required' }, { status: 400 });
     }
+    if (status !== undefined && !['pending', 'approved', 'rejected'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid review status' }, { status: 400 });
+    }
 
     // Mağaza yanıtı uzunluk sınırı — DB schema'da @db.VarChar(2000) ile ikinci
     // savunma katmanı var, ama API'da erken hata daha temiz mesaj verir.
@@ -123,11 +154,25 @@ export async function PUT(request: Request) {
     }
 
     try {
-      const updatedReview = await prisma.$transaction(async (tx) => {
-        const existing = await tx.review.findFirst({
-          where: { id, storeId: user.merchantId },
-        });
+      const result = await prisma.$transaction(async (tx) => {
+        const existing = await getReviewForModerationUpdate(tx, id, user.merchantId);
         if (!existing) throw new Error(REVIEW_NOT_FOUND);
+
+        const videoMedia = status !== undefined && existing.hasVideo
+          ? (await tx.reviewMedia.findMany({
+              where: { reviewId: id, resourceType: 'video', provider: 'cloudflare_stream' },
+              select: { id: true, providerAssetId: true, processingStatus: true, sourceAssetId: true },
+            }) ?? [])
+          : [];
+        if (existing.hasVideo && status !== undefined && videoMedia.length === 0) {
+          throw new VideoModerationError('video_not_ready');
+        }
+        if (status === 'approved' && videoMedia.length > 0) {
+          return requestVideoApproval(tx, existing, videoMedia, merchantReply);
+        }
+        if (status === 'rejected' && videoMedia.length > 0) {
+          return rejectVideoReview(tx, existing, videoMedia, merchantReply);
+        }
 
         const updated = await tx.review.update({
           where: { id },
@@ -143,10 +188,14 @@ export async function PUT(request: Request) {
           });
         }
         await applyReviewSummaryVisibilityChange(tx, existing, updated);
-        return updated;
+        return { updated, jobs: [], processing: false as const };
       });
-      return NextResponse.json({ data: updatedReview });
+      await Promise.all(result.jobs.map((job) => dispatchMediaProviderJob(job.id)));
+      return NextResponse.json({ data: result.updated, processing: result.processing }, { status: result.processing ? 202 : 200 });
     } catch (error) {
+      if (error instanceof VideoModerationError) {
+        return NextResponse.json({ error: 'Video henüz onaylanmaya hazır değil.' }, { status: 409 });
+      }
       if (error instanceof Error && error.message !== REVIEW_NOT_FOUND) {
         console.error('Error updating review:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

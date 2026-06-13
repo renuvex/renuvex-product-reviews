@@ -37,7 +37,7 @@ export var LIST_CSS = `
   .renuvex-pr-review-list-title{font-weight:600;font-size:var(--renuvex-pr-review-title-size,16px);color:var(--renuvex-pr-review-title,var(--renuvex-pr-text,rgba(0,0,0,1)));margin:0;}
   .renuvex-pr-review-list-body{margin-top:var(--renuvex-pr-gap-normal);line-height:1.6;color:var(--renuvex-pr-review-body,var(--renuvex-pr-text,rgba(0,0,0,1)));font-size:var(--renuvex-pr-review-text-size,14px);}
   .renuvex-pr-review-list-media{display:flex;justify-content:flex-end;align-items:flex-start;}
-  .renuvex-pr-review-list-media img{
+  .renuvex-pr-review-list-media > *{
     display:block;flex:0 0 auto;
     width:var(--renuvex-pr-list-photo-w,120px);height:var(--renuvex-pr-list-photo-h,160px);max-width:100%;
     aspect-ratio:3/4;object-fit:cover;
@@ -50,7 +50,7 @@ export var LIST_CSS = `
      için min-width:601 media query içinde tanımlandı — böylece mobile strip
      tüm fotoları göstermeye engel olmaz. */
   @media (min-width:601px){
-    .renuvex-pr-review-list-media img:not(:first-child){display:none;}
+    .renuvex-pr-review-list-media > *:not(:first-child){display:none;}
   }
   @media (max-width:600px){
     /* Mobile sıra: yıldız → title → yazar → tarih → body → foto → reply.
@@ -86,7 +86,7 @@ export var LIST_CSS = `
       justify-content:flex-start;
     }
     .renuvex-pr-review-list-media::-webkit-scrollbar{display:none;}
-    .renuvex-pr-review-list-media img{
+    .renuvex-pr-review-list-media > *{
       flex-shrink:0;
       width:var(--renuvex-pr-list-photo-w-mobile,100px);
       height:var(--renuvex-pr-list-photo-h-mobile,133.33px);

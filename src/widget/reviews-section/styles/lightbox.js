@@ -9,7 +9,8 @@ export var LIGHTBOX_CSS = `
 
   .renuvex-pr-modal{background:#ffffff;color:#111111;border-radius:calc(var(--renuvex-pr-radius, 8px) * 1.5);overflow:hidden;display:flex;width:100%;height:584px;max-height:80vh;box-shadow:0 16px 48px rgba(0,0,0,0.25);}
   .renuvex-pr-modal-left{flex:0 0 438px;background:#222;position:relative;overflow:hidden;}
-  .renuvex-pr-modal-main-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:block;background:#222;transition:opacity 0.25s ease;}
+  .renuvex-pr-modal-main-img,.renuvex-pr-modal-main-video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:block;background:#222;transition:opacity 0.25s ease;}
+  .renuvex-pr-modal-main-video{border:0;}
   /* İlk açılışta görsel yüklenene kadar opacity:0; load/error'da class kalkar ve yukarıdaki
      transition ile yumuşak fade-in olur (koyu zemine ani "pop"/flash yerine). */
   .renuvex-pr-modal-img-loading{opacity:0;}

@@ -34,6 +34,8 @@ model Review {
   merchantReply String?       @db.VarChar(2000)
   images        String?
   hasImages     Boolean       @default(false)
+  hasVideo      Boolean       @default(false)
+  moderationVersion Int       @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   productName   String?
@@ -42,6 +44,7 @@ model Review {
   media         ReviewMedia[]
 
   @@index([storeId, productId, status])
+  @@index([storeId, productId, status, hasVideo])
   @@index([storeId, status])
   @@index([storeId, slug, status])
 }
@@ -56,6 +59,13 @@ model ReviewMedia {
   assetId           String?  @db.VarChar(128)
   version           String?  @db.VarChar(64)
   resourceType      String   @default("image") @db.VarChar(32)
+  provider          String   @default("cloudinary") @db.VarChar(64)
+  providerAssetId   String?  @db.VarChar(512)
+  posterUrl         String?  @db.VarChar(2048)
+  durationMs        Int?
+  processingStatus  String   @default("ready") @db.VarChar(32)
+  sourceProvider    String?  @db.VarChar(64)
+  sourceAssetId     String?  @db.VarChar(1024)
   format            String?  @db.VarChar(32)
   mimeType          String?  @db.VarChar(128)
   width             Int?
@@ -73,6 +83,8 @@ model ReviewMedia {
   @@index([reviewId, position])
   @@index([storeId, productId, visible, createdAt])
   @@index([metadataStatus, createdAt])
+  @@index([provider, providerAssetId])
+  @@index([processingStatus, createdAt])
 }
 
 model ProductReviewSummary {
@@ -109,6 +121,8 @@ model StoreSettings {
   storefrontScripts Json?
   /// Non-sensitive published storefront/theme metadata for runtime adapter selection
   storefrontTheme   Json?
+  /// Monthly video-review quota. Zero keeps video uploads disabled for the store.
+  videoMonthlyLimit Int      @default(0)
 }
 
 model WidgetSettings {
@@ -138,17 +152,26 @@ model ProductSnapshot {
   @@index([storeId, slug])
 }
 
-// Registry of Cloudinary uploads that are not yet attached to a Review.
-// Created when the widget reports a successful upload; removed atomically
-// when a review is submitted with that publicId. The cleanup cron expires
-// rows older than the retention window and deletes the orphaned Cloudinary
-// asset. See ADR_0012 for the rationale.
+// Provider-agnostic registry of uploads that are not yet attached to a Review.
+// The legacy model name is intentionally retained for additive migration
+// safety. Provider-specific cleanup is routed through the media adapters.
+// See ADR_0012 and ADR_0031 for the lifecycle contracts.
 model PendingReviewImage {
   publicId          String   @id
   storeId           String?
+  productId         String?
+  uploadSessionId   String?  @unique
+  url               String?  @db.VarChar(2048)
   assetId           String?  @db.VarChar(128)
   version           String?  @db.VarChar(64)
   resourceType      String   @default("image") @db.VarChar(32)
+  provider          String   @default("cloudinary") @db.VarChar(64)
+  providerAssetId   String?  @db.VarChar(512)
+  posterUrl         String?  @db.VarChar(2048)
+  durationMs        Int?
+  processingStatus  String   @default("ready") @db.VarChar(32)
+  sourceProvider    String?  @db.VarChar(64)
+  sourceAssetId     String?  @db.VarChar(1024)
   format            String?  @db.VarChar(32)
   mimeType          String?  @db.VarChar(128)
   width             Int?
@@ -163,6 +186,98 @@ model PendingReviewImage {
   @@index([createdAt])
   @@index([storeId, createdAt])
   @@index([metadataStatus, createdAt])
+  @@index([provider, providerAssetId])
+  @@index([processingStatus, createdAt])
+}
+
+// Durable state for the R2 multipart -> Stream processing lifecycle. The
+// opaque client token is never stored; only its SHA-256 hash is persisted.
+model VideoUploadSession {
+  id               String    @id @default(uuid())
+  tokenHash        String    @unique @db.VarChar(64)
+  storeId          String
+  productId        String
+  status           String    @default("initiated") @db.VarChar(32)
+  mimeType         String    @db.VarChar(128)
+  bytes            Int
+  fileFingerprint  String?   @db.VarChar(128)
+  r2UploadId       String?   @db.VarChar(1024)
+  masterObjectKey  String    @unique @db.VarChar(1024)
+  ingestObjectKey  String?   @unique @db.VarChar(1024)
+  streamUid        String?   @unique @db.VarChar(128)
+  publicId         String?   @unique @db.VarChar(512)
+  playbackUrl      String?   @db.VarChar(2048)
+  posterUrl        String?   @db.VarChar(2048)
+  durationMs       Int?
+  quotaState       String    @default("reserved") @db.VarChar(32)
+  reservedMonth    DateTime  @db.Date
+  expiresAt        DateTime
+  consumedAt       DateTime?
+  errorCode        String?   @db.VarChar(128)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([storeId, productId, status])
+  @@index([status, expiresAt])
+  @@index([createdAt])
+}
+
+// Monthly quota counters. Reservations are taken before a multipart upload is
+// created so concurrent initiate requests cannot oversubscribe a merchant.
+model StoreVideoUsage {
+  storeId       String
+  month         DateTime @db.Date
+  reservedCount Int      @default(0)
+  consumedCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@id([storeId, month])
+  @@index([month])
+}
+
+// Transactional outbox for provider mutations. Provider ids survive review or
+// pending-row deletion and every action is idempotent through dedupeKey.
+model MediaProviderJob {
+  id              String    @id @default(uuid())
+  dedupeKey       String    @unique @db.VarChar(256)
+  storeId         String?
+  reviewId        String?
+  mediaId         String?
+  uploadSessionId String?
+  provider        String    @db.VarChar(64)
+  action          String    @db.VarChar(64)
+  resourceType    String    @db.VarChar(32)
+  payload         Json
+  status          String    @default("pending") @db.VarChar(32)
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(8)
+  availableAt     DateTime  @default(now())
+  lockedAt        DateTime?
+  completedAt     DateTime?
+  lastErrorCode   String?   @db.VarChar(128)
+  lastErrorAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status, availableAt])
+  @@index([provider, action, createdAt])
+  @@index([uploadSessionId])
+  @@index([reviewId])
+}
+
+// Short-lived provider mutation lease. The monotonically increasing version is
+// a fencing token, so a worker that outlives its lease cannot be treated as the
+// current owner when it records its result.
+model MediaProviderLease {
+  key          String   @id @db.VarChar(256)
+  ownerJobId   String
+  leaseVersion Int      @default(1)
+  lockedUntil  DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([lockedUntil])
 }
 
 // --- Cleanup hardening (ADR_0030) -------------------------------------------

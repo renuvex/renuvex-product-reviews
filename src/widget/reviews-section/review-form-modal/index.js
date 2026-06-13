@@ -11,8 +11,11 @@ import { createWizardState, TOTAL_STEPS } from './wizard-state.js';
 import { createProgressBar } from './progress-bar.js';
 import { createStepRating } from './steps/step-rating.js';
 import { createStepPhotos } from './steps/step-photos.js';
+import { createStepMedia } from './steps/step-media.js';
 import { createStepContent } from './steps/step-content.js';
 import { createStepAuthor } from './steps/step-author.js';
+import { currentSettings } from '../../core/state.js';
+import { cancelReviewVideoUpload } from './media/video-upload.js';
 
 // CSS is now injected into the wizard's shadow root by createWizardShell.open()
 // — see modal-shell.js. No head-level <style> injection is needed.
@@ -22,6 +25,13 @@ function renderStep(stepNum, state, stepOpts) {
   stepOpts = stepOpts || {};
   if (stepNum === 1) return createStepRating(state, {
     canNavigate: stepOpts.canNavigate,
+  });
+  if (stepNum === 2 && state.get().videoEnabled) return createStepMedia(state, {
+    canNavigate: stepOpts.canNavigate,
+    blobMap: stepOpts.blobMap,
+    urlToFinger: stepOpts.urlToFinger,
+    revokeBlobUrl: stepOpts.revokeBlobUrl,
+    showToast: stepOpts.showToast,
   });
   if (stepNum === 2) return createStepPhotos(state, {
     canNavigate: stepOpts.canNavigate,
@@ -62,6 +72,7 @@ export function openReviewFormModal(opts) {
   var state = createWizardState({
     productId: opts.productId,
     productName: opts.productName,
+    videoEnabled: currentSettings && currentSettings.videoReviewsEnabled === true,
   });
 
   var persistentBlobMap = {};
@@ -89,6 +100,15 @@ export function openReviewFormModal(opts) {
     (snapshot.images || []).forEach(function (url) {
       revokeBlobUrl(url);
     });
+    if (snapshot.videoUpload) revokeBlobUrl(snapshot.videoUpload.localUrl);
+  }
+
+  function cleanupVideoUpload() {
+    var snapshot = state.get();
+    var video = snapshot.videoUpload;
+    if (!video || snapshot.videoSubmitted) return;
+    if (video.controller) video.controller.abort();
+    cancelReviewVideoUpload(video.token, snapshot.productId, video.file);
   }
 
   var shell = createWizardShell({
@@ -101,6 +121,7 @@ export function openReviewFormModal(opts) {
       restoreModalHistoryEntry(modalHistoryEntry);
 
       // Bellek temizliği: Tüm blob URL'lerini serbest bırak
+      cleanupVideoUpload();
       revokeAllBlobUrls();
       if (opts.onClose) opts.onClose();
     },

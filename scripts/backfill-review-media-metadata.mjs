@@ -94,6 +94,8 @@ function metadataFromResource(resource) {
 
 function metadataWhere(storeId, productId) {
   return {
+    provider: 'cloudinary',
+    resourceType: 'image',
     ...(storeId ? { storeId } : {}),
     ...(productId ? { productId } : {}),
     OR: [

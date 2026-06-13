@@ -3,9 +3,10 @@
 // Fotoğraf yoksa orta kolon foto kolonunu kapsar (no-media modifier).
 // Mobile (<600px) dikey diziliş — styles.js'te tanımlı.
 
-import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
+import { starsHTML, formatDate, PHOTO_STRIP_THUMB_WIDTH } from '../../core/helpers.js';
+import { getTrustedReviewMedia } from '../../core/review-media.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
-import { wireLightboxTrigger } from '../../reviews-section/lightbox-trigger.js';
+import { createMediaThumbnail } from '../../reviews-section/media-thumbnail.js';
 import { currentSettings } from '../../core/state.js';
 import { LIST_CSS } from './styles.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';
@@ -30,8 +31,8 @@ export var meta = {
 export var css = LIST_CSS;
 
 export function render(r, allReviews) {
-  var trustedImages = getTrustedReviewImages(r);
-  var hasMedia = trustedImages.length > 0;
+  var trustedMedia = getTrustedReviewMedia(r);
+  var hasMedia = trustedMedia.length > 0;
 
   var reviewEl = document.createElement('article');
   reviewEl.className = 'renuvex-pr-review-list' + (hasMedia ? '' : ' renuvex-pr-review-list--no-media');
@@ -91,24 +92,14 @@ export function render(r, allReviews) {
   if (hasMedia) {
     var mediaCol = document.createElement('div');
     mediaCol.className = 'renuvex-pr-review-list-media';
-    trustedImages.forEach(function(imgUrl) {
-      // alt kasıtlı yok: wireLightboxTrigger role=button + aria-label verir (erişilebilir ad orada).
-      var imgEl = document.createElement('img');
-      // Liste sağ kolonu ~90 px, mobile yatay strip aspect 3:4 (styles.js:90).
-      // srcset: 1x/2x retina yedeği. width/height 3:4 oranına uyumlu.
-      var listAttrs = buildResponsiveImgAttrs(imgUrl, PHOTO_STRIP_THUMB_WIDTH);
-      imgEl.src = listAttrs.src;
-      imgEl.srcset = listAttrs.srcset;
-      imgEl.loading = 'lazy';
-      imgEl.decoding = 'async';
-      imgEl.width = PHOTO_STRIP_THUMB_WIDTH;
-      imgEl.height = Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3);
-      imgEl.setAttribute('data-renuvex-img-url', imgUrl);
-      hideOnImageError(imgEl);
-      (function(url) {
-        wireLightboxTrigger(imgEl, function() { openReviewModal(r, url, allReviews); });
-      })(imgUrl);
-      mediaCol.appendChild(imgEl);
+    trustedMedia.forEach(function(item) {
+      var thumb = createMediaThumbnail(item, {
+        sourceWidth: PHOTO_STRIP_THUMB_WIDTH,
+        width: PHOTO_STRIP_THUMB_WIDTH,
+        height: Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3),
+        onOpen: function() { openReviewModal(r, item.url, allReviews); },
+      });
+      if (thumb) mediaCol.appendChild(thumb);
     });
     reviewEl.appendChild(mediaCol);
   }

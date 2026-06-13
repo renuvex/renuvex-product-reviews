@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Check, X, ChevronDown, ChevronUp, MoreVertical, Trash2, MessageSquareX, Reply } from 'lucide-react';
+import { Check, X, ChevronDown, ChevronUp, MoreVertical, Trash2, MessageSquareX, Reply, Play } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { colors, componentStyles, radii, typography } from '@/lib/design-tokens';
-import { Review, COMMENT_LIMIT } from './types';
+import { Review, ReviewMedia, COMMENT_LIMIT } from './types';
 
 interface ReviewRowProps {
   review: Review;
@@ -11,11 +11,11 @@ interface ReviewRowProps {
   onReply: (review: Review) => void;
   onDeleteReply: (id: string) => void;
   onDeleteReview: (id: string) => void;
-  onLightbox: (url: string) => void;
+  onMediaOpen: (media: ReviewMedia) => void;
   renderStars: (n: number) => React.ReactNode;
 }
 
-export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDeleteReview, onLightbox, renderStars }: ReviewRowProps) {
+export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDeleteReview, onMediaOpen, renderStars }: ReviewRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -25,6 +25,21 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
 
   let images: string[] = [];
   try { if (review.images) images = JSON.parse(review.images); } catch (_) {}
+  const media: ReviewMedia[] = review.media?.length
+    ? review.media
+    : images.map((url, position) => ({
+        id: `legacy-${position}`,
+        type: 'image' as const,
+        url,
+        posterUrl: null,
+        durationMs: null,
+        width: null,
+        height: null,
+        position,
+        processingStatus: 'ready',
+        visible: true,
+      }));
+  const hasProcessingVideo = media.some(item => item.type === 'video' && item.processingStatus !== 'ready');
 
   return (
     <div className="flex items-start gap-4 px-6 py-4 hover:bg-muted/30 transition-colors">
@@ -55,12 +70,28 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
           </div>
         )}
 
-        {images.length > 0 && (
+        {media.length > 0 && (
           <div className="mt-2 flex gap-2 flex-wrap">
-            {images.map((img, idx) => (
-              <Image key={idx} src={img} alt="Review" width={48} height={48}
+            {media.map((item) => item.type === 'image' && item.url ? (
+              <Image key={item.id} src={item.url} alt="Yorum görseli" width={48} height={48}
                 className="w-10 h-10 object-cover rounded border border-border cursor-zoom-in"
-                onClick={() => onLightbox(img)} />
+                onClick={() => onMediaOpen(item)} />
+            ) : (
+              <button
+                key={item.id}
+                type="button"
+                className="relative w-10 h-10 overflow-hidden rounded border border-border bg-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={item.processingStatus !== 'ready' || !item.posterUrl}
+                onClick={() => onMediaOpen(item)}
+                aria-label={item.processingStatus === 'ready' ? 'Yorum videosunu aç' : 'Video işleniyor'}
+                title={item.processingStatus === 'ready' ? 'Videoyu oynat' : 'Video işleniyor'}
+              >
+                {item.posterUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.posterUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                )}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/25"><Play size={16} fill="currentColor" /></span>
+              </button>
             ))}
           </div>
         )}
@@ -76,8 +107,9 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
       <div className="flex items-center gap-1.5 shrink-0">
         {review.status !== 'approved' && (
           <button
-            disabled={actionLoading !== null}
-            style={{ ...componentStyles.btnSm, color: colors.primary, borderColor: colors.primary, backgroundColor: 'transparent', display: 'flex', alignItems: 'center', gap: 4, opacity: actionLoading === 'approved' ? 0.6 : 1, cursor: actionLoading !== null ? 'not-allowed' : 'pointer' }}
+            disabled={actionLoading !== null || hasProcessingVideo}
+            title={hasProcessingVideo ? 'Video işlenmeden yorum onaylanamaz.' : undefined}
+            style={{ ...componentStyles.btnSm, color: colors.primary, borderColor: colors.primary, backgroundColor: 'transparent', display: 'flex', alignItems: 'center', gap: 4, opacity: actionLoading === 'approved' || hasProcessingVideo ? 0.6 : 1, cursor: actionLoading !== null || hasProcessingVideo ? 'not-allowed' : 'pointer' }}
             onClick={async () => {
               setActionLoading('approved');
               await onStatusChange(review.id, 'approved');

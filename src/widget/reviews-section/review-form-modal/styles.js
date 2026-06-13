@@ -338,6 +338,105 @@ export var FWIZARD_CSS = `
     box-shadow:none;
     padding:0;
   }
+  .renuvex-pr-fwizard-media-choices{
+    width:100%;
+    max-width:420px;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .renuvex-pr-fwizard-media-choice{
+    min-height:48px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:10px 14px;
+    border:1px solid var(--renuvex-pr-fwizard-input-border,#AFAFAF);
+    border-radius:var(--renuvex-pr-radius-sm,8px);
+    background:var(--renuvex-pr-fwizard-bg,#fff);
+    color:var(--renuvex-pr-fwizard-text,#111);
+    font:inherit;
+    cursor:pointer;
+  }
+  .renuvex-pr-fwizard-media-choice svg{
+    width:20px;
+    height:20px;
+  }
+  .renuvex-pr-fwizard-media-choice--active{
+    border-color:var(--renuvex-pr-fwizard-btn-bg,#111);
+  }
+  .renuvex-pr-fwizard-media-choice:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+  .renuvex-pr-fwizard-media-content{
+    width:100%;
+    max-width:420px;
+  }
+  .renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-step-photos{
+    gap:0;
+  }
+  .renuvex-pr-fwizard-video-card{
+    position:relative;
+    display:grid;
+    grid-template-columns:112px minmax(0,1fr);
+    gap:14px;
+    align-items:center;
+    padding:12px;
+    border:1px solid var(--renuvex-pr-fwizard-input-border,#AFAFAF);
+    border-radius:var(--renuvex-pr-radius,12px);
+  }
+  .renuvex-pr-fwizard-video-preview{
+    width:112px;
+    aspect-ratio:16/10;
+    display:block;
+    object-fit:cover;
+    border-radius:var(--renuvex-pr-radius-sm,8px);
+    background:#111;
+  }
+  .renuvex-pr-fwizard-video-details{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+  }
+  .renuvex-pr-fwizard-video-name{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:14px;
+    font-weight:600;
+  }
+  .renuvex-pr-fwizard-video-status{
+    color:var(--renuvex-pr-fwizard-secondary-text,#6b7280);
+    font-size:13px;
+  }
+  .renuvex-pr-fwizard-video-status--error{
+    color:#b91c1c;
+  }
+  .renuvex-pr-fwizard-video-progress{
+    width:100%;
+    height:6px;
+    accent-color:var(--renuvex-pr-fwizard-btn-bg,#111);
+  }
+  .renuvex-pr-fwizard-video-retry{
+    align-self:flex-start;
+    padding:0;
+    border:0;
+    background:transparent;
+    color:var(--renuvex-pr-fwizard-text,#111);
+    font:inherit;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    text-decoration:underline;
+  }
+  .renuvex-pr-fwizard-video-remove{
+    top:6px;
+    right:6px;
+    border:1px solid rgba(0,0,0,.12);
+  }
   .renuvex-pr-fwizard-photo-remove svg{width:12px;height:12px;}
 
   /* ─── Step 3: İçerik formu (başlık + textarea) ─── */
@@ -606,6 +705,8 @@ export var FWIZARD_CSS = `
   .renuvex-pr-fwizard-star:focus-visible,
   .renuvex-pr-fwizard-photo-add:focus-visible,
   .renuvex-pr-fwizard-photo-remove:focus-visible,
+  .renuvex-pr-fwizard-media-choice:focus-visible,
+  .renuvex-pr-fwizard-video-retry:focus-visible,
   .renuvex-pr-fwizard-submit-btn:focus-visible,
   .renuvex-pr-fwizard-cta-btn:focus-visible,
   .renuvex-pr-fwizard-nav-btn:focus-visible{
@@ -705,6 +806,13 @@ export var FWIZARD_CSS = `
     }
     .renuvex-pr-fwizard-stars{
       gap:8px;
+    }
+    .renuvex-pr-fwizard-video-card{
+      grid-template-columns:88px minmax(0,1fr);
+      gap:10px;
+    }
+    .renuvex-pr-fwizard-video-preview{
+      width:88px;
     }
   }
 

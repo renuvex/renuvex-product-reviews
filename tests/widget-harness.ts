@@ -101,6 +101,8 @@ export function baseReviewsSettings(overrides: Record<string, unknown> = {}): Re
     formStepRatingTitle: 'Bu ürünü nasıl değerlendirirsiniz?',
     formStepPhotosTitle: 'Fotoğraflı değerlendirme',
     formStepPhotosSubtitle: 'Fotoğraf ekleyebilirsiniz.',
+    formStepMediaTitle: 'Fotoğraf veya video ekleyin',
+    formStepMediaSubtitle: 'En fazla 3 fotoğraf veya 60 saniyelik 1 video ekleyebilirsiniz.',
     formStepContentTitle: 'Deneyiminizi anlatın',
     formStepAuthorTitle: 'Hakkınızda',
     ...overrides,

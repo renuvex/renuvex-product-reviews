@@ -5,6 +5,7 @@ import { reconcileStorefrontScripts } from '@/lib/reconcile-storefront-scripts';
 import { reconcileStorefrontThemes } from '@/lib/storefront-theme-sync';
 import { runReviewMediaMetadataBackfill } from '@/lib/review-media-metadata-backfill';
 import { reportCronTaskError } from '@/lib/cron-observability';
+import { reconcileProcessingVideos, redispatchDueMediaJobs } from '@/lib/media/reconciliation';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -33,6 +34,8 @@ export async function GET(request: Request) {
   let storefrontScripts = null;
   let storefrontThemes = null;
   let reviewMediaMetadata = null;
+  let videoReconciliation = null;
+  let mediaJobs = null;
   const runFullMaintenance = shouldRunFullMaintenance(request);
 
   try {
@@ -67,6 +70,22 @@ export async function GET(request: Request) {
       reportCronTaskError('daily-maintenance', 'review-media-metadata-backfill', error);
       errors.push({ task: 'review-media-metadata-backfill', error: message });
     }
+
+    try {
+      videoReconciliation = await reconcileProcessingVideos();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      reportCronTaskError('daily-maintenance', 'video-processing-reconciliation', error);
+      errors.push({ task: 'video-processing-reconciliation', error: message });
+    }
+
+    try {
+      mediaJobs = await redispatchDueMediaJobs();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      reportCronTaskError('daily-maintenance', 'media-job-redispatch', error);
+      errors.push({ task: 'media-job-redispatch', error: message });
+    }
   }
 
   return NextResponse.json(
@@ -77,6 +96,8 @@ export async function GET(request: Request) {
         pendingUploads,
         storefrontScripts,
         reviewMediaMetadata,
+        videoReconciliation,
+        mediaJobs,
         errors,
       },
     },

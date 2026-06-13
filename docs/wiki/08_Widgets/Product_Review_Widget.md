@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-12
-last_verified: 2026-06-12
+updated: 2026-06-13
+last_verified: 2026-06-13
 confidence: high
 tags:
   - widget
@@ -30,6 +30,11 @@ source_files:
   - "src/widget/reviews-section/render/pagination.js"
   - "src/widget/reviews-section/render/handlers.js"
   - "src/widget/reviews-section/reviews-api.js"
+  - "src/widget/reviews-section/media-thumbnail.js"
+  - "src/widget/reviews-section/video-playback.js"
+  - "src/widget/core/review-media.js"
+  - "src/widget/reviews-section/review-form-modal/steps/step-media.js"
+  - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
@@ -46,10 +51,10 @@ The full review block on a product detail page: rating summary (with bar chart f
 Source: [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts).
 
 Recurring categories:
-- General — show/hide widget title, photo gallery title, etc.
+- General — show/hide widget title, photo/media gallery title, etc.
 - Layout — `summaryLayout` (`classic` / `compact` / `hero` / `minimal` / `split`) and `reviewLayout` (`card` / `gallery` / `list`)
 - Pagination — `paginationMode` (`loadMore` button — default — vs `numbered` `1 2 3 …` control)
-- Form — modal wizard fields/colors and auto-approve mode
+- Form — modal wizard fields/colors, auto-approve mode, and gated video-review capability (`videoReviewsEnabled` only works when the server global flag and store quota are also open)
 - Colors (basic + advanced tier)
 - Icons — review icon (star / heart), filter icon (Sliders / Funnel)
 - Ranges — sizes, gaps
@@ -57,17 +62,19 @@ Recurring categories:
 
 ## Render path
 1. `bootstrap.js` runs only from the `reviews-main` product surface and verifies the explicit review mount before heavy work.
-2. Fetches `/api/public/settings` (cached), then calls `reviews-api.js` for `/api/public/reviews` and photoStrip fetches (cached; stale reviews are preferred on failures).
+2. Fetches `/api/public/settings` (cached), then calls `reviews-api.js` for `/api/public/reviews` and the strip fetch (cached; image-only stores use `hasImages=true`, video-enabled stores use `hasMedia=true`; stale reviews are preferred on failures).
 3. Reads layout choice from settings → looks up registry in [summary-layouts/index.js](src/widget/summary-layouts/index.js) and [review-layouts/index.js](src/widget/review-layouts/index.js).
 4. `render.js` composes summary + reviews + CTA. Review fetch errors render a retryable error state and do not reuse the empty-review UI. A true product-empty state (`allCount === 0`) is built by `buildEmptyReviewsState()` in [render/states.js](src/widget/reviews-section/render/states.js), with its own left-aligned semantic `h3` title, 5 empty review icons, explanatory status text, and the write-review CTA. On desktop the CTA sits to the right of the copy; on mobile it becomes a centered full-width button. Filtered-empty state (`allCount > 0` and visible `reviews.length === 0`) stays minimal: summary remains, no write-review CTA is added, and `buildFilteredEmptyReviewsState()` renders a polite status message for assistive technology. State stored in [core/state.js](src/widget/core/state.js).
 5. CTA opens the multi-step submission wizard.
 
 Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merchant/theme-provided mount point `<div data-renuvex-widget="reviews"></div>`. If the mount is missing, the review section does **not** render — placement is opt-in (no auto-create). The PDP rating badge is a separate "badge" feature: it auto-places on the product title and is gated only by the badge widget toggle, so it shows independently of the review-section mount. The review section root is `#renuvex-reviews-widget` (inner container `#renuvex-reviews`); the PDP badge scroll target is `#renuvex-reviews`. `data-renuvex-widget="<type>"` is the canonical public mount scheme for all widgets (e.g. a future carousel uses `data-renuvex-widget="carousel"`). Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 
-## Photo review detail lightbox
+## Media review detail lightbox
 - Detail lightbox source: [review-modal.js](src/widget/reviews-section/review-modal.js). Full note: [[Product_Review_Lightbox]].
-- Entry points include review images inside card/list/gallery layouts and the top photo strip rendered by [render.js](src/widget/reviews-section/render.js). All photo lightbox entry points use [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) so click, `Enter` / `Space`, `role="button"`, `tabindex="0"`, label, and focus-return behavior stay consistent.
+- Entry points include review media inside card/list/gallery layouts and the top strip rendered by [render.js](src/widget/reviews-section/render.js). All media lightbox entry points use [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) so click, `Enter` / `Space`, `role="button"`, `tabindex="0"`, label, and focus-return behavior stay consistent.
 - All photo entry points use trusted image helpers; third-party `https://` URLs and `data:image` payloads are not rendered on storefronts.
+- Video entry points use [core/review-media.js](src/widget/core/review-media.js): storefront renders only trusted Stream HLS/poster URLs from normalized `media[]`; provider ids never reach the widget. Cards/lists/gallery/strip show poster + play badge + optional duration, not autoplaying `<video>` elements.
+- The lightbox uses native `<video controls playsinline preload="metadata">` for Safari/iOS HLS and lazy `hls.js` for other supported browsers. Closing/navigating pauses video, removes sources, and destroys the hls.js instance.
 - In gallery layout, long photo-backed reviews can use the lightbox for full detail; long photo-less reviews expand inline and must not open the photo-only lightbox.
 - This lightbox is separate from the submission wizard under [review-form-modal/](src/widget/reviews-section/review-form-modal/).
 - Open audit risks are tracked in [[Bug_Review_Detail_Lightbox_Risks]].
@@ -77,24 +84,28 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Steps managed in [reviews-section/review-form-modal/wizard-state.js](src/widget/reviews-section/review-form-modal/wizard-state.js).
 - The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Open focuses the dialog container, first `Tab` enters the active step, step changes do not auto-focus inputs, and close returns focus to the opening control for keyboard opens. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]] and [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary under `review_images/stores/<storeId>`.
+- Video V1 is opt-in and gated by global flag + merchant setting + store monthly quota. When effective, step 2 becomes a media step ([step-media.js](src/widget/reviews-section/review-form-modal/steps/step-media.js)): users can add **3 photos OR 1 video**, never mixed media in v1.
+- Videos upload through [media/video-upload.js](src/widget/reviews-section/review-form-modal/media/video-upload.js): client validates MP4/MOV, <=150MB, known 2-60s duration, then uses server-authorized R2 multipart upload (10MiB parts, max 3 parallel, retry/resume via stored session token). Server and Stream remain authoritative; client validation is only fast feedback.
+- Preview mode never calls Cloudflare. The wizard simulates upload/progress/processing/ready states deterministically.
 - Photo step allows **parallel uploads** — the add button stays enabled while existing uploads are in flight. Each pending upload is tracked independently in `pendingImages`. The submission step blocks submit with a "fotoğraflar yükleniyor" message until every pending upload resolves. Upper bound `MAX_PHOTOS=3` is enforced across completed + pending so parallel selection never exceeds the cap.
 - Local preview `blob:` URLs are owned by the modal lifecycle: pending, completed-preview-map, and preview-mode blobs are revoked on close. Removing a photo updates wizard state before revoking the local URL, and deleting one pending upload skips only that upload's state update instead of aborting the rest of the selected batch. Related bug: [[Bug_Review_Wizard_Photo_Upload_Lifecycle]].
 - Auto-jump to the next step fires only on the user's first real photo action (no completed, no pending). Returning to the photo step to add more keeps the user on that step.
-- On submit → `POST /api/public/reviews`; image URLs are validated against the trusted Cloudinary policy before storage, then status is set by auto-approve mode.
+- On submit → `POST /api/public/reviews`; image URLs are validated against the trusted Cloudinary policy before storage. A ready video token is validated against store/product/session ownership, consumes the pending video, forces `Review.status='pending'`, and waits for admin moderation before public visibility.
 - The legacy inline/page form was removed; all review CTAs open the multi-step modal.
 
 ## Pagination, filtering, sorting
 - Pagination: 10 per page (server-side); `limit` query param clamped 1-30 for ad-hoc fetches (photo strip uses 15).
 - Sort: `newest` / `highest` / `lowest`.
-- Filter: by rating (1..5), by `hasImages=true`. Backend uses indexed `Review.hasImages`; it must not scan legacy `Review.images` text. The rating filter is driven by the summary bar chart ([summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js)); a bar with **zero reviews is not interactive** (no `role="button"`, not focusable, no hover, `cursor:default`), so a click can't land on an empty "Henüz yorum yok" result — only bars that actually have reviews filter (Looox-style).
+- Filter: by rating (1..5), by `hasImages=true`. Backend uses indexed `Review.hasImages`; it must not scan legacy `Review.images` text. Internal media-strip fetch can use `hasMedia=true` (`hasImages OR hasVideo`) when video is effectively enabled; this is separate from the public photo filter UI. The rating filter is driven by the summary bar chart ([summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js)); a bar with **zero reviews is not interactive** (no `role="button"`, not focusable, no hover, `cursor:default`), so a click can't land on an empty "Henüz yorum yok" result — only bars that actually have reviews filter (Looox-style).
 - Bar chart in summary uses filter-independent `ratingCounts` returned by `/api/public/reviews`. Aggregate fields (`allCount`, `avgRating`, `ratingCounts`) and exact `totalCount` / `totalPages` for rating/photo filters come from the backend `ProductReviewSummary` read model; only the visible review rows come from `Review`. See [[ADR_0026_Product_Review_Summary_Read_Model]].
-- Review response `images` is still a string array for widget compatibility. The API now reads normalized `ReviewMedia` rows first and falls back to legacy `Review.images` during migration/backfill. Additive `media[]` entries expose thumbnail URL and nullable metadata for future media-heavy layouts; current widget visuals still use the existing image contract. See [[ADR_0027_Review_Media_Read_Model]] and [[ADR_0029_Review_Media_Metadata]].
+- Review response `images` is still a string array for widget compatibility and remains image-only. The widget now prefers additive `media[]` for media-aware layouts and falls back to legacy `images[]` for images. Video entries expose only normalized playback/poster/duration/display fields, never provider ids. See [[ADR_0027_Review_Media_Read_Model]], [[ADR_0029_Review_Media_Metadata]], and [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - Load-more: the first page uses the legacy `page=1` request and stores `data.nextCursor`; subsequent "Daha Fazla Goster" requests use `cursor` when available and fall back to `page + 1` only for backwards compatibility. Sort/filter/retry/product changes reset the cursor. See [[ADR_0028_Review_Cursor_Pagination]].
 - **Pagination mode (merchant-selectable, `paginationMode`):** the Tasarım accordion offers `loadMore` (default — the cursor-append "Daha Fazla" button above) or `numbered`. Numbered uses the **offset** path (`page=N`, no cursor) via [render/pagination.js](src/widget/reviews-section/render/pagination.js): `buildPageList` is a pure windowed/ellipsis builder (all pages if `totalPages ≤ 7`, else first/last + current ±1 with `…`); `onPageChange` (in [render/handlers.js](src/widget/reviews-section/render/handlers.js)) re-fetches page N and **replaces** the list (not append), then scrolls the section to top. The control hides when `totalPages ≤ 1`, sits in document flow under the list (not sticky), and sort/filter reset it to page 1. Activating a page disables the whole control (`aria-busy` + dimmed) until the new render replaces it; after render, focus is restored to the new active page button (`preventScroll`, since the full re-render would otherwise drop focus to `<body>`) and a persistent shadow-root live region politely announces "Sayfa N". The scroll-to-top honors `prefers-reduced-motion`. The **active page is a filled box** with its own explicit colors — `paginationActiveBgColor` (fill, default `#111111`) and `paginationActiveTextColor` (number, default `#ffffff`) — independent of the passive `paginationBgColor` / `paginationTextColor`. Every pagination color is an explicit setting (no auto-derivation). Font weight matches the other buttons (the fill is the sole distinction). Colors live in the "Sayfalama" color group (`showWhen paginationMode === 'numbered'`); load-more colors are gated to `loadMore`. Honest trade-off: numbered re-introduces offset cost at deep pages (`totalPages` itself stays cheap from `ProductReviewSummary`). See [[Widget_Customization]] and [[ADR_0028_Review_Cursor_Pagination]].
 - `Widget Boyutu` (`size`) is also the single source for list-pagination control sizing. Desktop load-more and numbered pagination use compact boxes. Mobile/coarse-pointer layouts use the same visible box as the clickable target, so there is no invisible hit area around dense page numbers; the mobile targets still scale by size and remain above the WCAG 2.2 24px minimum. No separate pagination-size admin setting exists, and centered wrap behavior stays unchanged.
 
-## Photo strip
-- Dedicated horizontal strip above the review list, populated by a separate `hasImages=true&limit=15&orderBy=newest` fetch, independent of sort/filter/load-more.
+## Photo / media strip
+- Dedicated horizontal strip above the review list, independent of sort/filter/load-more.
+- Image-only stores keep the existing `hasImages=true&limit=15&orderBy=newest` fetch. Video-enabled stores use `hasMedia=true&limit=15&orderBy=newest` so approved video posters can appear in the same strip without changing the public photo filter.
 - Cap fixed at 15 (no admin setting), newest-first rotation.
 - Full doc: [[Photo_Strip]]. Decision: [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
 
@@ -129,6 +140,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-13: Began Review Video V1 implementation behind closed gates. Added provider-agnostic storefront media normalization, poster/play/duration thumbnails for card/list/gallery/strip, video-aware lightbox playback with native iOS/Safari HLS + lazy hls.js, a wizard media step with simulated preview upload and real multipart client path, and admin moderation/private playback plumbing. Public `images[]` remains image-only; `media[]` is the video-capable contract. Related: [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - 2026-06-12: Review pagination sizing was revised again after mobile UX review: desktop load-more/numbered controls remain compact, while mobile now uses the visible control box as the clickable target instead of adding an invisible 44px halo around dense page numbers. Runtime smoke covers desktop size, mobile clickable/visible size, focus ring placement, and overflow.
 - 2026-06-12: Load-more and numbered pagination physical control sizes now follow `Widget Boyutu` through shared root CSS variables. The existing `size` setting remains the only size control; mobile/coarse pointer layouts keep centered wrapping pagination and use compact visible targets rather than a separate invisible hit area. Runtime smoke covers load-more sizing, numbered pagination sizing, and mobile overflow.
 - 2026-06-11: Product-empty review UI (`allCount === 0`) moved into `buildEmptyReviewsState()` in [render/states.js](src/widget/reviews-section/render/states.js), then upgraded to the empty-product design: left-aligned semantic `h3` title, 5 empty review icons, explanatory `role="status"` / `aria-live="polite"` text, and a hero/minimal-style CTA (right-aligned on desktop, centered full-width on mobile). Widget-runtime smoke pins the empty-state contract including custom `writeButtonText`, semantic title markup, and responsive CTA layout. The shared `partialStarsHTML()` helper falls back to the default star icon pair when called without an icon pair, so reusable state builders do not render blank decorative icons in standalone use.

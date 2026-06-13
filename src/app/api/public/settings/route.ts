@@ -5,6 +5,7 @@ import { buildPublicThemeRuntime, parseStorefrontThemeState } from '@/lib/storef
 import { syncStorefrontThemeForToken } from '@/lib/storefront-theme-sync';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { getWidgetDefaults, sanitizeSettings } from '@/lib/widget-settings';
+import { isVideoReviewsGloballyEnabled } from '@/lib/media/config';
 
 // ADR_0022: ikas does not expose a `store/theme/*` webhook scope (Admin API
 // introspection 2026-05-27 lists only 10 webhook scopes, none storefront/theme
@@ -59,7 +60,14 @@ export async function GET(req: Request) {
   const widgets: Record<string, unknown> = {};
   for (const row of rows) {
     const savedSettings = sanitizeSettings(row.widgetId, row.settings as Record<string, unknown>);
-    widgets[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
+    const publicSettings = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
+    if (row.widgetId === 'reviews') {
+      publicSettings.videoReviewsEnabled =
+        isVideoReviewsGloballyEnabled() &&
+        savedSettings.videoReviewsEnabled === true &&
+        store.videoMonthlyLimit > 0;
+    }
+    widgets[row.widgetId] = publicSettings;
   }
 
   // ADR_0022 — Storefront-driven lazy theme resync. Stale check happens

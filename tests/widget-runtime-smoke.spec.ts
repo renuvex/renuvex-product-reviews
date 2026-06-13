@@ -77,6 +77,7 @@ type RuntimeReview = {
   author?: string;
   createdAt?: string;
   images?: string[];
+  media?: Array<Record<string, unknown>>;
   merchantReply?: string | null;
   recommendation?: boolean;
 };
@@ -151,6 +152,21 @@ const CONTROL_SIZE_CASES = [
 
 function trustedReviewImage(name: string, storeId = PUBLIC_KEY): string {
   return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${storeId}/${name}.jpg`;
+}
+
+function trustedReviewVideoMedia(name: string, position = 0): Record<string, unknown> {
+  const uid = `${name}-uid`;
+  const posterUrl = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
+  return {
+    type: 'video',
+    url: `https://videodelivery.net/${uid}/manifest/video.m3u8`,
+    posterUrl,
+    thumbnailUrl: posterUrl,
+    durationMs: 45_000,
+    width: 1080,
+    height: 1920,
+    position,
+  };
 }
 
 function runtimeReview(input: RuntimeReview): Record<string, unknown> {
@@ -1505,6 +1521,54 @@ test('list review item photo keeps the medium 3:4 portrait box in a tall row', a
   expect(box.width).toBeLessThan(115);
   expect(box.height).toBeGreaterThan(142);
   expect(box.height).toBeLessThan(152);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('video-enabled media strip uses hasMedia and renders poster thumbnails without list video preload', async ({ page }) => {
+  await page.route('https://videodelivery.net/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'image/svg+xml; charset=utf-8' },
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"><rect width="160" height="90" fill="#111"/></svg>',
+    });
+  });
+  let sawMediaStripRequest = false;
+  let sawImageStripRequest = false;
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      videoReviewsEnabled: true,
+      thumbnailSize: 'medium',
+    },
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      const hasMedia = url.searchParams.get('hasMedia') === 'true';
+      const hasImages = url.searchParams.get('hasImages') === 'true';
+      sawMediaStripRequest = sawMediaStripRequest || hasMedia;
+      sawImageStripRequest = sawImageStripRequest || hasImages;
+      if (hasMedia) {
+        await fulfillJson(route, reviewsPayload([
+          { id: 'strip-video', title: 'Strip video', images: [], media: [trustedReviewVideoMedia('strip-video')] },
+        ], { allCount: 2, totalCount: 1 }));
+        return;
+      }
+      await fulfillJson(route, reviewsPayload([
+        { id: 'card-video', title: 'Card video', images: [], media: [trustedReviewVideoMedia('card-video')] },
+      ], { allCount: 2, totalCount: 2 }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-media-video-thumb')).toBeGreaterThanOrEqual(2);
+  await waitForWidgetIdle(page);
+
+  expect(sawMediaStripRequest).toBe(true);
+  expect(sawImageStripRequest).toBe(false);
+  expect(await countInReviewsShadow(page, '.renuvex-pr-review-card video, .renuvex-pr-photo-strip video')).toBe(0);
+  expect(log.urls.some((url) => url.includes('/manifest/video.m3u8'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 

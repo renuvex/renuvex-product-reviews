@@ -95,11 +95,13 @@ export function createStepAuthor(state, opts) {
     var disabled = !isValid();
     var pendingCount = (state.get().pendingImages || []).length;
     var isUploading = pendingCount > 0;
+    var video = state.get().videoUpload;
+    var isVideoPending = !!(video && video.status !== 'ready');
 
-    if (isUploading) {
+    if (isUploading || isVideoPending) {
       submitBtn.disabled = true;
       submitBtn.classList.add('renuvex-pr-fwizard-submit-btn--disabled');
-      submitBtn.textContent = 'Fotoğraflar Yükleniyor...';
+      submitBtn.textContent = isVideoPending ? 'Video Hazırlanıyor...' : 'Fotoğraflar Yükleniyor...';
     } else {
       submitBtn.disabled = disabled;
       submitBtn.classList.toggle('renuvex-pr-fwizard-submit-btn--disabled', disabled);
@@ -162,7 +164,10 @@ export function createStepAuthor(state, opts) {
 
     // Preview modunda submit simüle et (validasyonlar geçtikten sonra)
     if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
-      setTimeout(function () { onSuccess(); }, 600);
+      setTimeout(function () {
+        if (s.videoUpload && s.videoUpload.status === 'ready') state.set({ videoSubmitted: true });
+        onSuccess();
+      }, 600);
       return;
     }
 
@@ -184,11 +189,13 @@ export function createStepAuthor(state, opts) {
           title: (s.title || '').trim() || null,
           comment: comment || null,
           rating: s.rating,
-          images: s.images || [],
+          images: s.videoUpload ? [] : (s.images || []),
+          videoToken: s.videoUpload && s.videoUpload.status === 'ready' ? s.videoUpload.token : null,
           // NOT: email payload'a eklenmedi — faz 2 (verified buyer)
         }),
       }, 15000);
       if (r.ok) {
+        if (s.videoUpload && s.videoUpload.status === 'ready') state.set({ videoSubmitted: true });
         onSuccess();
       } else {
         var err = await r.json().catch(function () { return {}; });

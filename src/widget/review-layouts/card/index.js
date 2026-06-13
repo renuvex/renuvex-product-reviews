@@ -3,9 +3,10 @@
 // DOM order: stars/date -> title -> author -> body -> photos -> merchant reply.
 // Card visual CSS lives in styles.js; shared review primitives stay in the base stylesheet.
 
-import { starsHTML, formatDate, getTrustedReviewImages, PHOTO_STRIP_THUMB_WIDTH, buildResponsiveImgAttrs, hideOnImageError } from '../../core/helpers.js';
+import { starsHTML, formatDate, PHOTO_STRIP_THUMB_WIDTH } from '../../core/helpers.js';
+import { getTrustedReviewMedia } from '../../core/review-media.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
-import { wireLightboxTrigger } from '../../reviews-section/lightbox-trigger.js';
+import { createMediaThumbnail } from '../../reviews-section/media-thumbnail.js';
 import { currentSettings } from '../../core/state.js';
 import { buildReplyEl, buildClampedBody } from '../_shared.js';
 import { CARD_REVIEW_CSS } from './styles.js';
@@ -69,27 +70,19 @@ export function render(r, allReviews) {
     reviewEl.appendChild(buildClampedBody(comment, 'renuvex-pr-body').fragment);
   }
 
-  var trustedImages = getTrustedReviewImages(r);
-  if (trustedImages.length) {
+  var trustedMedia = getTrustedReviewMedia(r);
+  if (trustedMedia.length) {
     var gallery = document.createElement('div');
     gallery.className = 'renuvex-pr-gallery';
-    trustedImages.forEach(function(imgUrl) {
-      // alt kasıtlı yok: wireLightboxTrigger role=button + aria-label verir (erişilebilir ad orada).
-      var imgEl = document.createElement('img');
-      var cardAttrs = buildResponsiveImgAttrs(imgUrl, PHOTO_STRIP_THUMB_WIDTH);
-      imgEl.src = cardAttrs.src;
-      imgEl.srcset = cardAttrs.srcset;
-      imgEl.loading = 'lazy';
-      imgEl.decoding = 'async';
-      imgEl.width = PHOTO_STRIP_THUMB_WIDTH;
-      imgEl.height = PHOTO_STRIP_THUMB_WIDTH;
-      imgEl.className = 'renuvex-pr-img';
-      hideOnImageError(imgEl);
-      imgEl.setAttribute('data-renuvex-img-url', imgUrl);
-      (function(url) {
-        wireLightboxTrigger(imgEl, function() { openReviewModal(r, url, allReviews); });
-      })(imgUrl);
-      gallery.appendChild(imgEl);
+    trustedMedia.forEach(function(item) {
+      var thumb = createMediaThumbnail(item, {
+        className: 'renuvex-pr-img',
+        sourceWidth: PHOTO_STRIP_THUMB_WIDTH,
+        width: PHOTO_STRIP_THUMB_WIDTH,
+        height: PHOTO_STRIP_THUMB_WIDTH,
+        onOpen: function() { openReviewModal(r, item.url, allReviews); },
+      });
+      if (thumb) gallery.appendChild(thumb);
     });
     reviewEl.appendChild(gallery);
   }

@@ -136,9 +136,14 @@ Video reuses the same durable media lifecycle as review images ([[ADR_0012_Pendi
 4. A video-bearing submission forces `Review.status='pending'`.
 5. Public reads expose media only when `Review.status='approved'` **and** `ReviewMedia.visible=true`.
 6. Abandoned pending video assets are deleted by pending cleanup.
-7. Deleted/hidden review media is cleaned through **provider-specific adapter cleanup**.
+7. Deleted/hidden review media is cleaned through **provider-specific adapter cleanup** and queued provider jobs.
 8. Cleanup is **idempotent and provider-aware**: Cloudinary image, Cloudflare Stream `uid`, and the R2 master object are each removed through separate adapter operations; the **transient public R2 ingest copy is deleted immediately after the Stream `ready` webhook** and must never persist (else the raw master would be publicly readable — §1).
+   Expired Cloudinary pending-image cleanup also uses the shared `MediaProviderJob` outbox, so provider identity is retained until deletion succeeds or reaches manual-review/dead-letter state.
 9. Storefront read paths **never** call provider Admin APIs (read-model only).
+10. Session failure/cancel state and its cleanup `MediaProviderJob` are written in the **same DB transaction**. QStash only wakes the durable DB outbox; it is not the lifecycle source of truth.
+11. Stream publication mutations are serialized per provider asset with an expiring DB lease and fencing version. A stale approve/reject job re-reads the latest DB-visible intent and converges Stream before it can become the final provider state.
+12. Quota accounting uses an explicit `reserved -> released|consumed` state transition. Failed, aborted, or expired unfinished uploads release once; a successfully processed video remains consumed even if moderation later rejects it because provider cost has already occurred.
+13. The transient public ingest key and a deadline cleanup job are persisted before the public copy is created. Cleanup checks Stream state after 60 minutes, defers while Stream is still fetching, and enforces a 23-hour application deadline; the bucket's 24-hour lifecycle is only the final backstop.
 
 ### 9. Admin & widget UX contract
 Video is a **vertical feature** — admin setting + wizard + moderation UI + public render ship together, not backend-only.
@@ -168,6 +173,7 @@ Video is a **vertical feature** — admin setting + wizard + moderation UI + pub
 - **Nullable `publicId` + `@@unique([provider, providerAssetId])` for asset identity:** considered and rejected for v1 — `PendingReviewImage.publicId` is the `@id` primary key, so a pending video row still needs a non-null key; the provider-scoped `publicId` (only video prefixed) solves the PK cleanly and needs no image-row migration. The composite-unique remains available as an optional secondary index for lookups.
 
 ## Consequences
+- **Provider cleanup outbox:** video cleanup and expired Cloudinary pending-image cleanup both run through `MediaProviderJob`. Failed provider deletes keep their DB identity for retry/reconciliation instead of deleting registry rows first.
 - **Schema:** additive migration (new nullable/defaulted columns on `ReviewMedia` + `PendingReviewImage`, `Review.hasVideo`); one safe deploy. `Review.images` legacy mirror and the public `images[]` contract are untouched ([[ADR_0027_Review_Media_Read_Model]] / [[ADR_0029_Review_Media_Metadata]]).
 - **New code:** a `MediaProvider` adapter interface (`uploadToken` / `onWebhook` / `deleteAsset` / `buildPlaybackUrl` / `buildPosterUrl`); `POST /api/public/upload/video-token`; `POST /api/webhooks/stream`; media-aware generalization of `review-media.ts`, `review-images.ts`/`core/helpers.js` trust, and the lightbox/strip render; a new wizard media step affordance ("Video Ekle").
 - **Runtime (decision A):** R2 + Stream are integrated from the existing Next.js/Vercel API routes over HTTP — R2 via the S3-compatible API + presigned URLs, Stream via REST + signed webhook. No Cloudflare Worker, Wrangler, or R2/Stream bindings are introduced (those are Worker-only and unnecessary here).

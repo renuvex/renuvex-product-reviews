@@ -1,10 +1,16 @@
 import type { Prisma } from '@prisma/client';
 import { buildReviewImageThumbnailUrl, getReviewImagePublicId, isTrustedReviewImageUrl, parseStoredReviewImages } from '@/lib/review-images';
+import { isTrustedStreamDeliveryUrl } from '@/lib/media/providers/cloudflare-stream';
 import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 
 export type PublicReviewMediaRow = {
   url: string;
   position: number;
+  resourceType?: string | null;
+  provider?: string | null;
+  providerAssetId?: string | null;
+  posterUrl?: string | null;
+  durationMs?: number | null;
   width?: number | null;
   height?: number | null;
   format?: string | null;
@@ -41,8 +47,11 @@ export function buildReviewMediaCreateManyData(input: ReviewMediaWriteInput): Pr
 }
 
 export type PublicReviewMedia = {
+  type: 'image' | 'video';
   url: string;
   thumbnailUrl: string | null;
+  posterUrl: string | null;
+  durationMs: number | null;
   position: number;
   width: number | null;
   height: number | null;
@@ -54,8 +63,11 @@ export type PublicReviewMedia = {
 function publicMediaFromUrl(url: string, position: number, cloudName: string | null, storeId: string): PublicReviewMedia | null {
   if (!isTrustedReviewImageUrl(url, cloudName, storeId)) return null;
   return {
+    type: 'image',
     url,
     thumbnailUrl: buildReviewImageThumbnailUrl(url, cloudName, storeId),
+    posterUrl: null,
+    durationMs: null,
     position,
     width: null,
     height: null,
@@ -74,11 +86,34 @@ export function publicMediaFromMediaOrLegacy(
   const mediaItems = (media ?? [])
     .slice()
     .sort((a, b) => a.position - b.position)
-    .flatMap((item) => {
+    .flatMap<PublicReviewMedia>((item) => {
+      if (item.resourceType === 'video') {
+        if (item.provider !== 'cloudflare_stream') return [];
+        if (!isTrustedStreamDeliveryUrl(item.url, item.providerAssetId)) return [];
+        if (!item.posterUrl || !isTrustedStreamDeliveryUrl(item.posterUrl, item.providerAssetId)) return [];
+        return [{
+          type: 'video' as const,
+          url: item.url,
+          thumbnailUrl: item.posterUrl,
+          posterUrl: item.posterUrl,
+          durationMs: item.durationMs ?? null,
+          position: item.position,
+          width: item.width ?? null,
+          height: item.height ?? null,
+          format: item.format ?? null,
+          mimeType: item.mimeType ?? null,
+          bytes: item.bytes ?? null,
+        }];
+      }
+      if (item.resourceType && item.resourceType !== 'image') return [];
+      if (item.provider && item.provider !== 'cloudinary') return [];
       if (!isTrustedReviewImageUrl(item.url, cloudName, storeId)) return [];
       return [{
+        type: 'image' as const,
         url: item.url,
         thumbnailUrl: buildReviewImageThumbnailUrl(item.url, cloudName, storeId),
+        posterUrl: null,
+        durationMs: null,
         position: item.position,
         width: item.width ?? null,
         height: item.height ?? null,
@@ -102,5 +137,7 @@ export function publicImagesFromMediaOrLegacy(
   cloudName: string | null,
   storeId: string,
 ): string[] {
-  return publicMediaFromMediaOrLegacy(media, legacyImages, cloudName, storeId).map((item) => item.url);
+  return publicMediaFromMediaOrLegacy(media, legacyImages, cloudName, storeId)
+    .filter((item) => item.type === 'image')
+    .map((item) => item.url);
 }

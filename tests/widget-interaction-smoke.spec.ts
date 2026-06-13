@@ -11,6 +11,7 @@ import {
   hasOverlay,
   hasReviewsWidget,
   isOverlayControlDisabled,
+  setupPreviewRoutes,
   setupWidgetRoutes,
   textInOverlay,
   widgetErrors,
@@ -85,6 +86,25 @@ async function blobAudit(page: Page) {
     };
     return win.__renuvexBlobAudit || { created: [], revoked: [] };
   });
+}
+
+async function stubVideoMetadata(page: Page, durationSeconds: number) {
+  await page.addInitScript((durationSeconds) => {
+    const nativeCreateElement = document.createElement.bind(document);
+    document.createElement = ((tagName: string, options?: ElementCreationOptions) => {
+      const element = nativeCreateElement(tagName, options);
+      if (String(tagName).toLowerCase() === 'video') {
+        setTimeout(() => {
+          Object.defineProperty(element, 'duration', { configurable: true, get: () => durationSeconds });
+          const event = new Event('loadedmetadata');
+          const video = element as HTMLVideoElement;
+          if (typeof video.onloadedmetadata === 'function') video.onloadedmetadata(event);
+          element.dispatchEvent(event);
+        }, 0);
+      }
+      return element;
+    }) as typeof document.createElement;
+  }, durationSeconds);
 }
 
 async function countInOverlay(page: Page, overlaySelector: string, selector: string) {
@@ -558,6 +578,203 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
     images: [uploadedUrl],
   });
   expect((submittedBodies[0].images as string[]).every((url) => !url.startsWith('blob:'))).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('video upload wizard posts a ready video token without photo media', async ({ page }) => {
+  await stubVideoMetadata(page, 12);
+  const submittedBodies: Array<Record<string, unknown>> = [];
+  const initiateBodies: Array<Record<string, unknown>> = [];
+  const partsBodies: Array<Record<string, unknown>> = [];
+  const completeBodies: Array<Record<string, unknown>> = [];
+  const videoToken = 'video-token-opaque-abcdefghijklmnopqrstuvwxyz1234567890';
+  let r2PutCalls = 0;
+
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      videoReviewsEnabled: true,
+      formStepMediaTitle: 'Medya ekle',
+      formStepMediaSubtitle: 'Fotoğraf veya kısa video ekleyebilirsiniz.',
+    },
+    reviewSubmitHandler: async (route) => {
+      submittedBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
+      await route.fulfill({
+        status: 201,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ message: 'Yorum alindi', data: { id: 'submitted-video-review', status: 'pending' } }),
+      });
+    },
+  });
+
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+    initiateBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          token: videoToken,
+          partSize: 10 * 1024 * 1024,
+          partCount: 1,
+          maxParallelParts: 3,
+          expiresAt: '2099-01-01T00:00:00.000Z',
+        },
+      }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/parts**`, async (route) => {
+    partsBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          completed: [],
+          parts: [{ partNumber: 1, uploadUrl: 'https://r2-upload.test/review-video/part-1' }],
+        },
+      }),
+    });
+  });
+  await page.route('https://r2-upload.test/**', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'PUT,OPTIONS',
+          'Access-Control-Allow-Headers': '*',
+          'Access-Control-Expose-Headers': 'ETag',
+        },
+        body: '',
+      });
+      return;
+    }
+    r2PutCalls += 1;
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'ETag',
+        ETag: '"part-1-etag"',
+      },
+      body: '',
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+    completeBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ data: { status: 'processing' } }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          status: 'ready',
+          durationMs: 12000,
+          posterUrl: 'https://customer-test.cloudflarestream.com/poster.jpg',
+        },
+      }),
+    });
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Medya ekle');
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-choice:nth-child(1) span')).toBe('Fotoğraf Ekle');
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-choice:nth-child(2) span')).toBe('Video Ekle');
+
+  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
+    name: 'review-video.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]),
+  });
+  await expect.poll(() => initiateBodies.length).toBe(1);
+  await expect.poll(() => r2PutCalls).toBe(1);
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
+
+  await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-textarea', 'Video upload contract check.');
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-next');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-author')).toBe(true);
+  await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-author input[type="text"]', 'Mert');
+  await expect.poll(() => isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn')).toBe(false);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-thanks')).toBe(true);
+
+  expect(initiateBodies[0]).toMatchObject({
+    storeId: PUBLIC_KEY,
+    productId: 'product-1',
+    mimeType: 'video/mp4',
+    bytes: 12,
+  });
+  expect(partsBodies).toEqual([
+    { token: videoToken },
+    { token: videoToken, partNumbers: [1] },
+  ]);
+  expect(completeBodies).toEqual([{ token: videoToken, parts: [{ partNumber: 1, etag: '"part-1-etag"' }] }]);
+  expect(submittedBodies).toHaveLength(1);
+  expect(submittedBodies[0]).toMatchObject({
+    storeId: PUBLIC_KEY,
+    productId: 'product-1',
+    author: 'Mert',
+    comment: 'Video upload contract check.',
+    rating: 5,
+    images: [],
+    videoToken,
+  });
+  expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('cloudflare.com/client/v4'))).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('preview video media step simulates upload without public video endpoints', async ({ page }) => {
+  await stubVideoMetadata(page, 10);
+  let publicVideoUploadCalls = 0;
+  const log = await setupPreviewRoutes(page, {
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      videoReviewsEnabled: true,
+      formStepMediaTitle: 'Önizleme medya',
+      formStepMediaSubtitle: 'Fotoğraf veya video ekleyebilirsiniz.',
+    },
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/**`, async (route) => {
+    publicVideoUploadCalls += 1;
+    await route.fulfill({
+      status: 500,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ error: 'preview_must_not_call_public_video_upload' }),
+    });
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/preview`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Önizleme medya');
+
+  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
+    name: 'preview-video.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
+  });
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
+
+  expect(publicVideoUploadCalls).toBe(0);
+  expect(log.urls.some((url) => url.includes('/api/public/upload/video/'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 

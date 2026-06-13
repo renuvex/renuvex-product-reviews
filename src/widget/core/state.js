@@ -17,6 +17,8 @@ export var loadedLightboxReviews = [];
 // çağrısıyla bir kere doldurulur, sort/filter/load-more değişikliklerinde yeniden
 // fetch edilmez. Strateji A (newest-first rotation): yeni onaylı fotoğraflı yorumlar
 // REVIEWS_CACHE_TTL (1 dk) süresince stale kalır, sonra otomatik yenilenir.
+// The legacy state name is retained for compatibility. Video-enabled stores
+// populate it with the provider-agnostic `hasMedia` query.
 export var photoStripReviews = [];
 
 export function setCurrentOrderBy(v) { currentOrderBy = v; }

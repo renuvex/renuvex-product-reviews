@@ -24,4 +24,5 @@ export {
   UI_CLOSE,
   PHOTO_ICON,
   PLUS_ICON,
+  PLAY_ICON,
 } from './ui-icons.js';

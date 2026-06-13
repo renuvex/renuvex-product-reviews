@@ -38,6 +38,7 @@ async function collectReviews(storeId, productId) {
       images: true,
       hasImages: true,
       media: {
+        where: { provider: 'cloudinary', resourceType: 'image' },
         select: {
           id: true,
           publicId: true,
@@ -66,8 +67,12 @@ async function collectConsistency(storeId, productId) {
       FROM "ReviewMedia" m
       LEFT JOIN "Review" r ON r.id = m."reviewId"
       WHERE r.id IS NULL
+        AND m."provider" = 'cloudinary'
+        AND m."resourceType" = 'image'
     `,
-    prisma.reviewMedia.count({ where }),
+    prisma.reviewMedia.count({
+      where: { ...where, provider: 'cloudinary', resourceType: 'image' },
+    }),
   ]);
 
   const exact = new Map(hasImagesGroups.map((row) => [`${row.storeId}\u0000${row.productId}`, row._count._all]));

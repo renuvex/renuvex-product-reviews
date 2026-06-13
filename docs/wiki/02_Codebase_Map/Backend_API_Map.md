@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-06-13
+last_verified: 2026-06-13
 confidence: high
 tags:
   - api
@@ -26,6 +26,20 @@ source_files:
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
+  - "src/lib/media/access.ts"
+  - "src/lib/media/config.ts"
+  - "src/lib/media/constants.ts"
+  - "src/lib/media/jobs.ts"
+  - "src/lib/media/moderation.ts"
+  - "src/lib/media/moderation-intent.ts"
+  - "src/lib/media/providers/cloudflare-stream.ts"
+  - "src/lib/media/providers/cloudinary-image.ts"
+  - "src/lib/media/providers/r2.ts"
+  - "src/lib/media/reconciliation.ts"
+  - "src/lib/media/sessions.ts"
+  - "src/lib/media/stream-webhook.ts"
+  - "src/lib/media/video-policy.ts"
+  - "src/lib/media/video-processing.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
   - "scripts/backfill-review-media.mjs"
   - "scripts/audit-legacy-review-media.mjs"
@@ -49,6 +63,7 @@ Three groups of API routes:
 | GET `/api/admin/reviews?page&limit&status` | [route.ts](src/app/api/admin/reviews/route.ts) | Paginated reviews for `merchantId` |
 | PUT `/api/admin/reviews` `{ id, status?, merchantReply? }` | same | Update status / reply |
 | DELETE `/api/admin/reviews?id=` | same | Hard delete |
+| GET `/api/admin/reviews/video-playback?mediaId=` | [route.ts](src/app/api/admin/reviews/video-playback/route.ts) | Short-lived signed HLS URL for pending/admin video preview. Provider ids stay server-side. |
 | GET `/api/admin/settings` | [route.ts](src/app/api/admin/settings/route.ts) | All widget settings as map (defaults merged) |
 | PUT `/api/admin/settings` `{ widgetId, settings }` | same | Validate + sanitize + upsert into `WidgetSettings`; schedules lightweight storefront theme sync after the response |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
@@ -68,13 +83,18 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | Method + Path | Source | Purpose |
 |---|---|---|
 | OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
-| GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&limit&cursor` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. Exact `totalCount` / `totalPages` for unfiltered, rating, photo, and rating+photo filters come from summary buckets, not raw `Review.count()`. Legacy `page/limit` remains supported; responses include signed `nextCursor` and cursor requests use keyset pagination without `skip`. Tampered, unsigned, or context-mismatched cursors return `400`. `hasImages=true` uses indexed `Review.hasImages`; response `images` reads `ReviewMedia` first with legacy `Review.images` fallback. Additive `media[]` carries URL, thumbnail URL, position, and nullable Cloudinary metadata for future media-heavy UI. `limit` clamped 1-30 (default 10); photo strip calls with `limit=15&hasImages=true` and does not use cursor (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]], [[ADR_0028_Review_Cursor_Pagination]]) |
-| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + trusted image URLs + auto-approve). Writes `Review`, legacy `Review.images`, `Review.hasImages`, `ReviewMedia`, pending upload metadata cleanup, and summary update transactionally. Client `slug`/`productName`/`email` are ignored. |
+| GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&hasMedia&limit&cursor` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. Exact `totalCount` / `totalPages` for unfiltered/rating/photo filters come from summary buckets; `hasMedia=true` uses an approved `(hasImages OR hasVideo)` count because video counts are not yet in `ProductReviewSummary`. Legacy `page/limit` remains supported; responses include signed `nextCursor` and cursor requests use keyset pagination without `skip`. Tampered, unsigned, or context-mismatched cursors return `400`. `hasImages=true` uses indexed `Review.hasImages`; `hasMedia=true` is reserved for the media strip and cannot be combined with `hasImages`. Response `images` remains image-only; additive `media[]` exposes `{ type, url, posterUrl, thumbnailUrl, durationMs, width, height, position }` without provider ids. |
+| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + trusted image URLs/video token + auto-approve). Writes `Review`, legacy `Review.images`, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. v1 rejects mixed image+video; video-bearing reviews always start `pending`. Client `slug`/`productName`/`email` are ignored. |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
 | GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read `ProductReviewSummary` by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/upload/sign` body `{ storeId }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload scoped to `review_images/stores/<storeId>` after StoreSettings verification |
 | POST `/api/public/upload/register` body `{ storeId, secureUrl, metadata? }` | [route.ts](src/app/api/public/upload/register/route.ts) | Register a completed tenant-scoped Cloudinary upload in `PendingReviewImage` for cleanup. Optional signed Cloudinary upload-response metadata is verified server-side before dimensions/format/bytes are staged for `ReviewMedia`. |
+| POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated R2 multipart video upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, part size/count, and max parallelism. |
+| POST `/api/public/upload/video/parts` | [route.ts](src/app/api/public/upload/video/parts/route.ts) | Return short-lived presigned R2 part URLs and already-completed part ETags for resume. |
+| POST `/api/public/upload/video/complete` | [route.ts](src/app/api/public/upload/video/complete/route.ts) | Complete multipart upload, HEAD/signature-check master object, enqueue Stream copy job, and move session to processing. |
+| GET `/api/public/upload/video/status?token=` | [route.ts](src/app/api/public/upload/video/status/route.ts) | Poll session processing/ready/failed state without exposing provider admin APIs. |
+| DELETE `/api/public/upload/video` | [route.ts](src/app/api/public/upload/video/route.ts) | Atomically mark the session aborted and create its provider-aware cleanup outbox job. Provider calls are worker-owned; the public route does not delete R2/Stream assets directly. |
 
 ### Caching
 GET responses set `Cache-Control: s-maxage=60, stale-while-revalidate=300`. See [[Caching_And_Performance]].
@@ -84,13 +104,21 @@ GET responses set `Cache-Control: s-maxage=60, stale-while-revalidate=300`. See 
 - `/api/public/upload/sign` POST → 10 / 10min / IP
 - `/api/public/ratings` + `/api/public/ratings-by-slug` GET → 300 / 60sec / IP, shared key
 - `/api/public/upload/register` POST -> 30 / 10min / IP
+- `/api/public/upload/video/initiate` POST -> 10 / 10min / IP, plus store-level monthly quota reservation.
 Detail in [[Security_And_Rate_Limits]].
+
+## Internal async media jobs
+
+| Method + Path | Source | Purpose |
+|---|---|---|
+| POST `/api/internal/media-jobs` | [route.ts](src/app/api/internal/media-jobs/route.ts) | QStash-signed DB outbox worker for Stream prepare/publish/protect and R2/Stream/ingest cleanup jobs. Verifies raw-body JWT, serializes same-asset mutations with `MediaProviderLease`, and treats delivery as at-least-once/idempotent. |
 
 ## Webhooks
 
 | Method + Path | Source | Purpose |
 |---|---|---|
 | POST `/api/webhooks/ikas/products` | [route.ts](src/app/api/webhooks/ikas/products/route.ts) | Validate ikas webhook signature, process product create/update events, refresh `ProductSnapshot` |
+| POST `/api/webhooks/cloudflare-stream` | [route.ts](src/app/api/webhooks/cloudflare-stream/route.ts) | Validate Cloudflare Stream raw-body HMAC + freshness, apply ready/failed state idempotently, store poster/HLS/duration, delete transient ingest copy through provider jobs. |
 
 ## OAuth
 
@@ -124,6 +152,9 @@ Detail in [[Security_And_Rate_Limits]].
 - **Cloudinary metadata is write-time/read-model data.** Public reads should use `ReviewMedia` metadata or nullable fallback values; do not call Cloudinary Admin API from storefront GET paths.
 - **Legacy global review image paths need copy-first reconciliation.** Do not make `/api/public/reviews` or widget helpers trust old global `review_images/...` URLs. Use `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and the scoped `reviews:media:reconcile` script instead. See [[Legacy_Review_Media_Reconciliation]].
 - **Status enums are strings, not Prisma enums.** `'pending' | 'approved' | 'rejected'` lives in code, not in the DB schema. If you add a state, search for the literals to update everywhere.
+- **Video provider identity is server-private.** Public/admin list responses expose normalized media fields only; provider ids are used only in server adapters, jobs, webhooks, and signed admin playback.
+- **Media provider mutations are outbox-owned.** Do not call Stream publish/delete or expired Cloudinary pending-image deletes directly from UI/cron routes except by enqueueing `MediaProviderJob` and dispatching QStash; this keeps retries, idempotency, stale-lock recovery, and DLQ/manual repair observable.
+- **QStash is a wakeup layer, not the source of truth.** Session failure/cancel state and the matching cleanup job are committed in the same DB transaction. Repeated delivery is safe; same-asset provider calls are lease-serialized and stale moderation jobs converge Stream to the latest DB-visible state.
 
 ## Related Source Files
 - [src/app/api/](src/app/api/)
@@ -151,6 +182,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-13: Added Review Video V1 API surface: gated multipart R2 upload endpoints, Cloudflare Stream webhook, QStash media job worker, admin signed playback endpoint, `hasMedia` read path, mixed-media rejection, and moderation-gated video approval flow. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - 2026-06-08: `/api/admin/daily-maintenance` now runs a bounded, durable `ReviewMedia` metadata backfill (`src/lib/review-media-metadata-backfill.ts`) from the Cloudinary Admin API, so existing/legacy rows self-heal in production without a manual local script run. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: `/api/public/upload/register` accepts optional signed Cloudinary upload-response metadata; `/api/public/reviews` POST carries pending metadata into `ReviewMedia`, and GET keeps `images` while adding structured `media[]`. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: `/api/public/reviews` now derives exact filtered `totalCount` / `totalPages` from `ProductReviewSummary` and no longer calls raw `Review.count()` on the public read path.

@@ -8,9 +8,15 @@ import {
   getReviewImagePublicId,
   sanitizeReviewImageUrls,
 } from '@/lib/review-images';
-import { buildReviewMediaCreateManyData, publicMediaFromMediaOrLegacy, type PublicReviewMediaRow } from '@/lib/review-media';
+import {
+  buildReviewMediaCreateManyData,
+  publicImagesFromMediaOrLegacy,
+  publicMediaFromMediaOrLegacy,
+  type PublicReviewMediaRow,
+} from '@/lib/review-media';
 import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 import { applyReviewSummaryVisibilityChange, filteredReviewTotal, summaryStats } from '@/lib/review-summary';
+import { hashMediaToken } from '@/lib/media/video-policy';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -29,11 +35,16 @@ const PUBLIC_REVIEW_SELECT = {
   merchantReply: true,
   images: true,
   media: {
-    where: { visible: true },
+    where: { visible: true, processingStatus: 'ready' },
     orderBy: { position: 'asc' as const },
     select: {
       url: true,
       position: true,
+      resourceType: true,
+      provider: true,
+      providerAssetId: true,
+      posterUrl: true,
+      durationMs: true,
       width: true,
       height: true,
       format: true,
@@ -86,6 +97,7 @@ type ReviewCursorPayload = {
   orderBy: ReviewOrderByKey;
   ratingFilter: number | null;
   hasImages: boolean;
+  hasMedia?: boolean;
   values: ReviewCursorValues;
 };
 
@@ -193,6 +205,7 @@ function parseReviewCursorPayload(parsed: unknown): ReviewCursorPayload | null {
     if (typeof parsedRatingFilter !== 'number' || !Number.isInteger(parsedRatingFilter) || parsedRatingFilter < 1 || parsedRatingFilter > 5) return null;
   }
   if (typeof payload.hasImages !== 'boolean') return null;
+  if (payload.hasMedia !== undefined && typeof payload.hasMedia !== 'boolean') return null;
   if (!payload.values || typeof payload.values.createdAt !== 'string' || typeof payload.values.id !== 'string' || !payload.values.id) return null;
   const createdAt = new Date(payload.values.createdAt);
   if (Number.isNaN(createdAt.getTime())) return null;
@@ -206,6 +219,7 @@ function encodeReviewCursor(input: {
   orderBy: ReviewOrderByKey;
   ratingFilter: number | null;
   hasImages: boolean;
+  hasMedia: boolean;
   review: Pick<PublicReviewRow, 'id' | 'rating' | 'createdAt'>;
 }): string {
   const payload: ReviewCursorPayload = {
@@ -215,6 +229,7 @@ function encodeReviewCursor(input: {
     orderBy: input.orderBy,
     ratingFilter: input.ratingFilter,
     hasImages: input.hasImages,
+    hasMedia: input.hasMedia,
     values: {
       createdAt: input.review.createdAt.toISOString(),
       id: input.review.id,
@@ -248,13 +263,15 @@ function cursorMatchesQuery(cursor: ReviewCursorPayload, input: {
   orderBy: ReviewOrderByKey;
   ratingFilter: number | null;
   hasImages: boolean;
+  hasMedia: boolean;
 }) {
   return (
     cursor.storeId === input.storeId &&
     cursor.productId === input.productId &&
     cursor.orderBy === input.orderBy &&
     cursor.ratingFilter === input.ratingFilter &&
-    cursor.hasImages === input.hasImages
+    cursor.hasImages === input.hasImages &&
+    Boolean(cursor.hasMedia) === input.hasMedia
   );
 }
 
@@ -310,7 +327,7 @@ function formatPublicReview(review: PublicReviewRow, cloudName: string | null, s
     comment: review.comment,
     author: maskAuthor(review.author),
     merchantReply: review.merchantReply,
-    images: media.map((item) => item.url),
+    images: publicImagesFromMediaOrLegacy(review.media, review.images, cloudName, storeId),
     media,
     createdAt: review.createdAt.toISOString(),
   };
@@ -363,12 +380,23 @@ export async function GET(req: Request) {
     const orderBy = REVIEW_ORDER_BY[orderByKey];
     const ratingFilter = normalizeRatingFilter(searchParams.get('rating'));
     const hasImagesFilter = searchParams.get('hasImages') === 'true';
+    const hasMediaFilter = searchParams.get('hasMedia') === 'true';
+    if (hasImagesFilter && hasMediaFilter) {
+      return withCors(NextResponse.json({ error: 'hasImages and hasMedia cannot be used together.' }, { status: 400 }));
+    }
     const rawCursor = searchParams.get('cursor');
     const cursor = decodeReviewCursor(rawCursor);
     if (rawCursor !== null && !cursor) {
       return withCors(NextResponse.json({ error: 'Geçersiz cursor' }, { status: 400 }));
     }
-    if (cursor && !cursorMatchesQuery(cursor, { storeId, productId, orderBy: orderByKey, ratingFilter, hasImages: hasImagesFilter })) {
+    if (cursor && !cursorMatchesQuery(cursor, {
+      storeId,
+      productId,
+      orderBy: orderByKey,
+      ratingFilter,
+      hasImages: hasImagesFilter,
+      hasMedia: hasMediaFilter,
+    })) {
       return withCors(NextResponse.json({ error: 'Cursor bu sorgu ile uyumlu değil' }, { status: 400 }));
     }
     const cloudName = getConfiguredCloudinaryCloudName();
@@ -379,6 +407,7 @@ export async function GET(req: Request) {
       status: 'approved',
       ...(ratingFilter ? { rating: ratingFilter } : {}),
       ...(hasImagesFilter ? { hasImages: true } : {}),
+      ...(hasMediaFilter ? { OR: [{ hasImages: true }, { hasVideo: true }] } : {}),
     };
     const listWhere = cursor ? { ...baseWhere, ...buildCursorWhere(cursor) } : baseWhere;
 
@@ -389,19 +418,28 @@ export async function GET(req: Request) {
       ? prisma.review.findMany({ where: listWhere, orderBy, take: limit + 1, select: PUBLIC_REVIEW_SELECT })
       : prisma.review.findMany({ where: listWhere, orderBy, take: limit, skip, select: PUBLIC_REVIEW_SELECT });
 
-    const [reviewsWithExtra, summary] = await Promise.all([
+    const [reviewsWithExtra, summary, mediaTotal] = await Promise.all([
       reviewsPromise,
       prisma.productReviewSummary.findUnique({ where: { storeId_productId: summaryWhere } }),
+      hasMediaFilter ? prisma.review.count({ where: baseWhere }) : Promise.resolve(null),
     ]);
 
     const { allCount, ratingCounts, avgRating } = summaryStats(summary);
-    const totalCount = filteredReviewTotal(summary, { ratingFilter, hasImagesFilter });
+    const totalCount = mediaTotal ?? filteredReviewTotal(summary, { ratingFilter, hasImagesFilter });
 
     const reviews = cursor ? reviewsWithExtra.slice(0, limit) : reviewsWithExtra;
     const hasMore = cursor ? reviewsWithExtra.length > limit : page * limit < totalCount;
     const lastVisibleReview = reviews[reviews.length - 1];
     const nextCursor = hasMore && lastVisibleReview
-      ? encodeReviewCursor({ storeId, productId, orderBy: orderByKey, ratingFilter, hasImages: hasImagesFilter, review: lastVisibleReview })
+      ? encodeReviewCursor({
+          storeId,
+          productId,
+          orderBy: orderByKey,
+          ratingFilter,
+          hasImages: hasImagesFilter,
+          hasMedia: hasMediaFilter,
+          review: lastVisibleReview,
+        })
       : null;
     const formattedReviews = reviews.map((review) => formatPublicReview(review, cloudName, storeId));
 
@@ -440,14 +478,16 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 }));
     }
 
-    const { storeId, productId, rating, title, comment, author, images } = body;
+    const { storeId, productId, rating, title, comment, author, images, videoToken } = body;
     const storeIdText = requiredString(storeId, 128);
     const productIdText = requiredString(productId, 128);
     const authorText = requiredString(author, 40);
     const titleText = optionalString(title, 60);
     const commentText = optionalString(comment, 2000);
+    const videoTokenText = optionalString(videoToken, 256);
     const hasTitleInput = title !== undefined && title !== null && (typeof title !== 'string' || title.trim() !== '');
     const hasCommentInput = comment !== undefined && comment !== null && (typeof comment !== 'string' || comment.trim() !== '');
+    const hasVideoTokenInput = videoToken !== undefined && videoToken !== null && videoToken !== '';
 
     // Validasyon — zorunlu alanlar ve tip/aralık kontrolleri
     if (!storeIdText || !productIdText || !authorText) {
@@ -462,6 +502,9 @@ export async function POST(request: Request) {
     }
     if (hasCommentInput && !commentText) {
       return withCors(NextResponse.json({ error: 'Yorum en fazla 2000 karakter olabilir.' }, { status: 400 }));
+    }
+    if (hasVideoTokenInput && (!videoTokenText || videoTokenText.length < 32)) {
+      return withCors(NextResponse.json({ error: 'Geçersiz video yükleme anahtarı.' }, { status: 400 }));
     }
     if (containsProfanity(titleText ?? '') || containsProfanity(commentText ?? '') || containsProfanity(authorText)) {
       return withCors(NextResponse.json({ error: 'Yorumunuz uygunsuz ifadeler içeriyor.' }, { status: 400 }));
@@ -480,6 +523,10 @@ export async function POST(request: Request) {
         return withCors(NextResponse.json({ error: 'Görsel yükleme yapılandırması eksik.' }, { status: 500 }));
       }
       return withCors(NextResponse.json({ error: 'Geçersiz yorum görseli.' }, { status: 400 }));
+    }
+
+    if (videoTokenText && imageResult.urls.length > 0) {
+      return withCors(NextResponse.json({ error: 'Aynı yoruma fotoğraf ve video birlikte eklenemez.' }, { status: 400 }));
     }
 
     const verifiedProduct = await verifyReviewTarget(storeIdText, productIdText);
@@ -507,7 +554,7 @@ export async function POST(request: Request) {
       autoApproveMode === '4plus' ? ratingNum >= 4 :
       false;
 
-    const initialStatus = shouldAutoApprove ? 'approved' : 'pending';
+    const initialStatus = videoTokenText ? 'pending' : (shouldAutoApprove ? 'approved' : 'pending');
 
     // Atomic commit: create Review and remove any PendingReviewImage rows
     // tied to the publicIds this review consumes. Rows that were never
@@ -517,6 +564,31 @@ export async function POST(request: Request) {
       .filter((id): id is string => !!id);
 
     const newReview = await prisma.$transaction(async (tx) => {
+      const videoSession = videoTokenText
+        ? await tx.videoUploadSession.findUnique({ where: { tokenHash: hashMediaToken(videoTokenText) } })
+        : null;
+      if (videoTokenText && (
+        !videoSession ||
+        videoSession.storeId !== storeIdText ||
+        videoSession.productId !== productIdText ||
+        videoSession.status !== 'ready' ||
+        !videoSession.publicId ||
+        !videoSession.streamUid ||
+        !videoSession.playbackUrl ||
+        !videoSession.posterUrl ||
+        !videoSession.durationMs ||
+        videoSession.expiresAt <= new Date()
+      )) {
+        throw new Error('invalid_video_session');
+      }
+      if (videoSession) {
+        const consumed = await tx.videoUploadSession.updateMany({
+          where: { id: videoSession.id, status: 'ready' },
+          data: { status: 'consumed', consumedAt: new Date() },
+        });
+        if (consumed.count !== 1) throw new Error('invalid_video_session');
+      }
+
       const created = await tx.review.create({
         data: {
           storeId: storeIdText,
@@ -530,6 +602,7 @@ export async function POST(request: Request) {
           email: '',
           images: imageResult.urls.length ? JSON.stringify(imageResult.urls) : null,
           hasImages: imageResult.urls.length > 0,
+          hasVideo: !!videoSession,
           status: initialStatus,
         },
       });
@@ -570,6 +643,36 @@ export async function POST(request: Request) {
         });
       }
 
+      if (videoSession) {
+        await tx.reviewMedia.create({
+          data: {
+            reviewId: created.id,
+            storeId: storeIdText,
+            productId: productIdText,
+            url: videoSession.playbackUrl!,
+            publicId: videoSession.publicId!,
+            resourceType: 'video',
+            provider: 'cloudflare_stream',
+            providerAssetId: videoSession.streamUid,
+            posterUrl: videoSession.posterUrl,
+            durationMs: videoSession.durationMs,
+            processingStatus: 'ready',
+            sourceProvider: 'cloudflare_r2',
+            sourceAssetId: videoSession.masterObjectKey,
+            mimeType: videoSession.mimeType,
+            bytes: videoSession.bytes,
+            metadataSource: 'stream_webhook',
+            metadataStatus: 'complete',
+            metadataFetchedAt: new Date(),
+            position: 0,
+            visible: false,
+          },
+        });
+        await tx.pendingReviewImage.deleteMany({
+          where: { uploadSessionId: videoSession.id, provider: 'cloudflare_stream', resourceType: 'video' },
+        });
+      }
+
       if (committedPublicIds.length > 0) {
         await tx.pendingReviewImage.deleteMany({
           where: { publicId: { in: committedPublicIds }, storeId: storeIdText },
@@ -589,6 +692,9 @@ export async function POST(request: Request) {
       },
     }, { status: 201 }));
   } catch (error: any) {
+    if (error instanceof Error && error.message === 'invalid_video_session') {
+      return withCors(NextResponse.json({ error: 'Video yüklemesi hazır değil, süresi dolmuş veya bu ürüne ait değil.' }, { status: 400 }));
+    }
     console.error('[POST] Reviews ERROR:', error);
     return withCors(NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 }));
   }

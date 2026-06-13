@@ -20,16 +20,18 @@ export function createStepPhotos(state, opts) {
   root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-photos';
 
   // Başlık
-  var title = document.createElement('div');
-  title.className = 'renuvex-pr-fwizard-step-title renuvex-pr-fwizard-step-title--lg';
-  title.textContent = reviewFormCopy('formStepPhotosTitle');
-  root.appendChild(title);
+  if (!opts.hideHeading) {
+    var title = document.createElement('div');
+    title.className = 'renuvex-pr-fwizard-step-title renuvex-pr-fwizard-step-title--lg';
+    title.textContent = reviewFormCopy('formStepPhotosTitle');
+    root.appendChild(title);
 
   // Alt başlık
-  var subtitle = document.createElement('div');
-  subtitle.className = 'renuvex-pr-fwizard-step-subtitle';
-  subtitle.textContent = reviewFormCopy('formStepPhotosSubtitle');
-  root.appendChild(subtitle);
+    var subtitle = document.createElement('div');
+    subtitle.className = 'renuvex-pr-fwizard-step-subtitle';
+    subtitle.textContent = reviewFormCopy('formStepPhotosSubtitle');
+    root.appendChild(subtitle);
+  }
 
   // Çerçeveli kart — upload butonu ve önizlemeler burada
   var card = document.createElement('div');
@@ -380,6 +382,9 @@ export function createStepPhotos(state, opts) {
 
   return {
     el: root,
+    openPicker: function () {
+      if (!fileInput.disabled) fileInput.click();
+    },
     destroy: function () {
       isExiting = true; // Modal kapanırsa veya destroy olursa da koru
       fileInput.onchange = null;

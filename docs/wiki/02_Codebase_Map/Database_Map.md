@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-09
-last_verified: 2026-06-09
+updated: 2026-06-13
+last_verified: 2026-06-13
 confidence: high
 tags:
   - database
@@ -24,6 +24,7 @@ source_files:
   - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
   - "prisma/migrations/20260608170000_add_review_summary_photo_rating_counts/migration.sql"
   - "prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql"
+  - "prisma/migrations/20260613010000_add_review_video_v1_foundation/migration.sql"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
@@ -36,7 +37,7 @@ source_files:
 # Database Map
 
 ## Summary
-Postgres (Supabase) accessed via Prisma. Ten models: `AuthToken`, `Review`, `ReviewMedia`, `ProductReviewSummary`, `StoreSettings`, `WidgetSettings`, `ProductSnapshot`, `PendingReviewImage`, `MediaCleanupRun`, `OrphanImageQuarantine`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
+Postgres (Supabase) accessed via Prisma. Core review/media models now include the image-era tables plus the additive video lifecycle tables: `VideoUploadSession`, `StoreVideoUsage`, and `MediaProviderJob`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
 
 ## Files
 
@@ -53,15 +54,19 @@ Postgres (Supabase) accessed via Prisma. Ten models: `AuthToken`, `Review`, `Rev
 | Model | Primary key | Purpose |
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
-| `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow |
-| `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted review image rows with Cloudinary metadata; public photo filters use `Review.hasImages` and media display reads this table before legacy `Review.images` fallback |
+| `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow; additive `hasVideo` marks video-bearing reviews and `moderationVersion` dedupes async provider moderation jobs |
+| `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted media rows. Images remain Cloudinary; videos carry provider/providerAssetId/poster/duration/processing/source fields and still use `visible` + `Review.status` as the public gate. |
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
-| `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks `storefrontScripts: Json` and non-sensitive `storefrontTheme: Json` sync state |
+| `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks storefront script/theme sync state and additive `videoMonthlyLimit` quota gate (default `0`, so video stays closed). |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
 | `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
-| `PendingReviewImage` | `publicId` | Registry of tenant-scoped Cloudinary uploads not yet attached to a `Review` |
+| `PendingReviewImage` | `publicId` | Legacy-named pending media registry. Cloudinary image uploads and Cloudflare Stream video sessions both stage here behind provider-aware fields until review submit or cleanup. |
 | `MediaCleanupRun` | `id` (uuid) | Audit log, one row per `cleanup-images` cron run (scan/quarantine/sweep counts, breaker status, `sampleDeleted` sample). See [[ADR_0030_Cleanup_Hardening]] |
 | `OrphanImageQuarantine` | `publicId` | Two-phase orphan-deletion state: orphans are marked here, then hard-deleted only after a grace window if still orphaned. See [[ADR_0030_Cleanup_Hardening]] |
+| `VideoUploadSession` | `id` (uuid), unique `tokenHash` | Hashed shopper upload session, R2 master key/upload id, Stream uid, status, poster/playback metadata, explicit `quotaState`, and 24h expiry. Raw tokens are never stored. |
+| `StoreVideoUsage` | `(storeId, month)` | Atomic monthly quota reserve/consume counters for feature-gated video uploads. |
+| `MediaProviderJob` | `id` (uuid), unique `dedupeKey` | DB outbox for provider operations (`prepare_stream`, `publish_stream`, `protect_stream`, `cleanup_video`, `cleanup_ingest`, `cleanup_image`) dispatched through QStash with idempotent retries, stale-lock recovery, and DLQ/manual-repair state. |
+| `MediaProviderLease` | `key` | Expiring per-session/per-Stream-asset provider mutation lease with a fencing version. It serializes publish/protect/delete work without holding a database transaction open during a provider HTTP call. |
 
 ## Index strategy
 On `Review`:
@@ -77,13 +82,22 @@ On `ProductReviewSummary`:
 - unique `[storeId, productId]` - public badge, structured-data, `/api/public/ratings`, review summary distribution, and `/api/public/reviews` `totalCount` / `totalPages` read this aggregate row instead of recomputing from raw `Review.groupBy()` or `Review.count()` on every storefront request.
 
 On `ReviewMedia`:
-- unique `publicId` - one Cloudinary asset belongs to one committed review image.
+- unique `publicId` - one committed media asset belongs to one review row (`cloudinary` image public id or prefixed `cloudflare_stream:<uid>` video id).
+- `[provider, providerAssetId]` - provider-scoped video/image asset lookup without parsing URLs.
+- `[resourceType, provider, processingStatus]` - video processing/reconciliation and provider-aware cleanup.
 - unique `[reviewId, position]` plus `[reviewId, position]` index - stable per-review image ordering.
 - `[storeId, productId, visible, createdAt]` - future media-gallery/photo-strip reads and tenant-scoped cleanup/reporting.
 - `[metadataStatus, createdAt]` - metadata repair/backfill scans.
 
 On `Review` media reads:
 - partial `[storeId, productId, createdAt] where status='approved' and hasImages=true` - public photo-review list/photo strip hot path.
+- `[storeId, productId, status, hasVideo]` supports approved video/media queries and admin moderation slices.
+
+On video lifecycle:
+- `VideoUploadSession`: `tokenHash`, `streamUid`, `publicId`, `(storeId, productId, status, createdAt)`, and `(status, expiresAt)` support token lookup, webhook/session reconciliation, and pending cleanup. `quotaState=reserved|released|consumed` makes quota transitions idempotent under concurrent webhook/cancel/failure handling.
+- `StoreVideoUsage`: unique `(storeId, month)` keeps quota reservation atomic under serializable transactions.
+- `MediaProviderJob`: `dedupeKey`, `status/availableAt`, `lockedAt`, `provider/action/status`, and `uploadSessionId` keep provider jobs resumable, stale-lock recoverable, and deduped. It owns both video provider mutations and expired Cloudinary pending-image cleanup.
+- `MediaProviderLease`: the primary key is the serialization key (`video-session:<id>` or `stream:<uid>`); `leaseVersion` is a fencing token and expired leases can be atomically replaced.
 
 On `Review` cursor pagination:
 - partial `[storeId, productId, createdAt desc, id desc] where status='approved'` - public `newest` review list/load-more.
@@ -135,6 +149,7 @@ code run together, so a migration must not break the old code.
 - `Review.hasImages` is the indexed public photo-review facet. Do not reintroduce `Review.images contains` for public filters.
 - `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`. It owns exact public counts for unfiltered, rating-filtered, photo-filtered, and photo+rating-filtered review list responses.
 - `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>`; the script rejects placeholder cloud names. If media metadata is missing, run `pnpm reviews:media:metadata:backfill --cloudName=<cloudinaryCloudName>` first as dry-run, then add `--apply` after reviewing the plan.
+- Video V1 is additive. A safe deploy must keep global `VIDEO_REVIEWS_ENABLED=false` and `StoreSettings.videoMonthlyLimit=0` until Cloudflare R2/Stream/QStash infrastructure and staging integration tests are configured. Existing image rows continue as `provider='cloudinary'`, `processingStatus='ready'`.
 - Legacy global Cloudinary paths (`review_images/...` without `stores/<storeId>`) are not trusted tenant media. Audit them with `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and reconcile copy-first with `pnpm reviews:media:reconcile --cloudName=<cloudinaryCloudName> --storeId=<merchantId> --allowLegacyGlobal --apply`. Use `--dropMissingLegacy` only for verified missing source assets. See [[Legacy_Review_Media_Reconciliation]].
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
@@ -161,6 +176,7 @@ code run together, so a migration must not break the old code.
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-13: Added additive Review Video V1 foundation: `Review.hasVideo`, provider/source/processing video fields on `ReviewMedia` and `PendingReviewImage`, `StoreSettings.videoMonthlyLimit`, `VideoUploadSession`, `StoreVideoUsage`, and `MediaProviderJob`. Migration is additive and can deploy with old code while feature gates stay closed. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - 2026-06-09: Added `MediaCleanupRun` (cleanup audit log) and `OrphanImageQuarantine` (two-phase orphan-deletion state) tables; `cleanup-images` now marks-then-sweeps orphans behind a circuit-breaker instead of deleting immediately. Additive, single-deploy migration. See [[ADR_0030_Cleanup_Hardening]] and [[Maintenance_Runbook]].
 - 2026-06-08: Added additive Cloudinary metadata fields to `ReviewMedia` and `PendingReviewImage`; public review responses keep `images` and add structured `media[]`. See [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: Extended `ProductReviewSummary` with `photoRating1Count` ... `photoRating5Count` so `/api/public/reviews` can return exact filtered `totalCount` / `totalPages` without raw `Review.count()` on public reads.
