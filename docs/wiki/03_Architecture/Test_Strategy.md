@@ -37,6 +37,7 @@ source_files:
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/video-upload-routes.test.ts"
   - "tests/unit/media-route-contracts.test.ts"
+  - "tests/unit/admin-video-preview-contract.test.ts"
   - "tests/unit/review-summary.test.ts"
   - "tests/unit/review-media-reconciliation.test.ts"
   - "tests/unit/storefront-theme.test.ts"
@@ -111,6 +112,8 @@ The media suite deliberately separates playback contracts:
 - Wizard upload tests mock the R2 multipart CORS contract, Stream processing status, and public review submit, while asserting no direct Cloudflare Admin API call leaves the widget.
 
 Unit route contracts separately pin video observability: malformed or expected client errors and missing provider configuration do not consume Sentry error quota, while unexpected initiate, part-signing, completion, cancellation, and Stream-webhook failures call `captureException` exactly once with `source=media-job` and the route-specific `task` tag used by production alerts.
+
+The admin video preview contract keeps pending/rejected UGC visibly marked as unapproved, starts video muted with native controls and `playsInline`, and obtains playback only from the short-lived signed admin endpoint. Approved video and image previews do not show the moderation warning.
 
 Playwright device descriptors emulate viewport, input, and browser-engine behavior; they do not prove physical-device codec, memory, thermal, or network behavior. Real iPhone Safari and Android Chrome acceptance remains a release gate before enabling video for merchants.
 

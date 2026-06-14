@@ -11,7 +11,7 @@ interface ReviewRowProps {
   onReply: (review: Review) => void;
   onDeleteReply: (id: string) => void;
   onDeleteReview: (id: string) => void;
-  onMediaOpen: (media: ReviewMedia) => void;
+  onMediaOpen: (media: ReviewMedia, reviewStatus: string) => void;
   renderStars: (n: number) => React.ReactNode;
 }
 
@@ -75,14 +75,14 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
             {media.map((item) => item.type === 'image' && item.url ? (
               <Image key={item.id} src={item.url} alt="Yorum görseli" width={48} height={48}
                 className="w-10 h-10 object-cover rounded border border-border cursor-zoom-in"
-                onClick={() => onMediaOpen(item)} />
+                onClick={() => onMediaOpen(item, review.status)} />
             ) : (
               <button
                 key={item.id}
                 type="button"
                 className="relative w-10 h-10 overflow-hidden rounded border border-border bg-black text-white disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={item.processingStatus !== 'ready' || !item.posterUrl}
-                onClick={() => onMediaOpen(item)}
+                onClick={() => onMediaOpen(item, review.status)}
                 aria-label={item.processingStatus === 'ready' ? 'Yorum videosunu aç' : 'Video işleniyor'}
                 title={item.processingStatus === 'ready' ? 'Videoyu oynat' : 'Video işleniyor'}
               >

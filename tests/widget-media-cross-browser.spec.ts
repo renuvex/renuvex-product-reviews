@@ -493,6 +493,9 @@ test('video wizard completes multipart upload and submits only the ready video t
   });
   expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('cloudflare.com/client/v4'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
 });
 
 test('video to image navigation disposes the previous player before rendering the next review', async ({ page }) => {

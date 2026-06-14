@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-14
-last_verified: 2026-06-14
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - deployment
@@ -76,6 +76,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - No dedicated `/health` route today. Add if uptime monitoring is wired up.
 - Vercel logs are line-based (`console.error('[scope] ERROR', ...)` pattern is searchable).
 - Sentry CLI and MCP are tracked in [[Sentry_Operations]]. Current MCP scope is organization-level (`renuvex`).
+- Review Video V1 preflight uses `scripts/verify-video-infrastructure.mjs --require-webhook --write-probe`, QStash delivery/DLQ inspection, Sentry media-route queries, and the live `/api/public/settings` capability response. Local `.env.local` flag state is not proof of the Vercel Production flag.
 
 ## Notes
 - **Don't bypass the widget bundle commit step.** If you forget to commit `public/widget.js`, deploys ship the old widget. CI does not regenerate.

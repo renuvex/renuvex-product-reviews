@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-14
-last_verified: 2026-06-14
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - log
@@ -19,6 +19,13 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-15 - acceptance | Start Review Video V1 physical-device gate
+- Hardened pending admin video preview with a visible unapproved-UGC warning, muted native playback, and a contract test that pins the signed admin endpoint.
+- Re-verified the Phase 6 preflight: Vercel commit `88e1041b` ready, R2 multipart write/abort clean, Stream token/webhook valid, QStash deliveries successful, media-worker DLQ empty after deleting the intentional invalid-job probe, unsigned worker calls rejected with `401`, and no matching Sentry/Vercel production errors in the preceding 24 hours.
+- Corrected stale rollout memory: controlled provider canary work already consumed two quota units and completed cleanup. Physical iPhone/Android and the 72-hour retained-review window remain pending.
+- Live public settings showed the internal store effective while local operations env remained disabled. Production activation is held until the Vercel flag is disabled, the admin hardening deploys, and the live capability is re-verified.
+- Added [[Review_Video_Physical_Device_Acceptance_2026-06]] as the dated evidence ledger.
 
 ## 2026-06-14 - operations | Prepare controlled Review Video V1 canary
 - Added `pnpm video:canary:ops`, a read-only-by-default command that reports global/merchant/quota gates plus per-store quota, session, outbox, review, and media evidence.

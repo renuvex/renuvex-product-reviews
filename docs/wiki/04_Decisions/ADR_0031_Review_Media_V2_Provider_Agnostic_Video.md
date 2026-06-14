@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: draft
 created: 2026-06-12
-updated: 2026-06-14
-last_verified: 2026-06-14
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: medium
 tags:
   - adr
@@ -67,7 +67,8 @@ Draft - implemented behind disabled rollout gates; production acceptance is stil
 - 2026-06-14: Master bucket CORS was corrected for merchant storefront origins. Live verification passed both arbitrary-origin preflight and a temporary presigned multipart `PUT`; the response exposed a readable `ETag`, and the probe upload was aborted successfully.
 - 2026-06-14: Phase 4 cross-browser media coverage is implemented. The official Playwright 1.60 Linux image passed the five-project matrix (Chromium desktop, Firefox desktop, WebKit desktop, Pixel 7 emulation, and iPhone 15 WebKit emulation): 30 passed and 5 intentional platform-scope skips. The suite pins poster-first rendering, native HLS and `hls.js` branches, browser-back/source cleanup, multipart wizard submit, and video-to-image navigation cleanup.
 - 2026-06-14: Phase 5 operational preparation is implemented. The dry-run-first `video:canary:ops` command reports all three gates and per-store lifecycle evidence; apply mode is single-store scoped, requires an exact confirmation id, preserves unrelated widget settings, and blocks accidental live activation while the global flag is already true. The real provider canary is still pending.
-- Production acceptance is still open. The ADR remains draft until the account-level Stream webhook, live canary, and physical iPhone Safari / Android Chrome acceptance gates pass.
+- 2026-06-15: The controlled provider path is no longer pending: DB evidence records two consumed quota units, nine succeeded jobs, one superseded job, and no retained video review/media rows after cleanup. R2 multipart write/abort, Stream API/webhook, QStash signed delivery/retry, empty media-worker DLQ, and production observability preflight were re-verified. Pending-admin preview now starts muted and visibly labels unapproved UGC. Physical iPhone Safari, physical Android Chrome, and the 72-hour retained-review window are still pending.
+- Production acceptance is still open. The ADR remains draft until the physical-device and 72-hour canary gates pass.
 
 ## Date
 2026-06-12

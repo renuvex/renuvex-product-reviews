@@ -18,7 +18,7 @@ interface ReviewsTabProps {
   onReply: (review: Review) => void;
   onDeleteReply: (id: string) => void;
   onDeleteReview: (id: string) => void;
-  onMediaOpen: (media: ReviewMedia) => void;
+  onMediaOpen: (media: ReviewMedia, reviewStatus: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }

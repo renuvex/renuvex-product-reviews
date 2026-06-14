@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { Review, ReviewMedia, WidgetSettingsMap, TabKey } from './types';
+import { isUnapprovedVideoPreview, type MediaPreviewState } from './MediaPreviewState';
 import { ReplyDialog } from './ReplyDialog';
 import { ReviewsTab } from './ReviewsTab';
 import { WidgetsContainer } from './widgets';
@@ -39,7 +40,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   const [tabCounts, setTabCounts] = useState<Record<TabKey, number>>({ pending: 0, approved: 0, rejected: 0, all: 0 });
   const [settingsLoadState, setSettingsLoadState] = useState<WidgetSettingsLoadState>(INITIAL_WIDGET_SETTINGS_LOAD_STATE);
   const [loading, setLoading] = useState(false);
-  const [mediaPreview, setMediaPreview] = useState<{ type: 'image' | 'video'; url: string | null; loading: boolean } | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<MediaPreviewState | null>(null);
   const [replyDialog, setReplyDialog] = useState<{ open: boolean; review: Review | null }>({ open: false, review: null });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -141,23 +142,27 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     }
   };
 
-  const handleMediaOpen = async (media: ReviewMedia) => {
+  const handleMediaOpen = async (media: ReviewMedia, reviewStatus: string) => {
     if (media.type === 'image' && media.url) {
-      setMediaPreview({ type: 'image', url: media.url, loading: false });
+      setMediaPreview({ mediaId: media.id, type: 'image', url: media.url, loading: false, reviewStatus });
       return;
     }
     if (media.type !== 'video' || media.processingStatus !== 'ready') return;
-    setMediaPreview({ type: 'video', url: null, loading: true });
+    setMediaPreview({ mediaId: media.id, type: 'video', url: null, loading: true, reviewStatus });
     try {
       const response = await axios.get(`/api/admin/reviews/video-playback?mediaId=${encodeURIComponent(media.id)}`, {
         headers: await freshAuthHeader(token),
       });
       const url = response.data?.data?.url;
       if (typeof url !== 'string' || !url) throw new Error('video_playback_url_missing');
-      setMediaPreview({ type: 'video', url, loading: false });
+      setMediaPreview(current => (
+        current?.mediaId === media.id
+          ? { ...current, url, loading: false }
+          : current
+      ));
     } catch (error) {
       console.error('Video önizlemesi açılamadı:', error);
-      setMediaPreview(null);
+      setMediaPreview(current => (current?.mediaId === media.id ? null : current));
       toast.error('Video önizlemesi açılamadı. Lütfen tekrar deneyin.');
     }
   };
@@ -260,7 +265,15 @@ export default function HomePage({ token, storeName }: HomePageProps) {
           {mediaPreview.loading ? (
             <div className="flex items-center gap-2 text-white" role="status"><LoaderCircle className="animate-spin" size={22} /> Video hazırlanıyor...</div>
           ) : mediaPreview.type === 'video' && mediaPreview.url ? (
-            <video src={mediaPreview.url} controls playsInline preload="metadata" className="max-w-[90vw] max-h-[90vh] rounded-lg bg-black shadow-2xl" onClick={(event) => event.stopPropagation()} />
+            <div className="flex max-h-[94vh] max-w-[94vw] flex-col items-center gap-3" onClick={(event) => event.stopPropagation()}>
+              {isUnapprovedVideoPreview(mediaPreview) && (
+                <div className="flex w-full items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950" role="note">
+                  <AlertCircle size={17} aria-hidden="true" />
+                  Onaylanmamış müşteri videosu
+                </div>
+              )}
+              <video src={mediaPreview.url} muted controls playsInline preload="metadata" className="max-h-[86vh] max-w-[90vw] rounded-lg bg-black shadow-2xl" />
+            </div>
           ) : mediaPreview.url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={mediaPreview.url} alt="Görsel" className="max-w-[90vw] max-h-[90vh] rounded-lg object-contain shadow-2xl" onClick={(event) => event.stopPropagation()} />

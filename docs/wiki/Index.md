@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-19
-last_verified: 2026-05-17
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - index
@@ -71,6 +71,7 @@ source_files: []
 - [[Sentry_Operations]]
 - [[Maintenance_Runbook]]
 - [[Review_Video_Canary_Runbook]]
+- [[Review_Video_Physical_Device_Acceptance_2026-06]]
 - [[Test_Strategy]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Theme_Adapter_Playbook]]

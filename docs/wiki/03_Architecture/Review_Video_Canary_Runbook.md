@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-14
-updated: 2026-06-14
-last_verified: 2026-06-14
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - video
@@ -17,6 +17,7 @@ related:
   - "[[Maintenance_Runbook]]"
   - "[[Config_And_Env_Map]]"
   - "[[Test_Strategy]]"
+  - "[[Review_Video_Physical_Device_Acceptance_2026-06]]"
 source_files:
   - "scripts/video-canary-ops.mjs"
   - "scripts/video-canary-ops-lib.mjs"
@@ -150,3 +151,5 @@ Do not delete provider credentials or webhook configuration while cleanup work i
 ## Physical Device Follow-Up
 
 Playwright emulation is not physical-device acceptance. Phase 6 must repeat selection, metadata, multipart upload, interruption/resume, processing, admin preview, HLS playback, fullscreen, audio, pause, browser back, and modal close on a real iPhone Safari device and a real Android Chrome device.
+
+The dated evidence ledger is [[Review_Video_Physical_Device_Acceptance_2026-06]]. The 72-hour clock starts only after the retained Android review is approved and storefront playback is verified. If media-path code changes during the window, add the regression test, redeploy, and restart the clock; documentation-only changes do not restart it.
