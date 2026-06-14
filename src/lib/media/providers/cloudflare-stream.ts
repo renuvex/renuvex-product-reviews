@@ -1,4 +1,5 @@
 import { getStreamMediaConfig } from '@/lib/media/config';
+import { VIDEO_MAX_BYTES, VIDEO_MAX_DURATION_MS } from '@/lib/media/constants';
 
 export type StreamVideo = {
   uid: string;
@@ -9,7 +10,7 @@ export type StreamVideo = {
   requireSignedURLs?: boolean;
   thumbnail?: string;
   playback?: { hls?: string; dash?: string };
-  status?: { state?: string; errorReasonCode?: string; errorReasonText?: string };
+  status?: { state?: string; pctComplete?: number | string; errorReasonCode?: string; errorReasonText?: string };
   meta?: Record<string, unknown>;
 };
 
@@ -53,11 +54,13 @@ export async function createStreamVideoFromUrl(input: { url: string; creator: st
   return request<StreamVideo>('/copy', {
     method: 'POST',
     body: JSON.stringify({
-      input: input.url,
+      url: input.url,
       creator: input.creator,
       meta: { uploadSessionId: input.creator },
       name: input.name,
       requireSignedURLs: true,
+      maxDurationSeconds: Math.floor(VIDEO_MAX_DURATION_MS / 1000),
+      maxSizeBytes: VIDEO_MAX_BYTES,
       thumbnailTimestampPct: 0.1,
     }),
   });

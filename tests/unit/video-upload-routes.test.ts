@@ -87,6 +87,20 @@ beforeEach(() => {
 });
 
 describe('video upload initiate', () => {
+  it('returns 400 for malformed JSON without reserving quota or creating provider state', async () => {
+    const { POST } = await import('@/app/api/public/upload/video/initiate/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
+      method: 'POST',
+      body: '{',
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe('invalid_json');
+    expect(sessionMock.createReservedVideoSession).not.toHaveBeenCalled();
+    expect(r2Mock.createVideoMultipartUpload).not.toHaveBeenCalled();
+  });
+
   it('fails closed when any feature gate is closed', async () => {
     accessMock.getVideoFeatureAccess.mockResolvedValue({ enabled: false, reason: 'quota_disabled', monthlyLimit: 0 });
     const { POST } = await import('@/app/api/public/upload/video/initiate/route');

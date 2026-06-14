@@ -9,6 +9,7 @@ import {
   listVideoUploadParts,
   readVideoMasterPrefix,
 } from '@/lib/media/providers/r2';
+import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 import { getVideoSessionByToken } from '@/lib/media/sessions';
 import { hasIsoBaseMediaFtyp, normalizeCompletedParts, partitionVideoBytes } from '@/lib/media/video-policy';
 
@@ -19,10 +20,10 @@ export async function OPTIONS(request: Request) {
 export async function POST(request: Request) {
   let sessionId: string | null = null;
   try {
-    const body = await request.json() as Record<string, unknown>;
+    const body = await readJsonObject(request);
     const session = await getVideoSessionByToken(typeof body.token === 'string' ? body.token : '');
     if (!session || !session.r2UploadId || session.expiresAt <= new Date()) {
-      return withCors(NextResponse.json({ error: 'Geçersiz veya süresi dolmuş yükleme.' }, { status: 404 }), request);
+      return withCors(NextResponse.json({ error: 'invalid_or_expired_upload' }, { status: 404 }), request);
     }
     sessionId = session.id;
     if (session.status === 'completing' || session.status === 'uploaded' || session.status === 'processing') {
@@ -32,12 +33,12 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ data: { status: session.status } }), request);
     }
     if (session.status !== 'uploading') {
-      return withCors(NextResponse.json({ error: 'Yükleme tamamlanamaz.' }, { status: 409 }), request);
+      return withCors(NextResponse.json({ error: 'upload_not_completable' }, { status: 409 }), request);
     }
 
     const clientParts = normalizeCompletedParts(body.parts);
     if (!clientParts) {
-      return withCors(NextResponse.json({ error: 'Geçersiz video parça listesi.' }, { status: 400 }), request);
+      return withCors(NextResponse.json({ error: 'invalid_video_parts' }, { status: 400 }), request);
     }
 
     const providerParts = await listVideoUploadParts(session.masterObjectKey, session.r2UploadId);
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
       return remote && client && remote.size === part.size && remote.etag === client.ETag;
     });
     if (!exact) {
-      return withCors(NextResponse.json({ error: 'Video parçaları eksik veya uyuşmuyor.' }, { status: 409 }), request);
+      return withCors(NextResponse.json({ error: 'video_parts_mismatch' }, { status: 409 }), request);
     }
 
     const claim = await prisma.videoUploadSession.updateMany({
@@ -64,14 +65,14 @@ export async function POST(request: Request) {
       if (current?.status === 'ready') {
         return withCors(NextResponse.json({ data: { status: 'ready' } }), request);
       }
-      return withCors(NextResponse.json({ error: 'Yükleme tamamlanamaz.' }, { status: 409 }), request);
+      return withCors(NextResponse.json({ error: 'upload_not_completable' }, { status: 409 }), request);
     }
 
     await completeVideoMultipartUpload({ key: session.masterObjectKey, uploadId: session.r2UploadId, parts: clientParts });
     const [head, prefix] = await Promise.all([headVideoMaster(session.masterObjectKey), readVideoMasterPrefix(session.masterObjectKey)]);
     if (head.bytes !== session.bytes || head.bytes > VIDEO_MAX_BYTES || head.mimeType.toLowerCase() !== session.mimeType || !hasIsoBaseMediaFtyp(prefix)) {
       await failSessionAndQueueCleanup(session.id, 'invalid_master_object');
-      return withCors(NextResponse.json({ error: 'Video dosyası doğrulanamadı.' }, { status: 400 }), request);
+      return withCors(NextResponse.json({ error: 'invalid_video_master' }, { status: 400 }), request);
     }
 
     const job = await prisma.$transaction(async (tx) => {
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
     await dispatchMediaProviderJob(job.id);
     return withCors(NextResponse.json({ data: { status: 'processing' } }), request);
   } catch (error) {
+    if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
     if (sessionId) {
       try {
         await failSessionAndQueueCleanup(sessionId, 'complete_failed');
@@ -97,6 +99,6 @@ export async function POST(request: Request) {
       }
     }
     console.error('[video-complete] failed:', error);
-    return withCors(NextResponse.json({ error: 'Video yükleme tamamlanamadı.' }, { status: 500 }), request);
+    return withCors(NextResponse.json({ error: 'video_upload_complete_failed' }, { status: 500 }), request);
   }
 }

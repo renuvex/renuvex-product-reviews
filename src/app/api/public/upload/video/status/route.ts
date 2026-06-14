@@ -9,7 +9,7 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get('token') ?? '';
   const session = await getVideoSessionByToken(token);
-  if (!session) return withCors(NextResponse.json({ error: 'Yükleme bulunamadı.' }, { status: 404 }), request);
+  if (!session) return withCors(NextResponse.json({ error: 'upload_not_found' }, { status: 404 }), request);
   const publicStatus = session.status === 'completing' || session.status === 'uploaded' ? 'processing' : session.status;
   return withCors(NextResponse.json({
     data: {

@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-14 - security | Harden video provider contracts
+- Summary: Corrected QStash signature-error classification, introduced shared JSON object parsing for media routes, moved video API failures to stable English error codes, and validated signed Stream webhook payloads before lifecycle processing.
+- Provider contract: Stream copy requests now send the documented `url` field plus the V1 `60s` and `150 MB` limits. Stream assets remain processing until `readyToStream`, `status.state='ready'`, and `pctComplete=100` all hold.
+- Verification target: route tests cover missing/invalid QStash signatures, signed malformed payloads, unmatched valid Stream webhooks, documented Stream copy payload fields, malformed public upload JSON, and full-encode readiness.
+- Updated wiki: [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]], [[Backend_API_Map]]
+
 ## 2026-06-08 - performance | Add review media metadata
 - Summary: Added additive Cloudinary metadata fields to `ReviewMedia` and `PendingReviewImage`. Widget upload/register now forwards Cloudinary upload-response metadata; the server verifies the response signature before staging metadata, and review submit carries pending metadata into committed `ReviewMedia` rows.
 - Public contract: `images: string[]` remains unchanged. `/api/public/reviews` now also returns additive `media[]` entries with URL, thumbnail URL, position, and nullable metadata for future media-heavy UI.

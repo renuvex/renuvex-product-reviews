@@ -53,6 +53,10 @@ source_files:
 ## Status
 Proposed — draft (not yet implemented; supersedes the image-only assumptions of [[ADR_0027_Review_Media_Read_Model]] and [[ADR_0029_Review_Media_Metadata]] by generalizing them to multi-provider media)
 
+## Implementation Status
+- 2026-06-14: Provider contract hardening is implemented in source. QStash signature failures are classified as `401`, malformed signed payloads as `400`, Stream copy requests use the documented `url` field with the V1 size/duration limits, and a video remains processing until Stream reports `state='ready'` with `pctComplete=100`.
+- Production acceptance is still open. The ADR remains draft until the account-level Stream webhook, environment isolation, live canary, cross-browser suite, and real-device acceptance gates pass.
+
 ## Date
 2026-06-12
 

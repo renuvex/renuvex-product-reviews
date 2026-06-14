@@ -7,6 +7,7 @@ import { getVideoFeatureAccess, verifyVideoReviewTarget } from '@/lib/media/acce
 import { getQStashMediaConfig, getR2MediaConfig, getStreamMediaConfig, MediaConfigError } from '@/lib/media/config';
 import { createVideoMultipartUpload } from '@/lib/media/providers/r2';
 import { failSessionAndQueueCleanup } from '@/lib/media/jobs';
+import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 import { createReservedVideoSession, VideoQuotaError } from '@/lib/media/sessions';
 import { partitionVideoBytes, validateVideoUploadInput } from '@/lib/media/video-policy';
 
@@ -18,10 +19,10 @@ export async function POST(request: Request) {
   let createdSessionId: string | null = null;
   let createdUploadId: string | null = null;
   try {
-    const body = await request.json() as Record<string, unknown>;
+    const body = await readJsonObject(request);
     const storeId = typeof body.storeId === 'string' ? body.storeId.trim().slice(0, 128) : '';
     const productId = typeof body.productId === 'string' ? body.productId.trim().slice(0, 128) : '';
-    if (!storeId || !productId) return withCors(NextResponse.json({ error: 'Eksik parametre.' }, { status: 400 }), request);
+    if (!storeId || !productId) return withCors(NextResponse.json({ error: 'missing_parameters' }, { status: 400 }), request);
     const upload = validateVideoUploadInput({ mimeType: body.mimeType, bytes: body.bytes });
     if (!upload.ok) return withCors(NextResponse.json({ error: upload.code }, { status: 400 }), request);
 
@@ -32,11 +33,11 @@ export async function POST(request: Request) {
       windowSec: 10 * 60,
       label: 'video-upload-initiate',
     });
-    if (!rate.allowed) return withCors(NextResponse.json({ error: 'Çok fazla video yükleme denemesi.' }, { status: 429 }), request);
+    if (!rate.allowed) return withCors(NextResponse.json({ error: 'rate_limited' }, { status: 429 }), request);
 
     const [access, target] = await Promise.all([getVideoFeatureAccess(storeId), verifyVideoReviewTarget(storeId, productId)]);
-    if (!access.enabled) return withCors(NextResponse.json({ error: 'Video yükleme bu mağaza için kullanılamıyor.' }, { status: 403 }), request);
-    if (!target) return withCors(NextResponse.json({ error: 'Ürün doğrulanamadı.' }, { status: 400 }), request);
+    if (!access.enabled) return withCors(NextResponse.json({ error: 'video_upload_disabled' }, { status: 403 }), request);
+    if (!target) return withCors(NextResponse.json({ error: 'invalid_product' }, { status: 400 }), request);
 
     // Fail closed before reserving quota when provider/job configuration is incomplete.
     getR2MediaConfig();
@@ -72,12 +73,13 @@ export async function POST(request: Request) {
         console.error('[video-initiate] failed to persist cleanup outbox:', cleanupError);
       }
     }
-    if (error instanceof VideoQuotaError) return withCors(NextResponse.json({ error: 'Aylık video kotası doldu.' }, { status: 429 }), request);
+    if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
+    if (error instanceof VideoQuotaError) return withCors(NextResponse.json({ error: 'video_quota_exceeded' }, { status: 429 }), request);
     if (error instanceof MediaConfigError) {
       console.error('[video-initiate] provider configuration is incomplete:', error.code);
-      return withCors(NextResponse.json({ error: 'Video yükleme geçici olarak kullanılamıyor.' }, { status: 503 }), request);
+      return withCors(NextResponse.json({ error: 'video_provider_unavailable' }, { status: 503 }), request);
     }
     console.error('[video-initiate] failed:', error);
-    return withCors(NextResponse.json({ error: 'Video yükleme başlatılamadı.' }, { status: 500 }), request);
+    return withCors(NextResponse.json({ error: 'video_upload_initiate_failed' }, { status: 500 }), request);
   }
 }

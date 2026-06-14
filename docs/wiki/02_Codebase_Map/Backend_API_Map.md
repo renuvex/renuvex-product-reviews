@@ -182,6 +182,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-14: Hardened Review Video V1 provider boundaries. Public video routes now return stable error codes for malformed JSON, QStash signature failures return `401` instead of generic `500`, signed malformed payloads return `400`, Stream copy requests enforce the V1 server limits, and Stream readiness waits for the full encode before publishing the media read model.
 - 2026-06-13: Added Review Video V1 API surface: gated multipart R2 upload endpoints, Cloudflare Stream webhook, QStash media job worker, admin signed playback endpoint, `hasMedia` read path, mixed-media rejection, and moderation-gated video approval flow. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - 2026-06-08: `/api/admin/daily-maintenance` now runs a bounded, durable `ReviewMedia` metadata backfill (`src/lib/review-media-metadata-backfill.ts`) from the Cloudinary Admin API, so existing/legacy rows self-heal in production without a manual local script run. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: `/api/public/upload/register` accepts optional signed Cloudinary upload-response metadata; `/api/public/reviews` POST carries pending metadata into `ReviewMedia`, and GET keeps `images` while adding structured `media[]`. Related: [[ADR_0029_Review_Media_Metadata]].

@@ -21,7 +21,10 @@ export async function applyStreamVideoState(session: VideoUploadSession, video: 
     await failSessionAndQueueCleanup(session.id, video.status?.errorReasonCode ?? 'stream_processing_failed');
     return { ok: false as const, code: 'stream_processing_failed' };
   }
-  if (!video.readyToStream) return { ok: true as const, status: 'processing' as const };
+  const pctComplete = Number(video.status?.pctComplete ?? 0);
+  if (!video.readyToStream || providerState !== 'ready' || !Number.isFinite(pctComplete) || pctComplete < 100) {
+    return { ok: true as const, status: 'processing' as const };
+  }
 
   const durationMs = Math.round(Number(video.duration ?? 0) * 1000);
   const providerBytes = Number(video.size ?? session.bytes);

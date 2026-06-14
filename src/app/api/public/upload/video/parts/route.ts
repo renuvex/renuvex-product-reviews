@@ -3,6 +3,7 @@ import { withCors, corsOptions } from '@/lib/cors';
 import { partitionVideoBytes } from '@/lib/media/video-policy';
 import { getVideoSessionByToken } from '@/lib/media/sessions';
 import { listVideoUploadParts, signVideoUploadParts } from '@/lib/media/providers/r2';
+import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 
 export async function OPTIONS(request: Request) {
   return corsOptions(request);
@@ -10,13 +11,13 @@ export async function OPTIONS(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as Record<string, unknown>;
+    const body = await readJsonObject(request);
     const session = await getVideoSessionByToken(typeof body.token === 'string' ? body.token : '');
     if (!session || !session.r2UploadId || session.expiresAt <= new Date()) {
-      return withCors(NextResponse.json({ error: 'Geçersiz veya süresi dolmuş yükleme.' }, { status: 404 }), request);
+      return withCors(NextResponse.json({ error: 'invalid_or_expired_upload' }, { status: 404 }), request);
     }
     if (!['uploading', 'initiated'].includes(session.status)) {
-      return withCors(NextResponse.json({ error: 'Yükleme bu durumda devam ettirilemez.' }, { status: 409 }), request);
+      return withCors(NextResponse.json({ error: 'upload_not_resumable' }, { status: 409 }), request);
     }
     const allParts = partitionVideoBytes(session.bytes);
     const completed = await listVideoUploadParts(session.masterObjectKey, session.r2UploadId);
@@ -30,7 +31,8 @@ export async function POST(request: Request) {
     const signed = await signVideoUploadParts({ key: session.masterObjectKey, uploadId: session.r2UploadId, partNumbers });
     return withCors(NextResponse.json({ data: { parts: signed, completed } }), request);
   } catch (error) {
+    if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
     console.error('[video-parts] failed:', error);
-    return withCors(NextResponse.json({ error: 'Video parçaları hazırlanamadı.' }, { status: 500 }), request);
+    return withCors(NextResponse.json({ error: 'video_parts_failed' }, { status: 500 }), request);
   }
 }

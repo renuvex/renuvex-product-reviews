@@ -82,6 +82,9 @@ Media provider job worker (QStash target, not for unauthenticated manual browser
 # QStash sends a signed POST body: { "jobId": "..." }
 # For local manual debugging, call processMediaProviderJob(jobId) in a controlled script
 # rather than bypassing the QStash signature gate on /api/internal/media-jobs.
+#
+# Response classification: invalid signature = 401, signed malformed body = 400,
+# missing provider config = 503, authenticated worker failure = 500.
 ```
 
 Cleanup-images (two-phase — the **first run after a deploy only marks**; deletions begin one grace
