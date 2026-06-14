@@ -3,9 +3,9 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-29
-last_verified: 2026-05-29
-confidence: medium
+updated: 2026-06-14
+last_verified: 2026-06-14
+confidence: high
 tags:
   - seo
   - structured-data
@@ -62,7 +62,7 @@ Emission rules:
 ## Automated Checks
 - `pnpm test:widget-smoke` verifies JSON-LD across badge on/off, review mount present/absent, unsupported theme, rich-snippet toggle, and zero-approved-review scenarios.
 - `pnpm test:widget-runtime` verifies JSON-LD presence across representative review section layout combinations.
-- `pnpm verify:deployed-jsonld` loads the deployed widget from `https://new-ikas-app.vercel.app` in a controlled browser harness, mocks public API responses, and verifies exactly one parseable `Product` JSON-LD object with `AggregateRating` for visible rating/review scenarios. It also verifies no JSON-LD when no visible surface exists or the rich-snippet toggle is disabled.
+- `pnpm verify:deployed-jsonld` loads the deployed widget from `https://widget.renuvex.app` in a controlled browser harness, mocks public API responses, and verifies exactly one parseable `Product` JSON-LD object with `AggregateRating` for visible rating/review scenarios. It also verifies no JSON-LD when no visible surface exists or the rich-snippet toggle is disabled.
 
 These tests prove the browser runtime contract. They do not prove Google indexing behavior.
 

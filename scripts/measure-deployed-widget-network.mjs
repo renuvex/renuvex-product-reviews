@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const WIDGET_ORIGIN = process.env.MEASURE_WIDGET_ORIGIN || 'https://new-ikas-app.vercel.app';
+const WIDGET_ORIGIN = process.env.MEASURE_WIDGET_ORIGIN || 'https://widget.renuvex.app';
 const MERCHANT_ORIGIN = process.env.MEASURE_MERCHANT_ORIGIN || 'https://merchant-measure.test';
 const PUBLIC_KEY = process.env.MEASURE_PUBLIC_API_KEY || 'ci-public-key';
 const REVIEW_CLOUD_NAME = resolveReviewCloudName();

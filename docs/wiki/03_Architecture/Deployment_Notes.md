@@ -3,7 +3,9 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
+updated: 2026-06-14
+last_verified: 2026-06-14
+confidence: high
 tags:
   - deployment
   - vercel
@@ -21,7 +23,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 
 ## Vercel
 - **Region**: `["fra1"]` ([vercel.json](vercel.json)). Reasonable proximity to ikas/Supabase EU regions.
-- **Project rename status**: GitHub and the Vercel project are now named `renuvex-product-reviews`. The production Vercel domain intentionally remains `new-ikas-app.vercel.app` until a stable custom domain is added. Do not update `STOREFRONT_WIDGET_BASE_URL` or ikas script records away from that working domain until the replacement domain serves `widget.js`.
+- **Production domains**: `app.renuvex.app` is the ikas app/admin/API origin and `widget.renuvex.app` is the storefront widget origin. Both resolve to the production Vercel project. `new-ikas-app.vercel.app` remains a temporary compatibility alias only; do not use it for new configuration or documentation.
 - **Cron**: `/api/admin/daily-maintenance` daily at 03:00 UTC. It verifies pending storefront themes in batches and runs pending-upload cleanup plus storefront script reconciliation. The route still supports lightweight sub-daily execution if the Vercel plan is upgraded and the cron expression is changed later. `/api/admin/cleanup-images` remains monthly on day 1 at 04:00 UTC.
 - **Build command**: `pnpm build` → `prisma generate && prisma migrate deploy && next build --webpack`.
 - **Why webpack**: build script forces `--webpack` (Turbopack opt-out, presumably for compatibility — verify when Next ships stable Turbopack production builds).
@@ -81,7 +83,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Cron routes require `CRON_SECRET`; without it they return 500. Set it in Vercel env before deploy. Vercel Hobby cron supports daily schedules only; 2-5 minute theme verification requires Pro/Enterprise cron or an external delayed queue such as QStash.
 - Keep `NEXT_PUBLIC_DEPLOY_URL` and the app's URL in sync. Mismatch breaks OAuth (`getRedirectUri` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when `localhost` config meets non-localhost host, but it's a fallback).
 - Keep `STOREFRONT_WIDGET_BASE_URL` in sync with the public widget host. The helper trims accidental whitespace and rejects localhost/private/non-HTTPS URLs by default so local development cannot overwrite real storefront script records with `http://localhost:3000/widget.js`.
-- External rename order: Vercel project/domain -> Vercel env (`NEXT_PUBLIC_DEPLOY_URL`, `STOREFRONT_WIDGET_BASE_URL`) -> ikas Partner callback/webhook/app URLs -> deploy -> manual script repair/reconcile -> live storefront test -> Sentry/Upstash display-name cleanup. The current `new-ikas-app.vercel.app/widget.js` URL must stay active until the new Vercel URL is verified.
+- Domain migration order: Vercel project/domain -> Vercel env (`NEXT_PUBLIC_DEPLOY_URL`, `STOREFRONT_WIDGET_BASE_URL`) -> ikas Partner callback/app URLs -> deploy -> manual script repair/reconcile -> live storefront test -> observability cleanup. This migration is complete for `app.renuvex.app` and `widget.renuvex.app`; keep the old Vercel alias only during the defined compatibility observation window.
 
 ## Related Source Files
 - [vercel.json](vercel.json)
@@ -98,6 +100,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-06-14: Promoted `app.renuvex.app` as the ikas app/admin/API origin and `widget.renuvex.app` as the storefront widget origin. Live storefront checks confirmed the custom widget domain; `new-ikas-app.vercel.app` remains only as a temporary compatibility alias.
 - 2026-05-25: GitHub repository and Vercel project renamed to `renuvex-product-reviews`; local `origin` updated. Production domain remains `new-ikas-app.vercel.app` until a custom domain replaces it. `renuvex-product-reviews.vercel.app` returned 404 and the team-scoped Vercel domain is protected, so storefront script URLs must not be changed yet.
 - 2026-05-24: Recorded the Pro upgrade path for sub-daily theme verification and clarified that Upstash Redis is already configured for rate limits, while QStash remains optional future infrastructure.
 - 2026-05-23: Restored `/api/admin/daily-maintenance` to the daily 03:00 UTC Vercel-compatible schedule after the attempted 5-minute cron failed deployment on the current plan. The route still supports lightweight sub-daily runs if the deploy plan or queue architecture changes later.

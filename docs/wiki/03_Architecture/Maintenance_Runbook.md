@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-06-13
-last_verified: 2026-06-13
+updated: 2026-06-14
+last_verified: 2026-06-14
 confidence: high
 tags:
   - runbook
@@ -71,7 +71,7 @@ Org: `renuvex` (EU, `de.sentry.io`). See [[Sentry_Operations]].
 ## Manual trigger (run now / verify)
 ```bash
 curl -s -H "Authorization: Bearer <CRON_SECRET>" \
-  "https://new-ikas-app.vercel.app/api/admin/daily-maintenance?full=1"
+  "https://app.renuvex.app/api/admin/daily-maintenance?full=1"
 ```
 `<CRON_SECRET>` = Vercel → Project → Settings → Environment Variables → `CRON_SECRET`.
 Read `data.reviewMediaMetadata` (`{status:'ran', completed, ...}`) and `data.errors[]`.
@@ -88,11 +88,11 @@ Cleanup-images (two-phase — the **first run after a deploy only marks**; delet
 window later):
 ```bash
 curl -s -H "Authorization: Bearer <CRON_SECRET>" \
-  "https://new-ikas-app.vercel.app/api/admin/cleanup-images"
+  "https://app.renuvex.app/api/admin/cleanup-images"
 # After reviewing a `tripped` MediaCleanupRun row and confirming the deletion is intended,
 # re-run with ?force=1 to override the ratio (G2) / absolute (G3) caps — never G1:
 curl -s -H "Authorization: Bearer <CRON_SECRET>" \
-  "https://new-ikas-app.vercel.app/api/admin/cleanup-images?force=1"
+  "https://app.renuvex.app/api/admin/cleanup-images?force=1"
 ```
 Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, `released`,
 `deleted`, `breakerReason`.

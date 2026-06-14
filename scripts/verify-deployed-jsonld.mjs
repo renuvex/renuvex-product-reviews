@@ -1,6 +1,6 @@
 import { chromium } from '@playwright/test';
 
-const WIDGET_ORIGIN = process.env.SEO_WIDGET_ORIGIN || 'https://new-ikas-app.vercel.app';
+const WIDGET_ORIGIN = process.env.SEO_WIDGET_ORIGIN || 'https://widget.renuvex.app';
 const MERCHANT_ORIGIN = process.env.SEO_MERCHANT_ORIGIN || 'https://merchant-seo.test';
 const PUBLIC_KEY = process.env.SEO_PUBLIC_API_KEY || 'ci-public-key';
 const REAL_PDP_URL = process.env.SEO_PDP_URL || '';
