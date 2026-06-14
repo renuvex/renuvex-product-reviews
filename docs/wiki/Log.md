@@ -27,6 +27,7 @@ source_files:
 - Live public settings showed the internal store effective while local operations env remained disabled. Production activation is held until the Vercel flag is disabled, the admin hardening deploys, and the live capability is re-verified.
 - Added [[Review_Video_Physical_Device_Acceptance_2026-06]] as the dated evidence ledger.
 - Deployed commit `9f20cdc9` with the global Production capability disabled. The live internal store returned `videoReviewsEnabled=false`; post-deploy R2/Stream preflight, QStash DLQ/delivery, unsigned-worker rejection, and Sentry checks passed.
+- Reactivated the Production global video gate on deployment `dpl_2ASH38BDDDg632wjipyGquHQ5h7q`. The live internal store returned `videoReviewsEnabled=true`, the second store stayed effectively disabled, QStash DLQ was empty, Sentry reported zero matching media-path errors, and unsigned worker access remained `401`.
 
 ## 2026-06-14 - operations | Prepare controlled Review Video V1 canary
 - Added `pnpm video:canary:ops`, a read-only-by-default command that reports global/merchant/quota gates plus per-store quota, session, outbox, review, and media evidence.

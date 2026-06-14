@@ -75,6 +75,21 @@ After deployment:
 
 Physical-device acceptance must start only after Vercel Production `VIDEO_REVIEWS_ENABLED=true` is set deliberately and redeployed. Preview remains without production Cloudflare and QStash credentials.
 
+## Controlled Reactivation
+
+Verified on 2026-06-15 at approximately 00:52 TRT:
+
+- Vercel Production deployment `dpl_2ASH38BDDDg632wjipyGquHQ5h7q` is `READY`.
+- The deployment commit is `681ef9647aa198e3bd9af1e8554f7e4475afab45`.
+- The live internal-store public settings response returned `videoReviewsEnabled=true`.
+- The second store returned no reviews widget settings and no video capability.
+- Unsigned access to `/api/internal/media-jobs` returned `401`.
+- QStash media-worker DLQ returned zero messages.
+- Sentry reported zero matching production media-path errors in the preceding hour.
+- Vercel production error logs for the `video` query returned no entries in the preceding hour.
+
+The two-device physical acceptance can start. The 72-hour canary clock has not started yet; it starts only after the Android review is approved and storefront playback is verified.
+
 Preview must remain without production Cloudflare and QStash credentials.
 
 ## Physical Device Matrix
