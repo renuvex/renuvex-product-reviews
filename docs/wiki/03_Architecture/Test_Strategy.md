@@ -20,8 +20,10 @@ related:
 source_files:
   - "package.json"
   - "playwright.widget.config.ts"
+  - "playwright.media.config.ts"
   - "vitest.config.ts"
   - ".github/workflows/widget-smoke.yml"
+  - ".github/workflows/media-cross-browser.yml"
   - ".github/pull_request_template.md"
   - "scripts/check-widget-runtime.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
@@ -30,6 +32,7 @@ source_files:
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
+  - "tests/widget-media-cross-browser.spec.ts"
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/review-summary.test.ts"
@@ -60,6 +63,7 @@ source_files:
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/render/theme-vars.js"
   - "src/widget/reviews-section/review-modal.js"
+  - "src/widget/reviews-section/video-playback.js"
   - "src/widget/reviews-section/review-form-modal/index.js"
   - "src/widget/listing-badges/fallback-candidates.js"
   - "src/components/home-page/widgets/widgetDefs.ts"
@@ -80,7 +84,7 @@ source_files:
 # Test Strategy
 
 ## Summary
-The automated test suite has five layers: widget network/chunk contracts, widget layout/runtime rendering, storefront interactions, admin preview/settings behavior, and backend/theme-state unit tests. The suite is designed to catch regressions in public widget behavior without depending on real ikas auth, production DB data, Cloudinary uploads, or live merchant credentials.
+The automated test suite has six layers: widget network/chunk contracts, widget layout/runtime rendering, storefront interactions, cross-browser review media, admin preview/settings behavior, and backend/theme-state unit tests. The suite is designed to catch regressions in public widget behavior without depending on real ikas auth, production DB data, Cloudinary uploads, Stream assets, R2 uploads, or live merchant credentials.
 
 ## Layers
 
@@ -89,10 +93,22 @@ The automated test suite has five layers: widget network/chunk contracts, widget
 | Widget network/chunk smoke | `pnpm test:widget-smoke` | Built `public/widget.js` and content-hashed runtime chunks; validates API fan-out, lazy chunk boundaries, badge/review/structured-data combinations, unsupported theme behavior, listing fallback gating, and local transfer evidence without byte-budget gating. |
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, photo strip toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |
 | Storefront interactions | `pnpm test:widget-interactions` | Photo-strip lightbox, review-image lightbox, summary filter/popover light-dismiss, keyboard close, review wizard validation, step flow, mocked review submit, and body-scroll-lock regression (opening either overlay locks scroll on BOTH `<html>` and `<body>` and restores on close — ADR_0025). |
+| Cross-browser review media | `pnpm test:widget-media` | PR gate across Chromium desktop, Pixel Android emulation, and iPhone WebKit emulation. Pins poster-first card/list/gallery rendering, size presets, no list autoplay/preload, native-HLS lightbox attributes, browser-back cleanup, multipart video wizard submit, and video-to-image navigation cleanup. `pnpm test:widget-media:all` adds Firefox desktop and desktop WebKit plus the non-native `hls.js` branch. |
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
 | Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). |
 
-`pnpm test:ci` runs the five layers together. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
+`pnpm test:ci` runs the six layers together. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium and WebKit, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates.
+
+The media config uses Playwright's official desktop and device descriptors for Desktop Chrome, Desktop Firefox, Desktop Safari, Pixel 7, and iPhone 15. It keeps one active worker to avoid browser-engine memory contention and uses isolated tests with retained traces/screenshots on failure. The scheduled `Media Cross-Browser` workflow runs all five projects daily; the normal PR gate runs the three highest-value shopper targets.
+
+The media suite deliberately separates playback contracts:
+
+- Native HLS is forced at the DOM capability boundary and verifies `controls`, `playsinline`, `preload="metadata"`, no autoplay, browser-back disposal, and source cleanup.
+- The `hls.js`/MSE branch runs on desktop Chromium and Firefox and verifies lazy manifest loading plus player cleanup.
+- Poster-first card/list/gallery tests assert that no HLS manifest is requested before the shopper opens the lightbox.
+- Wizard upload tests mock the R2 multipart CORS contract, Stream processing status, and public review submit, while asserting no direct Cloudflare Admin API call leaves the widget.
+
+Playwright device descriptors emulate viewport, input, and browser-engine behavior; they do not prove physical-device codec, memory, thermal, or network behavior. Real iPhone Safari and Android Chrome acceptance remains a release gate before enabling video for merchants.
 
 Storefront interactions, runtime smoke, and unit tests also pin the summary filter same-gesture shield: touch/pen filter option activation closes the menu on `pointerdown`, arms the popover registry shield, keeps the exposed write button at `pointer-events:none` / `opacity:1` for that gesture, keeps selected-filter rating bar dim opacity intact while pointer-blocking bar rows, and clears the shield when the trailing click is swallowed. Runtime smoke treats that shield as transient: it asserts dimmed rating rows are pointer-blocked while the shield is armed, then simulates the swallowed trailing click and asserts the controls return to `pointer-events:auto`. Desktop mouse option selection is pinned separately to the normal `click` path: every summary layout keeps the filter button at `pointer-events:auto` / `cursor:pointer` and can reopen it immediately after a sort-triggered render. This protects physical mobile compat-event behavior without disabling ADR_0011 `:active` feedback for real future taps or desktop repeat-selection ergonomics.
 
@@ -169,6 +185,7 @@ The suite uses risk-based pairwise coverage instead of a full cartesian matrix. 
 - Admin widget editor skeleton/error/retry screens are not in CI because the current admin preview harness mounts the preview runtime, not the authenticated admin page.
 - Admin widget editor iframe-preview loading overlays are not in CI for the same reason; reducer behavior is covered by unit tests and visual behavior needs manual-auth smoke or a future admin editor harness.
 - Live dev-store post-deploy smoke is not replaced by CI. Runtime-affecting widget changes should still be checked on the dev storefront after deploy.
+- Playwright iPhone/Pixel emulation does not replace physical iPhone Safari and Android Chrome video acceptance. Native codec playback and weak-network behavior still require real devices before rollout.
 - Sentry production health checks are not part of CI. Use Sentry MCP or the dashboard after deploys that change runtime error reporting.
 - Transfer-size budgets are not enforced yet. Current network tests attach local transfer evidence and assert relative behavior, not byte ceilings.
 - Google Rich Results / Search Console verification is not in CI. Runtime JSON-LD is automated; search-engine rendering remains a live SEO playbook item.
@@ -178,7 +195,7 @@ When adding a new storefront surface such as carousel, FAQ, popup, Q&A, or anoth
 
 - surface/lazy-boundary change -> widget network smoke;
 - layout or render change -> widget runtime smoke;
-- modal/lightbox/wizard change -> interaction smoke;
+- modal/lightbox/wizard change -> interaction smoke, plus cross-browser media coverage when image/video playback or upload behavior changes;
 - admin setting or preview change -> admin preview smoke and static schema assertions;
 - public API/theme-state change -> unit tests.
 
@@ -191,9 +208,12 @@ The PR template repeats this rule as a checklist. If a change intentionally does
 ## Related Source Files
 - [package.json](package.json)
 - [playwright.widget.config.ts](playwright.widget.config.ts)
+- [playwright.media.config.ts](playwright.media.config.ts)
 - [vitest.config.ts](vitest.config.ts)
 - [.github/workflows/widget-smoke.yml](.github/workflows/widget-smoke.yml)
+- [.github/workflows/media-cross-browser.yml](.github/workflows/media-cross-browser.yml)
 - [tests/widget-harness.ts](tests/widget-harness.ts)
+- [tests/widget-media-cross-browser.spec.ts](tests/widget-media-cross-browser.spec.ts)
 - [tests/](tests/)
 
 ## Obsidian Links

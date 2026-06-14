@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-29
-last_verified: 2026-05-25
+updated: 2026-06-14
+last_verified: 2026-06-14
 confidence: high
 source_files: []
 tags:
@@ -21,7 +21,7 @@ related:
 # Current Status - Renuvex Product Reviews
 
 ## Current Phase
-Active development. Core feature set is functional end-to-end. Recent work has focused on widget UI/UX polish, storefront reliability, and architecture research for a Yotpo-style loader plus modular widget system. See [[Yotpo_Style_Widget_Modular_Architecture]] and [[Yotpo_Protein_Ocean_Widget_Research]] before large storefront widget changes.
+Active development. Core image-review features are functional end-to-end. Provider-agnostic video review infrastructure, upload/moderation contracts, storefront render, wizard flow, and the Phase 4 cross-browser media suite are implemented behind disabled rollout gates. Production canary and physical-device acceptance remain open.
 
 ## Working Features
 - OAuth install flow for ikas merchants — code-signature validation, token exchange, JWT issuance, session cookie
@@ -60,6 +60,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress
+- Video review production acceptance: account-level Stream webhook verification, internal-store canary, and physical iPhone Safari / Android Chrome acceptance. Playwright's five-project media matrix is complete; device emulation is not treated as physical-device proof. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - ADR_0013 Phase 3 source hardening is implemented: non-destructive StorefrontJSScript create/update lifecycle, daily script reconcile through daily maintenance, hashed runtime entry with stable shim, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]]. Post-deploy storefront/Sentry verification and deployed transfer-size measurement remain.
 
 ## Known Issues / Gaps
@@ -70,7 +71,7 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 - No multi-language storefront UI (widget is Turkish-only; settings labels Turkish)
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
-- No automated tests visible in repo (no `__tests__` / `test/` / vitest config found at top level) — flag for [[Open_Questions]]
+- Real-device video acceptance is not automated. CI covers Chromium, Firefox, WebKit, Pixel emulation, and iPhone WebKit emulation; physical iPhone Safari and Android Chrome remain release gates.
 - Current script injection relies on DB-tracked script ids because active MCP still does not expose `listStorefrontJSScript`; source intentionally avoids destructive cleanup while ikas docs/MCP disagree. See [[Ikas_Storefront_Script_Capabilities]].
 - Large new storefront surfaces should use the Phase 2 loader/module split pattern and must not be statically imported into the always-loaded runtime. See [[Yotpo_Style_Widget_Modular_Architecture]].
 - DOM-only listing badge fallback now resolves current slugs through `ProductSnapshot` before reading reviews by product id. If a snapshot is missing, the old slug query remains as a last-resort compatibility path; run `/api/admin/sync-products` to repair drift.
@@ -96,9 +97,10 @@ Active development. Core feature set is functional end-to-end. Recent work has f
 8. Consider tests for the public submission endpoint (highest blast-radius surface).
 
 ## Last Updated
-2026-05-29
+2026-06-14
 
 ## Change Log
+- 2026-06-14: Recorded provider-agnostic video implementation and the Phase 4 five-project Playwright media matrix. Rollout remains disabled pending Stream webhook, canary, and physical-device acceptance.
 - 2026-05-25: Renuvex Product Reviews hard namespace cleanup and opt-in review mount contract are current. Source and active generated widget assets use `renuvex-pr` / `renuvex_pr`; historical `ikr` / `yorum-paneli` notes remain only in old ADRs/bug history.
 - 2026-05-17: ADR_0013 Phase 3 source hardening implemented: non-destructive StorefrontJSScript lifecycle, daily maintenance reconcile, hashed runtime entry with stable shim, and hidden-link listing badge filter.
 - 2026-05-17: Canonical product identity implemented for listing/search badge reads: widget maps Storefront Events product ids and public ratings can group by `productId`. Related: [[ADR_0015_Canonical_Product_Identity]].

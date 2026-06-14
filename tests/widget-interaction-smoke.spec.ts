@@ -11,17 +11,13 @@ import {
   hasOverlay,
   hasReviewsWidget,
   isOverlayControlDisabled,
+  setFileInputInOverlay,
   setupPreviewRoutes,
   setupWidgetRoutes,
+  stubVideoMetadata,
   textInOverlay,
   widgetErrors,
 } from './widget-harness';
-
-type UploadFilePayload = {
-  name: string;
-  mimeType: string;
-  buffer: Buffer;
-};
 
 function overlayActiveState(page: Page, overlaySelector: string) {
   return page.evaluate((overlaySelector) => {
@@ -54,28 +50,6 @@ function reviewsActiveState(page: Page) {
   });
 }
 
-async function setFileInputInOverlay(
-  page: Page,
-  overlaySelector: string,
-  selector: string,
-  files: UploadFilePayload | UploadFilePayload[],
-) {
-  const handle = await page.evaluateHandle(({ overlaySelector, selector }) => {
-    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
-      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
-      .filter((candidate): candidate is ShadowRoot => !!candidate)
-      .find((candidate) => !!candidate.querySelector(overlaySelector));
-    return root?.querySelector<HTMLInputElement>(selector) || null;
-  }, { overlaySelector, selector });
-  const input = handle.asElement();
-  if (!input) {
-    await handle.dispose();
-    throw new Error(`Missing overlay file input: ${selector}`);
-  }
-  await input.setInputFiles(files);
-  await handle.dispose();
-}
-
 async function blobAudit(page: Page) {
   return page.evaluate(() => {
     const win = window as Window & {
@@ -86,25 +60,6 @@ async function blobAudit(page: Page) {
     };
     return win.__renuvexBlobAudit || { created: [], revoked: [] };
   });
-}
-
-async function stubVideoMetadata(page: Page, durationSeconds: number) {
-  await page.addInitScript((durationSeconds) => {
-    const nativeCreateElement = document.createElement.bind(document);
-    document.createElement = ((tagName: string, options?: ElementCreationOptions) => {
-      const element = nativeCreateElement(tagName, options);
-      if (String(tagName).toLowerCase() === 'video') {
-        setTimeout(() => {
-          Object.defineProperty(element, 'duration', { configurable: true, get: () => durationSeconds });
-          const event = new Event('loadedmetadata');
-          const video = element as HTMLVideoElement;
-          if (typeof video.onloadedmetadata === 'function') video.onloadedmetadata(event);
-          element.dispatchEvent(event);
-        }, 0);
-      }
-      return element;
-    }) as typeof document.createElement;
-  }, durationSeconds);
 }
 
 async function countInOverlay(page: Page, overlaySelector: string, selector: string) {

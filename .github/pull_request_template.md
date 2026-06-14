@@ -6,6 +6,7 @@
 - [ ] `pnpm test:widget-smoke`
 - [ ] `pnpm test:widget-runtime`
 - [ ] `pnpm test:widget-interactions`
+- [ ] `pnpm test:widget-media`
 - [ ] `pnpm test:admin-preview`
 - [ ] `pnpm check:widget-js`
 - [ ] `pnpm exec tsc --noEmit`

@@ -1,13 +1,12 @@
-name: Quality Gate
+name: Media Cross-Browser
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+  schedule:
+    - cron: '30 2 * * *'
 
 jobs:
-  quality-gate:
+  media-cross-browser:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,28 +26,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: pnpm prisma:generate
-
       - name: Build widget
         run: pnpm build:widget
         env:
           NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: renuvex
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium webkit
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
-      - name: Run unit and browser smoke tests
-        run: pnpm test:ci
+      - name: Run full media browser matrix
+        run: pnpm test:widget-media:all
 
-      - name: Syntax check generated widget assets
-        run: pnpm check:widget-js
-
-      - name: Typecheck
-        run: pnpm exec tsc --noEmit
-
-      - name: Lint source
-        run: pnpm lint
-
-      - name: Diff whitespace check
-        run: git diff --check
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-cross-browser-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

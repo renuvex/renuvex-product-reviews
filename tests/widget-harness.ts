@@ -50,6 +50,12 @@ export type RequestLog = {
   consoleErrors: string[];
 };
 
+export type UploadFilePayload = {
+  name: string;
+  mimeType: string;
+  buffer: Buffer;
+};
+
 export type WidgetNetworkSummary = {
   scriptCount: number;
   assetBytes: number;
@@ -586,6 +592,7 @@ function productHtml(options: SmokeOptions): string {
 <html lang="tr">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${PRODUCT_NAME}</title>
     ${hostileStyle}
     ${ikasEventsScript(events, options.ikasEventMode)}
@@ -957,6 +964,47 @@ export async function textInOverlay(page: Page, overlaySelector: string, selecto
       .find((candidate) => !!candidate.querySelector(overlaySelector));
     return root?.querySelector(selector)?.textContent?.trim() || '';
   }, { overlaySelector, selector });
+}
+
+export async function setFileInputInOverlay(
+  page: Page,
+  overlaySelector: string,
+  selector: string,
+  files: UploadFilePayload | UploadFilePayload[],
+): Promise<void> {
+  const handle = await page.evaluateHandle(({ overlaySelector, selector }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    return root?.querySelector<HTMLInputElement>(selector) || null;
+  }, { overlaySelector, selector });
+  const input = handle.asElement();
+  if (!input) {
+    await handle.dispose();
+    throw new Error(`Missing overlay file input: ${selector}`);
+  }
+  await input.setInputFiles(files);
+  await handle.dispose();
+}
+
+export async function stubVideoMetadata(page: Page, durationSeconds: number): Promise<void> {
+  await page.addInitScript((durationSeconds) => {
+    const nativeCreateElement = document.createElement.bind(document);
+    document.createElement = ((tagName: string, options?: ElementCreationOptions) => {
+      const element = nativeCreateElement(tagName, options);
+      if (String(tagName).toLowerCase() === 'video') {
+        setTimeout(() => {
+          Object.defineProperty(element, 'duration', { configurable: true, get: () => durationSeconds });
+          const event = new Event('loadedmetadata');
+          const video = element as HTMLVideoElement;
+          if (typeof video.onloadedmetadata === 'function') video.onloadedmetadata(event);
+          element.dispatchEvent(event);
+        }, 0);
+      }
+      return element;
+    }) as typeof document.createElement;
+  }, durationSeconds);
 }
 
 export async function isOverlayControlDisabled(page: Page, overlaySelector: string, selector: string): Promise<boolean> {

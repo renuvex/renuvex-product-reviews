@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: draft
 created: 2026-06-12
-updated: 2026-06-12
-last_verified: 2026-06-12
+updated: 2026-06-14
+last_verified: 2026-06-14
 confidence: medium
 tags:
   - adr
@@ -42,22 +42,28 @@ source_files:
   - "src/lib/cleanup-pending-uploads.ts"
   - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"
   - "src/widget/reviews-section/review-modal.js"
+  - "src/widget/reviews-section/video-playback.js"
+  - "src/widget/reviews-section/media-thumbnail.js"
   - "src/widget/reviews-section/render/photo-strip.js"
   - "src/widget/core/helpers.js"
   - "src/components/home-page/widgets/widgetDefs.ts"
   - "src/lib/widget-settings.ts"
+  - "playwright.media.config.ts"
+  - "tests/widget-media-cross-browser.spec.ts"
+  - ".github/workflows/media-cross-browser.yml"
 ---
 
 # ADR_0031 — Review Media v2: Provider-Agnostic Model + Video on Cloudflare Stream
 
 ## Status
-Proposed — draft (not yet implemented; supersedes the image-only assumptions of [[ADR_0027_Review_Media_Read_Model]] and [[ADR_0029_Review_Media_Metadata]] by generalizing them to multi-provider media)
+Draft - implemented behind disabled rollout gates; production acceptance is still pending. This decision supersedes the image-only assumptions of [[ADR_0027_Review_Media_Read_Model]] and [[ADR_0029_Review_Media_Metadata]] by generalizing them to multi-provider media.
 
 ## Implementation Status
 - 2026-06-14: Provider contract hardening is implemented in source. QStash signature failures are classified as `401`, malformed signed payloads as `400`, Stream copy requests use the documented `url` field with the V1 size/duration limits, and a video remains processing until Stream reports `state='ready'` with `pctComplete=100`.
 - 2026-06-14: Production env isolation is verified: Cloudflare, Stream, QStash, and the global video flag are Production-only in Vercel. The deployed commit is `ebe82a2c`.
 - 2026-06-14: Master bucket CORS was corrected for merchant storefront origins. Live verification passed both arbitrary-origin preflight and a temporary presigned multipart `PUT`; the response exposed a readable `ETag`, and the probe upload was aborted successfully.
-- Production acceptance is still open. The ADR remains draft until the account-level Stream webhook, environment isolation, live canary, cross-browser suite, and real-device acceptance gates pass.
+- 2026-06-14: Phase 4 cross-browser media coverage is implemented. The official Playwright 1.60 Linux image passed the five-project matrix (Chromium desktop, Firefox desktop, WebKit desktop, Pixel 7 emulation, and iPhone 15 WebKit emulation): 30 passed and 5 intentional platform-scope skips. The suite pins poster-first rendering, native HLS and `hls.js` branches, browser-back/source cleanup, multipart wizard submit, and video-to-image navigation cleanup.
+- Production acceptance is still open. The ADR remains draft until the account-level Stream webhook, live canary, and physical iPhone Safari / Android Chrome acceptance gates pass.
 
 ## Date
 2026-06-12

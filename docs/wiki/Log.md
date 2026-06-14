@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-06-14
+last_verified: 2026-06-14
 confidence: high
 tags:
   - log
@@ -19,6 +19,13 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-14 - test | Add Phase 4 cross-browser review media gate
+- Added a dedicated Playwright media config and suite for Chromium desktop, Firefox desktop, WebKit desktop, Pixel 7 emulation, and iPhone 15 WebKit emulation.
+- Contracts cover poster-first card/list/gallery rendering, responsive media sizing, no pre-lightbox HLS requests, native HLS attributes, lazy `hls.js`, browser-back/source cleanup, multipart video wizard submit, and video-to-image navigation cleanup.
+- CI now runs the Chromium/Pixel/iPhone subset on normal quality gates and the full five-project matrix on a scheduled/manual workflow. The official Playwright 1.60 Linux image passed with 30 tests and 5 intentional platform-scope skips.
+- Physical iPhone Safari and Android Chrome remain rollout acceptance requirements; Playwright device emulation is not treated as real-device proof.
+- Updated wiki: [[Test_Strategy]], [[Product_Review_Lightbox]], [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]]
 
 ## 2026-06-14 - operations | Verify production video infrastructure
 - Deployment: Vercel production deployment `dpl_ApD7oYZrGhiJeZMA72fA7jjnSZzU` is ready on `app.renuvex.app` and `widget.renuvex.app`, built from commit `ebe82a2c`.
