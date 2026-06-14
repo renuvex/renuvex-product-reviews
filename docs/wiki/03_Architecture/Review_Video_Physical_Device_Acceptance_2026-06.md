@@ -18,7 +18,11 @@ related:
 source_files:
   - "src/components/home-page/index.tsx"
   - "src/components/home-page/MediaPreviewState.ts"
+  - "src/app/api/webhooks/cloudflare-stream/route.ts"
+  - "src/widget/reviews-section/review-form-modal/steps/step-media.js"
   - "tests/unit/admin-video-preview-contract.test.ts"
+  - "tests/unit/media-route-contracts.test.ts"
+  - "tests/widget-interaction-smoke.spec.ts"
   - "tests/widget-media-cross-browser.spec.ts"
   - "scripts/verify-video-infrastructure.mjs"
   - "scripts/video-canary-ops.mjs"
@@ -91,6 +95,18 @@ Verified on 2026-06-15 at approximately 00:52 TRT:
 The two-device physical acceptance can start. The 72-hour canary clock has not started yet; it starts only after the Android review is approved and storefront playback is verified.
 
 Preview must remain without production Cloudflare and QStash credentials.
+
+## iOS Safari Blocker And Fix
+
+Verified on 2026-06-15 during the first physical iOS Safari attempt:
+
+- iOS upload reached Cloudflare Stream successfully, but the shopper UI stayed in `processing`.
+- DB/provider evidence showed the Stream asset was already `readyToStream=true`, `status.state='ready'`, `pctComplete=100`, with HLS and thumbnail available, while `VideoUploadSession.status` stayed `processing` and `PendingReviewImage.processingStatus` stayed `pending`.
+- The root cause was the webhook route applying the signed webhook payload directly. A webhook payload can be insufficient for the final delivery fields the DB readiness contract requires, so the route now fetches the canonical Stream video record before applying readiness.
+- The video-card remove button also stayed visible after cancellation because the media step only re-rendered while `videoUpload` existed. The state listener now clears the video card when a previous video is removed, and the remove button handles both `pointerdown` and `click` for iOS tap reliability.
+- Contract coverage was added for canonical Stream hydration and pending video-card removal.
+
+The 72-hour canary clock remains not started. Physical-device acceptance must restart from a deployment that includes this fix.
 
 ## Physical Device Matrix
 

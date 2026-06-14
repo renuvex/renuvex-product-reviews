@@ -436,6 +436,9 @@ export var FWIZARD_CSS = `
     top:6px;
     right:6px;
     border:1px solid rgba(0,0,0,.12);
+    z-index:2;
+    touch-action:manipulation;
+    pointer-events:auto;
   }
   .renuvex-pr-fwizard-photo-remove svg{width:12px;height:12px;}
 

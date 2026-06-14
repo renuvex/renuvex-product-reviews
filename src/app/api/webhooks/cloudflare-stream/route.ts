@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { getStreamMediaConfig, MediaConfigError } from '@/lib/media/config';
-import type { StreamVideo } from '@/lib/media/providers/cloudflare-stream';
+import { getStreamVideo, type StreamVideo } from '@/lib/media/providers/cloudflare-stream';
 import { MediaRequestError, parseJsonObject } from '@/lib/media/request';
 import { verifyStreamWebhookSignature } from '@/lib/media/stream-webhook';
 import { applyStreamVideoState, findSessionForStreamVideo } from '@/lib/media/video-processing';
@@ -42,7 +42,8 @@ export async function POST(request: Request) {
     const video: StreamVideo = parsed.data;
     const session = await findSessionForStreamVideo(video);
     if (!session) return NextResponse.json({ received: true, matched: false }, { status: 202 });
-    const result = await applyStreamVideoState(session, video);
+    const canonicalVideo = await getStreamVideo(video.uid);
+    const result = await applyStreamVideoState(session, canonicalVideo);
     return NextResponse.json({ received: true, matched: true, status: result.ok ? result.status : result.code });
   } catch (error) {
     if (error instanceof MediaRequestError) return NextResponse.json({ error: error.code }, { status: 400 });

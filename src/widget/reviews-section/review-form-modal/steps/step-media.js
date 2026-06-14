@@ -118,7 +118,15 @@ export function createStepMedia(state, opts) {
     remove.setAttribute('aria-label', 'Videoyu kaldır');
     var removeIcon = iconUseNode(UI_CLOSE);
     if (removeIcon) remove.appendChild(removeIcon);
-    remove.onclick = removeVideo;
+    function onRemove(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      removeVideo();
+    }
+    remove.addEventListener('pointerdown', onRemove);
+    remove.addEventListener('click', onRemove);
     card.appendChild(remove);
     content.appendChild(card);
   }
@@ -230,9 +238,12 @@ export function createStepMedia(state, opts) {
     if (file) startUpload(file, null);
   };
 
+  var hadVideo = !!currentVideo();
   var unsubscribe = state.onChange(function () {
     updateChoices();
-    if (currentVideo()) renderVideo();
+    var hasVideo = !!currentVideo();
+    if (hasVideo || hadVideo) renderVideo();
+    hadVideo = hasVideo;
   });
   updateChoices();
   if (hasPhotos()) mountPhotoPicker(false);

@@ -50,8 +50,12 @@ const processingMock = vi.hoisted(() => ({
   findSessionForStreamVideo: vi.fn(),
   applyStreamVideoState: vi.fn(),
 }));
+const streamProviderMock = vi.hoisted(() => ({
+  getStreamVideo: vi.fn(),
+}));
 
 vi.mock('@/lib/media/video-processing', () => processingMock);
+vi.mock('@/lib/media/providers/cloudflare-stream', () => streamProviderMock);
 
 function streamSignature(rawBody: string, time = Math.floor(Date.now() / 1000)) {
   const digest = createHmac('sha256', 'stream-secret').update(`${time}.${rawBody}`, 'utf8').digest('hex');
@@ -127,6 +131,7 @@ describe('Cloudflare Stream webhook route contracts', () => {
       webhookSecret: 'stream-secret',
     });
     processingMock.findSessionForStreamVideo.mockResolvedValue(null);
+    streamProviderMock.getStreamVideo.mockResolvedValue(null);
   });
 
   it('returns 401 for an invalid Stream signature', async () => {
@@ -215,5 +220,40 @@ describe('Cloudflare Stream webhook route contracts', () => {
     expect(response.status).toBe(202);
     expect(body).toEqual({ received: true, matched: false });
     expect(processingMock.applyStreamVideoState).not.toHaveBeenCalled();
+  });
+
+  it('hydrates a matched webhook from Stream before applying readiness state', async () => {
+    const session = { id: '11111111-1111-4111-8111-111111111111' };
+    const rawBody = JSON.stringify({
+      uid: 'stream-1',
+      creator: session.id,
+      readyToStream: true,
+      status: { state: 'ready', pctComplete: 100 },
+    });
+    const canonical = {
+      uid: 'stream-1',
+      readyToStream: true,
+      duration: 12,
+      size: 5_000_000,
+      thumbnail: 'https://videodelivery.net/stream-1/thumbnails/thumbnail.jpg',
+      playback: { hls: 'https://videodelivery.net/stream-1/manifest/video.m3u8' },
+      status: { state: 'ready', pctComplete: 100 },
+    };
+    processingMock.findSessionForStreamVideo.mockResolvedValue(session);
+    streamProviderMock.getStreamVideo.mockResolvedValue(canonical);
+    processingMock.applyStreamVideoState.mockResolvedValue({ ok: true, status: 'ready' });
+
+    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
+      method: 'POST',
+      headers: { 'Webhook-Signature': streamSignature(rawBody) },
+      body: rawBody,
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ received: true, matched: true, status: 'ready' });
+    expect(streamProviderMock.getStreamVideo).toHaveBeenCalledWith('stream-1');
+    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(session, canonical);
   });
 });
