@@ -60,17 +60,20 @@ The internal store has quota `5` and merchant video toggle enabled. Current DB e
 
 Deletion does not refund consumed quota because provider processing cost has already occurred.
 
-## Activation Safety Hold
+## Activation State
 
-The local operations environment reports `VIDEO_REVIEWS_ENABLED=false`, but the live public settings response currently reports `videoReviewsEnabled=true` for the internal store and `false` for the other store. Production activation is therefore already effective for the internal store.
+Commit `9f20cdc9` deployed successfully to Vercel Production as deployment `dpl_JBK7wZ69ZLBNcFjoHJwqrccRUYdB`. The deployment is `READY`, serves `app.renuvex.app` and `widget.renuvex.app`, and contains the pending-admin preview hardening.
 
-Before physical-device acceptance starts:
+After deployment:
 
-1. Set Vercel Production `VIDEO_REVIEWS_ENABLED=false` and redeploy.
-2. Verify the live internal-store public settings response returns `videoReviewsEnabled=false`.
-3. Deploy the pending-admin preview hardening.
-4. Re-run the full automated and infrastructure gates.
-5. Set the Production flag to `true` only for the controlled acceptance window.
+- the live internal-store public settings response returned `videoReviewsEnabled=false`
+- the R2 multipart write/abort, Stream token, and Stream webhook preflight passed again
+- unsigned access to the media-job worker returned `401`
+- the QStash media-worker DLQ was empty
+- the latest ten media-worker deliveries reached `DELIVERED`, including messages that exercised retry
+- Sentry reported zero matching production media-path errors in the preceding hour
+
+Physical-device acceptance must start only after Vercel Production `VIDEO_REVIEWS_ENABLED=true` is set deliberately and redeployed. Preview remains without production Cloudflare and QStash credentials.
 
 Preview must remain without production Cloudflare and QStash credentials.
 
