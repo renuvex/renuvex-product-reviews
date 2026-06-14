@@ -51,6 +51,9 @@ source_files:
   - "playwright.media.config.ts"
   - "tests/widget-media-cross-browser.spec.ts"
   - ".github/workflows/media-cross-browser.yml"
+  - "scripts/video-canary-ops.mjs"
+  - "scripts/video-canary-ops-lib.mjs"
+  - "tests/unit/video-canary-ops.test.ts"
 ---
 
 # ADR_0031 — Review Media v2: Provider-Agnostic Model + Video on Cloudflare Stream
@@ -63,6 +66,7 @@ Draft - implemented behind disabled rollout gates; production acceptance is stil
 - 2026-06-14: Production env isolation is verified: Cloudflare, Stream, QStash, and the global video flag are Production-only in Vercel. The deployed commit is `ebe82a2c`.
 - 2026-06-14: Master bucket CORS was corrected for merchant storefront origins. Live verification passed both arbitrary-origin preflight and a temporary presigned multipart `PUT`; the response exposed a readable `ETag`, and the probe upload was aborted successfully.
 - 2026-06-14: Phase 4 cross-browser media coverage is implemented. The official Playwright 1.60 Linux image passed the five-project matrix (Chromium desktop, Firefox desktop, WebKit desktop, Pixel 7 emulation, and iPhone 15 WebKit emulation): 30 passed and 5 intentional platform-scope skips. The suite pins poster-first rendering, native HLS and `hls.js` branches, browser-back/source cleanup, multipart wizard submit, and video-to-image navigation cleanup.
+- 2026-06-14: Phase 5 operational preparation is implemented. The dry-run-first `video:canary:ops` command reports all three gates and per-store lifecycle evidence; apply mode is single-store scoped, requires an exact confirmation id, preserves unrelated widget settings, and blocks accidental live activation while the global flag is already true. The real provider canary is still pending.
 - Production acceptance is still open. The ADR remains draft until the account-level Stream webhook, live canary, and physical iPhone Safari / Android Chrome acceptance gates pass.
 
 ## Date

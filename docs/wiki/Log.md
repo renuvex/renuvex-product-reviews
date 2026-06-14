@@ -20,6 +20,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-14 - operations | Prepare controlled Review Video V1 canary
+- Added `pnpm video:canary:ops`, a read-only-by-default command that reports global/merchant/quota gates plus per-store quota, session, outbox, review, and media evidence.
+- Apply mode requires a single existing store, matching `--confirmStoreId`, explicit fields, and `--apply`; it preserves unrelated review-widget settings and blocks accidental activation when the global flag is already true.
+- Added [[Review_Video_Canary_Runbook]] with preflight, activation order, real-provider evidence, exit criteria, rollback, and physical-device follow-up.
+- Verified the current DB baseline without mutation: all store quotas are zero, all merchant video toggles are off, and the loaded global flag is false. The real production canary remains pending.
+
 ## 2026-06-14 - test | Add Phase 4 cross-browser review media gate
 - Added a dedicated Playwright media config and suite for Chromium desktop, Firefox desktop, WebKit desktop, Pixel 7 emulation, and iPhone 15 WebKit emulation.
 - Contracts cover poster-first card/list/gallery rendering, responsive media sizing, no pre-lightbox HLS requests, native HLS attributes, lazy `hls.js`, browser-back/source cleanup, multipart video wizard submit, and video-to-image navigation cleanup.

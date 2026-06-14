@@ -25,6 +25,7 @@ source_files:
   - "src/app/api/admin/cleanup-images/route.ts"
   - "src/app/api/internal/media-jobs/route.ts"
   - "src/lib/media/jobs.ts"
+  - "scripts/video-canary-ops.mjs"
   - "vercel.json"
 ---
 
@@ -133,6 +134,7 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 - Required Cloudflare setup is manual/operator-owned in V1: private master R2 bucket, public-ingest R2 bucket with 24h lifecycle, CORS exposing `ETag` for multipart uploads, Stream webhook URL, Stream API token, and QStash signing keys. The app does not provision Cloudflare resources automatically.
 - The master bucket receives browser multipart `PUT` requests from merchant storefront domains, not from `app.renuvex.app` or `widget.renuvex.app`. Its R2 CORS rule must therefore support arbitrary merchant origins (`AllowedOrigins: ["*"]`) while remaining method-constrained to `PUT`/`HEAD` and exposing `ETag`. Presigned URLs remain the upload authorization boundary. Verify preflight with `pnpm verify:video-infrastructure`; verify a real temporary part and cleanup with `node --env-file=.env.local scripts/verify-video-infrastructure.mjs --expect-disabled --write-probe`.
 - The transient ingest bucket intentionally has no browser CORS policy. Only the backend copies objects into it, and Cloudflare Stream fetches them server-to-server through the public custom domain. Its required controls are the unguessable object key, public custom domain, immediate application cleanup, and 24-hour lifecycle backstop.
+- The first production video rollout must follow [[Review_Video_Canary_Runbook]]. `pnpm video:canary:ops` is read-only by default; apply mode is single-store scoped and requires an exact confirmation id.
 
 ## Obsidian Links
 - [[Sentry_Operations]]
@@ -140,3 +142,4 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 - [[ADR_0029_Review_Media_Metadata]]
 - [[ADR_0030_Cleanup_Hardening]]
 - [[Database_Map]]
+- [[Review_Video_Canary_Runbook]]

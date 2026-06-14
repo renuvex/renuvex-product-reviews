@@ -60,7 +60,7 @@ Active development. Core image-review features are functional end-to-end. Provid
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress
-- Video review production acceptance: account-level Stream webhook verification, internal-store canary, and physical iPhone Safari / Android Chrome acceptance. Playwright's five-project media matrix is complete; device emulation is not treated as physical-device proof. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
+- Video review production acceptance: the dry-run-first single-store canary operations command and runbook are implemented. The real internal-store provider chain and physical iPhone Safari / Android Chrome acceptance remain open. Playwright's five-project media matrix is complete; device emulation is not treated as physical-device proof. See [[Review_Video_Canary_Runbook]] and [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - ADR_0013 Phase 3 source hardening is implemented: non-destructive StorefrontJSScript create/update lifecycle, daily script reconcile through daily maintenance, hashed runtime entry with stable shim, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]]. Post-deploy storefront/Sentry verification and deployed transfer-size measurement remain.
 
 ## Known Issues / Gaps
@@ -100,6 +100,7 @@ Active development. Core image-review features are functional end-to-end. Provid
 2026-06-14
 
 ## Change Log
+- 2026-06-14: Added dry-run-first Review Video V1 canary operations and a controlled activation/rollback runbook. No production merchant gate or global flag was enabled by this change.
 - 2026-06-14: Recorded provider-agnostic video implementation and the Phase 4 five-project Playwright media matrix. Rollout remains disabled pending Stream webhook, canary, and physical-device acceptance.
 - 2026-05-25: Renuvex Product Reviews hard namespace cleanup and opt-in review mount contract are current. Source and active generated widget assets use `renuvex-pr` / `renuvex_pr`; historical `ikr` / `yorum-paneli` notes remain only in old ADRs/bug history.
 - 2026-05-17: ADR_0013 Phase 3 source hardening implemented: non-destructive StorefrontJSScript lifecycle, daily maintenance reconcile, hashed runtime entry with stable shim, and hidden-link listing badge filter.

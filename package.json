@@ -15,6 +15,8 @@
     "measure:deployed-widget": "node scripts/measure-deployed-widget-network.mjs",
     "verify:deployed-jsonld": "node scripts/verify-deployed-jsonld.mjs",
     "verify:video-infrastructure": "node --env-file=.env.local scripts/verify-video-infrastructure.mjs --expect-disabled",
+    "video:canary:ops": "node --env-file=.env.local scripts/video-canary-ops.mjs",
+    "video:canary:verify-disabled": "node --env-file=.env.local scripts/video-canary-ops.mjs --expect-all-disabled",
     "test:widget-smoke": "playwright test --config=playwright.widget.config.ts tests/widget-network-smoke.spec.ts",
     "test:widget-runtime": "playwright test --config=playwright.widget.config.ts tests/widget-runtime-smoke.spec.ts",
     "test:widget-interactions": "playwright test --config=playwright.widget.config.ts tests/widget-interaction-smoke.spec.ts",

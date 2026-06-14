@@ -126,6 +126,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 ## Notes
 - `.env.local` is gitignored. `.env.example` is the contract — keep it accurate when adding env vars. Upstash and Cloudflare values in `.env.example` are placeholders only.
 - `pnpm verify:video-infrastructure` performs a secret-safe, read-only check of required env presence, R2 bucket access, arbitrary merchant-origin multipart CORS, ingest-domain reachability, Stream API access, and Stream webhook presence. Run the script directly with `--write-probe` to create one temporary multipart part, verify readable `ETag`, and abort it; add `--require-webhook` after webhook registration.
+- `pnpm video:canary:ops` reports global/merchant/quota gates and per-store lifecycle evidence without writing by default. DB writes require `--storeId`, matching `--confirmStoreId`, explicit quota/toggle fields, and `--apply`. See [[Review_Video_Canary_Runbook]].
 - `.env.sentry-build-plugin` and `.sentryclirc` are also gitignored. Hold Sentry CI secrets only.
 - Never log env values. Code uses `process.env.X || ''` defaults in JWT helpers — be aware of fail-open risk.
 - `NEXT_PUBLIC_*` are exposed to the browser bundle. Don't put secrets there. (DSN is intentionally public-ish — it identifies a Sentry project, no auth.)
