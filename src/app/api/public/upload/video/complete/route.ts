@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { MEDIA_JOB_ACTIONS, VIDEO_MAX_BYTES } from '@/lib/media/constants';
@@ -98,6 +99,7 @@ export async function POST(request: Request) {
         console.error('[video-complete] failed to persist cleanup outbox:', cleanupError);
       }
     }
+    Sentry.captureException(error, { tags: { source: 'media-job', task: 'video-complete' } });
     console.error('[video-complete] failed:', error);
     return withCors(NextResponse.json({ error: 'video_upload_complete_failed' }, { status: 500 }), request);
   }

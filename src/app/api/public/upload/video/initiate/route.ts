@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { getClientIp, checkFixedWindowRateLimit } from '@/lib/public-rate-limit';
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
       console.error('[video-initiate] provider configuration is incomplete:', error.code);
       return withCors(NextResponse.json({ error: 'video_provider_unavailable' }, { status: 503 }), request);
     }
+    Sentry.captureException(error, { tags: { source: 'media-job', task: 'video-initiate' } });
     console.error('[video-initiate] failed:', error);
     return withCors(NextResponse.json({ error: 'video_upload_initiate_failed' }, { status: 500 }), request);
   }

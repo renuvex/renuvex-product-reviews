@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { withCors, corsOptions } from '@/lib/cors';
 import { cancelSessionAndQueueCleanup } from '@/lib/media/jobs';
 import { MediaRequestError, readJsonObject } from '@/lib/media/request';
@@ -18,6 +19,7 @@ export async function DELETE(request: Request) {
     return withCors(NextResponse.json({ data: { status: 'cancelling' } }), request);
   } catch (error) {
     if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
+    Sentry.captureException(error, { tags: { source: 'media-job', task: 'video-cancel' } });
     console.error('[video-delete] failed:', error);
     return withCors(NextResponse.json({ error: 'video_upload_cancel_failed' }, { status: 500 }), request);
   }

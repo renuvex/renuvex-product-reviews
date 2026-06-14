@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { withCors, corsOptions } from '@/lib/cors';
 import { partitionVideoBytes } from '@/lib/media/video-policy';
 import { getVideoSessionByToken } from '@/lib/media/sessions';
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
     return withCors(NextResponse.json({ data: { parts: signed, completed } }), request);
   } catch (error) {
     if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
+    Sentry.captureException(error, { tags: { source: 'media-job', task: 'video-parts' } });
     console.error('[video-parts] failed:', error);
     return withCors(NextResponse.json({ error: 'video_parts_failed' }, { status: 500 }), request);
   }

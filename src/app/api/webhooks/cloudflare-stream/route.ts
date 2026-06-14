@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { getStreamMediaConfig, MediaConfigError } from '@/lib/media/config';
 import type { StreamVideo } from '@/lib/media/providers/cloudflare-stream';
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof MediaRequestError) return NextResponse.json({ error: error.code }, { status: 400 });
     if (error instanceof MediaConfigError) return NextResponse.json({ error: 'Webhook is not configured' }, { status: 503 });
+    Sentry.captureException(error, { tags: { source: 'media-job', task: 'stream-webhook' } });
     console.error('[cloudflare-stream-webhook] failed:', error);
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
