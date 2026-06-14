@@ -27,7 +27,13 @@ export class StreamProviderError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+type CloudflareResponse = { ok: boolean; status: number; body: CloudflareEnvelope<unknown> | null };
+
+// Cloudflare Stream replies with a JSON envelope for most calls, but a
+// successful DELETE returns an empty body. Read the payload as text once so an
+// empty (or non-JSON, e.g. an edge 5xx HTML page) response never throws at the
+// parse step the way response.json() did.
+async function rawRequest(path: string, init?: RequestInit): Promise<CloudflareResponse> {
   const config = getStreamMediaConfig();
   const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.accountId)}/stream${path}`, {
     ...init,
@@ -37,12 +43,40 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   });
-  const body = await response.json() as CloudflareEnvelope<T>;
-  if (!response.ok || !body.success) {
-    const first = body.errors?.[0];
-    throw new StreamProviderError(String(first?.code ?? response.status), first?.message ?? 'Cloudflare Stream request failed');
+  const text = await response.text();
+  let body: CloudflareEnvelope<unknown> | null = null;
+  if (text.trim()) {
+    try {
+      body = JSON.parse(text) as CloudflareEnvelope<unknown>;
+    } catch {
+      body = null;
+    }
   }
-  return body.result;
+  return { ok: response.ok, status: response.status, body };
+}
+
+function throwIfStreamError(result: CloudflareResponse): void {
+  if (!result.ok || (result.body !== null && !result.body.success)) {
+    const first = result.body?.errors?.[0];
+    throw new StreamProviderError(String(first?.code ?? result.status), first?.message ?? 'Cloudflare Stream request failed');
+  }
+}
+
+// For calls that must return a result body. An empty (or non-JSON) success
+// response is treated as an error so callers never silently receive undefined.
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const result = await rawRequest(path, init);
+  throwIfStreamError(result);
+  if (result.body === null) {
+    throw new StreamProviderError(String(result.status), 'Cloudflare Stream returned an empty response body');
+  }
+  return result.body.result as T;
+}
+
+// For calls with no meaningful result body (DELETE). A successful empty
+// response resolves; only a real error envelope or non-2xx status throws.
+async function requestVoid(path: string, init?: RequestInit): Promise<void> {
+  throwIfStreamError(await rawRequest(path, init));
 }
 
 export async function findStreamVideoByCreator(creator: string): Promise<StreamVideo | null> {
@@ -79,7 +113,7 @@ export async function setStreamVideoPublic(uid: string, isPublic: boolean) {
 
 export async function deleteStreamVideo(uid: string) {
   try {
-    await request<unknown>(`/${encodeURIComponent(uid)}`, { method: 'DELETE' });
+    await requestVoid(`/${encodeURIComponent(uid)}`, { method: 'DELETE' });
   } catch (error) {
     if (error instanceof StreamProviderError && (error.code === '1001' || error.code === '10003' || error.code === '404')) return;
     throw error;

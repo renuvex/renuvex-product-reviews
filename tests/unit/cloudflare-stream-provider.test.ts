@@ -15,7 +15,8 @@ describe('Cloudflare Stream provider contract', () => {
   it('uses the documented copy URL field and server-side upload limits', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true, result: { uid: 'stream-1' } }),
+      status: 200,
+      text: async () => JSON.stringify({ success: true, result: { uid: 'stream-1' } }),
     });
     vi.stubGlobal('fetch', fetchMock);
     const { createStreamVideoFromUrl } = await import('@/lib/media/providers/cloudflare-stream');
@@ -39,18 +40,57 @@ describe('Cloudflare Stream provider contract', () => {
     });
   });
 
-  it('treats an already deleted Stream video as an idempotent delete success', async () => {
+  it('treats an already deleted Stream video (JSON error envelope) as an idempotent delete success', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
-      json: async () => ({
-        success: false,
-        result: null,
-        errors: [{ code: 10003, message: 'Not Found: The requested resource or operation was not found.' }],
-      }),
+      status: 404,
+      text: async () =>
+        JSON.stringify({
+          success: false,
+          result: null,
+          errors: [{ code: 10003, message: 'Not Found: The requested resource or operation was not found.' }],
+        }),
     });
     vi.stubGlobal('fetch', fetchMock);
     const { deleteStreamVideo } = await import('@/lib/media/providers/cloudflare-stream');
 
     await expect(deleteStreamVideo('stream-1')).resolves.toBeUndefined();
+  });
+
+  it('treats a successful empty-body DELETE response as success', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      text: async () => '',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { deleteStreamVideo } = await import('@/lib/media/providers/cloudflare-stream');
+
+    await expect(deleteStreamVideo('stream-1')).resolves.toBeUndefined();
+  });
+
+  it('throws a StreamProviderError (not a JSON parse error) on a non-JSON error response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      text: async () => '<html><body>Bad Gateway</body></html>',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { deleteStreamVideo, StreamProviderError } = await import('@/lib/media/providers/cloudflare-stream');
+
+    await expect(deleteStreamVideo('stream-1')).rejects.toBeInstanceOf(StreamProviderError);
+    await expect(deleteStreamVideo('stream-1')).rejects.toMatchObject({ code: '502' });
+  });
+
+  it('throws when a result-returning call receives an empty success body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => '',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getStreamVideo, StreamProviderError } = await import('@/lib/media/providers/cloudflare-stream');
+
+    await expect(getStreamVideo('stream-1')).rejects.toBeInstanceOf(StreamProviderError);
   });
 });
