@@ -55,6 +55,8 @@ Proposed — draft (not yet implemented; supersedes the image-only assumptions o
 
 ## Implementation Status
 - 2026-06-14: Provider contract hardening is implemented in source. QStash signature failures are classified as `401`, malformed signed payloads as `400`, Stream copy requests use the documented `url` field with the V1 size/duration limits, and a video remains processing until Stream reports `state='ready'` with `pctComplete=100`.
+- 2026-06-14: Production env isolation is verified: Cloudflare, Stream, QStash, and the global video flag are Production-only in Vercel. The deployed commit is `ebe82a2c`.
+- 2026-06-14: Master bucket CORS was corrected for merchant storefront origins. Live verification passed both arbitrary-origin preflight and a temporary presigned multipart `PUT`; the response exposed a readable `ETag`, and the probe upload was aborted successfully.
 - Production acceptance is still open. The ADR remains draft until the account-level Stream webhook, environment isolation, live canary, cross-browser suite, and real-device acceptance gates pass.
 
 ## Date

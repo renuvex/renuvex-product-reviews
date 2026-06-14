@@ -20,6 +20,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-14 - operations | Verify production video infrastructure
+- Deployment: Vercel production deployment `dpl_ApD7oYZrGhiJeZMA72fA7jjnSZzU` is ready on `app.renuvex.app` and `widget.renuvex.app`, built from commit `ebe82a2c`.
+- Environment isolation: Cloudflare/R2/Stream, QStash, media-job base URL, and `VIDEO_REVIEWS_ENABLED` are scoped to Vercel Production only.
+- Live CORS correction: R2 master multipart CORS now accepts arbitrary merchant storefront origins. Both preflight and a temporary presigned `PUT` passed; `ETag` was readable and the multipart probe was aborted. Added a secret-safe infrastructure verifier so this provider contract is repeatable before canary activation.
+
 ## 2026-06-14 - security | Harden video provider contracts
 - Summary: Corrected QStash signature-error classification, introduced shared JSON object parsing for media routes, moved video API failures to stable English error codes, and validated signed Stream webhook payloads before lifecycle processing.
 - Provider contract: Stream copy requests now send the documented `url` field plus the V1 `60s` and `150 MB` limits. Stream assets remain processing until `readyToStream`, `status.state='ready'`, and `pctComplete=100` all hold.
