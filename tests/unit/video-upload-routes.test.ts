@@ -26,19 +26,26 @@ const jobsMock = vi.hoisted(() => ({
   enqueueMediaProviderJob: vi.fn(),
   failSessionAndQueueCleanup: vi.fn(),
 }));
+const configMock = vi.hoisted(() => ({
+  getR2MediaConfig: vi.fn(),
+  getStreamMediaConfig: vi.fn(),
+  getQStashMediaConfig: vi.fn(),
+}));
+const sentryMock = vi.hoisted(() => ({
+  captureException: vi.fn(),
+}));
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/media/access', () => accessMock);
 vi.mock('@/lib/media/sessions', () => ({ ...sessionMock, VideoQuotaError: class VideoQuotaError extends Error {} }));
 vi.mock('@/lib/media/providers/r2', () => r2Mock);
 vi.mock('@/lib/media/jobs', () => jobsMock);
+vi.mock('@sentry/nextjs', () => sentryMock);
 vi.mock('@/lib/media/config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/media/config')>();
   return {
     ...actual,
-    getR2MediaConfig: vi.fn(() => ({})),
-    getStreamMediaConfig: vi.fn(() => ({})),
-    getQStashMediaConfig: vi.fn(() => ({})),
+    ...configMock,
   };
 });
 vi.mock('@/lib/public-rate-limit', () => ({
@@ -75,9 +82,19 @@ function session(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function expectMediaJobCapture(error: Error, task: string) {
+  expect(sentryMock.captureException).toHaveBeenCalledOnce();
+  expect(sentryMock.captureException).toHaveBeenCalledWith(error, {
+    tags: { source: 'media-job', task },
+  });
+}
+
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  configMock.getR2MediaConfig.mockReturnValue({});
+  configMock.getStreamMediaConfig.mockReturnValue({});
+  configMock.getQStashMediaConfig.mockReturnValue({});
   accessMock.getVideoFeatureAccess.mockResolvedValue({ enabled: true, reason: 'enabled', monthlyLimit: 5 });
   accessMock.verifyVideoReviewTarget.mockResolvedValue({ productId: 'product-1', slug: 'product', name: 'Product' });
   jobsMock.dispatchMediaProviderJob.mockResolvedValue(true);
@@ -99,6 +116,7 @@ describe('video upload initiate', () => {
     expect(body.error).toBe('invalid_json');
     expect(sessionMock.createReservedVideoSession).not.toHaveBeenCalled();
     expect(r2Mock.createVideoMultipartUpload).not.toHaveBeenCalled();
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
   });
 
   it('fails closed when any feature gate is closed', async () => {
@@ -110,6 +128,35 @@ describe('video upload initiate', () => {
     }));
     expect(response.status).toBe(403);
     expect(sessionMock.createReservedVideoSession).not.toHaveBeenCalled();
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('returns 503 for missing provider configuration without reporting an operational exception', async () => {
+    const { MediaConfigError } = await import('@/lib/media/config');
+    configMock.getR2MediaConfig.mockImplementationOnce(() => {
+      throw new MediaConfigError('missing_config', 'R2 is not configured');
+    });
+    const { POST } = await import('@/app/api/public/upload/video/initiate/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ storeId: 'store-1', productId: 'product-1', mimeType: 'video/mp4', bytes: 100 }),
+    }));
+
+    expect(response.status).toBe(503);
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('reports unexpected initiate failures with the media-job task tags', async () => {
+    const error = new Error('access lookup failed');
+    accessMock.getVideoFeatureAccess.mockRejectedValueOnce(error);
+    const { POST } = await import('@/app/api/public/upload/video/initiate/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ storeId: 'store-1', productId: 'product-1', mimeType: 'video/mp4', bytes: 100 }),
+    }));
+
+    expect(response.status).toBe(500);
+    expectMediaJobCapture(error, 'video-initiate');
   });
 
   it('reserves quota before creating a multipart upload and returns only client-safe state', async () => {
@@ -133,6 +180,30 @@ describe('video upload initiate', () => {
 });
 
 describe('video multipart parts', () => {
+  it('returns 400 for malformed JSON without reporting an operational exception', async () => {
+    const { POST } = await import('@/app/api/public/upload/video/parts/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/parts', {
+      method: 'POST',
+      body: '{',
+    }));
+
+    expect(response.status).toBe(400);
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('reports unexpected part-signing failures with the media-job task tags', async () => {
+    const error = new Error('session lookup failed');
+    sessionMock.getVideoSessionByToken.mockRejectedValueOnce(error);
+    const { POST } = await import('@/app/api/public/upload/video/parts/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/parts', {
+      method: 'POST',
+      body: JSON.stringify({ token: 'opaque-token' }),
+    }));
+
+    expect(response.status).toBe(500);
+    expectMediaJobCapture(error, 'video-parts');
+  });
+
   it('lists provider parts and signs only missing parts by default', async () => {
     sessionMock.getVideoSessionByToken.mockResolvedValue(session());
     r2Mock.listVideoUploadParts.mockResolvedValue([{ partNumber: 1, etag: '"one"', size: VIDEO_MULTIPART_PART_BYTES }]);
@@ -167,6 +238,30 @@ describe('video multipart parts', () => {
 });
 
 describe('video upload complete and status', () => {
+  it('returns 400 for malformed JSON without reporting an operational exception', async () => {
+    const { POST } = await import('@/app/api/public/upload/video/complete/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/complete', {
+      method: 'POST',
+      body: '{',
+    }));
+
+    expect(response.status).toBe(400);
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('reports unexpected completion failures with the media-job task tags', async () => {
+    const error = new Error('session lookup failed');
+    sessionMock.getVideoSessionByToken.mockRejectedValueOnce(error);
+    const { POST } = await import('@/app/api/public/upload/video/complete/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/complete', {
+      method: 'POST',
+      body: JSON.stringify({ token: 'opaque-token', parts: [] }),
+    }));
+
+    expect(response.status).toBe(500);
+    expectMediaJobCapture(error, 'video-complete');
+  });
+
   it('validates the exact R2 part list and queues Stream processing once', async () => {
     const current = session();
     sessionMock.getVideoSessionByToken.mockResolvedValue(current);
@@ -244,6 +339,30 @@ describe('video upload complete and status', () => {
 });
 
 describe('video upload cancellation', () => {
+  it('returns 400 for malformed JSON without reporting an operational exception', async () => {
+    const { DELETE } = await import('@/app/api/public/upload/video/route');
+    const response = await DELETE(new Request('https://app.test/api/public/upload/video', {
+      method: 'DELETE',
+      body: '{',
+    }));
+
+    expect(response.status).toBe(400);
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('reports unexpected cancellation failures with the media-job task tags', async () => {
+    const error = new Error('session lookup failed');
+    sessionMock.getVideoSessionByToken.mockRejectedValueOnce(error);
+    const { DELETE } = await import('@/app/api/public/upload/video/route');
+    const response = await DELETE(new Request('https://app.test/api/public/upload/video', {
+      method: 'DELETE',
+      body: JSON.stringify({ token: 'opaque-token' }),
+    }));
+
+    expect(response.status).toBe(500);
+    expectMediaJobCapture(error, 'video-cancel');
+  });
+
   it('routes cancellation through the transactional cleanup outbox', async () => {
     const current = session();
     sessionMock.getVideoSessionByToken.mockResolvedValue(current);

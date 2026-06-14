@@ -35,6 +35,8 @@ source_files:
   - "tests/widget-media-cross-browser.spec.ts"
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
+  - "tests/unit/video-upload-routes.test.ts"
+  - "tests/unit/media-route-contracts.test.ts"
   - "tests/unit/review-summary.test.ts"
   - "tests/unit/review-media-reconciliation.test.ts"
   - "tests/unit/storefront-theme.test.ts"
@@ -107,6 +109,8 @@ The media suite deliberately separates playback contracts:
 - The `hls.js`/MSE branch runs on desktop Chromium and Firefox and verifies lazy manifest loading plus player cleanup.
 - Poster-first card/list/gallery tests assert that no HLS manifest is requested before the shopper opens the lightbox.
 - Wizard upload tests mock the R2 multipart CORS contract, Stream processing status, and public review submit, while asserting no direct Cloudflare Admin API call leaves the widget.
+
+Unit route contracts separately pin video observability: malformed or expected client errors and missing provider configuration do not consume Sentry error quota, while unexpected initiate, part-signing, completion, cancellation, and Stream-webhook failures call `captureException` exactly once with `source=media-job` and the route-specific `task` tag used by production alerts.
 
 Playwright device descriptors emulate viewport, input, and browser-engine behavior; they do not prove physical-device codec, memory, thermal, or network behavior. Real iPhone Safari and Android Chrome acceptance remains a release gate before enabling video for merchants.
 

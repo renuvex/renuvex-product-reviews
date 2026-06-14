@@ -5,6 +5,12 @@ const qstashMock = vi.hoisted(() => ({
   verify: vi.fn(),
   processJob: vi.fn(),
 }));
+const configMock = vi.hoisted(() => ({
+  getStreamMediaConfig: vi.fn(),
+}));
+const sentryMock = vi.hoisted(() => ({
+  captureException: vi.fn(),
+}));
 
 class TestSignatureError extends Error {
   constructor(message = 'invalid signature') {
@@ -31,18 +37,14 @@ vi.mock('@/lib/media/config', async (importOriginal) => {
       currentSigningKey: 'current',
       nextSigningKey: 'next',
     }),
-    getStreamMediaConfig: () => ({
-      accountId: 'account',
-      apiToken: 'token',
-      customerCode: 'customer',
-      webhookSecret: 'stream-secret',
-    }),
+    getStreamMediaConfig: configMock.getStreamMediaConfig,
   };
 });
 
 vi.mock('@/lib/media/jobs', () => ({
   processMediaProviderJob: qstashMock.processJob,
 }));
+vi.mock('@sentry/nextjs', () => sentryMock);
 
 const processingMock = vi.hoisted(() => ({
   findSessionForStreamVideo: vi.fn(),
@@ -118,6 +120,12 @@ describe('Cloudflare Stream webhook route contracts', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    configMock.getStreamMediaConfig.mockReturnValue({
+      accountId: 'account',
+      apiToken: 'token',
+      customerCode: 'customer',
+      webhookSecret: 'stream-secret',
+    });
     processingMock.findSessionForStreamVideo.mockResolvedValue(null);
   });
 
@@ -130,6 +138,7 @@ describe('Cloudflare Stream webhook route contracts', () => {
     }));
 
     expect(response.status).toBe(401);
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
   });
 
   it('returns 400 for validly signed malformed JSON', async () => {
@@ -144,6 +153,7 @@ describe('Cloudflare Stream webhook route contracts', () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toBe('invalid_json');
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
   });
 
   it('returns 400 for a signed payload without a video uid', async () => {
@@ -156,6 +166,40 @@ describe('Cloudflare Stream webhook route contracts', () => {
     }));
 
     expect(response.status).toBe(400);
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('returns 503 for missing Stream configuration without reporting an operational exception', async () => {
+    const { MediaConfigError } = await import('@/lib/media/config');
+    configMock.getStreamMediaConfig.mockImplementationOnce(() => {
+      throw new MediaConfigError('missing_config', 'Stream is not configured');
+    });
+    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
+      method: 'POST',
+      body: '{}',
+    }));
+
+    expect(response.status).toBe(503);
+    expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('reports unexpected processing failures with the media-job task tags', async () => {
+    const error = new Error('processing lookup failed');
+    const rawBody = JSON.stringify({ uid: 'stream-1', readyToStream: false, status: { state: 'downloading' } });
+    processingMock.findSessionForStreamVideo.mockRejectedValueOnce(error);
+    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
+      method: 'POST',
+      headers: { 'Webhook-Signature': streamSignature(rawBody) },
+      body: rawBody,
+    }));
+
+    expect(response.status).toBe(500);
+    expect(sentryMock.captureException).toHaveBeenCalledOnce();
+    expect(sentryMock.captureException).toHaveBeenCalledWith(error, {
+      tags: { source: 'media-job', task: 'stream-webhook' },
+    });
   });
 
   it('acknowledges an unmatched valid Stream webhook without mutation', async () => {
