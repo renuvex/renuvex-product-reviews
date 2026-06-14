@@ -38,4 +38,19 @@ describe('Cloudflare Stream provider contract', () => {
       thumbnailTimestampPct: 0.1,
     });
   });
+
+  it('treats an already deleted Stream video as an idempotent delete success', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        success: false,
+        result: null,
+        errors: [{ code: 10003, message: 'Not Found: The requested resource or operation was not found.' }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { deleteStreamVideo } = await import('@/lib/media/providers/cloudflare-stream');
+
+    await expect(deleteStreamVideo('stream-1')).resolves.toBeUndefined();
+  });
 });

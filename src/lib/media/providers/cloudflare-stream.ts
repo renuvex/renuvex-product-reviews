@@ -81,7 +81,7 @@ export async function deleteStreamVideo(uid: string) {
   try {
     await request<unknown>(`/${encodeURIComponent(uid)}`, { method: 'DELETE' });
   } catch (error) {
-    if (error instanceof StreamProviderError && (error.code === '1001' || error.code === '404')) return;
+    if (error instanceof StreamProviderError && (error.code === '1001' || error.code === '10003' || error.code === '404')) return;
     throw error;
   }
 }
