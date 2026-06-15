@@ -13,12 +13,15 @@ export const VIDEO_INGEST_CLEANUP_DELAY_MS = 60 * 60 * 1000;
 export const VIDEO_INGEST_RECHECK_DELAY_MS = 30 * 60 * 1000;
 export const VIDEO_INGEST_HARD_DEADLINE_MS = 23 * 60 * 60 * 1000;
 export const VIDEO_STREAM_RECONCILE_OFFSETS_MS = [
-  15_000,
+  10_000,
+  20_000,
+  30_000,
   45_000,
-  105_000,
-  225_000,
-  345_000,
-  465_000,
+  60_000,
+  90_000,
+  120_000,
+  180_000,
+  300_000,
   600_000,
 ] as const;
 

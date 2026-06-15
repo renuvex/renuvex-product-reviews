@@ -90,7 +90,7 @@ export async function reconcileProcessingVideos(limit = 50) {
   for (const session of sessions) {
     try {
       const video = await getStreamVideo(session.streamUid!);
-      const result = await applyStreamVideoState(session, video);
+      const result = await applyStreamVideoState(session, video, 'stream_maintenance');
       if (result.ok && result.status === 'ready') ready += 1;
       else if (result.ok) processing += 1;
       else failed += 1;

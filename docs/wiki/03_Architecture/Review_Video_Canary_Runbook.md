@@ -118,7 +118,7 @@ Verify in order:
 1. Browser receives multipart URLs and uploads more than one R2 part.
 2. Complete returns processing and creates one `prepare_stream` outbox job.
 3. QStash delivers the signed job; the session progresses to Stream processing.
-4. The real Stream webhook advances the session to ready and removes the ingest object. As a failure-path check, the deduped `reconcile_stream` job must be able to apply the same canonical ready/error state when webhook delivery is delayed or missed.
+4. The real Stream webhook advances the session to ready and removes the ingest object. Readiness requires `readyToStream=true`, `status.state='ready'`, trusted HLS/poster delivery URLs, and valid V1 duration/size metadata; `pctComplete` is diagnostic only. As a failure-path check, the deduped `reconcile_stream` job must apply the same canonical ready/error state when webhook delivery is delayed or missed.
 5. Quota moves from reserved to consumed exactly once.
 6. Review submission consumes the ready token and creates a pending video review.
 7. Admin playback uses the short-lived signed endpoint; provider credentials and private playback data are not exposed by public status APIs.
@@ -143,6 +143,7 @@ The report includes current-month quota counts, recent sessions, provider-job st
 - Reserved quota is zero; consumed quota reflects exactly the completed canary upload.
 - No unexpected Sentry issue appears with `source=media-job` or video API routes.
 - Public review APIs expose normalized media fields only, never provider credentials or private admin playback tokens.
+- Readiness provenance matches the path that won the terminal transition: `stream_webhook`, `stream_reconcile`, `stream_ingest_cleanup`, or `stream_maintenance`.
 
 ## Rollback
 

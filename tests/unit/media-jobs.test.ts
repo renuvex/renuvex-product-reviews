@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MEDIA_JOB_ACTIONS } from '@/lib/media/constants';
+import {
+  MEDIA_JOB_ACTIONS,
+  VIDEO_STREAM_RECONCILE_OFFSETS_MS,
+} from '@/lib/media/constants';
 
 const prismaMock = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
@@ -317,7 +320,11 @@ describe('media provider jobs', () => {
     const result = await processMediaProviderJob('ingest-job');
 
     expect(result).toEqual({ processed: true, status: 'succeeded' });
-    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(current, canonical);
+    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(
+      current,
+      canonical,
+      'stream_ingest_cleanup',
+    );
     expect(r2Mock.deleteVideoIngest).toHaveBeenCalledWith('public-ingest/video.mp4');
     expect(prismaMock.videoUploadSession.updateMany).toHaveBeenCalledWith({
       where: {
@@ -329,7 +336,7 @@ describe('media provider jobs', () => {
   });
 
   it('redispatches the durable reconciliation job when prepare retries after the Stream uid was persisted', async () => {
-    const availableAt = new Date(Date.now() + 15_000);
+    const availableAt = new Date(Date.now() + 10_000);
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'prepare-job',
       provider: 'cloudflare_stream',
@@ -368,7 +375,7 @@ describe('media provider jobs', () => {
   it('recovers a processing session when the webhook is missed', async () => {
     const startedAt = new Date('2026-06-15T12:00:00.000Z');
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(startedAt.getTime() + 15_000));
+    vi.setSystemTime(new Date(startedAt.getTime() + 10_000));
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'reconcile-job',
       provider: 'cloudflare_stream',
@@ -397,7 +404,11 @@ describe('media provider jobs', () => {
     const result = await processMediaProviderJob('reconcile-job');
 
     expect(result).toEqual({ processed: true, status: 'succeeded' });
-    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(current, canonical);
+    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(
+      current,
+      canonical,
+      'stream_reconcile',
+    );
     expect(prismaMock.mediaProviderJob.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         status: 'succeeded',
@@ -407,7 +418,19 @@ describe('media provider jobs', () => {
     vi.useRealTimers();
   });
 
-  it('uses a bounded seven-check schedule and records delayed processing without deleting the video', async () => {
+  it('uses the bounded ten-check schedule and records delayed processing without deleting the video', async () => {
+    expect(VIDEO_STREAM_RECONCILE_OFFSETS_MS).toEqual([
+      10_000,
+      20_000,
+      30_000,
+      45_000,
+      60_000,
+      90_000,
+      120_000,
+      180_000,
+      300_000,
+      600_000,
+    ]);
     const startedAt = new Date('2026-06-15T12:00:00.000Z');
     vi.useFakeTimers();
     vi.setSystemTime(new Date(startedAt.getTime() + 600_000));
@@ -419,7 +442,7 @@ describe('media provider jobs', () => {
         sessionId: '11111111-1111-4111-8111-111111111111',
         streamUid: 'stream-1',
         startedAt: startedAt.toISOString(),
-        checkIndex: 6,
+        checkIndex: 9,
       },
       attempts: 1,
       maxAttempts: 16,
@@ -446,7 +469,7 @@ describe('media provider jobs', () => {
       data: expect.objectContaining({
         status: 'succeeded',
         payload: expect.objectContaining({
-          checkIndex: 6,
+          checkIndex: 9,
           outcome: 'stream_processing_delayed',
         }),
       }),

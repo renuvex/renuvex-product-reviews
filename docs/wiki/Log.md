@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-15
-last_verified: 2026-06-15
+updated: 2026-06-16
+last_verified: 2026-06-16
 confidence: high
 tags:
   - log
@@ -19,6 +19,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-16 - fix | Accept playable Stream readiness without full rendition completion
+- Replaced the incorrect `pctComplete=100` readiness gate with Cloudflare's documented playable signal: `readyToStream=true` and provider `state='ready'`, plus trusted HLS/poster URLs and the existing V1 duration/size limits.
+- Increased missed-webhook self-healing density to `10/20/30/45/60/90/120/180/300/600` seconds while retaining webhook fast-path behavior, the 10-minute delayed-processing state, the 60-minute ingest backstop, and DB-only public status.
+- Added explicit readiness provenance for webhook, reconciliation, ingest cleanup, and maintenance. The locked terminal transition now preserves the first winner so concurrent webhook/reconcile delivery cannot consume quota twice or overwrite provenance.
+- Unit coverage pins readiness below or without `pctComplete`, invalid delivery URLs, the ten-check schedule, each internal provenance path, and concurrent terminal idempotency. Deployment timing verification and renewed physical-device acceptance remain required before 72-hour canary `T0`.
 
 ## 2026-06-15 - acceptance | Start Review Video V1 physical-device gate
 - Post-hardening Android Chrome and iPhone Safari user acceptance passed interruption/retry, X removal, processing-to-ready, admin moderation, storefront HLS, fullscreen/audio/back/modal close; desktop Chrome also passed. Longer videos took approximately one to two minutes to become ready, within the existing delayed-processing policy. Video-to-video lightbox navigation revealed that the directional transform moved the native center play control; video transitions now use opacity-only animation, with a browser regression contract. The global gate remains disabled and canary `T0` has not started.
@@ -57,8 +63,8 @@ source_files:
 
 ## 2026-06-14 - security | Harden video provider contracts
 - Summary: Corrected QStash signature-error classification, introduced shared JSON object parsing for media routes, moved video API failures to stable English error codes, and validated signed Stream webhook payloads before lifecycle processing.
-- Provider contract: Stream copy requests now send the documented `url` field plus the V1 `60s` and `150 MB` limits. Stream assets remain processing until `readyToStream`, `status.state='ready'`, and `pctComplete=100` all hold.
-- Verification target: route tests cover missing/invalid QStash signatures, signed malformed payloads, unmatched valid Stream webhooks, documented Stream copy payload fields, malformed public upload JSON, and full-encode readiness.
+- Provider contract at that date: Stream copy requests send the documented `url` field plus the V1 `60s` and `150 MB` limits. The original readiness gate also required `pctComplete=100`; the 2026-06-16 readiness correction above supersedes that overly strict condition.
+- Verification target at that date: route tests covered missing/invalid QStash signatures, signed malformed payloads, unmatched valid Stream webhooks, documented Stream copy payload fields, malformed public upload JSON, and the then-current full-encode readiness rule.
 - Updated wiki: [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]], [[Backend_API_Map]]
 
 ## 2026-06-08 - performance | Add review media metadata

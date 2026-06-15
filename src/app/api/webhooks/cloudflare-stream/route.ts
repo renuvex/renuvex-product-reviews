@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       console.error('[cloudflare-stream-webhook] provider fetch failed:', error);
       return NextResponse.json({ error: 'stream_provider_unavailable' }, { status: 502 });
     }
-    const result = await applyStreamVideoState(session, canonicalVideo);
+    const result = await applyStreamVideoState(session, canonicalVideo, 'stream_webhook');
     return NextResponse.json({ received: true, matched: true, status: result.ok ? result.status : result.code });
   } catch (error) {
     if (error instanceof MediaRequestError) return NextResponse.json({ error: error.code }, { status: 400 });

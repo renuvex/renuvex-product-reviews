@@ -264,7 +264,11 @@ describe('Cloudflare Stream webhook route contracts', () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({ received: true, matched: true, status: 'ready' });
     expect(streamProviderMock.getStreamVideo).toHaveBeenCalledWith('stream-1');
-    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(session, canonical);
+    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(
+      session,
+      canonical,
+      'stream_webhook',
+    );
   });
 
   it('acknowledges a matched webhook when the Stream asset was already deleted', async () => {

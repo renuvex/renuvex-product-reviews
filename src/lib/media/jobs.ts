@@ -374,7 +374,7 @@ async function reconcileStream(payload: z.infer<typeof reconcileStreamPayload>):
     return nextStreamReconcileResult(payload, code);
   }
 
-  const result = await applyStreamVideoState(session, video);
+  const result = await applyStreamVideoState(session, video, 'stream_reconcile');
   if (!result.ok || result.status === 'ready' || result.status === 'consumed') {
     return {
       status: 'succeeded',
@@ -477,7 +477,7 @@ async function cleanupIngest(payload: z.infer<typeof cleanupIngestPayload>): Pro
   const terminal = ['ready', 'consumed', 'failed', 'aborted'].includes(session.status);
   if (!terminal && session.streamUid && hardDeleteAt > new Date()) {
     const video = await getStreamVideo(session.streamUid);
-    const result = await applyStreamVideoState(session, video);
+    const result = await applyStreamVideoState(session, video, 'stream_ingest_cleanup');
     if (result.ok && result.status === 'processing') {
       return { status: 'deferred', delayMs: VIDEO_INGEST_RECHECK_DELAY_MS };
     }

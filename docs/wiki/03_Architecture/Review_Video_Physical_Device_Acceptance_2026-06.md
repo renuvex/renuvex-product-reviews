@@ -199,7 +199,7 @@ This corrects the earlier Android row that said resume was still pending. The 72
 
 Implemented locally on 2026-06-15 after the physical observations:
 
-- Stream readiness no longer depends on webhook delivery alone. A deduped DB outbox job checks canonical Stream status at 15/45/105/225/345/465/600 seconds and applies the same state transition as the webhook.
+- Stream readiness no longer depends on webhook delivery alone. A deduped DB outbox job checks canonical Stream status at 10/20/30/45/60/90/120/180/300/600 seconds and applies the same state transition as the webhook.
 - Session reservation and exact `expiresAt` cleanup are committed in one serializable transaction. Ready-but-unsubmitted video is cleaned at expiry, consumed review sessions are protected, and daily maintenance backfills lifecycle jobs for pre-deploy sessions.
 - The media step preserves one `<video>` preview element across progress/status updates, avoiding the mobile preview flash caused by repeated element recreation.
 - Retry retains the original opaque upload session and already-read metadata. Completed multipart parts remain server-authoritative and contribute to resumed progress.
@@ -218,6 +218,19 @@ User-reported physical acceptance on 2026-06-15 after deployment:
 - Admin signed preview, approval, storefront HLS playback, fullscreen, audio, browser back, and modal close passed.
 - Desktop Chrome repeated the playback flow without a functional failure.
 - Storefront video-to-video lightbox navigation exposed a visual-only regression: the browser-native center play control moved horizontally because the directional slide animation was applied to the `<video>` element itself. The source now uses a video-specific opacity transition so native controls remain centered. This fix requires deploy verification before canary `T0`.
+
+## Stream Readiness Latency Diagnosis
+
+Verified from the controlled approximately `100 MiB` / 4K source test and current source on 2026-06-16:
+
+- Browser upload completion to the R2 master was separate from provider readiness.
+- R2-to-Stream preparation took approximately `14s`; Stream processing to a playable provider state took approximately `32s`.
+- The prior backend contract still required `pctComplete=100`, even though Cloudflare documents `readyToStream=true` as the playable signal. That could keep the shopper in `processing` while remaining rendition work continued.
+- The prior missed-webhook fallback also had a `45s -> 105s` gap. The revised schedule checks at `10/20/30/45/60/90/120/180/300/600s`.
+- The new terminal contract requires `readyToStream=true`, provider `state='ready'`, trusted HLS and poster URLs, and valid V1 duration/size metadata. `pctComplete` is retained only as provider diagnostics.
+- The actual terminal source is recorded as webhook, reconciliation, ingest cleanup, or maintenance. Concurrent terminal attempts consume quota once and preserve the first winning provenance.
+
+This is implementation evidence, not renewed physical-device acceptance. After deployment, repeat one small-video and one approximately `100 MiB` / high-resolution timing measurement and record provider-ready -> DB-ready -> widget-ready latency before canary `T0`.
 
 Production DB evidence at the time of the report contained four approved, ready, visible video reviews and one pending, ready, hidden video review. File names are not required for lifecycle identity; the canary must select and record one retained `Review.id` explicitly before `T0`.
 

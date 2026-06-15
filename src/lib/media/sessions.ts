@@ -18,6 +18,11 @@ export class VideoQuotaError extends Error {
 }
 
 type TransactionClient = Prisma.TransactionClient;
+export type VideoReadinessSource =
+  | 'stream_webhook'
+  | 'stream_reconcile'
+  | 'stream_ingest_cleanup'
+  | 'stream_maintenance';
 
 export async function getVideoSessionForUpdate(tx: TransactionClient, sessionId: string) {
   const rows = await tx.$queryRaw<VideoUploadSession[]>`
@@ -118,11 +123,13 @@ export async function markVideoSessionReady(input: {
   playbackUrl: string;
   posterUrl: string;
   durationMs: number;
+  metadataSource: VideoReadinessSource;
 }) {
   return prisma.$transaction(async (tx) => {
     const session = await getVideoSessionForUpdate(tx, input.sessionId);
     if (!session) return null;
     if (session.status === 'failed' || session.status === 'aborted') return null;
+    if (session.status === 'ready' || session.status === 'consumed') return session;
     if (session.quotaState === 'reserved') {
       const claim = await tx.videoUploadSession.updateMany({
         where: { id: session.id, quotaState: 'reserved' },
@@ -168,7 +175,7 @@ export async function markVideoSessionReady(input: {
         sourceAssetId: session.masterObjectKey,
         mimeType: session.mimeType,
         bytes: session.bytes,
-        metadataSource: 'stream_webhook',
+        metadataSource: input.metadataSource,
         metadataStatus: 'complete',
         metadataFetchedAt: new Date(),
       },
@@ -178,7 +185,7 @@ export async function markVideoSessionReady(input: {
         posterUrl: input.posterUrl,
         durationMs: input.durationMs,
         processingStatus: 'ready',
-        metadataSource: 'stream_webhook',
+        metadataSource: input.metadataSource,
         metadataStatus: 'complete',
         metadataFetchedAt: new Date(),
       },

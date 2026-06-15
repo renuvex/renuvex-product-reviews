@@ -1,12 +1,22 @@
 import type { VideoUploadSession } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { VIDEO_MAX_BYTES, VIDEO_MAX_DURATION_MS, VIDEO_MIN_DURATION_MS } from '@/lib/media/constants';
-import type { StreamVideo } from '@/lib/media/providers/cloudflare-stream';
+import {
+  isTrustedStreamDeliveryUrl,
+  type StreamVideo,
+} from '@/lib/media/providers/cloudflare-stream';
 import { deleteVideoIngest } from '@/lib/media/providers/r2';
 import { failSessionAndQueueCleanup } from '@/lib/media/lifecycle';
-import { markVideoSessionReady } from '@/lib/media/sessions';
+import {
+  markVideoSessionReady,
+  type VideoReadinessSource,
+} from '@/lib/media/sessions';
 
-export async function applyStreamVideoState(session: VideoUploadSession, video: StreamVideo) {
+export async function applyStreamVideoState(
+  session: VideoUploadSession,
+  video: StreamVideo,
+  metadataSource: VideoReadinessSource,
+) {
   if (!video.uid || (session.streamUid && video.uid !== session.streamUid)) {
     return { ok: false as const, code: 'stream_uid_mismatch' };
   }
@@ -21,8 +31,7 @@ export async function applyStreamVideoState(session: VideoUploadSession, video: 
     await failSessionAndQueueCleanup(session.id, video.status?.errorReasonCode ?? 'stream_processing_failed');
     return { ok: false as const, code: 'stream_processing_failed' };
   }
-  const pctComplete = Number(video.status?.pctComplete ?? 0);
-  if (!video.readyToStream || providerState !== 'ready' || !Number.isFinite(pctComplete) || pctComplete < 100) {
+  if (!video.readyToStream || providerState !== 'ready') {
     return { ok: true as const, status: 'processing' as const };
   }
 
@@ -38,10 +47,24 @@ export async function applyStreamVideoState(session: VideoUploadSession, video: 
   }
   const playbackUrl = video.playback?.hls;
   const posterUrl = video.thumbnail;
-  if (!playbackUrl || !posterUrl) return { ok: true as const, status: 'processing' as const };
+  if (
+    !playbackUrl ||
+    !posterUrl ||
+    !isTrustedStreamDeliveryUrl(playbackUrl, video.uid) ||
+    !isTrustedStreamDeliveryUrl(posterUrl, video.uid)
+  ) {
+    return { ok: true as const, status: 'processing' as const };
+  }
 
   if (session.ingestObjectKey) await deleteVideoIngest(session.ingestObjectKey);
-  await markVideoSessionReady({ sessionId: session.id, streamUid: video.uid, playbackUrl, posterUrl, durationMs });
+  await markVideoSessionReady({
+    sessionId: session.id,
+    streamUid: video.uid,
+    playbackUrl,
+    posterUrl,
+    durationMs,
+    metadataSource,
+  });
   return { ok: true as const, status: 'ready' as const };
 }
 

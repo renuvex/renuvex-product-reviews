@@ -43,30 +43,69 @@ describe('Cloudflare Stream processing state', () => {
     vi.clearAllMocks();
   });
 
-  it('does not publish a video before the highest-quality encode reaches 100 percent', async () => {
+  it('marks a playable Stream video ready before every quality rendition reaches 100 percent', async () => {
     const { applyStreamVideoState } = await import('@/lib/media/video-processing');
     const result = await applyStreamVideoState(session() as never, readyVideo({
       status: { state: 'ready', pctComplete: 99 },
-    }));
+    }), 'stream_reconcile');
 
-    expect(result).toEqual({ ok: true, status: 'processing' });
-    expect(r2Mock.deleteVideoIngest).not.toHaveBeenCalled();
-    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, status: 'ready' });
+    expect(r2Mock.deleteVideoIngest).toHaveBeenCalledWith('public-ingest/video.mp4');
+    expect(sessionsMock.markVideoSessionReady).toHaveBeenCalledWith(expect.objectContaining({
+      metadataSource: 'stream_reconcile',
+    }));
+  });
+
+  it('does not require pctComplete when Stream reports the video as playable and ready', async () => {
+    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
+    const result = await applyStreamVideoState(session() as never, readyVideo({
+      status: { state: 'ready' },
+    }), 'stream_webhook');
+
+    expect(result).toEqual({ ok: true, status: 'ready' });
+    expect(sessionsMock.markVideoSessionReady).toHaveBeenCalledWith(expect.objectContaining({
+      metadataSource: 'stream_webhook',
+    }));
   });
 
   it('requires the provider state to be ready even if readyToStream is true', async () => {
     const { applyStreamVideoState } = await import('@/lib/media/video-processing');
     const result = await applyStreamVideoState(session() as never, readyVideo({
       status: { state: 'inprogress', pctComplete: 100 },
-    }));
+    }), 'stream_reconcile');
 
     expect(result).toEqual({ ok: true, status: 'processing' });
     expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
   });
 
-  it('deletes the transient ingest object and marks the session ready at full encode completion', async () => {
+  it('requires readyToStream even when the provider state is ready', async () => {
     const { applyStreamVideoState } = await import('@/lib/media/video-processing');
-    const result = await applyStreamVideoState(session() as never, readyVideo());
+    const result = await applyStreamVideoState(session() as never, readyVideo({
+      readyToStream: false,
+    }), 'stream_reconcile');
+
+    expect(result).toEqual({ ok: true, status: 'processing' });
+    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
+  });
+
+  it('requires trusted HLS and poster delivery URLs before marking the session ready', async () => {
+    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
+    const result = await applyStreamVideoState(session() as never, readyVideo({
+      playback: { hls: 'https://example.com/stream-1/manifest/video.m3u8' },
+    }), 'stream_ingest_cleanup');
+
+    expect(result).toEqual({ ok: true, status: 'processing' });
+    expect(r2Mock.deleteVideoIngest).not.toHaveBeenCalled();
+    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
+  });
+
+  it('deletes the transient ingest object and records the actual readiness source', async () => {
+    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
+    const result = await applyStreamVideoState(
+      session() as never,
+      readyVideo(),
+      'stream_maintenance',
+    );
 
     expect(result).toEqual({ ok: true, status: 'ready' });
     expect(r2Mock.deleteVideoIngest).toHaveBeenCalledWith('public-ingest/video.mp4');
@@ -74,6 +113,7 @@ describe('Cloudflare Stream processing state', () => {
       sessionId: '11111111-1111-4111-8111-111111111111',
       streamUid: 'stream-1',
       durationMs: 12_000,
+      metadataSource: 'stream_maintenance',
     }));
   });
 
@@ -82,7 +122,7 @@ describe('Cloudflare Stream processing state', () => {
     const result = await applyStreamVideoState(session() as never, readyVideo({
       readyToStream: false,
       status: { state: 'error', errorReasonCode: 'ERR_PROCESSING' },
-    }));
+    }), 'stream_webhook');
 
     expect(result).toEqual({ ok: false, code: 'stream_processing_failed' });
     expect(jobsMock.failSessionAndQueueCleanup).toHaveBeenCalledWith(
