@@ -222,7 +222,11 @@ describe('video upload initiate', () => {
 
   it('reserves quota before creating a multipart upload and returns only client-safe state', async () => {
     const created = session({ status: 'initiated', r2UploadId: null });
-    sessionMock.createReservedVideoSession.mockResolvedValue({ session: created, token: 'opaque-token'.padEnd(43, 'x') });
+    sessionMock.createReservedVideoSession.mockResolvedValue({
+      session: created,
+      token: 'opaque-token'.padEnd(43, 'x'),
+      expiryJob: { id: 'expiry-job' },
+    });
     r2Mock.createVideoMultipartUpload.mockResolvedValue('upload-1');
     const { POST } = await import('@/app/api/public/upload/video/initiate/route');
     const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
@@ -234,6 +238,7 @@ describe('video upload initiate', () => {
     expect(response.status).toBe(201);
     expect(sessionMock.createReservedVideoSession).toHaveBeenCalledWith(expect.objectContaining({ monthlyLimit: 5 }));
     expect(r2Mock.createVideoMultipartUpload).toHaveBeenCalledWith(created.masterObjectKey, 'video/mp4');
+    expect(jobsMock.dispatchMediaProviderJob).toHaveBeenCalledWith('expiry-job', expect.any(Number));
     expect(body.data).toEqual(expect.objectContaining({ partSize: VIDEO_MULTIPART_PART_BYTES, partCount: 2, maxParallelParts: 3 }));
     expect(body.data).not.toHaveProperty('uploadId');
     expect(body.data).not.toHaveProperty('masterObjectKey');

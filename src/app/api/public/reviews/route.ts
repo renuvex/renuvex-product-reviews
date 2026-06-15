@@ -17,6 +17,8 @@ import {
 import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 import { applyReviewSummaryVisibilityChange, filteredReviewTotal, summaryStats } from '@/lib/review-summary';
 import { hashMediaToken } from '@/lib/media/video-policy';
+import { MEDIA_JOB_ACTIONS } from '@/lib/media/constants';
+import { supersedeSessionLifecycleJobs } from '@/lib/media/outbox';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -587,6 +589,10 @@ export async function POST(request: Request) {
           data: { status: 'consumed', consumedAt: new Date() },
         });
         if (consumed.count !== 1) throw new Error('invalid_video_session');
+        await supersedeSessionLifecycleJobs(tx, videoSession.id, [
+          MEDIA_JOB_ACTIONS.expireUploadSession,
+          MEDIA_JOB_ACTIONS.reconcileStream,
+        ]);
       }
 
       const created = await tx.review.create({

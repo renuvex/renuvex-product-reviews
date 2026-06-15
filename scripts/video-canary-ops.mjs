@@ -76,7 +76,21 @@ async function readStoreEvidence(storeId) {
   const month = new Date();
   month.setUTCDate(1);
   month.setUTCHours(0, 0, 0, 0);
-  const [usage, sessionStatuses, quotaStates, jobStatuses, jobActions, reviewStatuses, mediaStatuses, pendingStatuses] = await Promise.all([
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - 15 * 60 * 1000);
+  const [
+    usage,
+    sessionStatuses,
+    quotaStates,
+    jobStatuses,
+    jobActions,
+    futureScheduledJobs,
+    dueJobs,
+    staleProcessingJobs,
+    reviewStatuses,
+    mediaStatuses,
+    pendingStatuses,
+  ] = await Promise.all([
     prisma.storeVideoUsage.findUnique({
       where: { storeId_month: { storeId, month } },
       select: { reservedCount: true, consumedCount: true, updatedAt: true },
@@ -85,6 +99,19 @@ async function readStoreEvidence(storeId) {
     prisma.videoUploadSession.groupBy({ by: ['quotaState'], where: { storeId }, _count: { _all: true } }),
     prisma.mediaProviderJob.groupBy({ by: ['status'], where: { storeId }, _count: { _all: true } }),
     prisma.mediaProviderJob.groupBy({ by: ['action'], where: { storeId }, _count: { _all: true } }),
+    prisma.mediaProviderJob.count({
+      where: { storeId, status: 'pending', availableAt: { gt: now } },
+    }),
+    prisma.mediaProviderJob.count({
+      where: { storeId, status: { in: ['pending', 'failed'] }, availableAt: { lte: now } },
+    }),
+    prisma.mediaProviderJob.count({
+      where: {
+        storeId,
+        status: 'processing',
+        OR: [{ lockedAt: { lt: staleBefore } }, { lockedAt: null }],
+      },
+    }),
     prisma.review.groupBy({ by: ['status'], where: { storeId, hasVideo: true }, _count: { _all: true } }),
     prisma.reviewMedia.groupBy({ by: ['processingStatus'], where: { storeId, resourceType: 'video' }, _count: { _all: true } }),
     prisma.pendingReviewImage.groupBy({ by: ['processingStatus'], where: { storeId, resourceType: 'video' }, _count: { _all: true } }),
@@ -111,7 +138,15 @@ async function readStoreEvidence(storeId) {
     currentMonth: month.toISOString().slice(0, 10),
     usage: usage ?? { reservedCount: 0, consumedCount: 0, updatedAt: null },
     sessions: { byStatus: countBy(sessionStatuses, 'status'), byQuotaState: countBy(quotaStates, 'quotaState'), recent: recentSessions },
-    jobs: { byStatus: countBy(jobStatuses, 'status'), byAction: countBy(jobActions, 'action') },
+    jobs: {
+      byStatus: countBy(jobStatuses, 'status'),
+      byAction: countBy(jobActions, 'action'),
+      timing: {
+        futureScheduled: futureScheduledJobs,
+        due: dueJobs,
+        staleProcessing: staleProcessingJobs,
+      },
+    },
     videoReviews: { byStatus: countBy(reviewStatuses, 'status') },
     reviewMedia: { byProcessingStatus: countBy(mediaStatuses, 'processingStatus') },
     pendingMedia: { byProcessingStatus: countBy(pendingStatuses, 'processingStatus') },

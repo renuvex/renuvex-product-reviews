@@ -40,7 +40,15 @@ source_files:
   - "src/app/api/public/reviews/route.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/cleanup-pending-uploads.ts"
+  - "src/lib/media/outbox.ts"
+  - "src/lib/media/dispatcher.ts"
+  - "src/lib/media/lifecycle.ts"
+  - "src/lib/media/jobs.ts"
+  - "src/lib/media/reconciliation.ts"
+  - "src/lib/media/sessions.ts"
   - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"
+  - "src/widget/reviews-section/review-form-modal/steps/step-media.js"
+  - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "src/widget/reviews-section/review-modal.js"
   - "src/widget/reviews-section/video-playback.js"
   - "src/widget/reviews-section/media-thumbnail.js"
@@ -68,6 +76,7 @@ Draft - implemented behind disabled rollout gates; production acceptance is stil
 - 2026-06-14: Phase 4 cross-browser media coverage is implemented. The official Playwright 1.60 Linux image passed the five-project matrix (Chromium desktop, Firefox desktop, WebKit desktop, Pixel 7 emulation, and iPhone 15 WebKit emulation): 30 passed and 5 intentional platform-scope skips. The suite pins poster-first rendering, native HLS and `hls.js` branches, browser-back/source cleanup, multipart wizard submit, and video-to-image navigation cleanup.
 - 2026-06-14: Phase 5 operational preparation is implemented. The dry-run-first `video:canary:ops` command reports all three gates and per-store lifecycle evidence; apply mode is single-store scoped, requires an exact confirmation id, preserves unrelated widget settings, and blocks accidental live activation while the global flag is already true. The real provider canary is still pending.
 - 2026-06-15: The controlled provider path is no longer pending: DB evidence records two consumed quota units, nine succeeded jobs, one superseded job, and no retained video review/media rows after cleanup. R2 multipart write/abort, Stream API/webhook, QStash signed delivery/retry, empty media-worker DLQ, and production observability preflight were re-verified. Pending-admin preview now starts muted and visibly labels unapproved UGC. Physical iPhone Safari, physical Android Chrome, and the 72-hour retained-review window are still pending.
+- 2026-06-15: Upload reliability hardening is implemented in source. Stream webhook delivery remains the fast path, while a transactionally-created `reconcile_stream` outbox job polls canonical Stream state on a bounded 15-second-to-10-minute schedule. Upload reservation and `expire_upload_session` are committed in the same serializable transaction; QStash only wakes durable DB records. The widget keeps one video preview node across progress updates, retries transient status failures without creating a new session, and persists offline cancel intent until a terminal server response. Physical Android/iPhone interruption tests must be repeated after deployment; the 72-hour clock remains not started.
 - Production acceptance is still open. The ADR remains draft until the physical-device and 72-hour canary gates pass.
 
 ## Date
@@ -161,11 +170,15 @@ Video reuses the same durable media lifecycle as review images ([[ADR_0012_Pendi
 11. Stream publication mutations are serialized per provider asset with an expiring DB lease and fencing version. A stale approve/reject job re-reads the latest DB-visible intent and converges Stream before it can become the final provider state.
 12. Quota accounting uses an explicit `reserved -> released|consumed` state transition. Failed, aborted, or expired unfinished uploads release once; a successfully processed video remains consumed even if moderation later rejects it because provider cost has already occurred.
 13. The transient public ingest key and a deadline cleanup job are persisted before the public copy is created. Cleanup checks Stream state after 60 minutes, defers while Stream is still fetching, and enforces a 23-hour application deadline; the bucket's 24-hour lifecycle is only the final backstop.
+14. Stream webhook delivery is the low-latency path, not the only readiness path. When a Stream UID is committed, the same transaction creates one deduped `reconcile_stream` job. QStash checks at `T+15s`, `45s`, `105s`, `225s`, `345s`, `465s`, and `600s`; terminal sessions supersede the job without provider access, and ready/error results use the same `applyStreamVideoState()` transition as the webhook.
+15. Upload reservation and `expire_upload_session` are written in the same serializable transaction. The job defers to the authoritative `expiresAt`, releases abandoned reserved quota once, removes ready-but-unsubmitted assets without refunding consumed usage, and never deletes a review-consumed session. Daily maintenance backfills missing lifecycle jobs for pre-deploy rows.
+16. Shopper cancellation is optimistic in the UI but durable in intent. If the browser is offline, the opaque cancel token stays in same-tab `sessionStorage` and is retried on reconnect, wizard reopen, or before a new upload. Only `2xx`, `404`, or terminal `409` clears the intent; network/5xx retains it and server expiry remains the final backstop.
 
 ### 9. Admin & widget UX contract
 Video is a **vertical feature** — admin setting + wizard + moderation UI + public render ship together, not backend-only.
 - **Gating:** global feature flag + per-merchant `WidgetSettings.videoReviewsEnabled`. The merchant setting lives in the **Reviews-widget behavior/settings area — not the visual/styling accordion** (it changes capability, not appearance).
 - **Wizard:** the existing photo step ([step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js)) **evolves into a media step** (generalized/renamed in place, *not* a parallel duplicate). With video enabled it shows photo + video affordances in the **same media step**, reusing the photo modal's design language (validation message, progress, retry/remove, toast errors). v1 policy `3 photos OR 1 video` (§6).
+- **Upload stability:** one selected file owns one stable `<video>` preview node. Progress/status/error changes update separate DOM nodes and do not recreate the media element. Status polling backs off from roughly 2s to 5s and then 10s, tolerates three consecutive transient failures, shows a slower-processing message after 30s, and after 10m offers retry against the same session instead of uploading the file again.
 - **Admin moderation minimum:** poster preview · **play in an admin-safe preview** (muted by default, explicit "unmoderated UGC" warning, no autoplay) · approve (→ `approved` + `visible`) · reject · hide/remove video media · delete review — hide/remove run through provider-aware adapter cleanup (§8).
 - **Unapproved-video playback security (decision):** a video is uploaded to Stream with **`requireSignedURLs: true` while `pending`** (only the admin surface gets a signed token); **on approval it is flipped to public** by updating the Stream video metadata to `requireSignedURLs: false`. Cloudflare documents `requireSignedURLs` as the supported way to protect Stream videos and documents video metadata updates that include this field; the implementation still verifies the post-update manifest before treating publication as complete. The storefront then plays the approved video with no per-view token on the hot read path. This enforces the moderation gate **at the CDN** — an unapproved/offensive video is never publicly playable even if its `uid` leaks.
 - **Public render:** a video shows only when `Review.status='approved'` **and** `ReviewMedia.visible=true`; poster-first, playback on interaction (§4).

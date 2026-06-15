@@ -12,6 +12,15 @@ export const MEDIA_JOB_STALE_LOCK_MS = 15 * 60 * 1000;
 export const VIDEO_INGEST_CLEANUP_DELAY_MS = 60 * 60 * 1000;
 export const VIDEO_INGEST_RECHECK_DELAY_MS = 30 * 60 * 1000;
 export const VIDEO_INGEST_HARD_DEADLINE_MS = 23 * 60 * 60 * 1000;
+export const VIDEO_STREAM_RECONCILE_OFFSETS_MS = [
+  15_000,
+  45_000,
+  105_000,
+  225_000,
+  345_000,
+  465_000,
+  600_000,
+] as const;
 
 export const VIDEO_ALLOWED_MIME_TYPES = new Set(['video/mp4', 'video/quicktime']);
 export const VIDEO_TERMINAL_SESSION_STATUSES = new Set(['ready', 'failed', 'aborted', 'consumed']);
@@ -23,6 +32,8 @@ export const MEDIA_JOB_ACTIONS = {
   cleanupVideo: 'cleanup_video',
   cleanupIngest: 'cleanup_ingest',
   cleanupImage: 'cleanup_image',
+  reconcileStream: 'reconcile_stream',
+  expireUploadSession: 'expire_upload_session',
 } as const;
 
 export type MediaJobAction = typeof MEDIA_JOB_ACTIONS[keyof typeof MEDIA_JOB_ACTIONS];

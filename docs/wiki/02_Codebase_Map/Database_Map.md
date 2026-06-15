@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-13
-last_verified: 2026-06-13
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - database
@@ -28,6 +28,8 @@ source_files:
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
+  - "src/lib/media/outbox.ts"
+  - "src/lib/media/sessions.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
   - "scripts/backfill-review-media.mjs"
   - "scripts/audit-legacy-review-media.mjs"
@@ -65,7 +67,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `OrphanImageQuarantine` | `publicId` | Two-phase orphan-deletion state: orphans are marked here, then hard-deleted only after a grace window if still orphaned. See [[ADR_0030_Cleanup_Hardening]] |
 | `VideoUploadSession` | `id` (uuid), unique `tokenHash` | Hashed shopper upload session, R2 master key/upload id, Stream uid, status, poster/playback metadata, explicit `quotaState`, and 24h expiry. Raw tokens are never stored. |
 | `StoreVideoUsage` | `(storeId, month)` | Atomic monthly quota reserve/consume counters for feature-gated video uploads. |
-| `MediaProviderJob` | `id` (uuid), unique `dedupeKey` | DB outbox for provider operations (`prepare_stream`, `publish_stream`, `protect_stream`, `cleanup_video`, `cleanup_ingest`, `cleanup_image`) dispatched through QStash with idempotent retries, stale-lock recovery, and DLQ/manual-repair state. |
+| `MediaProviderJob` | `id` (uuid), unique `dedupeKey` | DB outbox for provider operations (`prepare_stream`, `reconcile_stream`, `expire_upload_session`, `publish_stream`, `protect_stream`, `cleanup_video`, `cleanup_ingest`, `cleanup_image`) dispatched through QStash with idempotent retries, stale-lock recovery, and DLQ/manual-repair state. |
 | `MediaProviderLease` | `key` | Expiring per-session/per-Stream-asset provider mutation lease with a fencing version. It serializes publish/protect/delete work without holding a database transaction open during a provider HTTP call. |
 
 ## Index strategy
@@ -96,7 +98,7 @@ On `Review` media reads:
 On video lifecycle:
 - `VideoUploadSession`: `tokenHash`, `streamUid`, `publicId`, `(storeId, productId, status, createdAt)`, and `(status, expiresAt)` support token lookup, webhook/session reconciliation, and pending cleanup. `quotaState=reserved|released|consumed` makes quota transitions idempotent under concurrent webhook/cancel/failure handling.
 - `StoreVideoUsage`: unique `(storeId, month)` keeps quota reservation atomic under serializable transactions.
-- `MediaProviderJob`: `dedupeKey`, `status/availableAt`, `lockedAt`, `provider/action/status`, and `uploadSessionId` keep provider jobs resumable, stale-lock recoverable, and deduped. It owns both video provider mutations and expired Cloudinary pending-image cleanup.
+- `MediaProviderJob`: `dedupeKey`, `status/availableAt`, `lockedAt`, `provider/action/status`, and `uploadSessionId` keep provider jobs resumable, stale-lock recoverable, and deduped. It owns provider mutations, bounded Stream reconciliation, exact upload-session expiry, and expired Cloudinary pending-image cleanup. Future-scheduled lifecycle jobs are healthy state, not due/stuck work.
 - `MediaProviderLease`: the primary key is the serialization key (`video-session:<id>` or `stream:<uid>`); `leaseVersion` is a fencing token and expired leases can be atomically replaced.
 
 On `Review` cursor pagination:

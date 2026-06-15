@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   describeVideoUploadError,
   shouldDiscardStoredVideoSession,
+  videoProcessingPollDelayMs,
+  videoUploadProgressPercent,
   VideoUploadRequestError,
 } from '../../src/widget/reviews-section/review-form-modal/media/video-upload.js';
 
@@ -11,6 +13,7 @@ describe('video upload error presentation', () => {
     ['rate_limited', 'Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.', false],
     ['video_upload_disabled', 'Video yükleme şu anda kullanılamıyor.', false],
     ['video_provider_unavailable', 'Video yükleme geçici olarak kullanılamıyor.', true],
+    ['video_processing_delayed', 'Video hazırlanması beklenenden uzun sürüyor. Biraz sonra tekrar deneyin.', true],
   ])('maps %s to stable shopper copy and retry policy', (code, message, retryable) => {
     expect(describeVideoUploadError(new VideoUploadRequestError(code, 429, 60))).toEqual({
       code,
@@ -18,6 +21,30 @@ describe('video upload error presentation', () => {
       retryable,
       retryAfterSec: 60,
     });
+  });
+
+  it('backs off status polling after 30 seconds and two minutes', () => {
+    expect(videoProcessingPollDelayMs(0)).toBe(2000);
+    expect(videoProcessingPollDelayMs(29_999)).toBe(2000);
+    expect(videoProcessingPollDelayMs(30_000)).toBe(5000);
+    expect(videoProcessingPollDelayMs(119_999)).toBe(5000);
+    expect(videoProcessingPollDelayMs(120_000)).toBe(10_000);
+  });
+
+  it('starts resumed upload progress from already completed multipart parts', () => {
+    const partSize = 10 * 1024 * 1024;
+    expect(videoUploadProgressPercent(
+      25 * 1024 * 1024,
+      partSize,
+      [1, 2],
+      {},
+    )).toBe(76);
+    expect(videoUploadProgressPercent(
+      25 * 1024 * 1024,
+      partSize,
+      [1, 2],
+      { 3: 2.5 * 1024 * 1024 },
+    )).toBe(86);
   });
 
   it('keeps unknown network errors retryable with the generic copy', () => {

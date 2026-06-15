@@ -15,6 +15,7 @@ function videoStatusText(video) {
   if (!video) return '';
   if (video.error) return video.error;
   if (video.status === 'processing') return 'Video işleniyor...';
+  if (video.status === 'processing_slow') return 'Video hazırlanıyor. Bu işlem biraz sürebilir.';
   if (video.status === 'ready') return 'Video hazır';
   return 'Video yükleniyor: %' + Math.max(0, Math.min(100, video.progress || 0));
 }
@@ -23,6 +24,7 @@ export function createStepMedia(state, opts) {
   opts = opts || {};
   var destroyed = false;
   var photoInstance = null;
+  var videoView = null;
 
   var root = document.createElement('div');
   root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-media';
@@ -70,11 +72,18 @@ export function createStepMedia(state, opts) {
     return state.get().videoUpload || null;
   }
 
-  function renderVideo() {
-    if (destroyed) return;
-    var video = currentVideo();
+  function clearVideoView() {
+    if (!videoView) {
+      content.innerHTML = '';
+      return;
+    }
+    videoView.retry.onclick = null;
     content.innerHTML = '';
-    if (!video) return;
+    videoView = null;
+  }
+
+  function createVideoView(video) {
+    content.innerHTML = '';
     var card = document.createElement('div');
     card.className = 'renuvex-pr-fwizard-video-card';
     var preview = document.createElement('video');
@@ -90,28 +99,20 @@ export function createStepMedia(state, opts) {
     name.className = 'renuvex-pr-fwizard-video-name';
     name.textContent = video.file ? video.file.name : 'Video';
     var status = document.createElement('div');
-    status.className = 'renuvex-pr-fwizard-video-status' + (video.error ? ' renuvex-pr-fwizard-video-status--error' : '');
-    status.setAttribute('role', video.error ? 'alert' : 'status');
+    status.className = 'renuvex-pr-fwizard-video-status';
+    status.setAttribute('role', 'status');
     status.setAttribute('aria-live', 'polite');
-    status.textContent = videoStatusText(video);
     details.appendChild(name);
     details.appendChild(status);
-    if (video.status === 'uploading') {
-      var progress = document.createElement('progress');
-      progress.className = 'renuvex-pr-fwizard-video-progress';
-      progress.max = 100;
-      progress.value = video.progress || 0;
-      progress.setAttribute('aria-label', 'Video yükleme ilerlemesi');
-      details.appendChild(progress);
-    }
-    if (video.error && video.file && video.retryable !== false) {
-      var retry = document.createElement('button');
-      retry.type = 'button';
-      retry.className = 'renuvex-pr-fwizard-video-retry';
-      retry.textContent = 'Tekrar Dene';
-      retry.onclick = function () { startUpload(video.file, video.localUrl); };
-      details.appendChild(retry);
-    }
+    var progress = document.createElement('progress');
+    progress.className = 'renuvex-pr-fwizard-video-progress';
+    progress.max = 100;
+    progress.setAttribute('aria-label', 'Video yükleme ilerlemesi');
+    details.appendChild(progress);
+    var retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'renuvex-pr-fwizard-video-retry';
+    retry.textContent = 'Tekrar Dene';
     card.appendChild(details);
     var remove = document.createElement('button');
     remove.type = 'button';
@@ -130,6 +131,48 @@ export function createStepMedia(state, opts) {
     remove.addEventListener('click', onRemove);
     card.appendChild(remove);
     content.appendChild(card);
+
+    videoView = {
+      card: card,
+      preview: preview,
+      localUrl: video.localUrl || '',
+      details: details,
+      name: name,
+      status: status,
+      progress: progress,
+      retry: retry,
+      remove: remove,
+    };
+  }
+
+  function renderVideo() {
+    if (destroyed) return;
+    var video = currentVideo();
+    if (!video) {
+      clearVideoView();
+      return;
+    }
+    if (!videoView || videoView.localUrl !== (video.localUrl || '')) createVideoView(video);
+
+    videoView.name.textContent = video.file ? video.file.name : 'Video';
+    videoView.status.className = 'renuvex-pr-fwizard-video-status' +
+      (video.error ? ' renuvex-pr-fwizard-video-status--error' : '');
+    videoView.status.setAttribute('role', video.error ? 'alert' : 'status');
+    videoView.status.textContent = videoStatusText(video);
+
+    var isUploading = video.status === 'uploading';
+    videoView.progress.hidden = !isUploading;
+    videoView.progress.value = video.progress || 0;
+
+    var canRetry = !!(video.error && video.file && video.retryable !== false);
+    videoView.retry.onclick = canRetry
+      ? function () { startUpload(video.file, video.localUrl, video.durationMs); }
+      : null;
+    if (canRetry && !videoView.retry.isConnected) {
+      videoView.details.appendChild(videoView.retry);
+    } else if (!canRetry && videoView.retry.isConnected) {
+      videoView.retry.remove();
+    }
   }
 
   function updateChoices() {
@@ -144,16 +187,21 @@ export function createStepMedia(state, opts) {
   function updateVideoState(patch) {
     var existing = currentVideo();
     if (!existing) return;
+    var keys = Object.keys(patch);
+    var changed = keys.some(function (key) { return existing[key] !== patch[key]; });
+    if (!changed) return;
     state.set({ videoUpload: Object.assign({}, existing, patch) });
   }
 
-  async function startUpload(file, existingLocalUrl) {
+  async function startUpload(file, existingLocalUrl, knownDurationMs) {
     var validation = validateVideoFile(file);
     if (!validation.ok) {
       if (opts.showToast) opts.showToast(validation.message, 'error');
       return;
     }
-    var duration = await readVideoDuration(file);
+    var duration = knownDurationMs !== undefined
+      ? (Number.isFinite(knownDurationMs) ? knownDurationMs / 1000 : null)
+      : await readVideoDuration(file);
     var durationValidation = validateKnownVideoDuration(duration);
     if (!durationValidation.ok) {
       if (opts.showToast) opts.showToast(durationValidation.message, 'error');
@@ -227,6 +275,7 @@ export function createStepMedia(state, opts) {
 
   function mountPhotoPicker(openImmediately) {
     if (photoInstance) return;
+    videoView = null;
     content.innerHTML = '';
     photoInstance = createStepPhotos(state, {
       canNavigate: opts.canNavigate,
@@ -250,7 +299,7 @@ export function createStepMedia(state, opts) {
   videoInput.onchange = function () {
     var file = videoInput.files && videoInput.files[0];
     videoInput.value = '';
-    if (file) startUpload(file, null);
+    if (file) startUpload(file, null, undefined);
   };
 
   var hadVideo = !!currentVideo();

@@ -15,7 +15,10 @@ import { createStepMedia } from './steps/step-media.js';
 import { createStepContent } from './steps/step-content.js';
 import { createStepAuthor } from './steps/step-author.js';
 import { currentSettings } from '../../core/state.js';
-import { cancelReviewVideoUpload } from './media/video-upload.js';
+import {
+  cancelReviewVideoUpload,
+  ensurePendingVideoCancelDelivery,
+} from './media/video-upload.js';
 
 // CSS is now injected into the wizard's shadow root by createWizardShell.open()
 // — see modal-shell.js. No head-level <style> injection is needed.
@@ -68,6 +71,7 @@ function buildThanksScreen() {
  */
 export function openReviewFormModal(opts) {
   opts = opts || {};
+  ensurePendingVideoCancelDelivery();
 
   var state = createWizardState({
     productId: opts.productId,

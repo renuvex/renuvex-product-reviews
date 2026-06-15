@@ -9,7 +9,7 @@ const sessionsMock = vi.hoisted(() => ({ markVideoSessionReady: vi.fn() }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/media/providers/r2', () => r2Mock);
-vi.mock('@/lib/media/jobs', () => jobsMock);
+vi.mock('@/lib/media/lifecycle', () => jobsMock);
 vi.mock('@/lib/media/sessions', () => sessionsMock);
 
 function session(overrides: Record<string, unknown> = {}) {

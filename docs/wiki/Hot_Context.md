@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-11
-last_verified: 2026-06-11
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - hot-context
@@ -120,6 +120,7 @@ source_files:
 - 2026-06-08: Review list load-more uses signed cursor/keyset pagination via `data.nextCursor`; legacy `page/limit` remains for compatibility and future numbered pagination. Cursor requests do not use Prisma `skip`; tampered/unsigned/context-mismatched cursors return `400`. `REVIEW_CURSOR_SECRET` is required in server env. See [[ADR_0028_Review_Cursor_Pagination]].
 - 2026-06-08: Review-list exact `totalCount` / `totalPages` now come from `ProductReviewSummary` buckets, including `photoRating*Count` for rating+photo filters. `/api/public/reviews` no longer calls raw `Review.count()` on the public read path.
 - 2026-06-08: Review media metadata is now staged in `PendingReviewImage` and committed to `ReviewMedia` after signed Cloudinary upload-response verification. Public `images` remains the compatibility contract; additive `media[]` exposes dimensions/format/bytes/thumbnail URL for future layouts. See [[ADR_0029_Review_Media_Metadata]].
+- 2026-06-15: Review Video V1 reliability hardening adds transactionally scheduled Stream reconciliation and upload-session expiry jobs, stable mobile preview DOM, adaptive processing polling, and durable offline cancellation intent. The change requires post-deploy Android/iPhone interruption retests before a new 72-hour canary `T0`. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] and [[Review_Video_Canary_Runbook]].
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes.

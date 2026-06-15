@@ -20,6 +20,10 @@ source_files:
   - "src/components/home-page/index.tsx"
   - "src/components/home-page/MediaPreviewState.ts"
   - "src/app/api/webhooks/cloudflare-stream/route.ts"
+  - "src/lib/media/jobs.ts"
+  - "src/lib/media/reconciliation.ts"
+  - "src/lib/media/sessions.ts"
+  - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "src/widget/reviews-section/review-form-modal/steps/step-media.js"
   - "tests/unit/admin-video-preview-contract.test.ts"
   - "tests/unit/media-route-contracts.test.ts"
@@ -33,7 +37,7 @@ source_files:
 
 ## Status
 
-In progress. This report is not a production-readiness approval. Physical Android Chrome passed the post-fix resume retest and now has a retained approved video review. Physical iPhone Safari interruption/resume and the 72-hour retained-review window are still pending.
+In progress. This report is not a production-readiness approval. Physical Android Chrome passed the earlier resume retest and has a retained approved video review. A later reliability hardening change modifies the media path, so Android and iPhone interruption/offline-cancel/processing checks must be repeated after deployment. The 72-hour retained-review window has not started.
 
 ## Verified Preflight
 
@@ -191,12 +195,25 @@ Verified on 2026-06-15 after deploying the resume fix:
 
 This corrects the earlier Android row that said resume was still pending. The 72-hour canary clock still has not started; it must be started explicitly and recorded as `T0` before checkpoint tracking begins.
 
+## Reliability Hardening Before Canary T0
+
+Implemented locally on 2026-06-15 after the physical observations:
+
+- Stream readiness no longer depends on webhook delivery alone. A deduped DB outbox job checks canonical Stream status at 15/45/105/225/345/465/600 seconds and applies the same state transition as the webhook.
+- Session reservation and exact `expiresAt` cleanup are committed in one serializable transaction. Ready-but-unsubmitted video is cleaned at expiry, consumed review sessions are protected, and daily maintenance backfills lifecycle jobs for pre-deploy sessions.
+- The media step preserves one `<video>` preview element across progress/status updates, avoiding the mobile preview flash caused by repeated element recreation.
+- Retry retains the original opaque upload session and already-read metadata. Completed multipart parts remain server-authoritative and contribute to resumed progress.
+- Offline X/removal clears the UI immediately but stores the cancellation intent in same-tab `sessionStorage`; reconnect, wizard reopen, or a new upload flushes it. `2xx`, `404`, and terminal `409` clear the intent; network/5xx retains it.
+- Processing polling backs off from roughly 2s to 5s and then 10s, tolerates three consecutive transient failures, shows slower-processing copy after 30s, and after 10 minutes retries the same session instead of re-uploading.
+
+These changes are not yet physical-device evidence. After deployment, repeat Android Chrome and iPhone Safari interruption, resume, offline cancel, processing, X/removal, submit, moderation, and playback. Only then record a new retained Android review and explicit canary `T0`.
+
 ## Physical Device Matrix
 
 | Device | File | Selection / metadata | Resume | Processing / ready | Pending admin preview | Storefront HLS | Cleanup | Result |
 |---|---|---|---|---|---|---|---|---|
 | iPhone Safari | 1080p MOV, 30-80 MiB, 2-60 s | Pass | Pending | Pass | Pass | Published | Pass | Partial pass; interruption/resume and device-version evidence remain |
-| Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pass | Pass after post-fix retest | Pass | Pass | Pass | Retained, not deleted | Pass for device flow; 72-hour canary clock not started |
+| Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pass before reliability hardening | Retest required after deploy | Retest required after deploy | Pass before reliability hardening | Pass before reliability hardening | Retained, not deleted | Earlier pass is historical evidence; new media-path baseline requires retest |
 
 Record the physical device model, OS version, browser version, timestamps, and pass/fail result. Do not record customer media, upload tokens, signed playback URLs, R2 keys, or provider credentials.
 

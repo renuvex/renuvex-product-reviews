@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
 import type { Prisma, VideoUploadSession } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { VIDEO_UPLOAD_SESSION_TTL_MS } from '@/lib/media/constants';
+import { MEDIA_JOB_ACTIONS, VIDEO_UPLOAD_SESSION_TTL_MS } from '@/lib/media/constants';
+import { enqueueMediaProviderJob, supersedeSessionLifecycleJobs } from '@/lib/media/outbox';
 import {
   createOpaqueMediaToken,
   hashMediaToken,
@@ -57,9 +58,9 @@ export async function createReservedVideoSession(input: {
   const id = randomUUID();
   const token = createOpaqueMediaToken();
   const month = utcMonthStart(now);
-  const session = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await reserveQuota(tx, input.storeId, month, input.monthlyLimit);
-    return tx.videoUploadSession.create({
+    const session = await tx.videoUploadSession.create({
       data: {
         id,
         tokenHash: hashMediaToken(token),
@@ -73,8 +74,23 @@ export async function createReservedVideoSession(input: {
         expiresAt: new Date(now.getTime() + VIDEO_UPLOAD_SESSION_TTL_MS),
       },
     });
+    const expiryJob = await enqueueMediaProviderJob(tx, {
+      dedupeKey: `expire-upload-session:${session.id}`,
+      storeId: session.storeId,
+      uploadSessionId: session.id,
+      provider: 'internal',
+      action: MEDIA_JOB_ACTIONS.expireUploadSession,
+      resourceType: 'video',
+      availableAt: session.expiresAt,
+      maxAttempts: 16,
+      payload: {
+        sessionId: session.id,
+        expiresAt: session.expiresAt.toISOString(),
+      },
+    });
+    return { session, expiryJob };
   }, { isolationLevel: 'Serializable' });
-  return { session, token };
+  return { ...result, token };
 }
 
 export async function getVideoSessionByToken(token: string): Promise<VideoUploadSession | null> {
@@ -120,6 +136,7 @@ export async function markVideoSessionReady(input: {
       }
     }
     const publicId = `cloudflare_stream:${input.streamUid}`;
+    await supersedeSessionLifecycleJobs(tx, session.id, [MEDIA_JOB_ACTIONS.reconcileStream]);
     const updated = await tx.videoUploadSession.update({
       where: { id: session.id },
       data: {

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { VIDEO_MAX_BYTES, VIDEO_MAX_DURATION_MS, VIDEO_MIN_DURATION_MS } from '@/lib/media/constants';
 import type { StreamVideo } from '@/lib/media/providers/cloudflare-stream';
 import { deleteVideoIngest } from '@/lib/media/providers/r2';
-import { failSessionAndQueueCleanup } from '@/lib/media/jobs';
+import { failSessionAndQueueCleanup } from '@/lib/media/lifecycle';
 import { markVideoSessionReady } from '@/lib/media/sessions';
 
 export async function applyStreamVideoState(session: VideoUploadSession, video: StreamVideo) {

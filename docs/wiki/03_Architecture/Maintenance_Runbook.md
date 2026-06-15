@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-06-14
-last_verified: 2026-06-14
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - runbook
@@ -24,7 +24,11 @@ source_files:
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
   - "src/app/api/internal/media-jobs/route.ts"
+  - "src/lib/media/outbox.ts"
+  - "src/lib/media/dispatcher.ts"
+  - "src/lib/media/lifecycle.ts"
   - "src/lib/media/jobs.ts"
+  - "src/lib/media/reconciliation.ts"
   - "scripts/video-canary-ops.mjs"
   - "vercel.json"
 ---
@@ -76,7 +80,7 @@ curl -s -H "Authorization: Bearer <CRON_SECRET>" \
 ```
 `<CRON_SECRET>` = Vercel → Project → Settings → Environment Variables → `CRON_SECRET`.
 Read `data.reviewMediaMetadata` (`{status:'ran', completed, ...}`) and `data.errors[]`.
-When video env is configured, also inspect the video maintenance fields for stuck `VideoUploadSession` rows and redispatched/dead `MediaProviderJob` rows. Daily maintenance redispatches due `pending`/`failed` jobs and stale `processing` jobs whose lock has expired; stale jobs must still be idempotent because QStash/background delivery is at-least-once. When video env is missing and the global flag is off, video maintenance may be skipped; that is expected for pre-rollout deployments.
+When video env is configured, also inspect the video maintenance fields for stuck `VideoUploadSession` rows and redispatched/dead `MediaProviderJob` rows. Daily maintenance backfills missing `expire_upload_session` and `reconcile_stream` records for pre-deploy sessions, then redispatches due `pending`/`failed` jobs and stale `processing` jobs whose lock has expired. Future-scheduled lifecycle jobs are healthy and must be reported separately from due or stale work. Repeated delivery is safe because QStash/background delivery is at-least-once. When video env is missing and the global flag is off, video maintenance may be skipped; that is expected for pre-rollout deployments.
 
 Media provider job worker (QStash target, not for unauthenticated manual browser calls):
 ```bash
@@ -111,8 +115,10 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 | `source:media-job` + `action:publish_stream` | Stream public/private flip or moderation race | Confirm `Review.moderationVersion` and `MediaProviderLease`. A stale job must converge Stream to the latest DB state and finish `superseded`; it must not remain the final public/private decision. |
 | `source:media-job` + `action:cleanup_video` | R2/Stream delete failed | Cleanup is idempotent and provider-aware. Verify Stream UID and R2 object keys, then retry the job; do not delete DB registry rows before provider cleanup succeeds. |
 | `source:media-job` + `action:cleanup_ingest` | Public ingest deadline check failed or Stream is still downloading | The job checks Stream state before deletion, defers by 30 minutes while the provider is still fetching, and hard-deletes at the application deadline. The R2 24h lifecycle remains the final backstop, not the primary cleanup mechanism. |
+| `source:media-job` + `action:reconcile_stream` | Stream webhook was delayed/missed or canonical status polling failed | The bounded self-healing schedule runs at 15/45/105/225/345/465/600 seconds and applies state through the same transition helper as the webhook. After 10 minutes it records `stream_processing_delayed`; it does not delete or fail a still-processing video. Inspect Stream state, the 60-minute ingest job, and the 24-hour session expiry before manual mutation. |
+| `source:media-job` + `action:expire_upload_session` | A delayed expiry wakeup or session cleanup failed | `expiresAt` is authoritative. Early delivery must defer; expired reserved uploads release quota and queue cleanup; ready-but-unsubmitted uploads clean provider assets without refunding consumed quota; consumed sessions supersede the job. |
 | `source:media-job` + `action:cleanup_image` | Cloudinary pending-image delete failed | Pending registry rows are intentionally kept until the outbox job deletes the provider asset. Verify Cloudinary env/Admin API status, then retry or let daily redispatch pick it up. |
-| Stuck video session (`uploading`/`completing`/`processing`) | Shopper abandoned upload, duplicate complete race, missing webhook, or Stream processing failed silently | Daily reconciliation should redispatch/cleanup. If manual intervention is needed, inspect `VideoUploadSession`, `PendingReviewImage`, and provider state before marking failed. |
+| Stuck video session (`uploading`/`completing`/`processing`) | Shopper abandoned upload, duplicate complete race, missing webhook, or Stream processing failed silently | Transactionally-created expiry/reconciliation jobs should heal the session without waiting for the daily cron. Daily maintenance is the pre-deploy/backstop repair path. If manual intervention is needed, inspect `VideoUploadSession`, lifecycle jobs, `PendingReviewImage`, and provider state before marking failed. |
 | Public ingest object older than 60 minutes | Stream ready webhook/job missed or Stream is still downloading | Inspect the `cleanup_ingest` job and Stream state. The job should defer while downloading and delete no later than the 23h application deadline; an object reaching the 24h bucket lifecycle indicates the application cleanup path failed. |
 | `cleanup-images` `task:breaker-tripped` reason `empty-used-set` (G1) | In-use diff is broken (e.g. `cloudName`/`publicId` regression) — **0 deleted, real photos protected** | **Do not force.** Investigate why `usedCount=0` while `ReviewMedia` has rows; fix the diff, then re-trigger. G1 is never force-overridable. |
 | `cleanup-images` `task:breaker-tripped` reason `ratio …` (G2) / `sweep … > …` (G3) | A genuine bulk cleanup **or** an anomaly | Inspect the latest `MediaCleanupRun` (`candidates`, `sampleDeleted`). If intended, re-run `?force=1`; else fix the cause. |

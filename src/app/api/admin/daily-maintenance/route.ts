@@ -5,7 +5,11 @@ import { reconcileStorefrontScripts } from '@/lib/reconcile-storefront-scripts';
 import { reconcileStorefrontThemes } from '@/lib/storefront-theme-sync';
 import { runReviewMediaMetadataBackfill } from '@/lib/review-media-metadata-backfill';
 import { reportCronTaskError } from '@/lib/cron-observability';
-import { reconcileProcessingVideos, redispatchDueMediaJobs } from '@/lib/media/reconciliation';
+import {
+  ensureVideoLifecycleJobs,
+  reconcileProcessingVideos,
+  redispatchDueMediaJobs,
+} from '@/lib/media/reconciliation';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -35,6 +39,7 @@ export async function GET(request: Request) {
   let storefrontThemes = null;
   let reviewMediaMetadata = null;
   let videoReconciliation = null;
+  let videoLifecycleJobs = null;
   let mediaJobs = null;
   const runFullMaintenance = shouldRunFullMaintenance(request);
 
@@ -72,6 +77,14 @@ export async function GET(request: Request) {
     }
 
     try {
+      videoLifecycleJobs = await ensureVideoLifecycleJobs();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      reportCronTaskError('daily-maintenance', 'video-lifecycle-jobs', error);
+      errors.push({ task: 'video-lifecycle-jobs', error: message });
+    }
+
+    try {
       videoReconciliation = await reconcileProcessingVideos();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown';
@@ -96,6 +109,7 @@ export async function GET(request: Request) {
         pendingUploads,
         storefrontScripts,
         reviewMediaMetadata,
+        videoLifecycleJobs,
         videoReconciliation,
         mediaJobs,
         errors,

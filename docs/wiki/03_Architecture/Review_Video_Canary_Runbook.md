@@ -23,8 +23,13 @@ source_files:
   - "scripts/video-canary-ops-lib.mjs"
   - "scripts/verify-video-infrastructure.mjs"
   - "src/lib/media/access.ts"
+  - "src/lib/media/outbox.ts"
+  - "src/lib/media/dispatcher.ts"
+  - "src/lib/media/lifecycle.ts"
   - "src/lib/media/jobs.ts"
+  - "src/lib/media/reconciliation.ts"
   - "src/lib/media/sessions.ts"
+  - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "tests/unit/video-canary-ops.test.ts"
 ---
 
@@ -113,7 +118,7 @@ Verify in order:
 1. Browser receives multipart URLs and uploads more than one R2 part.
 2. Complete returns processing and creates one `prepare_stream` outbox job.
 3. QStash delivers the signed job; the session progresses to Stream processing.
-4. The real Stream webhook advances the session to ready and removes the ingest object.
+4. The real Stream webhook advances the session to ready and removes the ingest object. As a failure-path check, the deduped `reconcile_stream` job must be able to apply the same canonical ready/error state when webhook delivery is delayed or missed.
 5. Quota moves from reserved to consumed exactly once.
 6. Review submission consumes the ready token and creates a pending video review.
 7. Admin playback uses the short-lived signed endpoint; provider credentials and private playback data are not exposed by public status APIs.
@@ -132,7 +137,7 @@ The report includes current-month quota counts, recent sessions, provider-job st
 ## Exit Criteria
 
 - No session is stuck in `uploading`, `completing`, or `processing` beyond its expected window.
-- No provider job remains `failed`, stale `processing`, or `dead`.
+- No provider job remains `failed`, stale `processing`, or `dead`. Future-scheduled `expire_upload_session` jobs are expected and are not counted as due/stuck work.
 - The transient ingest object is removed by application cleanup; the 24-hour bucket lifecycle is only a backstop.
 - After review deletion, the Stream asset and R2 master object are absent.
 - Reserved quota is zero; consumed quota reflects exactly the completed canary upload.
@@ -154,4 +159,4 @@ Do not delete provider credentials or webhook configuration while cleanup work i
 
 Playwright emulation is not physical-device acceptance. Phase 6 must repeat selection, metadata, multipart upload, interruption/resume, processing, admin preview, HLS playback, fullscreen, audio, pause, browser back, and modal close on a real iPhone Safari device and a real Android Chrome device.
 
-The dated evidence ledger is [[Review_Video_Physical_Device_Acceptance_2026-06]]. The 72-hour clock starts only after the retained Android review is approved and storefront playback is verified. If media-path code changes during the window, add the regression test, redeploy, and restart the clock; documentation-only changes do not restart it.
+The dated evidence ledger is [[Review_Video_Physical_Device_Acceptance_2026-06]]. After the reliability hardening deploy, both Android Chrome and iPhone Safari must repeat interruption, retry/resume, offline cancel, processing, and removal checks. The 72-hour clock starts only after those post-deploy checks pass and the retained Android review is approved with storefront playback verified. If media-path code changes during the window, add the regression test, redeploy, and restart the clock; documentation-only changes do not restart it.

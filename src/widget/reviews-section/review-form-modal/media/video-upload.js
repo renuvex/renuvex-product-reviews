@@ -6,12 +6,16 @@ var VIDEO_MIN_DURATION_SECONDS = 2;
 var VIDEO_MAX_DURATION_SECONDS = 60;
 var ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime'];
 var SESSION_STORAGE_PREFIX = 'renuvex_pr_video_upload_';
+var PENDING_CANCEL_STORAGE_PREFIX = 'renuvex_pr_video_cancel_';
+var cancelFlushPromise = null;
+var cancelOnlineListenerInstalled = false;
 
 var VIDEO_UPLOAD_ERROR_MESSAGES = {
   video_quota_exceeded: 'Bu mağaza bu ayki video yorum limitine ulaştı.',
   rate_limited: 'Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.',
   video_upload_disabled: 'Video yükleme şu anda kullanılamıyor.',
   video_provider_unavailable: 'Video yükleme geçici olarak kullanılamıyor.',
+  video_processing_delayed: 'Video hazırlanması beklenenden uzun sürüyor. Biraz sonra tekrar deneyin.',
 };
 
 var NON_RETRYABLE_VIDEO_UPLOAD_ERRORS = {
@@ -53,6 +57,22 @@ function sleep(ms) {
   return new Promise(function (resolve) { setTimeout(resolve, ms); });
 }
 
+function sleepWithSignal(ms, signal) {
+  return new Promise(function (resolve, reject) {
+    var timer = setTimeout(finish, ms);
+    function finish() {
+      if (signal) signal.removeEventListener('abort', abort);
+      resolve();
+    }
+    function abort() {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', abort);
+      reject(new DOMException('Aborted', 'AbortError'));
+    }
+    if (signal) signal.addEventListener('abort', abort, { once: true });
+  });
+}
+
 function fingerprint(file) {
   return [file.name, file.size, file.lastModified, file.type].join('_').slice(0, 128);
 }
@@ -81,6 +101,45 @@ function clearStoredSession(productId, file) {
   try { window.sessionStorage.removeItem(sessionStorageKey(productId, file)); } catch (_) {}
 }
 
+function pendingCancelStorageKey(productId, file) {
+  return PENDING_CANCEL_STORAGE_PREFIX + PUBLIC_API_KEY + '_' + productId + '_' + fingerprint(file);
+}
+
+function storePendingCancel(token, productId, file, expiresAt) {
+  if (!token || !productId || !file) return;
+  var value = {
+    token: token,
+    productId: productId,
+    expiresAt: expiresAt || null,
+  };
+  try {
+    window.sessionStorage.setItem(pendingCancelStorageKey(productId, file), JSON.stringify(value));
+  } catch (_) {}
+}
+
+function pendingCancelEntries() {
+  var entries = [];
+  try {
+    for (var index = 0; index < window.sessionStorage.length; index += 1) {
+      var key = window.sessionStorage.key(index);
+      if (!key || key.indexOf(PENDING_CANCEL_STORAGE_PREFIX + PUBLIC_API_KEY + '_') !== 0) continue;
+      var raw = window.sessionStorage.getItem(key);
+      var value = raw ? JSON.parse(raw) : null;
+      if (!value || typeof value.token !== 'string') {
+        window.sessionStorage.removeItem(key);
+        index -= 1;
+        continue;
+      }
+      entries.push({ key: key, token: value.token });
+    }
+  } catch (_) {}
+  return entries;
+}
+
+function clearPendingCancel(key) {
+  try { window.sessionStorage.removeItem(key); } catch (_) {}
+}
+
 async function jsonRequest(path, options, timeoutMs) {
   var response = await fetchWithTimeout(API_BASE + path, options, timeoutMs || 20000);
   var payload = await response.json().catch(function () { return {}; });
@@ -93,6 +152,48 @@ async function jsonRequest(path, options, timeoutMs) {
     );
   }
   return payload.data || {};
+}
+
+async function sendPendingCancel(entry) {
+  try {
+    await jsonRequest('/api/public/upload/video', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: entry.token }),
+    }, 8000);
+    clearPendingCancel(entry.key);
+    return true;
+  } catch (error) {
+    if (error && (Number(error.status) === 404 || Number(error.status) === 409)) {
+      clearPendingCancel(entry.key);
+      return true;
+    }
+    return false;
+  }
+}
+
+export function flushPendingVideoCancellations() {
+  if (typeof window === 'undefined' || window.__ikasPreviewMode) return Promise.resolve();
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve();
+  if (cancelFlushPromise) return cancelFlushPromise;
+  cancelFlushPromise = (async function () {
+    var entries = pendingCancelEntries();
+    for (var index = 0; index < entries.length; index += 1) {
+      await sendPendingCancel(entries[index]);
+    }
+  })().finally(function () {
+    cancelFlushPromise = null;
+  });
+  return cancelFlushPromise;
+}
+
+export function ensurePendingVideoCancelDelivery() {
+  if (typeof window === 'undefined' || cancelOnlineListenerInstalled) return;
+  cancelOnlineListenerInstalled = true;
+  window.addEventListener('online', function () {
+    flushPendingVideoCancellations();
+  });
+  flushPendingVideoCancellations();
 }
 
 function uploadPartWithProgress(url, blob, signal, onProgress) {
@@ -157,6 +258,18 @@ async function uploadOnePart(input) {
   throw new Error('video_part_upload_failed');
 }
 
+export function videoUploadProgressPercent(fileSize, partSize, completedPartNumbers, loadedByPart) {
+  if (!Number.isFinite(fileSize) || fileSize <= 0) return 0;
+  var completedBytes = (completedPartNumbers || []).reduce(function (sum, number) {
+    var start = (Number(number) - 1) * partSize;
+    return sum + Math.max(0, Math.min(partSize, fileSize - start));
+  }, 0);
+  var uploadingBytes = Object.keys(loadedByPart || {}).reduce(function (sum, key) {
+    return sum + Math.max(0, Number(loadedByPart[key]) || 0);
+  }, 0);
+  return Math.min(95, Math.round(((completedBytes + uploadingBytes) / fileSize) * 95));
+}
+
 async function uploadMissingParts(input) {
   var completedMap = {};
   (input.completed || []).forEach(function (part) {
@@ -168,13 +281,12 @@ async function uploadMissingParts(input) {
     if (!completedMap[partNumber]) queue.push(partNumber);
   }
   function reportProgress() {
-    var completedBytes = Object.keys(completedMap).reduce(function (sum, key) {
-      var number = Number(key);
-      var start = (number - 1) * input.partSize;
-      return sum + Math.min(input.partSize, input.file.size - start);
-    }, 0);
-    var uploadingBytes = Object.keys(loadedByPart).reduce(function (sum, key) { return sum + loadedByPart[key]; }, 0);
-    input.onProgress(Math.min(95, Math.round(((completedBytes + uploadingBytes) / input.file.size) * 95)));
+    input.onProgress(videoUploadProgressPercent(
+      input.file.size,
+      input.partSize,
+      Object.keys(completedMap).map(Number),
+      loadedByPart,
+    ));
   }
   reportProgress();
   async function worker() {
@@ -202,17 +314,40 @@ async function uploadMissingParts(input) {
     .sort(function (a, b) { return a.partNumber - b.partNumber; });
 }
 
+export function videoProcessingPollDelayMs(elapsedMs) {
+  if (elapsedMs < 30 * 1000) return 2000;
+  if (elapsedMs < 2 * 60 * 1000) return 5000;
+  return 10 * 1000;
+}
+
 async function pollUntilReady(token, signal, onStatus) {
-  var deadline = Date.now() + 10 * 60 * 1000;
+  var startedAt = Date.now();
+  var deadline = startedAt + 10 * 60 * 1000;
+  var consecutiveErrors = 0;
   while (Date.now() < deadline) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-    var status = await jsonRequest('/api/public/upload/video/status?token=' + encodeURIComponent(token), { method: 'GET' });
-    if (onStatus) onStatus(status.status || 'processing');
-    if (status.status === 'ready') return status;
-    if (status.status === 'failed' || status.status === 'aborted') throw new Error(status.errorCode || 'video_processing_failed');
-    await sleep(2000);
+    var elapsedMs = Date.now() - startedAt;
+    try {
+      var status = await jsonRequest(
+        '/api/public/upload/video/status?token=' + encodeURIComponent(token),
+        { method: 'GET', signal: signal },
+      );
+      consecutiveErrors = 0;
+      if (onStatus) onStatus(elapsedMs >= 30 * 1000 ? 'processing_slow' : (status.status || 'processing'));
+      if (status.status === 'ready') return status;
+      if (status.status === 'failed' || status.status === 'aborted') {
+        throw new VideoUploadRequestError(status.errorCode || 'video_processing_failed', 409, null);
+      }
+    } catch (error) {
+      if (signal.aborted) throw error;
+      if (error instanceof VideoUploadRequestError && error.status === 409) throw error;
+      if (shouldDiscardStoredVideoSession(error)) throw error;
+      consecutiveErrors += 1;
+      if (consecutiveErrors >= 3) throw error;
+    }
+    await sleepWithSignal(videoProcessingPollDelayMs(elapsedMs), signal);
   }
-  throw new Error('video_processing_timeout');
+  throw new VideoUploadRequestError('video_processing_delayed', 0, null);
 }
 
 async function readStoredUploadStatus(token) {
@@ -290,6 +425,8 @@ export async function uploadReviewVideo(input) {
   if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
     return simulatePreviewUpload(input.file, input.signal, input.onProgress, input.onStatus);
   }
+  ensurePendingVideoCancelDelivery();
+  await flushPendingVideoCancellations();
   var stored = readStoredSession(input.productId, input.file);
   var token = stored && stored.token;
   var session = stored;
@@ -358,11 +495,10 @@ export async function uploadReviewVideo(input) {
 }
 
 export async function cancelReviewVideoUpload(token, productId, file) {
+  var stored = productId && file ? readStoredSession(productId, file) : null;
+  if (token && productId && file) storePendingCancel(token, productId, file, stored && stored.expiresAt);
   if (productId && file) clearStoredSession(productId, file);
   if (!token || (typeof window !== 'undefined' && window.__ikasPreviewMode)) return;
-  await jsonRequest('/api/public/upload/video', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token }),
-  }).catch(function () {});
+  ensurePendingVideoCancelDelivery();
+  await flushPendingVideoCancellations();
 }

@@ -866,21 +866,38 @@ test('video retry preserves the multipart session across a transient status fail
     mimeType: 'video/mp4',
     buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
   });
-  await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-status',
+  )).toContain('Video yüklenemedi');
+  expect(await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .find((candidate) => !!candidate?.querySelector('.renuvex-pr-fwizard-overlay'));
+    return typeof (root?.querySelector('.renuvex-pr-fwizard-video-retry') as HTMLButtonElement | null)?.onclick === 'function';
+  })).toBe(true);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry');
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-status',
+  )).toContain('Video yükleniyor');
+  await expect.poll(() => statusCalls).toBeGreaterThanOrEqual(3);
+  await expect.poll(() => r2PutCalls).toBe(4);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
 
   expect(initiateCalls).toBe(1);
-  expect(statusCalls).toBeGreaterThanOrEqual(3);
-  expect(r2PutCalls).toBe(4);
   expect(partsTokens.length).toBeGreaterThanOrEqual(4);
   expect(new Set(partsTokens)).toEqual(new Set([videoToken]));
 });
 
 test('video upload card remove cancels pending video selection', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await stubVideoMetadata(page, 12);
   const videoToken = 'video-token-remove-abcdefghijklmnopqrstuvwxyz1234567890';
   let cancelCalls = 0;
+  let statusCalls = 0;
 
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
@@ -937,6 +954,7 @@ test('video upload card remove cancels pending video selection', async ({ page }
     });
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+    statusCalls += 1;
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -966,12 +984,148 @@ test('video upload card remove cancels pending video selection', async ({ page }
   });
 
   await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-card')).toBe(1);
+  await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .find((candidate) => !!candidate?.querySelector('.renuvex-pr-fwizard-overlay'));
+    (window as Window & { __renuvexVideoPreviewNode?: Element | null }).__renuvexVideoPreviewNode =
+      root?.querySelector('.renuvex-pr-fwizard-video-preview') || null;
+  });
+  await expect.poll(() => statusCalls).toBeGreaterThanOrEqual(2);
+  expect(await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .find((candidate) => !!candidate?.querySelector('.renuvex-pr-fwizard-overlay'));
+    return (window as Window & { __renuvexVideoPreviewNode?: Element | null }).__renuvexVideoPreviewNode ===
+      root?.querySelector('.renuvex-pr-fwizard-video-preview');
+  })).toBe(true);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove');
 
   await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-card')).toBe(0);
   await expect.poll(() => cancelCalls).toBe(1);
   expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-choice:nth-child(2)')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
+});
+
+test('offline video removal persists cancellation and flushes it when connectivity returns', async ({ page }) => {
+  await stubVideoMetadata(page, 12);
+  const videoToken = 'video-token-offline-cancel-abcdefghijklmnopqrstuvwxyz1234567890';
+  let cancelCalls = 0;
+  let statusCalls = 0;
+  let cancelDeliveryAvailable = false;
+
+  await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      videoReviewsEnabled: true,
+    },
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+    await route.fulfill({
+      status: 201,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          token: videoToken,
+          partSize: 10 * 1024 * 1024,
+          partCount: 1,
+          maxParallelParts: 3,
+          expiresAt: '2099-01-01T00:00:00.000Z',
+        },
+      }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/parts**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          completed: [],
+          parts: [{ partNumber: 1, uploadUrl: 'https://r2-upload.test/offline-cancel/part-1' }],
+        },
+      }),
+    });
+  });
+  await page.route('https://r2-upload.test/offline-cancel/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'ETag',
+        ETag: '"offline-cancel-etag"',
+      },
+      body: '',
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ data: { status: 'processing' } }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+    statusCalls += 1;
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ data: { status: 'processing' } }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video`, async (route) => {
+    if (route.request().method() === 'DELETE') {
+      cancelCalls += 1;
+      if (!cancelDeliveryAvailable) {
+        await route.abort('failed');
+        return;
+      }
+      await route.fulfill({
+        status: 409,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ error: 'upload_terminal' }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ data: { status: 'cancelling' } }),
+    });
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
+    name: 'offline-cancel.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
+  });
+  await expect.poll(() => statusCalls).toBeGreaterThanOrEqual(1);
+
+  await page.context().setOffline(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove');
+  await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-card')).toBe(0);
+  expect(cancelCalls).toBe(0);
+  expect(await page.evaluate(() => (
+    Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index))
+      .filter((key) => key?.startsWith('renuvex_pr_video_cancel_')).length
+  ))).toBe(1);
+
+  await page.context().setOffline(false);
+  cancelDeliveryAvailable = true;
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect.poll(() => cancelCalls).toBe(1);
+  await expect.poll(() => page.evaluate(() => (
+    Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index))
+      .filter((key) => key?.startsWith('renuvex_pr_video_cancel_')).length
+  ))).toBe(0);
 });
 
 test('preview video media step simulates upload without public video endpoints', async ({ page }) => {

@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-06-14
-last_verified: 2026-06-14
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - testing
@@ -36,6 +36,10 @@ source_files:
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
   - "tests/unit/video-upload-routes.test.ts"
+  - "tests/unit/video-upload-error.test.ts"
+  - "tests/unit/media-jobs.test.ts"
+  - "tests/unit/media-session-creation.test.ts"
+  - "tests/unit/media-reconciliation.test.ts"
   - "tests/unit/media-route-contracts.test.ts"
   - "tests/unit/admin-video-preview-contract.test.ts"
   - "tests/unit/review-summary.test.ts"
@@ -110,6 +114,10 @@ The media suite deliberately separates playback contracts:
 - The `hls.js`/MSE branch runs on desktop Chromium and Firefox and verifies lazy manifest loading plus player cleanup.
 - Poster-first card/list/gallery tests assert that no HLS manifest is requested before the shopper opens the lightbox.
 - Wizard upload tests mock the R2 multipart CORS contract, Stream processing status, and public review submit, while asserting no direct Cloudflare Admin API call leaves the widget.
+
+Video lifecycle unit coverage pins the DB-outbox reliability contract: quota reservation, upload-session creation, and `expire_upload_session` are one serializable transaction; early expiry delivery defers to `expiresAt`; abandoned reserved and ready-unsubmitted sessions clean correctly; consumed review sessions cannot expire. `reconcile_stream` uses a bounded seven-check schedule, recovers a ready video when the webhook is missed, records delayed processing without destructive cleanup, and redispatches the existing deduped job when a `prepare_stream` retry finds an already-persisted Stream UID. The 60-minute ingest cleanup backstop applies canonical Stream ready/error state through the same transition helper before removing the transient public copy.
+
+Widget interaction coverage pins the mobile reliability contract: progress/status mutations preserve the same `<video>` preview node, a transient status failure retries the original multipart session without a second initiate call, completed parts contribute to resumed progress, offline removal stores a cancellation intent without sending a request, and reconnect clears that intent after a terminal server response. Retry reuses already-read video metadata instead of reopening the media decoder.
 
 Unit route contracts separately pin video observability: malformed or expected client errors and missing provider configuration do not consume Sentry error quota, while unexpected initiate, part-signing, completion, cancellation, and Stream-webhook failures call `captureException` exactly once with `source=media-job` and the route-specific `task` tag used by production alerts. The Stream webhook contract also distinguishes already-deleted Stream assets (`202 stream_not_found`, no state mutation, no Sentry) from transient provider fetch failures (`502 stream_provider_unavailable`, provider tags, no stale state mutation).
 

@@ -50,6 +50,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   mediaProviderJob: {
     upsert: vi.fn(),
+    updateMany: vi.fn(),
   },
 }));
 
@@ -213,6 +214,7 @@ function setupVerifiedReviewTarget(autoApprove: unknown = 'manual') {
     productReviewSummary: prismaMock.productReviewSummary,
     pendingReviewImage: prismaMock.pendingReviewImage,
     videoUploadSession: prismaMock.videoUploadSession,
+    mediaProviderJob: prismaMock.mediaProviderJob,
   }));
 }
 

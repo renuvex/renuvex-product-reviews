@@ -27,6 +27,11 @@ source_files:
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/media/access.ts"
+  - "src/lib/media/outbox.ts"
+  - "src/lib/media/dispatcher.ts"
+  - "src/lib/media/lifecycle.ts"
+  - "src/lib/media/jobs.ts"
+  - "src/lib/media/reconciliation.ts"
   - "src/app/api/public/upload/video/capability/route.ts"
   - "src/lib/media/config.ts"
   - "src/lib/media/constants.ts"
@@ -114,7 +119,7 @@ Detail in [[Security_And_Rate_Limits]].
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| POST `/api/internal/media-jobs` | [route.ts](src/app/api/internal/media-jobs/route.ts) | QStash-signed DB outbox worker for Stream prepare/publish/protect and R2/Stream/ingest cleanup jobs. Verifies raw-body JWT, serializes same-asset mutations with `MediaProviderLease`, and treats delivery as at-least-once/idempotent. |
+| POST `/api/internal/media-jobs` | [route.ts](src/app/api/internal/media-jobs/route.ts) | QStash-signed DB outbox worker for Stream prepare/reconcile/publish/protect, exact upload-session expiry, and R2/Stream/ingest cleanup jobs. Verifies raw-body JWT, serializes same-session/asset mutations with `MediaProviderLease`, and treats delivery as at-least-once/idempotent. |
 
 ## Webhooks
 
@@ -159,6 +164,7 @@ Detail in [[Security_And_Rate_Limits]].
 - **Video capability is advisory, reservation is authoritative.** The widget uses the fresh capability endpoint to hide unavailable video upload before opening the wizard. `/api/public/upload/video/initiate` repeats every gate and the atomic quota reservation remains the concurrency authority. Quota exhaustion returns `429 video_quota_exceeded`; rate limiting returns `429 rate_limited` with `Retry-After`; disabled and provider-unavailable states return `403` and `503` respectively.
 - **Media provider mutations are outbox-owned.** Do not call Stream publish/delete or expired Cloudinary pending-image deletes directly from UI/cron routes except by enqueueing `MediaProviderJob` and dispatching QStash; this keeps retries, idempotency, stale-lock recovery, and DLQ/manual repair observable.
 - **QStash is a wakeup layer, not the source of truth.** Session failure/cancel state and the matching cleanup job are committed in the same DB transaction. Repeated delivery is safe; same-asset provider calls are lease-serialized and stale moderation jobs converge Stream to the latest DB-visible state.
+- **Stream readiness is self-healing.** Committing a Stream UID also creates a deduped `reconcile_stream` outbox record. The webhook remains the fast path, while bounded canonical-status checks recover missed/delayed delivery without exposing provider identity through the public status endpoint. Upload reservation similarly creates `expire_upload_session` in the same serializable transaction.
 
 ## Related Source Files
 - [src/app/api/](src/app/api/)

@@ -7,7 +7,7 @@ import { getClientIp, checkFixedWindowRateLimit } from '@/lib/public-rate-limit'
 import { getVideoFeatureAccess, verifyVideoReviewTarget } from '@/lib/media/access';
 import { getQStashMediaConfig, getR2MediaConfig, getStreamMediaConfig, MediaConfigError } from '@/lib/media/config';
 import { createVideoMultipartUpload } from '@/lib/media/providers/r2';
-import { failSessionAndQueueCleanup } from '@/lib/media/jobs';
+import { dispatchMediaProviderJob, failSessionAndQueueCleanup } from '@/lib/media/jobs';
 import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 import { createReservedVideoSession, VideoQuotaError } from '@/lib/media/sessions';
 import { partitionVideoBytes, validateVideoUploadInput } from '@/lib/media/video-policy';
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     getStreamMediaConfig();
     getQStashMediaConfig();
 
-    const { session, token } = await createReservedVideoSession({
+    const { session, token, expiryJob } = await createReservedVideoSession({
       storeId,
       productId,
       mimeType: upload.mimeType,
@@ -69,6 +69,10 @@ export async function POST(request: Request) {
     const uploadId = await createVideoMultipartUpload(session.masterObjectKey, session.mimeType);
     createdUploadId = uploadId;
     await prisma.videoUploadSession.update({ where: { id: session.id }, data: { status: 'uploading', r2UploadId: uploadId } });
+    await dispatchMediaProviderJob(
+      expiryJob.id,
+      Math.max(1, Math.ceil((session.expiresAt.getTime() - Date.now()) / 1000)),
+    );
     return withCors(NextResponse.json({
       data: {
         token,
