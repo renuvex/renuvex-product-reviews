@@ -139,11 +139,24 @@ Verified on 2026-06-15 after deploying commit `84276d8b` as Vercel Production de
 
 Android physical-device acceptance can now continue. The 72-hour clock has not started.
 
+## iOS Review Deletion Cleanup
+
+Verified on 2026-06-15 after deleting the published iOS review from the admin panel:
+
+- The review and its `ReviewMedia` row were removed, and no pending-media row remained for the consumed upload session.
+- The review deletion transaction created one `cleanup_video` outbox job carrying the Stream UID and R2 master key.
+- QStash delivered the worker request, the job succeeded on its first attempt, and no matching DLQ message was present.
+- Direct provider reads confirmed the Stream asset returned HTTP `404` and the R2 master object returned `not_found`.
+- No failed, dead, or processing media job remained, and Sentry had no matching media-job/admin-delete error during the verification window.
+- Consumed monthly quota remained consumed, as designed; deleting a published video does not refund monthly usage.
+
+The iOS cleanup criterion passes. The physical iOS interruption/resume criterion remains pending until a real iPhone is available again.
+
 ## Physical Device Matrix
 
 | Device | File | Selection / metadata | Resume | Processing / ready | Pending admin preview | Storefront HLS | Cleanup | Result |
 |---|---|---|---|---|---|---|---|---|
-| iPhone Safari | 1080p MOV, 30-80 MiB, 2-60 s | Pass | Pending | Pass | Pass | Published | Pending | Partial pass; quota UX fix awaits deploy verification |
+| iPhone Safari | 1080p MOV, 30-80 MiB, 2-60 s | Pass | Pending | Pass | Pass | Published | Pass | Partial pass; interruption/resume and device-version evidence remain |
 | Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
 
 Record the physical device model, OS version, browser version, timestamps, and pass/fail result. Do not record customer media, upload tokens, signed playback URLs, R2 keys, or provider credentials.
