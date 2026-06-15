@@ -124,6 +124,21 @@ Verified on 2026-06-15 after deploying commit `64dfc5a7`:
 
 The 72-hour canary clock still does not start from the iOS review. It starts only after the Android review is approved and storefront playback is verified.
 
+## Quota-Aware Capability Deployment
+
+Verified on 2026-06-15 after deploying commit `84276d8b` as Vercel Production deployment `dpl_AjWAf29bnLSQWxA8ceQ8gdLBQQiz`:
+
+- The deployment was `READY` and matched the intended commit.
+- Before mutation, the fresh capability endpoint returned `quota_exceeded` for the internal store with usage `reserved=1`, `consumed=4`, limit `5`.
+- Dry-run showed only the internal store changing from quota `5` to `20`; the merchant toggle remained enabled.
+- Exact-store apply set the internal limit to `20`, leaving current usage at `5` and remaining capacity at `15`.
+- The second store remained quota `0`, toggle disabled.
+- Live no-store capability returned `enabled=true` / `enabled` for the internal store and `enabled=false` / `merchant_disabled` for the second store.
+- Vercel runtime logs showed the capability requests as HTTP `200` and no matching capability errors.
+- One upload session remains legitimately reserved until `2026-06-15T22:36:07Z`; it is not yet expired under the 24-hour session contract and must be released by the existing expiration cleanup rather than manual counter editing.
+
+Android physical-device acceptance can now continue. The 72-hour clock has not started.
+
 ## Physical Device Matrix
 
 | Device | File | Selection / metadata | Resume | Processing / ready | Pending admin preview | Storefront HLS | Cleanup | Result |
