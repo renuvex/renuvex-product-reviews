@@ -21,6 +21,7 @@ source_files:
 # Project Log
 
 ## 2026-06-15 - acceptance | Start Review Video V1 physical-device gate
+- Implemented the quota-aware video capability follow-up locally: a no-store capability endpoint, current-month usage/provider gates, photo-only fallback, structured upload error copy/retry policy, read-only admin usage metadata, and quota-aware canary reporting. Cached public settings and atomic initiate reservation contracts remain unchanged. Production deploy and the internal-store `5 -> 20` dry-run/apply are still pending.
 - Hardened pending admin video preview with a visible unapproved-UGC warning, muted native playback, and a contract test that pins the signed admin endpoint.
 - Re-verified the Phase 6 preflight: Vercel commit `88e1041b` ready, R2 multipart write/abort clean, Stream token/webhook valid, QStash deliveries successful, media-worker DLQ empty after deleting the intentional invalid-job probe, unsigned worker calls rejected with `401`, and no matching Sentry/Vercel production errors in the preceding 24 hours.
 - Corrected stale rollout memory: controlled provider canary work already consumed two quota units and completed cleanup. Physical iPhone/Android and the 72-hour retained-review window remain pending.

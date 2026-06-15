@@ -102,6 +102,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       setSettingsLoadState(state => reduceWidgetSettingsLoadState(state, {
         type: 'success',
         settings: settingsRes.data?.data,
+        meta: settingsRes.data?.meta,
       }));
     } catch (error) {
       console.error("Widget ayarları çekilirken hata:", error);
@@ -330,6 +331,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         <TabsContent value="widgets" className="m-0 flex-1 min-w-0">
           <WidgetsContainer
             settings={settings}
+            settingsMeta={settingsLoadState.meta}
             settingsStatus={settingsLoadState.status}
             onChange={handleSettingsChange}
             onSave={async (widgetId, widgetSettings) => {

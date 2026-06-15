@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-13
-last_verified: 2026-06-13
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - widget
@@ -35,6 +35,8 @@ source_files:
   - "src/widget/core/review-media.js"
   - "src/widget/reviews-section/review-form-modal/steps/step-media.js"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
+  - "src/widget/reviews-section/review-form-modal/media/video-capability.js"
+  - "src/widget/summary-layouts/shared/write-action.js"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
@@ -65,7 +67,7 @@ Recurring categories:
 2. Fetches `/api/public/settings` (cached), then calls `reviews-api.js` for `/api/public/reviews` and the strip fetch (cached; image-only stores use `hasImages=true`, video-enabled stores use `hasMedia=true`; stale reviews are preferred on failures).
 3. Reads layout choice from settings → looks up registry in [summary-layouts/index.js](src/widget/summary-layouts/index.js) and [review-layouts/index.js](src/widget/review-layouts/index.js).
 4. `render.js` composes summary + reviews + CTA. Review fetch errors render a retryable error state and do not reuse the empty-review UI. A true product-empty state (`allCount === 0`) is built by `buildEmptyReviewsState()` in [render/states.js](src/widget/reviews-section/render/states.js), with its own left-aligned semantic `h3` title, 5 empty review icons, explanatory status text, and the write-review CTA. On desktop the CTA sits to the right of the copy; on mobile it becomes a centered full-width button. Filtered-empty state (`allCount > 0` and visible `reviews.length === 0`) stays minimal: summary remains, no write-review CTA is added, and `buildFilteredEmptyReviewsState()` renders a polite status message for assistive technology. State stored in [core/state.js](src/widget/core/state.js).
-5. CTA opens the multi-step submission wizard.
+5. Every real storefront CTA performs a fresh `no-store` video capability check before opening the multi-step submission wizard. Concurrent clicks share one request and the clicked CTA is temporarily disabled with `aria-busy=true`. A timeout, network error, or unknown store never blocks text/photo reviews; the wizard opens photo-only. Admin preview skips the real endpoint and uses the deterministic draft setting.
 
 Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merchant/theme-provided mount point `<div data-renuvex-widget="reviews"></div>`. If the mount is missing, the review section does **not** render — placement is opt-in (no auto-create). The PDP rating badge is a separate "badge" feature: it auto-places on the product title and is gated only by the badge widget toggle, so it shows independently of the review-section mount. The review section root is `#renuvex-reviews-widget` (inner container `#renuvex-reviews`); the PDP badge scroll target is `#renuvex-reviews`. `data-renuvex-widget="<type>"` is the canonical public mount scheme for all widgets (e.g. a future carousel uses `data-renuvex-widget="carousel"`). Related bug: [[Bug_Product_Widget_Missing_Auto_Mount]].
 
@@ -84,8 +86,9 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Steps managed in [reviews-section/review-form-modal/wizard-state.js](src/widget/reviews-section/review-form-modal/wizard-state.js).
 - The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Open focuses the dialog container, first `Tab` enters the active step, step changes do not auto-focus inputs, and close returns focus to the opening control for keyboard opens. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]] and [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary under `review_images/stores/<storeId>`.
-- Video V1 is opt-in and gated by global flag + merchant setting + store monthly quota. When effective, step 2 becomes a media step ([step-media.js](src/widget/reviews-section/review-form-modal/steps/step-media.js)): users can add **3 photos OR 1 video**, never mixed media in v1.
+- Video V1 is opt-in and gated by global flag + merchant setting + provider configuration + the current UTC month's `reservedCount + consumedCount < monthlyLimit`. The cached settings response expresses merchant intent; the fresh capability endpoint expresses current upload availability. When effective, step 2 becomes a media step ([step-media.js](src/widget/reviews-section/review-form-modal/steps/step-media.js)): users can add **3 photos OR 1 video**, never mixed media in v1.
 - Videos upload through [media/video-upload.js](src/widget/reviews-section/review-form-modal/media/video-upload.js): client validates MP4/MOV, <=150MB, known 2-60s duration, then uses server-authorized R2 multipart upload (10MiB parts, max 3 parallel, retry/resume via stored session token). Server and Stream remain authoritative; client validation is only fast feedback.
+- Upload failures retain stable server error codes. Quota, disabled-feature, and rate-limit failures show specific shopper copy without an immediate retry action; network and retryable server failures retain the retry action. Inline feedback and the existing toast both remain visible, and the remove control remains available.
 - Preview mode never calls Cloudflare. The wizard simulates upload/progress/processing/ready states deterministically.
 - Photo step allows **parallel uploads** — the add button stays enabled while existing uploads are in flight. Each pending upload is tracked independently in `pendingImages`. The submission step blocks submit with a "fotoğraflar yükleniyor" message until every pending upload resolves. Upper bound `MAX_PHOTOS=3` is enforced across completed + pending so parallel selection never exceeds the cap.
 - Local preview `blob:` URLs are owned by the modal lifecycle: pending, completed-preview-map, and preview-mode blobs are revoked on close. Removing a photo updates wizard state before revoking the local URL, and deleting one pending upload skips only that upload's state update instead of aborting the rest of the selected batch. Related bug: [[Bug_Review_Wizard_Photo_Upload_Lifecycle]].
@@ -140,6 +143,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-15: Added a fresh quota-aware video capability check before every real storefront wizard open. Capability failure degrades to photo-only, preview stays deterministic, and structured quota/rate/disabled/provider errors now drive specific copy and retry policy.
 - 2026-06-13: Began Review Video V1 implementation behind closed gates. Added provider-agnostic storefront media normalization, poster/play/duration thumbnails for card/list/gallery/strip, video-aware lightbox playback with native iOS/Safari HLS + lazy hls.js, a wizard media step with simulated preview upload and real multipart client path, and admin moderation/private playback plumbing. Public `images[]` remains image-only; `media[]` is the video-capable contract. Related: [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - 2026-06-12: Review pagination sizing was revised again after mobile UX review: desktop load-more/numbered controls remain compact, while mobile now uses the visible control box as the clickable target instead of adding an invisible 44px halo around dense page numbers. Runtime smoke covers desktop size, mobile clickable/visible size, focus ring placement, and overflow.
 - 2026-06-12: Load-more and numbered pagination physical control sizes now follow `Widget Boyutu` through shared root CSS variables. The existing `size` setting remains the only size control; mobile/coarse pointer layouts keep centered wrapping pagination and use compact visible targets rather than a separate invisible hit area. Runtime smoke covers load-more sizing, numbered pagination sizing, and mobile overflow.

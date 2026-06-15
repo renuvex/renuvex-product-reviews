@@ -8,10 +8,15 @@ import { BadgePreview } from './previews/BadgePreview';
 import { WidgetEditor } from './editor/WidgetEditor';
 import { EditorSkeleton } from './editor/EditorSkeleton';
 import { EditorSettingsError } from './editor/EditorSettingsError';
-import { canOpenWidgetEditor, type WidgetSettingsLoadStatus } from './editor/WidgetSettingsLoadState';
+import {
+  canOpenWidgetEditor,
+  type WidgetSettingsLoadStatus,
+  type WidgetSettingsMeta,
+} from './editor/WidgetSettingsLoadState';
 
 interface WidgetsContainerProps {
   settings: WidgetSettingsMap;
+  settingsMeta: WidgetSettingsMeta;
   settingsStatus: WidgetSettingsLoadStatus;
   onChange: (s: WidgetSettingsMap) => void;
   onSave: (widgetId: string, widgetSettings: Record<string, unknown>) => Promise<void>;
@@ -47,7 +52,7 @@ function getEnabled(settings: WidgetSettingsMap, id: WidgetDef['id']): boolean {
   return false;
 }
 
-export function WidgetsContainer({ settings, settingsStatus, onChange, onSave, onRetrySettings }: WidgetsContainerProps) {
+export function WidgetsContainer({ settings, settingsMeta, settingsStatus, onChange, onSave, onRetrySettings }: WidgetsContainerProps) {
   const [editingId, setEditingId] = useState<WidgetDef['id'] | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -84,6 +89,7 @@ export function WidgetsContainer({ settings, settingsStatus, onChange, onSave, o
           <WidgetEditor
             widget={editingWidget}
             savedSettings={editingWidgetSettings}
+            settingsMeta={settingsMeta}
             saving={saving}
             onCommit={(committed) => handleCommit(editingWidget.id, committed)}
             onBack={() => setEditingId(null)}

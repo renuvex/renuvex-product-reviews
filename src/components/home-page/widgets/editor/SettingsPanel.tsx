@@ -17,6 +17,8 @@ import { IconSelect } from './IconSelect';
 import { ColorPickerField } from './ColorPickerField';
 import { InfoTooltip } from './InfoTooltip';
 import { VisualSelectGrid, hasVisualSelectPreview } from './VisualSelectGrid';
+import type { WidgetSettingsMeta } from './WidgetSettingsLoadState';
+import { buildVideoUsageStatus, type VideoUsageStatusTone } from './VideoUsageStatus';
 // Layout registry'leri — meta.supports okumak için.
 // Bkz: src/widget/{summary,review}-layouts/index.js (supports sözleşmesi).
 import { LAYOUTS as SUMMARY_LAYOUTS } from '@/widget/summary-layouts/index.js';
@@ -39,6 +41,7 @@ function layoutSupports(layoutKey: 'summaryLayout' | 'reviewLayout', activeId: u
 interface SettingsPanelProps {
   groups: SettingsGroup[];
   settings: WidgetSettingsDraft;
+  settingsMeta: WidgetSettingsMeta;
   onChange: (s: WidgetSettingsDraft) => void;
 }
 
@@ -47,7 +50,7 @@ type PanelView =
   | { type: 'group'; title: string; groups: SettingsGroup[] }
   | { type: 'colors' };
 
-export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps) {
+export function SettingsPanel({ groups, settings, settingsMeta, onChange }: SettingsPanelProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [view, setView] = useState<PanelView>({ type: 'main' });
 
@@ -164,6 +167,12 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
                 settings={settings}
                 onChange={onChange}
               />
+              {field.key === 'videoReviewsEnabled' && settingsMeta.videoUsage ? (
+                <VideoUsageNotice
+                  usage={settingsMeta.videoUsage}
+                  merchantToggleEnabled={Boolean(settings.videoReviewsEnabled)}
+                />
+              ) : null}
             </div>
           );
         })}
@@ -356,6 +365,37 @@ export function SettingsPanel({ groups, settings, onChange }: SettingsPanelProps
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function VideoUsageNotice({ usage, merchantToggleEnabled }: {
+  usage: NonNullable<WidgetSettingsMeta['videoUsage']>;
+  merchantToggleEnabled: boolean;
+}) {
+  const status = buildVideoUsageStatus(usage, merchantToggleEnabled);
+  const toneColors: Record<VideoUsageStatusTone, { background: string; border: string; text: string }> = {
+    neutral: { background: colors.bgPage, border: colors.borderDefault, text: colors.textSecondary },
+    success: { background: colors.successBg, border: colors.successBorder, text: colors.successText },
+    warning: { background: colors.warningBg, border: colors.warningBorder, text: colors.warningText },
+  };
+  const tone = toneColors[status.tone];
+
+  return (
+    <div
+      role={status.tone === 'warning' ? 'status' : undefined}
+      style={{
+        marginTop: sp[3],
+        padding: `${sp[3]}px`,
+        borderLeft: `3px solid ${tone.border}`,
+        backgroundColor: tone.background,
+        color: tone.text,
+        fontSize: typography.fontSize.sm,
+        lineHeight: 1.5,
+      }}
+    >
+      <div style={{ fontWeight: typography.fontWeight.medium }}>{status.title}</div>
+      <div>{status.detail}</div>
+    </div>
   );
 }
 

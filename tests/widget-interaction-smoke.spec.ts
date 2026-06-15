@@ -536,6 +536,81 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('quota-aware capability hides video while keeping the photo review flow available', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { videoReviewsEnabled: true },
+    videoCapability: { enabled: false, reason: 'quota_exceeded' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(true);
+  expect(await hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(false);
+  expect(log.urls.some((url) => url.includes('/api/public/upload/video/capability'))).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('capability failures fail closed to the photo-only wizard', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { videoReviewsEnabled: true },
+    videoCapability: { enabled: false, status: 503 },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(true);
+  expect(await hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(false);
+  expect(widgetErrors(log).filter((message) => !message.includes('status of 503'))).toEqual([]);
+});
+
+test('quota races show specific non-retryable video upload copy', async ({ page }) => {
+  await stubVideoMetadata(page, 12);
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { videoReviewsEnabled: true },
+    videoCapability: { enabled: true },
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+    await route.fulfill({
+      status: 429,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ error: 'video_quota_exceeded' }),
+    });
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+
+  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
+    name: 'quota-video.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
+  });
+
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-status',
+  )).toBe('Bu mağaza bu ayki video yorum limitine ulaştı.');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(1);
+  expect(widgetErrors(log).filter((message) => !message.includes('status of 429'))).toEqual([]);
+});
+
 test('video upload wizard posts a ready video token without photo media', async ({ page }) => {
   await stubVideoMetadata(page, 12);
   const submittedBodies: Array<Record<string, unknown>> = [];

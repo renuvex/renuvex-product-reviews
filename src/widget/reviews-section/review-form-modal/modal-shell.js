@@ -17,6 +17,10 @@ import { FWIZARD_CSS } from './styles.js';
 
 export function createWizardShell(opts) {
   var onClose = opts && opts.onClose ? opts.onClose : function () {};
+  var explicitReturnFocusEl = opts && opts.returnFocusElement ? opts.returnFocusElement : null;
+  var explicitOpenedByKeyboard = opts && typeof opts.openedByKeyboard === 'boolean'
+    ? opts.openedByKeyboard
+    : null;
   // Faz 2+'da step ilerlerken outside-click davranışı değişebilir.
   // Şimdilik basit: dış tıklama her zaman kapatır.
   var allowOutsideClose = opts && opts.allowOutsideClose !== false;
@@ -122,8 +126,10 @@ export function createWizardShell(opts) {
 
   // ─── Mount ────────────────────────────────────────────────────────
   function open(initialBody) {
-    returnFocusEl = getReturnFocusElement();
-    openedByKeyboard = wasLastInputKeyboard();
+    returnFocusEl = explicitReturnFocusEl || getReturnFocusElement();
+    openedByKeyboard = explicitOpenedByKeyboard === null
+      ? wasLastInputKeyboard()
+      : explicitOpenedByKeyboard;
     if (initialBody) content.appendChild(initialBody);
     // Isolate the wizard in its own body-level shadow root. Host-theme CSS
     // cannot reach inside; FWIZARD_CSS is injected into the root; sprite

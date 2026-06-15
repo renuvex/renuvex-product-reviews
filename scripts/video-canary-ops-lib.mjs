@@ -99,19 +99,33 @@ export function mergeVideoToggle(value, enabled) {
   return { ...asSettingsObject(value), videoReviewsEnabled: enabled };
 }
 
-export function effectiveVideoGate({ globalEnabled, quota, toggle }) {
-  return globalEnabled === true && toggle === true && Number.isInteger(quota) && quota > 0;
+export function effectiveVideoGate({ globalEnabled, quota, toggle, usedCount = 0, providerConfigured = true }) {
+  return globalEnabled === true &&
+    toggle === true &&
+    Number.isInteger(quota) &&
+    quota > 0 &&
+    Number.isInteger(usedCount) &&
+    usedCount < quota &&
+    providerConfigured === true;
 }
 
-export function buildStoreGateRow(store, widget, globalEnabled) {
+export function buildStoreGateRow(store, widget, globalEnabled, usage = null, providerConfigured = true) {
   const toggle = readVideoToggle(widget?.settings);
   const quota = store.videoMonthlyLimit;
+  const reservedCount = usage?.reservedCount ?? 0;
+  const consumedCount = usage?.consumedCount ?? 0;
+  const usedCount = reservedCount + consumedCount;
   return {
     storeId: store.storeId,
     quota,
     toggle,
     globalEnabled,
-    effective: effectiveVideoGate({ globalEnabled, quota, toggle }),
+    reservedCount,
+    consumedCount,
+    usedCount,
+    remainingCount: Math.max(0, quota - usedCount),
+    providerConfigured,
+    effective: effectiveVideoGate({ globalEnabled, quota, toggle, usedCount, providerConfigured }),
     hasReviewsSettings: Boolean(widget),
   };
 }
@@ -131,8 +145,12 @@ export function buildMutationPreview(current, options, globalEnabled) {
     quota: options.quota ?? current.quota,
     toggle: options.toggle ?? current.toggle,
   };
-  const currentEffective = effectiveVideoGate({ globalEnabled, ...current });
-  const nextEffective = effectiveVideoGate({ globalEnabled, ...next });
+  const gateContext = {
+    usedCount: current.usedCount ?? 0,
+    providerConfigured: current.providerConfigured ?? true,
+  };
+  const currentEffective = effectiveVideoGate({ globalEnabled, ...current, ...gateContext });
+  const nextEffective = effectiveVideoGate({ globalEnabled, ...next, ...gateContext });
   if (options.apply && !currentEffective && nextEffective && !options.allowLiveActivation) {
     throw new Error(
       'This change would activate video immediately because the global flag is true. '
@@ -149,4 +167,3 @@ export function buildMutationPreview(current, options, globalEnabled) {
 export function countBy(rows, key) {
   return Object.fromEntries(rows.map((row) => [String(row[key]), row._count._all]));
 }
-

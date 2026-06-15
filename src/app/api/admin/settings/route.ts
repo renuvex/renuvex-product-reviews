@@ -5,6 +5,7 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { getWidgetDefaults, sanitizeSettings, validateSettings } from '@/lib/widget-settings';
 import { syncStorefrontThemeForToken } from '@/lib/storefront-theme-sync';
 import { AuthTokenManager } from '@/models/auth-token/manager';
+import { getVideoFeatureAccess } from '@/lib/media/access';
 
 /**
  * GET /api/admin/settings
@@ -15,9 +16,12 @@ export async function GET(request: Request) {
     const user = getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
 
-    const rows = await prisma.widgetSettings.findMany({
-      where: { storeId: user.merchantId },
-    });
+    const [rows, videoAccess] = await Promise.all([
+      prisma.widgetSettings.findMany({
+        where: { storeId: user.merchantId },
+      }),
+      getVideoFeatureAccess(user.merchantId),
+    ]);
 
     // { reviews: { enabled: true, ... }, badge: { ... } } — defaults ile merge edilmiş
     const data: Record<string, unknown> = {};
@@ -26,7 +30,20 @@ export async function GET(request: Request) {
       data[row.widgetId] = { ...getWidgetDefaults(row.widgetId), ...savedSettings };
     }
 
-    return NextResponse.json({ data });
+    return NextResponse.json({
+      data,
+      meta: {
+        videoUsage: {
+          monthlyLimit: videoAccess.monthlyLimit,
+          reservedCount: videoAccess.reservedCount,
+          consumedCount: videoAccess.consumedCount,
+          usedCount: videoAccess.usedCount,
+          remainingCount: videoAccess.remainingCount,
+          effective: videoAccess.enabled,
+          reason: videoAccess.reason,
+        },
+      },
+    });
   } catch (error) {
     console.error('[GET] Admin Settings API error:', error);
     return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });

@@ -72,7 +72,10 @@ export function openReviewFormModal(opts) {
   var state = createWizardState({
     productId: opts.productId,
     productName: opts.productName,
-    videoEnabled: currentSettings && currentSettings.videoReviewsEnabled === true,
+    videoEnabled: typeof opts.videoEnabled === 'boolean'
+      ? opts.videoEnabled
+      : currentSettings && currentSettings.videoReviewsEnabled === true,
+    videoUnavailableReason: opts.videoUnavailableReason || null,
   });
 
   var persistentBlobMap = {};
@@ -112,6 +115,8 @@ export function openReviewFormModal(opts) {
   }
 
   var shell = createWizardShell({
+    returnFocusElement: opts.returnFocusElement || null,
+    openedByKeyboard: typeof opts.openedByKeyboard === 'boolean' ? opts.openedByKeyboard : null,
     onClose: function () {
       window.removeEventListener('popstate', onPopState);
       // Manual close (X / ESC): neutralize the pushed history entry via the shared

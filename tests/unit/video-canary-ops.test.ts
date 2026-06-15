@@ -59,11 +59,14 @@ describe('video canary operations', () => {
     expect(mergeVideoToggle(null, false)).toEqual({ videoReviewsEnabled: false });
   });
 
-  it('uses all three gates for effective storefront capability', () => {
+  it('uses global, merchant, quota usage and provider gates for effective storefront capability', () => {
     expect(effectiveVideoGate({ globalEnabled: true, quota: 5, toggle: true })).toBe(true);
     expect(effectiveVideoGate({ globalEnabled: false, quota: 5, toggle: true })).toBe(false);
     expect(effectiveVideoGate({ globalEnabled: true, quota: 0, toggle: true })).toBe(false);
     expect(effectiveVideoGate({ globalEnabled: true, quota: 5, toggle: false })).toBe(false);
+    expect(effectiveVideoGate({ globalEnabled: true, quota: 5, toggle: true, usedCount: 5 })).toBe(false);
+    expect(effectiveVideoGate({ globalEnabled: true, quota: 5, toggle: true, usedCount: 4 })).toBe(true);
+    expect(effectiveVideoGate({ globalEnabled: true, quota: 5, toggle: true, providerConfigured: false })).toBe(false);
   });
 
   it('summarizes disabled gate state without treating missing widget rows as enabled', () => {
@@ -80,6 +83,7 @@ describe('video canary operations', () => {
       effectivelyEnabled: 0,
       allDisabled: true,
     });
+    expect(first).toMatchObject({ usedCount: 0, remainingCount: 0, providerConfigured: true });
   });
 
   it('blocks accidental live activation unless explicitly acknowledged', () => {
@@ -110,4 +114,3 @@ describe('video canary operations', () => {
     expect(() => parseCanaryOptions(argv('--unknown'))).toThrow('Unknown argument');
   });
 });
-

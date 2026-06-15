@@ -34,10 +34,12 @@ const configMock = vi.hoisted(() => ({
 const sentryMock = vi.hoisted(() => ({
   captureException: vi.fn(),
 }));
+const rateLimitMock = vi.hoisted(() => vi.fn());
+const VideoQuotaErrorMock = vi.hoisted(() => class VideoQuotaError extends Error {});
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/media/access', () => accessMock);
-vi.mock('@/lib/media/sessions', () => ({ ...sessionMock, VideoQuotaError: class VideoQuotaError extends Error {} }));
+vi.mock('@/lib/media/sessions', () => ({ ...sessionMock, VideoQuotaError: VideoQuotaErrorMock }));
 vi.mock('@/lib/media/providers/r2', () => r2Mock);
 vi.mock('@/lib/media/jobs', () => jobsMock);
 vi.mock('@sentry/nextjs', () => sentryMock);
@@ -50,7 +52,7 @@ vi.mock('@/lib/media/config', async (importOriginal) => {
 });
 vi.mock('@/lib/public-rate-limit', () => ({
   getClientIp: () => '127.0.0.1',
-  checkFixedWindowRateLimit: vi.fn(async () => ({ allowed: true })),
+  checkFixedWindowRateLimit: rateLimitMock,
 }));
 
 function session(overrides: Record<string, unknown> = {}) {
@@ -95,7 +97,16 @@ beforeEach(() => {
   configMock.getR2MediaConfig.mockReturnValue({});
   configMock.getStreamMediaConfig.mockReturnValue({});
   configMock.getQStashMediaConfig.mockReturnValue({});
-  accessMock.getVideoFeatureAccess.mockResolvedValue({ enabled: true, reason: 'enabled', monthlyLimit: 5 });
+  rateLimitMock.mockResolvedValue({ allowed: true, retryAfterSec: 600 });
+  accessMock.getVideoFeatureAccess.mockResolvedValue({
+    enabled: true,
+    reason: 'enabled',
+    monthlyLimit: 5,
+    reservedCount: 0,
+    consumedCount: 0,
+    usedCount: 0,
+    remainingCount: 5,
+  });
   accessMock.verifyVideoReviewTarget.mockResolvedValue({ productId: 'product-1', slug: 'product', name: 'Product' });
   jobsMock.dispatchMediaProviderJob.mockResolvedValue(true);
   jobsMock.enqueueMediaProviderJob.mockResolvedValue({ id: 'job-1' });
@@ -129,6 +140,56 @@ describe('video upload initiate', () => {
     expect(response.status).toBe(403);
     expect(sessionMock.createReservedVideoSession).not.toHaveBeenCalled();
     expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('returns a specific quota error before provider work when the monthly quota is full', async () => {
+    accessMock.getVideoFeatureAccess.mockResolvedValue({
+      enabled: false,
+      reason: 'quota_exceeded',
+      monthlyLimit: 5,
+      reservedCount: 1,
+      consumedCount: 4,
+      usedCount: 5,
+      remainingCount: 0,
+    });
+    const { POST } = await import('@/app/api/public/upload/video/initiate/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ storeId: 'store-1', productId: 'product-1', mimeType: 'video/mp4', bytes: 100 }),
+    }));
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({ error: 'video_quota_exceeded' });
+    expect(sessionMock.createReservedVideoSession).not.toHaveBeenCalled();
+    expect(r2Mock.createVideoMultipartUpload).not.toHaveBeenCalled();
+  });
+
+  it('returns Retry-After for initiate rate limiting', async () => {
+    rateLimitMock.mockResolvedValue({ allowed: false, retryAfterSec: 321 });
+    const { POST } = await import('@/app/api/public/upload/video/initiate/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ storeId: 'store-1', productId: 'product-1', mimeType: 'video/mp4', bytes: 100 }),
+    }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('321');
+    await expect(response.json()).resolves.toEqual({ error: 'rate_limited' });
+    expect(accessMock.getVideoFeatureAccess).not.toHaveBeenCalled();
+  });
+
+  it('keeps the transactional reservation authoritative after a positive capability check', async () => {
+    sessionMock.createReservedVideoSession.mockRejectedValue(new VideoQuotaErrorMock());
+    const { POST } = await import('@/app/api/public/upload/video/initiate/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ storeId: 'store-1', productId: 'product-1', mimeType: 'video/mp4', bytes: 100 }),
+    }));
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({ error: 'video_quota_exceeded' });
+    expect(accessMock.getVideoFeatureAccess).toHaveBeenCalledOnce();
+    expect(r2Mock.createVideoMultipartUpload).not.toHaveBeenCalled();
   });
 
   it('returns 503 for missing provider configuration without reporting an operational exception', async () => {

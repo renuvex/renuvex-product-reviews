@@ -20,6 +20,22 @@ import {
 
 const prisma = new PrismaClient();
 const globalEnabled = process.env.VIDEO_REVIEWS_ENABLED === 'true';
+const providerConfigured = [
+  'CLOUDFLARE_R2_ENDPOINT',
+  'CLOUDFLARE_R2_ACCESS_KEY_ID',
+  'CLOUDFLARE_R2_SECRET_ACCESS_KEY',
+  'CLOUDFLARE_R2_MASTER_BUCKET',
+  'CLOUDFLARE_R2_INGEST_BUCKET',
+  'CLOUDFLARE_R2_INGEST_PUBLIC_BASE_URL',
+  'CLOUDFLARE_ACCOUNT_ID',
+  'CLOUDFLARE_STREAM_API_TOKEN',
+  'CLOUDFLARE_STREAM_CUSTOMER_CODE',
+  'CLOUDFLARE_STREAM_WEBHOOK_SECRET',
+  'QSTASH_TOKEN',
+  'QSTASH_CURRENT_SIGNING_KEY',
+  'QSTASH_NEXT_SIGNING_KEY',
+  'MEDIA_JOB_BASE_URL',
+].every((name) => typeof process.env[name] === 'string' && process.env[name].trim().length > 0);
 let options;
 
 function output(value) {
@@ -28,7 +44,10 @@ function output(value) {
 }
 
 async function readGateRows(client = prisma) {
-  const [stores, widgets] = await Promise.all([
+  const month = new Date();
+  month.setUTCDate(1);
+  month.setUTCHours(0, 0, 0, 0);
+  const [stores, widgets, usages] = await Promise.all([
     client.storeSettings.findMany({
       orderBy: { storeId: 'asc' },
       select: { storeId: true, videoMonthlyLimit: true },
@@ -37,9 +56,20 @@ async function readGateRows(client = prisma) {
       where: { widgetId: 'reviews' },
       select: { storeId: true, settings: true },
     }),
+    client.storeVideoUsage.findMany({
+      where: { month },
+      select: { storeId: true, reservedCount: true, consumedCount: true },
+    }),
   ]);
   const widgetsByStore = new Map(widgets.map((row) => [row.storeId, row]));
-  return stores.map((store) => buildStoreGateRow(store, widgetsByStore.get(store.storeId), globalEnabled));
+  const usageByStore = new Map(usages.map((row) => [row.storeId, row]));
+  return stores.map((store) => buildStoreGateRow(
+    store,
+    widgetsByStore.get(store.storeId),
+    globalEnabled,
+    usageByStore.get(store.storeId),
+    providerConfigured,
+  ));
 }
 
 async function readStoreEvidence(storeId) {

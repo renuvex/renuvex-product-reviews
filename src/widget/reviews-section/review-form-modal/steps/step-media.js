@@ -3,6 +3,7 @@ import { PHOTO_ICON, PLAY_ICON, UI_CLOSE } from '../../../icons/index.js';
 import { reviewFormCopy } from '../copy.js';
 import {
   cancelReviewVideoUpload,
+  describeVideoUploadError,
   readVideoDuration,
   uploadReviewVideo,
   validateKnownVideoDuration,
@@ -103,7 +104,7 @@ export function createStepMedia(state, opts) {
       progress.setAttribute('aria-label', 'Video yükleme ilerlemesi');
       details.appendChild(progress);
     }
-    if (video.error && video.file) {
+    if (video.error && video.file && video.retryable !== false) {
       var retry = document.createElement('button');
       retry.type = 'button';
       retry.className = 'renuvex-pr-fwizard-video-retry';
@@ -169,6 +170,9 @@ export function createStepMedia(state, opts) {
         progress: 0,
         durationMs: duration === null ? null : Math.round(duration * 1000),
         error: null,
+        errorCode: null,
+        retryable: true,
+        retryAfterSec: null,
         controller: controller,
       },
     });
@@ -191,13 +195,24 @@ export function createStepMedia(state, opts) {
         posterUrl: result.previewOnly ? localUrl : result.posterUrl,
         durationMs: result.durationMs || (duration === null ? null : Math.round(duration * 1000)),
         error: null,
+        errorCode: null,
+        retryable: true,
+        retryAfterSec: null,
         controller: null,
       });
       if (!destroyed && (!opts.canNavigate || opts.canNavigate())) state.goNext();
     } catch (error) {
       if (controller.signal.aborted) return;
-      updateVideoState({ status: 'failed', error: 'Video yüklenemedi. Tekrar deneyin.', controller: null });
-      if (opts.showToast) opts.showToast('Video yüklenemedi. Tekrar deneyin.', 'error');
+      var failure = describeVideoUploadError(error);
+      updateVideoState({
+        status: 'failed',
+        error: failure.message,
+        errorCode: failure.code,
+        retryable: failure.retryable,
+        retryAfterSec: failure.retryAfterSec,
+        controller: null,
+      });
+      if (opts.showToast) opts.showToast(failure.message, 'error');
     }
   }
 

@@ -34,10 +34,22 @@ export async function POST(request: Request) {
       windowSec: 10 * 60,
       label: 'video-upload-initiate',
     });
-    if (!rate.allowed) return withCors(NextResponse.json({ error: 'rate_limited' }, { status: 429 }), request);
+    if (!rate.allowed) {
+      const response = NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+      response.headers.set('Retry-After', String(rate.retryAfterSec));
+      return withCors(response, request);
+    }
 
     const [access, target] = await Promise.all([getVideoFeatureAccess(storeId), verifyVideoReviewTarget(storeId, productId)]);
-    if (!access.enabled) return withCors(NextResponse.json({ error: 'video_upload_disabled' }, { status: 403 }), request);
+    if (!access.enabled) {
+      if (access.reason === 'quota_exceeded') {
+        return withCors(NextResponse.json({ error: 'video_quota_exceeded' }, { status: 429 }), request);
+      }
+      if (access.reason === 'provider_unavailable') {
+        return withCors(NextResponse.json({ error: 'video_provider_unavailable' }, { status: 503 }), request);
+      }
+      return withCors(NextResponse.json({ error: 'video_upload_disabled' }, { status: 403 }), request);
+    }
     if (!target) return withCors(NextResponse.json({ error: 'invalid_product' }, { status: 400 }), request);
 
     // Fail closed before reserving quota when provider/job configuration is incomplete.

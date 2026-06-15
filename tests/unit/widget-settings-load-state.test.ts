@@ -11,6 +11,7 @@ describe('Widget settings load state', () => {
     expect(INITIAL_WIDGET_SETTINGS_LOAD_STATE).toEqual({
       status: 'loading',
       settings: {},
+      meta: {},
     });
   });
 
@@ -18,11 +19,13 @@ describe('Widget settings load state', () => {
     const state: WidgetSettingsLoadState = {
       status: 'error',
       settings: { reviews: { title: 'Kayitli baslik' } },
+      meta: {},
     };
 
     expect(reduceWidgetSettingsLoadState(state, { type: 'start' })).toEqual({
       status: 'loading',
       settings: state.settings,
+      meta: {},
     });
   });
 
@@ -35,6 +38,7 @@ describe('Widget settings load state', () => {
     })).toEqual({
       status: 'loaded',
       settings,
+      meta: {},
     });
   });
 
@@ -45,6 +49,7 @@ describe('Widget settings load state', () => {
     })).toEqual({
       status: 'loaded',
       settings: {},
+      meta: {},
     });
   });
 
@@ -52,11 +57,13 @@ describe('Widget settings load state', () => {
     const state: WidgetSettingsLoadState = {
       status: 'loading',
       settings: { reviews: { title: 'Kayitli baslik' } },
+      meta: {},
     };
 
     expect(reduceWidgetSettingsLoadState(state, { type: 'failure' })).toEqual({
       status: 'error',
       settings: state.settings,
+      meta: {},
     });
   });
 
@@ -64,6 +71,7 @@ describe('Widget settings load state', () => {
     const state: WidgetSettingsLoadState = {
       status: 'loading',
       settings: { reviews: { title: 'Kayitli baslik' } },
+      meta: {},
     };
 
     expect(reduceWidgetSettingsLoadState(state, {
@@ -72,7 +80,44 @@ describe('Widget settings load state', () => {
     })).toEqual({
       status: 'error',
       settings: state.settings,
+      meta: {},
     });
+  });
+
+  it('keeps valid usage metadata separate from editable settings', () => {
+    const settings = { reviews: { videoReviewsEnabled: true } };
+    const meta = {
+      videoUsage: {
+        monthlyLimit: 5,
+        reservedCount: 1,
+        consumedCount: 4,
+        usedCount: 5,
+        remainingCount: 0,
+        effective: false,
+        reason: 'quota_exceeded',
+      },
+    };
+
+    const next = reduceWidgetSettingsLoadState(INITIAL_WIDGET_SETTINGS_LOAD_STATE, {
+      type: 'success',
+      settings,
+      meta,
+    });
+
+    expect(next.settings).toBe(settings);
+    expect(next.meta).toEqual(meta);
+    expect(next.settings.reviews).not.toHaveProperty('videoUsage');
+  });
+
+  it('ignores malformed metadata without blocking the editor', () => {
+    const next = reduceWidgetSettingsLoadState(INITIAL_WIDGET_SETTINGS_LOAD_STATE, {
+      type: 'success',
+      settings: { reviews: {} },
+      meta: { videoUsage: { monthlyLimit: '5' } },
+    });
+
+    expect(next.status).toBe('loaded');
+    expect(next.meta).toEqual({});
   });
 
   it('opens the widget editor only after settings are loaded', () => {

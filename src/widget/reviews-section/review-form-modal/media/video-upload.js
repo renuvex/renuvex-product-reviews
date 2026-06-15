@@ -7,6 +7,43 @@ var VIDEO_MAX_DURATION_SECONDS = 60;
 var ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime'];
 var SESSION_STORAGE_PREFIX = 'renuvex_pr_video_upload_';
 
+var VIDEO_UPLOAD_ERROR_MESSAGES = {
+  video_quota_exceeded: 'Bu mağaza bu ayki video yorum limitine ulaştı.',
+  rate_limited: 'Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.',
+  video_upload_disabled: 'Video yükleme şu anda kullanılamıyor.',
+  video_provider_unavailable: 'Video yükleme geçici olarak kullanılamıyor.',
+};
+
+var NON_RETRYABLE_VIDEO_UPLOAD_ERRORS = {
+  video_quota_exceeded: true,
+  rate_limited: true,
+  video_upload_disabled: true,
+};
+
+export class VideoUploadRequestError extends Error {
+  constructor(code, status, retryAfterSec) {
+    super(code || 'video_request_failed');
+    this.name = 'VideoUploadRequestError';
+    this.code = code || 'video_request_failed';
+    this.status = status || 0;
+    this.retryAfterSec = retryAfterSec || null;
+  }
+}
+
+export function describeVideoUploadError(error) {
+  var code = error && typeof error.code === 'string'
+    ? error.code
+    : error && typeof error.message === 'string'
+      ? error.message
+      : 'video_request_failed';
+  return {
+    code: code,
+    message: VIDEO_UPLOAD_ERROR_MESSAGES[code] || 'Video yüklenemedi. Tekrar deneyin.',
+    retryable: NON_RETRYABLE_VIDEO_UPLOAD_ERRORS[code] !== true,
+    retryAfterSec: error && Number.isFinite(error.retryAfterSec) ? error.retryAfterSec : null,
+  };
+}
+
 function sleep(ms) {
   return new Promise(function (resolve) { setTimeout(resolve, ms); });
 }
@@ -42,7 +79,14 @@ function clearStoredSession(productId, file) {
 async function jsonRequest(path, options, timeoutMs) {
   var response = await fetchWithTimeout(API_BASE + path, options, timeoutMs || 20000);
   var payload = await response.json().catch(function () { return {}; });
-  if (!response.ok) throw new Error(payload.error || 'video_request_failed');
+  if (!response.ok) {
+    var retryAfter = Number(response.headers.get('Retry-After'));
+    throw new VideoUploadRequestError(
+      payload.error || 'video_request_failed',
+      response.status,
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+    );
+  }
   return payload.data || {};
 }
 

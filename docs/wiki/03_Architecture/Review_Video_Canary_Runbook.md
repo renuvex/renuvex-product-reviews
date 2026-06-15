@@ -34,19 +34,21 @@ source_files:
 
 This runbook controls the first real Review Video V1 production canary. The canary is limited to one internal store. It does not authorize a general merchant rollout.
 
-The capability requires all three gates:
+The runtime capability requires all gates below:
 
 ```text
 VIDEO_REVIEWS_ENABLED=true
 AND WidgetSettings(reviews).videoReviewsEnabled=true
 AND StoreSettings.videoMonthlyLimit>0
+AND current UTC month reservedCount+consumedCount<videoMonthlyLimit
+AND R2, Stream, QStash, and media-job configuration is available
 ```
 
 The global flag is changed last. Preview and local-development deployments must not receive production provider credentials.
 
 ## Safe Operations Command
 
-`pnpm video:canary:ops` is read-only by default. It reports each store's quota, merchant toggle, global flag view, and effective gate state.
+`pnpm video:canary:ops` is read-only by default. It reports each store's quota, merchant toggle, current-month reserved/consumed/remaining counts, provider configuration view, global flag view, and effective gate state.
 
 ```bash
 # Report all store gates. No writes.
@@ -58,14 +60,14 @@ pnpm video:canary:verify-disabled
 # Report one store plus quota/session/job/review/media evidence. No writes.
 pnpm video:canary:ops --storeId=<merchantId>
 
-# Preview a mutation. Still no writes.
-pnpm video:canary:ops --storeId=<merchantId> --quota=5 --toggle=on
+# Preview a mutation. Still no writes. Phase 6 continuation uses 20 only for the internal canary store.
+pnpm video:canary:ops --storeId=<merchantId> --quota=20 --toggle=on
 
 # Apply to one explicitly confirmed store.
 pnpm video:canary:ops \
   --storeId=<merchantId> \
   --confirmStoreId=<merchantId> \
-  --quota=5 \
+  --quota=20 \
   --toggle=on \
   --apply
 ```
@@ -88,17 +90,17 @@ node --env-file=.env.local scripts/verify-video-infrastructure.mjs \
 ```
 
 4. Confirm the internal test store id from the actual ikas installation/DB record. Do not infer it from row order.
-5. Dry-run `--quota=5 --toggle=on` and inspect the before/after plan.
-6. Apply quota and toggle while the production global flag is still false.
-7. Re-run the store report. `quota=5` and `toggle=true` should be visible, while `effective=false` remains true because the global flag is still off.
+5. Dry-run the intended quota and toggle change and inspect the before/after plan. The initial canary used `5`; Phase 6 continuation raises only the verified internal store to `20` after this quota-aware UX deploy.
+6. Apply quota and toggle with exact store confirmation.
+7. Re-run the store report. Confirm usage, remaining quota, provider configuration, and effective state from the actual environment.
 
 ## Activation Order
 
-1. Set the internal store quota to `5`.
+1. Set the internal store quota to the approved canary value (`20` for the Phase 6 continuation; this is not a product default).
 2. Enable the internal store's `videoReviewsEnabled` toggle.
 3. Confirm every other store remains quota `0` and toggle `false`.
 4. Set Vercel Production `VIDEO_REVIEWS_ENABLED=true` only after the DB gates are correct.
-5. Redeploy Production and verify the effective gate for only the internal store.
+5. Redeploy Production and verify both the live no-store capability endpoint and the ops report are effective for only the internal store.
 
 Do not add production provider variables to Preview. Do not enable multiple merchants during the first canary.
 

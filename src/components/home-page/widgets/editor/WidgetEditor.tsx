@@ -20,6 +20,7 @@ import {
   shouldShowPreviewOverlay,
   type WidgetPreviewStatus,
 } from './WidgetPreviewLoadState';
+import type { WidgetSettingsMeta } from './WidgetSettingsLoadState';
 
 // Widgets that support iframe preview (real widget.js)
 const IFRAME_PREVIEW_WIDGETS = ['reviews'];
@@ -64,6 +65,7 @@ export interface PreviewProps {
 interface WidgetEditorProps {
   widget: WidgetDef;
   savedSettings: WidgetSettingsDraft;
+  settingsMeta: WidgetSettingsMeta;
   saving: boolean;
   onCommit: (committed: WidgetSettingsDraft) => Promise<void>;
   onBack: () => void;
@@ -152,7 +154,7 @@ function PreviewLoadOverlay({ status, onRetry }: { status: WidgetPreviewStatus; 
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }: WidgetEditorProps) {
+export function WidgetEditor({ widget, savedSettings, settingsMeta, saving, onCommit, onBack }: WidgetEditorProps) {
   const [draft, setDraft] = useState<WidgetSettingsDraft>(() => mergeWithDefaults(widget, savedSettings));
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
@@ -394,6 +396,7 @@ export function WidgetEditor({ widget, savedSettings, saving, onCommit, onBack }
             <SettingsPanel
               groups={widget.settings}
               settings={draft}
+              settingsMeta={settingsMeta}
               onChange={setDraft}
             />
           </div>

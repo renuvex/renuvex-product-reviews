@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-13
-last_verified: 2026-06-13
+updated: 2026-06-15
+last_verified: 2026-06-15
 confidence: high
 tags:
   - api
@@ -27,6 +27,7 @@ source_files:
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/media/access.ts"
+  - "src/app/api/public/upload/video/capability/route.ts"
   - "src/lib/media/config.ts"
   - "src/lib/media/constants.ts"
   - "src/lib/media/jobs.ts"
@@ -64,7 +65,7 @@ Three groups of API routes:
 | PUT `/api/admin/reviews` `{ id, status?, merchantReply? }` | same | Update status / reply |
 | DELETE `/api/admin/reviews?id=` | same | Hard delete |
 | GET `/api/admin/reviews/video-playback?mediaId=` | [route.ts](src/app/api/admin/reviews/video-playback/route.ts) | Short-lived signed HLS URL for pending/admin video preview. Provider ids stay server-side. |
-| GET `/api/admin/settings` | [route.ts](src/app/api/admin/settings/route.ts) | All widget settings as map (defaults merged) |
+| GET `/api/admin/settings` | [route.ts](src/app/api/admin/settings/route.ts) | All widget settings as map (defaults merged), plus read-only `meta.videoUsage` for the current UTC month. Metadata is not part of the editable settings payload. |
 | PUT `/api/admin/settings` `{ widgetId, settings }` | same | Validate + sanitize + upsert into `WidgetSettings`; schedules lightweight storefront theme sync after the response |
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
 | POST `/api/admin/storefront-theme/sync` | [route.ts](src/app/api/admin/storefront-theme/sync/route.ts) | Lightweight active theme sync from ikas `listStorefront`; no script create/update |
@@ -90,6 +91,7 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/upload/sign` body `{ storeId }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload scoped to `review_images/stores/<storeId>` after StoreSettings verification |
 | POST `/api/public/upload/register` body `{ storeId, secureUrl, metadata? }` | [route.ts](src/app/api/public/upload/register/route.ts) | Register a completed tenant-scoped Cloudinary upload in `PendingReviewImage` for cleanup. Optional signed Cloudinary upload-response metadata is verified server-side before dimensions/format/bytes are staged for `ReviewMedia`. |
+| GET `/api/public/upload/video/capability?storeId=` | [route.ts](src/app/api/public/upload/video/capability/route.ts) | Fresh `no-store` video capability check. Returns only `{ enabled, reason }`; quota counts and provider configuration remain server-private. |
 | POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated R2 multipart video upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, part size/count, and max parallelism. |
 | POST `/api/public/upload/video/parts` | [route.ts](src/app/api/public/upload/video/parts/route.ts) | Return short-lived presigned R2 part URLs and already-completed part ETags for resume. |
 | POST `/api/public/upload/video/complete` | [route.ts](src/app/api/public/upload/video/complete/route.ts) | Complete multipart upload, HEAD/signature-check master object, enqueue Stream copy job, and move session to processing. |
@@ -97,7 +99,7 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | DELETE `/api/public/upload/video` | [route.ts](src/app/api/public/upload/video/route.ts) | Atomically mark the session aborted and create its provider-aware cleanup outbox job. Provider calls are worker-owned; the public route does not delete R2/Stream assets directly. |
 
 ### Caching
-GET responses set `Cache-Control: s-maxage=60, stale-while-revalidate=300`. See [[Caching_And_Performance]].
+Storefront configuration and review GET responses use the documented edge-cache policy. The video capability endpoint is intentionally excluded and sends `Cache-Control: no-store` because reserved and consumed quota can change between wizard openings. See [[Caching_And_Performance]].
 
 ### Rate limits (Upstash Redis)
 - `/api/public/reviews` POST → 3 / 10min / IP
@@ -153,6 +155,7 @@ Detail in [[Security_And_Rate_Limits]].
 - **Legacy global review image paths need copy-first reconciliation.** Do not make `/api/public/reviews` or widget helpers trust old global `review_images/...` URLs. Use `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and the scoped `reviews:media:reconcile` script instead. See [[Legacy_Review_Media_Reconciliation]].
 - **Status enums are strings, not Prisma enums.** `'pending' | 'approved' | 'rejected'` lives in code, not in the DB schema. If you add a state, search for the literals to update everywhere.
 - **Video provider identity is server-private.** Public/admin list responses expose normalized media fields only; provider ids are used only in server adapters, jobs, webhooks, and signed admin playback.
+- **Video capability is advisory, reservation is authoritative.** The widget uses the fresh capability endpoint to hide unavailable video upload before opening the wizard. `/api/public/upload/video/initiate` repeats every gate and the atomic quota reservation remains the concurrency authority. Quota exhaustion returns `429 video_quota_exceeded`; rate limiting returns `429 rate_limited` with `Retry-After`; disabled and provider-unavailable states return `403` and `503` respectively.
 - **Media provider mutations are outbox-owned.** Do not call Stream publish/delete or expired Cloudinary pending-image deletes directly from UI/cron routes except by enqueueing `MediaProviderJob` and dispatching QStash; this keeps retries, idempotency, stale-lock recovery, and DLQ/manual repair observable.
 - **QStash is a wakeup layer, not the source of truth.** Session failure/cancel state and the matching cleanup job are committed in the same DB transaction. Repeated delivery is safe; same-asset provider calls are lease-serialized and stale moderation jobs converge Stream to the latest DB-visible state.
 
@@ -182,6 +185,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-15: Added the uncached public video capability endpoint, quota-aware access reasons, structured initiate errors, and read-only admin video usage metadata. Cached public settings remain unchanged; atomic initiate reservation is still authoritative.
 - 2026-06-14: Hardened Review Video V1 provider boundaries. Public video routes now return stable error codes for malformed JSON, QStash signature failures return `401` instead of generic `500`, signed malformed payloads return `400`, Stream copy requests enforce the V1 server limits, and Stream readiness waits for the full encode before publishing the media read model.
 - 2026-06-13: Added Review Video V1 API surface: gated multipart R2 upload endpoints, Cloudflare Stream webhook, QStash media job worker, admin signed playback endpoint, `hasMedia` read path, mixed-media rejection, and moderation-gated video approval flow. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - 2026-06-08: `/api/admin/daily-maintenance` now runs a bounded, durable `ReviewMedia` metadata backfill (`src/lib/review-media-metadata-backfill.ts`) from the Cloudinary Admin API, so existing/legacy rows self-heal in production without a manual local script run. Related: [[ADR_0029_Review_Media_Metadata]].

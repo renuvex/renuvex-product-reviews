@@ -31,6 +31,11 @@ export type SmokeOptions = {
   ikasEvents?: IkasEventSequenceItem[];
   ikasEventMode?: 'async' | 'sync';
   reviewsSettings?: Record<string, unknown>;
+  videoCapability?: {
+    enabled: boolean;
+    reason?: string | null;
+    status?: number;
+  };
   badgeSettings?: Record<string, unknown>;
   hasMore?: boolean;
   approvedReviewCount?: number;
@@ -267,6 +272,20 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(settingsResponse(options)),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/capability**`, async (route) => {
+    const configured = options.videoCapability;
+    const enabled = configured
+      ? configured.enabled
+      : options.reviewsSettings?.videoReviewsEnabled === true;
+    const status = configured?.status ?? 200;
+    await route.fulfill({
+      status,
+      headers: { ...jsonHeaders(), 'Cache-Control': 'no-store' },
+      body: JSON.stringify(status >= 400
+        ? { error: 'video_capability_unavailable' }
+        : { data: { enabled, reason: enabled ? null : configured?.reason || 'merchant_disabled' } }),
     });
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/ratings**`, async (route) => {
