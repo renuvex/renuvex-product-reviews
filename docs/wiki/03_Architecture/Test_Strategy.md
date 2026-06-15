@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-06-15
-last_verified: 2026-06-15
+updated: 2026-06-16
+last_verified: 2026-06-16
 confidence: high
 tags:
   - testing
@@ -51,6 +51,7 @@ source_files:
   - "tests/unit/widget-theme-vars.test.ts"
   - "tests/unit/widget-popover-registry.test.ts"
   - "tests/unit/widget-asset-cache.test.ts"
+  - "tests/unit/widget-video-poster-quality.test.ts"
   - "tests/unit/widget-settings.test.ts"
   - "tests/unit/widget-editor-state.test.ts"
   - "tests/unit/widget-settings-load-state.test.ts"
@@ -111,8 +112,8 @@ The media config uses Playwright's official desktop and device descriptors for D
 The media suite deliberately separates playback contracts:
 
 - Native HLS is forced at the DOM capability boundary and verifies `controls`, `playsinline`, `preload="metadata"`, no autoplay, browser-back disposal, and source cleanup.
-- The `hls.js`/MSE branch runs on desktop Chromium and Firefox and verifies lazy manifest loading plus player cleanup.
-- Poster-first card/list/gallery tests assert that no HLS manifest is requested before the shopper opens the lightbox.
+- The `hls.js`/MSE branch runs on desktop Chromium and Firefox and verifies lazy manifest loading plus player cleanup. Unit coverage also pins the conservative startup-quality helpers: Data Saver/2g keeps the default safe ABR start, player-size-aware warm-start chooses a bounded first level, and ABR remains available after startup.
+- Poster-first card/list/gallery tests assert that no HLS manifest is requested before the shopper opens the lightbox, and that video poster `<img>` tags use trusted Cloudflare Stream thumbnail variants with 1x/2x `srcset`.
 - Wizard upload tests mock the R2 multipart CORS contract, Stream processing status, and public review submit, while asserting no direct Cloudflare Admin API call leaves the widget.
 
 Video lifecycle unit coverage pins the DB-outbox reliability contract: quota reservation, upload-session creation, and `expire_upload_session` are one serializable transaction; early expiry delivery defers to `expiresAt`; abandoned reserved and ready-unsubmitted sessions clean correctly; consumed review sessions cannot expire. `reconcile_stream` uses a bounded ten-check schedule (`10/20/30/45/60/90/120/180/300/600` seconds), recovers a ready video when the webhook is missed, records delayed processing without destructive cleanup, and redispatches the existing deduped job when a `prepare_stream` retry finds an already-persisted Stream UID. Stream readiness tests accept `readyToStream=true` plus provider `ready` when trusted HLS/poster URLs and V1 media limits pass even if `pctComplete` is below `100` or absent; untrusted/missing delivery URLs remain processing. Webhook/reconcile races consume quota once and preserve the first terminal provenance. The 60-minute ingest cleanup backstop and daily maintenance use the same canonical transition with their own explicit provenance before removing the transient public copy.

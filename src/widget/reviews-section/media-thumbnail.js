@@ -1,15 +1,29 @@
 import { buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
-import { formatMediaDuration, mediaPreviewUrl } from '../core/review-media.js';
+import {
+  formatMediaDuration,
+  mediaPreviewUrl,
+  streamPosterSrcSet,
+  streamPosterVariantUrl,
+} from '../core/review-media.js';
 import { iconUseNode } from '../icons/star-sprite.js';
 import { PLAY_ICON } from '../icons/index.js';
 import { wireLightboxTrigger } from './lightbox-trigger.js';
 
 export function createMediaThumbnail(item, opts) {
   opts = opts || {};
-  var previewUrl = mediaPreviewUrl(item);
+  var videoPosterOpts = item && item.type === 'video' ? {
+    width: opts.width || opts.sourceWidth || 0,
+    height: opts.height || opts.width || opts.sourceWidth || 0,
+    fit: 'crop',
+  } : null;
+  var previewUrl = videoPosterOpts
+    ? streamPosterVariantUrl(item.posterUrl, videoPosterOpts)
+    : mediaPreviewUrl(item);
   if (!previewUrl) return null;
   var img = document.createElement('img');
-  var attrs = item.type === 'image' ? buildResponsiveImgAttrs(previewUrl, opts.sourceWidth) : { src: previewUrl, srcset: '' };
+  var attrs = item.type === 'image'
+    ? buildResponsiveImgAttrs(previewUrl, opts.sourceWidth)
+    : { src: previewUrl, srcset: streamPosterSrcSet(item.posterUrl, videoPosterOpts) };
   img.src = attrs.src;
   if (attrs.srcset) img.srcset = attrs.srcset;
   img.loading = opts.loading || 'lazy';

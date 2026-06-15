@@ -20,6 +20,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-16 - fix | Improve video poster and startup quality
+- Added trusted Cloudflare Stream poster variant helpers for storefront video thumbnails and lightbox posters. Video cards/strip now render sized `width`/`height`/`fit=crop` poster images with `srcset`; the lightbox uses a larger `1280x720 fit=clip` poster while keeping the stored `posterUrl` as source of truth.
+- Added conservative hls.js startup-quality handling for non-native HLS browsers: player-size capping is enabled, Data Saver/2g keeps safe default ABR startup, and good-network starts can pick a bounded first level without disabling ABR.
+- Native video controls remain browser/OS-owned; this change does not theme the native progress bar, center play button, fullscreen, or PiP controls. Unit and media browser coverage pin poster URL variants, no pre-lightbox HLS requests, native HLS attributes, and hls.js helper behavior.
+
 ## 2026-06-16 - fix | Accept playable Stream readiness without full rendition completion
 - Replaced the incorrect `pctComplete=100` readiness gate with Cloudflare's documented playable signal: `readyToStream=true` and provider `state='ready'`, plus trusted HLS/poster URLs and the existing V1 duration/size limits.
 - Increased missed-webhook self-healing density to `10/20/30/45/60/90/120/180/300/600` seconds while retaining webhook fast-path behavior, the 10-minute delayed-processing state, the 60-minute ingest backstop, and DB-only public status.

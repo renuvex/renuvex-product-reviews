@@ -185,12 +185,15 @@ async function mediaBox(page: Page, selector: string) {
     const computedStyle = getComputedStyle(element);
     const computedWidth = Number.parseFloat(computedStyle.width);
     const computedHeight = Number.parseFloat(computedStyle.height);
+    const poster = element.querySelector<HTMLImageElement>('.renuvex-pr-media-poster');
     return {
       width: rect.width || computedWidth,
       height: rect.height || computedHeight,
       duration: element.querySelector('.renuvex-pr-media-duration')?.textContent?.trim() || '',
       hasPlayIcon: !!element.querySelector('.renuvex-pr-media-play svg'),
-      posterTag: element.querySelector('.renuvex-pr-media-poster')?.tagName || '',
+      posterTag: poster?.tagName || '',
+      posterSrc: poster?.getAttribute('src') || '',
+      posterSrcset: poster?.getAttribute('srcset') || '',
       widgetClientWidth: widget.clientWidth,
       widgetScrollWidth: widget.scrollWidth,
     };
@@ -271,6 +274,12 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
     expect(box.duration).toBe('0:45');
     expect(box.hasPlayIcon).toBe(true);
     expect(box.posterTag).toBe('IMG');
+    expect(box.posterSrc).toContain('/video-1/thumbnails/thumbnail.jpg');
+    expect(box.posterSrc).toMatch(/[?&]width=\d+/);
+    expect(box.posterSrc).toMatch(/[?&]height=\d+/);
+    expect(box.posterSrc).toContain('fit=crop');
+    expect(box.posterSrcset).toContain(' 1x');
+    expect(box.posterSrcset).toContain(' 2x');
     expect(box.widgetScrollWidth).toBeLessThanOrEqual(box.widgetClientWidth + 1);
 
     expect(log.urls.some((url) => url.endsWith('/manifest/video.m3u8'))).toBe(false);
@@ -299,6 +308,9 @@ test('video lightbox uses native HLS contract and releases media on browser back
     ariaModal: 'true',
   });
   expect(state.poster).toContain('/video-1/thumbnails/thumbnail.jpg');
+  expect(state.poster).toContain('width=1280');
+  expect(state.poster).toContain('height=720');
+  expect(state.poster).toContain('fit=clip');
   expect(state.src).toContain('/video-1/manifest/video.m3u8');
   expect(state.overlayScrollWidth).toBeLessThanOrEqual(state.overlayClientWidth + 1);
   expect(await mediaAudit(page)).toMatchObject({ playCalls: 0 });

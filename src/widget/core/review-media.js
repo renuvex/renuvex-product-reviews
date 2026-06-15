@@ -13,6 +13,55 @@ function isTrustedStreamUrl(value) {
   }
 }
 
+function isTrustedStreamThumbnailUrl(url) {
+  if (!url || !isTrustedStreamUrl(url.href)) return false;
+  return /\/thumbnails\/thumbnail\.(jpg|jpeg|png|webp|gif)$/i.test(url.pathname);
+}
+
+function positiveInt(value) {
+  var number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.round(number) : 0;
+}
+
+export function streamPosterVariantUrl(value, opts) {
+  opts = opts || {};
+  if (typeof value !== 'string' || !value) return '';
+  var url;
+  try {
+    url = new URL(value);
+  } catch (_) {
+    return value;
+  }
+  if (!isTrustedStreamThumbnailUrl(url)) return value;
+  var width = positiveInt(opts.width);
+  var height = positiveInt(opts.height);
+  if (width) url.searchParams.set('width', String(width));
+  if (height) url.searchParams.set('height', String(height));
+  if (opts.fit === 'clip' || opts.fit === 'scale' || opts.fit === 'fill' || opts.fit === 'crop') {
+    url.searchParams.set('fit', opts.fit);
+  }
+  return url.href;
+}
+
+export function streamPosterSrcSet(value, opts) {
+  opts = opts || {};
+  var width = positiveInt(opts.width);
+  var height = positiveInt(opts.height);
+  if (!width && !height) return '';
+  var oneX = streamPosterVariantUrl(value, {
+    width: width,
+    height: height,
+    fit: opts.fit,
+  });
+  var twoX = streamPosterVariantUrl(value, {
+    width: width ? width * 2 : 0,
+    height: height ? height * 2 : 0,
+    fit: opts.fit,
+  });
+  if (!oneX || !twoX || oneX === value || twoX === value) return '';
+  return oneX + ' 1x, ' + twoX + ' 2x';
+}
+
 export function getTrustedReviewMedia(review) {
   var result = [];
   var seen = {};

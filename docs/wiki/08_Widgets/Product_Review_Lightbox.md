@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-10
-updated: 2026-06-14
-last_verified: 2026-06-14
+updated: 2026-06-16
+last_verified: 2026-06-16
 confidence: high
 tags:
   - widget
@@ -91,8 +91,12 @@ The product review lightbox is the media detail modal opened from trusted review
 - Switching between different reviews normalizes every lightbox scroll layer (`.renuvex-pr-modal-wrap`, `.renuvex-pr-modal-right`, and `.renuvex-pr-modal-scroll-content`) immediately and again after layout settles. This prevents stale long-review scroll state from carrying into a short-review lightbox view.
 - In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
 - `tests/widget-media-cross-browser.spec.ts` covers poster-first card/list/gallery rendering and cleanup on Chromium, Firefox, desktop WebKit, Pixel emulation, and iPhone WebKit emulation. Emulation is not a replacement for the physical-device release gate in [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
+- Video posters are not raw, one-size Stream URLs at render time. `review-media.js` derives trusted Cloudflare Stream thumbnail variants for the current surface: card/list/gallery/strip use sized crop variants and the lightbox uses a larger `1280x720 fit=clip` poster.
+- Native video controls stay browser/OS-owned; Renuvex does not theme the native progress bar or native center play icon. The configurable-looking storefront layer is the poster thumbnail, play badge, and duration badge.
+- On non-native HLS browsers, hls.js keeps ABR enabled but starts with a player-size-aware quality warm-start unless Data Saver or a 2g connection is reported. Cloudflare `clientBandwidthHint` is intentionally not used.
 
 ## Change Log
+- 2026-06-16: Improved video first-frame quality by deriving sized Stream poster variants and adding hls.js player-size capping plus a conservative start-level warm-start. Native controls remain unchanged and browser-owned.
 - 2026-06-14: Documented the provider-aware image/video lightbox and Phase 4 cross-browser media suite. Native-HLS attributes, lazy `hls.js`, no-autoplay poster-first rendering, browser-back cleanup, and video-to-image navigation cleanup are now pinned across the five-project Playwright matrix.
 - 2026-06-01: Lightbox CSS ownership moved into [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) while `review-modal.js` continues to inject the stable `CLASSIC_CSS` aggregator.
 - 2026-05-31: Added shared [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) after an audit found photo-strip thumbnails were click-only images. Photo-strip and card/list/gallery lightbox triggers now share keyboard/ARIA wiring, and interaction smoke verifies keyboard open + focus restore from the photo strip. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].

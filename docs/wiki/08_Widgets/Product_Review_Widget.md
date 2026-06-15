@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-15
-last_verified: 2026-06-15
+updated: 2026-06-16
+last_verified: 2026-06-16
 confidence: high
 tags:
   - widget
@@ -76,7 +76,8 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Entry points include review media inside card/list/gallery layouts and the top strip rendered by [render.js](src/widget/reviews-section/render.js). All media lightbox entry points use [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) so click, `Enter` / `Space`, `role="button"`, `tabindex="0"`, label, and focus-return behavior stay consistent.
 - All photo entry points use trusted image helpers; third-party `https://` URLs and `data:image` payloads are not rendered on storefronts.
 - Video entry points use [core/review-media.js](src/widget/core/review-media.js): storefront renders only trusted Stream HLS/poster URLs from normalized `media[]`; provider ids never reach the widget. Cards/lists/gallery/strip show poster + play badge + optional duration, not autoplaying `<video>` elements.
-- The lightbox uses native `<video controls playsinline preload="metadata">` for Safari/iOS HLS and lazy `hls.js` for other supported browsers. Closing/navigating pauses video, removes sources, and destroys the hls.js instance.
+- Video poster surfaces derive Cloudflare Stream thumbnail variants from the trusted `posterUrl`: fixed thumbnails use sized `width`/`height`/`fit=crop` variants with `srcset`, while the lightbox uses a higher-quality `fit=clip` poster. The base `posterUrl` remains the source of truth.
+- The lightbox uses native `<video controls playsinline preload="metadata">` for Safari/iOS HLS and lazy `hls.js` for other supported browsers. Native video control chrome (progress bar, center play button, fullscreen/PiP UI) remains browser/OS-owned; Renuvex controls the poster, thumbnail play badge, and duration badge. hls.js uses a conservative startup quality warm-start while keeping ABR enabled. Closing/navigating pauses video, removes sources, and destroys the hls.js instance.
 - In gallery layout, long photo-backed reviews can use the lightbox for full detail; long photo-less reviews expand inline and must not open the photo-only lightbox.
 - This lightbox is separate from the submission wizard under [review-form-modal/](src/widget/reviews-section/review-form-modal/).
 - Open audit risks are tracked in [[Bug_Review_Detail_Lightbox_Risks]].
@@ -143,6 +144,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-16: Video poster delivery now derives trusted Cloudflare Stream thumbnail variants for thumbnails and lightbox posters. The non-native hls.js path uses player-size capping and a conservative start-level warm-start without disabling ABR; native Safari/iOS controls remain browser-owned.
 - 2026-06-15: Added a fresh quota-aware video capability check before every real storefront wizard open. Capability failure degrades to photo-only, preview stays deterministic, and structured quota/rate/disabled/provider errors now drive specific copy and retry policy.
 - 2026-06-13: Began Review Video V1 implementation behind closed gates. Added provider-agnostic storefront media normalization, poster/play/duration thumbnails for card/list/gallery/strip, video-aware lightbox playback with native iOS/Safari HLS + lazy hls.js, a wizard media step with simulated preview upload and real multipart client path, and admin moderation/private playback plumbing. Public `images[]` remains image-only; `media[]` is the video-capable contract. Related: [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
 - 2026-06-12: Review pagination sizing was revised again after mobile UX review: desktop load-more/numbered controls remain compact, while mobile now uses the visible control box as the clickable target instead of adding an invisible 44px halo around dense page numbers. Runtime smoke covers desktop size, mobile clickable/visible size, focus ring placement, and overflow.
