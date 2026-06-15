@@ -528,3 +528,39 @@ test('video to image navigation disposes the previous player before rendering th
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
+
+test('video to video navigation keeps native controls centered during the transition', async ({ page }) => {
+  const log = await setupVideoWidget(page, {
+    reviews: [
+      review('video-1', [videoMedia('video-1')]),
+      review('video-2', [videoMedia('video-2')]),
+    ],
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-nav-next');
+
+  const transition = await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
+    const video = root?.querySelector<HTMLVideoElement>('.renuvex-pr-modal-main-video');
+    if (!video) throw new Error('Missing navigated video');
+    const style = getComputedStyle(video);
+    return {
+      className: video.className,
+      animationName: style.animationName,
+      transform: style.transform,
+    };
+  });
+
+  expect(transition.className).toContain('renuvex-pr-modal-video-enter');
+  expect(transition.className).not.toContain('renuvex-pr-modal-img-enter');
+  expect(transition.animationName).toBe('renuvexPrVideoFadeIn');
+  expect(transition.transform).toBe('none');
+  expect(widgetErrors(log)).toEqual([]);
+});

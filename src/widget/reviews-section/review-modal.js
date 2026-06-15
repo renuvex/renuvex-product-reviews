@@ -149,7 +149,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   var animClass = direction === 'next' ? 'renuvex-pr-modal-img-enter-right' : direction === 'prev' ? 'renuvex-pr-modal-img-enter-left' : '';
   if (currentMedia && currentMedia.type === 'video') {
     var mainVideo = document.createElement('video');
-    mainVideo.className = 'renuvex-pr-modal-main-video' + (animClass ? ' ' + animClass : '');
+    mainVideo.className = 'renuvex-pr-modal-main-video' + (animClass ? ' renuvex-pr-modal-video-enter' : '');
     mainVideo.setAttribute('aria-label', 'Yorum videosu');
     mainVideo.addEventListener('error', function () {
       if (left.querySelector('.renuvex-pr-modal-img-error')) return;

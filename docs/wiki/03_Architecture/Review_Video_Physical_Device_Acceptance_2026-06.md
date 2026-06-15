@@ -37,7 +37,7 @@ source_files:
 
 ## Status
 
-In progress. This report is not a production-readiness approval. Physical Android Chrome passed the earlier resume retest and has a retained approved video review. A later reliability hardening change modifies the media path, so Android and iPhone interruption/offline-cancel/processing checks must be repeated after deployment. The 72-hour retained-review window has not started.
+In progress. This report is not a production-readiness approval. Post-hardening physical Android Chrome and iPhone Safari checks passed interruption/retry, offline removal, processing-to-ready, moderation, storefront playback, fullscreen/audio/back/modal-close, and desktop Chrome playback. A storefront lightbox transition polish fix is still awaiting deploy verification, and the 72-hour retained-review window has not started.
 
 ## Verified Preflight
 
@@ -208,12 +208,26 @@ Implemented locally on 2026-06-15 after the physical observations:
 
 These changes are not yet physical-device evidence. After deployment, repeat Android Chrome and iPhone Safari interruption, resume, offline cancel, processing, X/removal, submit, moderation, and playback. Only then record a new retained Android review and explicit canary `T0`.
 
+## Post-Hardening Physical Retest
+
+User-reported physical acceptance on 2026-06-15 after deployment:
+
+- Android Chrome and iPhone Safari both passed network interruption followed by retry/resume.
+- X/removal cleared the media UI correctly.
+- Stream processing reached `ready`; longer source videos took approximately one to two minutes. Cloudflare exposes canonical `readyToStream` and processing status/progress but does not publish a fixed completion-time SLA, so this remains within the product's existing 10-minute delayed-processing threshold rather than being classified as a stuck job.
+- Admin signed preview, approval, storefront HLS playback, fullscreen, audio, browser back, and modal close passed.
+- Desktop Chrome repeated the playback flow without a functional failure.
+- Storefront video-to-video lightbox navigation exposed a visual-only regression: the browser-native center play control moved horizontally because the directional slide animation was applied to the `<video>` element itself. The source now uses a video-specific opacity transition so native controls remain centered. This fix requires deploy verification before canary `T0`.
+
+Production DB evidence at the time of the report contained four approved, ready, visible video reviews and one pending, ready, hidden video review. File names are not required for lifecycle identity; the canary must select and record one retained `Review.id` explicitly before `T0`.
+
 ## Physical Device Matrix
 
 | Device | File | Selection / metadata | Resume | Processing / ready | Pending admin preview | Storefront HLS | Cleanup | Result |
 |---|---|---|---|---|---|---|---|---|
-| iPhone Safari | 1080p MOV, 30-80 MiB, 2-60 s | Pass | Pending | Pass | Pass | Published | Pass | Partial pass; interruption/resume and device-version evidence remain |
-| Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pass before reliability hardening | Retest required after deploy | Retest required after deploy | Pass before reliability hardening | Pass before reliability hardening | Retained, not deleted | Earlier pass is historical evidence; new media-path baseline requires retest |
+| iPhone Safari | Controlled video within V1 policy | Pass | Pass after reliability deploy | Pass; longer input observed at ~1-2 min | Pass | Pass | X/removal pass | Functional pass; device/OS/browser versions still need recording |
+| Android Chrome | Controlled video within V1 policy | Pass | Pass after reliability deploy | Pass; longer input observed at ~1-2 min | Pass | Pass | X/removal pass | Functional pass; lightbox transition fix requires deploy recheck and device versions still need recording |
+| Desktop Chrome | Controlled video within V1 policy | Pass | Not a physical-network acceptance target | Pass | Pass | Pass | Not exercised in this report | Supplemental pass |
 
 Record the physical device model, OS version, browser version, timestamps, and pass/fail result. Do not record customer media, upload tokens, signed playback URLs, R2 keys, or provider credentials.
 
