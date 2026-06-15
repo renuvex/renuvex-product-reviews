@@ -111,7 +111,7 @@ The media suite deliberately separates playback contracts:
 - Poster-first card/list/gallery tests assert that no HLS manifest is requested before the shopper opens the lightbox.
 - Wizard upload tests mock the R2 multipart CORS contract, Stream processing status, and public review submit, while asserting no direct Cloudflare Admin API call leaves the widget.
 
-Unit route contracts separately pin video observability: malformed or expected client errors and missing provider configuration do not consume Sentry error quota, while unexpected initiate, part-signing, completion, cancellation, and Stream-webhook failures call `captureException` exactly once with `source=media-job` and the route-specific `task` tag used by production alerts.
+Unit route contracts separately pin video observability: malformed or expected client errors and missing provider configuration do not consume Sentry error quota, while unexpected initiate, part-signing, completion, cancellation, and Stream-webhook failures call `captureException` exactly once with `source=media-job` and the route-specific `task` tag used by production alerts. The Stream webhook contract also distinguishes already-deleted Stream assets (`202 stream_not_found`, no state mutation, no Sentry) from transient provider fetch failures (`502 stream_provider_unavailable`, provider tags, no stale state mutation).
 
 The admin video preview contract keeps pending/rejected UGC visibly marked as unapproved, starts video muted with native controls and `playsInline`, and obtains playback only from the short-lived signed admin endpoint. Approved video and image previews do not show the moderation warning.
 

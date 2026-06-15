@@ -555,11 +555,11 @@ test('quota-aware capability hides video while keeping the photo review flow ava
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('capability failures fail closed to the photo-only wizard', async ({ page }) => {
+test('capability rate limits fail closed to the photo-only wizard', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
     reviewsSettings: { videoReviewsEnabled: true },
-    videoCapability: { enabled: false, status: 503 },
+    videoCapability: { enabled: false, status: 429 },
   });
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
@@ -570,7 +570,7 @@ test('capability failures fail closed to the photo-only wizard', async ({ page }
 
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(true);
   expect(await hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(false);
-  expect(widgetErrors(log).filter((message) => !message.includes('status of 503'))).toEqual([]);
+  expect(widgetErrors(log).filter((message) => !message.includes('status of 429'))).toEqual([]);
 });
 
 test('quota races show specific non-retryable video upload copy', async ({ page }) => {

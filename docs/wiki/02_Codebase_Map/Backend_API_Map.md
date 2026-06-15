@@ -91,7 +91,7 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/upload/sign` body `{ storeId }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload scoped to `review_images/stores/<storeId>` after StoreSettings verification |
 | POST `/api/public/upload/register` body `{ storeId, secureUrl, metadata? }` | [route.ts](src/app/api/public/upload/register/route.ts) | Register a completed tenant-scoped Cloudinary upload in `PendingReviewImage` for cleanup. Optional signed Cloudinary upload-response metadata is verified server-side before dimensions/format/bytes are staged for `ReviewMedia`. |
-| GET `/api/public/upload/video/capability?storeId=` | [route.ts](src/app/api/public/upload/video/capability/route.ts) | Fresh `no-store` video capability check. Returns only `{ enabled, reason }`; quota counts and provider configuration remain server-private. |
+| GET `/api/public/upload/video/capability?storeId=` | [route.ts](src/app/api/public/upload/video/capability/route.ts) | Fresh `no-store` video capability check with a 60/min/IP fixed-window limit. Returns only `{ enabled, reason }`; quota counts and provider configuration remain server-private. |
 | POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated R2 multipart video upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, part size/count, and max parallelism. |
 | POST `/api/public/upload/video/parts` | [route.ts](src/app/api/public/upload/video/parts/route.ts) | Return short-lived presigned R2 part URLs and already-completed part ETags for resume. |
 | POST `/api/public/upload/video/complete` | [route.ts](src/app/api/public/upload/video/complete/route.ts) | Complete multipart upload, HEAD/signature-check master object, enqueue Stream copy job, and move session to processing. |
@@ -105,6 +105,7 @@ Storefront configuration and review GET responses use the documented edge-cache 
 - `/api/public/reviews` POST → 3 / 10min / IP
 - `/api/public/upload/sign` POST → 10 / 10min / IP
 - `/api/public/ratings` + `/api/public/ratings-by-slug` GET → 300 / 60sec / IP, shared key
+- `/api/public/upload/video/capability` GET -> 60 / 60sec / IP
 - `/api/public/upload/register` POST -> 30 / 10min / IP
 - `/api/public/upload/video/initiate` POST -> 10 / 10min / IP, plus store-level monthly quota reservation.
 Detail in [[Security_And_Rate_Limits]].
@@ -120,7 +121,7 @@ Detail in [[Security_And_Rate_Limits]].
 | Method + Path | Source | Purpose |
 |---|---|---|
 | POST `/api/webhooks/ikas/products` | [route.ts](src/app/api/webhooks/ikas/products/route.ts) | Validate ikas webhook signature, process product create/update events, refresh `ProductSnapshot` |
-| POST `/api/webhooks/cloudflare-stream` | [route.ts](src/app/api/webhooks/cloudflare-stream/route.ts) | Validate Cloudflare Stream raw-body HMAC + freshness, apply ready/failed state idempotently, store poster/HLS/duration, delete transient ingest copy through provider jobs. |
+| POST `/api/webhooks/cloudflare-stream` | [route.ts](src/app/api/webhooks/cloudflare-stream/route.ts) | Validate Cloudflare Stream raw-body HMAC + freshness, hydrate the canonical Stream state, apply ready/failed state idempotently, store poster/HLS/duration, and delete transient ingest copy through provider jobs. If a matched Stream asset was already deleted, the webhook is acknowledged as `stream_not_found`; transient Stream API failures return `502 stream_provider_unavailable` and are reported with provider tags. |
 
 ## OAuth
 

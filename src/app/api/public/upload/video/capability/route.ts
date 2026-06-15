@@ -1,10 +1,19 @@
+import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
 import { withCors, corsOptions } from '@/lib/cors';
 import { getVideoFeatureAccess } from '@/lib/media/access';
+import { checkFixedWindowRateLimit, getClientIp } from '@/lib/public-rate-limit';
+
+const CAPABILITY_RATE_LIMIT_MAX = 60;
+const CAPABILITY_RATE_LIMIT_WINDOW_SEC = 60;
 
 function noStore(response: NextResponse): NextResponse {
   response.headers.set('Cache-Control', 'no-store');
   return response;
+}
+
+function hashClientIp(ip: string): string {
+  return createHash('sha256').update(ip).digest('hex').slice(0, 32);
 }
 
 export async function OPTIONS(request: Request) {
@@ -18,6 +27,18 @@ export async function GET(request: Request) {
   }
 
   try {
+    const rateLimit = await checkFixedWindowRateLimit({
+      key: `renuvex_pr_video_cap:${hashClientIp(getClientIp(request))}`,
+      max: CAPABILITY_RATE_LIMIT_MAX,
+      windowSec: CAPABILITY_RATE_LIMIT_WINDOW_SEC,
+      label: 'video-capability',
+    });
+    if (!rateLimit.allowed) {
+      const response = noStore(NextResponse.json({ error: 'rate_limited' }, { status: 429 }));
+      response.headers.set('Retry-After', String(rateLimit.retryAfterSec));
+      return withCors(response, request);
+    }
+
     const access = await getVideoFeatureAccess(storeId);
     if (access.reason === 'store_missing') {
       return withCors(noStore(NextResponse.json({ error: 'store_not_found' }, { status: 404 })), request);

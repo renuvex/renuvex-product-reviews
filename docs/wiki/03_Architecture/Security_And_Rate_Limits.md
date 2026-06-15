@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
+updated: 2026-06-15
 tags:
   - security
   - rate-limit
@@ -19,6 +19,7 @@ source_files:
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/app/api/public/upload/sign/route.ts"
   - "src/app/api/public/upload/register/route.ts"
+  - "src/app/api/public/upload/video/capability/route.ts"
   - "src/app/api/public/widget-error/route.ts"
 ---
 
@@ -48,9 +49,10 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | `POST /api/public/upload/sign` | 10 | 10 min | `renuvex_pr_upload_rl:<ip>` |
 | `POST /api/public/upload/register` | 30 | 10 min | `renuvex_pr_upload_reg_rl:<ip>` |
 | `GET /api/public/ratings` + `GET /api/public/ratings-by-slug` | 300 combined | 60 sec | `renuvex_pr_ratings_rl:<ip>` |
+| `GET /api/public/upload/video/capability` | 60 | 60 sec | `renuvex_pr_video_cap:<ip-hash>` |
 | `POST /api/public/widget-error` | 30 | 60 sec | `renuvex_pr_werr_rl:<ip>` |
 
-Pattern: `INCR` then `EXPIRE` on first hit. Rating read limits use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable, so listing badges do not disappear during a transient Redis issue. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
+Pattern: `INCR` then `EXPIRE` on first hit. Rating read limits and the video capability probe use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable, so listing badges and text/photo review submission do not disappear during a transient Redis issue. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/upload/video/capability/route.ts](src/app/api/public/upload/video/capability/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
 
 IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theory if upstream is misconfigured — acceptable today.
 

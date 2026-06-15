@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { getStreamMediaConfig, MediaConfigError } from '@/lib/media/config';
-import { getStreamVideo, type StreamVideo } from '@/lib/media/providers/cloudflare-stream';
+import { getStreamVideo, StreamProviderError, type StreamVideo } from '@/lib/media/providers/cloudflare-stream';
 import { MediaRequestError, parseJsonObject } from '@/lib/media/request';
 import { verifyStreamWebhookSignature } from '@/lib/media/stream-webhook';
 import { applyStreamVideoState, findSessionForStreamVideo } from '@/lib/media/video-processing';
@@ -28,6 +28,8 @@ const streamVideoSchema = z.object({
   meta: z.record(z.unknown()).optional(),
 }).passthrough();
 
+const BENIGN_STREAM_NOT_FOUND_CODES = new Set(['1001', '10003', '404']);
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   try {
@@ -42,7 +44,26 @@ export async function POST(request: Request) {
     const video: StreamVideo = parsed.data;
     const session = await findSessionForStreamVideo(video);
     if (!session) return NextResponse.json({ received: true, matched: false }, { status: 202 });
-    const canonicalVideo = await getStreamVideo(video.uid);
+    let canonicalVideo: StreamVideo;
+    try {
+      canonicalVideo = await getStreamVideo(video.uid);
+    } catch (error) {
+      if (!(error instanceof StreamProviderError)) throw error;
+      if (BENIGN_STREAM_NOT_FOUND_CODES.has(error.code)) {
+        return NextResponse.json({ received: true, matched: true, status: 'stream_not_found' }, { status: 202 });
+      }
+
+      Sentry.captureException(error, {
+        tags: {
+          source: 'media-job',
+          task: 'stream-webhook',
+          provider: 'cloudflare_stream',
+          providerCode: error.code,
+        },
+      });
+      console.error('[cloudflare-stream-webhook] provider fetch failed:', error);
+      return NextResponse.json({ error: 'stream_provider_unavailable' }, { status: 502 });
+    }
     const result = await applyStreamVideoState(session, canonicalVideo);
     return NextResponse.json({ received: true, matched: true, status: result.ok ? result.status : result.code });
   } catch (error) {
