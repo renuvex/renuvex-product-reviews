@@ -152,12 +152,25 @@ Verified on 2026-06-15 after deleting the published iOS review from the admin pa
 
 The iOS cleanup criterion passes. The physical iOS interruption/resume criterion remains pending until a real iPhone is available again.
 
+## Android Physical Attempt And Resume Finding
+
+Verified on 2026-06-15 during the physical Android Chrome attempt:
+
+- Video selection, upload completion, Stream readiness, review submission, admin signed preview, approval, storefront playback, and review deletion all completed.
+- Deletion cleanup passed: the review/media/pending rows were absent, the `cleanup_video` job succeeded on its first QStash delivery, Stream returned HTTP `404`, R2 master returned `not_found`, the DLQ was empty, and no matching Sentry error was present.
+- The interrupted upload exposed a client resume bug. A transient `/status` failure caused the widget to delete its stored opaque session token and call `/initiate` again. DB evidence showed the abandoned session still `uploading/reserved` and a second session for the same file size completing successfully.
+- The backend multipart contract was not the cause: `/parts` remains server-authoritative through R2 `ListParts` and does not re-sign completed parts.
+- The widget now discards a stored session only after an explicit `404 upload_not_found` or `404 invalid_or_expired_upload`. Transient network/5xx status failures retain the token and are retried before resuming missing parts.
+- Regression coverage pins that a transient status failure does not create a second initiate request and every subsequent parts request uses the original token.
+
+Because the Android review was deleted immediately, this attempt validates cleanup but does not start the 72-hour retained-review window. Android interruption/resume must be repeated after deployment of the fix.
+
 ## Physical Device Matrix
 
 | Device | File | Selection / metadata | Resume | Processing / ready | Pending admin preview | Storefront HLS | Cleanup | Result |
 |---|---|---|---|---|---|---|---|---|
 | iPhone Safari | 1080p MOV, 30-80 MiB, 2-60 s | Pass | Pending | Pass | Pass | Published | Pass | Partial pass; interruption/resume and device-version evidence remain |
-| Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
+| Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pass | Fail; fix pending deploy/retest | Pass | Pass | Pass | Pass | Partial pass; resume retest and 72-hour retained review remain |
 
 Record the physical device model, OS version, browser version, timestamps, and pass/fail result. Do not record customer media, upload tokens, signed playback URLs, R2 keys, or provider credentials.
 

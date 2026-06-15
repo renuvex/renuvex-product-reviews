@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeVideoUploadError,
+  shouldDiscardStoredVideoSession,
   VideoUploadRequestError,
 } from '../../src/widget/reviews-section/review-form-modal/media/video-upload.js';
 
@@ -26,5 +27,12 @@ describe('video upload error presentation', () => {
       retryable: true,
       retryAfterSec: null,
     });
+  });
+
+  it('discards a stored upload only when the server confirms the session is gone', () => {
+    expect(shouldDiscardStoredVideoSession(new VideoUploadRequestError('upload_not_found', 404, null))).toBe(true);
+    expect(shouldDiscardStoredVideoSession(new VideoUploadRequestError('invalid_or_expired_upload', 404, null))).toBe(true);
+    expect(shouldDiscardStoredVideoSession(new VideoUploadRequestError('video_status_failed', 500, null))).toBe(false);
+    expect(shouldDiscardStoredVideoSession(new Error('network_failed'))).toBe(false);
   });
 });

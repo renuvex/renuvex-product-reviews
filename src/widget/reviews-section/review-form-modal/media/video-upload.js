@@ -44,6 +44,11 @@ export function describeVideoUploadError(error) {
   };
 }
 
+export function shouldDiscardStoredVideoSession(error) {
+  if (!error || Number(error.status) !== 404) return false;
+  return error.code === 'upload_not_found' || error.code === 'invalid_or_expired_upload';
+}
+
 function sleep(ms) {
   return new Promise(function (resolve) { setTimeout(resolve, ms); });
 }
@@ -210,6 +215,24 @@ async function pollUntilReady(token, signal, onStatus) {
   throw new Error('video_processing_timeout');
 }
 
+async function readStoredUploadStatus(token) {
+  var lastError = null;
+  for (var attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await jsonRequest(
+        '/api/public/upload/video/status?token=' + encodeURIComponent(token),
+        { method: 'GET' },
+        8000,
+      );
+    } catch (error) {
+      if (shouldDiscardStoredVideoSession(error)) return null;
+      lastError = error;
+      if (attempt < 3) await sleep(400 * attempt);
+    }
+  }
+  throw lastError || new Error('video_status_failed');
+}
+
 async function simulatePreviewUpload(file, signal, onProgress, onStatus) {
   for (var progress = 10; progress <= 90; progress += 20) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -271,7 +294,7 @@ export async function uploadReviewVideo(input) {
   var token = stored && stored.token;
   var session = stored;
   if (token) {
-    var storedStatus = await jsonRequest('/api/public/upload/video/status?token=' + encodeURIComponent(token), { method: 'GET' }).catch(function () { return null; });
+    var storedStatus = await readStoredUploadStatus(token);
     if (!storedStatus) {
       clearStoredSession(input.productId, input.file);
       token = null;
