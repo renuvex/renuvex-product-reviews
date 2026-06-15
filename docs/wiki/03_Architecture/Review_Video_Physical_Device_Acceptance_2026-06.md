@@ -33,7 +33,7 @@ source_files:
 
 ## Status
 
-In progress. This report is not a production-readiness approval. Physical iPhone Safari, physical Android Chrome, and the 72-hour retained-review window are still pending.
+In progress. This report is not a production-readiness approval. Physical Android Chrome passed the post-fix resume retest and now has a retained approved video review. Physical iPhone Safari interruption/resume and the 72-hour retained-review window are still pending.
 
 ## Verified Preflight
 
@@ -165,18 +165,46 @@ Verified on 2026-06-15 during the physical Android Chrome attempt:
 
 Because the Android review was deleted immediately, this attempt validates cleanup but does not start the 72-hour retained-review window. Android interruption/resume must be repeated after deployment of the fix.
 
+## Android Resume Retest And Retained Review
+
+Verified on 2026-06-15 after deploying the resume fix:
+
+- The second physical Android Chrome test passed the corrected flow: video selection, upload, retry/resume, Stream readiness, review submit, admin signed preview, approval, and storefront playback.
+- The retained review remains in the production DB and was not deleted after the retest:
+  - `Review.id=0f87eb64-40d1-4497-9933-8f142d7981e8`
+  - `Review.status=approved`
+  - `Review.hasVideo=true`
+  - `Review.moderationVersion=2`
+- The attached video media remains ready and visible:
+  - `ReviewMedia.id=9b837155-dfd0-49e4-a0fc-ae49ac1cf946`
+  - `resourceType=video`
+  - `provider=cloudflare_stream`
+  - `providerAssetId=1f38e9db682fe3df9dd27702549541d7`
+  - `processingStatus=ready`
+  - `visible=true`
+  - `sourceProvider=cloudflare_r2`
+  - `sourceAssetId=review-videos/stores/02786d4b-a09b-4b36-ad8c-56e6d396f6fd/b26699f1-387c-4cf8-b8e7-6a2fa49b8acd/master`
+  - `bytes=102476472`
+  - `durationMs=23000`
+- The consumed upload session is `VideoUploadSession.id=b26699f1-387c-4cf8-b8e7-6a2fa49b8acd`, with status `consumed`, quota state `consumed`, Stream UID `1f38e9db682fe3df9dd27702549541d7`, and no stored error code.
+- The production canary ops snapshot showed one approved video review, one ready `ReviewMedia` row, and one ready pending-media row for the internal canary store.
+
+This corrects the earlier Android row that said resume was still pending. The 72-hour canary clock still has not started; it must be started explicitly and recorded as `T0` before checkpoint tracking begins.
+
 ## Physical Device Matrix
 
 | Device | File | Selection / metadata | Resume | Processing / ready | Pending admin preview | Storefront HLS | Cleanup | Result |
 |---|---|---|---|---|---|---|---|---|
 | iPhone Safari | 1080p MOV, 30-80 MiB, 2-60 s | Pass | Pending | Pass | Pass | Published | Pass | Partial pass; interruption/resume and device-version evidence remain |
-| Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pass | Fail; fix pending deploy/retest | Pass | Pass | Pass | Pass | Partial pass; resume retest and 72-hour retained review remain |
+| Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pass | Pass after post-fix retest | Pass | Pass | Pass | Retained, not deleted | Pass for device flow; 72-hour canary clock not started |
 
 Record the physical device model, OS version, browser version, timestamps, and pass/fail result. Do not record customer media, upload tokens, signed playback URLs, R2 keys, or provider credentials.
 
 ## Canary Checkpoints
 
 The 72-hour clock starts only after the Android review is approved and storefront playback is verified.
+
+As of the Android retest update above, an approved retained Android video review exists, but the 72-hour clock is intentionally not started yet. Record an explicit `T0` before changing checkpoint rows from `Pending`.
 
 | Checkpoint | DB / jobs | Sentry | QStash / DLQ | Vercel 5xx | Ingest empty | Retained master + Stream | Other stores gated | Result |
 |---|---|---|---|---|---|---|---|---|
