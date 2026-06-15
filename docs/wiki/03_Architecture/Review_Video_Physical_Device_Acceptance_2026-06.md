@@ -16,6 +16,7 @@ related:
   - "[[Review_Video_Canary_Runbook]]"
   - "[[Test_Strategy]]"
 source_files:
+  - "src/app/api/public/upload/video/initiate/route.ts"
   - "src/components/home-page/index.tsx"
   - "src/components/home-page/MediaPreviewState.ts"
   - "src/app/api/webhooks/cloudflare-stream/route.ts"
@@ -108,11 +109,25 @@ Verified on 2026-06-15 during the first physical iOS Safari attempt:
 
 The 72-hour canary clock remains not started. Physical-device acceptance must restart from a deployment that includes this fix.
 
+## iOS Safari Pass And Quota-Limit Observation
+
+Verified on 2026-06-15 after deploying commit `64dfc5a7`:
+
+- The physical iOS Safari flow passed the corrected critical path: video upload reached ready, review submit succeeded, admin preview/review worked, admin approval succeeded, and the approved video review became visible on the storefront.
+- The video-card remove button worked correctly after the pointer/click-safe removal fix.
+- A second immediate video selection showed the generic widget message `Video yuklenemedi. Tekrar deneyin.`
+- This was not evidence of a Stream processing failure. Production logs for the period showed repeated `POST /api/public/upload/video/initiate` responses with HTTP `429`.
+- DB evidence for the internal canary store at the same point showed monthly video usage at `consumed=4`, `reserved=1`, with the canary quota set to `5`. Therefore `consumed + reserved = 5/5`, so a new upload could be rejected by the quota gate. Repeated retries can also trip the initiate rate limiter, which returns the same HTTP class.
+- Product decision: quota is not only a test-stage guard. It is a permanent cost-control and abuse-control layer for video UGC. The canary uses a deliberately small quota to keep provider spend and cleanup blast radius bounded.
+- UX gap: the widget currently maps these `429` cases to the generic upload error. A future polish pass should show specific messages for `video_quota_exceeded` and `rate_limited` instead of the generic upload-failed copy.
+
+The 72-hour canary clock still does not start from the iOS review. It starts only after the Android review is approved and storefront playback is verified.
+
 ## Physical Device Matrix
 
 | Device | File | Selection / metadata | Resume | Processing / ready | Pending admin preview | Storefront HLS | Cleanup | Result |
 |---|---|---|---|---|---|---|---|---|
-| iPhone Safari | 1080p MOV, 30-80 MiB, 2-60 s | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
+| iPhone Safari | 1080p MOV, 30-80 MiB, 2-60 s | Pass | Pending | Pass | Pass | Published | Pending | Partial pass; quota-limit UX gap noted |
 | Android Chrome | 1080p MP4, 30-80 MiB, 2-60 s | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
 
 Record the physical device model, OS version, browser version, timestamps, and pass/fail result. Do not record customer media, upload tokens, signed playback URLs, R2 keys, or provider credentials.
