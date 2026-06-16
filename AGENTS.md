@@ -50,6 +50,12 @@
 - TypeScript strict; avoid any. Use precise types from generated GraphQL.
 - Treat API tokens and secrets as sensitive; never log them.
 
+## Destructive Actions — Stop and Confirm
+- Before running any irreversible/destructive action, STOP, state the exact command and why it is risky, and get explicit confirmation in chat first. Do not run it silently.
+- Covers (non-exhaustive): `wrangler deploy` / `delete` / `rollback` / `secret put|delete`, `wrangler r2|kv|d1 ... delete` and `wrangler d1 execute`, `git push --force`, `git reset --hard`, `git clean -f`, `rm -rf`, `prisma migrate reset`, `prisma db push`, `supabase db reset`, SQL `DROP`/`TRUNCATE`, `vercel deploy`/`env`, and destructive MCP tools (mux delete/cancel, Supabase write/migration/branch ops, Vercel deploy).
+- Catastrophic, never-automated ops (`rm -rf /` or `~`, `--no-preserve-root`, fork bombs) must NOT be run at all — ask the user to perform them manually.
+- This rule is the cross-agent guardrail; `.claude/settings.json` also denies the catastrophic `rm -rf` patterns as a hard backstop in Claude Code.
+
 ## Stack Overview
 - Next.js 16.2.1 App Router, React 19, TypeScript, Tailwind + shadcn/ui.
 - ikas Admin GraphQL via `@ikas/admin-api-client` with codegen.
