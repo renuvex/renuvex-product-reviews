@@ -36,7 +36,7 @@ jobs:
           NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: renuvex
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium webkit
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run unit and browser smoke tests
         run: pnpm test:ci
@@ -52,3 +52,53 @@ jobs:
 
       - name: Diff whitespace check
         run: git diff --check
+
+  media-pr-gate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium-desktop
+            browser: chromium
+          - project: pixel-android
+            browser: chromium
+          - project: iphone-webkit
+            browser: webkit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.4.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build widget
+        run: pnpm build:widget
+        env:
+          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: renuvex
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run media project
+        run: pnpm exec playwright test --config=playwright.media.config.ts tests/widget-media-cross-browser.spec.ts --project=${{ matrix.project }}
+
+      - name: Upload media failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-${{ matrix.project }}-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

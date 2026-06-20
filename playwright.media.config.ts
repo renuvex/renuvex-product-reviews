@@ -12,7 +12,7 @@ export default defineConfig({
   use: {
     headless: true,
     ignoreHTTPSErrors: true,
-    trace: 'retain-on-failure',
+    trace: process.env.CI ? 'on-first-retry' : 'off',
     screenshot: 'only-on-failure',
   },
   projects: [
