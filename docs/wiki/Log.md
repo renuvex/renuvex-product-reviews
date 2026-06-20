@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 tags:
   - log
@@ -20,6 +20,10 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-21 - migration | Start Mux contract cleanup
+- Added `20260621003000_review_video_mux_contract_drop_legacy_columns` to drop only old Cloudflare Stream/R2 `VideoUploadSession` columns and legacy indexes after read-only evidence showed no active video rows/jobs and no data in those legacy columns.
+- Vercel cleanup scope is limited to old Cloudflare Stream/R2 video env vars. Cloudflare DNS/zone and future Worker-based widget/script delivery remain out of teardown scope.
 
 ## 2026-06-20 - performance | Harden Mux upload measurement and retry UX
 - Replaced the fixed 30 MB UpChunk setting with server-configured defaults (`8192` KB chunks, `5` attempts) and returned `chunkAttempts` from video initiate.

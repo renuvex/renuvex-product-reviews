@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-17
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 supersedes: "[[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]]"
 tags:
@@ -27,6 +27,7 @@ source_files:
   - "prisma/migrations/20260617090000_review_video_mux_additive/migration.sql"
   - "prisma/migrations/20260617100000_review_video_mux_backend_cutover/migration.sql"
   - "prisma/migrations/20260620190000_add_video_upload_performance_sample/migration.sql"
+  - "prisma/migrations/20260621003000_review_video_mux_contract_drop_legacy_columns/migration.sql"
   - "src/lib/media/config.ts"
   - "src/lib/media/sessions.ts"
   - "src/lib/media/jobs.ts"
@@ -51,13 +52,13 @@ source_files:
 ## Status
 Accepted. This supersedes [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] for the video provider only. The provider-agnostic media model, quota reservation, moderation gate, transactional outbox, lease fencing, reconciliation, and cleanup lifecycle are retained.
 
-This ADR describes the target architecture and the local code/migration state. It does not claim that production has been migrated. Deploy, migration, env writes, Mux writes, external provider teardown, and credential revoke remain stop/go-gated operations.
+This ADR describes the target architecture and the code/migration state. Deploy, migration apply, env writes, Mux writes, external provider teardown, and credential revoke remain stop/go-gated operations.
 
 ## Current Evidence
 - The latest read-only DB inventory before implementation showed zero video reviews, review-media videos, pending video rows, upload sessions, and video usage. The older "6 reviews / 39 sessions" purge manifest is historical only and must not be executed against current data.
-- The local branch contains the Mux dependency, additive provider columns, `WebhookEvent`, Mux provider adapter, Mux upload/status/webhook/admin playback routes, widget UpChunk upload, and tests. Main/production state must be verified separately before any deploy or migration.
-- The legacy provider-column contract SQL is documented in [[Review_Video_Canary_Runbook]] as a deferred contract phase and is intentionally not present under `prisma/migrations` for the first Preview deploy.
-- The live database was not assumed to have ADR_0032 migrations. Migrations are staged locally and must be applied only after approval.
+- Main/production now contains the Mux dependency, additive provider columns, `WebhookEvent`, Mux provider adapter, Mux upload/status/webhook/admin playback routes, widget UpChunk upload, and tests.
+- The 2026-06-21 read-only closeout showed zero active video review/media/pending rows, zero active upload sessions, zero failed/dead video jobs, and zero rows with legacy `r2UploadId`, `ingestObjectKey`, `masterObjectKey`, or `streamUid` values.
+- The legacy provider-column contract migration is now staged as `20260621003000_review_video_mux_contract_drop_legacy_columns` after explicit approval. Applying it remains a destructive DB operation and must be verified after deploy.
 - Mux environments stay separated:
   - `Renuvex - Products Review (Preview)` is for local/Preview validation, test upload, Preview webhook, and canary.
   - `Renuvex - Products Review` is for the production gate only.
@@ -67,7 +68,7 @@ This ADR describes the target architecture and the local code/migration state. I
 1. **Mux is the video provider.** Shopper upload uses Mux direct uploads. The previous app-signed multipart/upload-parts route and previous video-provider adapter files are removed from the active codebase.
 2. **Browser gets only the Mux direct-upload URL.** Mux API tokens, signing keys, webhook secret, and provider identifiers are server-side only. No `NEXT_PUBLIC_MUX_*` variables are used.
 3. **Provider identity is explicit.** `VideoUploadSession.provider` is written by the app as `mux`; there is no DB default. Mux fields stay nullable: `providerUploadId`, `providerAssetId`, `signedPlaybackId`, and `publicPlaybackId`.
-4. **The contract migration is deferred.** The local Prisma schema no longer includes previous provider-specific upload/archive columns, but the drop migration must stay out of the active deploy path until Preview and Production Mux canaries prove no running code depends on the old shape. The contract SQL must be recreated as a new migration in the approved contract phase.
+4. **The contract migration is an approved contract step.** The Prisma schema no longer includes previous provider-specific upload/archive columns. The active contract migration drops only the old `VideoUploadSession` Cloudflare Stream/R2 columns and legacy unique indexes after the code has already stopped depending on them.
 5. **Playback separation is fixed.** Pending/admin playback uses a signed playback ID plus short-lived JWT generated on demand. Approved/storefront playback uses a public playback ID and tokenless Mux delivery URLs. Public upload status APIs do not expose signed playback IDs or tokenless signed-playback URLs.
 6. **Webhook audit is not a retry engine.** `WebhookEvent` stores normalized ids, timestamps, status, and `payloadDigest`; it never stores payloads, tokens, signed URLs, or upload URLs. Actual work/retry remains in `MediaProviderJob`.
 7. **Retry policy is per operation.** Mux reads/deletes may retry through the SDK. `uploads.create` and `assets.createPlaybackId` use `maxRetries:0` because Mux has no idempotency key for those creates. Duplicate public playback IDs are reconciled by list/keep/delete convergence.
@@ -86,7 +87,7 @@ The migration remains expand/contract:
 7. Preview Mux webhook creation and Preview env secret write, followed by Preview redeploy.
 8. Preview functional canary: upload -> Mux processing -> webhook/reconcile -> pending admin preview -> approve public playback -> reject/delete cleanup.
 9. Production gate: separate production Mux token/signing key/webhook secret, isolated test-store toggle/quota, and global flag only after proof.
-10. Contract/teardown: recreate and apply the contract migration after cutover evidence, then revoke legacy external credentials only after explicit approval and inventory proof.
+10. Contract/teardown: apply the approved contract migration after cutover evidence, then remove legacy Vercel video env vars. External Cloudflare Stream/R2 credential revoke and resource teardown remain separate and require inventory proof plus explicit approval.
 
 ## Stop/Go Rules
 Stop and ask before: deploy, migration apply, Vercel env mutation, Mux write, external resource delete/revoke, destructive DB change, or credential teardown. The request must include scope, risk, rollback, and evidence needed after the operation.

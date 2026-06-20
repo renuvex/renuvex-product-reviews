@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 tags:
   - database
@@ -26,6 +26,7 @@ source_files:
   - "prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql"
   - "prisma/migrations/20260613010000_add_review_video_v1_foundation/migration.sql"
   - "prisma/migrations/20260620190000_add_video_upload_performance_sample/migration.sql"
+  - "prisma/migrations/20260621003000_review_video_mux_contract_drop_legacy_columns/migration.sql"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
@@ -183,7 +184,8 @@ code run together, so a migration must not break the old code.
 
 ## Change Log
 - 2026-06-20: Added additive `VideoUploadPerformanceSample` for sanitized Mux direct-upload performance diagnostics. The table has RLS enabled and no public policies; public clients submit through `/api/public/upload/video/metrics`.
-- 2026-06-20: Mux contract migration is staged locally. `VideoUploadSession` keeps Mux provider/upload/asset/playback ids; previous provider-specific upload/archive columns are removed from the local Prisma schema. See [[ADR_0032_Review_Video_On_Mux]].
+- 2026-06-21: Added the approved Mux contract migration `20260621003000_review_video_mux_contract_drop_legacy_columns` to remove old Cloudflare Stream/R2 `VideoUploadSession` columns and legacy unique indexes after the Mux production canary closeout showed no active video rows/jobs and no data in those legacy columns.
+- 2026-06-20: Mux contract work was staged locally. `VideoUploadSession` keeps Mux provider/upload/asset/playback ids; previous provider-specific upload/archive columns are removed from the Prisma schema. See [[ADR_0032_Review_Video_On_Mux]].
 - 2026-06-13: Added additive Review Video foundation: `Review.hasVideo`, provider/source/processing video fields on `ReviewMedia` and `PendingReviewImage`, `StoreSettings.videoMonthlyLimit`, `VideoUploadSession`, `StoreVideoUsage`, and `MediaProviderJob`. Superseded by [[ADR_0032_Review_Video_On_Mux]] for provider details.
 - 2026-06-09: Added `MediaCleanupRun` (cleanup audit log) and `OrphanImageQuarantine` (two-phase orphan-deletion state) tables; `cleanup-images` now marks-then-sweeps orphans behind a circuit-breaker instead of deleting immediately. Additive, single-deploy migration. See [[ADR_0030_Cleanup_Hardening]] and [[Maintenance_Runbook]].
 - 2026-06-08: Added additive Cloudinary metadata fields to `ReviewMedia` and `PendingReviewImage`; public review responses keep `images` and add structured `media[]`. See [[ADR_0029_Review_Media_Metadata]].

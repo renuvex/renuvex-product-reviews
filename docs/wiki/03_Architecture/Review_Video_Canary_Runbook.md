@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-14
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 tags:
   - video
@@ -32,6 +32,7 @@ source_files:
   - "src/app/api/public/upload/video/metrics/route.ts"
   - "src/app/api/webhooks/mux/route.ts"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
+  - "prisma/migrations/20260621003000_review_video_mux_contract_drop_legacy_columns/migration.sql"
   - "tests/unit/media-jobs.test.ts"
   - "tests/unit/video-upload-routes.test.ts"
   - "tests/unit/media-route-contracts.test.ts"
@@ -85,8 +86,10 @@ Stop and get explicit approval before any migration apply, deploy, Vercel env mu
 9. Verify `pnpm verify:video-infrastructure:post-webhook -- --json`.
 10. Run the Preview functional canary.
 
-## Deferred Contract Phase
-The legacy provider-column contract migration must stay out of `prisma/migrations` until Preview and Production Mux canaries are accepted. Recreate a new Prisma migration for the contract phase only after explicit approval. The deferred SQL shape is:
+## Contract Phase
+After Preview/Production Mux canaries and the 2026-06-21 read-only closeout showed no active video reviews, pending video rows, active upload sessions, failed/dead video jobs, or non-empty legacy provider columns, the contract migration entered the active deploy path as `20260621003000_review_video_mux_contract_drop_legacy_columns`.
+
+The migration drops only the old Cloudflare Stream/R2 upload columns on `VideoUploadSession` and their legacy unique indexes:
 
 ```sql
 DROP INDEX IF EXISTS "VideoUploadSession_masterObjectKey_key";
@@ -99,6 +102,8 @@ ALTER TABLE "VideoUploadSession"
   DROP COLUMN IF EXISTS "ingestObjectKey",
   DROP COLUMN IF EXISTS "streamUid";
 ```
+
+Do not pair this migration with any Cloudflare zone, DNS, or future Worker cleanup. External provider credential/resource teardown remains a separate stop/go step.
 
 ## Preview Functional Canary
 Use a controlled MP4/MOV between 2 and 60 seconds, no larger than 150 MiB. Record ids and timestamps only; never paste tokens, upload URLs, signed URLs, secrets, or customer media into docs/tickets.

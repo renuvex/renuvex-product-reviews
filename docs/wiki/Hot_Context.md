@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 tags:
   - hot-context
@@ -112,13 +112,13 @@ source_files:
 
 ## Recent Important Changes
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
-- 2026-06-20: Review Video provider cutover is staged locally for Mux. Active code uses Mux direct uploads, UpChunk, `resolve_video_asset` / `reconcile_video`, Mux webhook dedup/audit, admin signed playback, and public playback IDs after approval. No deploy, migration apply, env write, Mux write, or external teardown is implied. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
+- 2026-06-21: Review Video provider cutover is live on Mux, and the approved contract migration `20260621003000_review_video_mux_contract_drop_legacy_columns` is staged to remove old Cloudflare Stream/R2 `VideoUploadSession` columns after read-only evidence showed no active video rows/jobs and no data in those legacy columns. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
 - 2026-06-20: Mux upload performance hardening measures browser-to-Mux transfer separately from processing/webhooks via sanitized `VideoUploadPerformanceSample` rows and keeps same-session retry progress monotonic.
 - 2026-06-20: The older `6 reviews / 39 sessions` purge manifest is historical only; latest DB evidence before implementation showed zero video surfaces. Preview and production Mux environments are separate, and webhook resource/secret creation waits for a deployed `/api/webhooks/mux` URL.
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes.
-- Mux migration gates still pending outside local code: DB migration apply, Preview deploy, Preview webhook creation/env write, Preview canary, production credential proof, and final external credential/resource teardown.
+- Mux cleanup gates still pending: apply/verify the contract migration, remove old Vercel Cloudflare Stream/R2 video env vars, and only later consider external Cloudflare Stream/R2 credential/resource teardown after inventory proof. Cloudflare DNS/zone and future Worker delivery infrastructure are out of this cleanup scope.
 - Theme adapters still depend on Admin API `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme admin warning UI, authenticated ikas dashboard smoke, Sentry post-deploy health.
 

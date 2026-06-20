@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-20
+updated: 2026-06-21
 tags:
   - adr
   - decisions
@@ -49,7 +49,7 @@ related:
 | [[ADR_0028_Review_Cursor_Pagination]] | Public review list load-more uses cursor/keyset pagination while preserving legacy `page/limit` response compatibility. | Accepted |
 | [[ADR_0029_Review_Media_Metadata]] | `ReviewMedia` and `PendingReviewImage` carry verified Cloudinary image metadata for future media-heavy widgets while preserving the public `images` contract. | Accepted |
 | [[ADR_0030_Cleanup_Hardening]] | `cleanup-images` orphan deletion is hardened with a circuit-breaker (G1 empty-used-set / G2 30% ratio / G3 200 absolute), two-phase quarantine (mark now, sweep after a grace window), a `MediaCleanupRun` audit log, and `source:cron` Sentry error alerts (failures + breaker trips). `?force=1` overrides G2/G3 but never G1. | Accepted |
-| [[ADR_0032_Review_Video_On_Mux]] | Review video provider is **Mux** while retaining the provider-agnostic model and durable lifecycle. Active path uses Mux direct upload (UpChunk), Mux webhook dedup/audit, provider-neutral media jobs, signed admin playback, and public playback IDs after approval. Current DB evidence invalidates the old purge manifest; webhook and production activation are gated by Preview deploy/canary and separate Mux environments. | Accepted |
+| [[ADR_0032_Review_Video_On_Mux]] | Review video provider is **Mux** while retaining the provider-agnostic model and durable lifecycle. Active path uses Mux direct upload (UpChunk), Mux webhook dedup/audit, provider-neutral media jobs, signed admin playback, and public playback IDs after approval. Production Mux canary evidence allowed the contract migration to enter the active deploy path; external Cloudflare Stream/R2 teardown remains separately gated. | Accepted |
 
 ## Superseded / Deprecated
 
@@ -70,6 +70,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-06-21: Updated [[ADR_0032_Review_Video_On_Mux]] after Mux production canary closeout. The contract migration is now staged as `20260621003000_review_video_mux_contract_drop_legacy_columns`; Vercel cleanup is limited to old Cloudflare Stream/R2 video env vars, and external resource teardown remains separate.
 - 2026-06-20: Revised [[ADR_0032_Review_Video_On_Mux]] after current evidence invalidated the older purge manifest. Mux migration is documented as Preview-first: additive provider columns + `WebhookEvent`, backend cutover, Mux direct uploads, provider-neutral media jobs, webhook dedup/audit only, admin signed playback, public playback IDs after approval, and a staged contract migration. No production deploy/migration/env/provider writes are implied by the local implementation.
 - 2026-06-17: Added [[ADR_0032_Review_Video_On_Mux]] and superseded [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]]. The provider-agnostic `ReviewMedia` model + durable media lifecycle (outbox/lease/reconcile/quota/`visible`+`Review.status` gate) are retained unchanged. Mux specifics: direct upload with UpChunk, signed/public playback IDs, webhook dedup/audit in `WebhookEvent`, retry work in `MediaProviderJob`, and per-operation create retry policy (`uploads.create`/`createPlaybackId` `maxRetries:0`).
 - 2026-06-12: Added [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] as the first provider-agnostic video foundation. It is now superseded by [[ADR_0032_Review_Video_On_Mux]] for all provider details.

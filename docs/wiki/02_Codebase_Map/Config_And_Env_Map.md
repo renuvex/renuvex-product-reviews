@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-20
+updated: 2026-06-21
 tags:
   - config
   - env
@@ -130,6 +130,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 - `NEXT_PUBLIC_*` are exposed to the browser bundle. Don't put secrets there. (DSN is intentionally public-ish — it identifies a Sentry project, no auth.)
 
 - `VIDEO_UPLOAD_CHUNK_SIZE_KB` and `VIDEO_UPLOAD_CHUNK_ATTEMPTS` tune browser-to-Mux direct uploads only. They do not change Mux processing speed, webhook delivery, or provider lifecycle jobs.
+- Legacy Cloudflare Stream/R2 video env vars (`CLOUDFLARE_STREAM_*`, `CLOUDFLARE_R2_*`, `CLOUDFLARE_ACCOUNT_ID`) are not part of the current Review Video contract. If found in Vercel after Mux cutover proof, remove only those video-provider env vars; do not treat Cloudflare DNS/zone or future Worker delivery infrastructure as teardown scope.
 
 ## Related Source Files
 - [.env.example](.env.example)
