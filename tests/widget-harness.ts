@@ -288,6 +288,13 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
         : { data: { enabled, reason: enabled ? null : configured?.reason || 'merchant_disabled' } }),
     });
   });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/metrics**`, async (route) => {
+    await route.fulfill({
+      status: 202,
+      headers: jsonHeaders(),
+      body: JSON.stringify({ data: { status: 'recorded' } }),
+    });
+  });
   await page.route(`${WIDGET_ORIGIN}/api/public/ratings**`, async (route) => {
     await route.fulfill({
       status: 200,

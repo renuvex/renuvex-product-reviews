@@ -5,14 +5,12 @@ import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { getClientIp, checkFixedWindowRateLimit } from '@/lib/public-rate-limit';
 import { getVideoFeatureAccess, verifyVideoReviewTarget } from '@/lib/media/access';
-import { getMuxApiConfig, getMuxVideoQuality, getQStashMediaConfig, MediaConfigError } from '@/lib/media/config';
+import { getMuxApiConfig, getMuxVideoQuality, getQStashMediaConfig, getVideoUploadClientConfig, MediaConfigError } from '@/lib/media/config';
 import { createMuxDirectUpload } from '@/lib/media/providers/mux';
 import { dispatchMediaProviderJob, failSessionAndQueueCleanup } from '@/lib/media/jobs';
 import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 import { createReservedVideoSession, VideoQuotaError } from '@/lib/media/sessions';
 import { validateVideoUploadInput } from '@/lib/media/video-policy';
-
-const MUX_UPLOAD_CHUNK_SIZE_KB = 30_720;
 
 function muxCorsOrigin(request: Request): string {
   const origin = request.headers.get('origin')?.trim();
@@ -68,6 +66,7 @@ export async function POST(request: Request) {
     // Fail closed before reserving quota when provider/job configuration is incomplete.
     getMuxApiConfig();
     const videoQuality = getMuxVideoQuality();
+    const uploadClient = getVideoUploadClientConfig();
     getQStashMediaConfig();
 
     const { session, token, expiryJob } = await createReservedVideoSession({
@@ -98,7 +97,8 @@ export async function POST(request: Request) {
       data: {
         token,
         uploadUrl: muxUpload.url,
-        chunkSize: MUX_UPLOAD_CHUNK_SIZE_KB,
+        chunkSize: uploadClient.chunkSizeKb,
+        chunkAttempts: uploadClient.chunkAttempts,
         expiresAt: session.expiresAt.toISOString(),
       },
     }, { status: 201 }), request);

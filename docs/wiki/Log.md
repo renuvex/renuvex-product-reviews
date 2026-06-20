@@ -21,6 +21,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-20 - performance | Harden Mux upload measurement and retry UX
+- Replaced the fixed 30 MB UpChunk setting with server-configured defaults (`8192` KB chunks, `5` attempts) and returned `chunkAttempts` from video initiate.
+- Added sanitized `VideoUploadPerformanceSample` metrics via `/api/public/upload/video/metrics` so direct-upload, complete, and processing-poll durations can be separated from Mux webhook/job lifecycle evidence.
+- Widget retry now distinguishes same-session retry from expired/missing-session restart and keeps progress monotonic within the same session.
+
 ## 2026-06-20 - migration | Make review video Mux-only locally
 - Review Video local source now targets Mux direct upload, Mux webhook audit/dedupe, provider-neutral media jobs, admin signed playback, and public playback IDs after approval.
 - Previous video-provider adapters, app-signed upload-parts route, S3 SDK dependencies, and retained provider-specific widget runtime chunks were removed from the local repo state.

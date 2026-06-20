@@ -411,7 +411,8 @@ test('video wizard completes Mux direct upload and submits only the ready video 
       data: {
         token: videoToken,
         uploadUrl: 'https://mux-upload.test/review-video',
-        chunkSize: 30_720,
+        chunkSize: 8192,
+        chunkAttempts: 5,
         expiresAt: '2099-01-01T00:00:00.000Z',
       },
     });

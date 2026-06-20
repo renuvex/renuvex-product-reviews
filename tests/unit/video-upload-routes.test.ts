@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prismaMock = vi.hoisted(() => ({
   videoUploadSession: { update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn() },
+  videoUploadPerformanceSample: { upsert: vi.fn() },
   $transaction: vi.fn(),
 }));
 const accessMock = vi.hoisted(() => ({ getVideoFeatureAccess: vi.fn(), verifyVideoReviewTarget: vi.fn() }));
@@ -111,6 +112,7 @@ beforeEach(() => {
   jobsMock.failSessionAndQueueCleanup.mockResolvedValue({ id: 'cleanup-job' });
   prismaMock.videoUploadSession.update.mockResolvedValue({});
   prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 1 });
+  prismaMock.videoUploadPerformanceSample.upsert.mockResolvedValue({});
   prismaMock.$transaction.mockImplementation(async (callback) => callback({ videoUploadSession: prismaMock.videoUploadSession }));
 });
 
@@ -270,7 +272,8 @@ describe('video upload initiate', () => {
     expect(body.data).toEqual(expect.objectContaining({
       token: 'opaque-token'.padEnd(43, 'x'),
       uploadUrl: 'https://storage.googleapis.com/video-upload',
-      chunkSize: 30_720,
+      chunkSize: 8192,
+      chunkAttempts: 5,
     }));
     expect(body.data).not.toHaveProperty('providerUploadId');
     expect(body.data).not.toHaveProperty('providerAssetId');
@@ -402,6 +405,93 @@ describe('video upload complete and status', () => {
     expect(body.data).not.toHaveProperty('providerAssetId');
     expect(body.data).not.toHaveProperty('signedPlaybackId');
     expect(body.data).not.toHaveProperty('playbackUrl');
+  });
+});
+
+describe('video upload metrics', () => {
+  it('rate limits metrics before token lookup', async () => {
+    rateLimitMock.mockResolvedValue({ allowed: false, retryAfterSec: 120 });
+    const { POST } = await import('@/app/api/public/upload/video/metrics/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/metrics', {
+      method: 'POST',
+      body: JSON.stringify({ token: 'opaque-token' }),
+    }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('120');
+    expect(sessionMock.getVideoSessionByToken).not.toHaveBeenCalled();
+    expect(prismaMock.videoUploadPerformanceSample.upsert).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 for an invalid metrics token without writing a sample', async () => {
+    sessionMock.getVideoSessionByToken.mockResolvedValue(null);
+    const { POST } = await import('@/app/api/public/upload/video/metrics/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/metrics', {
+      method: 'POST',
+      body: JSON.stringify({ token: 'missing-token' }),
+    }));
+
+    expect(response.status).toBe(404);
+    expect(prismaMock.videoUploadPerformanceSample.upsert).not.toHaveBeenCalled();
+  });
+
+  it('stores one sanitized metrics row per valid upload session', async () => {
+    const current = session({ bytes: 98_765_432 });
+    sessionMock.getVideoSessionByToken.mockResolvedValue(current);
+    const { POST } = await import('@/app/api/public/upload/video/metrics/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/metrics', {
+      method: 'POST',
+      body: JSON.stringify({
+        token: 'opaque-token',
+        chunkSizeKb: 8192,
+        chunkAttempts: 5,
+        retryClicks: 1,
+        upchunkErrors: 2,
+        firstErrorCode: 'http_503',
+        directUploadMs: 123_456,
+        completeMs: 321,
+        processingPollMs: 16_000,
+        totalClientMs: 180_000,
+        finalStatus: 'ready',
+        uploadUrl: 'https://mux-upload.test/secret',
+      }),
+    }));
+
+    expect(response.status).toBe(202);
+    expect(prismaMock.videoUploadPerformanceSample.upsert).toHaveBeenCalledWith({
+      where: { uploadSessionId: current.id },
+      create: {
+        uploadSessionId: current.id,
+        storeId: current.storeId,
+        productId: current.productId,
+        provider: 'mux',
+        fileBytes: current.bytes,
+        chunkSizeKb: 8192,
+        chunkAttempts: 5,
+        retryClicks: 1,
+        upchunkErrors: 2,
+        firstErrorCode: 'http_503',
+        directUploadMs: 123_456,
+        completeMs: 321,
+        processingPollMs: 16_000,
+        totalClientMs: 180_000,
+        finalStatus: 'ready',
+      },
+      update: {
+        chunkSizeKb: 8192,
+        chunkAttempts: 5,
+        retryClicks: 1,
+        upchunkErrors: 2,
+        firstErrorCode: 'http_503',
+        directUploadMs: 123_456,
+        completeMs: 321,
+        processingPollMs: 16_000,
+        totalClientMs: 180_000,
+        finalStatus: 'ready',
+      },
+    });
+    expect(JSON.stringify(prismaMock.videoUploadPerformanceSample.upsert.mock.calls[0][0])).not.toContain('mux-upload.test');
+    expect(JSON.stringify(prismaMock.videoUploadPerformanceSample.upsert.mock.calls[0][0])).not.toContain('opaque-token');
   });
 });
 

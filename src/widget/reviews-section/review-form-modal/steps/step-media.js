@@ -14,6 +14,8 @@ import { createStepPhotos } from './step-photos.js';
 function videoStatusText(video) {
   if (!video) return '';
   if (video.error) return video.error;
+  if (video.status === 'upload_retrying') return 'Bağlantı yeniden deneniyor...';
+  if (video.status === 'uploading_offline') return 'Bağlantı bekleniyor...';
   if (video.status === 'processing') return 'Video işleniyor...';
   if (video.status === 'processing_slow') return 'Video hazırlanıyor. Bu işlem biraz sürebilir.';
   if (video.status === 'ready') return 'Video hazır';
@@ -160,7 +162,9 @@ export function createStepMedia(state, opts) {
     videoView.status.setAttribute('role', video.error ? 'alert' : 'status');
     videoView.status.textContent = videoStatusText(video);
 
-    var isUploading = video.status === 'uploading';
+    var isUploading = video.status === 'uploading' ||
+      video.status === 'upload_retrying' ||
+      video.status === 'uploading_offline';
     videoView.progress.hidden = !isUploading;
     videoView.progress.value = video.progress || 0;
 
@@ -194,6 +198,10 @@ export function createStepMedia(state, opts) {
   }
 
   async function startUpload(file, existingLocalUrl, knownDurationMs) {
+    var previousVideo = currentVideo();
+    var isRetry = !!(existingLocalUrl && previousVideo && previousVideo.file === file);
+    var initialProgress = isRetry ? Math.max(0, Math.min(95, Number(previousVideo.progress) || 0)) : 0;
+    var retryClicks = isRetry ? (Number(previousVideo.retryClicks) || 0) + 1 : 0;
     var validation = validateVideoFile(file);
     if (!validation.ok) {
       if (opts.showToast) opts.showToast(validation.message, 'error');
@@ -213,14 +221,15 @@ export function createStepMedia(state, opts) {
       videoUpload: {
         file: file,
         localUrl: localUrl,
-        token: null,
+        token: isRetry ? previousVideo.token || null : null,
         status: 'uploading',
-        progress: 0,
+        progress: initialProgress,
         durationMs: duration === null ? null : Math.round(duration * 1000),
         error: null,
         errorCode: null,
         retryable: true,
         retryAfterSec: null,
+        retryClicks: retryClicks,
         controller: controller,
       },
     });
@@ -229,9 +238,12 @@ export function createStepMedia(state, opts) {
         file: file,
         productId: state.get().productId,
         signal: controller.signal,
+        minProgress: initialProgress,
+        retryClicks: retryClicks,
         onToken: function (token) { updateVideoState({ token: token }); },
         onProgress: function (progress) { updateVideoState({ progress: progress }); },
         onStatus: function (status) { updateVideoState({ status: status }); },
+        onSessionReset: function () { updateVideoState({ token: null, progress: 0 }); },
       });
       if (result.previewOnly && result.posterUrl && result.posterUrl !== localUrl) {
         try { URL.revokeObjectURL(result.posterUrl); } catch (_) {}

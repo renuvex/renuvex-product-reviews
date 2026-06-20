@@ -196,30 +196,31 @@ model PendingReviewImage {
 // ADR_0032 (Mux migration): video uploads use Mux direct uploads and Mux asset
 // identifiers. Provider is still written explicitly by the app; no DB default.
 model VideoUploadSession {
-  id               String    @id @default(uuid())
-  tokenHash        String    @unique @db.VarChar(64)
-  storeId          String
-  productId        String
-  status           String    @default("initiated") @db.VarChar(32)
-  mimeType         String    @db.VarChar(128)
-  bytes            Int
-  fileFingerprint  String?   @db.VarChar(128)
-  provider         String?   @db.VarChar(64)
-  providerUploadId String?   @db.VarChar(256)
-  providerAssetId  String?   @db.VarChar(256)
-  signedPlaybackId String?   @db.VarChar(256)
-  publicPlaybackId String?   @db.VarChar(256)
-  publicId         String?   @unique @db.VarChar(512)
-  playbackUrl      String?   @db.VarChar(2048)
-  posterUrl        String?   @db.VarChar(2048)
-  durationMs       Int?
-  quotaState       String    @default("reserved") @db.VarChar(32)
-  reservedMonth    DateTime  @db.Date
-  expiresAt        DateTime
-  consumedAt       DateTime?
-  errorCode        String?   @db.VarChar(128)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                String                        @id @default(uuid())
+  tokenHash         String                        @unique @db.VarChar(64)
+  storeId           String
+  productId         String
+  status            String                        @default("initiated") @db.VarChar(32)
+  mimeType          String                        @db.VarChar(128)
+  bytes             Int
+  fileFingerprint   String?                       @db.VarChar(128)
+  provider          String?                       @db.VarChar(64)
+  providerUploadId  String?                       @db.VarChar(256)
+  providerAssetId   String?                       @db.VarChar(256)
+  signedPlaybackId  String?                       @db.VarChar(256)
+  publicPlaybackId  String?                       @db.VarChar(256)
+  publicId          String?                       @unique @db.VarChar(512)
+  playbackUrl       String?                       @db.VarChar(2048)
+  posterUrl         String?                       @db.VarChar(2048)
+  durationMs        Int?
+  quotaState        String                        @default("reserved") @db.VarChar(32)
+  reservedMonth     DateTime                      @db.Date
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  errorCode         String?                       @db.VarChar(128)
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  performanceSample VideoUploadPerformanceSample?
 
   @@unique([provider, providerUploadId])
   @@unique([provider, providerAssetId])
@@ -308,6 +309,35 @@ model WebhookEvent {
 
   @@unique([provider, providerEventId])
   @@index([status, receivedAt])
+}
+
+// Non-sensitive client-side upload timing for Mux performance diagnosis.
+// Stores one sanitized sample per video session; never stores tokens, upload
+// URLs, signed playback URLs, raw user-agent, IP, or file names.
+model VideoUploadPerformanceSample {
+  id               String             @id @default(uuid())
+  uploadSessionId  String             @unique
+  storeId          String
+  productId        String
+  provider         String             @db.VarChar(64)
+  fileBytes        Int
+  chunkSizeKb      Int
+  chunkAttempts    Int
+  retryClicks      Int                @default(0)
+  upchunkErrors    Int                @default(0)
+  firstErrorCode   String?            @db.VarChar(128)
+  directUploadMs   Int?
+  completeMs       Int?
+  processingPollMs Int?
+  totalClientMs    Int?
+  finalStatus      String             @db.VarChar(32)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  uploadSession    VideoUploadSession @relation(fields: [uploadSessionId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, productId, createdAt])
+  @@index([provider, finalStatus, createdAt])
+  @@index([createdAt])
 }
 
 // --- Cleanup hardening (ADR_0030) -------------------------------------------

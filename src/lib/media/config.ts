@@ -1,5 +1,13 @@
 type Env = Record<string, string | undefined>;
 
+const DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB = 8192;
+const MIN_VIDEO_UPLOAD_CHUNK_SIZE_KB = 5120;
+const MAX_VIDEO_UPLOAD_CHUNK_SIZE_KB = 30_720;
+const VIDEO_UPLOAD_CHUNK_SIZE_STEP_KB = 256;
+const DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS = 5;
+const MIN_VIDEO_UPLOAD_CHUNK_ATTEMPTS = 3;
+const MAX_VIDEO_UPLOAD_CHUNK_ATTEMPTS = 8;
+
 export class MediaConfigError extends Error {
   constructor(public readonly code: string, message: string) {
     super(message);
@@ -52,6 +60,36 @@ export function getMuxVideoQuality(env: Env = process.env): 'basic' | 'plus' {
     throw new MediaConfigError('invalid_config', 'MUX_VIDEO_QUALITY must be basic or plus');
   }
   return value;
+}
+
+function parsePositiveInteger(value: string | undefined): number | null {
+  if (!value?.trim()) return null;
+  const parsed = Number(value.trim());
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function clampInteger(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function normalizeChunkSizeKb(value: number): number {
+  const clamped = clampInteger(value, MIN_VIDEO_UPLOAD_CHUNK_SIZE_KB, MAX_VIDEO_UPLOAD_CHUNK_SIZE_KB);
+  const normalized = Math.floor(clamped / VIDEO_UPLOAD_CHUNK_SIZE_STEP_KB) * VIDEO_UPLOAD_CHUNK_SIZE_STEP_KB;
+  return clampInteger(normalized, MIN_VIDEO_UPLOAD_CHUNK_SIZE_KB, MAX_VIDEO_UPLOAD_CHUNK_SIZE_KB);
+}
+
+export function getVideoUploadClientConfig(env: Env = process.env) {
+  const rawChunkSize = parsePositiveInteger(env.VIDEO_UPLOAD_CHUNK_SIZE_KB);
+  const rawAttempts = parsePositiveInteger(env.VIDEO_UPLOAD_CHUNK_ATTEMPTS);
+  return {
+    chunkSizeKb: normalizeChunkSizeKb(rawChunkSize ?? DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB),
+    chunkAttempts: clampInteger(
+      rawAttempts ?? DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS,
+      MIN_VIDEO_UPLOAD_CHUNK_ATTEMPTS,
+      MAX_VIDEO_UPLOAD_CHUNK_ATTEMPTS,
+    ),
+  };
 }
 
 export function getQStashMediaConfig(env: Env = process.env) {

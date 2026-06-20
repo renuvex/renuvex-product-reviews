@@ -26,6 +26,7 @@ source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260617090000_review_video_mux_additive/migration.sql"
   - "prisma/migrations/20260617100000_review_video_mux_backend_cutover/migration.sql"
+  - "prisma/migrations/20260620190000_add_video_upload_performance_sample/migration.sql"
   - "src/lib/media/config.ts"
   - "src/lib/media/sessions.ts"
   - "src/lib/media/jobs.ts"
@@ -38,6 +39,7 @@ source_files:
   - "src/app/api/public/upload/video/initiate/route.ts"
   - "src/app/api/public/upload/video/complete/route.ts"
   - "src/app/api/public/upload/video/status/route.ts"
+  - "src/app/api/public/upload/video/metrics/route.ts"
   - "src/app/api/webhooks/mux/route.ts"
   - "src/app/api/admin/reviews/video-playback/route.ts"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
@@ -70,6 +72,7 @@ This ADR describes the target architecture and the local code/migration state. I
 6. **Webhook audit is not a retry engine.** `WebhookEvent` stores normalized ids, timestamps, status, and `payloadDigest`; it never stores payloads, tokens, signed URLs, or upload URLs. Actual work/retry remains in `MediaProviderJob`.
 7. **Retry policy is per operation.** Mux reads/deletes may retry through the SDK. `uploads.create` and `assets.createPlaybackId` use `maxRetries:0` because Mux has no idempotency key for those creates. Duplicate public playback IDs are reconciled by list/keep/delete convergence.
 8. **Quality policy is explicit.** Product config currently permits `basic|plus`. Mux also supports `premium`; excluding it is a deliberate product policy until changed by ADR/test updates.
+9. **Upload performance evidence is separate from provider lifecycle.** Browser-to-Mux direct upload timing is measured with sanitized `VideoUploadPerformanceSample` rows. `WebhookEvent`, `MediaProviderJob`, and `VideoUploadSession` remain the lifecycle source of truth; performance samples do not store tokens, upload URLs, signed URLs, playback IDs, raw user-agent, IP, or file names.
 
 ## Migration Plan
 The migration remains expand/contract:

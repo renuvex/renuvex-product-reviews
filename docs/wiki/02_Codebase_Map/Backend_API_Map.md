@@ -33,6 +33,7 @@ source_files:
   - "src/lib/media/jobs.ts"
   - "src/lib/media/reconciliation.ts"
   - "src/app/api/public/upload/video/capability/route.ts"
+  - "src/app/api/public/upload/video/metrics/route.ts"
   - "src/lib/media/config.ts"
   - "src/lib/media/constants.ts"
   - "src/lib/media/jobs.ts"
@@ -96,9 +97,10 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | POST `/api/public/upload/sign` body `{ storeId }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload scoped to `review_images/stores/<storeId>` after StoreSettings verification |
 | POST `/api/public/upload/register` body `{ storeId, secureUrl, metadata? }` | [route.ts](src/app/api/public/upload/register/route.ts) | Register a completed tenant-scoped Cloudinary upload in `PendingReviewImage` for cleanup. Optional signed Cloudinary upload-response metadata is verified server-side before dimensions/format/bytes are staged for `ReviewMedia`. |
 | GET `/api/public/upload/video/capability?storeId=` | [route.ts](src/app/api/public/upload/video/capability/route.ts) | Fresh `no-store` video capability check with a 60/min/IP fixed-window limit. Returns only `{ enabled, reason }`; quota counts and provider configuration remain server-private. |
-| POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated Mux direct upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, Mux upload URL, and suggested chunk size without exposing provider ids or credentials. |
+| POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated Mux direct upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, Mux upload URL, suggested chunk size, and chunk attempts without exposing provider ids or credentials. |
 | POST `/api/public/upload/video/complete` | [route.ts](src/app/api/public/upload/video/complete/route.ts) | Mark direct upload complete, enqueue `resolve_video_asset`, and move session toward processing without trusting client-side provider ids. |
 | GET `/api/public/upload/video/status?token=` | [route.ts](src/app/api/public/upload/video/status/route.ts) | Poll session processing/ready/failed state without exposing provider admin APIs. |
+| POST `/api/public/upload/video/metrics` | [route.ts](src/app/api/public/upload/video/metrics/route.ts) | Record sanitized client upload timing for an existing session. The token is used only for lookup; stored samples exclude tokens, upload URLs, signed URLs, playback IDs, raw user-agent, IP, and file names. |
 | DELETE `/api/public/upload/video` | [route.ts](src/app/api/public/upload/video/route.ts) | Atomically mark the session aborted and create its provider-aware cleanup outbox job. Provider calls are worker-owned; the public route does not call Mux directly. |
 
 ### Caching
@@ -111,6 +113,7 @@ Storefront configuration and review GET responses use the documented edge-cache 
 - `/api/public/upload/video/capability` GET -> 60 / 60sec / IP
 - `/api/public/upload/register` POST -> 30 / 10min / IP
 - `/api/public/upload/video/initiate` POST -> 10 / 10min / IP, plus store-level monthly quota reservation.
+- `/api/public/upload/video/metrics` POST -> 60 / 10min / IP
 Detail in [[Security_And_Rate_Limits]].
 
 ## Internal async media jobs
@@ -190,6 +193,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-06-20: Added `/api/public/upload/video/metrics` and returned `chunkAttempts` from video initiate so Mux direct-upload transfer/retry timing can be measured separately from processing/webhook lifecycle.
 - 2026-06-15: Added the uncached public video capability endpoint, quota-aware access reasons, structured initiate errors, and read-only admin video usage metadata. Cached public settings remain unchanged; atomic initiate reservation is still authoritative.
 - 2026-06-20: Moved Review Video to Mux direct upload, Mux webhook audit/dedupe, provider-neutral media jobs, admin signed playback, and public playback IDs after approval. Removed the previous upload-parts route and previous video-provider adapters from active source. See [[ADR_0032_Review_Video_On_Mux]].
 - 2026-06-14: Hardened Review Video provider boundaries. Public video routes return stable error codes for malformed JSON, QStash signature failures return `401` instead of generic `500`, signed malformed payloads return `400`, and readiness remains DB-owned.

@@ -4,6 +4,7 @@ import {
   getMuxApiConfig,
   getMuxWebhookConfig,
   getMuxVideoQuality,
+  getVideoUploadClientConfig,
   isVideoReviewsGloballyEnabled,
   MediaConfigError,
 } from '@/lib/media/config';
@@ -55,5 +56,50 @@ describe('media configuration', () => {
     });
     expect(() => getMuxWebhookConfig(apiEnv)).toThrow(MediaConfigError);
     expect(getMuxWebhookConfig({ MUX_WEBHOOK_SECRET: 'webhook-secret' })).toEqual({ webhookSecret: 'webhook-secret' });
+  });
+
+  it('uses the conservative default upload chunk and retry settings', () => {
+    expect(getVideoUploadClientConfig({})).toEqual({
+      chunkSizeKb: 8192,
+      chunkAttempts: 5,
+    });
+  });
+
+  it('falls back to defaults for invalid environment values', () => {
+    expect(getVideoUploadClientConfig({
+      VIDEO_UPLOAD_CHUNK_SIZE_KB: 'not-a-number',
+      VIDEO_UPLOAD_CHUNK_ATTEMPTS: '0',
+    })).toEqual({
+      chunkSizeKb: 8192,
+      chunkAttempts: 5,
+    });
+  });
+
+  it('clamps upload config to supported bounds', () => {
+    expect(getVideoUploadClientConfig({
+      VIDEO_UPLOAD_CHUNK_SIZE_KB: '999999',
+      VIDEO_UPLOAD_CHUNK_ATTEMPTS: '99',
+    })).toEqual({
+      chunkSizeKb: 30_720,
+      chunkAttempts: 8,
+    });
+
+    expect(getVideoUploadClientConfig({
+      VIDEO_UPLOAD_CHUNK_SIZE_KB: '1024',
+      VIDEO_UPLOAD_CHUNK_ATTEMPTS: '1',
+    })).toEqual({
+      chunkSizeKb: 5120,
+      chunkAttempts: 3,
+    });
+  });
+
+  it('normalizes chunk size to a 256 KB multiple', () => {
+    expect(getVideoUploadClientConfig({
+      VIDEO_UPLOAD_CHUNK_SIZE_KB: '8300',
+      VIDEO_UPLOAD_CHUNK_ATTEMPTS: '6',
+    })).toEqual({
+      chunkSizeKb: 8192,
+      chunkAttempts: 6,
+    });
   });
 });

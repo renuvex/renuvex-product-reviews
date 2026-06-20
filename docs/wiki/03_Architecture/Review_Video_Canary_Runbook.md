@@ -29,6 +29,7 @@ source_files:
   - "src/lib/media/providers/mux.ts"
   - "src/app/api/public/upload/video/initiate/route.ts"
   - "src/app/api/public/upload/video/complete/route.ts"
+  - "src/app/api/public/upload/video/metrics/route.ts"
   - "src/app/api/webhooks/mux/route.ts"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "tests/unit/media-jobs.test.ts"
@@ -64,6 +65,8 @@ AND QStash and MEDIA_JOB_BASE_URL are valid
 `MUX_WEBHOOK_SECRET` is deliberately excluded from the upload/API capability gate. It is required only by `/api/webhooks/mux`, which returns `503` until the Mux webhook endpoint exists and the matching environment secret is written.
 
 `MUX_VIDEO_QUALITY` is intentionally limited to `basic|plus`. Mux supports `premium`, but this product does not expose it until ADR/test updates say otherwise.
+
+`VIDEO_UPLOAD_CHUNK_SIZE_KB` and `VIDEO_UPLOAD_CHUNK_ATTEMPTS` tune the browser-to-Mux UpChunk transfer only. Defaults are `8192` KB and `5` attempts. They are not evidence of Mux processing speed; processing must be measured from webhook/job/session timestamps.
 
 ## Stop/Go
 Stop and get explicit approval before any migration apply, deploy, Vercel env mutation, Mux write, external resource delete/revoke, or destructive DB change. State scope, risk, rollback, and post-action verification.
@@ -114,6 +117,16 @@ Verify in order:
 11. Storefront uses tokenless public Mux URLs (`stream.mux.com`, `image.mux.com`) only after approval.
 12. Rejection/hide enqueues `protect_video` and removes public playback IDs.
 13. Delete/cancel/expiry cleanup is idempotent and deletes/cancels Mux upload/assets without refunding consumed quota for ready-but-unsubmitted sessions.
+
+## Upload Performance Evidence
+For physical canary uploads, compare these surfaces before making product or provider conclusions:
+- `VideoUploadPerformanceSample.directUploadMs`: browser-to-Mux transfer time, including UpChunk retries.
+- `VideoUploadPerformanceSample.completeMs`: public complete route latency.
+- `VideoUploadPerformanceSample.processingPollMs`: client-visible waiting after complete until session readiness.
+- `WebhookEvent.providerEventCreatedAt` and `receivedAt`: provider event timing and delivery delay.
+- `VideoUploadSession.createdAt`, `updatedAt`, `status`, and `errorCode`: DB lifecycle convergence.
+
+Acceptance for the first hardening pass: run at least three uploads with the same physical phone, internet, and video. The visible `% -> retry` error should not appear for transient PUT failures that fit inside `VIDEO_UPLOAD_CHUNK_ATTEMPTS`. If direct upload remains the dominant delay after this, continue with Mux dashboard/API/support timing evidence; do not tune processing or webhook code to hide a transfer-path bottleneck.
 
 ## Production Gate
 Production requires separate proof:

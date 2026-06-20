@@ -69,6 +69,8 @@ All variables in this section are environment-scoped. Preview deployments must u
 | `VIDEO_REVIEWS_ENABLED` | Global kill switch. Video upload is disabled unless this is exactly `true`, the merchant widget toggle is enabled, and `StoreSettings.videoMonthlyLimit > 0`. |
 | `MUX_TOKEN_ID` / `MUX_TOKEN_SECRET` | Server-only Mux API token for upload, asset, playback-id, cancel, and delete operations. |
 | `MUX_VIDEO_QUALITY` | Mux encoding quality. Product policy currently accepts `basic` or `plus`. |
+| `VIDEO_UPLOAD_CHUNK_SIZE_KB` | Optional Mux direct-upload client tuning. Defaults to `8192`; accepted values are clamped to `5120..30720` and normalized to a 256 KB multiple for UpChunk. |
+| `VIDEO_UPLOAD_CHUNK_ATTEMPTS` | Optional UpChunk retry tuning. Defaults to `5`; accepted values are clamped to `3..8`. |
 | `MUX_WEBHOOK_SECRET` | Server-only Mux webhook signing secret for `/api/webhooks/mux`; not required for upload/API initiation. Write it only after the deployed endpoint exists in the matching Mux environment. |
 | `MUX_SIGNING_KEY_ID` / `MUX_SIGNING_KEY_PRIVATE` | Server-only Mux signing key used for pending/admin signed playback and thumbnail tokens. |
 | `QSTASH_TOKEN` | Publishes durable media-provider jobs. |
@@ -126,6 +128,8 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 - `.env.sentry-build-plugin` and `.sentryclirc` are also gitignored. Hold Sentry CI secrets only.
 - Never log env values. Code uses `process.env.X || ''` defaults in JWT helpers — be aware of fail-open risk.
 - `NEXT_PUBLIC_*` are exposed to the browser bundle. Don't put secrets there. (DSN is intentionally public-ish — it identifies a Sentry project, no auth.)
+
+- `VIDEO_UPLOAD_CHUNK_SIZE_KB` and `VIDEO_UPLOAD_CHUNK_ATTEMPTS` tune browser-to-Mux direct uploads only. They do not change Mux processing speed, webhook delivery, or provider lifecycle jobs.
 
 ## Related Source Files
 - [.env.example](.env.example)

@@ -4,6 +4,8 @@ import { fetchWithTimeout } from '../../../core/fetch.js';
 var VIDEO_MAX_BYTES = 150 * 1024 * 1024;
 var VIDEO_MIN_DURATION_SECONDS = 2;
 var VIDEO_MAX_DURATION_SECONDS = 60;
+var DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB = 8192;
+var DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS = 5;
 var ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime'];
 var SESSION_STORAGE_PREFIX = 'renuvex_pr_video_upload_';
 var PENDING_CANCEL_STORAGE_PREFIX = 'renuvex_pr_video_cancel_';
@@ -55,6 +57,15 @@ export function shouldDiscardStoredVideoSession(error) {
 
 function sleep(ms) {
   return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+function nowMs() {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') return performance.now();
+  return Date.now();
+}
+
+function elapsedMs(start) {
+  return Math.max(0, Math.round(nowMs() - start));
 }
 
 function sleepWithSignal(ms, signal) {
@@ -154,6 +165,29 @@ async function jsonRequest(path, options, timeoutMs) {
   return payload.data || {};
 }
 
+async function submitUploadMetrics(token, metrics, finalStatus) {
+  if (!token || typeof window === 'undefined' || window.__ikasPreviewMode) return;
+  try {
+    await jsonRequest('/api/public/upload/video/metrics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: token,
+        chunkSizeKb: metrics.chunkSizeKb || 0,
+        chunkAttempts: metrics.chunkAttempts || 0,
+        retryClicks: metrics.retryClicks || 0,
+        upchunkErrors: metrics.upchunkErrors || 0,
+        firstErrorCode: metrics.firstErrorCode || null,
+        directUploadMs: metrics.directUploadMs,
+        completeMs: metrics.completeMs,
+        processingPollMs: metrics.processingPollMs,
+        totalClientMs: elapsedMs(metrics.startedAt),
+        finalStatus: finalStatus,
+      }),
+    }, 4000);
+  } catch (_) {}
+}
+
 async function sendPendingCancel(entry) {
   try {
     await jsonRequest('/api/public/upload/video', {
@@ -205,6 +239,14 @@ async function loadUpChunkCreateUpload() {
   throw new Error('video_upload_sdk_unavailable');
 }
 
+function upchunkErrorCode(detail) {
+  var response = detail && detail.response;
+  var statusCode = response && Number(response.statusCode);
+  if (Number.isFinite(statusCode) && statusCode > 0) return 'http_' + statusCode;
+  if (detail && typeof detail.message === 'string' && detail.message) return 'upchunk_error';
+  return 'upload_attempt_failed';
+}
+
 async function uploadToMuxDirectUrl(input) {
   var createUpload = await loadUpChunkCreateUpload();
   return new Promise(function (resolve, reject) {
@@ -229,19 +271,30 @@ async function uploadToMuxDirectUrl(input) {
       endpoint: input.uploadUrl,
       file: input.file,
       method: 'PUT',
-      chunkSize: input.chunkSize || 30720,
-      attempts: 3,
+      chunkSize: input.chunkSize || DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB,
+      attempts: input.chunkAttempts || DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS,
       dynamicChunkSize: true,
+    });
+    upload.on('attempt', function () { input.onStatus('uploading'); });
+    upload.on('attemptFailure', function (event) {
+      var detail = event && event.detail;
+      if (input.onAttemptFailure) input.onAttemptFailure(upchunkErrorCode(detail));
+      input.onStatus('upload_retrying');
     });
     upload.on('progress', function (event) {
       var progress = Number(event && event.detail);
-      if (Number.isFinite(progress)) input.onProgress(Math.min(95, Math.max(0, Math.round(progress * 0.95))));
+      if (Number.isFinite(progress)) {
+        var mapped = Math.min(95, Math.max(0, Math.round(progress * 0.95)));
+        if (Number.isFinite(input.minProgress)) mapped = Math.max(input.minProgress, mapped);
+        input.onProgress(mapped);
+      }
     });
     upload.on('offline', function () { input.onStatus('uploading_offline'); });
     upload.on('online', function () { input.onStatus('uploading'); });
     upload.on('error', function (event) {
       var detail = event && event.detail;
       var message = detail && typeof detail.message === 'string' ? detail.message : 'video_upload_failed';
+      if (input.onUploadError) input.onUploadError(upchunkErrorCode(detail));
       finish(new Error(message));
     });
     upload.on('success', function () {
@@ -362,6 +415,25 @@ export async function uploadReviewVideo(input) {
   if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
     return simulatePreviewUpload(input.file, input.signal, input.onProgress, input.onStatus);
   }
+  var metrics = {
+    startedAt: nowMs(),
+    chunkSizeKb: 0,
+    chunkAttempts: 0,
+    retryClicks: input.retryClicks || 0,
+    upchunkErrors: 0,
+    firstErrorCode: null,
+    directUploadMs: null,
+    completeMs: null,
+    processingPollMs: null,
+  };
+  function recordUploadError(code) {
+    metrics.upchunkErrors += 1;
+    if (!metrics.firstErrorCode) metrics.firstErrorCode = code || 'upload_attempt_failed';
+  }
+  function discardStoredSession() {
+    clearStoredSession(input.productId, input.file);
+    if (input.onSessionReset) input.onSessionReset();
+  }
   ensurePendingVideoCancelDelivery();
   await flushPendingVideoCancellations();
   var stored = readStoredSession(input.productId, input.file);
@@ -370,27 +442,32 @@ export async function uploadReviewVideo(input) {
   if (token) {
     var storedStatus = await readStoredUploadStatus(token);
     if (!storedStatus) {
-      clearStoredSession(input.productId, input.file);
+      discardStoredSession();
       token = null;
       session = null;
     } else if (storedStatus.status === 'ready') {
       if (input.onToken) input.onToken(token);
       input.onProgress(100);
+      clearStoredSession(input.productId, input.file);
+      await submitUploadMetrics(token, metrics, 'ready');
       return Object.assign({ token: token }, storedStatus);
     } else if (storedStatus.status === 'uploaded' || storedStatus.status === 'processing') {
       if (input.onToken) input.onToken(token);
       input.onStatus('processing');
+      var resumedPollStartedAt = nowMs();
       var resumedReady = await pollUntilReady(token, input.signal, input.onStatus);
+      metrics.processingPollMs = elapsedMs(resumedPollStartedAt);
       clearStoredSession(input.productId, input.file);
       input.onProgress(100);
+      await submitUploadMetrics(token, metrics, 'ready');
       return Object.assign({ token: token }, resumedReady);
     } else if (storedStatus.status === 'failed' || storedStatus.status === 'aborted') {
-      clearStoredSession(input.productId, input.file);
+      discardStoredSession();
       token = null;
       session = null;
     }
     if (token && (!session || typeof session.uploadUrl !== 'string' || !session.uploadUrl)) {
-      clearStoredSession(input.productId, input.file);
+      discardStoredSession();
       token = null;
       session = null;
     }
@@ -412,25 +489,47 @@ export async function uploadReviewVideo(input) {
     storeSession(input.productId, input.file, initiated);
   }
   if (input.onToken) input.onToken(token);
+  metrics.chunkSizeKb = session.chunkSize || DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB;
+  metrics.chunkAttempts = session.chunkAttempts || DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS;
   input.onStatus('uploading');
-  await uploadToMuxDirectUrl({
-    uploadUrl: session.uploadUrl,
-    file: input.file,
-    chunkSize: session.chunkSize,
-    signal: input.signal,
-    onProgress: input.onProgress,
-    onStatus: input.onStatus,
-  });
-  input.onStatus('processing');
-  await jsonRequest('/api/public/upload/video/complete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token }),
-  }, 30000);
-  var ready = await pollUntilReady(token, input.signal, input.onStatus);
-  clearStoredSession(input.productId, input.file);
-  input.onProgress(100);
-  return Object.assign({ token: token }, ready);
+  try {
+    var uploadStartedAt = nowMs();
+    await uploadToMuxDirectUrl({
+      uploadUrl: session.uploadUrl,
+      file: input.file,
+      chunkSize: session.chunkSize,
+      chunkAttempts: session.chunkAttempts,
+      minProgress: input.minProgress || 0,
+      signal: input.signal,
+      onProgress: input.onProgress,
+      onStatus: input.onStatus,
+      onAttemptFailure: recordUploadError,
+      onUploadError: recordUploadError,
+    });
+    metrics.directUploadMs = elapsedMs(uploadStartedAt);
+    input.onStatus('processing');
+    var completeStartedAt = nowMs();
+    await jsonRequest('/api/public/upload/video/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token }),
+    }, 30000);
+    metrics.completeMs = elapsedMs(completeStartedAt);
+    var pollStartedAt = nowMs();
+    var ready = await pollUntilReady(token, input.signal, input.onStatus);
+    metrics.processingPollMs = elapsedMs(pollStartedAt);
+    clearStoredSession(input.productId, input.file);
+    input.onProgress(100);
+    await submitUploadMetrics(token, metrics, 'ready');
+    return Object.assign({ token: token }, ready);
+  } catch (error) {
+    if (input.signal && input.signal.aborted) {
+      await submitUploadMetrics(token, metrics, 'aborted');
+      throw error;
+    }
+    await submitUploadMetrics(token, metrics, 'failed');
+    throw error;
+  }
 }
 
 export async function cancelReviewVideoUpload(token, productId, file) {

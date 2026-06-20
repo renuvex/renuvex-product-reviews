@@ -113,6 +113,7 @@ source_files:
 ## Recent Important Changes
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-20: Review Video provider cutover is staged locally for Mux. Active code uses Mux direct uploads, UpChunk, `resolve_video_asset` / `reconcile_video`, Mux webhook dedup/audit, admin signed playback, and public playback IDs after approval. No deploy, migration apply, env write, Mux write, or external teardown is implied. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
+- 2026-06-20: Mux upload performance hardening measures browser-to-Mux transfer separately from processing/webhooks via sanitized `VideoUploadPerformanceSample` rows and keeps same-session retry progress monotonic.
 - 2026-06-20: The older `6 reviews / 39 sessions` purge manifest is historical only; latest DB evidence before implementation showed zero video surfaces. Preview and production Mux environments are separate, and webhook resource/secret creation waits for a deployed `/api/webhooks/mux` URL.
 
 ## Current Risks / Open Questions

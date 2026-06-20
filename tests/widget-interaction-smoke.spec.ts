@@ -647,7 +647,8 @@ test('video upload wizard posts a ready video token without photo media', async 
         data: {
           token: videoToken,
           uploadUrl: 'https://mux-upload.test/review-video',
-          chunkSize: 30_720,
+          chunkSize: 8192,
+          chunkAttempts: 5,
           expiresAt: '2099-01-01T00:00:00.000Z',
         },
       }),
@@ -746,7 +747,90 @@ test('video upload wizard posts a ready video token without photo media', async 
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('video retry preserves the Mux direct upload session across a transient status failure', async ({ page }) => {
+test('video upload retries transient Mux PUT failures before showing shopper retry', async ({ page }) => {
+  await stubVideoMetadata(page, 12);
+  const videoToken = 'video-token-transient-abcdefghijklmnopqrstuvwxyz1234567890';
+  let initiateCalls = 0;
+  let muxPutCalls = 0;
+
+  await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      videoReviewsEnabled: true,
+    },
+  });
+
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+    initiateCalls += 1;
+    await route.fulfill({
+      status: 201,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          token: videoToken,
+          uploadUrl: 'https://mux-upload.test/transient-video',
+          chunkSize: 8192,
+          chunkAttempts: 5,
+          expiresAt: '2099-01-01T00:00:00.000Z',
+        },
+      }),
+    });
+  });
+  await page.route('https://mux-upload.test/transient-video**', async (route) => {
+    muxPutCalls += 1;
+    if (muxPutCalls <= 3) {
+      await route.fulfill({ status: 503, body: '' });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: '',
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ data: { status: 'processing' } }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          status: 'ready',
+          durationMs: 12000,
+          posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg',
+        },
+      }),
+    });
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+
+  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
+    name: 'transient-video.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
+  });
+
+  await expect.poll(() => muxPutCalls).toBe(4);
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
+  expect(initiateCalls).toBe(1);
+});
+
+test('video retry preserves the Mux direct upload session after chunk attempts are exhausted', async ({ page }) => {
   await stubVideoMetadata(page, 12);
   const videoToken = 'video-token-resume-abcdefghijklmnopqrstuvwxyz1234567890';
   let initiateCalls = 0;
@@ -771,7 +855,8 @@ test('video retry preserves the Mux direct upload session across a transient sta
         data: {
           token: videoToken,
           uploadUrl: 'https://mux-upload.test/resume-video',
-          chunkSize: 30_720,
+          chunkSize: 8192,
+          chunkAttempts: 5,
           expiresAt: '2099-01-01T00:00:00.000Z',
         },
       }),
@@ -779,7 +864,7 @@ test('video retry preserves the Mux direct upload session across a transient sta
   });
   await page.route('https://mux-upload.test/resume-video**', async (route) => {
     muxPutCalls += 1;
-    if (muxPutCalls <= 3) {
+    if (muxPutCalls <= 5) {
       await route.fulfill({ status: 503, body: '' });
       return;
     }
@@ -845,7 +930,7 @@ test('video retry preserves the Mux direct upload session across a transient sta
     '.renuvex-pr-fwizard-video-status',
   )).toContain('Video yükleniyor');
   await expect.poll(() => statusCalls).toBeGreaterThanOrEqual(3);
-  await expect.poll(() => muxPutCalls).toBe(4);
+  await expect.poll(() => muxPutCalls).toBe(6);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
 
   expect(initiateCalls).toBe(1);
@@ -875,7 +960,8 @@ test('video upload card remove cancels pending video selection', async ({ page }
         data: {
           token: videoToken,
           uploadUrl: 'https://mux-upload.test/remove-video',
-          chunkSize: 30_720,
+          chunkSize: 8192,
+          chunkAttempts: 5,
           expiresAt: '2099-01-01T00:00:00.000Z',
         },
       }),
@@ -974,7 +1060,8 @@ test('offline video removal persists cancellation and flushes it when connectivi
         data: {
           token: videoToken,
           uploadUrl: 'https://mux-upload.test/offline-cancel',
-          chunkSize: 30_720,
+          chunkSize: 8192,
+          chunkAttempts: 5,
           expiresAt: '2099-01-01T00:00:00.000Z',
         },
       }),
