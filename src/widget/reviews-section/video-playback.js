@@ -1,4 +1,4 @@
-import { streamPosterVariantUrl } from '../core/review-media.js';
+import { muxPosterVariantUrl } from '../core/review-media.js';
 
 export function shouldUseQualityWarmStart(navigatorRef) {
   var nav = navigatorRef || (typeof navigator !== 'undefined' ? navigator : null);
@@ -79,7 +79,7 @@ export function attachReviewVideoPlayback(video, media) {
   video.playsInline = true;
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
-  video.poster = streamPosterVariantUrl(media.posterUrl || '', { width: 1280, height: 720, fit: 'clip' }) || media.posterUrl || '';
+  video.poster = muxPosterVariantUrl(media.posterUrl || '', { width: 1280, height: 720, fit: 'preserve' }) || media.posterUrl || '';
 
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = media.url;

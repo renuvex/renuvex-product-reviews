@@ -4,6 +4,7 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { getConfiguredCloudinaryCloudName, parseStoredReviewImages } from '@/lib/review-images';
 import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
 import { dispatchMediaProviderJob } from '@/lib/media/jobs';
+import { VIDEO_PROVIDER } from '@/lib/media/constants';
 import {
   enqueueVideoReviewCleanup,
   getReviewForModerationUpdate,
@@ -99,8 +100,8 @@ export async function DELETE(request: Request) {
         if (!existing) throw new Error(REVIEW_NOT_FOUND);
 
         const videoMedia = await tx.reviewMedia.findMany({
-          where: { reviewId: id, resourceType: 'video', provider: 'cloudflare_stream' },
-          select: { id: true, providerAssetId: true, processingStatus: true, sourceAssetId: true },
+          where: { reviewId: id, resourceType: 'video', provider: VIDEO_PROVIDER },
+          select: { id: true, providerAssetId: true, processingStatus: true },
         }) ?? [];
         const cleanupJobs = await enqueueVideoReviewCleanup(tx, existing, videoMedia);
 
@@ -160,8 +161,8 @@ export async function PUT(request: Request) {
 
         const videoMedia = status !== undefined && existing.hasVideo
           ? (await tx.reviewMedia.findMany({
-              where: { reviewId: id, resourceType: 'video', provider: 'cloudflare_stream' },
-              select: { id: true, providerAssetId: true, processingStatus: true, sourceAssetId: true },
+              where: { reviewId: id, resourceType: 'video', provider: VIDEO_PROVIDER },
+              select: { id: true, providerAssetId: true, processingStatus: true },
             }) ?? [])
           : [];
         if (existing.hasVideo && status !== undefined && videoMedia.length === 0) {

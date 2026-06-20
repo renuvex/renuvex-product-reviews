@@ -13,12 +13,12 @@ const prismaMock = vi.hoisted(() => ({
 const jobsMock = vi.hoisted(() => ({
   dispatchMediaProviderJob: vi.fn(),
 }));
-const streamMock = vi.hoisted(() => ({ getStreamVideo: vi.fn() }));
-const processingMock = vi.hoisted(() => ({ applyStreamVideoState: vi.fn() }));
+const muxMock = vi.hoisted(() => ({ getMuxAsset: vi.fn() }));
+const processingMock = vi.hoisted(() => ({ applyMuxAssetState: vi.fn() }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/media/jobs', () => jobsMock);
-vi.mock('@/lib/media/providers/cloudflare-stream', () => streamMock);
+vi.mock('@/lib/media/providers/mux', () => muxMock);
 vi.mock('@/lib/media/video-processing', () => processingMock);
 
 describe('media reconciliation', () => {
@@ -54,7 +54,9 @@ describe('media reconciliation', () => {
       id: '11111111-1111-4111-8111-111111111111',
       storeId: 'store-1',
       status: 'processing',
-      streamUid: 'stream-1',
+      provider: 'mux',
+      providerUploadId: 'upload-1',
+      providerAssetId: 'asset-1',
       expiresAt,
       createdAt: new Date(),
     }]);
@@ -78,25 +80,26 @@ describe('media reconciliation', () => {
     const session = {
       id: '11111111-1111-4111-8111-111111111111',
       status: 'processing',
-      streamUid: 'stream-1',
+      provider: 'mux',
+      providerAssetId: 'asset-1',
     };
     const canonical = {
-      uid: 'stream-1',
-      readyToStream: true,
-      status: { state: 'ready', pctComplete: 87 },
+      id: 'asset-1',
+      status: 'ready',
+      playback_ids: [{ id: 'signed-1', policy: 'signed' }],
     };
     prismaMock.videoUploadSession.findMany.mockResolvedValue([session]);
-    streamMock.getStreamVideo.mockResolvedValue(canonical);
-    processingMock.applyStreamVideoState.mockResolvedValue({ ok: true, status: 'ready' });
+    muxMock.getMuxAsset.mockResolvedValue(canonical);
+    processingMock.applyMuxAssetState.mockResolvedValue({ ok: true, status: 'ready' });
     const { reconcileProcessingVideos } = await import('@/lib/media/reconciliation');
 
     const result = await reconcileProcessingVideos();
 
     expect(result).toEqual({ scanned: 1, ready: 1, processing: 0, failed: 0 });
-    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(
+    expect(processingMock.applyMuxAssetState).toHaveBeenCalledWith(
       session,
       canonical,
-      'stream_maintenance',
+      'mux_maintenance',
     );
   });
 });

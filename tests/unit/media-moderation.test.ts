@@ -49,9 +49,8 @@ describe('video moderation intent', () => {
 
     const result = await requestVideoApproval(tx as never, review(), [{
       id: 'media-1',
-      providerAssetId: 'stream-1',
+      providerAssetId: 'asset-1',
       processingStatus: 'ready',
-      sourceAssetId: 'master-1',
     }], undefined);
 
     expect(result.processing).toBe(true);
@@ -64,9 +63,9 @@ describe('video moderation intent', () => {
       data: { visible: false },
     });
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { dedupeKey: 'publish-stream:review-1:media-1:v3' },
+      where: { dedupeKey: 'publish-video:review-1:media-1:v3' },
       create: expect.objectContaining({
-        payload: expect.objectContaining({ moderationVersion: 3, streamUid: 'stream-1' }),
+        payload: expect.objectContaining({ moderationVersion: 3, providerAssetId: 'asset-1' }),
       }),
     }));
   });
@@ -75,9 +74,8 @@ describe('video moderation intent', () => {
     const tx = { review: { update: vi.fn() }, reviewMedia: { updateMany: vi.fn() }, mediaProviderJob: { upsert: vi.fn() } };
     await expect(requestVideoApproval(tx as never, review(), [{
       id: 'media-1',
-      providerAssetId: 'stream-1',
+      providerAssetId: 'asset-1',
       processingStatus: 'pending',
-      sourceAssetId: 'master-1',
     }], undefined)).rejects.toEqual(expect.objectContaining<Partial<VideoModerationError>>({ code: 'video_not_ready' }));
   });
 
@@ -92,13 +90,12 @@ describe('video moderation intent', () => {
 
     await requestVideoApproval(tx as never, review({ moderationVersion: 2 }), [{
       id: 'media-1',
-      providerAssetId: 'stream-1',
+      providerAssetId: 'asset-1',
       processingStatus: 'ready',
-      sourceAssetId: 'master-1',
     }], undefined);
 
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { dedupeKey: 'publish-stream:review-1:media-1:v4' },
+      where: { dedupeKey: 'publish-video:review-1:media-1:v4' },
       create: expect.objectContaining({ payload: expect.objectContaining({ moderationVersion: 4 }) }),
     }));
   });
@@ -114,9 +111,8 @@ describe('video moderation intent', () => {
 
     await requestVideoApproval(tx as never, existing, [{
       id: 'media-1',
-      providerAssetId: 'stream-1',
+      providerAssetId: 'asset-1',
       processingStatus: 'ready',
-      sourceAssetId: 'master-1',
     }], undefined);
 
     expect(summaryMock.applyReviewSummaryVisibilityChange).toHaveBeenCalledWith(tx, existing, updated);

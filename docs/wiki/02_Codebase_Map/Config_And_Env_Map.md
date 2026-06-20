@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-13
+updated: 2026-06-20
 tags:
   - config
   - env
@@ -61,21 +61,16 @@ related:
 | `KV_REST_API_URL` | Upstash REST endpoint |
 | `KV_REST_API_TOKEN` | Upstash REST token |
 
-### Review video V1 (Cloudflare R2 + Stream + QStash)
-All variables in this section are Production-only in Vercel during the V1 canary. Preview deployments must not receive production R2, Stream, QStash, or feature-flag credentials.
+### Review video on Mux + QStash
+All variables in this section are environment-scoped. Preview deployments must use the Preview Mux environment; Production must use the Production Mux environment.
 
 | Var | Purpose |
 |---|---|
 | `VIDEO_REVIEWS_ENABLED` | Global kill switch. Video upload is disabled unless this is exactly `true`, the merchant widget toggle is enabled, and `StoreSettings.videoMonthlyLimit > 0`. |
-| `CLOUDFLARE_R2_ENDPOINT` | S3-compatible R2 account endpoint used by the server-side storage adapter. |
-| `CLOUDFLARE_R2_ACCESS_KEY_ID` / `CLOUDFLARE_R2_SECRET_ACCESS_KEY` | Scoped R2 credentials for multipart upload signing, master copy, and cleanup. Never expose to the browser. |
-| `CLOUDFLARE_R2_MASTER_BUCKET` | Private EU-jurisdiction master archive bucket for original shopper videos. |
-| `CLOUDFLARE_R2_INGEST_BUCKET` | Transient public-ingest bucket used only for Stream copy-from-URL. Lifecycle backstop should delete objects after 24h. |
-| `CLOUDFLARE_R2_INGEST_PUBLIC_BASE_URL` | HTTPS public base URL/custom domain for unguessable ingest objects. Not a user-supplied URL. |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account for Stream API calls. |
-| `CLOUDFLARE_STREAM_API_TOKEN` | Stream-scoped API token for create/status/publish/protect/delete operations. |
-| `CLOUDFLARE_STREAM_CUSTOMER_CODE` | Customer code used to build signed pending/admin playback URLs. |
-| `CLOUDFLARE_STREAM_WEBHOOK_SECRET` | Raw-body HMAC secret for `/api/webhooks/cloudflare-stream`. |
+| `MUX_TOKEN_ID` / `MUX_TOKEN_SECRET` | Server-only Mux API token for upload, asset, playback-id, cancel, and delete operations. |
+| `MUX_VIDEO_QUALITY` | Mux encoding quality. Product policy currently accepts `basic` or `plus`. |
+| `MUX_WEBHOOK_SECRET` | Server-only Mux webhook signing secret for `/api/webhooks/mux`; not required for upload/API initiation. Write it only after the deployed endpoint exists in the matching Mux environment. |
+| `MUX_SIGNING_KEY_ID` / `MUX_SIGNING_KEY_PRIVATE` | Server-only Mux signing key used for pending/admin signed playback and thumbnail tokens. |
 | `QSTASH_TOKEN` | Publishes durable media-provider jobs. |
 | `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` | Verifies QStash raw-body signatures on `/api/internal/media-jobs`. |
 | `MEDIA_JOB_BASE_URL` | HTTPS app origin used by QStash to call `/api/internal/media-jobs`. |
@@ -124,8 +119,9 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 `read_orders,write_orders,read_products,read_inventories,write_inventories` — flagged for review in [[Open_Questions]] (do we really need write_*?).
 
 ## Notes
-- `.env.local` is gitignored. `.env.example` is the contract — keep it accurate when adding env vars. Upstash and Cloudflare values in `.env.example` are placeholders only.
-- `pnpm verify:video-infrastructure` performs a secret-safe, read-only check of required env presence, R2 bucket access, arbitrary merchant-origin multipart CORS, ingest-domain reachability, Stream API access, and Stream webhook presence. Run the script directly with `--write-probe` to create one temporary multipart part, verify readable `ETag`, and abort it; add `--require-webhook` after webhook registration.
+- `.env.local` is gitignored. `.env.example` is the contract — keep it accurate when adding env vars. Mux and Upstash values in `.env.example` are placeholders only.
+- `pnpm verify:video-infrastructure` performs the secret-safe, read-only pre-webhook check of required Mux API/signing/QStash env presence, Mux API read access, video quality policy, and media-job URL shape. It intentionally does not require `MUX_WEBHOOK_SECRET`.
+- `pnpm verify:video-infrastructure:post-webhook` performs the same check after webhook setup and also requires `MUX_WEBHOOK_SECRET`.
 - `pnpm video:canary:ops` reports global/merchant/quota gates and per-store lifecycle evidence without writing by default. DB writes require `--storeId`, matching `--confirmStoreId`, explicit quota/toggle fields, and `--apply`. See [[Review_Video_Canary_Runbook]].
 - `.env.sentry-build-plugin` and `.sentryclirc` are also gitignored. Hold Sentry CI secrets only.
 - Never log env values. Code uses `process.env.X || ''` defaults in JWT helpers — be aware of fail-open risk.

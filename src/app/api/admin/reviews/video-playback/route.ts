@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { prisma } from '@/lib/prisma';
 import {
-  buildSignedStreamPlaybackUrl,
-  createStreamPlaybackToken,
-} from '@/lib/media/providers/cloudflare-stream';
+  buildMuxPosterUrl,
+  buildMuxSignedPlaybackUrl,
+  signMuxPlaybackToken,
+} from '@/lib/media/providers/mux';
+import { VIDEO_PROVIDER } from '@/lib/media/constants';
 
 export async function GET(request: Request) {
   const user = getUserFromRequest(request);
@@ -16,7 +18,7 @@ export async function GET(request: Request) {
     where: {
       id: mediaId,
       resourceType: 'video',
-      provider: 'cloudflare_stream',
+      provider: VIDEO_PROVIDER,
       processingStatus: 'ready',
       review: { storeId: user.merchantId },
     },
@@ -24,10 +26,20 @@ export async function GET(request: Request) {
   });
   if (!media?.providerAssetId) return NextResponse.json({ error: 'Video not found' }, { status: 404 });
 
-  const token = await createStreamPlaybackToken(media.providerAssetId, 15 * 60);
+  const session = await prisma.videoUploadSession.findFirst({
+    where: { provider: VIDEO_PROVIDER, providerAssetId: media.providerAssetId },
+    select: { signedPlaybackId: true },
+  });
+  if (!session?.signedPlaybackId) return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+
+  const [playbackToken, thumbnailToken] = await Promise.all([
+    signMuxPlaybackToken(session.signedPlaybackId, 'video', 15 * 60),
+    signMuxPlaybackToken(session.signedPlaybackId, 'thumbnail', 15 * 60),
+  ]);
   const response = NextResponse.json({
     data: {
-      url: buildSignedStreamPlaybackUrl(media.providerAssetId, token),
+      url: buildMuxSignedPlaybackUrl(session.signedPlaybackId, playbackToken),
+      posterUrl: buildMuxPosterUrl(session.signedPlaybackId, thumbnailToken),
       expiresIn: 15 * 60,
     },
   });

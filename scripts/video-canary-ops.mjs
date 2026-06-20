@@ -1,4 +1,4 @@
-// Review Video V1 canary operations.
+// Review Video Mux canary operations.
 // Default mode is read-only. Mutations require an explicit store id, matching
 // confirmation, requested fields, and --apply.
 //
@@ -21,16 +21,12 @@ import {
 const prisma = new PrismaClient();
 const globalEnabled = process.env.VIDEO_REVIEWS_ENABLED === 'true';
 const providerConfigured = [
-  'CLOUDFLARE_R2_ENDPOINT',
-  'CLOUDFLARE_R2_ACCESS_KEY_ID',
-  'CLOUDFLARE_R2_SECRET_ACCESS_KEY',
-  'CLOUDFLARE_R2_MASTER_BUCKET',
-  'CLOUDFLARE_R2_INGEST_BUCKET',
-  'CLOUDFLARE_R2_INGEST_PUBLIC_BASE_URL',
-  'CLOUDFLARE_ACCOUNT_ID',
-  'CLOUDFLARE_STREAM_API_TOKEN',
-  'CLOUDFLARE_STREAM_CUSTOMER_CODE',
-  'CLOUDFLARE_STREAM_WEBHOOK_SECRET',
+  'MUX_TOKEN_ID',
+  'MUX_TOKEN_SECRET',
+  'MUX_VIDEO_QUALITY',
+  'MUX_WEBHOOK_SECRET',
+  'MUX_SIGNING_KEY_ID',
+  'MUX_SIGNING_KEY_PRIVATE',
   'QSTASH_TOKEN',
   'QSTASH_CURRENT_SIGNING_KEY',
   'QSTASH_NEXT_SIGNING_KEY',
@@ -130,8 +126,10 @@ async function readStoreEvidence(storeId) {
       errorCode: true,
       createdAt: true,
       updatedAt: true,
-      streamUid: true,
-      ingestObjectKey: true,
+      provider: true,
+      providerUploadId: true,
+      providerAssetId: true,
+      publicPlaybackId: true,
     },
   });
   return {

@@ -1,21 +1,23 @@
 import { getTrustedReviewImages, isTrustedReviewImageUrl } from './helpers.js';
 
-function isTrustedStreamUrl(value) {
+function isTrustedMuxUrl(value) {
   if (typeof value !== 'string' || !value) return false;
   try {
     var url = new URL(value);
     if (url.protocol !== 'https:' || url.username || url.password) return false;
     var host = url.hostname.toLowerCase();
-    return host === 'videodelivery.net' || host.endsWith('.videodelivery.net') ||
-      host === 'cloudflarestream.com' || host.endsWith('.cloudflarestream.com');
+    return host === 'stream.mux.com' || host === 'image.mux.com';
   } catch (_) {
     return false;
   }
 }
 
-function isTrustedStreamThumbnailUrl(url) {
-  if (!url || !isTrustedStreamUrl(url.href)) return false;
-  return /\/thumbnails\/thumbnail\.(jpg|jpeg|png|webp|gif)$/i.test(url.pathname);
+function isTrustedMuxThumbnailUrl(url) {
+  if (!url || !isTrustedMuxUrl(url.href)) return false;
+  if (url.hostname.toLowerCase() === 'image.mux.com') {
+    return /\/thumbnail\.(jpg|jpeg|png|webp)$/i.test(url.pathname);
+  }
+  return false;
 }
 
 function positiveInt(value) {
@@ -23,7 +25,7 @@ function positiveInt(value) {
   return Number.isFinite(number) && number > 0 ? Math.round(number) : 0;
 }
 
-export function streamPosterVariantUrl(value, opts) {
+export function muxPosterVariantUrl(value, opts) {
   opts = opts || {};
   if (typeof value !== 'string' || !value) return '';
   var url;
@@ -32,28 +34,32 @@ export function streamPosterVariantUrl(value, opts) {
   } catch (_) {
     return value;
   }
-  if (!isTrustedStreamThumbnailUrl(url)) return value;
+  if (!isTrustedMuxThumbnailUrl(url)) return value;
   var width = positiveInt(opts.width);
   var height = positiveInt(opts.height);
   if (width) url.searchParams.set('width', String(width));
   if (height) url.searchParams.set('height', String(height));
-  if (opts.fit === 'clip' || opts.fit === 'scale' || opts.fit === 'fill' || opts.fit === 'crop') {
-    url.searchParams.set('fit', opts.fit);
+  if (url.hostname.toLowerCase() === 'image.mux.com') {
+    if (opts.fit === 'crop' || opts.fit === 'smartcrop' || opts.fit === 'pad' || opts.fit === 'stretch' || opts.fit === 'preserve') {
+      url.searchParams.set('fit_mode', opts.fit);
+    } else if (opts.fit) {
+      url.searchParams.set('fit_mode', 'preserve');
+    }
   }
   return url.href;
 }
 
-export function streamPosterSrcSet(value, opts) {
+export function muxPosterSrcSet(value, opts) {
   opts = opts || {};
   var width = positiveInt(opts.width);
   var height = positiveInt(opts.height);
   if (!width && !height) return '';
-  var oneX = streamPosterVariantUrl(value, {
+  var oneX = muxPosterVariantUrl(value, {
     width: width,
     height: height,
     fit: opts.fit,
   });
-  var twoX = streamPosterVariantUrl(value, {
+  var twoX = muxPosterVariantUrl(value, {
     width: width ? width * 2 : 0,
     height: height ? height * 2 : 0,
     fit: opts.fit,
@@ -69,7 +75,7 @@ export function getTrustedReviewMedia(review) {
   structured.forEach(function (item) {
     if (!item || typeof item !== 'object') return;
     if (item.type === 'video') {
-      if (!isTrustedStreamUrl(item.url) || !isTrustedStreamUrl(item.posterUrl || item.thumbnailUrl)) return;
+      if (!isTrustedMuxUrl(item.url) || !isTrustedMuxUrl(item.posterUrl || item.thumbnailUrl)) return;
       var videoKey = 'video:' + item.url;
       if (seen[videoKey]) return;
       seen[videoKey] = true;

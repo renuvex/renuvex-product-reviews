@@ -48,6 +48,9 @@ describe('video session creation', () => {
     });
     expect(result.session.expiresAt).toEqual(new Date(now.getTime() + VIDEO_UPLOAD_SESSION_TTL_MS));
     expect(result.expiryJob).toEqual({ id: 'expiry-job' });
+    expect(prismaMock.videoUploadSession.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ provider: 'mux' }),
+    }));
     expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
         action: MEDIA_JOB_ACTIONS.expireUploadSession,

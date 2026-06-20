@@ -16,7 +16,9 @@ export async function GET(request: Request) {
       status: publicStatus,
       errorCode: session.errorCode,
       durationMs: publicStatus === 'ready' ? session.durationMs : null,
-      posterUrl: publicStatus === 'ready' ? session.posterUrl : null,
+      // Do not expose pending/admin signed playback IDs through the public upload
+      // status API. The widget keeps its local preview until the review is saved.
+      posterUrl: null,
       expiresAt: session.expiresAt.toISOString(),
     },
   }), request);

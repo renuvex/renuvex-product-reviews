@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import { dispatchMediaProviderJob } from '@/lib/media/jobs';
-import { getStreamVideo } from '@/lib/media/providers/cloudflare-stream';
-import { applyStreamVideoState } from '@/lib/media/video-processing';
+import { getMuxAsset } from '@/lib/media/providers/mux';
+import { applyMuxAssetState } from '@/lib/media/video-processing';
 import {
   MEDIA_JOB_ACTIONS,
   MEDIA_JOB_STALE_LOCK_MS,
-  VIDEO_STREAM_RECONCILE_OFFSETS_MS,
+  VIDEO_ASSET_RECONCILE_OFFSETS_MS,
+  VIDEO_PROVIDER,
 } from '@/lib/media/constants';
 import { enqueueMediaProviderJob } from '@/lib/media/outbox';
 
@@ -16,7 +17,7 @@ function delaySecondsUntil(availableAt: Date) {
 export async function ensureVideoLifecycleJobs(limit = 200) {
   const sessions = await prisma.videoUploadSession.findMany({
     where: {
-      status: { in: ['initiated', 'uploading', 'completing', 'uploaded', 'processing', 'ready'] },
+      status: { in: ['initiated', 'uploading', 'uploaded', 'processing', 'ready'] },
     },
     orderBy: { createdAt: 'asc' },
     take: Math.max(1, Math.min(500, limit)),
@@ -41,23 +42,24 @@ export async function ensureVideoLifecycleJobs(limit = 200) {
           expiresAt: session.expiresAt.toISOString(),
         },
       });
-      if (session.status !== 'processing' || !session.streamUid) {
+      if (session.status !== 'processing' || (!session.providerAssetId && !session.providerUploadId)) {
         return { expiryJob, reconcileJob: null };
       }
       const startedAt = new Date();
-      const availableAt = new Date(startedAt.getTime() + VIDEO_STREAM_RECONCILE_OFFSETS_MS[0]);
+      const availableAt = new Date(startedAt.getTime() + VIDEO_ASSET_RECONCILE_OFFSETS_MS[0]);
       const reconcileJob = await enqueueMediaProviderJob(tx, {
-        dedupeKey: `reconcile-stream:${session.id}`,
+        dedupeKey: `reconcile-video:${session.id}`,
         storeId: session.storeId,
         uploadSessionId: session.id,
-        provider: 'cloudflare_stream',
-        action: MEDIA_JOB_ACTIONS.reconcileStream,
+        provider: VIDEO_PROVIDER,
+        action: MEDIA_JOB_ACTIONS.reconcileVideo,
         resourceType: 'video',
         availableAt,
         maxAttempts: 16,
         payload: {
           sessionId: session.id,
-          streamUid: session.streamUid,
+          ...(session.providerUploadId ? { providerUploadId: session.providerUploadId } : {}),
+          ...(session.providerAssetId ? { providerAssetId: session.providerAssetId } : {}),
           startedAt: startedAt.toISOString(),
           checkIndex: 0,
         },
@@ -80,7 +82,7 @@ export async function ensureVideoLifecycleJobs(limit = 200) {
 
 export async function reconcileProcessingVideos(limit = 50) {
   const sessions = await prisma.videoUploadSession.findMany({
-    where: { status: 'processing', streamUid: { not: null } },
+    where: { status: 'processing', provider: VIDEO_PROVIDER, providerAssetId: { not: null } },
     orderBy: { updatedAt: 'asc' },
     take: Math.max(1, Math.min(200, limit)),
   });
@@ -89,8 +91,8 @@ export async function reconcileProcessingVideos(limit = 50) {
   let failed = 0;
   for (const session of sessions) {
     try {
-      const video = await getStreamVideo(session.streamUid!);
-      const result = await applyStreamVideoState(session, video, 'stream_maintenance');
+      const asset = await getMuxAsset(session.providerAssetId!);
+      const result = await applyMuxAssetState(session, asset, 'mux_maintenance');
       if (result.ok && result.status === 'ready') ready += 1;
       else if (result.ok) processing += 1;
       else failed += 1;

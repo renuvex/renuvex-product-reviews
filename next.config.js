@@ -9,7 +9,6 @@ const cloudinaryCloudName = normalizePublicCloudName(
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ['*.trycloudflare.com'],
   env: {
     NEXT_PUBLIC_DEPLOY_URL: process.env.NEXT_PUBLIC_DEPLOY_URL,
   },

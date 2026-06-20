@@ -29,7 +29,7 @@ ikas-specific OAuth particulars and gotchas. The full step-by-step flow lives in
 ## Gotchas
 - **Re-install hygiene**: `prisma.authToken.deleteMany({ merchantId })` runs on every callback before upsert. This is intentional to clean stale rows from previous installs (e.g. a merchant uninstalling and re-installing).
 - **No uninstall webhook** wired today. Stale `AuthToken` rows for uninstalled merchants persist. Consider a periodic sweep or wiring an ikas uninstall callback if available.
-- **`getRedirectUri(host)`** in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when the configured redirect uses `localhost` but the request comes from a different host (e.g. `*.trycloudflare.com` for a tunneled dev). Useful for local dev with a public tunnel. In prod, always set `NEXT_PUBLIC_DEPLOY_URL` correctly.
+- **`getRedirectUri(host)`** in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when the configured redirect uses `localhost` but the request comes from a different public development host. Useful for local dev with a public tunnel. In prod, always set `NEXT_PUBLIC_DEPLOY_URL` correctly.
 - **JWT and OAuth share `CLIENT_SECRET`**. Rotation simultaneously invalidates JWTs and breaks ikas refresh. Plan rotations carefully.
 
 ## Failure surface

@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { buildReviewImageThumbnailUrl, getReviewImagePublicId, isTrustedReviewImageUrl, parseStoredReviewImages } from '@/lib/review-images';
-import { isTrustedStreamDeliveryUrl } from '@/lib/media/providers/cloudflare-stream';
+import { isTrustedMuxDeliveryUrl } from '@/lib/media/providers/mux';
+import { VIDEO_PROVIDER } from '@/lib/media/constants';
 import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 
 export type PublicReviewMediaRow = {
@@ -88,9 +89,9 @@ export function publicMediaFromMediaOrLegacy(
     .sort((a, b) => a.position - b.position)
     .flatMap<PublicReviewMedia>((item) => {
       if (item.resourceType === 'video') {
-        if (item.provider !== 'cloudflare_stream') return [];
-        if (!isTrustedStreamDeliveryUrl(item.url, item.providerAssetId)) return [];
-        if (!item.posterUrl || !isTrustedStreamDeliveryUrl(item.posterUrl, item.providerAssetId)) return [];
+        if (item.provider !== VIDEO_PROVIDER) return [];
+        if (!isTrustedMuxDeliveryUrl(item.url)) return [];
+        if (!item.posterUrl || !isTrustedMuxDeliveryUrl(item.posterUrl)) return [];
         return [{
           type: 'video' as const,
           url: item.url,

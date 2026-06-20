@@ -23,7 +23,7 @@ related:
   - "[[Bug_Lightbox_Mobile_Pull_To_Refresh]]"
   - "[[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
-  - "[[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]]"
+  - "[[ADR_0032_Review_Video_On_Mux]]"
 source_files:
   - "src/widget/reviews-section/review-modal.js"
   - "src/widget/reviews-section/video-playback.js"
@@ -65,7 +65,7 @@ The product review lightbox is the media detail modal opened from trusted review
 - [[Bug_Lightbox_Mobile_Pull_To_Refresh]]
 - [[Bug_Lightbox_Mobile_Review_Switch_Scroll_State]]
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
-- [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]]
+- [[ADR_0032_Review_Video_On_Mux]]
 
 ## Notes
 - This lightbox is not the multi-step review submission modal. The submission wizard lives under [review-form-modal/](src/widget/reviews-section/review-form-modal/).
@@ -74,7 +74,7 @@ The product review lightbox is the media detail modal opened from trusted review
 - Card, list, and gallery review layouts receive one canonical loaded review collection for the active sort/filter state. Initial render resets that collection; load-more appends to the same stable array reference so existing card click handlers can navigate across all currently loaded photo-backed reviews.
 - The lightbox does not fetch additional review pages by itself. Previous/next navigation is intentionally scoped to reviews already loaded into the storefront widget for the current sort/filter state.
 - Review text fields are written with `textContent`, which protects comment/title/reply rendering from direct HTML injection in this component.
-- Media URLs are not accepted by generic prefixes. `getTrustedReviewMedia()` retains the tenant-scoped Cloudinary image policy and accepts video playback/poster URLs only from the approved Cloudflare Stream delivery hosts.
+- Media URLs are not accepted by generic prefixes. `getTrustedReviewMedia()` retains the tenant-scoped Cloudinary image policy and accepts video playback/poster URLs only from approved Mux delivery hosts.
 - If the active main image fails to load after passing the trusted URL policy, the `<img>` is hidden and a neutral in-modal placeholder is shown. Mini thumbnails use the standard thumbnail fallback and hide failed assets. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - The main lightbox image uses `object-fit:contain` on a dark media background so customer photos are not cropped. Thumbnail, card, list, gallery, and mini-thumb render paths keep `cover` because those are fixed-format previews.
 - Video list/card/gallery surfaces are poster-first. They render an image poster plus play/duration badges and do not create a `<video>` element or request the HLS manifest before lightbox open.
@@ -90,13 +90,13 @@ The product review lightbox is the media detail modal opened from trusted review
 - Mobile uses `overflow-y:scroll` on `.renuvex-pr-modal-wrap` so the fullscreen lightbox remains a consistent scroll container even when a short review does not exceed the viewport.
 - Switching between different reviews normalizes every lightbox scroll layer (`.renuvex-pr-modal-wrap`, `.renuvex-pr-modal-right`, and `.renuvex-pr-modal-scroll-content`) immediately and again after layout settles. This prevents stale long-review scroll state from carrying into a short-review lightbox view.
 - In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
-- `tests/widget-media-cross-browser.spec.ts` covers poster-first card/list/gallery rendering and cleanup on Chromium, Firefox, desktop WebKit, Pixel emulation, and iPhone WebKit emulation. Emulation is not a replacement for the physical-device release gate in [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
-- Video posters are not raw, one-size Stream URLs at render time. `review-media.js` derives trusted Cloudflare Stream thumbnail variants for the current surface: card/list/gallery/strip use sized crop variants and the lightbox uses a larger `1280x720 fit=clip` poster.
+- `tests/widget-media-cross-browser.spec.ts` covers poster-first card/list/gallery rendering and cleanup on Chromium, Firefox, desktop WebKit, Pixel emulation, and iPhone WebKit emulation. Emulation is not a replacement for the physical-device release gate in [[ADR_0032_Review_Video_On_Mux]].
+- Video posters are not raw, one-size URLs at render time. `review-media.js` derives trusted Mux Image thumbnail variants for the current surface: card/list/gallery/strip use sized crop variants and the lightbox uses a larger `1280x720 fit=preserve` poster.
 - Native video controls stay browser/OS-owned; Renuvex does not theme the native progress bar or native center play icon. The configurable-looking storefront layer is the poster thumbnail, play badge, and duration badge.
-- On non-native HLS browsers, hls.js keeps ABR enabled but starts with a player-size-aware quality warm-start unless Data Saver or a 2g connection is reported. Cloudflare `clientBandwidthHint` is intentionally not used.
+- On non-native HLS browsers, hls.js keeps ABR enabled but starts with a player-size-aware quality warm-start unless Data Saver or a 2g connection is reported.
 
 ## Change Log
-- 2026-06-16: Improved video first-frame quality by deriving sized Stream poster variants and adding hls.js player-size capping plus a conservative start-level warm-start. Native controls remain unchanged and browser-owned.
+- 2026-06-16: Improved video first-frame quality by deriving sized Mux poster variants and adding hls.js player-size capping plus a conservative start-level warm-start. Native controls remain unchanged and browser-owned.
 - 2026-06-14: Documented the provider-aware image/video lightbox and Phase 4 cross-browser media suite. Native-HLS attributes, lazy `hls.js`, no-autoplay poster-first rendering, browser-back cleanup, and video-to-image navigation cleanup are now pinned across the five-project Playwright matrix.
 - 2026-06-01: Lightbox CSS ownership moved into [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) while `review-modal.js` continues to inject the stable `CLASSIC_CSS` aggregator.
 - 2026-05-31: Added shared [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) after an audit found photo-strip thumbnails were click-only images. Photo-strip and card/list/gallery lightbox triggers now share keyboard/ARIA wiring, and interaction smoke verifies keyboard open + focus restore from the photo strip. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].

@@ -23,25 +23,25 @@ model AuthToken {
 }
 
 model Review {
-  id            String        @id @default(uuid())
-  storeId       String
-  productId     String
-  rating        Int
-  comment       String?       @db.VarChar(2000)
-  author        String
-  email         String?
-  status        String        @default("pending")
-  merchantReply String?       @db.VarChar(2000)
-  images        String?
-  hasImages     Boolean       @default(false)
-  hasVideo      Boolean       @default(false)
-  moderationVersion Int       @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  productName   String?
-  slug          String
-  title         String?
-  media         ReviewMedia[]
+  id                String        @id @default(uuid())
+  storeId           String
+  productId         String
+  rating            Int
+  comment           String?       @db.VarChar(2000)
+  author            String
+  email             String?
+  status            String        @default("pending")
+  merchantReply     String?       @db.VarChar(2000)
+  images            String?
+  hasImages         Boolean       @default(false)
+  hasVideo          Boolean       @default(false)
+  moderationVersion Int           @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  productName       String?
+  slug              String
+  title             String?
+  media             ReviewMedia[]
 
   @@index([storeId, productId, status])
   @@index([storeId, productId, status, hasVideo])
@@ -50,34 +50,34 @@ model Review {
 }
 
 model ReviewMedia {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   reviewId          String
   storeId           String
   productId         String
-  url               String   @db.VarChar(2048)
-  publicId          String   @unique @db.VarChar(512)
-  assetId           String?  @db.VarChar(128)
-  version           String?  @db.VarChar(64)
-  resourceType      String   @default("image") @db.VarChar(32)
-  provider          String   @default("cloudinary") @db.VarChar(64)
-  providerAssetId   String?  @db.VarChar(512)
-  posterUrl         String?  @db.VarChar(2048)
+  url               String    @db.VarChar(2048)
+  publicId          String    @unique @db.VarChar(512)
+  assetId           String?   @db.VarChar(128)
+  version           String?   @db.VarChar(64)
+  resourceType      String    @default("image") @db.VarChar(32)
+  provider          String    @default("cloudinary") @db.VarChar(64)
+  providerAssetId   String?   @db.VarChar(512)
+  posterUrl         String?   @db.VarChar(2048)
   durationMs        Int?
-  processingStatus  String   @default("ready") @db.VarChar(32)
-  sourceProvider    String?  @db.VarChar(64)
-  sourceAssetId     String?  @db.VarChar(1024)
-  format            String?  @db.VarChar(32)
-  mimeType          String?  @db.VarChar(128)
+  processingStatus  String    @default("ready") @db.VarChar(32)
+  sourceProvider    String?   @db.VarChar(64)
+  sourceAssetId     String?   @db.VarChar(1024)
+  format            String?   @db.VarChar(32)
+  mimeType          String?   @db.VarChar(128)
   width             Int?
   height            Int?
   bytes             Int?
-  metadataSource    String   @default("unknown") @db.VarChar(64)
-  metadataStatus    String   @default("pending") @db.VarChar(64)
+  metadataSource    String    @default("unknown") @db.VarChar(64)
+  metadataStatus    String    @default("pending") @db.VarChar(64)
   metadataFetchedAt DateTime?
   position          Int
-  visible           Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  review            Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  visible           Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  review            Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, position])
   @@index([reviewId, position])
@@ -157,30 +157,30 @@ model ProductSnapshot {
 // safety. Provider-specific cleanup is routed through the media adapters.
 // See ADR_0012 and ADR_0031 for the lifecycle contracts.
 model PendingReviewImage {
-  publicId          String   @id
+  publicId          String    @id
   storeId           String?
   productId         String?
-  uploadSessionId   String?  @unique
-  url               String?  @db.VarChar(2048)
-  assetId           String?  @db.VarChar(128)
-  version           String?  @db.VarChar(64)
-  resourceType      String   @default("image") @db.VarChar(32)
-  provider          String   @default("cloudinary") @db.VarChar(64)
-  providerAssetId   String?  @db.VarChar(512)
-  posterUrl         String?  @db.VarChar(2048)
+  uploadSessionId   String?   @unique
+  url               String?   @db.VarChar(2048)
+  assetId           String?   @db.VarChar(128)
+  version           String?   @db.VarChar(64)
+  resourceType      String    @default("image") @db.VarChar(32)
+  provider          String    @default("cloudinary") @db.VarChar(64)
+  providerAssetId   String?   @db.VarChar(512)
+  posterUrl         String?   @db.VarChar(2048)
   durationMs        Int?
-  processingStatus  String   @default("ready") @db.VarChar(32)
-  sourceProvider    String?  @db.VarChar(64)
-  sourceAssetId     String?  @db.VarChar(1024)
-  format            String?  @db.VarChar(32)
-  mimeType          String?  @db.VarChar(128)
+  processingStatus  String    @default("ready") @db.VarChar(32)
+  sourceProvider    String?   @db.VarChar(64)
+  sourceAssetId     String?   @db.VarChar(1024)
+  format            String?   @db.VarChar(32)
+  mimeType          String?   @db.VarChar(128)
   width             Int?
   height            Int?
   bytes             Int?
-  metadataSource    String   @default("unknown") @db.VarChar(64)
-  metadataStatus    String   @default("pending") @db.VarChar(64)
+  metadataSource    String    @default("unknown") @db.VarChar(64)
+  metadataStatus    String    @default("pending") @db.VarChar(64)
   metadataFetchedAt DateTime?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
   ipHash            String?
 
   @@index([createdAt])
@@ -190,8 +190,11 @@ model PendingReviewImage {
   @@index([processingStatus, createdAt])
 }
 
-// Durable state for the R2 multipart -> Stream processing lifecycle. The
+// Durable state for the video upload -> provider processing lifecycle. The
 // opaque client token is never stored; only its SHA-256 hash is persisted.
+//
+// ADR_0032 (Mux migration): video uploads use Mux direct uploads and Mux asset
+// identifiers. Provider is still written explicitly by the app; no DB default.
 model VideoUploadSession {
   id               String    @id @default(uuid())
   tokenHash        String    @unique @db.VarChar(64)
@@ -201,10 +204,11 @@ model VideoUploadSession {
   mimeType         String    @db.VarChar(128)
   bytes            Int
   fileFingerprint  String?   @db.VarChar(128)
-  r2UploadId       String?   @db.VarChar(1024)
-  masterObjectKey  String    @unique @db.VarChar(1024)
-  ingestObjectKey  String?   @unique @db.VarChar(1024)
-  streamUid        String?   @unique @db.VarChar(128)
+  provider         String?   @db.VarChar(64)
+  providerUploadId String?   @db.VarChar(256)
+  providerAssetId  String?   @db.VarChar(256)
+  signedPlaybackId String?   @db.VarChar(256)
+  publicPlaybackId String?   @db.VarChar(256)
   publicId         String?   @unique @db.VarChar(512)
   playbackUrl      String?   @db.VarChar(2048)
   posterUrl        String?   @db.VarChar(2048)
@@ -217,12 +221,14 @@ model VideoUploadSession {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
+  @@unique([provider, providerUploadId])
+  @@unique([provider, providerAssetId])
   @@index([storeId, productId, status])
   @@index([status, expiresAt])
   @@index([createdAt])
 }
 
-// Monthly quota counters. Reservations are taken before a multipart upload is
+// Monthly quota counters. Reservations are taken before a Mux direct upload is
 // created so concurrent initiate requests cannot oversubscribe a merchant.
 model StoreVideoUsage {
   storeId       String
@@ -278,6 +284,30 @@ model MediaProviderLease {
   updatedAt    DateTime @updatedAt
 
   @@index([lockedUntil])
+}
+
+// Provider webhook idempotency + audit (ADR_0032). Dedup/audit ONLY - the
+// actual provider work + retry reuse the MediaProviderJob outbox +
+// MediaProviderLease. Linked to a session by the natural key (sessionId /
+// providerUploadId / providerAssetId). Payload is never persisted (only a
+// digest + normalized ids); signed URLs/tokens are never stored.
+model WebhookEvent {
+  id                     String    @id @default(uuid())
+  provider               String    @db.VarChar(64)
+  providerEventId        String    @db.VarChar(256)
+  eventType              String    @db.VarChar(128)
+  providerUploadId       String?   @db.VarChar(256)
+  providerAssetId        String?   @db.VarChar(256)
+  sessionId              String?
+  providerEventCreatedAt DateTime?
+  receivedAt             DateTime  @default(now())
+  processedAt            DateTime?
+  status                 String    @default("received") @db.VarChar(32)
+  lastError              String?   @db.VarChar(512)
+  payloadDigest          String?   @db.VarChar(64)
+
+  @@unique([provider, providerEventId])
+  @@index([status, receivedAt])
 }
 
 // --- Cleanup hardening (ADR_0030) -------------------------------------------

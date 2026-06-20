@@ -31,24 +31,27 @@ export function isVideoReviewsGloballyEnabled(env: Env = process.env): boolean {
   return env.VIDEO_REVIEWS_ENABLED === 'true';
 }
 
-export function getR2MediaConfig(env: Env = process.env) {
+export function getMuxApiConfig(env: Env = process.env) {
   return {
-    endpoint: httpsBaseUrl(required(env, 'CLOUDFLARE_R2_ENDPOINT'), 'CLOUDFLARE_R2_ENDPOINT'),
-    accessKeyId: required(env, 'CLOUDFLARE_R2_ACCESS_KEY_ID'),
-    secretAccessKey: required(env, 'CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
-    masterBucket: required(env, 'CLOUDFLARE_R2_MASTER_BUCKET'),
-    ingestBucket: required(env, 'CLOUDFLARE_R2_INGEST_BUCKET'),
-    ingestPublicBaseUrl: httpsBaseUrl(required(env, 'CLOUDFLARE_R2_INGEST_PUBLIC_BASE_URL'), 'CLOUDFLARE_R2_INGEST_PUBLIC_BASE_URL'),
+    tokenId: required(env, 'MUX_TOKEN_ID'),
+    tokenSecret: required(env, 'MUX_TOKEN_SECRET'),
+    signingKeyId: required(env, 'MUX_SIGNING_KEY_ID'),
+    signingKeyPrivate: required(env, 'MUX_SIGNING_KEY_PRIVATE'),
   };
 }
 
-export function getStreamMediaConfig(env: Env = process.env) {
+export function getMuxWebhookConfig(env: Env = process.env) {
   return {
-    accountId: required(env, 'CLOUDFLARE_ACCOUNT_ID'),
-    apiToken: required(env, 'CLOUDFLARE_STREAM_API_TOKEN'),
-    customerCode: required(env, 'CLOUDFLARE_STREAM_CUSTOMER_CODE'),
-    webhookSecret: required(env, 'CLOUDFLARE_STREAM_WEBHOOK_SECRET'),
+    webhookSecret: required(env, 'MUX_WEBHOOK_SECRET'),
   };
+}
+
+export function getMuxVideoQuality(env: Env = process.env): 'basic' | 'plus' {
+  const value = required(env, 'MUX_VIDEO_QUALITY').toLowerCase();
+  if (value !== 'basic' && value !== 'plus') {
+    throw new MediaConfigError('invalid_config', 'MUX_VIDEO_QUALITY must be basic or plus');
+  }
+  return value;
 }
 
 export function getQStashMediaConfig(env: Env = process.env) {

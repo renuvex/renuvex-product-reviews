@@ -1,6 +1,6 @@
 import type { VideoUploadSession } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { MEDIA_JOB_ACTIONS } from '@/lib/media/constants';
+import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
 import { dispatchMediaProviderJob } from '@/lib/media/dispatcher';
 import {
   enqueueMediaProviderJob,
@@ -14,15 +14,13 @@ function videoCleanupJobInput(session: VideoUploadSession): EnqueueMediaJobInput
     dedupeKey: `cleanup-video:${session.id}`,
     storeId: session.storeId,
     uploadSessionId: session.id,
-    provider: 'cloudflare_stream',
+    provider: VIDEO_PROVIDER,
     action: MEDIA_JOB_ACTIONS.cleanupVideo,
     resourceType: 'video',
     payload: {
       sessionId: session.id,
-      streamUid: session.streamUid ?? undefined,
-      r2UploadId: session.r2UploadId ?? undefined,
-      masterObjectKey: session.masterObjectKey,
-      ingestObjectKey: session.ingestObjectKey ?? undefined,
+      providerUploadId: session.providerUploadId ?? undefined,
+      providerAssetId: session.providerAssetId ?? undefined,
       pendingPublicId: session.publicId ?? undefined,
     },
   };
@@ -31,14 +29,14 @@ function videoCleanupJobInput(session: VideoUploadSession): EnqueueMediaJobInput
 export async function failSessionAndQueueCleanup(
   sessionId: string,
   errorCode: string,
-  identifiers: { r2UploadId?: string | null } = {},
+  identifiers: { providerUploadId?: string | null; providerAssetId?: string | null } = {},
 ) {
   const job = await prisma.$transaction(async (tx) => {
     const session = await getVideoSessionForUpdate(tx, sessionId);
     if (!session || session.status === 'consumed') return null;
     await releaseVideoReservation(tx, session);
     await supersedeSessionLifecycleJobs(tx, session.id, [
-      MEDIA_JOB_ACTIONS.reconcileStream,
+      MEDIA_JOB_ACTIONS.reconcileVideo,
       MEDIA_JOB_ACTIONS.expireUploadSession,
     ]);
     const failed = await tx.videoUploadSession.update({
@@ -46,7 +44,8 @@ export async function failSessionAndQueueCleanup(
       data: {
         status: 'failed',
         errorCode: errorCode.slice(0, 128),
-        ...(identifiers.r2UploadId && !session.r2UploadId ? { r2UploadId: identifiers.r2UploadId } : {}),
+        ...(identifiers.providerUploadId && !session.providerUploadId ? { providerUploadId: identifiers.providerUploadId } : {}),
+        ...(identifiers.providerAssetId && !session.providerAssetId ? { providerAssetId: identifiers.providerAssetId } : {}),
       },
     });
     return enqueueMediaProviderJob(tx, videoCleanupJobInput(failed));
@@ -62,7 +61,7 @@ export async function cancelSessionAndQueueCleanup(sessionId: string) {
     if (!session || session.status === 'consumed') return null;
     await releaseVideoReservation(tx, session);
     await supersedeSessionLifecycleJobs(tx, session.id, [
-      MEDIA_JOB_ACTIONS.reconcileStream,
+      MEDIA_JOB_ACTIONS.reconcileVideo,
       MEDIA_JOB_ACTIONS.expireUploadSession,
     ]);
     const aborted = await tx.videoUploadSession.update({

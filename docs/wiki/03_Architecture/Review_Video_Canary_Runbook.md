@@ -3,25 +3,22 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-14
-updated: 2026-06-15
-last_verified: 2026-06-15
+updated: 2026-06-20
+last_verified: 2026-06-20
 confidence: high
 tags:
   - video
   - canary
   - operations
-  - cloudflare
+  - mux
   - qstash
 related:
-  - "[[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]]"
+  - "[[ADR_0032_Review_Video_On_Mux]]"
   - "[[Maintenance_Runbook]]"
   - "[[Config_And_Env_Map]]"
   - "[[Test_Strategy]]"
   - "[[Review_Video_Physical_Device_Acceptance_2026-06]]"
 source_files:
-  - "scripts/video-canary-ops.mjs"
-  - "scripts/video-canary-ops-lib.mjs"
-  - "scripts/verify-video-infrastructure.mjs"
   - "src/lib/media/access.ts"
   - "src/lib/media/outbox.ts"
   - "src/lib/media/dispatcher.ts"
@@ -29,135 +26,119 @@ source_files:
   - "src/lib/media/jobs.ts"
   - "src/lib/media/reconciliation.ts"
   - "src/lib/media/sessions.ts"
+  - "src/lib/media/providers/mux.ts"
+  - "src/app/api/public/upload/video/initiate/route.ts"
+  - "src/app/api/public/upload/video/complete/route.ts"
+  - "src/app/api/webhooks/mux/route.ts"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
-  - "tests/unit/video-canary-ops.test.ts"
+  - "tests/unit/media-jobs.test.ts"
+  - "tests/unit/video-upload-routes.test.ts"
+  - "tests/unit/media-route-contracts.test.ts"
 ---
 
-# Review Video Canary Runbook
+# Review Video Mux Canary Runbook
 
 ## Purpose
+This runbook controls the Mux review-video canary. The first canary is Preview-only. Production activation is a later gate and must use the separate production Mux environment.
 
-This runbook controls the first real Review Video V1 production canary. The canary is limited to one internal store. It does not authorize a general merchant rollout.
+## Environment Separation
+- Preview/local: Mux environment `Renuvex - Products Review (Preview)`.
+- Production: Mux environment `Renuvex - Products Review`.
+- Do not mix token IDs, token secrets, signing keys, or webhook secrets across environments.
+- Do not create a Mux webhook resource until the matching deployed `/api/webhooks/mux` URL exists.
+- Do not use `NEXT_PUBLIC_MUX_*`; Mux secrets are server-only.
 
-The runtime capability requires all gates below:
+## Capability Gate
+The runtime video capability requires all gates below:
 
 ```text
 VIDEO_REVIEWS_ENABLED=true
 AND WidgetSettings(reviews).videoReviewsEnabled=true
 AND StoreSettings.videoMonthlyLimit>0
 AND current UTC month reservedCount+consumedCount<videoMonthlyLimit
-AND R2, Stream, QStash, and media-job configuration is available
+AND MUX_TOKEN_ID/MUX_TOKEN_SECRET/MUX_VIDEO_QUALITY are valid
+AND MUX_SIGNING_KEY_ID/MUX_SIGNING_KEY_PRIVATE are valid
+AND QStash and MEDIA_JOB_BASE_URL are valid
 ```
 
-The global flag is changed last. Preview and local-development deployments must not receive production provider credentials.
+`MUX_WEBHOOK_SECRET` is deliberately excluded from the upload/API capability gate. It is required only by `/api/webhooks/mux`, which returns `503` until the Mux webhook endpoint exists and the matching environment secret is written.
 
-## Safe Operations Command
+`MUX_VIDEO_QUALITY` is intentionally limited to `basic|plus`. Mux supports `premium`, but this product does not expose it until ADR/test updates say otherwise.
 
-`pnpm video:canary:ops` is read-only by default. It reports each store's quota, merchant toggle, current-month reserved/consumed/remaining counts, provider configuration view, global flag view, and effective gate state.
+## Stop/Go
+Stop and get explicit approval before any migration apply, deploy, Vercel env mutation, Mux write, external resource delete/revoke, or destructive DB change. State scope, risk, rollback, and post-action verification.
 
-```bash
-# Report all store gates. No writes.
-pnpm video:canary:ops
+## Preview Sequence
+1. Read-only evidence freeze: Git branch/status, deployment target, DB video row counts, Mux Preview credentials presence, QStash, and Preview DB isolation. Run `pnpm verify:preview-db-isolation -- --json` before pushing a branch that can trigger Vercel Preview. This check must prove Preview `DATABASE_URL` and `DIRECT_URL` do not target the Production Supabase project.
+2. Apply only approved local code/doc changes. Run `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm exec prisma validate`, `pnpm test:unit`, `pnpm build:widget`, and `pnpm check:widget-js`.
+3. After approval, apply migrations in the target DB:
+   - `20260617090000_review_video_mux_additive`
+   - `20260617100000_review_video_mux_backend_cutover`
+4. Verify `pnpm verify:video-infrastructure -- --json --phase=pre-webhook` before webhook setup.
+5. Deploy Preview with Preview Mux credentials except webhook secret if the webhook resource does not exist yet.
+6. Create a Mux webhook endpoint in `Renuvex - Products Review (Preview)` pointing at the deployed Preview `/api/webhooks/mux` URL.
+7. Write the resulting `MUX_WEBHOOK_SECRET` to the matching Preview environment only.
+8. Redeploy Preview so the webhook route uses the real secret.
+9. Verify `pnpm verify:video-infrastructure:post-webhook -- --json`.
+10. Run the Preview functional canary.
 
-# Fail unless every DB gate and the loaded global flag are disabled.
-pnpm video:canary:verify-disabled
+## Deferred Contract Phase
+The legacy provider-column contract migration must stay out of `prisma/migrations` until Preview and Production Mux canaries are accepted. Recreate a new Prisma migration for the contract phase only after explicit approval. The deferred SQL shape is:
 
-# Report one store plus quota/session/job/review/media evidence. No writes.
-pnpm video:canary:ops --storeId=<merchantId>
+```sql
+DROP INDEX IF EXISTS "VideoUploadSession_masterObjectKey_key";
+DROP INDEX IF EXISTS "VideoUploadSession_ingestObjectKey_key";
+DROP INDEX IF EXISTS "VideoUploadSession_streamUid_key";
 
-# Preview a mutation. Still no writes. Phase 6 continuation uses 20 only for the internal canary store.
-pnpm video:canary:ops --storeId=<merchantId> --quota=20 --toggle=on
-
-# Apply to one explicitly confirmed store.
-pnpm video:canary:ops \
-  --storeId=<merchantId> \
-  --confirmStoreId=<merchantId> \
-  --quota=20 \
-  --toggle=on \
-  --apply
+ALTER TABLE "VideoUploadSession"
+  DROP COLUMN IF EXISTS "r2UploadId",
+  DROP COLUMN IF EXISTS "masterObjectKey",
+  DROP COLUMN IF EXISTS "ingestObjectKey",
+  DROP COLUMN IF EXISTS "streamUid";
 ```
 
-Apply mode requires an existing `StoreSettings` row, an exact `confirmStoreId` match, and at least one explicit mutation. Unrelated review-widget settings are preserved. If the loaded global flag is already true and the mutation would newly activate a store, the command refuses unless `--allow-live-activation` is added deliberately.
-
-The command reads `.env.local`. Before an apply operation, verify that its database URLs point to the intended environment. The command does not modify Vercel environment variables.
-
-## Pre-Canary Gate
-
-1. Confirm the intended production commit is deployed and healthy.
-2. Run `pnpm video:canary:verify-disabled`.
-3. Run the infrastructure verifier with a real temporary multipart write and webhook requirement:
-
-```bash
-node --env-file=.env.local scripts/verify-video-infrastructure.mjs \
-  --expect-disabled \
-  --require-webhook \
-  --write-probe
-```
-
-4. Confirm the internal test store id from the actual ikas installation/DB record. Do not infer it from row order.
-5. Dry-run the intended quota and toggle change and inspect the before/after plan. The initial canary used `5`; Phase 6 continuation raises only the verified internal store to `20` after this quota-aware UX deploy.
-6. Apply quota and toggle with exact store confirmation.
-7. Re-run the store report. Confirm usage, remaining quota, provider configuration, and effective state from the actual environment.
-
-## Activation Order
-
-1. Set the internal store quota to the approved canary value (`20` for the Phase 6 continuation; this is not a product default).
-2. Enable the internal store's `videoReviewsEnabled` toggle.
-3. Confirm every other store remains quota `0` and toggle `false`.
-4. Set Vercel Production `VIDEO_REVIEWS_ENABLED=true` only after the DB gates are correct.
-5. Redeploy Production and verify both the live no-store capability endpoint and the ops report are effective for only the internal store.
-
-Do not add production provider variables to Preview. Do not enable multiple merchants during the first canary.
-
-## Real Canary Scenario
-
-Use a controlled MP4 larger than `10 MiB`, between `2` and `60` seconds, and no larger than `150 MiB`. Record timestamps and ids without copying tokens, signed URLs, secrets, or customer media into tickets/logs.
+## Preview Functional Canary
+Use a controlled MP4/MOV between 2 and 60 seconds, no larger than 150 MiB. Record ids and timestamps only; never paste tokens, upload URLs, signed URLs, secrets, or customer media into docs/tickets.
 
 Verify in order:
+1. Widget capability opens video mode only for the intended test store.
+2. Initiate returns a token and Mux direct-upload URL; response does not expose Mux token secret, signing key, provider upload ID, provider asset ID, or playback IDs.
+3. UpChunk uploads to the Mux URL and progress/cancel/retry behavior stays on the same upload session.
+4. Complete returns `processing` and enqueues `resolve_video_asset`.
+5. Mux upload resolves to an asset via webhook or bounded reconcile.
+6. Asset `ready` creates a ready `VideoUploadSession` with `provider='mux'`, `providerAssetId`, `signedPlaybackId`, and no public playback ID yet.
+7. Quota moves from reserved to consumed exactly once.
+8. Review submission consumes the ready token, creates a pending video review, and keeps `ReviewMedia.visible=false`.
+9. Admin preview obtains a short-lived signed video JWT and a separate thumbnail JWT through `/api/admin/reviews/video-playback`.
+10. Approval enqueues `publish_video`; the job creates/converges one public playback ID and only then makes the review/media public.
+11. Storefront uses tokenless public Mux URLs (`stream.mux.com`, `image.mux.com`) only after approval.
+12. Rejection/hide enqueues `protect_video` and removes public playback IDs.
+13. Delete/cancel/expiry cleanup is idempotent and deletes/cancels Mux upload/assets without refunding consumed quota for ready-but-unsubmitted sessions.
 
-1. Browser receives multipart URLs and uploads more than one R2 part.
-2. Complete returns processing and creates one `prepare_stream` outbox job.
-3. QStash delivers the signed job; the session progresses to Stream processing.
-4. The real Stream webhook advances the session to ready and removes the ingest object. Readiness requires `readyToStream=true`, `status.state='ready'`, trusted HLS/poster delivery URLs, and valid V1 duration/size metadata; `pctComplete` is diagnostic only. As a failure-path check, the deduped `reconcile_stream` job must apply the same canonical ready/error state when webhook delivery is delayed or missed.
-5. Quota moves from reserved to consumed exactly once.
-6. Review submission consumes the ready token and creates a pending video review.
-7. Admin playback uses the short-lived signed endpoint; provider credentials and private playback data are not exposed by public status APIs.
-8. Approval creates and completes one `publish_stream` job. Only then does the review become approved and its media visible.
-9. Storefront renders a poster first and plays HLS only after lightbox open.
-10. Review deletion creates cleanup work; Stream and R2 master assets are removed idempotently.
-
-After each stage, run:
-
-```bash
-pnpm video:canary:ops --storeId=<merchantId>
-```
-
-The report includes current-month quota counts, recent sessions, provider-job status/action counts, video-review status counts, and pending/read-model processing counts. It is evidence, not a repair command.
-
-## Exit Criteria
-
-- No session is stuck in `uploading`, `completing`, or `processing` beyond its expected window.
-- No provider job remains `failed`, stale `processing`, or `dead`. Future-scheduled `expire_upload_session` jobs are expected and are not counted as due/stuck work.
-- The transient ingest object is removed by application cleanup; the 24-hour bucket lifecycle is only a backstop.
-- After review deletion, the Stream asset and R2 master object are absent.
-- Reserved quota is zero; consumed quota reflects exactly the completed canary upload.
-- No unexpected Sentry issue appears with `source=media-job` or video API routes.
-- Public review APIs expose normalized media fields only, never provider credentials or private admin playback tokens.
-- Readiness provenance matches the path that won the terminal transition: `stream_webhook`, `stream_reconcile`, `stream_ingest_cleanup`, or `stream_maintenance`.
+## Production Gate
+Production requires separate proof:
+- Production Mux token, signing key, and webhook secret belong to `Renuvex - Products Review`.
+- Global flag stays off until test-store quota/toggle isolation is verified.
+- Only the intended test store can upload.
+- No provider secrets, signed URLs, upload URLs, or provider IDs leak through browser bundle, public APIs, or logs.
+- Preview evidence cannot be reused as production credential evidence.
 
 ## Rollback
+Rollback closes exposure before teardown:
+1. Set `VIDEO_REVIEWS_ENABLED=false` and redeploy the affected environment.
+2. Set the canary store toggle off and quota to `0`.
+3. Keep Mux credentials/webhook/QStash configured until outstanding sessions and jobs are terminal.
+4. Verify no reserved quota, stuck session, failed/dead job, orphan pending video row, or public playback ID remains for rejected/deleted media.
 
-Rollback closes exposure before removing infrastructure:
+Do not revoke provider credentials or delete webhook/resources while cleanup work is pending.
 
-1. Set Vercel Production `VIDEO_REVIEWS_ENABLED=false` and redeploy.
-2. Set the canary store toggle off and quota to `0` using the ops command.
-3. Keep R2, Stream, webhook, QStash, and provider env configured until existing sessions and cleanup jobs reach terminal states.
-4. Verify no reserved quota, stuck session, failed/dead job, or stale ingest object remains.
-
-Do not delete provider credentials or webhook configuration while cleanup work is pending.
+## Exit Criteria
+- No `uploading`, `uploaded`, or `processing` session is stuck beyond the expected reconcile window.
+- No provider job remains `failed`, stale `processing`, or `dead`.
+- Reserved quota returns to zero; consumed quota matches completed uploads.
+- Public review APIs expose normalized media only, never private playback IDs or provider credentials.
+- Mux environment used by canary matches the intended Preview or Production gate.
+- No external credential revoke or provider resource deletion happens until inventory is proven and the contract/teardown phase is approved.
 
 ## Physical Device Follow-Up
-
-Playwright emulation is not physical-device acceptance. Phase 6 must repeat selection, metadata, multipart upload, interruption/resume, processing, admin preview, HLS playback, fullscreen, audio, pause, browser back, and modal close on a real iPhone Safari device and a real Android Chrome device.
-
-The dated evidence ledger is [[Review_Video_Physical_Device_Acceptance_2026-06]]. After the reliability hardening deploy, both Android Chrome and iPhone Safari must repeat interruption, retry/resume, offline cancel, processing, and removal checks. The 72-hour clock starts only after those post-deploy checks pass and the retained Android review is approved with storefront playback verified. If media-path code changes during the window, add the regression test, redeploy, and restart the clock; documentation-only changes do not restart it.
+Playwright emulation is not physical-device acceptance. Before production rollout, repeat upload, interruption/resume, cancel/offline, processing, admin preview, HLS playback, fullscreen/audio/pause, browser back, modal close, and public storefront playback on real iPhone Safari and real Android Chrome devices.

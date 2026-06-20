@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import {
   getMediaJobEndpoint,
+  getMuxApiConfig,
+  getMuxVideoQuality,
   getQStashMediaConfig,
-  getR2MediaConfig,
-  getStreamMediaConfig,
   isVideoReviewsGloballyEnabled,
   MediaConfigError,
 } from '@/lib/media/config';
@@ -69,8 +69,8 @@ export function resolveVideoFeatureAccess(input: VideoFeatureAccessInput): Video
 
 export function hasVideoProviderConfiguration(): boolean {
   try {
-    getR2MediaConfig();
-    getStreamMediaConfig();
+    getMuxApiConfig();
+    getMuxVideoQuality();
     getQStashMediaConfig();
     getMediaJobEndpoint();
     return true;

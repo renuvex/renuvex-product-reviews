@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-16
-last_verified: 2026-06-16
+updated: 2026-06-20
+last_verified: 2026-06-20
 confidence: high
 tags:
   - hot-context
@@ -17,6 +17,7 @@ related:
   - "[[ADR_0022_Placement_Allowlist_And_Lazy_Resync]]"
   - "[[ADR_0023_Widget_Lifecycle_Gating_Contract]]"
   - "[[ADR_0024_Badge_Review_Surface_Separation]]"
+  - "[[ADR_0032_Review_Video_On_Mux]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Test_Strategy]]"
 source_files:
@@ -33,6 +34,9 @@ source_files:
   - "tests/widget-interaction-smoke.spec.ts"
   - "tests/admin-preview-smoke.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
+  - "tests/unit/video-upload-routes.test.ts"
+  - "tests/unit/media-jobs.test.ts"
+  - "tests/unit/media-route-contracts.test.ts"
   - "tests/unit/review-summary.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
@@ -97,40 +101,28 @@ source_files:
 # Hot Context
 
 ## Current Focus
-- ikas review/rating app: admin, storefront widget, badges, uploads, moderation.
+- ikas review/rating app: admin, storefront widget, badges, uploads, moderation, and the Mux review-video cutover.
 
 ## Must Know
 - Source/config/tests/runtime win; wiki routes.
 - Prompt procedures live in `09_Prompts`; do not create `08_Prompts`.
 - Never document secrets.
 - `package.json` pins Next.js `16.2.1`; older Next.js 15 docs are stale unless re-verified.
+- For video work, no deploy, migration apply, env write, provider write, or teardown happens without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-05-25 to 2026-06-01: Review section became explicit-mount, Shadow DOM isolated, lifecycle-gated, structured-data aware, and backed by layered widget tests.
-- 2026-06-01: Widget CSS ownership is split: classic/card layout styles own layout visuals; `reviews-section/styles.js` aggregates shared CSS modules.
-- 2026-06-01: `PAGE_VIEW` dedupe is semantic (`pageType + pathname/search`), so distinct fast transitions still run.
-- 2026-06-01: Listing badge sibling mount is the default contract. The temporary publicApiKey rollout gate and legacy in-title branch were removed; adapter overrides are the only exception path.
-- 2026-06-01: `reviews-section/render.js` uses pure `render/*.js` builders + DI handlers; load-more stays inline for incremental DOM insert.
-- 2026-06-01: Wizard close color derives from `formBgColor`; summary popovers, bar a11y/counts, hover gating, and mobile tap shields are pinned by tests.
-- 2026-06-06: Review wizard step copy is merchant-editable under `Metin > Yorum Formu`; nested settings stay flat saved keys.
-- 2026-06-06: ikas confirmed Storefront Events are not DOM-ready signals and `VIEW_LISTING.productDetails[]` is usable. PDP reviews stay deterministic by replaying only late `reviews-main` mounts and product/path-guarding stale bootstraps.
-- 2026-06-06: Public rating/summary aggregates use `ProductReviewSummary`; raw `Review` stays source of truth and `pnpm reviews:summaries:rebuild` repairs it. See [[ADR_0026_Product_Review_Summary_Read_Model]].
-
-- 2026-06-08: Photo reads use `Review.hasImages` + `ReviewMedia`; legacy media reconciliation copied 10 available assets, dropped 30 missing source URLs, and left zero global legacy URLs. See [[Legacy_Review_Media_Reconciliation]].
-- 2026-06-08: Review list load-more uses signed cursor/keyset pagination via `data.nextCursor`; legacy `page/limit` remains for compatibility and future numbered pagination. Cursor requests do not use Prisma `skip`; tampered/unsigned/context-mismatched cursors return `400`. `REVIEW_CURSOR_SECRET` is required in server env. See [[ADR_0028_Review_Cursor_Pagination]].
-- 2026-06-08: Review-list exact `totalCount` / `totalPages` now come from `ProductReviewSummary` buckets, including `photoRating*Count` for rating+photo filters. `/api/public/reviews` no longer calls raw `Review.count()` on the public read path.
-- 2026-06-08: Review media metadata is now staged in `PendingReviewImage` and committed to `ReviewMedia` after signed Cloudinary upload-response verification. Public `images` remains the compatibility contract; additive `media[]` exposes dimensions/format/bytes/thumbnail URL for future layouts. See [[ADR_0029_Review_Media_Metadata]].
-- 2026-06-15: Video reliability adds durable Stream reconciliation/session expiry, stable mobile preview, adaptive polling, and offline cancellation. Android/iPhone interruption retests remain required before canary `T0`. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] and [[Review_Video_Canary_Runbook]].
-- 2026-06-16: Stream readiness uses `readyToStream=true`, provider `ready`, trusted HLS/poster URLs, and V1 limits; `pctComplete` is diagnostic. Reconciliation checks `T+10s` through `T+600s` with explicit provenance and single-consumption race protection.
+- 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
+- 2026-06-20: Review Video provider cutover is staged locally for Mux. Active code uses Mux direct uploads, UpChunk, `resolve_video_asset` / `reconcile_video`, Mux webhook dedup/audit, admin signed playback, and public playback IDs after approval. No deploy, migration apply, env write, Mux write, or external teardown is implied. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
+- 2026-06-20: The older `6 reviews / 39 sessions` purge manifest is historical only; latest DB evidence before implementation showed zero video surfaces. Preview and production Mux environments are separate, and webhook resource/secret creation waits for a deployed `/api/webhooks/mux` URL.
 
 ## Current Risks / Open Questions
 - Keep live post-deploy smoke after runtime widget changes.
+- Mux migration gates still pending outside local code: DB migration apply, Preview deploy, Preview webhook creation/env write, Preview canary, production credential proof, and final external credential/resource teardown.
 - Theme adapters still depend on Admin API `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme admin warning UI, authenticated ikas dashboard smoke, Sentry post-deploy health.
 
 ## Read Next
 - [[Current_Status]]
-- [[Project_Overview]]
-- [[Open_Questions]]
 - [[Test_Strategy]]
-- [[ADR_0024_Badge_Review_Surface_Separation]]
+- [[ADR_0032_Review_Video_On_Mux]]
+- [[Review_Video_Canary_Runbook]]

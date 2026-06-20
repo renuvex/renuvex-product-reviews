@@ -3,7 +3,6 @@ import {
   describeVideoUploadError,
   shouldDiscardStoredVideoSession,
   videoProcessingPollDelayMs,
-  videoUploadProgressPercent,
   VideoUploadRequestError,
 } from '../../src/widget/reviews-section/review-form-modal/media/video-upload.js';
 
@@ -29,22 +28,6 @@ describe('video upload error presentation', () => {
     expect(videoProcessingPollDelayMs(30_000)).toBe(5000);
     expect(videoProcessingPollDelayMs(119_999)).toBe(5000);
     expect(videoProcessingPollDelayMs(120_000)).toBe(10_000);
-  });
-
-  it('starts resumed upload progress from already completed multipart parts', () => {
-    const partSize = 10 * 1024 * 1024;
-    expect(videoUploadProgressPercent(
-      25 * 1024 * 1024,
-      partSize,
-      [1, 2],
-      {},
-    )).toBe(76);
-    expect(videoUploadProgressPercent(
-      25 * 1024 * 1024,
-      partSize,
-      [1, 2],
-      { 3: 2.5 * 1024 * 1024 },
-    )).toBe(86);
   });
 
   it('keeps unknown network errors retryable with the generic copy', () => {

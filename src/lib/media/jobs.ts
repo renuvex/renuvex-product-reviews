@@ -5,34 +5,29 @@ import { prisma } from '@/lib/prisma';
 import {
   MEDIA_JOB_ACTIONS,
   MEDIA_JOB_STALE_LOCK_MS,
-  VIDEO_INGEST_CLEANUP_DELAY_MS,
-  VIDEO_INGEST_HARD_DEADLINE_MS,
-  VIDEO_INGEST_RECHECK_DELAY_MS,
-  VIDEO_STREAM_RECONCILE_OFFSETS_MS,
+  VIDEO_ASSET_RECONCILE_OFFSETS_MS,
+  VIDEO_PROVIDER,
 } from '@/lib/media/constants';
 import {
-  createStreamVideoFromUrl,
-  deleteStreamVideo,
-  findStreamVideoByCreator,
-  getStreamVideo,
-  setStreamVideoPublic,
-  StreamProviderError,
-} from '@/lib/media/providers/cloudflare-stream';
-import {
-  abortVideoMultipartUpload,
-  copyVideoMasterToIngest,
-  deleteVideoIngest,
-  deleteVideoMaster,
-} from '@/lib/media/providers/r2';
+  buildMuxPlaybackUrl,
+  buildMuxPosterUrl,
+  cancelMuxUpload,
+  createMuxPlaybackId,
+  deleteMuxAsset,
+  deleteMuxPlaybackId,
+  getMuxAsset,
+  getMuxUpload,
+  isMuxNotFound,
+  listMuxPlaybackIds,
+  MuxProviderError,
+  type MuxPlaybackId,
+} from '@/lib/media/providers/mux';
 import { deleteCloudinaryReviewImages } from '@/lib/media/providers/cloudinary-image';
 import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
 import { getVideoSessionForUpdate, releaseVideoReservation } from '@/lib/media/sessions';
-import { videoIngestObjectKey } from '@/lib/media/video-policy';
 import { matchesVideoModerationIntent } from '@/lib/media/moderation-intent';
-import { applyStreamVideoState } from '@/lib/media/video-processing';
-import {
-  enqueueMediaProviderJob,
-} from '@/lib/media/outbox';
+import { applyMuxAssetState } from '@/lib/media/video-processing';
+import { enqueueMediaProviderJob } from '@/lib/media/outbox';
 import { dispatchMediaProviderJob } from '@/lib/media/dispatcher';
 import { failSessionAndQueueCleanup } from '@/lib/media/lifecycle';
 
@@ -43,34 +38,31 @@ export {
   failSessionAndQueueCleanup,
 } from '@/lib/media/lifecycle';
 
-const preparePayload = z.object({ sessionId: z.string().uuid() });
+const resolveVideoAssetPayload = z.object({
+  sessionId: z.string().uuid(),
+  providerUploadId: z.string().min(1).max(256),
+});
 const moderationPayload = z.object({
   reviewId: z.string().uuid(),
   mediaId: z.string().uuid(),
-  streamUid: z.string().min(1).max(128),
+  providerAssetId: z.string().min(1).max(256),
   moderationVersion: z.number().int().positive(),
 });
 const cleanupPayload = z.object({
   sessionId: z.string().uuid().optional(),
-  streamUid: z.string().max(128).optional(),
-  r2UploadId: z.string().max(1024).optional(),
-  masterObjectKey: z.string().max(1024).optional(),
-  ingestObjectKey: z.string().max(1024).optional(),
+  providerUploadId: z.string().max(256).optional(),
+  providerAssetId: z.string().max(256).optional(),
   pendingPublicId: z.string().max(512).optional(),
-});
-const cleanupIngestPayload = z.object({
-  sessionId: z.string().uuid(),
-  ingestObjectKey: z.string().max(1024),
-  hardDeleteAt: z.string().datetime(),
 });
 const cleanupImagePayload = z.object({
   publicIds: z.array(z.string().min(1).max(512)).min(1).max(100),
 });
-const reconcileStreamPayload = z.object({
+const reconcileVideoPayload = z.object({
   sessionId: z.string().uuid(),
-  streamUid: z.string().min(1).max(128),
+  providerUploadId: z.string().min(1).max(256).optional(),
+  providerAssetId: z.string().min(1).max(256).optional(),
   startedAt: z.string().datetime(),
-  checkIndex: z.number().int().min(0).max(VIDEO_STREAM_RECONCILE_OFFSETS_MS.length - 1),
+  checkIndex: z.number().int().min(0).max(VIDEO_ASSET_RECONCILE_OFFSETS_MS.length - 1),
   outcome: z.string().max(128).optional(),
   lastProviderErrorCode: z.string().max(128).optional(),
 });
@@ -90,8 +82,10 @@ function mediaJobSerialKey(job: { action: string; payload: Prisma.JsonValue }): 
   const payload = job.payload as Record<string, Prisma.JsonValue>;
   const sessionId = typeof payload.sessionId === 'string' ? payload.sessionId : '';
   if (sessionId && job.action !== MEDIA_JOB_ACTIONS.cleanupImage) return `video-session:${sessionId}`;
-  const streamUid = typeof payload.streamUid === 'string' ? payload.streamUid : '';
-  if (streamUid) return `stream:${streamUid}`;
+  const providerAssetId = typeof payload.providerAssetId === 'string' ? payload.providerAssetId : '';
+  if (providerAssetId) return `mux-asset:${providerAssetId}`;
+  const providerUploadId = typeof payload.providerUploadId === 'string' ? payload.providerUploadId : '';
+  if (providerUploadId) return `mux-upload:${providerUploadId}`;
   return null;
 }
 
@@ -138,7 +132,33 @@ async function requireCurrentLease(lease: MediaJobLease | null) {
   if (lease && !(await mediaJobLeaseIsCurrent(lease))) throw new Error('media_provider_lease_lost');
 }
 
-async function convergeStreamPublication(payload: z.infer<typeof moderationPayload>) {
+function providerErrorCode(error: unknown): string {
+  if (error instanceof MuxProviderError) return error.code;
+  return error instanceof Error ? error.name || error.message : 'mux_provider_unavailable';
+}
+
+function publicPlaybackIds(playbackIds: MuxPlaybackId[]): MuxPlaybackId[] {
+  return playbackIds.filter((playbackId) => playbackId.policy === 'public' && playbackId.id);
+}
+
+async function ensureMuxPublicPlaybackId(assetId: string): Promise<MuxPlaybackId> {
+  const existing = publicPlaybackIds(await listMuxPlaybackIds(assetId)).sort((a, b) => a.id.localeCompare(b.id));
+  if (existing[0]) {
+    await Promise.all(existing.slice(1).map((playbackId) => deleteMuxPlaybackId(assetId, playbackId.id)));
+    return existing[0];
+  }
+  const created = await createMuxPlaybackId(assetId, 'public');
+  const converged = publicPlaybackIds(await listMuxPlaybackIds(assetId)).sort((a, b) => a.id.localeCompare(b.id));
+  await Promise.all(converged.slice(1).map((playbackId) => deleteMuxPlaybackId(assetId, playbackId.id)));
+  return converged[0] ?? created;
+}
+
+async function deleteMuxPublicPlaybackIds(assetId: string) {
+  const playbackIds = publicPlaybackIds(await listMuxPlaybackIds(assetId));
+  await Promise.all(playbackIds.map((playbackId) => deleteMuxPlaybackId(assetId, playbackId.id)));
+}
+
+async function convergeMuxPublication(payload: z.infer<typeof moderationPayload>) {
   const media = await prisma.reviewMedia.findUnique({
     where: { id: payload.mediaId },
     select: {
@@ -148,41 +168,47 @@ async function convergeStreamPublication(payload: z.infer<typeof moderationPaylo
       review: { select: { status: true } },
     },
   });
-  if (!media || media.providerAssetId !== payload.streamUid) {
-    await deleteStreamVideo(payload.streamUid);
+  if (!media || media.providerAssetId !== payload.providerAssetId) {
+    await deleteMuxAsset(payload.providerAssetId);
     return 'deleted' as const;
   }
   const shouldBePublic = media.processingStatus === 'ready' && media.visible && media.review.status === 'approved';
-  await setStreamVideoPublic(payload.streamUid, shouldBePublic);
-  return shouldBePublic ? 'public' as const : 'protected' as const;
+  if (shouldBePublic) {
+    await ensureMuxPublicPlaybackId(payload.providerAssetId);
+    return 'public' as const;
+  }
+  await deleteMuxPublicPlaybackIds(payload.providerAssetId);
+  return 'protected' as const;
 }
 
-async function ensureStreamReconcileJob(session: {
+async function ensureMuxReconcileJob(session: {
   id: string;
   storeId: string;
-  streamUid: string;
+  providerUploadId?: string | null;
+  providerAssetId?: string | null;
 }) {
   const startedAt = new Date();
-  const availableAt = new Date(startedAt.getTime() + VIDEO_STREAM_RECONCILE_OFFSETS_MS[0]);
+  const availableAt = new Date(startedAt.getTime() + VIDEO_ASSET_RECONCILE_OFFSETS_MS[0]);
   return prisma.$transaction((tx) => enqueueMediaProviderJob(tx, {
-    dedupeKey: `reconcile-stream:${session.id}`,
+    dedupeKey: `reconcile-video:${session.id}`,
     storeId: session.storeId,
     uploadSessionId: session.id,
-    provider: 'cloudflare_stream',
-    action: MEDIA_JOB_ACTIONS.reconcileStream,
+    provider: VIDEO_PROVIDER,
+    action: MEDIA_JOB_ACTIONS.reconcileVideo,
     resourceType: 'video',
     availableAt,
     maxAttempts: 16,
     payload: {
       sessionId: session.id,
-      streamUid: session.streamUid,
+      ...(session.providerUploadId ? { providerUploadId: session.providerUploadId } : {}),
+      ...(session.providerAssetId ? { providerAssetId: session.providerAssetId } : {}),
       startedAt: startedAt.toISOString(),
       checkIndex: 0,
     },
   }));
 }
 
-async function dispatchStreamReconcileJob(job: {
+async function dispatchMuxReconcileJob(job: {
   id: string;
   status: string;
   availableAt: Date;
@@ -192,147 +218,134 @@ async function dispatchStreamReconcileJob(job: {
     job.id,
     Math.max(1, Math.ceil((job.availableAt.getTime() - Date.now()) / 1000)),
   );
-  if (!dispatched) throw new Error('stream_reconcile_dispatch_failed');
+  if (!dispatched) throw new Error('mux_reconcile_dispatch_failed');
 }
 
-async function prepareStream(payload: z.infer<typeof preparePayload>): Promise<MediaJobResult> {
+async function updateSessionWithMuxAsset(input: {
+  sessionId: string;
+  storeId: string;
+  productId: string;
+  mimeType: string;
+  bytes: number;
+  providerUploadId: string;
+  providerAssetId: string;
+}) {
+  const publicId = `${VIDEO_PROVIDER}:${input.providerAssetId}`;
+  const claimed = await prisma.videoUploadSession.updateMany({
+    where: {
+      id: input.sessionId,
+      status: { in: ['uploading', 'completing', 'uploaded', 'processing'] },
+      OR: [{ providerAssetId: null }, { providerAssetId: input.providerAssetId }],
+    },
+    data: {
+      status: 'processing',
+      provider: VIDEO_PROVIDER,
+      providerUploadId: input.providerUploadId,
+      providerAssetId: input.providerAssetId,
+      publicId,
+      errorCode: null,
+    },
+  });
+  if (claimed.count === 0) return false;
+  await prisma.pendingReviewImage.upsert({
+    where: { publicId },
+    create: {
+      publicId,
+      storeId: input.storeId,
+      productId: input.productId,
+      uploadSessionId: input.sessionId,
+      url: null,
+      resourceType: 'video',
+      provider: VIDEO_PROVIDER,
+      providerAssetId: input.providerAssetId,
+      posterUrl: null,
+      processingStatus: 'pending',
+      sourceProvider: null,
+      sourceAssetId: null,
+      mimeType: input.mimeType,
+      bytes: input.bytes,
+      metadataSource: 'mux_upload',
+      metadataStatus: 'pending',
+    },
+    update: {
+      provider: VIDEO_PROVIDER,
+      providerAssetId: input.providerAssetId,
+      processingStatus: 'pending',
+      sourceProvider: null,
+      sourceAssetId: null,
+      metadataSource: 'mux_upload',
+      metadataStatus: 'pending',
+    },
+  });
+  return true;
+}
+
+async function resolveMuxVideoAsset(payload: z.infer<typeof resolveVideoAssetPayload>): Promise<MediaJobResult> {
   const session = await prisma.videoUploadSession.findUnique({ where: { id: payload.sessionId } });
-  if (!session || ['failed', 'aborted', 'consumed'].includes(session.status)) return { status: 'superseded' };
-  if (session.streamUid) {
-    const reconcileJob = await ensureStreamReconcileJob({
-      id: session.id,
-      storeId: session.storeId,
-      streamUid: session.streamUid,
-    });
-    await dispatchStreamReconcileJob(reconcileJob);
-    return { status: 'succeeded' };
+  if (!session || ['failed', 'aborted', 'consumed', 'ready'].includes(session.status)) return { status: 'superseded' };
+  const providerUploadId = session.providerUploadId ?? payload.providerUploadId;
+  if (!providerUploadId || providerUploadId !== payload.providerUploadId) return { status: 'superseded' };
+
+  const upload = await getMuxUpload(providerUploadId);
+  if (upload.status === 'errored' || upload.status === 'cancelled' || upload.status === 'timed_out') {
+    await failSessionAndQueueCleanup(session.id, `mux_upload_${upload.status}`, { providerUploadId });
+    return { status: 'succeeded', payload: { ...payload, outcome: upload.status } };
+  }
+  if (!upload.asset_id) {
+    return { status: 'deferred', delayMs: 5_000, payload };
   }
 
-  const now = new Date();
-  const ingestObjectKey = session.ingestObjectKey ?? videoIngestObjectKey(session.id);
-  const cleanupAvailableAt = new Date(now.getTime() + VIDEO_INGEST_CLEANUP_DELAY_MS);
-  const hardDeleteAt = new Date(now.getTime() + VIDEO_INGEST_HARD_DEADLINE_MS);
-  const deadlineJob = await prisma.$transaction(async (tx) => {
-    const claimed = await tx.videoUploadSession.updateMany({
-      where: { id: session.id, status: { in: ['uploaded', 'completing', 'processing'] }, streamUid: null },
-      data: { ingestObjectKey },
-    });
-    if (claimed.count === 0) return null;
-    return enqueueMediaProviderJob(tx, {
-      dedupeKey: `cleanup-ingest:${session.id}:${ingestObjectKey}`,
-      storeId: session.storeId,
-      uploadSessionId: session.id,
-      provider: 'cloudflare_r2',
-      action: MEDIA_JOB_ACTIONS.cleanupIngest,
-      resourceType: 'video',
-      availableAt: cleanupAvailableAt,
-      maxAttempts: 64,
-      payload: { sessionId: session.id, ingestObjectKey, hardDeleteAt: hardDeleteAt.toISOString() },
-    });
+  const claimed = await updateSessionWithMuxAsset({
+    sessionId: session.id,
+    storeId: session.storeId,
+    productId: session.productId,
+    mimeType: session.mimeType,
+    bytes: session.bytes,
+    providerUploadId,
+    providerAssetId: upload.asset_id,
   });
-  if (!deadlineJob) return { status: 'superseded' };
-  if (!await dispatchMediaProviderJob(deadlineJob.id, Math.ceil(VIDEO_INGEST_CLEANUP_DELAY_MS / 1000))) {
-    throw new Error('ingest_cleanup_dispatch_failed');
-  }
+  if (!claimed) return { status: 'superseded' };
 
-  const ingestUrl = await copyVideoMasterToIngest(session.masterObjectKey, ingestObjectKey, session.mimeType);
-  const current = await prisma.videoUploadSession.findUnique({ where: { id: session.id }, select: { status: true } });
-  if (!current || ['failed', 'aborted', 'consumed'].includes(current.status)) {
-    await deleteVideoIngest(ingestObjectKey);
-    return { status: 'superseded' };
-  }
-
-  const existing = await findStreamVideoByCreator(session.id);
-  const video = existing ?? await createStreamVideoFromUrl({ url: ingestUrl, creator: session.id, name: `review-video-${session.id}` });
-  if (!video.uid) throw new Error('stream_copy_missing_uid');
-  const processingStartedAt = new Date();
-  const firstReconcileAt = new Date(processingStartedAt.getTime() + VIDEO_STREAM_RECONCILE_OFFSETS_MS[0]);
-  const reconcileJob = await prisma.$transaction(async (tx) => {
-    const claimed = await tx.videoUploadSession.updateMany({
-      where: {
-        id: session.id,
-        status: { in: ['uploaded', 'completing', 'processing'] },
-        OR: [{ streamUid: null }, { streamUid: video.uid }],
-      },
-      data: {
-        status: 'processing',
-        ingestObjectKey,
-        streamUid: video.uid,
-        publicId: `cloudflare_stream:${video.uid}`,
-        playbackUrl: video.playback?.hls ?? null,
-        posterUrl: video.thumbnail ?? null,
-      },
-    });
-    if (claimed.count === 0) return false;
-    await tx.pendingReviewImage.upsert({
-      where: { publicId: `cloudflare_stream:${video.uid}` },
-      create: {
-        publicId: `cloudflare_stream:${video.uid}`,
-        storeId: session.storeId,
-        productId: session.productId,
-        uploadSessionId: session.id,
-        url: video.playback?.hls ?? null,
-        resourceType: 'video',
-        provider: 'cloudflare_stream',
-        providerAssetId: video.uid,
-        posterUrl: video.thumbnail ?? null,
-        processingStatus: 'pending',
-        sourceProvider: 'cloudflare_r2',
-        sourceAssetId: session.masterObjectKey,
-        mimeType: session.mimeType,
-        bytes: session.bytes,
-        metadataSource: 'stream_copy',
-        metadataStatus: 'pending',
-      },
-      update: {
-        providerAssetId: video.uid,
-        url: video.playback?.hls ?? null,
-        posterUrl: video.thumbnail ?? null,
-        processingStatus: 'pending',
-      },
-    });
-    return enqueueMediaProviderJob(tx, {
-      dedupeKey: `reconcile-stream:${session.id}`,
-      storeId: session.storeId,
-      uploadSessionId: session.id,
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.reconcileStream,
-      resourceType: 'video',
-      availableAt: firstReconcileAt,
-      maxAttempts: 16,
-      payload: {
-        sessionId: session.id,
-        streamUid: video.uid,
-        startedAt: processingStartedAt.toISOString(),
-        checkIndex: 0,
-      },
-    });
+  const current = await prisma.videoUploadSession.findUnique({ where: { id: session.id } });
+  if (!current) return { status: 'superseded' };
+  const reconcileJob = await ensureMuxReconcileJob({
+    id: current.id,
+    storeId: current.storeId,
+    providerUploadId,
+    providerAssetId: upload.asset_id,
   });
-  if (!reconcileJob) {
-    await deleteStreamVideo(video.uid);
-    await deleteVideoIngest(ingestObjectKey);
-    return { status: 'superseded' };
+
+  try {
+    const asset = await getMuxAsset(upload.asset_id);
+    const result = await applyMuxAssetState(current, asset, 'mux_complete_poll');
+    if (result.ok && (result.status === 'ready' || result.status === 'consumed')) {
+      return { status: 'succeeded', payload: { ...payload, providerAssetId: upload.asset_id, outcome: result.status } };
+    }
+    if (!result.ok) return { status: 'succeeded', payload: { ...payload, providerAssetId: upload.asset_id, outcome: result.code } };
+  } catch (error) {
+    if (!isMuxNotFound(error)) throw error;
   }
-  await dispatchStreamReconcileJob(reconcileJob);
-  return { status: 'succeeded' };
+
+  await dispatchMuxReconcileJob(reconcileJob);
+  return { status: 'succeeded', payload: { ...payload, providerAssetId: upload.asset_id, outcome: 'processing' } };
 }
 
-function nextStreamReconcileResult(
-  payload: z.infer<typeof reconcileStreamPayload>,
+function nextMuxReconcileResult(
+  payload: z.infer<typeof reconcileVideoPayload>,
   providerErrorCode?: string,
 ): MediaJobResult {
   const nextIndex = payload.checkIndex + 1;
-  if (nextIndex >= VIDEO_STREAM_RECONCILE_OFFSETS_MS.length) {
+  if (nextIndex >= VIDEO_ASSET_RECONCILE_OFFSETS_MS.length) {
     return {
       status: 'succeeded',
       payload: {
         ...payload,
-        outcome: 'stream_processing_delayed',
+        outcome: 'mux_processing_delayed',
         ...(providerErrorCode ? { lastProviderErrorCode: providerErrorCode.slice(0, 128) } : {}),
       },
     };
   }
-  const nextAt = new Date(payload.startedAt).getTime() + VIDEO_STREAM_RECONCILE_OFFSETS_MS[nextIndex];
+  const nextAt = new Date(payload.startedAt).getTime() + VIDEO_ASSET_RECONCILE_OFFSETS_MS[nextIndex];
   return {
     status: 'deferred',
     delayMs: Math.max(1_000, nextAt - Date.now()),
@@ -344,47 +357,77 @@ function nextStreamReconcileResult(
   };
 }
 
-async function reconcileStream(payload: z.infer<typeof reconcileStreamPayload>): Promise<MediaJobResult> {
-  const session = await prisma.videoUploadSession.findUnique({ where: { id: payload.sessionId } });
+async function reconcileMuxVideo(payload: z.infer<typeof reconcileVideoPayload>): Promise<MediaJobResult> {
+  let session = await prisma.videoUploadSession.findUnique({ where: { id: payload.sessionId } });
   if (!session || ['ready', 'failed', 'aborted', 'consumed'].includes(session.status)) {
     return { status: 'superseded' };
   }
-  if (!session.streamUid || session.streamUid !== payload.streamUid) return { status: 'superseded' };
 
-  let video;
+  let providerAssetId = session.providerAssetId ?? payload.providerAssetId ?? null;
+  const providerUploadId = session.providerUploadId ?? payload.providerUploadId ?? null;
+  if (!providerAssetId && providerUploadId) {
+    try {
+      const upload = await getMuxUpload(providerUploadId);
+      if (upload.status === 'errored' || upload.status === 'cancelled' || upload.status === 'timed_out') {
+        await failSessionAndQueueCleanup(session.id, `mux_upload_${upload.status}`, { providerUploadId });
+        return { status: 'succeeded', payload: { ...payload, outcome: upload.status } };
+      }
+      providerAssetId = upload.asset_id ?? null;
+      if (providerAssetId) {
+        await updateSessionWithMuxAsset({
+          sessionId: session.id,
+          storeId: session.storeId,
+          productId: session.productId,
+          mimeType: session.mimeType,
+          bytes: session.bytes,
+          providerUploadId,
+          providerAssetId,
+        });
+        session = await prisma.videoUploadSession.findUnique({ where: { id: session.id } });
+        if (!session) return { status: 'superseded' };
+      }
+    } catch (error) {
+      const code = providerErrorCode(error);
+      Sentry.captureException(error, {
+        tags: { source: 'media-job', provider: VIDEO_PROVIDER, action: MEDIA_JOB_ACTIONS.reconcileVideo, status: 'retrying' },
+        extra: { sessionId: payload.sessionId, checkIndex: payload.checkIndex },
+      });
+      return nextMuxReconcileResult(payload, code);
+    }
+  }
+  if (!providerAssetId) return nextMuxReconcileResult(payload);
+
+  let asset;
   try {
-    video = await getStreamVideo(payload.streamUid);
+    asset = await getMuxAsset(providerAssetId);
   } catch (error) {
-    const code = error instanceof StreamProviderError
-      ? error.code
-      : error instanceof Error
-        ? error.name || error.message
-        : 'stream_provider_unavailable';
-    if (payload.checkIndex === 0 || payload.checkIndex === VIDEO_STREAM_RECONCILE_OFFSETS_MS.length - 1) {
+    const code = providerErrorCode(error);
+    if (payload.checkIndex === 0 || payload.checkIndex === VIDEO_ASSET_RECONCILE_OFFSETS_MS.length - 1) {
       Sentry.captureException(error, {
         tags: {
           source: 'media-job',
-          provider: 'cloudflare_stream',
-          action: MEDIA_JOB_ACTIONS.reconcileStream,
-          status: payload.checkIndex === VIDEO_STREAM_RECONCILE_OFFSETS_MS.length - 1 ? 'delayed' : 'retrying',
+          provider: VIDEO_PROVIDER,
+          action: MEDIA_JOB_ACTIONS.reconcileVideo,
+          status: payload.checkIndex === VIDEO_ASSET_RECONCILE_OFFSETS_MS.length - 1 ? 'delayed' : 'retrying',
         },
         extra: { sessionId: payload.sessionId, checkIndex: payload.checkIndex },
       });
     }
-    return nextStreamReconcileResult(payload, code);
+    return nextMuxReconcileResult(payload, code);
   }
 
-  const result = await applyStreamVideoState(session, video, 'stream_reconcile');
+  const result = await applyMuxAssetState(session, asset, 'mux_reconcile');
   if (!result.ok || result.status === 'ready' || result.status === 'consumed') {
     return {
       status: 'succeeded',
       payload: {
         ...payload,
+        providerAssetId,
         outcome: result.ok ? result.status : result.code,
       },
     };
   }
-  return nextStreamReconcileResult(payload);
+  return nextMuxReconcileResult({ ...payload, providerAssetId });
 }
 
 async function expireUploadSession(payload: z.infer<typeof expireUploadSessionPayload>): Promise<MediaJobResult> {
@@ -404,55 +447,81 @@ async function expireUploadSession(payload: z.infer<typeof expireUploadSessionPa
   return { status: 'succeeded' };
 }
 
-async function publishStream(payload: z.infer<typeof moderationPayload>, lease: MediaJobLease | null): Promise<MediaJobResult> {
+async function publishVideo(payload: z.infer<typeof moderationPayload>, lease: MediaJobLease | null): Promise<MediaJobResult> {
   const candidate = await prisma.review.findUnique({ where: { id: payload.reviewId } });
   if (!matchesVideoModerationIntent(candidate, 'pending', payload.moderationVersion)) {
-    await convergeStreamPublication(payload);
+    await convergeMuxPublication(payload);
     return { status: 'superseded' };
   }
-  await setStreamVideoPublic(payload.streamUid, true);
+  const publicPlaybackId = await ensureMuxPublicPlaybackId(payload.providerAssetId);
   await requireCurrentLease(lease);
+  const publicPlaybackUrl = buildMuxPlaybackUrl(publicPlaybackId.id);
+  const publicPosterUrl = buildMuxPosterUrl(publicPlaybackId.id);
   const applied = await prisma.$transaction(async (tx) => {
     const existing = await tx.review.findUnique({ where: { id: payload.reviewId } });
     if (!matchesVideoModerationIntent(existing, 'pending', payload.moderationVersion)) return false;
     const updated = await tx.review.update({ where: { id: payload.reviewId }, data: { status: 'approved' } });
     await tx.reviewMedia.updateMany({
-      where: { id: payload.mediaId, reviewId: payload.reviewId, processingStatus: 'ready' },
-      data: { visible: true },
+      where: {
+        id: payload.mediaId,
+        reviewId: payload.reviewId,
+        provider: VIDEO_PROVIDER,
+        providerAssetId: payload.providerAssetId,
+        processingStatus: 'ready',
+      },
+      data: {
+        visible: true,
+        url: publicPlaybackUrl,
+        posterUrl: publicPosterUrl,
+      },
+    });
+    await tx.videoUploadSession.updateMany({
+      where: { provider: VIDEO_PROVIDER, providerAssetId: payload.providerAssetId },
+      data: {
+        publicPlaybackId: publicPlaybackId.id,
+        playbackUrl: publicPlaybackUrl,
+        posterUrl: publicPosterUrl,
+      },
     });
     await applyReviewSummaryVisibilityChange(tx, existing, updated);
     return true;
   });
   if (!applied) {
-    await convergeStreamPublication(payload);
+    await convergeMuxPublication(payload);
     return { status: 'superseded' };
   }
   return { status: 'succeeded' };
 }
 
-async function protectStream(payload: z.infer<typeof moderationPayload>, lease: MediaJobLease | null): Promise<MediaJobResult> {
+async function protectVideo(payload: z.infer<typeof moderationPayload>, lease: MediaJobLease | null): Promise<MediaJobResult> {
   const candidate = await prisma.review.findUnique({ where: { id: payload.reviewId } });
   if (!matchesVideoModerationIntent(candidate, 'rejected', payload.moderationVersion)) {
-    await convergeStreamPublication(payload);
+    await convergeMuxPublication(payload);
     return { status: 'superseded' };
   }
-  await setStreamVideoPublic(payload.streamUid, false);
+  await deleteMuxPublicPlaybackIds(payload.providerAssetId);
   await requireCurrentLease(lease);
   const current = await prisma.review.findUnique({ where: { id: payload.reviewId } });
   if (!matchesVideoModerationIntent(current, 'rejected', payload.moderationVersion)) {
-    await convergeStreamPublication(payload);
+    await convergeMuxPublication(payload);
     return { status: 'superseded' };
   }
+  await prisma.$transaction(async (tx) => {
+    await tx.reviewMedia.updateMany({
+      where: { id: payload.mediaId, reviewId: payload.reviewId, provider: VIDEO_PROVIDER, providerAssetId: payload.providerAssetId },
+      data: { visible: false },
+    });
+    await tx.videoUploadSession.updateMany({
+      where: { provider: VIDEO_PROVIDER, providerAssetId: payload.providerAssetId },
+      data: { publicPlaybackId: null },
+    });
+  });
   return { status: 'succeeded' };
 }
 
 async function cleanupVideo(payload: z.infer<typeof cleanupPayload>): Promise<MediaJobResult> {
-  if (payload.streamUid) await deleteStreamVideo(payload.streamUid);
-  if (payload.ingestObjectKey) await deleteVideoIngest(payload.ingestObjectKey);
-  if (payload.r2UploadId && payload.masterObjectKey) {
-    await abortVideoMultipartUpload(payload.masterObjectKey, payload.r2UploadId);
-  }
-  if (payload.masterObjectKey) await deleteVideoMaster(payload.masterObjectKey);
+  if (payload.providerUploadId) await cancelMuxUpload(payload.providerUploadId);
+  if (payload.providerAssetId) await deleteMuxAsset(payload.providerAssetId);
   await prisma.$transaction(async (tx) => {
     if (payload.pendingPublicId) await tx.pendingReviewImage.deleteMany({ where: { publicId: payload.pendingPublicId } });
     if (payload.sessionId) {
@@ -462,33 +531,6 @@ async function cleanupVideo(payload: z.infer<typeof cleanupPayload>): Promise<Me
         await tx.videoUploadSession.update({ where: { id: session.id }, data: { status: 'aborted', errorCode: null } });
       }
     }
-  });
-  return { status: 'succeeded' };
-}
-
-async function cleanupIngest(payload: z.infer<typeof cleanupIngestPayload>): Promise<MediaJobResult> {
-  const session = await prisma.videoUploadSession.findUnique({ where: { id: payload.sessionId } });
-  if (!session || session.ingestObjectKey !== payload.ingestObjectKey) {
-    await deleteVideoIngest(payload.ingestObjectKey);
-    return { status: 'succeeded' };
-  }
-
-  const hardDeleteAt = new Date(payload.hardDeleteAt);
-  const terminal = ['ready', 'consumed', 'failed', 'aborted'].includes(session.status);
-  if (!terminal && session.streamUid && hardDeleteAt > new Date()) {
-    const video = await getStreamVideo(session.streamUid);
-    const result = await applyStreamVideoState(session, video, 'stream_ingest_cleanup');
-    if (result.ok && result.status === 'processing') {
-      return { status: 'deferred', delayMs: VIDEO_INGEST_RECHECK_DELAY_MS };
-    }
-  } else if (!terminal && hardDeleteAt > new Date()) {
-    return { status: 'deferred', delayMs: VIDEO_INGEST_RECHECK_DELAY_MS };
-  }
-
-  await deleteVideoIngest(payload.ingestObjectKey);
-  await prisma.videoUploadSession.updateMany({
-    where: { id: session.id, ingestObjectKey: payload.ingestObjectKey },
-    data: { ingestObjectKey: null },
   });
   return { status: 'succeeded' };
 }
@@ -539,13 +581,12 @@ export async function processMediaProviderJob(jobId: string) {
     }
 
     let result: MediaJobResult;
-    if (job.action === MEDIA_JOB_ACTIONS.prepareStream) result = await prepareStream(preparePayload.parse(job.payload));
-    else if (job.action === MEDIA_JOB_ACTIONS.publishStream) result = await publishStream(moderationPayload.parse(job.payload), lease);
-    else if (job.action === MEDIA_JOB_ACTIONS.protectStream) result = await protectStream(moderationPayload.parse(job.payload), lease);
+    if (job.action === MEDIA_JOB_ACTIONS.resolveVideoAsset) result = await resolveMuxVideoAsset(resolveVideoAssetPayload.parse(job.payload));
+    else if (job.action === MEDIA_JOB_ACTIONS.publishVideo) result = await publishVideo(moderationPayload.parse(job.payload), lease);
+    else if (job.action === MEDIA_JOB_ACTIONS.protectVideo) result = await protectVideo(moderationPayload.parse(job.payload), lease);
     else if (job.action === MEDIA_JOB_ACTIONS.cleanupVideo) result = await cleanupVideo(cleanupPayload.parse(job.payload));
-    else if (job.action === MEDIA_JOB_ACTIONS.cleanupIngest) result = await cleanupIngest(cleanupIngestPayload.parse(job.payload));
     else if (job.action === MEDIA_JOB_ACTIONS.cleanupImage) result = await cleanupCloudinaryImages(cleanupImagePayload.parse(job.payload));
-    else if (job.action === MEDIA_JOB_ACTIONS.reconcileStream) result = await reconcileStream(reconcileStreamPayload.parse(job.payload));
+    else if (job.action === MEDIA_JOB_ACTIONS.reconcileVideo) result = await reconcileMuxVideo(reconcileVideoPayload.parse(job.payload));
     else if (job.action === MEDIA_JOB_ACTIONS.expireUploadSession) result = await expireUploadSession(expireUploadSessionPayload.parse(job.payload));
     else throw new Error('unsupported_media_job_action');
 

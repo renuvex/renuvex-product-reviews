@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   getMediaJobEndpoint,
-  getR2MediaConfig,
+  getMuxApiConfig,
+  getMuxWebhookConfig,
+  getMuxVideoQuality,
   isVideoReviewsGloballyEnabled,
   MediaConfigError,
 } from '@/lib/media/config';
@@ -13,26 +15,45 @@ describe('media configuration', () => {
     expect(isVideoReviewsGloballyEnabled({})).toBe(false);
   });
 
-  it('normalizes secure endpoint URLs without leaking credentials into the contract', () => {
-    expect(getR2MediaConfig({
-      CLOUDFLARE_R2_ENDPOINT: 'https://account.r2.cloudflarestorage.com/',
-      CLOUDFLARE_R2_ACCESS_KEY_ID: 'key',
-      CLOUDFLARE_R2_SECRET_ACCESS_KEY: 'secret',
-      CLOUDFLARE_R2_MASTER_BUCKET: 'master',
-      CLOUDFLARE_R2_INGEST_BUCKET: 'ingest',
-      CLOUDFLARE_R2_INGEST_PUBLIC_BASE_URL: 'https://ingest.example.com/',
-    })).toEqual({
-      endpoint: 'https://account.r2.cloudflarestorage.com',
-      accessKeyId: 'key',
-      secretAccessKey: 'secret',
-      masterBucket: 'master',
-      ingestBucket: 'ingest',
-      ingestPublicBaseUrl: 'https://ingest.example.com',
-    });
-  });
-
   it('rejects insecure or missing URLs and builds the internal QStash endpoint', () => {
     expect(() => getMediaJobEndpoint({ MEDIA_JOB_BASE_URL: 'http://app.example.com' })).toThrow(MediaConfigError);
     expect(getMediaJobEndpoint({ MEDIA_JOB_BASE_URL: 'https://app.example.com/' })).toBe('https://app.example.com/api/internal/media-jobs');
+  });
+
+  it('requires server-only Mux API credentials and explicit product video quality', () => {
+    const env = {
+      MUX_TOKEN_ID: 'token-id',
+      MUX_TOKEN_SECRET: 'token-secret',
+      MUX_SIGNING_KEY_ID: 'signing-key-id',
+      MUX_SIGNING_KEY_PRIVATE: 'private-key',
+      MUX_VIDEO_QUALITY: 'plus',
+    };
+
+    expect(getMuxApiConfig(env)).toEqual({
+      tokenId: 'token-id',
+      tokenSecret: 'token-secret',
+      signingKeyId: 'signing-key-id',
+      signingKeyPrivate: 'private-key',
+    });
+    expect(getMuxVideoQuality(env)).toBe('plus');
+    expect(() => getMuxVideoQuality({ ...env, MUX_VIDEO_QUALITY: 'premium' })).toThrow(MediaConfigError);
+  });
+
+  it('keeps Mux webhook secret separate from upload and signing config', () => {
+    const apiEnv = {
+      MUX_TOKEN_ID: 'token-id',
+      MUX_TOKEN_SECRET: 'token-secret',
+      MUX_SIGNING_KEY_ID: 'signing-key-id',
+      MUX_SIGNING_KEY_PRIVATE: 'private-key',
+    };
+
+    expect(getMuxApiConfig(apiEnv)).toEqual({
+      tokenId: 'token-id',
+      tokenSecret: 'token-secret',
+      signingKeyId: 'signing-key-id',
+      signingKeyPrivate: 'private-key',
+    });
+    expect(() => getMuxWebhookConfig(apiEnv)).toThrow(MediaConfigError);
+    expect(getMuxWebhookConfig({ MUX_WEBHOOK_SECRET: 'webhook-secret' })).toEqual({ webhookSecret: 'webhook-secret' });
   });
 });

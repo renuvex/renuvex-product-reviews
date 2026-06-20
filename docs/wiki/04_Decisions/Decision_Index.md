@@ -3,7 +3,7 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-09
+updated: 2026-06-20
 tags:
   - adr
   - decisions
@@ -49,10 +49,13 @@ related:
 | [[ADR_0028_Review_Cursor_Pagination]] | Public review list load-more uses cursor/keyset pagination while preserving legacy `page/limit` response compatibility. | Accepted |
 | [[ADR_0029_Review_Media_Metadata]] | `ReviewMedia` and `PendingReviewImage` carry verified Cloudinary image metadata for future media-heavy widgets while preserving the public `images` contract. | Accepted |
 | [[ADR_0030_Cleanup_Hardening]] | `cleanup-images` orphan deletion is hardened with a circuit-breaker (G1 empty-used-set / G2 30% ratio / G3 200 absolute), two-phase quarantine (mark now, sweep after a grace window), a `MediaCleanupRun` audit log, and `source:cron` Sentry error alerts (failures + breaker trips). `?force=1` overrides G2/G3 but never G1. | Accepted |
-| [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] | Provider-agnostic `ReviewMedia` (additive `provider`/`providerAssetId`/`posterUrl`/`durationMs`/`processingStatus`; reuses `visible`+`Review.status` gate). Video → Cloudflare Stream (Istanbul edge, ABR, delivered-minute pricing decoupled from the image credit pool); images stay Cloudinary; **R2 master included in V1** (egress-free, EU-jurisdiction; R2-first upload → Stream copy-from-URL via unguessable public URL, not presigned GET; hybrid direct-to-Stream fallback documented). Poster-first + lazy-hls.js lightbox, moderation-gated, feature-flag + per-merchant quota rollout. v1 = 3 photos OR 1 video, mp4/mov, ≤60s, ≤150MB (≤100MB without resumable), adaptive HD ≤1080p, no autoplay. | Proposed — draft |
+| [[ADR_0032_Review_Video_On_Mux]] | Review video provider is **Mux** while retaining the provider-agnostic model and durable lifecycle. Active path uses Mux direct upload (UpChunk), Mux webhook dedup/audit, provider-neutral media jobs, signed admin playback, and public playback IDs after approval. Current DB evidence invalidates the old purge manifest; webhook and production activation are gated by Preview deploy/canary and separate Mux environments. | Accepted |
 
 ## Superseded / Deprecated
-*(none yet)*
+
+| ID | Title | Status |
+|---|---|---|
+| [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] | Earlier provider-agnostic video foundation | Superseded by [[ADR_0032_Review_Video_On_Mux]] (2026-06-17) |
 
 ## How to add an ADR
 1. Copy [[Decision_Template]] → `04_Decisions/ADR_XXXX_short_title.md`
@@ -67,7 +70,9 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
-- 2026-06-12: Added [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] (draft) — generalizes the image-only media stack ([[ADR_0027_Review_Media_Read_Model]]/[[ADR_0029_Review_Media_Metadata]]) into a provider-agnostic `ReviewMedia` and adds **video reviews on Cloudflare Stream** (Istanbul edge + automatic ABR + delivered-minute pricing decoupled from the image credit pool), keeping **images on Cloudinary** and including the **Cloudflare R2 master in V1** for vendor portability. Additive schema (single safe deploy), reuses the existing `visible`+`Review.status` publish-gate for moderation, poster-first strip + native `<video>`+lazy-hls.js lightbox, and a feature-flag + per-merchant-quota + manual-moderation rollout. v1 policy: 3 photos OR 1 video (mp4/mov, ≤60s, ≤150MB [≤100MB without resumable], adaptive HD ≤1080p, no autoplay); mixed-media UI, AI video moderation, and the async pipeline ([[Async_Media_Pipeline]]) remain later phases. Provider choice is reversible (per-row provider + R2 master + dual-provider coexistence + backfill).
+- 2026-06-20: Revised [[ADR_0032_Review_Video_On_Mux]] after current evidence invalidated the older purge manifest. Mux migration is documented as Preview-first: additive provider columns + `WebhookEvent`, backend cutover, Mux direct uploads, provider-neutral media jobs, webhook dedup/audit only, admin signed playback, public playback IDs after approval, and a staged contract migration. No production deploy/migration/env/provider writes are implied by the local implementation.
+- 2026-06-17: Added [[ADR_0032_Review_Video_On_Mux]] and superseded [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]]. The provider-agnostic `ReviewMedia` model + durable media lifecycle (outbox/lease/reconcile/quota/`visible`+`Review.status` gate) are retained unchanged. Mux specifics: direct upload with UpChunk, signed/public playback IDs, webhook dedup/audit in `WebhookEvent`, retry work in `MediaProviderJob`, and per-operation create retry policy (`uploads.create`/`createPlaybackId` `maxRetries:0`).
+- 2026-06-12: Added [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]] as the first provider-agnostic video foundation. It is now superseded by [[ADR_0032_Review_Video_On_Mux]] for all provider details.
 - 2026-06-09: Removed the Sentry cron **check-in monitors** (`withCronMonitor`/`captureCheckIn`) from both maintenance crons (briefly added with [[ADR_0030_Cleanup_Hardening]] earlier the same day). The Sentry plan includes a single cron monitor and serverless check-ins were noisy (false "missed" alerts); alerting now relies on `captureException` (`source:cron`, incl. `task:breaker-tripped`) and "did it run" uses the Vercel → Crons dashboard. ADR_0030 + [[Maintenance_Runbook]] + [[Sentry_Operations]] updated.
 - 2026-06-09: Added [[ADR_0030_Cleanup_Hardening]] - `cleanup-images` now marks orphans into `OrphanImageQuarantine` (phase 1) and only hard-deletes them after a 7-day grace if still orphaned (phase 2), guarded by a circuit-breaker (G1 empty-used-set non-overridable, G2 30% ratio, G3 200 absolute) with `?force=1` override, a `MediaCleanupRun` audit row per run, and a Sentry cron monitor (`withCronMonitor`). Industry-aligned (MS Entra 500 / octoDNS 30%); first run after deploy marks only.
 - 2026-06-08: Added [[ADR_0029_Review_Media_Metadata]] - review media rows now have additive metadata fields; upload/register verifies signed Cloudinary upload-response metadata, review submit carries it into `ReviewMedia`, and a dry-run-first metadata backfill script repairs existing rows.

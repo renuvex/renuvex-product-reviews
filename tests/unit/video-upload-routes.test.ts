@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { VIDEO_MULTIPART_PART_BYTES } from '@/lib/media/constants';
 
 const prismaMock = vi.hoisted(() => ({
   videoUploadSession: { update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn() },
@@ -9,16 +8,9 @@ const accessMock = vi.hoisted(() => ({ getVideoFeatureAccess: vi.fn(), verifyVid
 const sessionMock = vi.hoisted(() => ({
   createReservedVideoSession: vi.fn(),
   getVideoSessionByToken: vi.fn(),
-  markVideoSessionFailed: vi.fn(),
 }));
-const r2Mock = vi.hoisted(() => ({
-  createVideoMultipartUpload: vi.fn(),
-  signVideoUploadParts: vi.fn(),
-  listVideoUploadParts: vi.fn(),
-  completeVideoMultipartUpload: vi.fn(),
-  headVideoMaster: vi.fn(),
-  readVideoMasterPrefix: vi.fn(),
-  abortVideoMultipartUpload: vi.fn(),
+const muxMock = vi.hoisted(() => ({
+  createMuxDirectUpload: vi.fn(),
 }));
 const jobsMock = vi.hoisted(() => ({
   cancelSessionAndQueueCleanup: vi.fn(),
@@ -27,8 +19,9 @@ const jobsMock = vi.hoisted(() => ({
   failSessionAndQueueCleanup: vi.fn(),
 }));
 const configMock = vi.hoisted(() => ({
-  getR2MediaConfig: vi.fn(),
-  getStreamMediaConfig: vi.fn(),
+  getMuxApiConfig: vi.fn(),
+  getMuxWebhookConfig: vi.fn(),
+  getMuxVideoQuality: vi.fn(),
   getQStashMediaConfig: vi.fn(),
 }));
 const sentryMock = vi.hoisted(() => ({
@@ -40,7 +33,7 @@ const VideoQuotaErrorMock = vi.hoisted(() => class VideoQuotaError extends Error
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/media/access', () => accessMock);
 vi.mock('@/lib/media/sessions', () => ({ ...sessionMock, VideoQuotaError: VideoQuotaErrorMock }));
-vi.mock('@/lib/media/providers/r2', () => r2Mock);
+vi.mock('@/lib/media/providers/mux', () => muxMock);
 vi.mock('@/lib/media/jobs', () => jobsMock);
 vi.mock('@sentry/nextjs', () => sentryMock);
 vi.mock('@/lib/media/config', async (importOriginal) => {
@@ -55,20 +48,23 @@ vi.mock('@/lib/public-rate-limit', () => ({
   checkFixedWindowRateLimit: rateLimitMock,
 }));
 
+const SESSION_ID = '11111111-1111-4111-8111-111111111111';
+
 function session(overrides: Record<string, unknown> = {}) {
   return {
-    id: '11111111-1111-4111-8111-111111111111',
+    id: SESSION_ID,
     tokenHash: 'hash',
     storeId: 'store-1',
     productId: 'product-1',
     status: 'uploading',
     mimeType: 'video/mp4',
-    bytes: VIDEO_MULTIPART_PART_BYTES + 5,
+    bytes: 1024,
     fileFingerprint: null,
-    r2UploadId: 'upload-1',
-    masterObjectKey: 'review-videos/stores/store-1/session/master',
-    ingestObjectKey: null,
-    streamUid: null,
+    provider: 'mux',
+    providerUploadId: 'upload-1',
+    providerAssetId: null,
+    signedPlaybackId: null,
+    publicPlaybackId: null,
     publicId: null,
     playbackUrl: null,
     posterUrl: null,
@@ -94,8 +90,9 @@ function expectMediaJobCapture(error: Error, task: string) {
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
-  configMock.getR2MediaConfig.mockReturnValue({});
-  configMock.getStreamMediaConfig.mockReturnValue({});
+  configMock.getMuxApiConfig.mockReturnValue({});
+  configMock.getMuxWebhookConfig.mockReturnValue({});
+  configMock.getMuxVideoQuality.mockReturnValue('basic');
   configMock.getQStashMediaConfig.mockReturnValue({});
   rateLimitMock.mockResolvedValue({ allowed: true, retryAfterSec: 600 });
   accessMock.getVideoFeatureAccess.mockResolvedValue({
@@ -108,8 +105,11 @@ beforeEach(() => {
     remainingCount: 5,
   });
   accessMock.verifyVideoReviewTarget.mockResolvedValue({ productId: 'product-1', slug: 'product', name: 'Product' });
+  muxMock.createMuxDirectUpload.mockResolvedValue({ id: 'upload-1', url: 'https://storage.googleapis.com/video-upload' });
   jobsMock.dispatchMediaProviderJob.mockResolvedValue(true);
   jobsMock.enqueueMediaProviderJob.mockResolvedValue({ id: 'job-1' });
+  jobsMock.failSessionAndQueueCleanup.mockResolvedValue({ id: 'cleanup-job' });
+  prismaMock.videoUploadSession.update.mockResolvedValue({});
   prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 1 });
   prismaMock.$transaction.mockImplementation(async (callback) => callback({ videoUploadSession: prismaMock.videoUploadSession }));
 });
@@ -126,7 +126,7 @@ describe('video upload initiate', () => {
     expect(response.status).toBe(400);
     expect(body.error).toBe('invalid_json');
     expect(sessionMock.createReservedVideoSession).not.toHaveBeenCalled();
-    expect(r2Mock.createVideoMultipartUpload).not.toHaveBeenCalled();
+    expect(muxMock.createMuxDirectUpload).not.toHaveBeenCalled();
     expect(sentryMock.captureException).not.toHaveBeenCalled();
   });
 
@@ -161,7 +161,7 @@ describe('video upload initiate', () => {
     expect(response.status).toBe(429);
     await expect(response.json()).resolves.toEqual({ error: 'video_quota_exceeded' });
     expect(sessionMock.createReservedVideoSession).not.toHaveBeenCalled();
-    expect(r2Mock.createVideoMultipartUpload).not.toHaveBeenCalled();
+    expect(muxMock.createMuxDirectUpload).not.toHaveBeenCalled();
   });
 
   it('returns Retry-After for initiate rate limiting', async () => {
@@ -189,13 +189,13 @@ describe('video upload initiate', () => {
     expect(response.status).toBe(429);
     await expect(response.json()).resolves.toEqual({ error: 'video_quota_exceeded' });
     expect(accessMock.getVideoFeatureAccess).toHaveBeenCalledOnce();
-    expect(r2Mock.createVideoMultipartUpload).not.toHaveBeenCalled();
+    expect(muxMock.createMuxDirectUpload).not.toHaveBeenCalled();
   });
 
   it('returns 503 for missing provider configuration without reporting an operational exception', async () => {
     const { MediaConfigError } = await import('@/lib/media/config');
-    configMock.getR2MediaConfig.mockImplementationOnce(() => {
-      throw new MediaConfigError('missing_config', 'R2 is not configured');
+    configMock.getMuxApiConfig.mockImplementationOnce(() => {
+      throw new MediaConfigError('missing_config', 'Mux is not configured');
     });
     const { POST } = await import('@/app/api/public/upload/video/initiate/route');
     const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
@@ -205,6 +205,26 @@ describe('video upload initiate', () => {
 
     expect(response.status).toBe(503);
     expect(sentryMock.captureException).not.toHaveBeenCalled();
+  });
+
+  it('does not require Mux webhook secret to initiate a direct upload', async () => {
+    const created = session({ status: 'initiated', providerUploadId: null });
+    sessionMock.createReservedVideoSession.mockResolvedValue({
+      session: created,
+      token: 'opaque-token'.padEnd(43, 'x'),
+      expiryJob: { id: 'expiry-job' },
+    });
+    const { POST } = await import('@/app/api/public/upload/video/initiate/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
+      method: 'POST',
+      headers: { origin: 'https://merchant.example' },
+      body: JSON.stringify({ storeId: 'store-1', productId: 'product-1', mimeType: 'video/mp4', bytes: created.bytes }),
+    }));
+
+    expect(response.status).toBe(201);
+    expect(configMock.getMuxApiConfig).toHaveBeenCalledOnce();
+    expect(configMock.getMuxWebhookConfig).not.toHaveBeenCalled();
+    expect(muxMock.createMuxDirectUpload).toHaveBeenCalledOnce();
   });
 
   it('reports unexpected initiate failures with the media-job task tags', async () => {
@@ -220,86 +240,61 @@ describe('video upload initiate', () => {
     expectMediaJobCapture(error, 'video-initiate');
   });
 
-  it('reserves quota before creating a multipart upload and returns only client-safe state', async () => {
-    const created = session({ status: 'initiated', r2UploadId: null });
+  it('reserves quota before creating a Mux direct upload and returns only client-safe state', async () => {
+    const created = session({ status: 'initiated', providerUploadId: null });
     sessionMock.createReservedVideoSession.mockResolvedValue({
       session: created,
       token: 'opaque-token'.padEnd(43, 'x'),
       expiryJob: { id: 'expiry-job' },
     });
-    r2Mock.createVideoMultipartUpload.mockResolvedValue('upload-1');
     const { POST } = await import('@/app/api/public/upload/video/initiate/route');
     const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
       method: 'POST',
+      headers: { origin: 'https://merchant.example' },
       body: JSON.stringify({ storeId: 'store-1', productId: 'product-1', mimeType: 'video/mp4', bytes: created.bytes }),
     }));
     const body = await response.json();
 
     expect(response.status).toBe(201);
     expect(sessionMock.createReservedVideoSession).toHaveBeenCalledWith(expect.objectContaining({ monthlyLimit: 5 }));
-    expect(r2Mock.createVideoMultipartUpload).toHaveBeenCalledWith(created.masterObjectKey, 'video/mp4');
+    expect(muxMock.createMuxDirectUpload).toHaveBeenCalledWith({
+      corsOrigin: 'https://merchant.example',
+      passthrough: created.id,
+      videoQuality: 'basic',
+    });
+    expect(prismaMock.videoUploadSession.update).toHaveBeenCalledWith({
+      where: { id: created.id },
+      data: { status: 'uploading', providerUploadId: 'upload-1' },
+    });
     expect(jobsMock.dispatchMediaProviderJob).toHaveBeenCalledWith('expiry-job', expect.any(Number));
-    expect(body.data).toEqual(expect.objectContaining({ partSize: VIDEO_MULTIPART_PART_BYTES, partCount: 2, maxParallelParts: 3 }));
-    expect(body.data).not.toHaveProperty('uploadId');
-    expect(body.data).not.toHaveProperty('masterObjectKey');
-  });
-});
-
-describe('video multipart parts', () => {
-  it('returns 400 for malformed JSON without reporting an operational exception', async () => {
-    const { POST } = await import('@/app/api/public/upload/video/parts/route');
-    const response = await POST(new Request('https://app.test/api/public/upload/video/parts', {
-      method: 'POST',
-      body: '{',
+    expect(body.data).toEqual(expect.objectContaining({
+      token: 'opaque-token'.padEnd(43, 'x'),
+      uploadUrl: 'https://storage.googleapis.com/video-upload',
+      chunkSize: 30_720,
     }));
-
-    expect(response.status).toBe(400);
-    expect(sentryMock.captureException).not.toHaveBeenCalled();
+    expect(body.data).not.toHaveProperty('providerUploadId');
+    expect(body.data).not.toHaveProperty('providerAssetId');
   });
 
-  it('reports unexpected part-signing failures with the media-job task tags', async () => {
-    const error = new Error('session lookup failed');
-    sessionMock.getVideoSessionByToken.mockRejectedValueOnce(error);
-    const { POST } = await import('@/app/api/public/upload/video/parts/route');
-    const response = await POST(new Request('https://app.test/api/public/upload/video/parts', {
+  it('queues cleanup when Mux upload creation fails after quota reservation', async () => {
+    const created = session({ status: 'initiated', providerUploadId: null });
+    const error = new Error('mux failed');
+    sessionMock.createReservedVideoSession.mockResolvedValue({
+      session: created,
+      token: 'opaque-token'.padEnd(43, 'x'),
+      expiryJob: { id: 'expiry-job' },
+    });
+    muxMock.createMuxDirectUpload.mockRejectedValue(error);
+    const { POST } = await import('@/app/api/public/upload/video/initiate/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/initiate', {
       method: 'POST',
-      body: JSON.stringify({ token: 'opaque-token' }),
+      headers: { origin: 'https://merchant.example' },
+      body: JSON.stringify({ storeId: 'store-1', productId: 'product-1', mimeType: 'video/mp4', bytes: created.bytes }),
     }));
 
     expect(response.status).toBe(500);
-    expectMediaJobCapture(error, 'video-parts');
-  });
-
-  it('lists provider parts and signs only missing parts by default', async () => {
-    sessionMock.getVideoSessionByToken.mockResolvedValue(session());
-    r2Mock.listVideoUploadParts.mockResolvedValue([{ partNumber: 1, etag: '"one"', size: VIDEO_MULTIPART_PART_BYTES }]);
-    r2Mock.signVideoUploadParts.mockImplementation(async ({ partNumbers }) => partNumbers.map((partNumber: number) => ({ partNumber, uploadUrl: `https://r2.test/${partNumber}` })));
-    const { POST } = await import('@/app/api/public/upload/video/parts/route');
-    const response = await POST(new Request('https://app.test/api/public/upload/video/parts', {
-      method: 'POST',
-      body: JSON.stringify({ token: 'opaque-token' }),
-    }));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(r2Mock.signVideoUploadParts).toHaveBeenCalledWith(expect.objectContaining({ partNumbers: [2] }));
-    expect(body.data.completed).toEqual([{ partNumber: 1, etag: '"one"', size: VIDEO_MULTIPART_PART_BYTES }]);
-  });
-
-  it('does not re-sign already completed parts even when explicitly requested', async () => {
-    sessionMock.getVideoSessionByToken.mockResolvedValue(session());
-    r2Mock.listVideoUploadParts.mockResolvedValue([{ partNumber: 1, etag: '"one"', size: VIDEO_MULTIPART_PART_BYTES }]);
-    r2Mock.signVideoUploadParts.mockImplementation(async ({ partNumbers }) => partNumbers.map((partNumber: number) => ({ partNumber, uploadUrl: `https://r2.test/${partNumber}` })));
-    const { POST } = await import('@/app/api/public/upload/video/parts/route');
-    const response = await POST(new Request('https://app.test/api/public/upload/video/parts', {
-      method: 'POST',
-      body: JSON.stringify({ token: 'opaque-token', partNumbers: [1, 2] }),
-    }));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(r2Mock.signVideoUploadParts).toHaveBeenCalledWith(expect.objectContaining({ partNumbers: [2] }));
-    expect(body.data.parts).toEqual([{ partNumber: 2, uploadUrl: 'https://r2.test/2' }]);
+    expect(jobsMock.failSessionAndQueueCleanup).toHaveBeenCalledWith(created.id, 'initiate_failed', { providerUploadId: null });
+    expectMediaJobCapture(error, 'video-initiate');
   });
 });
 
@@ -321,85 +316,91 @@ describe('video upload complete and status', () => {
     const { POST } = await import('@/app/api/public/upload/video/complete/route');
     const response = await POST(new Request('https://app.test/api/public/upload/video/complete', {
       method: 'POST',
-      body: JSON.stringify({ token: 'opaque-token', parts: [] }),
+      body: JSON.stringify({ token: 'opaque-token' }),
     }));
 
     expect(response.status).toBe(500);
     expectMediaJobCapture(error, 'video-complete');
   });
 
-  it('validates the exact R2 part list and queues Stream processing once', async () => {
+  it('claims upload completion atomically and queues Mux asset resolution once', async () => {
     const current = session();
     sessionMock.getVideoSessionByToken.mockResolvedValue(current);
-    r2Mock.listVideoUploadParts.mockResolvedValue([
-      { partNumber: 1, etag: '"one"', size: VIDEO_MULTIPART_PART_BYTES },
-      { partNumber: 2, etag: '"two"', size: 5 },
-    ]);
-    r2Mock.headVideoMaster.mockResolvedValue({ bytes: current.bytes, mimeType: 'video/mp4' });
-    r2Mock.readVideoMasterPrefix.mockResolvedValue(Uint8Array.from([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109]));
     const { POST } = await import('@/app/api/public/upload/video/complete/route');
     const response = await POST(new Request('https://app.test/api/public/upload/video/complete', {
       method: 'POST',
-      body: JSON.stringify({ token: 'opaque-token', parts: [{ partNumber: 1, etag: '"one"' }, { partNumber: 2, etag: '"two"' }] }),
+      body: JSON.stringify({ token: 'opaque-token' }),
     }));
 
     expect(response.status).toBe(200);
-    expect(r2Mock.completeVideoMultipartUpload).toHaveBeenCalledOnce();
+    expect(prismaMock.videoUploadSession.updateMany).toHaveBeenCalledWith({
+      where: { id: current.id, status: 'uploading' },
+      data: { status: 'uploaded' },
+    });
     expect(jobsMock.enqueueMediaProviderJob).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      dedupeKey: `prepare-stream:${current.id}`,
+      dedupeKey: `resolve-video-asset:${current.id}`,
+      provider: 'mux',
+      action: 'resolve_video_asset',
+      payload: { sessionId: current.id, providerUploadId: 'upload-1' },
     }));
+    expect(jobsMock.dispatchMediaProviderJob).toHaveBeenCalledWith('job-1');
   });
 
-  it('claims complete atomically so concurrent duplicates do not complete R2 twice', async () => {
+  it('does not enqueue duplicate resolution work when another request already claimed completion', async () => {
     const current = session();
     sessionMock.getVideoSessionByToken.mockResolvedValue(current);
-    r2Mock.listVideoUploadParts.mockResolvedValue([
-      { partNumber: 1, etag: '"one"', size: VIDEO_MULTIPART_PART_BYTES },
-      { partNumber: 2, etag: '"two"', size: 5 },
-    ]);
-    r2Mock.headVideoMaster.mockResolvedValue({ bytes: current.bytes, mimeType: 'video/mp4' });
-    r2Mock.readVideoMasterPrefix.mockResolvedValue(Uint8Array.from([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109]));
-    prismaMock.videoUploadSession.updateMany
-      .mockResolvedValueOnce({ count: 1 })
-      .mockResolvedValueOnce({ count: 0 });
-    prismaMock.videoUploadSession.findUnique.mockResolvedValue({ status: 'completing' });
-    let releaseComplete: (() => void) | undefined;
-    r2Mock.completeVideoMultipartUpload.mockImplementationOnce(() => new Promise<void>((resolve) => {
-      releaseComplete = resolve;
-    }));
+    prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 0 });
     const { POST } = await import('@/app/api/public/upload/video/complete/route');
-    const requestBody = JSON.stringify({ token: 'opaque-token', parts: [{ partNumber: 1, etag: '"one"' }, { partNumber: 2, etag: '"two"' }] });
-    const first = POST(new Request('https://app.test/api/public/upload/video/complete', { method: 'POST', body: requestBody }));
-    const second = POST(new Request('https://app.test/api/public/upload/video/complete', { method: 'POST', body: requestBody }));
+    const response = await POST(new Request('https://app.test/api/public/upload/video/complete', {
+      method: 'POST',
+      body: JSON.stringify({ token: 'opaque-token' }),
+    }));
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(r2Mock.completeVideoMultipartUpload).toHaveBeenCalledTimes(1);
-    releaseComplete?.();
-    const [firstResponse, secondResponse] = await Promise.all([first, second]);
-
-    expect(firstResponse.status).toBe(200);
-    expect(secondResponse.status).toBe(200);
-    expect(r2Mock.completeVideoMultipartUpload).toHaveBeenCalledOnce();
+    expect(response.status).toBe(200);
+    expect(jobsMock.enqueueMediaProviderJob).not.toHaveBeenCalled();
+    expect(jobsMock.dispatchMediaProviderJob).not.toHaveBeenCalled();
   });
 
-  it('is idempotent after processing starts and never completes R2 twice', async () => {
+  it('is idempotent after processing starts', async () => {
     sessionMock.getVideoSessionByToken.mockResolvedValue(session({ status: 'processing' }));
     const { POST } = await import('@/app/api/public/upload/video/complete/route');
     const response = await POST(new Request('https://app.test/api/public/upload/video/complete', {
       method: 'POST',
-      body: JSON.stringify({ token: 'opaque-token', parts: [{ partNumber: 1, etag: '"one"' }] }),
+      body: JSON.stringify({ token: 'opaque-token' }),
     }));
     expect(response.status).toBe(200);
-    expect(r2Mock.completeVideoMultipartUpload).not.toHaveBeenCalled();
+    expect(jobsMock.enqueueMediaProviderJob).not.toHaveBeenCalled();
   });
 
-  it('returns sanitized processing status without playback or provider identifiers', async () => {
-    sessionMock.getVideoSessionByToken.mockResolvedValue(session({ status: 'processing', streamUid: 'secret-provider-id' }));
+  it('returns ready idempotently after provider processing completes', async () => {
+    sessionMock.getVideoSessionByToken.mockResolvedValue(session({ status: 'ready' }));
+    const { POST } = await import('@/app/api/public/upload/video/complete/route');
+    const response = await POST(new Request('https://app.test/api/public/upload/video/complete', {
+      method: 'POST',
+      body: JSON.stringify({ token: 'opaque-token' }),
+    }));
+    await expect(response.json()).resolves.toEqual({ data: { status: 'ready' } });
+  });
+
+  it('returns sanitized ready status without playback or provider identifiers', async () => {
+    sessionMock.getVideoSessionByToken.mockResolvedValue(session({
+      status: 'ready',
+      durationMs: 12_000,
+      providerUploadId: 'upload-1',
+      providerAssetId: 'asset-1',
+      signedPlaybackId: 'signed-playback-1',
+      posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg',
+      playbackUrl: 'https://stream.mux.com/signed-playback-1.m3u8',
+    }));
     const { GET } = await import('@/app/api/public/upload/video/status/route');
     const response = await GET(new Request('https://app.test/api/public/upload/video/status?token=opaque-token'));
     const body = await response.json();
-    expect(body.data.status).toBe('processing');
-    expect(body.data).not.toHaveProperty('streamUid');
+    expect(body.data.status).toBe('ready');
+    expect(body.data.durationMs).toBe(12_000);
+    expect(body.data.posterUrl).toBeNull();
+    expect(body.data).not.toHaveProperty('providerUploadId');
+    expect(body.data).not.toHaveProperty('providerAssetId');
+    expect(body.data).not.toHaveProperty('signedPlaybackId');
     expect(body.data).not.toHaveProperty('playbackUrl');
   });
 });
@@ -442,6 +443,5 @@ describe('video upload cancellation', () => {
 
     expect(response.status).toBe(200);
     expect(jobsMock.cancelSessionAndQueueCleanup).toHaveBeenCalledWith(current.id);
-    expect(r2Mock.abortVideoMultipartUpload).not.toHaveBeenCalled();
   });
 });

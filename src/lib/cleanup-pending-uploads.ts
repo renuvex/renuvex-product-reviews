@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { MEDIA_JOB_ACTIONS } from '@/lib/media/constants';
+import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
 import { dispatchMediaProviderJob, enqueueMediaProviderJob, failSessionAndQueueCleanup } from '@/lib/media/jobs';
 
 const PENDING_TTL_HOURS = 24;
@@ -45,11 +45,10 @@ export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSumm
         provider: true,
         providerAssetId: true,
         uploadSessionId: true,
-        sourceAssetId: true,
       },
     }),
     prisma.videoUploadSession.findMany({
-      where: { expiresAt: { lt: new Date() }, status: { in: ['initiated', 'uploading', 'completing', 'uploaded', 'processing', 'failed'] } },
+      where: { expiresAt: { lt: new Date() }, status: { in: ['initiated', 'uploading', 'uploaded', 'processing', 'failed'] } },
       take: BATCH_SIZE,
     }),
   ]);
@@ -71,7 +70,7 @@ export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSumm
     jobs.push(job);
   }
 
-  const videoRows = expired.filter((row) => row.provider === 'cloudflare_stream');
+  const videoRows = expired.filter((row) => row.provider === VIDEO_PROVIDER);
   const handledSessionIds = new Set<string>();
   let queuedVideoJobs = 0;
   let queuedExpiredSessions = 0;
@@ -85,12 +84,11 @@ export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSumm
     const job = await prisma.$transaction((tx) => enqueueMediaProviderJob(tx, {
       dedupeKey: `cleanup-video:${row.publicId}`,
       storeId: row.storeId,
-      provider: 'cloudflare_stream',
+      provider: VIDEO_PROVIDER,
       action: MEDIA_JOB_ACTIONS.cleanupVideo,
       resourceType: 'video',
       payload: {
-        streamUid: row.providerAssetId ?? undefined,
-        masterObjectKey: row.sourceAssetId ?? undefined,
+        providerAssetId: row.providerAssetId ?? undefined,
         pendingPublicId: row.publicId,
       },
     }));

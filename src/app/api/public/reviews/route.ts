@@ -17,7 +17,7 @@ import {
 import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 import { applyReviewSummaryVisibilityChange, filteredReviewTotal, summaryStats } from '@/lib/review-summary';
 import { hashMediaToken } from '@/lib/media/video-policy';
-import { MEDIA_JOB_ACTIONS } from '@/lib/media/constants';
+import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
 import { supersedeSessionLifecycleJobs } from '@/lib/media/outbox';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
@@ -575,7 +575,9 @@ export async function POST(request: Request) {
         videoSession.productId !== productIdText ||
         videoSession.status !== 'ready' ||
         !videoSession.publicId ||
-        !videoSession.streamUid ||
+        videoSession.provider !== VIDEO_PROVIDER ||
+        !videoSession.providerAssetId ||
+        !videoSession.signedPlaybackId ||
         !videoSession.playbackUrl ||
         !videoSession.posterUrl ||
         !videoSession.durationMs ||
@@ -591,7 +593,7 @@ export async function POST(request: Request) {
         if (consumed.count !== 1) throw new Error('invalid_video_session');
         await supersedeSessionLifecycleJobs(tx, videoSession.id, [
           MEDIA_JOB_ACTIONS.expireUploadSession,
-          MEDIA_JOB_ACTIONS.reconcileStream,
+          MEDIA_JOB_ACTIONS.reconcileVideo,
         ]);
       }
 
@@ -650,6 +652,14 @@ export async function POST(request: Request) {
       }
 
       if (videoSession) {
+        const pendingVideo = await tx.pendingReviewImage.findUnique({
+          where: { publicId: videoSession.publicId! },
+          select: {
+            metadataSource: true,
+            metadataStatus: true,
+            metadataFetchedAt: true,
+          },
+        });
         await tx.reviewMedia.create({
           data: {
             reviewId: created.id,
@@ -658,24 +668,24 @@ export async function POST(request: Request) {
             url: videoSession.playbackUrl!,
             publicId: videoSession.publicId!,
             resourceType: 'video',
-            provider: 'cloudflare_stream',
-            providerAssetId: videoSession.streamUid,
+            provider: VIDEO_PROVIDER,
+            providerAssetId: videoSession.providerAssetId,
             posterUrl: videoSession.posterUrl,
             durationMs: videoSession.durationMs,
             processingStatus: 'ready',
-            sourceProvider: 'cloudflare_r2',
-            sourceAssetId: videoSession.masterObjectKey,
+            sourceProvider: null,
+            sourceAssetId: null,
             mimeType: videoSession.mimeType,
             bytes: videoSession.bytes,
-            metadataSource: 'stream_webhook',
-            metadataStatus: 'complete',
-            metadataFetchedAt: new Date(),
+            metadataSource: pendingVideo?.metadataSource ?? 'mux_webhook',
+            metadataStatus: pendingVideo?.metadataStatus ?? 'complete',
+            metadataFetchedAt: pendingVideo?.metadataFetchedAt ?? new Date(),
             position: 0,
             visible: false,
           },
         });
         await tx.pendingReviewImage.deleteMany({
-          where: { uploadSessionId: videoSession.id, provider: 'cloudflare_stream', resourceType: 'video' },
+          where: { uploadSessionId: videoSession.id, provider: VIDEO_PROVIDER, resourceType: 'video' },
         });
       }
 

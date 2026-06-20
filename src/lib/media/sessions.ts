@@ -1,13 +1,12 @@
 import { randomUUID } from 'crypto';
 import type { Prisma, VideoUploadSession } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { MEDIA_JOB_ACTIONS, VIDEO_UPLOAD_SESSION_TTL_MS } from '@/lib/media/constants';
+import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER, VIDEO_UPLOAD_SESSION_TTL_MS } from '@/lib/media/constants';
 import { enqueueMediaProviderJob, supersedeSessionLifecycleJobs } from '@/lib/media/outbox';
 import {
   createOpaqueMediaToken,
   hashMediaToken,
   utcMonthStart,
-  videoMasterObjectKey,
 } from '@/lib/media/video-policy';
 
 export class VideoQuotaError extends Error {
@@ -19,10 +18,10 @@ export class VideoQuotaError extends Error {
 
 type TransactionClient = Prisma.TransactionClient;
 export type VideoReadinessSource =
-  | 'stream_webhook'
-  | 'stream_reconcile'
-  | 'stream_ingest_cleanup'
-  | 'stream_maintenance';
+  | 'mux_webhook'
+  | 'mux_reconcile'
+  | 'mux_complete_poll'
+  | 'mux_maintenance';
 
 export async function getVideoSessionForUpdate(tx: TransactionClient, sessionId: string) {
   const rows = await tx.$queryRaw<VideoUploadSession[]>`
@@ -74,7 +73,7 @@ export async function createReservedVideoSession(input: {
         mimeType: input.mimeType,
         bytes: input.bytes,
         fileFingerprint: input.fileFingerprint?.slice(0, 128) || null,
-        masterObjectKey: videoMasterObjectKey(input.storeId, id),
+        provider: VIDEO_PROVIDER,
         reservedMonth: month,
         expiresAt: new Date(now.getTime() + VIDEO_UPLOAD_SESSION_TTL_MS),
       },
@@ -119,7 +118,9 @@ export async function releaseVideoReservation(tx: TransactionClient, session: Vi
 
 export async function markVideoSessionReady(input: {
   sessionId: string;
-  streamUid: string;
+  providerUploadId?: string | null;
+  providerAssetId: string;
+  signedPlaybackId: string;
   playbackUrl: string;
   posterUrl: string;
   durationMs: number;
@@ -142,18 +143,20 @@ export async function markVideoSessionReady(input: {
         });
       }
     }
-    const publicId = `cloudflare_stream:${input.streamUid}`;
-    await supersedeSessionLifecycleJobs(tx, session.id, [MEDIA_JOB_ACTIONS.reconcileStream]);
+    const publicId = `${VIDEO_PROVIDER}:${input.providerAssetId}`;
+    await supersedeSessionLifecycleJobs(tx, session.id, [MEDIA_JOB_ACTIONS.reconcileVideo]);
     const updated = await tx.videoUploadSession.update({
       where: { id: session.id },
       data: {
         status: session.status === 'consumed' ? 'consumed' : 'ready',
-        streamUid: input.streamUid,
+        provider: VIDEO_PROVIDER,
+        ...(input.providerUploadId ? { providerUploadId: input.providerUploadId } : {}),
+        providerAssetId: input.providerAssetId,
+        signedPlaybackId: input.signedPlaybackId,
         publicId,
         playbackUrl: input.playbackUrl,
         posterUrl: input.posterUrl,
         durationMs: input.durationMs,
-        ingestObjectKey: null,
         errorCode: null,
       },
     });
@@ -166,13 +169,13 @@ export async function markVideoSessionReady(input: {
         uploadSessionId: session.id,
         url: input.playbackUrl,
         resourceType: 'video',
-        provider: 'cloudflare_stream',
-        providerAssetId: input.streamUid,
+        provider: VIDEO_PROVIDER,
+        providerAssetId: input.providerAssetId,
         posterUrl: input.posterUrl,
         durationMs: input.durationMs,
         processingStatus: 'ready',
-        sourceProvider: 'cloudflare_r2',
-        sourceAssetId: session.masterObjectKey,
+        sourceProvider: null,
+        sourceAssetId: null,
         mimeType: session.mimeType,
         bytes: session.bytes,
         metadataSource: input.metadataSource,
@@ -181,10 +184,13 @@ export async function markVideoSessionReady(input: {
       },
       update: {
         url: input.playbackUrl,
-        providerAssetId: input.streamUid,
+        provider: VIDEO_PROVIDER,
+        providerAssetId: input.providerAssetId,
         posterUrl: input.posterUrl,
         durationMs: input.durationMs,
         processingStatus: 'ready',
+        sourceProvider: null,
+        sourceAssetId: null,
         metadataSource: input.metadataSource,
         metadataStatus: 'complete',
         metadataFetchedAt: new Date(),

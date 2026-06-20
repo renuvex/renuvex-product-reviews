@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-15
-last_verified: 2026-06-15
+updated: 2026-06-20
+last_verified: 2026-06-20
 confidence: high
 source_files: []
 tags:
@@ -21,7 +21,7 @@ related:
 # Current Status - Renuvex Product Reviews
 
 ## Current Phase
-Active development. Core image-review features are functional end-to-end. Provider-agnostic video review infrastructure, upload/moderation contracts, storefront render, wizard flow, and the Phase 4 cross-browser media suite are implemented. Controlled provider canary uploads and cleanup have completed. Stream processing self-healing, exact session expiry, stable mobile preview rendering, durable offline cancel intent, and playable-readiness detection are implemented locally; post-deploy physical-device timing verification and the 72-hour retained-review window remain open.
+Active development. Core image-review features are functional end-to-end. Provider-agnostic video review infrastructure, Mux upload/moderation contracts, storefront render, wizard flow, and the cross-browser media suite are implemented locally. Mux deploy, DB migration apply, webhook setup, Preview canary, production credential proof, and physical-device acceptance remain gated.
 
 ## Working Features
 - OAuth install flow for ikas merchants — code-signature validation, token exchange, JWT issuance, session cookie
@@ -60,7 +60,7 @@ Active development. Core image-review features are functional end-to-end. Provid
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
 ## In Progress
-- Video review production acceptance: post-hardening Android Chrome and iPhone Safari checks passed interruption/retry, offline removal, processing-to-ready, moderation, and storefront playback. Desktop Chrome also passed. The lightbox transition fix is recorded, and Stream readiness now follows Cloudflare's playable signal without waiting for `pctComplete=100`; denser early reconciliation reduces missed-webhook detection latency. Deployment timing verification and the 72-hour clock remain open. See [[Review_Video_Canary_Runbook]], [[Review_Video_Physical_Device_Acceptance_2026-06]], and [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
+- Video review migration: active local code uses Mux direct upload, Mux webhook dedup/audit, provider-neutral media jobs, admin signed playback, and public playback IDs after approval. Preview deployment, webhook creation/env write, Preview canary, production credential proof, and physical-device acceptance remain open. See [[Review_Video_Canary_Runbook]], [[Review_Video_Physical_Device_Acceptance_2026-06]], and [[ADR_0032_Review_Video_On_Mux]].
 - ADR_0013 Phase 3 source hardening is implemented: non-destructive StorefrontJSScript create/update lifecycle, daily script reconcile through daily maintenance, hashed runtime entry with stable shim, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]]. Post-deploy storefront/Sentry verification and deployed transfer-size measurement remain.
 
 ## Known Issues / Gaps
@@ -97,21 +97,21 @@ Active development. Core image-review features are functional end-to-end. Provid
 8. Consider tests for the public submission endpoint (highest blast-radius surface).
 
 ## Last Updated
-2026-06-15
+2026-06-20
 
 ## Change Log
 - 2026-06-14: Added dry-run-first Review Video V1 canary operations and a controlled activation/rollback runbook. No production merchant gate or global flag was enabled by this change.
-- 2026-06-14: Recorded provider-agnostic video implementation and the Phase 4 five-project Playwright media matrix. Rollout remains disabled pending Stream webhook, canary, and physical-device acceptance.
+- 2026-06-14: Recorded provider-agnostic video implementation and the Phase 4 five-project Playwright media matrix. Provider details are superseded by [[ADR_0032_Review_Video_On_Mux]].
 - 2026-06-15: Corrected the production acceptance state from source/DB/provider evidence. Controlled provider uploads and cleanup completed; physical-device and 72-hour acceptance remain pending. Live settings showed the internal-store global gate effective before the pending-admin hardening deploy, so activation is held until the Production flag is disabled and re-verified.
-- 2026-06-15: Deployed pending-admin preview hardening from `9f20cdc9` with the Production video capability disabled. Post-deploy R2/Stream/QStash/Sentry checks passed; physical-device acceptance now awaits deliberate global reactivation.
+- 2026-06-15: Deployed pending-admin preview hardening from `9f20cdc9` with the Production video capability disabled. Historical provider preflight details are superseded by the Mux canary path.
 - 2026-06-15: Deliberately reactivated the Production global video gate for the internal-store acceptance window. Live settings showed the internal store enabled and the second store disabled; QStash DLQ, Sentry media-path errors, Vercel video logs, and unsigned worker access checks were clean.
-- 2026-06-15: First physical iOS Safari attempt exposed a readiness sync blocker and video-card remove bug. The webhook now hydrates the canonical Stream video record before applying readiness, and the media step clears a removed video card reliably.
+- 2026-06-15: First physical iOS Safari attempt exposed a readiness sync blocker and video-card remove bug. The Mux migration supersedes the earlier provider-specific readiness path; the media step still clears a removed video card reliably.
 - 2026-06-15: After deploying the iOS fixes, the iOS Safari video path passed through submit, admin approval, and storefront publication. A later immediate upload hit the canary quota/rate-limit boundary (`/api/public/upload/video/initiate` returned `429` while usage was `consumed=4`, `reserved=1`, quota `5`); specific quota/rate-limit shopper copy remains a follow-up polish item.
 - 2026-06-15: Implemented the quota-aware capability and error-UX follow-up locally. Cached public settings remain merchant intent; a new no-store capability endpoint checks current usage/provider readiness, widget failures degrade to photo-only, initiate errors have explicit copy/retry policy, admin receives read-only usage metadata, and canary operations now include usage/provider state. Deploy and live canary quota adjustment remain pending.
 - 2026-06-15: Deployed quota-aware capability commit `84276d8b` to Production (`dpl_AjWAf29bnLSQWxA8ceQ8gdLBQQiz`) and raised only the verified internal store quota from `5` to `20`. The no-store endpoint returned `enabled=true` for the internal store and `merchant_disabled` for the second store; capability requests were `200` with no matching production error logs. At that point, Android physical acceptance was next.
 - 2026-06-15: Android Chrome post-fix physical retest passed and left a retained approved video review for the future canary window. The 72-hour canary clock is still not formally started; iPhone Safari interruption/resume remains pending, and ADR_0031 remains draft until the full Phase 6 gate passes.
-- 2026-06-15: Implemented video upload reliability hardening locally: transactionally scheduled Stream reconciliation and session expiry jobs, canonical ingest-backstop state application, stable mobile preview DOM, adaptive processing polling, and durable offline cancel intent. This is a media-path change, so physical Android/iPhone interruption tests and the 72-hour canary must restart after deployment.
-- 2026-06-16: Corrected Stream readiness to use `readyToStream=true`, provider `ready`, trusted HLS/poster URLs, and V1 media limits without requiring `pctComplete=100`. Reconciliation now checks ten times from `T+10s` through `T+600s`, and terminal provenance records the actual webhook/reconcile/cleanup/maintenance path. Deployment timing verification remains required before canary `T0`.
+- 2026-06-15: Implemented video upload reliability hardening locally: transactionally scheduled reconciliation and session expiry jobs, stable mobile preview DOM, adaptive processing polling, and durable offline cancel intent. The Mux migration keeps these durability contracts.
+- 2026-06-16: Readiness is now documented under the Mux contract: asset `ready`, trusted Mux HLS/poster URLs, signed pending playback ID, and valid V1 media limits. Reconciliation checks ten times from `T+10s` through `T+600s`, and terminal provenance records the actual webhook/reconcile/cleanup path.
 - 2026-05-25: Renuvex Product Reviews hard namespace cleanup and opt-in review mount contract are current. Source and active generated widget assets use `renuvex-pr` / `renuvex_pr`; historical `ikr` / `yorum-paneli` notes remain only in old ADRs/bug history.
 - 2026-05-17: ADR_0013 Phase 3 source hardening implemented: non-destructive StorefrontJSScript lifecycle, daily maintenance reconcile, hashed runtime entry with stable shim, and hidden-link listing badge filter.
 - 2026-05-17: Canonical product identity implemented for listing/search badge reads: widget maps Storefront Events product ids and public ratings can group by `productId`. Related: [[ADR_0015_Canonical_Product_Identity]].

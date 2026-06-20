@@ -1,15 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prismaMock = vi.hoisted(() => ({
-  videoUploadSession: { findUnique: vi.fn() },
+  videoUploadSession: { findUnique: vi.fn(), findFirst: vi.fn() },
 }));
-const r2Mock = vi.hoisted(() => ({ deleteVideoIngest: vi.fn() }));
-const jobsMock = vi.hoisted(() => ({ failSessionAndQueueCleanup: vi.fn() }));
+const lifecycleMock = vi.hoisted(() => ({ failSessionAndQueueCleanup: vi.fn() }));
 const sessionsMock = vi.hoisted(() => ({ markVideoSessionReady: vi.fn() }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
-vi.mock('@/lib/media/providers/r2', () => r2Mock);
-vi.mock('@/lib/media/lifecycle', () => jobsMock);
+vi.mock('@/lib/media/lifecycle', () => lifecycleMock);
 vi.mock('@/lib/media/sessions', () => sessionsMock);
 
 function session(overrides: Record<string, unknown> = {}) {
@@ -18,116 +16,96 @@ function session(overrides: Record<string, unknown> = {}) {
     storeId: 'store-1',
     productId: 'product-1',
     status: 'processing',
-    streamUid: 'stream-1',
+    provider: 'mux',
+    providerUploadId: 'upload-1',
+    providerAssetId: 'asset-1',
     bytes: 5_000_000,
-    ingestObjectKey: 'public-ingest/video.mp4',
     ...overrides,
   };
 }
 
-function readyVideo(overrides: Record<string, unknown> = {}) {
+function readyAsset(overrides: Record<string, unknown> = {}) {
   return {
-    uid: 'stream-1',
+    id: 'asset-1',
+    upload_id: 'upload-1',
+    status: 'ready',
     duration: 12,
-    size: 5_000_000,
-    readyToStream: true,
-    thumbnail: 'https://videodelivery.net/stream-1/thumbnails/thumbnail.jpg',
-    playback: { hls: 'https://videodelivery.net/stream-1/manifest/video.m3u8' },
-    status: { state: 'ready', pctComplete: 100 },
+    playback_ids: [{ id: 'signed-playback-1', policy: 'signed' }],
+    passthrough: '11111111-1111-4111-8111-111111111111',
     ...overrides,
   };
 }
 
-describe('Cloudflare Stream processing state', () => {
+describe('Mux video processing state', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('marks a playable Stream video ready before every quality rendition reaches 100 percent', async () => {
-    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
-    const result = await applyStreamVideoState(session() as never, readyVideo({
-      status: { state: 'ready', pctComplete: 99 },
-    }), 'stream_reconcile');
+  it('marks a ready Mux asset ready when a signed playback id exists', async () => {
+    const { applyMuxAssetState } = await import('@/lib/media/video-processing');
+    const result = await applyMuxAssetState(session() as never, readyAsset() as never, 'mux_reconcile');
 
     expect(result).toEqual({ ok: true, status: 'ready' });
-    expect(r2Mock.deleteVideoIngest).toHaveBeenCalledWith('public-ingest/video.mp4');
-    expect(sessionsMock.markVideoSessionReady).toHaveBeenCalledWith(expect.objectContaining({
-      metadataSource: 'stream_reconcile',
-    }));
-  });
-
-  it('does not require pctComplete when Stream reports the video as playable and ready', async () => {
-    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
-    const result = await applyStreamVideoState(session() as never, readyVideo({
-      status: { state: 'ready' },
-    }), 'stream_webhook');
-
-    expect(result).toEqual({ ok: true, status: 'ready' });
-    expect(sessionsMock.markVideoSessionReady).toHaveBeenCalledWith(expect.objectContaining({
-      metadataSource: 'stream_webhook',
-    }));
-  });
-
-  it('requires the provider state to be ready even if readyToStream is true', async () => {
-    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
-    const result = await applyStreamVideoState(session() as never, readyVideo({
-      status: { state: 'inprogress', pctComplete: 100 },
-    }), 'stream_reconcile');
-
-    expect(result).toEqual({ ok: true, status: 'processing' });
-    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
-  });
-
-  it('requires readyToStream even when the provider state is ready', async () => {
-    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
-    const result = await applyStreamVideoState(session() as never, readyVideo({
-      readyToStream: false,
-    }), 'stream_reconcile');
-
-    expect(result).toEqual({ ok: true, status: 'processing' });
-    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
-  });
-
-  it('requires trusted HLS and poster delivery URLs before marking the session ready', async () => {
-    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
-    const result = await applyStreamVideoState(session() as never, readyVideo({
-      playback: { hls: 'https://example.com/stream-1/manifest/video.m3u8' },
-    }), 'stream_ingest_cleanup');
-
-    expect(result).toEqual({ ok: true, status: 'processing' });
-    expect(r2Mock.deleteVideoIngest).not.toHaveBeenCalled();
-    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
-  });
-
-  it('deletes the transient ingest object and records the actual readiness source', async () => {
-    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
-    const result = await applyStreamVideoState(
-      session() as never,
-      readyVideo(),
-      'stream_maintenance',
-    );
-
-    expect(result).toEqual({ ok: true, status: 'ready' });
-    expect(r2Mock.deleteVideoIngest).toHaveBeenCalledWith('public-ingest/video.mp4');
     expect(sessionsMock.markVideoSessionReady).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: '11111111-1111-4111-8111-111111111111',
-      streamUid: 'stream-1',
+      providerUploadId: 'upload-1',
+      providerAssetId: 'asset-1',
+      signedPlaybackId: 'signed-playback-1',
+      playbackUrl: 'https://stream.mux.com/signed-playback-1.m3u8',
+      posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg',
       durationMs: 12_000,
-      metadataSource: 'stream_maintenance',
+      metadataSource: 'mux_reconcile',
     }));
   });
 
-  it('moves provider errors through the durable cleanup path', async () => {
-    const { applyStreamVideoState } = await import('@/lib/media/video-processing');
-    const result = await applyStreamVideoState(session() as never, readyVideo({
-      readyToStream: false,
-      status: { state: 'error', errorReasonCode: 'ERR_PROCESSING' },
-    }), 'stream_webhook');
+  it('keeps a preparing Mux asset in processing', async () => {
+    const { applyMuxAssetState } = await import('@/lib/media/video-processing');
+    const result = await applyMuxAssetState(session() as never, readyAsset({ status: 'preparing' }) as never, 'mux_webhook');
 
-    expect(result).toEqual({ ok: false, code: 'stream_processing_failed' });
-    expect(jobsMock.failSessionAndQueueCleanup).toHaveBeenCalledWith(
+    expect(result).toEqual({ ok: true, status: 'processing' });
+    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
+  });
+
+  it('waits until Mux exposes the signed playback id', async () => {
+    const { applyMuxAssetState } = await import('@/lib/media/video-processing');
+    const result = await applyMuxAssetState(session() as never, readyAsset({ playback_ids: [] }) as never, 'mux_webhook');
+
+    expect(result).toEqual({ ok: true, status: 'processing' });
+    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
+  });
+
+  it('moves Mux asset errors through durable cleanup', async () => {
+    const { applyMuxAssetState } = await import('@/lib/media/video-processing');
+    const result = await applyMuxAssetState(session() as never, readyAsset({
+      status: 'errored',
+      errors: { type: 'invalid_input', messages: ['invalid'] },
+    }) as never, 'mux_webhook');
+
+    expect(result).toEqual({ ok: false, code: 'mux_processing_failed' });
+    expect(lifecycleMock.failSessionAndQueueCleanup).toHaveBeenCalledWith(
       '11111111-1111-4111-8111-111111111111',
-      'ERR_PROCESSING',
+      'invalid_input',
+      { providerUploadId: 'upload-1', providerAssetId: 'asset-1' },
     );
+  });
+
+  it('rejects invalid duration after Mux processing', async () => {
+    const { applyMuxAssetState } = await import('@/lib/media/video-processing');
+    const result = await applyMuxAssetState(session() as never, readyAsset({ duration: 1 }) as never, 'mux_webhook');
+
+    expect(result).toEqual({ ok: false, code: 'invalid_video_duration' });
+    expect(lifecycleMock.failSessionAndQueueCleanup).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      'invalid_video_duration',
+      { providerUploadId: 'upload-1', providerAssetId: 'asset-1' },
+    );
+  });
+
+  it('rejects provider identity mismatches without mutating readiness', async () => {
+    const { applyMuxAssetState } = await import('@/lib/media/video-processing');
+    const result = await applyMuxAssetState(session() as never, readyAsset({ id: 'asset-2' }) as never, 'mux_reconcile');
+
+    expect(result).toEqual({ ok: false, code: 'mux_asset_id_mismatch' });
+    expect(sessionsMock.markVideoSessionReady).not.toHaveBeenCalled();
   });
 });

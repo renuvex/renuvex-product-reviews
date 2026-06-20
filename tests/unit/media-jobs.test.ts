@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   MEDIA_JOB_ACTIONS,
-  VIDEO_STREAM_RECONCILE_OFFSETS_MS,
+  VIDEO_ASSET_RECONCILE_OFFSETS_MS,
 } from '@/lib/media/constants';
 
 const prismaMock = vi.hoisted(() => ({
@@ -32,31 +32,39 @@ const prismaMock = vi.hoisted(() => ({
   },
   pendingReviewImage: {
     deleteMany: vi.fn(),
+    upsert: vi.fn(),
   },
 }));
 const cloudinaryMock = vi.hoisted(() => ({
   deleteCloudinaryReviewImages: vi.fn(),
 }));
-const streamMock = vi.hoisted(() => ({
-  createStreamVideoFromUrl: vi.fn(),
-  deleteStreamVideo: vi.fn(),
-  findStreamVideoByCreator: vi.fn(),
-  getStreamVideo: vi.fn(),
-  setStreamVideoPublic: vi.fn(),
-}));
+const muxMock = vi.hoisted(() => {
+  class TestMuxProviderError extends Error {
+    constructor(public readonly code: string, message = code, public readonly status?: number) {
+      super(message);
+      this.name = 'MuxProviderError';
+    }
+  }
+  return {
+    buildMuxPlaybackUrl: (playbackId: string) => `https://stream.mux.com/${playbackId}.m3u8`,
+    buildMuxPosterUrl: (playbackId: string) => `https://image.mux.com/${playbackId}/thumbnail.jpg`,
+    cancelMuxUpload: vi.fn(),
+    createMuxPlaybackId: vi.fn(),
+    deleteMuxAsset: vi.fn(),
+    deleteMuxPlaybackId: vi.fn(),
+    getMuxAsset: vi.fn(),
+    getMuxUpload: vi.fn(),
+    isMuxNotFound: vi.fn((error: unknown) => (error as { status?: number })?.status === 404),
+    listMuxPlaybackIds: vi.fn(),
+    MuxProviderError: TestMuxProviderError,
+  };
+});
 const qstashMock = vi.hoisted(() => ({ publishJSON: vi.fn() }));
-const processingMock = vi.hoisted(() => ({ applyStreamVideoState: vi.fn() }));
-const r2Mock = vi.hoisted(() => ({
-  abortVideoMultipartUpload: vi.fn(),
-  copyVideoMasterToIngest: vi.fn(),
-  deleteVideoIngest: vi.fn(),
-  deleteVideoMaster: vi.fn(),
-}));
+const processingMock = vi.hoisted(() => ({ applyMuxAssetState: vi.fn() }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/media/providers/cloudinary-image', () => cloudinaryMock);
-vi.mock('@/lib/media/providers/cloudflare-stream', () => streamMock);
-vi.mock('@/lib/media/providers/r2', () => r2Mock);
+vi.mock('@/lib/media/providers/mux', () => muxMock);
 vi.mock('@/lib/media/video-processing', () => processingMock);
 vi.mock('@/lib/review-summary', () => ({ applyReviewSummaryVisibilityChange: vi.fn() }));
 vi.mock('@upstash/qstash', () => ({
@@ -73,20 +81,57 @@ vi.mock('@/lib/media/config', () => ({
 }));
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 
+const UUID_1 = '11111111-1111-4111-8111-111111111111';
+const UUID_2 = '22222222-2222-4222-8222-222222222222';
+
+function muxSession(overrides: Record<string, unknown> = {}) {
+  return {
+    id: UUID_1,
+    storeId: 'store-1',
+    productId: 'product-1',
+    status: 'processing',
+    quotaState: 'reserved',
+    reservedMonth: new Date('2026-06-01T00:00:00.000Z'),
+    expiresAt: new Date(Date.now() + 60_000),
+    mimeType: 'video/mp4',
+    bytes: 1024,
+    provider: 'mux',
+    providerUploadId: 'upload-1',
+    providerAssetId: 'asset-1',
+    publicId: 'mux:asset-1',
+    ...overrides,
+  };
+}
+
 describe('media provider jobs', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.resetModules();
     vi.clearAllMocks();
     prismaMock.mediaProviderJob.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.mediaProviderJob.update.mockResolvedValue({});
-    prismaMock.mediaProviderJob.upsert.mockResolvedValue({ id: 'cleanup-job' });
+    prismaMock.mediaProviderJob.upsert.mockResolvedValue({
+      id: 'provider-job',
+      status: 'pending',
+      availableAt: new Date(Date.now() + 10_000),
+    });
     prismaMock.pendingReviewImage.deleteMany.mockResolvedValue({ count: 2 });
+    prismaMock.pendingReviewImage.upsert.mockResolvedValue({});
+    prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.videoUploadSession.update.mockResolvedValue(muxSession({ status: 'failed', quotaState: 'released' }));
+    prismaMock.storeVideoUsage.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.$executeRaw.mockResolvedValue(1);
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
     qstashMock.publishJSON.mockResolvedValue({ messageId: 'message-1' });
     cloudinaryMock.deleteCloudinaryReviewImages.mockResolvedValue(['image-a', 'image-b']);
-    processingMock.applyStreamVideoState.mockResolvedValue({ ok: true, status: 'processing' });
-    r2Mock.deleteVideoIngest.mockResolvedValue(undefined);
+    muxMock.cancelMuxUpload.mockResolvedValue(undefined);
+    muxMock.createMuxPlaybackId.mockResolvedValue({ id: 'public-1', policy: 'public' });
+    muxMock.deleteMuxAsset.mockResolvedValue(undefined);
+    muxMock.deleteMuxPlaybackId.mockResolvedValue(undefined);
+    muxMock.getMuxAsset.mockResolvedValue({ id: 'asset-1', status: 'preparing', playback_ids: [{ id: 'signed-1', policy: 'signed' }] });
+    muxMock.getMuxUpload.mockResolvedValue({ id: 'upload-1', status: 'asset_created', asset_id: 'asset-1' });
+    muxMock.listMuxPlaybackIds.mockResolvedValue([]);
+    processingMock.applyMuxAssetState.mockResolvedValue({ ok: true, status: 'processing' });
   });
 
   it('claims stale processing jobs and cleans Cloudinary images through the outbox', async () => {
@@ -120,12 +165,12 @@ describe('media provider jobs', () => {
   it('serializes provider mutations and converges a stale approval to the latest protected state', async () => {
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'publish-job',
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.publishStream,
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.publishVideo,
       payload: {
-        reviewId: '11111111-1111-4111-8111-111111111111',
-        mediaId: '22222222-2222-4222-8222-222222222222',
-        streamUid: 'stream-1',
+        reviewId: UUID_1,
+        mediaId: UUID_2,
+        providerAssetId: 'asset-1',
         moderationVersion: 3,
       },
       attempts: 1,
@@ -134,30 +179,33 @@ describe('media provider jobs', () => {
     prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
     prismaMock.review.findUnique.mockResolvedValue({ status: 'rejected', moderationVersion: 4 });
     prismaMock.reviewMedia.findUnique.mockResolvedValue({
-      providerAssetId: 'stream-1',
+      providerAssetId: 'asset-1',
       processingStatus: 'ready',
       visible: false,
       review: { status: 'rejected' },
     });
+    muxMock.listMuxPlaybackIds.mockResolvedValue([
+      { id: 'signed-1', policy: 'signed' },
+      { id: 'public-1', policy: 'public' },
+    ]);
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
     const result = await processMediaProviderJob('publish-job');
 
     expect(result).toEqual({ processed: true, status: 'superseded' });
-    expect(streamMock.setStreamVideoPublic).toHaveBeenCalledTimes(1);
-    expect(streamMock.setStreamVideoPublic).toHaveBeenCalledWith('stream-1', false);
+    expect(muxMock.deleteMuxPlaybackId).toHaveBeenCalledWith('asset-1', 'public-1');
     expect(prismaMock.$executeRaw).toHaveBeenCalledOnce();
   });
 
   it('repairs provider visibility when moderation changes during an approval call', async () => {
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'publish-job',
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.publishStream,
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.publishVideo,
       payload: {
-        reviewId: '11111111-1111-4111-8111-111111111111',
-        mediaId: '22222222-2222-4222-8222-222222222222',
-        streamUid: 'stream-1',
+        reviewId: UUID_1,
+        mediaId: UUID_2,
+        providerAssetId: 'asset-1',
         moderationVersion: 3,
       },
       attempts: 1,
@@ -170,32 +218,34 @@ describe('media provider jobs', () => {
       .mockResolvedValueOnce({ status: 'pending', moderationVersion: 3 })
       .mockResolvedValueOnce({ status: 'rejected', moderationVersion: 4 });
     prismaMock.reviewMedia.findUnique.mockResolvedValue({
-      providerAssetId: 'stream-1',
+      providerAssetId: 'asset-1',
       processingStatus: 'ready',
       visible: false,
       review: { status: 'rejected' },
     });
+    muxMock.listMuxPlaybackIds
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'public-1', policy: 'public' }])
+      .mockResolvedValueOnce([{ id: 'public-1', policy: 'public' }]);
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
     const result = await processMediaProviderJob('publish-job');
 
     expect(result).toEqual({ processed: true, status: 'superseded' });
-    expect(streamMock.setStreamVideoPublic.mock.calls).toEqual([
-      ['stream-1', true],
-      ['stream-1', false],
-    ]);
+    expect(muxMock.createMuxPlaybackId).toHaveBeenCalledWith('asset-1', 'public');
+    expect(muxMock.deleteMuxPlaybackId).toHaveBeenCalledWith('asset-1', 'public-1');
     expect(prismaMock.review.update).not.toHaveBeenCalled();
   });
 
   it('defers a job without calling the provider while another worker owns the asset lease', async () => {
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'protect-job',
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.protectStream,
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.protectVideo,
       payload: {
-        reviewId: '11111111-1111-4111-8111-111111111111',
-        mediaId: '22222222-2222-4222-8222-222222222222',
-        streamUid: 'stream-1',
+        reviewId: UUID_1,
+        mediaId: UUID_2,
+        providerAssetId: 'asset-1',
         moderationVersion: 4,
       },
       attempts: 1,
@@ -207,35 +257,21 @@ describe('media provider jobs', () => {
     const result = await processMediaProviderJob('protect-job');
 
     expect(result).toEqual({ processed: false, reason: 'asset_busy' });
-    expect(streamMock.setStreamVideoPublic).not.toHaveBeenCalled();
+    expect(muxMock.deleteMuxPlaybackId).not.toHaveBeenCalled();
     expect(prismaMock.mediaProviderJob.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: 'pending', attempts: { decrement: 1 } }),
     }));
   });
 
   it('records session failure and its cleanup outbox job in one transaction', async () => {
-    const current = {
-      id: '11111111-1111-4111-8111-111111111111',
-      storeId: 'store-1',
-      productId: 'product-1',
-      status: 'processing',
-      quotaState: 'reserved',
-      reservedMonth: new Date('2026-06-01T00:00:00.000Z'),
-      r2UploadId: 'upload-1',
-      masterObjectKey: 'master-1',
-      ingestObjectKey: 'ingest-1',
-      streamUid: 'stream-1',
-      publicId: 'cloudflare_stream:stream-1',
-    };
+    const current = muxSession({ status: 'processing', providerUploadId: 'upload-1', providerAssetId: 'asset-1' });
     prismaMock.$queryRaw.mockResolvedValueOnce([current]);
-    prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.storeVideoUsage.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.videoUploadSession.update.mockResolvedValue({ ...current, status: 'failed', quotaState: 'released' });
     const { failSessionAndQueueCleanup } = await import('@/lib/media/jobs');
 
     const result = await failSessionAndQueueCleanup(current.id, 'provider_failed');
 
-    expect(result).toEqual({ id: 'cleanup-job' });
+    expect(result).toEqual(expect.objectContaining({ id: 'provider-job' }));
     expect(prismaMock.$transaction).toHaveBeenCalledOnce();
     expect(prismaMock.videoUploadSession.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: 'failed', errorCode: 'provider_failed' }),
@@ -243,146 +279,103 @@ describe('media provider jobs', () => {
     expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
         action: MEDIA_JOB_ACTIONS.cleanupVideo,
-        payload: expect.objectContaining({ r2UploadId: 'upload-1', streamUid: 'stream-1' }),
+        payload: expect.objectContaining({ providerUploadId: 'upload-1', providerAssetId: 'asset-1' }),
       }),
     }));
-    expect(prismaMock.videoUploadSession.update.mock.invocationCallOrder[0])
-      .toBeLessThan(prismaMock.mediaProviderJob.upsert.mock.invocationCallOrder[0]);
+    expect(qstashMock.publishJSON).toHaveBeenCalledWith(expect.objectContaining({ body: { jobId: 'provider-job' } }));
   });
 
-  it('keeps a public ingest object while Stream is still fetching and schedules a state-aware recheck', async () => {
+  it('defers resolve work while Mux has not attached an asset to the upload', async () => {
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
-      id: 'ingest-job',
-      provider: 'cloudflare_r2',
-      action: MEDIA_JOB_ACTIONS.cleanupIngest,
-      payload: {
-        sessionId: '11111111-1111-4111-8111-111111111111',
-        ingestObjectKey: 'public-ingest/video.mp4',
-        hardDeleteAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      },
+      id: 'resolve-job',
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.resolveVideoAsset,
+      payload: { sessionId: UUID_1, providerUploadId: 'upload-1' },
       attempts: 1,
-      maxAttempts: 64,
-    });
-    prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
-    prismaMock.videoUploadSession.findUnique.mockResolvedValue({
-      id: '11111111-1111-4111-8111-111111111111',
-      status: 'processing',
-      streamUid: 'stream-1',
-      ingestObjectKey: 'public-ingest/video.mp4',
-    });
-    streamMock.getStreamVideo.mockResolvedValue({
-      uid: 'stream-1',
-      readyToStream: false,
-      status: { state: 'downloading' },
-    });
-    const { processMediaProviderJob } = await import('@/lib/media/jobs');
-
-    const result = await processMediaProviderJob('ingest-job');
-
-    expect(result).toEqual({ processed: true, status: 'deferred' });
-    expect(qstashMock.publishJSON).toHaveBeenCalledWith(expect.objectContaining({ delay: 30 * 60 }));
-    expect(prismaMock.mediaProviderJob.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status: 'pending', attempts: { decrement: 1 } }),
-    }));
-  });
-
-  it('applies a ready Stream state from the ingest cleanup backstop before deleting the public copy', async () => {
-    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
-      id: 'ingest-job',
-      provider: 'cloudflare_r2',
-      action: MEDIA_JOB_ACTIONS.cleanupIngest,
-      payload: {
-        sessionId: '11111111-1111-4111-8111-111111111111',
-        ingestObjectKey: 'public-ingest/video.mp4',
-        hardDeleteAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      },
-      attempts: 1,
-      maxAttempts: 64,
-    });
-    prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
-    const current = {
-      id: '11111111-1111-4111-8111-111111111111',
-      status: 'processing',
-      streamUid: 'stream-1',
-      ingestObjectKey: 'public-ingest/video.mp4',
-    };
-    const canonical = {
-      uid: 'stream-1',
-      readyToStream: true,
-      status: { state: 'ready', pctComplete: 100 },
-    };
-    prismaMock.videoUploadSession.findUnique.mockResolvedValue(current);
-    prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 1 });
-    streamMock.getStreamVideo.mockResolvedValue(canonical);
-    processingMock.applyStreamVideoState.mockResolvedValue({ ok: true, status: 'ready' });
-    const { processMediaProviderJob } = await import('@/lib/media/jobs');
-
-    const result = await processMediaProviderJob('ingest-job');
-
-    expect(result).toEqual({ processed: true, status: 'succeeded' });
-    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(
-      current,
-      canonical,
-      'stream_ingest_cleanup',
-    );
-    expect(r2Mock.deleteVideoIngest).toHaveBeenCalledWith('public-ingest/video.mp4');
-    expect(prismaMock.videoUploadSession.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: current.id,
-        ingestObjectKey: 'public-ingest/video.mp4',
-      },
-      data: { ingestObjectKey: null },
-    });
-  });
-
-  it('redispatches the durable reconciliation job when prepare retries after the Stream uid was persisted', async () => {
-    const availableAt = new Date(Date.now() + 10_000);
-    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
-      id: 'prepare-job',
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.prepareStream,
-      payload: { sessionId: '11111111-1111-4111-8111-111111111111' },
-      attempts: 2,
       maxAttempts: 16,
     });
     prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
-    prismaMock.videoUploadSession.findUnique.mockResolvedValue({
-      id: '11111111-1111-4111-8111-111111111111',
-      storeId: 'store-1',
-      status: 'processing',
-      streamUid: 'stream-1',
-    });
-    prismaMock.mediaProviderJob.upsert.mockResolvedValue({
-      id: 'reconcile-job',
-      status: 'pending',
-      availableAt,
-    });
+    prismaMock.videoUploadSession.findUnique.mockResolvedValue(muxSession({ status: 'uploaded', providerAssetId: null }));
+    muxMock.getMuxUpload.mockResolvedValue({ id: 'upload-1', status: 'waiting', asset_id: null });
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
-    const result = await processMediaProviderJob('prepare-job');
+    const result = await processMediaProviderJob('resolve-job');
 
-    expect(result).toEqual({ processed: true, status: 'succeeded' });
-    expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { dedupeKey: 'reconcile-stream:11111111-1111-4111-8111-111111111111' },
+    expect(result).toEqual({ processed: true, status: 'deferred' });
+    expect(prismaMock.mediaProviderJob.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: 'pending',
+        attempts: { decrement: 1 },
+        payload: { sessionId: UUID_1, providerUploadId: 'upload-1' },
+      }),
     }));
-    expect(qstashMock.publishJSON).toHaveBeenCalledWith(expect.objectContaining({
-      body: { jobId: 'reconcile-job' },
-      delay: expect.any(Number),
-    }));
-    expect(streamMock.createStreamVideoFromUrl).not.toHaveBeenCalled();
+    expect(qstashMock.publishJSON).toHaveBeenCalledWith(expect.objectContaining({ delay: 5 }));
   });
 
-  it('recovers a processing session when the webhook is missed', async () => {
+  it('claims a created Mux asset and redispatches the durable reconciliation job', async () => {
+    const current = muxSession({ status: 'uploaded', providerAssetId: null, publicId: null });
+    const processing = muxSession({ status: 'processing' });
+    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
+      id: 'resolve-job',
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.resolveVideoAsset,
+      payload: { sessionId: UUID_1, providerUploadId: 'upload-1' },
+      attempts: 1,
+      maxAttempts: 16,
+    });
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
+    prismaMock.videoUploadSession.findUnique
+      .mockResolvedValueOnce(current)
+      .mockResolvedValueOnce(processing);
+    muxMock.getMuxUpload.mockResolvedValue({ id: 'upload-1', status: 'asset_created', asset_id: 'asset-1' });
+    processingMock.applyMuxAssetState.mockResolvedValue({ ok: true, status: 'processing' });
+    const { processMediaProviderJob } = await import('@/lib/media/jobs');
+
+    const result = await processMediaProviderJob('resolve-job');
+
+    expect(result).toEqual({ processed: true, status: 'succeeded' });
+    expect(prismaMock.videoUploadSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: 'processing',
+        provider: 'mux',
+        providerUploadId: 'upload-1',
+        providerAssetId: 'asset-1',
+        publicId: 'mux:asset-1',
+      }),
+    }));
+    expect(prismaMock.pendingReviewImage.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({
+        publicId: 'mux:asset-1',
+        provider: 'mux',
+        providerAssetId: 'asset-1',
+        sourceProvider: null,
+        sourceAssetId: null,
+      }),
+    }));
+    expect(processingMock.applyMuxAssetState).toHaveBeenCalledWith(
+      processing,
+      expect.objectContaining({ id: 'asset-1' }),
+      'mux_complete_poll',
+    );
+    expect(qstashMock.publishJSON).toHaveBeenCalledWith(expect.objectContaining({
+      body: { jobId: 'provider-job' },
+      delay: expect.any(Number),
+    }));
+  });
+
+  it('recovers a processing session when the Mux asset-ready webhook is missed', async () => {
     const startedAt = new Date('2026-06-15T12:00:00.000Z');
     vi.useFakeTimers();
     vi.setSystemTime(new Date(startedAt.getTime() + 10_000));
+    const current = muxSession({ status: 'processing' });
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'reconcile-job',
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.reconcileStream,
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.reconcileVideo,
       payload: {
-        sessionId: '11111111-1111-4111-8111-111111111111',
-        streamUid: 'stream-1',
+        sessionId: UUID_1,
+        providerUploadId: 'upload-1',
+        providerAssetId: 'asset-1',
         startedAt: startedAt.toISOString(),
         checkIndex: 0,
       },
@@ -390,36 +383,26 @@ describe('media provider jobs', () => {
       maxAttempts: 16,
     });
     prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
-    const current = {
-      id: '11111111-1111-4111-8111-111111111111',
-      status: 'processing',
-      streamUid: 'stream-1',
-    };
     prismaMock.videoUploadSession.findUnique.mockResolvedValue(current);
-    const canonical = { uid: 'stream-1', readyToStream: true, status: { state: 'ready', pctComplete: 100 } };
-    streamMock.getStreamVideo.mockResolvedValue(canonical);
-    processingMock.applyStreamVideoState.mockResolvedValue({ ok: true, status: 'ready' });
+    const asset = { id: 'asset-1', status: 'ready', playback_ids: [{ id: 'signed-1', policy: 'signed' }] };
+    muxMock.getMuxAsset.mockResolvedValue(asset);
+    processingMock.applyMuxAssetState.mockResolvedValue({ ok: true, status: 'ready' });
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
     const result = await processMediaProviderJob('reconcile-job');
 
     expect(result).toEqual({ processed: true, status: 'succeeded' });
-    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(
-      current,
-      canonical,
-      'stream_reconcile',
-    );
+    expect(processingMock.applyMuxAssetState).toHaveBeenCalledWith(current, asset, 'mux_reconcile');
     expect(prismaMock.mediaProviderJob.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         status: 'succeeded',
-        payload: expect.objectContaining({ outcome: 'ready' }),
+        payload: expect.objectContaining({ outcome: 'ready', providerAssetId: 'asset-1' }),
       }),
     }));
-    vi.useRealTimers();
   });
 
-  it('uses the bounded ten-check schedule and records delayed processing without deleting the video', async () => {
-    expect(VIDEO_STREAM_RECONCILE_OFFSETS_MS).toEqual([
+  it('uses the bounded ten-check schedule and records delayed processing without deleting the asset', async () => {
+    expect(VIDEO_ASSET_RECONCILE_OFFSETS_MS).toEqual([
       10_000,
       20_000,
       30_000,
@@ -436,11 +419,12 @@ describe('media provider jobs', () => {
     vi.setSystemTime(new Date(startedAt.getTime() + 600_000));
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'reconcile-job',
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.reconcileStream,
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.reconcileVideo,
       payload: {
-        sessionId: '11111111-1111-4111-8111-111111111111',
-        streamUid: 'stream-1',
+        sessionId: UUID_1,
+        providerUploadId: 'upload-1',
+        providerAssetId: 'asset-1',
         startedAt: startedAt.toISOString(),
         checkIndex: 9,
       },
@@ -448,50 +432,34 @@ describe('media provider jobs', () => {
       maxAttempts: 16,
     });
     prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
-    prismaMock.videoUploadSession.findUnique.mockResolvedValue({
-      id: '11111111-1111-4111-8111-111111111111',
-      status: 'processing',
-      streamUid: 'stream-1',
-    });
-    streamMock.getStreamVideo.mockResolvedValue({
-      uid: 'stream-1',
-      readyToStream: false,
-      status: { state: 'inprogress', pctComplete: 80 },
-    });
-    processingMock.applyStreamVideoState.mockResolvedValue({ ok: true, status: 'processing' });
+    prismaMock.videoUploadSession.findUnique.mockResolvedValue(muxSession({ status: 'processing' }));
+    muxMock.getMuxAsset.mockResolvedValue({ id: 'asset-1', status: 'preparing' });
+    processingMock.applyMuxAssetState.mockResolvedValue({ ok: true, status: 'processing' });
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
     const result = await processMediaProviderJob('reconcile-job');
 
     expect(result).toEqual({ processed: true, status: 'succeeded' });
     expect(qstashMock.publishJSON).not.toHaveBeenCalled();
+    expect(muxMock.deleteMuxAsset).not.toHaveBeenCalled();
     expect(prismaMock.mediaProviderJob.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         status: 'succeeded',
         payload: expect.objectContaining({
           checkIndex: 9,
-          outcome: 'stream_processing_delayed',
+          outcome: 'mux_processing_delayed',
         }),
       }),
     }));
-    vi.useRealTimers();
   });
 
   it('expires an abandoned reserved upload through the transactional cleanup path', async () => {
-    const expired = {
-      id: '11111111-1111-4111-8111-111111111111',
-      storeId: 'store-1',
-      productId: 'product-1',
+    const expired = muxSession({
       status: 'uploading',
-      quotaState: 'reserved',
-      reservedMonth: new Date('2026-06-01T00:00:00.000Z'),
       expiresAt: new Date(Date.now() - 1_000),
-      r2UploadId: 'upload-1',
-      masterObjectKey: 'master-1',
-      ingestObjectKey: null,
-      streamUid: null,
+      providerAssetId: null,
       publicId: null,
-    };
+    });
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'expiry-job',
       provider: 'internal',
@@ -504,8 +472,6 @@ describe('media provider jobs', () => {
       .mockResolvedValueOnce([{ leaseVersion: 1 }])
       .mockResolvedValueOnce([expired]);
     prismaMock.videoUploadSession.findUnique.mockResolvedValue(expired);
-    prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.storeVideoUsage.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.videoUploadSession.update.mockResolvedValue({ ...expired, status: 'failed', quotaState: 'released' });
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
@@ -516,7 +482,10 @@ describe('media provider jobs', () => {
       data: { reservedCount: { decrement: 1 } },
     }));
     expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      create: expect.objectContaining({ action: MEDIA_JOB_ACTIONS.cleanupVideo }),
+      create: expect.objectContaining({
+        action: MEDIA_JOB_ACTIONS.cleanupVideo,
+        payload: expect.objectContaining({ sessionId: expired.id, providerUploadId: 'upload-1' }),
+      }),
     }));
   });
 
@@ -530,18 +499,14 @@ describe('media provider jobs', () => {
       provider: 'internal',
       action: MEDIA_JOB_ACTIONS.expireUploadSession,
       payload: {
-        sessionId: '11111111-1111-4111-8111-111111111111',
+        sessionId: UUID_1,
         expiresAt: expiresAt.toISOString(),
       },
       attempts: 1,
       maxAttempts: 16,
     });
     prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
-    prismaMock.videoUploadSession.findUnique.mockResolvedValue({
-      id: '11111111-1111-4111-8111-111111111111',
-      status: 'uploading',
-      expiresAt,
-    });
+    prismaMock.videoUploadSession.findUnique.mockResolvedValue(muxSession({ status: 'uploading', expiresAt }));
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
     const result = await processMediaProviderJob('expiry-job');
@@ -549,24 +514,15 @@ describe('media provider jobs', () => {
     expect(result).toEqual({ processed: true, status: 'deferred' });
     expect(qstashMock.publishJSON).toHaveBeenCalledWith(expect.objectContaining({ delay: 60 }));
     expect(prismaMock.videoUploadSession.update).not.toHaveBeenCalled();
-    vi.useRealTimers();
   });
 
   it('cleans an expired ready-but-unsubmitted video without refunding consumed quota', async () => {
-    const expired = {
-      id: '11111111-1111-4111-8111-111111111111',
-      storeId: 'store-1',
-      productId: 'product-1',
+    const expired = muxSession({
       status: 'ready',
       quotaState: 'consumed',
-      reservedMonth: new Date('2026-06-01T00:00:00.000Z'),
       expiresAt: new Date(Date.now() - 1_000),
-      r2UploadId: 'upload-1',
-      masterObjectKey: 'master-1',
-      ingestObjectKey: null,
-      streamUid: 'stream-1',
-      publicId: 'cloudflare_stream:stream-1',
-    };
+      publicId: 'mux:asset-1',
+    });
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'expiry-job',
       provider: 'internal',
@@ -589,7 +545,7 @@ describe('media provider jobs', () => {
     expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
         action: MEDIA_JOB_ACTIONS.cleanupVideo,
-        payload: expect.objectContaining({ streamUid: 'stream-1', masterObjectKey: 'master-1' }),
+        payload: expect.objectContaining({ providerUploadId: 'upload-1', providerAssetId: 'asset-1', pendingPublicId: 'mux:asset-1' }),
       }),
     }));
   });
@@ -600,18 +556,17 @@ describe('media provider jobs', () => {
       provider: 'internal',
       action: MEDIA_JOB_ACTIONS.expireUploadSession,
       payload: {
-        sessionId: '11111111-1111-4111-8111-111111111111',
+        sessionId: UUID_1,
         expiresAt: new Date(Date.now() - 1_000).toISOString(),
       },
       attempts: 1,
       maxAttempts: 16,
     });
     prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
-    prismaMock.videoUploadSession.findUnique.mockResolvedValue({
-      id: '11111111-1111-4111-8111-111111111111',
+    prismaMock.videoUploadSession.findUnique.mockResolvedValue(muxSession({
       status: 'consumed',
       expiresAt: new Date(Date.now() - 1_000),
-    });
+    }));
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
     const result = await processMediaProviderJob('expiry-job');

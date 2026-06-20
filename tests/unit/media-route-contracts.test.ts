@@ -1,15 +1,40 @@
-import { createHmac } from 'crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const qstashMock = vi.hoisted(() => ({
   verify: vi.fn(),
   processJob: vi.fn(),
-}));
-const configMock = vi.hoisted(() => ({
-  getStreamMediaConfig: vi.fn(),
+  enqueueMediaProviderJob: vi.fn(),
+  dispatchMediaProviderJob: vi.fn(),
 }));
 const sentryMock = vi.hoisted(() => ({
   captureException: vi.fn(),
+}));
+const muxMock = vi.hoisted(() => {
+  class TestMuxProviderError extends Error {
+    constructor(public readonly code: string, message = code, public readonly status?: number) {
+      super(message);
+      this.name = 'MuxProviderError';
+    }
+  }
+  return {
+    unwrapMuxWebhook: vi.fn(),
+    MuxProviderError: TestMuxProviderError,
+  };
+});
+const txMock = vi.hoisted(() => ({
+  webhookEvent: {
+    findUnique: vi.fn(),
+    upsert: vi.fn(),
+  },
+  videoUploadSession: {
+    findUnique: vi.fn(),
+  },
+}));
+const prismaMock = vi.hoisted(() => ({
+  $transaction: vi.fn((callback: (tx: typeof txMock) => unknown) => callback(txMock)),
+  videoUploadSession: {
+    findFirst: vi.fn(),
+  },
 }));
 
 class TestSignatureError extends Error {
@@ -37,40 +62,17 @@ vi.mock('@/lib/media/config', async (importOriginal) => {
       currentSigningKey: 'current',
       nextSigningKey: 'next',
     }),
-    getStreamMediaConfig: configMock.getStreamMediaConfig,
   };
 });
 
 vi.mock('@/lib/media/jobs', () => ({
   processMediaProviderJob: qstashMock.processJob,
+  enqueueMediaProviderJob: qstashMock.enqueueMediaProviderJob,
+  dispatchMediaProviderJob: qstashMock.dispatchMediaProviderJob,
 }));
+vi.mock('@/lib/media/providers/mux', () => muxMock);
+vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@sentry/nextjs', () => sentryMock);
-
-const processingMock = vi.hoisted(() => ({
-  findSessionForStreamVideo: vi.fn(),
-  applyStreamVideoState: vi.fn(),
-}));
-const streamProviderMock = vi.hoisted(() => {
-  class TestStreamProviderError extends Error {
-    constructor(public readonly code: string, message = code) {
-      super(message);
-      this.name = 'StreamProviderError';
-    }
-  }
-
-  return {
-    getStreamVideo: vi.fn(),
-    StreamProviderError: TestStreamProviderError,
-  };
-});
-
-vi.mock('@/lib/media/video-processing', () => processingMock);
-vi.mock('@/lib/media/providers/cloudflare-stream', () => streamProviderMock);
-
-function streamSignature(rawBody: string, time = Math.floor(Date.now() / 1000)) {
-  const digest = createHmac('sha256', 'stream-secret').update(`${time}.${rawBody}`, 'utf8').digest('hex');
-  return `time=${time},sig1=${digest}`;
-}
 
 describe('media job route contracts', () => {
   beforeEach(() => {
@@ -130,67 +132,38 @@ describe('media job route contracts', () => {
   });
 });
 
-describe('Cloudflare Stream webhook route contracts', () => {
+describe('Mux webhook route contracts', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    configMock.getStreamMediaConfig.mockReturnValue({
-      accountId: 'account',
-      apiToken: 'token',
-      customerCode: 'customer',
-      webhookSecret: 'stream-secret',
-    });
-    processingMock.findSessionForStreamVideo.mockResolvedValue(null);
-    streamProviderMock.getStreamVideo.mockResolvedValue(null);
+    prismaMock.$transaction.mockImplementation((callback: (tx: typeof txMock) => unknown) => callback(txMock));
+    prismaMock.videoUploadSession.findFirst.mockResolvedValue(null);
+    txMock.webhookEvent.findUnique.mockResolvedValue(null);
+    txMock.webhookEvent.upsert.mockResolvedValue({ id: 'webhook-1' });
+    txMock.videoUploadSession.findUnique.mockResolvedValue({ storeId: 'store-1' });
+    qstashMock.enqueueMediaProviderJob.mockResolvedValue({ id: 'job-1' });
+    qstashMock.dispatchMediaProviderJob.mockResolvedValue(true);
   });
 
-  it('returns 401 for an invalid Stream signature', async () => {
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
+  it('returns 401 when Mux signature verification fails', async () => {
+    muxMock.unwrapMuxWebhook.mockRejectedValue(new muxMock.MuxProviderError('invalid_signature', 'invalid'));
+    const { POST } = await import('@/app/api/webhooks/mux/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/mux', {
       method: 'POST',
-      headers: { 'Webhook-Signature': 'time=1,sig1=invalid' },
+      headers: { 'mux-signature': 'bad' },
       body: '{}',
     }));
 
     expect(response.status).toBe(401);
+    expect(txMock.webhookEvent.upsert).not.toHaveBeenCalled();
     expect(sentryMock.captureException).not.toHaveBeenCalled();
   });
 
-  it('returns 400 for validly signed malformed JSON', async () => {
-    const rawBody = '{';
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
-      method: 'POST',
-      headers: { 'Webhook-Signature': streamSignature(rawBody) },
-      body: rawBody,
-    }));
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body.error).toBe('invalid_json');
-    expect(sentryMock.captureException).not.toHaveBeenCalled();
-  });
-
-  it('returns 400 for a signed payload without a video uid', async () => {
-    const rawBody = '{}';
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
-      method: 'POST',
-      headers: { 'Webhook-Signature': streamSignature(rawBody) },
-      body: rawBody,
-    }));
-
-    expect(response.status).toBe(400);
-    expect(sentryMock.captureException).not.toHaveBeenCalled();
-  });
-
-  it('returns 503 for missing Stream configuration without reporting an operational exception', async () => {
+  it('returns 503 when Mux webhook configuration is missing', async () => {
     const { MediaConfigError } = await import('@/lib/media/config');
-    configMock.getStreamMediaConfig.mockImplementationOnce(() => {
-      throw new MediaConfigError('missing_config', 'Stream is not configured');
-    });
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
+    muxMock.unwrapMuxWebhook.mockRejectedValue(new MediaConfigError('missing_config', 'MUX_WEBHOOK_SECRET is not configured'));
+    const { POST } = await import('@/app/api/webhooks/mux/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/mux', {
       method: 'POST',
       body: '{}',
     }));
@@ -199,158 +172,106 @@ describe('Cloudflare Stream webhook route contracts', () => {
     expect(sentryMock.captureException).not.toHaveBeenCalled();
   });
 
-  it('reports unexpected processing failures with the media-job task tags', async () => {
-    const error = new Error('processing lookup failed');
-    const rawBody = JSON.stringify({ uid: 'stream-1', readyToStream: false, status: { state: 'downloading' } });
-    processingMock.findSessionForStreamVideo.mockRejectedValueOnce(error);
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
-      method: 'POST',
-      headers: { 'Webhook-Signature': streamSignature(rawBody) },
-      body: rawBody,
-    }));
-
-    expect(response.status).toBe(500);
-    expect(sentryMock.captureException).toHaveBeenCalledOnce();
-    expect(sentryMock.captureException).toHaveBeenCalledWith(error, {
-      tags: { source: 'media-job', task: 'stream-webhook' },
+  it('records unmatched Mux events as orphan audit rows without enqueueing work', async () => {
+    muxMock.unwrapMuxWebhook.mockResolvedValue({
+      id: 'evt-1',
+      type: 'video.asset.ready',
+      created_at: '2026-06-19T10:00:00.000Z',
+      data: { id: 'asset-1', status: 'ready' },
     });
-  });
-
-  it('acknowledges an unmatched valid Stream webhook without mutation', async () => {
-    const rawBody = JSON.stringify({ uid: 'stream-1', readyToStream: false, status: { state: 'downloading', pctComplete: 25 } });
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
+    const { POST } = await import('@/app/api/webhooks/mux/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/mux', {
       method: 'POST',
-      headers: { 'Webhook-Signature': streamSignature(rawBody) },
-      body: rawBody,
+      body: JSON.stringify({ event: true }),
     }));
-    const body = await response.json();
-
-    expect(response.status).toBe(202);
-    expect(body).toEqual({ received: true, matched: false });
-    expect(processingMock.applyStreamVideoState).not.toHaveBeenCalled();
-  });
-
-  it('hydrates a matched webhook from Stream before applying readiness state', async () => {
-    const session = { id: '11111111-1111-4111-8111-111111111111' };
-    const rawBody = JSON.stringify({
-      uid: 'stream-1',
-      creator: session.id,
-      readyToStream: true,
-      status: { state: 'ready', pctComplete: 100 },
-    });
-    const canonical = {
-      uid: 'stream-1',
-      readyToStream: true,
-      duration: 12,
-      size: 5_000_000,
-      thumbnail: 'https://videodelivery.net/stream-1/thumbnails/thumbnail.jpg',
-      playback: { hls: 'https://videodelivery.net/stream-1/manifest/video.m3u8' },
-      status: { state: 'ready', pctComplete: 100 },
-    };
-    processingMock.findSessionForStreamVideo.mockResolvedValue(session);
-    streamProviderMock.getStreamVideo.mockResolvedValue(canonical);
-    processingMock.applyStreamVideoState.mockResolvedValue({ ok: true, status: 'ready' });
-
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
-      method: 'POST',
-      headers: { 'Webhook-Signature': streamSignature(rawBody) },
-      body: rawBody,
-    }));
-    const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ received: true, matched: true, status: 'ready' });
-    expect(streamProviderMock.getStreamVideo).toHaveBeenCalledWith('stream-1');
-    expect(processingMock.applyStreamVideoState).toHaveBeenCalledWith(
-      session,
-      canonical,
-      'stream_webhook',
-    );
+    expect(txMock.webhookEvent.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ status: 'orphan', providerAssetId: 'asset-1' }),
+    }));
+    expect(qstashMock.enqueueMediaProviderJob).not.toHaveBeenCalled();
   });
 
-  it('acknowledges a matched webhook when the Stream asset was already deleted', async () => {
-    const session = { id: '11111111-1111-4111-8111-111111111111' };
-    const rawBody = JSON.stringify({
-      uid: 'stream-deleted',
-      creator: session.id,
-      status: { state: 'ready', pctComplete: 100 },
+  it('deduplicates already processed Mux events', async () => {
+    txMock.webhookEvent.findUnique.mockResolvedValue({ status: 'processed' });
+    muxMock.unwrapMuxWebhook.mockResolvedValue({
+      id: 'evt-1',
+      type: 'video.asset.ready',
+      created_at: '2026-06-19T10:00:00.000Z',
+      data: { id: 'asset-1', passthrough: '11111111-1111-4111-8111-111111111111' },
     });
-    processingMock.findSessionForStreamVideo.mockResolvedValue(session);
-    streamProviderMock.getStreamVideo.mockRejectedValueOnce(new streamProviderMock.StreamProviderError('404', 'video not found'));
-
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
+    const { POST } = await import('@/app/api/webhooks/mux/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/mux', {
       method: 'POST',
-      headers: { 'Webhook-Signature': streamSignature(rawBody) },
-      body: rawBody,
+      body: '{}',
     }));
-    const body = await response.json();
 
-    expect(response.status).toBe(202);
-    expect(body).toEqual({ received: true, matched: true, status: 'stream_not_found' });
-    expect(processingMock.applyStreamVideoState).not.toHaveBeenCalled();
-    expect(sentryMock.captureException).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(txMock.webhookEvent.upsert).not.toHaveBeenCalled();
+    expect(qstashMock.enqueueMediaProviderJob).not.toHaveBeenCalled();
   });
 
-  it('reports transient Stream provider fetch failures without applying stale state', async () => {
-    const session = { id: '11111111-1111-4111-8111-111111111111' };
-    const error = new streamProviderMock.StreamProviderError('10000', 'stream temporarily unavailable');
-    const rawBody = JSON.stringify({
-      uid: 'stream-1',
-      creator: session.id,
-      readyToStream: true,
-      status: { state: 'ready', pctComplete: 100 },
-    });
-    processingMock.findSessionForStreamVideo.mockResolvedValue(session);
-    streamProviderMock.getStreamVideo.mockRejectedValueOnce(error);
-
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
-      method: 'POST',
-      headers: { 'Webhook-Signature': streamSignature(rawBody) },
-      body: rawBody,
-    }));
-    const body = await response.json();
-
-    expect(response.status).toBe(502);
-    expect(body).toEqual({ error: 'stream_provider_unavailable' });
-    expect(processingMock.applyStreamVideoState).not.toHaveBeenCalled();
-    expect(sentryMock.captureException).toHaveBeenCalledWith(error, {
-      tags: {
-        source: 'media-job',
-        task: 'stream-webhook',
-        provider: 'cloudflare_stream',
-        providerCode: '10000',
+  it('turns upload asset-created webhooks into resolve jobs', async () => {
+    muxMock.unwrapMuxWebhook.mockResolvedValue({
+      id: 'evt-upload-1',
+      type: 'video.upload.asset_created',
+      created_at: '2026-06-19T10:00:00.000Z',
+      data: {
+        id: 'upload-1',
+        asset_id: 'asset-1',
+        status: 'asset_created',
+        new_asset_settings: { passthrough: '11111111-1111-4111-8111-111111111111' },
       },
     });
-  });
-
-  it('keeps non-provider Stream fetch errors on the generic webhook failure path', async () => {
-    const session = { id: '11111111-1111-4111-8111-111111111111' };
-    const error = new Error('undici socket reset');
-    const rawBody = JSON.stringify({
-      uid: 'stream-1',
-      creator: session.id,
-      readyToStream: true,
-      status: { state: 'ready', pctComplete: 100 },
-    });
-    processingMock.findSessionForStreamVideo.mockResolvedValue(session);
-    streamProviderMock.getStreamVideo.mockRejectedValueOnce(error);
-
-    const { POST } = await import('@/app/api/webhooks/cloudflare-stream/route');
-    const response = await POST(new Request('https://app.test/api/webhooks/cloudflare-stream', {
+    const { POST } = await import('@/app/api/webhooks/mux/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/mux', {
       method: 'POST',
-      headers: { 'Webhook-Signature': streamSignature(rawBody) },
-      body: rawBody,
+      body: '{}',
     }));
 
-    expect(response.status).toBe(500);
-    expect(processingMock.applyStreamVideoState).not.toHaveBeenCalled();
-    expect(sentryMock.captureException).toHaveBeenCalledWith(error, {
-      tags: { source: 'media-job', task: 'stream-webhook' },
+    expect(response.status).toBe(200);
+    expect(qstashMock.enqueueMediaProviderJob).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({
+        dedupeKey: 'resolve-video-asset:11111111-1111-4111-8111-111111111111',
+        action: 'resolve_video_asset',
+        payload: { sessionId: '11111111-1111-4111-8111-111111111111', providerUploadId: 'upload-1' },
+      }),
+    );
+    expect(qstashMock.dispatchMediaProviderJob).toHaveBeenCalledWith('job-1');
+  });
+
+  it('turns asset-ready webhooks into reconcile jobs', async () => {
+    muxMock.unwrapMuxWebhook.mockResolvedValue({
+      id: 'evt-asset-1',
+      type: 'video.asset.ready',
+      created_at: '2026-06-19T10:00:00.000Z',
+      data: {
+        id: 'asset-1',
+        upload_id: 'upload-1',
+        passthrough: '11111111-1111-4111-8111-111111111111',
+        status: 'ready',
+      },
     });
+    const { POST } = await import('@/app/api/webhooks/mux/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/mux', {
+      method: 'POST',
+      body: '{}',
+    }));
+
+    expect(response.status).toBe(200);
+    expect(qstashMock.enqueueMediaProviderJob).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({
+        dedupeKey: 'reconcile-video:11111111-1111-4111-8111-111111111111',
+        action: 'reconcile_video',
+        payload: expect.objectContaining({
+          sessionId: '11111111-1111-4111-8111-111111111111',
+          providerUploadId: 'upload-1',
+          providerAssetId: 'asset-1',
+          checkIndex: 0,
+        }),
+      }),
+    );
   });
 });

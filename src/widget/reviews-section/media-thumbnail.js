@@ -2,8 +2,8 @@ import { buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
 import {
   formatMediaDuration,
   mediaPreviewUrl,
-  streamPosterSrcSet,
-  streamPosterVariantUrl,
+  muxPosterSrcSet,
+  muxPosterVariantUrl,
 } from '../core/review-media.js';
 import { iconUseNode } from '../icons/star-sprite.js';
 import { PLAY_ICON } from '../icons/index.js';
@@ -17,13 +17,13 @@ export function createMediaThumbnail(item, opts) {
     fit: 'crop',
   } : null;
   var previewUrl = videoPosterOpts
-    ? streamPosterVariantUrl(item.posterUrl, videoPosterOpts)
+    ? muxPosterVariantUrl(item.posterUrl, videoPosterOpts)
     : mediaPreviewUrl(item);
   if (!previewUrl) return null;
   var img = document.createElement('img');
   var attrs = item.type === 'image'
     ? buildResponsiveImgAttrs(previewUrl, opts.sourceWidth)
-    : { src: previewUrl, srcset: streamPosterSrcSet(item.posterUrl, videoPosterOpts) };
+    : { src: previewUrl, srcset: muxPosterSrcSet(item.posterUrl, videoPosterOpts) };
   img.src = attrs.src;
   if (attrs.srcset) img.srcset = attrs.srcset;
   img.loading = opts.loading || 'lazy';

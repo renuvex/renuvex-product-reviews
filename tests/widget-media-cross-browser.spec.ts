@@ -54,10 +54,10 @@ function isMobileProject(testInfo: TestInfo): boolean {
 }
 
 function videoMedia(uid: string, position = 0) {
-  const posterUrl = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
+  const posterUrl = `https://image.mux.com/${uid}/thumbnail.jpg`;
   return {
     type: 'video',
-    url: `https://videodelivery.net/${uid}/manifest/video.m3u8`,
+    url: `https://stream.mux.com/${uid}.m3u8`,
     posterUrl,
     thumbnailUrl: posterUrl,
     durationMs: 45_000,
@@ -123,8 +123,8 @@ async function fulfillJson(route: Route, body: unknown): Promise<void> {
   });
 }
 
-async function routeStreamAssets(page: Page): Promise<void> {
-  await page.route('https://videodelivery.net/**', async (route) => {
+async function routeMuxAssets(page: Page): Promise<void> {
+  await page.route('https://stream.mux.com/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname.endsWith('.m3u8')) {
       await route.fulfill({
@@ -137,6 +137,9 @@ async function routeStreamAssets(page: Page): Promise<void> {
       });
       return;
     }
+    await route.fallback();
+  });
+  await page.route('https://image.mux.com/**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: {
@@ -156,7 +159,7 @@ async function setupVideoWidget(
     reviews?: Array<Record<string, unknown>>;
   } = {},
 ) {
-  await routeStreamAssets(page);
+  await routeMuxAssets(page);
   const rows = options.reviews ?? [review('video-1', [videoMedia('video-1')])];
   return setupWidgetRoutes(page, {
     mountReviews: true,
@@ -274,15 +277,15 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
     expect(box.duration).toBe('0:45');
     expect(box.hasPlayIcon).toBe(true);
     expect(box.posterTag).toBe('IMG');
-    expect(box.posterSrc).toContain('/video-1/thumbnails/thumbnail.jpg');
+    expect(box.posterSrc).toContain('/video-1/thumbnail.jpg');
     expect(box.posterSrc).toMatch(/[?&]width=\d+/);
     expect(box.posterSrc).toMatch(/[?&]height=\d+/);
-    expect(box.posterSrc).toContain('fit=crop');
+    expect(box.posterSrc).toContain('fit_mode=crop');
     expect(box.posterSrcset).toContain(' 1x');
     expect(box.posterSrcset).toContain(' 2x');
     expect(box.widgetScrollWidth).toBeLessThanOrEqual(box.widgetClientWidth + 1);
 
-    expect(log.urls.some((url) => url.endsWith('/manifest/video.m3u8'))).toBe(false);
+    expect(log.urls.some((url) => url.endsWith('/video-1.m3u8'))).toBe(false);
     expect(widgetErrors(log)).toEqual([]);
   });
 }
@@ -307,11 +310,11 @@ test('video lightbox uses native HLS contract and releases media on browser back
     dialogRole: 'dialog',
     ariaModal: 'true',
   });
-  expect(state.poster).toContain('/video-1/thumbnails/thumbnail.jpg');
+  expect(state.poster).toContain('/video-1/thumbnail.jpg');
   expect(state.poster).toContain('width=1280');
   expect(state.poster).toContain('height=720');
-  expect(state.poster).toContain('fit=clip');
-  expect(state.src).toContain('/video-1/manifest/video.m3u8');
+  expect(state.poster).toContain('fit_mode=preserve');
+  expect(state.src).toContain('/video-1.m3u8');
   expect(state.overlayScrollWidth).toBeLessThanOrEqual(state.overlayClientWidth + 1);
   expect(await mediaAudit(page)).toMatchObject({ playCalls: 0 });
 
@@ -355,7 +358,7 @@ test('non-native HLS branch loads the manifest through hls.js and cleans up on c
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
-  await expect.poll(() => log.urls.some((url) => url.endsWith('/video-1/manifest/video.m3u8'))).toBe(true);
+  await expect.poll(() => log.urls.some((url) => url.endsWith('/video-1.m3u8'))).toBe(true);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
@@ -375,7 +378,7 @@ test('non-native HLS branch loads the manifest through hls.js and cleans up on c
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('video wizard completes multipart upload and submits only the ready video token', async ({ page }, testInfo) => {
+test('video wizard completes Mux direct upload and submits only the ready video token', async ({ page }, testInfo) => {
   test.skip(
     testInfo.project.name === 'firefox-desktop' || testInfo.project.name === 'webkit-desktop',
     'The PR matrix runs the wizard on Chromium desktop, Android Chrome emulation, and iPhone WebKit emulation.',
@@ -384,7 +387,7 @@ test('video wizard completes multipart upload and submits only the ready video t
   const submittedBodies: Array<Record<string, unknown>> = [];
   const completeBodies: Array<Record<string, unknown>> = [];
   const videoToken = 'video-token-opaque-abcdefghijklmnopqrstuvwxyz1234567890';
-  let r2PutCalls = 0;
+  let muxPutCalls = 0;
 
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
@@ -407,22 +410,13 @@ test('video wizard completes multipart upload and submits only the ready video t
     await fulfillJson(route, {
       data: {
         token: videoToken,
-        partSize: 10 * 1024 * 1024,
-        partCount: 1,
-        maxParallelParts: 3,
+        uploadUrl: 'https://mux-upload.test/review-video',
+        chunkSize: 30_720,
         expiresAt: '2099-01-01T00:00:00.000Z',
       },
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/parts**`, async (route) => {
-    await fulfillJson(route, {
-      data: {
-        completed: [],
-        parts: [{ partNumber: 1, uploadUrl: 'https://r2-upload.test/review-video/part-1' }],
-      },
-    });
-  });
-  await page.route('https://r2-upload.test/**', async (route) => {
+  await page.route('https://mux-upload.test/**', async (route) => {
     if (route.request().method() === 'OPTIONS') {
       await route.fulfill({
         status: 204,
@@ -436,13 +430,11 @@ test('video wizard completes multipart upload and submits only the ready video t
       });
       return;
     }
-    r2PutCalls += 1;
+    muxPutCalls += 1;
     await route.fulfill({
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Expose-Headers': 'ETag',
-        ETag: '"part-1-etag"',
       },
       body: '',
     });
@@ -456,7 +448,7 @@ test('video wizard completes multipart upload and submits only the ready video t
       data: {
         status: 'ready',
         durationMs: 12_000,
-        posterUrl: 'https://customer-test.cloudflarestream.com/poster.jpg',
+        posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg',
       },
     });
   });
@@ -484,7 +476,7 @@ test('video wizard completes multipart upload and submits only the ready video t
     mimeType: 'video/mp4',
     buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]),
   });
-  await expect.poll(() => r2PutCalls).toBe(1);
+  await expect.poll(() => muxPutCalls).toBe(1);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
 
   await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-textarea', 'Cross-browser video upload.');
@@ -495,7 +487,7 @@ test('video wizard completes multipart upload and submits only the ready video t
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-thanks')).toBe(true);
 
-  expect(completeBodies).toEqual([{ token: videoToken, parts: [{ partNumber: 1, etag: '"part-1-etag"' }] }]);
+  expect(completeBodies).toEqual([{ token: videoToken }]);
   expect(submittedBodies).toHaveLength(1);
   expect(submittedBodies[0]).toMatchObject({
     storeId: PUBLIC_KEY,
@@ -503,7 +495,7 @@ test('video wizard completes multipart upload and submits only the ready video t
     images: [],
     videoToken,
   });
-  expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('cloudflare.com/client/v4'))).toBe(false);
+  expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('api.mux.com'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close');
@@ -574,5 +566,8 @@ test('video to video navigation keeps native controls centered during the transi
   expect(transition.className).not.toContain('renuvex-pr-modal-img-enter');
   expect(transition.animationName).toBe('renuvexPrVideoFadeIn');
   expect(transition.transform).toBe('none');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });

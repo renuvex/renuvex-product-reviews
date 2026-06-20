@@ -615,10 +615,9 @@ test('video upload wizard posts a ready video token without photo media', async 
   await stubVideoMetadata(page, 12);
   const submittedBodies: Array<Record<string, unknown>> = [];
   const initiateBodies: Array<Record<string, unknown>> = [];
-  const partsBodies: Array<Record<string, unknown>> = [];
   const completeBodies: Array<Record<string, unknown>> = [];
   const videoToken = 'video-token-opaque-abcdefghijklmnopqrstuvwxyz1234567890';
-  let r2PutCalls = 0;
+  let muxPutCalls = 0;
 
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
@@ -647,28 +646,14 @@ test('video upload wizard posts a ready video token without photo media', async 
       body: JSON.stringify({
         data: {
           token: videoToken,
-          partSize: 10 * 1024 * 1024,
-          partCount: 1,
-          maxParallelParts: 3,
+          uploadUrl: 'https://mux-upload.test/review-video',
+          chunkSize: 30_720,
           expiresAt: '2099-01-01T00:00:00.000Z',
         },
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/parts**`, async (route) => {
-    partsBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        data: {
-          completed: [],
-          parts: [{ partNumber: 1, uploadUrl: 'https://r2-upload.test/review-video/part-1' }],
-        },
-      }),
-    });
-  });
-  await page.route('https://r2-upload.test/**', async (route) => {
+  await page.route('https://mux-upload.test/**', async (route) => {
     if (route.request().method() === 'OPTIONS') {
       await route.fulfill({
         status: 204,
@@ -682,13 +667,11 @@ test('video upload wizard posts a ready video token without photo media', async 
       });
       return;
     }
-    r2PutCalls += 1;
+    muxPutCalls += 1;
     await route.fulfill({
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Expose-Headers': 'ETag',
-        ETag: '"part-1-etag"',
       },
       body: '',
     });
@@ -709,7 +692,7 @@ test('video upload wizard posts a ready video token without photo media', async 
         data: {
           status: 'ready',
           durationMs: 12000,
-          posterUrl: 'https://customer-test.cloudflarestream.com/poster.jpg',
+          posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg',
         },
       }),
     });
@@ -731,7 +714,7 @@ test('video upload wizard posts a ready video token without photo media', async 
     buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]),
   });
   await expect.poll(() => initiateBodies.length).toBe(1);
-  await expect.poll(() => r2PutCalls).toBe(1);
+  await expect.poll(() => muxPutCalls).toBe(1);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
 
   await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-textarea', 'Video upload contract check.');
@@ -748,11 +731,7 @@ test('video upload wizard posts a ready video token without photo media', async 
     mimeType: 'video/mp4',
     bytes: 12,
   });
-  expect(partsBodies).toEqual([
-    { token: videoToken },
-    { token: videoToken, partNumbers: [1] },
-  ]);
-  expect(completeBodies).toEqual([{ token: videoToken, parts: [{ partNumber: 1, etag: '"part-1-etag"' }] }]);
+  expect(completeBodies).toEqual([{ token: videoToken }]);
   expect(submittedBodies).toHaveLength(1);
   expect(submittedBodies[0]).toMatchObject({
     storeId: PUBLIC_KEY,
@@ -763,17 +742,16 @@ test('video upload wizard posts a ready video token without photo media', async 
     images: [],
     videoToken,
   });
-  expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('cloudflare.com/client/v4'))).toBe(false);
+  expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('api.mux.com'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('video retry preserves the multipart session across a transient status failure', async ({ page }) => {
+test('video retry preserves the Mux direct upload session across a transient status failure', async ({ page }) => {
   await stubVideoMetadata(page, 12);
   const videoToken = 'video-token-resume-abcdefghijklmnopqrstuvwxyz1234567890';
   let initiateCalls = 0;
   let statusCalls = 0;
-  let r2PutCalls = 0;
-  const partsTokens: string[] = [];
+  let muxPutCalls = 0;
 
   await setupWidgetRoutes(page, {
     mountReviews: true,
@@ -792,31 +770,16 @@ test('video retry preserves the multipart session across a transient status fail
       body: JSON.stringify({
         data: {
           token: videoToken,
-          partSize: 10 * 1024 * 1024,
-          partCount: 1,
-          maxParallelParts: 3,
+          uploadUrl: 'https://mux-upload.test/resume-video',
+          chunkSize: 30_720,
           expiresAt: '2099-01-01T00:00:00.000Z',
         },
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/parts**`, async (route) => {
-    const body = JSON.parse(route.request().postData() || '{}') as { token?: string };
-    if (body.token) partsTokens.push(body.token);
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        data: {
-          completed: [],
-          parts: [{ partNumber: 1, uploadUrl: 'https://r2-upload.test/resume-video/part-1' }],
-        },
-      }),
-    });
-  });
-  await page.route('https://r2-upload.test/resume-video/**', async (route) => {
-    r2PutCalls += 1;
-    if (r2PutCalls <= 3) {
+  await page.route('https://mux-upload.test/resume-video**', async (route) => {
+    muxPutCalls += 1;
+    if (muxPutCalls <= 3) {
       await route.fulfill({ status: 503, body: '' });
       return;
     }
@@ -824,8 +787,6 @@ test('video retry preserves the multipart session across a transient status fail
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Expose-Headers': 'ETag',
-        ETag: '"resume-part-1-etag"',
       },
       body: '',
     });
@@ -842,7 +803,7 @@ test('video retry preserves the multipart session across a transient status fail
       body: JSON.stringify({
         data: statusCalls === 2
           ? { status: 'uploading' }
-          : { status: 'ready', durationMs: 12000, posterUrl: 'https://customer-test.cloudflarestream.com/poster.jpg' },
+          : { status: 'ready', durationMs: 12000, posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg' },
       }),
     });
   });
@@ -884,12 +845,10 @@ test('video retry preserves the multipart session across a transient status fail
     '.renuvex-pr-fwizard-video-status',
   )).toContain('Video yükleniyor');
   await expect.poll(() => statusCalls).toBeGreaterThanOrEqual(3);
-  await expect.poll(() => r2PutCalls).toBe(4);
+  await expect.poll(() => muxPutCalls).toBe(4);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
 
   expect(initiateCalls).toBe(1);
-  expect(partsTokens.length).toBeGreaterThanOrEqual(4);
-  expect(new Set(partsTokens)).toEqual(new Set([videoToken]));
 });
 
 test('video upload card remove cancels pending video selection', async ({ page }) => {
@@ -915,33 +874,18 @@ test('video upload card remove cancels pending video selection', async ({ page }
       body: JSON.stringify({
         data: {
           token: videoToken,
-          partSize: 10 * 1024 * 1024,
-          partCount: 1,
-          maxParallelParts: 3,
+          uploadUrl: 'https://mux-upload.test/remove-video',
+          chunkSize: 30_720,
           expiresAt: '2099-01-01T00:00:00.000Z',
         },
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/parts**`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        data: {
-          completed: [],
-          parts: [{ partNumber: 1, uploadUrl: 'https://r2-upload.test/remove-video/part-1' }],
-        },
-      }),
-    });
-  });
-  await page.route('https://r2-upload.test/remove-video/**', async (route) => {
+  await page.route('https://mux-upload.test/remove-video**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Expose-Headers': 'ETag',
-        ETag: '"remove-part-1-etag"',
       },
       body: '',
     });
@@ -1029,33 +973,18 @@ test('offline video removal persists cancellation and flushes it when connectivi
       body: JSON.stringify({
         data: {
           token: videoToken,
-          partSize: 10 * 1024 * 1024,
-          partCount: 1,
-          maxParallelParts: 3,
+          uploadUrl: 'https://mux-upload.test/offline-cancel',
+          chunkSize: 30_720,
           expiresAt: '2099-01-01T00:00:00.000Z',
         },
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/parts**`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        data: {
-          completed: [],
-          parts: [{ partNumber: 1, uploadUrl: 'https://r2-upload.test/offline-cancel/part-1' }],
-        },
-      }),
-    });
-  });
-  await page.route('https://r2-upload.test/offline-cancel/**', async (route) => {
+  await page.route('https://mux-upload.test/offline-cancel**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Expose-Headers': 'ETag',
-        ETag: '"offline-cancel-etag"',
       },
       body: '',
     });

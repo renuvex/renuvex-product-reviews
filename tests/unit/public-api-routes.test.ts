@@ -41,6 +41,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   pendingReviewImage: {
     findMany: vi.fn(),
+    findUnique: vi.fn(),
     upsert: vi.fn(),
     deleteMany: vi.fn(),
   },
@@ -265,6 +266,8 @@ beforeEach(() => {
   prismaMock.reviewMedia.deleteMany.mockReset();
   prismaMock.pendingReviewImage.findMany.mockReset();
   prismaMock.pendingReviewImage.findMany.mockResolvedValue([]);
+  prismaMock.pendingReviewImage.findUnique.mockReset();
+  prismaMock.pendingReviewImage.findUnique.mockResolvedValue(null);
   prismaMock.pendingReviewImage.upsert.mockReset();
   prismaMock.pendingReviewImage.deleteMany.mockReset();
   prismaMock.videoUploadSession.findUnique.mockReset();
@@ -768,10 +771,11 @@ describe('/api/public/reviews', () => {
     ]);
   });
 
-  it('returns normalized Stream video media without exposing provider identity', async () => {
-    const uid = 'stream-video-1';
-    const playbackUrl = `https://customer-test.cloudflarestream.com/${uid}/manifest/video.m3u8`;
-    const posterUrl = `https://customer-test.cloudflarestream.com/${uid}/thumbnails/thumbnail.jpg`;
+  it('returns normalized Mux video media without exposing provider identity', async () => {
+    const assetId = 'asset-video-1';
+    const playbackId = 'public-playback-1';
+    const playbackUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+    const posterUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
     prismaMock.review.findMany.mockResolvedValue([{
       id: 'review-video',
       rating: 5,
@@ -784,8 +788,8 @@ describe('/api/public/reviews', () => {
         url: playbackUrl,
         position: 0,
         resourceType: 'video',
-        provider: 'cloudflare_stream',
-        providerAssetId: uid,
+        provider: 'mux',
+        providerAssetId: assetId,
         posterUrl,
         durationMs: 45_000,
         width: 1920,
@@ -1377,9 +1381,10 @@ describe('/api/public/reviews', () => {
 
   it('atomically consumes a ready same-product video and forces moderation', async () => {
     const videoToken = 'v'.repeat(43);
-    const uid = 'stream-video-1';
-    const playbackUrl = `https://customer-test.cloudflarestream.com/${uid}/manifest/video.m3u8`;
-    const posterUrl = `https://customer-test.cloudflarestream.com/${uid}/thumbnails/thumbnail.jpg`;
+    const assetId = 'asset-video-1';
+    const signedPlaybackId = 'signed-playback-1';
+    const playbackUrl = `https://stream.mux.com/${signedPlaybackId}.m3u8`;
+    const posterUrl = `https://image.mux.com/${signedPlaybackId}/thumbnail.jpg`;
     setupVerifiedReviewTarget('all');
     prismaMock.videoUploadSession.findUnique.mockResolvedValue({
       id: 'video-session-1',
@@ -1390,11 +1395,12 @@ describe('/api/public/reviews', () => {
       mimeType: 'video/mp4',
       bytes: 12_000_000,
       fileFingerprint: null,
-      r2UploadId: 'upload-1',
-      masterObjectKey: 'review-videos/stores/store-1/video-session-1/master',
-      ingestObjectKey: null,
-      streamUid: uid,
-      publicId: `cloudflare_stream:${uid}`,
+      provider: 'mux',
+      providerUploadId: 'upload-1',
+      providerAssetId: assetId,
+      signedPlaybackId,
+      publicPlaybackId: null,
+      publicId: `mux:${assetId}`,
       playbackUrl,
       posterUrl,
       durationMs: 45_000,
@@ -1419,8 +1425,8 @@ describe('/api/public/reviews', () => {
       data: expect.objectContaining({
         reviewId: 'review-created',
         resourceType: 'video',
-        provider: 'cloudflare_stream',
-        providerAssetId: uid,
+        provider: 'mux',
+        providerAssetId: assetId,
         url: playbackUrl,
         posterUrl,
         durationMs: 45_000,
@@ -1428,7 +1434,7 @@ describe('/api/public/reviews', () => {
       }),
     });
     expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({
-      where: { uploadSessionId: 'video-session-1', provider: 'cloudflare_stream', resourceType: 'video' },
+      where: { uploadSessionId: 'video-session-1', provider: 'mux', resourceType: 'video' },
     });
   });
 
@@ -1538,7 +1544,7 @@ describe('/api/admin/reviews', () => {
     expect(prismaMock.reviewMedia.updateMany).not.toHaveBeenCalled();
   });
 
-  it('refuses to approve a video review while Stream processing is incomplete', async () => {
+  it('refuses to approve a video review while Mux processing is incomplete', async () => {
     getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
     prismaMock.review.findFirst.mockResolvedValue({
       id: 'review-video-1',
@@ -1555,9 +1561,8 @@ describe('/api/admin/reviews', () => {
     prismaMock.$queryRaw.mockResolvedValue([await prismaMock.review.findFirst()]);
     prismaMock.reviewMedia.findMany.mockResolvedValue([{
       id: 'media-video-1',
-      providerAssetId: 'stream-1',
+      providerAssetId: 'asset-1',
       processingStatus: 'pending',
-      sourceAssetId: 'review-videos/stores/store-1/session/master',
     }]);
     prismaMock.$transaction.mockImplementation(async (callback) => callback({
       $queryRaw: prismaMock.$queryRaw,
@@ -1579,7 +1584,7 @@ describe('/api/admin/reviews', () => {
     expect(prismaMock.mediaProviderJob.upsert).not.toHaveBeenCalled();
   });
 
-  it('queues Stream publish instead of immediately approving a ready video review', async () => {
+  it('queues Mux publish instead of immediately approving a ready video review', async () => {
     getUserFromRequestMock.mockReturnValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
     prismaMock.review.findFirst.mockResolvedValue({
       id: 'review-video-1',
@@ -1608,9 +1613,8 @@ describe('/api/admin/reviews', () => {
     });
     prismaMock.reviewMedia.findMany.mockResolvedValue([{
       id: 'media-video-1',
-      providerAssetId: 'stream-1',
+      providerAssetId: 'asset-1',
       processingStatus: 'ready',
-      sourceAssetId: 'review-videos/stores/store-1/session/master',
     }]);
     prismaMock.mediaProviderJob.upsert.mockResolvedValue({ id: 'job-publish-1' });
     prismaMock.$transaction.mockImplementation(async (callback) => callback({
@@ -1644,12 +1648,15 @@ describe('/api/admin/reviews', () => {
       data: { visible: false },
     });
     expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledWith({
-      where: { dedupeKey: 'publish-stream:review-video-1:media-video-1:v3' },
+      where: { dedupeKey: 'publish-video:review-video-1:media-video-1:v3' },
       create: expect.objectContaining({
-        provider: 'cloudflare_stream',
-        action: 'publish_stream',
+        provider: 'mux',
+        action: 'publish_video',
         resourceType: 'video',
         status: 'pending',
+        payload: expect.objectContaining({
+          providerAssetId: 'asset-1',
+        }),
       }),
       update: {},
     });

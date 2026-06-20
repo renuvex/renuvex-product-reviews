@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-15
-last_verified: 2026-06-15
+updated: 2026-06-20
+last_verified: 2026-06-20
 confidence: high
 tags:
   - api
@@ -38,14 +38,13 @@ source_files:
   - "src/lib/media/jobs.ts"
   - "src/lib/media/moderation.ts"
   - "src/lib/media/moderation-intent.ts"
-  - "src/lib/media/providers/cloudflare-stream.ts"
   - "src/lib/media/providers/cloudinary-image.ts"
-  - "src/lib/media/providers/r2.ts"
+  - "src/lib/media/providers/mux.ts"
   - "src/lib/media/reconciliation.ts"
   - "src/lib/media/sessions.ts"
-  - "src/lib/media/stream-webhook.ts"
   - "src/lib/media/video-policy.ts"
   - "src/lib/media/video-processing.ts"
+  - "src/app/api/webhooks/mux/route.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
   - "scripts/backfill-review-media.mjs"
   - "scripts/audit-legacy-review-media.mjs"
@@ -97,11 +96,10 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | POST `/api/public/upload/sign` body `{ storeId }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload scoped to `review_images/stores/<storeId>` after StoreSettings verification |
 | POST `/api/public/upload/register` body `{ storeId, secureUrl, metadata? }` | [route.ts](src/app/api/public/upload/register/route.ts) | Register a completed tenant-scoped Cloudinary upload in `PendingReviewImage` for cleanup. Optional signed Cloudinary upload-response metadata is verified server-side before dimensions/format/bytes are staged for `ReviewMedia`. |
 | GET `/api/public/upload/video/capability?storeId=` | [route.ts](src/app/api/public/upload/video/capability/route.ts) | Fresh `no-store` video capability check with a 60/min/IP fixed-window limit. Returns only `{ enabled, reason }`; quota counts and provider configuration remain server-private. |
-| POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated R2 multipart video upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, part size/count, and max parallelism. |
-| POST `/api/public/upload/video/parts` | [route.ts](src/app/api/public/upload/video/parts/route.ts) | Return short-lived presigned R2 part URLs and already-completed part ETags for resume. |
-| POST `/api/public/upload/video/complete` | [route.ts](src/app/api/public/upload/video/complete/route.ts) | Complete multipart upload, HEAD/signature-check master object, enqueue Stream copy job, and move session to processing. |
+| POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated Mux direct upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, Mux upload URL, and suggested chunk size without exposing provider ids or credentials. |
+| POST `/api/public/upload/video/complete` | [route.ts](src/app/api/public/upload/video/complete/route.ts) | Mark direct upload complete, enqueue `resolve_video_asset`, and move session toward processing without trusting client-side provider ids. |
 | GET `/api/public/upload/video/status?token=` | [route.ts](src/app/api/public/upload/video/status/route.ts) | Poll session processing/ready/failed state without exposing provider admin APIs. |
-| DELETE `/api/public/upload/video` | [route.ts](src/app/api/public/upload/video/route.ts) | Atomically mark the session aborted and create its provider-aware cleanup outbox job. Provider calls are worker-owned; the public route does not delete R2/Stream assets directly. |
+| DELETE `/api/public/upload/video` | [route.ts](src/app/api/public/upload/video/route.ts) | Atomically mark the session aborted and create its provider-aware cleanup outbox job. Provider calls are worker-owned; the public route does not call Mux directly. |
 
 ### Caching
 Storefront configuration and review GET responses use the documented edge-cache policy. The video capability endpoint is intentionally excluded and sends `Cache-Control: no-store` because reserved and consumed quota can change between wizard openings. See [[Caching_And_Performance]].
@@ -119,14 +117,14 @@ Detail in [[Security_And_Rate_Limits]].
 
 | Method + Path | Source | Purpose |
 |---|---|---|
-| POST `/api/internal/media-jobs` | [route.ts](src/app/api/internal/media-jobs/route.ts) | QStash-signed DB outbox worker for Stream prepare/reconcile/publish/protect, exact upload-session expiry, and R2/Stream/ingest cleanup jobs. Verifies raw-body JWT, serializes same-session/asset mutations with `MediaProviderLease`, and treats delivery as at-least-once/idempotent. |
+| POST `/api/internal/media-jobs` | [route.ts](src/app/api/internal/media-jobs/route.ts) | QStash-signed DB outbox worker for Mux resolve/reconcile/publish/protect/cleanup plus exact upload-session expiry. Verifies raw-body JWT, serializes same-session/asset mutations with `MediaProviderLease`, and treats delivery as at-least-once/idempotent. |
 
 ## Webhooks
 
 | Method + Path | Source | Purpose |
 |---|---|---|
 | POST `/api/webhooks/ikas/products` | [route.ts](src/app/api/webhooks/ikas/products/route.ts) | Validate ikas webhook signature, process product create/update events, refresh `ProductSnapshot` |
-| POST `/api/webhooks/cloudflare-stream` | [route.ts](src/app/api/webhooks/cloudflare-stream/route.ts) | Validate Cloudflare Stream raw-body HMAC + freshness, hydrate the canonical Stream state, apply ready/failed state idempotently, store poster/HLS/duration, and delete transient ingest copy through provider jobs. If a matched Stream asset was already deleted, the webhook is acknowledged as `stream_not_found`; transient Stream API failures return `502 stream_provider_unavailable` and are reported with provider tags. |
+| POST `/api/webhooks/mux` | [route.ts](src/app/api/webhooks/mux/route.ts) | Validate Mux raw-body signature, dedupe/audit `WebhookEvent`, resolve upload/asset ids, and enqueue provider-neutral media jobs. Webhook storage never persists payloads, tokens, signed URLs, or upload URLs. |
 
 ## OAuth
 
@@ -162,9 +160,9 @@ Detail in [[Security_And_Rate_Limits]].
 - **Status enums are strings, not Prisma enums.** `'pending' | 'approved' | 'rejected'` lives in code, not in the DB schema. If you add a state, search for the literals to update everywhere.
 - **Video provider identity is server-private.** Public/admin list responses expose normalized media fields only; provider ids are used only in server adapters, jobs, webhooks, and signed admin playback.
 - **Video capability is advisory, reservation is authoritative.** The widget uses the fresh capability endpoint to hide unavailable video upload before opening the wizard. `/api/public/upload/video/initiate` repeats every gate and the atomic quota reservation remains the concurrency authority. Quota exhaustion returns `429 video_quota_exceeded`; rate limiting returns `429 rate_limited` with `Retry-After`; disabled and provider-unavailable states return `403` and `503` respectively.
-- **Media provider mutations are outbox-owned.** Do not call Stream publish/delete or expired Cloudinary pending-image deletes directly from UI/cron routes except by enqueueing `MediaProviderJob` and dispatching QStash; this keeps retries, idempotency, stale-lock recovery, and DLQ/manual repair observable.
-- **QStash is a wakeup layer, not the source of truth.** Session failure/cancel state and the matching cleanup job are committed in the same DB transaction. Repeated delivery is safe; same-asset provider calls are lease-serialized and stale moderation jobs converge Stream to the latest DB-visible state.
-- **Stream readiness is self-healing.** Committing a Stream UID also creates a deduped `reconcile_stream` outbox record. The webhook remains the fast path, while bounded canonical-status checks recover missed/delayed delivery without exposing provider identity through the public status endpoint. Upload reservation similarly creates `expire_upload_session` in the same serializable transaction.
+- **Media provider mutations are outbox-owned.** Do not call Mux publish/delete or expired Cloudinary pending-image deletes directly from UI/cron routes except by enqueueing `MediaProviderJob` and dispatching QStash; this keeps retries, idempotency, stale-lock recovery, and DLQ/manual repair observable.
+- **QStash is a wakeup layer, not the source of truth.** Session failure/cancel state and the matching cleanup job are committed in the same DB transaction. Repeated delivery is safe; same-asset provider calls are lease-serialized and stale moderation jobs converge Mux playback state to the latest DB-visible state.
+- **Mux readiness is self-healing.** Upload completion creates a deduped `resolve_video_asset` / `reconcile_video` path. The webhook remains the fast path, while bounded canonical-status checks recover missed/delayed delivery without exposing provider identity through the public status endpoint. Upload reservation similarly creates `expire_upload_session` in the same serializable transaction.
 
 ## Related Source Files
 - [src/app/api/](src/app/api/)
@@ -193,8 +191,9 @@ Detail in [[Security_And_Rate_Limits]].
 
 ## Change Log
 - 2026-06-15: Added the uncached public video capability endpoint, quota-aware access reasons, structured initiate errors, and read-only admin video usage metadata. Cached public settings remain unchanged; atomic initiate reservation is still authoritative.
-- 2026-06-14: Hardened Review Video V1 provider boundaries. Public video routes now return stable error codes for malformed JSON, QStash signature failures return `401` instead of generic `500`, signed malformed payloads return `400`, Stream copy requests enforce the V1 server limits, and Stream readiness waits for the full encode before publishing the media read model.
-- 2026-06-13: Added Review Video V1 API surface: gated multipart R2 upload endpoints, Cloudflare Stream webhook, QStash media job worker, admin signed playback endpoint, `hasMedia` read path, mixed-media rejection, and moderation-gated video approval flow. See [[ADR_0031_Review_Media_V2_Provider_Agnostic_Video]].
+- 2026-06-20: Moved Review Video to Mux direct upload, Mux webhook audit/dedupe, provider-neutral media jobs, admin signed playback, and public playback IDs after approval. Removed the previous upload-parts route and previous video-provider adapters from active source. See [[ADR_0032_Review_Video_On_Mux]].
+- 2026-06-14: Hardened Review Video provider boundaries. Public video routes return stable error codes for malformed JSON, QStash signature failures return `401` instead of generic `500`, signed malformed payloads return `400`, and readiness remains DB-owned.
+- 2026-06-13: Added the first provider-agnostic Review Video API surface behind closed gates: video capability, upload lifecycle, QStash media job worker, admin signed playback endpoint, `hasMedia` read path, mixed-media rejection, and moderation-gated video approval flow. Superseded by [[ADR_0032_Review_Video_On_Mux]].
 - 2026-06-08: `/api/admin/daily-maintenance` now runs a bounded, durable `ReviewMedia` metadata backfill (`src/lib/review-media-metadata-backfill.ts`) from the Cloudinary Admin API, so existing/legacy rows self-heal in production without a manual local script run. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: `/api/public/upload/register` accepts optional signed Cloudinary upload-response metadata; `/api/public/reviews` POST carries pending metadata into `ReviewMedia`, and GET keeps `images` while adding structured `media[]`. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: `/api/public/reviews` now derives exact filtered `totalCount` / `totalPages` from `ProductReviewSummary` and no longer calls raw `Review.count()` on the public read path.

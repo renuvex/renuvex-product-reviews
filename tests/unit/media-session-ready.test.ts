@@ -53,7 +53,6 @@ describe('video ready transaction', () => {
       status: 'processing',
       quotaState: 'reserved',
       reservedMonth: new Date('2026-06-01T00:00:00.000Z'),
-      masterObjectKey: 'master/video.mp4',
       mimeType: 'video/mp4',
       bytes: 5_000_000,
     };
@@ -64,22 +63,24 @@ describe('video ready transaction', () => {
     const { markVideoSessionReady } = await import('@/lib/media/sessions');
     const input = {
       sessionId: 'session-1',
-      streamUid: 'stream-1',
-      playbackUrl: 'https://videodelivery.net/stream-1/manifest/video.m3u8',
-      posterUrl: 'https://videodelivery.net/stream-1/thumbnails/thumbnail.jpg',
+      providerUploadId: 'upload-1',
+      providerAssetId: 'asset-1',
+      signedPlaybackId: 'signed-playback-1',
+      playbackUrl: 'https://stream.mux.com/signed-playback-1.m3u8',
+      posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg',
       durationMs: 12_000,
     };
 
     await Promise.all([
-      markVideoSessionReady({ ...input, metadataSource: 'stream_webhook' }),
-      markVideoSessionReady({ ...input, metadataSource: 'stream_reconcile' }),
+      markVideoSessionReady({ ...input, metadataSource: 'mux_webhook' }),
+      markVideoSessionReady({ ...input, metadataSource: 'mux_reconcile' }),
     ]);
 
     expect(txMock.storeVideoUsage.updateMany).toHaveBeenCalledOnce();
     expect(txMock.pendingReviewImage.upsert).toHaveBeenCalledOnce();
     expect(txMock.pendingReviewImage.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      create: expect.objectContaining({ metadataSource: 'stream_webhook' }),
-      update: expect.objectContaining({ metadataSource: 'stream_webhook' }),
+      create: expect.objectContaining({ metadataSource: 'mux_webhook' }),
+      update: expect.objectContaining({ metadataSource: 'mux_webhook' }),
     }));
   });
 });

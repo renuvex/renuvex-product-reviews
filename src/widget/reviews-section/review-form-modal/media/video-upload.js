@@ -196,122 +196,59 @@ export function ensurePendingVideoCancelDelivery() {
   flushPendingVideoCancellations();
 }
 
-function uploadPartWithProgress(url, blob, signal, onProgress) {
+async function loadUpChunkCreateUpload() {
+  var upchunkModule = await import('@mux/upchunk');
+  if (upchunkModule && typeof upchunkModule.createUpload === 'function') return upchunkModule.createUpload;
+  if (upchunkModule && upchunkModule.UpChunk && typeof upchunkModule.UpChunk.createUpload === 'function') {
+    return upchunkModule.UpChunk.createUpload.bind(upchunkModule.UpChunk);
+  }
+  throw new Error('video_upload_sdk_unavailable');
+}
+
+async function uploadToMuxDirectUrl(input) {
+  var createUpload = await loadUpChunkCreateUpload();
   return new Promise(function (resolve, reject) {
-    var xhr = new XMLHttpRequest();
-    var aborted = false;
-    function cleanup() {
-      if (signal) signal.removeEventListener('abort', abort);
+    var settled = false;
+    var upload = null;
+    function finish(error) {
+      if (settled) return;
+      settled = true;
+      if (input.signal) input.signal.removeEventListener('abort', abort);
+      if (error) reject(error);
+      else resolve();
     }
     function abort() {
-      aborted = true;
-      xhr.abort();
+      try { if (upload) upload.abort(); } catch (_) {}
+      finish(new DOMException('Aborted', 'AbortError'));
     }
-    if (signal) {
-      if (signal.aborted) return reject(new DOMException('Aborted', 'AbortError'));
-      signal.addEventListener('abort', abort, { once: true });
+    if (input.signal) {
+      if (input.signal.aborted) return reject(new DOMException('Aborted', 'AbortError'));
+      input.signal.addEventListener('abort', abort, { once: true });
     }
-    xhr.open('PUT', url, true);
-    xhr.upload.onprogress = function (event) {
-      if (event.lengthComputable && onProgress) onProgress(event.loaded);
-    };
-    xhr.onload = function () {
-      cleanup();
-      if (xhr.status < 200 || xhr.status >= 300) return reject(new Error('video_part_upload_failed'));
-      var etag = xhr.getResponseHeader('ETag');
-      if (!etag) return reject(new Error('video_part_missing_etag'));
-      resolve(etag);
-    };
-    xhr.onerror = function () { cleanup(); reject(new Error('video_part_network_error')); };
-    xhr.onabort = function () {
-      cleanup();
-      reject(aborted ? new DOMException('Aborted', 'AbortError') : new Error('video_part_aborted'));
-    };
-    xhr.send(blob);
+    upload = createUpload({
+      endpoint: input.uploadUrl,
+      file: input.file,
+      method: 'PUT',
+      chunkSize: input.chunkSize || 30720,
+      attempts: 3,
+      dynamicChunkSize: true,
+    });
+    upload.on('progress', function (event) {
+      var progress = Number(event && event.detail);
+      if (Number.isFinite(progress)) input.onProgress(Math.min(95, Math.max(0, Math.round(progress * 0.95))));
+    });
+    upload.on('offline', function () { input.onStatus('uploading_offline'); });
+    upload.on('online', function () { input.onStatus('uploading'); });
+    upload.on('error', function (event) {
+      var detail = event && event.detail;
+      var message = detail && typeof detail.message === 'string' ? detail.message : 'video_upload_failed';
+      finish(new Error(message));
+    });
+    upload.on('success', function () {
+      input.onProgress(95);
+      finish();
+    });
   });
-}
-
-async function requestPartUrls(token, partNumbers) {
-  return jsonRequest('/api/public/upload/video/parts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token, partNumbers: partNumbers }),
-  });
-}
-
-async function uploadOnePart(input) {
-  var attempt = 0;
-  while (attempt < 3) {
-    attempt += 1;
-    try {
-      var signed = await requestPartUrls(input.token, [input.partNumber]);
-      var part = signed.parts && signed.parts[0];
-      if (!part || !part.uploadUrl) throw new Error('video_part_url_missing');
-      var etag = await uploadPartWithProgress(part.uploadUrl, input.blob, input.signal, input.onProgress);
-      return { partNumber: input.partNumber, etag: etag };
-    } catch (error) {
-      if (input.signal && input.signal.aborted) throw error;
-      if (attempt >= 3) throw error;
-      await sleep(400 * attempt);
-    }
-  }
-  throw new Error('video_part_upload_failed');
-}
-
-export function videoUploadProgressPercent(fileSize, partSize, completedPartNumbers, loadedByPart) {
-  if (!Number.isFinite(fileSize) || fileSize <= 0) return 0;
-  var completedBytes = (completedPartNumbers || []).reduce(function (sum, number) {
-    var start = (Number(number) - 1) * partSize;
-    return sum + Math.max(0, Math.min(partSize, fileSize - start));
-  }, 0);
-  var uploadingBytes = Object.keys(loadedByPart || {}).reduce(function (sum, key) {
-    return sum + Math.max(0, Number(loadedByPart[key]) || 0);
-  }, 0);
-  return Math.min(95, Math.round(((completedBytes + uploadingBytes) / fileSize) * 95));
-}
-
-async function uploadMissingParts(input) {
-  var completedMap = {};
-  (input.completed || []).forEach(function (part) {
-    completedMap[part.partNumber] = { partNumber: part.partNumber, etag: part.etag };
-  });
-  var loadedByPart = {};
-  var queue = [];
-  for (var partNumber = 1; partNumber <= input.partCount; partNumber += 1) {
-    if (!completedMap[partNumber]) queue.push(partNumber);
-  }
-  function reportProgress() {
-    input.onProgress(videoUploadProgressPercent(
-      input.file.size,
-      input.partSize,
-      Object.keys(completedMap).map(Number),
-      loadedByPart,
-    ));
-  }
-  reportProgress();
-  async function worker() {
-    while (queue.length > 0) {
-      if (input.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-      var number = queue.shift();
-      var start = (number - 1) * input.partSize;
-      var result = await uploadOnePart({
-        token: input.token,
-        partNumber: number,
-        blob: input.file.slice(start, Math.min(input.file.size, start + input.partSize)),
-        signal: input.signal,
-        onProgress: function (loaded) { loadedByPart[number] = loaded; reportProgress(); },
-      });
-      delete loadedByPart[number];
-      completedMap[number] = result;
-      reportProgress();
-    }
-  }
-  var workers = [];
-  var workerCount = Math.min(input.maxParallelParts || 3, queue.length || 1);
-  for (var i = 0; i < workerCount; i += 1) workers.push(worker());
-  await Promise.all(workers);
-  return Object.keys(completedMap).map(function (key) { return completedMap[key]; })
-    .sort(function (a, b) { return a.partNumber - b.partNumber; });
 }
 
 export function videoProcessingPollDelayMs(elapsedMs) {
@@ -452,6 +389,11 @@ export async function uploadReviewVideo(input) {
       token = null;
       session = null;
     }
+    if (token && (!session || typeof session.uploadUrl !== 'string' || !session.uploadUrl)) {
+      clearStoredSession(input.productId, input.file);
+      token = null;
+      session = null;
+    }
   }
   if (!token) {
     var initiated = await jsonRequest('/api/public/upload/video/initiate', {
@@ -471,22 +413,19 @@ export async function uploadReviewVideo(input) {
   }
   if (input.onToken) input.onToken(token);
   input.onStatus('uploading');
-  var partsData = await requestPartUrls(token);
-  var completed = await uploadMissingParts({
-    token: token,
+  await uploadToMuxDirectUrl({
+    uploadUrl: session.uploadUrl,
     file: input.file,
-    partSize: session.partSize,
-    partCount: session.partCount,
-    maxParallelParts: session.maxParallelParts,
-    completed: partsData.completed,
+    chunkSize: session.chunkSize,
     signal: input.signal,
     onProgress: input.onProgress,
+    onStatus: input.onStatus,
   });
   input.onStatus('processing');
   await jsonRequest('/api/public/upload/video/complete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token, parts: completed }),
+    body: JSON.stringify({ token: token }),
   }, 30000);
   var ready = await pollUntilReady(token, input.signal, input.onStatus);
   clearStoredSession(input.productId, input.file);

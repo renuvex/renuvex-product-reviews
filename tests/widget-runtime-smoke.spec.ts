@@ -156,10 +156,10 @@ function trustedReviewImage(name: string, storeId = PUBLIC_KEY): string {
 
 function trustedReviewVideoMedia(name: string, position = 0): Record<string, unknown> {
   const uid = `${name}-uid`;
-  const posterUrl = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
+  const posterUrl = `https://image.mux.com/${uid}/thumbnail.jpg`;
   return {
     type: 'video',
-    url: `https://videodelivery.net/${uid}/manifest/video.m3u8`,
+    url: `https://stream.mux.com/${uid}.m3u8`,
     posterUrl,
     thumbnailUrl: posterUrl,
     durationMs: 45_000,
@@ -1524,8 +1524,8 @@ test('list review item photo keeps the medium 3:4 portrait box in a tall row', a
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('video-enabled media strip uses hasMedia and renders poster thumbnails without list video preload', async ({ page }) => {
-  await page.route('https://videodelivery.net/**', async (route) => {
+test('video-enabled media strip uses hasMedia and renders Mux poster thumbnails without list video preload', async ({ page }) => {
+  await page.route('https://image.mux.com/**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'image/svg+xml; charset=utf-8' },
@@ -1568,7 +1568,7 @@ test('video-enabled media strip uses hasMedia and renders poster thumbnails with
   expect(sawMediaStripRequest).toBe(true);
   expect(sawImageStripRequest).toBe(false);
   expect(await countInReviewsShadow(page, '.renuvex-pr-review-card video, .renuvex-pr-photo-strip video')).toBe(0);
-  expect(log.urls.some((url) => url.includes('/manifest/video.m3u8'))).toBe(false);
+  expect(log.urls.some((url) => url.includes('.m3u8'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 

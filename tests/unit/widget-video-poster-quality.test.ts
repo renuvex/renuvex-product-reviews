@@ -1,41 +1,43 @@
 import { describe, expect, test } from 'vitest';
 import {
-  streamPosterSrcSet,
-  streamPosterVariantUrl,
+  muxPosterSrcSet,
+  muxPosterVariantUrl,
 } from '../../src/widget/core/review-media.js';
 import {
   pickWarmStartLevel,
   shouldUseQualityWarmStart,
 } from '../../src/widget/reviews-section/video-playback.js';
 
-describe('Stream poster variants', () => {
-  test('adds deterministic thumbnail sizing parameters to trusted Stream poster URLs', () => {
-    const url = streamPosterVariantUrl(
-      'https://videodelivery.net/video-1/thumbnails/thumbnail.jpg?time=1s',
+describe('Mux poster variants', () => {
+  test('adds deterministic thumbnail sizing parameters to trusted Mux poster URLs', () => {
+    const url = muxPosterVariantUrl(
+      'https://image.mux.com/playback-1/thumbnail.jpg?time=1',
       { width: 300, height: 400, fit: 'crop' },
     );
 
-    expect(url).toBe('https://videodelivery.net/video-1/thumbnails/thumbnail.jpg?time=1s&width=300&height=400&fit=crop');
+    expect(url).toBe('https://image.mux.com/playback-1/thumbnail.jpg?time=1&width=300&height=400&fit_mode=crop');
   });
 
   test('generates 1x and 2x poster srcset variants', () => {
-    const srcset = streamPosterSrcSet(
-      'https://customer-test.cloudflarestream.com/video-1/thumbnails/thumbnail.jpg',
-      { width: 320, height: 180, fit: 'clip' },
+    const srcset = muxPosterSrcSet(
+      'https://image.mux.com/playback-1/thumbnail.jpg',
+      { width: 320, height: 180, fit: 'smartcrop' },
     );
 
     expect(srcset).toBe(
-      'https://customer-test.cloudflarestream.com/video-1/thumbnails/thumbnail.jpg?width=320&height=180&fit=clip 1x, ' +
-      'https://customer-test.cloudflarestream.com/video-1/thumbnails/thumbnail.jpg?width=640&height=360&fit=clip 2x',
+      'https://image.mux.com/playback-1/thumbnail.jpg?width=320&height=180&fit_mode=smartcrop 1x, ' +
+      'https://image.mux.com/playback-1/thumbnail.jpg?width=640&height=360&fit_mode=smartcrop 2x',
     );
   });
 
   test('does not transform untrusted or non-thumbnail URLs', () => {
-    expect(streamPosterVariantUrl('https://example.com/video-1/thumbnails/thumbnail.jpg', { width: 300, height: 400, fit: 'crop' }))
+    expect(muxPosterVariantUrl('https://example.com/video-1/thumbnails/thumbnail.jpg', { width: 300, height: 400, fit: 'crop' }))
       .toBe('https://example.com/video-1/thumbnails/thumbnail.jpg');
-    expect(streamPosterVariantUrl('https://videodelivery.net/video-1/manifest/video.m3u8', { width: 300, height: 400, fit: 'crop' }))
-      .toBe('https://videodelivery.net/video-1/manifest/video.m3u8');
-    expect(streamPosterVariantUrl('not a url', { width: 300, height: 400, fit: 'crop' })).toBe('not a url');
+    expect(muxPosterVariantUrl('https://video.example.com/video-1/thumbnails/thumbnail.jpg', { width: 300, height: 400, fit: 'crop' }))
+      .toBe('https://video.example.com/video-1/thumbnails/thumbnail.jpg');
+    expect(muxPosterVariantUrl('https://stream.mux.com/playback-1.m3u8', { width: 300, height: 400, fit: 'crop' }))
+      .toBe('https://stream.mux.com/playback-1.m3u8');
+    expect(muxPosterVariantUrl('not a url', { width: 300, height: 400, fit: 'crop' })).toBe('not a url');
   });
 });
 

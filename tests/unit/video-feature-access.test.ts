@@ -10,16 +10,12 @@ vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 
 function setProviderEnv() {
   process.env.VIDEO_REVIEWS_ENABLED = 'true';
-  process.env.CLOUDFLARE_R2_ENDPOINT = 'https://account.eu.r2.cloudflarestorage.com';
-  process.env.CLOUDFLARE_R2_ACCESS_KEY_ID = 'access-key';
-  process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY = 'secret-key';
-  process.env.CLOUDFLARE_R2_MASTER_BUCKET = 'master';
-  process.env.CLOUDFLARE_R2_INGEST_BUCKET = 'ingest';
-  process.env.CLOUDFLARE_R2_INGEST_PUBLIC_BASE_URL = 'https://media-ingest.example.com';
-  process.env.CLOUDFLARE_ACCOUNT_ID = 'account';
-  process.env.CLOUDFLARE_STREAM_API_TOKEN = 'stream-token';
-  process.env.CLOUDFLARE_STREAM_CUSTOMER_CODE = 'customer';
-  process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET = 'webhook-secret';
+  process.env.MUX_TOKEN_ID = 'mux-token-id';
+  process.env.MUX_TOKEN_SECRET = 'mux-token-secret';
+  process.env.MUX_VIDEO_QUALITY = 'basic';
+  delete process.env.MUX_WEBHOOK_SECRET;
+  process.env.MUX_SIGNING_KEY_ID = 'mux-signing-key';
+  process.env.MUX_SIGNING_KEY_PRIVATE = Buffer.from('private-key').toString('base64');
   process.env.QSTASH_TOKEN = 'qstash-token';
   process.env.QSTASH_CURRENT_SIGNING_KEY = 'current-key';
   process.env.QSTASH_NEXT_SIGNING_KEY = 'next-key';
@@ -87,7 +83,7 @@ describe('video feature access', () => {
   });
 
   it('reports provider_unavailable without exposing missing configuration details', async () => {
-    delete process.env.CLOUDFLARE_STREAM_API_TOKEN;
+    delete process.env.MUX_TOKEN_SECRET;
     const { getVideoFeatureAccess } = await import('@/lib/media/access');
 
     await expect(getVideoFeatureAccess('store-1')).resolves.toMatchObject({

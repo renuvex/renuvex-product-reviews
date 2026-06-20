@@ -1,10 +1,10 @@
 import type { Prisma, Review, ReviewMedia } from '@prisma/client';
-import { MEDIA_JOB_ACTIONS } from '@/lib/media/constants';
+import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
 import { enqueueMediaProviderJob } from '@/lib/media/jobs';
 import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
 
 type TransactionClient = Prisma.TransactionClient;
-type VideoMedia = Pick<ReviewMedia, 'id' | 'providerAssetId' | 'processingStatus' | 'sourceAssetId'>;
+type VideoMedia = Pick<ReviewMedia, 'id' | 'providerAssetId' | 'processingStatus'>;
 
 export async function getReviewForModerationUpdate(tx: TransactionClient, reviewId: string, storeId: string) {
   const rows = await tx.$queryRaw<Review[]>`
@@ -48,17 +48,17 @@ export async function requestVideoApproval(
   const jobs = [];
   for (const item of media) {
     jobs.push(await enqueueMediaProviderJob(tx, {
-      dedupeKey: `publish-stream:${existing.id}:${item.id}:v${moderationVersion}`,
+      dedupeKey: `publish-video:${existing.id}:${item.id}:v${moderationVersion}`,
       storeId: existing.storeId,
       reviewId: existing.id,
       mediaId: item.id,
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.publishStream,
+      provider: VIDEO_PROVIDER,
+      action: MEDIA_JOB_ACTIONS.publishVideo,
       resourceType: 'video',
       payload: {
         reviewId: existing.id,
         mediaId: item.id,
-        streamUid: item.providerAssetId!,
+        providerAssetId: item.providerAssetId!,
         moderationVersion,
       },
     }));
@@ -87,17 +87,17 @@ export async function rejectVideoReview(
   const jobs = [];
   for (const item of media) {
     jobs.push(await enqueueMediaProviderJob(tx, {
-      dedupeKey: `protect-stream:${existing.id}:${item.id}:v${moderationVersion}`,
+      dedupeKey: `protect-video:${existing.id}:${item.id}:v${moderationVersion}`,
       storeId: existing.storeId,
       reviewId: existing.id,
       mediaId: item.id,
-      provider: 'cloudflare_stream',
-      action: MEDIA_JOB_ACTIONS.protectStream,
+      provider: VIDEO_PROVIDER,
+      action: MEDIA_JOB_ACTIONS.protectVideo,
       resourceType: 'video',
       payload: {
         reviewId: existing.id,
         mediaId: item.id,
-        streamUid: item.providerAssetId!,
+        providerAssetId: item.providerAssetId!,
         moderationVersion,
       },
     }));
@@ -113,12 +113,11 @@ export async function enqueueVideoReviewCleanup(tx: TransactionClient, review: R
       storeId: review.storeId,
       reviewId: review.id,
       mediaId: item.id,
-      provider: 'cloudflare_stream',
+      provider: VIDEO_PROVIDER,
       action: MEDIA_JOB_ACTIONS.cleanupVideo,
       resourceType: 'video',
       payload: {
-        streamUid: item.providerAssetId ?? undefined,
-        masterObjectKey: item.sourceAssetId ?? undefined,
+        providerAssetId: item.providerAssetId ?? undefined,
       },
     }));
   }

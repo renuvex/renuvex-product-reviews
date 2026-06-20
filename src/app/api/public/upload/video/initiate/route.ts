@@ -5,12 +5,25 @@ import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { getClientIp, checkFixedWindowRateLimit } from '@/lib/public-rate-limit';
 import { getVideoFeatureAccess, verifyVideoReviewTarget } from '@/lib/media/access';
-import { getQStashMediaConfig, getR2MediaConfig, getStreamMediaConfig, MediaConfigError } from '@/lib/media/config';
-import { createVideoMultipartUpload } from '@/lib/media/providers/r2';
+import { getMuxApiConfig, getMuxVideoQuality, getQStashMediaConfig, MediaConfigError } from '@/lib/media/config';
+import { createMuxDirectUpload } from '@/lib/media/providers/mux';
 import { dispatchMediaProviderJob, failSessionAndQueueCleanup } from '@/lib/media/jobs';
 import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 import { createReservedVideoSession, VideoQuotaError } from '@/lib/media/sessions';
-import { partitionVideoBytes, validateVideoUploadInput } from '@/lib/media/video-policy';
+import { validateVideoUploadInput } from '@/lib/media/video-policy';
+
+const MUX_UPLOAD_CHUNK_SIZE_KB = 30_720;
+
+function muxCorsOrigin(request: Request): string {
+  const origin = request.headers.get('origin')?.trim();
+  if (origin) {
+    const parsed = new URL(origin);
+    return parsed.origin;
+  }
+  const fallback = process.env.STOREFRONT_WIDGET_BASE_URL || process.env.NEXT_PUBLIC_DEPLOY_URL || '';
+  if (!fallback) throw new MediaConfigError('missing_config', 'STOREFRONT_WIDGET_BASE_URL is not configured');
+  return new URL(fallback).origin;
+}
 
 export async function OPTIONS(request: Request) {
   return corsOptions(request);
@@ -53,8 +66,8 @@ export async function POST(request: Request) {
     if (!target) return withCors(NextResponse.json({ error: 'invalid_product' }, { status: 400 }), request);
 
     // Fail closed before reserving quota when provider/job configuration is incomplete.
-    getR2MediaConfig();
-    getStreamMediaConfig();
+    getMuxApiConfig();
+    const videoQuality = getMuxVideoQuality();
     getQStashMediaConfig();
 
     const { session, token, expiryJob } = await createReservedVideoSession({
@@ -66,9 +79,17 @@ export async function POST(request: Request) {
       monthlyLimit: access.monthlyLimit,
     });
     createdSessionId = session.id;
-    const uploadId = await createVideoMultipartUpload(session.masterObjectKey, session.mimeType);
-    createdUploadId = uploadId;
-    await prisma.videoUploadSession.update({ where: { id: session.id }, data: { status: 'uploading', r2UploadId: uploadId } });
+    const muxUpload = await createMuxDirectUpload({
+      corsOrigin: muxCorsOrigin(request),
+      passthrough: session.id,
+      videoQuality,
+    });
+    if (!muxUpload.id || !muxUpload.url) throw new Error('mux_direct_upload_incomplete');
+    createdUploadId = muxUpload.id;
+    await prisma.videoUploadSession.update({
+      where: { id: session.id },
+      data: { status: 'uploading', providerUploadId: muxUpload.id },
+    });
     await dispatchMediaProviderJob(
       expiryJob.id,
       Math.max(1, Math.ceil((session.expiresAt.getTime() - Date.now()) / 1000)),
@@ -76,16 +97,15 @@ export async function POST(request: Request) {
     return withCors(NextResponse.json({
       data: {
         token,
-        partSize: 10 * 1024 * 1024,
-        partCount: partitionVideoBytes(session.bytes).length,
-        maxParallelParts: 3,
+        uploadUrl: muxUpload.url,
+        chunkSize: MUX_UPLOAD_CHUNK_SIZE_KB,
         expiresAt: session.expiresAt.toISOString(),
       },
     }, { status: 201 }), request);
   } catch (error) {
     if (createdSessionId) {
       try {
-        await failSessionAndQueueCleanup(createdSessionId, 'initiate_failed', { r2UploadId: createdUploadId });
+        await failSessionAndQueueCleanup(createdSessionId, 'initiate_failed', { providerUploadId: createdUploadId });
       } catch (cleanupError) {
         console.error('[video-initiate] failed to persist cleanup outbox:', cleanupError);
       }
