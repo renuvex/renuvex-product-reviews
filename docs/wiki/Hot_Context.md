@@ -133,3 +133,4 @@ source_files:
 - [[Test_Strategy]]
 - [[ADR_0032_Review_Video_On_Mux]]
 - [[Review_Video_Canary_Runbook]]
+- [[Review_Video_Manual_Repair_Runbook]]

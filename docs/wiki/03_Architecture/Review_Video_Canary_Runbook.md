@@ -15,6 +15,7 @@ tags:
 related:
   - "[[ADR_0032_Review_Video_On_Mux]]"
   - "[[Maintenance_Runbook]]"
+  - "[[Review_Video_Manual_Repair_Runbook]]"
   - "[[Config_And_Env_Map]]"
   - "[[Test_Strategy]]"
   - "[[Review_Video_Physical_Device_Acceptance_2026-06]]"
@@ -155,6 +156,7 @@ Do not revoke provider credentials or delete webhook/resources while cleanup wor
 ## Exit Criteria
 - No `uploading`, `uploaded`, or `processing` session is stuck beyond the expected reconcile window.
 - No provider job remains `failed`, stale `processing`, or `dead`.
+- Any exceptional manual repair follows [[Review_Video_Manual_Repair_Runbook]] and leaves DB, Mux, quota, public API, and job state converged.
 - Reserved quota returns to zero; consumed quota matches completed uploads.
 - Public review APIs expose normalized media only, never private playback IDs or provider credentials.
 - Mux environment used by canary matches the intended Preview or Production gate.

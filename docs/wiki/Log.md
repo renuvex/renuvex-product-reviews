@@ -37,6 +37,11 @@ source_files:
 - Browser-verified Loox, Yotpo, Okendo, and Judge.me plan snapshots against official pages, then folded the durable plan details into [[Competitor_Pricing_And_Plans]] and the individual competitor pages.
 - The comparison page is an English wiki snapshot for packaging work; verify official competitor pages again before final pricing decisions or public claims.
 
+## 2026-06-21 - operations | Add Mux video manual repair runbook
+- Added [[Review_Video_Manual_Repair_Runbook]] as the operator path for rare Mux review-video lifecycle failures after webhook, reconciliation, expiry, and media-job retry paths have not converged.
+- The runbook documents evidence-first handling for `VideoUploadSession`, `MediaProviderJob`, `WebhookEvent`, Mux upload/asset state, quota counters, pending registry rows, and public API leak checks.
+- Repair guidance keeps Mux direct-upload cancel limited to `waiting` uploads, uses asset deletion once an `asset_id` exists, protects review-consumed sessions from abandoned-upload refunds, and requires explicit approval before DB/provider mutation.
+
 ## 2026-06-21 - security | Record Supabase RLS launch gate
 - Read-only RLS audit found no browser Supabase client usage and no `NEXT_PUBLIC_SUPABASE_*` env surface in the repo; runtime DB access is server-side Prisma.
 - Supabase MCP still flags RLS disabled on most public app tables. Direct SQL checks did not show `anon`, `authenticated`, or `service_role` table privileges, and public schema has no views/functions/publication tables.

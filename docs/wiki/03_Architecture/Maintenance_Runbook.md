@@ -19,6 +19,7 @@ related:
   - "[[ADR_0030_Cleanup_Hardening]]"
   - "[[Database_Map]]"
   - "[[Async_Media_Pipeline]]"
+  - "[[Review_Video_Manual_Repair_Runbook]]"
 source_files:
   - "src/lib/cron-observability.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
@@ -29,6 +30,8 @@ source_files:
   - "src/lib/media/lifecycle.ts"
   - "src/lib/media/jobs.ts"
   - "src/lib/media/reconciliation.ts"
+  - "src/lib/media/providers/mux.ts"
+  - "tests/unit/media-jobs.test.ts"
   - "scripts/video-canary-ops.mjs"
   - "vercel.json"
 ---
@@ -114,7 +117,7 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 | `source:media-job` + `action:resolve_video_asset` | Mux upload has not produced an asset yet, or upload lookup failed | Check the Mux upload id, session status, and provider error code. A waiting upload should defer and retry; terminal Mux upload states fail the session and queue cleanup. |
 | `source:media-job` + `action:publish_video` | Public playback ID creation/convergence or moderation race failed | Confirm `Review.moderationVersion` and `MediaProviderLease`. A stale job must converge Mux public playback IDs to the latest DB state and finish `superseded`; it must not remain the final public/private decision. |
 | `source:media-job` + `action:protect_video` | Public playback ID deletion/convergence or moderation race failed | Confirm the review status, media visibility, and Mux playback IDs. The job should remove public playback IDs while keeping the signed pending/admin playback ID. |
-| `source:media-job` + `action:cleanup_video` | Mux cancel/delete failed | Cleanup is idempotent and provider-aware. Verify Mux upload/asset ids, then retry the job; do not delete DB registry rows before provider cleanup succeeds. Direct-upload cancel is only valid while the Mux upload is still waiting; if a known or recovered asset id exists, asset deletion is the cleanup source of truth. |
+| `source:media-job` + `action:cleanup_video` | Mux cancel/delete failed | Cleanup is idempotent and provider-aware. Use [[Review_Video_Manual_Repair_Runbook]] for evidence collection and repair approval. Verify Mux upload/asset ids, then retry the job; do not delete DB registry rows before provider cleanup succeeds. Direct-upload cancel is only valid while the Mux upload is still waiting; if a known or recovered asset id exists, asset deletion is the cleanup source of truth. |
 | `source:media-job` + `action:reconcile_video` | Mux webhook was delayed/missed or canonical asset polling failed | The bounded self-healing schedule runs at 10/20/30/45/60/90/120/180/300/600 seconds and applies state through the same transition helper as the webhook. Mux asset `ready`, signed playback ID, trusted Mux HLS/poster URLs, and valid V1 media limits are authoritative. After 10 minutes it records `mux_processing_delayed`; it does not delete or fail a still-processing video. Inspect Mux asset state and the session expiry before manual mutation. |
 | `source:media-job` + `action:expire_upload_session` | A delayed expiry wakeup or session cleanup failed | `expiresAt` is authoritative. Early delivery must defer; expired reserved uploads release reserved quota and queue cleanup; ready-but-unsubmitted uploads clean provider assets and can release consumed quota when `consumedAt` is still null; review-consumed sessions supersede the job and are not refunded by abandoned-upload cleanup. |
 | `source:media-job` + `action:cleanup_image` | Cloudinary pending-image delete failed | Pending registry rows are intentionally kept until the outbox job deletes the provider asset. Verify Cloudinary env/Admin API status, then retry or let daily redispatch pick it up. |
@@ -136,6 +139,7 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 - No secrets/tokens are sent to Sentry (`sendDefaultPii:false`; extras carry only counts + task/cron names).
 - `cleanup-images` uses a circuit-breaker + a `MediaCleanupRun` audit log + two-phase `OrphanImageQuarantine` ([[ADR_0030_Cleanup_Hardening]]). Thresholds are env-tunable (`CLEANUP_MAX_DELETE_ABSOLUTE`=200, `CLEANUP_MAX_DELETE_RATIO`=0.30, `CLEANUP_QUARANTINE_GRACE_DAYS`=7, `CLEANUP_ORPHAN_AGE_DAYS`=30); calibrate from real audit rows.
 - Review media lifecycle is DB-first: `VideoUploadSession`, `PendingReviewImage`, `WebhookEvent`, and `MediaProviderJob` are the source of truth; Cloudinary and Mux are provider state. Never repair by editing provider state alone without matching DB state.
+- Manual Mux repair uses [[Review_Video_Manual_Repair_Runbook]]. Start read-only, collect DB/job/webhook/provider evidence, and get explicit approval before any provider or DB mutation.
 - Required Mux setup is manual/operator-owned until an explicit provisioning tool exists: environment-specific Mux API token, signing key, webhook endpoint/secret, and QStash signing keys. The app does not provision Mux resources automatically.
 - Legacy external video credentials and inventory are teardown concerns only after Mux canary acceptance. Do not run destructive provider cleanup without proven inventory and explicit approval.
 - The first production video rollout must follow [[Review_Video_Canary_Runbook]]. `pnpm video:canary:ops` is read-only by default; apply mode is single-store scoped and requires an exact confirmation id.
@@ -147,3 +151,4 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 - [[ADR_0030_Cleanup_Hardening]]
 - [[Database_Map]]
 - [[Review_Video_Canary_Runbook]]
+- [[Review_Video_Manual_Repair_Runbook]]
