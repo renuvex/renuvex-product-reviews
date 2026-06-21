@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-06-22
+last_verified: 2026-06-22
 confidence: high
 tags:
   - widget
@@ -34,6 +34,8 @@ source_files:
   - "src/widget/reviews-section/media-thumbnail.js"
   - "src/widget/reviews-section/video-playback.js"
   - "src/widget/core/review-media.js"
+  - "src/widget/reviews-section/review-form-modal/styles.js"
+  - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"
   - "src/widget/reviews-section/review-form-modal/steps/step-media.js"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "src/widget/reviews-section/review-form-modal/media/video-capability.js"
@@ -88,7 +90,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Steps managed in [reviews-section/review-form-modal/wizard-state.js](src/widget/reviews-section/review-form-modal/wizard-state.js).
 - The wizard shell exposes modal dialog semantics and traps keyboard focus while open. Open focuses the dialog container, first `Tab` enters the active step, step changes do not auto-focus inputs, and close returns focus to the opening control for keyboard opens. Related bug: [[Bug_Review_Wizard_Focus_Trap_Accessibility]] and [[Bug_Wizard_Rating_Radiogroup_And_Focus_Return]].
 - Photos uploaded via `/api/public/upload/sign` → direct to Cloudinary under `review_images/stores/<storeId>`.
-- Video V1 is opt-in and gated by global flag + merchant setting + provider configuration + the current UTC month's `reservedCount + consumedCount < monthlyLimit`. The cached settings response expresses merchant intent; the fresh capability endpoint expresses current upload availability. When effective, step 2 becomes a media step ([step-media.js](src/widget/reviews-section/review-form-modal/steps/step-media.js)): users can add **3 photos OR 1 video**, never mixed media in v1.
+- Video V1 is opt-in and gated by global flag + merchant setting + provider configuration + the current UTC month's `reservedCount + consumedCount < monthlyLimit`. The cached settings response expresses merchant intent; the fresh capability endpoint expresses current upload availability. When effective, step 2 becomes a media step ([step-media.js](src/widget/reviews-section/review-form-modal/steps/step-media.js)): users can add **3 photos OR 1 video**, never mixed media in v1. The media step uses two stacked primary actions, `Fotoğraf Ekle` and `Video Ekle`, inside one media card. The photo path reuses [step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js) in embedded mode so thumbnails and upload lifecycle stay shared, but the embedded picker hides its own secondary add button; the outer media actions remain the only visible add controls.
 - Videos upload through [media/video-upload.js](src/widget/reviews-section/review-form-modal/media/video-upload.js): client validates MP4/MOV, <=150MB, known 2-60s duration, then uploads to a server-created Mux direct-upload URL via UpChunk. The app stores only the opaque session token in widget state; Mux upload URL is not persisted by the app. Server-side Mux asset/webhook/reconcile state remains authoritative; client validation is only fast feedback.
 - Upload failures retain stable server error codes. Quota, disabled-feature, and rate-limit failures show specific shopper copy without an immediate retry action; network and retryable server failures retain the retry action. Inline feedback and the existing toast both remain visible, and the remove control remains available.
 - Preview mode never calls Mux. The wizard simulates upload/progress/processing/ready states deterministically.

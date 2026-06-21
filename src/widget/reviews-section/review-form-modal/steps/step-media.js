@@ -9,7 +9,7 @@ import {
   validateKnownVideoDuration,
   validateVideoFile,
 } from '../media/video-upload.js';
-import { createStepPhotos } from './step-photos.js';
+import { createStepPhotos, MAX_PHOTOS } from './step-photos.js';
 
 function videoStatusText(video) {
   if (!video) return '';
@@ -41,23 +41,25 @@ export function createStepMedia(state, opts) {
   subtitle.textContent = reviewFormCopy('formStepMediaSubtitle');
   root.appendChild(subtitle);
 
-  var choices = document.createElement('div');
-  choices.className = 'renuvex-pr-fwizard-media-choices';
+  var mediaCard = document.createElement('div');
+  mediaCard.className = 'renuvex-pr-fwizard-media-card';
   var photoButton = document.createElement('button');
   photoButton.type = 'button';
-  photoButton.className = 'renuvex-pr-fwizard-media-choice';
+  photoButton.className = 'renuvex-pr-fwizard-photo-add renuvex-pr-fwizard-media-action';
+  photoButton.setAttribute('aria-label', 'Fotoğraf ekle');
   photoButton.innerHTML = iconUseSvg(PHOTO_ICON) + '<span>Fotoğraf Ekle</span>';
   var videoButton = document.createElement('button');
   videoButton.type = 'button';
-  videoButton.className = 'renuvex-pr-fwizard-media-choice';
+  videoButton.className = 'renuvex-pr-fwizard-photo-add renuvex-pr-fwizard-media-action';
+  videoButton.setAttribute('aria-label', 'Video ekle');
   videoButton.innerHTML = iconUseSvg(PLAY_ICON) + '<span>Video Ekle</span>';
-  choices.appendChild(photoButton);
-  choices.appendChild(videoButton);
-  root.appendChild(choices);
+  mediaCard.appendChild(photoButton);
+  mediaCard.appendChild(videoButton);
 
   var content = document.createElement('div');
   content.className = 'renuvex-pr-fwizard-media-content';
-  root.appendChild(content);
+  mediaCard.appendChild(content);
+  root.appendChild(mediaCard);
 
   var videoInput = document.createElement('input');
   videoInput.type = 'file';
@@ -68,6 +70,11 @@ export function createStepMedia(state, opts) {
   function hasPhotos() {
     var snapshot = state.get();
     return (snapshot.images || []).length > 0 || (snapshot.pendingImages || []).length > 0;
+  }
+
+  function photoCount() {
+    var snapshot = state.get();
+    return (snapshot.images || []).length + (snapshot.pendingImages || []).length;
   }
 
   function currentVideo() {
@@ -84,7 +91,14 @@ export function createStepMedia(state, opts) {
     videoView = null;
   }
 
+  function destroyPhotoPicker() {
+    if (!photoInstance) return;
+    if (photoInstance.destroy) photoInstance.destroy();
+    photoInstance = null;
+  }
+
   function createVideoView(video) {
+    destroyPhotoPicker();
     content.innerHTML = '';
     var card = document.createElement('div');
     card.className = 'renuvex-pr-fwizard-video-card';
@@ -181,11 +195,14 @@ export function createStepMedia(state, opts) {
 
   function updateChoices() {
     var photosSelected = hasPhotos();
+    var photosFull = photoCount() >= MAX_PHOTOS;
     var videoSelected = !!currentVideo();
-    photoButton.disabled = videoSelected;
+    var hasMedia = photosSelected || videoSelected;
+    photoButton.disabled = videoSelected || photosFull;
     videoButton.disabled = photosSelected || videoSelected;
-    photoButton.classList.toggle('renuvex-pr-fwizard-media-choice--active', photosSelected);
-    videoButton.classList.toggle('renuvex-pr-fwizard-media-choice--active', videoSelected);
+    mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--has-media', hasMedia);
+    photoButton.classList.toggle('renuvex-pr-fwizard-media-action--active', photosSelected);
+    videoButton.classList.toggle('renuvex-pr-fwizard-media-action--active', videoSelected);
   }
 
   function updateVideoState(patch) {
@@ -286,7 +303,10 @@ export function createStepMedia(state, opts) {
   }
 
   function mountPhotoPicker(openImmediately) {
-    if (photoInstance) return;
+    if (photoInstance) {
+      if (openImmediately && photoInstance.openPicker) photoInstance.openPicker();
+      return;
+    }
     videoView = null;
     content.innerHTML = '';
     photoInstance = createStepPhotos(state, {
@@ -296,6 +316,8 @@ export function createStepMedia(state, opts) {
       revokeBlobUrl: opts.revokeBlobUrl,
       showToast: opts.showToast,
       hideHeading: true,
+      hideAddButton: true,
+      embeddedMedia: true,
     });
     content.appendChild(photoInstance.el);
     if (openImmediately && photoInstance.openPicker) photoInstance.openPicker();
@@ -306,7 +328,10 @@ export function createStepMedia(state, opts) {
     mountPhotoPicker(true);
   };
   videoButton.onclick = function () {
-    if (!videoButton.disabled) videoInput.click();
+    if (videoButton.disabled) return;
+    destroyPhotoPicker();
+    content.innerHTML = '';
+    videoInput.click();
   };
   videoInput.onchange = function () {
     var file = videoInput.files && videoInput.files[0];

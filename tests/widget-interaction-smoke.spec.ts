@@ -706,8 +706,27 @@ test('video upload wizard posts a ready video token without photo media', async 
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
   expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-title')).toBe('Medya ekle');
-  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-choice:nth-child(1) span')).toBe('Fotoğraf Ekle');
-  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-choice:nth-child(2) span')).toBe('Video Ekle');
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1) span')).toBe('Fotoğraf Ekle');
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2) span')).toBe('Video Ekle');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(2);
+
+  await page.evaluate(() => {
+    const win = window as Window & { __renuvexNativeInputClick?: typeof HTMLInputElement.prototype.click };
+    win.__renuvexNativeInputClick = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function () {
+      if (this.type === 'file') return;
+      return win.__renuvexNativeInputClick?.call(this);
+    };
+  });
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(2);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-add')).toBe(0);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-card--embedded')).toBe(1);
+  await page.evaluate(() => {
+    const win = window as Window & { __renuvexNativeInputClick?: typeof HTMLInputElement.prototype.click };
+    if (win.__renuvexNativeInputClick) HTMLInputElement.prototype.click = win.__renuvexNativeInputClick;
+    delete win.__renuvexNativeInputClick;
+  });
 
   await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
     name: 'review-video.mp4',
@@ -1033,7 +1052,7 @@ test('video upload card remove cancels pending video selection', async ({ page }
 
   await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-card')).toBe(0);
   await expect.poll(() => cancelCalls).toBe(1);
-  expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-choice:nth-child(2)')).toBe(false);
+  expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 

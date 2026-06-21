@@ -338,44 +338,45 @@ export var FWIZARD_CSS = `
     box-shadow:none;
     padding:0;
   }
-  .renuvex-pr-fwizard-media-choices{
+  .renuvex-pr-fwizard-media-card{
     width:100%;
     max-width:420px;
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:10px;
-  }
-  .renuvex-pr-fwizard-media-choice{
-    min-height:48px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    padding:10px 14px;
     border:1px solid var(--renuvex-pr-fwizard-input-border,#AFAFAF);
-    border-radius:var(--renuvex-pr-radius-sm,8px);
-    background:var(--renuvex-pr-fwizard-bg,#fff);
-    color:var(--renuvex-pr-fwizard-text,#111);
+    border-radius:var(--renuvex-pr-radius,12px);
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:12px;
+    box-sizing:border-box;
+  }
+  .renuvex-pr-fwizard-media-action{
+    min-height:50px;
     font:inherit;
-    cursor:pointer;
   }
-  .renuvex-pr-fwizard-media-choice svg{
-    width:20px;
-    height:20px;
+  .renuvex-pr-fwizard-media-action--active{
+    border-color:var(--renuvex-pr-fwizard-btn-border, var(--renuvex-pr-fwizard-btn-bg,#111));
   }
-  .renuvex-pr-fwizard-media-choice--active{
-    border-color:var(--renuvex-pr-fwizard-btn-bg,#111);
-  }
-  .renuvex-pr-fwizard-media-choice:disabled{
+  .renuvex-pr-fwizard-media-action:disabled{
     opacity:.45;
     cursor:not-allowed;
   }
   .renuvex-pr-fwizard-media-content{
     width:100%;
-    max-width:420px;
+    max-width:none;
+  }
+  .renuvex-pr-fwizard-media-content:empty{
+    display:none;
   }
   .renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-step-photos{
     gap:0;
+  }
+  .renuvex-pr-fwizard-photo-card--embedded{
+    max-width:none;
+    border:0;
+    border-radius:0;
+    padding:0;
+    background:transparent;
   }
   .renuvex-pr-fwizard-video-card{
     position:relative;
@@ -708,7 +709,7 @@ export var FWIZARD_CSS = `
   .renuvex-pr-fwizard-star:focus-visible,
   .renuvex-pr-fwizard-photo-add:focus-visible,
   .renuvex-pr-fwizard-photo-remove:focus-visible,
-  .renuvex-pr-fwizard-media-choice:focus-visible,
+  .renuvex-pr-fwizard-media-action:focus-visible,
   .renuvex-pr-fwizard-video-retry:focus-visible,
   .renuvex-pr-fwizard-submit-btn:focus-visible,
   .renuvex-pr-fwizard-cta-btn:focus-visible,

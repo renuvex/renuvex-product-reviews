@@ -22,6 +22,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-22 - ui | Refine review wizard media actions
+- The video-enabled wizard media step now uses two stacked primary action buttons for photo and video, matching the established black `Fotoğraf Ekle` control instead of the old side-by-side outline choices.
+- The media step embeds the existing photo picker in a no-add-button mode, so clicking photo no longer shows a second duplicate `Fotoğraf Ekle` button while preserving the shared thumbnail/upload lifecycle.
+- The video action uses the Phosphor regular outline play icon through the shared widget icon registry.
+
 ## 2026-06-21 - fix | Harden abandoned Mux upload cleanup
 - Fixed the Mux direct-upload cancel/asset-created race for review videos: `cleanup_video` now retrieves upload state before cancel, deletes known or recovered Mux asset IDs even when cancel is no longer valid, and only uses direct-upload cancel while the upload is still waiting.
 - Expanded video quota release from reserved-only to abandoned consumed sessions that never reached review submit (`consumedAt` is null), while preserving review-consumed sessions.

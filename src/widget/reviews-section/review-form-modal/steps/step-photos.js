@@ -10,12 +10,13 @@ import { iconUseSvg, iconUseNode } from '../../../icons/star-sprite.js';
 import { PHOTO_ICON, PLUS_ICON, UI_CLOSE } from '../../../icons/index.js';
 import { reviewFormCopy } from '../copy.js';
 
-var MAX_PHOTOS = 3;
+export var MAX_PHOTOS = 3;
 var MAX_BYTES = 10 * 1024 * 1024;
 
 export function createStepPhotos(state, opts) {
   opts = opts || {};
   var isExiting = false; // Geçiş başladığında UI güncellemesini durdurmak için bayrak
+  var hideAddButton = opts.hideAddButton === true;
   var root = document.createElement('div');
   root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-photos';
 
@@ -36,6 +37,7 @@ export function createStepPhotos(state, opts) {
   // Çerçeveli kart — upload butonu ve önizlemeler burada
   var card = document.createElement('div');
   card.className = 'renuvex-pr-fwizard-photo-card';
+  if (opts.embeddedMedia) card.classList.add('renuvex-pr-fwizard-photo-card--embedded');
 
   // Upload button + hidden file input: button keeps keyboard semantics,
   // file input keeps the native picker contract.
@@ -52,7 +54,7 @@ export function createStepPhotos(state, opts) {
   fileInput.accept = 'image/*';
   fileInput.multiple = true;
   fileInput.style.display = 'none';
-  card.appendChild(uploadLabel);
+  if (!hideAddButton) card.appendChild(uploadLabel);
   card.appendChild(fileInput);
 
   // Önizleme listesi
@@ -174,23 +176,23 @@ export function createStepPhotos(state, opts) {
     var totalCount = completedCount + pendingCount;
     var isFull = totalCount >= MAX_PHOTOS;
 
-    if (totalCount > 0) {
-      card.classList.add('renuvex-pr-fwizard-photo-card--compact');
-      uploadLabel.innerHTML = iconUseSvg(PLUS_ICON);
-    } else {
-      card.classList.remove('renuvex-pr-fwizard-photo-card--compact');
-      uploadLabel.innerHTML = iconUseSvg(PHOTO_ICON) + '<span>Fotoğraf Ekle</span>';
+    card.classList.toggle('renuvex-pr-fwizard-photo-card--compact', totalCount > 0);
+
+    if (!hideAddButton) {
+      uploadLabel.innerHTML = totalCount > 0
+        ? iconUseSvg(PLUS_ICON)
+        : iconUseSvg(PHOTO_ICON) + '<span>Fotoğraf Ekle</span>';
     }
 
     if (isFull) {
-      uploadLabel.style.display = 'none';
+      if (!hideAddButton) uploadLabel.style.display = 'none';
       uploadLabel.disabled = true;
       fileInput.disabled = true;
     } else {
       // Üst sınıra ulaşılmadığı sürece buton her zaman aktif — kullanıcı
       // mevcut yüklemelerin bitmesini beklemeden yeni foto seçebilir.
       // Paralel yüklemeler pendingImages içinde bağımsız izleniyor.
-      uploadLabel.style.display = 'flex';
+      if (!hideAddButton) uploadLabel.style.display = 'flex';
       uploadLabel.disabled = false;
       fileInput.disabled = false;
       uploadLabel.classList.remove('renuvex-pr-fwizard-photo-add--disabled');
