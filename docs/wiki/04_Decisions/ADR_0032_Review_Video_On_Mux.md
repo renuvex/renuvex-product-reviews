@@ -45,6 +45,8 @@ source_files:
   - "src/app/api/admin/reviews/video-playback/route.ts"
   - "src/widget/reviews-section/review-form-modal/media/video-upload.js"
   - "src/widget/core/review-media.js"
+  - "tests/unit/media-jobs.test.ts"
+  - "tests/unit/media-route-contracts.test.ts"
 ---
 
 # ADR_0032 - Review Video on Mux
@@ -75,6 +77,7 @@ This ADR describes the target architecture and the code/migration state. Deploy,
 7. **Retry policy is per operation.** Mux reads/deletes may retry through the SDK. `uploads.create` and `assets.createPlaybackId` use `maxRetries:0` because Mux has no idempotency key for those creates. Duplicate public playback IDs are reconciled by list/keep/delete convergence.
 8. **Quality policy is explicit.** Product config currently permits `basic|plus`. Mux also supports `premium`; excluding it is a deliberate product policy until changed by ADR/test updates.
 9. **Upload performance evidence is separate from provider lifecycle.** Browser-to-Mux direct upload timing is measured with sanitized `VideoUploadPerformanceSample` rows. `WebhookEvent`, `MediaProviderJob`, and `VideoUploadSession` remain the lifecycle source of truth; performance samples do not store tokens, upload URLs, signed URLs, playback IDs, raw user-agent, IP, or file names.
+10. **Cleanup recovers late Mux asset ids.** Direct upload cancel is not the only cleanup mechanism because Mux cancel only applies while an upload is still waiting. `cleanup_video` may retrieve the Mux upload by `providerUploadId`, recover `asset_id`, and delete the asset even when `VideoUploadSession.providerAssetId` was not persisted yet. A late `video.upload.asset_created` webhook for an `aborted` or `failed` session is routed to an asset-scoped cleanup job instead of normal resolve/reconcile work.
 
 ## Migration Plan
 The migration remains expand/contract:

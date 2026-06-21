@@ -140,7 +140,7 @@ describe('Mux webhook route contracts', () => {
     prismaMock.videoUploadSession.findFirst.mockResolvedValue(null);
     txMock.webhookEvent.findUnique.mockResolvedValue(null);
     txMock.webhookEvent.upsert.mockResolvedValue({ id: 'webhook-1' });
-    txMock.videoUploadSession.findUnique.mockResolvedValue({ storeId: 'store-1' });
+    txMock.videoUploadSession.findUnique.mockResolvedValue({ storeId: 'store-1', status: 'processing' });
     qstashMock.enqueueMediaProviderJob.mockResolvedValue({ id: 'job-1' });
     qstashMock.dispatchMediaProviderJob.mockResolvedValue(true);
   });
@@ -236,6 +236,41 @@ describe('Mux webhook route contracts', () => {
         dedupeKey: 'resolve-video-asset:11111111-1111-4111-8111-111111111111',
         action: 'resolve_video_asset',
         payload: { sessionId: '11111111-1111-4111-8111-111111111111', providerUploadId: 'upload-1' },
+      }),
+    );
+    expect(qstashMock.dispatchMediaProviderJob).toHaveBeenCalledWith('job-1');
+  });
+
+  it.each(['aborted', 'failed'])('routes late upload asset-created webhooks for %s sessions into cleanup jobs', async (status) => {
+    txMock.videoUploadSession.findUnique.mockResolvedValue({ storeId: 'store-1', status });
+    muxMock.unwrapMuxWebhook.mockResolvedValue({
+      id: 'evt-upload-cleanup-1',
+      type: 'video.upload.asset_created',
+      created_at: '2026-06-19T10:00:00.000Z',
+      data: {
+        id: 'upload-1',
+        asset_id: 'asset-1',
+        status: 'asset_created',
+        new_asset_settings: { passthrough: '11111111-1111-4111-8111-111111111111' },
+      },
+    });
+    const { POST } = await import('@/app/api/webhooks/mux/route');
+    const response = await POST(new Request('https://app.test/api/webhooks/mux', {
+      method: 'POST',
+      body: '{}',
+    }));
+
+    expect(response.status).toBe(200);
+    expect(qstashMock.enqueueMediaProviderJob).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({
+        dedupeKey: 'cleanup-video-asset:asset-1',
+        action: 'cleanup_video',
+        payload: {
+          sessionId: '11111111-1111-4111-8111-111111111111',
+          providerUploadId: 'upload-1',
+          providerAssetId: 'asset-1',
+        },
       }),
     );
     expect(qstashMock.dispatchMediaProviderJob).toHaveBeenCalledWith('job-1');

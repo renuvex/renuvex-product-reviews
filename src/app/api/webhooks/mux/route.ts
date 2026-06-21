@@ -36,6 +36,12 @@ type NormalizedMuxEvent = {
   payloadDigest: string;
   uploadStatus: string | null;
 };
+type WebhookSession = {
+  storeId: string;
+  status: string;
+};
+
+const CLEANUP_UPLOAD_SESSION_STATUSES = new Set(['aborted', 'failed']);
 
 function stringValue(value: unknown, maxLength: number): string | null {
   return typeof value === 'string' && value ? value.slice(0, maxLength) : null;
@@ -93,9 +99,22 @@ async function resolveSessionId(input: NormalizedMuxEvent): Promise<string | nul
   return session?.id ?? null;
 }
 
-function webhookJobShape(input: NormalizedMuxEvent & { sessionId: string }) {
+function webhookJobShape(input: NormalizedMuxEvent & { sessionId: string }, session: WebhookSession | null) {
   if (input.eventType === 'video.upload.asset_created' || input.eventType === 'video.upload.errored' || input.eventType === 'video.upload.cancelled') {
     if (!input.providerUploadId) return null;
+    if (input.eventType === 'video.upload.asset_created' && session && CLEANUP_UPLOAD_SESSION_STATUSES.has(session.status)) {
+      return {
+        dedupeKey: input.providerAssetId
+          ? `cleanup-video-asset:${input.providerAssetId}`
+          : `cleanup-video-upload:${input.providerUploadId}`,
+        action: MEDIA_JOB_ACTIONS.cleanupVideo,
+        payload: {
+          sessionId: input.sessionId,
+          providerUploadId: input.providerUploadId,
+          ...(input.providerAssetId ? { providerAssetId: input.providerAssetId } : {}),
+        },
+      };
+    }
     return {
       dedupeKey: `resolve-video-asset:${input.sessionId}`,
       action: MEDIA_JOB_ACTIONS.resolveVideoAsset,
@@ -143,7 +162,13 @@ export async function POST(request: Request) {
         return null;
       }
 
-      const shape = matchedSessionId ? webhookJobShape({ ...normalized, sessionId: matchedSessionId }) : null;
+      const session = matchedSessionId
+        ? await tx.videoUploadSession.findUnique({
+          where: { id: matchedSessionId },
+          select: { storeId: true, status: true },
+        })
+        : null;
+      const shape = matchedSessionId ? webhookJobShape({ ...normalized, sessionId: matchedSessionId }, session) : null;
       const status = !matchedSessionId ? 'orphan' : shape ? 'processed' : 'ignored';
       await tx.webhookEvent.upsert({
         where: { provider_providerEventId: { provider: VIDEO_PROVIDER, providerEventId: normalized.providerEventId } },
@@ -171,10 +196,6 @@ export async function POST(request: Request) {
         },
       });
       if (!shape || !matchedSessionId) return null;
-      const session = await tx.videoUploadSession.findUnique({
-        where: { id: matchedSessionId },
-        select: { storeId: true },
-      });
       return enqueueMediaProviderJob(tx, {
         dedupeKey: shape.dedupeKey,
         storeId: session?.storeId,

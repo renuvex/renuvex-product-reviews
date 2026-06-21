@@ -285,6 +285,46 @@ describe('media provider jobs', () => {
     expect(qstashMock.publishJSON).toHaveBeenCalledWith(expect.objectContaining({ body: { jobId: 'provider-job' } }));
   });
 
+  it('cleans a cancelled upload that created a Mux asset before providerAssetId was persisted', async () => {
+    const aborted = muxSession({
+      status: 'aborted',
+      quotaState: 'released',
+      providerUploadId: 'upload-1',
+      providerAssetId: null,
+      publicId: null,
+    });
+    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
+      id: 'cleanup-job',
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.cleanupVideo,
+      payload: { sessionId: UUID_1, providerUploadId: 'upload-1' },
+      attempts: 1,
+      maxAttempts: 16,
+    });
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ leaseVersion: 1 }])
+      .mockResolvedValueOnce([aborted]);
+    muxMock.getMuxUpload.mockResolvedValue({ id: 'upload-1', status: 'asset_created', asset_id: 'asset-1' });
+    const { processMediaProviderJob } = await import('@/lib/media/jobs');
+
+    const result = await processMediaProviderJob('cleanup-job');
+
+    expect(result).toEqual({ processed: true, status: 'succeeded' });
+    expect(muxMock.cancelMuxUpload).toHaveBeenCalledWith('upload-1');
+    expect(muxMock.getMuxUpload).toHaveBeenCalledWith('upload-1');
+    expect(muxMock.deleteMuxAsset).toHaveBeenCalledWith('asset-1');
+    expect(prismaMock.videoUploadSession.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: UUID_1 },
+      data: { status: 'aborted', errorCode: null },
+    }));
+    expect(prismaMock.mediaProviderJob.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: 'succeeded',
+        payload: { sessionId: UUID_1, providerUploadId: 'upload-1', providerAssetId: 'asset-1' },
+      }),
+    }));
+  });
+
   it('defers resolve work while Mux has not attached an asset to the upload', async () => {
     prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
       id: 'resolve-job',

@@ -113,6 +113,7 @@ source_files:
 ## Recent Important Changes
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-21: Review Video provider cutover is live on Mux. Production DB has applied `20260621003000_review_video_mux_contract_drop_legacy_columns`; old Cloudflare Stream/R2 `VideoUploadSession` columns are absent, Mux assets are cleaned up after canary deletion, Vercel has no Cloudflare video env vars, and Cloudflare Stream/R2 inventory is empty. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
+- 2026-06-21: Mux cleanup lifecycle now handles the cancel/asset-created race: `cleanup_video` recovers `asset_id` from `providerUploadId`, and late `video.upload.asset_created` webhooks for `aborted`/`failed` sessions route to asset-scoped cleanup.
 - 2026-06-20: Mux upload performance hardening measures browser-to-Mux transfer separately from processing/webhooks via sanitized `VideoUploadPerformanceSample` rows and keeps same-session retry progress monotonic.
 - 2026-06-20: The older `6 reviews / 39 sessions` purge manifest is historical only; latest DB evidence before implementation showed zero video surfaces. Preview and production Mux environments are separate, and webhook resource/secret creation waits for a deployed `/api/webhooks/mux` URL.
 

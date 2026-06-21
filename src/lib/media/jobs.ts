@@ -520,8 +520,20 @@ async function protectVideo(payload: z.infer<typeof moderationPayload>, lease: M
 }
 
 async function cleanupVideo(payload: z.infer<typeof cleanupPayload>): Promise<MediaJobResult> {
-  if (payload.providerUploadId) await cancelMuxUpload(payload.providerUploadId);
-  if (payload.providerAssetId) await deleteMuxAsset(payload.providerAssetId);
+  const providerAssetIds = new Set<string>();
+  if (payload.providerAssetId) providerAssetIds.add(payload.providerAssetId);
+
+  if (payload.providerUploadId) {
+    await cancelMuxUpload(payload.providerUploadId);
+    try {
+      const upload = await getMuxUpload(payload.providerUploadId);
+      if (upload.asset_id) providerAssetIds.add(upload.asset_id);
+    } catch (error) {
+      if (!isMuxNotFound(error)) throw error;
+    }
+  }
+
+  await Promise.all([...providerAssetIds].map((providerAssetId) => deleteMuxAsset(providerAssetId)));
   await prisma.$transaction(async (tx) => {
     if (payload.pendingPublicId) await tx.pendingReviewImage.deleteMany({ where: { publicId: payload.pendingPublicId } });
     if (payload.sessionId) {
@@ -532,7 +544,10 @@ async function cleanupVideo(payload: z.infer<typeof cleanupPayload>): Promise<Me
       }
     }
   });
-  return { status: 'succeeded' };
+  const recoveredProviderAssetId = [...providerAssetIds][0];
+  return recoveredProviderAssetId && recoveredProviderAssetId !== payload.providerAssetId
+    ? { status: 'succeeded', payload: { ...payload, providerAssetId: recoveredProviderAssetId } }
+    : { status: 'succeeded' };
 }
 
 async function cleanupCloudinaryImages(payload: z.infer<typeof cleanupImagePayload>): Promise<MediaJobResult> {

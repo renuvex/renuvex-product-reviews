@@ -123,7 +123,7 @@ Verify in order:
 10. Approval enqueues `publish_video`; the job creates/converges one public playback ID and only then makes the review/media public.
 11. Storefront uses tokenless public Mux URLs (`stream.mux.com`, `image.mux.com`) only after approval.
 12. Rejection/hide enqueues `protect_video` and removes public playback IDs.
-13. Delete/cancel/expiry cleanup is idempotent and deletes/cancels Mux upload/assets without refunding consumed quota for ready-but-unsubmitted sessions.
+13. Delete/cancel/expiry cleanup is idempotent and deletes/cancels Mux upload/assets without refunding consumed quota for ready-but-unsubmitted sessions. Mux direct upload cancel only covers uploads that are still waiting; cleanup must also retrieve the Mux upload by `providerUploadId` and delete a recovered `asset_id` if the asset was created before `providerAssetId` was persisted. A late `video.upload.asset_created` webhook for an `aborted` or `failed` session should enqueue asset-scoped `cleanup_video`, not normal resolve/reconcile work.
 
 ## Upload Performance Evidence
 For physical canary uploads, compare these surfaces before making product or provider conclusions:
