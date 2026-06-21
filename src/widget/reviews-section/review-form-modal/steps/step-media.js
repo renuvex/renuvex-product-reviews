@@ -11,25 +11,9 @@ import {
 } from '../media/video-upload.js';
 import { createStepPhotos, MAX_PHOTOS } from './step-photos.js';
 
-function videoStatusText(video) {
-  if (!video) return '';
-  if (video.error) return video.error;
-  if (video.status === 'upload_retrying') return 'Bağlantı yeniden deneniyor...';
-  if (video.status === 'uploading_offline') return 'Bağlantı bekleniyor...';
-  if (video.status === 'processing') return 'Video işleniyor...';
-  if (video.status === 'processing_slow') return 'Video hazırlanıyor. Bu işlem biraz sürebilir.';
-  if (video.status === 'ready') return 'Video hazır';
-  return 'Video hazırlanıyor';
-}
-
-function isVideoBusy(video) {
-  return !!video && (
-    video.status === 'uploading' ||
-    video.status === 'upload_retrying' ||
-    video.status === 'uploading_offline' ||
-    video.status === 'processing' ||
-    video.status === 'processing_slow'
-  );
+function videoFailureText(video) {
+  if (video && video.error) return video.error;
+  return 'Video yüklenemedi';
 }
 
 function videoViewMode(video) {
@@ -129,7 +113,6 @@ export function createStepMedia(state, opts) {
     var details = null;
     var name = null;
     var status = null;
-    var progress = null;
     var retry = document.createElement('button');
     retry.type = 'button';
     retry.className = 'renuvex-pr-fwizard-video-retry';
@@ -175,22 +158,24 @@ export function createStepMedia(state, opts) {
       card.appendChild(details);
     }
 
-    var remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'renuvex-pr-fwizard-photo-remove renuvex-pr-fwizard-video-remove';
-    remove.setAttribute('aria-label', 'Videoyu kaldır');
-    var removeIcon = iconUseNode(UI_CLOSE);
-    if (removeIcon) remove.appendChild(removeIcon);
-    function onRemove(event) {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
+    if (mode !== 'busy') {
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'renuvex-pr-fwizard-photo-remove renuvex-pr-fwizard-video-remove';
+      remove.setAttribute('aria-label', 'Videoyu kaldır');
+      var removeIcon = iconUseNode(UI_CLOSE);
+      if (removeIcon) remove.appendChild(removeIcon);
+      function onRemove(event) {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        removeVideo();
       }
-      removeVideo();
+      remove.addEventListener('pointerdown', onRemove);
+      remove.addEventListener('click', onRemove);
+      card.appendChild(remove);
     }
-    remove.addEventListener('pointerdown', onRemove);
-    remove.addEventListener('click', onRemove);
-    if (mode !== 'busy') card.appendChild(remove);
     content.appendChild(card);
 
     videoView = {
@@ -201,9 +186,7 @@ export function createStepMedia(state, opts) {
       details: details,
       name: name,
       status: status,
-      progress: progress,
       retry: retry,
-      remove: remove,
     };
   }
 
@@ -222,15 +205,7 @@ export function createStepMedia(state, opts) {
     if (videoView.status && mode === 'failed') {
       videoView.status.className = 'renuvex-pr-fwizard-video-status renuvex-pr-fwizard-video-status--error';
       videoView.status.setAttribute('role', 'alert');
-      videoView.status.textContent = videoStatusText(video);
-    }
-
-    var isUploading = video.status === 'uploading' ||
-      video.status === 'upload_retrying' ||
-      video.status === 'uploading_offline';
-    if (videoView.progress) {
-      videoView.progress.hidden = !isUploading;
-      videoView.progress.value = video.progress || 0;
+      videoView.status.textContent = videoFailureText(video);
     }
 
     var canRetry = mode === 'failed' && !!(video.error && video.file && video.retryable !== false);

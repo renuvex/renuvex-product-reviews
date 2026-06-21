@@ -486,11 +486,6 @@ export var FWIZARD_CSS = `
   .renuvex-pr-fwizard-video-status--error{
     color:#b91c1c;
   }
-  .renuvex-pr-fwizard-video-progress{
-    width:100%;
-    height:6px;
-    accent-color:var(--renuvex-pr-fwizard-btn-bg,#111);
-  }
   .renuvex-pr-fwizard-video-retry{
     align-self:flex-start;
     padding:0;
