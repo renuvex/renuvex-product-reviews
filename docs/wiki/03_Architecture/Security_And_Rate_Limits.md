@@ -3,7 +3,9 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-15
+updated: 2026-06-21
+last_verified: 2026-06-21
+confidence: high
 tags:
   - security
   - rate-limit
@@ -13,6 +15,9 @@ related:
   - "[[API_Design]]"
   - "[[ADR_0006_Trusted_Review_Image_URL_Policy]]"
 source_files:
+  - ".env.example"
+  - "prisma/schema.prisma"
+  - "src/lib/prisma.ts"
   - "src/lib/public-rate-limit.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
@@ -108,6 +113,26 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - ⚠️ Never log secrets or full tokens. Code uses `console.error('[scope] ERROR', err)` patterns — keep err objects from leaking sensitive headers.
 - ⚠️ The `/callback` client page receives the session JWT as a URL query param. A `console.log('OAuth callback params:', params.toString())` that printed it to the browser console was removed — never re-add param logging there. See [[Auth_And_Installation_Flow]].
 
+## Supabase Data API / RLS audit
+
+2026-06-21 read-only audit:
+- The app does not use `@supabase/supabase-js`, browser `createClient`, `NEXT_PUBLIC_SUPABASE_*`, or `SUPABASE_ANON_KEY`.
+- Runtime database access is server-side Prisma through `DATABASE_URL`; migrations use `DIRECT_URL`.
+- Supabase MCP still reports RLS disabled on 16 public app tables. `VideoUploadPerformanceSample` has RLS enabled but no policies.
+- Direct SQL privilege checks did not show table access for `anon`, `authenticated`, or `service_role`: no public schema usage and no table `SELECT`, `INSERT`, `UPDATE`, or `DELETE` privileges were present in the checked grants.
+- The public schema had no views, materialized views, functions, or realtime publication tables during the audit.
+- This does not prove the Supabase Dashboard Data API exposure setting by itself; it only proves the repo and SQL surfaces checked above.
+
+Decision:
+- Do not enable RLS blindly while the schema is still changing in the test-stage app. Enabling RLS without matching policies can block intended API behavior.
+- Before public launch, make this a security hardening gate: verify Supabase Dashboard Data API exposed schemas, make role grants explicit, revoke/default-deny `anon` and `authenticated` table privileges where direct Data API access is not intended, enable RLS on app tables without `FORCE RLS`, and add policies only for deliberately exposed client-side Supabase access.
+- Keep storefront/admin flows through Next.js API routes and server-side Prisma unless a separate ADR introduces a browser Supabase client.
+
+Official references:
+- [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- [Supabase Securing your API](https://supabase.com/docs/guides/api/securing-your-api)
+- [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys)
+
 ## Known weaknesses
 - Profanity filter is bypassable (see above)
 - IP rate limit can be circumvented with rotating IPs
@@ -115,6 +140,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - No bot detection / hCaptcha on public POST
 - JWT signing falls back to empty string if env missing
 - Storefront script lifecycle deliberately avoids zero-argument `deleteStorefrontJSScript()` because active ikas contract semantics are ambiguous.
+- Most public app tables have RLS disabled. Current evidence did not show direct `anon`/`authenticated` Data API grants, but RLS/default-grants hardening remains a public-launch blocker.
 
 ## Notes
 - Treat `/api/public/reviews` POST as the **highest-risk** endpoint. Any future change here should be reviewed for abuse vectors.
@@ -136,6 +162,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-06-21: Recorded the Supabase Data API / RLS audit. Current repo uses server-side Prisma, no browser Supabase client was found, and checked SQL grants did not show direct `anon`/`authenticated` table access; RLS hardening remains a public-launch gate.
 - 2026-05-25: Removed a `console.log` in the `/callback` client page that printed the full query string (including the session JWT) to the browser console. Source: [src/app/callback/page.tsx](src/app/callback/page.tsx).
 - 2026-05-24: Namespace migration changed public Redis rate-limit prefixes from `ikr_*` to `renuvex_pr_*`. Limits and windows are unchanged.
 - 2026-05-18: D3 tenant-scoped Cloudinary uploads: upload signatures now require a verified `storeId` and sign `review_images/stores/<storeId>`; register/review read/write paths and widget filtering reject cross-tenant image paths.

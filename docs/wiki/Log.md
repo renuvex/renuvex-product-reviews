@@ -21,6 +21,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-21 - security | Record Supabase RLS launch gate
+- Read-only RLS audit found no browser Supabase client usage and no `NEXT_PUBLIC_SUPABASE_*` env surface in the repo; runtime DB access is server-side Prisma.
+- Supabase MCP still flags RLS disabled on most public app tables. Direct SQL checks did not show `anon`, `authenticated`, or `service_role` table privileges, and public schema has no views/functions/publication tables.
+- Decision: do not enforce RLS during active schema development. Treat Data API exposure, default grants, explicit grants, and RLS enablement as a public-launch security hardening gate.
+
 ## 2026-06-21 - closeout | Verify Mux video migration cleanup
 - Verified the Mux review-video closeout without mutating platform state: Git/Vercel are on `main` only, old preview/new-ikas/mertcopper Vercel aliases are absent, and production Mux/QStash env keys are present without Cloudflare video env keys.
 - Production DB has applied additive, backend-cutover, performance-sample, and contract migrations. `VideoUploadSession` no longer has `r2UploadId`, `masterObjectKey`, `ingestObjectKey`, or `streamUid`; active video jobs are empty; old Cloudflare provider jobs remain only as succeeded/superseded audit history.
