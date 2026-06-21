@@ -96,12 +96,17 @@ export function createStepAuthor(state, opts) {
     var pendingCount = (state.get().pendingImages || []).length;
     var isUploading = pendingCount > 0;
     var video = state.get().videoUpload;
-    var isVideoPending = !!(video && video.status !== 'ready');
+    var isVideoFailed = !!(video && video.status === 'failed');
+    var isVideoPending = !!(video && video.status !== 'ready' && video.status !== 'failed');
 
-    if (isUploading || isVideoPending) {
+    if (isUploading || isVideoPending || isVideoFailed) {
       submitBtn.disabled = true;
       submitBtn.classList.add('renuvex-pr-fwizard-submit-btn--disabled');
-      submitBtn.textContent = isVideoPending ? 'Video Hazırlanıyor...' : 'Fotoğraflar Yükleniyor...';
+      submitBtn.textContent = isVideoFailed
+        ? 'Video Yüklenemedi'
+        : isVideoPending
+          ? 'Video Hazırlanıyor...'
+          : 'Fotoğraflar Yükleniyor...';
     } else {
       submitBtn.disabled = disabled;
       submitBtn.classList.toggle('renuvex-pr-fwizard-submit-btn--disabled', disabled);

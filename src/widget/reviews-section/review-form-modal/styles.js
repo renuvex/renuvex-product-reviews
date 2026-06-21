@@ -361,6 +361,9 @@ export var FWIZARD_CSS = `
     opacity:.45;
     cursor:not-allowed;
   }
+  .renuvex-pr-fwizard-media-card--video-selected > .renuvex-pr-fwizard-media-action{
+    display:none;
+  }
   .renuvex-pr-fwizard-media-content{
     width:100%;
     max-width:none;
@@ -381,6 +384,57 @@ export var FWIZARD_CSS = `
     padding:0;
     background:transparent;
   }
+  .renuvex-pr-fwizard-video-uploading-card{
+    position:relative;
+    min-height:50px;
+    border-radius:var(--renuvex-pr-radius-sm,8px);
+    background:var(--renuvex-pr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--renuvex-pr-fwizard-btn-text, #ffffff);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:14px 48px;
+    box-sizing:border-box;
+  }
+  .renuvex-pr-fwizard-video-uploading-status{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    min-width:0;
+    font-size:15px;
+    font-weight:600;
+  }
+  .renuvex-pr-fwizard-video-dots{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+  }
+  .renuvex-pr-fwizard-video-dots span{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:currentColor;
+    opacity:.35;
+    animation:renuvexPrVideoDotPulse 1s ease-in-out infinite;
+  }
+  .renuvex-pr-fwizard-video-dots span:nth-child(2){
+    animation-delay:.14s;
+  }
+  .renuvex-pr-fwizard-video-dots span:nth-child(3){
+    animation-delay:.28s;
+  }
+  @keyframes renuvexPrVideoDotPulse{
+    0%, 80%, 100%{ opacity:.35; transform:translateY(0); }
+    40%{ opacity:1; transform:translateY(-2px); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .renuvex-pr-fwizard-video-dots span{
+      animation:none;
+      opacity:.85;
+      transform:none;
+    }
+  }
   .renuvex-pr-fwizard-video-card{
     position:relative;
     display:grid;
@@ -391,6 +445,13 @@ export var FWIZARD_CSS = `
     border:1px solid var(--renuvex-pr-fwizard-input-border,#AFAFAF);
     border-radius:var(--renuvex-pr-radius,12px);
   }
+  .renuvex-pr-fwizard-video-card--failed{
+    display:flex;
+    min-height:76px;
+  }
+  .renuvex-pr-fwizard-video-thumb{
+    background:#111;
+  }
   .renuvex-pr-fwizard-video-preview{
     width:112px;
     aspect-ratio:16/10;
@@ -398,6 +459,12 @@ export var FWIZARD_CSS = `
     object-fit:cover;
     border-radius:var(--renuvex-pr-radius-sm,8px);
     background:#111;
+  }
+  .renuvex-pr-fwizard-video-thumb .renuvex-pr-fwizard-video-preview{
+    width:100%;
+    height:100%;
+    aspect-ratio:auto;
+    border-radius:0;
   }
   .renuvex-pr-fwizard-video-details{
     min-width:0;

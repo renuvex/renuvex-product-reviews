@@ -70,13 +70,14 @@ export function createProgressBar(opts) {
     var hasNext = nextableSteps.indexOf(currentStep) !== -1;
     // Yükleme devam ederken de (pendingImages doluyken) "Devam Et" görünsün —
     // kullanıcı geri döndüğünde buton doğru durumda olsun.
-    var hasPhotos = stateData && (
+    var hasMedia = stateData && (
       (stateData.images && stateData.images.length > 0) ||
-      (stateData.pendingImages && stateData.pendingImages.length > 0)
+      (stateData.pendingImages && stateData.pendingImages.length > 0) ||
+      !!stateData.videoUpload
     );
 
     if (isSkippable) {
-      if (currentStep === 2 && hasPhotos) {
+      if (currentStep === 2 && hasMedia) {
         // Fotoğraf var → "Devam Et" (Siyah Buton - CTA)
         rightBtn.className = 'renuvex-pr-fwizard-cta-btn renuvex-pr-fwizard-footer-next';
         rightBtn.setAttribute('aria-label', 'Devam Et');

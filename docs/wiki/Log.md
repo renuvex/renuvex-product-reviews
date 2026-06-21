@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-06-22
+last_verified: 2026-06-22
 confidence: high
 tags:
   - log
@@ -21,6 +21,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-22 - ui | Auto-advance video review uploads
+- Video selection in the review wizard now mirrors the photo first-selection behavior: step 2 writes `videoUpload` state and advances to the comment step while Mux direct upload, complete, and processing polling continue in the background.
+- Returning to the media step during upload/processing shows a single black `Video yükleniyor` status control with remove; returning after readiness shows one photo-sized video thumbnail with remove only, no play icon and no extra `+` video tile.
+- Step 4 remains backend-safe: submit stays blocked until the video session is `ready`, failed video uploads show a terminal disabled state instead of a misleading endless "preparing" label, and submit still sends only the ready opaque video token.
+- Gates passed: `pnpm build:widget` and `pnpm test:widget-interactions`.
 
 ## 2026-06-22 - ui | Refine review wizard media actions
 - The video-enabled wizard media step now uses two stacked primary action buttons for photo and video, matching the established black `Fotoğraf Ekle` control instead of the old side-by-side outline choices.

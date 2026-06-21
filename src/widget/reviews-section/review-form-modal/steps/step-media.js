@@ -22,6 +22,23 @@ function videoStatusText(video) {
   return 'Video yükleniyor: %' + Math.max(0, Math.min(100, video.progress || 0));
 }
 
+function isVideoBusy(video) {
+  return !!video && (
+    video.status === 'uploading' ||
+    video.status === 'upload_retrying' ||
+    video.status === 'uploading_offline' ||
+    video.status === 'processing' ||
+    video.status === 'processing_slow'
+  );
+}
+
+function videoViewMode(video) {
+  if (!video) return 'empty';
+  if (video.status === 'ready') return 'ready';
+  if (video.status === 'failed') return 'failed';
+  return 'busy';
+}
+
 export function createStepMedia(state, opts) {
   opts = opts || {};
   var destroyed = false;
@@ -100,36 +117,64 @@ export function createStepMedia(state, opts) {
   function createVideoView(video) {
     destroyPhotoPicker();
     content.innerHTML = '';
+    var mode = videoViewMode(video);
     var card = document.createElement('div');
-    card.className = 'renuvex-pr-fwizard-video-card';
-    var preview = document.createElement('video');
-    preview.className = 'renuvex-pr-fwizard-video-preview';
-    preview.muted = true;
-    preview.playsInline = true;
-    preview.preload = 'metadata';
-    preview.src = video.localUrl || '';
-    card.appendChild(preview);
-    var details = document.createElement('div');
-    details.className = 'renuvex-pr-fwizard-video-details';
-    var name = document.createElement('div');
-    name.className = 'renuvex-pr-fwizard-video-name';
-    name.textContent = video.file ? video.file.name : 'Video';
-    var status = document.createElement('div');
-    status.className = 'renuvex-pr-fwizard-video-status';
-    status.setAttribute('role', 'status');
-    status.setAttribute('aria-live', 'polite');
-    details.appendChild(name);
-    details.appendChild(status);
-    var progress = document.createElement('progress');
-    progress.className = 'renuvex-pr-fwizard-video-progress';
-    progress.max = 100;
-    progress.setAttribute('aria-label', 'Video yükleme ilerlemesi');
-    details.appendChild(progress);
+    card.className = mode === 'ready'
+      ? 'renuvex-pr-fwizard-photo-thumb renuvex-pr-fwizard-video-thumb'
+      : mode === 'failed'
+        ? 'renuvex-pr-fwizard-video-card renuvex-pr-fwizard-video-card--failed'
+        : 'renuvex-pr-fwizard-video-uploading-card';
+
+    var preview = null;
+    var details = null;
+    var name = null;
+    var status = null;
+    var progress = null;
     var retry = document.createElement('button');
     retry.type = 'button';
     retry.className = 'renuvex-pr-fwizard-video-retry';
     retry.textContent = 'Tekrar Dene';
-    card.appendChild(details);
+
+    if (mode === 'ready') {
+      var posterUrl = video.posterUrl || video.localUrl || '';
+      if (posterUrl && posterUrl !== video.localUrl) {
+        preview = document.createElement('img');
+        preview.alt = '';
+        preview.src = posterUrl;
+      } else {
+        preview = document.createElement('video');
+        preview.muted = true;
+        preview.playsInline = true;
+        preview.preload = 'metadata';
+        preview.src = video.localUrl || '';
+      }
+      preview.className = 'renuvex-pr-fwizard-video-preview';
+      card.appendChild(preview);
+    } else if (mode === 'busy') {
+      status = document.createElement('div');
+      status.className = 'renuvex-pr-fwizard-video-uploading-status';
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      status.innerHTML =
+        '<span class="renuvex-pr-fwizard-video-dots" aria-hidden="true">' +
+        '<span></span><span></span><span></span>' +
+        '</span><span>Video yükleniyor</span>';
+      card.appendChild(status);
+    } else {
+      details = document.createElement('div');
+      details.className = 'renuvex-pr-fwizard-video-details';
+      name = document.createElement('div');
+      name.className = 'renuvex-pr-fwizard-video-name';
+      name.textContent = video.file ? video.file.name : 'Video';
+      status = document.createElement('div');
+      status.className = 'renuvex-pr-fwizard-video-status renuvex-pr-fwizard-video-status--error';
+      status.setAttribute('role', 'alert');
+      status.setAttribute('aria-live', 'assertive');
+      details.appendChild(name);
+      details.appendChild(status);
+      card.appendChild(details);
+    }
+
     var remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'renuvex-pr-fwizard-photo-remove renuvex-pr-fwizard-video-remove';
@@ -149,9 +194,10 @@ export function createStepMedia(state, opts) {
     content.appendChild(card);
 
     videoView = {
+      mode: mode,
       card: card,
       preview: preview,
-      localUrl: video.localUrl || '',
+      previewUrl: mode === 'ready' ? (video.posterUrl || video.localUrl || '') : '',
       details: details,
       name: name,
       status: status,
@@ -168,25 +214,30 @@ export function createStepMedia(state, opts) {
       clearVideoView();
       return;
     }
-    if (!videoView || videoView.localUrl !== (video.localUrl || '')) createVideoView(video);
+    var mode = videoViewMode(video);
+    var previewUrl = mode === 'ready' ? (video.posterUrl || video.localUrl || '') : '';
+    if (!videoView || videoView.mode !== mode || videoView.previewUrl !== previewUrl) createVideoView(video);
 
-    videoView.name.textContent = video.file ? video.file.name : 'Video';
-    videoView.status.className = 'renuvex-pr-fwizard-video-status' +
-      (video.error ? ' renuvex-pr-fwizard-video-status--error' : '');
-    videoView.status.setAttribute('role', video.error ? 'alert' : 'status');
-    videoView.status.textContent = videoStatusText(video);
+    if (videoView.name) videoView.name.textContent = video.file ? video.file.name : 'Video';
+    if (videoView.status && mode === 'failed') {
+      videoView.status.className = 'renuvex-pr-fwizard-video-status renuvex-pr-fwizard-video-status--error';
+      videoView.status.setAttribute('role', 'alert');
+      videoView.status.textContent = videoStatusText(video);
+    }
 
     var isUploading = video.status === 'uploading' ||
       video.status === 'upload_retrying' ||
       video.status === 'uploading_offline';
-    videoView.progress.hidden = !isUploading;
-    videoView.progress.value = video.progress || 0;
+    if (videoView.progress) {
+      videoView.progress.hidden = !isUploading;
+      videoView.progress.value = video.progress || 0;
+    }
 
-    var canRetry = !!(video.error && video.file && video.retryable !== false);
+    var canRetry = mode === 'failed' && !!(video.error && video.file && video.retryable !== false);
     videoView.retry.onclick = canRetry
       ? function () { startUpload(video.file, video.localUrl, video.durationMs); }
       : null;
-    if (canRetry && !videoView.retry.isConnected) {
+    if (canRetry && videoView.details && !videoView.retry.isConnected) {
       videoView.details.appendChild(videoView.retry);
     } else if (!canRetry && videoView.retry.isConnected) {
       videoView.retry.remove();
@@ -201,6 +252,7 @@ export function createStepMedia(state, opts) {
     photoButton.disabled = videoSelected || photosFull;
     videoButton.disabled = photosSelected || videoSelected;
     mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--has-media', hasMedia);
+    mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--video-selected', videoSelected);
     photoButton.classList.toggle('renuvex-pr-fwizard-media-action--active', photosSelected);
     videoButton.classList.toggle('renuvex-pr-fwizard-media-action--active', videoSelected);
   }
@@ -224,14 +276,6 @@ export function createStepMedia(state, opts) {
       if (opts.showToast) opts.showToast(validation.message, 'error');
       return;
     }
-    var duration = knownDurationMs !== undefined
-      ? (Number.isFinite(knownDurationMs) ? knownDurationMs / 1000 : null)
-      : await readVideoDuration(file);
-    var durationValidation = validateKnownVideoDuration(duration);
-    if (!durationValidation.ok) {
-      if (opts.showToast) opts.showToast(durationValidation.message, 'error');
-      return;
-    }
     var localUrl = existingLocalUrl || URL.createObjectURL(file);
     var controller = new AbortController();
     state.set({
@@ -250,7 +294,18 @@ export function createStepMedia(state, opts) {
         controller: controller,
       },
     });
+    if (!isRetry && !destroyed && (!opts.canNavigate || opts.canNavigate())) state.goNext();
     try {
+      var duration = knownDurationMs !== undefined
+        ? (Number.isFinite(knownDurationMs) ? knownDurationMs / 1000 : null)
+        : await readVideoDuration(file);
+      var durationValidation = validateKnownVideoDuration(duration);
+      if (!durationValidation.ok) {
+        throw Object.assign(new Error('invalid_video_duration'), {
+          code: 'invalid_video_duration',
+          message: durationValidation.message,
+        });
+      }
       var result = await uploadReviewVideo({
         file: file,
         productId: state.get().productId,
@@ -277,10 +332,18 @@ export function createStepMedia(state, opts) {
         retryAfterSec: null,
         controller: null,
       });
-      if (!destroyed && (!opts.canNavigate || opts.canNavigate())) state.goNext();
+      if (isRetry && !destroyed && (!opts.canNavigate || opts.canNavigate())) state.goNext();
     } catch (error) {
       if (controller.signal.aborted) return;
       var failure = describeVideoUploadError(error);
+      if (error && error.code === 'invalid_video_duration') {
+        failure = {
+          code: 'invalid_video_duration',
+          message: error.message || 'Video süresi geçersiz.',
+          retryable: false,
+          retryAfterSec: null,
+        };
+      }
       updateVideoState({
         status: 'failed',
         error: failure.message,
