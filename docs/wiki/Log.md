@@ -24,6 +24,7 @@ source_files:
 ## 2026-06-21 - migration | Start Mux contract cleanup
 - Added `20260621003000_review_video_mux_contract_drop_legacy_columns` to drop only old Cloudflare Stream/R2 `VideoUploadSession` columns and legacy indexes after read-only evidence showed no active video rows/jobs and no data in those legacy columns.
 - Vercel cleanup scope is limited to old Cloudflare Stream/R2 video env vars. Cloudflare DNS/zone and future Worker-based widget/script delivery remain out of teardown scope.
+- Retained old hash-named widget runtime chunks after import-chain proof showed older cached `runtime-*` / `bootstrap-*` files can still reference them. Active `build-manifest.json` points to the Mux-only `render-*` chunk; manual cleanup must preserve the retained import graph until the runtime retention window expires.
 
 ## 2026-06-20 - performance | Harden Mux upload measurement and retry UX
 - Replaced the fixed 30 MB UpChunk setting with server-configured defaults (`8192` KB chunks, `5` attempts) and returned `chunkAttempts` from video initiate.

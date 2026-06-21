@@ -98,7 +98,7 @@ Browser/Playwright smoke test yapılacaksa kullanıcı test mağazasının URL�
 ```text
 Test mağazası URL: https://dev-mertcopper.ikas.shop/
 Test edilecek ortam: development / staging / production
-Widget script URL: https://new-ikas-app.vercel.app/widget.js?publicApiKey=...
+Widget script URL: https://widget.renuvex.app/widget.js?publicApiKey=...
 Test kapsamı: home, category/listing, product detail, mobile, SPA back/forward, lazy load
 ```
 
@@ -347,7 +347,7 @@ Badge gösterilmesi gereken alanlar:
 Mevcut örnekte widget şu yapıdadır:
 
 ```txt
-https://new-ikas-app.vercel.app/widget.js?publicApiKey=...
+https://widget.renuvex.app/widget.js?publicApiKey=...
 ```
 
 Bu model MVP için kabul edilebilir. Public API key ile tenant/merchant tespiti yapılabilir. Ancak kalıcı mimaride tek dosyaya her şeyi yüklemek yerine daha modüler bir loader mimarisi değerlendirilmelidir.
@@ -455,7 +455,7 @@ https://staticw2.yotpo.com/widget-assets/yotpo-pixel/{date}/bundle.js
 Bizim örnek:
 
 ```txt
-https://new-ikas-app.vercel.app/widget.js?publicApiKey=...
+https://widget.renuvex.app/widget.js?publicApiKey=...
 ```
 
 ### 6.2 Yotpo’dan Alınabilecek Mimari Dersler
