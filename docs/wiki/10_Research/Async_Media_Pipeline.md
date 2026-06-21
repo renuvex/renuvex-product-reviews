@@ -3,8 +3,8 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: medium
 tags:
   - research
@@ -16,7 +16,7 @@ tags:
 related:
   - "[[ADR_0029_Review_Media_Metadata]]"
   - "[[ADR_0032_Review_Video_On_Mux]]"
-  - "[[Competitor_Feature_Matrix]]"
+  - "[[Competitor_Pricing_And_Plans]]"
   - "[[Roadmap]]"
   - "[[Open_Questions]]"
   - "[[Future_Feature_Ideas]]"

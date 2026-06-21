@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-25
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 tags:
   - widget
@@ -19,6 +19,7 @@ related:
   - "[[ADR_0017_Badge_Architecture]]"
   - "[[ADR_0018_Widget_Ownership_And_Placement_Resilience]]"
   - "[[ADR_0019_Icon_Sprite_Rendering]]"
+  - "[[Competitor_Pricing_And_Plans]]"
 source_files:
   - "src/widget/core/helpers.js"
   - "src/widget/core/badge.js"
@@ -76,7 +77,7 @@ Required because ikas gives no stable mount point/slot ([[ADR_0018_Widget_Owners
 - Stars: `partialStarsHTML` / `starsHTML` ([src/widget/core/helpers.js](src/widget/core/helpers.js)); badge factory `createBadgeEl` ([src/widget/core/badge.js](src/widget/core/badge.js)).
 
 ## SEO
-- PDP Product `AggregateRating` JSON-LD is owned by the independent structured-data surface ([src/widget/structured-data/jsonld.js](src/widget/structured-data/jsonld.js)); the visual rating badge no longer writes schema. `<time datetime>` on review dates complements it. This is **shipped** (Competitor_Feature_Matrix previously listed it as planned).
+- PDP Product `AggregateRating` JSON-LD is owned by the independent structured-data surface ([src/widget/structured-data/jsonld.js](src/widget/structured-data/jsonld.js)); the visual rating badge no longer writes schema. `<time datetime>` on review dates complements it. This is **shipped** (previous competitor matrix notes listed it as planned).
 
 ## Admin vs storefront
 Storefront HTML is **not** reused verbatim in the admin panel (React/TSX `PreviewStars`, `BadgePreview`). Share the *source* (ICONS registry, design tokens, settings) — not the markup. True-fidelity preview is the `/preview` iframe rendering the real widget.

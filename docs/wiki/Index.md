@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-15
-last_verified: 2026-06-15
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 tags:
   - index
@@ -19,17 +19,17 @@ source_files: []
 
 # ikas Review App Wiki Index
 
-> Renuvex Product Reviews — review & rating app for ikas e-commerce stores. Merchant admin + storefront widget + structured-data integration.
+> Renuvex Product Reviews - review & rating app for ikas e-commerce stores. Merchant admin + storefront widget + structured-data integration.
 
 ## Start Here
 - [[Hot_Context]] - fast active context for new sessions
-- [[Project_Overview]] — what the app is and who it's for
-- [[Current_Status]] — current phase, working features, in-progress work
-- [[Roadmap]] — planned features and rough sequence
-- [[Open_Questions]] — uncertain areas that need a decision
-- [[Glossary]] — domain vocabulary (ikas-specific and project-specific)
-- [[Feature_Map]] — feature inventory with implementation status
-- [[Project_Index]] — quick links to source code entry points
+- [[Project_Overview]] - what the app is and who it's for
+- [[Current_Status]] - current phase, working features, in-progress work
+- [[Roadmap]] - planned features and rough sequence
+- [[Open_Questions]] - uncertain areas that need a decision
+- [[Glossary]] - domain vocabulary (ikas-specific and project-specific)
+- [[Feature_Map]] - feature inventory with implementation status
+- [[Project_Index]] - quick links to source code entry points
 - [[Log]] - project-memory event log
 
 ## Task Routing
@@ -130,8 +130,9 @@ source_files: []
 ## Competitors
 - [[Judge_Me]]
 - [[Yotpo]]
-- [[Competitor_Feature_Matrix]]
-- [[Competitor_Insights]]
+- [[Loox]]
+- [[Okendo]]
+- [[Competitor_Pricing_And_Plans]]
 
 ## Prompts (AI workflows)
 - [[Agent_Rules]]
@@ -139,7 +140,7 @@ source_files: []
 - [[Wiki_Maintenance_Prompt]]
 - [[Problem_Resolution_Prompt]]
 - [[IDE_Agent_Usage]]
-- [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] — canonical pre-existing rule files (Ruler-generated CLAUDE/AGENTS/cursor) + ikas CLI config
+- [[Existing_AI_Rules_And_Ikas_CLI_Instructions]] - canonical pre-existing rule files (Ruler-generated CLAUDE/AGENTS/cursor) + ikas CLI config
 - [[Master_Project_Prompt]]
 - [[Claude_Code_Rules]]
 - [[Codex_Rules]]
@@ -151,6 +152,7 @@ source_files: []
 
 ## Research
 - [[Review_App_Market_Research]]
+- [[Competitor_Pricing_And_Plans]]
 - [[Google_Rich_Snippets_Research]]
 - [[Ecommerce_Review_UX_Patterns]]
 - [[Review_Layout_Padding_Research]]
@@ -172,7 +174,7 @@ source_files: []
 - [[Codebase_Map_Template]]
 
 ## Inbox
-- [[Raw_Notes]] — drop ideas here, file later
+- [[Raw_Notes]] - drop ideas here, file later
 
 ---
 

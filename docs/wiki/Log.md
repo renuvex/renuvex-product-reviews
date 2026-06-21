@@ -13,6 +13,7 @@ related:
   - "[[Index]]"
   - "[[Hot_Context]]"
   - "[[ADR_0032_Review_Video_On_Mux]]"
+  - "[[Competitor_Pricing_And_Plans]]"
 source_files:
   - "AGENTS.md"
   - "docs/wiki/Index.md"
@@ -20,6 +21,16 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-21 - docs | Record Turkish-first localization boundary
+- Documented that the current storefront widget is Turkish-first and has no i18n layer, locale resolver, or per-locale settings model.
+- Linked future English/German support to [[Roadmap]], [[Open_Questions]], [[Storefront_Widget_Overview]], [[Widget_Customization]], and [[Feature_Map]].
+- Decision note: merchant-editable copy fields are not localization; future multi-language support must include visible text, date/number formatting, and accessibility strings.
+
+## 2026-06-21 - research | Preserve competitor pricing snapshots
+- Replaced multiple competitor comparison pages with the single canonical [[Competitor_Pricing_And_Plans]] page.
+- Browser-verified Loox, Yotpo, Okendo, and Judge.me plan snapshots against official pages, then folded the durable plan details into [[Competitor_Pricing_And_Plans]] and the individual competitor pages.
+- The comparison page is an English wiki snapshot for packaging work; verify official competitor pages again before final pricing decisions or public claims.
 
 ## 2026-06-21 - security | Record Supabase RLS launch gate
 - Read-only RLS audit found no browser Supabase client usage and no `NEXT_PUBLIC_SUPABASE_*` env surface in the repo; runtime DB access is server-side Prisma.

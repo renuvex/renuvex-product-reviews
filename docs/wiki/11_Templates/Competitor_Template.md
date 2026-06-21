@@ -3,12 +3,16 @@ type: research
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-06-21
+last_verified: 2026-06-21
+confidence: medium
 tags:
   - template
   - competitor
 related:
-  - "[[Competitor_Feature_Matrix]]"
+  - "[[Competitor_Pricing_And_Plans]]"
+source_files:
+  - "docs/wiki/10_Research/Competitor_Pricing_And_Plans.md"
 ---
 
 # Competitor Name
@@ -29,9 +33,8 @@ Tiers and rough pricing (currency + per-month). Update periodically.
 What can we steal / improve / avoid? What does this tell us about market expectations?
 
 ## Obsidian Links
-- [[Competitor_Feature_Matrix]]
-- [[Competitor_Insights]]
+- [[Competitor_Pricing_And_Plans]]
 
 ---
 
-> Copy into `06_Competitors/<Name>.md` and add the competitor as a column in [[Competitor_Feature_Matrix]].
+> Copy into `06_Competitors/<Name>.md`, then update [[Competitor_Pricing_And_Plans]] with the plan snapshot and comparison rows.

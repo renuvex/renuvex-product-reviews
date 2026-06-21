@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
-last_verified: 2026-05-25
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 tags:
   - overview
@@ -14,6 +14,9 @@ related:
   - "[[Current_Status]]"
   - "[[Roadmap]]"
   - "[[System_Architecture]]"
+  - "[[Competitor_Pricing_And_Plans]]"
+  - "[[Open_Questions]]"
+  - "[[Storefront_Widget_Overview]]"
 source_files:
   - "package.json"
   - "README.md"
@@ -28,7 +31,7 @@ source_files:
 Renuvex Product Reviews is a SaaS-style review and rating app for ikas e-commerce merchants. It provides a merchant admin panel for moderating reviews, a customizable storefront widget that collects and displays reviews on product pages, and listing-level rating badges. The repo started from `ikas-app-starter-template` and has been extended with a review domain on top of the OAuth + Prisma + GraphQL foundation.
 
 ## Product Goal
-Compete with global review apps within the ikas ecosystem. See [[Competitor_Feature_Matrix]] and [[Competitor_Insights]] for positioning.
+Compete with global review apps within the ikas ecosystem. See [[Competitor_Pricing_And_Plans]] for positioning.
 
 ## Who It's For
 - ikas merchants who want product reviews on their storefront
@@ -58,6 +61,7 @@ See [[System_Architecture]] for the diagram-level view.
 - Not a full PIM. It does not own product data — fetched on-the-fly from ikas Admin GraphQL when needed.
 - Not a marketing/email tool yet. No review-request emails, no post-purchase triggers (yet — see [[Roadmap]]).
 - Not multi-store-per-merchant aware in a complex way: storeId == merchantId throughout.
+- Not a fully localized product yet. The storefront widget is Turkish-first today; English/German support needs the planned i18n layer in [[Roadmap]] and [[Open_Questions]].
 
 ## Related Source Files
 - [README.md](README.md) — public-facing project README
@@ -72,6 +76,7 @@ See [[System_Architecture]] for the diagram-level view.
 - [[System_Architecture]]
 - [[Auth_And_Installation_Flow]]
 - [[Storefront_Widget_Overview]]
+- [[Open_Questions]]
 
 ## Notes
 - The package name is `renuvex-product-reviews`. Public technical identity is app-specific: `product-reviews`, `renuvex-pr`, and `renuvex-product-reviews-widget`.

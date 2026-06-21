@@ -3,13 +3,20 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-10
+updated: 2026-06-21
+last_verified: 2026-06-21
+confidence: medium
 tags:
   - features
 related:
   - "[[Index]]"
   - "[[Current_Status]]"
   - "[[Roadmap]]"
+  - "[[Open_Questions]]"
+source_files:
+  - "src/widget/core/helpers.js"
+  - "src/widget/reviews-section/review-form-modal/copy.js"
+  - "src/components/home-page/widgets/widgetDefs.ts"
 ---
 
 # Feature Map
@@ -72,6 +79,13 @@ related:
 | Q&A widget | ❓ | same |
 | Settings live preview via postMessage | ✅ | [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts), [src/widget/index.js](src/widget/index.js) |
 
+## Localization / i18n
+| Feature | Status | Source |
+|---|---|---|
+| Turkish-first storefront widget copy | current reality | Hardcoded widget strings plus selected merchant-editable labels in [copy.js](src/widget/reviews-section/review-form-modal/copy.js) and [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) |
+| English / German / multi-language widget UI | planned | [[Roadmap]], [[Open_Questions]], [[Storefront_Widget_Overview]], [[Widget_Customization]] |
+| Locale-aware accessibility labels | planned | Current source still has hardcoded Turkish `aria-label` strings; future i18n must include accessible names, not only visible text |
+
 ## SEO / Structured Data
 | Feature | Status | Source |
 |---|---|---|
@@ -96,6 +110,10 @@ related:
 - [[Product_Review_Lightbox]]
 - [[API_Design]]
 - [[Backend_API_Map]]
+- [[Open_Questions]]
+- [[Storefront_Widget_Overview]]
+- [[Widget_Customization]]
 
 ## Change Log
+- 2026-06-21: Added explicit localization status. The widget is Turkish-first today; English/German support is planned and requires a real i18n layer.
 - 2026-05-10: Added review detail lightbox to the storefront widget feature inventory and linked its open audit risks. Related source: [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

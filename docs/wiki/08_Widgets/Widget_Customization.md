@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-12
-last_verified: 2026-06-12
+updated: 2026-06-21
+last_verified: 2026-06-21
 confidence: high
 source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
@@ -29,6 +29,8 @@ related:
   - "[[Index]]"
   - "[[Widget_Architecture]]"
   - "[[Frontend_Map]]"
+  - "[[Open_Questions]]"
+  - "[[Roadmap]]"
 ---
 
 # Widget Customization
@@ -121,6 +123,18 @@ with its timestamp query. That freshness behavior is intentionally separate from
 the preview loading overlay and should not be changed without a dedicated cache
 contract review.
 
+## Copy And Localization Boundary
+Widget copy customization is not the same thing as product localization.
+
+Today, merchants can edit selected visible strings, especially review-form wizard headings under `Metin > Yorum Formu`. Those values are saved as flat widget settings and rendered safely through `review-form-modal/copy.js`. This does not create a multi-language system:
+- settings are currently single-value per merchant/widget, not per locale;
+- default fallbacks are Turkish;
+- dates and counts still use `tr-TR` in widget helpers and summary layouts;
+- many visible labels and accessibility labels remain hardcoded Turkish in widget modules;
+- browser auto-translation does not translate `aria-label` attributes.
+
+Future English/German support should add a string catalog, a locale source, and a localized settings model before exposing per-language copy fields. If per-storefront locale support is chosen, it should be designed together with the multi-storefront settings question in [[Open_Questions]].
+
 ## Removing / changing fields
 - **Removing a field**: just delete from `widgetDefs.ts`. `sanitizeSettings` filters unknown keys at read time, so old DB rows still work.
 - **Renaming a field**: harder — write a one-time migration to copy `oldKey` → `newKey` in JSON, or add a back-compat shim in `sanitizeSettings`.
@@ -152,8 +166,11 @@ contract review.
 - [[Frontend_Map]]
 - [[Storefront_Widget_Overview]]
 - [[Database_Schema]]
+- [[Open_Questions]]
+- [[Roadmap]]
 
 ## Change Log
+- 2026-06-21: Documented that existing merchant copy settings are Turkish-first single-value fields, not an i18n layer. Future English/German support needs a locale-aware string catalog and settings model.
 - 2026-06-12: Review pagination sizing was compacted on desktop and mobile now uses the visible control box as the clickable target instead of a separate invisible tap halo. No new admin setting was added; `Widget Boyutu` remains the single control.
 - 2026-06-12: `Widget Boyutu` now scales the physical load-more and numbered-pagination controls in addition to typography. No new admin field was added; the behavior is driven by internal widget CSS variables.
 - 2026-06-12: Admin widget settings loading moved from a boolean gate to a tri-state gate. The editor only mounts after a successful settings response; hard settings-fetch errors show an error/retry state with no settings panel, preview iframe, or save button.

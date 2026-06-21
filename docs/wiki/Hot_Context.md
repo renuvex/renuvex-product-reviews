@@ -118,6 +118,7 @@ source_files:
 - 2026-06-20: The older `6 reviews / 39 sessions` purge manifest is historical only; latest DB evidence before implementation showed zero video surfaces. Preview and production Mux environments are separate, and webhook resource/secret creation waits for a deployed `/api/webhooks/mux` URL.
 
 ## Current Risks / Open Questions
+- The storefront widget is Turkish-first today. There is no i18n layer, locale resolver, or per-locale settings model yet. Future English/German support requires a proper string catalog, locale source, and accessibility-string migration; do not treat the current merchant-editable copy fields as localization.
 - Keep live post-deploy smoke after runtime widget changes.
 - Mux cleanup gates closed for the old video provider: contract migration verified, old Vercel Cloudflare video env vars absent, and Cloudflare Stream/R2 video inventory empty. Cloudflare DNS/zone and future Worker delivery infrastructure stay out of this cleanup scope.
 - Supabase RLS audit: repo uses server-side Prisma and no browser Supabase client; SQL privilege checks did not show `anon`/`authenticated` table access, but most public app tables still have RLS disabled. Treat RLS/default-grants hardening as a public-launch blocker; do not enable blindly during active schema churn.

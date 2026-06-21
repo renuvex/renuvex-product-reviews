@@ -3,13 +3,18 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-06-21
+last_verified: 2026-06-21
+confidence: medium
 tags:
   - research
   - ideas
 related:
   - "[[Index]]"
   - "[[Roadmap]]"
+  - "[[Competitor_Pricing_And_Plans]]"
+source_files:
+  - "docs/wiki/10_Research/Competitor_Pricing_And_Plans.md"
 ---
 
 # Future Feature Ideas
@@ -56,5 +61,4 @@ Aggregate sentiment trend over time per product (LLM or simple keyword).
 
 ## Obsidian Links
 - [[Roadmap]]
-- [[Competitor_Feature_Matrix]]
-- [[Competitor_Insights]]
+- [[Competitor_Pricing_And_Plans]]

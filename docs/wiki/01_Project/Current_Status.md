@@ -68,7 +68,7 @@ Active development. Core image-review features are functional end-to-end. Provid
 - No review-request emails / post-purchase triggers
 - No CSV import/export of reviews
 - No analytics dashboard (review volume over time, conversion lift, etc.)
-- No multi-language storefront UI (widget is Turkish-only; settings labels Turkish)
+- No multi-language storefront UI yet. The widget is Turkish-first; source still has hardcoded Turkish visible text, `tr-TR` formatting, and Turkish accessibility labels. Scope: [[Roadmap]] and [[Open_Questions]].
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
 - Real-device video acceptance is not automated. CI covers Chromium, Firefox, WebKit, Pixel emulation, and iPhone WebKit emulation; physical iPhone Safari and Android Chrome remain release gates.

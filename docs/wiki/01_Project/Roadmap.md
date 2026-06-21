@@ -3,13 +3,18 @@ type: roadmap
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-06-09
+updated: 2026-06-21
+last_verified: 2026-06-21
+confidence: medium
 tags:
   - roadmap
 related:
   - "[[Index]]"
   - "[[Current_Status]]"
   - "[[Future_Feature_Ideas]]"
+  - "[[Competitor_Pricing_And_Plans]]"
+source_files:
+  - "docs/wiki/10_Research/Competitor_Pricing_And_Plans.md"
 ---
 
 # Roadmap
@@ -51,4 +56,4 @@ Living roadmap. Order is rough priority, not committed dates. Tweak as decisions
 - [[Current_Status]]
 - [[Open_Questions]]
 - [[Future_Feature_Ideas]]
-- [[Competitor_Feature_Matrix]]
+- [[Competitor_Pricing_And_Plans]]
