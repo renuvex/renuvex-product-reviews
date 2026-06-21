@@ -19,7 +19,7 @@ function videoStatusText(video) {
   if (video.status === 'processing') return 'Video işleniyor...';
   if (video.status === 'processing_slow') return 'Video hazırlanıyor. Bu işlem biraz sürebilir.';
   if (video.status === 'ready') return 'Video hazır';
-  return 'Video yükleniyor: %' + Math.max(0, Math.min(100, video.progress || 0));
+  return 'Video hazırlanıyor';
 }
 
 function isVideoBusy(video) {
@@ -158,7 +158,7 @@ export function createStepMedia(state, opts) {
       status.innerHTML =
         '<span class="renuvex-pr-fwizard-video-dots" aria-hidden="true">' +
         '<span></span><span></span><span></span>' +
-        '</span><span>Video yükleniyor</span>';
+        '</span><span>Video hazırlanıyor</span>';
       card.appendChild(status);
     } else {
       details = document.createElement('div');
@@ -190,7 +190,7 @@ export function createStepMedia(state, opts) {
     }
     remove.addEventListener('pointerdown', onRemove);
     remove.addEventListener('click', onRemove);
-    card.appendChild(remove);
+    if (mode !== 'busy') card.appendChild(remove);
     content.appendChild(card);
 
     videoView = {

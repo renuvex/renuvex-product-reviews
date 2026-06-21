@@ -393,7 +393,7 @@ export var FWIZARD_CSS = `
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:14px 48px;
+    padding:14px 20px;
     box-sizing:border-box;
   }
   .renuvex-pr-fwizard-video-uploading-status{
