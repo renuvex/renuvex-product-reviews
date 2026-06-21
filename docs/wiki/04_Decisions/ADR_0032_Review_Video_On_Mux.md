@@ -58,7 +58,8 @@ This ADR describes the target architecture and the code/migration state. Deploy,
 - The latest read-only DB inventory before implementation showed zero video reviews, review-media videos, pending video rows, upload sessions, and video usage. The older "6 reviews / 39 sessions" purge manifest is historical only and must not be executed against current data.
 - Main/production now contains the Mux dependency, additive provider columns, `WebhookEvent`, Mux provider adapter, Mux upload/status/webhook/admin playback routes, widget UpChunk upload, and tests.
 - The 2026-06-21 read-only closeout showed zero active video review/media/pending rows, zero active upload sessions, zero failed/dead video jobs, and zero rows with legacy `r2UploadId`, `ingestObjectKey`, `masterObjectKey`, or `streamUid` values.
-- The legacy provider-column contract migration is now staged as `20260621003000_review_video_mux_contract_drop_legacy_columns` after explicit approval. Applying it remains a destructive DB operation and must be verified after deploy.
+- The legacy provider-column contract migration `20260621003000_review_video_mux_contract_drop_legacy_columns` was applied in production and verified on 2026-06-21: the old Cloudflare Stream/R2 upload columns are absent from `VideoUploadSession`.
+- External closeout evidence on 2026-06-21 showed Mux production assets at 0 after canary deletion cleanup, Cloudflare Stream/R2 videos/buckets/storage at 0, no active video provider jobs, and no Cloudflare video env keys in Vercel.
 - Mux environments stay separated:
   - `Renuvex - Products Review (Preview)` is for local/Preview validation, test upload, Preview webhook, and canary.
   - `Renuvex - Products Review` is for the production gate only.
@@ -87,7 +88,7 @@ The migration remains expand/contract:
 7. Preview Mux webhook creation and Preview env secret write, followed by Preview redeploy.
 8. Preview functional canary: upload -> Mux processing -> webhook/reconcile -> pending admin preview -> approve public playback -> reject/delete cleanup.
 9. Production gate: separate production Mux token/signing key/webhook secret, isolated test-store toggle/quota, and global flag only after proof.
-10. Contract/teardown: apply the approved contract migration after cutover evidence, then remove legacy Vercel video env vars. External Cloudflare Stream/R2 credential revoke and resource teardown remain separate and require inventory proof plus explicit approval.
+10. Contract/teardown: the approved contract migration has been applied and verified. Legacy Vercel video env vars are absent and Cloudflare Stream/R2 video inventory is empty. Cloudflare DNS/zone and future Worker delivery infrastructure remain outside video-provider teardown.
 
 ## Stop/Go Rules
 Stop and ask before: deploy, migration apply, Vercel env mutation, Mux write, external resource delete/revoke, destructive DB change, or credential teardown. The request must include scope, risk, rollback, and evidence needed after the operation.

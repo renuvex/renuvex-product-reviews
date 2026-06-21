@@ -21,6 +21,14 @@ source_files:
 
 # Project Log
 
+## 2026-06-21 - closeout | Verify Mux video migration cleanup
+- Verified the Mux review-video closeout without mutating platform state: Git/Vercel are on `main` only, old preview/new-ikas/mertcopper Vercel aliases are absent, and production Mux/QStash env keys are present without Cloudflare video env keys.
+- Production DB has applied additive, backend-cutover, performance-sample, and contract migrations. `VideoUploadSession` no longer has `r2UploadId`, `masterObjectKey`, `ingestObjectKey`, or `streamUid`; active video jobs are empty; old Cloudflare provider jobs remain only as succeeded/superseded audit history.
+- Mux production asset list is empty after canary delete cleanup. Historical direct-upload records remain in Mux as 8 `asset_created` and 1 `cancelled` uploads. Cloudflare Stream/R2 inventory is empty for videos, storage minutes, buckets, live inputs, watermarks, Workers scripts, and KV namespaces.
+- Current widget manifest files are Mux-only. Older hash-named `render-*` chunks can still contain previous Cloudflare host strings as retained deployment artifacts; keep them under the `scripts/build-widget.mjs` retention policy instead of deleting by hand.
+- Gates passed: `pnpm exec prisma validate`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test:unit`, `pnpm check:widget-js`, `node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=post-webhook --json`, and `pnpm test:ci`.
+- Separate security follow-up: Supabase MCP reports RLS disabled on most public tables. This is outside the Mux migration closeout and needs policy design before any enablement.
+
 ## 2026-06-21 - migration | Start Mux contract cleanup
 - Added `20260621003000_review_video_mux_contract_drop_legacy_columns` to drop only old Cloudflare Stream/R2 `VideoUploadSession` columns and legacy indexes after read-only evidence showed no active video rows/jobs and no data in those legacy columns.
 - Vercel cleanup scope is limited to old Cloudflare Stream/R2 video env vars. Cloudflare DNS/zone and future Worker-based widget/script delivery remain out of teardown scope.

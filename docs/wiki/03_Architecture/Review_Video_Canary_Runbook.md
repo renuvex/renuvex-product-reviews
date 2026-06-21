@@ -89,6 +89,8 @@ Stop and get explicit approval before any migration apply, deploy, Vercel env mu
 ## Contract Phase
 After Preview/Production Mux canaries and the 2026-06-21 read-only closeout showed no active video reviews, pending video rows, active upload sessions, failed/dead video jobs, or non-empty legacy provider columns, the contract migration entered the active deploy path as `20260621003000_review_video_mux_contract_drop_legacy_columns`.
 
+The migration was later verified as applied in production on 2026-06-21. The legacy columns are absent from the live `VideoUploadSession` schema; old Cloudflare provider jobs, if present, are historical succeeded/superseded audit rows and are not a purge target.
+
 The migration drops only the old Cloudflare Stream/R2 upload columns on `VideoUploadSession` and their legacy unique indexes:
 
 ```sql
@@ -103,7 +105,7 @@ ALTER TABLE "VideoUploadSession"
   DROP COLUMN IF EXISTS "streamUid";
 ```
 
-Do not pair this migration with any Cloudflare zone, DNS, or future Worker cleanup. External provider credential/resource teardown remains a separate stop/go step.
+Do not pair this migration with any Cloudflare zone, DNS, or future Worker cleanup. The 2026-06-21 external inventory showed Cloudflare Stream videos/storage and R2 buckets at zero, but Cloudflare DNS/zone and future Worker delivery infrastructure remain separate scope.
 
 ## Preview Functional Canary
 Use a controlled MP4/MOV between 2 and 60 seconds, no larger than 150 MiB. Record ids and timestamps only; never paste tokens, upload URLs, signed URLs, secrets, or customer media into docs/tickets.
