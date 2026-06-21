@@ -27,7 +27,7 @@ source_files:
 # Widget Transfer Measurement - 2026-05-29
 
 ## Summary
-`pnpm measure:deployed-widget` measured deployed widget assets from `https://new-ikas-app.vercel.app` using a controlled Playwright harness. Merchant HTML and `/api/public/*` responses were mocked, so no production DB/admin settings were changed.
+`pnpm measure:deployed-widget` measured deployed widget assets from the then-active legacy pre-custom-domain Vercel alias using a controlled Playwright harness. Current runs default to `https://widget.renuvex.app`. Merchant HTML and `/api/public/*` responses were mocked, so no production DB/admin settings were changed.
 
 The measurement is evidence, not a CI byte budget. It proves the important ADR_0024 relative behavior:
 

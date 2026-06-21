@@ -26,7 +26,7 @@ source_files:
 # Structured Data Verification - 2026-05-29
 
 ## Summary
-`pnpm verify:deployed-jsonld` loads the deployed widget from `https://new-ikas-app.vercel.app` in a controlled Playwright harness and mocks public API responses. This verifies the browser runtime contract without changing production DB/admin settings.
+`pnpm verify:deployed-jsonld` loaded the deployed widget from the then-active legacy pre-custom-domain Vercel alias in a controlled Playwright harness and mocked public API responses. Current runs default to `https://widget.renuvex.app`. This verifies the browser runtime contract without changing production DB/admin settings.
 
 The 2026-05-29 result below is kept as historical evidence. The 2026-05-31 result verifies the current deployed structured-data contract after the independent `structured-data` surface shipped.
 

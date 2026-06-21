@@ -39,7 +39,7 @@ widget.js?publicApiKey=02786d4b-a09b-4b36-ad8c-56e6d396f6fd:257 Uncaught Referen
 ```
 
 ## Scenario
-1. `https://dev-mertcopper.ikas.shop/premium-shorts` loads the injected script from `https://new-ikas-app.vercel.app/widget.js?publicApiKey=02786d4b-a09b-4b36-ad8c-56e6d396f6fd`.
+1. `https://dev-mertcopper.ikas.shop/premium-shorts` loaded the injected script from the legacy pre-custom-domain Vercel alias with `publicApiKey=02786d4b-a09b-4b36-ad8c-56e6d396f6fd`.
 2. The script request returns `200 OK`.
 3. Public settings and reviews endpoints return valid data for the same `publicApiKey` and product.
 4. Before the widget can subscribe to `IkasEvents`, bootstrap, or render, the browser parses a broken bundle and throws `ReferenceError: modal is not defined`.

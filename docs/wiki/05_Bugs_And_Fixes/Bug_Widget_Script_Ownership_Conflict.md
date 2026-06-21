@@ -53,7 +53,7 @@ The classic loader and runtime config identified the app's script by scanning
 for a script URL containing `/widget.js`. When `document.currentScript` was not
 available in the ESM runtime path, the scan could pick the third-party
 `social.serpingo.com/widget.js` script instead of this app's
-`new-ikas-app.vercel.app/widget.js?publicApiKey=<merchantId>` script.
+legacy pre-custom-domain Vercel alias `widget.js?publicApiKey=<merchantId>` script.
 
 That made `publicApiKey` resolve to `null` and prevented widget startup. This
 was not a stale ikas script injection record and not proof that the third-party
