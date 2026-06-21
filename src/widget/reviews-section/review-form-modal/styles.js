@@ -365,6 +365,9 @@ export var FWIZARD_CSS = `
     width:100%;
     max-width:none;
   }
+  .renuvex-pr-fwizard-media-card:not(.renuvex-pr-fwizard-media-card--has-media) .renuvex-pr-fwizard-media-content{
+    display:none;
+  }
   .renuvex-pr-fwizard-media-content:empty{
     display:none;
   }

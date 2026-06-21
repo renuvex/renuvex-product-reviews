@@ -25,6 +25,7 @@ source_files:
 ## 2026-06-22 - ui | Refine review wizard media actions
 - The video-enabled wizard media step now uses two stacked primary action buttons for photo and video, matching the established black `Fotoğraf Ekle` control instead of the old side-by-side outline choices.
 - The media step embeds the existing photo picker in a no-add-button mode, so clicking photo no longer shows a second duplicate `Fotoğraf Ekle` button while preserving the shared thumbnail/upload lifecycle.
+- Empty embedded media content stays hidden until a real photo/video selection exists, so opening and dismissing the native picker does not move the media action buttons.
 - The video action uses the Phosphor regular outline play icon through the shared widget icon registry.
 
 ## 2026-06-21 - fix | Harden abandoned Mux upload cleanup

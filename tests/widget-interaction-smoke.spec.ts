@@ -113,6 +113,24 @@ async function styleInOverlay(page: Page, overlaySelector: string, selector: str
   }, { overlaySelector, selector, properties });
 }
 
+async function rectInOverlay(page: Page, overlaySelector: string, selector: string) {
+  return page.evaluate(({ overlaySelector, selector }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    const el = root?.querySelector<HTMLElement>(selector);
+    if (!el) throw new Error(`Missing overlay selector: ${selector}`);
+    const rect = el.getBoundingClientRect();
+    return {
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    };
+  }, { overlaySelector, selector });
+}
+
 async function hoverInOverlay(page: Page, overlaySelector: string, selector: string) {
   const box = await page.evaluate(({ overlaySelector, selector }) => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
@@ -710,6 +728,8 @@ test('video upload wizard posts a ready video token without photo media', async 
   expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2) span')).toBe('Video Ekle');
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(2);
 
+  const initialPhotoRect = await rectInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)');
+  const initialVideoRect = await rectInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)');
   await page.evaluate(() => {
     const win = window as Window & { __renuvexNativeInputClick?: typeof HTMLInputElement.prototype.click };
     win.__renuvexNativeInputClick = HTMLInputElement.prototype.click;
@@ -722,6 +742,11 @@ test('video upload wizard posts a ready video token without photo media', async 
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(2);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-add')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-card--embedded')).toBe(1);
+  expect((await rectInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)')).top).toBeCloseTo(initialPhotoRect.top, 0);
+  expect((await rectInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)')).top).toBeCloseTo(initialVideoRect.top, 0);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)');
+  expect((await rectInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)')).top).toBeCloseTo(initialPhotoRect.top, 0);
+  expect((await rectInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)')).top).toBeCloseTo(initialVideoRect.top, 0);
   await page.evaluate(() => {
     const win = window as Window & { __renuvexNativeInputClick?: typeof HTMLInputElement.prototype.click };
     if (win.__renuvexNativeInputClick) HTMLInputElement.prototype.click = win.__renuvexNativeInputClick;
@@ -931,11 +956,12 @@ test('video retry preserves the Mux direct upload session after chunk attempts a
     mimeType: 'video/mp4',
     buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
   });
+  await expect.poll(() => muxPutCalls, { timeout: 15000 }).toBe(5);
   await expect.poll(() => textInOverlay(
     page,
     '.renuvex-pr-fwizard-overlay',
     '.renuvex-pr-fwizard-video-status',
-  )).toContain('Video yüklenemedi');
+  ), { timeout: 10000 }).toContain('Video yüklenemedi');
   expect(await page.evaluate(() => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
       .map((host) => host.shadowRoot)
