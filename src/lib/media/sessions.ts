@@ -102,16 +102,29 @@ export async function getVideoSessionByToken(token: string): Promise<VideoUpload
   return prisma.videoUploadSession.findUnique({ where: { tokenHash: hashMediaToken(token) } });
 }
 
-export async function releaseVideoReservation(tx: TransactionClient, session: VideoUploadSession) {
-  if (session.quotaState !== 'reserved') return false;
+export async function releaseVideoQuota(tx: TransactionClient, session: VideoUploadSession) {
+  if (session.quotaState === 'reserved') {
+    const claim = await tx.videoUploadSession.updateMany({
+      where: { id: session.id, quotaState: 'reserved' },
+      data: { quotaState: 'released' },
+    });
+    if (claim.count === 0) return false;
+    await tx.storeVideoUsage.updateMany({
+      where: { storeId: session.storeId, month: session.reservedMonth, reservedCount: { gt: 0 } },
+      data: { reservedCount: { decrement: 1 } },
+    });
+    return true;
+  }
+
+  if (session.quotaState !== 'consumed' || session.status === 'consumed' || session.consumedAt) return false;
   const claim = await tx.videoUploadSession.updateMany({
-    where: { id: session.id, quotaState: 'reserved' },
+    where: { id: session.id, quotaState: 'consumed', status: { not: 'consumed' }, consumedAt: null },
     data: { quotaState: 'released' },
   });
   if (claim.count === 0) return false;
   await tx.storeVideoUsage.updateMany({
-    where: { storeId: session.storeId, month: session.reservedMonth, reservedCount: { gt: 0 } },
-    data: { reservedCount: { decrement: 1 } },
+    where: { storeId: session.storeId, month: session.reservedMonth, consumedCount: { gt: 0 } },
+    data: { consumedCount: { decrement: 1 } },
   });
   return true;
 }

@@ -310,8 +310,8 @@ describe('media provider jobs', () => {
     const result = await processMediaProviderJob('cleanup-job');
 
     expect(result).toEqual({ processed: true, status: 'succeeded' });
-    expect(muxMock.cancelMuxUpload).toHaveBeenCalledWith('upload-1');
     expect(muxMock.getMuxUpload).toHaveBeenCalledWith('upload-1');
+    expect(muxMock.cancelMuxUpload).not.toHaveBeenCalled();
     expect(muxMock.deleteMuxAsset).toHaveBeenCalledWith('asset-1');
     expect(prismaMock.videoUploadSession.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: UUID_1 },
@@ -323,6 +323,66 @@ describe('media provider jobs', () => {
         payload: { sessionId: UUID_1, providerUploadId: 'upload-1', providerAssetId: 'asset-1' },
       }),
     }));
+  });
+
+  it('deletes a known Mux asset even when waiting-upload cancel fails', async () => {
+    const aborted = muxSession({
+      status: 'aborted',
+      quotaState: 'released',
+      providerUploadId: 'upload-1',
+      providerAssetId: 'asset-1',
+      publicId: 'mux:asset-1',
+    });
+    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
+      id: 'cleanup-job',
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.cleanupVideo,
+      payload: { sessionId: UUID_1, providerUploadId: 'upload-1', providerAssetId: 'asset-1', pendingPublicId: 'mux:asset-1' },
+      attempts: 1,
+      maxAttempts: 16,
+    });
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ leaseVersion: 1 }])
+      .mockResolvedValueOnce([aborted]);
+    muxMock.getMuxUpload.mockResolvedValue({ id: 'upload-1', status: 'waiting', asset_id: null });
+    muxMock.cancelMuxUpload.mockRejectedValue(new muxMock.MuxProviderError('400', 'upload is not waiting', 400));
+    const { processMediaProviderJob } = await import('@/lib/media/jobs');
+
+    const result = await processMediaProviderJob('cleanup-job');
+
+    expect(result).toEqual({ processed: true, status: 'succeeded' });
+    expect(muxMock.cancelMuxUpload).toHaveBeenCalledWith('upload-1');
+    expect(muxMock.deleteMuxAsset).toHaveBeenCalledWith('asset-1');
+    expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({ where: { publicId: 'mux:asset-1' } });
+  });
+
+  it('cancels a waiting Mux upload when no asset exists yet', async () => {
+    const aborted = muxSession({
+      status: 'aborted',
+      quotaState: 'released',
+      providerUploadId: 'upload-1',
+      providerAssetId: null,
+      publicId: null,
+    });
+    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
+      id: 'cleanup-job',
+      provider: 'mux',
+      action: MEDIA_JOB_ACTIONS.cleanupVideo,
+      payload: { sessionId: UUID_1, providerUploadId: 'upload-1' },
+      attempts: 1,
+      maxAttempts: 16,
+    });
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ leaseVersion: 1 }])
+      .mockResolvedValueOnce([aborted]);
+    muxMock.getMuxUpload.mockResolvedValue({ id: 'upload-1', status: 'waiting', asset_id: null });
+    const { processMediaProviderJob } = await import('@/lib/media/jobs');
+
+    const result = await processMediaProviderJob('cleanup-job');
+
+    expect(result).toEqual({ processed: true, status: 'succeeded' });
+    expect(muxMock.cancelMuxUpload).toHaveBeenCalledWith('upload-1');
+    expect(muxMock.deleteMuxAsset).not.toHaveBeenCalled();
   });
 
   it('defers resolve work while Mux has not attached an asset to the upload', async () => {
@@ -556,10 +616,11 @@ describe('media provider jobs', () => {
     expect(prismaMock.videoUploadSession.update).not.toHaveBeenCalled();
   });
 
-  it('cleans an expired ready-but-unsubmitted video without refunding consumed quota', async () => {
+  it('cleans an expired ready-but-unsubmitted video and refunds consumed quota', async () => {
     const expired = muxSession({
       status: 'ready',
       quotaState: 'consumed',
+      consumedAt: null,
       expiresAt: new Date(Date.now() - 1_000),
       publicId: 'mux:asset-1',
     });
@@ -575,13 +636,15 @@ describe('media provider jobs', () => {
       .mockResolvedValueOnce([{ leaseVersion: 1 }])
       .mockResolvedValueOnce([expired]);
     prismaMock.videoUploadSession.findUnique.mockResolvedValue(expired);
-    prismaMock.videoUploadSession.update.mockResolvedValue({ ...expired, status: 'failed' });
+    prismaMock.videoUploadSession.update.mockResolvedValue({ ...expired, status: 'failed', quotaState: 'released' });
     const { processMediaProviderJob } = await import('@/lib/media/jobs');
 
     const result = await processMediaProviderJob('expiry-job');
 
     expect(result).toEqual({ processed: true, status: 'succeeded' });
-    expect(prismaMock.storeVideoUsage.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.storeVideoUsage.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: { consumedCount: { decrement: 1 } },
+    }));
     expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
         action: MEDIA_JOB_ACTIONS.cleanupVideo,

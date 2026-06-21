@@ -22,6 +22,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-21 - fix | Harden abandoned Mux upload cleanup
+- Fixed the Mux direct-upload cancel/asset-created race for review videos: `cleanup_video` now retrieves upload state before cancel, deletes known or recovered Mux asset IDs even when cancel is no longer valid, and only uses direct-upload cancel while the upload is still waiting.
+- Expanded video quota release from reserved-only to abandoned consumed sessions that never reached review submit (`consumedAt` is null), while preserving review-consumed sessions.
+- Gates passed: targeted media unit tests, `pnpm exec prisma validate` with `.env.local` loaded, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test:unit`, and `pnpm verify:video-infrastructure:post-webhook -- --json`.
+
 ## 2026-06-21 - docs | Record Turkish-first localization boundary
 - Documented that the current storefront widget is Turkish-first and has no i18n layer, locale resolver, or per-locale settings model.
 - Linked future English/German support to [[Roadmap]], [[Open_Questions]], [[Storefront_Widget_Overview]], [[Widget_Customization]], and [[Feature_Map]].

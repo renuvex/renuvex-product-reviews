@@ -24,7 +24,7 @@ import {
 } from '@/lib/media/providers/mux';
 import { deleteCloudinaryReviewImages } from '@/lib/media/providers/cloudinary-image';
 import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
-import { getVideoSessionForUpdate, releaseVideoReservation } from '@/lib/media/sessions';
+import { getVideoSessionForUpdate, releaseVideoQuota } from '@/lib/media/sessions';
 import { matchesVideoModerationIntent } from '@/lib/media/moderation-intent';
 import { applyMuxAssetState } from '@/lib/media/video-processing';
 import { enqueueMediaProviderJob } from '@/lib/media/outbox';
@@ -524,12 +524,20 @@ async function cleanupVideo(payload: z.infer<typeof cleanupPayload>): Promise<Me
   if (payload.providerAssetId) providerAssetIds.add(payload.providerAssetId);
 
   if (payload.providerUploadId) {
-    await cancelMuxUpload(payload.providerUploadId);
+    let shouldCancelUpload = false;
     try {
       const upload = await getMuxUpload(payload.providerUploadId);
       if (upload.asset_id) providerAssetIds.add(upload.asset_id);
+      else if (upload.status === 'waiting') shouldCancelUpload = true;
     } catch (error) {
-      if (!isMuxNotFound(error)) throw error;
+      if (!isMuxNotFound(error) && providerAssetIds.size === 0) throw error;
+    }
+    if (shouldCancelUpload) {
+      try {
+        await cancelMuxUpload(payload.providerUploadId);
+      } catch (error) {
+        if (providerAssetIds.size === 0) throw error;
+      }
     }
   }
 
@@ -539,7 +547,7 @@ async function cleanupVideo(payload: z.infer<typeof cleanupPayload>): Promise<Me
     if (payload.sessionId) {
       const session = await getVideoSessionForUpdate(tx, payload.sessionId);
       if (session && session.status !== 'consumed') {
-        await releaseVideoReservation(tx, session);
+        await releaseVideoQuota(tx, session);
         await tx.videoUploadSession.update({ where: { id: session.id }, data: { status: 'aborted', errorCode: null } });
       }
     }

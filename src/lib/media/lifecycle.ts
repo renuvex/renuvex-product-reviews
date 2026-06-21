@@ -7,7 +7,7 @@ import {
   supersedeSessionLifecycleJobs,
   type EnqueueMediaJobInput,
 } from '@/lib/media/outbox';
-import { getVideoSessionForUpdate, releaseVideoReservation } from '@/lib/media/sessions';
+import { getVideoSessionForUpdate, releaseVideoQuota } from '@/lib/media/sessions';
 
 function videoCleanupJobInput(session: VideoUploadSession): EnqueueMediaJobInput {
   return {
@@ -34,7 +34,7 @@ export async function failSessionAndQueueCleanup(
   const job = await prisma.$transaction(async (tx) => {
     const session = await getVideoSessionForUpdate(tx, sessionId);
     if (!session || session.status === 'consumed') return null;
-    await releaseVideoReservation(tx, session);
+    await releaseVideoQuota(tx, session);
     await supersedeSessionLifecycleJobs(tx, session.id, [
       MEDIA_JOB_ACTIONS.reconcileVideo,
       MEDIA_JOB_ACTIONS.expireUploadSession,
@@ -59,7 +59,7 @@ export async function cancelSessionAndQueueCleanup(sessionId: string) {
   const job = await prisma.$transaction(async (tx) => {
     const session = await getVideoSessionForUpdate(tx, sessionId);
     if (!session || session.status === 'consumed') return null;
-    await releaseVideoReservation(tx, session);
+    await releaseVideoQuota(tx, session);
     await supersedeSessionLifecycleJobs(tx, session.id, [
       MEDIA_JOB_ACTIONS.reconcileVideo,
       MEDIA_JOB_ACTIONS.expireUploadSession,
