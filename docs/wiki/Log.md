@@ -22,6 +22,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-22 - fix | Re-arm stalled video uploads after reconnect
+- Physical mobile testing found the prior Mux direct-upload watchdog was not sufficient: after Wi-Fi was disabled and re-enabled, the wizard could stay on `Video yÃ¼kleniyor` while the DB session remained `uploading`, quota stayed `reserved`, and Mux direct upload stayed `waiting` with no asset.
+- Production/runtime evidence showed the new widget build was deployed, so the root issue was client-side recovery, not Mux webhook/backend processing. The direct-upload layer now listens to browser `offline`/`online` events in addition to UpChunk events and keeps a low-frequency network probe while offline so a missed or reordered `online` event cannot leave the stall watchdog permanently paused.
+- Automatic same-session recovery remains limited to watchdog-detected stalls. Exhausted UpChunk chunk attempts still surface `Video yÃ¼klenemedi` + `Tekrar dene`, preserving the manual retry contract.
+- Gates passed: `pnpm build:widget`, targeted offline/stall/chunk-exhaustion interaction tests, `pnpm test:widget-interactions`, `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, and `pnpm lint`.
+
 ## 2026-06-22 - ui | Auto-advance video review uploads
 - Simplified video upload recovery copy without losing state-machine detail: upload/retry/processing now display `Video yükleniyor`, UpChunk offline displays `İnternet bağlantısı yok`, terminal failures display `Video yüklenemedi`, and retryable failures expose one themed `Tekrar dene` action with no remove icon.
 - Video selection in the review wizard now mirrors the photo first-selection behavior: step 2 writes `videoUpload` state and advances to the comment step while Mux direct upload, complete, and processing polling continue in the background.

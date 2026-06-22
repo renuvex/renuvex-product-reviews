@@ -257,25 +257,34 @@ function upchunkErrorCode(detail) {
   return 'upload_attempt_failed';
 }
 
+function isAutoRecoverableDirectUploadError(error) {
+  if (!(error instanceof VideoUploadRequestError)) return false;
+  return error.code === 'video_upload_stalled';
+}
+
 async function uploadToMuxDirectUrl(input) {
   var createUpload = await loadUpChunkCreateUpload();
   return new Promise(function (resolve, reject) {
     var settled = false;
     var upload = null;
     var stallTimer = null;
+    var networkProbeTimer = null;
     var stallTimeout = uploadStallTimeoutMs();
+    var removeWindowNetworkListeners = null;
     function finish(error) {
       if (settled) return;
       settled = true;
       if (stallTimer) clearTimeout(stallTimer);
+      if (networkProbeTimer) clearInterval(networkProbeTimer);
       if (input.signal) input.signal.removeEventListener('abort', abort);
+      if (removeWindowNetworkListeners) removeWindowNetworkListeners();
       if (error) reject(error);
       else resolve();
     }
-    function scheduleStallWatch() {
+    function scheduleStallWatch(forceOnline) {
       if (settled) return;
       if (stallTimer) clearTimeout(stallTimer);
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      if (!forceOnline && typeof navigator !== 'undefined' && navigator.onLine === false) return;
       stallTimer = setTimeout(function () {
         if (settled) return;
         if (input.onUploadError) input.onUploadError('video_upload_stalled');
@@ -290,6 +299,27 @@ async function uploadToMuxDirectUrl(input) {
     function pauseStallWatch() {
       if (stallTimer) clearTimeout(stallTimer);
       stallTimer = null;
+    }
+    function clearNetworkProbe() {
+      if (networkProbeTimer) clearInterval(networkProbeTimer);
+      networkProbeTimer = null;
+    }
+    function startNetworkProbe() {
+      if (networkProbeTimer || settled) return;
+      networkProbeTimer = setInterval(function () {
+        if (settled) return clearNetworkProbe();
+        if (typeof navigator === 'undefined' || navigator.onLine !== false) markOnline();
+      }, 1000);
+    }
+    function markOffline() {
+      pauseStallWatch();
+      input.onStatus('uploading_offline');
+      startNetworkProbe();
+    }
+    function markOnline() {
+      clearNetworkProbe();
+      input.onStatus('uploading');
+      scheduleStallWatch(true);
     }
     function abort() {
       try { if (upload) upload.abort(); } catch (_) {}
@@ -307,6 +337,21 @@ async function uploadToMuxDirectUrl(input) {
       attempts: input.chunkAttempts || DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS,
       dynamicChunkSize: true,
     });
+    if (
+      typeof window !== 'undefined'
+      && typeof window.addEventListener === 'function'
+      && typeof window.removeEventListener === 'function'
+    ) {
+      window.addEventListener('offline', markOffline);
+      window.addEventListener('online', markOnline);
+      removeWindowNetworkListeners = function () {
+        window.removeEventListener('offline', markOffline);
+        window.removeEventListener('online', markOnline);
+      };
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      input.onStatus('uploading_offline');
+    }
     scheduleStallWatch();
     upload.on('attempt', function () {
       noteActivity();
@@ -328,20 +373,14 @@ async function uploadToMuxDirectUrl(input) {
         input.onProgress(mapped);
       }
     });
-    upload.on('offline', function () {
-      pauseStallWatch();
-      input.onStatus('uploading_offline');
-    });
-    upload.on('online', function () {
-      input.onStatus('uploading');
-      scheduleStallWatch();
-    });
+    upload.on('offline', markOffline);
+    upload.on('online', markOnline);
     upload.on('error', function (event) {
       noteActivity();
       var detail = event && event.detail;
-      var message = detail && typeof detail.message === 'string' ? detail.message : 'video_upload_failed';
-      if (input.onUploadError) input.onUploadError(upchunkErrorCode(detail));
-      finish(new Error(message));
+      var code = upchunkErrorCode(detail);
+      if (input.onUploadError) input.onUploadError(code);
+      finish(new VideoUploadRequestError(code, 0, null));
     });
     upload.on('success', function () {
       noteActivity();
@@ -578,7 +617,7 @@ export async function uploadReviewVideo(input) {
         await submitUploadMetrics(token, metrics, 'aborted');
         throw error;
       }
-      if (error instanceof VideoUploadRequestError && error.code === 'video_upload_stalled' && autoRecoveries < VIDEO_UPLOAD_AUTO_RECOVERY_LIMIT) {
+      if (isAutoRecoverableDirectUploadError(error) && autoRecoveries < VIDEO_UPLOAD_AUTO_RECOVERY_LIMIT) {
         autoRecoveries += 1;
         var recoveryDecision = null;
         try {
