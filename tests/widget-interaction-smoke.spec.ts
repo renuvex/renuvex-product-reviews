@@ -606,7 +606,7 @@ test('capability rate limits fail closed to the photo-only wizard', async ({ pag
   expect(widgetErrors(log).filter((message) => !message.includes('status of 429'))).toEqual([]);
 });
 
-test('quota races show specific non-retryable video upload copy', async ({ page }) => {
+test('quota races fail closed with generic video upload copy', async ({ page }) => {
   await stubVideoMetadata(page, 12);
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
@@ -641,9 +641,9 @@ test('quota races show specific non-retryable video upload copy', async ({ page 
     page,
     '.renuvex-pr-fwizard-overlay',
     '.renuvex-pr-fwizard-video-status',
-  )).toBe('Bu mağaza bu ayki video yorum limitine ulaştı.');
+  )).toBe('Video yüklenemedi');
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
-  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(1);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
   expect(widgetErrors(log).filter((message) => !message.includes('status of 429'))).toEqual([]);
 });
 
@@ -793,7 +793,7 @@ test('video upload wizard posts a ready video token without photo media', async 
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
-  await expect.poll(() => textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-uploading-card')).toContain('Video hazırlanıyor');
+  await expect.poll(() => textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-uploading-card')).toContain('Video yükleniyor');
   expect(await visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-uploading-card .renuvex-pr-fwizard-video-remove')).toBe(0);
 
@@ -1007,6 +1007,13 @@ test('video upload retries transient Mux PUT failures before showing shopper ret
       }),
     });
   });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ data: { status: 'cancelling' } }),
+    });
+  });
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
@@ -1025,6 +1032,128 @@ test('video upload retries transient Mux PUT failures before showing shopper ret
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
   expect(initiateCalls).toBe(1);
+});
+
+test('video upload shows offline copy and resumes simple upload copy when online', async ({ page }) => {
+  await stubVideoMetadata(page, 12);
+  const videoToken = 'video-token-offline-resume-abcdefghijklmnopqrstuvwxyz1234567890';
+  let muxPutCalls = 0;
+  let failFirstMuxUpload: () => void = () => {};
+  const firstMuxUploadGate = new Promise<void>((resolve) => {
+    failFirstMuxUpload = resolve;
+  });
+  let releaseSecondMuxUpload: () => void = () => {};
+  const secondMuxUploadGate = new Promise<void>((resolve) => {
+    releaseSecondMuxUpload = resolve;
+  });
+
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      videoReviewsEnabled: true,
+    },
+  });
+
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+    await route.fulfill({
+      status: 201,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          token: videoToken,
+          uploadUrl: 'https://mux-upload.test/offline-resume-video',
+          chunkSize: 8192,
+          chunkAttempts: 5,
+          expiresAt: '2099-01-01T00:00:00.000Z',
+        },
+      }),
+    });
+  });
+  await page.route('https://mux-upload.test/offline-resume-video**', async (route) => {
+    muxPutCalls += 1;
+    if (muxPutCalls === 1) {
+      await firstMuxUploadGate;
+      await route.abort('failed');
+      return;
+    }
+    await secondMuxUploadGate;
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: '',
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ data: { status: 'processing' } }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        data: {
+          status: 'ready',
+          durationMs: 12000,
+          posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg',
+        },
+      }),
+    });
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+
+  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
+    name: 'offline-resume-video.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
+  });
+
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
+  await expect.poll(() => muxPutCalls).toBe(1);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-uploading-card',
+  )).toContain('Video yükleniyor');
+
+  await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-uploading-card',
+  )).toBe('İnternet bağlantısı yok');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
+
+  failFirstMuxUpload();
+  await page.waitForTimeout(1200);
+  expect(muxPutCalls).toBe(1);
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-uploading-card',
+  )).toContain('Video yükleniyor');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close');
+  releaseSecondMuxUpload();
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
+  expect(widgetErrors(log).filter((message) => !message.includes('net::ERR_FAILED'))).toEqual([]);
 });
 
 test('video retry preserves the Mux direct upload session after chunk attempts are exhausted', async ({ page }) => {
@@ -1118,6 +1247,8 @@ test('video retry preserves the Mux direct upload session after chunk attempts a
     '.renuvex-pr-fwizard-overlay',
     '.renuvex-pr-fwizard-video-status',
   ), { timeout: 10000 }).toContain('Video yüklenemedi');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
   expect(await page.evaluate(() => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
       .map((host) => host.shadowRoot)
@@ -1129,7 +1260,7 @@ test('video retry preserves the Mux direct upload session after chunk attempts a
     page,
     '.renuvex-pr-fwizard-overlay',
     '.renuvex-pr-fwizard-video-uploading-card',
-  )).toContain('Video hazırlanıyor');
+  )).toContain('Video yükleniyor');
   await expect.poll(() => statusCalls).toBeGreaterThanOrEqual(3);
   await expect.poll(() => muxPutCalls).toBe(6);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);

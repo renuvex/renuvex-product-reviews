@@ -448,7 +448,10 @@ export var FWIZARD_CSS = `
   }
   .renuvex-pr-fwizard-video-card--failed{
     display:flex;
-    min-height:76px;
+    align-items:center;
+    justify-content:center;
+    min-height:110px;
+    text-align:center;
   }
   .renuvex-pr-fwizard-video-thumb{
     background:#111;
@@ -473,6 +476,11 @@ export var FWIZARD_CSS = `
     flex-direction:column;
     gap:7px;
   }
+  .renuvex-pr-fwizard-video-details--failed{
+    align-items:center;
+    gap:12px;
+    width:100%;
+  }
   .renuvex-pr-fwizard-video-name{
     overflow:hidden;
     text-overflow:ellipsis;
@@ -488,16 +496,19 @@ export var FWIZARD_CSS = `
     color:#b91c1c;
   }
   .renuvex-pr-fwizard-video-retry{
-    align-self:flex-start;
-    padding:0;
-    border:0;
-    background:transparent;
-    color:var(--renuvex-pr-fwizard-text,#111);
+    align-self:center;
+    min-height:42px;
+    padding:10px 18px;
+    border:1px solid transparent;
+    border-radius:var(--renuvex-pr-radius-sm,8px);
+    background:var(--renuvex-pr-fwizard-btn-bg, rgb(17,17,17));
+    color:var(--renuvex-pr-fwizard-btn-text, #ffffff);
     font:inherit;
-    font-size:13px;
+    font-size:14px;
     font-weight:600;
     cursor:pointer;
-    text-decoration:underline;
+    text-decoration:none;
+    box-sizing:border-box;
   }
   .renuvex-pr-fwizard-video-remove{
     top:6px;

@@ -23,8 +23,9 @@ source_files:
 # Project Log
 
 ## 2026-06-22 - ui | Auto-advance video review uploads
+- Simplified video upload recovery copy without losing state-machine detail: upload/retry/processing now display `Video yükleniyor`, UpChunk offline displays `İnternet bağlantısı yok`, terminal failures display `Video yüklenemedi`, and retryable failures expose one themed `Tekrar dene` action with no remove icon.
 - Video selection in the review wizard now mirrors the photo first-selection behavior: step 2 writes `videoUpload` state and advances to the comment step while Mux direct upload, complete, and processing polling continue in the background.
-- Returning to the media step during upload/processing shows a single black `Video hazırlanıyor` status control without a remove button; returning after readiness shows one photo-sized video thumbnail with remove only, no play icon and no extra `+` video tile.
+- Returning to the media step during upload/retry/processing shows a single black `Video yükleniyor` status control without a remove button; returning after readiness shows one photo-sized video thumbnail with remove only, no play icon and no extra `+` video tile.
 - Step 4 remains backend-safe: submit stays blocked until the video session is `ready`, failed video uploads show a terminal disabled state instead of a misleading endless "preparing" label, and submit still sends only the ready opaque video token.
 - Gates passed: `pnpm build:widget` and `pnpm test:widget-interactions`.
 
