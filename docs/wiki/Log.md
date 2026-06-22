@@ -25,9 +25,10 @@ source_files:
 ## 2026-06-22 - ui | Auto-advance video review uploads
 - Simplified video upload recovery copy without losing state-machine detail: upload/retry/processing now display `Video yükleniyor`, UpChunk offline displays `İnternet bağlantısı yok`, terminal failures display `Video yüklenemedi`, and retryable failures expose one themed `Tekrar dene` action with no remove icon.
 - Video selection in the review wizard now mirrors the photo first-selection behavior: step 2 writes `videoUpload` state and advances to the comment step while Mux direct upload, complete, and processing polling continue in the background.
+- The direct-upload path now has an activity watchdog for online stalls. If UpChunk stops emitting activity after connectivity returns, the client aborts the stalled PUT once, checks current server session status, retries the same selected file/upload session when still valid, and only then falls back to `Video yüklenemedi` + `Tekrar dene`.
 - Returning to the media step during upload/retry/processing shows a single black `Video yükleniyor` status control without a remove button; returning after readiness shows one photo-sized video thumbnail with remove only, no play icon and no extra `+` video tile.
 - Step 4 remains backend-safe: submit stays blocked until the video session is `ready`, failed video uploads show a terminal disabled state instead of a misleading endless "preparing" label, and submit still sends only the ready opaque video token.
-- Gates passed: `pnpm build:widget` and `pnpm test:widget-interactions`.
+- Gates passed: `pnpm build:widget`, targeted stalled-upload interaction tests, `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test:unit`, `pnpm test:widget-interactions`, `pnpm test:widget-media:chromium`, `node --env-file=.env.local .\node_modules\prisma\build\index.js validate`, `pnpm verify:video-infrastructure:post-webhook -- --json`, and `node scripts/wiki-audit.mjs --changed-source-check` (0 errors; existing wiki-health warnings remain).
 
 ## 2026-06-22 - ui | Refine review wizard media actions
 - After a photo is pending or uploaded in the media step, the primary media actions hide and the embedded photo strip owns the visible thumbnail plus compact `+` add tile. Removing a selected video resets the step to the empty media-selection actions.

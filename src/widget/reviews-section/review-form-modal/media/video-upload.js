@@ -6,6 +6,8 @@ var VIDEO_MIN_DURATION_SECONDS = 2;
 var VIDEO_MAX_DURATION_SECONDS = 60;
 var DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB = 8192;
 var DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS = 5;
+var DEFAULT_VIDEO_UPLOAD_STALL_TIMEOUT_MS = 30000;
+var VIDEO_UPLOAD_AUTO_RECOVERY_LIMIT = 1;
 var ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime'];
 var SESSION_STORAGE_PREFIX = 'renuvex_pr_video_upload_';
 var PENDING_CANCEL_STORAGE_PREFIX = 'renuvex_pr_video_cancel_';
@@ -66,6 +68,14 @@ function nowMs() {
 
 function elapsedMs(start) {
   return Math.max(0, Math.round(nowMs() - start));
+}
+
+function uploadStallTimeoutMs() {
+  if (typeof window !== 'undefined') {
+    var override = Number(window.__renuvexPrVideoUploadStallMs);
+    if (Number.isFinite(override) && override >= 250) return override;
+  }
+  return DEFAULT_VIDEO_UPLOAD_STALL_TIMEOUT_MS;
 }
 
 function sleepWithSignal(ms, signal) {
@@ -252,12 +262,34 @@ async function uploadToMuxDirectUrl(input) {
   return new Promise(function (resolve, reject) {
     var settled = false;
     var upload = null;
+    var stallTimer = null;
+    var stallTimeout = uploadStallTimeoutMs();
     function finish(error) {
       if (settled) return;
       settled = true;
+      if (stallTimer) clearTimeout(stallTimer);
       if (input.signal) input.signal.removeEventListener('abort', abort);
       if (error) reject(error);
       else resolve();
+    }
+    function scheduleStallWatch() {
+      if (settled) return;
+      if (stallTimer) clearTimeout(stallTimer);
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      stallTimer = setTimeout(function () {
+        if (settled) return;
+        if (input.onUploadError) input.onUploadError('video_upload_stalled');
+        finish(new VideoUploadRequestError('video_upload_stalled', 0, null));
+        try { if (upload) upload.abort(); } catch (_) {}
+      }, stallTimeout);
+    }
+    function noteActivity() {
+      if (settled) return;
+      scheduleStallWatch();
+    }
+    function pauseStallWatch() {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = null;
     }
     function abort() {
       try { if (upload) upload.abort(); } catch (_) {}
@@ -275,13 +307,20 @@ async function uploadToMuxDirectUrl(input) {
       attempts: input.chunkAttempts || DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS,
       dynamicChunkSize: true,
     });
-    upload.on('attempt', function () { input.onStatus('uploading'); });
+    scheduleStallWatch();
+    upload.on('attempt', function () {
+      noteActivity();
+      input.onStatus('uploading');
+    });
     upload.on('attemptFailure', function (event) {
+      noteActivity();
       var detail = event && event.detail;
       if (input.onAttemptFailure) input.onAttemptFailure(upchunkErrorCode(detail));
       input.onStatus('upload_retrying');
     });
+    upload.on('chunkSuccess', function () { noteActivity(); });
     upload.on('progress', function (event) {
+      noteActivity();
       var progress = Number(event && event.detail);
       if (Number.isFinite(progress)) {
         var mapped = Math.min(95, Math.max(0, Math.round(progress * 0.95)));
@@ -289,15 +328,23 @@ async function uploadToMuxDirectUrl(input) {
         input.onProgress(mapped);
       }
     });
-    upload.on('offline', function () { input.onStatus('uploading_offline'); });
-    upload.on('online', function () { input.onStatus('uploading'); });
+    upload.on('offline', function () {
+      pauseStallWatch();
+      input.onStatus('uploading_offline');
+    });
+    upload.on('online', function () {
+      input.onStatus('uploading');
+      scheduleStallWatch();
+    });
     upload.on('error', function (event) {
+      noteActivity();
       var detail = event && event.detail;
       var message = detail && typeof detail.message === 'string' ? detail.message : 'video_upload_failed';
       if (input.onUploadError) input.onUploadError(upchunkErrorCode(detail));
       finish(new Error(message));
     });
     upload.on('success', function () {
+      noteActivity();
       input.onProgress(95);
       finish();
     });
@@ -434,101 +481,124 @@ export async function uploadReviewVideo(input) {
     clearStoredSession(input.productId, input.file);
     if (input.onSessionReset) input.onSessionReset();
   }
+  async function settleKnownStatus(currentToken, currentSession) {
+    var storedStatus = await readStoredUploadStatus(currentToken);
+    if (!storedStatus) return { action: 'discard' };
+    if (storedStatus.status === 'ready') {
+      if (input.onToken) input.onToken(currentToken);
+      input.onProgress(100);
+      clearStoredSession(input.productId, input.file);
+      await submitUploadMetrics(currentToken, metrics, 'ready');
+      return { action: 'return', value: Object.assign({ token: currentToken }, storedStatus) };
+    }
+    if (storedStatus.status === 'uploaded' || storedStatus.status === 'processing') {
+      if (input.onToken) input.onToken(currentToken);
+      input.onStatus('processing');
+      var resumedPollStartedAt = nowMs();
+      var resumedReady = await pollUntilReady(currentToken, input.signal, input.onStatus);
+      metrics.processingPollMs = elapsedMs(resumedPollStartedAt);
+      clearStoredSession(input.productId, input.file);
+      input.onProgress(100);
+      await submitUploadMetrics(currentToken, metrics, 'ready');
+      return { action: 'return', value: Object.assign({ token: currentToken }, resumedReady) };
+    }
+    if (storedStatus.status === 'failed' || storedStatus.status === 'aborted') return { action: 'discard' };
+    if (!currentSession || typeof currentSession.uploadUrl !== 'string' || !currentSession.uploadUrl) return { action: 'discard' };
+    return { action: 'upload' };
+  }
   ensurePendingVideoCancelDelivery();
   await flushPendingVideoCancellations();
   var stored = readStoredSession(input.productId, input.file);
   var token = stored && stored.token;
   var session = stored;
   if (token) {
-    var storedStatus = await readStoredUploadStatus(token);
-    if (!storedStatus) {
-      discardStoredSession();
-      token = null;
-      session = null;
-    } else if (storedStatus.status === 'ready') {
-      if (input.onToken) input.onToken(token);
-      input.onProgress(100);
-      clearStoredSession(input.productId, input.file);
-      await submitUploadMetrics(token, metrics, 'ready');
-      return Object.assign({ token: token }, storedStatus);
-    } else if (storedStatus.status === 'uploaded' || storedStatus.status === 'processing') {
-      if (input.onToken) input.onToken(token);
-      input.onStatus('processing');
-      var resumedPollStartedAt = nowMs();
-      var resumedReady = await pollUntilReady(token, input.signal, input.onStatus);
-      metrics.processingPollMs = elapsedMs(resumedPollStartedAt);
-      clearStoredSession(input.productId, input.file);
-      input.onProgress(100);
-      await submitUploadMetrics(token, metrics, 'ready');
-      return Object.assign({ token: token }, resumedReady);
-    } else if (storedStatus.status === 'failed' || storedStatus.status === 'aborted') {
-      discardStoredSession();
-      token = null;
-      session = null;
-    }
-    if (token && (!session || typeof session.uploadUrl !== 'string' || !session.uploadUrl)) {
+    var storedDecision = await settleKnownStatus(token, session);
+    if (storedDecision.action === 'return') return storedDecision.value;
+    if (storedDecision.action === 'discard') {
       discardStoredSession();
       token = null;
       session = null;
     }
   }
-  if (!token) {
-    var initiated = await jsonRequest('/api/public/upload/video/initiate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        storeId: PUBLIC_API_KEY,
-        productId: input.productId,
-        mimeType: input.file.type,
-        bytes: input.file.size,
-        fileFingerprint: fingerprint(input.file),
-      }),
-    });
-    token = initiated.token;
-    session = initiated;
-    storeSession(input.productId, input.file, initiated);
-  }
-  if (input.onToken) input.onToken(token);
-  metrics.chunkSizeKb = session.chunkSize || DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB;
-  metrics.chunkAttempts = session.chunkAttempts || DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS;
-  input.onStatus('uploading');
-  try {
+  var autoRecoveries = 0;
+  while (true) {
+    if (!token) {
+      var initiated = await jsonRequest('/api/public/upload/video/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: PUBLIC_API_KEY,
+          productId: input.productId,
+          mimeType: input.file.type,
+          bytes: input.file.size,
+          fileFingerprint: fingerprint(input.file),
+        }),
+      });
+      token = initiated.token;
+      session = initiated;
+      storeSession(input.productId, input.file, initiated);
+    }
+    if (input.onToken) input.onToken(token);
+    metrics.chunkSizeKb = session.chunkSize || DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB;
+    metrics.chunkAttempts = session.chunkAttempts || DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS;
+    input.onStatus('uploading');
     var uploadStartedAt = nowMs();
-    await uploadToMuxDirectUrl({
-      uploadUrl: session.uploadUrl,
-      file: input.file,
-      chunkSize: session.chunkSize,
-      chunkAttempts: session.chunkAttempts,
-      minProgress: input.minProgress || 0,
-      signal: input.signal,
-      onProgress: input.onProgress,
-      onStatus: input.onStatus,
-      onAttemptFailure: recordUploadError,
-      onUploadError: recordUploadError,
-    });
-    metrics.directUploadMs = elapsedMs(uploadStartedAt);
-    input.onStatus('processing');
-    var completeStartedAt = nowMs();
-    await jsonRequest('/api/public/upload/video/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token }),
-    }, 30000);
-    metrics.completeMs = elapsedMs(completeStartedAt);
-    var pollStartedAt = nowMs();
-    var ready = await pollUntilReady(token, input.signal, input.onStatus);
-    metrics.processingPollMs = elapsedMs(pollStartedAt);
-    clearStoredSession(input.productId, input.file);
-    input.onProgress(100);
-    await submitUploadMetrics(token, metrics, 'ready');
-    return Object.assign({ token: token }, ready);
-  } catch (error) {
-    if (input.signal && input.signal.aborted) {
-      await submitUploadMetrics(token, metrics, 'aborted');
+    try {
+      await uploadToMuxDirectUrl({
+        uploadUrl: session.uploadUrl,
+        file: input.file,
+        chunkSize: session.chunkSize,
+        chunkAttempts: session.chunkAttempts,
+        minProgress: input.minProgress || 0,
+        signal: input.signal,
+        onProgress: input.onProgress,
+        onStatus: input.onStatus,
+        onAttemptFailure: recordUploadError,
+        onUploadError: recordUploadError,
+      });
+      metrics.directUploadMs = (metrics.directUploadMs || 0) + elapsedMs(uploadStartedAt);
+      input.onStatus('processing');
+      var completeStartedAt = nowMs();
+      await jsonRequest('/api/public/upload/video/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token }),
+      }, 30000);
+      metrics.completeMs = elapsedMs(completeStartedAt);
+      var pollStartedAt = nowMs();
+      var ready = await pollUntilReady(token, input.signal, input.onStatus);
+      metrics.processingPollMs = elapsedMs(pollStartedAt);
+      clearStoredSession(input.productId, input.file);
+      input.onProgress(100);
+      await submitUploadMetrics(token, metrics, 'ready');
+      return Object.assign({ token: token }, ready);
+    } catch (error) {
+      metrics.directUploadMs = (metrics.directUploadMs || 0) + elapsedMs(uploadStartedAt);
+      if (input.signal && input.signal.aborted) {
+        await submitUploadMetrics(token, metrics, 'aborted');
+        throw error;
+      }
+      if (error instanceof VideoUploadRequestError && error.code === 'video_upload_stalled' && autoRecoveries < VIDEO_UPLOAD_AUTO_RECOVERY_LIMIT) {
+        autoRecoveries += 1;
+        var recoveryDecision = null;
+        try {
+          recoveryDecision = await settleKnownStatus(token, session);
+        } catch (_) {
+          recoveryDecision = session && typeof session.uploadUrl === 'string' && session.uploadUrl
+            ? { action: 'upload' }
+            : { action: 'discard' };
+        }
+        if (recoveryDecision.action === 'return') return recoveryDecision.value;
+        if (recoveryDecision.action === 'discard') {
+          discardStoredSession();
+          token = null;
+          session = null;
+        }
+        continue;
+      }
+      await submitUploadMetrics(token, metrics, 'failed');
       throw error;
     }
-    await submitUploadMetrics(token, metrics, 'failed');
-    throw error;
   }
 }
 

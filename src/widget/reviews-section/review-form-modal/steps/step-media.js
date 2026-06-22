@@ -262,6 +262,7 @@ export function createStepMedia(state, opts) {
       return;
     }
     var localUrl = existingLocalUrl || URL.createObjectURL(file);
+    var initialDurationMs = Number.isFinite(knownDurationMs) ? knownDurationMs : null;
     var controller = new AbortController();
     state.set({
       videoUpload: {
@@ -270,7 +271,7 @@ export function createStepMedia(state, opts) {
         token: isRetry ? previousVideo.token || null : null,
         status: 'uploading',
         progress: initialProgress,
-        durationMs: duration === null ? null : Math.round(duration * 1000),
+        durationMs: initialDurationMs,
         error: null,
         errorCode: null,
         retryable: true,
