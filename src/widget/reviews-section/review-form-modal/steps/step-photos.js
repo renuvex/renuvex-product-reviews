@@ -17,6 +17,8 @@ export function createStepPhotos(state, opts) {
   opts = opts || {};
   var isExiting = false; // Geçiş başladığında UI güncellemesini durdurmak için bayrak
   var hideAddButton = opts.hideAddButton === true;
+  var revealAddButtonAfterMedia = opts.revealAddButtonAfterMedia === true;
+  var ownsAddButton = !hideAddButton || revealAddButtonAfterMedia;
   var root = document.createElement('div');
   root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-photos';
 
@@ -54,7 +56,7 @@ export function createStepPhotos(state, opts) {
   fileInput.accept = 'image/*';
   fileInput.multiple = true;
   fileInput.style.display = 'none';
-  if (!hideAddButton) card.appendChild(uploadLabel);
+  if (ownsAddButton) card.appendChild(uploadLabel);
   card.appendChild(fileInput);
 
   // Önizleme listesi
@@ -178,21 +180,23 @@ export function createStepPhotos(state, opts) {
 
     card.classList.toggle('renuvex-pr-fwizard-photo-card--compact', totalCount > 0);
 
-    if (!hideAddButton) {
+    if (ownsAddButton) {
       uploadLabel.innerHTML = totalCount > 0
         ? iconUseSvg(PLUS_ICON)
         : iconUseSvg(PHOTO_ICON) + '<span>Fotoğraf Ekle</span>';
     }
 
     if (isFull) {
-      if (!hideAddButton) uploadLabel.style.display = 'none';
+      if (ownsAddButton) uploadLabel.style.display = 'none';
       uploadLabel.disabled = true;
       fileInput.disabled = true;
     } else {
       // Üst sınıra ulaşılmadığı sürece buton her zaman aktif — kullanıcı
       // mevcut yüklemelerin bitmesini beklemeden yeni foto seçebilir.
       // Paralel yüklemeler pendingImages içinde bağımsız izleniyor.
-      if (!hideAddButton) uploadLabel.style.display = 'flex';
+      if (ownsAddButton) {
+        uploadLabel.style.display = revealAddButtonAfterMedia && totalCount === 0 ? 'none' : 'flex';
+      }
       uploadLabel.disabled = false;
       fileInput.disabled = false;
       uploadLabel.classList.remove('renuvex-pr-fwizard-photo-add--disabled');

@@ -227,6 +227,7 @@ export function createStepMedia(state, opts) {
     photoButton.disabled = videoSelected || photosFull;
     videoButton.disabled = photosSelected || videoSelected;
     mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--has-media', hasMedia);
+    mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--photo-selected', photosSelected);
     mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--video-selected', videoSelected);
     photoButton.classList.toggle('renuvex-pr-fwizard-media-action--active', photosSelected);
     videoButton.classList.toggle('renuvex-pr-fwizard-media-action--active', videoSelected);
@@ -355,6 +356,7 @@ export function createStepMedia(state, opts) {
       showToast: opts.showToast,
       hideHeading: true,
       hideAddButton: true,
+      revealAddButtonAfterMedia: true,
       embeddedMedia: true,
     });
     content.appendChild(photoInstance.el);

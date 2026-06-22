@@ -759,7 +759,8 @@ test('video upload wizard posts a ready video token without photo media', async 
   });
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)');
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(2);
-  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-add')).toBe(0);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-add')).toBe(1);
+  expect(await visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-add')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-card--embedded')).toBe(1);
   expect((await rectInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)')).top).toBeCloseTo(initialPhotoRect.top, 0);
   expect((await rectInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)')).top).toBeCloseTo(initialVideoRect.top, 0);
@@ -837,6 +838,109 @@ test('video upload wizard posts a ready video token without photo media', async 
     videoToken,
   });
   expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('api.mux.com'))).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('media step photo selection hides primary actions and shows compact add tile', async ({ page }) => {
+  const uploadedUrl = `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/media-step-photo.jpg`;
+  let uploadRequests = 0;
+  let releaseUpload: () => void = () => {};
+  const uploadGate = new Promise<void>((resolve) => {
+    releaseUpload = resolve;
+  });
+
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+      videoReviewsEnabled: true,
+    },
+  });
+
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/sign**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        signature: 'ci-signature',
+        timestamp: 1790000000,
+        cloud_name: REVIEW_CLOUD_NAME,
+        api_key: 'ci-api-key',
+        folder: `review_images/stores/${PUBLIC_KEY}`,
+      }),
+    });
+  });
+  await page.route('https://api.cloudinary.com/v1_1/**', async (route) => {
+    uploadRequests += 1;
+    await uploadGate;
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        secure_url: uploadedUrl,
+        public_id: `review_images/stores/${PUBLIC_KEY}/media-step-photo`,
+        version: 1790000001,
+        resource_type: 'image',
+        format: 'jpg',
+        width: 1200,
+        height: 1600,
+        bytes: 450000,
+        asset_id: 'ci-media-step-asset',
+        signature: 'ci-upload-response-signature',
+      }),
+    });
+  });
+  await page.route(`${WIDGET_ORIGIN}/api/public/upload/register**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+
+  await page.evaluate(() => {
+    const win = window as Window & { __renuvexNativeInputClick?: typeof HTMLInputElement.prototype.click };
+    win.__renuvexNativeInputClick = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function () {
+      if (this.type === 'file') return;
+      return win.__renuvexNativeInputClick?.call(this);
+    };
+  });
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)');
+  await page.evaluate(() => {
+    const win = window as Window & { __renuvexNativeInputClick?: typeof HTMLInputElement.prototype.click };
+    if (win.__renuvexNativeInputClick) HTMLInputElement.prototype.click = win.__renuvexNativeInputClick;
+    delete win.__renuvexNativeInputClick;
+  });
+  await expect.poll(() => visibleCountInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-add',
+  )).toBe(0);
+
+  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept="image/*"]', {
+    name: 'media-step-photo.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
+  });
+  await expect.poll(() => uploadRequests).toBe(1);
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+  await expect.poll(() => visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(0);
+  await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-thumb')).toBe(1);
+  await expect.poll(() => visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-add')).toBe(1);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-content .renuvex-pr-fwizard-photo-card--compact')).toBe(1);
+
+  releaseUpload();
   expect(widgetErrors(log)).toEqual([]);
 });
 
@@ -1126,6 +1230,8 @@ test('ready video thumbnail remove cancels selected video', async ({ page }) => 
 
   await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-thumb')).toBe(0);
   await expect.poll(() => cancelCalls).toBe(1);
+  await expect.poll(() => visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(2);
+  expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)')).toBe(false);
   expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
