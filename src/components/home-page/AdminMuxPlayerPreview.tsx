@@ -30,6 +30,7 @@ export function AdminMuxPlayerPreview({
       playback-token={playbackToken}
       thumbnail-token={thumbnailToken}
       poster={posterUrl || undefined}
+      accent-color="#f8fafc"
       stream-type="on-demand"
       preload="metadata"
       muted
@@ -37,6 +38,7 @@ export function AdminMuxPlayerPreview({
       disable-tracking
       disable-cookies
       hotkeys="noarrowleft noarrowright"
+      style={{ '--controls-backdrop-color': 'rgba(0,0,0,0.45)' }}
       onContextMenu={preventNativeVideoContextMenu}
     />
   );

@@ -45,6 +45,8 @@ describe('admin video preview contract', () => {
     expect(playerSource).toContain('thumbnail-token={thumbnailToken}');
     expect(playerSource).toContain('disable-tracking');
     expect(playerSource).toContain('disable-cookies');
+    expect(playerSource).toContain('accent-color="#f8fafc"');
+    expect(playerSource).toContain("'--controls-backdrop-color': 'rgba(0,0,0,0.45)'");
     expect(playerSource).toContain('onContextMenu={preventNativeVideoContextMenu}');
     expect(playerSource).not.toMatch(/autoPlay|autoplay/);
   });

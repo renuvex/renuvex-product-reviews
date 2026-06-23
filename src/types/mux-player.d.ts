@@ -9,6 +9,7 @@ type MuxPlayerElementAttributes = DetailedHTMLProps<HTMLAttributes<HTMLElement>,
   'stream-type'?: 'on-demand' | 'live' | 'unknown';
   'disable-tracking'?: boolean | '';
   'disable-cookies'?: boolean | '';
+  'accent-color'?: string;
   poster?: string;
   preload?: 'none' | 'metadata' | 'auto';
   playsinline?: boolean | '';

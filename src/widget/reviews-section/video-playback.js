@@ -28,6 +28,7 @@ function applyReviewPlayerAttributes(player, media) {
   player.setAttribute('stream-type', 'on-demand');
   player.setAttribute('playsinline', '');
   player.setAttribute('hotkeys', 'noarrowleft noarrowright');
+  player.setAttribute('accent-color', '#f8fafc');
   if (poster) player.setAttribute('poster', poster);
   player.setAttribute('playback-id', playbackId);
   return true;
