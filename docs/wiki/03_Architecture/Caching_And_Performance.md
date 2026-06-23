@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-24
+last_verified: 2026-06-24
 confidence: high
 tags:
   - performance
@@ -20,6 +20,7 @@ source_files:
   - "prisma/schema.prisma"
   - "vercel.json"
   - "scripts/build-widget.mjs"
+  - "scripts/clean-widget-runtime-untracked.mjs"
   - "scripts/rebuild-product-review-summaries.mjs"
   - "scripts/backfill-review-media.mjs"
   - "src/lib/review-media.ts"
@@ -84,6 +85,13 @@ missing asset after deploy. `runtime.js` remains only as a stable compatibility
 shim. This static-asset policy is independent of the API edge cache above and
 does not affect moderation latency.
 
+Local build runs can also leave untracked hash-named runtime files that are not
+referenced by the current `build-manifest.json`. Those files are not part of the
+runtime retention contract until committed. Use `pnpm clean:widget-runtime` for
+a dry-run report and `pnpm clean:widget-runtime:apply` only when intentionally
+cleaning local manifest-unreferenced untracked files. The helper does not touch
+tracked retention files.
+
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
 
@@ -145,6 +153,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-06-24: Added `scripts/clean-widget-runtime-untracked.mjs` and npm wrappers to separate local untracked widget build leftovers from the committed seven-day runtime retention contract. The default command is dry-run; `--apply` deletes only untracked files outside the current manifest.
 - 2026-06-08: Public review-list exact `totalCount` / `totalPages` moved from raw `Review.count()` to `ProductReviewSummary` buckets, preserving response shape while removing the remaining aggregate scan from the public read path.
 - 2026-06-07: Public photo-review filtering moved from `Review.images` text matching to indexed `Review.hasImages`; normalized image rows live in `ReviewMedia`. See [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-08: Public review list load-more moved from offset-only pagination to cursor/keyset pagination while preserving page compatibility. See [[ADR_0028_Review_Cursor_Pagination]].
