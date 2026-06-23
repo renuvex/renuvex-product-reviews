@@ -25,8 +25,18 @@ function defineReviewPlayerTheme() {
   timeRangeStyle.textContent = `
     media-time-range {
       --media-range-bar-color: #ffffff;
-      --media-range-thumb-background: #ffffff;
+      --media-range-thumb-background: radial-gradient(
+        circle,
+        #000000 0%,
+        #000000 32%,
+        #ffffff 32%,
+        #ffffff 100%
+      );
+      --media-range-thumb-border: 1px solid rgba(255,255,255,0.72);
+      --media-range-thumb-box-shadow: 0 0 0 1px rgba(0,0,0,0.45);
       --media-range-track-background: #000000;
+      --media-range-track-pointer-background: rgba(255,255,255,0.72);
+      --media-range-track-pointer-border-right: 1px solid rgba(0,0,0,0.55);
       --media-time-range-buffered-color: rgba(255,255,255,0.28);
     }
   `;

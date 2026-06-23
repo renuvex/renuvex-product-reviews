@@ -57,6 +57,11 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('media-theme-renuvex-review');
     expect(themeSource).toContain('media-time-range');
     expect(themeSource).toContain('--media-range-bar-color: #ffffff');
+    expect(themeSource).toContain('--media-range-thumb-background: radial-gradient');
+    expect(themeSource).toContain('#000000 32%');
+    expect(themeSource).toContain('--media-range-thumb-box-shadow: 0 0 0 1px rgba(0,0,0,0.45)');
     expect(themeSource).toContain('--media-range-track-background: #000000');
+    expect(themeSource).toContain('--media-range-track-pointer-background: rgba(255,255,255,0.72)');
+    expect(themeSource).toContain('--media-range-track-pointer-border-right: 1px solid rgba(0,0,0,0.55)');
   });
 });

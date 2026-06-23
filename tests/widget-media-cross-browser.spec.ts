@@ -236,7 +236,14 @@ async function lightboxVideoState(page: Page) {
       theme: player.getAttribute('theme') || '',
       themeRegistered: !!ThemeConstructor,
       themeHasWhiteProgress: themeMarkup.includes('--media-range-bar-color: #ffffff'),
+      themeHasContrastThumb:
+        themeMarkup.includes('--media-range-thumb-background: radial-gradient') &&
+        themeMarkup.includes('#000000 32%') &&
+        themeMarkup.includes('--media-range-thumb-box-shadow: 0 0 0 1px rgba(0,0,0,0.45)'),
       themeHasBlackTrack: themeMarkup.includes('--media-range-track-background: #000000'),
+      themeHasPointerContrast:
+        themeMarkup.includes('--media-range-track-pointer-background: rgba(255,255,255,0.72)') &&
+        themeMarkup.includes('--media-range-track-pointer-border-right: 1px solid rgba(0,0,0,0.55)'),
       accentColor: player.getAttribute('accent-color') || '',
       primaryColor: player.getAttribute('primary-color') || '',
       secondaryColor: player.getAttribute('secondary-color') || '',
@@ -307,7 +314,9 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     theme: 'renuvex-review',
     themeRegistered: true,
     themeHasWhiteProgress: true,
+    themeHasContrastThumb: true,
     themeHasBlackTrack: true,
+    themeHasPointerContrast: true,
     accentColor: '#ffffff',
     primaryColor: '#ffffff',
     secondaryColor: '#000000',
