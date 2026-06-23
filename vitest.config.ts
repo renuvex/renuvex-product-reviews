@@ -7,6 +7,7 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.ts'],
     clearMocks: true,
     restoreMocks: true,
+    maxWorkers: 1,
   },
   resolve: {
     alias: {

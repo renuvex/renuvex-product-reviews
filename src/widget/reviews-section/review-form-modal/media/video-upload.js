@@ -256,6 +256,17 @@ function upchunkErrorCode(detail) {
   return 'upload_attempt_failed';
 }
 
+var RETRYABLE_UPCHUNK_HTTP_FAILURE_CODES = {
+  http_408: true,
+  http_502: true,
+  http_503: true,
+  http_504: true,
+};
+
+export function shouldSurfaceManualRetryForUploadAttempt(code) {
+  return RETRYABLE_UPCHUNK_HTTP_FAILURE_CODES[code] !== true;
+}
+
 async function uploadToMuxDirectUrl(input) {
   var createUpload = await loadUpChunkCreateUpload();
   return new Promise(function (resolve, reject) {
@@ -332,7 +343,14 @@ async function uploadToMuxDirectUrl(input) {
     upload.on('attemptFailure', function (event) {
       noteActivity();
       var detail = event && event.detail;
-      if (input.onAttemptFailure) input.onAttemptFailure(upchunkErrorCode(detail));
+      var code = upchunkErrorCode(detail);
+      if (input.onAttemptFailure) input.onAttemptFailure(code);
+      if (shouldSurfaceManualRetryForUploadAttempt(code)) {
+        if (input.onUploadError) input.onUploadError(code);
+        finish(new VideoUploadRequestError(code, 0, null));
+        try { if (upload) upload.abort(); } catch (_) {}
+        return;
+      }
       input.onStatus('upload_retrying');
     });
     upload.on('chunkSuccess', function () { noteActivity(); });

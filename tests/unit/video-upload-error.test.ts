@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeVideoUploadError,
+  shouldSurfaceManualRetryForUploadAttempt,
   shouldDiscardStoredVideoSession,
   videoProcessingPollDelayMs,
   VideoUploadRequestError,
@@ -37,6 +38,18 @@ describe('video upload error presentation', () => {
       retryable: true,
       retryAfterSec: null,
     });
+  });
+
+  it('keeps only UpChunk transient HTTP failures in automatic retry mode', () => {
+    expect(shouldSurfaceManualRetryForUploadAttempt('http_408')).toBe(false);
+    expect(shouldSurfaceManualRetryForUploadAttempt('http_502')).toBe(false);
+    expect(shouldSurfaceManualRetryForUploadAttempt('http_503')).toBe(false);
+    expect(shouldSurfaceManualRetryForUploadAttempt('http_504')).toBe(false);
+
+    expect(shouldSurfaceManualRetryForUploadAttempt('upchunk_error')).toBe(true);
+    expect(shouldSurfaceManualRetryForUploadAttempt('upload_attempt_failed')).toBe(true);
+    expect(shouldSurfaceManualRetryForUploadAttempt('http_0')).toBe(true);
+    expect(shouldSurfaceManualRetryForUploadAttempt('http_500')).toBe(true);
   });
 
   it('discards a stored upload only when the server confirms the session is gone', () => {

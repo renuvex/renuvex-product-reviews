@@ -26,6 +26,7 @@ source_files:
 - Physical mobile retesting showed the automatic reconnect path could still leave the wizard on `Video yükleniyor` while the DB session stayed `uploading` and the Mux direct upload stayed `waiting`.
 - The widget now fails closed for direct-upload offline/stall cases: it aborts the active PUT, records the technical failure code for metrics, and shows only generic shopper copy (`Video yüklenemedi` + themed `Tekrar dene`). No network-specific copy is shown in the storefront.
 - Manual retry preserves the selected file and reuses the existing upload session when server status says it is still valid. It does not return to the initial photo/video choices and does not auto-retry after browser `online` events.
+- Follow-up hardening keeps UpChunk automatic retry only for transient HTTP statuses (`408`, `502`, `503`, `504`). Response-less attempt failures now immediately surface the manual retry state, preventing the media step from sitting indefinitely on `Video yükleniyor` after mobile connectivity changes.
 
 ## 2026-06-22 - fix | Re-arm stalled video uploads after reconnect
 - Physical mobile testing found the prior Mux direct-upload watchdog was not sufficient: after Wi-Fi was disabled and re-enabled, the wizard could stay on `Video yÃ¼kleniyor` while the DB session remained `uploading`, quota stayed `reserved`, and Mux direct upload stayed `waiting` with no asset.

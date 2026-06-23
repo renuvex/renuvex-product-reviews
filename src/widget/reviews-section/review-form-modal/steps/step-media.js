@@ -232,6 +232,8 @@ export function createStepMedia(state, opts) {
     var photosFull = photoCount() >= MAX_PHOTOS;
     var videoSelected = !!currentVideo();
     var hasMedia = photosSelected || videoSelected;
+    photoButton.hidden = hasMedia;
+    videoButton.hidden = hasMedia;
     photoButton.disabled = videoSelected || photosFull;
     videoButton.disabled = photosSelected || videoSelected;
     mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--has-media', hasMedia);
