@@ -215,6 +215,11 @@ async function lightboxVideoState(page: Page) {
     const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
     if (!overlay || !wrap || !player) throw new Error('Missing Mux Player lightbox');
     const style = getComputedStyle(player);
+    const ThemeConstructor = customElements.get('media-theme-renuvex-review') as
+      | (CustomElementConstructor & { template?: HTMLTemplateElement })
+      | undefined;
+    const themeTemplate = ThemeConstructor?.template;
+    const themeMarkup = themeTemplate?.innerHTML || themeTemplate?.content.textContent || '';
     const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
     player.dispatchEvent(contextMenuEvent);
     return {
@@ -228,7 +233,12 @@ async function lightboxVideoState(page: Page) {
       hotkeys: player.getAttribute('hotkeys') || '',
       poster: player.getAttribute('poster') || '',
       autoplayAttr: player.hasAttribute('autoplay'),
+      theme: player.getAttribute('theme') || '',
+      themeRegistered: !!ThemeConstructor,
+      themeHasWhiteProgress: themeMarkup.includes('--media-range-bar-color: #ffffff'),
+      themeHasBlackTrack: themeMarkup.includes('--media-range-track-background: #000000'),
       accentColor: player.getAttribute('accent-color') || '',
+      primaryColor: player.getAttribute('primary-color') || '',
       secondaryColor: player.getAttribute('secondary-color') || '',
       contextMenuPrevented: contextMenuEvent.defaultPrevented,
       seekBackwardButton: style.getPropertyValue('--seek-backward-button').trim(),
@@ -236,9 +246,6 @@ async function lightboxVideoState(page: Page) {
       pipButton: style.getPropertyValue('--pip-button').trim(),
       renditionMenuButton: style.getPropertyValue('--rendition-menu-button').trim(),
       controlsBackdropColor: style.getPropertyValue('--controls-backdrop-color').trim(),
-      rangeBarColor: style.getPropertyValue('--media-range-bar-color').trim(),
-      rangeTrackBackground: style.getPropertyValue('--media-range-track-background').trim(),
-      timeRangeBufferedColor: style.getPropertyValue('--media-time-range-buffered-color').trim(),
       dialogRole: wrap.getAttribute('role'),
       ariaModal: wrap.getAttribute('aria-modal'),
       overlayClientWidth: overlay.clientWidth,
@@ -285,6 +292,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await expect.poll(async () => (await lightboxVideoState(page)).themeRegistered).toBe(true);
 
   const state = await lightboxVideoState(page);
   expect(state).toMatchObject({
@@ -296,8 +304,13 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     disableTracking: true,
     disableCookies: true,
     autoplayAttr: false,
-    accentColor: '#f8fafc',
-    secondaryColor: '#111111',
+    theme: 'renuvex-review',
+    themeRegistered: true,
+    themeHasWhiteProgress: true,
+    themeHasBlackTrack: true,
+    accentColor: '#ffffff',
+    primaryColor: '#ffffff',
+    secondaryColor: '#000000',
     contextMenuPrevented: true,
     hotkeys: 'noarrowleft noarrowright',
     seekBackwardButton: 'none',
@@ -305,9 +318,6 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     pipButton: 'none',
     renditionMenuButton: 'none',
     controlsBackdropColor: 'rgba(0,0,0,0.58)',
-    rangeBarColor: '#f8fafc',
-    rangeTrackBackground: 'rgba(0,0,0,0.72)',
-    timeRangeBufferedColor: 'rgba(255,255,255,0.28)',
     dialogRole: 'dialog',
     ariaModal: 'true',
   });

@@ -29,6 +29,7 @@ describe('admin video preview contract', () => {
   it('keeps signed playback and safe player defaults in the admin surface', () => {
     const source = readFileSync(path.join(process.cwd(), 'src/components/home-page/index.tsx'), 'utf8');
     const playerSource = readFileSync(path.join(process.cwd(), 'src/components/home-page/AdminMuxPlayerPreview.tsx'), 'utf8');
+    const themeSource = readFileSync(path.join(process.cwd(), 'src/lib/mux-player/review-player-theme.ts'), 'utf8');
 
     expect(source).toContain('/api/admin/reviews/video-playback?mediaId=');
     expect(source).toContain('Onaylanmam\u0131\u015f m\u00fc\u015fteri videosu');
@@ -39,17 +40,23 @@ describe('admin video preview contract', () => {
     expect(source).toContain('w-[min(92vw,760px)]');
     expect(source).toContain('h-[min(72vh,640px)]');
     expect(source).not.toContain('max-h-[86vh] max-w-[90vw]');
-    expect(playerSource).toContain("import('@mux/mux-player')");
+    expect(playerSource).toContain('ensureReviewMuxPlayerTheme');
     expect(playerSource).toContain('<mux-player');
+    expect(playerSource).toContain('theme={REVIEW_MUX_PLAYER_THEME}');
     expect(playerSource).toContain('playback-token={playbackToken}');
     expect(playerSource).toContain('thumbnail-token={thumbnailToken}');
     expect(playerSource).toContain('disable-tracking');
     expect(playerSource).toContain('disable-cookies');
-    expect(playerSource).toContain('accent-color="#f8fafc"');
-    expect(playerSource).toContain('secondary-color="#111111"');
+    expect(playerSource).toContain('accent-color="#ffffff"');
+    expect(playerSource).toContain('primary-color="#ffffff"');
+    expect(playerSource).toContain('secondary-color="#000000"');
     expect(playerSource).toContain("'--controls-backdrop-color': 'rgba(0,0,0,0.58)'");
-    expect(playerSource).toContain("'--media-range-track-background': 'rgba(0,0,0,0.72)'");
     expect(playerSource).toContain('onContextMenu={preventNativeVideoContextMenu}');
     expect(playerSource).not.toMatch(/autoPlay|autoplay/);
+    expect(playerSource).not.toContain('theme-style');
+    expect(themeSource).toContain('media-theme-renuvex-review');
+    expect(themeSource).toContain('media-time-range');
+    expect(themeSource).toContain('--media-range-bar-color: #ffffff');
+    expect(themeSource).toContain('--media-range-track-background: #000000');
   });
 });

@@ -1,10 +1,11 @@
+import { ensureReviewMuxPlayerTheme, REVIEW_MUX_PLAYER_THEME } from '../../lib/mux-player/review-player-theme';
 import { muxPlaybackIdFromUrl, muxPosterVariantUrl } from '../core/review-media.js';
 
 var muxPlayerModulePromise = null;
 
 function loadMuxPlayer() {
   if (!muxPlayerModulePromise) {
-    muxPlayerModulePromise = import('@mux/mux-player');
+    muxPlayerModulePromise = ensureReviewMuxPlayerTheme();
   }
   return muxPlayerModulePromise;
 }
@@ -28,8 +29,10 @@ function applyReviewPlayerAttributes(player, media) {
   player.setAttribute('stream-type', 'on-demand');
   player.setAttribute('playsinline', '');
   player.setAttribute('hotkeys', 'noarrowleft noarrowright');
-  player.setAttribute('accent-color', '#f8fafc');
-  player.setAttribute('secondary-color', '#111111');
+  player.setAttribute('theme', REVIEW_MUX_PLAYER_THEME);
+  player.setAttribute('accent-color', '#ffffff');
+  player.setAttribute('primary-color', '#ffffff');
+  player.setAttribute('secondary-color', '#000000');
   if (poster) player.setAttribute('poster', poster);
   player.setAttribute('playback-id', playbackId);
   return true;
