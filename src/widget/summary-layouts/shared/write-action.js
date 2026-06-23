@@ -8,6 +8,19 @@ import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 
 var openPromise = null;
 
+function videoEnabledFromSettings() {
+  return currentSettings && currentSettings.videoReviewsEnabled === true;
+}
+
+function fallbackCapabilityAfterRequestError(error) {
+  var status = error && Number(error.status);
+  var hasHttpStatus = Number.isFinite(status) && status >= 100;
+  if (videoEnabledFromSettings() && !hasHttpStatus) {
+    return { enabled: true, reason: 'capability_unavailable' };
+  }
+  return { enabled: false, reason: 'capability_unavailable' };
+}
+
 function setButtonBusy(button) {
   if (!button) return function () {};
   var wasDisabled = button.disabled;
@@ -25,14 +38,14 @@ async function resolveCapabilityAndOpen(triggerButton, openedByKeyboard) {
   var capability;
   if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
     capability = {
-      enabled: currentSettings && currentSettings.videoReviewsEnabled === true,
+      enabled: videoEnabledFromSettings(),
       reason: null,
     };
   } else {
     try {
       capability = await fetchReviewVideoCapability();
-    } catch (_) {
-      capability = { enabled: false, reason: 'capability_unavailable' };
+    } catch (error) {
+      capability = fallbackCapabilityAfterRequestError(error);
     }
   }
 

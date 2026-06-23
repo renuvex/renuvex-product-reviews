@@ -9,10 +9,19 @@ export async function fetchReviewVideoCapability() {
     { method: 'GET', cache: 'no-store' },
     CAPABILITY_TIMEOUT_MS,
   );
-  if (!response.ok) throw new Error('video_capability_unavailable');
+  if (!response.ok) {
+    var error = new Error('video_capability_unavailable');
+    error.code = 'video_capability_http';
+    error.status = response.status;
+    throw error;
+  }
   var payload = await response.json().catch(function () { return {}; });
   var data = payload && payload.data;
-  if (!data || typeof data.enabled !== 'boolean') throw new Error('video_capability_invalid');
+  if (!data || typeof data.enabled !== 'boolean') {
+    var invalidError = new Error('video_capability_invalid');
+    invalidError.code = 'video_capability_invalid';
+    throw invalidError;
+  }
   return {
     enabled: data.enabled === true,
     reason: typeof data.reason === 'string' ? data.reason : null,

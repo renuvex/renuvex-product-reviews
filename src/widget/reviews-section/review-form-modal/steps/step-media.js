@@ -35,6 +35,7 @@ export function createStepMedia(state, opts) {
   var destroyed = false;
   var photoInstance = null;
   var videoView = null;
+  var activeVideoAttemptId = 0;
 
   var root = document.createElement('div');
   root.className = 'renuvex-pr-fwizard-step renuvex-pr-fwizard-step-media';
@@ -87,6 +88,16 @@ export function createStepMedia(state, opts) {
 
   function currentVideo() {
     return state.get().videoUpload || null;
+  }
+
+  function beginVideoAttempt() {
+    activeVideoAttemptId += 1;
+    return activeVideoAttemptId;
+  }
+
+  function isActiveVideoAttempt(attemptId, controller) {
+    var video = currentVideo();
+    return activeVideoAttemptId === attemptId && !!video && video.controller === controller;
   }
 
   function clearVideoView() {
@@ -252,6 +263,11 @@ export function createStepMedia(state, opts) {
     state.set({ videoUpload: Object.assign({}, existing, patch) });
   }
 
+  function updateVideoAttemptState(attemptId, controller, patch) {
+    if (!isActiveVideoAttempt(attemptId, controller)) return;
+    updateVideoState(patch);
+  }
+
   async function startUpload(file, existingLocalUrl, knownDurationMs) {
     var previousVideo = currentVideo();
     var isRetry = !!(existingLocalUrl && previousVideo && previousVideo.file === file);
@@ -265,6 +281,7 @@ export function createStepMedia(state, opts) {
     var localUrl = existingLocalUrl || URL.createObjectURL(file);
     var initialDurationMs = Number.isFinite(knownDurationMs) ? knownDurationMs : null;
     var controller = new AbortController();
+    var attemptId = beginVideoAttempt();
     state.set({
       videoUpload: {
         file: file,
@@ -299,11 +316,12 @@ export function createStepMedia(state, opts) {
         signal: controller.signal,
         minProgress: initialProgress,
         retryClicks: retryClicks,
-        onToken: function (token) { updateVideoState({ token: token }); },
-        onProgress: function (progress) { updateVideoState({ progress: progress }); },
-        onStatus: function (status) { updateVideoState({ status: status }); },
-        onSessionReset: function () { updateVideoState({ token: null, progress: 0 }); },
+        onToken: function (token) { updateVideoAttemptState(attemptId, controller, { token: token }); },
+        onProgress: function (progress) { updateVideoAttemptState(attemptId, controller, { progress: progress }); },
+        onStatus: function (status) { updateVideoAttemptState(attemptId, controller, { status: status }); },
+        onSessionReset: function () { updateVideoAttemptState(attemptId, controller, { token: null, progress: 0 }); },
       });
+      if (!isActiveVideoAttempt(attemptId, controller)) return;
       if (result.previewOnly && result.posterUrl && result.posterUrl !== localUrl) {
         try { URL.revokeObjectURL(result.posterUrl); } catch (_) {}
       }
@@ -322,6 +340,7 @@ export function createStepMedia(state, opts) {
       if (isRetry && !destroyed && (!opts.canNavigate || opts.canNavigate())) state.goNext();
     } catch (error) {
       if (controller.signal.aborted) return;
+      if (!isActiveVideoAttempt(attemptId, controller)) return;
       var failure = describeVideoUploadError(error);
       if (error && error.code === 'invalid_video_duration') {
         failure = {
@@ -351,6 +370,7 @@ export function createStepMedia(state, opts) {
   function removeVideo() {
     var video = currentVideo();
     if (!video) return;
+    beginVideoAttempt();
     if (video.controller) video.controller.abort();
     cancelReviewVideoUpload(video.token, state.get().productId, video.file);
     if (opts.revokeBlobUrl) opts.revokeBlobUrl(video.localUrl);

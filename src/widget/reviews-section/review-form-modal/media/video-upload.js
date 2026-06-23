@@ -296,8 +296,9 @@ async function uploadToMuxDirectUrl(input) {
       }, stallTimeout);
     }
     function noteActivity() {
-      if (settled) return;
+      if (settled) return false;
       scheduleStallWatch();
+      return true;
     }
     function markOffline() {
       if (settled) return;
@@ -337,11 +338,11 @@ async function uploadToMuxDirectUrl(input) {
     }
     scheduleStallWatch();
     upload.on('attempt', function () {
-      noteActivity();
+      if (!noteActivity()) return;
       input.onStatus('uploading');
     });
     upload.on('attemptFailure', function (event) {
-      noteActivity();
+      if (!noteActivity()) return;
       var detail = event && event.detail;
       var code = upchunkErrorCode(detail);
       if (input.onAttemptFailure) input.onAttemptFailure(code);
@@ -355,7 +356,7 @@ async function uploadToMuxDirectUrl(input) {
     });
     upload.on('chunkSuccess', function () { noteActivity(); });
     upload.on('progress', function (event) {
-      noteActivity();
+      if (!noteActivity()) return;
       var progress = Number(event && event.detail);
       if (Number.isFinite(progress)) {
         var mapped = Math.min(95, Math.max(0, Math.round(progress * 0.95)));
@@ -365,14 +366,14 @@ async function uploadToMuxDirectUrl(input) {
     });
     upload.on('offline', markOffline);
     upload.on('error', function (event) {
-      noteActivity();
+      if (!noteActivity()) return;
       var detail = event && event.detail;
       var code = upchunkErrorCode(detail);
       if (input.onUploadError) input.onUploadError(code);
       finish(new VideoUploadRequestError(code, 0, null));
     });
     upload.on('success', function () {
-      noteActivity();
+      if (!noteActivity()) return;
       input.onProgress(95);
       finish();
     });

@@ -606,6 +606,27 @@ test('capability rate limits fail closed to the photo-only wizard', async ({ pag
   expect(widgetErrors(log).filter((message) => !message.includes('status of 429'))).toEqual([]);
 });
 
+test('capability network failures keep the video action when settings enable video', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { videoReviewsEnabled: true },
+    videoCapability: { abort: 'failed' },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1) span')).toBe('Fotoğraf Ekle');
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2) span')).toBe('Video Ekle');
+  expect(await visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(2);
+  expect(await hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(false);
+  expect(widgetErrors(log).filter((message) => !message.includes('net::ERR_FAILED'))).toEqual([]);
+});
+
 test('quota races fail closed with generic video upload copy', async ({ page }) => {
   await stubVideoMetadata(page, 12);
   const log = await setupWidgetRoutes(page, {
@@ -1150,6 +1171,7 @@ test('video upload shows neutral retry copy when connection drops', async ({ pag
   await page.waitForTimeout(800);
   expect(muxPutCalls).toBe(1);
   expect(completeCalls).toBe(0);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-status')).toMatch(/Video y.*klenemedi/);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
 

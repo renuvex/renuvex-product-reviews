@@ -32,9 +32,10 @@ export type SmokeOptions = {
   ikasEventMode?: 'async' | 'sync';
   reviewsSettings?: Record<string, unknown>;
   videoCapability?: {
-    enabled: boolean;
+    enabled?: boolean;
     reason?: string | null;
     status?: number;
+    abort?: Parameters<Route['abort']>[0];
   };
   badgeSettings?: Record<string, unknown>;
   hasMore?: boolean;
@@ -276,8 +277,12 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/capability**`, async (route) => {
     const configured = options.videoCapability;
+    if (configured?.abort) {
+      await route.abort(configured.abort);
+      return;
+    }
     const enabled = configured
-      ? configured.enabled
+      ? configured.enabled === true
       : options.reviewsSettings?.videoReviewsEnabled === true;
     const status = configured?.status ?? 200;
     await route.fulfill({
