@@ -33,11 +33,16 @@ function applyReviewPlayerAttributes(player, media) {
   return true;
 }
 
+function preventNativeVideoContextMenu(event) {
+  event.preventDefault();
+}
+
 export function createReviewVideoPlayback(media, className) {
   var cancelled = false;
   var player = document.createElement('mux-player');
   player.className = className || 'renuvex-pr-modal-main-video';
   player.setAttribute('aria-label', 'Yorum videosu');
+  player.addEventListener('contextmenu', preventNativeVideoContextMenu);
 
   var configured = applyReviewPlayerAttributes(player, media);
   if (configured) {
@@ -61,6 +66,7 @@ export function createReviewVideoPlayback(media, className) {
       player.removeAttribute('playback-token');
       player.removeAttribute('thumbnail-token');
       player.removeAttribute('poster');
+      player.removeEventListener('contextmenu', preventNativeVideoContextMenu);
     },
   };
 }

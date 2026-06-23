@@ -215,6 +215,8 @@ async function lightboxVideoState(page: Page) {
     const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
     if (!overlay || !wrap || !player) throw new Error('Missing Mux Player lightbox');
     const style = getComputedStyle(player);
+    const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    player.dispatchEvent(contextMenuEvent);
     return {
       tagName: player.tagName,
       playbackId: player.getAttribute('playback-id') || '',
@@ -226,6 +228,7 @@ async function lightboxVideoState(page: Page) {
       hotkeys: player.getAttribute('hotkeys') || '',
       poster: player.getAttribute('poster') || '',
       autoplayAttr: player.hasAttribute('autoplay'),
+      contextMenuPrevented: contextMenuEvent.defaultPrevented,
       seekBackwardButton: style.getPropertyValue('--seek-backward-button').trim(),
       seekForwardButton: style.getPropertyValue('--seek-forward-button').trim(),
       pipButton: style.getPropertyValue('--pip-button').trim(),
@@ -287,6 +290,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     disableTracking: true,
     disableCookies: true,
     autoplayAttr: false,
+    contextMenuPrevented: true,
     hotkeys: 'noarrowleft noarrowright',
     seekBackwardButton: 'none',
     seekForwardButton: 'none',

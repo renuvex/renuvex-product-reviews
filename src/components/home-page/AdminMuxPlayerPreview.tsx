@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type MouseEvent } from 'react';
 
 type AdminMuxPlayerPreviewProps = {
   playbackId: string;
@@ -7,6 +7,10 @@ type AdminMuxPlayerPreviewProps = {
   posterUrl?: string | null;
   className?: string;
 };
+
+function preventNativeVideoContextMenu(event: MouseEvent<HTMLElement>) {
+  event.preventDefault();
+}
 
 export function AdminMuxPlayerPreview({
   playbackId,
@@ -33,6 +37,7 @@ export function AdminMuxPlayerPreview({
       disable-tracking
       disable-cookies
       hotkeys="noarrowleft noarrowright"
+      onContextMenu={preventNativeVideoContextMenu}
     />
   );
 }
