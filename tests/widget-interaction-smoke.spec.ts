@@ -1034,10 +1034,12 @@ test('video upload retries transient Mux PUT failures before showing shopper ret
   expect(initiateCalls).toBe(1);
 });
 
-test('video upload shows offline copy and resumes simple upload copy when online', async ({ page }) => {
+test('video upload shows neutral retry copy when connection drops', async ({ page }) => {
   await stubVideoMetadata(page, 12);
-  const videoToken = 'video-token-offline-resume-abcdefghijklmnopqrstuvwxyz1234567890';
+  const videoToken = 'video-token-offline-manual-retry-abcdefghijklmnopqrstuvwxyz1234567890';
   let muxPutCalls = 0;
+  let completeCalls = 0;
+  let statusReady = false;
   let failFirstMuxUpload: () => void = () => {};
   const firstMuxUploadGate = new Promise<void>((resolve) => {
     failFirstMuxUpload = resolve;
@@ -1063,7 +1065,7 @@ test('video upload shows offline copy and resumes simple upload copy when online
       body: JSON.stringify({
         data: {
           token: videoToken,
-          uploadUrl: 'https://mux-upload.test/offline-resume-video',
+          uploadUrl: 'https://mux-upload.test/offline-manual-retry-video',
           chunkSize: 8192,
           chunkAttempts: 5,
           expiresAt: '2099-01-01T00:00:00.000Z',
@@ -1071,138 +1073,18 @@ test('video upload shows offline copy and resumes simple upload copy when online
       }),
     });
   });
-  await page.route('https://mux-upload.test/offline-resume-video**', async (route) => {
+  await page.route('https://mux-upload.test/offline-manual-retry-video**', async (route) => {
     muxPutCalls += 1;
     if (muxPutCalls === 1) {
       await firstMuxUploadGate;
-      await route.abort('failed');
-      return;
-    }
-    await secondMuxUploadGate;
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: '',
-    });
-  });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ data: { status: 'processing' } }),
-    });
-  });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        data: {
-          status: 'ready',
-          durationMs: 12000,
-          posterUrl: 'https://image.mux.com/signed-playback-1/thumbnail.jpg',
-        },
-      }),
-    });
-  });
-
-  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
-  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
-  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
-  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
-  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
-  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
-
-  await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
-    name: 'offline-resume-video.mp4',
-    mimeType: 'video/mp4',
-    buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
-  });
-
-  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
-  await expect.poll(() => muxPutCalls).toBe(1);
-  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
-  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
-  await expect.poll(() => textInOverlay(
-    page,
-    '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-uploading-card',
-  )).toContain('Video yükleniyor');
-
-  await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-  await expect.poll(() => textInOverlay(
-    page,
-    '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-uploading-card',
-  )).toBe('İnternet bağlantısı yok');
-  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
-  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
-
-  failFirstMuxUpload();
-  await page.waitForTimeout(1200);
-  expect(muxPutCalls).toBe(1);
-  await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect.poll(() => textInOverlay(
-    page,
-    '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-uploading-card',
-  )).toContain('Video yükleniyor');
-  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
-  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
-
-  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close');
-  releaseSecondMuxUpload();
-  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
-  expect(widgetErrors(log).filter((message) => !message.includes('net::ERR_FAILED'))).toEqual([]);
-});
-
-test('window online event re-arms stalled video upload resolution after offline pause', async ({ page }) => {
-  await stubVideoMetadata(page, 12);
-  await page.addInitScript(() => {
-    (window as Window & { __renuvexPrVideoUploadStallMs?: number }).__renuvexPrVideoUploadStallMs = 500;
-  });
-  const videoToken = 'video-token-window-online-rearm-abcdefghijklmnopqrstuvwxyz1234567890';
-  let initiateCalls = 0;
-  let completeCalls = 0;
-  let muxPutCalls = 0;
-  let statusReady = false;
-
-  const log = await setupWidgetRoutes(page, {
-    mountReviews: true,
-    reviewsSettings: {
-      summaryLayout: 'classic',
-      reviewLayout: 'card',
-      videoReviewsEnabled: true,
-    },
-  });
-
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
-    initiateCalls += 1;
-    await route.fulfill({
-      status: 201,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        data: {
-          token: videoToken,
-          uploadUrl: 'https://mux-upload.test/window-online-rearm',
-          chunkSize: 8192,
-          chunkAttempts: 5,
-          expiresAt: '2099-01-01T00:00:00.000Z',
-        },
-      }),
-    });
-  });
-  await page.route('https://mux-upload.test/window-online-rearm**', async (route) => {
-    muxPutCalls += 1;
-    if (muxPutCalls === 1) {
-      await new Promise((resolve) => setTimeout(resolve, 2500));
       try {
         await route.abort('failed');
       } catch {
-        // The client-side watchdog aborts the stalled PUT before Playwright can.
+        // The client aborts the active upload as soon as the connection is marked lost.
       }
       return;
     }
+    await secondMuxUploadGate;
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
@@ -1238,35 +1120,53 @@ test('window online event re-arms stalled video upload resolution after offline 
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
 
   await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
-    name: 'window-online-rearm.mp4',
+    name: 'offline-manual-retry-video.mp4',
     mimeType: 'video/mp4',
     buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
   });
 
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
   await expect.poll(() => muxPutCalls).toBe(1);
-  await page.evaluate(() => window.dispatchEvent(new Event('offline')));
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-uploading-card',
+  )).toContain('Video yükleniyor');
 
+  await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-status',
+  )).toContain('Video yüklenemedi');
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-card')).not.toContain('İnternet');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
+
+  failFirstMuxUpload();
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.waitForTimeout(800);
   expect(muxPutCalls).toBe(1);
   expect(completeCalls).toBe(0);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
 
-  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry');
+  await expect.poll(() => muxPutCalls).toBe(2);
+  releaseSecondMuxUpload();
   await expect.poll(() => completeCalls).toBe(1);
   await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-thumb')).toBe(1);
-  expect(muxPutCalls).toBeGreaterThanOrEqual(1);
-  expect(initiateCalls).toBe(1);
   expect(widgetErrors(log).filter((message) => !message.includes('net::ERR_FAILED') && !message.includes('net::ERR_ABORTED'))).toEqual([]);
 });
 
-test('video upload auto-recovers a stalled direct upload without shopper retry', async ({ page }) => {
+test('video upload surfaces manual retry when direct upload stalls', async ({ page }) => {
   await stubVideoMetadata(page, 12);
   await page.addInitScript(() => {
     (window as Window & { __renuvexPrVideoUploadStallMs?: number }).__renuvexPrVideoUploadStallMs = 500;
   });
-  const videoToken = 'video-token-stalled-auto-recover-abcdefghijklmnopqrstuvwxyz1234567890';
+  const videoToken = 'video-token-stalled-manual-abcdefghijklmnopqrstuvwxyz1234567890';
   let initiateCalls = 0;
   let completeCalls = 0;
   let muxPutCalls = 0;
@@ -1289,7 +1189,7 @@ test('video upload auto-recovers a stalled direct upload without shopper retry',
       body: JSON.stringify({
         data: {
           token: videoToken,
-          uploadUrl: 'https://mux-upload.test/stalled-auto-recover',
+          uploadUrl: 'https://mux-upload.test/stalled-manual',
           chunkSize: 8192,
           chunkAttempts: 5,
           expiresAt: '2099-01-01T00:00:00.000Z',
@@ -1297,7 +1197,7 @@ test('video upload auto-recovers a stalled direct upload without shopper retry',
       }),
     });
   });
-  await page.route('https://mux-upload.test/stalled-auto-recover**', async (route) => {
+  await page.route('https://mux-upload.test/stalled-manual**', async (route) => {
     muxPutCalls += 1;
     if (muxPutCalls === 1) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -1343,7 +1243,7 @@ test('video upload auto-recovers a stalled direct upload without shopper retry',
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
 
   await setFileInputInOverlay(page, '.renuvex-pr-fwizard-overlay', 'input[accept*="video"]', {
-    name: 'stalled-auto-recover.mp4',
+    name: 'stalled-manual.mp4',
     mimeType: 'video/mp4',
     buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
   });
@@ -1353,6 +1253,19 @@ test('video upload auto-recovers a stalled direct upload without shopper retry',
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
 
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-status',
+  ), { timeout: 10000 }).toContain('Video yüklenemedi');
+  await page.waitForTimeout(800);
+  expect(muxPutCalls).toBe(1);
+  expect(completeCalls).toBe(0);
+  expect(await visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(0);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry');
   await expect.poll(() => muxPutCalls, { timeout: 10000 }).toBe(2);
   await expect.poll(() => completeCalls).toBe(1);
   await expect.poll(() => countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-thumb')).toBe(1);
@@ -1362,7 +1275,7 @@ test('video upload auto-recovers a stalled direct upload without shopper retry',
   expect(widgetErrors(log).filter((message) => !message.includes('net::ERR_FAILED') && !message.includes('net::ERR_ABORTED'))).toEqual([]);
 });
 
-test('video retry keeps the selected file after stalled auto recovery fails', async ({ page }) => {
+test('video retry keeps the selected file after repeated stalled uploads', async ({ page }) => {
   await stubVideoMetadata(page, 12);
   await page.addInitScript(() => {
     (window as Window & { __renuvexPrVideoUploadStallMs?: number }).__renuvexPrVideoUploadStallMs = 500;
@@ -1450,7 +1363,7 @@ test('video retry keeps the selected file after stalled auto recovery fails', as
   });
 
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
-  await expect.poll(() => muxPutCalls, { timeout: 10000 }).toBe(2);
+  await expect.poll(() => muxPutCalls, { timeout: 10000 }).toBe(1);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
   await expect.poll(() => textInOverlay(
     page,
@@ -1460,6 +1373,20 @@ test('video retry keeps the selected file after stalled auto recovery fails', as
   expect(await visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry');
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-uploading-card',
+  )).toContain('Video yükleniyor');
+  await expect.poll(() => muxPutCalls, { timeout: 10000 }).toBe(2);
+  await expect.poll(() => textInOverlay(
+    page,
+    '.renuvex-pr-fwizard-overlay',
+    '.renuvex-pr-fwizard-video-status',
+  ), { timeout: 10000 }).toContain('Video yüklenemedi');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
 
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry');
   await expect.poll(() => textInOverlay(

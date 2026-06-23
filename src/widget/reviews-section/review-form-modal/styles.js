@@ -448,9 +448,11 @@ export var FWIZARD_CSS = `
   }
   .renuvex-pr-fwizard-video-card--failed{
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
-    min-height:110px;
+    min-height:122px;
+    gap:12px;
     text-align:center;
   }
   .renuvex-pr-fwizard-video-thumb{
@@ -497,14 +499,15 @@ export var FWIZARD_CSS = `
   }
   .renuvex-pr-fwizard-video-retry{
     align-self:center;
-    min-height:42px;
-    padding:10px 18px;
+    width:100%;
+    min-height:50px;
+    padding:14px 20px;
     border:1px solid transparent;
     border-radius:var(--renuvex-pr-radius-sm,8px);
     background:var(--renuvex-pr-fwizard-btn-bg, rgb(17,17,17));
     color:var(--renuvex-pr-fwizard-btn-text, #ffffff);
     font:inherit;
-    font-size:14px;
+    font-size:15px;
     font-weight:600;
     cursor:pointer;
     text-decoration:none;

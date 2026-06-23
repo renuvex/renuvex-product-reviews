@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-22
-last_verified: 2026-06-22
+updated: 2026-06-23
+last_verified: 2026-06-23
 confidence: high
 tags:
   - log
@@ -22,16 +22,21 @@ source_files:
 
 # Project Log
 
+## 2026-06-23 - fix | Make stalled video upload retry manual
+- Physical mobile retesting showed the automatic reconnect path could still leave the wizard on `Video yükleniyor` while the DB session stayed `uploading` and the Mux direct upload stayed `waiting`.
+- The widget now fails closed for direct-upload offline/stall cases: it aborts the active PUT, records the technical failure code for metrics, and shows only generic shopper copy (`Video yüklenemedi` + themed `Tekrar dene`). No network-specific copy is shown in the storefront.
+- Manual retry preserves the selected file and reuses the existing upload session when server status says it is still valid. It does not return to the initial photo/video choices and does not auto-retry after browser `online` events.
+
 ## 2026-06-22 - fix | Re-arm stalled video uploads after reconnect
 - Physical mobile testing found the prior Mux direct-upload watchdog was not sufficient: after Wi-Fi was disabled and re-enabled, the wizard could stay on `Video yÃ¼kleniyor` while the DB session remained `uploading`, quota stayed `reserved`, and Mux direct upload stayed `waiting` with no asset.
-- Production/runtime evidence showed the new widget build was deployed, so the root issue was client-side recovery, not Mux webhook/backend processing. The direct-upload layer now listens to browser `offline`/`online` events in addition to UpChunk events and keeps a low-frequency network probe while offline so a missed or reordered `online` event cannot leave the stall watchdog permanently paused.
-- Automatic same-session recovery remains limited to watchdog-detected stalls. Exhausted UpChunk chunk attempts still surface `Video yÃ¼klenemedi` + `Tekrar dene`, preserving the manual retry contract.
+- Production/runtime evidence showed the new widget build was deployed, so the root issue was client-side recovery, not Mux webhook/backend processing. This automatic reconnect approach was superseded on 2026-06-23 after physical retesting proved it could still leave the shopper waiting indefinitely.
+- The retained lesson is that exhausted UpChunk chunk attempts and stalled direct uploads should surface `Video yÃ¼klenemedi` + `Tekrar dene`, preserving the manual retry contract.
 - Gates passed: `pnpm build:widget`, targeted offline/stall/chunk-exhaustion interaction tests, `pnpm test:widget-interactions`, `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, and `pnpm lint`.
 
 ## 2026-06-22 - ui | Auto-advance video review uploads
-- Simplified video upload recovery copy without losing state-machine detail: upload/retry/processing now display `Video yükleniyor`, UpChunk offline displays `İnternet bağlantısı yok`, terminal failures display `Video yüklenemedi`, and retryable failures expose one themed `Tekrar dene` action with no remove icon.
+- Simplified video upload recovery copy without losing state-machine detail: upload/retry/processing display `Video yükleniyor`, terminal failures display `Video yüklenemedi`, and retryable failures expose one themed `Tekrar dene` action with no remove icon. Network-specific shopper copy was removed in the 2026-06-23 manual-retry follow-up.
 - Video selection in the review wizard now mirrors the photo first-selection behavior: step 2 writes `videoUpload` state and advances to the comment step while Mux direct upload, complete, and processing polling continue in the background.
-- The direct-upload path now has an activity watchdog for online stalls. If UpChunk stops emitting activity after connectivity returns, the client aborts the stalled PUT once, checks current server session status, retries the same selected file/upload session when still valid, and only then falls back to `Video yüklenemedi` + `Tekrar dene`.
+- The direct-upload path has an activity watchdog. As of the 2026-06-23 follow-up, the watchdog feeds the manual retry failure state instead of automatic same-session reupload.
 - Returning to the media step during upload/retry/processing shows a single black `Video yükleniyor` status control without a remove button; returning after readiness shows one photo-sized video thumbnail with remove only, no play icon and no extra `+` video tile.
 - Step 4 remains backend-safe: submit stays blocked until the video session is `ready`, failed video uploads show a terminal disabled state instead of a misleading endless "preparing" label, and submit still sends only the ready opaque video token.
 - Gates passed: `pnpm build:widget`, targeted stalled-upload interaction tests, `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test:unit`, `pnpm test:widget-interactions`, `pnpm test:widget-media:chromium`, `node --env-file=.env.local .\node_modules\prisma\build\index.js validate`, `pnpm verify:video-infrastructure:post-webhook -- --json`, and `node scripts/wiki-audit.mjs --changed-source-check` (0 errors; existing wiki-health warnings remain).

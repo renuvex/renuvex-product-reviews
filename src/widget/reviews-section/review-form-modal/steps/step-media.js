@@ -23,12 +23,11 @@ function videoViewMode(video) {
 }
 
 function videoBusyText(video) {
-  if (video && video.status === 'uploading_offline') return 'İnternet bağlantısı yok';
   return 'Video yükleniyor';
 }
 
 function videoBusyShowsDots(video) {
-  return !(video && video.status === 'uploading_offline');
+  return true;
 }
 
 export function createStepMedia(state, opts) {
@@ -280,29 +279,6 @@ export function createStepMedia(state, opts) {
         controller: controller,
       },
     });
-    var removeNetworkListeners = null;
-    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-      var isActiveUpload = function () {
-        var video = currentVideo();
-        return !!(video && video.controller === controller);
-      };
-      var markOffline = function () {
-        if (isActiveUpload()) updateVideoState({ status: 'uploading_offline' });
-      };
-      var markOnline = function () {
-        var video = currentVideo();
-        if (isActiveUpload() && video && video.status === 'uploading_offline') {
-          updateVideoState({ status: 'uploading' });
-        }
-      };
-      window.addEventListener('offline', markOffline);
-      window.addEventListener('online', markOnline);
-      removeNetworkListeners = function () {
-        window.removeEventListener('offline', markOffline);
-        window.removeEventListener('online', markOnline);
-      };
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) markOffline();
-    }
     if (!isRetry && !destroyed && (!opts.canNavigate || opts.canNavigate())) state.goNext();
     try {
       var duration = knownDurationMs !== undefined
@@ -367,8 +343,6 @@ export function createStepMedia(state, opts) {
           : videoFailureText();
         opts.showToast(toastMessage, 'error');
       }
-    } finally {
-      if (removeNetworkListeners) removeNetworkListeners();
     }
   }
 

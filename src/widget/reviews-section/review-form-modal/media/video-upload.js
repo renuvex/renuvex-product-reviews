@@ -7,7 +7,6 @@ var VIDEO_MAX_DURATION_SECONDS = 60;
 var DEFAULT_VIDEO_UPLOAD_CHUNK_SIZE_KB = 8192;
 var DEFAULT_VIDEO_UPLOAD_CHUNK_ATTEMPTS = 5;
 var DEFAULT_VIDEO_UPLOAD_STALL_TIMEOUT_MS = 30000;
-var VIDEO_UPLOAD_AUTO_RECOVERY_LIMIT = 1;
 var ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime'];
 var SESSION_STORAGE_PREFIX = 'renuvex_pr_video_upload_';
 var PENDING_CANCEL_STORAGE_PREFIX = 'renuvex_pr_video_cancel_';
@@ -257,25 +256,18 @@ function upchunkErrorCode(detail) {
   return 'upload_attempt_failed';
 }
 
-function isAutoRecoverableDirectUploadError(error) {
-  if (!(error instanceof VideoUploadRequestError)) return false;
-  return error.code === 'video_upload_stalled';
-}
-
 async function uploadToMuxDirectUrl(input) {
   var createUpload = await loadUpChunkCreateUpload();
   return new Promise(function (resolve, reject) {
     var settled = false;
     var upload = null;
     var stallTimer = null;
-    var networkProbeTimer = null;
     var stallTimeout = uploadStallTimeoutMs();
     var removeWindowNetworkListeners = null;
     function finish(error) {
       if (settled) return;
       settled = true;
       if (stallTimer) clearTimeout(stallTimer);
-      if (networkProbeTimer) clearInterval(networkProbeTimer);
       if (input.signal) input.signal.removeEventListener('abort', abort);
       if (removeWindowNetworkListeners) removeWindowNetworkListeners();
       if (error) reject(error);
@@ -296,30 +288,11 @@ async function uploadToMuxDirectUrl(input) {
       if (settled) return;
       scheduleStallWatch();
     }
-    function pauseStallWatch() {
-      if (stallTimer) clearTimeout(stallTimer);
-      stallTimer = null;
-    }
-    function clearNetworkProbe() {
-      if (networkProbeTimer) clearInterval(networkProbeTimer);
-      networkProbeTimer = null;
-    }
-    function startNetworkProbe() {
-      if (networkProbeTimer || settled) return;
-      networkProbeTimer = setInterval(function () {
-        if (settled) return clearNetworkProbe();
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) markOnline();
-      }, 1000);
-    }
     function markOffline() {
-      pauseStallWatch();
-      input.onStatus('uploading_offline');
-      startNetworkProbe();
-    }
-    function markOnline() {
-      clearNetworkProbe();
-      input.onStatus('uploading');
-      scheduleStallWatch(true);
+      if (settled) return;
+      if (input.onUploadError) input.onUploadError('video_upload_offline');
+      finish(new VideoUploadRequestError('video_upload_offline', 0, null));
+      try { if (upload) upload.abort(); } catch (_) {}
     }
     function abort() {
       try { if (upload) upload.abort(); } catch (_) {}
@@ -343,14 +316,13 @@ async function uploadToMuxDirectUrl(input) {
       && typeof window.removeEventListener === 'function'
     ) {
       window.addEventListener('offline', markOffline);
-      window.addEventListener('online', markOnline);
       removeWindowNetworkListeners = function () {
         window.removeEventListener('offline', markOffline);
-        window.removeEventListener('online', markOnline);
       };
     }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      input.onStatus('uploading_offline');
+      markOffline();
+      return;
     }
     scheduleStallWatch();
     upload.on('attempt', function () {
@@ -374,7 +346,6 @@ async function uploadToMuxDirectUrl(input) {
       }
     });
     upload.on('offline', markOffline);
-    upload.on('online', markOnline);
     upload.on('error', function (event) {
       noteActivity();
       var detail = event && event.detail;
@@ -559,7 +530,6 @@ export async function uploadReviewVideo(input) {
       session = null;
     }
   }
-  var autoRecoveries = 0;
   while (true) {
     if (!token) {
       var initiated = await jsonRequest('/api/public/upload/video/initiate', {
@@ -616,24 +586,6 @@ export async function uploadReviewVideo(input) {
       if (input.signal && input.signal.aborted) {
         await submitUploadMetrics(token, metrics, 'aborted');
         throw error;
-      }
-      if (isAutoRecoverableDirectUploadError(error) && autoRecoveries < VIDEO_UPLOAD_AUTO_RECOVERY_LIMIT) {
-        autoRecoveries += 1;
-        var recoveryDecision = null;
-        try {
-          recoveryDecision = await settleKnownStatus(token, session);
-        } catch (_) {
-          recoveryDecision = session && typeof session.uploadUrl === 'string' && session.uploadUrl
-            ? { action: 'upload' }
-            : { action: 'discard' };
-        }
-        if (recoveryDecision.action === 'return') return recoveryDecision.value;
-        if (recoveryDecision.action === 'discard') {
-          discardStoredSession();
-          token = null;
-          session = null;
-        }
-        continue;
       }
       await submitUploadMetrics(token, metrics, 'failed');
       throw error;
