@@ -3,8 +3,8 @@ type: roadmap
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-06-23
+last_verified: 2026-06-23
 confidence: medium
 tags:
   - roadmap
@@ -13,6 +13,8 @@ related:
   - "[[Current_Status]]"
   - "[[Future_Feature_Ideas]]"
   - "[[Competitor_Pricing_And_Plans]]"
+  - "[[ADR_0032_Review_Video_On_Mux]]"
+  - "[[Review_Video_Canary_Runbook]]"
 source_files:
   - "docs/wiki/10_Research/Competitor_Pricing_And_Plans.md"
 ---
@@ -51,6 +53,8 @@ Living roadmap. Order is rough priority, not committed dates. Tweak as decisions
 - Review CORS policy — currently `Access-Control-Allow-Origin: *`; OK for read endpoints, consider tightening POST endpoints
 - Revisit OAuth scope (`read_orders,write_orders,read_products,read_inventories,write_inventories`) — does the app actually need write_orders/write_inventories?
 - **Authoritative review-media metadata at scale** — client upload-response dimensions are forgeable (cosmetic/self-inflicted, not a security issue); at thousands of stores / 1M+ images add a Cloudinary upload **webhook** (signed, server-to-server) as the authoritative source, with the daily-maintenance cron pull demoted to safety-net. Detail: [[ADR_0029_Review_Media_Metadata]] (Scale Evolution).
+
+- **Mux asset reconciliation report** - deferred hardening: add a read-only scheduled or manually runnable report that compares Mux asset inventory with DB ownership (`VideoUploadSession`, `ReviewMedia`, `MediaProviderJob`, `WebhookEvent`) to detect orphan assets, broken DB references, stuck abandoned sessions, failed cleanup jobs, or environment mismatches. Default behavior must be dry-run/report-only; no automatic asset delete or DB mutation. Initial scheduler can be manual, Vercel Cron, or QStash. If storefront widget/script delivery later moves to Cloudflare Workers, keep the public widget Worker secret-free and place this audit only in a separate backend/control worker or keep it on Vercel/QStash. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
 
 ## Obsidian Links
 - [[Current_Status]]
