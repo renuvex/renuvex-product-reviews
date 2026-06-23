@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import {
   muxPosterSrcSet,
+  muxPlaybackIdFromUrl,
   muxPosterVariantUrl,
 } from '../../src/widget/core/review-media.js';
 import {
-  pickWarmStartLevel,
-  shouldUseQualityWarmStart,
+  getReviewVideoPlaybackId,
 } from '../../src/widget/reviews-section/video-playback.js';
 
 describe('Mux poster variants', () => {
@@ -39,43 +39,23 @@ describe('Mux poster variants', () => {
       .toBe('https://stream.mux.com/playback-1.m3u8');
     expect(muxPosterVariantUrl('not a url', { width: 300, height: 400, fit: 'crop' })).toBe('not a url');
   });
-});
-
-describe('hls.js quality warm start helpers', () => {
-  test('keeps conservative ABR startup when data saver or 2g is active', () => {
-    expect(shouldUseQualityWarmStart({ connection: { saveData: true, effectiveType: '4g' } })).toBe(false);
-    expect(shouldUseQualityWarmStart({ connection: { saveData: false, effectiveType: 'slow-2g' } })).toBe(false);
-    expect(shouldUseQualityWarmStart({ connection: { saveData: false, effectiveType: '2g' } })).toBe(false);
-    expect(shouldUseQualityWarmStart({ connection: { saveData: false, effectiveType: '4g' } })).toBe(true);
+  test('extracts playback ids only from trusted Mux delivery URLs', () => {
+    expect(muxPlaybackIdFromUrl('https://stream.mux.com/playback-1.m3u8')).toBe('playback-1');
+    expect(muxPlaybackIdFromUrl('https://image.mux.com/playback-1/thumbnail.jpg?width=320')).toBe('playback-1');
+    expect(muxPlaybackIdFromUrl('https://evil.example/playback-1.m3u8')).toBe('');
+    expect(muxPlaybackIdFromUrl('https://stream.mux.com/playback-1/master.mp4')).toBe('');
   });
 
-  test('chooses the highest level that fits the rendered player size and device pixel ratio', () => {
-    const levels = [
-      { width: 426, height: 240, bitrate: 400_000 },
-      { width: 854, height: 480, bitrate: 1_200_000 },
-      { width: 1280, height: 720, bitrate: 2_800_000 },
-      { width: 1920, height: 1080, bitrate: 5_000_000 },
-    ];
-    const video = {
-      clientWidth: 640,
-      clientHeight: 360,
-      getBoundingClientRect: () => ({ width: 640, height: 360 }),
-    };
-
-    expect(pickWarmStartLevel(levels, video, { devicePixelRatio: 2 })).toBe(2);
-  });
-
-  test('falls back to the lowest available level when every level is larger than the player', () => {
-    const levels = [
-      { width: 1280, height: 720, bitrate: 2_800_000 },
-      { width: 1920, height: 1080, bitrate: 5_000_000 },
-    ];
-    const video = {
-      clientWidth: 180,
-      clientHeight: 120,
-      getBoundingClientRect: () => ({ width: 180, height: 120 }),
-    };
-
-    expect(pickWarmStartLevel(levels, video, { devicePixelRatio: 1 })).toBe(0);
+  test('uses explicit playbackId when it matches the trusted Mux URL', () => {
+    expect(getReviewVideoPlaybackId({
+      type: 'video',
+      playbackId: 'playback-1',
+      url: 'https://stream.mux.com/playback-1.m3u8',
+    })).toBe('playback-1');
+    expect(getReviewVideoPlaybackId({
+      type: 'video',
+      playbackId: 'other-id',
+      url: 'https://stream.mux.com/playback-1.m3u8',
+    })).toBe('');
   });
 });

@@ -41,7 +41,7 @@ The product review lightbox is the media detail modal opened from trusted review
 
 ## Related Source Files
 - [review-modal.js](src/widget/reviews-section/review-modal.js) - image/video review detail lightbox.
-- [video-playback.js](src/widget/reviews-section/video-playback.js) - native HLS / lazy `hls.js` selection and deterministic player cleanup.
+- [video-playback.js](src/widget/reviews-section/video-playback.js) - official Mux Player creation, trusted playback ID fallback, lazy module loading, and deterministic player cleanup.
 - [media-thumbnail.js](src/widget/reviews-section/media-thumbnail.js) - poster-first video thumbnail, play badge, and duration badge.
 - [review-media.js](src/widget/core/review-media.js) - trusted provider-aware media normalization.
 - [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) - shared click/keyboard/ARIA wiring for media elements that open the lightbox.
@@ -77,9 +77,9 @@ The product review lightbox is the media detail modal opened from trusted review
 - Media URLs are not accepted by generic prefixes. `getTrustedReviewMedia()` retains the tenant-scoped Cloudinary image policy and accepts video playback/poster URLs only from approved Mux delivery hosts.
 - If the active main image fails to load after passing the trusted URL policy, the `<img>` is hidden and a neutral in-modal placeholder is shown. Mini thumbnails use the standard thumbnail fallback and hide failed assets. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - The main lightbox image uses `object-fit:contain` on a dark media background so customer photos are not cropped. Thumbnail, card, list, gallery, and mini-thumb render paths keep `cover` because those are fixed-format previews.
-- Video list/card/gallery surfaces are poster-first. They render an image poster plus play/duration badges and do not create a `<video>` element or request the HLS manifest before lightbox open.
-- Lightbox video uses native controls, `playsinline`, `preload="metadata"`, a poster, and no autoplay. Safari/iOS uses native HLS; MSE-capable non-Safari browsers lazy-load `hls.js`.
-- Closing, browser-back navigation, or switching from video to another media item pauses playback, destroys any `hls.js` instance, removes the source, and calls `load()` so decoding/network state is released.
+- Video list/card/gallery surfaces are poster-first. They render an image poster plus play/duration badges and do not create a `<video>` or `<mux-player>` element before lightbox open.
+- Lightbox video uses the official `<mux-player>` web component with a public playback ID, `playsinline`, `preload="metadata"`, `stream-type="on-demand"`, a trusted poster, and no autoplay. Mux Data tracking and cookies are disabled in this phase.
+- Closing, browser-back navigation, or switching from video to another media item pauses the player and removes playback/token/poster attributes before the lightbox media node is replaced.
 - Body scroll locking snapshots previous inline `html` / `body` scroll containment styles, body fixed-position fields, padding compensation, and scroll position before locking. Close restores the previous inline values and scroll position. Android/modern Chrome relies on root overflow plus `overscroll-behavior-y:none`; iOS/WebKit keeps fixed-body locking because that platform needs stronger background-scroll containment.
 - Browser back support uses a widget-owned modal history state. Browser back closes the modal through `popstate`; normal UI close does not call `history.go(-1)` and only replaces the widget-owned state when it is still current.
 - The lightbox wrapper exposes dialog semantics (`role="dialog"`, `aria-modal="true"`), moves focus into the modal on open, traps `Tab` / `Shift+Tab` inside the overlay, and restores previous focus on close.
@@ -92,10 +92,10 @@ The product review lightbox is the media detail modal opened from trusted review
 - In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
 - `tests/widget-media-cross-browser.spec.ts` covers poster-first card/list/gallery rendering and cleanup on Chromium, Firefox, desktop WebKit, Pixel emulation, and iPhone WebKit emulation. Emulation is not a replacement for the physical-device release gate in [[ADR_0032_Review_Video_On_Mux]].
 - Video posters are not raw, one-size URLs at render time. `review-media.js` derives trusted Mux Image thumbnail variants for the current surface: card/list/gallery/strip use sized crop variants and the lightbox uses a larger `1280x720 fit=preserve` poster.
-- Native video controls stay browser/OS-owned; Renuvex does not theme the native progress bar or native center play icon. The configurable-looking storefront layer is the poster thumbnail, play badge, and duration badge.
-- On non-native HLS browsers, hls.js keeps ABR enabled but starts with a player-size-aware quality warm-start unless Data Saver or a 2g connection is reported.
+- Mux Player controls are Mux/Media Chrome-owned in this phase. The storefront hides unnecessary controls through Mux Player CSS variables, but admin-controlled player theming, Mux Data analytics, and custom Media Chrome themes are separate future phases.
 
 ## Change Log
+- 2026-06-23: Storefront review video lightbox moved to official Mux Player. The player receives a public `playback-id`, disables Mux Data tracking/cookies for now, hides nonessential controls through supported CSS variables, and keeps a trusted `.m3u8` parsing fallback only for rollout overlap.
 - 2026-06-16: Improved video first-frame quality by deriving sized Mux poster variants and adding hls.js player-size capping plus a conservative start-level warm-start. Native controls remain unchanged and browser-owned.
 - 2026-06-14: Documented the provider-aware image/video lightbox and Phase 4 cross-browser media suite. Native-HLS attributes, lazy `hls.js`, no-autoplay poster-first rendering, browser-back cleanup, and video-to-image navigation cleanup are now pinned across the five-project Playwright matrix.
 - 2026-06-01: Lightbox CSS ownership moved into [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) while `review-modal.js` continues to inject the stable `CLASSIC_CSS` aggregator.

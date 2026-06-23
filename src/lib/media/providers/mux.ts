@@ -222,6 +222,29 @@ export function buildMuxPosterUrl(playbackId: string, token?: string): string {
   return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
+export function parseMuxPlaybackIdFromDeliveryUrl(value: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || url.username || url.password) return null;
+  const host = url.hostname.toLowerCase();
+  const segments = url.pathname.split('/').filter(Boolean);
+  try {
+    if (host === 'stream.mux.com' && segments.length === 1 && segments[0].endsWith('.m3u8')) {
+      return decodeURIComponent(segments[0].slice(0, -5));
+    }
+    if (host === 'image.mux.com' && segments.length >= 2 && /^thumbnail\.(jpg|jpeg|png|webp)$/i.test(segments[1])) {
+      return decodeURIComponent(segments[0]);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export function isTrustedMuxDeliveryUrl(value: string, playbackId?: string | null): boolean {
   let url: URL;
   try {
@@ -232,6 +255,8 @@ export function isTrustedMuxDeliveryUrl(value: string, playbackId?: string | nul
   if (url.protocol !== 'https:' || url.username || url.password) return false;
   const host = url.hostname.toLowerCase();
   if (host !== 'stream.mux.com' && host !== 'image.mux.com') return false;
+  const parsedPlaybackId = parseMuxPlaybackIdFromDeliveryUrl(value);
+  if (!parsedPlaybackId) return false;
   if (!playbackId) return true;
-  return url.pathname.split('/').some((segment) => segment === playbackId || segment === `${playbackId}.m3u8`);
+  return parsedPlaybackId === playbackId;
 }

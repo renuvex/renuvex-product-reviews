@@ -25,7 +25,7 @@ import { lockBodyScroll, restoreBodyScroll } from '../core/body-scroll-lock.js';
 import { getReturnFocusElement, restoreFocus, trapFocus } from '../shared/focus-trap.js';
 import { wasLastInputKeyboard } from '../shared/input-modality.js';
 import { pushModalHistoryEntry, restoreModalHistoryEntry } from '../core/modal-history.js';
-import { attachReviewVideoPlayback } from './video-playback.js';
+import { createReviewVideoPlayback } from './video-playback.js';
 
 function getValidMedia(review) {
   return getTrustedReviewMedia(review);
@@ -148,9 +148,11 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
 
   var animClass = direction === 'next' ? 'renuvex-pr-modal-img-enter-right' : direction === 'prev' ? 'renuvex-pr-modal-img-enter-left' : '';
   if (currentMedia && currentMedia.type === 'video') {
-    var mainVideo = document.createElement('video');
-    mainVideo.className = 'renuvex-pr-modal-main-video' + (animClass ? ' renuvex-pr-modal-video-enter' : '');
-    mainVideo.setAttribute('aria-label', 'Yorum videosu');
+    var playback = createReviewVideoPlayback(
+      currentMedia,
+      'renuvex-pr-modal-main-video' + (animClass ? ' renuvex-pr-modal-video-enter' : ''),
+    );
+    var mainVideo = playback.element;
     mainVideo.addEventListener('error', function () {
       if (left.querySelector('.renuvex-pr-modal-img-error')) return;
       var videoPlaceholder = document.createElement('div');
@@ -159,7 +161,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
       videoPlaceholder.textContent = 'Bu video şu anda oynatılamıyor.';
       left.insertBefore(videoPlaceholder, mainVideo);
     });
-    left.__renuvexMediaCleanup = attachReviewVideoPlayback(mainVideo, currentMedia);
+    left.__renuvexMediaCleanup = playback.cleanup;
     left.appendChild(mainVideo);
   } else {
     var mainImg = document.createElement('img');

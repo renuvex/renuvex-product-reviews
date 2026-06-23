@@ -8,6 +8,9 @@ function preview(overrides: Partial<MediaPreviewState> = {}): MediaPreviewState 
     mediaId: 'media-1',
     type: 'video',
     url: 'https://signed-playback.test/manifest.m3u8',
+    playbackId: 'signed-playback-1',
+    playbackToken: 'video-token',
+    thumbnailToken: 'thumbnail-token',
     loading: false,
     reviewStatus: 'pending',
     ...overrides,
@@ -25,10 +28,19 @@ describe('admin video preview contract', () => {
 
   it('keeps signed playback and safe player defaults in the admin surface', () => {
     const source = readFileSync(path.join(process.cwd(), 'src/components/home-page/index.tsx'), 'utf8');
+    const playerSource = readFileSync(path.join(process.cwd(), 'src/components/home-page/AdminMuxPlayerPreview.tsx'), 'utf8');
 
     expect(source).toContain('/api/admin/reviews/video-playback?mediaId=');
     expect(source).toContain('Onaylanmam\u0131\u015f m\u00fc\u015fteri videosu');
-    expect(source).toMatch(/<video\s+src=\{mediaPreview\.url\}\s+muted\s+controls\s+playsInline\s+preload="metadata"/);
-    expect(source).not.toMatch(/<video[^>]*\sautoPlay(?:\s|=|>)/);
+    expect(source).toContain('playbackId={mediaPreview.playbackId}');
+    expect(source).toContain('playbackToken={mediaPreview.playbackToken}');
+    expect(source).toContain('thumbnailToken={mediaPreview.thumbnailToken}');
+    expect(playerSource).toContain("import('@mux/mux-player')");
+    expect(playerSource).toContain('<mux-player');
+    expect(playerSource).toContain('playback-token={playbackToken}');
+    expect(playerSource).toContain('thumbnail-token={thumbnailToken}');
+    expect(playerSource).toContain('disable-tracking');
+    expect(playerSource).toContain('disable-cookies');
+    expect(playerSource).not.toMatch(/autoPlay|autoplay/);
   });
 });

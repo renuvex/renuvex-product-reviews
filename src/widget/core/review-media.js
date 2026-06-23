@@ -20,6 +20,26 @@ function isTrustedMuxThumbnailUrl(url) {
   return false;
 }
 
+export function muxPlaybackIdFromUrl(value) {
+  if (typeof value !== 'string' || !value) return '';
+  try {
+    var url = new URL(value);
+    if (url.protocol !== 'https:' || url.username || url.password) return '';
+    var host = url.hostname.toLowerCase();
+    if (host !== 'stream.mux.com' && host !== 'image.mux.com') return '';
+    var segments = url.pathname.split('/').filter(Boolean);
+    if (host === 'stream.mux.com' && segments.length === 1 && segments[0].endsWith('.m3u8')) {
+      return decodeURIComponent(segments[0].slice(0, -5));
+    }
+    if (host === 'image.mux.com' && segments.length >= 2 && /^thumbnail\.(jpg|jpeg|png|webp)$/i.test(segments[1])) {
+      return decodeURIComponent(segments[0]);
+    }
+    return '';
+  } catch (_) {
+    return '';
+  }
+}
+
 function positiveInt(value) {
   var number = Number(value);
   return Number.isFinite(number) && number > 0 ? Math.round(number) : 0;
@@ -76,12 +96,20 @@ export function getTrustedReviewMedia(review) {
     if (!item || typeof item !== 'object') return;
     if (item.type === 'video') {
       if (!isTrustedMuxUrl(item.url) || !isTrustedMuxUrl(item.posterUrl || item.thumbnailUrl)) return;
+      var playbackId = typeof item.playbackId === 'string' ? item.playbackId.trim() : '';
+      var playbackIdFromUrl = muxPlaybackIdFromUrl(item.url);
+      if (playbackId && playbackIdFromUrl && playbackId !== playbackIdFromUrl) return;
+      playbackId = playbackId || playbackIdFromUrl;
+      if (!playbackId) return;
+      var posterPlaybackId = muxPlaybackIdFromUrl(item.posterUrl || item.thumbnailUrl);
+      if (posterPlaybackId !== playbackId) return;
       var videoKey = 'video:' + item.url;
       if (seen[videoKey]) return;
       seen[videoKey] = true;
       result.push({
         type: 'video',
         url: item.url,
+        playbackId: playbackId,
         posterUrl: item.posterUrl || item.thumbnailUrl,
         thumbnailUrl: item.thumbnailUrl || item.posterUrl,
         durationMs: typeof item.durationMs === 'number' ? item.durationMs : null,

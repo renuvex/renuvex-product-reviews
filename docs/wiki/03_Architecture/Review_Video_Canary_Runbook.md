@@ -163,4 +163,4 @@ Do not revoke provider credentials or delete webhook/resources while cleanup wor
 - No external credential revoke or provider resource deletion happens until inventory is proven and the contract/teardown phase is approved.
 
 ## Physical Device Follow-Up
-Playwright emulation is not physical-device acceptance. Before production rollout, repeat upload, interruption/resume, cancel/offline, processing, admin preview, HLS playback, fullscreen/audio/pause, browser back, modal close, and public storefront playback on real iPhone Safari and real Android Chrome devices.
+Playwright emulation is not physical-device acceptance. Before production rollout, repeat upload, interruption/resume, cancel/offline, processing, admin preview, Mux Player playback, fullscreen/audio/pause, browser back, modal close, and public storefront playback on real iPhone Safari and real Android Chrome devices.

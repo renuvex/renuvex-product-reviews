@@ -57,6 +57,7 @@ function videoMedia(uid: string, position = 0) {
   const posterUrl = `https://image.mux.com/${uid}/thumbnail.jpg`;
   return {
     type: 'video',
+    playbackId: uid,
     url: `https://stream.mux.com/${uid}.m3u8`,
     posterUrl,
     thumbnailUrl: posterUrl,
@@ -203,35 +204,6 @@ async function mediaBox(page: Page, selector: string) {
   }, selector);
 }
 
-async function installNativeHlsAudit(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const audit = { playCalls: 0, pauseCalls: 0, loadCalls: 0 };
-    const nativeCanPlayType = HTMLMediaElement.prototype.canPlayType;
-    HTMLMediaElement.prototype.canPlayType = function (type: string) {
-      if (type === 'application/vnd.apple.mpegurl') return 'probably';
-      return nativeCanPlayType.call(this, type);
-    };
-    HTMLMediaElement.prototype.play = function () {
-      audit.playCalls += 1;
-      return Promise.resolve();
-    };
-    HTMLMediaElement.prototype.pause = function () {
-      audit.pauseCalls += 1;
-    };
-    HTMLMediaElement.prototype.load = function () {
-      audit.loadCalls += 1;
-    };
-    (window as Window & { __renuvexMediaAudit?: typeof audit }).__renuvexMediaAudit = audit;
-  });
-}
-
-async function mediaAudit(page: Page) {
-  return page.evaluate(() => (
-    (window as Window & { __renuvexMediaAudit?: { playCalls: number; pauseCalls: number; loadCalls: number } })
-      .__renuvexMediaAudit || { playCalls: -1, pauseCalls: -1, loadCalls: -1 }
-  ));
-}
-
 async function lightboxVideoState(page: Page) {
   return page.evaluate(() => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
@@ -240,17 +212,24 @@ async function lightboxVideoState(page: Page) {
       .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
     const overlay = root?.querySelector<HTMLElement>('.renuvex-pr-modal-overlay');
     const wrap = root?.querySelector<HTMLElement>('.renuvex-pr-modal-wrap');
-    const video = root?.querySelector<HTMLVideoElement>('.renuvex-pr-modal-main-video');
-    if (!overlay || !wrap || !video) throw new Error('Missing video lightbox');
+    const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
+    if (!overlay || !wrap || !player) throw new Error('Missing Mux Player lightbox');
+    const style = getComputedStyle(player);
     return {
-      controls: video.controls,
-      autoplay: video.autoplay,
-      preload: video.preload,
-      playsInline: video.playsInline,
-      playsInlineAttr: video.hasAttribute('playsinline'),
-      webkitPlaysInlineAttr: video.hasAttribute('webkit-playsinline'),
-      poster: video.poster,
-      src: video.getAttribute('src') || '',
+      tagName: player.tagName,
+      playbackId: player.getAttribute('playback-id') || '',
+      preload: player.getAttribute('preload') || '',
+      streamType: player.getAttribute('stream-type') || '',
+      playsInlineAttr: player.hasAttribute('playsinline'),
+      disableTracking: player.hasAttribute('disable-tracking'),
+      disableCookies: player.hasAttribute('disable-cookies'),
+      hotkeys: player.getAttribute('hotkeys') || '',
+      poster: player.getAttribute('poster') || '',
+      autoplayAttr: player.hasAttribute('autoplay'),
+      seekBackwardButton: style.getPropertyValue('--seek-backward-button').trim(),
+      seekForwardButton: style.getPropertyValue('--seek-forward-button').trim(),
+      pipButton: style.getPropertyValue('--pip-button').trim(),
+      renditionMenuButton: style.getPropertyValue('--rendition-menu-button').trim(),
       dialogRole: wrap.getAttribute('role'),
       ariaModal: wrap.getAttribute('aria-modal'),
       overlayClientWidth: overlay.clientWidth,
@@ -290,8 +269,7 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
   });
 }
 
-test('video lightbox uses native HLS contract and releases media on browser back', async ({ page }) => {
-  await installNativeHlsAudit(page);
+test('video lightbox uses Mux Player contract and closes on browser back', async ({ page }) => {
   const log = await setupVideoWidget(page);
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
@@ -301,12 +279,19 @@ test('video lightbox uses native HLS contract and releases media on browser back
 
   const state = await lightboxVideoState(page);
   expect(state).toMatchObject({
-    controls: true,
-    autoplay: false,
+    tagName: 'MUX-PLAYER',
+    playbackId: 'video-1',
     preload: 'metadata',
-    playsInline: true,
+    streamType: 'on-demand',
     playsInlineAttr: true,
-    webkitPlaysInlineAttr: true,
+    disableTracking: true,
+    disableCookies: true,
+    autoplayAttr: false,
+    hotkeys: 'noarrowleft noarrowright',
+    seekBackwardButton: 'none',
+    seekForwardButton: 'none',
+    pipButton: 'none',
+    renditionMenuButton: 'none',
     dialogRole: 'dialog',
     ariaModal: 'true',
   });
@@ -314,67 +299,30 @@ test('video lightbox uses native HLS contract and releases media on browser back
   expect(state.poster).toContain('width=1280');
   expect(state.poster).toContain('height=720');
   expect(state.poster).toContain('fit_mode=preserve');
-  expect(state.src).toContain('/video-1.m3u8');
   expect(state.overlayScrollWidth).toBeLessThanOrEqual(state.overlayClientWidth + 1);
-  expect(await mediaAudit(page)).toMatchObject({ playCalls: 0 });
 
   await page.evaluate(() => history.back());
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
-  await expect.poll(() => mediaAudit(page)).toMatchObject({
-    playCalls: 0,
-    pauseCalls: 1,
-    loadCalls: 1,
-  });
+  await expect.poll(() => page.locator('mux-player').count()).toBe(0);
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('non-native HLS branch loads the manifest through hls.js and cleans up on close', async ({ page }, testInfo) => {
-  test.skip(
-    testInfo.project.name !== 'chromium-desktop' && testInfo.project.name !== 'firefox-desktop',
-    'MSE-backed hls.js branch is exercised on desktop Chromium and Firefox.',
-  );
-  await page.addInitScript(() => {
-    const nativeCanPlayType = HTMLMediaElement.prototype.canPlayType;
-    HTMLMediaElement.prototype.canPlayType = function (type: string) {
-      if (type === 'application/vnd.apple.mpegurl') return '';
-      return nativeCanPlayType.call(this, type);
-    };
-    const audit = { pauseCalls: 0, loadCalls: 0 };
-    const nativePause = HTMLMediaElement.prototype.pause;
-    const nativeLoad = HTMLMediaElement.prototype.load;
-    HTMLMediaElement.prototype.pause = function () {
-      audit.pauseCalls += 1;
-      try { return nativePause.call(this); } catch { return undefined; }
-    };
-    HTMLMediaElement.prototype.load = function () {
-      audit.loadCalls += 1;
-      try { return nativeLoad.call(this); } catch { return undefined; }
-    };
-    (window as Window & { __renuvexHlsCleanupAudit?: typeof audit }).__renuvexHlsCleanupAudit = audit;
+test('video lightbox derives playback id from trusted legacy m3u8 URLs', async ({ page }) => {
+  const log = await setupVideoWidget(page, {
+    reviews: [review('video-legacy', [{
+      ...videoMedia('legacy-playback-id'),
+      playbackId: undefined,
+    }])],
   });
-  const log = await setupVideoWidget(page);
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
-  await expect.poll(() => log.urls.some((url) => url.endsWith('/video-1.m3u8'))).toBe(true);
+  await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('legacy-playback-id');
 
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
-  await expect.poll(() => page.evaluate(() => (
-    (window as Window & { __renuvexHlsCleanupAudit?: { pauseCalls: number; loadCalls: number } })
-      .__renuvexHlsCleanupAudit
-  ))).toMatchObject({
-    pauseCalls: expect.any(Number),
-    loadCalls: expect.any(Number),
-  });
-  const cleanup = await page.evaluate(() => (
-    (window as Window & { __renuvexHlsCleanupAudit?: { pauseCalls: number; loadCalls: number } })
-      .__renuvexHlsCleanupAudit
-  ));
-  expect(cleanup?.pauseCalls).toBeGreaterThanOrEqual(1);
-  expect(cleanup?.loadCalls).toBeGreaterThanOrEqual(1);
   expect(widgetErrors(log)).toEqual([]);
 });
 
@@ -505,7 +453,6 @@ test('video wizard completes Mux direct upload and submits only the ready video 
 });
 
 test('video to image navigation disposes the previous player before rendering the next review', async ({ page }) => {
-  await installNativeHlsAudit(page);
   const log = await setupVideoWidget(page, {
     reviews: [
       review('video-1', [videoMedia('video-1')]),
@@ -524,18 +471,17 @@ test('video to image navigation disposes the previous player before rendering th
       .filter((candidate): candidate is ShadowRoot => !!candidate)
       .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
     return {
-      videos: root?.querySelectorAll('.renuvex-pr-modal-main-video').length || 0,
+      players: root?.querySelectorAll('mux-player.renuvex-pr-modal-main-video').length || 0,
       images: root?.querySelectorAll('.renuvex-pr-modal-main-img').length || 0,
     };
-  })).toEqual({ videos: 0, images: 1 });
-  await expect.poll(() => mediaAudit(page)).toMatchObject({ pauseCalls: 1, loadCalls: 1 });
+  })).toEqual({ players: 0, images: 1 });
 
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('video to video navigation keeps native controls centered during the transition', async ({ page }) => {
+test('video to video navigation keeps Mux Player centered during the transition', async ({ page }) => {
   const log = await setupVideoWidget(page, {
     reviews: [
       review('video-1', [videoMedia('video-1')]),
@@ -554,11 +500,12 @@ test('video to video navigation keeps native controls centered during the transi
       .map((host) => host.shadowRoot)
       .filter((candidate): candidate is ShadowRoot => !!candidate)
       .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
-    const video = root?.querySelector<HTMLVideoElement>('.renuvex-pr-modal-main-video');
-    if (!video) throw new Error('Missing navigated video');
-    const style = getComputedStyle(video);
+    const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
+    if (!player) throw new Error('Missing navigated player');
+    const style = getComputedStyle(player);
     return {
-      className: video.className,
+      className: player.className,
+      playbackId: player.getAttribute('playback-id') || '',
       animationName: style.animationName,
       transform: style.transform,
     };
@@ -566,6 +513,7 @@ test('video to video navigation keeps native controls centered during the transi
 
   expect(transition.className).toContain('renuvex-pr-modal-video-enter');
   expect(transition.className).not.toContain('renuvex-pr-modal-img-enter');
+  expect(transition.playbackId).toBe('video-2');
   expect(transition.animationName).toBe('renuvexPrVideoFadeIn');
   expect(transition.transform).toBe('none');
 

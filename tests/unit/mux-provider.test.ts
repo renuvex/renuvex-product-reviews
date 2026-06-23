@@ -108,12 +108,17 @@ describe('Mux provider adapter', () => {
   });
 
   it('trusts only expected Mux delivery hosts over https', async () => {
-    const { isTrustedMuxDeliveryUrl } = await import('@/lib/media/providers/mux');
+    const { isTrustedMuxDeliveryUrl, parseMuxPlaybackIdFromDeliveryUrl } = await import('@/lib/media/providers/mux');
 
     expect(isTrustedMuxDeliveryUrl('https://stream.mux.com/public-1.m3u8')).toBe(true);
     expect(isTrustedMuxDeliveryUrl('https://image.mux.com/public-1/thumbnail.jpg')).toBe(true);
     expect(isTrustedMuxDeliveryUrl('http://stream.mux.com/public-1.m3u8')).toBe(false);
     expect(isTrustedMuxDeliveryUrl('https://evil.example/public-1.m3u8')).toBe(false);
+    expect(isTrustedMuxDeliveryUrl('https://stream.mux.com/public-1/master.mp4')).toBe(false);
     expect(isTrustedMuxDeliveryUrl('https://stream.mux.com/public-1.m3u8', 'other-id')).toBe(false);
+    expect(parseMuxPlaybackIdFromDeliveryUrl('https://stream.mux.com/public-1.m3u8')).toBe('public-1');
+    expect(parseMuxPlaybackIdFromDeliveryUrl('https://image.mux.com/public-1/thumbnail.jpg?width=640')).toBe('public-1');
+    expect(parseMuxPlaybackIdFromDeliveryUrl('https://stream.mux.com/public-1/master.mp4')).toBeNull();
+    expect(parseMuxPlaybackIdFromDeliveryUrl('https://stream.mux.com/%E0%A4%A.m3u8')).toBeNull();
   });
 });

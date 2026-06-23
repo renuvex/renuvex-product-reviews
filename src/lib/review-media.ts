@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { buildReviewImageThumbnailUrl, getReviewImagePublicId, isTrustedReviewImageUrl, parseStoredReviewImages } from '@/lib/review-images';
-import { isTrustedMuxDeliveryUrl } from '@/lib/media/providers/mux';
+import { isTrustedMuxDeliveryUrl, parseMuxPlaybackIdFromDeliveryUrl } from '@/lib/media/providers/mux';
 import { VIDEO_PROVIDER } from '@/lib/media/constants';
 import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 
@@ -50,6 +50,7 @@ export function buildReviewMediaCreateManyData(input: ReviewMediaWriteInput): Pr
 export type PublicReviewMedia = {
   type: 'image' | 'video';
   url: string;
+  playbackId?: string | null;
   thumbnailUrl: string | null;
   posterUrl: string | null;
   durationMs: number | null;
@@ -90,11 +91,13 @@ export function publicMediaFromMediaOrLegacy(
     .flatMap<PublicReviewMedia>((item) => {
       if (item.resourceType === 'video') {
         if (item.provider !== VIDEO_PROVIDER) return [];
-        if (!isTrustedMuxDeliveryUrl(item.url)) return [];
-        if (!item.posterUrl || !isTrustedMuxDeliveryUrl(item.posterUrl)) return [];
+        const playbackId = parseMuxPlaybackIdFromDeliveryUrl(item.url);
+        if (!playbackId || !isTrustedMuxDeliveryUrl(item.url, playbackId)) return [];
+        if (!item.posterUrl || !isTrustedMuxDeliveryUrl(item.posterUrl, playbackId)) return [];
         return [{
           type: 'video' as const,
           url: item.url,
+          playbackId,
           thumbnailUrl: item.posterUrl,
           posterUrl: item.posterUrl,
           durationMs: item.durationMs ?? null,

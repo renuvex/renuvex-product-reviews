@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { colors, componentStyles, typography } from '@/lib/design-tokens';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { Review, ReviewMedia, WidgetSettingsMap, TabKey } from './types';
+import { AdminMuxPlayerPreview } from './AdminMuxPlayerPreview';
 import { isUnapprovedVideoPreview, type MediaPreviewState } from './MediaPreviewState';
 import { ReplyDialog } from './ReplyDialog';
 import { ReviewsTab } from './ReviewsTab';
@@ -154,11 +155,24 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       const response = await axios.get(`/api/admin/reviews/video-playback?mediaId=${encodeURIComponent(media.id)}`, {
         headers: await freshAuthHeader(token),
       });
-      const url = response.data?.data?.url;
-      if (typeof url !== 'string' || !url) throw new Error('video_playback_url_missing');
+      const data = response.data?.data;
+      const playbackId = data?.playbackId;
+      const playbackToken = data?.playbackToken;
+      const thumbnailToken = data?.thumbnailToken;
+      if (typeof playbackId !== 'string' || !playbackId) throw new Error('video_playback_id_missing');
+      if (typeof playbackToken !== 'string' || !playbackToken) throw new Error('video_playback_token_missing');
+      if (typeof thumbnailToken !== 'string' || !thumbnailToken) throw new Error('video_thumbnail_token_missing');
       setMediaPreview(current => (
         current?.mediaId === media.id
-          ? { ...current, url, loading: false }
+          ? {
+              ...current,
+              url: typeof data?.url === 'string' ? data.url : null,
+              posterUrl: typeof data?.posterUrl === 'string' ? data.posterUrl : null,
+              playbackId,
+              playbackToken,
+              thumbnailToken,
+              loading: false,
+            }
           : current
       ));
     } catch (error) {
@@ -265,7 +279,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
           <button type="button" className="absolute top-4 right-5 flex h-10 w-10 items-center justify-center text-white bg-transparent border-none cursor-pointer" aria-label="Kapat" onClick={() => setMediaPreview(null)}><X size={24} /></button>
           {mediaPreview.loading ? (
             <div className="flex items-center gap-2 text-white" role="status"><LoaderCircle className="animate-spin" size={22} /> Video hazırlanıyor...</div>
-          ) : mediaPreview.type === 'video' && mediaPreview.url ? (
+          ) : mediaPreview.type === 'video' && mediaPreview.playbackId && mediaPreview.playbackToken && mediaPreview.thumbnailToken ? (
             <div className="flex max-h-[94vh] max-w-[94vw] flex-col items-center gap-3" onClick={(event) => event.stopPropagation()}>
               {isUnapprovedVideoPreview(mediaPreview) && (
                 <div className="flex w-full items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950" role="note">
@@ -273,7 +287,13 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                   Onaylanmamış müşteri videosu
                 </div>
               )}
-              <video src={mediaPreview.url} muted controls playsInline preload="metadata" className="max-h-[86vh] max-w-[90vw] rounded-lg bg-black shadow-2xl" />
+              <AdminMuxPlayerPreview
+                playbackId={mediaPreview.playbackId}
+                playbackToken={mediaPreview.playbackToken}
+                thumbnailToken={mediaPreview.thumbnailToken}
+                posterUrl={mediaPreview.posterUrl}
+                className="max-h-[86vh] max-w-[90vw] rounded-lg bg-black shadow-2xl"
+              />
             </div>
           ) : mediaPreview.url ? (
             // eslint-disable-next-line @next/next/no-img-element

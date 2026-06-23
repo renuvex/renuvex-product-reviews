@@ -811,12 +811,15 @@ describe('/api/public/reviews', () => {
     expect(body.data.reviews[0].media).toEqual([expect.objectContaining({
       type: 'video',
       url: playbackUrl,
+      playbackId,
       thumbnailUrl: posterUrl,
       posterUrl,
       durationMs: 45_000,
     })]);
     expect(body.data.reviews[0].media[0]).not.toHaveProperty('provider');
     expect(body.data.reviews[0].media[0]).not.toHaveProperty('providerAssetId');
+    expect(body.data.reviews[0].media[0]).not.toHaveProperty('providerUploadId');
+    expect(body.data.reviews[0].media[0]).not.toHaveProperty('token');
   });
 
   it('applies review GET pagination, sorting, rating, and trusted image filters', async () => {

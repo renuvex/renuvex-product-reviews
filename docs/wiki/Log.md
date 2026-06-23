@@ -22,6 +22,12 @@ source_files:
 
 # Project Log
 
+## 2026-06-23 - migration | Move review playback to Mux Player
+- Replaced the storefront lightbox's custom native `<video>` + direct `hls.js` orchestration with official `@mux/mux-player`.
+- Public approved video media now returns additive `playbackId`; the widget prefers that ID, keeps trusted Mux `.m3u8` parsing only as rollout fallback, and does not expose provider ids, signed/private playback ids, tokens, or upload URLs.
+- Admin pending/rejected video preview now uses signed Mux Player attributes (`playbackId`, `playbackToken`, `thumbnailToken`) from `/api/admin/reviews/video-playback`; legacy signed URL fields remain temporarily for deployment overlap.
+- Mux Data tracking/cookies stay disabled in this first playback phase. Player theming, Mux Data analytics, and custom Media Chrome surfaces remain separate product work.
+
 ## 2026-06-23 - fix | Make stalled video upload retry manual
 - Physical mobile retesting showed the automatic reconnect path could still leave the wizard on `Video Yükleniyor` while the DB session stayed `uploading` and the Mux direct upload stayed `waiting`.
 - The widget now fails closed for direct-upload offline/stall cases: it aborts the active PUT, records the technical failure code for metrics, and shows only the themed `Tekrar dene` action for retryable failures. No network-specific or red error copy is shown in the storefront retry card.

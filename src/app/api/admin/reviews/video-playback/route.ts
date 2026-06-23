@@ -38,6 +38,9 @@ export async function GET(request: Request) {
   ]);
   const response = NextResponse.json({
     data: {
+      playbackId: session.signedPlaybackId,
+      playbackToken,
+      thumbnailToken,
       url: buildMuxSignedPlaybackUrl(session.signedPlaybackId, playbackToken),
       posterUrl: buildMuxPosterUrl(session.signedPlaybackId, thumbnailToken),
       expiresIn: 15 * 60,
