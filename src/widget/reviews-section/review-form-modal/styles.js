@@ -490,13 +490,6 @@ export var FWIZARD_CSS = `
     font-size:14px;
     font-weight:600;
   }
-  .renuvex-pr-fwizard-video-status{
-    color:var(--renuvex-pr-fwizard-secondary-text,#6b7280);
-    font-size:13px;
-  }
-  .renuvex-pr-fwizard-video-status--error{
-    color:#b91c1c;
-  }
   .renuvex-pr-fwizard-video-retry{
     align-self:center;
     width:100%;
