@@ -46,7 +46,9 @@ describe('admin video preview contract', () => {
     expect(playerSource).toContain('disable-tracking');
     expect(playerSource).toContain('disable-cookies');
     expect(playerSource).toContain('accent-color="#f8fafc"');
-    expect(playerSource).toContain("'--controls-backdrop-color': 'rgba(0,0,0,0.45)'");
+    expect(playerSource).toContain('secondary-color="#111111"');
+    expect(playerSource).toContain("'--controls-backdrop-color': 'rgba(0,0,0,0.58)'");
+    expect(playerSource).toContain("'--media-range-track-background': 'rgba(0,0,0,0.72)'");
     expect(playerSource).toContain('onContextMenu={preventNativeVideoContextMenu}');
     expect(playerSource).not.toMatch(/autoPlay|autoplay/);
   });

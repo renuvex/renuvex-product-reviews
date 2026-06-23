@@ -31,6 +31,7 @@ export function AdminMuxPlayerPreview({
       thumbnail-token={thumbnailToken}
       poster={posterUrl || undefined}
       accent-color="#f8fafc"
+      secondary-color="#111111"
       stream-type="on-demand"
       preload="metadata"
       muted
@@ -38,7 +39,12 @@ export function AdminMuxPlayerPreview({
       disable-tracking
       disable-cookies
       hotkeys="noarrowleft noarrowright"
-      style={{ '--controls-backdrop-color': 'rgba(0,0,0,0.45)' }}
+      style={{
+        '--controls-backdrop-color': 'rgba(0,0,0,0.58)',
+        '--media-range-bar-color': '#f8fafc',
+        '--media-range-track-background': 'rgba(0,0,0,0.72)',
+        '--media-time-range-buffered-color': 'rgba(255,255,255,0.28)',
+      }}
       onContextMenu={preventNativeVideoContextMenu}
     />
   );

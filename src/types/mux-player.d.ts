@@ -10,6 +10,7 @@ type MuxPlayerElementAttributes = DetailedHTMLProps<HTMLAttributes<HTMLElement>,
   'disable-tracking'?: boolean | '';
   'disable-cookies'?: boolean | '';
   'accent-color'?: string;
+  'secondary-color'?: string;
   poster?: string;
   preload?: 'none' | 'metadata' | 'auto';
   playsinline?: boolean | '';
