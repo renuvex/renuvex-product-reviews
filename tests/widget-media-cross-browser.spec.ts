@@ -383,6 +383,7 @@ test('video wizard completes Mux direct upload and submits only the ready video 
     testInfo.project.name === 'firefox-desktop' || testInfo.project.name === 'webkit-desktop',
     'The PR matrix runs the wizard on Chromium desktop, Android Chrome emulation, and iPhone WebKit emulation.',
   );
+  await routeMuxAssets(page);
   await stubVideoMetadata(page, 12);
   const submittedBodies: Array<Record<string, unknown>> = [];
   const completeBodies: Array<Record<string, unknown>> = [];
