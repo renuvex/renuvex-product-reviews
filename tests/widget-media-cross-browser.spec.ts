@@ -244,6 +244,13 @@ async function lightboxVideoState(page: Page) {
       themeHasPointerContrast:
         themeMarkup.includes('--media-range-track-pointer-background: rgba(255,255,255,0.72)') &&
         themeMarkup.includes('--media-range-track-pointer-border-right: 1px solid rgba(0,0,0,0.55)'),
+      themeHasControlHoverContrast:
+        themeMarkup.includes('media-control-bar,') &&
+        themeMarkup.includes('media-control-bar *,') &&
+        themeMarkup.includes('.center-controls.pre-playback media-play-button') &&
+        themeMarkup.includes('--media-control-hover-background: rgba(0,0,0,0.84)') &&
+        themeMarkup.includes('--media-icon-color: #ffffff') &&
+        themeMarkup.includes('--media-text-color: #ffffff'),
       accentColor: player.getAttribute('accent-color') || '',
       primaryColor: player.getAttribute('primary-color') || '',
       secondaryColor: player.getAttribute('secondary-color') || '',
@@ -317,6 +324,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     themeHasContrastThumb: true,
     themeHasBlackTrack: true,
     themeHasPointerContrast: true,
+    themeHasControlHoverContrast: true,
     accentColor: '#ffffff',
     primaryColor: '#ffffff',
     secondaryColor: '#000000',

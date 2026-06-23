@@ -21,8 +21,30 @@ function defineReviewPlayerTheme() {
   const reviewTemplate = gerwigTemplate.cloneNode(true) as HTMLTemplateElement;
   reviewTemplate.id = REVIEW_MUX_PLAYER_THEME_ELEMENT;
 
-  const timeRangeStyle = document.createElement('style');
-  timeRangeStyle.textContent = `
+  const reviewControlStyle = document.createElement('style');
+  reviewControlStyle.textContent = `
+    :host {
+      --media-control-hover-background: rgba(0,0,0,0.84);
+      --media-icon-color: #ffffff;
+      --media-text-color: #ffffff;
+    }
+
+    media-control-bar,
+    media-control-bar *,
+    .center-controls,
+    .center-controls * {
+      --media-control-hover-background: rgba(0,0,0,0.84);
+      --media-icon-color: #ffffff;
+      --media-text-color: #ffffff;
+    }
+
+    .center-controls.pre-playback media-play-button,
+    [breakpointsm] .center-controls.pre-playback media-play-button {
+      --media-control-background: #000000;
+      --media-control-hover-background: rgba(0,0,0,0.84);
+      --media-icon-color: #ffffff;
+    }
+
     media-time-range {
       --media-range-bar-color: #ffffff;
       --media-range-thumb-background: radial-gradient(
@@ -40,7 +62,7 @@ function defineReviewPlayerTheme() {
       --media-time-range-buffered-color: rgba(255,255,255,0.28);
     }
   `;
-  reviewTemplate.content.append(timeRangeStyle);
+  reviewTemplate.content.append(reviewControlStyle);
 
   class RenuvexReviewTheme extends GerwigTheme {}
 

@@ -55,6 +55,12 @@ describe('admin video preview contract', () => {
     expect(playerSource).not.toMatch(/autoPlay|autoplay/);
     expect(playerSource).not.toContain('theme-style');
     expect(themeSource).toContain('media-theme-renuvex-review');
+    expect(themeSource).toContain('media-control-bar,');
+    expect(themeSource).toContain('media-control-bar *,');
+    expect(themeSource).toContain('.center-controls.pre-playback media-play-button');
+    expect(themeSource).toContain('--media-control-hover-background: rgba(0,0,0,0.84)');
+    expect(themeSource).toContain('--media-icon-color: #ffffff');
+    expect(themeSource).toContain('--media-text-color: #ffffff');
     expect(themeSource).toContain('media-time-range');
     expect(themeSource).toContain('--media-range-bar-color: #ffffff');
     expect(themeSource).toContain('--media-range-thumb-background: radial-gradient');
