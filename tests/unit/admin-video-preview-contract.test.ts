@@ -35,6 +35,10 @@ describe('admin video preview contract', () => {
     expect(source).toContain('playbackId={mediaPreview.playbackId}');
     expect(source).toContain('playbackToken={mediaPreview.playbackToken}');
     expect(source).toContain('thumbnailToken={mediaPreview.thumbnailToken}');
+    expect(source).toContain('w-[min(88vw,360px)]');
+    expect(source).toContain('w-[min(92vw,760px)]');
+    expect(source).toContain('h-[min(72vh,640px)]');
+    expect(source).not.toContain('max-h-[86vh] max-w-[90vw]');
     expect(playerSource).toContain("import('@mux/mux-player')");
     expect(playerSource).toContain('<mux-player');
     expect(playerSource).toContain('playback-token={playbackToken}');

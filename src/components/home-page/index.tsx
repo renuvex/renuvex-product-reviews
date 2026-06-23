@@ -150,7 +150,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       return;
     }
     if (media.type !== 'video' || media.processingStatus !== 'ready') return;
-    setMediaPreview({ mediaId: media.id, type: 'video', url: null, loading: true, reviewStatus });
+    setMediaPreview({ mediaId: media.id, type: 'video', url: null, width: media.width, height: media.height, loading: true, reviewStatus });
     try {
       const response = await axios.get(`/api/admin/reviews/video-playback?mediaId=${encodeURIComponent(media.id)}`, {
         headers: await freshAuthHeader(token),
@@ -248,6 +248,17 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     );
   }
 
+  const videoPreviewIsPortrait = mediaPreview?.type === 'video'
+    && typeof mediaPreview.width === 'number'
+    && typeof mediaPreview.height === 'number'
+    && mediaPreview.height > mediaPreview.width;
+  const videoPreviewShellClassName = videoPreviewIsPortrait
+    ? 'flex w-[min(88vw,360px)] max-h-[92vh] flex-col items-center gap-3'
+    : 'flex w-[min(92vw,760px)] max-h-[92vh] flex-col items-center gap-3';
+  const videoPreviewPlayerClassName = videoPreviewIsPortrait
+    ? 'h-[min(72vh,640px)] w-full rounded-lg bg-black shadow-2xl [--media-object-fit:contain] [--media-object-position:center]'
+    : 'aspect-video max-h-[72vh] w-full rounded-lg bg-black shadow-2xl [--media-object-fit:contain] [--media-object-position:center]';
+
   return (
     <div className="w-full p-4 bg-background min-h-screen">
 
@@ -280,7 +291,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
           {mediaPreview.loading ? (
             <div className="flex items-center gap-2 text-white" role="status"><LoaderCircle className="animate-spin" size={22} /> Video hazırlanıyor...</div>
           ) : mediaPreview.type === 'video' && mediaPreview.playbackId && mediaPreview.playbackToken && mediaPreview.thumbnailToken ? (
-            <div className="flex max-h-[94vh] max-w-[94vw] flex-col items-center gap-3" onClick={(event) => event.stopPropagation()}>
+            <div className={videoPreviewShellClassName} onClick={(event) => event.stopPropagation()}>
               {isUnapprovedVideoPreview(mediaPreview) && (
                 <div className="flex w-full items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950" role="note">
                   <AlertCircle size={17} aria-hidden="true" />
@@ -292,7 +303,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
                 playbackToken={mediaPreview.playbackToken}
                 thumbnailToken={mediaPreview.thumbnailToken}
                 posterUrl={mediaPreview.posterUrl}
-                className="max-h-[86vh] max-w-[90vw] rounded-lg bg-black shadow-2xl"
+                className={videoPreviewPlayerClassName}
               />
             </div>
           ) : mediaPreview.url ? (

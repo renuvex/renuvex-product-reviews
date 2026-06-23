@@ -6,6 +6,8 @@ export interface MediaPreviewState {
   playbackToken?: string | null;
   thumbnailToken?: string | null;
   posterUrl?: string | null;
+  width?: number | null;
+  height?: number | null;
   loading: boolean;
   reviewStatus: string;
 }
