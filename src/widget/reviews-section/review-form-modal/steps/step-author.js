@@ -91,6 +91,29 @@ export function createStepAuthor(state, opts) {
     return validateStep(4, state.get());
   }
 
+  function setSubmitButtonText(text) {
+    submitBtn.classList.remove('renuvex-pr-fwizard-submit-btn--video-pending');
+    submitBtn.textContent = text;
+  }
+
+  function setVideoPreparingButton() {
+    submitBtn.classList.add('renuvex-pr-fwizard-submit-btn--video-pending');
+    submitBtn.textContent = '';
+
+    var dots = document.createElement('span');
+    dots.className = 'renuvex-pr-fwizard-video-dots';
+    dots.setAttribute('aria-hidden', 'true');
+    dots.appendChild(document.createElement('span'));
+    dots.appendChild(document.createElement('span'));
+    dots.appendChild(document.createElement('span'));
+
+    var label = document.createElement('span');
+    label.textContent = 'Video Hazırlanıyor';
+
+    submitBtn.appendChild(dots);
+    submitBtn.appendChild(label);
+  }
+
   function applySubmitDisabled() {
     var disabled = !isValid();
     var pendingCount = (state.get().pendingImages || []).length;
@@ -102,15 +125,17 @@ export function createStepAuthor(state, opts) {
     if (isUploading || isVideoPending || isVideoFailed) {
       submitBtn.disabled = true;
       submitBtn.classList.add('renuvex-pr-fwizard-submit-btn--disabled');
-      submitBtn.textContent = isVideoFailed
-        ? 'Video Yüklenemedi'
-        : isVideoPending
-          ? 'Video Hazırlanıyor...'
-          : 'Fotoğraflar Yükleniyor...';
+      if (isVideoFailed) {
+        setSubmitButtonText('Video Yüklenemedi');
+      } else if (isVideoPending) {
+        setVideoPreparingButton();
+      } else {
+        setSubmitButtonText('Fotoğraflar Yükleniyor...');
+      }
     } else {
       submitBtn.disabled = disabled;
       submitBtn.classList.toggle('renuvex-pr-fwizard-submit-btn--disabled', disabled);
-      submitBtn.textContent = 'Gönder';
+      setSubmitButtonText('Gönder');
     }
   }
 

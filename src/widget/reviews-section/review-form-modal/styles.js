@@ -616,6 +616,12 @@ export var FWIZARD_CSS = `
   .renuvex-pr-fwizard-submit-btn:hover:not(:disabled){
     opacity:0.92;
   }
+  .renuvex-pr-fwizard-submit-btn--video-pending{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+  }
   .renuvex-pr-fwizard-submit-btn--disabled,
   .renuvex-pr-fwizard-submit-btn:disabled{
     background:var(--renuvex-pr-fwizard-btn-disabled-bg, rgba(0,0,0,0.18));

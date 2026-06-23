@@ -658,11 +658,7 @@ test('quota races fail closed with generic video upload copy', async ({ page }) 
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
-  await expect.poll(() => textInOverlay(
-    page,
-    '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-status',
-  )).toBe('Video yüklenemedi');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-status')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
   expect(widgetErrors(log).filter((message) => !message.includes('status of 429'))).toEqual([]);
@@ -808,13 +804,14 @@ test('video upload wizard posts a ready video token without photo media', async 
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-author')).toBe(true);
   await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-step-author input[type="text"]', 'Mert');
   await expect.poll(() => isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn')).toBe(true);
-  await expect.poll(() => textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn')).toBe('Video Hazırlanıyor...');
+  await expect.poll(() => textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn')).toBe('Video Hazırlanıyor');
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn .renuvex-pr-fwizard-video-dots span')).toBe(3);
 
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
-  await expect.poll(() => textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-uploading-card')).toContain('Video yükleniyor');
+  await expect.poll(() => textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-uploading-card')).toContain('Video Yükleniyor');
   expect(await visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-uploading-card .renuvex-pr-fwizard-video-remove')).toBe(0);
 
@@ -1154,16 +1151,17 @@ test('video upload shows neutral retry copy when connection drops', async ({ pag
     page,
     '.renuvex-pr-fwizard-overlay',
     '.renuvex-pr-fwizard-video-uploading-card',
-  )).toContain('Video yükleniyor');
+  )).toContain('Video Yükleniyor');
 
   await page.evaluate(() => window.dispatchEvent(new Event('offline')));
   await expect.poll(() => textInOverlay(
     page,
     '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-status',
-  )).toContain('Video yüklenemedi');
+    '.renuvex-pr-fwizard-video-retry',
+  )).toBe('Tekrar dene');
   expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-card')).not.toContain('İnternet');
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
+  expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-status')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
 
   failFirstMuxUpload();
@@ -1171,7 +1169,7 @@ test('video upload shows neutral retry copy when connection drops', async ({ pag
   await page.waitForTimeout(800);
   expect(muxPutCalls).toBe(1);
   expect(completeCalls).toBe(0);
-  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-status')).toMatch(/Video y.*klenemedi/);
+  expect(await textInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe('Tekrar dene');
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
 
@@ -1278,8 +1276,8 @@ test('video upload surfaces manual retry when direct upload stalls', async ({ pa
   await expect.poll(() => textInOverlay(
     page,
     '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-status',
-  ), { timeout: 10000 }).toContain('Video yüklenemedi');
+    '.renuvex-pr-fwizard-video-retry',
+  ), { timeout: 10000 }).toBe('Tekrar dene');
   await page.waitForTimeout(800);
   expect(muxPutCalls).toBe(1);
   expect(completeCalls).toBe(0);
@@ -1390,8 +1388,8 @@ test('video retry keeps the selected file after repeated stalled uploads', async
   await expect.poll(() => textInOverlay(
     page,
     '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-status',
-  ), { timeout: 10000 }).toContain('Video yüklenemedi');
+    '.renuvex-pr-fwizard-video-retry',
+  ), { timeout: 10000 }).toBe('Tekrar dene');
   expect(await visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
@@ -1401,13 +1399,13 @@ test('video retry keeps the selected file after repeated stalled uploads', async
     page,
     '.renuvex-pr-fwizard-overlay',
     '.renuvex-pr-fwizard-video-uploading-card',
-  )).toContain('Video yükleniyor');
+  )).toContain('Video Yükleniyor');
   await expect.poll(() => muxPutCalls, { timeout: 10000 }).toBe(2);
   await expect.poll(() => textInOverlay(
     page,
     '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-status',
-  ), { timeout: 10000 }).toContain('Video yüklenemedi');
+    '.renuvex-pr-fwizard-video-retry',
+  ), { timeout: 10000 }).toBe('Tekrar dene');
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
 
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry');
@@ -1415,7 +1413,7 @@ test('video retry keeps the selected file after repeated stalled uploads', async
     page,
     '.renuvex-pr-fwizard-overlay',
     '.renuvex-pr-fwizard-video-uploading-card',
-  )).toContain('Video yükleniyor');
+  )).toContain('Video Yükleniyor');
   await expect.poll(() => muxPutCalls, { timeout: 10000 }).toBe(3);
   await expect.poll(() => completeCalls).toBe(1);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
@@ -1512,8 +1510,8 @@ test('video retry preserves the Mux direct upload session after chunk attempts a
   await expect.poll(() => textInOverlay(
     page,
     '.renuvex-pr-fwizard-overlay',
-    '.renuvex-pr-fwizard-video-status',
-  ), { timeout: 10000 }).toContain('Video yüklenemedi');
+    '.renuvex-pr-fwizard-video-retry',
+  ), { timeout: 10000 }).toBe('Tekrar dene');
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-remove')).toBe(0);
   expect(await countInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-video-retry')).toBe(1);
   expect(await page.evaluate(() => {
@@ -1527,7 +1525,7 @@ test('video retry preserves the Mux direct upload session after chunk attempts a
     page,
     '.renuvex-pr-fwizard-overlay',
     '.renuvex-pr-fwizard-video-uploading-card',
-  )).toContain('Video yükleniyor');
+  )).toContain('Video Yükleniyor');
   await expect.poll(() => statusCalls).toBeGreaterThanOrEqual(3);
   await expect.poll(() => muxPutCalls).toBe(6);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);

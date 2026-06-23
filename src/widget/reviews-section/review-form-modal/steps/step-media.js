@@ -11,10 +11,6 @@ import {
 } from '../media/video-upload.js';
 import { createStepPhotos, MAX_PHOTOS } from './step-photos.js';
 
-function videoFailureText() {
-  return 'Video yüklenemedi';
-}
-
 function videoViewMode(video) {
   if (!video) return 'empty';
   if (video.status === 'ready') return 'ready';
@@ -23,7 +19,7 @@ function videoViewMode(video) {
 }
 
 function videoBusyText(video) {
-  return 'Video yükleniyor';
+  return 'Video Yükleniyor';
 }
 
 function videoBusyShowsDots(video) {
@@ -135,6 +131,7 @@ export function createStepMedia(state, opts) {
     retry.type = 'button';
     retry.className = 'renuvex-pr-fwizard-video-retry';
     retry.textContent = 'Tekrar dene';
+    retry.setAttribute('aria-label', 'Video yüklenemedi, tekrar dene');
 
     if (mode === 'ready') {
       var posterUrl = video.posterUrl || video.localUrl || '';
@@ -158,14 +155,7 @@ export function createStepMedia(state, opts) {
       status.setAttribute('aria-live', 'polite');
       card.appendChild(status);
     } else {
-      details = document.createElement('div');
-      details.className = 'renuvex-pr-fwizard-video-details renuvex-pr-fwizard-video-details--failed';
-      status = document.createElement('div');
-      status.className = 'renuvex-pr-fwizard-video-status renuvex-pr-fwizard-video-status--error';
-      status.setAttribute('role', 'alert');
-      status.setAttribute('aria-live', 'assertive');
-      details.appendChild(status);
-      card.appendChild(details);
+      details = card;
     }
 
     if (mode === 'ready') {
@@ -221,12 +211,6 @@ export function createStepMedia(state, opts) {
         : '<span>' + busyText + '</span>';
       if (videoView.status.innerHTML !== busyMarkup) videoView.status.innerHTML = busyMarkup;
     }
-    if (videoView.status && mode === 'failed') {
-      videoView.status.className = 'renuvex-pr-fwizard-video-status renuvex-pr-fwizard-video-status--error';
-      videoView.status.setAttribute('role', 'alert');
-      videoView.status.textContent = videoFailureText(video);
-    }
-
     var canRetry = mode === 'failed' && !!(video.error && video.file && video.retryable !== false);
     videoView.retry.onclick = canRetry
       ? function () { startUpload(video.file, video.localUrl, video.durationMs); }
@@ -361,7 +345,7 @@ export function createStepMedia(state, opts) {
       if (opts.showToast) {
         var toastMessage = failure.code === 'invalid_video_duration'
           ? failure.message
-          : videoFailureText();
+          : 'Video yüklenemedi';
         opts.showToast(toastMessage, 'error');
       }
     }
