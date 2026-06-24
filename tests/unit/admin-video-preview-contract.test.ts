@@ -72,6 +72,8 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('export const ADMIN_REVIEW_PLAYER_COLORS');
     expect(themeSource).toContain('export const STOREFRONT_REVIEW_PLAYER_COLORS');
     expect(themeSource).toContain("import('./review-player-i18n')");
+    expect(themeSource).toContain("import('media-chrome')");
+    expect(themeSource).toContain("import('media-chrome/menu')");
     expect(themeSource).toContain("querySelector('media-controller')?.setAttribute('lang', REVIEW_PLAYER_LOCALE)");
     expect(themeSource).toContain("controlForeground: '#ffffff'");
     expect(themeSource).toContain("controlBackground: '#000000'");
@@ -100,6 +102,7 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain("--media-menu-background: ${colors.menuBackground}");
     expect(themeSource).toContain("--media-text-color: ${colors.menuText}");
     expect(i18nSource).toContain("addTranslation(REVIEW_PLAYER_LOCALE, REVIEW_PLAYER_TR_TRANSLATIONS)");
+    expect(i18nSource).toContain("setLanguage(REVIEW_PLAYER_LOCALE)");
     expect(i18nSource).toContain("Quality: 'Kalite'");
     expect(i18nSource).toContain("'Playback rate': 'Oynatma hızı'");
     expect(REVIEW_PLAYER_LOCALE).toBe('tr');

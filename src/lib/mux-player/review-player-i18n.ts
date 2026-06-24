@@ -1,4 +1,4 @@
-import { addTranslation } from 'media-chrome/dist/utils/i18n.js';
+import { addTranslation, setLanguage } from 'media-chrome/dist/utils/i18n.js';
 import type { TranslateDictionary } from 'media-chrome/dist/lang/en.js';
 import { REVIEW_PLAYER_LOCALE } from './review-player-locale';
 
@@ -80,3 +80,4 @@ export const REVIEW_PLAYER_TR_TRANSLATIONS = {
 } as const satisfies TranslateDictionary;
 
 addTranslation(REVIEW_PLAYER_LOCALE, REVIEW_PLAYER_TR_TRANSLATIONS);
+setLanguage(REVIEW_PLAYER_LOCALE);

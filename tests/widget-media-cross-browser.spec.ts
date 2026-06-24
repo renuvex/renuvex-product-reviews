@@ -218,6 +218,12 @@ async function lightboxVideoState(page: Page) {
     const ThemeConstructor = customElements.get('media-theme-renuvex-review-storefront') as
       | (CustomElementConstructor & { template?: HTMLTemplateElement })
       | undefined;
+    const RenditionMenuButton = customElements.get('media-rendition-menu-button') as
+      | (CustomElementConstructor & { getTooltipContentHTML?: () => string })
+      | undefined;
+    const PlaybackRateMenuButton = customElements.get('media-playback-rate-menu-button') as
+      | (CustomElementConstructor & { getTooltipContentHTML?: () => string })
+      | undefined;
     const themeTemplate = ThemeConstructor?.template;
     const themeMarkup = themeTemplate?.innerHTML || themeTemplate?.content.textContent || '';
     const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
@@ -238,6 +244,8 @@ async function lightboxVideoState(page: Page) {
       themeRegistered: !!ThemeConstructor,
       themeHasTurkishController:
         themeMarkup.includes('<media-controller') && themeMarkup.includes('lang="tr"'),
+      renditionMenuTooltip: RenditionMenuButton?.getTooltipContentHTML?.() || '',
+      playbackRateMenuTooltip: PlaybackRateMenuButton?.getTooltipContentHTML?.() || '',
       themeHasWhiteProgress: themeMarkup.includes('--media-range-bar-color: #ffffff'),
       themeHasContrastThumb:
         themeMarkup.includes('--media-range-thumb-background: radial-gradient') &&
@@ -325,6 +333,8 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     theme: 'renuvex-review-storefront',
     themeRegistered: true,
     themeHasTurkishController: true,
+    renditionMenuTooltip: 'Kalite',
+    playbackRateMenuTooltip: 'Oynatma hızı',
     themeHasWhiteProgress: true,
     themeHasContrastThumb: true,
     themeHasBlackTrack: true,

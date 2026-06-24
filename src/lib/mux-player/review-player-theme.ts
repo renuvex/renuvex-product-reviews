@@ -138,6 +138,8 @@ function ensureNamedReviewMuxPlayerTheme(themeElement: string, themeCss: string)
   if (typeof window === 'undefined') return Promise.resolve();
 
   reviewPlayerModulePromise ??= import('./review-player-i18n')
+    .then(() => import('media-chrome'))
+    .then(() => import('media-chrome/menu'))
     .then(() => import('@mux/mux-player/themes/gerwig'))
     .then(() => import('@mux/mux-player'))
     .then(() => undefined);
