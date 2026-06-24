@@ -215,7 +215,7 @@ async function lightboxVideoState(page: Page) {
     const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
     if (!overlay || !wrap || !player) throw new Error('Missing Mux Player lightbox');
     const style = getComputedStyle(player);
-    const ThemeConstructor = customElements.get('media-theme-renuvex-review') as
+    const ThemeConstructor = customElements.get('media-theme-renuvex-review-storefront') as
       | (CustomElementConstructor & { template?: HTMLTemplateElement })
       | undefined;
     const themeTemplate = ThemeConstructor?.template;
@@ -318,7 +318,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     disableTracking: true,
     disableCookies: true,
     autoplayAttr: false,
-    theme: 'renuvex-review',
+    theme: 'renuvex-review-storefront',
     themeRegistered: true,
     themeHasWhiteProgress: true,
     themeHasContrastThumb: true,

@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-22
-last_verified: 2026-06-22
+updated: 2026-06-24
+last_verified: 2026-06-24
 confidence: high
 tags:
   - widget
@@ -33,6 +33,8 @@ source_files:
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/media-thumbnail.js"
   - "src/widget/reviews-section/video-playback.js"
+  - "src/lib/mux-player/review-player-theme.ts"
+  - "src/components/home-page/AdminMuxPlayerPreview.tsx"
   - "src/widget/core/review-media.js"
   - "src/widget/reviews-section/review-form-modal/styles.js"
   - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"
@@ -81,6 +83,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Video entry points use [core/review-media.js](src/widget/core/review-media.js): storefront renders only trusted Mux playback IDs plus trusted Mux delivery/poster URLs from normalized `media[]`; provider ids never reach the widget. Cards/lists/gallery/strip show poster + play badge + optional duration, not autoplaying `<video>` or `<mux-player>` elements.
 - Video poster surfaces derive Mux Image thumbnail variants from the trusted `posterUrl`: fixed thumbnails use sized `width`/`height`/`fit_mode=crop` variants with `srcset`, while the lightbox uses a higher-quality `fit_mode=preserve` poster. The base `posterUrl` remains the source of truth.
 - The lightbox lazy-loads the official `@mux/mux-player` web component only when a video opens. It renders `<mux-player playback-id>` with `preload="metadata"`, `stream-type="on-demand"`, `playsinline`, no autoplay, `disable-tracking`, and `disable-cookies`. The review lightbox hides extra controls such as seek forward/back, PiP, cast, AirPlay, playback rate, rendition, and audio-track menus through Mux Player CSS variables. Closing/navigating pauses the player and removes playback/token/poster attributes before replacing the lightbox media node.
+- Storefront and admin Mux Player themes are intentionally separate. Storefront review playback uses `STOREFRONT_REVIEW_MUX_PLAYER_THEME` / `STOREFRONT_REVIEW_PLAYER_COLORS`; the admin moderation preview uses `ADMIN_REVIEW_MUX_PLAYER_THEME` / `ADMIN_REVIEW_PLAYER_COLORS`. Future widget/player customization must flow through storefront-scoped tokens or presets, not the admin preview surface.
 - In gallery layout, long photo-backed reviews can use the lightbox for full detail; long photo-less reviews expand inline and must not open the photo-only lightbox.
 - This lightbox is separate from the submission wizard under [review-form-modal/](src/widget/reviews-section/review-form-modal/).
 - Open audit risks are tracked in [[Bug_Review_Detail_Lightbox_Risks]].
@@ -147,6 +150,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-24: Split the Mux Player theme boundary into storefront and admin exports, including separate named color sets. Storefront review lightbox customization can now evolve through storefront-scoped player tokens/presets without changing the fixed admin moderation preview.
 - 2026-06-23: Storefront review video playback moved from native `<video>` plus direct `hls.js` orchestration to official Mux Player. Public review media now includes additive `playbackId` for video items, the widget prefers that ID and keeps a trusted Mux `.m3u8` fallback for rollout overlap, and Mux Data tracking/cookies are disabled until analytics is explicitly productized.
 - 2026-06-23: Physical mobile retesting showed automatic reconnect recovery could still leave the direct upload on `Video Yükleniyor` while the Mux direct upload remained `waiting`. The storefront now fails closed for direct-upload offline/stall/non-HTTP attempt-failure cases: it aborts the active PUT, shows only the themed `Tekrar dene` action for retryable failures, and does not show network-specific or red error copy to shoppers. Manual retry preserves the selected file and reuses the existing session only when server status proves it is still valid. Follow-up hardening ignores late callbacks from superseded upload attempts and keeps the video action visible when the capability check fails from a browser/network failure rather than a proven HTTP gate.
 - 2026-06-22: The video-enabled submission wizard media step now auto-advances to the comment step after video selection while Mux upload/processing continues in shared state. Returning to step 2 shows a single black loading status during upload/retry/processing and a single photo-sized removable video thumbnail once ready. Step 4 blocks submit with the same dot animation pattern and `Video Hazırlanıyor` label while the video is not ready. Ready thumbnails have no play icon and no extra `+` video tile. The same date also replaced the old side-by-side media choices with two stacked primary actions, hid empty embedded media content to prevent layout shift, aligned the photo-selected media state so primary actions hide while the embedded thumbnail strip exposes the compact `+` add tile, and added the direct-upload activity watchdog that now feeds the manual retry path when the upload stalls.

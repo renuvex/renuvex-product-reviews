@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-23
-last_verified: 2026-06-23
+updated: 2026-06-24
+last_verified: 2026-06-24
 confidence: high
 tags:
   - log
@@ -21,6 +21,10 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-24 - refactor | Separate Mux Player theme boundaries
+- Split review-video Mux Player theming into explicit storefront and admin exports. The storefront lightbox now uses a storefront theme, while the admin moderation preview uses a fixed admin theme.
+- This keeps future widget/player customization scoped to shopper-facing surfaces and prevents merchant storefront settings from changing the admin preview player.
 
 ## 2026-06-23 - migration | Move review playback to Mux Player
 - Replaced the storefront lightbox's custom native `<video>` + direct `hls.js` orchestration with official `@mux/mux-player`.

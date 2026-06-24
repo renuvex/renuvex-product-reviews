@@ -1,5 +1,9 @@
 import { useEffect, type MouseEvent } from 'react';
-import { ensureReviewMuxPlayerTheme, REVIEW_MUX_PLAYER_THEME } from '@/lib/mux-player/review-player-theme';
+import {
+  ADMIN_REVIEW_PLAYER_COLORS,
+  ADMIN_REVIEW_MUX_PLAYER_THEME,
+  ensureAdminReviewMuxPlayerTheme,
+} from '@/lib/mux-player/review-player-theme';
 
 type AdminMuxPlayerPreviewProps = {
   playbackId: string;
@@ -21,7 +25,7 @@ export function AdminMuxPlayerPreview({
   className,
 }: AdminMuxPlayerPreviewProps) {
   useEffect(() => {
-    void ensureReviewMuxPlayerTheme();
+    void ensureAdminReviewMuxPlayerTheme();
   }, []);
 
   return (
@@ -31,10 +35,10 @@ export function AdminMuxPlayerPreview({
       playback-token={playbackToken}
       thumbnail-token={thumbnailToken}
       poster={posterUrl || undefined}
-      theme={REVIEW_MUX_PLAYER_THEME}
-      accent-color="#ffffff"
-      primary-color="#ffffff"
-      secondary-color="#000000"
+      theme={ADMIN_REVIEW_MUX_PLAYER_THEME}
+      accent-color={ADMIN_REVIEW_PLAYER_COLORS.controlForeground}
+      primary-color={ADMIN_REVIEW_PLAYER_COLORS.controlForeground}
+      secondary-color={ADMIN_REVIEW_PLAYER_COLORS.controlBackground}
       stream-type="on-demand"
       preload="metadata"
       muted
@@ -43,9 +47,9 @@ export function AdminMuxPlayerPreview({
       disable-cookies
       hotkeys="noarrowleft noarrowright"
       style={{
-        '--controls-backdrop-color': 'rgba(0,0,0,0.58)',
-        '--media-primary-color': '#ffffff',
-        '--media-secondary-color': '#000000',
+        '--controls-backdrop-color': ADMIN_REVIEW_PLAYER_COLORS.controlsBackdrop,
+        '--media-primary-color': ADMIN_REVIEW_PLAYER_COLORS.controlForeground,
+        '--media-secondary-color': ADMIN_REVIEW_PLAYER_COLORS.controlBackground,
       }}
       onContextMenu={preventNativeVideoContextMenu}
     />

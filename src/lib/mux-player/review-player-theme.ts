@@ -1,86 +1,127 @@
-const REVIEW_MUX_PLAYER_THEME_ELEMENT = 'media-theme-renuvex-review';
+const ADMIN_REVIEW_MUX_PLAYER_THEME_ELEMENT = 'media-theme-renuvex-review-admin';
+const STOREFRONT_REVIEW_MUX_PLAYER_THEME_ELEMENT = 'media-theme-renuvex-review-storefront';
 
-export const REVIEW_MUX_PLAYER_THEME = 'renuvex-review';
+export const ADMIN_REVIEW_MUX_PLAYER_THEME = 'renuvex-review-admin';
+export const STOREFRONT_REVIEW_MUX_PLAYER_THEME = 'renuvex-review-storefront';
+
+const NEUTRAL_REVIEW_PLAYER_COLORS = {
+  controlForeground: '#ffffff',
+  controlBackground: '#000000',
+  controlHoverBackground: 'rgba(0,0,0,0.84)',
+  controlsBackdrop: 'rgba(0,0,0,0.58)',
+  progressPlayed: '#ffffff',
+  progressTrack: '#000000',
+  progressPointer: 'rgba(255,255,255,0.72)',
+  progressBuffered: 'rgba(255,255,255,0.28)',
+  progressThumbBorder: '1px solid rgba(255,255,255,0.72)',
+  progressThumbShadow: '0 0 0 1px rgba(0,0,0,0.45)',
+  progressPointerBorder: '1px solid rgba(0,0,0,0.55)',
+} as const;
+
+type ReviewPlayerColors = typeof NEUTRAL_REVIEW_PLAYER_COLORS;
+
+export const ADMIN_REVIEW_PLAYER_COLORS = {
+  ...NEUTRAL_REVIEW_PLAYER_COLORS,
+} as const satisfies ReviewPlayerColors;
+
+export const STOREFRONT_REVIEW_PLAYER_COLORS = {
+  ...NEUTRAL_REVIEW_PLAYER_COLORS,
+} as const satisfies ReviewPlayerColors;
 
 type MediaThemeConstructor = CustomElementConstructor & {
   template?: HTMLTemplateElement;
 };
 
-let reviewThemePromise: Promise<void> | null = null;
+let reviewPlayerModulePromise: Promise<void> | null = null;
 
-function defineReviewPlayerTheme() {
+function reviewPlayerThemeCss(colors: ReviewPlayerColors): string {
+  return `
+  :host {
+    --media-control-hover-background: ${colors.controlHoverBackground};
+    --media-icon-color: ${colors.controlForeground};
+    --media-text-color: ${colors.controlForeground};
+  }
+
+  media-control-bar,
+  media-control-bar *,
+  .center-controls,
+  .center-controls * {
+    --media-control-hover-background: ${colors.controlHoverBackground};
+    --media-icon-color: ${colors.controlForeground};
+    --media-text-color: ${colors.controlForeground};
+  }
+
+  .center-controls.pre-playback media-play-button,
+  [breakpointsm] .center-controls.pre-playback media-play-button {
+    --media-control-background: ${colors.controlBackground};
+    --media-control-hover-background: ${colors.controlHoverBackground};
+    --media-icon-color: ${colors.controlForeground};
+  }
+
+  media-time-range {
+    --media-range-bar-color: ${colors.progressPlayed};
+    --media-range-thumb-background: radial-gradient(
+      circle,
+      ${colors.controlBackground} 0%,
+      ${colors.controlBackground} 32%,
+      ${colors.controlForeground} 32%,
+      ${colors.controlForeground} 100%
+    );
+    --media-range-thumb-border: ${colors.progressThumbBorder};
+    --media-range-thumb-box-shadow: ${colors.progressThumbShadow};
+    --media-range-track-background: ${colors.progressTrack};
+    --media-range-track-pointer-background: ${colors.progressPointer};
+    --media-range-track-pointer-border-right: ${colors.progressPointerBorder};
+    --media-time-range-buffered-color: ${colors.progressBuffered};
+  }
+`;
+}
+
+const ADMIN_REVIEW_PLAYER_THEME_CSS = reviewPlayerThemeCss(ADMIN_REVIEW_PLAYER_COLORS);
+const STOREFRONT_REVIEW_PLAYER_THEME_CSS = reviewPlayerThemeCss(STOREFRONT_REVIEW_PLAYER_COLORS);
+
+function defineReviewPlayerTheme(themeElement: string, themeCss: string) {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
   const registry = window.customElements;
-  if (registry.get(REVIEW_MUX_PLAYER_THEME_ELEMENT)) return;
+  if (registry.get(themeElement)) return;
 
   const GerwigTheme = registry.get('media-theme-gerwig') as MediaThemeConstructor | undefined;
   const gerwigTemplate = GerwigTheme?.template;
   if (!GerwigTheme || !(gerwigTemplate instanceof HTMLTemplateElement)) return;
 
   const reviewTemplate = gerwigTemplate.cloneNode(true) as HTMLTemplateElement;
-  reviewTemplate.id = REVIEW_MUX_PLAYER_THEME_ELEMENT;
+  reviewTemplate.id = themeElement;
 
   const reviewControlStyle = document.createElement('style');
-  reviewControlStyle.textContent = `
-    :host {
-      --media-control-hover-background: rgba(0,0,0,0.84);
-      --media-icon-color: #ffffff;
-      --media-text-color: #ffffff;
-    }
-
-    media-control-bar,
-    media-control-bar *,
-    .center-controls,
-    .center-controls * {
-      --media-control-hover-background: rgba(0,0,0,0.84);
-      --media-icon-color: #ffffff;
-      --media-text-color: #ffffff;
-    }
-
-    .center-controls.pre-playback media-play-button,
-    [breakpointsm] .center-controls.pre-playback media-play-button {
-      --media-control-background: #000000;
-      --media-control-hover-background: rgba(0,0,0,0.84);
-      --media-icon-color: #ffffff;
-    }
-
-    media-time-range {
-      --media-range-bar-color: #ffffff;
-      --media-range-thumb-background: radial-gradient(
-        circle,
-        #000000 0%,
-        #000000 32%,
-        #ffffff 32%,
-        #ffffff 100%
-      );
-      --media-range-thumb-border: 1px solid rgba(255,255,255,0.72);
-      --media-range-thumb-box-shadow: 0 0 0 1px rgba(0,0,0,0.45);
-      --media-range-track-background: #000000;
-      --media-range-track-pointer-background: rgba(255,255,255,0.72);
-      --media-range-track-pointer-border-right: 1px solid rgba(0,0,0,0.55);
-      --media-time-range-buffered-color: rgba(255,255,255,0.28);
-    }
-  `;
+  reviewControlStyle.textContent = themeCss;
   reviewTemplate.content.append(reviewControlStyle);
 
   class RenuvexReviewTheme extends GerwigTheme {}
 
   (RenuvexReviewTheme as MediaThemeConstructor).template = reviewTemplate;
-  registry.define(REVIEW_MUX_PLAYER_THEME_ELEMENT, RenuvexReviewTheme);
+  registry.define(themeElement, RenuvexReviewTheme);
 }
 
-export function ensureReviewMuxPlayerTheme(): Promise<void> {
+function ensureNamedReviewMuxPlayerTheme(themeElement: string, themeCss: string): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve();
 
-  reviewThemePromise ??= import('@mux/mux-player/themes/gerwig')
-    .then(() => {
-      defineReviewPlayerTheme();
-      return import('@mux/mux-player');
-    })
-    .then(() => {
-      defineReviewPlayerTheme();
-    });
+  reviewPlayerModulePromise ??= import('@mux/mux-player/themes/gerwig')
+    .then(() => import('@mux/mux-player'))
+    .then(() => undefined);
 
-  return reviewThemePromise;
+  return reviewPlayerModulePromise.then(() => {
+    defineReviewPlayerTheme(themeElement, themeCss);
+  });
+}
+
+export function ensureAdminReviewMuxPlayerTheme(): Promise<void> {
+  return ensureNamedReviewMuxPlayerTheme(ADMIN_REVIEW_MUX_PLAYER_THEME_ELEMENT, ADMIN_REVIEW_PLAYER_THEME_CSS);
+}
+
+export function ensureStorefrontReviewMuxPlayerTheme(): Promise<void> {
+  return ensureNamedReviewMuxPlayerTheme(
+    STOREFRONT_REVIEW_MUX_PLAYER_THEME_ELEMENT,
+    STOREFRONT_REVIEW_PLAYER_THEME_CSS,
+  );
 }
