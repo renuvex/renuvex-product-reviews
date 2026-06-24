@@ -3,15 +3,15 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-10
-updated: 2026-06-16
-last_verified: 2026-06-16
+updated: 2026-06-24
+last_verified: 2026-06-24
 confidence: high
 tags:
   - widget
   - reviews
   - lightbox
   - video
-  - hls
+  - mux-player
 related:
   - "[[Index]]"
   - "[[Product_Review_Widget]]"
@@ -97,7 +97,10 @@ The product review lightbox is the media detail modal opened from trusted review
 - Video posters are not raw, one-size URLs at render time. `review-media.js` derives trusted Mux Image thumbnail variants for the current surface: card/list/gallery/strip use sized crop variants and the lightbox uses a larger `1280x720 fit=preserve` poster.
 - Mux Player controls are Mux/Media Chrome-owned in this phase. The storefront hides unnecessary controls through Mux Player CSS variables, and the shared review-player theme layer loads a local Turkish Media Chrome translation module because Turkish is not bundled by Media Chrome. The theme loader registers the public Media Chrome custom elements before loading Gerwig so menu tooltip labels such as Quality and Playback rate use the Turkish registry rather than Gerwig's bundled English fallback. Admin-controlled player theming, Mux Data analytics, and deeper custom Media Chrome themes are separate future phases.
 
+- Storefront fullscreen binds the Mux MediaController `fullscreenElement` property directly to the current `.renuvex-pr-modal-left` media panel. Do not replace this with the Mux `fullscreen-element` attribute unless the lightbox leaves its shadow-root isolation, because Mux resolves that attribute through a document-level ID lookup.
+
 ## Change Log
+- 2026-06-24: Fixed storefront Mux Player fullscreen exit by binding MediaController fullscreen state to the active lightbox media panel and adding media tests that assert the binding survives video-to-video modal rebuilds.
 - 2026-06-24: Hardened review-player localization so Media Chrome menu labels are translated from the active Turkish registry before Gerwig defines its bundled fallback elements. Browser media tests now assert the quality and playback-rate menu tooltip labels render as `Kalite` and `Oynatma hızı`.
 - 2026-06-24: Review-video Mux Player controls now load a local Turkish Media Chrome translation module and set `lang="tr"` at the cloned theme controller boundary, so built-in labels such as Quality and Playback rate render in Turkish without changing playback infrastructure.
 - 2026-06-23: Storefront review video lightbox moved to official Mux Player. The player receives a public `playback-id`, disables Mux Data tracking/cookies for now, hides nonessential controls through supported CSS variables, and keeps a trusted `.m3u8` parsing fallback only for rollout overlap.

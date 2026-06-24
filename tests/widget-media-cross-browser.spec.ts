@@ -214,6 +214,10 @@ async function lightboxVideoState(page: Page) {
     const wrap = root?.querySelector<HTMLElement>('.renuvex-pr-modal-wrap');
     const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
     if (!overlay || !wrap || !player) throw new Error('Missing Mux Player lightbox');
+    const muxPlayer = player as HTMLElement & {
+      mediaController?: HTMLElement & { fullscreenElement?: HTMLElement };
+    };
+    const fullscreenElement = muxPlayer.mediaController?.fullscreenElement;
     const style = getComputedStyle(player);
     const ThemeConstructor = customElements.get('media-theme-renuvex-review-storefront') as
       | (CustomElementConstructor & { template?: HTMLTemplateElement })
@@ -242,6 +246,8 @@ async function lightboxVideoState(page: Page) {
       playerLang: player.getAttribute('lang') || '',
       theme: player.getAttribute('theme') || '',
       themeRegistered: !!ThemeConstructor,
+      mediaControllerFullscreenClassName: fullscreenElement?.className || '',
+      mediaControllerFullscreenContainsPlayer: !!fullscreenElement?.querySelector('mux-player.renuvex-pr-modal-main-video'),
       themeHasTurkishController:
         themeMarkup.includes('<media-controller') && themeMarkup.includes('lang="tr"'),
       renditionMenuTooltip: RenditionMenuButton?.getTooltipContentHTML?.() || '',
@@ -329,6 +335,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
   await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
   await expect.poll(async () => (await lightboxVideoState(page)).themeRegistered).toBe(true);
+  await expect.poll(async () => (await lightboxVideoState(page)).mediaControllerFullscreenContainsPlayer).toBe(true);
 
   const state = await lightboxVideoState(page);
   expect(state).toMatchObject({
@@ -343,6 +350,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     playerLang: 'tr',
     theme: 'renuvex-review-storefront',
     themeRegistered: true,
+    mediaControllerFullscreenContainsPlayer: true,
     themeHasTurkishController: true,
     renditionMenuTooltip: 'Kalite',
     playbackRateMenuTooltip: 'Oynatma hızı',
@@ -366,6 +374,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     dialogRole: 'dialog',
     ariaModal: 'true',
   });
+  expect(state.mediaControllerFullscreenClassName).toContain('renuvex-pr-modal-left');
   expect(state.poster).toContain('/video-1/thumbnail.jpg');
   expect(state.poster).toContain('width=1280');
   expect(state.poster).toContain('height=720');
@@ -565,6 +574,10 @@ test('video to video navigation keeps Mux Player centered during the transition'
   await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
   await clickInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-nav-next');
+  await expect.poll(async () => {
+    const state = await lightboxVideoState(page);
+    return state.playbackId === 'video-2' && state.mediaControllerFullscreenContainsPlayer;
+  }).toBe(true);
 
   const transition = await page.evaluate(() => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
@@ -573,12 +586,18 @@ test('video to video navigation keeps Mux Player centered during the transition'
       .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
     const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
     if (!player) throw new Error('Missing navigated player');
+    const muxPlayer = player as HTMLElement & {
+      mediaController?: HTMLElement & { fullscreenElement?: HTMLElement };
+    };
+    const fullscreenElement = muxPlayer.mediaController?.fullscreenElement;
     const style = getComputedStyle(player);
     return {
       className: player.className,
       playbackId: player.getAttribute('playback-id') || '',
       animationName: style.animationName,
       transform: style.transform,
+      mediaControllerFullscreenClassName: fullscreenElement?.className || '',
+      mediaControllerFullscreenContainsPlayer: !!fullscreenElement?.querySelector('mux-player.renuvex-pr-modal-main-video'),
     };
   });
 
@@ -587,6 +606,8 @@ test('video to video navigation keeps Mux Player centered during the transition'
   expect(transition.playbackId).toBe('video-2');
   expect(transition.animationName).toBe('renuvexPrVideoFadeIn');
   expect(transition.transform).toBe('none');
+  expect(transition.mediaControllerFullscreenClassName).toContain('renuvex-pr-modal-left');
+  expect(transition.mediaControllerFullscreenContainsPlayer).toBe(true);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
