@@ -92,6 +92,11 @@ function reviewPlayerThemeCss(colors: ReviewPlayerColors): string {
     --media-range-track-pointer-background: ${colors.progressPointer};
     --media-range-track-pointer-border-right: ${colors.progressPointerBorder};
     --media-time-range-buffered-color: ${colors.progressBuffered};
+    --media-preview-time-background: ${colors.controlBackground};
+    --media-preview-time-text-shadow: none;
+    --media-text-background: ${colors.controlBackground};
+    --media-control-background: ${colors.controlBackground};
+    --media-text-color: ${colors.controlForeground};
   }
 
   [part~='menu'] {
