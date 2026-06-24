@@ -42,7 +42,7 @@ export var LIST_CSS = `
     width:var(--renuvex-pr-list-photo-w,120px);height:var(--renuvex-pr-list-photo-h,160px);max-width:100%;
     aspect-ratio:3/4;object-fit:cover;
     border-radius:var(--renuvex-pr-radius,6px);
-    border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
+    border:1px solid var(--renuvex-pr-media-gallery-image-border,rgba(0,0,0,0.05));
     cursor:pointer;
   }
   /* Desktop: sadece ilk foto görünür (sağ kolonda tek delil görseli). DOM'da

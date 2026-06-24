@@ -100,7 +100,7 @@ Settings have a 5-minute fresh window in the widget and a 24-hour stale toleranc
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
 - Public reviews: covered by `[storeId, productId]`.
-- Public photo reviews/photo strip: covered by the partial `Review(storeId, productId, createdAt) where status='approved' and hasImages=true` index; do not use `Review.images contains` text scans.
+- Public photo reviews and image-only media-gallery reads: covered by the partial `Review(storeId, productId, createdAt) where status='approved' and hasImages=true` index; do not use `Review.images contains` text scans.
 - Public review list load-more: covered by partial cursor indexes for `newest`, `highest`, and `lowest` orderings. Keep the API's deterministic `createdAt + id` tie-breakers aligned with those indexes.
 - Listing badges: primary product-id path covered by `[storeId, productId, status]`; legacy slug fallback covered by `[storeId, slug, status]`.
 - Admin filtered list: covered by `[storeId, status]`.

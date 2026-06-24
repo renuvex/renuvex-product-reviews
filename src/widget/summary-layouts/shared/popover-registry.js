@@ -12,7 +12,7 @@
 // nodes, so trigger/element membership is detected correctly.
 //
 // Light-dismiss must ONLY dismiss: the dismiss click is swallowed so a tap that lands on a
-// photo-strip thumbnail (or any control) under an open menu just closes the menu instead of
+// media-gallery thumbnail (or any control) under an open menu just closes the menu instead of
 // also activating that element (opening the lightbox). Touch/pen option activation
 // (which closes the menu on `pointerdown`, before the trailing `click`) arms the same
 // one-shot swallow so its trailing click cannot fall through either. On real phones, the

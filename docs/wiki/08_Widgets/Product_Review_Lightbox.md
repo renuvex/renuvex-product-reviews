@@ -50,7 +50,7 @@ The product review lightbox is the media detail modal opened from trusted review
 - [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) - shared click/keyboard/ARIA wiring for media elements that open the lightbox.
 - [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) - `.renuvex-pr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
 - [styles.js](src/widget/reviews-section/styles.js) - `CLASSIC_CSS` aggregator injected into the lightbox shadow root.
-- [render.js](src/widget/reviews-section/render.js) - review layout and photo strip entry points that call `openReviewModal`.
+- [render.js](src/widget/reviews-section/render.js) - review layout and media-gallery entry points that call `openReviewModal`.
 - [state.js](src/widget/core/state.js) - canonical loaded review collection used by review layout lightbox navigation.
 - [gallery/index.js](src/widget/review-layouts/gallery/index.js) - gallery layout entry points for images and long-text "read more" behavior.
 - [helpers.js](src/widget/core/helpers.js) - shared image trust and responsive delivery helpers.
@@ -109,7 +109,7 @@ The product review lightbox is the media detail modal opened from trusted review
 - 2026-06-16: Improved video first-frame quality by deriving sized Mux poster variants and adding hls.js player-size capping plus a conservative start-level warm-start. Native controls remain unchanged and browser-owned.
 - 2026-06-14: Documented the provider-aware image/video lightbox and Phase 4 cross-browser media suite. Native-HLS attributes, lazy `hls.js`, no-autoplay poster-first rendering, browser-back cleanup, and video-to-image navigation cleanup are now pinned across the five-project Playwright matrix.
 - 2026-06-01: Lightbox CSS ownership moved into [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) while `review-modal.js` continues to inject the stable `CLASSIC_CSS` aggregator.
-- 2026-05-31: Added shared [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) after an audit found photo-strip thumbnails were click-only images. Photo-strip and card/list/gallery lightbox triggers now share keyboard/ARIA wiring, and interaction smoke verifies keyboard open + focus restore from the photo strip. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
+- 2026-05-31: Added shared [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) after an audit found the then-photo-strip thumbnails were click-only images. Media-gallery and card/list/gallery lightbox triggers now share keyboard/ARIA wiring, and interaction smoke verifies keyboard open + focus restore from the media gallery. Related bug: [[Bug_Lightbox_Focus_Trap_Accessibility]].
 - 2026-05-24/25: Updated preview-event wording for ADR_0020 namespace migration. `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` is the active preview event.
 - 2026-05-12: Fixed preview settings synchronization for an already-open lightbox. The right pane now re-renders from closure state on the preview settings event, covering review icons, merchant reply labels, and future right-pane setting-dependent fields. Related bug: [[Bug_Lightbox_Preview_Settings_Sync]].
 - 2026-05-12: Changed the main lightbox image from `cover` to `contain` on the existing dark media background so customer review photos are shown without crop; preview thumbnails remain `cover`.

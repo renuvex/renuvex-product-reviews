@@ -78,6 +78,44 @@ describe('widget settings schema traversal', () => {
     });
   });
 
+  it('normalizes legacy photo gallery keys into the media gallery contract', () => {
+    const defaults = getWidgetDefaults('reviews');
+    expect(defaults.showMediaGallery).toBe(true);
+    expect(defaults.showMediaGalleryTitle).toBe(true);
+    expect(defaults.mediaGalleryTitle).toBe('Müşteri Görselleri');
+    expect(defaults.mediaGalleryTitleColor).toBe('#111111');
+    expect(defaults.mediaGalleryArrowBgColor).toBe('#ffffff');
+    expect(defaults.mediaGalleryArrowTextColor).toBe('#111111');
+    expect(defaults.showPhotoGallery).toBeUndefined();
+    expect(defaults.photoGalleryTitle).toBeUndefined();
+
+    expect(sanitizeSettings('reviews', {
+      showPhotoGallery: false,
+      showPhotoGalleryTitle: false,
+      photoGalleryTitle: 'Eski Başlık',
+      photoTitleColor: '#222222',
+      photoArrowBgColor: '#eeeeee',
+      photoArrowTextColor: '#333333',
+    })).toEqual({
+      showMediaGallery: false,
+      showMediaGalleryTitle: false,
+      mediaGalleryTitle: 'Eski Başlık',
+      mediaGalleryTitleColor: '#222222',
+      mediaGalleryArrowBgColor: '#eeeeee',
+      mediaGalleryArrowTextColor: '#333333',
+    });
+
+    expect(sanitizeSettings('reviews', {
+      showPhotoGallery: false,
+      showMediaGallery: true,
+      photoGalleryTitle: 'Eski Başlık',
+      mediaGalleryTitle: 'Yeni Başlık',
+    })).toEqual({
+      showMediaGallery: true,
+      mediaGalleryTitle: 'Yeni Başlık',
+    });
+  });
+
   it('validates nested review form text field limits', () => {
     expect(validateSettings('reviews', {
       formStepContentTitle: 'x'.repeat(60),

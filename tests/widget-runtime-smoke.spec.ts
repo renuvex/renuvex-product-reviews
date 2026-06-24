@@ -649,13 +649,13 @@ async function reviewImageUrls(page: Page): Promise<string[]> {
   });
 }
 
-async function firstPhotoStripSrc(page: Page): Promise<string> {
+async function firstMediaGallerySrc(page: Page): Promise<string> {
   return page.evaluate(() => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
     const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
     const container = slot?.querySelector('#renuvex-reviews');
     const root = container?.shadowRoot || null;
-    return (root?.querySelector<HTMLImageElement>('.renuvex-pr-photo-strip-thumb')?.src || '');
+    return (root?.querySelector<HTMLImageElement>('.renuvex-pr-media-gallery-thumb')?.src || '');
   });
 }
 
@@ -677,8 +677,8 @@ for (const layoutCase of LAYOUT_MATRIX) {
     expect(await hasInReviewsShadow(page, layoutCase.summarySelector)).toBe(true);
     expect(await countInReviewsShadow(page, layoutCase.reviewSelector)).toBeGreaterThanOrEqual(1);
     expect(await hasInReviewsShadow(page, '.renuvex-pr-write-btn')).toBe(true);
-    expect(await hasInReviewsShadow(page, '.renuvex-pr-photo-section')).toBe(true);
-    expect(await countInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb')).toBeGreaterThanOrEqual(1);
+    expect(await hasInReviewsShadow(page, '.renuvex-pr-media-gallery-section')).toBe(true);
+    expect(await countInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb')).toBeGreaterThanOrEqual(1);
 
     if (layoutCase.expectsTitle) {
       expect(await textInReviewsShadow(page, '.renuvex-pr-title')).toBe('Musteri Yorumlari');
@@ -1214,7 +1214,7 @@ test('merchant text settings trim whitespace before falling back', async ({ page
       summaryLayout: 'compact',
       reviewLayout: 'list',
       title: '   ',
-      photoGalleryTitle: '   ',
+      mediaGalleryTitle: '   ',
       writeButtonText: '   ',
       countLabel: '   ',
       merchantReplyLabel: '   ',
@@ -1223,7 +1223,7 @@ test('merchant text settings trim whitespace before falling back', async ({ page
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
-  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-photo-title')).toBe(true);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-media-gallery-title')).toBe(true);
 
   const labels = await page.evaluate(() => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
@@ -1234,7 +1234,7 @@ test('merchant text settings trim whitespace before falling back', async ({ page
       title: root?.querySelector('.renuvex-pr-title')?.textContent?.trim() || '',
       count: root?.querySelector('.renuvex-pr-compact-trigger-text')?.textContent?.trim() || '',
       write: root?.querySelector('.renuvex-pr-write-btn')?.textContent?.trim() || '',
-      photoTitle: root?.querySelector('.renuvex-pr-photo-title')?.textContent?.trim() || '',
+      mediaGalleryTitle: root?.querySelector('.renuvex-pr-media-gallery-title')?.textContent?.trim() || '',
       replyLabel: root?.querySelector('.renuvex-pr-reply-label')?.textContent?.trim() || '',
       barLabel: root?.querySelector('.renuvex-pr-bar-row')?.getAttribute('aria-label') || '',
     };
@@ -1243,7 +1243,7 @@ test('merchant text settings trim whitespace before falling back', async ({ page
   expect(labels.title).toBe('Müşteri Yorumları');
   expect(labels.count).toMatch(/^\d+ Yorum$/);
   expect(labels.write).toBe('Yorum Yap');
-  expect(labels.photoTitle).toBe('Fotoğraflı Yorumlar');
+  expect(labels.mediaGalleryTitle).toBe('Müşteri Görselleri');
   expect(labels.replyLabel).toBe('Mağaza Sahibi');
   expect(labels.barLabel).toContain('Yorum');
   expect(labels.barLabel).not.toContain('   ');
@@ -1395,13 +1395,13 @@ test('compact mobile keeps bar panel stable when sort changes after rating filte
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('photo gallery toggle removes strip without breaking reviews', async ({ page }) => {
+test('media gallery toggle removes gallery without breaking reviews', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
     reviewsSettings: {
       summaryLayout: 'classic',
       reviewLayout: 'card',
-      showPhotoGallery: false,
+      showMediaGallery: false,
     },
   });
 
@@ -1409,7 +1409,7 @@ test('photo gallery toggle removes strip without breaking reviews', async ({ pag
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await waitForWidgetIdle(page);
 
-  expect(await hasInReviewsShadow(page, '.renuvex-pr-photo-section')).toBe(false);
+  expect(await hasInReviewsShadow(page, '.renuvex-pr-media-gallery-section')).toBe(false);
   expect(await countInReviewsShadow(page, '.renuvex-pr-review-card')).toBeGreaterThanOrEqual(1);
   expect(widgetErrors(log)).toEqual([]);
 });
@@ -1418,7 +1418,7 @@ for (const photoLayout of [
   { reviewLayout: 'list' as const, itemPhotoSelector: '.renuvex-pr-review-list-media img' },
   { reviewLayout: 'gallery' as const, itemPhotoSelector: '.renuvex-pr-review-gallery-media img' },
 ]) {
-  test(`${photoLayout.reviewLayout} photo strip thumbnail size follows the photo gallery setting`, async ({ page }) => {
+  test(`${photoLayout.reviewLayout} media gallery thumbnail size follows the media gallery setting`, async ({ page }) => {
     const log = await setupWidgetRoutes(page, {
       mountReviews: true,
       reviewsSettings: {
@@ -1431,10 +1431,10 @@ for (const photoLayout of [
 
     await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
     await expect.poll(() => hasReviewsWidget(page)).toBe(true);
-    await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb')).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb')).toBeGreaterThanOrEqual(1);
     await waitForWidgetIdle(page);
 
-    const stripThumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+    const stripThumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb');
     const itemPhotoWidth = await widthInReviewsShadow(page, photoLayout.itemPhotoSelector);
 
     expect(stripThumbWidth).toBeGreaterThan(130);
@@ -1446,13 +1446,13 @@ for (const photoLayout of [
 }
 
 // Layout-aware mobile fix: for list/gallery (3:4 portrait) the in-review item photo
-// shrinks on mobile (-w-mobile sizeOverrides), so the top photo strip thumb must shrink
+// shrinks on mobile (-w-mobile sizeOverrides), so the top media gallery thumb must shrink
 // to match — otherwise the strip looks bigger than the review photos on mobile.
 for (const photoLayout of [
   { reviewLayout: 'list' as const, itemPhotoSelector: '.renuvex-pr-review-list-media img' },
   { reviewLayout: 'gallery' as const, itemPhotoSelector: '.renuvex-pr-review-gallery-media img' },
 ]) {
-  test(`${photoLayout.reviewLayout} photo strip thumb matches the item photo size on mobile`, async ({ page }) => {
+  test(`${photoLayout.reviewLayout} media gallery thumb matches the item photo size on mobile`, async ({ page }) => {
     const log = await setupWidgetRoutes(page, {
       mountReviews: true,
       reviewsSettings: {
@@ -1466,10 +1466,10 @@ for (const photoLayout of [
     await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
     await expect.poll(() => hasReviewsWidget(page)).toBe(true);
     await page.setViewportSize({ width: 390, height: 900 });
-    await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb')).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb')).toBeGreaterThanOrEqual(1);
     await waitForWidgetIdle(page);
 
-    const stripThumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+    const stripThumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb');
     const itemPhotoWidth = await widthInReviewsShadow(page, photoLayout.itemPhotoSelector);
 
     // Equal on mobile (large -> 110px for both); card is unaffected (no -w-mobile shrink).
@@ -1524,7 +1524,7 @@ test('list review item photo keeps the medium 3:4 portrait box in a tall row', a
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('video-enabled media strip uses hasMedia and renders Mux poster thumbnails without list video preload', async ({ page }) => {
+test('video-enabled media gallery uses hasMedia and renders Mux poster thumbnails without list video preload', async ({ page }) => {
   await page.route('https://image.mux.com/**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -1567,7 +1567,7 @@ test('video-enabled media strip uses hasMedia and renders Mux poster thumbnails 
 
   expect(sawMediaStripRequest).toBe(true);
   expect(sawImageStripRequest).toBe(false);
-  expect(await countInReviewsShadow(page, '.renuvex-pr-review-card video, .renuvex-pr-photo-strip video')).toBe(0);
+  expect(await countInReviewsShadow(page, '.renuvex-pr-review-card video, .renuvex-pr-media-gallery-strip video')).toBe(0);
   expect(log.urls.some((url) => url.includes('.m3u8'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
@@ -1882,7 +1882,7 @@ test('initial review fetch failure renders a retry state and recovers on retry',
   expect(widgetErrors(log).filter((message) => message.includes('[renuvex-pr]'))).toEqual([]);
 });
 
-test('photo strip remains independent across sort and load-more, then hides for photo filter', async ({ page }) => {
+test('media gallery remains independent across sort and load-more, then hides for photo filter', async ({ page }) => {
   let stripCalls = 0;
   let highestLoadMoreCalls = 0;
   const log = await setupWidgetRoutes(page, {
@@ -1927,24 +1927,24 @@ test('photo strip remains independent across sort and load-more, then hides for 
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
-  await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb')).toBe(1);
-  const initialStripSrc = await firstPhotoStripSrc(page);
+  await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb')).toBe(1);
+  const initialStripSrc = await firstMediaGallerySrc(page);
   expect(initialStripSrc).toContain('strip-alpha');
   expect(stripCalls).toBe(1);
 
   await clickFilterItemAt(page, 1);
   await expect.poll(() => reviewTitles(page)).toEqual(['Highest page 1']);
-  expect(await firstPhotoStripSrc(page)).toBe(initialStripSrc);
+  expect(await firstMediaGallerySrc(page)).toBe(initialStripSrc);
   expect(stripCalls).toBe(1);
 
   await clickInReviewsShadow(page, '.renuvex-pr-load-more');
   await expect.poll(() => highestLoadMoreCalls).toBe(1);
-  expect(await firstPhotoStripSrc(page)).toBe(initialStripSrc);
+  expect(await firstMediaGallerySrc(page)).toBe(initialStripSrc);
   expect(stripCalls).toBe(1);
 
   await clickFilterItemAt(page, 3);
   await expect.poll(() => reviewTitles(page)).toEqual(['Photo filtered review']);
-  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-photo-section')).toBe(false);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-media-gallery-section')).toBe(false);
   expect(stripCalls).toBe(1);
   expect(widgetErrors(log)).toEqual([]);
 });
@@ -1991,7 +1991,7 @@ test('hostile host-theme img rule cannot cross the review shadow boundary', asyn
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
-  await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb')).toBeGreaterThanOrEqual(1);
+  await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb')).toBeGreaterThanOrEqual(1);
   await waitForWidgetIdle(page);
 
   // The hostile rule IS live: the light-DOM control image ballooned to its 600px container.
@@ -2001,7 +2001,7 @@ test('hostile host-theme img rule cannot cross the review shadow boundary', asyn
 
   // The review thumbnail lives inside the shadow root, so the same rule cannot reach it.
   // It stays at its widget-defined size (medium thumbnail = 110px), far below the control.
-  const thumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-photo-strip-thumb');
+  const thumbWidth = await widthInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb');
   expect(thumbWidth).toBeGreaterThan(0);
   expect(thumbWidth).toBeLessThan(200);
   expect(thumbWidth).toBeLessThan(controlWidth / 2);

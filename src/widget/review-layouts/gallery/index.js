@@ -20,7 +20,7 @@ export var meta = {
   // Bkz: review-layouts/index.js — supports sözleşmesi.
   supports: {},
   // Review item photo column scales with the general widget size. The top
-  // "Fotoğraflı Yorumlar" strip is a separate gallery surface and follows
+  // Media gallery is a separate gallery surface and follows
   // thumbnailSize through --renuvex-pr-thumbnail-size.
   // --renuvex-pr-gallery-photo-w        : desktop foto kolonu genişliği (3:4 portre)
   // --renuvex-pr-gallery-photo-w-mobile : mobile foto kolonu genişliği (3:4 portre)

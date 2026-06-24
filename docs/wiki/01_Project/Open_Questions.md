@@ -163,7 +163,7 @@ Concrete gap found 2026-06-06; enriches the [[Roadmap]] Mid-Term "Multi-language
 
 **There is NO i18n layer today.** Every storefront string is hardcoded Turkish in the widget
 bundle, except ~5 merchant-editable settings labels (`countLabel`, `writeButtonText`, `title`,
-`photoGalleryTitle`, `merchantReplyLabel`). So a future "language option" would NOT auto-translate
+`mediaGalleryTitle`, `merchantReplyLabel`). So a future "language option" would NOT auto-translate
 anything — it needs a real i18n refactor (a `{ tr, en, … }` string table + `t(key)` lookup + a
 language source, e.g. the ikas storefront locale).
 
@@ -173,7 +173,7 @@ language source, e.g. the ikas storefront locale).
   ([actions-block.js](src/widget/summary-layouts/shared/actions-block.js)), `'Puan dağılımı'`
   ([compact/index.js](src/widget/summary-layouts/compact/index.js)), the review-form wizard
   ([progress-bar.js](src/widget/reviews-section/review-form-modal/progress-bar.js) + `steps/*`),
-  photo-strip arrows ([render/photo-strip.js](src/widget/reviews-section/render/photo-strip.js)).
+  media-gallery arrows ([render/media-gallery.js](src/widget/reviews-section/render/media-gallery.js)).
 - **Browser auto-translate (Google Translate etc.) does NOT translate the `aria-label` attribute** —
   it only reaches visible text and `aria-labelledby`-referenced real text. So even a visitor running
   page translation keeps Turkish screen-reader labels. The codebase already knows this: the rating

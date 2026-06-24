@@ -133,7 +133,7 @@ renuvex-product-reviews/
 │     │  ├─ bootstrap.js
 │     │  ├─ render.js
 │     │  ├─ styles.js           # CLASSIC_CSS aggregator for shared review-section CSS
-│     │  ├─ styles/             # base / summary-controls / review-primitives / photo-strip / lightbox CSS
+│     │  ├─ styles/             # base / summary-controls / review-primitives / media-gallery / lightbox CSS
 │     │  ├─ review-form-modal/   # Multi-step submission wizard
 │     │  └─ review-modal.js
 │     ├─ review-layouts/         # card / gallery / list (each with index.js + styles.js)

@@ -29,7 +29,7 @@ Active development. Core image-review features are functional end-to-end. Provid
 - Manual re-injection via `/api/admin/inject-scripts` (button in admin)
 - Storefront widget runtime (`/public/widget.js` classic loader + `/public/widget-runtime/*` ESM chunks locally; deployed pre-Phase-2 response measured `177763` bytes on 2026-05-15) with:
   - Product review widget (modal submission + listing) with multiple review-layouts (card, gallery, list) and summary-layouts (classic, compact, hero, minimal, split)
-  - Photo strip above review list — dedicated newest-first fetch, cap 15, independent of sort/filter/load-more (see [[Photo_Strip]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]])
+  - Media gallery above review list — dedicated newest-first fetch, cap 15, independent of sort/filter/load-more (see [[Media_Gallery]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]])
   - Review fetch failures render a retryable error state instead of the normal empty-review state
   - Trusted review image policy: cloud name is a single build-time constant injected by the widget build script ([[ADR_0008_Cloud_Name_Build_Time_Only]]); settings response no longer carries `imagePolicy`
   - Review image load failures degrade gracefully: thumbnails hide broken assets, lightbox main image shows a neutral placeholder, and failures log with `console.warn`

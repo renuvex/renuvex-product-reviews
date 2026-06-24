@@ -57,7 +57,7 @@ source_files:
   - "src/widget/reviews-section/styles/base.js"
   - "src/widget/reviews-section/styles/summary-controls.js"
   - "src/widget/reviews-section/styles/review-primitives.js"
-  - "src/widget/reviews-section/styles/photo-strip.js"
+  - "src/widget/reviews-section/styles/media-gallery.js"
   - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/shared/base-reset.js"
   - "src/widget/summary-layouts/shared/bar-chart.js"
@@ -103,7 +103,7 @@ deployment before claiming live performance improvement.
 - Inject star+count badges into **listing-page product cards**
 - Inject a **rating badge** above the product title
 - Open a **multi-step review modal** with image upload
-- Open a **photo review detail lightbox** for review images and photo-strip thumbnails
+- Open a **photo/video review detail lightbox** for review media and media-gallery thumbnails
 - React to **SPA-style theme nav** via MutationObserver
 - Run in **preview mode** for live admin customization
 
@@ -130,8 +130,8 @@ deployment before claiming live performance improvement.
 | [events.js](src/widget/events.js) | SPA history patch (stale rating-badge cleanup) + quick-view modal badge plumbing. IkasEvents handling moved to `core/storefront-context.js` (ADR_0013). |
 | [rating-badge/](src/widget/rating-badge/) | Independent PDP rating badge surface. Fetches one-product rating summaries and owns only visual badge DOM cleanup/injection. |
 | [structured-data/](src/widget/structured-data/) | Independent Product `AggregateRating` JSON-LD surface. Emits only when the rich-snippet toggle, approved ratings, and visible/expected Renuvex rating content gates pass. |
-| [reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) | Reviews section entry. Fetches settings, checks the explicit reviews mount, resets per-product review state, fetches initial review/photo-strip data, guards each async boundary against stale product/path bootstraps, then dynamically imports `render.js`. |
-| [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) | Shared reviews/photoStrip fetch helpers, cache handling, preview fallback, and explicit review-fetch error result. |
+| [reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js) | Reviews section entry. Fetches settings, checks the explicit reviews mount, resets per-product review state, fetches initial review/media-gallery data, guards each async boundary against stale product/path bootstraps, then dynamically imports `render.js`. |
+| [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) | Shared reviews/media-gallery fetch helpers, cache handling, preview fallback, and explicit review-fetch error result. |
 | [reviews-section/render.js](src/widget/reviews-section/render.js) | Compose summary + reviews + modal CTA based on settings; handles filter/sort/load-more fetches through `reviews-api.js`. |
 | [core/product-title.js](src/widget/core/product-title.js) | Heuristic to find product title element across themes. |
 | [reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js) | Photo review detail lightbox. Distinct from the submission wizard. |
@@ -189,7 +189,7 @@ structured-data/index.js
 reviews-section/bootstrap.js
   ├── fetch /api/public/settings  (cached)
   ├── explicit <div data-renuvex-widget="reviews"> mount gate
-  ├── reviews-section/reviews-api.js fetches reviews + photoStrip
+  ├── reviews-section/reviews-api.js fetches reviews + media gallery
   ├── core/state.js ← write currentSettings, currentReviewsData, ...
   └── dynamic import render.js (chooses layouts from settings)
 ```
@@ -199,7 +199,7 @@ PDP review lifecycle note: the explicit review mount can arrive after a
 and replays only the `reviews-main` surface with the latest product context;
 `rating-badge`, `structured-data`, and listing surfaces are not replayed. Inside
 `reviews-section/bootstrap.js`, a product/path bootstrap guard and per-product
-state reset protect the initial reviews/photo-strip fetch from stale previous
+state reset protect the initial reviews/media-gallery fetch from stale previous
 product completions.
 
 Phase 1 of [[ADR_0013_Modular_Widget_Loader_Architecture]] introduced the loader +
@@ -212,7 +212,7 @@ verified live on the dev store on 2026-05-17 (browser + Sentry post-test); see
 
 ## Layout-aware settings (key concept)
 
-Each layout registers `supports: { title: true, photoStrip: false, ... }` in its layout `index.js`. Admin settings panel uses `showWhen: { layoutKey, supports }` in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) to hide irrelevant fields. This means **adding a new setting often means deciding which layouts support it** — not editing settings rendering code.
+Each layout registers support metadata such as `supports: { title: true, thumbnailSize: false, ... }` in its layout `index.js`. Admin settings panel uses `showWhen: { layoutKey, supports }` in [widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts) to hide irrelevant fields. This means **adding a new setting often means deciding which layouts support it** — not editing settings rendering code.
 
 ## Summary interaction contracts
 
@@ -308,7 +308,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - 2026-05-28: Expanded automated quality gates from network-only smoke to layered Playwright + Vitest coverage: widget runtime layouts, lightbox/wizard flows, admin preview/settings, public API routes, and theme-state helpers. CI now runs `pnpm test:ci` plus generated widget syntax checks.
 - 2026-05-28: Renamed the review-section implementation to `src/widget/reviews-section/` and moved the shared PDP title finder to `src/widget/core/product-title.js`. Public script URL, mount contract, settings schema, backend APIs, and ikas integration are unchanged.
 - 2026-05-28: Added `pnpm test:widget-smoke` and the `Widget Smoke` GitHub Actions workflow. The gate protects the ADR_0023/ADR_0024 network contract by exercising the deployed public loader/runtime shape in a browser fixture.
-- 2026-05-27: Follow-up hardening after [[ADR_0024_Badge_Review_Surface_Separation]]. Review/photoStrip API helpers moved from `reviews-section/bootstrap.js` to `reviews-section/reviews-api.js`, so bootstrap remains mount-gate orchestration and `render.js` can reuse the same fetch contract without importing bootstrap. The 2-second listing fallback in `loader.js` now probes for product-card-like candidates instead of any generic link. Widget error forwarding now captures script/chunk resource-load errors and route/visibility/online context to diagnose rare DevTools "error script" reports.
+- 2026-05-27: Follow-up hardening after [[ADR_0024_Badge_Review_Surface_Separation]]. Review/media-gallery API helpers moved from `reviews-section/bootstrap.js` to `reviews-section/reviews-api.js`, so bootstrap remains mount-gate orchestration and `render.js` can reuse the same fetch contract without importing bootstrap. The 2-second listing fallback in `loader.js` now probes for product-card-like candidates instead of any generic link. Widget error forwarding now captures script/chunk resource-load errors and route/visibility/online context to diagnose rare DevTools "error script" reports.
 - 2026-05-25: `probeWidgetVisibility` now evaluates the live owned node at probe time (via a `resolveCurrent` resolver at each call site) instead of the originally injected element, fixing a high-volume false-positive `missing_after_render` that fired after the one-shot self-heal / theme re-render swapped the badge element. Root cause proven mount-mode-independent and verified on the dev store. The bounded one-shot self-heal was left unchanged. See [[Bug_Listing_Badge_Missing_After_Render]].
 - 2026-05-25: Renuvex hard namespace cleanup completed for source and active generated widget assets. Preview events use `RENUVEX_PR_*`, health global is `window.__RENUVEX_PRODUCT_REVIEWS__`, and build defines are `__RENUVEX_PR_*`.
 - 2026-05-23: Added runtime health marker, badge visibility probes, widget-error health telemetry, and one-shot badge self-heal for third-party DOM removal; the build now injects a widget version marker.

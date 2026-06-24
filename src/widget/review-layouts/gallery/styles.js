@@ -1,6 +1,6 @@
 // review-layouts/gallery/styles.js — Premium tarzda 2-kolon galeri tasarımı.
 // CSS columns ile JS'siz masonry. Parent (#renuvex-reviews-widget) :has() ile
-// hedeflenir; non-review elemanlar (summary, başlık, photo-section,
+// hedeflenir; non-review elemanlar (summary, başlık, media-gallery-section,
 // load-more, state-msg) column-span:all ile kolon dışına alınır — sözleşme
 // dokunulmaz, render.js değişmez.
 //
@@ -26,10 +26,10 @@ export var GALLERY_CSS = `
     column-count:2;
     column-gap:32px;
   }
-  /* Non-review elemanlar kolon dışına çıkar — summary, başlık, foto strip vs. */
+  /* Non-review elemanlar kolon dışına çıkar — summary, başlık, media gallery vs. */
   #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-title,
   #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-summary,
-  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-photo-section,
+  #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-media-gallery-section,
   #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-write-btn,
   #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-load-more,
   #renuvex-reviews-widget:has(.renuvex-pr-review-gallery) > .renuvex-pr-pagination,
@@ -107,7 +107,7 @@ export var GALLERY_CSS = `
     display:block;width:100%;height:auto;
     aspect-ratio:3/4;object-fit:cover;
     border-radius:var(--renuvex-pr-radius,6px);
-    border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));
+    border:1px solid var(--renuvex-pr-media-gallery-image-border,rgba(0,0,0,0.05));
   }
   @media (max-width:600px){
     /* Tek kolonda full-bleed'i geri getir. Yukarıdaki masaüstü 2-kolon kuralı kökü

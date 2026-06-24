@@ -13,13 +13,12 @@ export var currentReviewsData = null;
 export var currentNextCursor = null;
 export var loadedLightboxReviews = [];
 
-// Fotoğraf şeridi için ayrı dataset — bootstrap'ta `hasImages=true&limit=15&orderBy=newest`
-// çağrısıyla bir kere doldurulur, sort/filter/load-more değişikliklerinde yeniden
-// fetch edilmez. Strateji A (newest-first rotation): yeni onaylı fotoğraflı yorumlar
+// Media gallery dataset. Media-enabled stores use `hasMedia=true`; image-only
+// stores use `hasImages=true`. It is filled once in bootstrap and is not
+// re-fetched on sort/filter/load-more changes.
+// Strateji A (newest-first rotation): yeni onaylı medya yorumları
 // REVIEWS_CACHE_TTL (1 dk) süresince stale kalır, sonra otomatik yenilenir.
-// The legacy state name is retained for compatibility. Video-enabled stores
-// populate it with the provider-agnostic `hasMedia` query.
-export var photoStripReviews = [];
+export var mediaStripReviews = [];
 
 export function setCurrentOrderBy(v) { currentOrderBy = v; }
 export function setCurrentPage(v) { currentPage = v; }
@@ -31,7 +30,7 @@ export function setCurrentBadgeSettings(v) { currentBadgeSettings = v; }
 export function setCurrentProductName(v) { currentProductName = v; }
 export function setCurrentReviewsData(v) { currentReviewsData = v; }
 export function setCurrentNextCursor(v) { currentNextCursor = v || null; }
-export function setPhotoStripReviews(v) { photoStripReviews = Array.isArray(v) ? v : []; }
+export function setMediaStripReviews(v) { mediaStripReviews = Array.isArray(v) ? v : []; }
 
 export function resetReviewStateForProduct(productId) {
   currentOrderBy = 'newest';
@@ -41,7 +40,7 @@ export function resetReviewStateForProduct(productId) {
   currentProductId = productId || null;
   currentReviewsData = null;
   currentNextCursor = null;
-  photoStripReviews = [];
+  mediaStripReviews = [];
   replaceLoadedLightboxReviews([]);
 }
 

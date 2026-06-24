@@ -351,8 +351,8 @@ export function getFirstTrustedReviewImage(review) {
 // Diğer çağrılar (thumbnail/tile/mini) ihtiyaca uygun width'i ikinci parametre olarak geçer.
 // Cloudinary olmayan URL'ler olduğu gibi döner — third-party host'lar için no-op.
 //
-// Sabitler — anlamlı isimle hangi çağrı yerine ait olduğunu belgeler. ADR_0007 ve [[Photo_Strip]].
-export var PHOTO_STRIP_THUMB_WIDTH = 300;   // strip + kart/liste thumbnail (90-140 px display, retina yedeği)
+// Sabitler — anlamlı isimle hangi çağrı yerine ait olduğunu belgeler. ADR_0007 ve [[Media_Gallery]].
+export var REVIEW_MEDIA_THUMB_WIDTH = 300;  // media gallery + card/list thumbnail (90-140 px display, retina yedeği)
 export var GALLERY_TILE_WIDTH = 600;        // gallery masonry tile (200-400 px display, retina yedeği)
 export var LIGHTBOX_MINI_THUMB_WIDTH = 200; // lightbox altı mini görsel şeridi (60-80 px display)
 export var LIGHTBOX_MAIN_WIDTH = 1200;      // lightbox ana görsel + preload (default)
@@ -367,7 +367,7 @@ export function optimizeImageUrl(url, width) {
 // 1x: baseWidth, 2x: baseWidth × 2. Tarayıcı DPR'ye göre otomatik seçer.
 // Cloudinary olmayan URL'ler için src ve srcset aynı URL — no-op.
 // Kullanım:
-//   var attrs = buildResponsiveImgAttrs(url, PHOTO_STRIP_THUMB_WIDTH);
+//   var attrs = buildResponsiveImgAttrs(url, REVIEW_MEDIA_THUMB_WIDTH);
 //   img.src = attrs.src; img.srcset = attrs.srcset;
 export function buildResponsiveImgAttrs(url, baseWidth) {
   if (!url) return { src: '', srcset: '' };

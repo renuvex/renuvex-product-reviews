@@ -39,7 +39,7 @@ function settingsResponse(scenario) {
         showTitle: true,
         summaryLayout: 'classic',
         reviewLayout: 'card',
-        showPhotoGallery: true,
+        showMediaGallery: true,
         reviewIcon: 'star',
         reviewStarColor: '#f59e0b',
         richSnippetsEnabled: scenario.richSnippetsEnabled !== false,

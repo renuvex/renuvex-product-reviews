@@ -7,7 +7,7 @@ import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
 
-var PHOTO_STRIP_LIMIT = 15;
+var MEDIA_GALLERY_LIMIT = 15;
 var REVIEWS_CACHE_TTL = 60 * 1000;
 var REVIEWS_FETCH_ERROR = '__renuvexProductReviewsFetchError';
 
@@ -75,14 +75,14 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
   }
 }
 
-export async function fetchPhotoStripReviews(productId) {
-  var data = await fetchReviews(productId, 'newest', 1, null, true, PHOTO_STRIP_LIMIT);
+export async function fetchImageMediaGalleryReviews(productId) {
+  var data = await fetchReviews(productId, 'newest', 1, null, true, MEDIA_GALLERY_LIMIT);
   if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
   return data.data.reviews;
 }
 
-export async function fetchMediaStripReviews(productId) {
-  var data = await fetchReviews(productId, 'newest', 1, null, false, PHOTO_STRIP_LIMIT, null, true);
+export async function fetchMixedMediaGalleryReviews(productId) {
+  var data = await fetchReviews(productId, 'newest', 1, null, false, MEDIA_GALLERY_LIMIT, null, true);
   if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
   return data.data.reviews;
 }

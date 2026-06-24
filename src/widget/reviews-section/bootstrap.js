@@ -2,8 +2,8 @@
 
 import { fetchSettings } from '../core/settings.js';
 import { getProductContext } from '../core/storefront-context.js';
-import { resetReviewStateForProduct, setPhotoStripReviews } from '../core/state.js';
-import { createReviewsFetchError, fetchMediaStripReviews, fetchPhotoStripReviews, fetchReviews } from './reviews-api.js';
+import { resetReviewStateForProduct, setMediaStripReviews } from '../core/state.js';
+import { createReviewsFetchError, fetchImageMediaGalleryReviews, fetchMixedMediaGalleryReviews, fetchReviews } from './reviews-api.js';
 
 var bootstrapCache = {};
 var bootstrapSeq = 0;
@@ -54,18 +54,18 @@ export async function bootstrap(productId, productName) {
     if (reviewsSettings.enabled === false) return;
 
     // ADR_0024: review section is opt-in via an explicit mount. If the mount is
-    // absent, stop before reviews/photoStrip fetches and before render.js loads.
+    // absent, stop before reviews/media-gallery fetches and before render.js loads.
     if (!document.querySelector('[data-renuvex-widget="reviews"]')) return;
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
     resetReviewStateForProduct(productId);
 
-    var stripFetch = reviewsSettings.videoReviewsEnabled === true
-      ? fetchMediaStripReviews(productId)
-      : fetchPhotoStripReviews(productId);
+    var mediaGalleryFetch = reviewsSettings.videoReviewsEnabled === true
+      ? fetchMixedMediaGalleryReviews(productId)
+      : fetchImageMediaGalleryReviews(productId);
     var fetchResults = await Promise.all([
       fetchReviews(productId, 'newest', 1, null),
-      stripFetch,
+      mediaGalleryFetch,
     ]);
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
@@ -73,7 +73,7 @@ export async function bootstrap(productId, productName) {
     var renderModule = await loadRenderModule();
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
-    setPhotoStripReviews(fetchResults[1]);
+    setMediaStripReviews(fetchResults[1]);
     await renderModule.render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
   } catch (err) {
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;

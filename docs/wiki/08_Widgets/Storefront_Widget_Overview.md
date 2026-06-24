@@ -37,7 +37,7 @@ source_files:
 A single ikas-injected `widget.js` URL that runs on every storefront page. As of Phase 2 implementation work on 2026-05-17, `public/widget.js` is a small classic compatibility loader and the actual runtime/modules live under `public/widget-runtime/*` as ESM chunks. The deployed pre-Phase-2 widget measured `177763` bytes during the 2026-05-15 audit. The runtime detects context and renders product review block (PDP), rating badge near the title, or listing/search rating badges. The PDP review block also includes a separate photo review detail lightbox. All other widget concepts (carousel/popup/Q&A) are partially scaffolded or unverified; see [[Open_Questions]].
 
 ## Where the widget runs
-- **Product detail pages** — independent PDP rating badge near title plus optional explicit-mount review block with summary, list, photo strip, photo detail lightbox, and "Write a Review" CTA.
+- **Product detail pages** — independent PDP rating badge near title plus optional explicit-mount review block with summary, list, media gallery, photo/video detail lightbox, and "Write a Review" CTA.
 - **Collection / search / listing pages** — small star+count badges injected next to product titles in cards.
 - **Preview iframe** (`/preview`) — same code, with `window.__ikasPreviewMode = true`.
 
@@ -52,7 +52,7 @@ A single ikas-injected `widget.js` URL that runs on every storefront page. As of
 | `qa` | ❓ unverified | Registered but flow undefined ([[Open_Questions]]) |
 
 ## What's customizable
-Per-widget settings live in `WidgetSettings(storeId, widgetId).settings: Json`. Schema source of truth: [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts). Categories include layout choice (summary / review), color tokens (basic + advanced tier), titles, icon choices, sizing ranges, toggles for sections (photo strip, etc.).
+Per-widget settings live in `WidgetSettings(storeId, widgetId).settings: Json`. Schema source of truth: [src/components/home-page/widgets/widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts). Categories include layout choice (summary / review), color tokens (basic + advanced tier), titles, icon choices, sizing ranges, toggles for sections such as the media gallery.
 
 Settings UI in admin: [src/components/home-page/widgets/editor/SettingsPanel.tsx](src/components/home-page/widgets/editor/SettingsPanel.tsx).
 

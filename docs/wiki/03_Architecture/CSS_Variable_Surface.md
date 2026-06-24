@@ -26,7 +26,7 @@ source_files:
   - "src/widget/reviews-section/styles/base.js"
   - "src/widget/reviews-section/styles/summary-controls.js"
   - "src/widget/reviews-section/styles/review-primitives.js"
-  - "src/widget/reviews-section/styles/photo-strip.js"
+  - "src/widget/reviews-section/styles/media-gallery.js"
   - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/summary-layouts/classic/styles.js"
   - "src/widget/core/helpers.js"
@@ -98,7 +98,7 @@ Set on the widget root in `render.js applyVars` based on merchant size choice (s
 | `--renuvex-pr-reply-name-size` | Merchant reply name |
 | `--renuvex-pr-reply-text-size` | Merchant reply text |
 | `--renuvex-pr-radius` / `--renuvex-pr-radius-sm` | Corner radius (small = radius-4) |
-| `--renuvex-pr-photo-title-size` | Photo lightbox title |
+| `--renuvex-pr-media-gallery-title-size` | Media gallery title |
 | `--renuvex-pr-avg-rating-size` | Summary avg rating number |
 | `--renuvex-pr-review-count-size` | Summary review count |
 | `--renuvex-pr-compact-count-size` | Compact layout count |
@@ -114,7 +114,7 @@ Set on the widget root in `render.js applyVars` based on merchant size choice (s
 | `--renuvex-pr-review-date-size` | Review item date |
 | `--renuvex-pr-read-more-size` | "Read more" button |
 | `--renuvex-pr-filter-text-size` | Filter dropdown text |
-| `--renuvex-pr-photo-title-size` | Photo strip title |
+| `--renuvex-pr-media-gallery-title-size` | Media gallery title |
 
 ### Color tokens (widget-root scope, set by `applyVars`)
 Per-element color variables. Each maps to a specific UI element so a merchant can recolor one piece without affecting siblings. Defaults fall back to fixed hex (`#111111` / `#555555` / `#e5e7eb` etc).
@@ -136,17 +136,18 @@ Per-element color variables. Each maps to a specific UI element so a merchant ca
 | `--renuvex-pr-review-author` / `--renuvex-pr-review-body` / `--renuvex-pr-review-title` / `--renuvex-pr-review-date` / `--renuvex-pr-review-border` | Review item parts |
 | `--renuvex-pr-state-text` | Empty/non-error state message color; derived from `reviewBodyColor` at 65% alpha, not exposed as a separate admin color |
 | `--renuvex-pr-reply-label` / `--renuvex-pr-reply-text` / `--renuvex-pr-reply-bg-color` / `--renuvex-pr-reply-border` | Merchant reply block |
-| `--renuvex-pr-photo-arrow-bg` / `--renuvex-pr-photo-arrow-border` / `--renuvex-pr-photo-arrow-text` / `--renuvex-pr-photo-image-border` / `--renuvex-pr-photo-title` | Photo lightbox |
+| `--renuvex-pr-media-gallery-arrow-bg` / `--renuvex-pr-media-gallery-arrow-border` / `--renuvex-pr-media-gallery-arrow-text` / `--renuvex-pr-media-gallery-image-border` / `--renuvex-pr-media-gallery-title` | Media gallery |
+| `--renuvex-pr-review-lightbox-video-icon` / `--renuvex-pr-review-lightbox-video-progress` / `--renuvex-pr-review-lightbox-video-progress-track` | Review lightbox Mux Player |
 | `--renuvex-pr-bg` / `--renuvex-pr-border` | Legacy generic background / border |
 
 ### Photo / image sizing
 | Variable | Purpose |
 |---|---|
-| `--renuvex-pr-photo-thumb-aspect` | Photo strip thumbnail aspect ratio |
+| `--renuvex-pr-media-gallery-thumb-aspect` | Media gallery thumbnail aspect ratio |
 | `--renuvex-pr-card-photo-w` | Card layout photo width |
 | `--renuvex-pr-list-photo-w` / `--renuvex-pr-list-photo-h` / `--renuvex-pr-list-photo-w-mobile` / `--renuvex-pr-list-photo-h-mobile` | List layout review item photo box (desktop + mobile, fixed 3:4 portrait) |
 | `--renuvex-pr-gallery-photo-w` / `--renuvex-pr-gallery-photo-w-mobile` | Gallery layout photo width (desktop + mobile) |
-| `--renuvex-pr-thumbnail-size` | Top photo strip thumbnail display size (`thumbnailSize` setting: 80 / 110 / 140 px) |
+| `--renuvex-pr-thumbnail-size` | Top media-gallery thumbnail display size (`thumbnailSize` setting: 80 / 110 / 140 px) |
 | `--renuvex-pr-star-size` / `--renuvex-pr-avg-star-size` | Star icon sizes inside summary/header |
 
 ### Layout-local (`.renuvex-pr-summary` only)
@@ -250,7 +251,7 @@ Widget runtime (settings.js)
 - [src/widget/reviews-section/styles/base.js](src/widget/reviews-section/styles/base.js) — widget-root declarations, shared icon/text-safety rules, mobile padding tokens
 - [src/widget/reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) — shared summary bar/action/filter controls
 - [src/widget/reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) — shared review stars, reply, read-more, load-more, pagination CSS
-- [src/widget/reviews-section/styles/photo-strip.js](src/widget/reviews-section/styles/photo-strip.js) — shared photo strip CSS
+- [src/widget/reviews-section/styles/media-gallery.js](src/widget/reviews-section/styles/media-gallery.js) — shared media gallery CSS
 - [src/widget/reviews-section/styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) — photo review lightbox CSS
 - [src/widget/reviews-section/render/theme-vars.js](src/widget/reviews-section/render/theme-vars.js) — merchant color settings mapped to widget-root CSS variables
 - [src/widget/summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) — classic/default summary root variables and avg/count/recommend styles

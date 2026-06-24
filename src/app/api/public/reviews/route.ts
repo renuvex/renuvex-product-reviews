@@ -373,7 +373,7 @@ export async function GET(req: Request) {
     }
 
     const page = positiveIntParam(searchParams.get('page'), 1);
-    // limit: ana liste için 10 (default); photo-strip newest-first fetch için 15.
+    // limit: ana liste için 10 (default); media-gallery newest-first fetch için 15.
     // 1-30 aralığında clamp — kötüye kullanım önlemi.
     const limit = positiveIntParam(searchParams.get('limit'), 10, 30);
     const skip = (page - 1) * limit;

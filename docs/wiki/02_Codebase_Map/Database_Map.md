@@ -91,11 +91,11 @@ On `ReviewMedia`:
 - `[provider, providerAssetId]` - provider-scoped video/image asset lookup without parsing URLs.
 - `[resourceType, provider, processingStatus]` - video processing/reconciliation and provider-aware cleanup.
 - unique `[reviewId, position]` plus `[reviewId, position]` index - stable per-review image ordering.
-- `[storeId, productId, visible, createdAt]` - future media-gallery/photo-strip reads and tenant-scoped cleanup/reporting.
+- `[storeId, productId, visible, createdAt]` - future media-gallery reads and tenant-scoped cleanup/reporting.
 - `[metadataStatus, createdAt]` - metadata repair/backfill scans.
 
 On `Review` media reads:
-- partial `[storeId, productId, createdAt] where status='approved' and hasImages=true` - public photo-review list/photo strip hot path.
+- partial `[storeId, productId, createdAt] where status='approved' and hasImages=true` - public photo-review list and image-only media-gallery hot path.
 - `[storeId, productId, status, hasVideo]` supports approved video/media queries and admin moderation slices.
 
 On video lifecycle:

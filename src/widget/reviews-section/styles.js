@@ -6,7 +6,7 @@
 import { PARTIAL_STARS_CSS } from '../core/helpers.js';
 import { REVIEW_SECTION_BASE_CSS, REVIEW_SECTION_MOBILE_CSS } from './styles/base.js';
 import { SUMMARY_CONTROLS_CSS } from './styles/summary-controls.js';
-import { PHOTO_STRIP_CSS } from './styles/photo-strip.js';
+import { MEDIA_GALLERY_CSS } from './styles/media-gallery.js';
 import { REVIEW_PRIMITIVES_CSS } from './styles/review-primitives.js';
 import { REVIEW_STATES_CSS } from './styles/states.js';
 import { LIGHTBOX_CSS } from './styles/lightbox.js';
@@ -16,7 +16,7 @@ export var CLASSIC_CSS = [
   REVIEW_SECTION_BASE_CSS,
   PARTIAL_STARS_CSS,
   SUMMARY_CONTROLS_CSS,
-  PHOTO_STRIP_CSS,
+  MEDIA_GALLERY_CSS,
   REVIEW_PRIMITIVES_CSS,
   REVIEW_STATES_CSS,
   REVIEW_MEDIA_CSS,

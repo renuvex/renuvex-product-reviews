@@ -159,7 +159,7 @@ Renuvex implications:
 | Photo reviews | Cloudinary signed uploads, trusted image policy, pending registry, and image cleanup are implemented. | Renuvex can compete with base photo-review collection and display. |
 | Video reviews | Mux direct upload, provider-neutral video sessions, media jobs, webhook audit, signed admin playback, public playback IDs, quota, and cleanup lifecycle exist in source. | Technically competitive, but packaging, UX polish, and video-specific controls still need product work. |
 | Review moderation | Pending/approved/rejected status, auto-approval modes, merchant reply, delete, and profanity filter exist. | Strong enough for SMB launch, weaker than enterprise AI/sentiment suites. |
-| Storefront widgets | PDP review section, summary layouts, card/gallery/list review layouts, title badge, listing badges, photo strip, media lightbox, and live preview exist. Carousel/popup/Q&A are scaffolded or unverified. | Strong customization direction; missing separate carousel/popup/Q&A parity. |
+| Storefront widgets | PDP review section, summary layouts, card/gallery/list review layouts, title badge, listing badges, media gallery, media lightbox, and live preview exist. Carousel/popup/Q&A are scaffolded or unverified. | Strong customization direction; missing separate carousel/popup/Q&A parity. |
 | Structured data | Independent Product AggregateRating JSON-LD surface exists in `src/widget/structured-data/jsonld.js`. | This closes a key SEO parity item. Validate in Google tools before public claims. |
 | Outreach | No post-purchase review request email flow yet. | Major parity gap versus all four competitors. |
 | Import/export | No CSV import/export yet. | Major migration/acquisition gap, especially versus Judge.me and Loox. |
@@ -183,7 +183,7 @@ Legend: `Yes` = browser/source verified, `Partial` = exists only in some tiers o
 | Star rating widget | Yes | Yes | Yes | Yes | Yes |
 | Listing/category badges | Yes | Yes | Yes | Yes | Yes |
 | Review carousel | Scaffold/unverified | Yes | Yes | Yes | Yes |
-| Media gallery | Yes for review lightbox/photo strip, not a separate UGC gallery product | Yes | Yes | Visual UGC path exists | Yes |
+| Media gallery | Yes for review lightbox/media gallery, not a separate UGC gallery product | Yes | Yes | Visual UGC path exists | Yes |
 | Q&A | Scaffold/unverified | Unknown | Awesome | Prime | Growth+ on Shopify listing |
 | Product grouping | No | Yes | Awesome | Prime | Yes |
 | Rich snippets / SEO | Yes in source | Yes | Yes | Yes | Yes |

@@ -131,7 +131,7 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'range', key: 'borderRadius', label: 'Köşe Ovalliği', min: 0, max: 24, default: 8 },
           // Boyut ayarları da tasarım kararı — eskiden ayrı "Boyutlar" accordion'undaydı,
           // tek tasarım panelinde toplandı. 'size' tüm widget tipografisi+ikon boyutu;
-          // 'thumbnailSize' fotoğraflı yorumlar strip'inin thumbnail boyutu.
+          // 'thumbnailSize' media gallery thumbnail boyutu.
           {
             type: 'select',
             key: 'size',
@@ -146,7 +146,7 @@ export const WIDGETS: WidgetDef[] = [
           {
             type: 'select',
             key: 'thumbnailSize',
-            label: 'Fotoğraf Galeri Boyutu',
+            label: 'Medya Galeri Boyutu',
             default: 'medium',
             options: [
               { value: 'small',  label: 'Küçük' },
@@ -157,7 +157,7 @@ export const WIDGETS: WidgetDef[] = [
           },
           // Göster/gizle toggle'ları tasarım kararı (görsel öğe seçimi).
           // Ayarlar = sistem davranışı, Tasarım = görünüm — net ayrım.
-          { type: 'toggle', key: 'showPhotoGallery',   label: 'Fotoğraf Galerisini Göster', default: true },
+          { type: 'toggle', key: 'showMediaGallery',   label: 'Medya Galerisini Göster', default: true },
           { type: 'toggle', key: 'showRecommendation', label: 'Tavsiye Yüzdesini Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
         ],
       },
@@ -248,12 +248,12 @@ export const WIDGETS: WidgetDef[] = [
         ],
       },
       {
-        title: 'Fotoğraf Galerisi',
+        title: 'Medya Galerisi',
         isColor: true,
         fields: [
-          { type: 'color', key: 'photoTitleColor',        label: 'Başlık Rengi',          default: '#111111' },
-          { type: 'color', key: 'photoArrowBgColor',      label: 'Ok Arka Plan Rengi',    default: '#ffffff' },
-          { type: 'color', key: 'photoArrowTextColor',    label: 'Ok Rengi',              default: '#111111' },
+          { type: 'color', key: 'mediaGalleryTitleColor',     label: 'Başlık Rengi',          default: '#111111' },
+          { type: 'color', key: 'mediaGalleryArrowBgColor',   label: 'Ok Arka Plan Rengi',    default: '#ffffff' },
+          { type: 'color', key: 'mediaGalleryArrowTextColor', label: 'Ok Rengi',              default: '#111111' },
         ],
       },
       {
@@ -313,10 +313,10 @@ export const WIDGETS: WidgetDef[] = [
           { type: 'toggle', key: 'showTitle', label: 'Widget Başlığını Göster', default: true, showWhen: { layoutKey: 'summaryLayout', supports: 'title' } },
           // Toggle metni zaten bağlamı veriyor, ekstra label tekrar olur — hideLabel ile gizlenir.
           { type: 'text',   key: 'title',     label: 'Widget Başlığı', placeholder: 'Müşteri Yorumları', default: 'Müşteri Yorumları', hideLabel: true, maxLength: 30, showWhen: { key: 'showTitle', equals: true } },
-          // Görsel galeri (Fotoğraflı Yorumlar strip) başlığı — Widget Başlığı pattern'inin aynısı.
-          // Tasarım'daki showPhotoGallery strip'i tamamen gizler, bu sadece başlığı.
-          { type: 'toggle', key: 'showPhotoGalleryTitle', label: 'Fotoğraf Galeri Başlığını Göster', default: true },
-          { type: 'text',   key: 'photoGalleryTitle',    label: 'Fotoğraf Galeri Başlığı', placeholder: 'Fotoğraflı Yorumlar', default: 'Fotoğraflı Yorumlar', hideLabel: true, maxLength: 30, showWhen: { key: 'showPhotoGalleryTitle', equals: true } },
+          // Media gallery başlığı — Widget Başlığı pattern'inin aynısı.
+          // Tasarım'daki showMediaGallery galeriyi tamamen gizler, bu sadece başlığı.
+          { type: 'toggle', key: 'showMediaGalleryTitle', label: 'Medya Galeri Başlığını Göster', default: true },
+          { type: 'text',   key: 'mediaGalleryTitle',    label: 'Medya Galeri Başlığı', placeholder: 'Müşteri Görselleri', default: 'Müşteri Görselleri', hideLabel: true, maxLength: 30, showWhen: { key: 'showMediaGalleryTitle', equals: true } },
           // Yorum Yap butonu metni — toggle yok, çünkü buton mağazanın yorum
           // toplama "kapısı": gizlenmemeli. Boş bırakılırsa render tarafında
           // 'Yorum Yap' fallback'i kullanılır. Tüm summary layout'ları + empty

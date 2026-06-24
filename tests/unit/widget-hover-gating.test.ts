@@ -25,7 +25,7 @@ const REVIEW_FORM_STYLE_PATH = path.join(process.cwd(), 'src', 'widget', 'review
 const GATED = '@media(hover:hover) and (pointer:fine)';
 
 // Decorative-hover CSS modules shipped inside the review shadow surface.
-const FILES = ['summary-controls.js', 'photo-strip.js', 'lightbox.js'];
+const FILES = ['summary-controls.js', 'media-gallery.js', 'lightbox.js'];
 
 describe('review-surface decorative hover gating', () => {
   for (const file of FILES) {

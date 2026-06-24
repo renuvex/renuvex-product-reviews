@@ -22,7 +22,7 @@ source_files:
   - "src/widget/summary-layouts/shared/bar-chart.js"
   - "src/widget/review-layouts/_shared.js"
   - "src/widget/reviews-section/render.js"
-  - "src/widget/reviews-section/render/photo-strip.js"
+  - "src/widget/reviews-section/render/media-gallery.js"
   - "src/widget/reviews-section/review-modal.js"
   - "tests/widget-runtime-smoke.spec.ts"
 ---
@@ -56,7 +56,7 @@ The compact trigger needs trusted SVG markup for the rating stars and caret, so 
 - Changed the dynamic count label span to be populated through `textContent`.
 - Added a shared `settingText(value, fallback)` helper for merchant-editable widget labels so whitespace-only values fall back consistently before being written to the DOM.
 - Added runtime smoke coverage proving compact count labels remain literal text and do not create nested SVG/HTML elements.
-- Added runtime smoke coverage proving whitespace-only merchant text settings fall back for the widget title, count label, write button, photo-strip title, merchant reply label, and rating-bar label.
+- Added runtime smoke coverage proving whitespace-only merchant text settings fall back for the widget title, count label, write button, media-gallery title, merchant reply label, and rating-bar label.
 
 ## Prevention
 - Merchant-editable text must be normalized with `settingText(...)` when it has a default fallback, then written with `textContent` or equivalent escaping.

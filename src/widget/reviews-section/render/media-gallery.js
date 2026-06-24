@@ -1,0 +1,103 @@
+// reviews-section/render/media-gallery.js — media gallery section builder.
+//
+// Builds the "Müşteri Görselleri" horizontal media gallery shown above the review
+// list. The dataset is filled once in bootstrap with `hasMedia=true` for
+// video-enabled stores and `hasImages=true` for photo-only stores. It is
+// independent of sort/filter/load-more and only refreshes after the cache TTL
+// (Strateji A — newest-first rotation; ADR_0007: fixed 15 cap, no admin setting).
+// Pure builder: returns the media gallery element, or null when the gallery should
+// not render (gallery off, photo filter active, or no media reviews). It does NOT
+// call render(); openReviewModal + wireLightboxTrigger are injected by the caller.
+
+import { REVIEW_MEDIA_THUMB_WIDTH, settingText } from '../../core/helpers.js';
+import { getFirstTrustedReviewMedia, getTrustedReviewMedia } from '../../core/review-media.js';
+import { iconUseNode } from '../../icons/star-sprite.js';
+import { UI_CARET_LEFT, UI_CARET_RIGHT } from '../../icons/index.js';
+import { createMediaThumbnail } from '../media-thumbnail.js';
+
+// opts: { settings, root, currentHasImages, openReviewModal, wireLightboxTrigger }
+export function buildMediaGallery(opts) {
+  var settings = opts.settings;
+  var root = opts.root;
+  var currentHasImages = opts.currentHasImages;
+  var openReviewModal = opts.openReviewModal;
+
+  var galleryReviews = (opts.mediaStripReviews || []).filter(function (r) {
+    return getTrustedReviewMedia(r).length > 0;
+  });
+  if (!(settings.showMediaGallery !== false && !currentHasImages && galleryReviews.length > 0)) {
+    return null;
+  }
+
+  var gallerySection = document.createElement('div');
+  gallerySection.className = 'renuvex-pr-media-gallery-section';
+
+  // Gallery üstündeki başlık — admin paneldeki "Medya Galeri Başlığı" ile
+  // özelleştirilebilir; toggle kapalıysa hiç render edilmez.
+  if (settings.showMediaGalleryTitle !== false) {
+    var galleryTitleText = settingText(settings.mediaGalleryTitle, 'Müşteri Görselleri');
+    var galleryTitle = document.createElement('div');
+    galleryTitle.className = 'renuvex-pr-media-gallery-title';
+    galleryTitle.textContent = galleryTitleText;
+    gallerySection.appendChild(galleryTitle);
+  }
+
+  // Thumbnail aspect ratio review layout'a göre otomatik:
+  // card review medyası 1:1 → gallery de kare; list/gallery review medyası
+  // 3:4 portre → gallery de portre. Tutarlı görsel akış.
+  var thumbAspect = settings.reviewLayout === 'card' ? '1/1' : '3/4';
+  root.style.setProperty('--renuvex-pr-media-gallery-thumb-aspect', thumbAspect);
+
+  var mediaStrip = document.createElement('div');
+  mediaStrip.className = 'renuvex-pr-media-gallery-strip';
+
+  // Backend cap=15 garantili; defansif iç sınır da 15.
+  // `<img>` width/height attribute'ları CSS `--renuvex-pr-media-gallery-thumb-aspect` ile uyumlu
+  // olmalı (card: 1/1, list/gallery: 3/4) — CLS rezervi tarayıcı tarafından doğru
+  // hesaplanır. width REVIEW_MEDIA_THUMB_WIDTH (300); height layout'a göre.
+  var stripWidth = REVIEW_MEDIA_THUMB_WIDTH;
+  var stripHeight = settings.reviewLayout === 'card' ? REVIEW_MEDIA_THUMB_WIDTH : Math.round(REVIEW_MEDIA_THUMB_WIDTH * 4 / 3);
+  var thumbCount = 0;
+  galleryReviews.forEach(function (r) {
+    if (thumbCount >= 15) return;
+    var firstMedia = getFirstTrustedReviewMedia(r);
+    if (!firstMedia) return;
+    var thumb = createMediaThumbnail(firstMedia, {
+      className: 'renuvex-pr-media-gallery-thumb',
+      sourceWidth: REVIEW_MEDIA_THUMB_WIDTH,
+      width: stripWidth,
+      height: stripHeight,
+      loading: thumbCount < 3 ? 'eager' : 'lazy',
+      onOpen: function () { openReviewModal(r, firstMedia.url, galleryReviews); },
+    });
+    if (!thumb) return;
+    // Lightbox navigasyonu gallery dataset'i içinde gezer — load-more sonrası
+    // ana liste değişse bile lightbox tutarlı kalır (K1.b çözümü).
+    mediaStrip.appendChild(thumb);
+    thumbCount++;
+  });
+
+  // Desktop ok butonları
+  var prevArrow = document.createElement('button');
+  prevArrow.className = 'renuvex-pr-media-gallery-arrow renuvex-pr-media-gallery-arrow-prev';
+  var prevArrowIcon = iconUseNode(UI_CARET_LEFT);
+  if (prevArrowIcon) prevArrow.appendChild(prevArrowIcon);
+  prevArrow.setAttribute('aria-label', 'Önceki');
+  prevArrow.onclick = function () { mediaStrip.scrollBy({ left: -200, behavior: 'smooth' }); };
+
+  var nextArrow = document.createElement('button');
+  nextArrow.className = 'renuvex-pr-media-gallery-arrow renuvex-pr-media-gallery-arrow-next';
+  var nextArrowIcon = iconUseNode(UI_CARET_RIGHT);
+  if (nextArrowIcon) nextArrow.appendChild(nextArrowIcon);
+  nextArrow.setAttribute('aria-label', 'Sonraki');
+  nextArrow.onclick = function () { mediaStrip.scrollBy({ left: 200, behavior: 'smooth' }); };
+
+  var stripWrap = document.createElement('div');
+  stripWrap.className = 'renuvex-pr-media-gallery-strip-wrap';
+  stripWrap.appendChild(prevArrow);
+  stripWrap.appendChild(mediaStrip);
+  stripWrap.appendChild(nextArrow);
+  gallerySection.appendChild(stripWrap);
+
+  return gallerySection;
+}

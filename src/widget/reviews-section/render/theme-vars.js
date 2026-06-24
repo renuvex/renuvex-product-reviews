@@ -108,12 +108,12 @@ export function applyManualTheme(root, settings) {
   var replyLabelColor = settings.replyLabelColor || '#111111';
   var replyTextVar = settings.replyTextColor || '#111111';
 
-  // Grup 9 — Fotoğraf Galerisi
-  var photoTitle = settings.photoTitleColor || '#111111';
-  var photoImageBorder = hexToRgba('#111111', 0.05);
-  var photoArrowBg = settings.photoArrowBgColor || '#ffffff';
-  var photoArrowText = settings.photoArrowTextColor || '#111111';
-  var photoArrowBorder = hexToRgba('#111111', 0.12);
+  // Grup 9 — Medya Galerisi
+  var mediaGalleryTitle = settings.mediaGalleryTitleColor || '#111111';
+  var mediaGalleryImageBorder = hexToRgba('#111111', 0.05);
+  var mediaGalleryArrowBg = settings.mediaGalleryArrowBgColor || '#ffffff';
+  var mediaGalleryArrowText = settings.mediaGalleryArrowTextColor || '#111111';
+  var mediaGalleryArrowBorder = hexToRgba('#111111', 0.12);
 
   // Group 10 - Review lightbox video player
   // These tokens are scoped to the product review lightbox only. Admin
@@ -206,12 +206,12 @@ export function applyManualTheme(root, settings) {
     '--renuvex-pr-reply-label': replyLabelColor,
     '--renuvex-pr-reply-text': replyTextVar,
 
-    // Grup 9 — Fotoğraf Galerisi
-    '--renuvex-pr-photo-title': photoTitle,
-    '--renuvex-pr-photo-image-border': photoImageBorder,
-    '--renuvex-pr-photo-arrow-bg': photoArrowBg,
-    '--renuvex-pr-photo-arrow-text': photoArrowText,
-    '--renuvex-pr-photo-arrow-border': photoArrowBorder,
+    // Grup 9 — Medya Galerisi
+    '--renuvex-pr-media-gallery-title': mediaGalleryTitle,
+    '--renuvex-pr-media-gallery-image-border': mediaGalleryImageBorder,
+    '--renuvex-pr-media-gallery-arrow-bg': mediaGalleryArrowBg,
+    '--renuvex-pr-media-gallery-arrow-text': mediaGalleryArrowText,
+    '--renuvex-pr-media-gallery-arrow-border': mediaGalleryArrowBorder,
 
     // Grup 10 — Review lightbox video player
     '--renuvex-pr-review-lightbox-video-icon': reviewLightboxVideoIcon,

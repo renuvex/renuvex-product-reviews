@@ -60,7 +60,7 @@ source_files:
 - Gates passed: `pnpm build:widget`, targeted stalled-upload interaction tests, `pnpm check:widget-js`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test:unit`, `pnpm test:widget-interactions`, `pnpm test:widget-media:chromium`, `node --env-file=.env.local .\node_modules\prisma\build\index.js validate`, `pnpm verify:video-infrastructure:post-webhook -- --json`, and `node scripts/wiki-audit.mjs --changed-source-check` (0 errors; existing wiki-health warnings remain).
 
 ## 2026-06-22 - ui | Refine review wizard media actions
-- After a photo is pending or uploaded in the media step, the primary media actions hide and the embedded photo strip owns the visible thumbnail plus compact `+` add tile. Removing a selected video resets the step to the empty media-selection actions.
+- After a photo is pending or uploaded in the media step, the primary media actions hide and the embedded photo thumbnail rail owns the visible thumbnail plus compact `+` add tile. Removing a selected video resets the step to the empty media-selection actions.
 - The video-enabled wizard media step now uses two stacked primary action buttons for photo and video, matching the established black `Fotoğraf Ekle` control instead of the old side-by-side outline choices.
 - The media step embeds the existing photo picker in a no-add-button mode, so clicking photo no longer shows a second duplicate `Fotoğraf Ekle` button while preserving the shared thumbnail/upload lifecycle.
 - Empty embedded media content stays hidden until a real photo/video selection exists, so opening and dismissing the native picker does not move the media action buttons.

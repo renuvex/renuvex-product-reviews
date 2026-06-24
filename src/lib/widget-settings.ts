@@ -4,6 +4,34 @@
 
 import { WIDGETS, collectSettingFields } from '@/components/home-page/widgets/widgetDefs';
 
+const REVIEW_SETTING_ALIASES: Record<string, string> = {
+  showPhotoGallery: 'showMediaGallery',
+  showPhotoGalleryTitle: 'showMediaGalleryTitle',
+  photoGalleryTitle: 'mediaGalleryTitle',
+  photoTitleColor: 'mediaGalleryTitleColor',
+  photoArrowBgColor: 'mediaGalleryArrowBgColor',
+  photoArrowTextColor: 'mediaGalleryArrowTextColor',
+};
+
+export function normalizeWidgetSettingsKeys(
+  widgetId: string,
+  settings: Record<string, unknown>,
+): Record<string, unknown> {
+  if (widgetId !== 'reviews') return { ...settings };
+
+  const normalized = { ...settings };
+  for (const [legacyKey, canonicalKey] of Object.entries(REVIEW_SETTING_ALIASES)) {
+    if (
+      Object.prototype.hasOwnProperty.call(normalized, legacyKey) &&
+      !Object.prototype.hasOwnProperty.call(normalized, canonicalKey)
+    ) {
+      normalized[canonicalKey] = normalized[legacyKey];
+    }
+    delete normalized[legacyKey];
+  }
+  return normalized;
+}
+
 export function getWidgetDefaults(widgetId: string): Record<string, unknown> {
   const widget = WIDGETS.find((w) => w.id === widgetId);
   if (!widget) return {};
@@ -28,9 +56,10 @@ export function getWidgetFieldKeys(widgetId: string): Set<string> | null {
 export function sanitizeSettings(widgetId: string, settings: Record<string, unknown>): Record<string, unknown> {
   const allowedKeys = getWidgetFieldKeys(widgetId);
   if (!allowedKeys) return settings;
+  const normalizedSettings = normalizeWidgetSettingsKeys(widgetId, settings);
 
   const sanitized = Object.fromEntries(
-    Object.entries(settings).filter(([key]) => allowedKeys.has(key))
+    Object.entries(normalizedSettings).filter(([key]) => allowedKeys.has(key))
   );
 
   const widget = WIDGETS.find((w) => w.id === widgetId);
@@ -48,8 +77,9 @@ export function sanitizeSettings(widgetId: string, settings: Record<string, unkn
 export function validateSettings(widgetId: string, settings: Record<string, unknown>): string | null {
   const widget = WIDGETS.find((w) => w.id === widgetId);
   if (!widget) return `Bilinmeyen widgetId: ${widgetId}`;
+  const normalizedSettings = normalizeWidgetSettingsKeys(widgetId, settings);
   for (const field of collectSettingFields(widget.settings)) {
-    const value = settings[field.key];
+    const value = normalizedSettings[field.key];
     if (value === undefined) continue;
     if (field.type === 'toggle' && typeof value !== 'boolean') {
       return `${field.key} boolean olmalı`;
@@ -69,7 +99,7 @@ export function validateSettings(widgetId: string, settings: Record<string, unkn
     }
     if (field.type === 'select') {
       // Options statik dizi veya settings'e bağlı fonksiyon olabilir — ikisini de destekle
-      const opts = typeof field.options === 'function' ? field.options(settings) : field.options;
+      const opts = typeof field.options === 'function' ? field.options(normalizedSettings) : field.options;
       const valid = opts.map((o) => o.value);
       if (!valid.includes(value as string)) {
         return `${field.key} şu değerlerden biri olmalı: ${valid.join(', ')}`;

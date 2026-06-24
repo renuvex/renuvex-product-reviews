@@ -24,7 +24,7 @@ import { beginReviewRequest, isCurrentReviewRequest } from './render/request-tok
 import { SIZE_PRESETS, THUMBNAIL_PRESETS, THUMBNAIL_PRESETS_MOBILE } from './render/size-presets.js';
 import { buildDisabledStateEl, buildEmptyReviewsState, buildFilteredEmptyReviewsState, buildReviewsErrorState } from './render/states.js';
 import { applyManualTheme } from './render/theme-vars.js';
-import { buildPhotoStrip } from './render/photo-strip.js';
+import { buildMediaGallery } from './render/media-gallery.js';
 import { createReviewHandlers } from './render/handlers.js';
 import { buildPaginationControl } from './render/pagination.js';
 import {
@@ -33,7 +33,7 @@ import {
   currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentNextCursor,
   setCurrentOrderBy, setCurrentPage, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
   setCurrentReviewsData, setCurrentNextCursor,
-  photoStripReviews, loadedLightboxReviews,
+  mediaStripReviews, loadedLightboxReviews,
   setLoadedLightboxReviews, getNewLoadedLightboxReviews, appendLoadedLightboxReviews,
 } from '../core/state.js';
 
@@ -128,12 +128,11 @@ export async function render(productId, settings, reviewsData, productName, orde
     var radius = settings.borderRadius !== undefined ? settings.borderRadius : 8;
 
     // Widget size drives typography and layout-local review item media.
-    // thumbnailSize drives only the top "Fotoğraflı Yorumlar" strip thumbnails.
+    // thumbnailSize drives only the top media gallery thumbnails.
     var sz = SIZE_PRESETS[settings.size] || SIZE_PRESETS.medium;
     var thumbPx = THUMBNAIL_PRESETS[settings.thumbnailSize] || THUMBNAIL_PRESETS.medium;
-    // Mobil photo strip thumbnail: list/gallery'de yorum-içi görsel mobilde küçüldüğü
-    // için (3:4 portre) strip de aynı değere insin → mobilde EŞİT. card (1:1) item'ı
-    // mobilde küçülmez, o yüzden masaüstü değeriyle (thumbPx) aynı kalır.
+    // Mobile media gallery thumbnails match list/gallery review-item media size.
+    // Card media stays square and keeps the desktop thumbnail value.
     var thumbPxMobile = thumbPx;
     if (settings.reviewLayout === 'list' || settings.reviewLayout === 'gallery') {
       thumbPxMobile = THUMBNAIL_PRESETS_MOBILE[settings.thumbnailSize] || THUMBNAIL_PRESETS_MOBILE.medium;
@@ -147,7 +146,7 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--renuvex-pr-reply-text-size', sz.replyTextSize + 'px');
     root.style.setProperty('--renuvex-pr-radius', radius + 'px');
     root.style.setProperty('--renuvex-pr-radius-sm', Math.max(0, radius - 4) + 'px');
-    root.style.setProperty('--renuvex-pr-photo-title-size', sz.photoTitleSize + 'px');
+    root.style.setProperty('--renuvex-pr-media-gallery-title-size', sz.mediaGalleryTitleSize + 'px');
     root.style.setProperty('--renuvex-pr-avg-rating-size', sz.avgRatingSize + 'px');
     root.style.setProperty('--renuvex-pr-review-count-size', sz.reviewCountSize + 'px');
     root.style.setProperty('--renuvex-pr-compact-count-size', sz.compactCountSize + 'px');
@@ -345,21 +344,20 @@ export async function render(productId, settings, reviewsData, productName, orde
         });
         widget.appendChild(summary);
 
-        // Fotoğraf şeridi — state.photoStripReviews bootstrap'ta tek seferlik
-        // `hasImages=true&limit=15&orderBy=newest` ile dolduruldu. Filtreden
-        // ("Fotoğraflı" sort) ve load-more'dan bağımsız; sadece cache TTL (1 dk)
-        // sonra arka planda yenilenir (Strateji A — newest-first rotation).
-        // ADR_0007: sabit 15 cap, admin ayarı yok. buildPhotoStrip null dönerse
-        // (galeri kapalı / foto filtresi aktif / foto yok) hiç eklenmez.
-        var photoSection = buildPhotoStrip({
+        // Media gallery — state.mediaStripReviews is filled once in bootstrap
+        // with `hasMedia=true` for media-enabled stores and `hasImages=true`
+        // for image-only stores. It stays independent from sort/filter/load-more.
+        // ADR_0007 keeps the fixed cap at 15. buildMediaGallery returns null
+        // when disabled, the photo filter is active, or no media exists.
+        var mediaGallerySection = buildMediaGallery({
           settings: settings,
           root: root,
           currentHasImages: currentHasImages,
-          photoStripReviews: photoStripReviews,
+          mediaStripReviews: mediaStripReviews,
           openReviewModal: openReviewModal,
           wireLightboxTrigger: wireLightboxTrigger,
         });
-        if (photoSection) widget.appendChild(photoSection);
+        if (mediaGallerySection) widget.appendChild(mediaGallerySection);
 
         if (reviews.length === 0) {
           widget.appendChild(buildFilteredEmptyReviewsState());

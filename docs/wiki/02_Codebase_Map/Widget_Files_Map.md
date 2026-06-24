@@ -27,7 +27,7 @@ source_files:
   - "src/widget/reviews-section/render/theme-vars.js"
   - "src/widget/reviews-section/render/size-presets.js"
   - "src/widget/reviews-section/render/states.js"
-  - "src/widget/reviews-section/render/photo-strip.js"
+  - "src/widget/reviews-section/render/media-gallery.js"
   - "src/widget/reviews-section/render/handlers.js"
   - "src/widget/reviews-section/render/request-token.js"
   - "src/widget/reviews-section/styles.js"
@@ -35,7 +35,7 @@ source_files:
   - "src/widget/reviews-section/styles/summary-controls.js"
   - "src/widget/reviews-section/styles/review-primitives.js"
   - "src/widget/reviews-section/styles/states.js"
-  - "src/widget/reviews-section/styles/photo-strip.js"
+  - "src/widget/reviews-section/styles/media-gallery.js"
   - "src/widget/reviews-section/styles/lightbox.js"
   - "src/widget/shared/base-reset.js"
   - "src/widget/review-layouts/card/styles.js"
@@ -66,7 +66,7 @@ related:
 # Widget Files Map
 
 ## Summary
-Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. `reviews-section/render.js` is the top-level render orchestrator; its builders (theme CSS vars, size presets, non-list states, photo strip, request race-token) and its render-rerunning interaction handlers (retry/filter/sort, via `render/handlers.js` `createReviewHandlers({render})` — render injected so there is no circular import) live under `reviews-section/render/*.js`. Load-more stays inline in render.js because it inserts DOM incrementally rather than re-running render. `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared review-section CSS ownership lives under `reviews-section/styles/*.js`. Layout-specific CSS lives in `review-layouts/*/styles.js` and `summary-layouts/*/styles.js` (card/classic defaults included). Neither belongs inside a theme adapter folder.
+Storefront widget source under `src/widget/*`. Plain JavaScript (.js), built by esbuild as a classic compatibility loader at [public/widget.js](public/widget.js) plus an ESM runtime/chunks under [public/widget-runtime/](public/widget-runtime/). Modular: a `core/` runtime, lazy-loaded `rating-badge/`, `structured-data/`, `reviews-section/`, and `listing-badges/` surfaces, swappable `review-layouts` and `summary-layouts`, and `themes/` for theme-specific fallback selectors/adapters. `reviews-section/render.js` is the top-level render orchestrator; its builders (theme CSS vars, size presets, non-list states, media gallery, request race-token) and its render-rerunning interaction handlers (retry/filter/sort, via `render/handlers.js` `createReviewHandlers({render})` — render injected so there is no circular import) live under `reviews-section/render/*.js`. Load-more stays inline in render.js because it inserts DOM incrementally rather than re-running render. `reviews-section/styles.js` remains the `CLASSIC_CSS` aggregator; shared review-section CSS ownership lives under `reviews-section/styles/*.js`. Layout-specific CSS lives in `review-layouts/*/styles.js` and `summary-layouts/*/styles.js` (card/classic defaults included). Neither belongs inside a theme adapter folder.
 
 ## Tree
 
@@ -101,13 +101,13 @@ src/widget/
 │
 ├─ reviews-section/
 │  ├─ bootstrap.js                # Reviews section entry: settings, mount gate, initial fetch orchestration
-│  ├─ reviews-api.js              # Reviews/photoStrip fetch helpers and explicit fetch-error result
+│  ├─ reviews-api.js              # Reviews/media-gallery fetch helpers and explicit fetch-error result
 │  ├─ render.js                   # Top-level render orchestrator (summary + list + modal CTA). Imports pure builders from render/*.
 │  ├─ render/                     # Builders + handlers extracted from render.js
 │  │  ├─ theme-vars.js            # applyManualTheme + hexToRgba: admin color settings → --renuvex-pr-* CSS vars
 │  │  ├─ size-presets.js          # SIZE_PRESETS + THUMBNAIL_PRESETS tables
 │  │  ├─ states.js                # Disabled, product-empty, filtered-empty, and fetch-error DOM builders
-│  │  ├─ photo-strip.js           # buildPhotoStrip(opts): photo strip section (openReviewModal/wireLightboxTrigger via DI)
+│  │  ├─ media-gallery.js         # buildMediaGallery(opts): media gallery section (openReviewModal/wireLightboxTrigger via DI)
 │  │  ├─ handlers.js              # createReviewHandlers({render}): retry/filter/sort handlers that re-run render (DI, no cycle)
 │  │  └─ request-token.js         # reviewRequestSeq race-token (beginReviewRequest/isCurrentReviewRequest)
 │  ├─ styles.js                  # CLASSIC_CSS aggregator for shared review-section CSS
@@ -116,7 +116,7 @@ src/widget/
 │  │  ├─ summary-controls.js     # Shared bar chart, write action, filter menu, rating-bar focus/count CSS
 │  │  ├─ review-primitives.js    # Shared review stars, replies, read-more, pagination/load-more primitives
 │  │  ├─ states.js               # Non-list state CSS: product-empty, filtered-empty, fetch-error
-│  │  ├─ photo-strip.js          # Photo strip/gallery title, arrows, thumbnails
+│  │  ├─ media-gallery.js        # Media gallery title, arrows, thumbnails
 │  │  └─ lightbox.js             # Photo review lightbox CSS
 │  ├─ review-modal.js             # Photo review detail lightbox
 │  └─ review-form-modal/
@@ -180,7 +180,7 @@ src/widget/
 - Bootstraps with `'mock-product'` and a fixture product name
 
 ### Layout-aware settings (important)
-- `summary-layouts/index.js` and `review-layouts/index.js` each export a registry where every layout declares `supports: { title: true, photoStrip: false, ... }`.
+- `summary-layouts/index.js` and `review-layouts/index.js` each export a registry where every layout declares support metadata such as `supports: { title: true, thumbnailSize: false, ... }`.
 - Admin settings panel ([widgetDefs.ts](src/components/home-page/widgets/widgetDefs.ts)) uses `showWhen: { layoutKey: 'summaryLayout', supports: 'title' }` to read those flags.
 - ⚠️ When you add a new layout, declare `supports` keys for everything any setting could check. Otherwise admin shows fields that have no effect.
 
@@ -230,7 +230,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - 2026-05-31: Added [review-layouts/card/styles.js](src/widget/review-layouts/card/styles.js) so card/default review CSS ownership matches list/gallery while shared review primitives remain in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-31: Added [summary-layouts/classic/styles.js](src/widget/summary-layouts/classic/styles.js) so classic/default summary CSS ownership matches the other summary layout folders while shared review CSS remains in [reviews-section/styles.js](src/widget/reviews-section/styles.js).
 - 2026-05-28: Renamed the broad PDP implementation folder to [reviews-section/](src/widget/reviews-section/) and moved the shared PDP title finder to [core/product-title.js](src/widget/core/product-title.js). Public widget mount/API contracts stayed unchanged.
-- 2026-05-27: Added [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) to make the reviews-section folder boundary explicit: `bootstrap.js` owns review mount orchestration, `reviews-api.js` owns review/photoStrip data access, and `render.js` owns review-section UI interactions.
+- 2026-05-27: Added [reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) to make the reviews-section folder boundary explicit: `bootstrap.js` owns review mount orchestration, `reviews-api.js` owns review/media-gallery data access, and `render.js` owns review-section UI interactions.
 - 2026-05-24: Added [icons/star-sprite.js](src/widget/icons/star-sprite.js) — read-only rating stars render via a single injected SVG `<symbol>` sprite referenced by `<use>` instead of inlining `<path>` per star. Renderers (`partialStarsHTML`, `starsHTML`, `renderStarRow`) call `ensureStarSprite` + emit `starUseSvg`; `ICONS` strings stay the single source (admin preview + sprite both derive from them). Related: [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-18: Added [core/link-scope.js](src/widget/core/link-scope.js) so listing badges and the MutationObserver share scoped link discovery; active builds no longer use whole-document `document.querySelectorAll('a[href]')` for listing re-render checks.
 - 2026-05-17: Listing badge files now use canonical ikas product ids from Storefront Events for rating fetches; slug remains DOM fallback only. Related: [[ADR_0015_Canonical_Product_Identity]].

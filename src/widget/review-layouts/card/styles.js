@@ -3,7 +3,7 @@
 //
 // These rules describe the card layout's own visual structure. Shared review
 // primitives such as star rows, clamp/read-more controls, replies, state blocks,
-// photo strip, and modal/lightbox CSS remain in reviews-section/styles.js.
+// media gallery, and modal/lightbox CSS remain in reviews-section/styles.js.
 
 export var CARD_REVIEW_CSS = `
   /* Card review item: side padding is supplied by the shared mobile padding block. */
@@ -18,7 +18,7 @@ export var CARD_REVIEW_CSS = `
   .renuvex-pr-review .renuvex-pr-body{margin-top:var(--renuvex-pr-gap-normal);line-height:1.65;color:var(--renuvex-pr-review-body,#111111);font-size:var(--renuvex-pr-review-text-size,14px);font-weight:400;}
 
   .renuvex-pr-review .renuvex-pr-gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--renuvex-pr-gap-loose);}
-  .renuvex-pr-review .renuvex-pr-img{width:var(--renuvex-pr-card-photo-w,var(--renuvex-pr-thumbnail-size,90px));height:var(--renuvex-pr-card-photo-w,var(--renuvex-pr-thumbnail-size,90px));object-fit:cover;border-radius:var(--renuvex-pr-radius,6px);border:1px solid var(--renuvex-pr-photo-image-border,rgba(0,0,0,0.05));cursor:pointer;}
+  .renuvex-pr-review .renuvex-pr-img{width:var(--renuvex-pr-card-photo-w,var(--renuvex-pr-thumbnail-size,90px));height:var(--renuvex-pr-card-photo-w,var(--renuvex-pr-thumbnail-size,90px));object-fit:cover;border-radius:var(--renuvex-pr-radius,6px);border:1px solid var(--renuvex-pr-media-gallery-image-border,rgba(0,0,0,0.05));cursor:pointer;}
   /* Kart foto tetikleyicisi role=button → BASE_RESET press-dim'ini (opacity:0.85) miras
      alıyor ve basınca "flash" gibi okunuyor. Kaldır (lightbox açılışı zaten geri bildirim). */
   .renuvex-pr-review .renuvex-pr-img:active{opacity:1 !important;}

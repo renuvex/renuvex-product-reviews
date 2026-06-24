@@ -1,14 +1,14 @@
-// reviews-section/render/size-presets.js — Boyut preset tabloları.
+// reviews-section/render/size-presets.js - size preset tables.
 //
-// Küçük / Orta / Büyük — tüm font ve ikon boyutlarını tek seçimle belirler.
-// Thumbnail boyutu ayrı preset (thumbnailSize). render.js bu tabloları okuyup
-// --renuvex-pr-* CSS değişkenlerine yazar; layout meta.sizeOverrides bunların
-// üzerine yazabilir.
+// The small / medium / large widget size controls typography and icon sizes.
+// Thumbnail size is a separate preset (`thumbnailSize`). render.js reads these
+// tables and writes the corresponding --renuvex-pr-* CSS variables; layout
+// meta.sizeOverrides may override them.
 
 export var SIZE_PRESETS = {
   small: {
     titleSize: 20, reviewTextSize: 12, reviewTitleSize: 14, authorSize: 12,
-    replyNameSize: 12, replyTextSize: 12, photoTitleSize: 14,
+    replyNameSize: 12, replyTextSize: 12, mediaGalleryTitleSize: 14,
     avgRatingSize: 36, avgStarSize: 48, reviewCountSize: 16, recommendSize: 12,
     compactCountSize: 14,
     btnTextSize: 12, barLabelSize: 18, barCountSize: 12,
@@ -27,7 +27,7 @@ export var SIZE_PRESETS = {
   },
   medium: {
     titleSize: 24, reviewTextSize: 14, reviewTitleSize: 16, authorSize: 14,
-    replyNameSize: 13, replyTextSize: 13, photoTitleSize: 16,
+    replyNameSize: 13, replyTextSize: 13, mediaGalleryTitleSize: 16,
     avgRatingSize: 46, avgStarSize: 58, reviewCountSize: 20, recommendSize: 14,
     compactCountSize: 16,
     btnTextSize: 14, barLabelSize: 22, barCountSize: 14,
@@ -46,7 +46,7 @@ export var SIZE_PRESETS = {
   },
   large: {
     titleSize: 28, reviewTextSize: 16, reviewTitleSize: 18, authorSize: 16,
-    replyNameSize: 15, replyTextSize: 15, photoTitleSize: 18,
+    replyNameSize: 15, replyTextSize: 15, mediaGalleryTitleSize: 18,
     avgRatingSize: 56, avgStarSize: 68, reviewCountSize: 22, recommendSize: 16,
     compactCountSize: 18,
     btnTextSize: 16, barLabelSize: 26, barCountSize: 16,
@@ -67,9 +67,8 @@ export var SIZE_PRESETS = {
 
 export var THUMBNAIL_PRESETS = { small: 80, medium: 110, large: 140 };
 
-// Mobil photo strip thumbnail — YALNIZ list/gallery (3:4 portre) için. Bu layout'ların
-// yorum-içi görseli mobilde küçülüyor (review-layouts/*/index.js -mobile sizeOverrides:
-// small 80 / medium 100 / large 110); photo strip de aynı değere insin ki mobilde
-// strip ile yorum-içi görsel EŞİT olsun. card (1:1) item'ı mobilde küçülmez → bu
-// tabloyu kullanmaz, masaüstü THUMBNAIL_PRESETS değeriyle sabit kalır.
+// Mobile media-gallery thumbnails, only for list/gallery (3:4 portrait).
+// Those review-item media boxes shrink on mobile; the media gallery uses the
+// same values so the two surfaces stay visually aligned. card (1:1) media does
+// not shrink on mobile and keeps the desktop THUMBNAIL_PRESETS value.
 export var THUMBNAIL_PRESETS_MOBILE = { small: 80, medium: 100, large: 110 };

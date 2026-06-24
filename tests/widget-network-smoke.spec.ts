@@ -73,7 +73,7 @@ function wait(ms: number): Promise<void> {
 async function reviewsWidgetState(page: Page): Promise<{
   productId: string;
   emptyText: string;
-  photoThumbs: number;
+  mediaThumbs: number;
   reviewCards: number;
 }> {
   return page.evaluate(() => {
@@ -85,7 +85,7 @@ async function reviewsWidgetState(page: Page): Promise<{
     return {
       productId: widget?.getAttribute('data-renuvex-product-id') || '',
       emptyText: root?.querySelector('.renuvex-pr-state-msg')?.textContent?.trim() || '',
-      photoThumbs: root?.querySelectorAll('.renuvex-pr-photo-strip-thumb').length || 0,
+      mediaThumbs: root?.querySelectorAll('.renuvex-pr-media-gallery-thumb').length || 0,
       reviewCards: root?.querySelectorAll('.renuvex-pr-review').length || 0,
     };
   });
@@ -104,7 +104,7 @@ test('manifest points at the current widget surface hierarchy', async () => {
   expect(entryPoints.some((entryPoint) => entryPoint?.includes('product-widget'))).toBe(false);
 });
 
-test('review mount present loads reviews, photo strip, badge, and render chunk', async ({ page }) => {
+test('review mount present loads reviews, media gallery, badge, and render chunk', async ({ page }) => {
   const log = await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: true });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasPdpBadge(page)).toBe(true);
@@ -217,7 +217,7 @@ test('stale product bootstrap cannot overwrite the current review widget', async
   expect(state.productId).toBe(PRODUCT_ID);
   expect(state.emptyText).toBe('');
   expect(state.reviewCards).toBeGreaterThanOrEqual(1);
-  expect(state.photoThumbs).toBeGreaterThanOrEqual(1);
+  expect(state.mediaThumbs).toBeGreaterThanOrEqual(1);
   expect(countUrls(log, '/api/public/reviews?')).toBe(4);
   expect(widgetErrors(log)).toEqual([]);
 });

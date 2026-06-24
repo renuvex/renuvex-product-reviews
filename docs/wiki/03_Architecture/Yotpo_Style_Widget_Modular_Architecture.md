@@ -75,7 +75,7 @@ The current single bundle has accumulated too many responsibilities:
 - PDP review widget
 - title rating badge
 - listing badges
-- photo strip
+- media gallery
 - modal review form
 - photo lightbox
 - preview mode
@@ -124,7 +124,7 @@ Initial registry candidates:
 | `reviews-main` | PDP summary, filters, reviews, write CTA | `reviews-section/render.js` |
 | `listing-badge` | collection/search product cards | `listing-badges/*` |
 | `review-form` | multi-step review submission modal | `review-form-modal/*` |
-| `media-gallery` | photo strip and photo lightbox | `Photo_Strip`, `Product_Review_Lightbox` |
+| `media-gallery` | media gallery and media lightbox | `Media_Gallery`, `Product_Review_Lightbox` |
 | `questions-answers` | product Q&A | not production-complete |
 | `schema` | Product/AggregateRating JSON-LD | `structured-data/jsonld.js` |
 

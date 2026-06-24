@@ -21,6 +21,7 @@
     "verify:video-infrastructure:post-webhook": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=post-webhook",
     "video:canary:ops": "node --env-file=.env.local scripts/video-canary-ops.mjs",
     "video:canary:verify-disabled": "node --env-file=.env.local scripts/video-canary-ops.mjs --expect-all-disabled",
+    "settings:media-gallery:migrate": "node scripts/migrate-widget-settings-media-gallery-keys.mjs",
     "test:widget-smoke": "playwright test --config=playwright.widget.config.ts tests/widget-network-smoke.spec.ts",
     "test:widget-runtime": "playwright test --config=playwright.widget.config.ts tests/widget-runtime-smoke.spec.ts",
     "test:widget-interactions": "playwright test --config=playwright.widget.config.ts tests/widget-interaction-smoke.spec.ts",

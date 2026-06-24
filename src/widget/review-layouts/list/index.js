@@ -3,7 +3,7 @@
 // Fotoğraf yoksa orta kolon foto kolonunu kapsar (no-media modifier).
 // Mobile (<600px) dikey diziliş — styles.js'te tanımlı.
 
-import { starsHTML, formatDate, PHOTO_STRIP_THUMB_WIDTH } from '../../core/helpers.js';
+import { starsHTML, formatDate, REVIEW_MEDIA_THUMB_WIDTH } from '../../core/helpers.js';
 import { getTrustedReviewMedia } from '../../core/review-media.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { createMediaThumbnail } from '../../reviews-section/media-thumbnail.js';
@@ -17,7 +17,7 @@ export var meta = {
   // Bkz: review-layouts/index.js — supports sözleşmesi.
   supports: {},
   // Review item photo column scales with the general widget size. The top
-  // "Fotoğraflı Yorumlar" strip is a separate gallery surface and follows
+  // Media gallery is a separate gallery surface and follows
   // thumbnailSize through --renuvex-pr-thumbnail-size.
   // --renuvex-pr-list-photo-w / h        : desktop sağ kolon foto kutusu (3:4 portre)
   // --renuvex-pr-list-photo-w / h-mobile : mobile, metin altına düşen foto kutusu (3:4 portre)
@@ -94,9 +94,9 @@ export function render(r, allReviews) {
     mediaCol.className = 'renuvex-pr-review-list-media';
     trustedMedia.forEach(function(item) {
       var thumb = createMediaThumbnail(item, {
-        sourceWidth: PHOTO_STRIP_THUMB_WIDTH,
-        width: PHOTO_STRIP_THUMB_WIDTH,
-        height: Math.round(PHOTO_STRIP_THUMB_WIDTH * 4 / 3),
+        sourceWidth: REVIEW_MEDIA_THUMB_WIDTH,
+        width: REVIEW_MEDIA_THUMB_WIDTH,
+        height: Math.round(REVIEW_MEDIA_THUMB_WIDTH * 4 / 3),
         onOpen: function() { openReviewModal(r, item.url, allReviews); },
       });
       if (thumb) mediaCol.appendChild(thumb);

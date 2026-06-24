@@ -3,7 +3,7 @@
 // DOM order: stars/date -> title -> author -> body -> photos -> merchant reply.
 // Card visual CSS lives in styles.js; shared review primitives stay in the base stylesheet.
 
-import { starsHTML, formatDate, PHOTO_STRIP_THUMB_WIDTH } from '../../core/helpers.js';
+import { starsHTML, formatDate, REVIEW_MEDIA_THUMB_WIDTH } from '../../core/helpers.js';
 import { getTrustedReviewMedia } from '../../core/review-media.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { createMediaThumbnail } from '../../reviews-section/media-thumbnail.js';
@@ -15,7 +15,7 @@ export var meta = {
   id: 'card',
   name: 'Kart (Varsayılan)',
   // Card photos scale with the general size preset through --renuvex-pr-card-photo-w.
-  // The thumbnail-size setting only controls the top photo strip.
+  // The thumbnail-size setting only controls the top media gallery.
   sizeOverrides: {
     small:  { '--renuvex-pr-card-photo-w': '80px' },
     medium: { '--renuvex-pr-card-photo-w': '110px' },
@@ -77,9 +77,9 @@ export function render(r, allReviews) {
     trustedMedia.forEach(function(item) {
       var thumb = createMediaThumbnail(item, {
         className: 'renuvex-pr-img',
-        sourceWidth: PHOTO_STRIP_THUMB_WIDTH,
-        width: PHOTO_STRIP_THUMB_WIDTH,
-        height: PHOTO_STRIP_THUMB_WIDTH,
+        sourceWidth: REVIEW_MEDIA_THUMB_WIDTH,
+        width: REVIEW_MEDIA_THUMB_WIDTH,
+        height: REVIEW_MEDIA_THUMB_WIDTH,
         onOpen: function() { openReviewModal(r, item.url, allReviews); },
       });
       if (thumb) gallery.appendChild(thumb);

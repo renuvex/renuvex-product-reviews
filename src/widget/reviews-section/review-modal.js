@@ -532,7 +532,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   // Mirror the icon sprite so star/icon <use> refs resolve inside this shadow.
   registerSpriteRoot(shadow.root);
   // Focus the dialog container (role=dialog) itself, NOT the first control, so opening
-  // via a photo-strip thumbnail (or any click) does not show a focus ring on a nav arrow.
+  // via a media-gallery thumbnail (or any click) does not show a focus ring on a nav arrow.
   // Tab then navigates the lightbox controls.
   restoreFocus(modalWrap);
 }

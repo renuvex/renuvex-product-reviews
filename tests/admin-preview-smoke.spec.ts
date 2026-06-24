@@ -18,7 +18,7 @@ test('admin preview applies layout, toggle, and color updates through preview me
       summaryLayout: 'classic',
       reviewLayout: 'card',
       reviewStarColor: '#f59e0b',
-      showPhotoGallery: true,
+      showMediaGallery: true,
     },
   });
 
@@ -27,18 +27,18 @@ test('admin preview applies layout, toggle, and color updates through preview me
   expect(await textInReviewsShadow(page, '.renuvex-pr-title')).toBe('Musteri Yorumlari');
   expect(await hasInReviewsShadow(page, '.renuvex-pr-summary:not(.renuvex-pr-summary-compact)')).toBe(true);
   expect(await hasInReviewsShadow(page, '.renuvex-pr-review-card')).toBe(true);
-  expect(await hasInReviewsShadow(page, '.renuvex-pr-photo-section')).toBe(true);
+  expect(await hasInReviewsShadow(page, '.renuvex-pr-media-gallery-section')).toBe(true);
 
   await dispatchPreviewSettingsUpdate(page, {
     summaryLayout: 'compact',
     reviewLayout: 'gallery',
     reviewStarColor: '#22c55e',
-    showPhotoGallery: false,
+    showMediaGallery: false,
   });
 
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-summary-compact')).toBe(true);
   await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-review-gallery')).toBe(true);
-  expect(await hasInReviewsShadow(page, '.renuvex-pr-photo-section')).toBe(false);
+  expect(await hasInReviewsShadow(page, '.renuvex-pr-media-gallery-section')).toBe(false);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--renuvex-pr-review-star-color').trim())).toBe('#22c55e');
   expect(widgetErrors(log)).toEqual([]);
 });

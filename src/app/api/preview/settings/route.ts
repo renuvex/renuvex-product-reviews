@@ -18,6 +18,9 @@ export async function GET() {
       autoApprove: 'manual',
       size: 'medium',
       thumbnailSize: 'medium',
+      showMediaGallery: true,
+      showMediaGalleryTitle: true,
+      mediaGalleryTitle: 'Müşteri Görselleri',
       richSnippetsEnabled: true,
     },
     badge: {
