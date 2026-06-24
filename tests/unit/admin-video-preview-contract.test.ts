@@ -69,6 +69,7 @@ describe('admin video preview contract', () => {
     expect(playerSource).not.toContain('theme-style');
     expect(storefrontPlayerSource).toContain('ensureStorefrontReviewMuxPlayerTheme');
     expect(storefrontPlayerSource).toContain("player.setAttribute('lang', REVIEW_PLAYER_LOCALE)");
+    expect(storefrontPlayerSource).toContain("player.setAttribute('muted', '')");
     expect(storefrontPlayerSource).toContain('STOREFRONT_REVIEW_PLAYER_COLORS');
     expect(storefrontPlayerSource).toContain('STOREFRONT_REVIEW_MUX_PLAYER_THEME');
     expect(storefrontPlayerSource).not.toContain('ADMIN_REVIEW_MUX_PLAYER_THEME');

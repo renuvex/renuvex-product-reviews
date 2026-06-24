@@ -32,6 +32,7 @@ function applyReviewPlayerAttributes(player, media) {
   player.setAttribute('disable-cookies', '');
   player.setAttribute('preload', 'metadata');
   player.setAttribute('stream-type', 'on-demand');
+  player.setAttribute('muted', '');
   player.setAttribute('playsinline', '');
   player.setAttribute('hotkeys', 'noarrowleft noarrowright');
   player.setAttribute('lang', REVIEW_PLAYER_LOCALE);
