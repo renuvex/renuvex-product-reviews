@@ -14,6 +14,7 @@ type MuxPlayerElementAttributes = DetailedHTMLProps<HTMLAttributes<HTMLElement>,
   'secondary-color'?: string;
   theme?: string;
   poster?: string;
+  lang?: string;
   preload?: 'none' | 'metadata' | 'auto';
   playsinline?: boolean | '';
   muted?: boolean;

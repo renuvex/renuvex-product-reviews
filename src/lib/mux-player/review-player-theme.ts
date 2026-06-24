@@ -1,3 +1,5 @@
+import { REVIEW_PLAYER_LOCALE } from './review-player-locale';
+
 const ADMIN_REVIEW_MUX_PLAYER_THEME_ELEMENT = 'media-theme-renuvex-review-admin';
 const STOREFRONT_REVIEW_MUX_PLAYER_THEME_ELEMENT = 'media-theme-renuvex-review-storefront';
 
@@ -120,6 +122,7 @@ function defineReviewPlayerTheme(themeElement: string, themeCss: string) {
 
   const reviewTemplate = gerwigTemplate.cloneNode(true) as HTMLTemplateElement;
   reviewTemplate.id = themeElement;
+  reviewTemplate.content.querySelector('media-controller')?.setAttribute('lang', REVIEW_PLAYER_LOCALE);
 
   const reviewControlStyle = document.createElement('style');
   reviewControlStyle.textContent = themeCss;
@@ -134,7 +137,8 @@ function defineReviewPlayerTheme(themeElement: string, themeCss: string) {
 function ensureNamedReviewMuxPlayerTheme(themeElement: string, themeCss: string): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve();
 
-  reviewPlayerModulePromise ??= import('@mux/mux-player/themes/gerwig')
+  reviewPlayerModulePromise ??= import('./review-player-i18n')
+    .then(() => import('@mux/mux-player/themes/gerwig'))
     .then(() => import('@mux/mux-player'))
     .then(() => undefined);
 

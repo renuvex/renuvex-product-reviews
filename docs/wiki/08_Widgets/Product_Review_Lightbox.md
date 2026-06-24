@@ -42,6 +42,9 @@ The product review lightbox is the media detail modal opened from trusted review
 ## Related Source Files
 - [review-modal.js](src/widget/reviews-section/review-modal.js) - image/video review detail lightbox.
 - [video-playback.js](src/widget/reviews-section/video-playback.js) - official Mux Player creation, trusted playback ID fallback, lazy module loading, and deterministic player cleanup.
+- [review-player-theme.ts](src/lib/mux-player/review-player-theme.ts) - storefront/admin Mux Player theme cloning, control color contract, and internal `media-controller` locale wiring.
+- [review-player-i18n.ts](src/lib/mux-player/review-player-i18n.ts) - local Turkish Media Chrome translation registration for Mux Player controls.
+- [review-player-locale.ts](src/lib/mux-player/review-player-locale.ts) - shared review-player locale constant.
 - [media-thumbnail.js](src/widget/reviews-section/media-thumbnail.js) - poster-first video thumbnail, play badge, and duration badge.
 - [review-media.js](src/widget/core/review-media.js) - trusted provider-aware media normalization.
 - [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) - shared click/keyboard/ARIA wiring for media elements that open the lightbox.
@@ -92,9 +95,10 @@ The product review lightbox is the media detail modal opened from trusted review
 - In preview mode, an already-open lightbox keeps its active review in `openReviewModal` closure state. The `RENUVEX_PR_SETTINGS_UPDATED_PREVIEW` event carries merged settings. The lightbox re-renders its full right pane through `updateRight` so icon and merchant reply label changes apply without closing the modal.
 - `tests/widget-media-cross-browser.spec.ts` covers poster-first card/list/gallery rendering and cleanup on Chromium, Firefox, desktop WebKit, Pixel emulation, and iPhone WebKit emulation. Emulation is not a replacement for the physical-device release gate in [[ADR_0032_Review_Video_On_Mux]].
 - Video posters are not raw, one-size URLs at render time. `review-media.js` derives trusted Mux Image thumbnail variants for the current surface: card/list/gallery/strip use sized crop variants and the lightbox uses a larger `1280x720 fit=preserve` poster.
-- Mux Player controls are Mux/Media Chrome-owned in this phase. The storefront hides unnecessary controls through Mux Player CSS variables, but admin-controlled player theming, Mux Data analytics, and custom Media Chrome themes are separate future phases.
+- Mux Player controls are Mux/Media Chrome-owned in this phase. The storefront hides unnecessary controls through Mux Player CSS variables, and the shared review-player theme layer loads a local Turkish Media Chrome translation module because Turkish is not bundled by Media Chrome. Admin-controlled player theming, Mux Data analytics, and deeper custom Media Chrome themes are separate future phases.
 
 ## Change Log
+- 2026-06-24: Review-video Mux Player controls now load a local Turkish Media Chrome translation module and set `lang="tr"` at the cloned theme controller boundary, so built-in labels such as Quality and Playback rate render in Turkish without changing playback infrastructure.
 - 2026-06-23: Storefront review video lightbox moved to official Mux Player. The player receives a public `playback-id`, disables Mux Data tracking/cookies for now, hides nonessential controls through supported CSS variables, and keeps a trusted `.m3u8` parsing fallback only for rollout overlap.
 - 2026-06-16: Improved video first-frame quality by deriving sized Mux poster variants and adding hls.js player-size capping plus a conservative start-level warm-start. Native controls remain unchanged and browser-owned.
 - 2026-06-14: Documented the provider-aware image/video lightbox and Phase 4 cross-browser media suite. Native-HLS attributes, lazy `hls.js`, no-autoplay poster-first rendering, browser-back cleanup, and video-to-image navigation cleanup are now pinned across the five-project Playwright matrix.

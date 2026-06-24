@@ -233,8 +233,11 @@ async function lightboxVideoState(page: Page) {
       hotkeys: player.getAttribute('hotkeys') || '',
       poster: player.getAttribute('poster') || '',
       autoplayAttr: player.hasAttribute('autoplay'),
+      playerLang: player.getAttribute('lang') || '',
       theme: player.getAttribute('theme') || '',
       themeRegistered: !!ThemeConstructor,
+      themeHasTurkishController:
+        themeMarkup.includes('<media-controller') && themeMarkup.includes('lang="tr"'),
       themeHasWhiteProgress: themeMarkup.includes('--media-range-bar-color: #ffffff'),
       themeHasContrastThumb:
         themeMarkup.includes('--media-range-thumb-background: radial-gradient') &&
@@ -318,8 +321,10 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     disableTracking: true,
     disableCookies: true,
     autoplayAttr: false,
+    playerLang: 'tr',
     theme: 'renuvex-review-storefront',
     themeRegistered: true,
+    themeHasTurkishController: true,
     themeHasWhiteProgress: true,
     themeHasContrastThumb: true,
     themeHasBlackTrack: true,

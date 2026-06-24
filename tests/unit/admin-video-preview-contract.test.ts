@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { isUnapprovedVideoPreview, type MediaPreviewState } from '@/components/home-page/MediaPreviewState';
+import { REVIEW_PLAYER_LOCALE } from '@/lib/mux-player/review-player-locale';
 
 function preview(overrides: Partial<MediaPreviewState> = {}): MediaPreviewState {
   return {
@@ -31,6 +32,7 @@ describe('admin video preview contract', () => {
     const playerSource = readFileSync(path.join(process.cwd(), 'src/components/home-page/AdminMuxPlayerPreview.tsx'), 'utf8');
     const storefrontPlayerSource = readFileSync(path.join(process.cwd(), 'src/widget/reviews-section/video-playback.js'), 'utf8');
     const themeSource = readFileSync(path.join(process.cwd(), 'src/lib/mux-player/review-player-theme.ts'), 'utf8');
+    const i18nSource = readFileSync(path.join(process.cwd(), 'src/lib/mux-player/review-player-i18n.ts'), 'utf8');
 
     expect(source).toContain('/api/admin/reviews/video-playback?mediaId=');
     expect(source).toContain('Onaylanmam\u0131\u015f m\u00fc\u015fteri videosu');
@@ -44,6 +46,7 @@ describe('admin video preview contract', () => {
     expect(playerSource).toContain('ensureAdminReviewMuxPlayerTheme');
     expect(playerSource).toContain('<mux-player');
     expect(playerSource).toContain('ADMIN_REVIEW_PLAYER_COLORS');
+    expect(playerSource).toContain('lang={REVIEW_PLAYER_LOCALE}');
     expect(playerSource).toContain('theme={ADMIN_REVIEW_MUX_PLAYER_THEME}');
     expect(playerSource).toContain('playback-token={playbackToken}');
     expect(playerSource).toContain('thumbnail-token={thumbnailToken}');
@@ -58,6 +61,7 @@ describe('admin video preview contract', () => {
     expect(playerSource).not.toMatch(/autoPlay|autoplay/);
     expect(playerSource).not.toContain('theme-style');
     expect(storefrontPlayerSource).toContain('ensureStorefrontReviewMuxPlayerTheme');
+    expect(storefrontPlayerSource).toContain("player.setAttribute('lang', REVIEW_PLAYER_LOCALE)");
     expect(storefrontPlayerSource).toContain('STOREFRONT_REVIEW_PLAYER_COLORS');
     expect(storefrontPlayerSource).toContain('STOREFRONT_REVIEW_MUX_PLAYER_THEME');
     expect(storefrontPlayerSource).not.toContain('ADMIN_REVIEW_MUX_PLAYER_THEME');
@@ -67,6 +71,8 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain("export const STOREFRONT_REVIEW_MUX_PLAYER_THEME = 'renuvex-review-storefront'");
     expect(themeSource).toContain('export const ADMIN_REVIEW_PLAYER_COLORS');
     expect(themeSource).toContain('export const STOREFRONT_REVIEW_PLAYER_COLORS');
+    expect(themeSource).toContain("import('./review-player-i18n')");
+    expect(themeSource).toContain("querySelector('media-controller')?.setAttribute('lang', REVIEW_PLAYER_LOCALE)");
     expect(themeSource).toContain("controlForeground: '#ffffff'");
     expect(themeSource).toContain("controlBackground: '#000000'");
     expect(themeSource).toContain("controlHoverBackground: 'rgba(0,0,0,0.84)'");
@@ -93,5 +99,24 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain("media-playback-rate-menu {");
     expect(themeSource).toContain("--media-menu-background: ${colors.menuBackground}");
     expect(themeSource).toContain("--media-text-color: ${colors.menuText}");
+    expect(i18nSource).toContain("addTranslation(REVIEW_PLAYER_LOCALE, REVIEW_PLAYER_TR_TRANSLATIONS)");
+    expect(i18nSource).toContain("Quality: 'Kalite'");
+    expect(i18nSource).toContain("'Playback rate': 'Oynatma hızı'");
+    expect(REVIEW_PLAYER_LOCALE).toBe('tr');
+  });
+
+  it('registers Turkish labels for Media Chrome player controls', async () => {
+    const [{ setLanguage, t }] = await Promise.all([
+      import('media-chrome/dist/utils/i18n.js'),
+      import('@/lib/mux-player/review-player-i18n'),
+    ]);
+
+    setLanguage(REVIEW_PLAYER_LOCALE);
+
+    expect(t('Quality')).toBe('Kalite');
+    expect(t('Playback rate')).toBe('Oynatma hızı');
+    expect(t('Settings')).toBe('Ayarlar');
+    expect(t('Enter fullscreen mode')).toBe('Tam ekrana geç');
+    expect(t('Exit fullscreen mode')).toBe('Tam ekrandan çık');
   });
 });

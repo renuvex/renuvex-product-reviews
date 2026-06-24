@@ -4,6 +4,7 @@ import {
   ADMIN_REVIEW_MUX_PLAYER_THEME,
   ensureAdminReviewMuxPlayerTheme,
 } from '@/lib/mux-player/review-player-theme';
+import { REVIEW_PLAYER_LOCALE } from '@/lib/mux-player/review-player-locale';
 
 type AdminMuxPlayerPreviewProps = {
   playbackId: string;
@@ -35,6 +36,7 @@ export function AdminMuxPlayerPreview({
       playback-token={playbackToken}
       thumbnail-token={thumbnailToken}
       poster={posterUrl || undefined}
+      lang={REVIEW_PLAYER_LOCALE}
       theme={ADMIN_REVIEW_MUX_PLAYER_THEME}
       accent-color={ADMIN_REVIEW_PLAYER_COLORS.controlForeground}
       primary-color={ADMIN_REVIEW_PLAYER_COLORS.controlForeground}

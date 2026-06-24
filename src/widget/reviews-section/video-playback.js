@@ -3,6 +3,7 @@ import {
   ensureStorefrontReviewMuxPlayerTheme,
   STOREFRONT_REVIEW_MUX_PLAYER_THEME,
 } from '../../lib/mux-player/review-player-theme';
+import { REVIEW_PLAYER_LOCALE } from '../../lib/mux-player/review-player-locale';
 import { muxPlaybackIdFromUrl, muxPosterVariantUrl } from '../core/review-media.js';
 
 var muxPlayerModulePromise = null;
@@ -33,6 +34,7 @@ function applyReviewPlayerAttributes(player, media) {
   player.setAttribute('stream-type', 'on-demand');
   player.setAttribute('playsinline', '');
   player.setAttribute('hotkeys', 'noarrowleft noarrowright');
+  player.setAttribute('lang', REVIEW_PLAYER_LOCALE);
   player.setAttribute('theme', STOREFRONT_REVIEW_MUX_PLAYER_THEME);
   player.setAttribute('accent-color', STOREFRONT_REVIEW_PLAYER_COLORS.controlForeground);
   player.setAttribute('primary-color', STOREFRONT_REVIEW_PLAYER_COLORS.controlForeground);

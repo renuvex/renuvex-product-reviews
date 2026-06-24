@@ -1172,7 +1172,7 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
         border-radius: var(--media-menu-border-radius);
         border: var(--media-menu-border, none);
         display: var(--media-menu-display, inline-flex) !important;
-
+        
         transition: var(--media-menu-transition-in,
           visibility 0s,
           opacity .2s ease-out,
@@ -1181,18 +1181,18 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
           min-width .2s ease-in-out,
           min-height .2s ease-in-out
         ) !important;
-
+        
         visibility: var(--media-menu-visibility, visible);
         opacity: var(--media-menu-opacity, 1);
         max-height: var(--media-menu-max-height, var(--_menu-max-height, 300px));
         transform: var(--media-menu-transform-in, translateY(0) scale(1));
         flex-direction: column;
-
+        
         min-height: 0;
         position: relative;
         bottom: var(--_menu-bottom);
         box-sizing: border-box;
-      }
+      } 
 
       @-moz-document url-prefix() {
         :host{
@@ -1314,7 +1314,7 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
         background: var(--media-menu-item-checked-background, rgb(255 255 255 / .2));
       }
 
-
+      
       media-chrome-menu-item::part(checked-indicator) {
         display: var(--media-menu-item-checked-indicator-display, none);
       }
@@ -1415,14 +1415,14 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
         display: var(--media-menu-item-checked-indicator-display, inline-block);
       }
 
-
+      
       svg, img, ::slotted(svg), ::slotted(img) {
         height: var(--media-menu-item-icon-height, var(--media-control-height, 24px));
         fill: var(--media-icon-color, var(--media-primary-color, rgb(238 238 238)));
         display: block;
       }
 
-
+      
       [part~="indicator"],
       ::slotted([part~="indicator"]) {
         fill: var(--media-menu-item-indicator-fill,
@@ -1472,7 +1472,7 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
       }
 
       :host([role="menu"]) {
-
+        
         justify-content: end;
       }
 
@@ -1603,7 +1603,7 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
         border-color: transparent transparent transparent var(--_tooltip-arrow-background);
         transform: translate(0, -50%);
       }
-
+      
       :host([placement="none"]) #arrow {
         display: none;
       }
@@ -1633,12 +1633,12 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
         -webkit-tap-highlight-color: transparent;
       }
 
-
+      
       :host(:focus-visible) {
         box-shadow: var(--media-focus-box-shadow, inset 0 0 0 2px rgb(27 127 204 / .9));
         outline: 0;
       }
-
+      
       :host(:where(:focus)) {
         box-shadow: none;
         outline: 0;
@@ -1661,7 +1661,7 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
       }
 
       media-tooltip {
-
+        
         max-width: 0;
         overflow-x: clip;
         opacity: 0;
@@ -1731,7 +1731,7 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
         display: none !important;
       }
 
-
+      
       :host(:not([data-captions-enabled="true"])) slot[name=on] {
         display: none !important;
       }
@@ -1759,7 +1759,7 @@ import{a as Ke,c as ui}from"./chunk-D4BSMMIO.js";var Qa=e=>{throw TypeError(e)},
         min-width: 5ch;
         padding: var(--media-button-padding, var(--media-control-padding, 10px 5px));
       }
-
+      
       :host([aria-expanded="true"]) slot {
         display: block;
       }
