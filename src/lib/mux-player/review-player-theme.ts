@@ -9,6 +9,13 @@ const NEUTRAL_REVIEW_PLAYER_COLORS = {
   controlBackground: '#000000',
   controlHoverBackground: 'rgba(0,0,0,0.84)',
   controlsBackdrop: 'rgba(0,0,0,0.58)',
+  menuBackground: '#000000',
+  menuBorder: 'rgba(255,255,255,0.18)',
+  menuText: '#ffffff',
+  menuCheckedText: '#ffffff',
+  menuHoverBackground: 'rgba(255,255,255,0.12)',
+  menuCheckedBackground: 'rgba(255,255,255,0.18)',
+  menuHoverOutline: 'rgba(255,255,255,0.54) solid 1px',
   progressPlayed: '#ffffff',
   progressTrack: '#000000',
   progressPointer: 'rgba(255,255,255,0.72)',
@@ -73,6 +80,27 @@ function reviewPlayerThemeCss(colors: ReviewPlayerColors): string {
     --media-range-track-pointer-background: ${colors.progressPointer};
     --media-range-track-pointer-border-right: ${colors.progressPointerBorder};
     --media-time-range-buffered-color: ${colors.progressBuffered};
+  }
+
+  [part~='menu'] {
+    border-color: ${colors.menuBorder};
+    color: ${colors.menuText};
+  }
+
+  media-captions-menu,
+  media-rendition-menu,
+  media-audio-track-menu,
+  media-playback-rate-menu {
+    --media-menu-background: ${colors.menuBackground};
+    --media-menu-item-checked-background: ${colors.menuCheckedBackground};
+    --media-menu-item-hover-background: ${colors.menuHoverBackground};
+    --media-menu-item-hover-outline: ${colors.menuHoverOutline};
+    --media-text-color: ${colors.menuText};
+    color: ${colors.menuText};
+  }
+
+  media-playback-rate-menu[part~='menu']::part(checked) {
+    color: ${colors.menuCheckedText};
   }
 `;
 }

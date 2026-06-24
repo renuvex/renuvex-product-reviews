@@ -25,6 +25,7 @@ source_files:
 ## 2026-06-24 - refactor | Separate Mux Player theme boundaries
 - Split review-video Mux Player theming into explicit storefront and admin exports. The storefront lightbox now uses a storefront theme, while the admin moderation preview uses a fixed admin theme.
 - This keeps future widget/player customization scoped to shopper-facing surfaces and prevents merchant storefront settings from changing the admin preview player.
+- Added explicit dark menu colors for Mux quality and playback-rate menus so white player controls do not create white-on-white admin/player menus under the Gerwig theme.
 
 ## 2026-06-23 - migration | Move review playback to Mux Player
 - Replaced the storefront lightbox's custom native `<video>` + direct `hls.js` orchestration with official `@mux/mux-player`.

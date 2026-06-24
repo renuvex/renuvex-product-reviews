@@ -71,6 +71,10 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain("controlBackground: '#000000'");
     expect(themeSource).toContain("controlHoverBackground: 'rgba(0,0,0,0.84)'");
     expect(themeSource).toContain("controlsBackdrop: 'rgba(0,0,0,0.58)'");
+    expect(themeSource).toContain("menuBackground: '#000000'");
+    expect(themeSource).toContain("menuText: '#ffffff'");
+    expect(themeSource).toContain("menuCheckedBackground: 'rgba(255,255,255,0.18)'");
+    expect(themeSource).toContain("menuHoverBackground: 'rgba(255,255,255,0.12)'");
     expect(themeSource).toContain('media-control-bar,');
     expect(themeSource).toContain('media-control-bar *,');
     expect(themeSource).toContain('.center-controls.pre-playback media-play-button');
@@ -85,5 +89,9 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('--media-range-track-background: ${colors.progressTrack}');
     expect(themeSource).toContain('--media-range-track-pointer-background: ${colors.progressPointer}');
     expect(themeSource).toContain('--media-range-track-pointer-border-right: ${colors.progressPointerBorder}');
+    expect(themeSource).toContain("media-rendition-menu,");
+    expect(themeSource).toContain("media-playback-rate-menu {");
+    expect(themeSource).toContain("--media-menu-background: ${colors.menuBackground}");
+    expect(themeSource).toContain("--media-text-color: ${colors.menuText}");
   });
 });
