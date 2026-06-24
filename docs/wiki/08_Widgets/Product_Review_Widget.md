@@ -22,8 +22,10 @@ related:
   - "[[Bug_Review_Wizard_Focus_Trap_Accessibility]]"
   - "[[Bug_Review_Wizard_Photo_Upload_Lifecycle]]"
 source_files:
+  - "src/components/home-page/widgets/widgetDefs.ts"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/render/theme-vars.js"
   - "src/widget/reviews-section/render/size-presets.js"
   - "src/widget/reviews-section/render/states.js"
   - "src/widget/reviews-section/styles/states.js"
@@ -33,6 +35,7 @@ source_files:
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/media-thumbnail.js"
   - "src/widget/reviews-section/video-playback.js"
+  - "src/widget/reviews-section/styles/lightbox.js"
   - "src/lib/mux-player/review-player-theme.ts"
   - "src/lib/mux-player/review-player-i18n.ts"
   - "src/lib/mux-player/review-player-locale.ts"
@@ -85,7 +88,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - Video entry points use [core/review-media.js](src/widget/core/review-media.js): storefront renders only trusted Mux playback IDs plus trusted Mux delivery/poster URLs from normalized `media[]`; provider ids never reach the widget. Cards/lists/gallery/strip show poster + play badge + optional duration, not autoplaying `<video>` or `<mux-player>` elements.
 - Video poster surfaces derive Mux Image thumbnail variants from the trusted `posterUrl`: fixed thumbnails use sized `width`/`height`/`fit_mode=crop` variants with `srcset`, while the lightbox uses a higher-quality `fit_mode=preserve` poster. The base `posterUrl` remains the source of truth.
 - The lightbox lazy-loads the official `@mux/mux-player` web component only when a video opens. It renders `<mux-player playback-id>` with `preload="metadata"`, `stream-type="on-demand"`, `playsinline`, no autoplay, `disable-tracking`, and `disable-cookies`. The review lightbox hides extra controls such as seek forward/back, PiP, cast, AirPlay, playback rate, rendition, and audio-track menus through Mux Player CSS variables. Closing/navigating pauses the player and removes playback/token/poster attributes before replacing the lightbox media node.
-- Storefront and admin Mux Player themes are intentionally separate. Storefront review playback uses `STOREFRONT_REVIEW_MUX_PLAYER_THEME` / `STOREFRONT_REVIEW_PLAYER_COLORS`; the admin moderation preview uses `ADMIN_REVIEW_MUX_PLAYER_THEME` / `ADMIN_REVIEW_PLAYER_COLORS`. Both themes keep player controls high-contrast and explicitly force Mux quality/playback-rate menus to dark backgrounds with light text so Gerwig's `primary-color` menu default cannot regress into white-on-white controls. Both surfaces also load the local Turkish Media Chrome translation module, set the cloned theme's internal `media-controller` to `lang="tr"`, and define Media Chrome's public custom elements before loading Gerwig so menu labels such as Quality and Playback rate use the Turkish registry instead of Gerwig's bundled English fallback. The admin moderation preview intentionally hides nonessential controls: Picture-in-Picture, Cast, seek backward/forward, audio-track menu, captions/subtitles, and playback-rate. Future widget/player customization must flow through storefront-scoped tokens or presets, not the admin preview surface.
+- Storefront and admin Mux Player themes are intentionally separate. Storefront review playback uses `STOREFRONT_REVIEW_MUX_PLAYER_THEME` / `STOREFRONT_REVIEW_PLAYER_COLORS`; the admin moderation preview uses `ADMIN_REVIEW_MUX_PLAYER_THEME` / `ADMIN_REVIEW_PLAYER_COLORS`. Both themes keep player controls high-contrast and explicitly force Mux quality/playback-rate menus to dark backgrounds with light text so Gerwig's `primary-color` menu default cannot regress into white-on-white controls. Storefront review lightbox player colors are merchant-editable through the `Video Oynatıcı` color group: play icon, play button background, button hover background, progress color, and progress track color. The keys are intentionally scoped as `reviewLightboxVideo*` so future story/carousel players can use separate contracts. Both surfaces also load the local Turkish Media Chrome translation module, set the cloned theme's internal `media-controller` to `lang="tr"`, and define Media Chrome's public custom elements before loading Gerwig so menu labels such as Quality and Playback rate use the Turkish registry instead of Gerwig's bundled English fallback. The admin moderation preview intentionally hides nonessential controls: Picture-in-Picture, Cast, seek backward/forward, audio-track menu, captions/subtitles, and playback-rate. Future widget/player customization must flow through storefront-scoped tokens or presets, not the admin preview surface.
 - In gallery layout, long photo-backed reviews can use the lightbox for full detail; long photo-less reviews expand inline and must not open the photo-only lightbox.
 - This lightbox is separate from the submission wizard under [review-form-modal/](src/widget/reviews-section/review-form-modal/).
 - Open audit risks are tracked in [[Bug_Review_Detail_Lightbox_Risks]].
@@ -152,6 +155,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
+- 2026-06-24: Added five merchant-editable storefront review lightbox video player colors under `Renkler > Video Oynatıcı`: play icon, play button background, button hover background, progress color, and progress track color. The keys are scoped to `reviewLightboxVideo*`; admin moderation and future story/carousel players remain isolated.
 - 2026-06-24: Split the Mux Player theme boundary into storefront and admin exports, including separate named color sets. Storefront review lightbox customization can now evolve through storefront-scoped player tokens/presets without changing the fixed admin moderation preview. The same color contract also pins Mux quality/playback-rate menus to dark background/light text to avoid Gerwig theme menu contrast regressions when control icons stay white.
 - 2026-06-24: Simplified the admin moderation Mux Player controls by hiding Picture-in-Picture, Cast, seek backward/forward, audio-track, captions/subtitles, and playback-rate controls. Core playback, volume, timeline, fullscreen, and quality selection remain available for review moderation.
 - 2026-06-24: Hardened review-player localization by loading Media Chrome's public elements before Gerwig and setting the local Turkish translation registry as active. This closes the case where Gerwig's bundled Media Chrome copy could leave Quality and Playback rate labels in English even though the player host and controller had `lang="tr"`.

@@ -27,7 +27,11 @@ const NEUTRAL_REVIEW_PLAYER_COLORS = {
   progressPointerBorder: '1px solid rgba(0,0,0,0.55)',
 } as const;
 
-type ReviewPlayerColors = typeof NEUTRAL_REVIEW_PLAYER_COLORS;
+type ReviewPlayerColors = Record<keyof typeof NEUTRAL_REVIEW_PLAYER_COLORS, string>;
+
+function reviewLightboxVideoVar(name: string, fallback: string): string {
+  return `var(--renuvex-pr-review-lightbox-video-${name}, ${fallback})`;
+}
 
 export const ADMIN_REVIEW_PLAYER_COLORS = {
   ...NEUTRAL_REVIEW_PLAYER_COLORS,
@@ -35,6 +39,12 @@ export const ADMIN_REVIEW_PLAYER_COLORS = {
 
 export const STOREFRONT_REVIEW_PLAYER_COLORS = {
   ...NEUTRAL_REVIEW_PLAYER_COLORS,
+  controlForeground: reviewLightboxVideoVar('icon', NEUTRAL_REVIEW_PLAYER_COLORS.controlForeground),
+  controlBackground: reviewLightboxVideoVar('button-bg', NEUTRAL_REVIEW_PLAYER_COLORS.controlBackground),
+  controlHoverBackground: reviewLightboxVideoVar('button-hover-bg', '#222222'),
+  progressPlayed: reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed),
+  progressTrack: reviewLightboxVideoVar('progress-track', NEUTRAL_REVIEW_PLAYER_COLORS.progressTrack),
+  progressThumbBorder: `1px solid ${reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed)}`,
 } as const satisfies ReviewPlayerColors;
 
 type MediaThemeConstructor = CustomElementConstructor & {
@@ -73,8 +83,8 @@ function reviewPlayerThemeCss(colors: ReviewPlayerColors): string {
       circle,
       ${colors.controlBackground} 0%,
       ${colors.controlBackground} 32%,
-      ${colors.controlForeground} 32%,
-      ${colors.controlForeground} 100%
+      ${colors.progressPlayed} 32%,
+      ${colors.progressPlayed} 100%
     );
     --media-range-thumb-border: ${colors.progressThumbBorder};
     --media-range-thumb-box-shadow: ${colors.progressThumbShadow};

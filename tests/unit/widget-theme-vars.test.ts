@@ -92,6 +92,29 @@ describe('widget review form theme variables', () => {
     expect(passive.get('--renuvex-pr-pagination-active-text')).toBe('#ffffff');
   });
 
+  test('review lightbox video player vars follow explicit merchant colors', () => {
+    const vars = collectThemeVars({
+      reviewLightboxVideoIconColor: '#f97316',
+      reviewLightboxVideoButtonBgColor: '#111111',
+      reviewLightboxVideoButtonHoverBgColor: '#222222',
+      reviewLightboxVideoProgressColor: '#22c55e',
+      reviewLightboxVideoProgressTrackColor: '#030712',
+    });
+
+    expect(vars.get('--renuvex-pr-review-lightbox-video-icon')).toBe('#f97316');
+    expect(vars.get('--renuvex-pr-review-lightbox-video-button-bg')).toBe('#111111');
+    expect(vars.get('--renuvex-pr-review-lightbox-video-button-hover-bg')).toBe('#222222');
+    expect(vars.get('--renuvex-pr-review-lightbox-video-progress')).toBe('#22c55e');
+    expect(vars.get('--renuvex-pr-review-lightbox-video-progress-track')).toBe('#030712');
+
+    const def = collectThemeVars({});
+    expect(def.get('--renuvex-pr-review-lightbox-video-icon')).toBe('#ffffff');
+    expect(def.get('--renuvex-pr-review-lightbox-video-button-bg')).toBe('#000000');
+    expect(def.get('--renuvex-pr-review-lightbox-video-button-hover-bg')).toBe('#222222');
+    expect(def.get('--renuvex-pr-review-lightbox-video-progress')).toBe('#ffffff');
+    expect(def.get('--renuvex-pr-review-lightbox-video-progress-track')).toBe('#000000');
+  });
+
   test('readable control helpers use deterministic fallback colors', () => {
     expect(getReadableControlColor('#ffffff')).toBe('#111111');
     expect(getReadableControlColor('#111111')).toBe('#ffffff');

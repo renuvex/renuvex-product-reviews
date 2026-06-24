@@ -246,12 +246,15 @@ async function lightboxVideoState(page: Page) {
         themeMarkup.includes('<media-controller') && themeMarkup.includes('lang="tr"'),
       renditionMenuTooltip: RenditionMenuButton?.getTooltipContentHTML?.() || '',
       playbackRateMenuTooltip: PlaybackRateMenuButton?.getTooltipContentHTML?.() || '',
-      themeHasWhiteProgress: themeMarkup.includes('--media-range-bar-color: #ffffff'),
+      themeUsesLightboxProgressColor:
+        themeMarkup.includes('--media-range-bar-color: var(--renuvex-pr-review-lightbox-video-progress, #ffffff)'),
       themeHasContrastThumb:
         themeMarkup.includes('--media-range-thumb-background: radial-gradient') &&
-        themeMarkup.includes('#000000 32%') &&
+        themeMarkup.includes('var(--renuvex-pr-review-lightbox-video-button-bg, #000000) 32%') &&
+        themeMarkup.includes('var(--renuvex-pr-review-lightbox-video-progress, #ffffff) 32%') &&
         themeMarkup.includes('--media-range-thumb-box-shadow: 0 0 0 1px rgba(0,0,0,0.45)'),
-      themeHasBlackTrack: themeMarkup.includes('--media-range-track-background: #000000'),
+      themeUsesLightboxProgressTrack:
+        themeMarkup.includes('--media-range-track-background: var(--renuvex-pr-review-lightbox-video-progress-track, #000000)'),
       themeHasPointerContrast:
         themeMarkup.includes('--media-range-track-pointer-background: rgba(255,255,255,0.72)') &&
         themeMarkup.includes('--media-range-track-pointer-border-right: 1px solid rgba(0,0,0,0.55)'),
@@ -259,9 +262,9 @@ async function lightboxVideoState(page: Page) {
         themeMarkup.includes('media-control-bar,') &&
         themeMarkup.includes('media-control-bar *,') &&
         themeMarkup.includes('.center-controls.pre-playback media-play-button') &&
-        themeMarkup.includes('--media-control-hover-background: rgba(0,0,0,0.84)') &&
-        themeMarkup.includes('--media-icon-color: #ffffff') &&
-        themeMarkup.includes('--media-text-color: #ffffff'),
+        themeMarkup.includes('--media-control-hover-background: var(--renuvex-pr-review-lightbox-video-button-hover-bg, #222222)') &&
+        themeMarkup.includes('--media-icon-color: var(--renuvex-pr-review-lightbox-video-icon, #ffffff)') &&
+        themeMarkup.includes('--media-text-color: var(--renuvex-pr-review-lightbox-video-icon, #ffffff)'),
       accentColor: player.getAttribute('accent-color') || '',
       primaryColor: player.getAttribute('primary-color') || '',
       secondaryColor: player.getAttribute('secondary-color') || '',
@@ -335,14 +338,14 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     themeHasTurkishController: true,
     renditionMenuTooltip: 'Kalite',
     playbackRateMenuTooltip: 'Oynatma hızı',
-    themeHasWhiteProgress: true,
+    themeUsesLightboxProgressColor: true,
     themeHasContrastThumb: true,
-    themeHasBlackTrack: true,
+    themeUsesLightboxProgressTrack: true,
     themeHasPointerContrast: true,
     themeHasControlHoverContrast: true,
-    accentColor: '#ffffff',
-    primaryColor: '#ffffff',
-    secondaryColor: '#000000',
+    accentColor: 'var(--renuvex-pr-review-lightbox-video-icon, #ffffff)',
+    primaryColor: 'var(--renuvex-pr-review-lightbox-video-icon, #ffffff)',
+    secondaryColor: 'var(--renuvex-pr-review-lightbox-video-button-bg, #000000)',
     contextMenuPrevented: true,
     hotkeys: 'noarrowleft noarrowright',
     seekBackwardButton: 'none',

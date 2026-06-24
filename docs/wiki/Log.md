@@ -29,6 +29,7 @@ source_files:
 - Added a local Turkish Media Chrome translation module for Mux Player controls. The review-player theme clone sets its internal `media-controller` to `lang="tr"`, while admin and storefront `<mux-player>` hosts also carry `lang="tr"`. This translates UI labels such as Quality, Playback rate, Settings, and fullscreen tooltips without changing Mux upload, playback, webhook, DB, or cost behavior.
 - Follow-up localization hardening now registers Media Chrome's public custom elements before Gerwig and activates the Turkish registry up front. This prevents Gerwig's bundled Media Chrome fallback from leaving quality and playback-rate menu labels in English.
 - Admin moderation preview now hides nonessential Mux Player controls: Picture-in-Picture, Cast, seek backward/forward, audio-track, captions/subtitles, and playback-rate. Core playback, volume, timeline, fullscreen, and quality selection remain available.
+- Storefront review lightbox playback now has five merchant-editable `Video Oynatıcı` colors: play icon, play button background, button hover background, progress color, and progress track color. The keys are scoped to `reviewLightboxVideo*`, so admin moderation and future story/carousel players remain isolated.
 
 ## 2026-06-23 - migration | Move review playback to Mux Player
 - Replaced the storefront lightbox's custom native `<video>` + direct `hls.js` orchestration with official `@mux/mux-player`.

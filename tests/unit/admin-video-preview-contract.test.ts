@@ -78,6 +78,12 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain("export const STOREFRONT_REVIEW_MUX_PLAYER_THEME = 'renuvex-review-storefront'");
     expect(themeSource).toContain('export const ADMIN_REVIEW_PLAYER_COLORS');
     expect(themeSource).toContain('export const STOREFRONT_REVIEW_PLAYER_COLORS');
+    expect(themeSource).toContain('function reviewLightboxVideoVar');
+    expect(themeSource).toContain("reviewLightboxVideoVar('icon', NEUTRAL_REVIEW_PLAYER_COLORS.controlForeground)");
+    expect(themeSource).toContain("reviewLightboxVideoVar('button-bg', NEUTRAL_REVIEW_PLAYER_COLORS.controlBackground)");
+    expect(themeSource).toContain("reviewLightboxVideoVar('button-hover-bg', '#222222')");
+    expect(themeSource).toContain("reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed)");
+    expect(themeSource).toContain("reviewLightboxVideoVar('progress-track', NEUTRAL_REVIEW_PLAYER_COLORS.progressTrack)");
     expect(themeSource).toContain("import('./review-player-i18n')");
     expect(themeSource).toContain("import('media-chrome')");
     expect(themeSource).toContain("import('media-chrome/menu')");
@@ -100,6 +106,7 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('--media-range-bar-color: ${colors.progressPlayed}');
     expect(themeSource).toContain('--media-range-thumb-background: radial-gradient');
     expect(themeSource).toContain('${colors.controlBackground} 32%');
+    expect(themeSource).toContain('${colors.progressPlayed} 32%');
     expect(themeSource).toContain('--media-range-thumb-box-shadow: ${colors.progressThumbShadow}');
     expect(themeSource).toContain('--media-range-track-background: ${colors.progressTrack}');
     expect(themeSource).toContain('--media-range-track-pointer-background: ${colors.progressPointer}');

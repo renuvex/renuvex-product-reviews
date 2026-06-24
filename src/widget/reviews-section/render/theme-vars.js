@@ -115,7 +115,16 @@ export function applyManualTheme(root, settings) {
   var photoArrowText = settings.photoArrowTextColor || '#111111';
   var photoArrowBorder = hexToRgba('#111111', 0.12);
 
-  // Group 10 - Review form
+  // Group 10 - Review lightbox video player
+  // These tokens are scoped to the product review lightbox only. Admin
+  // moderation and future story/carousel players keep separate contracts.
+  var reviewLightboxVideoIcon = settings.reviewLightboxVideoIconColor || '#ffffff';
+  var reviewLightboxVideoButtonBg = settings.reviewLightboxVideoButtonBgColor || '#000000';
+  var reviewLightboxVideoButtonHoverBg = settings.reviewLightboxVideoButtonHoverBgColor || '#222222';
+  var reviewLightboxVideoProgress = settings.reviewLightboxVideoProgressColor || '#ffffff';
+  var reviewLightboxVideoProgressTrack = settings.reviewLightboxVideoProgressTrackColor || '#000000';
+
+  // Group 11 - Review form
   // Form tokens drive the modal review wizard.
   // The overlay color is intentionally not mapped here; it stays fixed.
   // Primary / secondary split: primary = titles, inputs; secondary = subtitles,
@@ -137,12 +146,12 @@ export function applyManualTheme(root, settings) {
   var formCloseText = getReadableControlColor(formBg);
   var formCloseHoverBg = getControlHoverBackground(formCloseText);
 
-  // Grup 11 — Daha Fazla Göster
+  // Grup 12 — Daha Fazla Göster
   var loadMoreBg = settings.loadMoreBgColor || '#ffffff';
   var loadMoreText = settings.loadMoreTextColor || '#111111';
   var loadMoreBorder = settings.loadMoreBorderColor || '#111111';
 
-  // Grup 12 — Sayfalama (numbered). Pasif butonlar (bg/numara/kenarlık) + aktif sayfanın
+  // Grup 13 — Sayfalama (numbered). Pasif butonlar (bg/numara/kenarlık) + aktif sayfanın
   // BAĞIMSIZ renkleri (aktif bg + aktif numara). Numara Rengi yalnız pasif numaraları,
   // Aktif Numara Rengi yalnız aktif sayfayı etkiler — otomatik türetme yok.
   // Fallback'ler widgetDefs default'larıyla eşit olmalı.
@@ -206,7 +215,14 @@ export function applyManualTheme(root, settings) {
     '--renuvex-pr-photo-arrow-text': photoArrowText,
     '--renuvex-pr-photo-arrow-border': photoArrowBorder,
 
-    // Grup 10 — Form wizard
+    // Grup 10 — Review lightbox video player
+    '--renuvex-pr-review-lightbox-video-icon': reviewLightboxVideoIcon,
+    '--renuvex-pr-review-lightbox-video-button-bg': reviewLightboxVideoButtonBg,
+    '--renuvex-pr-review-lightbox-video-button-hover-bg': reviewLightboxVideoButtonHoverBg,
+    '--renuvex-pr-review-lightbox-video-progress': reviewLightboxVideoProgress,
+    '--renuvex-pr-review-lightbox-video-progress-track': reviewLightboxVideoProgressTrack,
+
+    // Grup 11 — Form wizard
     '--renuvex-pr-fwizard-bg': formBg,
     '--renuvex-pr-fwizard-text': formPrimary,
     '--renuvex-pr-fwizard-secondary-text': formSecondary,
@@ -225,12 +241,12 @@ export function applyManualTheme(root, settings) {
     '--renuvex-pr-fwizard-btn-disabled-text': formBtnDisabledText,
     '--renuvex-pr-fwizard-nav-hover-bg': formNavHoverBg,
 
-    // Grup 11 — Daha Fazla Göster
+    // Grup 12 — Daha Fazla Göster
     '--renuvex-pr-load-more-bg': loadMoreBg,
     '--renuvex-pr-load-more-text': loadMoreText,
     '--renuvex-pr-load-more-border': loadMoreBorder,
 
-    // Grup 12 — Sayfalama
+    // Grup 13 — Sayfalama
     '--renuvex-pr-pagination-bg': paginationBg,
     '--renuvex-pr-pagination-text': paginationText,
     '--renuvex-pr-pagination-border': paginationBorder,
