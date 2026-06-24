@@ -80,8 +80,8 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('export const STOREFRONT_REVIEW_PLAYER_COLORS');
     expect(themeSource).toContain('function reviewLightboxVideoVar');
     expect(themeSource).toContain("reviewLightboxVideoVar('icon', NEUTRAL_REVIEW_PLAYER_COLORS.controlForeground)");
-    expect(themeSource).toContain("reviewLightboxVideoVar('button-bg', NEUTRAL_REVIEW_PLAYER_COLORS.controlBackground)");
-    expect(themeSource).toContain("reviewLightboxVideoVar('button-hover-bg', '#222222')");
+    expect(themeSource).not.toContain("reviewLightboxVideoVar('button-bg'");
+    expect(themeSource).not.toContain("reviewLightboxVideoVar('button-hover-bg'");
     expect(themeSource).toContain("reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed)");
     expect(themeSource).toContain("reviewLightboxVideoVar('progress-track', NEUTRAL_REVIEW_PLAYER_COLORS.progressTrack)");
     expect(themeSource).toContain("import('./review-player-i18n')");
@@ -91,6 +91,8 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain("controlForeground: '#ffffff'");
     expect(themeSource).toContain("controlBackground: '#000000'");
     expect(themeSource).toContain("controlHoverBackground: 'rgba(0,0,0,0.84)'");
+    expect(themeSource).toContain("centerPlayButtonBackground: 'transparent'");
+    expect(themeSource).toContain("centerPlayButtonHoverBackground: 'transparent'");
     expect(themeSource).toContain("controlsBackdrop: 'rgba(0,0,0,0.58)'");
     expect(themeSource).toContain("menuBackground: '#000000'");
     expect(themeSource).toContain("menuText: '#ffffff'");
@@ -99,7 +101,8 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('media-control-bar,');
     expect(themeSource).toContain('media-control-bar *,');
     expect(themeSource).toContain('.center-controls.pre-playback media-play-button');
-    expect(themeSource).toContain('--media-control-hover-background: ${colors.controlHoverBackground}');
+    expect(themeSource).toContain('--media-control-background: ${colors.centerPlayButtonBackground}');
+    expect(themeSource).toContain('--media-control-hover-background: ${colors.centerPlayButtonHoverBackground}');
     expect(themeSource).toContain('--media-icon-color: ${colors.controlForeground}');
     expect(themeSource).toContain('--media-text-color: ${colors.controlForeground}');
     expect(themeSource).toContain('media-time-range');

@@ -261,8 +261,6 @@ export const WIDGETS: WidgetDef[] = [
         isColor: true,
         fields: [
           { type: 'color', key: 'reviewLightboxVideoIconColor',          label: 'Play İkon Rengi',          default: '#ffffff' },
-          { type: 'color', key: 'reviewLightboxVideoButtonBgColor',      label: 'Play Butonu Arka Planı',   default: '#000000' },
-          { type: 'color', key: 'reviewLightboxVideoButtonHoverBgColor', label: 'Buton Hover Arka Planı',   default: '#222222' },
           { type: 'color', key: 'reviewLightboxVideoProgressColor',      label: 'İlerleme Rengi',           default: '#ffffff' },
           { type: 'color', key: 'reviewLightboxVideoProgressTrackColor', label: 'İlerleme Arka Planı',      default: '#000000' },
         ],

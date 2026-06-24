@@ -52,15 +52,13 @@ describe('widget settings schema traversal', () => {
   it('wires review lightbox video player colors through defaults, sanitize and validate', () => {
     const defaults = getWidgetDefaults('reviews');
     expect(defaults.reviewLightboxVideoIconColor).toBe('#ffffff');
-    expect(defaults.reviewLightboxVideoButtonBgColor).toBe('#000000');
-    expect(defaults.reviewLightboxVideoButtonHoverBgColor).toBe('#222222');
+    expect(defaults.reviewLightboxVideoButtonBgColor).toBeUndefined();
+    expect(defaults.reviewLightboxVideoButtonHoverBgColor).toBeUndefined();
     expect(defaults.reviewLightboxVideoProgressColor).toBe('#ffffff');
     expect(defaults.reviewLightboxVideoProgressTrackColor).toBe('#000000');
 
     expect(validateSettings('reviews', {
       reviewLightboxVideoIconColor: '#f97316',
-      reviewLightboxVideoButtonBgColor: '#111111',
-      reviewLightboxVideoButtonHoverBgColor: '#222222',
       reviewLightboxVideoProgressColor: '#22c55e',
       reviewLightboxVideoProgressTrackColor: '#030712',
     })).toBeNull();
@@ -70,6 +68,8 @@ describe('widget settings schema traversal', () => {
 
     expect(sanitizeSettings('reviews', {
       reviewLightboxVideoIconColor: '#f97316',
+      reviewLightboxVideoButtonBgColor: '#111111',
+      reviewLightboxVideoButtonHoverBgColor: '#222222',
       reviewLightboxVideoProgressColor: '#22c55e',
       storyVideoProgressColor: '#ff0000',
     })).toEqual({

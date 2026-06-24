@@ -250,7 +250,7 @@ async function lightboxVideoState(page: Page) {
         themeMarkup.includes('--media-range-bar-color: var(--renuvex-pr-review-lightbox-video-progress, #ffffff)'),
       themeHasContrastThumb:
         themeMarkup.includes('--media-range-thumb-background: radial-gradient') &&
-        themeMarkup.includes('var(--renuvex-pr-review-lightbox-video-button-bg, #000000) 32%') &&
+        themeMarkup.includes('#000000 32%') &&
         themeMarkup.includes('var(--renuvex-pr-review-lightbox-video-progress, #ffffff) 32%') &&
         themeMarkup.includes('--media-range-thumb-box-shadow: 0 0 0 1px rgba(0,0,0,0.45)'),
       themeUsesLightboxProgressTrack:
@@ -261,16 +261,17 @@ async function lightboxVideoState(page: Page) {
       themeHidesTimelinePreviewThumbnail:
         themeMarkup.includes('--media-preview-thumbnail-display: none'),
       themeHasPreviewTimeContrast:
-        themeMarkup.includes('--media-preview-time-background: var(--renuvex-pr-review-lightbox-video-button-bg, #000000)') &&
+        themeMarkup.includes('--media-preview-time-background: #000000') &&
         themeMarkup.includes('--media-preview-time-text-shadow: none') &&
-        themeMarkup.includes('--media-text-background: var(--renuvex-pr-review-lightbox-video-button-bg, #000000)') &&
-        themeMarkup.includes('--media-control-background: var(--renuvex-pr-review-lightbox-video-button-bg, #000000)') &&
+        themeMarkup.includes('--media-text-background: #000000') &&
+        themeMarkup.includes('--media-control-background: #000000') &&
         themeMarkup.includes('--media-text-color: var(--renuvex-pr-review-lightbox-video-icon, #ffffff)'),
-      themeHasControlHoverContrast:
+      themeHasTransparentCenterPlayButton:
         themeMarkup.includes('media-control-bar,') &&
         themeMarkup.includes('media-control-bar *,') &&
         themeMarkup.includes('.center-controls.pre-playback media-play-button') &&
-        themeMarkup.includes('--media-control-hover-background: var(--renuvex-pr-review-lightbox-video-button-hover-bg, #222222)') &&
+        themeMarkup.includes('--media-control-background: transparent') &&
+        themeMarkup.includes('--media-control-hover-background: transparent') &&
         themeMarkup.includes('--media-icon-color: var(--renuvex-pr-review-lightbox-video-icon, #ffffff)') &&
         themeMarkup.includes('--media-text-color: var(--renuvex-pr-review-lightbox-video-icon, #ffffff)'),
       accentColor: player.getAttribute('accent-color') || '',
@@ -353,10 +354,10 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     themeHasPointerContrast: true,
     themeHidesTimelinePreviewThumbnail: true,
     themeHasPreviewTimeContrast: true,
-    themeHasControlHoverContrast: true,
+    themeHasTransparentCenterPlayButton: true,
     accentColor: 'var(--renuvex-pr-review-lightbox-video-icon, #ffffff)',
     primaryColor: 'var(--renuvex-pr-review-lightbox-video-icon, #ffffff)',
-    secondaryColor: 'var(--renuvex-pr-review-lightbox-video-button-bg, #000000)',
+    secondaryColor: '#000000',
     contextMenuPrevented: true,
     hotkeys: 'noarrowleft noarrowright',
     seekBackwardButton: 'none',

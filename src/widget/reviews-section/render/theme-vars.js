@@ -119,8 +119,6 @@ export function applyManualTheme(root, settings) {
   // These tokens are scoped to the product review lightbox only. Admin
   // moderation and future story/carousel players keep separate contracts.
   var reviewLightboxVideoIcon = settings.reviewLightboxVideoIconColor || '#ffffff';
-  var reviewLightboxVideoButtonBg = settings.reviewLightboxVideoButtonBgColor || '#000000';
-  var reviewLightboxVideoButtonHoverBg = settings.reviewLightboxVideoButtonHoverBgColor || '#222222';
   var reviewLightboxVideoProgress = settings.reviewLightboxVideoProgressColor || '#ffffff';
   var reviewLightboxVideoProgressTrack = settings.reviewLightboxVideoProgressTrackColor || '#000000';
 
@@ -217,8 +215,6 @@ export function applyManualTheme(root, settings) {
 
     // Grup 10 — Review lightbox video player
     '--renuvex-pr-review-lightbox-video-icon': reviewLightboxVideoIcon,
-    '--renuvex-pr-review-lightbox-video-button-bg': reviewLightboxVideoButtonBg,
-    '--renuvex-pr-review-lightbox-video-button-hover-bg': reviewLightboxVideoButtonHoverBg,
     '--renuvex-pr-review-lightbox-video-progress': reviewLightboxVideoProgress,
     '--renuvex-pr-review-lightbox-video-progress-track': reviewLightboxVideoProgressTrack,
 

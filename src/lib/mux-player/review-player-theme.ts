@@ -10,6 +10,8 @@ const NEUTRAL_REVIEW_PLAYER_COLORS = {
   controlForeground: '#ffffff',
   controlBackground: '#000000',
   controlHoverBackground: 'rgba(0,0,0,0.84)',
+  centerPlayButtonBackground: 'transparent',
+  centerPlayButtonHoverBackground: 'transparent',
   controlsBackdrop: 'rgba(0,0,0,0.58)',
   menuBackground: '#000000',
   menuBorder: 'rgba(255,255,255,0.18)',
@@ -40,8 +42,6 @@ export const ADMIN_REVIEW_PLAYER_COLORS = {
 export const STOREFRONT_REVIEW_PLAYER_COLORS = {
   ...NEUTRAL_REVIEW_PLAYER_COLORS,
   controlForeground: reviewLightboxVideoVar('icon', NEUTRAL_REVIEW_PLAYER_COLORS.controlForeground),
-  controlBackground: reviewLightboxVideoVar('button-bg', NEUTRAL_REVIEW_PLAYER_COLORS.controlBackground),
-  controlHoverBackground: reviewLightboxVideoVar('button-hover-bg', '#222222'),
   progressPlayed: reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed),
   progressTrack: reviewLightboxVideoVar('progress-track', NEUTRAL_REVIEW_PLAYER_COLORS.progressTrack),
   progressThumbBorder: `1px solid ${reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed)}`,
@@ -72,8 +72,8 @@ function reviewPlayerThemeCss(colors: ReviewPlayerColors): string {
 
   .center-controls.pre-playback media-play-button,
   [breakpointsm] .center-controls.pre-playback media-play-button {
-    --media-control-background: ${colors.controlBackground};
-    --media-control-hover-background: ${colors.controlHoverBackground};
+    --media-control-background: ${colors.centerPlayButtonBackground};
+    --media-control-hover-background: ${colors.centerPlayButtonHoverBackground};
     --media-icon-color: ${colors.controlForeground};
   }
 
