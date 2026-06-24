@@ -52,6 +52,13 @@ export function AdminMuxPlayerPreview({
         '--controls-backdrop-color': ADMIN_REVIEW_PLAYER_COLORS.controlsBackdrop,
         '--media-primary-color': ADMIN_REVIEW_PLAYER_COLORS.controlForeground,
         '--media-secondary-color': ADMIN_REVIEW_PLAYER_COLORS.controlBackground,
+        '--pip-button': 'none',
+        '--cast-button': 'none',
+        '--seek-backward-button': 'none',
+        '--seek-forward-button': 'none',
+        '--audio-track-menu-button': 'none',
+        '--captions-button': 'none',
+        '--playback-rate-button': 'none',
       }}
       onContextMenu={preventNativeVideoContextMenu}
     />

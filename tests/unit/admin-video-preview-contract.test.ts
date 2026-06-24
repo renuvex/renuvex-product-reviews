@@ -56,6 +56,13 @@ describe('admin video preview contract', () => {
     expect(playerSource).toContain('primary-color={ADMIN_REVIEW_PLAYER_COLORS.controlForeground}');
     expect(playerSource).toContain('secondary-color={ADMIN_REVIEW_PLAYER_COLORS.controlBackground}');
     expect(playerSource).toContain("'--controls-backdrop-color': ADMIN_REVIEW_PLAYER_COLORS.controlsBackdrop");
+    expect(playerSource).toContain("'--pip-button': 'none'");
+    expect(playerSource).toContain("'--cast-button': 'none'");
+    expect(playerSource).toContain("'--seek-backward-button': 'none'");
+    expect(playerSource).toContain("'--seek-forward-button': 'none'");
+    expect(playerSource).toContain("'--audio-track-menu-button': 'none'");
+    expect(playerSource).toContain("'--captions-button': 'none'");
+    expect(playerSource).toContain("'--playback-rate-button': 'none'");
     expect(playerSource).toContain('onContextMenu={preventNativeVideoContextMenu}');
     expect(playerSource).not.toContain('STOREFRONT_REVIEW_MUX_PLAYER_THEME');
     expect(playerSource).not.toMatch(/autoPlay|autoplay/);
