@@ -73,6 +73,14 @@ function getOrCreateReviewsSlot(anchorEl, productId) {
   return slot;
 }
 
+function mediaPlaySizeForThumbnail(thumbnailPx) {
+  return Math.round(Math.max(36, Math.min(52, thumbnailPx * 0.38)));
+}
+
+function mediaPlayIconSizeForContainer(containerPx) {
+  return Math.round(containerPx * 0.5);
+}
+
 export async function render(productId, settings, reviewsData, productName, orderBy, page, badgeSettings) {
   if (renderInProgress) {
     setPendingRender({ productId, settings, reviewsData, productName, orderBy, page, badgeSettings });
@@ -173,6 +181,12 @@ export async function render(productId, settings, reviewsData, productName, orde
     root.style.setProperty('--renuvex-pr-read-more-size', sz.readMoreSize + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size', thumbPx + 'px');
     root.style.setProperty('--renuvex-pr-thumbnail-size-mobile', thumbPxMobile + 'px');
+    var mediaPlayPx = mediaPlaySizeForThumbnail(thumbPx);
+    var mediaPlayPxMobile = mediaPlaySizeForThumbnail(thumbPxMobile);
+    root.style.setProperty('--renuvex-pr-media-play-size', mediaPlayPx + 'px');
+    root.style.setProperty('--renuvex-pr-media-play-icon-size', mediaPlayIconSizeForContainer(mediaPlayPx) + 'px');
+    root.style.setProperty('--renuvex-pr-media-play-size-mobile', mediaPlayPxMobile + 'px');
+    root.style.setProperty('--renuvex-pr-media-play-icon-size-mobile', mediaPlayIconSizeForContainer(mediaPlayPxMobile) + 'px');
 
     // Yıldız rengi tek kaynak: tüm rating yüzeyleri (özet, liste, rozetler)
     // --renuvex-pr-review-star-color'dan beslenir; boş yıldız da aynı renkte outline.

@@ -53,6 +53,14 @@ function isMobileProject(testInfo: TestInfo): boolean {
   return testInfo.project.name === 'pixel-android' || testInfo.project.name === 'iphone-webkit';
 }
 
+function expectedMediaPlaySizes(thumbnailWidth: number) {
+  const container = Math.round(Math.max(36, Math.min(52, thumbnailWidth * 0.38)));
+  return {
+    container,
+    icon: Math.round(container * 0.5),
+  };
+}
+
 function videoMedia(uid: string, position = 0) {
   const posterUrl = `https://image.mux.com/${uid}/thumbnail.jpg`;
   return {
@@ -190,11 +198,17 @@ async function mediaBox(page: Page, selector: string) {
     const computedWidth = Number.parseFloat(computedStyle.width);
     const computedHeight = Number.parseFloat(computedStyle.height);
     const poster = element.querySelector<HTMLImageElement>('.renuvex-pr-media-poster');
+    const play = element.querySelector<HTMLElement>('.renuvex-pr-media-play');
+    const playIcon = play?.querySelector<SVGElement>('svg');
+    const playRect = play?.getBoundingClientRect();
+    const playIconRect = playIcon?.getBoundingClientRect();
     return {
       width: rect.width || computedWidth,
       height: rect.height || computedHeight,
       duration: element.querySelector('.renuvex-pr-media-duration')?.textContent?.trim() || '',
-      hasPlayIcon: !!element.querySelector('.renuvex-pr-media-play svg'),
+      hasPlayIcon: !!playIcon,
+      playWidth: playRect?.width || 0,
+      playIconWidth: playIconRect?.width || 0,
       posterTag: poster?.tagName || '',
       posterSrc: poster?.getAttribute('src') || '',
       posterSrcset: poster?.getAttribute('srcset') || '',
@@ -347,6 +361,11 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
     expect(box.height).toBeGreaterThan(0);
     expect(box.duration).toBe('0:45');
     expect(box.hasPlayIcon).toBe(true);
+    const expectedPlay = expectedMediaPlaySizes(expectedWidth);
+    expect(box.playWidth).toBeGreaterThan(expectedPlay.container - 1);
+    expect(box.playWidth).toBeLessThan(expectedPlay.container + 1);
+    expect(box.playIconWidth).toBeGreaterThan(expectedPlay.icon - 1);
+    expect(box.playIconWidth).toBeLessThan(expectedPlay.icon + 1);
     expect(box.posterTag).toBe('IMG');
     expect(box.posterSrc).toContain('/video-1/thumbnail.jpg');
     expect(box.posterSrc).toMatch(/[?&]width=\d+/);
