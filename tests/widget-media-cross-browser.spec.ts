@@ -293,6 +293,43 @@ async function lightboxVideoState(page: Page) {
   });
 }
 
+async function swipeVideoLightbox(page: Page, options: { startXRatio: number; endXRatio: number; yRatio: number }) {
+  await page.evaluate(({ startXRatio, endXRatio, yRatio }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
+    const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
+    if (!player) throw new Error('Missing video player for swipe');
+    const targetPlayer = player;
+    const rect = targetPlayer.getBoundingClientRect();
+    const y = rect.top + rect.height * yRatio;
+    const startX = rect.left + rect.width * startXRatio;
+    const endX = rect.left + rect.width * endXRatio;
+
+    function dispatchTouch(type: 'touchstart' | 'touchend', x: number) {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      const touch = {
+        identifier: 1,
+        target: targetPlayer,
+        clientX: x,
+        clientY: y,
+        screenX: x,
+        screenY: y,
+        pageX: x,
+        pageY: y,
+      };
+      Object.defineProperty(event, 'touches', { value: type === 'touchend' ? [] : [touch] });
+      Object.defineProperty(event, 'targetTouches', { value: type === 'touchend' ? [] : [touch] });
+      Object.defineProperty(event, 'changedTouches', { value: [touch] });
+      targetPlayer.dispatchEvent(event);
+    }
+
+    dispatchTouch('touchstart', startX);
+    dispatchTouch('touchend', endX);
+  }, options);
+}
+
 for (const layoutCase of LAYOUT_SIZE_CASES) {
   test(`${layoutCase.layout} ${layoutCase.size} renders a poster-first video tile without preloading playback`, async ({ page }, testInfo) => {
     const log = await setupVideoWidget(page, {
@@ -396,6 +433,31 @@ test('video lightbox derives playback id from trusted legacy m3u8 URLs', async (
   await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
   await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('legacy-playback-id');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('video control-band drags do not trigger lightbox swipe navigation', async ({ page }) => {
+  const log = await setupVideoWidget(page, {
+    reviews: [
+      review('video-1', [videoMedia('video-1')]),
+      review('video-2', [videoMedia('video-2')]),
+    ],
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('video-1');
+
+  await swipeVideoLightbox(page, { startXRatio: 0.82, endXRatio: 0.18, yRatio: 0.94 });
+  expect((await lightboxVideoState(page)).playbackId).toBe('video-1');
+
+  await swipeVideoLightbox(page, { startXRatio: 0.82, endXRatio: 0.18, yRatio: 0.42 });
+  await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('video-2');
 
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);

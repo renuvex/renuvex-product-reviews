@@ -138,6 +138,34 @@ function updateRight(right, r, settings) {
   right.scrollTop = 0;
 }
 
+var VIDEO_PLAYER_CONTROL_GESTURE_GUARD_PX = 112;
+
+function getTouchPoint(event) {
+  if (event && event.touches && event.touches.length) return event.touches[0];
+  if (event && event.changedTouches && event.changedTouches.length) return event.changedTouches[0];
+  return null;
+}
+
+function shouldReserveVideoControlGesture(event, currentMedia, left) {
+  if (!currentMedia || currentMedia.type !== 'video' || !left) return false;
+  var touch = getTouchPoint(event);
+  if (!touch) return false;
+
+  var player = left.querySelector('mux-player.renuvex-pr-modal-main-video');
+  if (!player || typeof player.getBoundingClientRect !== 'function') return false;
+
+  var rect = player.getBoundingClientRect();
+  if (!rect.width || !rect.height) return false;
+  if (touch.clientX < rect.left || touch.clientX > rect.right) return false;
+  if (touch.clientY < rect.top || touch.clientY > rect.bottom) return false;
+
+  var controlBandHeight = Math.min(
+    VIDEO_PLAYER_CONTROL_GESTURE_GUARD_PX,
+    Math.max(72, rect.height * 0.2),
+  );
+  return touch.clientY >= rect.bottom - controlBandHeight;
+}
+
 function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState) {
   var mediaItems = getValidMedia(r);
   var currentPhotoIdx = Math.max(0, Math.min(photoIdx || 0, mediaItems.length - 1));
@@ -202,11 +230,21 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
 
   // Swipe desteği — görsel alanında yatay kaydırma
   var touchStartX = 0;
+  var reservePlayerControlGesture = false;
   left.addEventListener('touchstart', function(e) {
-    touchStartX = e.touches[0].clientX;
+    var touch = getTouchPoint(e);
+    if (!touch) return;
+    touchStartX = touch.clientX;
+    reservePlayerControlGesture = shouldReserveVideoControlGesture(e, currentMedia, left);
   }, { passive: true });
   left.addEventListener('touchend', function(e) {
-    var diff = touchStartX - e.changedTouches[0].clientX;
+    if (reservePlayerControlGesture) {
+      reservePlayerControlGesture = false;
+      return;
+    }
+    var touch = getTouchPoint(e);
+    if (!touch) return;
+    var diff = touchStartX - touch.clientX;
     if (Math.abs(diff) < 50) return;
     if (diff > 0) {
       // sola kaydır — sonraki

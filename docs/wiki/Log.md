@@ -30,6 +30,7 @@ source_files:
 - Follow-up localization hardening now registers Media Chrome's public custom elements before Gerwig and activates the Turkish registry up front. This prevents Gerwig's bundled Media Chrome fallback from leaving quality and playback-rate menu labels in English.
 - Admin moderation preview now hides nonessential Mux Player controls: Picture-in-Picture, Cast, seek backward/forward, audio-track, captions/subtitles, and playback-rate. Core playback, volume, timeline, fullscreen, and quality selection remain available.
 - Storefront review lightbox playback now has three merchant-editable `Video Oynatıcı` colors: play icon, progress color, and progress track color. The center play button background and hover background are intentionally transparent, not merchant-editable. The keys are scoped to `reviewLightboxVideo*`, so admin moderation and future story/carousel players remain isolated.
+- Storefront video lightbox gestures now reserve the lower Mux Player control band for player controls. Timeline scrubbing no longer triggers previous/next review navigation, while swipes from the main video area still keep the lightbox review-navigation gesture.
 
 ## 2026-06-23 - migration | Move review playback to Mux Player
 - Replaced the storefront lightbox's custom native `<video>` + direct `hls.js` orchestration with official `@mux/mux-player`.
