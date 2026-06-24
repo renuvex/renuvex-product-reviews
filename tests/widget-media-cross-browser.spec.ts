@@ -258,6 +258,8 @@ async function lightboxVideoState(page: Page) {
       themeHasPointerContrast:
         themeMarkup.includes('--media-range-track-pointer-background: rgba(255,255,255,0.72)') &&
         themeMarkup.includes('--media-range-track-pointer-border-right: 1px solid rgba(0,0,0,0.55)'),
+      themeHidesTimelinePreviewThumbnail:
+        themeMarkup.includes('--media-preview-thumbnail-display: none'),
       themeHasPreviewTimeContrast:
         themeMarkup.includes('--media-preview-time-background: var(--renuvex-pr-review-lightbox-video-button-bg, #000000)') &&
         themeMarkup.includes('--media-preview-time-text-shadow: none') &&
@@ -348,6 +350,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     themeHasContrastThumb: true,
     themeUsesLightboxProgressTrack: true,
     themeHasPointerContrast: true,
+    themeHidesTimelinePreviewThumbnail: true,
     themeHasPreviewTimeContrast: true,
     themeHasControlHoverContrast: true,
     accentColor: 'var(--renuvex-pr-review-lightbox-video-icon, #ffffff)',

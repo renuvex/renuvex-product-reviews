@@ -111,6 +111,7 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('--media-range-track-background: ${colors.progressTrack}');
     expect(themeSource).toContain('--media-range-track-pointer-background: ${colors.progressPointer}');
     expect(themeSource).toContain('--media-range-track-pointer-border-right: ${colors.progressPointerBorder}');
+    expect(themeSource).toContain('--media-preview-thumbnail-display: none');
     expect(themeSource).toContain('--media-preview-time-background: ${colors.controlBackground}');
     expect(themeSource).toContain('--media-preview-time-text-shadow: none');
     expect(themeSource).toContain('--media-text-background: ${colors.controlBackground}');
