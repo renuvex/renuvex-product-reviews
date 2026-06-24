@@ -31,10 +31,6 @@ function getValidMedia(review) {
   return getTrustedReviewMedia(review);
 }
 
-function getModalFullscreenElement(modalState) {
-  return modalState && modalState.fullscreenElement ? modalState.fullscreenElement : null;
-}
-
 function cleanupMediaContainer(container) {
   if (container && typeof container.__renuvexMediaCleanup === 'function') {
     try { container.__renuvexMediaCleanup(); } catch (_) {}
@@ -149,18 +145,12 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
 
   var left = document.createElement('div');
   left.className = 'renuvex-pr-modal-left';
-  if (modalState) modalState.fullscreenElement = left;
 
   var animClass = direction === 'next' ? 'renuvex-pr-modal-img-enter-right' : direction === 'prev' ? 'renuvex-pr-modal-img-enter-left' : '';
   if (currentMedia && currentMedia.type === 'video') {
     var playback = createReviewVideoPlayback(
       currentMedia,
       'renuvex-pr-modal-main-video' + (animClass ? ' renuvex-pr-modal-video-enter' : ''),
-      {
-        getFullscreenElement: function () {
-          return getModalFullscreenElement(modalState) || left;
-        },
-      },
     );
     var mainVideo = playback.element;
     mainVideo.addEventListener('error', function () {
@@ -428,7 +418,6 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   var modalState = {
     currentReview: r,
     currentSettings: currentSettings,
-    fullscreenElement: null,
   };
   var lastPreviewSettings = null;
 

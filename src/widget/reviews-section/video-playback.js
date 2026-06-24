@@ -48,50 +48,16 @@ function preventNativeVideoContextMenu(event) {
   event.preventDefault();
 }
 
-function resolveFullscreenTarget(options) {
-  if (!options || typeof options.getFullscreenElement !== 'function') return null;
-  var target = options.getFullscreenElement();
-  return target && typeof target.querySelector === 'function' ? target : null;
-}
-
-function assignFullscreenTarget(player, options) {
-  var target = resolveFullscreenTarget(options);
-  var controller = player && player.mediaController;
-  if (!target || !target.isConnected || !controller || !('fullscreenElement' in controller)) return false;
-  controller.fullscreenElement = target;
-  return true;
-}
-
-export function createReviewVideoPlayback(media, className, options) {
+export function createReviewVideoPlayback(media, className) {
   var cancelled = false;
-  var fullscreenRetryTimer = null;
   var player = document.createElement('mux-player');
   player.className = className || 'renuvex-pr-modal-main-video';
   player.setAttribute('aria-label', 'Yorum videosu');
   player.addEventListener('contextmenu', preventNativeVideoContextMenu);
 
-  function clearFullscreenRetry() {
-    if (fullscreenRetryTimer) {
-      clearTimeout(fullscreenRetryTimer);
-      fullscreenRetryTimer = null;
-    }
-  }
-
-  function bindFullscreenTarget(attempt) {
-    clearFullscreenRetry();
-    if (cancelled || assignFullscreenTarget(player, options)) return;
-    if (attempt >= 10) return;
-    fullscreenRetryTimer = setTimeout(function () {
-      bindFullscreenTarget(attempt + 1);
-    }, 50);
-  }
-
   var configured = applyReviewPlayerAttributes(player, media);
   if (configured) {
     loadMuxPlayer()
-      .then(function () {
-        bindFullscreenTarget(0);
-      })
       .catch(function () {
         if (!cancelled) player.dispatchEvent(new Event('error'));
       });
@@ -105,7 +71,6 @@ export function createReviewVideoPlayback(media, className, options) {
     element: player,
     cleanup: function cleanup() {
       cancelled = true;
-      clearFullscreenRetry();
       try {
         if (typeof player.pause === 'function') player.pause();
       } catch (_) {}
