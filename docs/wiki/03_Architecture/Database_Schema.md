@@ -151,6 +151,8 @@ Product-level aggregate read model for public storefront rating surfaces. Raw `R
 | `rating1Count` ... `rating5Count` | Int | Bar chart/rating distribution buckets |
 | `photoReviewCount` | Int | Approved review count where `Review.hasImages=true`; repaired by summary/media rebuild scripts when legacy rows are normalized |
 | `photoRating1Count` ... `photoRating5Count` | Int | Exact approved photo-review buckets by rating; powers `hasImages=true&rating=N` `totalCount` without raw `Review.count()` |
+| `mediaReviewCount` | Int | Approved review count where `Review.hasImages=true OR Review.hasVideo=true`; powers video-enabled `Fotoğraf ve Video` filtering |
+| `mediaRating1Count` ... `mediaRating5Count` | Int | Exact approved media-review buckets by rating; powers `hasMedia=true&rating=N` `totalCount` without raw `Review.count()` |
 | `lastReviewAt` | DateTime? | Latest approved review timestamp |
 | `createdAt`, `updatedAt` | DateTime | |
 
@@ -163,12 +165,12 @@ Maintained by:
 - `/api/admin/reviews` DELETE when an approved review is hard-deleted
 - `scripts/rebuild-product-review-summaries.mjs` for repair/backfill
 - `scripts/backfill-review-media.mjs` repairs photo count state after media normalization; `scripts/rebuild-product-review-summaries.mjs` fully rebuilds all summary buckets
-- Migration `20260608170000_add_review_summary_photo_rating_counts` backfills existing summary rows from approved `Review.hasImages=true` rows; rebuild remains the operational repair tool for manual/import drift.
+- Migration `20260608170000_add_review_summary_photo_rating_counts` backfills existing summary rows from approved `Review.hasImages=true` rows. Migration `20260625090000_add_review_summary_media_counts` backfills approved `(hasImages OR hasVideo)` media buckets. Rebuild remains the operational repair tool for manual/import drift.
 
 Read by:
 - `/api/public/ratings`
 - `/api/public/ratings-by-slug` after `ProductSnapshot` resolution
-- `/api/public/reviews` for unfiltered `allCount`, `avgRating`, `ratingCounts`, and exact `totalCount` / `totalPages` across rating/photo filters
+- `/api/public/reviews` for unfiltered `allCount`, `avgRating`, `ratingCounts`, and exact `totalCount` / `totalPages` across rating/photo/media filters
 
 ### `StoreSettings`
 Per-merchant config. One row per merchant, created on OAuth callback.
@@ -300,7 +302,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 
 ## Notes
 - **JSON columns** (`settings`, `storefrontScripts`, `storefrontTheme`) are not validated at the DB layer. All validation must live in app code. Don't trust their shape after manual DB edits.
-- `Review.images` is now a legacy mirror. The normalized media model is `ReviewMedia`, and public photo filters should use `Review.hasImages`.
+- `Review.images` is now a legacy mirror. The normalized media model is `ReviewMedia`; public photo filters should use `Review.hasImages`, and public media filters should use `Review.hasImages OR Review.hasVideo`.
 - `ReviewMedia` metadata is additive. Public `images: string[]` remains the compatibility contract; `media[]` is an additive structured field for future media-heavy UI.
 - No soft-delete. `prisma.review.delete` is hard delete.
 - Orphan Cloudinary asset deletion **is** two-phase (mark → grace → sweep) via `OrphanImageQuarantine`; this is storage GC, not review soft-delete. See [[ADR_0030_Cleanup_Hardening]].

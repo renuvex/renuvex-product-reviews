@@ -19,9 +19,9 @@ import { fetchReviews } from '../reviews-api.js';
 import { announcePageChange } from './pagination.js';
 import { beginReviewRequest, isCurrentReviewRequest } from './request-token.js';
 import {
-  currentOrderBy, currentRatingFilter, currentHasImages,
+  currentOrderBy, currentRatingFilter, currentMediaFilter,
   currentProductId, currentSettings, currentBadgeSettings, currentProductName,
-  setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentHasImages,
+  setCurrentOrderBy, setCurrentPage, setCurrentRatingFilter, setCurrentMediaFilter,
   setCurrentNextCursor,
 } from '../../core/state.js';
 
@@ -34,14 +34,14 @@ export function createReviewHandlers(opts) {
     var productIdSnapshot = currentProductId;
     var orderBySnapshot = currentOrderBy;
     var ratingFilterSnapshot = currentRatingFilter;
-    var hasImagesSnapshot = currentHasImages;
+    var mediaFilterSnapshot = currentMediaFilter;
     setCurrentNextCursor(null);
-    var retried = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentHasImages);
+    var retried = await fetchReviews(currentProductId, currentOrderBy, 1, currentRatingFilter, currentMediaFilter);
     if (!isCurrentReviewRequest(token, {
       productId: productIdSnapshot,
       orderBy: orderBySnapshot,
       ratingFilter: ratingFilterSnapshot,
-      hasImages: hasImagesSnapshot,
+      mediaFilter: mediaFilterSnapshot,
     })) return;
     await render(currentProductId, currentSettings, retried, currentProductName, currentOrderBy, 1, currentBadgeSettings);
   }
@@ -51,42 +51,41 @@ export function createReviewHandlers(opts) {
     var nextRatingFilter = currentRatingFilter === starVal ? null : starVal;
     var productIdSnapshot = currentProductId;
     var orderBySnapshot = currentOrderBy;
-    var hasImagesSnapshot = currentHasImages;
+    var mediaFilterSnapshot = currentMediaFilter;
     setCurrentRatingFilter(nextRatingFilter);
     setCurrentPage(1);
     setCurrentNextCursor(null);
-    var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, nextRatingFilter, currentHasImages);
+    var filtered = await fetchReviews(currentProductId, currentOrderBy, 1, nextRatingFilter, currentMediaFilter);
     if (!isCurrentReviewRequest(token, {
       productId: productIdSnapshot,
       orderBy: orderBySnapshot,
       page: 1,
       ratingFilter: nextRatingFilter,
-      hasImages: hasImagesSnapshot,
+      mediaFilter: mediaFilterSnapshot,
     })) return;
     await render(currentProductId, currentSettings, filtered, currentProductName, currentOrderBy, 1);
   }
 
-  async function onSortChange(orderBy, isPhotos) {
+  async function onSortChange(orderBy, mediaFilter) {
     var token = beginReviewRequest();
     var productIdSnapshot = currentProductId;
     var ratingFilterSnapshot = currentRatingFilter;
     setCurrentPage(1);
     setCurrentNextCursor(null);
     var nextOrderBy = orderBy;
-    var nextHasImages = false;
-    if (isPhotos) {
-      nextHasImages = true;
+    var nextMediaFilter = mediaFilter === 'images' || mediaFilter === 'media' ? mediaFilter : 'none';
+    if (nextMediaFilter !== 'none') {
       nextOrderBy = 'newest';
     }
-    setCurrentHasImages(nextHasImages);
+    setCurrentMediaFilter(nextMediaFilter);
     setCurrentOrderBy(nextOrderBy);
-    var newData = await fetchReviews(currentProductId, nextOrderBy, 1, currentRatingFilter, nextHasImages);
+    var newData = await fetchReviews(currentProductId, nextOrderBy, 1, currentRatingFilter, nextMediaFilter);
     if (!isCurrentReviewRequest(token, {
       productId: productIdSnapshot,
       orderBy: nextOrderBy,
       page: 1,
       ratingFilter: ratingFilterSnapshot,
-      hasImages: nextHasImages,
+      mediaFilter: nextMediaFilter,
     })) return;
     await render(currentProductId, currentSettings, newData, currentProductName, nextOrderBy, 1);
   }
@@ -99,17 +98,17 @@ export function createReviewHandlers(opts) {
     var productIdSnapshot = currentProductId;
     var orderBySnapshot = currentOrderBy;
     var ratingFilterSnapshot = currentRatingFilter;
-    var hasImagesSnapshot = currentHasImages;
+    var mediaFilterSnapshot = currentMediaFilter;
     // Set page BEFORE fetch so the stale-guard compares against the new page.
     setCurrentPage(nextPage);
     setCurrentNextCursor(null);
-    var data = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentHasImages);
+    var data = await fetchReviews(currentProductId, currentOrderBy, nextPage, currentRatingFilter, currentMediaFilter);
     if (!isCurrentReviewRequest(token, {
       productId: productIdSnapshot,
       orderBy: orderBySnapshot,
       page: nextPage,
       ratingFilter: ratingFilterSnapshot,
-      hasImages: hasImagesSnapshot,
+      mediaFilter: mediaFilterSnapshot,
     })) return;
     await render(currentProductId, currentSettings, data, currentProductName, currentOrderBy, nextPage);
 

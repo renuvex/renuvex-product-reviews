@@ -181,6 +181,12 @@ function summaryRow(overrides: Record<string, unknown> = {}) {
     photoRating3Count: 0,
     photoRating4Count: 0,
     photoRating5Count: 0,
+    mediaReviewCount: 0,
+    mediaRating1Count: 0,
+    mediaRating2Count: 0,
+    mediaRating3Count: 0,
+    mediaRating4Count: 0,
+    mediaRating5Count: 0,
     lastReviewAt: new Date('2026-05-28T00:00:00.000Z'),
     createdAt: new Date('2026-05-28T00:00:00.000Z'),
     updatedAt: new Date('2026-05-28T00:00:00.000Z'),
@@ -880,10 +886,9 @@ describe('/api/public/reviews', () => {
     expect(prismaMock.review.count).not.toHaveBeenCalled();
   });
 
-  it('uses the internal media filter for the media strip without changing the public image filter', async () => {
+  it('uses the media summary count for hasMedia without changing the public image filter', async () => {
     prismaMock.review.findMany.mockResolvedValue([]);
-    prismaMock.review.count.mockResolvedValue(2);
-    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 4, photoReviewCount: 1 }));
+    prismaMock.productReviewSummary.findUnique.mockResolvedValue(summaryRow({ approvedCount: 4, photoReviewCount: 1, mediaReviewCount: 2 }));
     const { GET } = await import('@/app/api/public/reviews/route');
 
     const response = await GET(new Request('https://app.test/api/public/reviews?storeId=store-1&productId=product-1&hasMedia=true&limit=15'));
@@ -900,14 +905,7 @@ describe('/api/public/reviews', () => {
       take: 15,
       skip: 0,
     }));
-    expect(prismaMock.review.count).toHaveBeenCalledWith({
-      where: expect.objectContaining({
-        storeId: 'store-1',
-        productId: 'product-1',
-        status: 'approved',
-        OR: [{ hasImages: true }, { hasVideo: true }],
-      }),
-    });
+    expect(prismaMock.review.count).not.toHaveBeenCalled();
     expect(body.data.totalCount).toBe(2);
     expect(body.data.allCount).toBe(4);
   });

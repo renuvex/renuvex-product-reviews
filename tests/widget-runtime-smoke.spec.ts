@@ -1534,6 +1534,7 @@ test('video-enabled media gallery uses hasMedia and renders Mux poster thumbnail
   });
   let sawMediaStripRequest = false;
   let sawImageStripRequest = false;
+  let sawMediaFilterRequest = false;
   const log = await setupWidgetRoutes(page, {
     mountReviews: true,
     reviewsSettings: {
@@ -1546,11 +1547,19 @@ test('video-enabled media gallery uses hasMedia and renders Mux poster thumbnail
       const url = new URL(route.request().url());
       const hasMedia = url.searchParams.get('hasMedia') === 'true';
       const hasImages = url.searchParams.get('hasImages') === 'true';
+      const limit = url.searchParams.get('limit');
       sawMediaStripRequest = sawMediaStripRequest || hasMedia;
       sawImageStripRequest = sawImageStripRequest || hasImages;
-      if (hasMedia) {
+      if (hasMedia && limit === '15') {
         await fulfillJson(route, reviewsPayload([
           { id: 'strip-video', title: 'Strip video', images: [], media: [trustedReviewVideoMedia('strip-video')] },
+        ], { allCount: 2, totalCount: 1 }));
+        return;
+      }
+      if (hasMedia) {
+        sawMediaFilterRequest = true;
+        await fulfillJson(route, reviewsPayload([
+          { id: 'filtered-video', title: 'Filtered video', images: [], media: [trustedReviewVideoMedia('filtered-video')] },
         ], { allCount: 2, totalCount: 1 }));
         return;
       }
@@ -1569,6 +1578,12 @@ test('video-enabled media gallery uses hasMedia and renders Mux poster thumbnail
   expect(sawImageStripRequest).toBe(false);
   expect(await countInReviewsShadow(page, '.renuvex-pr-review-card video, .renuvex-pr-media-gallery-strip video')).toBe(0);
   expect(log.urls.some((url) => url.includes('.m3u8'))).toBe(false);
+
+  await clickFilterItemAt(page, 3);
+  await expect.poll(() => reviewTitles(page)).toEqual(['Filtered video']);
+  await expect.poll(() => sawMediaFilterRequest).toBe(true);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-media-gallery-section')).toBe(false);
+  expect(log.urls.some((url) => url.includes('hasImages=true') && !url.includes('limit=15'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 

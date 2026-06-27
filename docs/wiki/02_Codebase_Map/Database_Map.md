@@ -96,7 +96,7 @@ On `ReviewMedia`:
 
 On `Review` media reads:
 - partial `[storeId, productId, createdAt] where status='approved' and hasImages=true` - public photo-review list and image-only media-gallery hot path.
-- `[storeId, productId, status, hasVideo]` supports approved video/media queries and admin moderation slices.
+- `[storeId, productId, status, hasVideo]` and partial `[storeId, productId, createdAt desc, id desc] where status='approved' and hasVideo=true` support approved video/media queries, newest media filtering, and admin moderation slices.
 
 On video lifecycle:
 - `VideoUploadSession`: `tokenHash`, provider-scoped upload/asset ids, `publicId`, `(storeId, productId, status, createdAt)`, and `(status, expiresAt)` support token lookup, webhook/session reconciliation, and pending cleanup. `quotaState=reserved|released|consumed` makes quota transitions idempotent under concurrent webhook/cancel/failure handling.
@@ -110,6 +110,7 @@ On `Review` cursor pagination:
 - partial `[storeId, productId, rating desc, createdAt desc, id desc] where status='approved'` - public `highest` review list/load-more.
 - partial `[storeId, productId, rating asc, createdAt desc, id desc] where status='approved'` - public `lowest` review list/load-more.
 - partial `[storeId, productId, createdAt desc, id desc] where status='approved' and hasImages=true` - photo-review newest cursor path. The older photo index without `id` remains until production unused-index evidence supports cleanup.
+- partial `[storeId, productId, createdAt desc, id desc] where status='approved' and hasVideo=true` - video side of the public `hasMedia=true` newest cursor path.
 
 ## Migration workflow
 - Local dev: `pnpm prisma:migrate` (creates + applies migration)
@@ -149,11 +150,12 @@ code run together, so a migration must not break the old code.
 
 - `add_product_review_summary` — product-level aggregate read model for public rating/summary reads
 - `add_review_summary_photo_rating_counts` - exact `hasImages=true&rating=N` count buckets on the existing product summary read model
+- `add_review_summary_media_counts` - exact `hasMedia=true` and `hasMedia=true&rating=N` count buckets plus the approved-video newest cursor partial index
 
 ## Notes
 - `Review.images` is **legacy TEXT containing `JSON.stringify(string[])`**. New writes keep it as a compatibility mirror; public image display reads `ReviewMedia` first and falls back to the legacy mirror during transition/backfill.
 - `Review.hasImages` is the indexed public photo-review facet. Do not reintroduce `Review.images contains` for public filters.
-- `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`. It owns exact public counts for unfiltered, rating-filtered, photo-filtered, and photo+rating-filtered review list responses.
+- `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`. It owns exact public counts for unfiltered, rating-filtered, photo-filtered, photo+rating-filtered, media-filtered, and media+rating-filtered review list responses.
 - `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>`; the script rejects placeholder cloud names. If media metadata is missing, run `pnpm reviews:media:metadata:backfill --cloudName=<cloudinaryCloudName>` first as dry-run, then add `--apply` after reviewing the plan.
 - Review Video is Mux-only in the local schema. A safe deploy must keep global `VIDEO_REVIEWS_ENABLED=false` and `StoreSettings.videoMonthlyLimit=0` until Mux/QStash infrastructure and Preview canary tests are configured. Existing image rows continue as `provider='cloudinary'`, `processingStatus='ready'`.
 - Review Video upload performance diagnostics are stored in `VideoUploadPerformanceSample`. Treat the table as operational evidence, not source-of-truth lifecycle state; `VideoUploadSession`, `WebhookEvent`, and `MediaProviderJob` remain authoritative for provider lifecycle.

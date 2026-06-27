@@ -52,6 +52,7 @@ Default header value: `s-maxage=60, stale-while-revalidate=300`.
 2026-06-07 update: public `hasImages=true` reads now use indexed `Review.hasImages`, and review image display reads normalized `ReviewMedia` before falling back to legacy `Review.images`.
 2026-06-08 update: public review list load-more now uses `nextCursor` keyset pagination when available. Legacy `page/limit` remains for compatibility, but cursor requests do not use Prisma `skip`.
 2026-06-08 update: public review-list `totalCount` / `totalPages` now come from `ProductReviewSummary` buckets, including `photoRating*Count` for `hasImages=true&rating=N`; the public hot path no longer calls raw `Review.count()`.
+2026-06-25 update: video-enabled public media filtering now uses `hasMedia=true` with `ProductReviewSummary.mediaReviewCount` / `mediaRating*Count`, so `Fotoğraf ve Video` totals stay read-model backed instead of raw `Review.count()`.
 - 60s fresh window
 - 300s SWR — stale responses served while revalidation runs in the background
 
@@ -100,13 +101,13 @@ Settings have a 5-minute fresh window in the widget and a 24-hour stale toleranc
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
 - Public reviews: covered by `[storeId, productId]`.
-- Public photo reviews and image-only media-gallery reads: covered by the partial `Review(storeId, productId, createdAt) where status='approved' and hasImages=true` index; do not use `Review.images contains` text scans.
+- Public photo reviews and image-only media-gallery reads: covered by the partial `Review(storeId, productId, createdAt) where status='approved' and hasImages=true` index; public video/media reads also have the approved-video newest partial index for the video side of `hasMedia=true`. Do not use `Review.images contains` text scans.
 - Public review list load-more: covered by partial cursor indexes for `newest`, `highest`, and `lowest` orderings. Keep the API's deterministic `createdAt + id` tie-breakers aligned with those indexes.
 - Listing badges: primary product-id path covered by `[storeId, productId, status]`; legacy slug fallback covered by `[storeId, slug, status]`.
 - Admin filtered list: covered by `[storeId, status]`.
 
-`ProductReviewSummary` owns the hot aggregate read path for `/api/public/ratings`, resolved `/api/public/ratings-by-slug`, unfiltered review summary distribution, and exact review-list totals across rating/photo filters. Future high-read widgets should add explicit read models instead of public fan-out over raw review aggregates.
-`ReviewMedia` owns normalized review image rows, while `Review.hasImages` owns the hot photo-review filter. Future media-heavy widgets should read structured media rows rather than parsing legacy `Review.images`.
+`ProductReviewSummary` owns the hot aggregate read path for `/api/public/ratings`, resolved `/api/public/ratings-by-slug`, unfiltered review summary distribution, and exact review-list totals across rating/photo/media filters. Future high-read widgets should add explicit read models instead of public fan-out over raw review aggregates.
+`ReviewMedia` owns normalized review media rows, while `Review.hasImages` and `Review.hasVideo` own the public media facets. Future media-heavy widgets should read structured media rows rather than parsing legacy `Review.images`.
 `GET /api/public/reviews` owns row pagination. New infinite-list or load-more consumers should use `nextCursor`; keep `page/limit` only for compatibility or future numbered pagination UI.
 
 - The migration history shows we cleaned up redundant indexes once already — be selective.

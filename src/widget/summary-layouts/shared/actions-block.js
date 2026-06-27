@@ -1,6 +1,5 @@
 // summary-layouts/shared/actions-block.js
-// Actions row — Yorum Yap butonu + filtre dropdown.
-// Tüm summary layout'ları bu shared parçayı kullanır.
+// Shared actions row: write button + filter dropdown.
 
 import { registerPopover, swallowNextDismissGesture } from './popover-registry.js';
 import { getFilterIconSvg } from '../../icons/index.js';
@@ -12,7 +11,7 @@ import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 export function buildActionsBlock(opts) {
   var widget = opts.widget;
   var currentOrderBy = opts.currentOrderBy;
-  var currentHasImages = opts.currentHasImages;
+  var currentMediaFilter = opts.currentMediaFilter || 'none';
   var onWriteClick = opts.onWriteClick;
   var onSortChange = opts.onSortChange;
 
@@ -21,7 +20,6 @@ export function buildActionsBlock(opts) {
 
   var writeBtn = document.createElement('button');
   writeBtn.className = 'renuvex-pr-write-btn';
-  // Buton metni admin "Yorum Yap Butonu Metni" alanından gelir; boşsa fallback.
   writeBtn.textContent = settingText(currentSettings && currentSettings.writeButtonText, 'Yorum Yap');
   writeBtn.onclick = onWriteClick;
   actionsBlock.appendChild(writeBtn);
@@ -35,7 +33,6 @@ export function buildActionsBlock(opts) {
   filterBtn.setAttribute('aria-label', 'Filtrele');
   filterBtn.setAttribute('aria-haspopup', 'menu');
   filterBtn.setAttribute('aria-expanded', 'false');
-  // İkon admin panelinden seçili (settings.filterIcon); fallback "lines".
   var filterIconKey = (currentSettings && currentSettings.filterIcon) || 'lines';
   filterBtn.innerHTML = iconUseSvg(getFilterIconSvg(filterIconKey));
 
@@ -43,16 +40,20 @@ export function buildActionsBlock(opts) {
   filterMenu.className = 'renuvex-pr-filter-menu';
   filterMenu.setAttribute('role', 'menu');
 
+  var mediaFilterMode = currentSettings && currentSettings.videoReviewsEnabled === true ? 'media' : 'images';
+  var mediaFilterLabel = mediaFilterMode === 'media' ? 'Fotoğraf ve Video' : 'Fotoğraflı';
   var filterOpts = [
-    ['newest', 'En Yeni', false],
-    ['highest', 'En Yüksek Puan', false],
-    ['lowest', 'En Düşük Puan', false],
-    ['photos', 'Fotoğraflı', true],
+    { orderBy: 'newest', label: 'En Yeni', mediaFilter: 'none' },
+    { orderBy: 'highest', label: 'En Yüksek Puan', mediaFilter: 'none' },
+    { orderBy: 'lowest', label: 'En Düşük Puan', mediaFilter: 'none' },
+    { orderBy: 'newest', label: mediaFilterLabel, mediaFilter: mediaFilterMode },
   ];
   var isActivatingOption = false;
+
   function getGestureShieldScope() {
     return (widget && widget.parentNode) || widget || null;
   }
+
   function armDismissAfterPointerActivation(e, restoreFocus) {
     if (restoreFocus === true || !e) return;
     if (e.type === 'touchstart') {
@@ -64,12 +65,9 @@ export function buildActionsBlock(opts) {
       if (pointerType && pointerType !== 'mouse') {
         swallowNextDismissGesture(getGestureShieldScope());
       }
-      return;
     }
   }
-  // Pointer-vs-keyboard origin: restore focus to the trigger only when the
-  // close was driven by keyboard. Pointer/touch closes leave focus alone so
-  // the mobile button does not retain a stuck pressed/focus appearance.
+
   function closeFilter(opts) {
     var wasOpen = filterMenu.classList.contains('renuvex-pr-open');
     filterMenu.classList.remove('renuvex-pr-open');
@@ -83,6 +81,7 @@ export function buildActionsBlock(opts) {
     }
     return wasOpen;
   }
+
   function openFilter() {
     filterRegistration.notifyOpening();
     filterMenu.classList.add('renuvex-pr-open');
@@ -99,14 +98,17 @@ export function buildActionsBlock(opts) {
   }
 
   filterOpts.forEach(function(opt) {
-    var isPhotos = opt[2];
-    var isActive = isPhotos ? currentHasImages : (!currentHasImages && (currentOrderBy || 'newest') === opt[0]);
+    var isMediaFilter = opt.mediaFilter !== 'none';
+    var isActive = isMediaFilter
+      ? currentMediaFilter === opt.mediaFilter
+      : (currentMediaFilter === 'none' && (currentOrderBy || 'newest') === opt.orderBy);
     var item = document.createElement('button');
     item.type = 'button';
     item.className = 'renuvex-pr-filter-item' + (isActive ? ' renuvex-pr-filter-item-active' : '');
     item.setAttribute('role', 'menuitem');
-    item.textContent = opt[1];
+    item.textContent = opt.label;
     var activated = false;
+
     function activateOption(e, restoreFocus) {
       if (e) {
         e.preventDefault();
@@ -115,18 +117,15 @@ export function buildActionsBlock(opts) {
       if (activated) return;
       activated = true;
       isActivatingOption = true;
-      // Touch/pen selection closes the menu on pointerdown; the registry swallows the
-      // trailing compat click and briefly shields exposed controls from active-state bleed.
-      // Mouse selection stays on the normal click event, so there is no trailing click to
-      // swallow after render and desktop users can immediately reopen the filter.
       armDismissAfterPointerActivation(e, restoreFocus);
       closeFilter({ restoreFocus: restoreFocus });
-      onSortChange(opt[0], isPhotos);
+      onSortChange(opt.orderBy, opt.mediaFilter);
       setTimeout(function () {
         activated = false;
         isActivatingOption = false;
       }, 0);
     }
+
     item.addEventListener('pointerdown', function (e) {
       if (e.button !== undefined && e.button !== 0) return;
       if (e.pointerType === 'mouse') return;
@@ -151,8 +150,6 @@ export function buildActionsBlock(opts) {
     else openFilter();
   };
 
-  // Klavye: menü açıkken Escape kapatır ve odağı tetikleyiciye döndürür.
-  // Escape doğası gereği klavye olayıdır — restoreFocus burada koşulsuz.
   filterWrap.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && filterMenu.classList.contains('renuvex-pr-open')) {
       e.stopPropagation();
@@ -160,7 +157,6 @@ export function buildActionsBlock(opts) {
     }
   });
 
-  // Tab ile odak filterWrap dışına çıkarsa menüyü kapat (yeniden tetikleyiciye dönüş yapmadan).
   filterWrap.addEventListener('focusout', function (e) {
     if (!filterMenu.classList.contains('renuvex-pr-open')) return;
     if (isActivatingOption) return;
@@ -169,11 +165,6 @@ export function buildActionsBlock(opts) {
     closeFilter();
   });
 
-  // Filter her zaman popover (overlay) — desktop ve mobile'da light dismiss.
-  // NOT: buildActionsBlock tek-seferlik üretici, gerçek teardown noktası yok →
-  // unregister BİLEREK çağrılmaz (dismiss'te çıkarsa sonraki açılışta light-dismiss
-  // ölür). Eski entry'ler, summary yeniden render edilince filterMenu DOM'dan
-  // koptuğunda registry'nin purgeDisconnected'ı tarafından merkezî olarak düşürülür.
   var filterRegistration = registerPopover({
     trigger: filterWrap,
     element: filterMenu,

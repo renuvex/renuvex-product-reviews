@@ -4,7 +4,7 @@
 export var currentOrderBy = 'newest';
 export var currentPage = 1;
 export var currentRatingFilter = null;
-export var currentHasImages = false;
+export var currentMediaFilter = 'none';
 export var currentProductId = null;
 export var currentSettings = null;
 export var currentBadgeSettings = null;
@@ -23,7 +23,7 @@ export var mediaStripReviews = [];
 export function setCurrentOrderBy(v) { currentOrderBy = v; }
 export function setCurrentPage(v) { currentPage = v; }
 export function setCurrentRatingFilter(v) { currentRatingFilter = v; }
-export function setCurrentHasImages(v) { currentHasImages = v; }
+export function setCurrentMediaFilter(v) { currentMediaFilter = v === 'images' || v === 'media' ? v : 'none'; }
 export function setCurrentProductId(v) { currentProductId = v; }
 export function setCurrentSettings(v) { currentSettings = v; }
 export function setCurrentBadgeSettings(v) { currentBadgeSettings = v; }
@@ -36,7 +36,7 @@ export function resetReviewStateForProduct(productId) {
   currentOrderBy = 'newest';
   currentPage = 1;
   currentRatingFilter = null;
-  currentHasImages = false;
+  currentMediaFilter = 'none';
   currentProductId = productId || null;
   currentReviewsData = null;
   currentNextCursor = null;

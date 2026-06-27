@@ -420,14 +420,13 @@ export async function GET(req: Request) {
       ? prisma.review.findMany({ where: listWhere, orderBy, take: limit + 1, select: PUBLIC_REVIEW_SELECT })
       : prisma.review.findMany({ where: listWhere, orderBy, take: limit, skip, select: PUBLIC_REVIEW_SELECT });
 
-    const [reviewsWithExtra, summary, mediaTotal] = await Promise.all([
+    const [reviewsWithExtra, summary] = await Promise.all([
       reviewsPromise,
       prisma.productReviewSummary.findUnique({ where: { storeId_productId: summaryWhere } }),
-      hasMediaFilter ? prisma.review.count({ where: baseWhere }) : Promise.resolve(null),
     ]);
 
     const { allCount, ratingCounts, avgRating } = summaryStats(summary);
-    const totalCount = mediaTotal ?? filteredReviewTotal(summary, { ratingFilter, hasImagesFilter });
+    const totalCount = filteredReviewTotal(summary, { ratingFilter, hasImagesFilter, hasMediaFilter });
 
     const reviews = cursor ? reviewsWithExtra.slice(0, limit) : reviewsWithExtra;
     const hasMore = cursor ? reviewsWithExtra.length > limit : page * limit < totalCount;

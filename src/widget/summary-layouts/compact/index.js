@@ -63,7 +63,7 @@ export function render(opts) {
   var avgRatingVal = opts.avgRatingVal;
   var currentRatingFilter = opts.currentRatingFilter;
   var currentOrderBy = opts.currentOrderBy;
-  var currentHasImages = opts.currentHasImages;
+  var currentMediaFilter = opts.currentMediaFilter;
   var onFilterChange = opts.onFilterChange;
   var onSortChange = opts.onSortChange;
   var mobilePanelStateKey = getMobilePanelStateKey(productId);
@@ -112,7 +112,7 @@ export function render(opts) {
   var actions = buildActionsBlock({
     widget: widget,
     currentOrderBy: currentOrderBy,
-    currentHasImages: currentHasImages,
+    currentMediaFilter: currentMediaFilter,
     onWriteClick: openWriteForm,
     onSortChange: onSortChange,
   });
@@ -200,7 +200,7 @@ export function render(opts) {
   var mobileActions = buildActionsBlock({
     widget: widget,
     currentOrderBy: currentOrderBy,
-    currentHasImages: currentHasImages,
+    currentMediaFilter: currentMediaFilter,
     onWriteClick: openWriteForm,
     onSortChange: onSortChange,
   });

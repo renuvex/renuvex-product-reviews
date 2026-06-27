@@ -105,6 +105,12 @@ model ProductReviewSummary {
   photoRating3Count Int       @default(0)
   photoRating4Count Int       @default(0)
   photoRating5Count Int       @default(0)
+  mediaReviewCount  Int       @default(0)
+  mediaRating1Count Int       @default(0)
+  mediaRating2Count Int       @default(0)
+  mediaRating3Count Int       @default(0)
+  mediaRating4Count Int       @default(0)
+  mediaRating5Count Int       @default(0)
   lastReviewAt      DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

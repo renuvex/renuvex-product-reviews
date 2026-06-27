@@ -6,7 +6,7 @@
 // independent of sort/filter/load-more and only refreshes after the cache TTL
 // (Strateji A — newest-first rotation; ADR_0007: fixed 15 cap, no admin setting).
 // Pure builder: returns the media gallery element, or null when the gallery should
-// not render (gallery off, photo filter active, or no media reviews). It does NOT
+// not render (gallery off, media/photo filter active, or no media reviews). It does NOT
 // call render(); openReviewModal + wireLightboxTrigger are injected by the caller.
 
 import { REVIEW_MEDIA_THUMB_WIDTH, settingText } from '../../core/helpers.js';
@@ -15,17 +15,17 @@ import { iconUseNode } from '../../icons/star-sprite.js';
 import { UI_CARET_LEFT, UI_CARET_RIGHT } from '../../icons/index.js';
 import { createMediaThumbnail } from '../media-thumbnail.js';
 
-// opts: { settings, root, currentHasImages, openReviewModal, wireLightboxTrigger }
+// opts: { settings, root, currentMediaFilter, openReviewModal, wireLightboxTrigger }
 export function buildMediaGallery(opts) {
   var settings = opts.settings;
   var root = opts.root;
-  var currentHasImages = opts.currentHasImages;
+  var currentMediaFilter = opts.currentMediaFilter || 'none';
   var openReviewModal = opts.openReviewModal;
 
   var galleryReviews = (opts.mediaStripReviews || []).filter(function (r) {
     return getTrustedReviewMedia(r).length > 0;
   });
-  if (!(settings.showMediaGallery !== false && !currentHasImages && galleryReviews.length > 0)) {
+  if (!(settings.showMediaGallery !== false && currentMediaFilter === 'none' && galleryReviews.length > 0)) {
     return null;
   }
 

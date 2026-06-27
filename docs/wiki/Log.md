@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-24
-last_verified: 2026-06-24
+updated: 2026-06-25
+last_verified: 2026-06-25
 confidence: high
 tags:
   - log
@@ -21,6 +21,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-25 - refactor | Make public media filtering read-model backed
+- Replaced the review summary filter's photo-only boolean state with an explicit `currentMediaFilter` mode (`none | images | media`).
+- Video-disabled stores keep the legacy `Fotoğraflı` / `hasImages=true` filter. Video-enabled stores show `Fotoğraf ve Video` / `hasMedia=true`, matching the media gallery's mixed image/video model without confusing starter stores that do not offer video.
+- Expanded `ProductReviewSummary` with media count/rating buckets so public `hasMedia=true` totals stay on the summary read model rather than raw `Review.count()`.
+- The top Media Gallery remains bootstrap-owned and hides when the public photo/media facet is active, so the filtered review list owns the media focus.
 
 ## 2026-06-24 - refactor | Separate Mux Player theme boundaries
 - Split review-video Mux Player theming into explicit storefront and admin exports. The storefront lightbox now uses a storefront theme, while the admin moderation preview uses a fixed admin theme.

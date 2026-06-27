@@ -30,7 +30,7 @@ import { buildPaginationControl } from './render/pagination.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
-  currentOrderBy, currentPage, currentRatingFilter, currentHasImages, currentProductId, currentSettings, currentNextCursor,
+  currentOrderBy, currentPage, currentRatingFilter, currentMediaFilter, currentProductId, currentSettings, currentNextCursor,
   setCurrentOrderBy, setCurrentPage, setCurrentProductId, setCurrentSettings, setCurrentBadgeSettings, setCurrentProductName,
   setCurrentReviewsData, setCurrentNextCursor,
   mediaStripReviews, loadedLightboxReviews,
@@ -338,7 +338,7 @@ export async function render(productId, settings, reviewsData, productName, orde
           avgRatingVal: avgRatingVal,
           currentRatingFilter: currentRatingFilter,
           currentOrderBy: currentOrderBy,
-          currentHasImages: currentHasImages,
+          currentMediaFilter: currentMediaFilter,
           onFilterChange: handlers.onFilterChange,
           onSortChange: handlers.onSortChange,
         });
@@ -348,11 +348,11 @@ export async function render(productId, settings, reviewsData, productName, orde
         // with `hasMedia=true` for media-enabled stores and `hasImages=true`
         // for image-only stores. It stays independent from sort/filter/load-more.
         // ADR_0007 keeps the fixed cap at 15. buildMediaGallery returns null
-        // when disabled, the photo filter is active, or no media exists.
+        // when disabled, a media/photo filter is active, or no media exists.
         var mediaGallerySection = buildMediaGallery({
           settings: settings,
           root: root,
-          currentHasImages: currentHasImages,
+          currentMediaFilter: currentMediaFilter,
           mediaStripReviews: mediaStripReviews,
           openReviewModal: openReviewModal,
           wireLightboxTrigger: wireLightboxTrigger,
@@ -403,16 +403,16 @@ export async function render(productId, settings, reviewsData, productName, orde
             var orderBySnapshot = currentOrderBy;
             var pageSnapshot = currentPage;
             var ratingFilterSnapshot = currentRatingFilter;
-            var hasImagesSnapshot = currentHasImages;
+            var mediaFilterSnapshot = currentMediaFilter;
             var nextCursorSnapshot = currentNextCursor;
             var nextPage = pageSnapshot + 1;
-            var moreData = await fetchReviews(productIdSnapshot, orderBySnapshot, nextPage, ratingFilterSnapshot, hasImagesSnapshot, null, nextCursorSnapshot);
+            var moreData = await fetchReviews(productIdSnapshot, orderBySnapshot, nextPage, ratingFilterSnapshot, mediaFilterSnapshot, null, nextCursorSnapshot);
             if (!isCurrentReviewRequest(token, {
               productId: productIdSnapshot,
               orderBy: orderBySnapshot,
               page: pageSnapshot,
               ratingFilter: ratingFilterSnapshot,
-              hasImages: hasImagesSnapshot,
+              mediaFilter: mediaFilterSnapshot,
               nextCursor: nextCursorSnapshot,
             })) return;
             if (moreData && !isReviewsFetchError(moreData) && moreData.data && Array.isArray(moreData.data.reviews)) {

@@ -46,9 +46,9 @@ import { SUMMARY_BASE_CSS } from './shared/summary-base.js';
  * @property {string|number} avgRatingVal         Formatted average rating.
  * @property {number|null} currentRatingFilter    Active rating filter (1..5) or null.
  * @property {string} currentOrderBy              Active sort key (newest/highest/lowest).
- * @property {boolean} currentHasImages           Photo-only filter active.
+ * @property {string} currentMediaFilter            Media filter mode (`none`, `images`, or `media`).
  * @property {(star:number)=>void} onFilterChange Rating-filter toggle handler.
- * @property {(orderBy:string, isPhotos?:boolean)=>void} onSortChange Sort handler.
+ * @property {(orderBy:string, mediaFilter?:string)=>void} onSortChange Sort handler.
  */
 
 export var LAYOUTS = {

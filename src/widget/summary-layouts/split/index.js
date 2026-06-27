@@ -28,7 +28,7 @@ export function render(opts) {
   var avgRatingVal = opts.avgRatingVal;
   var currentRatingFilter = opts.currentRatingFilter;
   var currentOrderBy = opts.currentOrderBy;
-  var currentHasImages = opts.currentHasImages;
+  var currentMediaFilter = opts.currentMediaFilter;
   var onFilterChange = opts.onFilterChange;
   var onSortChange = opts.onSortChange;
 
@@ -78,7 +78,7 @@ export function render(opts) {
   var actions = buildActionsBlock({
     widget: widget,
     currentOrderBy: currentOrderBy,
-    currentHasImages: currentHasImages,
+    currentMediaFilter: currentMediaFilter,
     onWriteClick: openWriteForm,
     onSortChange: onSortChange,
   });

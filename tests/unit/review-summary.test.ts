@@ -27,6 +27,12 @@ function summary(overrides: Record<string, unknown> = {}) {
     photoRating3Count: 0,
     photoRating4Count: 0,
     photoRating5Count: 1,
+    mediaReviewCount: 1,
+    mediaRating1Count: 0,
+    mediaRating2Count: 0,
+    mediaRating3Count: 0,
+    mediaRating4Count: 0,
+    mediaRating5Count: 1,
     lastReviewAt: new Date('2026-05-28T00:00:00.000Z'),
     createdAt: new Date('2026-05-28T00:00:00.000Z'),
     updatedAt: new Date('2026-05-28T00:00:00.000Z'),
@@ -41,6 +47,8 @@ function approvedReview(overrides: Partial<ReviewSummaryReview> = {}): ReviewSum
     rating: 5,
     status: 'approved',
     images: null,
+    hasImages: false,
+    hasVideo: false,
     createdAt: new Date('2026-05-28T00:00:00.000Z'),
     ...overrides,
   };
@@ -153,6 +161,29 @@ describe('review summary read model', () => {
     });
   });
 
+  it('uses image or video flags for media review summary deltas', async () => {
+    const client = fakeClient();
+    client.productReviewSummary.findUnique.mockResolvedValue(null);
+
+    await applyReviewSummaryVisibilityChange(asReviewSummaryClient(client), null, approvedReview({ hasVideo: true }));
+
+    expect(client.productReviewSummary.upsert).toHaveBeenCalledWith({
+      where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
+      create: expect.objectContaining({
+        approvedCount: 1,
+        mediaReviewCount: 1,
+        mediaRating5Count: 1,
+        photoReviewCount: 0,
+      }),
+      update: expect.objectContaining({
+        approvedCount: { increment: 1 },
+        mediaReviewCount: { increment: 1 },
+        mediaRating5Count: { increment: 1 },
+        photoReviewCount: { increment: 0 },
+      }),
+    });
+  });
+
   it('recomputes one product summary exactly from approved review rows', async () => {
     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'renuvex';
     const client = fakeClient();
@@ -163,6 +194,7 @@ describe('review summary read model', () => {
         createdAt: new Date('2026-05-28T00:00:00.000Z'),
       }),
       approvedReview({ rating: 4, createdAt: new Date('2026-05-27T00:00:00.000Z') }),
+      approvedReview({ rating: 3, hasVideo: true, createdAt: new Date('2026-05-26T00:00:00.000Z') }),
     ]);
 
     await recomputeProductReviewSummary(asReviewSummaryClient(client), 'store-1', 'product-1');
@@ -170,22 +202,30 @@ describe('review summary read model', () => {
     expect(client.productReviewSummary.upsert).toHaveBeenCalledWith({
       where: { storeId_productId: { storeId: 'store-1', productId: 'product-1' } },
       create: expect.objectContaining({
-        approvedCount: 2,
-        ratingSum: 9,
-        averageRating: 4.5,
+        approvedCount: 3,
+        ratingSum: 12,
+        averageRating: 4,
+        rating3Count: 1,
         rating4Count: 1,
         rating5Count: 1,
         photoReviewCount: 1,
         photoRating5Count: 1,
+        mediaReviewCount: 2,
+        mediaRating3Count: 1,
+        mediaRating5Count: 1,
       }),
       update: expect.objectContaining({
-        approvedCount: 2,
-        ratingSum: 9,
-        averageRating: 4.5,
+        approvedCount: 3,
+        ratingSum: 12,
+        averageRating: 4,
+        rating3Count: 1,
         rating4Count: 1,
         rating5Count: 1,
         photoReviewCount: 1,
         photoRating5Count: 1,
+        mediaReviewCount: 2,
+        mediaRating3Count: 1,
+        mediaRating5Count: 1,
       }),
     });
   });
@@ -204,12 +244,20 @@ describe('review summary read model', () => {
       photoRating3Count: 1,
       photoRating4Count: 0,
       photoRating5Count: 2,
+      mediaReviewCount: 6,
+      mediaRating1Count: 1,
+      mediaRating2Count: 1,
+      mediaRating3Count: 1,
+      mediaRating4Count: 1,
+      mediaRating5Count: 2,
     });
 
     expect(filteredReviewTotal(row, {})).toBe(10);
     expect(filteredReviewTotal(row, { ratingFilter: 3 })).toBe(3);
     expect(filteredReviewTotal(row, { hasImagesFilter: true })).toBe(4);
     expect(filteredReviewTotal(row, { ratingFilter: 5, hasImagesFilter: true })).toBe(2);
+    expect(filteredReviewTotal(row, { hasMediaFilter: true })).toBe(6);
+    expect(filteredReviewTotal(row, { ratingFilter: 2, hasMediaFilter: true })).toBe(1);
     expect(filteredReviewTotal(null, { ratingFilter: 5, hasImagesFilter: true })).toBe(0);
   });
 

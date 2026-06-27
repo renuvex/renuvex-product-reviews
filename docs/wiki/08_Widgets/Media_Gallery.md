@@ -41,10 +41,10 @@ Default storefront title: `Müşteri Görselleri`.
 ## Runtime Contract
 - The gallery is fetched once during `reviews-section/bootstrap.js`, only after the explicit review mount exists.
 - Image-only stores use `fetchImageMediaGalleryReviews(productId)` with `hasImages=true&limit=15&orderBy=newest`.
-- Video-enabled stores use `fetchMixedMediaGalleryReviews(productId)` with `hasMedia=true&limit=15&orderBy=newest`, so approved video posters can appear in the same gallery without changing the public photo filter.
+- Video-enabled stores use `fetchMixedMediaGalleryReviews(productId)` with `hasMedia=true&limit=15&orderBy=newest`, so approved video posters can appear in the same gallery.
 - The response is stored in `state.mediaStripReviews`.
-- Sort, rating filter, photo filter, retry, and load-more interactions do not re-fetch the gallery.
-- When the public photo filter is active (`currentHasImages === true`), the media gallery hides so the filtered review list owns the media focus.
+- Sort, rating filter, media/photo filter, retry, and load-more interactions do not re-fetch the gallery.
+- When the public media facet is active (`currentMediaFilter !== 'none'`), the media gallery hides so the filtered review list owns the media focus.
 - The cap is fixed at 15 and intentionally has no admin setting. The historical decision is still [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
 
 ## Settings Contract
@@ -100,7 +100,7 @@ pnpm settings:media-gallery:migrate
 
 The script is dry-run by default. It prints which stores would change and never writes unless `--write` is passed. Write mode is a DB mutation and requires explicit approval before execution.
 
-The public `hasImages` filter remains image-specific by design. The media gallery may use `hasMedia` internally when video reviews are enabled, but the shopper-facing photo filter is still `hasImages=true`.
+The public filter is adaptive: video-disabled stores keep the image-specific `hasImages=true` facet, while video-enabled stores show `Fotoğraf ve Video` and use `hasMedia=true` (`hasImages OR hasVideo`). `ProductReviewSummary` owns the media count buckets so the public media filter does not use raw `Review.count()`.
 
 ## Related Source Files
 - [src/widget/reviews-section/render/media-gallery.js](src/widget/reviews-section/render/media-gallery.js)

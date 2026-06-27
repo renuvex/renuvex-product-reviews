@@ -22,7 +22,11 @@ export function isReviewsFetchError(value) {
   return !!(value && value.type === REVIEWS_FETCH_ERROR);
 }
 
-export async function fetchReviews(productId, orderBy, page, ratingFilter, hasImages, limit, cursor, hasMedia) {
+function normalizeMediaFilter(mediaFilter) {
+  return mediaFilter === 'images' || mediaFilter === 'media' ? mediaFilter : 'none';
+}
+
+export async function fetchReviews(productId, orderBy, page, ratingFilter, mediaFilter, limit, cursor) {
   if (window.__ikasPreviewMode) {
     try {
       var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
@@ -35,6 +39,9 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
 
   orderBy = orderBy || 'newest';
   page = page || 1;
+  mediaFilter = normalizeMediaFilter(mediaFilter);
+  var hasImages = mediaFilter === 'images';
+  var hasMedia = mediaFilter === 'media';
   var limitKey = limit ? '_l' + limit : '';
   var cursorKey = cursor ? '_c' + cursor : '';
   var key = 'renuvex_pr_reviews_' + PUBLIC_API_KEY + '_' + productId + '_' + orderBy + '_' + page + '_' + (ratingFilter || '') + '_' + (hasImages ? '1' : '0') + '_' + (hasMedia ? '1' : '0') + limitKey + cursorKey;
@@ -76,13 +83,13 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, hasIm
 }
 
 export async function fetchImageMediaGalleryReviews(productId) {
-  var data = await fetchReviews(productId, 'newest', 1, null, true, MEDIA_GALLERY_LIMIT);
+  var data = await fetchReviews(productId, 'newest', 1, null, 'images', MEDIA_GALLERY_LIMIT);
   if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
   return data.data.reviews;
 }
 
 export async function fetchMixedMediaGalleryReviews(productId) {
-  var data = await fetchReviews(productId, 'newest', 1, null, false, MEDIA_GALLERY_LIMIT, null, true);
+  var data = await fetchReviews(productId, 'newest', 1, null, 'media', MEDIA_GALLERY_LIMIT);
   if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
   return data.data.reviews;
 }
