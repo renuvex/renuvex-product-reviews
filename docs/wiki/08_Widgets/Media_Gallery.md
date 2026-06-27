@@ -45,6 +45,7 @@ Default storefront title: `Müşteri Görselleri`.
 - Sort, rating filter, media/photo filter, retry, and load-more interactions do not re-fetch the gallery.
 - When the public media facet is active (`currentMediaFilter !== 'none'`), the media gallery hides so the filtered review list owns the media focus.
 - The cap is fixed at 15 and intentionally has no admin setting. The historical decision is still [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
+- Opening the lightbox from the media gallery uses the same representative model as the gallery strip: one trusted first media item per review. The lightbox bottom rail shows those representative thumbnails and does not flatten every media item from multi-media reviews.
 
 ## Settings Contract
 Canonical settings keys:
@@ -113,4 +114,5 @@ The public filter is adaptive, but it is no longer tied to the video-upload togg
 - [scripts/migrate-widget-settings-media-gallery-keys.mjs](scripts/migrate-widget-settings-media-gallery-keys.mjs)
 
 ## Change Log
+- 2026-06-28: Added the media-gallery lightbox thumbnail rail. When the lightbox is opened from `Müşteri Görselleri`, the bottom rail mirrors the gallery's review-level representatives: one first trusted image/video per media-backed review, with video posters/play badges supported. Review-card lightbox opens keep the older current-review media thumbnail scope.
 - 2026-06-25: Renamed the active storefront surface from photo strip to media gallery. The old photo-strip behavior remains as the underlying historical decision, while active settings, DOM classes, CSS variables, source files, and docs now use media-gallery terminology.

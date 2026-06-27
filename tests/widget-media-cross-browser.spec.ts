@@ -315,6 +315,35 @@ async function lightboxVideoState(page: Page) {
   });
 }
 
+async function mediaGalleryRailState(page: Page) {
+  return page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
+    const thumbs = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-modal-thumbs--gallery .renuvex-pr-modal-thumb') || []);
+    return {
+      total: thumbs.length,
+      activeIndex: thumbs.findIndex((el) => el.getAttribute('aria-current') === 'true'),
+      videoThumbs: thumbs.filter((el) => el.classList.contains('renuvex-pr-modal-thumb-video')).length,
+      playIcons: thumbs.filter((el) => !!el.querySelector('.renuvex-pr-modal-thumb-play svg')).length,
+      durations: thumbs.map((el) => el.querySelector('.renuvex-pr-modal-thumb-duration')?.textContent?.trim() || ''),
+    };
+  });
+}
+
+async function clickMediaGalleryRailThumb(page: Page, index: number) {
+  await page.evaluate((index) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
+    const el = root?.querySelectorAll<HTMLElement>('.renuvex-pr-modal-thumbs--gallery .renuvex-pr-modal-thumb')[index];
+    if (!el) throw new Error(`Missing media gallery rail thumb ${index}`);
+    el.click();
+  }, index);
+}
+
 async function swipeVideoLightbox(page: Page, options: { startXRatio: number; endXRatio: number; yRatio: number }) {
   await page.evaluate(({ startXRatio, endXRatio, yRatio }) => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
@@ -369,7 +398,7 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
     expect(box.height).toBeGreaterThan(0);
     expect(box.duration).toBe('0:45');
     expect(box.hasPlayIcon).toBe(true);
-    expect(box.playBackground).toBe('rgba(0, 0, 0, 0.68)');
+    expect(box.playBackground).toBe('rgba(0, 0, 0, 0.2)');
     const expectedPlay = expectedMediaPlaySizes(expectedWidth);
     expect(box.playWidth).toBeGreaterThan(expectedPlay.container - 1);
     expect(box.playWidth).toBeLessThan(expectedPlay.container + 1);
@@ -447,6 +476,36 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
   await page.evaluate(() => history.back());
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
   await expect.poll(() => page.locator('mux-player').count()).toBe(0);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('media gallery lightbox rail renders video representative thumbnails', async ({ page }) => {
+  const log = await setupVideoWidget(page, {
+    reviews: [
+      review('video-1', [videoMedia('video-1')]),
+      review('video-2', [videoMedia('video-2')]),
+    ],
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({
+    total: 2,
+    activeIndex: 0,
+    videoThumbs: 2,
+    playIcons: 2,
+    durations: ['0:45', '0:45'],
+  });
+  await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('video-1');
+
+  await clickMediaGalleryRailThumb(page, 1);
+  await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({ activeIndex: 1 });
+  await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('video-2');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 

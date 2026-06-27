@@ -114,13 +114,13 @@ source_files:
 - For video work, no deploy, migration apply, env write, provider write, or teardown happens without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-06-28: Media-gallery lightbox opens now show a bottom rail with one first trusted image/video per media-backed review; ordinary review opens keep current-review media thumbnails.
 - 2026-06-27: Existing videos stay visible when video uploads are disabled. Media gallery reads always use `hasMedia=true`; the public filter uses `ProductReviewSummary.mediaReviewCount > photoReviewCount` to choose mixed media vs photo-only.
 - 2026-06-23: Review Video playback uses official Mux Player. Storefront videos expose public `playbackId`; admin preview uses signed Mux Player attributes. Mux Data tracking/cookies stay disabled.
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
-- 2026-06-21: Review Video provider cutover is live on Mux. Production DB has applied `20260621003000_review_video_mux_contract_drop_legacy_columns`; old Cloudflare Stream/R2 `VideoUploadSession` columns are absent, Mux assets are cleaned up after canary deletion, Vercel has no Cloudflare video env vars, and Cloudflare Stream/R2 inventory is empty. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
-- 2026-06-21: Mux cleanup lifecycle now handles abandoned ready uploads: `cleanup_video` retrieves the direct upload before cancel, deletes known or recovered `asset_id` values even when direct-upload cancel is no longer valid, and late `video.upload.asset_created` webhooks for `aborted`/`failed` sessions route to asset-scoped cleanup. Ready-but-unsubmitted sessions can release consumed quota when `consumedAt` is still null.
+- 2026-06-21: Mux cutover is live; contract migration, Cloudflare/R2 teardown, Vercel env cleanup, and canary asset cleanup were verified. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
+- 2026-06-21: Mux cleanup handles abandoned ready uploads by retrieving direct uploads, deleting known/recovered assets, routing late asset-created webhooks to cleanup, and refunding unsubmitted consumed quota when eligible.
 - 2026-06-20: Mux upload performance hardening measures browser-to-Mux transfer separately from processing/webhooks via sanitized `VideoUploadPerformanceSample` rows and keeps same-session retry progress monotonic.
-- 2026-06-20: The older `6 reviews / 39 sessions` purge manifest is historical only; latest DB evidence before implementation showed zero video surfaces. Preview and production Mux environments are separate, and webhook resource/secret creation waits for a deployed `/api/webhooks/mux` URL.
 
 ## Current Risks / Open Questions
 - The storefront widget is Turkish-first today. There is no i18n layer, locale resolver, or per-locale settings model yet. Future English/German support requires a proper string catalog, locale source, and accessibility-string migration; do not treat the current merchant-editable copy fields as localization.

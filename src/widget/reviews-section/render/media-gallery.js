@@ -68,7 +68,7 @@ export function buildMediaGallery(opts) {
       width: stripWidth,
       height: stripHeight,
       loading: thumbCount < 3 ? 'eager' : 'lazy',
-      onOpen: function () { openReviewModal(r, firstMedia.url, galleryReviews); },
+      onOpen: function () { openReviewModal(r, firstMedia.url, galleryReviews, { source: 'mediaGallery' }); },
     });
     if (!thumb) return;
     // Lightbox navigasyonu gallery dataset'i içinde gezer — load-more sonrası

@@ -11,7 +11,13 @@ import {
   hideOnImageError,
   settingText,
 } from '../core/helpers.js';
-import { getTrustedReviewMedia } from '../core/review-media.js';
+import {
+  formatMediaDuration,
+  getFirstTrustedReviewMedia,
+  getTrustedReviewMedia,
+  muxPosterSrcSet,
+  muxPosterVariantUrl,
+} from '../core/review-media.js';
 import { currentSettings } from '../core/state.js';
 import {
   RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
@@ -20,7 +26,7 @@ import { createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../
 import { CLASSIC_CSS } from './styles.js';
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot, unregisterSpriteRoot, iconUseNode } from '../icons/star-sprite.js';
-import { UI_CLOSE, UI_CARET_LEFT, UI_CARET_RIGHT } from '../icons/index.js';
+import { PLAY_ICON, UI_CLOSE, UI_CARET_LEFT, UI_CARET_RIGHT } from '../icons/index.js';
 import { lockBodyScroll, restoreBodyScroll } from '../core/body-scroll-lock.js';
 import { getReturnFocusElement, restoreFocus, trapFocus } from '../shared/focus-trap.js';
 import { wasLastInputKeyboard } from '../shared/input-modality.js';
@@ -29,6 +35,24 @@ import { createReviewVideoPlayback } from './video-playback.js';
 
 function getValidMedia(review) {
   return getTrustedReviewMedia(review);
+}
+
+function isMediaGalleryModal(modalState) {
+  return modalState && modalState.source === 'mediaGallery';
+}
+
+function getModalMediaItems(review, modalState) {
+  if (!isMediaGalleryModal(modalState)) return getValidMedia(review);
+  var representative = getFirstTrustedReviewMedia(review);
+  return representative ? [representative] : [];
+}
+
+function getModalReviewsWithMedia(allReviews, source) {
+  return (allReviews || []).filter(function(rv) {
+    return source === 'mediaGallery'
+      ? !!getFirstTrustedReviewMedia(rv)
+      : getValidMedia(rv).length > 0;
+  });
 }
 
 function cleanupMediaContainer(container) {
@@ -166,8 +190,84 @@ function shouldReserveVideoControlGesture(event, currentMedia, left) {
   return touch.clientY >= rect.bottom - controlBandHeight;
 }
 
+function modalThumbImageAttrs(item) {
+  var url = item && item.type === 'video' ? item.posterUrl : item && item.url;
+  if (item && item.type === 'video') {
+    var opts = {
+      width: LIGHTBOX_MINI_THUMB_WIDTH,
+      height: LIGHTBOX_MINI_THUMB_WIDTH,
+      fit: 'crop',
+    };
+    return {
+      src: muxPosterVariantUrl(url, opts),
+      srcset: muxPosterSrcSet(url, opts),
+    };
+  }
+  return buildResponsiveImgAttrs(url, LIGHTBOX_MINI_THUMB_WIDTH);
+}
+
+function buildMediaGalleryRailThumb(entry, isActive, onSelect) {
+  var item = entry && entry.media;
+  if (!item) return null;
+
+  var button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'renuvex-pr-modal-thumb renuvex-pr-modal-thumb-button' +
+    (item.type === 'video' ? ' renuvex-pr-modal-thumb-video' : '') +
+    (isActive ? ' renuvex-pr-modal-thumb-active' : '');
+  button.setAttribute('aria-label', 'Galeri medyası ' + (entry.index + 1) + ' seç');
+  if (isActive) button.setAttribute('aria-current', 'true');
+
+  var img = document.createElement('img');
+  img.className = 'renuvex-pr-modal-thumb-img';
+  var attrs = modalThumbImageAttrs(item);
+  img.src = attrs.src;
+  if (attrs.srcset) img.srcset = attrs.srcset;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.width = LIGHTBOX_MINI_THUMB_WIDTH;
+  img.height = LIGHTBOX_MINI_THUMB_WIDTH;
+  img.alt = '';
+  hideOnImageError(img);
+  button.appendChild(img);
+
+  if (item.type === 'video') {
+    var play = document.createElement('span');
+    play.className = 'renuvex-pr-modal-thumb-play';
+    var playIcon = iconUseNode(PLAY_ICON);
+    if (playIcon) play.appendChild(playIcon);
+    button.appendChild(play);
+
+    var duration = formatMediaDuration(item.durationMs);
+    if (duration) {
+      var badge = document.createElement('span');
+      badge.className = 'renuvex-pr-modal-thumb-duration';
+      badge.textContent = duration;
+      button.appendChild(badge);
+    }
+  }
+
+  button.onclick = onSelect;
+  return button;
+}
+
+function buildMediaGalleryThumbEntries(reviewsWithPhotos) {
+  var entries = [];
+  (reviewsWithPhotos || []).forEach(function(review, reviewIdx) {
+    var media = getFirstTrustedReviewMedia(review);
+    if (!media) return;
+    entries.push({
+      review: review,
+      reviewIdx: reviewIdx,
+      media: media,
+      index: entries.length,
+    });
+  });
+  return entries;
+}
+
 function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClose, direction, overlay, modalState) {
-  var mediaItems = getValidMedia(r);
+  var mediaItems = getModalMediaItems(r, modalState);
   var currentPhotoIdx = Math.max(0, Math.min(photoIdx || 0, mediaItems.length - 1));
   var currentMedia = mediaItems[currentPhotoIdx];
 
@@ -267,7 +367,20 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   }, { passive: true });
 
 
-  if (mediaItems.length > 1) {
+  if (isMediaGalleryModal(modalState)) {
+    var galleryThumbEntries = buildMediaGalleryThumbEntries(reviewsWithPhotos);
+    if (galleryThumbEntries.length > 1) {
+      var galleryThumbBar = document.createElement('div');
+      galleryThumbBar.className = 'renuvex-pr-modal-thumbs renuvex-pr-modal-thumbs--gallery';
+      galleryThumbEntries.forEach(function(entry) {
+        var thumb = buildMediaGalleryRailThumb(entry, entry.reviewIdx === reviewIdx, function() {
+          rebuildModal(entry.review, entry.reviewIdx, 0, reviewsWithPhotos, modal, requestClose, false, null, overlay, modalState);
+        });
+        if (thumb) galleryThumbBar.appendChild(thumb);
+      });
+      left.appendChild(galleryThumbBar);
+    }
+  } else if (mediaItems.length > 1) {
     var thumbBar = document.createElement('div');
     thumbBar.className = 'renuvex-pr-modal-thumbs';
     mediaItems.forEach(function(item, i) {
@@ -421,13 +534,14 @@ function rebuildModal(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestC
   prefetchNeighbors(reviewIdx, reviewsWithPhotos);
 }
 
-export function openReviewModal(r, clickedUrl, allReviews) {
-  var images = getValidMedia(r);
+export function openReviewModal(r, clickedUrl, allReviews, options) {
+  var source = options && options.source === 'mediaGallery' ? 'mediaGallery' : 'review';
+  var images = source === 'mediaGallery'
+    ? (getFirstTrustedReviewMedia(r) ? [getFirstTrustedReviewMedia(r)] : [])
+    : getValidMedia(r);
   if (!images.length) return;
 
-  var reviewsWithPhotos = (allReviews || []).filter(function(rv) {
-    return getValidMedia(rv).length > 0;
-  });
+  var reviewsWithPhotos = getModalReviewsWithMedia(allReviews, source);
 
   var reviewIdx = reviewsWithPhotos.findIndex(function(rv) { return rv === r || rv.id === r.id; });
   if (reviewIdx === -1) {
@@ -456,6 +570,7 @@ export function openReviewModal(r, clickedUrl, allReviews) {
   var modalState = {
     currentReview: r,
     currentSettings: currentSettings,
+    source: source,
   };
   var lastPreviewSettings = null;
 

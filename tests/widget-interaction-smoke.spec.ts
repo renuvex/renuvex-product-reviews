@@ -50,6 +50,70 @@ function reviewsActiveState(page: Page) {
   });
 }
 
+function testReviewImage(name: string): string {
+  return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/${name}.jpg`;
+}
+
+function mediaGalleryReview(id: string, title: string, images: string[]): Record<string, unknown> {
+  return {
+    id,
+    rating: 5,
+    title,
+    comment: `Review body for ${title}.`,
+    author: 'Gallery T.',
+    createdAt: '2026-06-28T00:00:00.000Z',
+    images,
+    merchantReply: null,
+    recommendation: true,
+  };
+}
+
+function mediaGalleryReviewsPayload(reviews: Array<Record<string, unknown>>): unknown {
+  return {
+    data: {
+      reviews,
+      allCount: reviews.length,
+      totalCount: reviews.length,
+      ratingCounts: [0, 0, 0, 0, reviews.length],
+      avgRating: '5.0',
+      hasMore: false,
+      photoReviewCount: reviews.length,
+      mediaReviewCount: reviews.length,
+    },
+  };
+}
+
+async function modalThumbState(page: Page) {
+  return page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
+    const thumbs = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-modal-thumbs .renuvex-pr-modal-thumb') || []);
+    const galleryThumbs = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-modal-thumbs--gallery .renuvex-pr-modal-thumb') || []);
+    return {
+      total: thumbs.length,
+      galleryTotal: galleryThumbs.length,
+      activeIndex: thumbs.findIndex((el) => el.getAttribute('aria-current') === 'true' || el.classList.contains('renuvex-pr-modal-thumb-active')),
+      galleryActiveIndex: galleryThumbs.findIndex((el) => el.getAttribute('aria-current') === 'true' || el.classList.contains('renuvex-pr-modal-thumb-active')),
+      videoThumbs: galleryThumbs.filter((el) => el.classList.contains('renuvex-pr-modal-thumb-video')).length,
+      playIcons: galleryThumbs.filter((el) => !!el.querySelector('.renuvex-pr-modal-thumb-play svg')).length,
+    };
+  });
+}
+
+async function clickNthInOverlay(page: Page, overlaySelector: string, selector: string, index: number) {
+  await page.evaluate(({ overlaySelector, selector, index }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    const el = root?.querySelectorAll<HTMLElement>(selector)[index];
+    if (!el) throw new Error(`Missing overlay selector: ${selector}[${index}]`);
+    el.click();
+  }, { overlaySelector, selector, index });
+}
+
 async function blobAudit(page: Page) {
   return page.evaluate(() => {
     const win = window as Window & {
@@ -179,6 +243,94 @@ test('media gallery lightbox opens, navigates, and closes without console errors
   await clickInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-close');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
 
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('media gallery lightbox shows one representative thumbnail per media review', async ({ page }) => {
+  const galleryReviews = [
+    mediaGalleryReview('gallery-review-1', 'First gallery review', [
+      testReviewImage('gallery-review-1a'),
+      testReviewImage('gallery-review-1b'),
+      testReviewImage('gallery-review-1c'),
+    ]),
+    mediaGalleryReview('gallery-review-2', 'Second gallery review', [testReviewImage('gallery-review-2a')]),
+    mediaGalleryReview('gallery-review-3', 'Third gallery review', [testReviewImage('gallery-review-3a')]),
+  ];
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+    reviewsGetHandler: async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(mediaGalleryReviewsPayload(galleryReviews)),
+      });
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+
+  await expect.poll(() => modalThumbState(page)).toMatchObject({
+    total: 3,
+    galleryTotal: 3,
+    activeIndex: 0,
+    galleryActiveIndex: 0,
+  });
+  expect(await textInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-title')).toBe('First gallery review');
+
+  await clickInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-nav-next');
+  await expect.poll(() => textInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-title')).toBe('Second gallery review');
+  await expect.poll(() => modalThumbState(page)).toMatchObject({ galleryActiveIndex: 1 });
+
+  await clickNthInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-thumbs--gallery .renuvex-pr-modal-thumb', 2);
+  await expect.poll(() => textInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-title')).toBe('Third gallery review');
+  await expect.poll(() => modalThumbState(page)).toMatchObject({ galleryActiveIndex: 2 });
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('review card lightbox keeps current-review thumbnail scope', async ({ page }) => {
+  const galleryReviews = [
+    mediaGalleryReview('gallery-review-1', 'First gallery review', [
+      testReviewImage('gallery-review-1a'),
+      testReviewImage('gallery-review-1b'),
+      testReviewImage('gallery-review-1c'),
+    ]),
+    mediaGalleryReview('gallery-review-2', 'Second gallery review', [testReviewImage('gallery-review-2a')]),
+  ];
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
+    reviewsGetHandler: async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(mediaGalleryReviewsPayload(galleryReviews)),
+      });
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-img');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+
+  await expect.poll(() => modalThumbState(page)).toMatchObject({
+    total: 3,
+    galleryTotal: 0,
+    activeIndex: 0,
+  });
+  await clickInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-nav-next');
+  await expect.poll(() => textInOverlay(page, '.renuvex-pr-modal-overlay', '.renuvex-pr-modal-title')).toBe('First gallery review');
+  await expect.poll(() => modalThumbState(page)).toMatchObject({ activeIndex: 1 });
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 
