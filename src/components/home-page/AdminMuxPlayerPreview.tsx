@@ -47,7 +47,7 @@ export function AdminMuxPlayerPreview({
       playsinline
       disable-tracking
       disable-cookies
-      hotkeys="noarrowleft noarrowright"
+      nohotkeys
       style={{
         '--controls-backdrop-color': ADMIN_REVIEW_PLAYER_COLORS.controlsBackdrop,
         '--media-primary-color': ADMIN_REVIEW_PLAYER_COLORS.controlForeground,

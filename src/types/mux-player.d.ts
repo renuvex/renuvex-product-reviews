@@ -19,6 +19,7 @@ type MuxPlayerElementAttributes = DetailedHTMLProps<HTMLAttributes<HTMLElement>,
   playsinline?: boolean | '';
   muted?: boolean;
   hotkeys?: string;
+  nohotkeys?: boolean | '';
   style?: CSSProperties & Record<string, string | number | undefined>;
 };
 

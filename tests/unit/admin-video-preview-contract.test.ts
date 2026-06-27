@@ -52,6 +52,8 @@ describe('admin video preview contract', () => {
     expect(playerSource).toContain('thumbnail-token={thumbnailToken}');
     expect(playerSource).toContain('disable-tracking');
     expect(playerSource).toContain('disable-cookies');
+    expect(playerSource).toContain('nohotkeys');
+    expect(playerSource).not.toContain('hotkeys=');
     expect(playerSource).toContain('accent-color={ADMIN_REVIEW_PLAYER_COLORS.controlForeground}');
     expect(playerSource).toContain('primary-color={ADMIN_REVIEW_PLAYER_COLORS.controlForeground}');
     expect(playerSource).toContain('secondary-color={ADMIN_REVIEW_PLAYER_COLORS.controlBackground}');
@@ -74,6 +76,8 @@ describe('admin video preview contract', () => {
     expect(storefrontPlayerSource).toContain("window.customElements.whenDefined('mux-player')");
     expect(storefrontPlayerSource).toContain("player.setAttribute('lang', REVIEW_PLAYER_LOCALE)");
     expect(storefrontPlayerSource).toContain("player.setAttribute('muted', '')");
+    expect(storefrontPlayerSource).toContain("player.setAttribute('nohotkeys', '')");
+    expect(storefrontPlayerSource).not.toContain("player.setAttribute('hotkeys'");
     expect(storefrontPlayerSource).toContain('STOREFRONT_REVIEW_PLAYER_COLORS');
     expect(storefrontPlayerSource).toContain('STOREFRONT_REVIEW_MUX_PLAYER_THEME');
     expect(storefrontPlayerSource).not.toContain('ADMIN_REVIEW_MUX_PLAYER_THEME');

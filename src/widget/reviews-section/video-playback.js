@@ -58,7 +58,7 @@ function applyReviewPlayerAttributes(player, media) {
   player.setAttribute('stream-type', 'on-demand');
   player.setAttribute('muted', '');
   player.setAttribute('playsinline', '');
-  player.setAttribute('hotkeys', 'noarrowleft noarrowright');
+  player.setAttribute('nohotkeys', '');
   player.setAttribute('lang', REVIEW_PLAYER_LOCALE);
   player.setAttribute('theme', STOREFRONT_REVIEW_MUX_PLAYER_THEME);
   player.setAttribute('accent-color', STOREFRONT_REVIEW_PLAYER_COLORS.controlForeground);
