@@ -74,7 +74,24 @@ function reviewPlayerThemeCss(colors: ReviewPlayerColors): string {
   [breakpointsm] .center-controls.pre-playback media-play-button {
     --media-control-background: ${colors.centerPlayButtonBackground};
     --media-control-hover-background: ${colors.centerPlayButtonHoverBackground};
+    --media-control-padding: 0;
+    --media-button-padding: 0;
+    --media-button-icon-width: 34px;
+    --media-button-icon-height: 34px;
     --media-icon-color: ${colors.controlForeground};
+    width: 72px;
+    height: 72px;
+    min-width: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  [breakpointsm] .center-controls.pre-playback media-play-button {
+    --media-button-icon-width: 30px;
+    --media-button-icon-height: 30px;
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
   }
 
   media-time-range {

@@ -104,6 +104,10 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('.center-controls.pre-playback media-play-button');
     expect(themeSource).toContain('--media-control-background: ${colors.centerPlayButtonBackground}');
     expect(themeSource).toContain('--media-control-hover-background: ${colors.centerPlayButtonHoverBackground}');
+    expect(themeSource).toContain('--media-control-padding: 0');
+    expect(themeSource).toContain('--media-button-icon-width: 34px');
+    expect(themeSource).toContain('width: 72px');
+    expect(themeSource).toContain('border-radius: 50%');
     expect(themeSource).toContain('--media-icon-color: ${colors.controlForeground}');
     expect(themeSource).toContain('--media-text-color: ${colors.controlForeground}');
     expect(themeSource).toContain('media-time-range');
