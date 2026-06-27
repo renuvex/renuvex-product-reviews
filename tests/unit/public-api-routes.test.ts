@@ -860,6 +860,8 @@ describe('/api/public/reviews', () => {
       totalPages: 0,
       hasMore: false,
       avgRating: null,
+      photoReviewCount: 0,
+      mediaReviewCount: 0,
     }));
   });
 
@@ -908,6 +910,8 @@ describe('/api/public/reviews', () => {
     expect(prismaMock.review.count).not.toHaveBeenCalled();
     expect(body.data.totalCount).toBe(2);
     expect(body.data.allCount).toBe(4);
+    expect(body.data.photoReviewCount).toBe(1);
+    expect(body.data.mediaReviewCount).toBe(2);
   });
 
   it('rejects conflicting hasImages and hasMedia filters', async () => {

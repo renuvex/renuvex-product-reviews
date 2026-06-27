@@ -4,7 +4,7 @@
 import { registerPopover, swallowNextDismissGesture } from './popover-registry.js';
 import { getFilterIconSvg } from '../../icons/index.js';
 import { iconUseSvg } from '../../icons/star-sprite.js';
-import { currentSettings } from '../../core/state.js';
+import { currentHasReviewVideoMedia, currentSettings } from '../../core/state.js';
 import { settingText } from '../../core/helpers.js';
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 
@@ -40,7 +40,7 @@ export function buildActionsBlock(opts) {
   filterMenu.className = 'renuvex-pr-filter-menu';
   filterMenu.setAttribute('role', 'menu');
 
-  var mediaFilterMode = currentSettings && currentSettings.videoReviewsEnabled === true ? 'media' : 'images';
+  var mediaFilterMode = currentHasReviewVideoMedia === true ? 'media' : 'images';
   var mediaFilterLabel = mediaFilterMode === 'media' ? 'Fotoğraf ve Video' : 'Fotoğraflı';
   var filterOpts = [
     { orderBy: 'newest', label: 'En Yeni', mediaFilter: 'none' },

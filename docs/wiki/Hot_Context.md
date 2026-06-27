@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-06-27
+last_verified: 2026-06-27
 confidence: high
 tags:
   - hot-context
@@ -114,7 +114,7 @@ source_files:
 - For video work, no deploy, migration apply, env write, provider write, or teardown happens without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-06-25: Adaptive summary media filter: video-off stores use photo-only `hasImages`; video-on stores use `hasMedia`. `ProductReviewSummary` owns the matching media count buckets.
+- 2026-06-27: Existing videos stay visible when video uploads are disabled. Media gallery reads always use `hasMedia=true`; the public filter uses `ProductReviewSummary.mediaReviewCount > photoReviewCount` to choose mixed media vs photo-only.
 - 2026-06-23: Review Video playback uses official Mux Player. Storefront videos expose public `playbackId`; admin preview uses signed Mux Player attributes. Mux Data tracking/cookies stay disabled.
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-21: Review Video provider cutover is live on Mux. Production DB has applied `20260621003000_review_video_mux_contract_drop_legacy_columns`; old Cloudflare Stream/R2 `VideoUploadSession` columns are absent, Mux assets are cleaned up after canary deletion, Vercel has no Cloudflare video env vars, and Cloudflare Stream/R2 inventory is empty. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].

@@ -34,14 +34,13 @@ source_files:
 # Media Gallery
 
 ## Summary
-The Media Gallery is the horizontal media rail above the review list. It keeps the original independent "photo strip" behavior, but the product language and active settings now describe the surface as media because approved videos can appear beside review images when video reviews are enabled.
+The Media Gallery is the horizontal media rail above the review list. It keeps the original independent "photo strip" behavior, but the product language and active settings now describe the surface as media because approved videos can appear beside review images. Existing approved video display is independent from whether new video uploads are currently enabled.
 
 Default storefront title: `Müşteri Görselleri`.
 
 ## Runtime Contract
 - The gallery is fetched once during `reviews-section/bootstrap.js`, only after the explicit review mount exists.
-- Image-only stores use `fetchImageMediaGalleryReviews(productId)` with `hasImages=true&limit=15&orderBy=newest`.
-- Video-enabled stores use `fetchMixedMediaGalleryReviews(productId)` with `hasMedia=true&limit=15&orderBy=newest`, so approved video posters can appear in the same gallery.
+- The gallery uses `fetchMixedMediaGalleryReviews(productId)` with `hasMedia=true&limit=15&orderBy=newest` for every store. `hasMedia=true` means approved `Review.hasImages OR Review.hasVideo`, so photo-only stores still receive image reviews while stores with existing approved videos keep showing those videos even when new video uploads are disabled.
 - The response is stored in `state.mediaStripReviews`.
 - Sort, rating filter, media/photo filter, retry, and load-more interactions do not re-fetch the gallery.
 - When the public media facet is active (`currentMediaFilter !== 'none'`), the media gallery hides so the filtered review list owns the media focus.
@@ -100,7 +99,7 @@ pnpm settings:media-gallery:migrate
 
 The script is dry-run by default. It prints which stores would change and never writes unless `--write` is passed. Write mode is a DB mutation and requires explicit approval before execution.
 
-The public filter is adaptive: video-disabled stores keep the image-specific `hasImages=true` facet, while video-enabled stores show `Fotoğraf ve Video` and use `hasMedia=true` (`hasImages OR hasVideo`). `ProductReviewSummary` owns the media count buckets so the public media filter does not use raw `Review.count()`.
+The public filter is adaptive, but it is no longer tied to the video-upload toggle. `/api/public/reviews` returns `photoReviewCount` and `mediaReviewCount` from `ProductReviewSummary`; if `mediaReviewCount > photoReviewCount`, the storefront shows `Fotoğraf ve Video` and uses `hasMedia=true`. Otherwise it keeps the image-specific `Fotoğraflı` / `hasImages=true` facet. This keeps existing approved videos visible after upload capability is disabled without confusing photo-only stores.
 
 ## Related Source Files
 - [src/widget/reviews-section/render/media-gallery.js](src/widget/reviews-section/render/media-gallery.js)

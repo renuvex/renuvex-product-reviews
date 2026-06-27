@@ -1,8 +1,8 @@
 // reviews-section/render/media-gallery.js — media gallery section builder.
 //
 // Builds the "Müşteri Görselleri" horizontal media gallery shown above the review
-// list. The dataset is filled once in bootstrap with `hasMedia=true` for
-// video-enabled stores and `hasImages=true` for photo-only stores. It is
+// list. The dataset is filled once in bootstrap with `hasMedia=true` so
+// approved videos remain visible even when new video uploads are disabled. It is
 // independent of sort/filter/load-more and only refreshes after the cache TTL
 // (Strateji A — newest-first rotation; ADR_0007: fixed 15 cap, no admin setting).
 // Pure builder: returns the media gallery element, or null when the gallery should

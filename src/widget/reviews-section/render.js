@@ -345,8 +345,8 @@ export async function render(productId, settings, reviewsData, productName, orde
         widget.appendChild(summary);
 
         // Media gallery — state.mediaStripReviews is filled once in bootstrap
-        // with `hasMedia=true` for media-enabled stores and `hasImages=true`
-        // for image-only stores. It stays independent from sort/filter/load-more.
+        // with `hasMedia=true`, independent of new video-upload capability. The
+        // filter label/mode is driven separately by summary media counts.
         // ADR_0007 keeps the fixed cap at 15. buildMediaGallery returns null
         // when disabled, a media/photo filter is active, or no media exists.
         var mediaGallerySection = buildMediaGallery({

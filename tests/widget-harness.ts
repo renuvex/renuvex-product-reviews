@@ -213,6 +213,7 @@ function reviewRows(_hasImages: boolean, storeId = PUBLIC_KEY): Array<Record<str
 
 export function reviewsResponse(hasImages: boolean, hasMore = false, storeId = PUBLIC_KEY, approvedReviewCount = 12): unknown {
   const hasApprovedReviews = approvedReviewCount > 0;
+  const photoReviewCount = hasApprovedReviews ? 2 : 0;
   return {
     data: {
       reviews: hasApprovedReviews ? reviewRows(hasImages, storeId) : [],
@@ -221,6 +222,8 @@ export function reviewsResponse(hasImages: boolean, hasMore = false, storeId = P
       ratingCounts: hasApprovedReviews ? [0, 0, 1, 2, 9] : [0, 0, 0, 0, 0],
       avgRating: hasApprovedReviews ? '4.8' : '0.0',
       hasMore,
+      photoReviewCount,
+      mediaReviewCount: photoReviewCount,
     },
   };
 }
@@ -325,10 +328,11 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
       return;
     }
     const url = new URL(route.request().url());
+    const hasMedia = url.searchParams.get('hasMedia') === 'true';
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
-      body: JSON.stringify(reviewsResponse(url.searchParams.get('hasImages') === 'true', options.hasMore === true, PUBLIC_KEY, options.approvedReviewCount ?? 12)),
+      body: JSON.stringify(reviewsResponse(url.searchParams.get('hasImages') === 'true' || hasMedia, options.hasMore === true, PUBLIC_KEY, options.approvedReviewCount ?? 12)),
     });
   });
   await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {

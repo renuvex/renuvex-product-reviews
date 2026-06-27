@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-25
-last_verified: 2026-06-25
+updated: 2026-06-27
+last_verified: 2026-06-27
 confidence: high
 tags:
   - log
@@ -22,9 +22,13 @@ source_files:
 
 # Project Log
 
+## 2026-06-27 - fix | Decouple existing video display from upload capability
+- `videoReviewsEnabled` now controls new video upload/wizard capability only. Existing approved videos remain visible on storefront media surfaces after uploads are disabled.
+- `/api/public/reviews` exposes additive `photoReviewCount` and `mediaReviewCount` read-model counts. The media gallery always fetches `hasMedia=true`, while the filter label/query uses the count comparison to keep photo-only products on `Fotoğraflı` / `hasImages=true`.
+
 ## 2026-06-25 - refactor | Make public media filtering read-model backed
 - Replaced the review summary filter's photo-only boolean state with an explicit `currentMediaFilter` mode (`none | images | media`).
-- Video-disabled stores keep the legacy `Fotoğraflı` / `hasImages=true` filter. Video-enabled stores show `Fotoğraf ve Video` / `hasMedia=true`, matching the media gallery's mixed image/video model without confusing starter stores that do not offer video.
+- The public filter gained an explicit media mode (`Fotoğraf ve Video` / `hasMedia=true`) alongside the legacy photo mode (`Fotoğraflı` / `hasImages=true`), matching the media gallery's mixed image/video model when a product has approved video media.
 - Expanded `ProductReviewSummary` with media count/rating buckets so public `hasMedia=true` totals stay on the summary read model rather than raw `Review.count()`.
 - The top Media Gallery remains bootstrap-owned and hides when the public photo/media facet is active, so the filtered review list owns the media focus.
 

@@ -85,6 +85,8 @@ type RuntimeReview = {
 type ReviewPayloadOptions = {
   allCount?: number;
   totalCount?: number;
+  photoReviewCount?: number;
+  mediaReviewCount?: number;
   ratingCounts?: number[];
   avgRating?: string;
   hasMore?: boolean;
@@ -188,6 +190,11 @@ function reviewsPayload(
 ): unknown {
   const allCount = options.allCount ?? Math.max(reviews.length, 1);
   const ratingCounts = options.ratingCounts ?? [0, 0, 0, 0, allCount];
+  const inferredPhotoReviewCount = reviews.filter((review) => Array.isArray(review.images) && review.images.length > 0).length;
+  const inferredMediaReviewCount = reviews.filter((review) => (
+    (Array.isArray(review.images) && review.images.length > 0) ||
+    (Array.isArray(review.media) && review.media.length > 0)
+  )).length;
   return {
     data: {
       reviews: reviews.map(runtimeReview),
@@ -199,6 +206,8 @@ function reviewsPayload(
       nextCursor: options.nextCursor ?? null,
       page: options.page ?? 1,
       totalPages: options.totalPages ?? 1,
+      photoReviewCount: options.photoReviewCount ?? inferredPhotoReviewCount,
+      mediaReviewCount: options.mediaReviewCount ?? inferredMediaReviewCount,
     },
   };
 }
@@ -1524,7 +1533,7 @@ test('list review item photo keeps the medium 3:4 portrait box in a tall row', a
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('video-enabled media gallery uses hasMedia and renders Mux poster thumbnails without list video preload', async ({ page }) => {
+test('media gallery preserves approved video when new video uploads are disabled', async ({ page }) => {
   await page.route('https://image.mux.com/**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -1540,7 +1549,7 @@ test('video-enabled media gallery uses hasMedia and renders Mux poster thumbnail
     reviewsSettings: {
       summaryLayout: 'classic',
       reviewLayout: 'card',
-      videoReviewsEnabled: true,
+      videoReviewsEnabled: false,
       thumbnailSize: 'medium',
     },
     reviewsGetHandler: async (route) => {
@@ -1553,19 +1562,19 @@ test('video-enabled media gallery uses hasMedia and renders Mux poster thumbnail
       if (hasMedia && limit === '15') {
         await fulfillJson(route, reviewsPayload([
           { id: 'strip-video', title: 'Strip video', images: [], media: [trustedReviewVideoMedia('strip-video')] },
-        ], { allCount: 2, totalCount: 1 }));
+        ], { allCount: 2, totalCount: 1, photoReviewCount: 0, mediaReviewCount: 1 }));
         return;
       }
       if (hasMedia) {
         sawMediaFilterRequest = true;
         await fulfillJson(route, reviewsPayload([
           { id: 'filtered-video', title: 'Filtered video', images: [], media: [trustedReviewVideoMedia('filtered-video')] },
-        ], { allCount: 2, totalCount: 1 }));
+        ], { allCount: 2, totalCount: 1, photoReviewCount: 0, mediaReviewCount: 1 }));
         return;
       }
       await fulfillJson(route, reviewsPayload([
         { id: 'card-video', title: 'Card video', images: [], media: [trustedReviewVideoMedia('card-video')] },
-      ], { allCount: 2, totalCount: 2 }));
+      ], { allCount: 2, totalCount: 2, photoReviewCount: 0, mediaReviewCount: 1 }));
     },
   });
 
@@ -1870,8 +1879,10 @@ test('initial review fetch failure renders a retry state and recovers on retry',
     reviewsGetHandler: async (route) => {
       const url = new URL(route.request().url());
       const hasImages = url.searchParams.get('hasImages') === 'true';
+      const hasMedia = url.searchParams.get('hasMedia') === 'true';
+      const limit = url.searchParams.get('limit');
 
-      if (hasImages) {
+      if ((hasImages || hasMedia) && limit === '15') {
         await fulfillJson(route, reviewsPayload([]));
         return;
       }
@@ -1906,22 +1917,23 @@ test('media gallery remains independent across sort and load-more, then hides fo
     reviewsGetHandler: async (route) => {
       const url = new URL(route.request().url());
       const hasImages = url.searchParams.get('hasImages') === 'true';
+      const hasMedia = url.searchParams.get('hasMedia') === 'true';
       const limit = url.searchParams.get('limit');
       const orderBy = url.searchParams.get('orderBy') || 'newest';
       const pageParam = url.searchParams.get('page') || '1';
 
-      if (hasImages && limit === '15') {
+      if (hasMedia && limit === '15') {
         stripCalls += 1;
         await fulfillJson(route, reviewsPayload([
           { id: 'strip-alpha', title: 'Strip Alpha', images: [trustedReviewImage('strip-alpha')] },
-        ]));
+        ], { photoReviewCount: 1, mediaReviewCount: 1 }));
         return;
       }
 
       if (hasImages) {
         await fulfillJson(route, reviewsPayload([
           { id: 'photo-filtered', title: 'Photo filtered review', images: [trustedReviewImage('photo-filtered')] },
-        ], { hasMore: false }));
+        ], { hasMore: false, photoReviewCount: 1, mediaReviewCount: 1 }));
         return;
       }
 
@@ -1974,8 +1986,10 @@ for (const reviewLayout of ['card', 'list', 'gallery'] as const) {
       reviewsGetHandler: async (route) => {
         const url = new URL(route.request().url());
         const hasImages = url.searchParams.get('hasImages') === 'true';
+        const hasMedia = url.searchParams.get('hasMedia') === 'true';
+        const limit = url.searchParams.get('limit');
 
-        if (hasImages) {
+        if ((hasImages || hasMedia) && limit === '15') {
           await fulfillJson(route, reviewsPayload([]));
           return;
         }

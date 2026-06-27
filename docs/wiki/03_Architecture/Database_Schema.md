@@ -151,7 +151,7 @@ Product-level aggregate read model for public storefront rating surfaces. Raw `R
 | `rating1Count` ... `rating5Count` | Int | Bar chart/rating distribution buckets |
 | `photoReviewCount` | Int | Approved review count where `Review.hasImages=true`; repaired by summary/media rebuild scripts when legacy rows are normalized |
 | `photoRating1Count` ... `photoRating5Count` | Int | Exact approved photo-review buckets by rating; powers `hasImages=true&rating=N` `totalCount` without raw `Review.count()` |
-| `mediaReviewCount` | Int | Approved review count where `Review.hasImages=true OR Review.hasVideo=true`; powers video-enabled `Fotoğraf ve Video` filtering |
+| `mediaReviewCount` | Int | Approved review count where `Review.hasImages=true OR Review.hasVideo=true`; powers media gallery reads and `Fotoğraf ve Video` filtering when `mediaReviewCount > photoReviewCount` |
 | `mediaRating1Count` ... `mediaRating5Count` | Int | Exact approved media-review buckets by rating; powers `hasMedia=true&rating=N` `totalCount` without raw `Review.count()` |
 | `lastReviewAt` | DateTime? | Latest approved review timestamp |
 | `createdAt`, `updatedAt` | DateTime | |

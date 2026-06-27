@@ -2,8 +2,9 @@
 
 import { fetchSettings } from '../core/settings.js';
 import { getProductContext } from '../core/storefront-context.js';
-import { resetReviewStateForProduct, setMediaStripReviews } from '../core/state.js';
-import { createReviewsFetchError, fetchImageMediaGalleryReviews, fetchMixedMediaGalleryReviews, fetchReviews } from './reviews-api.js';
+import { getTrustedReviewMedia } from '../core/review-media.js';
+import { resetReviewStateForProduct, setCurrentHasReviewVideoMedia, setMediaStripReviews } from '../core/state.js';
+import { createReviewsFetchError, fetchMixedMediaGalleryReviews, fetchReviews } from './reviews-api.js';
 
 var bootstrapCache = {};
 var bootstrapSeq = 0;
@@ -30,6 +31,24 @@ function isCurrentBootstrap(token, productId, startedPathname) {
   if (isPreviewMode()) return true;
   var product = getProductContext();
   return !!(product && String(product.id) === String(productId));
+}
+
+function reviewsContainTrustedVideoMedia(reviews) {
+  return (Array.isArray(reviews) ? reviews : []).some(function (review) {
+    return getTrustedReviewMedia(review).some(function (media) {
+      return media && media.type === 'video';
+    });
+  });
+}
+
+function responseSummaryHasVideoMedia(reviewsData) {
+  var data = reviewsData && reviewsData.data;
+  if (!data) return null;
+  var mediaCount = Number(data.mediaReviewCount);
+  var photoCount = Number(data.photoReviewCount);
+  if (!Number.isFinite(mediaCount) || !Number.isFinite(photoCount)) return null;
+  if (mediaCount === 0 && photoCount === 0) return null;
+  return mediaCount > photoCount;
 }
 
 export async function bootstrap(productId, productName) {
@@ -60,9 +79,7 @@ export async function bootstrap(productId, productName) {
 
     resetReviewStateForProduct(productId);
 
-    var mediaGalleryFetch = reviewsSettings.videoReviewsEnabled === true
-      ? fetchMixedMediaGalleryReviews(productId)
-      : fetchImageMediaGalleryReviews(productId);
+    var mediaGalleryFetch = fetchMixedMediaGalleryReviews(productId);
     var fetchResults = await Promise.all([
       fetchReviews(productId, 'newest', 1, null),
       mediaGalleryFetch,
@@ -70,10 +87,15 @@ export async function bootstrap(productId, productName) {
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
     var reviewsData = fetchResults[0];
+    var summaryHasVideo = responseSummaryHasVideoMedia(reviewsData);
+    var hasVideoMedia = summaryHasVideo === null
+      ? reviewsContainTrustedVideoMedia((reviewsData && reviewsData.data && reviewsData.data.reviews) || []) || reviewsContainTrustedVideoMedia(fetchResults[1])
+      : summaryHasVideo;
     var renderModule = await loadRenderModule();
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
     setMediaStripReviews(fetchResults[1]);
+    setCurrentHasReviewVideoMedia(hasVideoMedia);
     await renderModule.render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
   } catch (err) {
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;

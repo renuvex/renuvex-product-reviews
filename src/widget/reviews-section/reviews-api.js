@@ -82,12 +82,6 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, media
   }
 }
 
-export async function fetchImageMediaGalleryReviews(productId) {
-  var data = await fetchReviews(productId, 'newest', 1, null, 'images', MEDIA_GALLERY_LIMIT);
-  if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];
-  return data.data.reviews;
-}
-
 export async function fetchMixedMediaGalleryReviews(productId) {
   var data = await fetchReviews(productId, 'newest', 1, null, 'media', MEDIA_GALLERY_LIMIT);
   if (!data || !data.data || !Array.isArray(data.data.reviews)) return [];

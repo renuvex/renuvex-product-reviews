@@ -12,10 +12,11 @@ export var currentProductName = null;
 export var currentReviewsData = null;
 export var currentNextCursor = null;
 export var loadedLightboxReviews = [];
+export var currentHasReviewVideoMedia = false;
 
-// Media gallery dataset. Media-enabled stores use `hasMedia=true`; image-only
-// stores use `hasImages=true`. It is filled once in bootstrap and is not
-// re-fetched on sort/filter/load-more changes.
+// Media gallery dataset. It always uses `hasMedia=true` so approved videos
+// remain visible even when new video uploads are disabled. The public media
+// filter label/query is driven separately by `currentHasReviewVideoMedia`.
 // Strateji A (newest-first rotation): yeni onaylı medya yorumları
 // REVIEWS_CACHE_TTL (1 dk) süresince stale kalır, sonra otomatik yenilenir.
 export var mediaStripReviews = [];
@@ -31,6 +32,7 @@ export function setCurrentProductName(v) { currentProductName = v; }
 export function setCurrentReviewsData(v) { currentReviewsData = v; }
 export function setCurrentNextCursor(v) { currentNextCursor = v || null; }
 export function setMediaStripReviews(v) { mediaStripReviews = Array.isArray(v) ? v : []; }
+export function setCurrentHasReviewVideoMedia(v) { currentHasReviewVideoMedia = v === true; }
 
 export function resetReviewStateForProduct(productId) {
   currentOrderBy = 'newest';
@@ -40,6 +42,7 @@ export function resetReviewStateForProduct(productId) {
   currentProductId = productId || null;
   currentReviewsData = null;
   currentNextCursor = null;
+  currentHasReviewVideoMedia = false;
   mediaStripReviews = [];
   replaceLoadedLightboxReviews([]);
 }

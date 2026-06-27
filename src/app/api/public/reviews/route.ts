@@ -455,6 +455,8 @@ export async function GET(req: Request) {
         nextCursor,
         ratingCounts,
         avgRating,
+        photoReviewCount: summary?.photoReviewCount ?? 0,
+        mediaReviewCount: summary?.mediaReviewCount ?? 0,
       },
     }));
     res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
