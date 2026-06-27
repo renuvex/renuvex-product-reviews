@@ -566,7 +566,7 @@ test('media gallery lightbox rail renders video representative thumbnails', asyn
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('media gallery rail hides while the active lightbox video is playing', async ({ page }) => {
+test('media gallery rail stays hidden after video playback starts until ended', async ({ page }) => {
   const log = await setupVideoWidget(page, {
     reviews: [
       review('video-1', [videoMedia('video-1')]),
@@ -591,6 +591,12 @@ test('media gallery rail hides while the active lightbox video is playing', asyn
   });
 
   await dispatchLightboxPlayerEvent(page, 'pause');
+  await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({
+    leftVideoPlaying: true,
+    pointerEvents: 'none',
+  });
+
+  await dispatchLightboxPlayerEvent(page, 'ended');
   await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({
     leftVideoPlaying: false,
     pointerEvents: 'auto',

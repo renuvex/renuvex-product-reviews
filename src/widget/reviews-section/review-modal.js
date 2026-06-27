@@ -294,22 +294,31 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
       videoPlaceholder.textContent = 'Bu video şu anda oynatılamıyor.';
       left.insertBefore(videoPlaceholder, mainVideo);
     });
-    var markVideoPlaying = function () {
+    var hasStartedVideoPlayback = false;
+    var hideVideoRail = function () {
       left.classList.add('renuvex-pr-modal-left-video-playing');
     };
-    var markVideoIdle = function () {
+    var markVideoStarted = function () {
+      hasStartedVideoPlayback = true;
+      hideVideoRail();
+    };
+    var keepVideoRailHiddenAfterPause = function () {
+      if (hasStartedVideoPlayback) hideVideoRail();
+    };
+    var showVideoRail = function () {
+      hasStartedVideoPlayback = false;
       left.classList.remove('renuvex-pr-modal-left-video-playing');
     };
-    mainVideo.addEventListener('play', markVideoPlaying);
-    mainVideo.addEventListener('playing', markVideoPlaying);
-    mainVideo.addEventListener('pause', markVideoIdle);
-    mainVideo.addEventListener('ended', markVideoIdle);
+    mainVideo.addEventListener('play', markVideoStarted);
+    mainVideo.addEventListener('playing', markVideoStarted);
+    mainVideo.addEventListener('pause', keepVideoRailHiddenAfterPause);
+    mainVideo.addEventListener('ended', showVideoRail);
     left.__renuvexMediaCleanup = function () {
-      mainVideo.removeEventListener('play', markVideoPlaying);
-      mainVideo.removeEventListener('playing', markVideoPlaying);
-      mainVideo.removeEventListener('pause', markVideoIdle);
-      mainVideo.removeEventListener('ended', markVideoIdle);
-      markVideoIdle();
+      mainVideo.removeEventListener('play', markVideoStarted);
+      mainVideo.removeEventListener('playing', markVideoStarted);
+      mainVideo.removeEventListener('pause', keepVideoRailHiddenAfterPause);
+      mainVideo.removeEventListener('ended', showVideoRail);
+      showVideoRail();
       playback.cleanup();
     };
     left.appendChild(mainVideo);
