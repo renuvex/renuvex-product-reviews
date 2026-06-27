@@ -1,6 +1,5 @@
 import { buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
 import {
-  formatMediaDuration,
   mediaPreviewUrl,
   muxPosterSrcSet,
   muxPosterVariantUrl,
@@ -52,13 +51,6 @@ export function createMediaThumbnail(item, opts) {
   if (playIcon) play.appendChild(playIcon);
   button.appendChild(play);
 
-  var duration = formatMediaDuration(item.durationMs);
-  if (duration) {
-    var badge = document.createElement('span');
-    badge.className = 'renuvex-pr-media-duration';
-    badge.textContent = duration;
-    button.appendChild(badge);
-  }
   wireLightboxTrigger(button, opts.onOpen, opts.videoLabel || 'Yorum videosunu oynat');
   return button;
 }

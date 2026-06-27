@@ -206,7 +206,7 @@ async function mediaBox(page: Page, selector: string) {
     return {
       width: rect.width || computedWidth,
       height: rect.height || computedHeight,
-      duration: element.querySelector('.renuvex-pr-media-duration')?.textContent?.trim() || '',
+      durationBadges: element.querySelectorAll('.renuvex-pr-media-duration').length,
       hasPlayIcon: !!playIcon,
       playWidth: playRect?.width || 0,
       playIconWidth: playIconRect?.width || 0,
@@ -330,7 +330,7 @@ async function mediaGalleryRailState(page: Page) {
       activeIndex: thumbs.findIndex((el) => el.getAttribute('aria-current') === 'true'),
       videoThumbs: thumbs.filter((el) => el.classList.contains('renuvex-pr-modal-thumb-video')).length,
       playIcons: thumbs.filter((el) => !!el.querySelector('.renuvex-pr-modal-thumb-play svg')).length,
-      durations: thumbs.map((el) => el.querySelector('.renuvex-pr-modal-thumb-duration')?.textContent?.trim() || ''),
+      durationBadges: thumbs.filter((el) => !!el.querySelector('.renuvex-pr-modal-thumb-duration')).length,
       leftVideoPlaying: left?.classList.contains('renuvex-pr-modal-left-video-playing') || false,
       pointerEvents: railStyle?.pointerEvents || '',
       touchAction: railStyle?.touchAction || '',
@@ -453,7 +453,7 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
     expect(box.width).toBeGreaterThan(expectedWidth - 2);
     expect(box.width).toBeLessThan(expectedWidth + 2);
     expect(box.height).toBeGreaterThan(0);
-    expect(box.duration).toBe('0:45');
+    expect(box.durationBadges).toBe(0);
     expect(box.hasPlayIcon).toBe(true);
     expect(box.playBackground).toBe('rgba(0, 0, 0, 0.2)');
     const expectedPlay = expectedMediaPlaySizes(expectedWidth);
@@ -553,7 +553,7 @@ test('media gallery lightbox rail renders video representative thumbnails', asyn
     activeIndex: 0,
     videoThumbs: 2,
     playIcons: 2,
-    durations: ['0:45', '0:45'],
+    durationBadges: 0,
   });
   await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('video-1');
 

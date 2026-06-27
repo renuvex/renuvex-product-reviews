@@ -12,7 +12,6 @@ import {
   settingText,
 } from '../core/helpers.js';
 import {
-  formatMediaDuration,
   getFirstTrustedReviewMedia,
   getTrustedReviewMedia,
   muxPosterSrcSet,
@@ -242,14 +241,6 @@ function buildMediaGalleryRailThumb(entry, isActive, onSelect) {
     var playIcon = iconUseNode(PLAY_ICON);
     if (playIcon) play.appendChild(playIcon);
     button.appendChild(play);
-
-    var duration = formatMediaDuration(item.durationMs);
-    if (duration) {
-      var badge = document.createElement('span');
-      badge.className = 'renuvex-pr-modal-thumb-duration';
-      badge.textContent = duration;
-      button.appendChild(badge);
-    }
   }
 
   button.onclick = onSelect;

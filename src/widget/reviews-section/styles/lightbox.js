@@ -43,7 +43,6 @@ export var LIGHTBOX_CSS = `
   .renuvex-pr-modal-thumb-img{display:block;width:100%;height:100%;object-fit:cover;}
   .renuvex-pr-modal-thumb-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.20);color:var(--renuvex-pr-review-lightbox-video-icon,#ffffff);pointer-events:none;}
   .renuvex-pr-modal-thumb-play svg{width:12px;height:12px;margin-left:1px;}
-  .renuvex-pr-modal-thumb-duration{position:absolute;right:3px;bottom:3px;padding:2px 4px;border-radius:3px;background:rgba(0,0,0,.76);color:#fff;font-size:10px;line-height:1;pointer-events:none;}
   .renuvex-pr-modal-thumb-active{border-color:#fff;opacity:1;}
   .renuvex-pr-modal-close:focus-visible,.renuvex-pr-modal-close-mobile:focus-visible,.renuvex-pr-modal-nav:focus-visible,.renuvex-pr-modal-thumb:focus-visible{outline:2px solid #ffffff;outline-offset:2px;}
   .renuvex-pr-modal-right{flex:1;min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0;display:flex;flex-direction:column;background:#ffffff;color:#111111;}

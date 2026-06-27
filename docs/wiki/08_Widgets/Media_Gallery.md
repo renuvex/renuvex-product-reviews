@@ -46,6 +46,7 @@ Default storefront title: `Müşteri Görselleri`.
 - When the public media facet is active (`currentMediaFilter !== 'none'`), the media gallery hides so the filtered review list owns the media focus.
 - The cap is fixed at 15 and intentionally has no admin setting. The historical decision is still [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
 - Opening the lightbox from the media gallery uses the same representative model as the gallery strip: one trusted first media item per review. The lightbox bottom rail shows those representative thumbnails and does not flatten every media item from multi-media reviews.
+- Video representatives show poster + play affordance only. The gallery and lightbox rail intentionally do not render visible duration badges, although `durationMs` remains available in the normalized media model.
 - In the lightbox, the gallery rail is visible before playback. After the active video starts, the rail stays hidden until the video ends or another media item opens, so it does not compete with Mux Player controls while paused. Touch gestures that start on the rail are reserved for horizontal rail interaction, not previous/next lightbox navigation.
 
 ## Settings Contract
@@ -115,6 +116,7 @@ The public filter is adaptive, but it is no longer tied to the video-upload togg
 - [scripts/migrate-widget-settings-media-gallery-keys.mjs](scripts/migrate-widget-settings-media-gallery-keys.mjs)
 
 ## Change Log
+- 2026-06-28: Removed visible video duration badges from media-gallery thumbnails and lightbox rail thumbnails while keeping duration metadata available for future surfaces.
 - 2026-06-28: Media-gallery lightbox rail now stays hidden after active video playback starts until end/new media, and reserves mobile rail touch gestures so horizontal rail interaction does not change reviews.
 - 2026-06-28: Added the media-gallery lightbox thumbnail rail. When the lightbox is opened from `Müşteri Görselleri`, the bottom rail mirrors the gallery's review-level representatives: one first trusted image/video per media-backed review, with video posters/play badges supported. Review-card lightbox opens keep the older current-review media thumbnail scope.
 - 2026-06-25: Renamed the active storefront surface from photo strip to media gallery. The old photo-strip behavior remains as the underlying historical decision, while active settings, DOM classes, CSS variables, source files, and docs now use media-gallery terminology.

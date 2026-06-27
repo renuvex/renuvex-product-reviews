@@ -45,7 +45,7 @@ The product review lightbox is the media detail modal opened from trusted review
 - [review-player-theme.ts](src/lib/mux-player/review-player-theme.ts) - storefront/admin Mux Player theme cloning, control color contract, and internal `media-controller` locale wiring.
 - [review-player-i18n.ts](src/lib/mux-player/review-player-i18n.ts) - local Turkish Media Chrome translation registration for Mux Player controls.
 - [review-player-locale.ts](src/lib/mux-player/review-player-locale.ts) - shared review-player locale constant.
-- [media-thumbnail.js](src/widget/reviews-section/media-thumbnail.js) - poster-first video thumbnail, play badge, and duration badge.
+- [media-thumbnail.js](src/widget/reviews-section/media-thumbnail.js) - poster-first video thumbnail and play badge.
 - [review-media.js](src/widget/core/review-media.js) - trusted provider-aware media normalization.
 - [lightbox-trigger.js](src/widget/reviews-section/lightbox-trigger.js) - shared click/keyboard/ARIA wiring for media elements that open the lightbox.
 - [styles/lightbox.js](src/widget/reviews-section/styles/lightbox.js) - `.renuvex-pr-modal-*` layout, desktop/mobile responsive behavior, scroll containers, and modal controls.
@@ -82,7 +82,8 @@ The product review lightbox is the media detail modal opened from trusted review
 - Media URLs are not accepted by generic prefixes. `getTrustedReviewMedia()` retains the tenant-scoped Cloudinary image policy and accepts video playback/poster URLs only from approved Mux delivery hosts.
 - If the active main image fails to load after passing the trusted URL policy, the `<img>` is hidden and a neutral in-modal placeholder is shown. Mini thumbnails use the standard thumbnail fallback and hide failed assets. Related bug: [[Bug_Review_Image_Error_Fallback]].
 - The main lightbox image uses `object-fit:contain` on a dark media background so customer photos are not cropped. Thumbnail, card, list, gallery, and mini-thumb render paths keep `cover` because those are fixed-format previews.
-- Video list/card/gallery surfaces are poster-first. They render an image poster plus play/duration badges and do not create a `<video>` or `<mux-player>` element before lightbox open.
+- Video list/card/gallery surfaces are poster-first. They render an image poster plus a play badge and do not create a `<video>` or `<mux-player>` element before lightbox open.
+- Video thumbnail surfaces keep duration metadata in the review media model, but storefront thumbnails do not render visible duration badges. The visual contract is poster + play affordance only, including the media-gallery lightbox rail.
 - Lightbox video uses the official `<mux-player>` web component with a public playback ID, `playsinline`, `preload="metadata"`, `stream-type="on-demand"`, a trusted poster, no autoplay, and muted startup. Mux Data tracking and cookies are disabled in this phase.
 - Closing, browser-back navigation, or switching from video to another media item pauses the player and removes playback/token/poster attributes before the lightbox media node is replaced.
 - Video and thumbnail-rail gestures are isolated from lightbox swipe navigation. Horizontal swipes still move between media-backed reviews when they start in the main media area, but touches that start in the lower video control band belong to Mux Player controls, and touches that start in the bottom rail belong to horizontal rail scrolling/thumbnail selection.
@@ -103,6 +104,7 @@ The product review lightbox is the media detail modal opened from trusted review
 - Storefront fullscreen binds the Mux MediaController `fullscreenElement` property directly to the current `.renuvex-pr-modal-left` media panel. Do not replace this with the Mux `fullscreen-element` attribute unless the lightbox leaves its shadow-root isolation, because Mux resolves that attribute through a document-level ID lookup.
 
 ## Change Log
+- 2026-06-28: Removed visible duration badges from storefront video thumbnails and the media-gallery lightbox rail while keeping duration metadata available in the media model.
 - 2026-06-28: Hid the bottom thumbnail rail after active lightbox video playback starts until the video ends, and isolated mobile rail touch gestures from previous/next lightbox swipes.
 - 2026-06-28: Added a media-gallery source mode for the lightbox. Opens from `Müşteri Görselleri` now render a bottom thumbnail rail from the gallery dataset, one first trusted media item per review, while ordinary review opens continue to show only the active review's own media thumbnails.
 - 2026-06-24: Isolated Mux Player control-band gestures from the lightbox swipe handler. Dragging the mobile video timeline no longer changes reviews, while swiping the main video area still preserves previous/next lightbox navigation. The media browser test now pins both paths.

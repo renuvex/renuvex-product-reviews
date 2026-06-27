@@ -154,11 +154,3 @@ export function getFirstTrustedReviewMedia(review) {
 export function mediaPreviewUrl(item) {
   return item && item.type === 'video' ? item.posterUrl : item && item.url;
 }
-
-export function formatMediaDuration(durationMs) {
-  if (typeof durationMs !== 'number' || durationMs <= 0) return '';
-  var totalSeconds = Math.max(0, Math.round(durationMs / 1000));
-  var minutes = Math.floor(totalSeconds / 60);
-  var seconds = String(totalSeconds % 60).padStart(2, '0');
-  return minutes + ':' + seconds;
-}
