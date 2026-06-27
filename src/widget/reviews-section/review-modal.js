@@ -170,6 +170,11 @@ function getTouchPoint(event) {
   return null;
 }
 
+function isThumbRailGesture(event) {
+  var target = event && event.target;
+  return !!(target && typeof target.closest === 'function' && target.closest('.renuvex-pr-modal-thumbs'));
+}
+
 function shouldReserveVideoControlGesture(event, currentMedia, left) {
   if (!currentMedia || currentMedia.type !== 'video' || !left) return false;
   var touch = getTouchPoint(event);
@@ -289,7 +294,24 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
       videoPlaceholder.textContent = 'Bu video şu anda oynatılamıyor.';
       left.insertBefore(videoPlaceholder, mainVideo);
     });
-    left.__renuvexMediaCleanup = playback.cleanup;
+    var markVideoPlaying = function () {
+      left.classList.add('renuvex-pr-modal-left-video-playing');
+    };
+    var markVideoIdle = function () {
+      left.classList.remove('renuvex-pr-modal-left-video-playing');
+    };
+    mainVideo.addEventListener('play', markVideoPlaying);
+    mainVideo.addEventListener('playing', markVideoPlaying);
+    mainVideo.addEventListener('pause', markVideoIdle);
+    mainVideo.addEventListener('ended', markVideoIdle);
+    left.__renuvexMediaCleanup = function () {
+      mainVideo.removeEventListener('play', markVideoPlaying);
+      mainVideo.removeEventListener('playing', markVideoPlaying);
+      mainVideo.removeEventListener('pause', markVideoIdle);
+      mainVideo.removeEventListener('ended', markVideoIdle);
+      markVideoIdle();
+      playback.cleanup();
+    };
     left.appendChild(mainVideo);
   } else {
     var mainImg = document.createElement('img');
@@ -331,13 +353,20 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   // Swipe desteği — görsel alanında yatay kaydırma
   var touchStartX = 0;
   var reservePlayerControlGesture = false;
+  var reserveThumbRailGesture = false;
   left.addEventListener('touchstart', function(e) {
     var touch = getTouchPoint(e);
     if (!touch) return;
+    reserveThumbRailGesture = isThumbRailGesture(e);
     touchStartX = touch.clientX;
-    reservePlayerControlGesture = shouldReserveVideoControlGesture(e, currentMedia, left);
+    reservePlayerControlGesture = !reserveThumbRailGesture && shouldReserveVideoControlGesture(e, currentMedia, left);
   }, { passive: true });
   left.addEventListener('touchend', function(e) {
+    if (reserveThumbRailGesture) {
+      reserveThumbRailGesture = false;
+      reservePlayerControlGesture = false;
+      return;
+    }
     if (reservePlayerControlGesture) {
       reservePlayerControlGesture = false;
       return;

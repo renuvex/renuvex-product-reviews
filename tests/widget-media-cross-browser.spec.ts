@@ -321,15 +321,34 @@ async function mediaGalleryRailState(page: Page) {
       .map((host) => host.shadowRoot)
       .filter((candidate): candidate is ShadowRoot => !!candidate)
       .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
+    const left = root?.querySelector<HTMLElement>('.renuvex-pr-modal-left');
+    const rail = root?.querySelector<HTMLElement>('.renuvex-pr-modal-thumbs--gallery');
     const thumbs = Array.from(root?.querySelectorAll<HTMLElement>('.renuvex-pr-modal-thumbs--gallery .renuvex-pr-modal-thumb') || []);
+    const railStyle = rail ? getComputedStyle(rail) : null;
     return {
       total: thumbs.length,
       activeIndex: thumbs.findIndex((el) => el.getAttribute('aria-current') === 'true'),
       videoThumbs: thumbs.filter((el) => el.classList.contains('renuvex-pr-modal-thumb-video')).length,
       playIcons: thumbs.filter((el) => !!el.querySelector('.renuvex-pr-modal-thumb-play svg')).length,
       durations: thumbs.map((el) => el.querySelector('.renuvex-pr-modal-thumb-duration')?.textContent?.trim() || ''),
+      leftVideoPlaying: left?.classList.contains('renuvex-pr-modal-left-video-playing') || false,
+      pointerEvents: railStyle?.pointerEvents || '',
+      touchAction: railStyle?.touchAction || '',
+      zIndex: railStyle?.zIndex || '',
     };
   });
+}
+
+async function dispatchLightboxPlayerEvent(page: Page, eventName: string) {
+  await page.evaluate((eventName) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
+    const player = root?.querySelector<HTMLElement>('mux-player.renuvex-pr-modal-main-video');
+    if (!player) throw new Error('Missing lightbox player');
+    player.dispatchEvent(new Event(eventName, { bubbles: true }));
+  }, eventName);
 }
 
 async function clickMediaGalleryRailThumb(page: Page, index: number) {
@@ -342,6 +361,44 @@ async function clickMediaGalleryRailThumb(page: Page, index: number) {
     if (!el) throw new Error(`Missing media gallery rail thumb ${index}`);
     el.click();
   }, index);
+}
+
+async function swipeMediaGalleryRail(page: Page) {
+  await page.evaluate(() => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => host.shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector('.renuvex-pr-modal-overlay'));
+    const rail = root?.querySelector<HTMLElement>('.renuvex-pr-modal-thumbs--gallery');
+    const target = rail?.querySelector<HTMLElement>('.renuvex-pr-modal-thumb');
+    if (!rail || !target) throw new Error('Missing media gallery rail');
+    const railTarget = target;
+    const rect = rail.getBoundingClientRect();
+    const y = rect.top + rect.height / 2;
+    const startX = rect.left + rect.width * 0.82;
+    const endX = rect.left + rect.width * 0.18;
+
+    function dispatchTouch(type: 'touchstart' | 'touchend', x: number) {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      const touch = {
+        identifier: 1,
+        target,
+        clientX: x,
+        clientY: y,
+        screenX: x,
+        screenY: y,
+        pageX: x,
+        pageY: y,
+      };
+      Object.defineProperty(event, 'touches', { value: type === 'touchend' ? [] : [touch] });
+      Object.defineProperty(event, 'targetTouches', { value: type === 'touchend' ? [] : [touch] });
+      Object.defineProperty(event, 'changedTouches', { value: [touch] });
+      railTarget.dispatchEvent(event);
+    }
+
+    dispatchTouch('touchstart', startX);
+    dispatchTouch('touchend', endX);
+  });
 }
 
 async function swipeVideoLightbox(page: Page, options: { startXRatio: number; endXRatio: number; yRatio: number }) {
@@ -503,6 +560,75 @@ test('media gallery lightbox rail renders video representative thumbnails', asyn
   await clickMediaGalleryRailThumb(page, 1);
   await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({ activeIndex: 1 });
   await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('video-2');
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('media gallery rail hides while the active lightbox video is playing', async ({ page }) => {
+  const log = await setupVideoWidget(page, {
+    reviews: [
+      review('video-1', [videoMedia('video-1')]),
+      review('video-2', [videoMedia('video-2')]),
+    ],
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({
+    leftVideoPlaying: false,
+    pointerEvents: 'auto',
+    zIndex: '3',
+  });
+
+  await dispatchLightboxPlayerEvent(page, 'playing');
+  await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({
+    leftVideoPlaying: true,
+    pointerEvents: 'none',
+  });
+
+  await dispatchLightboxPlayerEvent(page, 'pause');
+  await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({
+    leftVideoPlaying: false,
+    pointerEvents: 'auto',
+  });
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('media gallery rail touch drags do not trigger lightbox swipe navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const log = await setupVideoWidget(page, {
+    reviews: [
+      review('video-1', [videoMedia('video-1')]),
+      review('video-2', [videoMedia('video-2')]),
+      review('video-3', [videoMedia('video-3')]),
+      review('video-4', [videoMedia('video-4')]),
+      review('video-5', [videoMedia('video-5')]),
+      review('video-6', [videoMedia('video-6')]),
+    ],
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
+  await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({
+    total: 6,
+    activeIndex: 0,
+    touchAction: 'pan-x',
+  });
+  await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('video-1');
+
+  await swipeMediaGalleryRail(page);
+
+  await expect.poll(() => mediaGalleryRailState(page)).toMatchObject({ activeIndex: 0 });
+  expect((await lightboxVideoState(page)).playbackId).toBe('video-1');
 
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(false);
