@@ -305,6 +305,7 @@ async function lightboxVideoState(page: Page) {
       fullscreenButton: style.getPropertyValue('--fullscreen-button').trim(),
       renditionMenuButton: style.getPropertyValue('--rendition-menu-button').trim(),
       controlsBackdropColor: style.getPropertyValue('--controls-backdrop-color').trim(),
+      centerPlayButton: style.getPropertyValue('--center-play-button').trim(),
       dialogRole: wrap.getAttribute('role'),
       ariaModal: wrap.getAttribute('aria-modal'),
       overlayClientWidth: overlay.clientWidth,
@@ -431,6 +432,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     fullscreenButton: 'none',
     renditionMenuButton: 'none',
     controlsBackdropColor: 'rgba(0,0,0,0.58)',
+    centerPlayButton: '',
     dialogRole: 'dialog',
     ariaModal: 'true',
   });

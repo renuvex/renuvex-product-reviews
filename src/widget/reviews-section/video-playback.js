@@ -7,12 +7,36 @@ import { REVIEW_PLAYER_LOCALE } from '../../lib/mux-player/review-player-locale'
 import { muxPlaybackIdFromUrl, muxPosterVariantUrl } from '../core/review-media.js';
 
 var muxPlayerModulePromise = null;
+var INITIAL_CENTER_PLAY_BUTTON_VAR = '--center-play-button';
 
 function loadMuxPlayer() {
   if (!muxPlayerModulePromise) {
     muxPlayerModulePromise = ensureStorefrontReviewMuxPlayerTheme();
   }
   return muxPlayerModulePromise;
+}
+
+function afterAnimationFrames(count) {
+  return new Promise(function (resolve) {
+    function nextFrame(remaining) {
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(function () {
+        nextFrame(remaining - 1);
+      });
+    }
+    nextFrame(count);
+  });
+}
+
+function hideInitialCenterPlayButton(player) {
+  player.style.setProperty(INITIAL_CENTER_PLAY_BUTTON_VAR, 'none');
+}
+
+function showInitialCenterPlayButton(player) {
+  player.style.removeProperty(INITIAL_CENTER_PLAY_BUTTON_VAR);
 }
 
 export function getReviewVideoPlaybackId(media) {
@@ -54,11 +78,28 @@ export function createReviewVideoPlayback(media, className) {
   var player = document.createElement('mux-player');
   player.className = className || 'renuvex-pr-modal-main-video';
   player.setAttribute('aria-label', 'Yorum videosu');
+  hideInitialCenterPlayButton(player);
   player.addEventListener('contextmenu', preventNativeVideoContextMenu);
 
   var configured = applyReviewPlayerAttributes(player, media);
   if (configured) {
     loadMuxPlayer()
+      .then(function () {
+        if (window.customElements && typeof window.customElements.whenDefined === 'function') {
+          return window.customElements.whenDefined('mux-player');
+        }
+        return undefined;
+      })
+      .then(function () {
+        if (cancelled) return undefined;
+        try {
+          if (typeof player.pause === 'function') player.pause();
+        } catch (_) {}
+        return afterAnimationFrames(2);
+      })
+      .then(function () {
+        if (!cancelled) showInitialCenterPlayButton(player);
+      })
       .catch(function () {
         if (!cancelled) player.dispatchEvent(new Event('error'));
       });
@@ -79,6 +120,7 @@ export function createReviewVideoPlayback(media, className) {
       player.removeAttribute('playback-token');
       player.removeAttribute('thumbnail-token');
       player.removeAttribute('poster');
+      showInitialCenterPlayButton(player);
       player.removeEventListener('contextmenu', preventNativeVideoContextMenu);
     },
   };

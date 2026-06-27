@@ -68,6 +68,10 @@ describe('admin video preview contract', () => {
     expect(playerSource).not.toMatch(/autoPlay|autoplay/);
     expect(playerSource).not.toContain('theme-style');
     expect(storefrontPlayerSource).toContain('ensureStorefrontReviewMuxPlayerTheme');
+    expect(storefrontPlayerSource).toContain("INITIAL_CENTER_PLAY_BUTTON_VAR = '--center-play-button'");
+    expect(storefrontPlayerSource).toContain("player.style.setProperty(INITIAL_CENTER_PLAY_BUTTON_VAR, 'none')");
+    expect(storefrontPlayerSource).toContain('player.style.removeProperty(INITIAL_CENTER_PLAY_BUTTON_VAR)');
+    expect(storefrontPlayerSource).toContain("window.customElements.whenDefined('mux-player')");
     expect(storefrontPlayerSource).toContain("player.setAttribute('lang', REVIEW_PLAYER_LOCALE)");
     expect(storefrontPlayerSource).toContain("player.setAttribute('muted', '')");
     expect(storefrontPlayerSource).toContain('STOREFRONT_REVIEW_PLAYER_COLORS');
