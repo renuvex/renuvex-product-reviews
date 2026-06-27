@@ -9,6 +9,7 @@ import {
   UI_CLOSE,
   PHOTO_ICON,
   PLUS_ICON,
+  VIDEO_UPLOAD_ICON,
 } from '../../src/widget/icons/index.js';
 
 function allRegistrySvgs(): string[] {
@@ -25,6 +26,7 @@ function allRegistrySvgs(): string[] {
     UI_CLOSE,
     PHOTO_ICON,
     PLUS_ICON,
+    VIDEO_UPLOAD_ICON,
   ];
 }
 
@@ -75,11 +77,11 @@ describe('svgStringToSymbol (icon sprite conversion)', () => {
   });
 });
 
-// The widget's chrome glyphs (caret/close) and content icons (photo/plus) share one Phosphor
+// The widget's chrome glyphs (caret/close) and content icons (photo/plus/upload video) share one Phosphor
 // family in icons/ui-icons.js. Guard the family invariants + the lossless sprite conversion.
 describe('shared UI icons (Phosphor family)', () => {
   test('every UI glyph is Phosphor 256-grid with documented stroke weight and currentColor', () => {
-    for (const svg of [UI_CARET_LEFT, UI_CARET_RIGHT, UI_CLOSE, PHOTO_ICON, PLUS_ICON]) {
+    for (const svg of [UI_CARET_LEFT, UI_CARET_RIGHT, UI_CLOSE, PHOTO_ICON, PLUS_ICON, VIDEO_UPLOAD_ICON]) {
       expect(svg).toContain('viewBox="0 0 256 256"');
       expect(svg).toContain('stroke="currentColor"');
       expect(svg).toContain('stroke-width="16"');
