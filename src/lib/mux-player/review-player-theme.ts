@@ -42,6 +42,8 @@ export const ADMIN_REVIEW_PLAYER_COLORS = {
 export const STOREFRONT_REVIEW_PLAYER_COLORS = {
   ...NEUTRAL_REVIEW_PLAYER_COLORS,
   controlForeground: reviewLightboxVideoVar('icon', NEUTRAL_REVIEW_PLAYER_COLORS.controlForeground),
+  centerPlayButtonBackground: 'rgba(0,0,0,0.20)',
+  centerPlayButtonHoverBackground: 'rgba(0,0,0,0.28)',
   progressPlayed: reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed),
   progressTrack: reviewLightboxVideoVar('progress-track', NEUTRAL_REVIEW_PLAYER_COLORS.progressTrack),
   progressThumbBorder: `1px solid ${reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed)}`,

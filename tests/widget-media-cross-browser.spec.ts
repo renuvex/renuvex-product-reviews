@@ -287,8 +287,8 @@ async function lightboxVideoState(page: Page) {
         themeMarkup.includes('media-control-bar,') &&
         themeMarkup.includes('media-control-bar *,') &&
         themeMarkup.includes('.center-controls.pre-playback media-play-button') &&
-        themeMarkup.includes('--media-control-background: rgba(0,0,0,0.68)') &&
-        themeMarkup.includes('--media-control-hover-background: rgba(0,0,0,0.72)') &&
+        themeMarkup.includes('--media-control-background: rgba(0,0,0,0.20)') &&
+        themeMarkup.includes('--media-control-hover-background: rgba(0,0,0,0.28)') &&
         themeMarkup.includes('--media-control-padding: 0') &&
         themeMarkup.includes('--media-button-icon-width: 34px') &&
         themeMarkup.includes('width: 72px') &&
