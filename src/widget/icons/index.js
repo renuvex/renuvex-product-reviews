@@ -25,5 +25,4 @@ export {
   PHOTO_ICON,
   PLUS_ICON,
   PLAY_ICON,
-  VIDEO_UPLOAD_ICON,
 } from './ui-icons.js';

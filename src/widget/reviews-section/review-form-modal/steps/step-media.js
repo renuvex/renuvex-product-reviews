@@ -1,5 +1,5 @@
 import { iconUseSvg, iconUseNode } from '../../../icons/star-sprite.js';
-import { PHOTO_ICON, UI_CLOSE, VIDEO_UPLOAD_ICON } from '../../../icons/index.js';
+import { PHOTO_ICON, PLAY_ICON, UI_CLOSE } from '../../../icons/index.js';
 import { reviewFormCopy } from '../copy.js';
 import {
   cancelReviewVideoUpload,
@@ -57,7 +57,7 @@ export function createStepMedia(state, opts) {
   videoButton.type = 'button';
   videoButton.className = 'renuvex-pr-fwizard-photo-add renuvex-pr-fwizard-media-action';
   videoButton.setAttribute('aria-label', 'Video ekle');
-  videoButton.innerHTML = iconUseSvg(VIDEO_UPLOAD_ICON) + '<span>Video Ekle</span>';
+  videoButton.innerHTML = iconUseSvg(PLAY_ICON) + '<span>Video Ekle</span>';
   mediaCard.appendChild(photoButton);
   mediaCard.appendChild(videoButton);
 
