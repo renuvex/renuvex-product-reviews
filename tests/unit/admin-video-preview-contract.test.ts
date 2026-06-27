@@ -89,8 +89,8 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain('export const STOREFRONT_REVIEW_PLAYER_COLORS');
     expect(themeSource).toContain('function reviewLightboxVideoVar');
     expect(themeSource).toContain("reviewLightboxVideoVar('icon', NEUTRAL_REVIEW_PLAYER_COLORS.controlForeground)");
-    expect(themeSource).toContain("centerPlayButtonBackground: 'rgba(0,0,0,0.20)'");
-    expect(themeSource).toContain("centerPlayButtonHoverBackground: 'rgba(0,0,0,0.28)'");
+    expect(themeSource).toContain("centerPlayButtonBackground: 'rgba(0,0,0,0.35)'");
+    expect(themeSource).toContain("centerPlayButtonHoverBackground: 'rgba(0,0,0,0.42)'");
     expect(themeSource).not.toContain("reviewLightboxVideoVar('button-bg'");
     expect(themeSource).not.toContain("reviewLightboxVideoVar('button-hover-bg'");
     expect(themeSource).toContain("reviewLightboxVideoVar('progress', NEUTRAL_REVIEW_PLAYER_COLORS.progressPlayed)");

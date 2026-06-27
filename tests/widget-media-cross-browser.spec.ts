@@ -288,8 +288,8 @@ async function lightboxVideoState(page: Page) {
         themeMarkup.includes('media-control-bar,') &&
         themeMarkup.includes('media-control-bar *,') &&
         themeMarkup.includes('.center-controls.pre-playback media-play-button') &&
-        themeMarkup.includes('--media-control-background: rgba(0,0,0,0.20)') &&
-        themeMarkup.includes('--media-control-hover-background: rgba(0,0,0,0.28)') &&
+        themeMarkup.includes('--media-control-background: rgba(0,0,0,0.35)') &&
+        themeMarkup.includes('--media-control-hover-background: rgba(0,0,0,0.42)') &&
         themeMarkup.includes('--media-control-padding: 0') &&
         themeMarkup.includes('--media-button-icon-width: 34px') &&
         themeMarkup.includes('width: 72px') &&
@@ -330,6 +330,10 @@ async function mediaGalleryRailState(page: Page) {
       activeIndex: thumbs.findIndex((el) => el.getAttribute('aria-current') === 'true'),
       videoThumbs: thumbs.filter((el) => el.classList.contains('renuvex-pr-modal-thumb-video')).length,
       playIcons: thumbs.filter((el) => !!el.querySelector('.renuvex-pr-modal-thumb-play svg')).length,
+      playBackgrounds: thumbs
+        .map((el) => el.querySelector<HTMLElement>('.renuvex-pr-modal-thumb-play'))
+        .filter((el): el is HTMLElement => !!el)
+        .map((el) => getComputedStyle(el).backgroundColor),
       durationBadges: thumbs.filter((el) => !!el.querySelector('.renuvex-pr-modal-thumb-duration')).length,
       leftVideoPlaying: left?.classList.contains('renuvex-pr-modal-left-video-playing') || false,
       pointerEvents: railStyle?.pointerEvents || '',
@@ -455,7 +459,7 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
     expect(box.height).toBeGreaterThan(0);
     expect(box.durationBadges).toBe(0);
     expect(box.hasPlayIcon).toBe(true);
-    expect(box.playBackground).toBe('rgba(0, 0, 0, 0.2)');
+    expect(box.playBackground).toBe('rgba(0, 0, 0, 0.35)');
     const expectedPlay = expectedMediaPlaySizes(expectedWidth);
     expect(box.playWidth).toBeGreaterThan(expectedPlay.container - 1);
     expect(box.playWidth).toBeLessThan(expectedPlay.container + 1);
@@ -553,6 +557,7 @@ test('media gallery lightbox rail renders video representative thumbnails', asyn
     activeIndex: 0,
     videoThumbs: 2,
     playIcons: 2,
+    playBackgrounds: ['rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.35)'],
     durationBadges: 0,
   });
   await expect.poll(async () => (await lightboxVideoState(page)).playbackId).toBe('video-1');
