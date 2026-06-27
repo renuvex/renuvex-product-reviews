@@ -202,6 +202,7 @@ async function mediaBox(page: Page, selector: string) {
     const playIcon = play?.querySelector<SVGElement>('svg');
     const playRect = play?.getBoundingClientRect();
     const playIconRect = playIcon?.getBoundingClientRect();
+    const playStyle = play ? getComputedStyle(play) : null;
     return {
       width: rect.width || computedWidth,
       height: rect.height || computedHeight,
@@ -209,6 +210,7 @@ async function mediaBox(page: Page, selector: string) {
       hasPlayIcon: !!playIcon,
       playWidth: playRect?.width || 0,
       playIconWidth: playIconRect?.width || 0,
+      playBackground: playStyle?.backgroundColor || '',
       posterTag: poster?.tagName || '',
       posterSrc: poster?.getAttribute('src') || '',
       posterSrcset: poster?.getAttribute('srcset') || '',
@@ -281,12 +283,12 @@ async function lightboxVideoState(page: Page) {
         themeMarkup.includes('--media-text-background: #000000') &&
         themeMarkup.includes('--media-control-background: #000000') &&
         themeMarkup.includes('--media-text-color: var(--renuvex-pr-review-lightbox-video-icon, #ffffff)'),
-      themeHasTransparentCenterPlayButton:
+      themeHasFilledCenterPlayButton:
         themeMarkup.includes('media-control-bar,') &&
         themeMarkup.includes('media-control-bar *,') &&
         themeMarkup.includes('.center-controls.pre-playback media-play-button') &&
-        themeMarkup.includes('--media-control-background: transparent') &&
-        themeMarkup.includes('--media-control-hover-background: transparent') &&
+        themeMarkup.includes('--media-control-background: rgba(0,0,0,0.68)') &&
+        themeMarkup.includes('--media-control-hover-background: rgba(0,0,0,0.84)') &&
         themeMarkup.includes('--media-icon-color: var(--renuvex-pr-review-lightbox-video-icon, #ffffff)') &&
         themeMarkup.includes('--media-text-color: var(--renuvex-pr-review-lightbox-video-icon, #ffffff)'),
       accentColor: player.getAttribute('accent-color') || '',
@@ -361,6 +363,7 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
     expect(box.height).toBeGreaterThan(0);
     expect(box.duration).toBe('0:45');
     expect(box.hasPlayIcon).toBe(true);
+    expect(box.playBackground).toBe('rgba(0, 0, 0, 0.68)');
     const expectedPlay = expectedMediaPlaySizes(expectedWidth);
     expect(box.playWidth).toBeGreaterThan(expectedPlay.container - 1);
     expect(box.playWidth).toBeLessThan(expectedPlay.container + 1);
@@ -412,7 +415,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
     themeHasPointerContrast: true,
     themeHidesTimelinePreviewThumbnail: true,
     themeHasPreviewTimeContrast: true,
-    themeHasTransparentCenterPlayButton: true,
+    themeHasFilledCenterPlayButton: true,
     accentColor: 'var(--renuvex-pr-review-lightbox-video-icon, #ffffff)',
     primaryColor: 'var(--renuvex-pr-review-lightbox-video-icon, #ffffff)',
     secondaryColor: '#000000',
