@@ -11,7 +11,7 @@ const NEUTRAL_REVIEW_PLAYER_COLORS = {
   controlBackground: '#000000',
   controlHoverBackground: 'rgba(0,0,0,0.84)',
   centerPlayButtonBackground: 'rgba(0,0,0,0.68)',
-  centerPlayButtonHoverBackground: 'rgba(0,0,0,0.84)',
+  centerPlayButtonHoverBackground: 'rgba(0,0,0,0.72)',
   controlsBackdrop: 'rgba(0,0,0,0.58)',
   menuBackground: '#000000',
   menuBorder: 'rgba(255,255,255,0.18)',

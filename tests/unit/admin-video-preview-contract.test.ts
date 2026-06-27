@@ -93,7 +93,7 @@ describe('admin video preview contract', () => {
     expect(themeSource).toContain("controlBackground: '#000000'");
     expect(themeSource).toContain("controlHoverBackground: 'rgba(0,0,0,0.84)'");
     expect(themeSource).toContain("centerPlayButtonBackground: 'rgba(0,0,0,0.68)'");
-    expect(themeSource).toContain("centerPlayButtonHoverBackground: 'rgba(0,0,0,0.84)'");
+    expect(themeSource).toContain("centerPlayButtonHoverBackground: 'rgba(0,0,0,0.72)'");
     expect(themeSource).toContain("controlsBackdrop: 'rgba(0,0,0,0.58)'");
     expect(themeSource).toContain("menuBackground: '#000000'");
     expect(themeSource).toContain("menuText: '#ffffff'");
