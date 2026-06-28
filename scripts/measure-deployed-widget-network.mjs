@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 const WIDGET_ORIGIN = process.env.MEASURE_WIDGET_ORIGIN || 'https://widget.renuvex.app';
 const API_ORIGIN = process.env.MEASURE_WIDGET_API_ORIGIN || WIDGET_ORIGIN;
+const READ_API_ORIGIN = process.env.MEASURE_WIDGET_READ_API_ORIGIN || WIDGET_ORIGIN;
 const MERCHANT_ORIGIN = process.env.MEASURE_MERCHANT_ORIGIN || 'https://merchant-measure.test';
 const PUBLIC_KEY = process.env.MEASURE_PUBLIC_API_KEY || 'ci-public-key';
 const REVIEW_CLOUD_NAME = resolveReviewCloudName();
@@ -208,14 +209,14 @@ async function configureRoutes(page, scenario) {
       body: JSON.stringify(settingsResponse(scenario)),
     });
   });
-  await page.route(`${API_ORIGIN}/api/public/ratings**`, async (route) => {
+  await page.route(`${READ_API_ORIGIN}/api/public/ratings**`, async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(ratingsResponse()),
     });
   });
-  await page.route(`${API_ORIGIN}/api/public/reviews**`, async (route) => {
+  await page.route(`${READ_API_ORIGIN}/api/public/reviews**`, async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
@@ -381,6 +382,7 @@ function printReport(results) {
   console.log(``);
   console.log(`Widget origin: ${WIDGET_ORIGIN}`);
   console.log(`API origin: ${API_ORIGIN}`);
+  console.log(`Read API origin: ${READ_API_ORIGIN}`);
   console.log(`Measured at: ${new Date().toISOString()}`);
   console.log(``);
   console.log(`| Scenario | Scripts | Encoded bytes | Decoded bytes | API calls | Chunks |`);
