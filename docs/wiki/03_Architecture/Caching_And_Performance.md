@@ -99,8 +99,8 @@ tracked retention files.
 ## Static widget assets (Cloudflare Worker target)
 
 [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]] keeps the same cache
-contract when `widget.renuvex.app` moves from Vercel static hosting to
-Cloudflare Worker Static Assets:
+contract now that `widget.renuvex.app` is served by Cloudflare Worker Static
+Assets:
 
 | Worker path | `Cache-Control` |
 |---|---|

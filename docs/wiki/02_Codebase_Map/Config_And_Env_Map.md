@@ -107,7 +107,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 | [ikas.config.json](ikas.config.json) | ikas dev tooling: port (3000), oauth redirect path (`/api/oauth/callback/ikas`), run command |
 | [next.config.js](next.config.js) | Next.js config |
 | [vercel.json](vercel.json) | `regions: ["fra1"]`, daily Vercel-compatible maintenance cron, monthly fallback cleanup cron, widget static asset cache headers |
-| [wrangler.widget.jsonc](wrangler.widget.jsonc) | Cloudflare Worker Static Assets config for future `widget.renuvex.app` asset-only delivery. No routes/custom domains are stored in source; external cutover remains separately approved. |
+| [wrangler.widget.jsonc](wrangler.widget.jsonc) | Cloudflare Worker Static Assets config for live `widget.renuvex.app` asset-only delivery. No routes/custom domains are stored in source; future Worker redeploys or domain/DNS edits remain separately approved. |
 | [components.json](components.json) | shadcn/ui CLI/MCP config |
 | [tsconfig.json](tsconfig.json) | TS config (paths: `@/*` → `src/*`) |
 | [eslint.config.mjs](eslint.config.mjs) | ESLint flat config |
