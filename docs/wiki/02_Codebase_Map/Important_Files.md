@@ -122,7 +122,7 @@ related:
 - **Be careful:** SSR-safe (guarded). If anything above this in the import graph reads `document` unguarded, the dashboard build will break — already happened (see `core/config.js` comment).
 
 ### [src/widget/core/origins.js](src/widget/core/origins.js)
-- **What:** Separates the script/static asset origin, backend/API origin, and optional public-read origin. `STOREFRONT_WIDGET_API_BASE_URL` and `STOREFRONT_WIDGET_READ_API_BASE_URL` are embedded at build time; unset read origin falls back to the API origin.
+- **What:** Separates the script/static asset origin, backend/API origin, and optional public-read origin. `STOREFRONT_WIDGET_API_BASE_URL` and `STOREFRONT_WIDGET_READ_API_BASE_URL` are embedded at build time; if the read origin is unset, the build falls back to `STOREFRONT_WIDGET_BASE_URL`, then runtime falls back to the API origin.
 - **Be careful:** Keep the helper origin-only. Do not allow path/query/hash API bases or arbitrary protocols. Localhost/private origins are only for explicit local-development overrides in the build script.
 
 ### [public/widget.js](public/widget.js)

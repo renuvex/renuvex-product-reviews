@@ -36,7 +36,7 @@ source_files:
 # ADR 0033: Cloudflare Worker Widget Asset Delivery
 
 ## Status
-Accepted and live for `widget.renuvex.app` asset delivery. V2 public-read proxy support is implemented in source but requires separate Worker deploy and Vercel env cutover approval before it becomes live. Future Worker redeploys, custom domain/DNS changes, Vercel env/domain changes, and any ikas script write remain explicit stop/go operations.
+Accepted and live for `widget.renuvex.app` asset delivery and V2 allowlisted public-read proxying. Future Worker redeploys, custom domain/DNS changes, Vercel env/domain changes, and any ikas script write remain explicit stop/go operations.
 
 ## Context
 The storefront widget currently uses one stable script URL:
@@ -84,7 +84,7 @@ The widget runtime now has three separate origins:
 
 - asset origin: discovered from the injected `<script src>` URL;
 - API/write origin: build-time `STOREFRONT_WIDGET_API_BASE_URL`, falling back to the asset origin when unset;
-- read API origin: build-time `STOREFRONT_WIDGET_READ_API_BASE_URL`, falling back to the API/write origin when unset.
+- read API origin: build-time `STOREFRONT_WIDGET_READ_API_BASE_URL`, falling back to `STOREFRONT_WIDGET_BASE_URL`, then the API/write origin when both read/widget origins are unset.
 
 `STOREFRONT_WIDGET_API_BASE_URL` is normalized to an origin. In production it should be:
 

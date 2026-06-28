@@ -265,7 +265,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [scripts/build-widget.mjs](scripts/build-widget.mjs) drives esbuild.
 - Output: classic loader (`public/widget.js`) plus ESM runtime/chunks
   (`public/widget-runtime/*`), ES2017, minified in prod, banner with build timestamp.
-- The build injects `__RENUVEX_PR_API_BASE_URL__` from `STOREFRONT_WIDGET_API_BASE_URL` and `__RENUVEX_PR_READ_API_BASE_URL__` from `STOREFRONT_WIDGET_READ_API_BASE_URL`. Leave the read value unset until the Worker read proxy has been deployed; unset falls back to the API origin.
+- The build injects `__RENUVEX_PR_API_BASE_URL__` from `STOREFRONT_WIDGET_API_BASE_URL` and `__RENUVEX_PR_READ_API_BASE_URL__` from `STOREFRONT_WIDGET_READ_API_BASE_URL`. After Worker V2 cutover, the read value should be `https://widget.renuvex.app`; if it is unset, the build falls back to `STOREFRONT_WIDGET_BASE_URL`, then runtime falls back to the API origin.
 - The build injects `__RENUVEX_PR_WIDGET_VERSION__` from the build timestamp; the runtime exposes it through `window.__RENUVEX_PRODUCT_REVIEWS__` and widget-error health events.
 - Validation: post-build `node --check` for the classic loader plus esbuild ESM
   bundling and `public/widget-runtime/build-manifest.json` output metadata.
@@ -320,7 +320,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
-- 2026-06-28: Added the Cloudflare Worker V2 public-read cache source contract from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. Widget asset, backend API, and read API origins are now separate; the read origin falls back to the API origin until V2 Worker/env cutover is approved.
+- 2026-06-28: Cloudflare Worker V2 public-read cache is live for allowlisted ratings/reviews reads. Widget asset, backend API, and read API origins are separate; the read origin is `widget.renuvex.app` while settings/write/upload/video/error calls stay on `app.renuvex.app`.
 - 2026-06-06: Public rating/summary aggregate reads moved to the backend `ProductReviewSummary` read model. Widget response contracts are unchanged; future high-read surfaces should define their aggregate read model before adding public fan-out. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-06-02: Corrected shared summary filter pointer semantics after desktop testing: touch/pen filter options still activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so every summary layout can reopen the filter immediately after a sort-triggered render. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].
 - 2026-06-02: Strengthened compact/mobile rating-bar visual state: inactive filtered rows now use the explicit `.renuvex-pr-bar-dimmed` CSS state class, and stable widget entrypoints revalidate on reload while hashed runtime chunks stay immutable. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].

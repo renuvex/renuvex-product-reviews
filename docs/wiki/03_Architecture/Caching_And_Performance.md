@@ -187,8 +187,8 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
-- 2026-06-28: Added the Cloudflare Worker V2 public-read cache source path for `ratings`, `ratings-by-slug`, and `reviews`. Settings/write/upload/video paths remain on `app.renuvex.app`, and live V2 activation still requires Worker deploy plus `STOREFRONT_WIDGET_READ_API_BASE_URL` cutover approval.
-- 2026-06-28: Added the Cloudflare Worker Static Assets target for `widget.renuvex.app`. The Worker mirrors existing widget cache headers and fails closed for `/api/*`; public API caching remains on Vercel until V2 read cutover.
+- 2026-06-28: Cloudflare Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. Settings/write/upload/video paths remain on `app.renuvex.app`.
+- 2026-06-28: Cloudflare Worker Static Assets is live for `widget.renuvex.app`; Worker V2 read-through caching is live for allowlisted public ratings/reviews reads and remains fail-closed for settings/write/upload/video paths.
 - 2026-06-24: Added `scripts/clean-widget-runtime-untracked.mjs` and npm wrappers to separate local untracked widget build leftovers from the committed seven-day runtime retention contract. The default command is dry-run; `--apply` deletes only untracked files outside the current manifest.
 - 2026-06-08: Public review-list exact `totalCount` / `totalPages` moved from raw `Review.count()` to `ProductReviewSummary` buckets, preserving response shape while removing the remaining aggregate scan from the public read path.
 - 2026-06-07: Public photo-review filtering moved from `Review.images` text matching to indexed `Review.hasImages`; normalized image rows live in `ReviewMedia`. See [[ADR_0027_Review_Media_Read_Model]].

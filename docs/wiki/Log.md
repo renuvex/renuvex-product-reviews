@@ -23,6 +23,13 @@ source_files:
 
 # Project Log
 
+## 2026-06-28 - deploy | Complete Cloudflare Worker V2 public-read cutover
+- Deployed Worker `renuvex-widget-assets` version `e82bfd0a-1868-4171-b20c-5496c5d41bed` with current widget assets and allowlisted read proxy support.
+- Committed widget runtime `runtime-DOJW3JHM.js` for the Worker asset graph and verified live `widget.renuvex.app` serves it from Cloudflare.
+- Verified `GET /api/public/ratings` and `GET /api/public/reviews` return `X-Renuvex-Edge-Cache: MISS` then `HIT` on repeat requests, while `GET /api/public/settings` and video upload capability stay fail-closed on the Worker.
+- Updated deployed-widget measurement to support separate read API origin; the live measurement passed with assets/read from `https://widget.renuvex.app` and backend/write from `https://app.renuvex.app`.
+- Added a build-time fallback so unset `STOREFRONT_WIDGET_READ_API_BASE_URL` uses `STOREFRONT_WIDGET_BASE_URL` before runtime falls back to the backend API origin.
+
 ## 2026-06-28 - build | Prepare Cloudflare Worker V2 public-read cache
 - Added source support for `STOREFRONT_WIDGET_READ_API_BASE_URL` so storefront ratings/reviews reads can use a separate read origin while settings, upload, submit, video, metrics, and widget-error stay on the backend API origin.
 - Extended Worker `renuvex-widget-assets` with a fail-closed allowlist for `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`, using 60 second edge caching only for safe 200 JSON responses.

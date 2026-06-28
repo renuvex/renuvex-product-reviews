@@ -78,7 +78,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 ### Storefront review submission
 1. Customer opens product page; ikas serves the `<script src="…/widget.js…">` tag.
 2. Widget reads `publicApiKey` (`= merchantId`) from script src and computes `ASSET_BASE` from the script origin.
-3. Widget calls `API_BASE /api/public/settings` (cached 60s/300s SWR), then `READ_API_BASE /api/public/reviews?storeId&productId`. In the Worker delivery target, `ASSET_BASE` is `https://widget.renuvex.app`, `API_BASE` is `https://app.renuvex.app`, and `READ_API_BASE` falls back to `API_BASE` until the Worker V2 read cutover is approved.
+3. Widget calls `API_BASE /api/public/settings` (cached 60s/300s SWR), then `READ_API_BASE /api/public/reviews?storeId&productId`. In the Worker delivery target, `ASSET_BASE` is `https://widget.renuvex.app`, `API_BASE` is `https://app.renuvex.app`, and `READ_API_BASE` is `https://widget.renuvex.app` for allowlisted public ratings/reviews reads.
 4. Customer clicks "Write a review" → multi-step modal → optional image uploads via Cloudinary (signed direct upload).
 5. Submit → `POST /api/public/reviews` → server enforces profanity filter + rate limit → writes Review with status by auto-approve mode.
 

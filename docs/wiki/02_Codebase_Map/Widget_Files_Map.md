@@ -202,7 +202,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 ## Cloudflare Worker asset delivery
 `widget.renuvex.app` is the live Cloudflare Worker Static Assets origin for storefront widget delivery. The repo-level pieces are:
 - [src/widget/core/origins.js](src/widget/core/origins.js) keeps static asset origin and public API origin separate;
-- [scripts/build-widget.mjs](scripts/build-widget.mjs) injects `STOREFRONT_WIDGET_API_BASE_URL` and optional `STOREFRONT_WIDGET_READ_API_BASE_URL` into the widget build when set;
+- [scripts/build-widget.mjs](scripts/build-widget.mjs) injects `STOREFRONT_WIDGET_API_BASE_URL` and `STOREFRONT_WIDGET_READ_API_BASE_URL` into the widget build; if the read value is unset, it falls back to `STOREFRONT_WIDGET_BASE_URL`;
 - [scripts/prepare-widget-worker-assets.mjs](scripts/prepare-widget-worker-assets.mjs) copies only widget runtime files into `.tmp/widget-worker-assets`;
 - [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts) serves the widget asset surface and V2 allowlisted public read paths, while failing closed for every other `/api/*` path;
 - [wrangler.widget.jsonc](wrangler.widget.jsonc) owns Worker Static Assets config without routes, domains, secrets, or data bindings.

@@ -137,7 +137,9 @@ function normalizePublicCloudName(value) {
 }
 
 const storefrontWidgetApiBaseUrl = resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_API_BASE_URL');
-const storefrontWidgetReadApiBaseUrl = resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_READ_API_BASE_URL');
+const storefrontWidgetReadApiBaseUrl =
+  resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_READ_API_BASE_URL') ||
+  resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_BASE_URL');
 const defaultReviewImageCloudName = normalizePublicCloudName(
   getEnvValue('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') || getEnvValue('CLOUDINARY_CLOUD_NAME'),
 );
