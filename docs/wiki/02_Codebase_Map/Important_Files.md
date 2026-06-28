@@ -3,7 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-18
+updated: 2026-06-28
+last_verified: 2026-06-28
 tags:
   - critical-files
 related:
@@ -117,8 +118,12 @@ related:
 - **Be careful:** New icon consumers should import from `src/widget/icons/index.js`. [src/widget/icons.js](src/widget/icons.js) remains only as a backward-compatible re-export.
 
 ### [src/widget/core/config.js](src/widget/core/config.js)
-- **What:** Reads `publicApiKey` and base URL from the widget's own `<script>` tag.
+- **What:** Reads `publicApiKey`, `ASSET_BASE`, and `API_BASE` for the storefront widget.
 - **Be careful:** SSR-safe (guarded). If anything above this in the import graph reads `document` unguarded, the dashboard build will break — already happened (see `core/config.js` comment).
+
+### [src/widget/core/origins.js](src/widget/core/origins.js)
+- **What:** Separates the script/static asset origin from the backend/API origin. `STOREFRONT_WIDGET_API_BASE_URL` is embedded at build time; unset falls back to the script origin.
+- **Be careful:** Keep the helper origin-only. Do not allow path/query/hash API bases or arbitrary protocols. Localhost/private origins are only for explicit local-development overrides in the build script.
 
 ### [public/widget.js](public/widget.js)
 - **What:** Built bundle.
@@ -129,6 +134,18 @@ related:
 ### [scripts/build-widget.mjs](scripts/build-widget.mjs)
 - **What:** esbuild driver. IIFE format, ES2017 target, minified in prod, `node --check` validates output.
 - **Be careful:** `--theme=new-theme` aliases swap theme files at bundle time. If you add a theme variant, declare it in the `validThemes` allowlist and provide all aliased modules.
+
+### [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
+- **What:** Cloudflare Worker Static Assets entry for `widget.renuvex.app`.
+- **Be careful:** Asset-only by design. It may serve widget runtime files and `/__health`; `/api/*` must remain fail-closed. Do not add secrets, DB, Mux, QStash, Cloudinary, R2, or provider calls to this Worker.
+
+### [wrangler.widget.jsonc](wrangler.widget.jsonc)
+- **What:** Cloudflare Worker config for widget static asset delivery.
+- **Be careful:** No routes/custom domains are stored in source. Any Worker deploy, custom domain, DNS, or Cloudflare mutation requires explicit stop/go approval.
+
+### [scripts/prepare-widget-worker-assets.mjs](scripts/prepare-widget-worker-assets.mjs)
+- **What:** Copies only the widget asset surface into `.tmp/widget-worker-assets` for Wrangler dry-runs/deploys.
+- **Be careful:** It must stay manifest-aware and retention-aware. Do not replace it with a full `public/` copy.
 
 ### [vercel.json](vercel.json)
 - **What:** `regions: ["fra1"]`, daily maintenance cron (`/api/admin/daily-maintenance`), monthly Cloudinary fallback cleanup, and widget static asset cache headers.
@@ -183,6 +200,7 @@ related:
 - [[Security_And_Rate_Limits]]
 
 ## Change Log
+- 2026-06-28: Added the split-origin widget helper and Cloudflare Worker asset-delivery files to the critical-file list.
 - 2026-05-12: Added [src/widget/icons/index.js](src/widget/icons/index.js) to the widget runtime hot-list after splitting review/rating and filter icon registries under [src/widget/icons/](src/widget/icons/).
 - 2026-05-11: Added [src/widget/core/error-reporter.js](src/widget/core/error-reporter.js) and [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts) under Observability. Together they close the widget-side visibility gap from ADR_0009 by forwarding uncaught widget errors to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited server endpoint. See [[ADR_0010_Widget_Error_Forwarding]].
 - 2026-05-11: Added the Observability (Sentry) section: [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), [src/instrumentation.ts](src/instrumentation.ts), [src/instrumentation-client.ts](src/instrumentation-client.ts), [src/app/global-error.tsx](src/app/global-error.tsx), and the `withSentryConfig` wrapping in [next.config.js](next.config.js). Each entry calls out the `sendDefaultPii: false` invariant, env-driven DSN, prod sample rates, and the wizard-wrapper ordering rule. See [[ADR_0009_Sentry_Observability_Strategy]].

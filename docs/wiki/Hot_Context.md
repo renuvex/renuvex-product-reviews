@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-27
-last_verified: 2026-06-27
+updated: 2026-06-28
+last_verified: 2026-06-28
 confidence: high
 tags:
   - hot-context
@@ -18,6 +18,7 @@ related:
   - "[[ADR_0023_Widget_Lifecycle_Gating_Contract]]"
   - "[[ADR_0024_Badge_Review_Surface_Separation]]"
   - "[[ADR_0032_Review_Video_On_Mux]]"
+  - "[[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Test_Strategy]]"
 source_files:
@@ -44,10 +45,12 @@ source_files:
   - "tests/unit/widget-hover-gating.test.ts"
   - "tests/unit/widget-settings.test.ts"
   - "scripts/check-widget-runtime.mjs"
+  - "scripts/prepare-widget-worker-assets.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
   - ".github/workflows/widget-smoke.yml"
   - "src/widget/loader.js"
+  - "src/widget/core/origins.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/state.js"
   - "src/widget/observer.js"
@@ -99,6 +102,8 @@ source_files:
   - "src/lib/media/jobs.ts"
   - "src/lib/media/lifecycle.ts"
   - "src/lib/media/sessions.ts"
+  - "workers/widget-delivery/src/index.ts"
+  - "wrangler.widget.jsonc"
 ---
 
 # Hot Context
@@ -114,6 +119,7 @@ source_files:
 - For video work, no deploy, migration apply, env write, provider write, or teardown happens without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-06-28: Cloudflare Worker widget asset delivery is local-source ready. `widget.renuvex.app` is the future asset-only Worker origin; `app.renuvex.app` remains backend/API/upload/Mux/QStash. External env, deploy, DNS, and ikas writes stay stop/go gated.
 - 2026-06-28: Media-gallery lightbox opens now show a bottom rail with one first trusted image/video per media-backed review; ordinary review opens keep current-review media thumbnails.
 - 2026-06-27: Existing videos stay visible when video uploads are disabled. Media gallery reads always use `hasMedia=true`; the public filter uses `ProductReviewSummary.mediaReviewCount > photoReviewCount` to choose mixed media vs photo-only.
 - 2026-06-23: Review Video playback uses official Mux Player. Storefront videos expose public `playbackId`; admin preview uses signed Mux Player attributes. Mux Data tracking/cookies stay disabled.
@@ -125,6 +131,7 @@ source_files:
 ## Current Risks / Open Questions
 - The storefront widget is Turkish-first today. There is no i18n layer, locale resolver, or per-locale settings model yet. Future English/German support requires a proper string catalog, locale source, and accessibility-string migration; do not treat the current merchant-editable copy fields as localization.
 - Keep live post-deploy smoke after runtime widget changes.
+- Worker delivery cutover is not live yet. First add/verify `STOREFRONT_WIDGET_API_BASE_URL=https://app.renuvex.app`, redeploy Vercel, canary `widget-canary.renuvex.app`, and keep rollback DNS evidence.
 - Mux cleanup gates closed for the old video provider: contract migration verified, old Vercel Cloudflare video env vars absent, and Cloudflare Stream/R2 video inventory empty. Cloudflare DNS/zone and future Worker delivery infrastructure stay out of this cleanup scope.
 - Supabase RLS audit: repo uses server-side Prisma and no browser Supabase client; SQL privilege checks did not show `anon`/`authenticated` table access, but most public app tables still have RLS disabled. Treat RLS/default-grants hardening as a public-launch blocker; do not enable blindly during active schema churn.
 - Theme adapters still depend on Admin API `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
@@ -133,6 +140,7 @@ source_files:
 ## Read Next
 - [[Current_Status]]
 - [[Test_Strategy]]
+- [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
 - [[ADR_0032_Review_Video_On_Mux]]
 - [[Review_Video_Canary_Runbook]]
 - [[Review_Video_Manual_Repair_Runbook]]

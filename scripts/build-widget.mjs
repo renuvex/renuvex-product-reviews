@@ -79,11 +79,64 @@ function getEnvValue(key) {
     '';
 }
 
+function normalizeHostname(hostname) {
+  return String(hostname || '').toLowerCase().replace(/^\[/, '').replace(/\]$/, '');
+}
+
+function isPrivateOrLocalIPv4(hostname) {
+  var parts = String(hostname || '').split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return false;
+  }
+  var first = parts[0];
+  var second = parts[1];
+  return first === 10 || first === 127 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
+}
+
+function isLocalOrPrivateHost(hostname) {
+  var normalized = normalizeHostname(hostname);
+  return normalized === 'localhost' ||
+    normalized === '0.0.0.0' ||
+    normalized === '::1' ||
+    normalized.endsWith('.localhost') ||
+    isPrivateOrLocalIPv4(normalized);
+}
+
+function resolveStorefrontWidgetApiBaseUrl() {
+  var raw = getEnvValue('STOREFRONT_WIDGET_API_BASE_URL').trim();
+  if (!raw) return '';
+
+  var parsed;
+  try {
+    parsed = new URL(raw);
+  } catch (_) {
+    console.error(`[build-widget] ERROR Invalid STOREFRONT_WIDGET_API_BASE_URL: ${raw}`);
+    process.exit(1);
+  }
+
+  var allowLocal = getEnvValue('ALLOW_LOCAL_STOREFRONT_WIDGET_URL') === 'true';
+  if (!allowLocal && parsed.protocol !== 'https:') {
+    console.error('[build-widget] ERROR STOREFRONT_WIDGET_API_BASE_URL must use https unless ALLOW_LOCAL_STOREFRONT_WIDGET_URL=true.');
+    process.exit(1);
+  }
+
+  if (!allowLocal && isLocalOrPrivateHost(parsed.hostname)) {
+    console.error('[build-widget] ERROR STOREFRONT_WIDGET_API_BASE_URL must not point to localhost or a private network address.');
+    process.exit(1);
+  }
+
+  parsed.hash = '';
+  parsed.search = '';
+  parsed.pathname = '';
+  return parsed.toString().replace(/\/$/, '');
+}
+
 function normalizePublicCloudName(value) {
   const cloudName = typeof value === 'string' ? value.trim() : '';
   return /^[A-Za-z0-9_-]+$/.test(cloudName) ? cloudName : '';
 }
 
+const storefrontWidgetApiBaseUrl = resolveStorefrontWidgetApiBaseUrl();
 const defaultReviewImageCloudName = normalizePublicCloudName(
   getEnvValue('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') || getEnvValue('CLOUDINARY_CLOUD_NAME'),
 );
@@ -91,6 +144,7 @@ const defaultReviewImageCloudName = normalizePublicCloudName(
 function createDefine(runtimePath) {
   return {
     __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
+    __RENUVEX_PR_API_BASE_URL__: JSON.stringify(storefrontWidgetApiBaseUrl),
     __RENUVEX_PR_RUNTIME_PATH__: JSON.stringify(runtimePath),
     __RENUVEX_PR_WIDGET_VERSION__: JSON.stringify(buildTime),
   };

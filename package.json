@@ -14,6 +14,10 @@
     "check:widget-js": "node scripts/check-widget-runtime.mjs",
     "clean:widget-runtime": "node scripts/clean-widget-runtime-untracked.mjs",
     "clean:widget-runtime:apply": "node scripts/clean-widget-runtime-untracked.mjs --apply",
+    "worker:widget:prepare-assets": "node scripts/prepare-widget-worker-assets.mjs",
+    "worker:widget:types": "pnpm worker:widget:prepare-assets && wrangler types workers/widget-delivery/worker-configuration.d.ts --config wrangler.widget.jsonc --env-file=.tmp/widget-worker.env --include-runtime=false",
+    "worker:widget:deploy:dry-run": "pnpm worker:widget:prepare-assets && wrangler deploy --config wrangler.widget.jsonc --env-file=.tmp/widget-worker.env --dry-run",
+    "worker:widget:deploy": "pnpm worker:widget:prepare-assets && wrangler deploy --config wrangler.widget.jsonc --env-file=.tmp/widget-worker.env",
     "measure:deployed-widget": "node scripts/measure-deployed-widget-network.mjs",
     "verify:deployed-jsonld": "node scripts/verify-deployed-jsonld.mjs",
     "verify:preview-db-isolation": "node scripts/verify-preview-db-isolation.mjs",
@@ -106,7 +110,8 @@
     "prisma": "^6.14.0",
     "tw-animate-css": "^1.3.7",
     "typescript": "^5",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.7",
+    "wrangler": "^4.105.0"
   },
   "prettier": {
     "semi": true,

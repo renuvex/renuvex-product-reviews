@@ -3,7 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-01
+updated: 2026-06-28
+last_verified: 2026-06-28
 tags:
   - structure
 related:
@@ -16,6 +17,8 @@ related:
 
 ## Summary
 Top-level layout. Three big buckets: the Next.js app (`src/app/*`), the storefront widget source (`src/widget/*`), and the Prisma DB (`prisma/`). The widget bundle is checked into `public/widget.js`. Update this page whenever a top-level folder is added, removed, or renamed.
+
+Cloudflare Worker widget delivery adds a small fourth top-level code bucket: `workers/widget-delivery/`. It is asset-only for `widget.renuvex.app`, uses `wrangler.widget.jsonc`, and must not own `/api/*`, DB, Mux, QStash, Cloudinary, R2, or webhook behavior.
 
 ## Tree (annotated)
 
@@ -120,7 +123,8 @@ renuvex-product-reviews/
 │     ├─ core/
 │     │  ├─ badge.js
 │     │  ├─ cache.js
-│     │  ├─ config.js            # PUBLIC_API_KEY + API_BASE from <script src=...>
+│     │  ├─ config.js            # PUBLIC_API_KEY + ASSET_BASE + API_BASE
+│     │  ├─ origins.js           # Script asset origin + explicit API origin normalization
 │     │  ├─ fetch.js
 │     │  ├─ helpers.js
 │     │  ├─ product-title.js     # Heuristic: locate product title in arbitrary themes
@@ -156,6 +160,7 @@ renuvex-product-reviews/
 - `src/widget/icons/` is the current icon source of truth. Import new code from [src/widget/icons/index.js](src/widget/icons/index.js); [src/widget/icons.js](src/widget/icons.js) exists only as a compatibility re-export.
 - `review-images.ts` is the server-side source of truth for trusted review image URLs. Widget helper logic in `src/widget/core/helpers.js` mirrors this contract for storefront defense in depth.
 - **Theme adapter note**: runtime theme selection is through public settings (`runtime.themeAdapterKey/source`) and `src/widget/themes/current-adapter.js`, not per-theme bundle URLs. `src/widget/reviews-section/styles.js` is the `CLASSIC_CSS` aggregator for shared review-section CSS, with ownership modules under `src/widget/reviews-section/styles/`; `src/widget/themes/ozy/styles.js` is only a compatibility re-export / future Ozy-specific override placeholder. The older `--theme=new-theme` build alias still exists, but it is not the current adapter model. See [[Theme_Adapter_Playbook]].
+- **Worker delivery note**: `workers/widget-delivery/`, `wrangler.widget.jsonc`, and `scripts/prepare-widget-worker-assets.mjs` are the Cloudflare Worker Static Assets delivery pieces for the storefront widget. They deploy only generated widget files prepared under `.tmp/widget-worker-assets`; do not deploy the full `public/` tree.
 
 ## Obsidian Links
 - [[Important_Files]]
@@ -165,6 +170,7 @@ renuvex-product-reviews/
 - [[Widget_Files_Map]]
 
 ## Change Log
+- 2026-06-28: Added the Cloudflare Worker widget delivery source bucket and its asset-only boundary to the folder structure notes.
 - 2026-06-01: Split shared review-section CSS ownership under `src/widget/reviews-section/styles/` while preserving `src/widget/reviews-section/styles.js` as the stable `CLASSIC_CSS` aggregator.
 - 2026-05-28: Renamed the review-section runtime folder to `src/widget/reviews-section/` and moved the shared PDP title finder to `src/widget/core/product-title.js`.
 - 2026-05-12: Split the widget icon registry into `src/widget/icons/` modules and kept [src/widget/icons.js](src/widget/icons.js) as a compatibility re-export.

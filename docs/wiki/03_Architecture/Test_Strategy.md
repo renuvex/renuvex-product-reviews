@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-06-28
+last_verified: 2026-06-28
 confidence: high
 tags:
   - testing
@@ -26,6 +26,7 @@ source_files:
   - ".github/workflows/media-cross-browser.yml"
   - ".github/pull_request_template.md"
   - "scripts/check-widget-runtime.mjs"
+  - "scripts/prepare-widget-worker-assets.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
   - "tests/widget-harness.ts"
@@ -56,6 +57,8 @@ source_files:
   - "tests/unit/widget-editor-state.test.ts"
   - "tests/unit/widget-settings-load-state.test.ts"
   - "tests/unit/widget-preview-load-state.test.ts"
+  - "tests/unit/widget-origin.test.ts"
+  - "tests/unit/widget-worker.test.ts"
   - "tests/unit/layout-contracts.test.ts"
   - "tests/unit/pagination-page-list.test.ts"
   - "vercel.json"
@@ -66,6 +69,7 @@ source_files:
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/state.js"
+  - "src/widget/core/origins.js"
   - "src/widget/core/storefront-context.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/render.js"
@@ -87,12 +91,25 @@ source_files:
   - "src/lib/review-media.ts"
   - "scripts/audit-legacy-review-media.mjs"
   - "scripts/reconcile-legacy-review-media.mjs"
+  - "workers/widget-delivery/src/index.ts"
+  - "wrangler.widget.jsonc"
 ---
 
 # Test Strategy
 
 ## Summary
 The automated test suite has six layers: widget network/chunk contracts, widget layout/runtime rendering, storefront interactions, cross-browser review media, admin preview/settings behavior, and backend/theme-state unit tests. The suite is designed to catch regressions in public widget behavior without depending on real ikas auth, production DB data, Cloudinary uploads, Mux assets/direct uploads, or live merchant credentials.
+
+## Worker Delivery Gates
+Cloudflare Worker widget delivery has a separate local gate because it validates an edge asset target without deploying it:
+
+| Command | Scope |
+|---|---|
+| `pnpm worker:widget:prepare-assets` | Copies only current manifest outputs plus retained committed widget runtime hashes into `.tmp/widget-worker-assets`. |
+| `pnpm worker:widget:types` | Regenerates the Worker binding types from `wrangler.widget.jsonc` without importing Cloudflare runtime DOM types into the main app type-check. |
+| `pnpm worker:widget:deploy:dry-run` | Validates the Worker script, Static Assets binding, and Wrangler config without deploying or changing Cloudflare state. |
+
+Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `tests/unit/widget-worker.test.ts`. It pins split-origin parsing, asset cache headers, CORS, `/__health`, and `/api/*` fail-closed behavior.
 
 ## Layers
 
@@ -239,3 +256,4 @@ The PR template repeats this rule as a checklist. If a change intentionally does
 - [[Widget_Performance]]
 - [[Backend_API_Map]]
 - [[Theme_Adapter_Playbook]]
+- [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]

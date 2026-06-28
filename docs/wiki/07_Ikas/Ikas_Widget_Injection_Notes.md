@@ -4,7 +4,7 @@ project: renuvex-product-reviews
 status: active
 created: 2026-05-05
 updated: 2026-05-25
-last_verified: 2026-05-25
+last_verified: 2026-06-28
 confidence: high
 tags:
   - ikas
@@ -24,6 +24,8 @@ source_files:
   - "src/lib/reconcile-storefront-scripts.ts"
   - "src/lib/storefront-scripts.ts"
   - "src/lib/storefront-widget-url.ts"
+  - "src/widget/core/origins.js"
+  - "scripts/build-widget.mjs"
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/ikas-client/v1-graphql-requests.ts"
 ---
@@ -68,6 +70,7 @@ The cron reconcile helper is still conservative: if a merchant's DB map is compl
 - `name` field on the ikas record: `"renuvex-product-reviews-widget"`.
 - Script content is built by `src/lib/storefront-widget-url.ts`. The helper prefers `STOREFRONT_WIDGET_BASE_URL`, falls back to `NEXT_PUBLIC_DEPLOY_URL`, trims whitespace, and rejects localhost/private/non-HTTPS URLs unless `ALLOW_LOCAL_STOREFRONT_WIDGET_URL=true`.
 - `NEXT_PUBLIC_DEPLOY_URL` is still the app/OAuth URL. It may be `http://localhost:3000` during local admin development. Do not rely on it as the canonical storefront widget URL for real stores.
+- The Cloudflare Worker asset-delivery migration does not require changing the ikas script URL when the hostname remains `widget.renuvex.app`. The script continues to load `/widget.js` from `STOREFRONT_WIDGET_BASE_URL`; the browser runtime sends API calls to `STOREFRONT_WIDGET_API_BASE_URL` when that build-time env is set.
 
 ## Failure Modes
 - **ikas API down at install time** - try/catch swallows; merchant must hit "Re-inject" later.
@@ -86,6 +89,7 @@ The cron reconcile helper is still conservative: if a merchant's DB map is compl
 - 2026-05-22 incident/follow-up: v1 `listStorefrontJSScript` can be used as read-only evidence even though v2 MCP/codegen does not expose it. A dev-store reinstall left a stale script id in `StoreSettings.storefrontScripts`; v1 listed zero remote scripts and v2 update returned `error_messages.theme.storefront_sf_script_not_found`. The recreate matcher was widened, then v1 list adoption was added so DB-lost/live-remote and stale-id cases reconcile before creating duplicates.
 - 2026-05-23 hardening: reconciliation now reports match/remote diagnostics and duplicate counts for manual inject, install, and cron paths.
 - 2026-05-24/25 namespace migration: canonical script name changed to `renuvex-product-reviews-widget`; script content emits only Renuvex markers. The `publicApiKey` fallback remains so stale records can be adopted and rewritten without duplicate creation.
+- 2026-06-28 Worker delivery note: `widget.renuvex.app` can move to Cloudflare Worker Static Assets without rewriting ikas script records, as long as the hostname stays the same and the widget build has `STOREFRONT_WIDGET_API_BASE_URL=https://app.renuvex.app`. Any ikas script write remains a separate explicit mutation.
 
 ## Related Source Files
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)

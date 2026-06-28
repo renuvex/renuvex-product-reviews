@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-27
-last_verified: 2026-06-27
+updated: 2026-06-28
+last_verified: 2026-06-28
 confidence: high
 tags:
   - log
@@ -13,6 +13,7 @@ related:
   - "[[Index]]"
   - "[[Hot_Context]]"
   - "[[ADR_0032_Review_Video_On_Mux]]"
+  - "[[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]"
   - "[[Competitor_Pricing_And_Plans]]"
 source_files:
   - "AGENTS.md"
@@ -21,6 +22,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-06-28 - build | Prepare Cloudflare Worker widget asset delivery
+- Added the local Worker Static Assets delivery layer for the storefront widget. The Worker serves only widget assets and `/__health`, applies the existing loader/runtime/chunk cache contract, and fails closed for `/api/*`.
+- Split the widget runtime origin model: `STOREFRONT_WIDGET_BASE_URL` remains the script/static asset origin, while `STOREFRONT_WIDGET_API_BASE_URL` embeds the backend/API origin into the widget build. If unset, the runtime falls back to the script origin for rollback/local compatibility.
+- Added Wrangler tooling, Worker type generation, a manifest-aware asset preparation script, unit contract tests, deployed-widget measurement support for separate asset/API origins, and ADR_0033.
+- No external mutation was performed in this phase. Vercel env/redeploy, Cloudflare Worker deploy/custom-domain/DNS cutover, and ikas script writes remain separate explicit stop/go gates.
 
 ## 2026-06-27 - fix | Decouple existing video display from upload capability
 - `videoReviewsEnabled` now controls new video upload/wizard capability only. Existing approved videos remain visible on storefront media surfaces after uploads are disabled.

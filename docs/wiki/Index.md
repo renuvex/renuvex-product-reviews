@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-06-28
+last_verified: 2026-06-28
 confidence: high
 tags:
   - index
@@ -121,6 +121,7 @@ source_files: []
 - [[ADR_0018_Widget_Ownership_And_Placement_Resilience]]
 - [[ADR_0019_Icon_Sprite_Rendering]]
 - [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]
+- [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -179,4 +180,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-05-28 (added test strategy routing and refreshed CI coverage)
+**Last Updated:** 2026-06-28 (added Cloudflare Worker widget asset-delivery ADR)

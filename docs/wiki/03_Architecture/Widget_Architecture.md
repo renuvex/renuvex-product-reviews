@@ -22,6 +22,8 @@ related:
   - "[[Test_Strategy]]"
 source_files:
   - "scripts/build-widget.mjs"
+  - "scripts/prepare-widget-worker-assets.mjs"
+  - "wrangler.widget.jsonc"
   - "vercel.json"
   - "scripts/check-widget-runtime.mjs"
   - "playwright.widget.config.ts"
@@ -43,6 +45,7 @@ source_files:
   - "src/widget/core/error-reporter.js"
   - "src/widget/core/lazy-modules.js"
   - "src/widget/core/config.js"
+  - "src/widget/core/origins.js"
   - "src/widget/core/storefront-context.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/settings.js"
@@ -81,6 +84,7 @@ source_files:
   - "src/widget/themes/ozy/adapter.js"
   - "src/lib/storefront-theme.ts"
   - "src/app/api/public/widget-error/route.ts"
+  - "workers/widget-delivery/src/index.ts"
   - "public/widget.js"
   - "public/widget-runtime/build-manifest.json"
 ---
@@ -97,6 +101,14 @@ As of the 2026-05-17 Phase 2 implementation work, local build output is split:
 is the ESM runtime entry, and PDP/listing modules are lazy chunks. The deployed
 pre-Phase-2 widget measured `177763` bytes on 2026-05-15; re-measure after
 deployment before claiming live performance improvement.
+
+As of [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]], storefront widget
+delivery has a split-origin contract. `widget.renuvex.app` is the script/asset
+origin; `app.renuvex.app` remains the backend API, upload, Mux, QStash, DB, and
+webhook origin. The classic loader imports runtime assets from the script origin,
+while runtime `/api/public/*` calls and loader import-error reports use the
+build-time `STOREFRONT_WIDGET_API_BASE_URL` when configured. If that env is unset,
+the runtime falls back to the script origin for rollback/local compatibility.
 
 ## Responsibilities
 - Inject summary + reviews on **product detail pages**
@@ -120,7 +132,8 @@ deployment before claiming live performance improvement.
 | [core/rating-summary.js](src/widget/core/rating-summary.js) | Shared one-product approved rating summary fetch used by visual badge and structured-data surfaces without duplicate API calls. |
 | [core/health.js](src/widget/core/health.js) | Runtime health marker, visibility telemetry, and bounded one-shot DOM-removal self-heal helpers for badge surfaces. |
 | [surfaces/](src/widget/surfaces/) | Thin surface descriptors (`detect`/`mount`) that lazy-load implementation modules. |
-| [core/config.js](src/widget/core/config.js) | `PUBLIC_API_KEY` and `API_BASE` parsed from own `<script src>`. |
+| [core/config.js](src/widget/core/config.js) | `PUBLIC_API_KEY`, `ASSET_BASE`, and `API_BASE` resolved from the owned `<script src>` plus optional build-time API origin. |
+| [core/origins.js](src/widget/core/origins.js) | Single owner for storefront widget asset/API origin separation. |
 | [core/state.js](src/widget/core/state.js) | Module-level mutable state (current product, settings, reviews, paging, canonical lightbox review collection). |
 | [core/fetch.js](src/widget/core/fetch.js) | API helpers calling `/api/public/*`. |
 | [core/cache.js](src/widget/core/cache.js) | `sessionStorage` wrapper with in-memory fallback (private browsing / quota exceeded). Persists across same-tab navigations. |
@@ -157,7 +170,7 @@ public/widget.js classic loader
 public/widget-runtime/runtime.js
         │
         ▼
-core/config.js    → PUBLIC_API_KEY, API_BASE
+core/config.js    → PUBLIC_API_KEY, ASSET_BASE, API_BASE
         │
         ▼
 index.js  (error-reporter / base-reset / input-modality side-effects)
@@ -238,6 +251,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 
 ## Caching strategy
 - `PRODUCT_VIEW` does not invalidate review browser cache directly. Review cache keys and the 60 second TTL contract are owned by `reviews-api.js`; `storefront-context.js` must not write non-matching base keys or add broad prefix invalidation without a separate cache-contract change.
+- The Cloudflare Worker asset delivery path is asset-only. It mirrors the widget static cache contract and returns 404 for `/api/*`; it must not become an implicit public API proxy without a new ADR.
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
 - Public badge, structured-data, and review summary distribution reads use the backend `ProductReviewSummary` read model. Widget response fields stay the same, but new high-read widget surfaces should prefer explicit aggregate/read-model endpoints over repeated raw `Review.groupBy()` scans. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.
@@ -249,9 +263,11 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [scripts/build-widget.mjs](scripts/build-widget.mjs) drives esbuild.
 - Output: classic loader (`public/widget.js`) plus ESM runtime/chunks
   (`public/widget-runtime/*`), ES2017, minified in prod, banner with build timestamp.
+- The build injects `__RENUVEX_PR_API_BASE_URL__` from `STOREFRONT_WIDGET_API_BASE_URL`. Leave it unset only for same-origin rollback/local compatibility.
 - The build injects `__RENUVEX_PR_WIDGET_VERSION__` from the build timestamp; the runtime exposes it through `window.__RENUVEX_PRODUCT_REVIEWS__` and widget-error health events.
 - Validation: post-build `node --check` for the classic loader plus esbuild ESM
   bundling and `public/widget-runtime/build-manifest.json` output metadata.
+- Worker assets are prepared by [scripts/prepare-widget-worker-assets.mjs](scripts/prepare-widget-worker-assets.mjs), which copies only the widget loader, runtime manifest, current manifest outputs, and retained committed runtime hashes into `.tmp/widget-worker-assets`. Do not deploy the full `public/` directory.
 
 ## CI smoke gate
 - `pnpm test:widget-smoke` runs Playwright against the built public widget assets (`public/widget.js` + `public/widget-runtime/*`) instead of importing source modules directly.
@@ -279,6 +295,9 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [public/widget.js](public/widget.js) (built)
 - [public/widget-runtime/build-manifest.json](public/widget-runtime/build-manifest.json) (built)
 - [scripts/build-widget.mjs](scripts/build-widget.mjs)
+- [scripts/prepare-widget-worker-assets.mjs](scripts/prepare-widget-worker-assets.mjs)
+- [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
+- [wrangler.widget.jsonc](wrangler.widget.jsonc)
 - [src/app/(preview)/preview/route.ts](src/app/(preview)/preview/route.ts)
 
 ## Obsidian Links
@@ -292,12 +311,14 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 - [[ADR_0008_Cloud_Name_Build_Time_Only]]
 - [[ADR_0013_Modular_Widget_Loader_Architecture]]
+- [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
 - [[Ikas_Widget_Injection_Notes]]
 - [[Ikas_Storefront_Events]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-06-28: Added the Cloudflare Worker asset-delivery contract from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. Widget asset origin and backend API origin are now separate, and the Worker V1 fails closed for `/api/*`.
 - 2026-06-06: Public rating/summary aggregate reads moved to the backend `ProductReviewSummary` read model. Widget response contracts are unchanged; future high-read surfaces should define their aggregate read model before adding public fan-out. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-06-02: Corrected shared summary filter pointer semantics after desktop testing: touch/pen filter options still activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so every summary layout can reopen the filter immediately after a sort-triggered render. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].
 - 2026-06-02: Strengthened compact/mobile rating-bar visual state: inactive filtered rows now use the explicit `.renuvex-pr-bar-dimmed` CSS state class, and stable widget entrypoints revalidate on reload while hashed runtime chunks stay immutable. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].

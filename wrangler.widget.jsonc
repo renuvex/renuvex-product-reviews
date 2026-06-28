@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "renuvex-widget-assets",
+  "main": "workers/widget-delivery/src/index.ts",
+  "compatibility_date": "2026-06-28",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".tmp/widget-worker-assets",
+    "not_found_handling": "none",
+    "run_worker_first": true
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  }
+}

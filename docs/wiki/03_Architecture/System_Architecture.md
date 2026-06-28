@@ -3,7 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-23
+updated: 2026-06-28
+last_verified: 2026-06-28
 tags:
   - architecture
   - system
@@ -12,12 +13,17 @@ related:
   - "[[API_Design]]"
   - "[[Auth_And_Installation_Flow]]"
   - "[[Widget_Architecture]]"
+  - "[[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]"
+source_files:
+  - "src/widget/core/origins.js"
+  - "workers/widget-delivery/src/index.ts"
+  - "wrangler.widget.jsonc"
 ---
 
 # System Architecture
 
 ## Summary
-A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three runtimes: the **merchant admin** (React iframe inside ikas Admin), the **storefront widget** (vanilla JS bundle injected into customer storefronts), and **API routes** that serve both. State lives in Postgres (Supabase) and Cloudinary; rate limits in Upstash Redis.
+A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary application runtimes: the **merchant admin** (React iframe inside ikas Admin), the **storefront widget** (vanilla JS bundle injected into customer storefronts), and **API routes** that serve both. The Cloudflare Worker widget-delivery target is intentionally a fourth, asset-only edge delivery layer: it serves `widget.renuvex.app` static widget files and does not own public API, upload, Mux, QStash, DB, or webhook behavior. State lives in Postgres (Supabase) and Cloudinary; rate limits in Upstash Redis.
 
 ## Components
 
@@ -71,8 +77,8 @@ See [[Auth_And_Installation_Flow]] for full trace.
 
 ### Storefront review submission
 1. Customer opens product page; ikas serves the `<script src="…/widget.js…">` tag.
-2. Widget reads `publicApiKey` (`= merchantId`) from script src.
-3. Widget calls `/api/public/settings` (cached 60s/300s SWR), then `/api/public/reviews?storeId&productId`.
+2. Widget reads `publicApiKey` (`= merchantId`) from script src and computes `ASSET_BASE` from the script origin.
+3. Widget calls `API_BASE /api/public/settings` (cached 60s/300s SWR), then `API_BASE /api/public/reviews?storeId&productId`. In the Worker delivery target, `ASSET_BASE` is `https://widget.renuvex.app` and `API_BASE` is `https://app.renuvex.app`.
 4. Customer clicks "Write a review" → multi-step modal → optional image uploads via Cloudinary (signed direct upload).
 5. Submit → `POST /api/public/reviews` → server enforces profanity filter + rate limit → writes Review with status by auto-approve mode.
 
@@ -101,6 +107,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 
 ## Deployment topology
 - Vercel project. Region `fra1`. Postgres on Supabase. Redis on Upstash. Cloudinary for images. ikas-side: registered app pointing OAuth callback to `<DEPLOY_URL>/api/oauth/callback/ikas`.
+- Planned widget static delivery: Cloudflare Worker Static Assets for `widget.renuvex.app`, with `/api/*` fail-closed and no data/provider bindings. `app.renuvex.app` remains the backend/API origin.
 - See [[Deployment_Notes]].
 
 ## Notes
@@ -111,6 +118,8 @@ See [[Auth_And_Installation_Flow]] for full trace.
 ## Related Source Files
 - [src/app/api/](src/app/api/)
 - [src/widget/index.js](src/widget/index.js)
+- [src/widget/core/origins.js](src/widget/core/origins.js)
+- [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
 - [vercel.json](vercel.json)
 
@@ -119,6 +128,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 - [[API_Design]]
 - [[Database_Schema]]
 - [[Widget_Architecture]]
+- [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
 - [[Caching_And_Performance]]
 - [[Security_And_Rate_Limits]]
 - [[Deployment_Notes]]

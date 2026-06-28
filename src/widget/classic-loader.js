@@ -7,6 +7,7 @@
 // derives the project base URL, then loads the ESM runtime/chunks from the same
 // origin. The runtime still reads publicApiKey from the original widget.js tag.
 
+import { getWidgetApiBaseUrl } from './core/origins.js';
 import { findRenuvexWidgetScript, getPublicApiKeyFromScript, getWidgetScriptBaseUrl } from './core/script-identity.js';
 
 var hasWindow = typeof window !== 'undefined';
@@ -57,6 +58,7 @@ if (hasWindow && hasDocument) {
   var script = findCurrentScript();
   var scriptSrc = script && script.src ? script.src : '';
   var scriptBase = getWidgetScriptBaseUrl(script);
+  var apiBase = getWidgetApiBaseUrl(script);
   var publicApiKey = getPublicApiKeyFromScript(script);
 
   if (scriptSrc && scriptBase && publicApiKey && !window.__renuvexProductReviewsRuntimeLoading) {
@@ -67,7 +69,7 @@ if (hasWindow && hasDocument) {
     var runtimeUrl = scriptBase + '/' + runtimePath;
     import(runtimeUrl).catch(function (err) {
       window.__renuvexProductReviewsRuntimeLoading = false;
-      postRuntimeError(scriptBase, publicApiKey, err && err.message, err && err.stack, runtimeUrl);
+      postRuntimeError(apiBase || scriptBase, publicApiKey, err && err.message, err && err.stack, runtimeUrl);
       try { console.error('[renuvex-pr] runtime import failed:', err); } catch (_) {}
     });
   }

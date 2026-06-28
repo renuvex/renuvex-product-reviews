@@ -1,13 +1,16 @@
-// config.js — Script tag'inden PUBLIC_API_KEY ve API_BASE çıkarma
-// Bu değerler tüm modüller tarafından import edilir.
+// config.js - PUBLIC_API_KEY, ASSET_BASE, and API_BASE extraction.
+// These values are imported by all storefront widget modules.
 //
-// SSR-safe guard: module-level'de document yoksa (Next.js dashboard
-// prerender sırasında bu modül transitively import ediliyor) sessizce
-// boş değerlerle çıkar. Browser'da gerçek değerler hesaplanır.
+// SSR-safe guard: when module-level document is unavailable (Next.js dashboard
+// prerender can import this module transitively), this module exits with empty
+// values. In the browser, values are computed from the widget script tag plus
+// the optional build-time API origin.
 
-import { findRenuvexWidgetScript, getPublicApiKeyFromScript, getWidgetScriptBaseUrl } from './script-identity.js';
+import { getWidgetApiBaseUrl, getWidgetAssetBaseUrl } from './origins.js';
+import { findRenuvexWidgetScript, getPublicApiKeyFromScript } from './script-identity.js';
 
 const scriptTag = findRenuvexWidgetScript();
 
 export const PUBLIC_API_KEY = getPublicApiKeyFromScript(scriptTag);
-export const API_BASE = getWidgetScriptBaseUrl(scriptTag);
+export const ASSET_BASE = getWidgetAssetBaseUrl(scriptTag);
+export const API_BASE = getWidgetApiBaseUrl(scriptTag);

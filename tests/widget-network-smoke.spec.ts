@@ -119,7 +119,7 @@ test('review mount present loads reviews, media gallery, badge, and render chunk
   expect(countUrls(log, '/api/public/settings')).toBe(1);
   expect(countUrls(log, '/api/public/ratings')).toBe(1);
   expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
-  expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('hasImages=true'))).toBe(true);
+  expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('hasMedia=true'))).toBe(true);
   expect(widgetErrors(log)).toEqual([]);
 });
 

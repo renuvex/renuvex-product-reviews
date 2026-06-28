@@ -9,6 +9,7 @@ confidence: high
 tags:
   - deployment
   - vercel
+  - cloudflare
 related:
   - "[[Index]]"
   - "[[Config_And_Env_Map]]"
@@ -64,6 +65,20 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Run `pnpm build:widget` after any `src/widget/*` change. Don't forget to commit the artifact.
 - Theme variant: `pnpm build:widget --theme=new-theme` produces `public/widget-new-theme.js`. Runtime selection mechanism is unclear — see [[Open_Questions]].
 
+## Cloudflare Worker widget delivery
+- Target architecture: `widget.renuvex.app` serves only storefront static widget assets through Cloudflare Worker Static Assets; `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash origin.
+- Local tooling:
+  - `pnpm worker:widget:prepare-assets` copies only widget deploy files into `.tmp/widget-worker-assets`.
+  - `pnpm worker:widget:types` regenerates Worker Env types with an empty `.tmp/widget-worker.env`, keeping app env names out of Worker types.
+  - `pnpm worker:widget:deploy:dry-run` validates the Worker bundle/assets without deploying.
+- Actual `pnpm worker:widget:deploy`, Cloudflare Worker custom domain creation, DNS edits, and Vercel domain/env changes are external mutations and require explicit stop/go approval.
+- Cutover order:
+  1. Add `STOREFRONT_WIDGET_API_BASE_URL=https://app.renuvex.app` to Vercel Production.
+  2. Redeploy Vercel Production and verify the Vercel-hosted widget still loads assets from `widget.renuvex.app` while API calls go to `app.renuvex.app`.
+  3. Deploy Worker to a canary domain such as `widget-canary.renuvex.app`.
+  4. Run deployed widget measurement with `MEASURE_WIDGET_ORIGIN=https://widget-canary.renuvex.app` and `MEASURE_WIDGET_API_ORIGIN=https://app.renuvex.app`.
+  5. Cut over `widget.renuvex.app` to Worker only after canary acceptance and rollback DNS evidence.
+
 ## Local development
 1. `pnpm install`
 2. Copy `.env.example` → `.env.local`, fill values
@@ -84,11 +99,14 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Cron routes require `CRON_SECRET`; without it they return 500. Set it in Vercel env before deploy. Vercel Hobby cron supports daily schedules only; 2-5 minute theme verification requires Pro/Enterprise cron or an external delayed queue such as QStash.
 - Keep `NEXT_PUBLIC_DEPLOY_URL` and the app's URL in sync. Mismatch breaks OAuth (`getRedirectUri` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when `localhost` config meets non-localhost host, but it's a fallback).
 - Keep `STOREFRONT_WIDGET_BASE_URL` in sync with the public widget host. The helper trims accidental whitespace and rejects localhost/private/non-HTTPS URLs by default so local development cannot overwrite real storefront script records with `http://localhost:3000/widget.js`.
+- Keep `STOREFRONT_WIDGET_API_BASE_URL` in sync with the backend/API origin when the widget asset origin is separate. Production target is `https://app.renuvex.app`; unset means same-origin fallback and should be treated as rollback/local compatibility only after the Worker cutover.
 - Domain migration order: Vercel project/domain -> Vercel env (`NEXT_PUBLIC_DEPLOY_URL`, `STOREFRONT_WIDGET_BASE_URL`) -> ikas Partner callback/app URLs -> deploy -> manual script repair/reconcile -> live storefront test -> observability cleanup. This migration is complete for `app.renuvex.app` and `widget.renuvex.app`; the legacy Vercel alias compatibility window is closed.
 
 ## Related Source Files
 - [vercel.json](vercel.json)
+- [wrangler.widget.jsonc](wrangler.widget.jsonc)
 - [package.json](package.json)
+- [scripts/prepare-widget-worker-assets.mjs](scripts/prepare-widget-worker-assets.mjs)
 - [src/globals/config.ts](src/globals/config.ts)
 - [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)
 - [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
@@ -101,6 +119,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-06-28: Added Cloudflare Worker widget delivery rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. `widget.renuvex.app` becomes an asset-only target; `app.renuvex.app` remains backend/API.
 - 2026-06-21: Removed the legacy pre-custom-domain Vercel alias after verifying Vercel Production env and live storefront script tags use `app.renuvex.app` / `widget.renuvex.app`.
 - 2026-06-14: Promoted `app.renuvex.app` as the ikas app/admin/API origin and `widget.renuvex.app` as the storefront widget origin. Live storefront checks confirmed the custom widget domain; the old Vercel alias was kept only for a temporary compatibility window.
 - 2026-05-25: GitHub repository and Vercel project renamed to `renuvex-product-reviews`; local `origin` updated. Production domain stayed on the legacy Vercel alias until a custom domain replaced it. `renuvex-product-reviews.vercel.app` returned 404 and the team-scoped Vercel domain was protected, so storefront script URLs could not be changed yet.
