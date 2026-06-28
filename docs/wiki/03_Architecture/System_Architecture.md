@@ -107,7 +107,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 
 ## Deployment topology
 - Vercel project. Region `fra1`. Postgres on Supabase. Redis on Upstash. Cloudinary for images. ikas-side: registered app pointing OAuth callback to `<DEPLOY_URL>/api/oauth/callback/ikas`.
-- Planned widget static delivery: Cloudflare Worker Static Assets for `widget.renuvex.app`, with `/api/*` fail-closed and no data/provider bindings. `app.renuvex.app` remains the backend/API origin.
+- Live widget static delivery: Cloudflare Worker Static Assets for `widget.renuvex.app`, with `/api/*` fail-closed and no data/provider bindings. `app.renuvex.app` remains the backend/API origin.
 - See [[Deployment_Notes]].
 
 ## Notes

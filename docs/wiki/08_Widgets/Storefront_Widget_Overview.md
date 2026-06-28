@@ -80,7 +80,7 @@ See [[Widget_Architecture]] for full details. Key points:
 - Real-time preview via `RENUVEX_PR_SETTINGS_UPDATE` postMessage.
 
 ## Cloudflare Worker Delivery Target
-Cloudflare Worker Static Assets is the planned delivery layer for `widget.renuvex.app`. The Worker is intentionally asset-only in v1:
+Cloudflare Worker Static Assets is the live delivery layer for `widget.renuvex.app`. The Worker is intentionally asset-only in v1:
 - allowed: `/widget.js`, `/widget-runtime/runtime.js`, `/widget-runtime/runtime-*.js`, `/widget-runtime/chunks/*.js`, `/widget-runtime/build-manifest.json`, `/__health`;
 - denied: `/api/*` and every other path, returning fail-closed `404`;
 - no secrets, DB, Mux, QStash, Cloudinary, or R2 bindings.
