@@ -3,7 +3,7 @@
 // Kept separate from bootstrap/render so orchestration and UI code can share
 // review fetching without creating a bootstrap <-> render ownership cycle.
 
-import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
+import { PUBLIC_API_KEY, API_BASE, READ_API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
 
@@ -62,7 +62,7 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, media
   }
 
   try {
-    var url = API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
+    var url = READ_API_BASE + '/api/public/reviews?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
       '&productId=' + encodeURIComponent(productId) +
       '&orderBy=' + encodeURIComponent(orderBy) +
       '&page=' + encodeURIComponent(page) +

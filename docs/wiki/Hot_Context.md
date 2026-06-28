@@ -109,7 +109,7 @@ source_files:
 # Hot Context
 
 ## Current Focus
-- ikas review/rating app: admin, storefront widget, badges, uploads, moderation, and the Mux review-video cutover.
+- ikas review/rating app: admin, storefront widget, badges, uploads, moderation, and Mux review video.
 
 ## Must Know
 - Source/config/tests/runtime win; wiki routes.
@@ -119,18 +119,19 @@ source_files:
 - For video work, no deploy, migration apply, env write, provider write, or teardown happens without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-06-28: Cloudflare Worker widget asset delivery is live. `widget.renuvex.app` is an asset-only Worker origin (`renuvex-widget-assets`); `app.renuvex.app` remains backend/API/upload/Mux/QStash.
+- 2026-06-28: Worker V2 public-read cache source is prepared for `ratings`, `ratings-by-slug`, and `reviews`. It is not live until Worker redeploy and Vercel `STOREFRONT_WIDGET_READ_API_BASE_URL=https://widget.renuvex.app` cutover are explicitly approved.
+- 2026-06-28: Worker asset delivery is live. `widget.renuvex.app` is static Worker origin (`renuvex-widget-assets`); `app.renuvex.app` remains backend/API/upload/Mux/QStash.
 - 2026-06-28: Media-gallery lightbox opens now show a bottom rail with one first trusted image/video per media-backed review; ordinary review opens keep current-review media thumbnails.
-- 2026-06-27: Existing videos stay visible when video uploads are disabled. Media gallery reads always use `hasMedia=true`; the public filter uses `ProductReviewSummary.mediaReviewCount > photoReviewCount` to choose mixed media vs photo-only.
+- 2026-06-27: Existing videos stay visible when video uploads are disabled; media gallery reads always use `hasMedia=true`.
 - 2026-06-23: Review Video playback uses official Mux Player. Storefront videos expose public `playbackId`; admin preview uses signed Mux Player attributes. Mux Data tracking/cookies stay disabled.
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-21: Mux cutover is live; contract migration, Cloudflare/R2 teardown, Vercel env cleanup, and canary asset cleanup were verified. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
-- 2026-06-21: Mux cleanup handles abandoned ready uploads by retrieving direct uploads, deleting known/recovered assets, routing late asset-created webhooks to cleanup, and refunding unsubmitted consumed quota when eligible.
-- 2026-06-20: Mux upload performance hardening measures browser-to-Mux transfer separately from processing/webhooks via sanitized `VideoUploadPerformanceSample` rows and keeps same-session retry progress monotonic.
+- 2026-06-21: Mux abandoned-ready cleanup deletes known/recovered assets and refunds eligible unsubmitted consumed quota.
 
 ## Current Risks / Open Questions
 - The storefront widget is Turkish-first today. There is no i18n layer, locale resolver, or per-locale settings model yet. Future English/German support requires a proper string catalog, locale source, and accessibility-string migration; do not treat the current merchant-editable copy fields as localization.
 - Keep live post-deploy smoke after runtime widget changes.
+- Worker V2 read cutover is two-step: redeploy Worker, then set/redeploy Vercel with `STOREFRONT_WIDGET_READ_API_BASE_URL=https://widget.renuvex.app`. Until both happen, reads fall back to `app.renuvex.app`.
 - Worker rollback: detach the Worker custom domain and restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, proxied `false`.
 - Mux cleanup gates closed for the old video provider: contract migration verified, old Vercel Cloudflare video env vars absent, and Cloudflare Stream/R2 video inventory empty. Cloudflare DNS/zone and future Worker delivery infrastructure stay out of this cleanup scope.
 - Supabase RLS audit: repo uses server-side Prisma and no browser Supabase client; SQL privilege checks did not show `anon`/`authenticated` table access, but most public app tables still have RLS disabled. Treat RLS/default-grants hardening as a public-launch blocker; do not enable blindly during active schema churn.

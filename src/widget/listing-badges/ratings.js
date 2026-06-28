@@ -1,6 +1,6 @@
 // listing-badges/ratings.js - fetches listing ratings from cache and public APIs.
 
-import { PUBLIC_API_KEY, API_BASE } from '../core/config.js';
+import { PUBLIC_API_KEY, READ_API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
 
@@ -95,7 +95,7 @@ export async function fetchRatings(input) {
   });
 
   var productBatchResults = await Promise.all(batch(productIds).map(function(productBatch) {
-    var url = API_BASE + '/api/public/ratings?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
+    var url = READ_API_BASE + '/api/public/ratings?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
       '&productIds=' + productBatch.map(encodeURIComponent).join(',');
     return fetchJsonData(url);
   }));
@@ -105,7 +105,7 @@ export async function fetchRatings(input) {
   });
 
   var slugFallbackResults = await Promise.all(batch(missingBySlugOnly).map(function(slugBatch) {
-    var url = API_BASE + '/api/public/ratings-by-slug?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
+    var url = READ_API_BASE + '/api/public/ratings-by-slug?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
       '&slugs=' + slugBatch.map(encodeURIComponent).join(',');
     return fetchJsonData(url);
   }));

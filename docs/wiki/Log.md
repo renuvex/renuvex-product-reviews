@@ -23,6 +23,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-28 - build | Prepare Cloudflare Worker V2 public-read cache
+- Added source support for `STOREFRONT_WIDGET_READ_API_BASE_URL` so storefront ratings/reviews reads can use a separate read origin while settings, upload, submit, video, metrics, and widget-error stay on the backend API origin.
+- Extended Worker `renuvex-widget-assets` with a fail-closed allowlist for `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`, using 60 second edge caching only for safe 200 JSON responses.
+- No external mutation was performed in this phase. Worker redeploy and Vercel `STOREFRONT_WIDGET_READ_API_BASE_URL=https://widget.renuvex.app` cutover remain separate explicit stop/go gates.
+
 ## 2026-06-28 - deploy | Cut over widget assets to Cloudflare Worker
 - Deployed Worker `renuvex-widget-assets` with `pnpm worker:widget:deploy` and attached `widget.renuvex.app` as its Cloudflare Worker Custom Domain.
 - Removed only the old `widget.renuvex.app` Vercel DNS-only CNAME (`2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, proxied `false`). Cloudflare created the read-only proxied Worker `AAAA 100::` record.

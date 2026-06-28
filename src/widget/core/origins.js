@@ -9,6 +9,15 @@ function getConfiguredApiBaseUrl() {
   return '';
 }
 
+function getConfiguredReadApiBaseUrl() {
+  try {
+    if (typeof __RENUVEX_PR_READ_API_BASE_URL__ !== 'undefined') {
+      return String(__RENUVEX_PR_READ_API_BASE_URL__ || '').trim();
+    }
+  } catch (_) {}
+  return '';
+}
+
 function normalizeBaseUrl(raw, fallbackHref) {
   var value = typeof raw === 'string' ? raw.trim() : '';
   if (!value) return '';
@@ -35,6 +44,16 @@ export function getWidgetApiBaseUrl(script) {
   return configured || assetBaseUrl;
 }
 
+export function getWidgetReadApiBaseUrl(script) {
+  var apiBaseUrl = getWidgetApiBaseUrl(script);
+  var configured = normalizeBaseUrl(getConfiguredReadApiBaseUrl(), apiBaseUrl);
+  return configured || apiBaseUrl;
+}
+
 export function normalizeWidgetApiBaseUrlForTest(raw, fallbackHref) {
+  return normalizeBaseUrl(raw, fallbackHref);
+}
+
+export function normalizeWidgetReadApiBaseUrlForTest(raw, fallbackHref) {
   return normalizeBaseUrl(raw, fallbackHref);
 }

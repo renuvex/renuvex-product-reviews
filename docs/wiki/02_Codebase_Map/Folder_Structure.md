@@ -18,7 +18,7 @@ related:
 ## Summary
 Top-level layout. Three big buckets: the Next.js app (`src/app/*`), the storefront widget source (`src/widget/*`), and the Prisma DB (`prisma/`). The widget bundle is checked into `public/widget.js`. Update this page whenever a top-level folder is added, removed, or renamed.
 
-Cloudflare Worker widget delivery adds a small fourth top-level code bucket: `workers/widget-delivery/`. It is asset-only for `widget.renuvex.app`, uses `wrangler.widget.jsonc`, and must not own `/api/*`, DB, Mux, QStash, Cloudinary, R2, or webhook behavior.
+Cloudflare Worker widget delivery adds a small fourth top-level code bucket: `workers/widget-delivery/`. It serves `widget.renuvex.app` static assets and V2 allowlisted public reads only, uses `wrangler.widget.jsonc`, and must not own settings side effects, writes, upload, DB, Mux, QStash, Cloudinary, R2, or webhook behavior.
 
 ## Tree (annotated)
 
@@ -123,7 +123,7 @@ renuvex-product-reviews/
 │     ├─ core/
 │     │  ├─ badge.js
 │     │  ├─ cache.js
-│     │  ├─ config.js            # PUBLIC_API_KEY + ASSET_BASE + API_BASE
+│     │  ├─ config.js            # PUBLIC_API_KEY + ASSET_BASE + API_BASE + READ_API_BASE
 │     │  ├─ origins.js           # Script asset origin + explicit API origin normalization
 │     │  ├─ fetch.js
 │     │  ├─ helpers.js
@@ -170,7 +170,8 @@ renuvex-product-reviews/
 - [[Widget_Files_Map]]
 
 ## Change Log
-- 2026-06-28: Added the Cloudflare Worker widget delivery source bucket and its asset-only boundary to the folder structure notes.
+- 2026-06-28: Added the Cloudflare Worker V2 public-read boundary to the folder structure notes.
+- 2026-06-28: Added the Cloudflare Worker widget delivery source bucket and its asset/static boundary to the folder structure notes.
 - 2026-06-01: Split shared review-section CSS ownership under `src/widget/reviews-section/styles/` while preserving `src/widget/reviews-section/styles.js` as the stable `CLASSIC_CSS` aggregator.
 - 2026-05-28: Renamed the review-section runtime folder to `src/widget/reviews-section/` and moved the shared PDP title finder to `src/widget/core/product-title.js`.
 - 2026-05-12: Split the widget icon registry into `src/widget/icons/` modules and kept [src/widget/icons.js](src/widget/icons.js) as a compatibility re-export.

@@ -70,7 +70,7 @@ The cron reconcile helper is still conservative: if a merchant's DB map is compl
 - `name` field on the ikas record: `"renuvex-product-reviews-widget"`.
 - Script content is built by `src/lib/storefront-widget-url.ts`. The helper prefers `STOREFRONT_WIDGET_BASE_URL`, falls back to `NEXT_PUBLIC_DEPLOY_URL`, trims whitespace, and rejects localhost/private/non-HTTPS URLs unless `ALLOW_LOCAL_STOREFRONT_WIDGET_URL=true`.
 - `NEXT_PUBLIC_DEPLOY_URL` is still the app/OAuth URL. It may be `http://localhost:3000` during local admin development. Do not rely on it as the canonical storefront widget URL for real stores.
-- The Cloudflare Worker asset-delivery migration does not require changing the ikas script URL when the hostname remains `widget.renuvex.app`. The script continues to load `/widget.js` from `STOREFRONT_WIDGET_BASE_URL`; the browser runtime sends API calls to `STOREFRONT_WIDGET_API_BASE_URL` when that build-time env is set.
+- The Cloudflare Worker asset/read-delivery migration does not require changing the ikas script URL when the hostname remains `widget.renuvex.app`. The script continues to load `/widget.js` from `STOREFRONT_WIDGET_BASE_URL`; the browser runtime sends settings/write/upload/video/error calls to `STOREFRONT_WIDGET_API_BASE_URL` and, after V2 cutover, ratings/reviews reads to `STOREFRONT_WIDGET_READ_API_BASE_URL`.
 
 ## Failure Modes
 - **ikas API down at install time** - try/catch swallows; merchant must hit "Re-inject" later.

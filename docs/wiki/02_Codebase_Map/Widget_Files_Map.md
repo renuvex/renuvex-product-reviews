@@ -89,7 +89,7 @@ src/widget/
 ├─ observer.js                    # MutationObserver — re-bootstraps widget on SPA-style theme nav
 │
 ├─ core/
-│  ├─ config.js                   # PUBLIC_API_KEY + ASSET_BASE + API_BASE (SSR-safe)
+│  ├─ config.js                   # PUBLIC_API_KEY + ASSET_BASE + API_BASE + READ_API_BASE (SSR-safe)
 │  ├─ origins.js                  # Script asset origin + explicit API origin normalization
 │  ├─ storefront-context.js       # Single Storefront Events owner.
 │  ├─ registry.js                 # Surface registry; supports async lazy mounts.
@@ -97,7 +97,7 @@ src/widget/
 │  ├─ settings.js                 # Shared public settings fetch/cache.
 │  ├─ link-scope.js              # Shared scoped link discovery for listing DOM fallbacks.
 │  ├─ state.js                    # Module-level mutable state (currentSettings, currentProductId, ...)
-│  ├─ fetch.js                    # API helpers (calls API_BASE /api/public/*)
+│  ├─ fetch.js                    # API helpers used by API_BASE/READ_API_BASE callers
 │  ├─ cache.js                    # sessionStorage wrapper with in-memory fallback (cacheGet/cacheSet)
 │  ├─ product-title.js            # Shared PDP title finder for badge placement and adapters
 │  ├─ helpers.js                  # Misc utilities + trusted review image URL helpers
@@ -202,9 +202,9 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 ## Cloudflare Worker asset delivery
 `widget.renuvex.app` is the live Cloudflare Worker Static Assets origin for storefront widget delivery. The repo-level pieces are:
 - [src/widget/core/origins.js](src/widget/core/origins.js) keeps static asset origin and public API origin separate;
-- [scripts/build-widget.mjs](scripts/build-widget.mjs) injects `STOREFRONT_WIDGET_API_BASE_URL` into the widget build when set;
+- [scripts/build-widget.mjs](scripts/build-widget.mjs) injects `STOREFRONT_WIDGET_API_BASE_URL` and optional `STOREFRONT_WIDGET_READ_API_BASE_URL` into the widget build when set;
 - [scripts/prepare-widget-worker-assets.mjs](scripts/prepare-widget-worker-assets.mjs) copies only widget runtime files into `.tmp/widget-worker-assets`;
-- [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts) serves only the widget asset surface and fails closed for `/api/*`;
+- [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts) serves the widget asset surface and V2 allowlisted public read paths, while failing closed for every other `/api/*` path;
 - [wrangler.widget.jsonc](wrangler.widget.jsonc) owns Worker Static Assets config without routes, domains, secrets, or data bindings.
 
 ## Notes
@@ -238,7 +238,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
-- 2026-06-28: Added the widget split-origin files and Cloudflare Worker Static Assets delivery map. `config.js` now exposes `ASSET_BASE` and `API_BASE`; Worker delivery remains asset-only and fail-closed for `/api/*`.
+- 2026-06-28: Added the widget read-origin split and Cloudflare Worker V2 read cache map. `config.js` now exposes `ASSET_BASE`, `API_BASE`, and `READ_API_BASE`; Worker delivery remains fail-closed except for allowlisted ratings/reviews reads.
 - 2026-06-11: Moved review-section non-list state CSS into [reviews-section/styles/states.js](src/widget/reviews-section/styles/states.js). [reviews-section/styles.js](src/widget/reviews-section/styles.js) remains the `CLASSIC_CSS` aggregator; [reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) no longer owns empty/error state selectors.
 - 2026-06-02: Clarified shared filter action semantics: touch/pen filter options activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so filters can reopen immediately after sort-triggered summary renders.
 - 2026-06-01: Hardened summary shared primitives: [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) now exposes a handle lifecycle contract, [summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js) exposes keyboard/ARIA toggle semantics, and [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) owns bar focus/count resilience.

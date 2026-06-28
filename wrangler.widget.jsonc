@@ -9,8 +9,11 @@
     "not_found_handling": "none",
     "run_worker_first": true
   },
+  "vars": {
+    "BACKEND_API_ORIGIN": "https://app.renuvex.app"
+  },
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 0.1
+    "head_sampling_rate": 0.01
   }
 }

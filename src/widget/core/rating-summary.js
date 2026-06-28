@@ -4,7 +4,7 @@
 // Keep the request here so those surfaces do not race into duplicate
 // /api/public/ratings calls for the same product.
 
-import { PUBLIC_API_KEY, API_BASE } from './config.js';
+import { PUBLIC_API_KEY, READ_API_BASE } from './config.js';
 import { fetchWithTimeout } from './fetch.js';
 
 var summaryCacheByProductId = {};
@@ -25,7 +25,7 @@ export async function fetchRatingSummary(productId) {
 
   var promise = (async function () {
     try {
-      var url = API_BASE + '/api/public/ratings?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
+      var url = READ_API_BASE + '/api/public/ratings?storeId=' + encodeURIComponent(PUBLIC_API_KEY) +
         '&productIds=' + encodeURIComponent(productId);
       var res = await fetchWithTimeout(url);
       if (!res.ok) return null;
@@ -45,4 +45,3 @@ export async function fetchRatingSummary(productId) {
   inflightByProductId[productId] = promise;
   return promise;
 }
-

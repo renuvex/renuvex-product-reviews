@@ -102,26 +102,26 @@ function isLocalOrPrivateHost(hostname) {
     isPrivateOrLocalIPv4(normalized);
 }
 
-function resolveStorefrontWidgetApiBaseUrl() {
-  var raw = getEnvValue('STOREFRONT_WIDGET_API_BASE_URL').trim();
+function resolveStorefrontWidgetOrigin(envKey) {
+  var raw = getEnvValue(envKey).trim();
   if (!raw) return '';
 
   var parsed;
   try {
     parsed = new URL(raw);
   } catch (_) {
-    console.error(`[build-widget] ERROR Invalid STOREFRONT_WIDGET_API_BASE_URL: ${raw}`);
+    console.error(`[build-widget] ERROR Invalid ${envKey}: ${raw}`);
     process.exit(1);
   }
 
   var allowLocal = getEnvValue('ALLOW_LOCAL_STOREFRONT_WIDGET_URL') === 'true';
   if (!allowLocal && parsed.protocol !== 'https:') {
-    console.error('[build-widget] ERROR STOREFRONT_WIDGET_API_BASE_URL must use https unless ALLOW_LOCAL_STOREFRONT_WIDGET_URL=true.');
+    console.error(`[build-widget] ERROR ${envKey} must use https unless ALLOW_LOCAL_STOREFRONT_WIDGET_URL=true.`);
     process.exit(1);
   }
 
   if (!allowLocal && isLocalOrPrivateHost(parsed.hostname)) {
-    console.error('[build-widget] ERROR STOREFRONT_WIDGET_API_BASE_URL must not point to localhost or a private network address.');
+    console.error(`[build-widget] ERROR ${envKey} must not point to localhost or a private network address.`);
     process.exit(1);
   }
 
@@ -136,7 +136,8 @@ function normalizePublicCloudName(value) {
   return /^[A-Za-z0-9_-]+$/.test(cloudName) ? cloudName : '';
 }
 
-const storefrontWidgetApiBaseUrl = resolveStorefrontWidgetApiBaseUrl();
+const storefrontWidgetApiBaseUrl = resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_API_BASE_URL');
+const storefrontWidgetReadApiBaseUrl = resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_READ_API_BASE_URL');
 const defaultReviewImageCloudName = normalizePublicCloudName(
   getEnvValue('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') || getEnvValue('CLOUDINARY_CLOUD_NAME'),
 );
@@ -145,6 +146,7 @@ function createDefine(runtimePath) {
   return {
     __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
     __RENUVEX_PR_API_BASE_URL__: JSON.stringify(storefrontWidgetApiBaseUrl),
+    __RENUVEX_PR_READ_API_BASE_URL__: JSON.stringify(storefrontWidgetReadApiBaseUrl),
     __RENUVEX_PR_RUNTIME_PATH__: JSON.stringify(runtimePath),
     __RENUVEX_PR_WIDGET_VERSION__: JSON.stringify(buildTime),
   };

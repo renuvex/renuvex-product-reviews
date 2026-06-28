@@ -29,6 +29,7 @@ related:
 | `NEXT_PUBLIC_DEPLOY_URL` | Public origin of this app (Vercel URL or custom domain) | OAuth redirect URI, JWT issuer |
 | `STOREFRONT_WIDGET_BASE_URL` | Canonical public script/asset origin used when writing ikas `StorefrontJSScript` records. Set this to the stable HTTPS widget host that storefront browsers should load `widget.js` from. Current target: `https://widget.renuvex.app`. Falls back to `NEXT_PUBLIC_DEPLOY_URL` only for compatibility. | [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts), OAuth callback, manual inject |
 | `STOREFRONT_WIDGET_API_BASE_URL` | Explicit backend/API origin embedded into the storefront widget build. Production target: `https://app.renuvex.app`. When unset, the widget falls back to the script origin for same-origin rollback/local compatibility. | [scripts/build-widget.mjs](scripts/build-widget.mjs), [src/widget/core/origins.js](src/widget/core/origins.js), [src/widget/core/config.js](src/widget/core/config.js), [src/widget/classic-loader.js](src/widget/classic-loader.js) |
+| `STOREFRONT_WIDGET_READ_API_BASE_URL` | Optional cacheable public-read origin embedded into the storefront widget build. Default/unset behavior is `READ_API_BASE = API_BASE`. After Worker V2 read cutover, production target is `https://widget.renuvex.app`; until then leave unset or set to `https://app.renuvex.app`. Only ratings/reviews list reads use this origin. | [scripts/build-widget.mjs](scripts/build-widget.mjs), [src/widget/core/origins.js](src/widget/core/origins.js), [src/widget/core/config.js](src/widget/core/config.js), [src/widget/core/rating-summary.js](src/widget/core/rating-summary.js), [src/widget/listing-badges/ratings.js](src/widget/listing-badges/ratings.js), [src/widget/reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js) |
 | `ALLOW_LOCAL_STOREFRONT_WIDGET_URL` | Optional local-only escape hatch. When exactly `true`, allows non-HTTPS/local/private widget script URLs for temporary experiments. Do not set in Vercel production or preview. | [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts) |
 
 ### OAuth / JWT
@@ -107,7 +108,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 | [ikas.config.json](ikas.config.json) | ikas dev tooling: port (3000), oauth redirect path (`/api/oauth/callback/ikas`), run command |
 | [next.config.js](next.config.js) | Next.js config |
 | [vercel.json](vercel.json) | `regions: ["fra1"]`, daily Vercel-compatible maintenance cron, monthly fallback cleanup cron, widget static asset cache headers |
-| [wrangler.widget.jsonc](wrangler.widget.jsonc) | Cloudflare Worker Static Assets config for live `widget.renuvex.app` asset-only delivery. No routes/custom domains are stored in source; future Worker redeploys or domain/DNS edits remain separately approved. |
+| [wrangler.widget.jsonc](wrangler.widget.jsonc) | Cloudflare Worker Static Assets config for live `widget.renuvex.app` delivery. Source includes V2 public-read proxy support with non-secret `BACKEND_API_ORIGIN=https://app.renuvex.app`; no routes/custom domains are stored in source. Future Worker redeploys or domain/DNS edits remain separately approved. |
 | [components.json](components.json) | shadcn/ui CLI/MCP config |
 | [tsconfig.json](tsconfig.json) | TS config (paths: `@/*` → `src/*`) |
 | [eslint.config.mjs](eslint.config.mjs) | ESLint flat config |
@@ -133,7 +134,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 
 - `VIDEO_UPLOAD_CHUNK_SIZE_KB` and `VIDEO_UPLOAD_CHUNK_ATTEMPTS` tune browser-to-Mux direct uploads only. They do not change Mux processing speed, webhook delivery, or provider lifecycle jobs.
 - Legacy Cloudflare Stream/R2 video env vars (`CLOUDFLARE_STREAM_*`, `CLOUDFLARE_R2_*`, `CLOUDFLARE_ACCOUNT_ID`) are not part of the current Review Video contract. If found in Vercel after Mux cutover proof, remove only those video-provider env vars; do not treat Cloudflare DNS/zone or future Worker delivery infrastructure as teardown scope.
-- `STOREFRONT_WIDGET_API_BASE_URL` is not a secret. Do not prefix it with `NEXT_PUBLIC_`; it is compiled into the public widget bundle intentionally. Keep it as an origin, not a path. Path-like values are normalized to the origin to avoid `/api/api/*` mistakes.
+- `STOREFRONT_WIDGET_API_BASE_URL` and `STOREFRONT_WIDGET_READ_API_BASE_URL` are not secrets. Do not prefix them with `NEXT_PUBLIC_`; they are compiled into the public widget bundle intentionally. Keep them as origins, not paths. Path-like values are normalized to the origin to avoid `/api/api/*` mistakes.
 
 ## Related Source Files
 - [.env.example](.env.example)

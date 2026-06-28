@@ -96,7 +96,7 @@ a dry-run report and `pnpm clean:widget-runtime:apply` only when intentionally
 cleaning local manifest-unreferenced untracked files. The helper does not touch
 tracked retention files.
 
-## Static widget assets (Cloudflare Worker target)
+## Static widget assets and V2 public reads (Cloudflare Worker target)
 
 [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]] keeps the same cache
 contract now that `widget.renuvex.app` is served by Cloudflare Worker Static
@@ -110,8 +110,21 @@ Assets:
 | `/widget-runtime/runtime-*.js` | `public, max-age=31536000, immutable` |
 | `/widget-runtime/chunks/*.js` | `public, max-age=31536000, immutable` |
 
-The Worker is asset-only and returns 404 for `/api/*`. Public API response
-caching stays on the `app.renuvex.app` Vercel origin.
+V1 Worker delivery is live for static assets. V2 source adds a narrow public-read
+proxy for only these GET endpoints:
+
+- `/api/public/ratings`
+- `/api/public/ratings-by-slug`
+- `/api/public/reviews`
+
+The read proxy keeps browser-facing `Cache-Control: public, max-age=0,
+must-revalidate`, stores eligible 200 JSON responses at the Worker edge for 60
+seconds, and marks diagnostics with `X-Renuvex-Edge-Cache: HIT | MISS | BYPASS`.
+It does not cache non-200 responses, `Set-Cookie` responses, unknown query
+parameters, or overly long URLs. `/api/public/settings` stays on
+`app.renuvex.app` because that route has backend theme-sync side effects.
+Upload, submit, video, widget-error, admin, webhook, Mux, Cloudinary, QStash,
+and DB writes are not proxied by the Worker.
 
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
@@ -174,7 +187,8 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
-- 2026-06-28: Added the Cloudflare Worker Static Assets target for `widget.renuvex.app`. The Worker mirrors existing widget cache headers and fails closed for `/api/*`; public API caching remains on Vercel.
+- 2026-06-28: Added the Cloudflare Worker V2 public-read cache source path for `ratings`, `ratings-by-slug`, and `reviews`. Settings/write/upload/video paths remain on `app.renuvex.app`, and live V2 activation still requires Worker deploy plus `STOREFRONT_WIDGET_READ_API_BASE_URL` cutover approval.
+- 2026-06-28: Added the Cloudflare Worker Static Assets target for `widget.renuvex.app`. The Worker mirrors existing widget cache headers and fails closed for `/api/*`; public API caching remains on Vercel until V2 read cutover.
 - 2026-06-24: Added `scripts/clean-widget-runtime-untracked.mjs` and npm wrappers to separate local untracked widget build leftovers from the committed seven-day runtime retention contract. The default command is dry-run; `--apply` deletes only untracked files outside the current manifest.
 - 2026-06-08: Public review-list exact `totalCount` / `totalPages` moved from raw `Review.count()` to `ProductReviewSummary` buckets, preserving response shape while removing the remaining aggregate scan from the public read path.
 - 2026-06-07: Public photo-review filtering moved from `Review.images` text matching to indexed `Review.hasImages`; normalized image rows live in `ReviewMedia`. See [[ADR_0027_Review_Media_Read_Model]].

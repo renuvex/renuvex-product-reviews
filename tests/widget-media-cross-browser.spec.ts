@@ -10,6 +10,7 @@ import {
   hasOverlay,
   hasReviewsWidget,
   isOverlayControlDisabled,
+  routeWidgetApi,
   setFileInputInOverlay,
   setupWidgetRoutes,
   stubVideoMetadata,
@@ -719,7 +720,7 @@ test('video wizard completes Mux direct upload and submits only the ready video 
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     await fulfillJson(route, {
       data: {
         token: videoToken,
@@ -753,11 +754,11 @@ test('video wizard completes Mux direct upload and submits only the ready video 
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     completeBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
     await fulfillJson(route, { data: { status: 'processing' } });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     await fulfillJson(route, {
       data: {
         status: 'ready',

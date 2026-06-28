@@ -118,11 +118,11 @@ related:
 - **Be careful:** New icon consumers should import from `src/widget/icons/index.js`. [src/widget/icons.js](src/widget/icons.js) remains only as a backward-compatible re-export.
 
 ### [src/widget/core/config.js](src/widget/core/config.js)
-- **What:** Reads `publicApiKey`, `ASSET_BASE`, and `API_BASE` for the storefront widget.
+- **What:** Reads `publicApiKey`, `ASSET_BASE`, `API_BASE`, and `READ_API_BASE` for the storefront widget.
 - **Be careful:** SSR-safe (guarded). If anything above this in the import graph reads `document` unguarded, the dashboard build will break — already happened (see `core/config.js` comment).
 
 ### [src/widget/core/origins.js](src/widget/core/origins.js)
-- **What:** Separates the script/static asset origin from the backend/API origin. `STOREFRONT_WIDGET_API_BASE_URL` is embedded at build time; unset falls back to the script origin.
+- **What:** Separates the script/static asset origin, backend/API origin, and optional public-read origin. `STOREFRONT_WIDGET_API_BASE_URL` and `STOREFRONT_WIDGET_READ_API_BASE_URL` are embedded at build time; unset read origin falls back to the API origin.
 - **Be careful:** Keep the helper origin-only. Do not allow path/query/hash API bases or arbitrary protocols. Localhost/private origins are only for explicit local-development overrides in the build script.
 
 ### [public/widget.js](public/widget.js)
@@ -137,7 +137,7 @@ related:
 
 ### [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
 - **What:** Cloudflare Worker Static Assets entry for `widget.renuvex.app`.
-- **Be careful:** Asset-only by design. It may serve widget runtime files and `/__health`; `/api/*` must remain fail-closed. Do not add secrets, DB, Mux, QStash, Cloudinary, R2, or provider calls to this Worker.
+- **Be careful:** Static/read-edge only by design. It may serve widget runtime files, `/__health`, and allowlisted public reads; every other `/api/*` path must remain fail-closed. Do not add secrets, DB, Mux, QStash, Cloudinary, R2, or provider calls to this Worker.
 
 ### [wrangler.widget.jsonc](wrangler.widget.jsonc)
 - **What:** Cloudflare Worker config for widget static asset delivery.
