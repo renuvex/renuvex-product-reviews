@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export const WIDGET_ORIGIN = 'https://widget.test';
+export const API_ORIGIN = resolveWidgetApiOrigin();
 export const MERCHANT_ORIGIN = 'https://merchant.test';
 export const PUBLIC_KEY = 'ci-public-key';
 export const PRODUCT_ID = 'product-1';
@@ -158,6 +159,35 @@ function readEnvFileValue(filePath: string, key: string): string {
   }
 }
 
+function normalizeOrigin(raw: string): string {
+  try {
+    const parsed = new URL(raw);
+    parsed.hash = '';
+    parsed.search = '';
+    parsed.pathname = '';
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+}
+
+function resolveWidgetApiOrigin(): string {
+  return normalizeOrigin(
+    process.env.STOREFRONT_WIDGET_API_BASE_URL ||
+    readEnvFileValue(path.join(process.cwd(), '.env.local'), 'STOREFRONT_WIDGET_API_BASE_URL') ||
+    readEnvFileValue(path.join(process.cwd(), '.env'), 'STOREFRONT_WIDGET_API_BASE_URL') ||
+    'https://app.renuvex.app',
+  ) || WIDGET_ORIGIN;
+}
+
+function apiOrigins(): string[] {
+  return Array.from(new Set([WIDGET_ORIGIN, API_ORIGIN].filter(Boolean)));
+}
+
+export async function routeWidgetApi(page: Page, pathPattern: string, handler: (route: Route) => Promise<void>): Promise<void> {
+  await Promise.all(apiOrigins().map((origin) => page.route(`${origin}${pathPattern}`, handler)));
+}
+
 function resolveReviewCloudName(): string {
   const raw = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
     process.env.CLOUDINARY_CLOUD_NAME ||
@@ -271,14 +301,14 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await page.route('https://res.cloudinary.com/**', fulfillImage);
-  await page.route(`${WIDGET_ORIGIN}/api/public/settings**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/settings**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(settingsResponse(options)),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/capability**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/capability**', async (route) => {
     const configured = options.videoCapability;
     if (configured?.abort) {
       await route.abort(configured.abort);
@@ -296,21 +326,21 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
         : { data: { enabled, reason: enabled ? null : configured?.reason || 'merchant_disabled' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/metrics**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/metrics**', async (route) => {
     await route.fulfill({
       status: 202,
       headers: jsonHeaders(),
       body: JSON.stringify({ data: { status: 'recorded' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/ratings**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(ratingsResponse(options)),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/reviews**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/reviews**', async (route) => {
     if (route.request().method() === 'POST') {
       if (options.reviewSubmitHandler) {
         await options.reviewSubmitHandler(route);
@@ -335,7 +365,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
       body: JSON.stringify(reviewsResponse(url.searchParams.get('hasImages') === 'true' || hasMedia, options.hasMore === true, PUBLIC_KEY, options.approvedReviewCount ?? 12)),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
     await route.fulfill({
       status: 204,
       headers: jsonHeaders(),
@@ -358,14 +388,14 @@ export async function setupPreviewRoutes(page: Page, options: SmokeOptions = {})
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await page.route('https://res.cloudinary.com/**', fulfillImage);
-  await page.route(`${WIDGET_ORIGIN}/api/preview/settings**`, async (route) => {
+  await routeWidgetApi(page, '/api/preview/settings**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(settingsResponse(options)),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/preview/reviews**`, async (route) => {
+  await routeWidgetApi(page, '/api/preview/reviews**', async (route) => {
     const url = new URL(route.request().url());
     await route.fulfill({
       status: 200,
@@ -373,7 +403,7 @@ export async function setupPreviewRoutes(page: Page, options: SmokeOptions = {})
       body: JSON.stringify(reviewsResponse(url.searchParams.get('hasImages') === 'true', options.hasMore === true, 'preview')),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
     await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
   });
   await page.route(`${MERCHANT_ORIGIN}/preview`, async (route) => {
@@ -390,7 +420,7 @@ export async function setupGenericLinksPage(page: Page): Promise<RequestLog> {
   const log = createRequestLog(page);
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
-  await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
     await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
   });
   await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
@@ -422,28 +452,28 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await page.route('https://res.cloudinary.com/**', fulfillImage);
-  await page.route(`${WIDGET_ORIGIN}/api/public/settings**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/settings**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(settingsResponse(options)),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/ratings-by-slug**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/ratings-by-slug**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(ratingsBySlugResponse()),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/ratings**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(ratingsResponse()),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
     await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
   });
   await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
@@ -477,28 +507,28 @@ async function setupListingProbePage(page: Page, body: string): Promise<RequestL
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
   await page.route('https://res.cloudinary.com/**', fulfillImage);
-  await page.route(`${WIDGET_ORIGIN}/api/public/settings**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/settings**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(settingsResponse({})),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/ratings**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(ratingsResponse()),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/ratings-by-slug**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/ratings-by-slug**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(ratingsBySlugResponse()),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
     await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
   });
   await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {

@@ -11,6 +11,7 @@ import {
   hasOverlay,
   hasReviewsWidget,
   isOverlayControlDisabled,
+  routeWidgetApi,
   setFileInputInOverlay,
   setupPreviewRoutes,
   setupWidgetRoutes,
@@ -625,7 +626,7 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/sign**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -658,7 +659,7 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/register**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
     registerBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
     await route.fulfill({
       status: 200,
@@ -786,7 +787,7 @@ test('quota races fail closed with generic video upload copy', async ({ page }) 
     reviewsSettings: { videoReviewsEnabled: true },
     videoCapability: { enabled: true },
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     await route.fulfill({
       status: 429,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -844,7 +845,7 @@ test('video upload wizard posts a ready video token without photo media', async 
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     initiateBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
     await route.fulfill({
       status: 200,
@@ -883,7 +884,7 @@ test('video upload wizard posts a ready video token without photo media', async 
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     completeBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
     await route.fulfill({
       status: 200,
@@ -891,7 +892,7 @@ test('video upload wizard posts a ready video token without photo media', async 
       body: JSON.stringify({ data: { status: 'processing' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1028,7 +1029,7 @@ test('media step photo selection hides primary actions and shows compact add til
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/sign**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1061,7 +1062,7 @@ test('media step photo selection hides primary actions and shows compact add til
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/register**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1129,7 +1130,7 @@ test('video upload retries transient Mux PUT failures before showing shopper ret
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     initiateCalls += 1;
     await route.fulfill({
       status: 201,
@@ -1157,14 +1158,14 @@ test('video upload retries transient Mux PUT failures before showing shopper ret
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify({ data: { status: 'processing' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1177,7 +1178,7 @@ test('video upload retries transient Mux PUT failures before showing shopper ret
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1228,7 +1229,7 @@ test('video upload shows neutral retry copy when connection drops', async ({ pag
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     await route.fulfill({
       status: 201,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1261,7 +1262,7 @@ test('video upload shows neutral retry copy when connection drops', async ({ pag
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     completeCalls += 1;
     statusReady = true;
     await route.fulfill({
@@ -1270,7 +1271,7 @@ test('video upload shows neutral retry copy when connection drops', async ({ pag
       body: JSON.stringify({ data: { status: 'processing' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1353,7 +1354,7 @@ test('video upload surfaces manual retry when direct upload stalls', async ({ pa
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     initiateCalls += 1;
     await route.fulfill({
       status: 201,
@@ -1386,7 +1387,7 @@ test('video upload surfaces manual retry when direct upload stalls', async ({ pa
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     completeCalls += 1;
     statusReady = true;
     await route.fulfill({
@@ -1395,7 +1396,7 @@ test('video upload surfaces manual retry when direct upload stalls', async ({ pa
       body: JSON.stringify({ data: { status: 'processing' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1467,7 +1468,7 @@ test('video retry keeps the selected file after repeated stalled uploads', async
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     initiateCalls += 1;
     await route.fulfill({
       status: 201,
@@ -1500,7 +1501,7 @@ test('video retry keeps the selected file after repeated stalled uploads', async
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     completeCalls += 1;
     statusReady = true;
     await route.fulfill({
@@ -1509,7 +1510,7 @@ test('video retry keeps the selected file after repeated stalled uploads', async
       body: JSON.stringify({ data: { status: 'processing' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1589,7 +1590,7 @@ test('video retry preserves the Mux direct upload session after chunk attempts a
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     initiateCalls += 1;
     await route.fulfill({
       status: 201,
@@ -1619,7 +1620,7 @@ test('video retry preserves the Mux direct upload session after chunk attempts a
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     statusCalls += 1;
     if (statusCalls === 1) {
       await route.abort('failed');
@@ -1635,7 +1636,7 @@ test('video retry preserves the Mux direct upload session after chunk attempts a
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1701,7 +1702,7 @@ test('ready video thumbnail remove cancels selected video', async ({ page }) => 
     },
   });
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1725,14 +1726,14 @@ test('ready video thumbnail remove cancels selected video', async ({ page }) => 
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify({ data: { status: 'ready' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     statusCalls += 1;
     await route.fulfill({
       status: 200,
@@ -1746,7 +1747,7 @@ test('ready video thumbnail remove cancels selected video', async ({ page }) => 
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video', async (route) => {
     if (route.request().method() === 'DELETE') cancelCalls += 1;
     await route.fulfill({
       status: 200,
@@ -1799,7 +1800,7 @@ test('offline modal close persists video cancellation and flushes it when connec
       videoReviewsEnabled: true,
     },
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/initiate**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/initiate**', async (route) => {
     await route.fulfill({
       status: 201,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1823,14 +1824,14 @@ test('offline modal close persists video cancellation and flushes it when connec
       body: '',
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/complete**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/complete**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify({ data: { status: 'processing' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/status**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/status**', async (route) => {
     statusCalls += 1;
     await route.fulfill({
       status: 200,
@@ -1838,7 +1839,7 @@ test('offline modal close persists video cancellation and flushes it when connec
       body: JSON.stringify({ data: { status: 'processing' } }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video', async (route) => {
     if (route.request().method() === 'DELETE') {
       cancelCalls += 1;
       if (!cancelDeliveryAvailable) {
@@ -1908,7 +1909,7 @@ test('preview video media step simulates upload without public video endpoints',
       formStepMediaSubtitle: 'Fotoğraf veya video ekleyebilirsiniz.',
     },
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/video/**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/video/**', async (route) => {
     publicVideoUploadCalls += 1;
     await route.fulfill({
       status: 500,
@@ -1967,7 +1968,7 @@ test('closing wizard during a pending photo upload revokes local blob previews',
   });
   const uploadedUrl = `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/pending-close.jpg`;
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/sign**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -1999,7 +2000,7 @@ test('closing wizard during a pending photo upload revokes local blob previews',
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/register**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -2037,7 +2038,7 @@ test('removing one pending photo does not abort later selected uploads', async (
   });
   let cloudUploadCalls = 0;
 
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/sign**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
@@ -2073,7 +2074,7 @@ test('removing one pending photo does not abort later selected uploads', async (
       }),
     });
   });
-  await page.route(`${WIDGET_ORIGIN}/api/public/upload/register**`, async (route) => {
+  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
