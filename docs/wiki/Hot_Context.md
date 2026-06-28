@@ -119,7 +119,7 @@ source_files:
 - For video work, no deploy, migration apply, env write, provider write, or teardown happens without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-06-28: Cloudflare Worker widget asset delivery is local-source ready. `widget.renuvex.app` is the future asset-only Worker origin; `app.renuvex.app` remains backend/API/upload/Mux/QStash. External env, deploy, DNS, and ikas writes stay stop/go gated.
+- 2026-06-28: Cloudflare Worker widget asset delivery is live. `widget.renuvex.app` is an asset-only Worker origin (`renuvex-widget-assets`); `app.renuvex.app` remains backend/API/upload/Mux/QStash.
 - 2026-06-28: Media-gallery lightbox opens now show a bottom rail with one first trusted image/video per media-backed review; ordinary review opens keep current-review media thumbnails.
 - 2026-06-27: Existing videos stay visible when video uploads are disabled. Media gallery reads always use `hasMedia=true`; the public filter uses `ProductReviewSummary.mediaReviewCount > photoReviewCount` to choose mixed media vs photo-only.
 - 2026-06-23: Review Video playback uses official Mux Player. Storefront videos expose public `playbackId`; admin preview uses signed Mux Player attributes. Mux Data tracking/cookies stay disabled.
@@ -131,7 +131,7 @@ source_files:
 ## Current Risks / Open Questions
 - The storefront widget is Turkish-first today. There is no i18n layer, locale resolver, or per-locale settings model yet. Future English/German support requires a proper string catalog, locale source, and accessibility-string migration; do not treat the current merchant-editable copy fields as localization.
 - Keep live post-deploy smoke after runtime widget changes.
-- Worker delivery cutover is not live yet. First add/verify `STOREFRONT_WIDGET_API_BASE_URL=https://app.renuvex.app`, redeploy Vercel, canary `widget-canary.renuvex.app`, and keep rollback DNS evidence.
+- Worker rollback: detach the Worker custom domain and restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, proxied `false`.
 - Mux cleanup gates closed for the old video provider: contract migration verified, old Vercel Cloudflare video env vars absent, and Cloudflare Stream/R2 video inventory empty. Cloudflare DNS/zone and future Worker delivery infrastructure stay out of this cleanup scope.
 - Supabase RLS audit: repo uses server-side Prisma and no browser Supabase client; SQL privilege checks did not show `anon`/`authenticated` table access, but most public app tables still have RLS disabled. Treat RLS/default-grants hardening as a public-launch blocker; do not enable blindly during active schema churn.
 - Theme adapters still depend on Admin API `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.

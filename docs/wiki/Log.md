@@ -23,6 +23,13 @@ source_files:
 
 # Project Log
 
+## 2026-06-28 - deploy | Cut over widget assets to Cloudflare Worker
+- Deployed Worker `renuvex-widget-assets` with `pnpm worker:widget:deploy` and attached `widget.renuvex.app` as its Cloudflare Worker Custom Domain.
+- Removed only the old `widget.renuvex.app` Vercel DNS-only CNAME (`2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, proxied `false`). Cloudflare created the read-only proxied Worker `AAAA 100::` record.
+- Verified live Worker delivery: `/__health` returned OK, `widget.js` and `runtime.js` kept the revalidate cache policy, hashed runtime/chunks kept immutable caching, and `/api/public/settings` returned `404`.
+- Ran `pnpm measure:deployed-widget` with separate origins: assets from `https://widget.renuvex.app`, API from `https://app.renuvex.app`; all four controlled scenarios completed with `widgetError: 0`.
+- `app.renuvex.app`, Vercel backend, Supabase, Mux, QStash, ikas script URL, KV, R2, and Stream were not changed.
+
 ## 2026-06-28 - build | Prepare Cloudflare Worker widget asset delivery
 - Added the local Worker Static Assets delivery layer for the storefront widget. The Worker serves only widget assets and `/__health`, applies the existing loader/runtime/chunk cache contract, and fails closed for `/api/*`.
 - Split the widget runtime origin model: `STOREFRONT_WIDGET_BASE_URL` remains the script/static asset origin, while `STOREFRONT_WIDGET_API_BASE_URL` embeds the backend/API origin into the widget build. If unset, the runtime falls back to the script origin for rollback/local compatibility.

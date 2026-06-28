@@ -36,7 +36,7 @@ source_files:
 # ADR 0033: Cloudflare Worker Widget Asset Delivery
 
 ## Status
-Accepted for local implementation. External cutover remains gated by explicit approval for Vercel env mutation, Cloudflare Worker deploy, custom domain/DNS changes, and any ikas script write.
+Accepted and live for `widget.renuvex.app` asset delivery. Future Worker redeploys, custom domain/DNS changes, Vercel env/domain changes, and any ikas script write remain explicit stop/go operations.
 
 ## Context
 The storefront widget currently uses one stable script URL:
@@ -115,11 +115,20 @@ X-Content-Type-Options: nosniff
 ```
 
 ## Rollout
-1. Add and deploy `STOREFRONT_WIDGET_API_BASE_URL=https://app.renuvex.app` on Vercel Production, then verify the still-Vercel-hosted widget sends API calls to `app.renuvex.app`.
-2. Deploy the Worker to a canary domain such as `widget-canary.renuvex.app`.
-3. Run deployed widget measurement with separate asset/API origins.
-4. After canary acceptance, cut over `widget.renuvex.app` to the Worker Custom Domain with explicit DNS rollback evidence.
-5. Leave `app.renuvex.app` unchanged.
+The rollout completed on 2026-06-28:
+
+1. `STOREFRONT_WIDGET_API_BASE_URL=https://app.renuvex.app` was added to Vercel Production and deployed.
+2. `pnpm worker:widget:deploy` deployed Worker `renuvex-widget-assets`.
+3. The old DNS-only Vercel CNAME was removed:
+
+   ```text
+   widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com
+   TTL 600, proxied false
+   ```
+
+4. `widget.renuvex.app` was attached as a Worker Custom Domain to `renuvex-widget-assets`.
+5. Cloudflare created a read-only proxied `AAAA 100::` DNS record for the Worker custom domain.
+6. `app.renuvex.app` remained unchanged.
 
 ## Consequences
 - Storefront static delivery can move to Cloudflare without moving the backend.
@@ -143,6 +152,14 @@ Local gates for the implementation:
 - `pnpm test:widget-runtime`
 - `pnpm test:widget-interactions`
 - `pnpm test:widget-media:chromium`
+
+Live cutover verification on 2026-06-28:
+
+- `https://widget.renuvex.app/__health` returned `{"ok":true,"service":"renuvex-widget-assets"}`.
+- `https://widget.renuvex.app/widget.js` and `/widget-runtime/runtime.js` returned `server: cloudflare`, CORS `*`, and `Cache-Control: public, max-age=0, must-revalidate`.
+- Hashed runtime/chunk assets returned `Cache-Control: public, max-age=31536000, immutable`.
+- `https://widget.renuvex.app/api/public/settings` returned `404`, so `/api/*` stayed fail-closed.
+- `pnpm measure:deployed-widget` passed against `MEASURE_WIDGET_ORIGIN=https://widget.renuvex.app` and `MEASURE_WIDGET_API_ORIGIN=https://app.renuvex.app`; measured widget API calls went to the backend origin and widget-error count stayed `0`.
 
 ## Related Source Files
 - [wrangler.widget.jsonc](wrangler.widget.jsonc)

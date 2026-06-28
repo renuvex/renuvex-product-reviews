@@ -66,18 +66,22 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Theme variant: `pnpm build:widget --theme=new-theme` produces `public/widget-new-theme.js`. Runtime selection mechanism is unclear — see [[Open_Questions]].
 
 ## Cloudflare Worker widget delivery
-- Target architecture: `widget.renuvex.app` serves only storefront static widget assets through Cloudflare Worker Static Assets; `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash origin.
+- Live architecture: `widget.renuvex.app` serves only storefront static widget assets through Cloudflare Worker Static Assets; `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash origin.
+- Live Worker: `renuvex-widget-assets`.
+- Worker custom domain: `widget.renuvex.app -> renuvex-widget-assets`.
+- Cloudflare-created DNS record: read-only proxied `AAAA 100::` for `widget.renuvex.app`.
+- Rollback DNS evidence: before cutover, `widget.renuvex.app` was `CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, proxied `false`.
 - Local tooling:
   - `pnpm worker:widget:prepare-assets` copies only widget deploy files into `.tmp/widget-worker-assets`.
   - `pnpm worker:widget:types` regenerates Worker Env types with an empty `.tmp/widget-worker.env`, keeping app env names out of Worker types.
   - `pnpm worker:widget:deploy:dry-run` validates the Worker bundle/assets without deploying.
-- Actual `pnpm worker:widget:deploy`, Cloudflare Worker custom domain creation, DNS edits, and Vercel domain/env changes are external mutations and require explicit stop/go approval.
-- Cutover order:
-  1. Add `STOREFRONT_WIDGET_API_BASE_URL=https://app.renuvex.app` to Vercel Production.
-  2. Redeploy Vercel Production and verify the Vercel-hosted widget still loads assets from `widget.renuvex.app` while API calls go to `app.renuvex.app`.
-  3. Deploy Worker to a canary domain such as `widget-canary.renuvex.app`.
-  4. Run deployed widget measurement with `MEASURE_WIDGET_ORIGIN=https://widget-canary.renuvex.app` and `MEASURE_WIDGET_API_ORIGIN=https://app.renuvex.app`.
-  5. Cut over `widget.renuvex.app` to Worker only after canary acceptance and rollback DNS evidence.
+- External mutations such as future Worker redeploys, custom domain edits, DNS rollback, and Vercel domain/env changes still require explicit stop/go approval.
+- Cutover verification on 2026-06-28:
+  - `https://widget.renuvex.app/__health` returned `{"ok":true,"service":"renuvex-widget-assets"}`.
+  - `https://widget.renuvex.app/widget.js` returned `server: cloudflare`, `Access-Control-Allow-Origin: *`, and `Cache-Control: public, max-age=0, must-revalidate`.
+  - Hashed runtime/chunk assets returned `Cache-Control: public, max-age=31536000, immutable`.
+  - `https://widget.renuvex.app/api/public/settings` returned `404`, confirming the Worker remains fail-closed for public API paths.
+  - `pnpm measure:deployed-widget` with `MEASURE_WIDGET_ORIGIN=https://widget.renuvex.app` and `MEASURE_WIDGET_API_ORIGIN=https://app.renuvex.app` passed four controlled scenarios with zero widget-error calls.
 
 ## Local development
 1. `pnpm install`
