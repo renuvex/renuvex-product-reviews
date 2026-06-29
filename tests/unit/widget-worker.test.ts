@@ -46,6 +46,25 @@ function assetEnv(body = 'ok') {
   };
 }
 
+function assetEnvWithStatus(status: number) {
+  const seen: string[] = [];
+  return {
+    env: {
+      ASSETS: {
+        async fetch(request: Request) {
+          seen.push(request.url);
+          return new Response(status === 304 ? null : 'ok', {
+            status,
+            headers: { 'Content-Type': 'application/javascript; charset=utf-8' },
+          });
+        },
+      },
+      BACKEND_API_ORIGIN: 'https://app.renuvex.app' as const,
+    },
+    seen,
+  };
+}
+
 function readProxyEnv(responseFactory?: (request: Request) => Response | Promise<Response>) {
   const { env } = assetEnv();
   const { cache, store } = createMockCache();
@@ -85,6 +104,17 @@ describe('widget Worker delivery contract', () => {
     expect(api.status).toBe(404);
     expect(await api.json()).toEqual({ error: 'not_found' });
     expect(api.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('preserves asset cache policy on conditional 304 responses', async () => {
+    const { env } = assetEnvWithStatus(304);
+    const stable = await worker.fetch(new Request('https://widget.renuvex.app/widget.js'), env);
+    const immutable = await worker.fetch(new Request('https://widget.renuvex.app/widget-runtime/chunks/chunk-ABC123.js'), env);
+
+    expect(stable.status).toBe(304);
+    expect(stable.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate');
+    expect(immutable.status).toBe(304);
+    expect(immutable.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
   });
 
   it('pins the path classifier to the supported widget surface', () => {

@@ -259,7 +259,8 @@ async function proxyPublicRead(request: Request, env: WidgetEnv, ctx?: Execution
 async function serveAsset(request: Request, env: Env, cacheControl: string): Promise<Response> {
   const response = await env.ASSETS.fetch(request);
   const headers = withCors(new Headers(response.headers));
-  headers.set('Cache-Control', response.status === 200 ? cacheControl : NO_STORE_CACHE_CONTROL);
+  const isCacheableAssetResponse = response.status === 200 || response.status === 304;
+  headers.set('Cache-Control', isCacheableAssetResponse ? cacheControl : NO_STORE_CACHE_CONTROL);
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

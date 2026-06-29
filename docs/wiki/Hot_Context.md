@@ -121,6 +121,7 @@ source_files:
 - For video work, no deploy, migration apply, env write, provider write, or teardown happens without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-06-29: Cloudflare Worker source fix is ready: asset `304` responses preserve the same cache policy as `200`; deploy is a separate approval.
 - 2026-06-28: Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. `settings`, upload, submit, video, metrics, and widget-error remain on `app.renuvex.app`.
 - 2026-06-29: AWS CloudFront/S3 widget CDN canary is live on the default CloudFront hostname and verified for the current widget asset graph. No production DNS or ikas script cutover happened.
 - 2026-06-28: Worker asset delivery is live. `widget.renuvex.app` is static Worker origin (`renuvex-widget-assets`); `app.renuvex.app` remains backend/API/upload/Mux/QStash.

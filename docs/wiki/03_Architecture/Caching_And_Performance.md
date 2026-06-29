@@ -126,6 +126,14 @@ parameters, or overly long URLs. `/api/public/settings` stays on
 Upload, submit, video, widget-error, admin, webhook, Mux, Cloudinary, QStash,
 and DB writes are not proxied by the Worker.
 
+2026-06-29 source hardening: Worker Static Assets must preserve the same
+asset cache policy on conditional `304 Not Modified` responses as on `200`
+responses. A live DevTools check found `/widget.js` returning `304` with
+`Cache-Control: no-store`; [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
+now treats `200` and `304` as cacheable asset responses so stable files keep
+`public, max-age=0, must-revalidate` and hashed files keep
+`public, max-age=31536000, immutable`.
+
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
 
@@ -187,6 +195,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-06-29: Hardened Cloudflare Worker asset headers so conditional `304` responses preserve the same stable/immutable cache policy as `200` asset responses.
 - 2026-06-28: Cloudflare Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. Settings/write/upload/video paths remain on `app.renuvex.app`.
 - 2026-06-28: Cloudflare Worker Static Assets is live for `widget.renuvex.app`; Worker V2 read-through caching is live for allowlisted public ratings/reviews reads and remains fail-closed for settings/write/upload/video paths.
 - 2026-06-24: Added `scripts/clean-widget-runtime-untracked.mjs` and npm wrappers to separate local untracked widget build leftovers from the committed seven-day runtime retention contract. The default command is dry-run; `--apply` deletes only untracked files outside the current manifest.

@@ -113,6 +113,41 @@ Header evidence from the same run:
 Note: `curl -I` uses `HEAD`. The Worker intentionally bypasses read-cache storage
 for `HEAD` requests. Read-cache behavior must be checked with `GET`.
 
+## 2026-06-29 Storefront Waterfall Follow-up
+
+Chrome DevTools and `scripts/measure-storefront-waterfall.mjs` were used against
+the dev ikas product page:
+
+```text
+https://dev-mertcopper.ikas.shop/premium-shortsg
+```
+
+Current evidence:
+
+- The page document reached DOMContentLoaded around 1.76s and the Renuvex widget
+  script tag was present at the same point.
+- The Renuvex review widget became visible around 3.24s.
+- Renuvex public read APIs were not the dominant delay in this run:
+  `renuvex-read-api` max TTFB was around 175ms and `settings` was around 246ms.
+- The host storefront produced the largest waterfall surface: roughly 106 ikas
+  storefront requests and about 1.91 MB encoded transfer in the sample.
+- DevTools showed `/widget.js` returning `304 Not Modified` with
+  `Cache-Control: no-store`. Source was hardened so Worker asset responses now
+  preserve the intended cache policy for both `200` and `304`: stable loader
+  paths remain `public, max-age=0, must-revalidate`; content-hashed runtime and
+  chunk paths remain `public, max-age=31536000, immutable`.
+
+Interpretation:
+
+- The evidence does not support blaming Supabase, Redis, QStash, Mux, or DB
+  writes for the initial visible widget delay.
+- The main optimization area is storefront discovery/runtime sequencing:
+  ikas host-page load, the classic loader -> ESM runtime -> surface chunk chain,
+  and first-render API fan-out.
+- Listing-badge traffic can appear later on PDPs with related/listing product
+  data, but the sampled 20-product `ratings` request did not block the first
+  review widget visibility.
+
 ## Cause And Effect
 
 ### What the data supports
