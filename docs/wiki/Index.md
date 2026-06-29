@@ -161,6 +161,9 @@ source_files: []
 - [[Ecommerce_Review_UX_Patterns]]
 - [[Review_Layout_Padding_Research]]
 - [[Storefront_CDN_Performance_Benchmark]]
+- [[Storefront_CDN_Cost_Model]]
+- [[Review_App_Monthly_Cost_Model]]
+- [[Upstash_Redis_QStash_Cost_Audit]]
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 - [[Phase_1_Widget_Runtime_Audit]]
 - [[Phase_2_Widget_Module_Split_Plan]]
@@ -183,4 +186,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-06-28 (added storefront CDN performance benchmark)
+**Last Updated:** 2026-06-30 (added storefront CDN, Upstash, and review-app cost models)

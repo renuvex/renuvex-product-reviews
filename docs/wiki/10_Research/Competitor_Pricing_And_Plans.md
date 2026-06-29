@@ -198,6 +198,22 @@ Legend: `Yes` = browser/source verified, `Partial` = exists only in some tiers o
 
 ## Packaging Implications For Renuvex
 
+### Media-Limit Positioning
+
+- Competitor evidence does not support small visible photo-count limits as the
+  main packaging mechanism. Judge.me explicitly lists unlimited visual reviews
+  on the verified Shopify listing; Loox, Yotpo, and Okendo primarily use
+  order/email/video/package gates or custom pricing signals in the current
+  evidence.
+- Renuvex should treat photo reviews as a base review value and control image
+  cost through optimized variants, lazy loading, CDN/provider choice, abuse
+  controls, and fair-use language.
+- Cost-heavy surfaces should still have explicit guardrails: review-request
+  emails, video uploads, video playback minutes, and enterprise/custom handling
+  for unusually high media delivery.
+- See [[Review_App_Monthly_Cost_Model]] for the 200-store no-quota vs
+  quota-governed cost scenarios.
+
 ### Starter
 - Should not compete by copying Judge.me's unlimited-everything economics without usage guardrails.
 - Best starter promise: ikas-native install, review widget, star/listing badges, photo reviews, moderation, structured data, and simple customization.

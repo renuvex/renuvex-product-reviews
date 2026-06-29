@@ -122,6 +122,8 @@ source_files:
 
 ## Recent Important Changes
 - 2026-06-29: Cloudflare Worker source fix is ready: asset `304` responses preserve the same cache policy as `200`; deploy is a separate approval.
+- 2026-06-30: Upstash audit: Redis measured `0` recent commands/bandwidth; QStash has no DLQ/schedules. See [[Upstash_Redis_QStash_Cost_Audit]].
+- 2026-06-29: ikas support said dev/test StorefrontJSScript timing should match production; do not treat dev-store timing as dev-only slowdown.
 - 2026-06-28: Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. `settings`, upload, submit, video, metrics, and widget-error remain on `app.renuvex.app`.
 - 2026-06-29: AWS CloudFront/S3 widget CDN canary is live on the default CloudFront hostname and verified for the current widget asset graph. No production DNS or ikas script cutover happened.
 - 2026-06-28: Worker asset delivery is live. `widget.renuvex.app` is static Worker origin (`renuvex-widget-assets`); `app.renuvex.app` remains backend/API/upload/Mux/QStash.
@@ -133,15 +135,15 @@ source_files:
 - 2026-06-21: Mux abandoned-ready cleanup deletes known/recovered assets and refunds eligible unsubmitted consumed quota.
 
 ## Current Risks / Open Questions
-- Storefront is Turkish-first; future EN/DE needs a real i18n layer, not only merchant copy fields.
-- Keep live post-deploy smoke after runtime widget changes.
-- Worker V2 read cutover is complete. Future widget builds should keep `STOREFRONT_WIDGET_READ_API_BASE_URL=https://widget.renuvex.app` or rely on `STOREFRONT_WIDGET_BASE_URL=https://widget.renuvex.app` as the read-origin fallback.
-- CDN benchmark: Cloudflare Worker V2 and the AWS canary both work. Local Turkey testing showed AWS modestly faster, but cutover still needs broader-region checks, cost review, rollback rehearsal, and explicit approval.
-- Worker rollback: detach the Worker custom domain and restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, proxied `false`.
-- Mux cleanup gates closed for the old video provider: contract migration verified, old Vercel Cloudflare video env vars absent, and Cloudflare Stream/R2 video inventory empty. Cloudflare DNS/zone and future Worker delivery infrastructure stay out of this cleanup scope.
-- Supabase RLS/default-grants hardening remains a public-launch blocker; do not enable blindly during active schema churn.
-- Theme adapters still depend on Admin API `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
-- Deferred gaps: unsupported-theme admin warning UI, authenticated ikas dashboard smoke, Sentry post-deploy health.
+- Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
+- Keep post-deploy smoke after runtime widget changes.
+- Worker V2 read cutover is complete. Keep storefront read origin on `widget.renuvex.app`; backend/write/upload stays on `app.renuvex.app`.
+- CDN benchmark: Cloudflare V2 and AWS canary work; production cutover still needs broader-region checks, cost review, rollback rehearsal, and approval.
+- Worker rollback: restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, DNS-only.
+- Old video-provider cleanup gates are closed; preserve Cloudflare DNS/zone and Worker delivery infrastructure.
+- Supabase RLS/default-grants hardening is a public-launch blocker.
+- Theme adapters depend on Admin API `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
+- Deferred gaps: unsupported-theme warning UI, authenticated ikas dashboard smoke, Sentry post-deploy health.
 
 ## Read Next
 - [[Current_Status]]

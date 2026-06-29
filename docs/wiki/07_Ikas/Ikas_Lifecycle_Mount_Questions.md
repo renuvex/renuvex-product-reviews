@@ -35,6 +35,14 @@ guaranteed** (Q1/Q2/Q4); there is **no** official route-change API beyond the ev
 placement points are on the roadmap but **not near-term** (Q3). **Net: the defensive fix is the
 required approach — there is no platform guarantee to simplify toward today.**
 
+**Follow-up answered 2026-06-29** (ikas support, user-provided). ikas stated that dev/test
+storefronts or builder environments should not have separate debug layers, preview/proxy behavior,
+cache behavior, or StorefrontJSScript injection timing differences versus public production; they
+should reflect in the same time. **Net: do not dismiss dev-store widget waterfall measurements as
+automatically slower because the store is dev/test.** This does not prove the ikas host page has no
+performance cost; it only removes the dev-vs-production environment-mismatch hypothesis from the
+primary root-cause list.
+
 ## Why we are asking (context)
 Our storefront review widget is injected via a storefront script. It reads page/product context
 from `window.IkasEvents` ([Ikas_Storefront_Events](Ikas_Storefront_Events.md)) and renders the
