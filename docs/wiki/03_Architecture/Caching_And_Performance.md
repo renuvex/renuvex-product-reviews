@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-24
-last_verified: 2026-06-24
+updated: 2026-06-29
+last_verified: 2026-06-29
 confidence: high
 tags:
   - performance
@@ -195,6 +195,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-06-29: Review widget first render no longer waits for the media-gallery read. Main review data renders first; the media gallery hydrates afterward, and stale initial data is not re-rendered if the shopper changes product/sort/filter/page before the delayed media read returns.
 - 2026-06-29: Hardened Cloudflare Worker asset headers so conditional `304` responses preserve the same stable/immutable cache policy as `200` asset responses.
 - 2026-06-28: Cloudflare Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. Settings/write/upload/video paths remain on `app.renuvex.app`.
 - 2026-06-28: Cloudflare Worker Static Assets is live for `widget.renuvex.app`; Worker V2 read-through caching is live for allowlisted public ratings/reviews reads and remains fail-closed for settings/write/upload/video paths.

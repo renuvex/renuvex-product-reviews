@@ -123,6 +123,67 @@ test('review mount present loads reviews, media gallery, badge, and render chunk
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('review section renders before delayed media gallery response', async ({ page }) => {
+  let mediaRequested = false;
+  let releaseMedia!: () => void;
+  const mediaGate = new Promise<void>((resolve) => {
+    releaseMedia = resolve;
+  });
+  const mainReviews = [
+    {
+      id: 'main-review-1',
+      rating: 5,
+      title: 'Fast render',
+      comment: 'Main review content should render before the media gallery read finishes.',
+      author: 'Mert W.',
+      createdAt: '2026-06-29T00:00:00.000Z',
+      images: [],
+      merchantReply: null,
+      recommendation: true,
+    },
+  ];
+  const galleryReviews = [
+    {
+      id: 'media-gallery-review-1',
+      rating: 5,
+      title: 'Media review',
+      comment: 'Representative media for the gallery.',
+      author: 'Ada K.',
+      createdAt: '2026-06-28T00:00:00.000Z',
+      images: [trustedReviewImage('delayed-gallery-1')],
+      merchantReply: null,
+      recommendation: true,
+    },
+  ];
+
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.get('hasMedia') === 'true') {
+        mediaRequested = true;
+        await mediaGate;
+        await fulfillJson(route, reviewPayload(galleryReviews));
+        return;
+      }
+      await fulfillJson(route, reviewPayload(mainReviews));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
+    reviewCards: 1,
+    mediaThumbs: 0,
+  });
+  expect(mediaRequested).toBe(true);
+
+  releaseMedia();
+  await expect.poll(async () => (await reviewsWidgetState(page)).mediaThumbs).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('duplicate product contexts stay idempotent across PDP surfaces', async ({ page }) => {
   const log = await setupWidgetRoutes(page, {
     badgeEnabled: true,

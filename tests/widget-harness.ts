@@ -5,6 +5,7 @@ import path from 'node:path';
 
 export const WIDGET_ORIGIN = 'https://widget.test';
 export const API_ORIGIN = resolveWidgetApiOrigin();
+export const READ_API_ORIGIN = resolveWidgetReadApiOrigin();
 export const MERCHANT_ORIGIN = 'https://merchant.test';
 export const PUBLIC_KEY = 'ci-public-key';
 export const PRODUCT_ID = 'product-1';
@@ -180,8 +181,17 @@ function resolveWidgetApiOrigin(): string {
   ) || WIDGET_ORIGIN;
 }
 
+function resolveWidgetReadApiOrigin(): string {
+  return normalizeOrigin(
+    process.env.STOREFRONT_WIDGET_READ_API_BASE_URL ||
+    readEnvFileValue(path.join(process.cwd(), '.env.local'), 'STOREFRONT_WIDGET_READ_API_BASE_URL') ||
+    readEnvFileValue(path.join(process.cwd(), '.env'), 'STOREFRONT_WIDGET_READ_API_BASE_URL') ||
+    API_ORIGIN,
+  ) || API_ORIGIN || WIDGET_ORIGIN;
+}
+
 function apiOrigins(): string[] {
-  return Array.from(new Set([WIDGET_ORIGIN, API_ORIGIN].filter(Boolean)));
+  return Array.from(new Set([WIDGET_ORIGIN, API_ORIGIN, READ_API_ORIGIN].filter(Boolean)));
 }
 
 export async function routeWidgetApi(page: Page, pathPattern: string, handler: (route: Route) => Promise<void>): Promise<void> {

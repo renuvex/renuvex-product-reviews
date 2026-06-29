@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-28
-last_verified: 2026-06-28
+updated: 2026-06-29
+last_verified: 2026-06-29
 confidence: high
 tags:
   - widget
@@ -81,7 +81,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-06-08 media metadata path: widget register now forwards signed Cloudinary upload-response metadata to `/api/public/upload/register`; public reads stay DB-only and expose additive `media[]` metadata for future image-heavy layouts. Cloudinary Admin API is only for dry-run-first backfill/repair (`pnpm reviews:media:metadata:backfill`), never storefront GET.
 
 - 2026-06-28 CDN latency snapshot: Cloudflare Worker V2 delivery is functionally live, but local Turkey measurements routed `widget.renuvex.app` to Cloudflare `FRA` and showed materially higher median TTFB than the sampled Yotpo CDN reference. Treat this as a dated decision-support snapshot, not a global CDN verdict. See [[Storefront_CDN_Performance_Benchmark]] before deciding on AWS CloudFront/S3 canary work.
-- 2026-06-29 storefront waterfall finding: the current Yotpo comparison does not support blaming missing cache headers, Supabase, Redis, QStash, Mux, or DB writes for first visible review-widget delay. Static/read cache headers are now correct enough to move to source sequencing. The verified blocker is `reviews-section/bootstrap.js`: first render waits for both the main review request and `fetchMixedMediaGalleryReviews(...hasMedia=true&limit=15)`, then loads the render chunk. The next optimization should render the main review payload first and hydrate the media gallery after first paint. See [[Storefront_CDN_Performance_Benchmark]].
+- 2026-06-29 storefront first-render isolation: the Yotpo comparison did not support blaming missing cache headers, Supabase, Redis, QStash, Mux, or DB writes for first visible review-widget delay. The verified blocker was `reviews-section/bootstrap.js` waiting for both the main review request and `fetchMixedMediaGalleryReviews(...hasMedia=true&limit=15)` before the first render. The source now renders the main review payload first and hydrates the media gallery after first paint; if the shopper changes product/sort/filter/page before media arrives, the stale initial payload is not re-rendered. `pnpm test:widget-smoke` covers this with a delayed media-gallery response and the V2 test harness routes `STOREFRONT_WIDGET_READ_API_BASE_URL` separately from backend/write origin. See [[Storefront_CDN_Performance_Benchmark]].
 - 2026-06-29 Yotpo home/category DevTools follow-up: the reference storefront's home and category pages use lightweight rating/star surfaces and carousel data, not the full PDP review/media API path. The observed Yotpo loader and `staticw2` widget shell still had TTL-0 cache behavior, while versioned star-rating assets used `max-age=31536000`. Preserve Renuvex's bulk ratings model and keep review/media/Mux code behind explicit PDP review mounts or future explicit widgets. See [[Storefront_CDN_Performance_Benchmark]].
 - 2026-06-29 multi-provider DevTools follow-up: Okendo, Judge.me, Yotpo, and ikas-native examples all support the same split: long-cache static/versioned assets, dynamic review APIs that are often no-cache/no-store or POST GraphQL, and lightweight home/category surfaces. The finding argues for Renuvex first-render isolation and lazy media/lightbox work before KV, write-path edge moves, or provider/CDN swaps. See [[Storefront_CDN_Performance_Benchmark]].
 
