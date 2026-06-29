@@ -81,6 +81,37 @@ function mediaPlayIconSizeForContainer(containerPx) {
   return Math.round(containerPx * 0.5);
 }
 
+function findGalleryInsertionPoint(widget) {
+  return widget.querySelector(
+    '.renuvex-pr-review, .renuvex-pr-review-list, .renuvex-pr-review-gallery, .renuvex-pr-state-msg, .renuvex-pr-load-more, .renuvex-pr-pagination'
+  );
+}
+
+export function renderDeferredMediaGallery(productId, settings) {
+  if (String(currentProductId || '') !== String(productId || '')) return false;
+
+  var container = document.getElementById('renuvex-reviews');
+  var sRoot = container && container.shadowRoot;
+  var widget = sRoot && sRoot.getElementById('renuvex-reviews-widget');
+  if (!widget || widget.getAttribute('data-renuvex-product-id') !== String(productId || '')) return false;
+
+  var existing = widget.querySelector('.renuvex-pr-media-gallery-section');
+  if (existing) existing.remove();
+
+  var mediaGallerySection = buildMediaGallery({
+    settings: settings,
+    root: document.documentElement,
+    currentMediaFilter: currentMediaFilter,
+    mediaStripReviews: mediaStripReviews,
+    openReviewModal: openReviewModal,
+    wireLightboxTrigger: wireLightboxTrigger,
+  });
+  if (!mediaGallerySection) return false;
+
+  widget.insertBefore(mediaGallerySection, findGalleryInsertionPoint(widget));
+  return true;
+}
+
 export async function render(productId, settings, reviewsData, productName, orderBy, page, badgeSettings) {
   if (renderInProgress) {
     setPendingRender({ productId, settings, reviewsData, productName, orderBy, page, badgeSettings });

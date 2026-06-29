@@ -13,6 +13,7 @@ import {
   setCurrentHasReviewVideoMedia,
   setMediaStripReviews,
 } from '../core/state.js';
+import { scheduleIdleTask } from '../core/scheduler.js';
 import { createReviewsFetchError, fetchMixedMediaGalleryReviews, fetchReviews } from './reviews-api.js';
 
 var bootstrapCache = {};
@@ -75,6 +76,38 @@ function isInitialReviewsView(productId) {
     currentMediaFilter === 'none';
 }
 
+async function loadDeferredMediaGallery(opts) {
+  var productId = opts.productId;
+  var reviewsSettings = opts.reviewsSettings;
+  var reviewsData = opts.reviewsData;
+  var renderModule = opts.renderModule;
+  var token = opts.token;
+  var startedPathname = opts.startedPathname;
+
+  if (!isCurrentBootstrap(token, productId, startedPathname)) return;
+
+  var mediaGalleryReviews = [];
+  try {
+    mediaGalleryReviews = await fetchMixedMediaGalleryReviews(productId);
+  } catch (err) {
+    console.error('[renuvex-pr] media gallery fetch error:', err);
+    return;
+  }
+
+  if (!isCurrentBootstrap(token, productId, startedPathname)) return;
+
+  setMediaStripReviews(mediaGalleryReviews);
+  setCurrentHasReviewVideoMedia(resolveHasVideoMedia(reviewsData, mediaGalleryReviews));
+
+  if (
+    mediaGalleryReviews.length > 0 &&
+    isInitialReviewsView(productId) &&
+    typeof renderModule.renderDeferredMediaGallery === 'function'
+  ) {
+    renderModule.renderDeferredMediaGallery(productId, reviewsSettings);
+  }
+}
+
 export async function bootstrap(productId, productName) {
   if (bootstrapCache[productId]) return;
   bootstrapCache[productId] = true;
@@ -104,10 +137,6 @@ export async function bootstrap(productId, productName) {
     resetReviewStateForProduct(productId);
 
     var renderModulePromise = loadRenderModule();
-    var mediaGalleryFetch = fetchMixedMediaGalleryReviews(productId).catch(function (err) {
-      console.error('[renuvex-pr] media gallery fetch error:', err);
-      return [];
-    });
     var reviewsData = await fetchReviews(productId, 'newest', 1, null);
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
@@ -117,16 +146,18 @@ export async function bootstrap(productId, productName) {
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
     await renderModule.render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
-
-    var mediaGalleryReviews = await mediaGalleryFetch;
-    if (!isCurrentBootstrap(token, productId, startedPathname)) return;
-
-    setMediaStripReviews(mediaGalleryReviews);
-    setCurrentHasReviewVideoMedia(resolveHasVideoMedia(reviewsData, mediaGalleryReviews));
-
-    if (mediaGalleryReviews.length > 0 && isInitialReviewsView(productId)) {
-      await renderModule.render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
-    }
+    scheduleIdleTask(function () {
+      loadDeferredMediaGallery({
+        productId: productId,
+        reviewsSettings: reviewsSettings,
+        reviewsData: reviewsData,
+        renderModule: renderModule,
+        token: token,
+        startedPathname: startedPathname,
+      }).catch(function (err) {
+        console.error('[renuvex-pr] deferred media gallery error:', err);
+      });
+    }, { timeout: 1500, fallbackDelay: 250 });
   } catch (err) {
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
     console.error('[renuvex-pr] bootstrap error:', err);

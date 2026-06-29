@@ -980,6 +980,13 @@ export async function elementWidth(page: Page, selector: string): Promise<number
 }
 
 export async function clickInReviewsShadow(page: Page, selector: string): Promise<void> {
+  await page.waitForFunction((selector) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    return !!(root && root.querySelector(selector));
+  }, selector);
   await page.evaluate((selector) => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
     const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');

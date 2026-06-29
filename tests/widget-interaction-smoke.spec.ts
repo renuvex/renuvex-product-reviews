@@ -343,6 +343,7 @@ test('media gallery thumbnails open the lightbox from keyboard and restore focus
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb')).toBe(true);
 
   await page.evaluate(() => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
@@ -2362,6 +2363,7 @@ test('media-gallery + lightbox icons instance their sprite symbol (non-empty geo
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => hasInReviewsShadow(page, '.renuvex-pr-media-gallery-arrow-prev svg')).toBe(true);
 
   const stripIconBBoxWidth = await page.evaluate(() => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');

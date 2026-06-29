@@ -182,7 +182,7 @@ Therefore, the current evidence does **not** support treating missing CDN cache
 headers, Supabase, Redis, QStash, Mux, or DB writes as the primary cause of the
 first visible review-widget delay.
 
-The source-level blocker is the storefront bootstrap critical path:
+The source-level blocker before the 2026-06-29 first-render fix was the storefront bootstrap critical path:
 
 - [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js)
   starts `fetchMixedMediaGalleryReviews(productId)`.
@@ -202,12 +202,12 @@ Impact:
   execution is also behind that combined network dependency.
 - This is a widget sequencing issue, not a backend write-path issue.
 
-Evidence-backed next optimization:
+Implemented optimization:
 
 1. Fetch and render the main review payload first.
 2. Do not await `fetchMixedMediaGalleryReviews` before the first visible render.
-3. Hydrate `Musteri Gorselleri` / media-gallery rail after the main review
-   section is visible.
+3. Schedule the media-gallery read after first render, then hydrate only
+   `.renuvex-pr-media-gallery-section` with `renderDeferredMediaGallery()`.
 4. Keep media-gallery failure isolated so it cannot collapse the full review
    widget.
 5. Keep listing badge and structured-data work outside the PDP review section's

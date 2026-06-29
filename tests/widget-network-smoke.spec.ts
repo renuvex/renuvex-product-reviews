@@ -156,6 +156,19 @@ test('review section renders before delayed media gallery response', async ({ pa
     },
   ];
 
+  await page.addInitScript(() => {
+    const callbacks: Array<IdleRequestCallback> = [];
+    Object.defineProperty(window, '__renuvexIdleCallbacks', {
+      configurable: true,
+      value: callbacks,
+    });
+    window.requestIdleCallback = ((callback: IdleRequestCallback) => {
+      callbacks.push(callback);
+      return callbacks.length;
+    }) as typeof window.requestIdleCallback;
+    window.cancelIdleCallback = (() => {}) as typeof window.cancelIdleCallback;
+  });
+
   const log = await setupWidgetRoutes(page, {
     badgeEnabled: true,
     mountReviews: true,
@@ -177,7 +190,14 @@ test('review section renders before delayed media gallery response', async ({ pa
     reviewCards: 1,
     mediaThumbs: 0,
   });
-  expect(mediaRequested).toBe(true);
+  expect(mediaRequested).toBe(false);
+
+  await page.evaluate(() => {
+    const callbacks = (window as Window & { __renuvexIdleCallbacks?: IdleRequestCallback[] }).__renuvexIdleCallbacks || [];
+    const callback = callbacks.shift();
+    if (callback) callback({ didTimeout: false, timeRemaining: () => 50 });
+  });
+  await expect.poll(() => mediaRequested).toBe(true);
 
   releaseMedia();
   await expect.poll(async () => (await reviewsWidgetState(page)).mediaThumbs).toBe(1);
@@ -279,7 +299,8 @@ test('stale product bootstrap cannot overwrite the current review widget', async
   expect(state.emptyText).toBe('');
   expect(state.reviewCards).toBeGreaterThanOrEqual(1);
   expect(state.mediaThumbs).toBeGreaterThanOrEqual(1);
-  expect(countUrls(log, '/api/public/reviews?')).toBe(4);
+  expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('productId=old-product') && url.includes('hasMedia=true'))).toBe(false);
+  expect(countUrls(log, '/api/public/reviews?')).toBe(3);
   expect(widgetErrors(log)).toEqual([]);
 });
 
