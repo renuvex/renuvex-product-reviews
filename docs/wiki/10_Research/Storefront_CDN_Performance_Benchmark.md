@@ -23,9 +23,12 @@ source_files:
   - "workers/widget-delivery/src/index.ts"
   - "wrangler.widget.jsonc"
   - "scripts/measure-deployed-widget-network.mjs"
+  - "scripts/measure-storefront-waterfall.mjs"
   - "scripts/build-widget.mjs"
   - "public/widget-runtime/build-manifest.json"
   - "src/widget/core/origins.js"
+  - "src/widget/reviews-section/bootstrap.js"
+  - "src/widget/reviews-section/reviews-api.js"
 ---
 
 # Storefront CDN Performance Benchmark
@@ -147,6 +150,187 @@ Interpretation:
 - Listing-badge traffic can appear later on PDPs with related/listing product
   data, but the sampled 20-product `ratings` request did not block the first
   review widget visibility.
+
+## 2026-06-29 Yotpo Comparison And Critical Path Finding
+
+Chrome DevTools MCP was used read-only against the same reference ikas storefront
+class:
+
+```text
+https://proteinocean.com/whey-protein
+https://dev-mertcopper.ikas.shop/premium-shortsg
+```
+
+Local trace artifacts were captured under `.tmp/` for the session:
+
+- `.tmp/trace-yotpo-proteinocean.json.json.gz`
+- `.tmp/trace-renuvex-dev-storefront.json.json.gz`
+- `.tmp/trace-renuvex-dev-storefront-repeat.json.json.gz`
+
+The important finding is not that Yotpo has a magic read-API cache. In this
+sample, Yotpo separated static widget assets from dynamic review APIs:
+
+| Surface | Evidence |
+|---|---|
+| Yotpo versioned widget modules | `cdn-widgetsrepository.yotpo.com/.../app.v0.117.4-7293.js` returned `Cache-Control: max-age=31536000` and `Server: AmazonS3`. |
+| Yotpo `staticw2` widget script | Public header check showed CDN hit timing markers such as `cdn-cache; desc=HIT` and `edge; dur=1`. |
+| Yotpo review/media APIs | `api-cdn.yotpo.com` review and media endpoints returned `Cache-Control: max-age=0, no-cache, no-store`. |
+| Renuvex static assets | `widget.renuvex.app/widget.js` and content-hashed runtime/chunks now return the intended Cloudflare cache policies, including conditional `304` responses. |
+| Renuvex read proxy | Repeated identical `GET /api/public/reviews` and media-gallery requests returned `X-Renuvex-Edge-Cache: HIT` after warm-up. |
+
+Therefore, the current evidence does **not** support treating missing CDN cache
+headers, Supabase, Redis, QStash, Mux, or DB writes as the primary cause of the
+first visible review-widget delay.
+
+The source-level blocker is the storefront bootstrap critical path:
+
+- [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js)
+  starts `fetchMixedMediaGalleryReviews(productId)`.
+- The first render then awaits `Promise.all([fetchReviews(...),
+  mediaGalleryFetch])`.
+- Only after both requests finish does it load the render module and call
+  `render(...)`.
+- [src/widget/reviews-section/reviews-api.js](src/widget/reviews-section/reviews-api.js)
+  implements the media gallery request as `hasMedia=true&limit=15`.
+
+Impact:
+
+- A slow media-gallery read can delay the initial review summary/list render even
+  when the main `fetchReviews(..., newest, page=1)` response is already
+  available.
+- The review render chunk is loaded after both review requests, so module
+  execution is also behind that combined network dependency.
+- This is a widget sequencing issue, not a backend write-path issue.
+
+Evidence-backed next optimization:
+
+1. Fetch and render the main review payload first.
+2. Do not await `fetchMixedMediaGalleryReviews` before the first visible render.
+3. Hydrate `Musteri Gorselleri` / media-gallery rail after the main review
+   section is visible.
+4. Keep media-gallery failure isolated so it cannot collapse the full review
+   widget.
+5. Keep listing badge and structured-data work outside the PDP review section's
+   first visible render path.
+
+## 2026-06-29 Yotpo Home And Category DevTools Evidence
+
+Chrome DevTools MCP was also used read-only against the same reference storefront
+home and category pages:
+
+```text
+https://proteinocean.com/
+https://proteinocean.com/protein
+```
+
+Local trace artifacts were captured under `.tmp/` during the session and are not
+project documentation artifacts:
+
+- `.tmp/trace-devtools-proteinocean-home.json.json.gz`
+- `.tmp/trace-devtools-proteinocean-protein-category-2.json.json.gz`
+
+Observed page-level evidence:
+
+| Page | DevTools trace evidence | Network evidence |
+|---|---|---|
+| `https://proteinocean.com/` | The captured reload did not emit an LCP metric; CLS was `0.00`. | 252 requests in the settled Network panel. Yotpo loaded the common loader, `staticw2` widget shell, carousel batch POSTs, carousel images, and per-product rating GETs. |
+| `https://proteinocean.com/protein` | LCP `1328 ms`, TTFB `59 ms`, load delay `1147 ms`, render delay `119 ms`, CLS `0.16`. | 186 requests in the settled Network panel. Yotpo loaded the common loader, `staticw2` widget shell, star-rating module, and 18 per-product rating GETs. |
+
+Header evidence from sampled requests:
+
+| Surface | Header evidence |
+|---|---|
+| Yotpo loader `cdn-widgetsrepository.yotpo.com/v1/loader/...` | `Access-Control-Allow-Origin: *`, gzip JavaScript. Chrome DevTools Cache insight reported TTL `0 seconds` and about `18.9 kB` wasted bytes on the category trace. |
+| Yotpo `staticw2` widget shell | `Access-Control-Allow-Origin: *`, gzip JavaScript. Chrome DevTools Cache insight reported TTL `0 seconds` and about `19.3 kB` wasted bytes on the category trace. |
+| Yotpo star-ratings module | `Cache-Control: max-age=31536000`, `Server: AmazonS3`, gzip JavaScript. |
+| Yotpo rating API `api-cdn.yotpo.com/.../ratings` | `Cache-Control: max-age=0, no-cache, no-store`, gzip JSON, origin-scoped CORS. |
+| Yotpo home carousel batch POST | `Cache-Control: public, max-age=8015`, gzip JSON, origin-scoped CORS. |
+
+Chrome DevTools ThirdParties insight for the category trace reported Yotpo as
+`45.4 kB` third-party transfer and about `97 ms` main-thread time. The largest
+third-party main-thread time in that trace was `myikas.com` at about `964 ms`.
+
+Interpretation:
+
+- Yotpo home/category surfaces are not loading the full main review widget or
+  reviews-media API path observed on PDPs. They primarily load lightweight
+  rating/star surfaces, and the home page also loads a carousel batch.
+- Yotpo still keeps its common loader and `staticw2` widget shell on a TTL-0
+  policy in this observed path. Long-lived caching is applied to versioned
+  widget modules such as the star-ratings asset.
+- This reinforces the existing Renuvex direction: home, listing, search, and
+  category pages should stay on lightweight rating surfaces. Full review,
+  media-gallery, Mux Player, and richer review modules should remain behind PDP
+  review mounts or future explicit widgets.
+- Renuvex should preserve its bulk ratings API model for listing/category
+  surfaces. Copying Yotpo's per-product rating request fan-out would be a step
+  backward for large product grids unless a future edge aggregation model makes
+  that trade-off explicit.
+
+## 2026-06-29 Multi-Provider Competitor DevTools Follow-up
+
+Chrome DevTools MCP was used read-only against additional production storefronts
+to avoid overfitting the architecture decision to one Yotpo-on-ikas reference.
+No forms, carts, review submissions, admin actions, provider writes, DNS changes,
+or deployment actions were performed.
+
+Targets:
+
+```text
+https://cozyearth.com/products/bamboo-sheet-set?variant=40965917835444
+https://curlmix.com/products/sculpting-jelly-anti-frizz-luscious-lotus
+https://takehiq.com/collections/protein-tozu/products/hiq-hi-pro-900g
+https://paen.com/keeper-katlanabilir-sirt-cantasi
+https://www.petzzshop.com/royal-canin-fit-32-yetiskin-kedi-mamasi?AGIRLIK=400%2B400-Gr-Hediyeli
+https://takehiq.com/collections/protein-tozu
+https://www.petzzshop.com/kedi-mamasi
+https://cozyearth.com/
+```
+
+Local trace artifacts were captured under `.tmp/` during the session. They are
+temporary evidence files, not durable source artifacts:
+
+- `.tmp/devtools-cozyearth-product-trace.json.json.gz`
+- `.tmp/devtools-hiq-product-trace.json.json.gz`
+- `.tmp/devtools-paen-product-trace.json.json.gz`
+- `.tmp/devtools-petzzshop-product-trace.json.json.gz`
+
+Observed product-page evidence:
+
+| Storefront | Review/runtime provider | Trace evidence | Header/API evidence | Interpretation |
+|---|---|---|---|---|
+| Cozy Earth PDP | Okendo | LCP `15572 ms`, TTFB `55 ms`, CLS `0.12`. LCP load delay was about `15043 ms`. | `cdn-static.okendo.io/reviews-widget-plus/js/okendo-reviews.js` returned `304`, `Cache-Control: max-age=300`, `Server: AmazonS3`, CloudFront `via`. Okendo review APIs on `api.okendo.io` returned `Cache-Control: no-cache` through CloudFront/API Gateway. | The slow trace was not an origin/DB TTFB problem. The delay was late resource discovery/render/third-party sequencing. Okendo uses CDN static assets plus dynamic no-cache APIs, not a magic fully immutable review-data path. |
+| CurlMix PDP | Yotpo, but page-protection affected capture | Deep product trace was incomplete because the page loaded the product document and then redirected the Chrome session to Google through protection/lockdown behavior. | `cdn-widgetsrepository.yotpo.com/v1/loader/...` loaded with `Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: GET,POST`, and rate-limit headers. | Do not use this site for timing conclusions. It only confirms the Yotpo loader surface and that storefront security scripts can materially change the browser path. |
+| HiQ PDP | Judge.me Shopify extension | LCP `337 ms`, TTFB `51 ms`, CLS `0.06`. | Judge.me loader from `cdn.shopify.com/extensions/.../judgeme.../loader.js` returned `Cache-Control: public, max-age=31557600`, `Server: cloudflare`, high `Age`, and CORS `*`. PDP later loaded many review/lightbox/media chunks. | Judge.me keeps versioned static assets long-cache and can still have a very fast first render when review details are not blocking the product's critical path. |
+| Paen PDP | ikas native reviews | LCP `1993 ms`, TTFB `56 ms`, CLS `0.00`. | Review reads used `POST https://api.myikas.com/api/sf/graphql/listCustomerReviews` with `limit:5` and `limit:100`; responses came through Cloudflare with `set-cookie` and no explicit static-cache contract in the sampled output. | ikas native reviews are POST GraphQL and not CDN-static review reads. This is a backend/API model, not a static widget CDN model. |
+| Petzzshop PDP | ikas native reviews | LCP `297 ms`, TTFB `2 ms`, CLS `0.14`. | Static chunks from `cdn.myikas.com` used long cache (`max-age=31536000`) through Cloudflare/CloudFront. Review reads used `POST api.myikas.com/api/sf/graphql?op=listCustomerReviews` with `Cache-Control: no-store`. | Fast PDP paint can coexist with no-store dynamic review APIs when the review path does not block first product render. Static chunks and dynamic review data are separated. |
+
+Observed home/category evidence:
+
+| Storefront | Page | Evidence | Interpretation |
+|---|---|---|---|
+| Cozy Earth | Home | Okendo script shell was visible, but product review API fan-out was not visible in the first settled XHR list. | Global script presence does not imply full product-review data is fetched on every page. |
+| HiQ | Category | Judge.me base/common/main assets loaded, but the full PDP review widget chunk chain and product review data path were not visible in the first page capture. | Listing/category pages stay lighter than PDP review pages. |
+| Petzzshop | Category | The first page capture had many ikas `_next/data` and product/category/search requests, but no `listCustomerReviews` call. | ikas native category pages avoid per-product review-detail fan-out in the observed path. |
+
+Cross-provider conclusion:
+
+- Mature storefronts separate static/versioned widget assets from dynamic review
+  data. Long-cache static modules are common; dynamic review APIs are often
+  `no-cache`, `no-store`, POST GraphQL, or otherwise not immutable edge data.
+- Fast product pages are not necessarily fast because every review API is cached
+  at the edge. They are fast because the first product render is not blocked by
+  full review/media/lightbox work.
+- Home, listing, search, and category pages should avoid full review/media API
+  fan-out. Lightweight rating summaries or explicitly mounted carousel widgets
+  are the observed pattern.
+- The current Renuvex Cloudflare Worker V2 split remains directionally correct:
+  static assets and selected public read GETs may use the edge, while settings
+  side effects, upload, submit, video, Mux, Cloudinary, QStash, and backend
+  writes stay on `app.renuvex.app`.
+- The next Renuvex optimization should focus on source sequencing and first
+  visible render isolation before adding KV, moving write paths, or changing CDN
+  providers solely because of one-off script timing comparisons.
 
 ## Cause And Effect
 

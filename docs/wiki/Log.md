@@ -27,6 +27,18 @@ source_files:
 
 # Project Log
 
+## 2026-06-29 - research | Compare multi-provider storefront widget delivery
+- Used Chrome DevTools MCP read-only against Cozy Earth/Okendo, CurlMix/Yotpo, HiQ/Judge.me, Paen/ikas native, Petzzshop/ikas native, plus selected home/category pages.
+- Recorded the detailed evidence in [[Storefront_CDN_Performance_Benchmark]]: mature storefronts separate long-cache static/versioned widget assets from dynamic review APIs, and dynamic review APIs are often `no-cache`, `no-store`, POST GraphQL, or otherwise not immutable edge data.
+- Recorded that fast product pages did not require every review API to be edge-cached; the common pattern is that full review/media/lightbox work does not block first product render.
+- Product/category implication: optimize Renuvex source sequencing and first-render isolation before adding KV, moving write/upload paths to the edge, or changing CDN provider only from one-off script timing comparisons.
+
+## 2026-06-29 - research | Compare Yotpo home and category storefront paths
+- Used Chrome DevTools MCP read-only against `https://proteinocean.com/` and `https://proteinocean.com/protein`.
+- Recorded that the reference Yotpo home/category paths use lightweight rating/star surfaces and carousel data instead of the full PDP review/media API path.
+- Added the header/cache evidence to [[Storefront_CDN_Performance_Benchmark]]: Yotpo loader and `staticw2` widget shell were TTL-0 in the sampled category trace, while versioned star-rating assets used `max-age=31536000` from Amazon S3.
+- Product/category implication: keep Renuvex listing/category/home surfaces on lightweight bulk ratings and keep full review/media/Mux surfaces behind explicit PDP mounts or future explicit widgets.
+
 ## 2026-06-29 - research | Verify AWS CloudFront widget canary
 - Deployed the non-invasive AWS CloudFront/S3 widget canary on the default CloudFront hostname `d34tylxlzkmua8.cloudfront.net`; no live DNS, ikas script, Vercel, DB, Mux, Cloudinary, QStash, or Cloudflare Worker production state was changed.
 - Fixed the canary's private S3 origin behavior by replacing AWS managed `UseOriginCacheControlHeaders` with a stack-owned CloudFront cache policy that does not forward viewer `Host` to S3.
