@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-06-28
+last_verified: 2026-06-28
 confidence: high
 tags:
   - widget
@@ -15,6 +15,7 @@ related:
   - "[[Widget_Architecture]]"
   - "[[Yotpo_Style_Widget_Modular_Architecture]]"
   - "[[Yotpo_Protein_Ocean_Widget_Research]]"
+  - "[[Storefront_CDN_Performance_Benchmark]]"
 source_files:
   - "scripts/build-widget.mjs"
   - "scripts/check-widget-runtime.mjs"
@@ -79,6 +80,8 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-06-27 media display/filter path: media gallery fetches always use `hasMedia=true` so existing approved videos are not hidden by disabling new uploads. The shopper-facing filter uses `ProductReviewSummary.mediaReviewCount > photoReviewCount` to decide between `Fotoğraf ve Video` / `hasMedia=true` and `Fotoğraflı` / `hasImages=true`, keeping totals read-model backed instead of raw `Review.count()`.
 - 2026-06-08 media metadata path: widget register now forwards signed Cloudinary upload-response metadata to `/api/public/upload/register`; public reads stay DB-only and expose additive `media[]` metadata for future image-heavy layouts. Cloudinary Admin API is only for dry-run-first backfill/repair (`pnpm reviews:media:metadata:backfill`), never storefront GET.
 
+- 2026-06-28 CDN latency snapshot: Cloudflare Worker V2 delivery is functionally live, but local Turkey measurements routed `widget.renuvex.app` to Cloudflare `FRA` and showed materially higher median TTFB than the sampled Yotpo CDN reference. Treat this as a dated decision-support snapshot, not a global CDN verdict. See [[Storefront_CDN_Performance_Benchmark]] before deciding on AWS CloudFront/S3 canary work.
+
 ## 2026-05-15 Live Observations
 
 Dev store smoke test:
@@ -140,3 +143,4 @@ Yotpo/Protein Ocean reference:
 - [[Storefront_Widget_Overview]]
 - [[Yotpo_Style_Widget_Modular_Architecture]]
 - [[Yotpo_Protein_Ocean_Widget_Research]]
+- [[Storefront_CDN_Performance_Benchmark]]

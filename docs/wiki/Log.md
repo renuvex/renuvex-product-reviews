@@ -4,7 +4,7 @@ project: renuvex-product-reviews
 status: active
 created: 2026-05-13
 updated: 2026-06-28
-last_verified: 2026-06-28
+last_verified: 2026-06-29
 confidence: high
 tags:
   - log
@@ -12,16 +12,38 @@ tags:
 related:
   - "[[Index]]"
   - "[[Hot_Context]]"
+  - "[[AWS_Setup_And_Access]]"
   - "[[ADR_0032_Review_Video_On_Mux]]"
   - "[[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]"
   - "[[Competitor_Pricing_And_Plans]]"
+  - "[[Storefront_CDN_Performance_Benchmark]]"
 source_files:
   - "AGENTS.md"
   - "docs/wiki/Index.md"
+  - "docs/wiki/03_Architecture/AWS_Setup_And_Access.md"
+  - "docs/wiki/10_Research/Storefront_CDN_Performance_Benchmark.md"
   - "scripts/wiki-audit.mjs"
 ---
 
 # Project Log
+
+## 2026-06-29 - research | Verify AWS CloudFront widget canary
+- Deployed the non-invasive AWS CloudFront/S3 widget canary on the default CloudFront hostname `d34tylxlzkmua8.cloudfront.net`; no live DNS, ikas script, Vercel, DB, Mux, Cloudinary, QStash, or Cloudflare Worker production state was changed.
+- Fixed the canary's private S3 origin behavior by replacing AWS managed `UseOriginCacheControlHeaders` with a stack-owned CloudFront cache policy that does not forward viewer `Host` to S3.
+- Verified stable loader, runtime, immutable chunk, health endpoint, simple CORS `GET` behavior, CloudFront cache HIT for immutable chunks, and the deployed-widget Playwright network contract.
+- Added [[AWS_Setup_And_Access]] to preserve the AWS CLI baseline, IAM Identity Center profile model, canary resource inventory, approval rules, and AWS skill/GitHub source references.
+- Recorded the first AWS vs Cloudflare measurement in [[Storefront_CDN_Performance_Benchmark]]. AWS was modestly faster from the local Turkey path, but the result is not yet broad enough to justify production cutover.
+
+## 2026-06-29 - infra | Prepare AWS CloudFront widget canary tooling
+- Added [[AWS_CloudFront_Widget_Canary_Runbook]] for the non-invasive CloudFront/S3 widget CDN benchmark path.
+- Prepared local AWS canary asset packaging and dry-run upload tooling that reuses the current widget asset graph and preserves the stable/immutable cache contract.
+- Drafted the CloudFormation canary stack for a private S3 bucket, CloudFront OAC, response headers policy, and distribution using origin cache-control headers.
+- Verified AWS read-only preflight: no existing S3 buckets, CloudFront distributions, CloudFront OACs, or ACM certificates; budget `Renuvex AWS Monthly Guardrail` exists at `10 USD` monthly. CloudFormation validation is pending a permission update for `RenuvexWidgetCanaryOperator`.
+
+## 2026-06-28 - research | Record storefront CDN performance snapshot
+- Added [[Storefront_CDN_Performance_Benchmark]] with the Cloudflare Worker, Vercel, and Yotpo reference measurements taken from the local Turkey client path.
+- Recorded the key routing evidence: `widget.renuvex.app` traced to Cloudflare `FRA` for the measured Turkey client, while the tiny Worker health response still had a median TTFB around 269 ms.
+- Decision note: keep the functionally correct Cloudflare Worker V2 split live, but require a non-invasive AWS CloudFront/S3 canary benchmark before making a final storefront CDN performance decision.
 
 ## 2026-06-28 - deploy | Complete Cloudflare Worker V2 public-read cutover
 - Deployed Worker `renuvex-widget-assets` version `e82bfd0a-1868-4171-b20c-5496c5d41bed` with current widget assets and allowlisted read proxy support.

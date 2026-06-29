@@ -69,7 +69,9 @@ source_files: []
 - [[Security_And_Rate_Limits]]
 - [[Deployment_Notes]]
 - [[Sentry_Operations]]
+- [[AWS_Setup_And_Access]]
 - [[Maintenance_Runbook]]
+- [[AWS_CloudFront_Widget_Canary_Runbook]]
 - [[Review_Video_Canary_Runbook]]
 - [[Review_Video_Manual_Repair_Runbook]]
 - [[Review_Video_Physical_Device_Acceptance_2026-06]]
@@ -158,6 +160,7 @@ source_files: []
 - [[Google_Rich_Snippets_Research]]
 - [[Ecommerce_Review_UX_Patterns]]
 - [[Review_Layout_Padding_Research]]
+- [[Storefront_CDN_Performance_Benchmark]]
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 - [[Phase_1_Widget_Runtime_Audit]]
 - [[Phase_2_Widget_Module_Split_Plan]]
@@ -180,4 +183,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-06-28 (added Cloudflare Worker widget asset-delivery ADR)
+**Last Updated:** 2026-06-28 (added storefront CDN performance benchmark)
