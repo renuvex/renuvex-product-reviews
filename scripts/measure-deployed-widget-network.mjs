@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const WIDGET_ORIGIN = process.env.MEASURE_WIDGET_ORIGIN || 'https://widget.renuvex.app';
-const API_ORIGIN = process.env.MEASURE_WIDGET_API_ORIGIN || WIDGET_ORIGIN;
+const API_ORIGIN = process.env.MEASURE_WIDGET_API_ORIGIN || 'https://app.renuvex.app';
 const READ_API_ORIGIN = process.env.MEASURE_WIDGET_READ_API_ORIGIN || WIDGET_ORIGIN;
 const MERCHANT_ORIGIN = process.env.MEASURE_MERCHANT_ORIGIN || 'https://merchant-measure.test';
 const PUBLIC_KEY = process.env.MEASURE_PUBLIC_API_KEY || 'ci-public-key';

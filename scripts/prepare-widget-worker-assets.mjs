@@ -84,7 +84,7 @@ for (const tracked of trackedWidgetFiles()) {
 
 mkdirSync(TMP_DIR, { recursive: true });
 assertInside(TMP_DIR, OUT_DIR, 'worker asset output');
-rmSync(OUT_DIR, { recursive: true, force: true });
+rmSync(OUT_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 writeFileSync(WRANGLER_ENV_FILE, '# Intentionally empty. Keeps wrangler widget types/deploy isolated from app .env files.\n');
 
 let copied = 0;

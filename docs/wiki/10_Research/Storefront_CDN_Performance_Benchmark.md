@@ -151,6 +151,106 @@ Interpretation:
   data, but the sampled 20-product `ratings` request did not block the first
   review widget visibility.
 
+## 2026-06-29 Live Storefront 10-Run Measurement After First-Render Isolation
+
+After deploying the first-render isolation change, the same live dev storefront
+was measured 10 times with [scripts/measure-storefront-waterfall.mjs](scripts/measure-storefront-waterfall.mjs):
+
+```text
+https://dev-mertcopper.ikas.shop/premium-shortsg
+```
+
+Temporary raw evidence was written under `.tmp/storefront-live-2026-06-29-10run/`
+for the session and is intentionally not a durable repository artifact.
+
+Environment and header evidence from the same measurement window:
+
+- `https://widget.renuvex.app/cdn-cgi/trace` still routed the local Turkey client
+  to Cloudflare `colo=FRA`.
+- `widget.js` returned `Server: cloudflare`, `CF-Cache-Status: HIT`,
+  `Cache-Control: public, max-age=0, must-revalidate`.
+- `runtime-4NVHX4PR.js` and `render-2MZWBQ6C.js` returned
+  `Cache-Control: public, max-age=31536000, immutable`.
+- Repeated identical `GET /api/public/reviews` returned
+  `X-Renuvex-Edge-Cache: MISS` first and `HIT` second, confirming the Worker
+  read cache was active.
+
+All 10 runs:
+
+| Metric | Min | Median | P90 | P95 | Max |
+|---|---:|---:|---:|---:|---:|
+| Document TTFB | 164 ms | 180.5 ms | 788.9 ms | 1679.4 ms | 2570 ms |
+| DOMContentLoaded | 1132 ms | 1282.5 ms | 1859.3 ms | 3012.6 ms | 4166 ms |
+| Page load event | 1488 ms | 1649 ms | 2513.4 ms | 3487.2 ms | 4461 ms |
+| Review widget visible mark | 2085 ms | 2305 ms | 3072.8 ms | 4831.4 ms | 6590 ms |
+| Rating badge visible mark | 1916 ms | 2105.5 ms | 2943.5 ms | 4561.2 ms | 6179 ms |
+| Renuvex static max TTFB | 226 ms | 353 ms | 741.2 ms | 800.6 ms | 860 ms |
+| Renuvex read API max TTFB | 72 ms | 143.5 ms | 423 ms | 873 ms | 1323 ms |
+| Renuvex settings API max TTFB | 137 ms | 145.5 ms | 342 ms | 985.5 ms | 1629 ms |
+| ikas storefront max TTFB | 780 ms | 879.5 ms | 1188.7 ms | 1884.8 ms | 2581 ms |
+
+Run 1 was a clear cold/outlier sample: document TTFB was `2570 ms`, review
+widget visible mark was `6590 ms`, and settings/read API also had their largest
+TTFB values. Runs 2-10 are the better near-warm picture:
+
+| Metric | Min | Median | P90 | P95 | Max |
+|---|---:|---:|---:|---:|---:|
+| Document TTFB | 164 ms | 178 ms | 268.6 ms | 429.8 ms | 591 ms |
+| DOMContentLoaded | 1132 ms | 1268 ms | 1414.2 ms | 1508.6 ms | 1603 ms |
+| Page load event | 1488 ms | 1645 ms | 1973 ms | 2135 ms | 2297 ms |
+| Review widget visible mark | 2085 ms | 2249 ms | 2458 ms | 2570 ms | 2682 ms |
+| Rating badge visible mark | 1916 ms | 2084 ms | 2311.2 ms | 2447.6 ms | 2584 ms |
+| Renuvex static max TTFB | 226 ms | 353 ms | 754.4 ms | 807.2 ms | 860 ms |
+| Renuvex read API max TTFB | 72 ms | 136 ms | 236.6 ms | 279.8 ms | 323 ms |
+| Renuvex settings API max TTFB | 137 ms | 145 ms | 187.8 ms | 193.4 ms | 199 ms |
+| ikas storefront max TTFB | 780 ms | 879 ms | 973.2 ms | 1003.6 ms | 1034 ms |
+
+Interpretation:
+
+- The first-render isolation change is behaving correctly: after the cold
+  outlier, the review widget visible mark clustered around `2.1-2.7s` instead
+  of being gated by the media gallery request.
+- Renuvex read APIs are no longer the dominant delay in the near-warm runs.
+  `reviews`/`ratings` max TTFB median was `136 ms`, while the ikas storefront
+  category max TTFB median was `879 ms`.
+- The remaining high static max TTFB is still consistent with the measured
+  client-to-Cloudflare `TR -> FRA` route. It is a CDN/network-path concern, not
+  evidence of Supabase, Redis, QStash, Mux, or DB write-path latency.
+- The storefront still loads a large ikas host-page surface: the sampled run
+  shape stayed around `106` ikas storefront requests and about `1.9 MB` encoded
+  transfer. This affects perceived widget timing because the widget script is
+  discovered and executed within that host page.
+- The measurement script did not record a `media-gallery-visible` mark in this
+  10-run set. The media-gallery request was still counted under Renuvex read
+  traffic, but if gallery hydration timing becomes a target metric, the marker
+  selector should be updated before using that specific mark as evidence.
+
+Decision from this run:
+
+- Keep the Cloudflare Worker V2 split live. It is functionally correct and read
+  cache is working.
+- Do not add KV or move write/upload/video paths to the edge based on this data.
+- If further optimization is needed, the next source-level target is chunk graph
+  and surface sequencing, especially reducing or deferring the large
+  `render-*` path and decoupling `settings` side effects before attempting to
+  cache settings at the Worker.
+- CDN provider choice remains a separate decision. AWS CloudFront/S3 is a proven
+  canary and was modestly faster in local testing, but this 10-run storefront
+  result does not by itself require a production cutover away from Cloudflare.
+
+### ikas Dev/Test Timing Follow-Up
+
+On 2026-06-29, ikas support answered that dev/test storefronts or builder
+environments should not have extra debug layers, preview/proxy behavior, cache
+behavior, or StorefrontJSScript injection timing differences compared with
+public production; they should reflect in the same time.
+
+This means the dev-store 10-run waterfall should not be discarded as naturally
+slower because it is a dev/test store. It remains decision-support evidence.
+The answer does not prove the host page is irrelevant; it only removes the
+dev-vs-production environment-mismatch explanation from the primary hypothesis
+list.
+
 ## 2026-06-29 Yotpo Comparison And Critical Path Finding
 
 Chrome DevTools MCP was used read-only against the same reference ikas storefront

@@ -28,6 +28,7 @@ source_files:
   - "scripts/check-widget-runtime.mjs"
   - "scripts/prepare-widget-worker-assets.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
+  - "scripts/measure-storefront-waterfall.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
   - "tests/widget-harness.ts"
   - "tests/widget-network-smoke.spec.ts"
@@ -180,7 +181,8 @@ These commands are not hard byte-budget gates. They produce repeatable productio
 
 | Command | Scope |
 |---|---|
-| `pnpm measure:deployed-widget` | Loads deployed `widget.js` and immutable `widget-runtime/*` chunks from `https://widget.renuvex.app`, mocks merchant HTML plus `/api/public/*`, and reports script count, chunk list, encoded transfer bytes, decoded bytes, API calls, and cache/content-encoding headers for mount-present/mount-absent and badge-on/badge-off combinations. |
+| `pnpm measure:deployed-widget` | Loads deployed `widget.js` and immutable `widget-runtime/*` chunks from `https://widget.renuvex.app`, defaults backend/settings/error mocks to `https://app.renuvex.app`, defaults cacheable ratings/reviews mocks to `https://widget.renuvex.app`, and reports script count, chunk list, encoded transfer bytes, decoded bytes, API calls, and cache/content-encoding headers for mount-present/mount-absent and badge-on/badge-off combinations. |
+| `pnpm measure:storefront-waterfall -- <storefront-url>` | Opens a real storefront PDP/category URL in Chromium, observes the page for `MEASURE_STOREFRONT_WAIT_MS` milliseconds after DOMContentLoaded, and reports Renuvex static assets, Worker read API, Vercel backend API, ikas storefront, Mux, Cloudinary, Yotpo, console errors, browser marks, encoded bytes, cache headers, TTFB, and total request timing by category. |
 | `pnpm verify:deployed-jsonld` | Loads the deployed widget in a controlled browser harness and verifies the JSON-LD runtime contract: visible rating/review paths emit one parseable `Product` + `AggregateRating`, no-visible-surface and rich-snippet-disabled paths emit none. `SEO_PDP_URL=<public-url>` switches it to a real public PDP URL check. |
 
 Record notable evidence in `docs/wiki/10_Research/` instead of adding brittle byte thresholds immediately.

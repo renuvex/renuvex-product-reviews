@@ -1,0 +1,307 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Renuvex storefront widget CloudFront/S3 canary. No live DNS or backend mutation.",
+  "Parameters": {
+    "BucketName": {
+      "Type": "String",
+      "Description": "Globally unique private S3 bucket name for widget canary assets.",
+      "AllowedPattern": "^renuvex-widget-[a-z0-9][a-z0-9.-]*[a-z0-9]$"
+    },
+    "EnvironmentName": {
+      "Type": "String",
+      "Default": "canary",
+      "AllowedPattern": "^[a-z0-9-]+$"
+    }
+  },
+  "Resources": {
+    "WidgetBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Ref": "BucketName"
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "CorsConfiguration": {
+          "CorsRules": [
+            {
+              "AllowedHeaders": [
+                "*"
+              ],
+              "AllowedMethods": [
+                "GET",
+                "HEAD"
+              ],
+              "AllowedOrigins": [
+                "*"
+              ],
+              "MaxAge": 86400
+            }
+          ]
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Component",
+            "Value": "storefront-widget-cdn-canary"
+          },
+          {
+            "Key": "Environment",
+            "Value": {
+              "Ref": "EnvironmentName"
+            }
+          }
+        ]
+      }
+    },
+    "WidgetOriginAccessControl": {
+      "Type": "AWS::CloudFront::OriginAccessControl",
+      "Properties": {
+        "OriginAccessControlConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-oac"
+          },
+          "Description": "OAC for private Renuvex widget canary S3 origin.",
+          "OriginAccessControlOriginType": "s3",
+          "SigningBehavior": "always",
+          "SigningProtocol": "sigv4"
+        }
+      }
+    },
+    "WidgetResponseHeadersPolicy": {
+      "Type": "AWS::CloudFront::ResponseHeadersPolicy",
+      "Properties": {
+        "ResponseHeadersPolicyConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-headers"
+          },
+          "Comment": "CORS and widget asset security headers for Renuvex canary.",
+          "CorsConfig": {
+            "AccessControlAllowCredentials": false,
+            "AccessControlAllowHeaders": {
+              "Items": [
+                "*"
+              ]
+            },
+            "AccessControlAllowMethods": {
+              "Items": [
+                "GET",
+                "HEAD"
+              ]
+            },
+            "AccessControlAllowOrigins": {
+              "Items": [
+                "*"
+              ]
+            },
+            "AccessControlMaxAgeSec": 86400,
+            "OriginOverride": true
+          },
+          "CustomHeadersConfig": {
+            "Items": [
+              {
+                "Header": "Cross-Origin-Resource-Policy",
+                "Override": true,
+                "Value": "cross-origin"
+              }
+            ]
+          },
+          "SecurityHeadersConfig": {
+            "ContentTypeOptions": {
+              "Override": true
+            }
+          }
+        }
+      }
+    },
+    "WidgetCachePolicy": {
+      "Type": "AWS::CloudFront::CachePolicy",
+      "Properties": {
+        "CachePolicyConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-cache"
+          },
+          "Comment": "Use origin Cache-Control for widget assets without forwarding viewer Host to S3.",
+          "DefaultTTL": 0,
+          "MaxTTL": 31536000,
+          "MinTTL": 0,
+          "ParametersInCacheKeyAndForwardedToOrigin": {
+            "EnableAcceptEncodingBrotli": true,
+            "EnableAcceptEncodingGzip": true,
+            "CookiesConfig": {
+              "CookieBehavior": "none"
+            },
+            "HeadersConfig": {
+              "HeaderBehavior": "none"
+            },
+            "QueryStringsConfig": {
+              "QueryStringBehavior": "none"
+            }
+          }
+        }
+      }
+    },
+    "WidgetDistribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Comment": "Renuvex storefront widget CDN canary",
+          "Enabled": true,
+          "HttpVersion": "http2and3",
+          "IPV6Enabled": true,
+          "PriceClass": "PriceClass_All",
+          "DefaultCacheBehavior": {
+            "AllowedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "CachePolicyId": {
+              "Ref": "WidgetCachePolicy"
+            },
+            "Compress": true,
+            "ResponseHeadersPolicyId": {
+              "Ref": "WidgetResponseHeadersPolicy"
+            },
+            "TargetOriginId": "WidgetS3Origin",
+            "ViewerProtocolPolicy": "redirect-to-https"
+          },
+          "Origins": [
+            {
+              "DomainName": {
+                "Fn::Sub": "${WidgetBucket}.s3.${AWS::Region}.amazonaws.com"
+              },
+              "Id": "WidgetS3Origin",
+              "OriginAccessControlId": {
+                "Ref": "WidgetOriginAccessControl"
+              },
+              "S3OriginConfig": {
+                "OriginAccessIdentity": ""
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Component",
+            "Value": "storefront-widget-cdn-canary"
+          },
+          {
+            "Key": "Environment",
+            "Value": {
+              "Ref": "EnvironmentName"
+            }
+          }
+        ]
+      }
+    },
+    "WidgetBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "WidgetBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DenyInsecureTransport",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:aws:s3:::${WidgetBucket}"
+                },
+                {
+                  "Fn::Sub": "arn:aws:s3:::${WidgetBucket}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            },
+            {
+              "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+              },
+              "Action": "s3:GetObject",
+              "Resource": {
+                "Fn::Sub": "arn:aws:s3:::${WidgetBucket}/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "AWS:SourceArn": {
+                    "Fn::Sub": "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WidgetDistribution}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketName": {
+      "Value": {
+        "Ref": "WidgetBucket"
+      }
+    },
+    "DistributionId": {
+      "Value": {
+        "Ref": "WidgetDistribution"
+      }
+    },
+    "DistributionDomainName": {
+      "Value": {
+        "Fn::GetAtt": [
+          "WidgetDistribution",
+          "DomainName"
+        ]
+      }
+    },
+    "WidgetCanaryOrigin": {
+      "Value": {
+        "Fn::Sub": "https://${WidgetDistribution.DomainName}"
+      }
+    }
+  }
+}
