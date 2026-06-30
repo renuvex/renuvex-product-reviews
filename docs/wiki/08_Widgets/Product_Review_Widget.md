@@ -120,7 +120,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 
 ## Media gallery
 - Dedicated horizontal gallery above the review list, independent of sort/filter/load-more.
-- The top gallery always uses `hasMedia=true&limit=15&orderBy=newest` so approved video posters can appear beside review images even when new video uploads are disabled. Stores with only photos receive the same image rows because `hasMedia=true` means `Review.hasImages OR Review.hasVideo`. The top gallery remains bootstrap-owned and hides when the review list is already filtered by the photo/media facet.
+- The top gallery uses `hasMedia=true&limit=15&orderBy=newest` only when the first review summary reports `mediaReviewCount > 0`, so empty/no-media products avoid the deferred gallery request. Approved video posters can still appear beside review images even when new video uploads are disabled. Stores with only photos receive the same image rows because `hasMedia=true` means `Review.hasImages OR Review.hasVideo`. The top gallery remains bootstrap-owned and hides when the review list is already filtered by the photo/media facet.
 - Cap fixed at 15 (no admin setting), newest-first rotation.
 - Full doc: [[Media_Gallery]]. Historical decision: [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
 
@@ -155,7 +155,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 - [[Bug_Review_Wizard_Photo_Upload_Lifecycle]]
 
 ## Change Log
-- 2026-06-27: Existing approved videos are no longer hidden by disabling new video uploads. The media gallery always fetches `hasMedia=true`; the public filter uses `ProductReviewSummary` counts (`mediaReviewCount > photoReviewCount`) to decide between `Fotoğraf ve Video` / `hasMedia=true` and `Fotoğraflı` / `hasImages=true`.
+- 2026-06-27/2026-07-01: Existing approved videos are no longer hidden by disabling new video uploads. The media gallery fetches `hasMedia=true` when `mediaReviewCount > 0` and skips the deferred gallery read when `mediaReviewCount === 0`; the public filter uses `ProductReviewSummary` counts (`mediaReviewCount > photoReviewCount`) to decide between `Fotoğraf ve Video` / `hasMedia=true` and `Fotoğraflı` / `hasImages=true`.
 - 2026-06-25: The summary filter media facet became read-model backed. `ProductReviewSummary` owns media-filter count buckets so public media filtering stays on the read-model path instead of raw `Review.count()`.
 - 2026-06-24: Revised the storefront review lightbox `Renkler > Video Oynatıcı` surface to three merchant-editable colors: play icon, progress color, and progress track color. The center play button background and hover background are transparent and no longer exposed as settings. The keys are scoped to `reviewLightboxVideo*`; admin moderation and future story/carousel players remain isolated.
 - 2026-06-24: Split the Mux Player theme boundary into storefront and admin exports, including separate named color sets. Storefront review lightbox customization can now evolve through storefront-scoped player tokens/presets without changing the fixed admin moderation preview. The same color contract also pins Mux quality/playback-rate menus to dark background/light text to avoid Gerwig theme menu contrast regressions when control icons stay white.

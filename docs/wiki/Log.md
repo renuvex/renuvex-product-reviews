@@ -89,7 +89,7 @@ source_files:
 
 ## 2026-06-27 - fix | Decouple existing video display from upload capability
 - `videoReviewsEnabled` now controls new video upload/wizard capability only. Existing approved videos remain visible on storefront media surfaces after uploads are disabled.
-- `/api/public/reviews` exposes additive `photoReviewCount` and `mediaReviewCount` read-model counts. The media gallery always fetches `hasMedia=true`, while the filter label/query uses the count comparison to keep photo-only products on `Fotoğraflı` / `hasImages=true`.
+- `/api/public/reviews` exposes additive `photoReviewCount` and `mediaReviewCount` read-model counts. The media gallery skips its deferred `hasMedia=true` read when the first response proves `mediaReviewCount === 0`; otherwise it still uses `hasMedia=true`, while the filter label/query uses the count comparison to keep photo-only products on `Fotoğraflı` / `hasImages=true`.
 
 ## 2026-06-25 - refactor | Make public media filtering read-model backed
 - Replaced the review summary filter's photo-only boolean state with an explicit `currentMediaFilter` mode (`none | images | media`).

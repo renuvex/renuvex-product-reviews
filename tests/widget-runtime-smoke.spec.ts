@@ -1939,16 +1939,28 @@ test('media gallery remains independent across sort and load-more, then hides fo
 
       if (orderBy === 'highest' && pageParam === '2') {
         highestLoadMoreCalls += 1;
-        await fulfillJson(route, reviewsPayload([{ id: 'highest-2', title: 'Highest page 2' }], { hasMore: false }));
+        await fulfillJson(route, reviewsPayload([{ id: 'highest-2', title: 'Highest page 2' }], {
+          hasMore: false,
+          photoReviewCount: 1,
+          mediaReviewCount: 1,
+        }));
         return;
       }
 
       if (orderBy === 'highest') {
-        await fulfillJson(route, reviewsPayload([{ id: 'highest-1', title: 'Highest page 1' }], { hasMore: true }));
+        await fulfillJson(route, reviewsPayload([{ id: 'highest-1', title: 'Highest page 1' }], {
+          hasMore: true,
+          photoReviewCount: 1,
+          mediaReviewCount: 1,
+        }));
         return;
       }
 
-      await fulfillJson(route, reviewsPayload([{ id: 'newest-1', title: 'Newest page 1' }], { hasMore: true }));
+      await fulfillJson(route, reviewsPayload([{ id: 'newest-1', title: 'Newest page 1' }], {
+        hasMore: true,
+        photoReviewCount: 1,
+        mediaReviewCount: 1,
+      }));
     },
   });
 

@@ -55,7 +55,7 @@ Default header value: `s-maxage=60, stale-while-revalidate=300`.
 2026-06-07 update: public `hasImages=true` reads now use indexed `Review.hasImages`, and review image display reads normalized `ReviewMedia` before falling back to legacy `Review.images`.
 2026-06-08 update: public review list load-more now uses `nextCursor` keyset pagination when available. Legacy `page/limit` remains for compatibility, but cursor requests do not use Prisma `skip`.
 2026-06-08 update: public review-list `totalCount` / `totalPages` now come from `ProductReviewSummary` buckets, including `photoRating*Count` for `hasImages=true&rating=N`; the public hot path no longer calls raw `Review.count()`.
-2026-06-27 update: public media gallery reads always use `hasMedia=true` so existing approved videos remain visible independently from new video-upload capability. The filter label/query is driven by `ProductReviewSummary.mediaReviewCount > photoReviewCount`: video-present products use `Fotoğraf ve Video` / `hasMedia=true`, while photo-only products keep `Fotoğraflı` / `hasImages=true`.
+2026-06-27/2026-07-01 update: public media gallery reads use `hasMedia=true` so existing approved videos remain visible independently from new video-upload capability, but the deferred gallery read is skipped when the first review summary reports `mediaReviewCount === 0`. The filter label/query is driven by `ProductReviewSummary.mediaReviewCount > photoReviewCount`: video-present products use `Fotoğraf ve Video` / `hasMedia=true`, while photo-only products keep `Fotoğraflı` / `hasImages=true`.
 - 60s fresh window
 - 300s SWR — stale responses served while revalidation runs in the background
 

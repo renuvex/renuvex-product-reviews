@@ -43,9 +43,22 @@ function trustedReviewImage(name: string): string {
 
 function reviewPayload(
   reviews: Array<Record<string, unknown>>,
-  options: { allCount?: number; totalCount?: number; ratingCounts?: number[]; avgRating?: string; hasMore?: boolean } = {},
+  options: {
+    allCount?: number;
+    totalCount?: number;
+    ratingCounts?: number[];
+    avgRating?: string;
+    hasMore?: boolean;
+    photoReviewCount?: number;
+    mediaReviewCount?: number;
+  } = {},
 ): unknown {
   const allCount = options.allCount ?? reviews.length;
+  const inferredPhotoReviewCount = reviews.filter((review) => Array.isArray(review.images) && review.images.length > 0).length;
+  const inferredMediaReviewCount = reviews.filter((review) => (
+    (Array.isArray(review.images) && review.images.length > 0) ||
+    (Array.isArray(review.media) && review.media.length > 0)
+  )).length;
   return {
     data: {
       reviews,
@@ -54,6 +67,8 @@ function reviewPayload(
       ratingCounts: options.ratingCounts ?? [0, 0, 0, 0, allCount],
       avgRating: options.avgRating ?? (allCount > 0 ? '5.0' : '0.0'),
       hasMore: options.hasMore ?? false,
+      photoReviewCount: options.photoReviewCount ?? inferredPhotoReviewCount,
+      mediaReviewCount: options.mediaReviewCount ?? inferredMediaReviewCount,
     },
   };
 }
@@ -105,7 +120,7 @@ test('manifest points at the current widget surface hierarchy', async () => {
 });
 
 test('review mount present loads reviews, media gallery, badge, and render chunk', async ({ page }) => {
-  const log = await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: true });
+  const log = await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: true, approvedReviewCount: 12 });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasPdpBadge(page)).toBe(true);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
@@ -121,6 +136,35 @@ test('review mount present loads reviews, media gallery, badge, and render chunk
   expect(countUrls(log, '/api/public/ratings')).toBe(1);
   expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
   expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('hasMedia=true'))).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('review mount with zero media summary skips deferred media gallery request', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    reviewsGetHandler: async (route) => {
+      await fulfillJson(route, reviewPayload([], {
+        allCount: 0,
+        totalCount: 0,
+        ratingCounts: [0, 0, 0, 0, 0],
+        avgRating: '0.0',
+        photoReviewCount: 0,
+        mediaReviewCount: 0,
+      }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await waitForWidgetIdle(page);
+
+  expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(1);
+  expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('hasMedia=true'))).toBe(false);
+  await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
+    reviewCards: 0,
+    mediaThumbs: 0,
+  });
   expect(widgetErrors(log)).toEqual([]);
 });
 
@@ -221,7 +265,7 @@ test('review section renders before delayed media gallery response', async ({ pa
         await fulfillJson(route, reviewPayload(galleryReviews));
         return;
       }
-      await fulfillJson(route, reviewPayload(mainReviews));
+      await fulfillJson(route, reviewPayload(mainReviews, { mediaReviewCount: 1 }));
     },
   });
 

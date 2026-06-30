@@ -40,7 +40,7 @@ Default storefront title: `Müşteri Görselleri`.
 
 ## Runtime Contract
 - The gallery is fetched once during `reviews-section/bootstrap.js`, only after the explicit review mount exists.
-- The gallery uses `fetchMixedMediaGalleryReviews(productId)` with `hasMedia=true&limit=15&orderBy=newest` for every store. `hasMedia=true` means approved `Review.hasImages OR Review.hasVideo`, so photo-only stores still receive image reviews while stores with existing approved videos keep showing those videos even when new video uploads are disabled.
+- The gallery uses `fetchMixedMediaGalleryReviews(productId)` with `hasMedia=true&limit=15&orderBy=newest` only after the first review summary reports `mediaReviewCount > 0`. If the summary reports `mediaReviewCount === 0`, the deferred gallery read is skipped. `hasMedia=true` means approved `Review.hasImages OR Review.hasVideo`, so photo-only stores still receive image reviews while stores with existing approved videos keep showing those videos even when new video uploads are disabled.
 - The response is stored in `state.mediaStripReviews`.
 - Sort, rating filter, media/photo filter, retry, and load-more interactions do not re-fetch the gallery.
 - When the public media facet is active (`currentMediaFilter !== 'none'`), the media gallery hides so the filtered review list owns the media focus.

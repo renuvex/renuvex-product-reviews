@@ -128,7 +128,7 @@ source_files:
 - 2026-06-29: AWS CloudFront/S3 widget CDN canary is live on the default CloudFront hostname and verified for the current widget asset graph. No production DNS or ikas script cutover happened.
 - 2026-06-28: Worker asset delivery is live. `widget.renuvex.app` is static Worker origin (`renuvex-widget-assets`); `app.renuvex.app` remains backend/API/upload/Mux/QStash.
 - 2026-06-28: Media-gallery lightbox opens now show a bottom rail with one first trusted image/video per media-backed review; ordinary review opens keep current-review media thumbnails.
-- 2026-06-27: Existing videos stay visible when video uploads are disabled; media gallery reads always use `hasMedia=true`.
+- 2026-06-27/2026-07-01: Existing videos stay visible when video uploads are disabled; media gallery reads use `hasMedia=true` when the first review summary reports `mediaReviewCount > 0`, and are skipped when `mediaReviewCount === 0`.
 - 2026-06-23: Review Video playback uses official Mux Player. Storefront videos expose public `playbackId`; admin preview uses signed Mux Player attributes. Mux Data tracking/cookies stay disabled.
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-21: Mux cutover is live; contract migration, Cloudflare/R2 teardown, Vercel env cleanup, and canary asset cleanup were verified. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].

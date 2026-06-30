@@ -69,6 +69,13 @@ function responseSummaryHasVideoMedia(reviewsData) {
   return mediaCount > photoCount;
 }
 
+function responseSummaryHasNoMedia(reviewsData) {
+  var data = reviewsData && reviewsData.data;
+  if (!data) return false;
+  var mediaCount = Number(data.mediaReviewCount);
+  return Number.isFinite(mediaCount) && mediaCount === 0;
+}
+
 function resolveHasVideoMedia(reviewsData, mediaGalleryReviews) {
   var summaryHasVideo = responseSummaryHasVideoMedia(reviewsData);
   if (summaryHasVideo !== null) return summaryHasVideo;
@@ -93,6 +100,13 @@ async function loadDeferredMediaGallery(opts) {
   var startedPathname = opts.startedPathname;
 
   if (!isCurrentBootstrap(token, productId, startedPathname)) return;
+
+  if (responseSummaryHasNoMedia(reviewsData)) {
+    setMediaStripReviews([]);
+    setCurrentHasReviewVideoMedia(resolveHasVideoMedia(reviewsData, []));
+    markWidgetPerf('media-gallery-deferred-skipped');
+    return;
+  }
 
   var mediaGalleryReviews = [];
   markWidgetPerf('media-gallery-deferred-start');
