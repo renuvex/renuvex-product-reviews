@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-06-30
+last_verified: 2026-06-30
 confidence: high
 tags:
   - widget
@@ -238,6 +238,23 @@ Each layout registers support metadata such as `supports: { title: true, thumbna
 - Compact summary uses two different panel contracts: desktop is a registered popover with light-dismiss and grow-out animation, while mobile is a flow accordion. On mobile, rating-bar filters may re-render the review section but the accordion stays open until the user closes it with the compact trigger/chevron; the desktop grow-out animation is disabled so the bar chart does not flicker during filter redraws.
 - Bar chart count cells use tabular numbers and an elastic minimum width. `--renuvex-pr-col-count` remains the layout-local minimum column token; long localized counts can grow without forcing the track to overlap text.
 
+## Future Widget Surface Rules
+
+Future storefront widgets must follow the same surface-isolation contract as the current review, badge, structured-data, and listing surfaces.
+
+1. Prefer explicit mounts first. A known mount such as `data-renuvex-widget="reviews"` is safer than DOM heuristics and should be the default for large widgets.
+2. Use auto-placement only for lightweight surfaces that naturally belong near existing storefront DOM, such as listing badges or title badges. Auto-placement is allowed, but it is a higher-risk path and must fail closed when the DOM is ambiguous.
+3. Keep `surface.detect()` cheap. It may inspect context and small DOM signals, but it must not import heavy modules, fetch data, mutate DOM, or start long async work.
+4. Lazy-load implementation modules from `surface.mount()` only after the surface is proven relevant. New carousel, Q&A, media, story, or analytics widgets must not be statically imported by `src/widget/index.js`, `src/widget/loader.js`, or always-loaded core modules.
+5. Treat ikas Storefront Events as the primary signal and DOM heuristics as fallback. Before changing placement logic, inspect `core/storefront-context.js`, `themes/current-adapter.js`, the active theme adapter, and `listing-badges/fallback-candidates.js`.
+6. Any new heuristic must define both positive and negative tests in `tests/widget-network-smoke.spec.ts`. At minimum, cover duplicate events, missing mount, late mount, generic links, nav/header/footer links, single product-like links, and unsupported-theme fail-closed behavior when relevant.
+7. Every new `src/widget/surfaces/*.surface.js` descriptor must be covered by the surface contract gate in `tests/unit/widget-surface-contracts.test.ts`.
+8. Preserve request fan-out rules. Listing/category/home surfaces should use bulk or aggregate reads; do not add per-card public API requests. High-read surfaces should use `ProductReviewSummary` or a dedicated read model before reaching production scale.
+9. Do not mix write/upload/video paths into storefront read surfaces. Upload, submit, Mux, Cloudinary, QStash, webhook, and admin flows stay on the backend/write origin unless a separate ADR changes that contract.
+10. Keep the user-visible widget resilient to duplicate script injection. New global listeners, history patches, MutationObservers, and singleton registries need idempotency guards comparable to the existing registry key guard and history `__renuvexPrPatched` guard.
+
+This rule set comes from the 2026-06-29/30 storefront performance and chunk-graph audits: mature review widgets keep static modules split, dynamic data separate, and heavy surfaces behind explicit or strongly proven triggers.
+
 ## Preview mode protocol
 
 ```
@@ -320,6 +337,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-06-30: Added future widget surface rules after the storefront performance and chunk-graph audits. New widget surfaces should prefer explicit mounts, keep detection cheap, lazy-load implementations, fail closed for ambiguous auto-placement, and add positive/negative network smoke coverage before production.
 - 2026-06-28: Cloudflare Worker V2 public-read cache is live for allowlisted ratings/reviews reads. Widget asset, backend API, and read API origins are separate; the read origin is `widget.renuvex.app` while settings/write/upload/video/error calls stay on `app.renuvex.app`.
 - 2026-06-06: Public rating/summary aggregate reads moved to the backend `ProductReviewSummary` read model. Widget response contracts are unchanged; future high-read surfaces should define their aggregate read model before adding public fan-out. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-06-02: Corrected shared summary filter pointer semantics after desktop testing: touch/pen filter options still activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so every summary layout can reopen the filter immediately after a sort-triggered render. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].
