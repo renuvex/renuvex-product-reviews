@@ -3,6 +3,8 @@
 // Keep this file light. Static imports here would pull code back into the
 // always-loaded runtime. These dynamic imports are the esbuild splitting points.
 
+import { markWidgetPerf } from './perf-timeline.js';
+
 var reviewsMainPromise = null;
 var listingBadgesPromise = null;
 var reviewsRenderPromise = null;
@@ -11,7 +13,14 @@ var structuredDataPromise = null;
 
 export function loadReviewsMainModule() {
   if (!reviewsMainPromise) {
-    reviewsMainPromise = import('../reviews-section/bootstrap.js');
+    markWidgetPerf('reviews-main-import-start');
+    reviewsMainPromise = import('../reviews-section/bootstrap.js').then(function (mod) {
+      markWidgetPerf('reviews-main-import-done');
+      return mod;
+    }, function (err) {
+      markWidgetPerf('reviews-main-import-error');
+      throw err;
+    });
   }
   return reviewsMainPromise;
 }
@@ -25,7 +34,14 @@ export function loadListingBadgesModule() {
 
 export function loadReviewsRenderModule() {
   if (!reviewsRenderPromise) {
-    reviewsRenderPromise = import('../reviews-section/render.js');
+    markWidgetPerf('render-import-start');
+    reviewsRenderPromise = import('../reviews-section/render.js').then(function (mod) {
+      markWidgetPerf('render-import-done');
+      return mod;
+    }, function (err) {
+      markWidgetPerf('render-import-error');
+      throw err;
+    });
   }
   return reviewsRenderPromise;
 }

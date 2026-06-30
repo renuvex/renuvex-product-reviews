@@ -6,6 +6,7 @@
 import { PUBLIC_API_KEY, API_BASE, READ_API_BASE } from '../core/config.js';
 import { cacheGet, cacheSet } from '../core/cache.js';
 import { fetchWithTimeout } from '../core/fetch.js';
+import { markWidgetPerf } from '../core/perf-timeline.js';
 
 var MEDIA_GALLERY_LIMIT = 15;
 var REVIEWS_CACHE_TTL = 60 * 1000;
@@ -27,13 +28,23 @@ function normalizeMediaFilter(mediaFilter) {
 }
 
 export async function fetchReviews(productId, orderBy, page, ratingFilter, mediaFilter, limit, cursor) {
+  markWidgetPerf('reviews-api-start', {
+    mediaFilter: normalizeMediaFilter(mediaFilter),
+    hasLimit: !!limit,
+    hasCursor: !!cursor,
+  });
   if (window.__ikasPreviewMode) {
     try {
       var previewBase = window.__ikasPreviewBaseUrl || API_BASE;
       var previewUrl = previewBase + '/api/preview/reviews?page=' + encodeURIComponent(page || 1);
       var previewRes = await fetchWithTimeout(previewUrl);
-      if (previewRes.ok) return await previewRes.json();
+      if (previewRes.ok) {
+        var previewData = await previewRes.json();
+        markWidgetPerf('reviews-api-done', { source: 'preview' });
+        return previewData;
+      }
     } catch (_) {}
+    markWidgetPerf('reviews-api-error', { source: 'preview' });
     return createReviewsFetchError();
   }
 
@@ -52,7 +63,10 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, media
     try {
       var entry = JSON.parse(cached);
       if (entry && entry.t !== undefined && entry.v) {
-        if (Date.now() - entry.t < REVIEWS_CACHE_TTL) return entry.v;
+        if (Date.now() - entry.t < REVIEWS_CACHE_TTL) {
+          markWidgetPerf('reviews-api-done', { source: 'memory-cache' });
+          return entry.v;
+        }
         staleReviews = entry.v;
         cacheSet(key, '');
       } else {
@@ -72,11 +86,16 @@ export async function fetchReviews(productId, orderBy, page, ratingFilter, media
       (limit ? '&limit=' + encodeURIComponent(limit) : '') +
       (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
     var res = await fetchWithTimeout(url);
-    if (!res.ok) return staleReviews || createReviewsFetchError();
+    if (!res.ok) {
+      markWidgetPerf('reviews-api-error', { status: res.status || 0 });
+      return staleReviews || createReviewsFetchError();
+    }
     var data = await res.json();
     cacheSet(key, JSON.stringify({ t: Date.now(), v: data }));
+    markWidgetPerf('reviews-api-done', { source: 'network' });
     return data;
   } catch (err) {
+    markWidgetPerf('reviews-api-error', { source: 'network' });
     console.error('[renuvex-pr] fetchReviews error:', err);
     return staleReviews || createReviewsFetchError();
   }

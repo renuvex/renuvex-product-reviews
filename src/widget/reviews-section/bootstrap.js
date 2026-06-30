@@ -14,13 +14,21 @@ import {
   setMediaStripReviews,
 } from '../core/state.js';
 import { scheduleIdleTask } from '../core/scheduler.js';
+import { markWidgetPerf } from '../core/perf-timeline.js';
 import { createReviewsFetchError, fetchMixedMediaGalleryReviews, fetchReviews } from './reviews-api.js';
 
 var bootstrapCache = {};
 var bootstrapSeq = 0;
 
 function loadRenderModule() {
-  return import('./render.js');
+  markWidgetPerf('render-import-start');
+  return import('./render.js').then(function (mod) {
+    markWidgetPerf('render-import-done');
+    return mod;
+  }, function (err) {
+    markWidgetPerf('render-import-error');
+    throw err;
+  });
 }
 
 function currentPathname() {
@@ -87,9 +95,11 @@ async function loadDeferredMediaGallery(opts) {
   if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
   var mediaGalleryReviews = [];
+  markWidgetPerf('media-gallery-deferred-start');
   try {
     mediaGalleryReviews = await fetchMixedMediaGalleryReviews(productId);
   } catch (err) {
+    markWidgetPerf('media-gallery-deferred-error');
     console.error('[renuvex-pr] media gallery fetch error:', err);
     return;
   }
@@ -106,6 +116,7 @@ async function loadDeferredMediaGallery(opts) {
   ) {
     renderModule.renderDeferredMediaGallery(productId, reviewsSettings);
   }
+  markWidgetPerf('media-gallery-deferred-done');
 }
 
 export async function bootstrap(productId, productName) {
@@ -145,7 +156,9 @@ export async function bootstrap(productId, productName) {
     var renderModule = await renderModulePromise;
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
+    markWidgetPerf('first-render-start');
     await renderModule.render(productId, reviewsSettings, reviewsData, productName, 'newest', 1, badgeSettings);
+    markWidgetPerf('first-render-done');
     scheduleIdleTask(function () {
       loadDeferredMediaGallery({
         productId: productId,

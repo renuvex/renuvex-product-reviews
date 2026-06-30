@@ -27,6 +27,11 @@ source_files:
 
 # Project Log
 
+## 2026-06-30 - performance | Add storefront widget startup timeline
+- Added opt-in browser-local startup markers for the storefront widget loader/runtime/API/render path.
+- Extended `scripts/measure-storefront-waterfall.mjs` to enable `renuvexPerf=1`, report widget timeline markers, classify the dominant delay bucket, and summarize repeated runs.
+- No Cloudflare, Vercel, AWS, ikas, database, Mux, QStash, or DNS mutation was performed in this phase.
+
 ## 2026-06-29 - research | Compare multi-provider storefront widget delivery
 - Used Chrome DevTools MCP read-only against Cozy Earth/Okendo, CurlMix/Yotpo, HiQ/Judge.me, Paen/ikas native, Petzzshop/ikas native, plus selected home/category pages.
 - Recorded the detailed evidence in [[Storefront_CDN_Performance_Benchmark]]: mature storefronts separate long-cache static/versioned widget assets from dynamic review APIs, and dynamic review APIs are often `no-cache`, `no-store`, POST GraphQL, or otherwise not immutable edge data.

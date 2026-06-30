@@ -469,6 +469,14 @@ Do not roll back Cloudflare Worker V2 only because of this snapshot. The current
 split architecture is functionally correct and keeps storefront static/read
 traffic isolated from the backend/write origin.
 
+The next measurement gate is startup attribution, not another blind provider
+switch. The widget now supports opt-in local markers through `renuvexPerf=1` and
+`window.__renuvexPerfTimeline`. After deployment, run
+`pnpm measure:storefront-waterfall -- --runs=10 <storefront-url>` to split the
+remaining delay into script injection/discovery, CDN/client-to-edge, chunk graph,
+read API/cache/backend, or render/main-thread/host-page pressure. This marker
+set is browser-local only and does not create storefront telemetry requests.
+
 Do not treat the current Cloudflare Worker route as the final performance
 architecture either. The next evidence-backed step is a non-invasive AWS
 CloudFront/S3 canary benchmark:

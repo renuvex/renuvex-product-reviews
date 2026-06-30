@@ -9,6 +9,7 @@ import { cacheGet, cacheSet } from './cache.js';
 import { fetchWithTimeout } from './fetch.js';
 import { setAutoPlacementEnabled, setReviewsMountEnabled, setThemeAdapterKey } from '../themes/current-adapter.js';
 import { getPreviewSettingsStorage } from './namespace.js';
+import { markWidgetPerf } from './perf-timeline.js';
 
 var SETTINGS_CACHE_KEY = 'renuvex_pr_settings_' + PUBLIC_API_KEY;
 var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
@@ -34,13 +35,23 @@ function applyRuntimeSettings(settings) {
 }
 
 export function fetchSettings() {
+  markWidgetPerf('settings-start');
+  var promise;
   if (window.__ikasPreviewMode) {
-    return loadPreviewSettings();
+    promise = loadPreviewSettings();
+  } else if (inflightSettings) {
+    promise = inflightSettings;
+  } else {
+    inflightSettings = loadSettings();
+    inflightSettings.then(resetInflightSettings, resetInflightSettings);
+    promise = inflightSettings;
   }
-  if (inflightSettings) return inflightSettings;
-  inflightSettings = loadSettings();
-  inflightSettings.then(resetInflightSettings, resetInflightSettings);
-  return inflightSettings;
+  promise.then(function () {
+    markWidgetPerf('settings-done');
+  }, function () {
+    markWidgetPerf('settings-error');
+  });
+  return promise;
 }
 
 function resetInflightSettings() {

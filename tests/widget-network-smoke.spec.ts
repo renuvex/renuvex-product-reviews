@@ -109,6 +109,7 @@ test('review mount present loads reviews, media gallery, badge, and render chunk
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasPdpBadge(page)).toBe(true);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await expect.poll(() => countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
 
   expect(await hasJsonLd(page)).toBe(true);
   expect(hasRuntime(log)).toBe(true);
@@ -121,6 +122,46 @@ test('review mount present loads reviews, media gallery, badge, and render chunk
   expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
   expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('hasMedia=true'))).toBe(true);
   expect(widgetErrors(log)).toEqual([]);
+});
+
+test('startup perf timeline is opt-in only', async ({ page }) => {
+  await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: true });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  const timeline = await page.evaluate(() => (window as typeof window & { __renuvexPerfTimeline?: unknown }).__renuvexPerfTimeline || null);
+  expect(timeline).toBeNull();
+});
+
+test('startup perf timeline records loader, import, API, and render marks when enabled', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('renuvexPerf', '1');
+  });
+  await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: true });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  const marks = await page.evaluate(() => {
+    const timeline = (window as typeof window & { __renuvexPerfTimeline?: { marks?: Array<{ name: string }> } }).__renuvexPerfTimeline;
+    return (timeline?.marks || []).map((mark) => mark.name);
+  });
+  expect(marks).toEqual(expect.arrayContaining([
+    'classic-loader-start',
+    'runtime-import-start',
+    'runtime-import-done',
+    'runtime-entry-start',
+    'settings-start',
+    'settings-done',
+    'reviews-main-import-start',
+    'reviews-main-import-done',
+    'reviews-api-start',
+    'reviews-api-done',
+    'render-import-start',
+    'render-import-done',
+    'first-render-start',
+    'first-render-done',
+    'reviews-widget-visible',
+  ]));
 });
 
 test('review section renders before delayed media gallery response', async ({ page }) => {

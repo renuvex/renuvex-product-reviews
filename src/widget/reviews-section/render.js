@@ -20,6 +20,7 @@ import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot } from '../icons/star-sprite.js';
 import { isReviewsMountEnabled } from '../themes/current-adapter.js';
 import { settingText } from '../core/helpers.js';
+import { markWidgetPerf } from '../core/perf-timeline.js';
 import { beginReviewRequest, isCurrentReviewRequest } from './render/request-token.js';
 import { SIZE_PRESETS, THUMBNAIL_PRESETS, THUMBNAIL_PRESETS_MOBILE } from './render/size-presets.js';
 import { buildDisabledStateEl, buildEmptyReviewsState, buildFilteredEmptyReviewsState, buildReviewsErrorState } from './render/states.js';
@@ -334,6 +335,7 @@ export async function render(productId, settings, reviewsData, productName, orde
         probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '', reason: 'fetch_error' }, function () {
           return sRoot.getElementById('renuvex-reviews-widget');
         });
+        markWidgetPerf('reviews-widget-visible');
         return;
       }
 
@@ -472,6 +474,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       probeWidgetVisibility(widget, 'reviews-widget', { productId: productId || '' }, function () {
         return sRoot.getElementById('renuvex-reviews-widget');
       });
+      markWidgetPerf('reviews-widget-visible');
     } catch (err) {
       console.error('[renuvex-pr] render error:', err);
       var errMsg = document.createElement('p');

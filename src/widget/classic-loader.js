@@ -8,6 +8,7 @@
 // origin. The runtime still reads publicApiKey from the original widget.js tag.
 
 import { getWidgetApiBaseUrl } from './core/origins.js';
+import { markWidgetPerf } from './core/perf-timeline.js';
 import { findRenuvexWidgetScript, getPublicApiKeyFromScript, getWidgetScriptBaseUrl } from './core/script-identity.js';
 
 var hasWindow = typeof window !== 'undefined';
@@ -55,7 +56,9 @@ function postRuntimeError(baseUrl, publicApiKey, message, stack, runtimeUrl) {
 }
 
 if (hasWindow && hasDocument) {
+  markWidgetPerf('classic-loader-start');
   var script = findCurrentScript();
+  if (script && script.src) markWidgetPerf('script-tag-present');
   var scriptSrc = script && script.src ? script.src : '';
   var scriptBase = getWidgetScriptBaseUrl(script);
   var apiBase = getWidgetApiBaseUrl(script);
@@ -67,8 +70,12 @@ if (hasWindow && hasDocument) {
       ? __RENUVEX_PR_RUNTIME_PATH__
       : 'widget-runtime/runtime.js';
     var runtimeUrl = scriptBase + '/' + runtimePath;
-    import(runtimeUrl).catch(function (err) {
+    markWidgetPerf('runtime-import-start');
+    import(runtimeUrl).then(function () {
+      markWidgetPerf('runtime-import-done');
+    }).catch(function (err) {
       window.__renuvexProductReviewsRuntimeLoading = false;
+      markWidgetPerf('runtime-import-error');
       postRuntimeError(apiBase || scriptBase, publicApiKey, err && err.message, err && err.stack, runtimeUrl);
       try { console.error('[renuvex-pr] runtime import failed:', err); } catch (_) {}
     });
