@@ -16,6 +16,7 @@ tags:
 related:
   - "[[Competitor_Pricing_And_Plans]]"
   - "[[Storefront_CDN_Cost_Model]]"
+  - "[[Review_Image_CDN_Cost_Model]]"
   - "[[Upstash_Redis_QStash_Cost_Audit]]"
   - "[[ADR_0032_Review_Video_On_Mux]]"
 source_files:
@@ -46,7 +47,8 @@ The model assumes the current target architecture:
 - AWS SES for email.
 - AWS S3 plus CloudFront as the future image-storage/CDN candidate in this
   model; Cloudinary remains the current implemented image provider until a
-  separate migration is approved.
+  separate migration is approved. See [[Review_Image_CDN_Cost_Model]] for the
+  focused AWS-vs-Cloudflare image CDN/storage comparison.
 - Sentry for error/trace observability with controlled sampling.
 
 ## Official Source Slugs
@@ -184,7 +186,9 @@ reserve hard limits for the features that create direct variable cost.
 ## Open Questions Before Public Pricing
 
 1. Measure real image CDN bytes after moving images away from Cloudinary, if
-   that migration is approved.
+   that migration is approved. The provider-cost model is now documented in
+   [[Review_Image_CDN_Cost_Model]], but real Cloudinary bytes/request counts are
+   still needed before a migration decision.
 2. Measure Mux playback minutes per approved video review after real storefront
    traffic starts.
 3. Decide whether email is bundled per plan, sold as an overage, or both.
