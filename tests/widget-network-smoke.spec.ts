@@ -392,7 +392,7 @@ test('duplicate same-page PAGE_VIEW inside the debounce window remains idempoten
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('review mount absent keeps badge but skips review render chunk and review APIs', async ({ page }) => {
+test('review mount absent keeps badge but skips review bootstrap/render chunks and review APIs', async ({ page }) => {
   const log = await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: false });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasPdpBadge(page)).toBe(true);
@@ -402,7 +402,7 @@ test('review mount absent keeps badge but skips review render chunk and review A
   expect(await hasReviewsWidget(page)).toBe(false);
   expect(hasChunk(log, 'rating-badge-')).toBe(true);
   expect(hasChunk(log, 'structured-data-')).toBe(true);
-  expect(hasChunk(log, 'bootstrap-')).toBe(true);
+  expect(hasChunk(log, 'bootstrap-')).toBe(false);
   expect(hasChunk(log, 'render-')).toBe(false);
   expect(countUrls(log, '/api/public/settings')).toBe(1);
   expect(countUrls(log, '/api/public/ratings')).toBe(1);
@@ -457,6 +457,7 @@ test('badge disabled and review mount absent produce no JSON-LD or ratings fetch
   expect(await hasJsonLd(page)).toBe(false);
   expect(hasChunk(log, 'rating-badge-')).toBe(true);
   expect(hasChunk(log, 'structured-data-')).toBe(true);
+  expect(hasChunk(log, 'bootstrap-')).toBe(false);
   expect(hasChunk(log, 'render-')).toBe(false);
   expect(countUrls(log, '/api/public/ratings')).toBe(0);
   expect(countUrls(log, '/api/public/reviews?')).toBe(0);

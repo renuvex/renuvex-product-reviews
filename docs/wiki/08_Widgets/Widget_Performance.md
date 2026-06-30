@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-29
-last_verified: 2026-06-29
+updated: 2026-06-30
+last_verified: 2026-06-30
 confidence: high
 tags:
   - widget
@@ -36,6 +36,7 @@ source_files:
   - "src/widget/core/settings.js"
   - "src/widget/core/rating-summary.js"
   - "src/widget/listing-badges/fallback-candidates.js"
+  - "src/widget/surfaces/reviews-main.surface.js"
   - "src/widget/surfaces/listing-badge.surface.js"
   - "src/widget/rating-badge/index.js"
   - "src/widget/structured-data/index.js"
@@ -84,6 +85,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-06-29 storefront first-render isolation: the Yotpo comparison did not support blaming missing cache headers, Supabase, Redis, QStash, Mux, or DB writes for first visible review-widget delay. The verified blocker was `reviews-section/bootstrap.js` waiting for both the main review request and `fetchMixedMediaGalleryReviews(...hasMedia=true&limit=15)` before the first render. The source now renders the main review payload first, schedules the media gallery read after first render via `src/widget/core/scheduler.js`, and hydrates only `.renuvex-pr-media-gallery-section` through an append-only `renderDeferredMediaGallery()` path. It does not rebuild the summary, filter, write button, review list, or current focus state when the delayed gallery arrives. `pnpm test:widget-smoke` covers this with a delayed media-gallery response and the V2 test harness routes `STOREFRONT_WIDGET_READ_API_BASE_URL` separately from backend/write origin. See [[Storefront_CDN_Performance_Benchmark]].
 - 2026-06-29 live 10-run follow-up: after the first-render isolation deploy, `scripts/measure-storefront-waterfall.mjs` measured the dev ikas PDP 10 times. Runs 2-10 showed review widget visible median `2249 ms`, Renuvex read API max TTFB median `136 ms`, settings max TTFB median `145 ms`, and ikas storefront max TTFB median `879 ms`. This supports keeping read/API work out of the critical path and treating remaining delay as host-page/CDN-path/chunk-sequencing work, not DB/QStash/Mux write-path work. See [[Storefront_CDN_Performance_Benchmark]].
 - 2026-06-30 startup timeline instrumentation: the widget now has opt-in `renuvexPerf=1` / `localStorage.renuvexPerf=1` startup markers for script discovery, classic loader execution, runtime import, settings, reviews API, render import, first render, visible widget, and deferred media gallery. The markers stay browser-local in `window.__renuvexPerfTimeline` and do not send network telemetry. `scripts/measure-storefront-waterfall.mjs` enables the flag during measurements and can summarize repeated runs, so the next live evidence can classify the remaining delay as injection/discovery, CDN/client-to-edge, chunk graph, read API/cache/backend, or render/main-thread/host pressure.
+- 2026-06-30 chunk graph audit: esbuild code splitting is based on the current ESM dependency graph, not future placeholder files. Dynamic imports become lazily loaded chunks and shared code can become small shared chunks when multiple entry points need it. The audit found one real source-level issue: `reviews-main` detected any product context and loaded `reviews-section/bootstrap.js` even when the explicit `<div data-renuvex-widget="reviews">` mount was absent. `src/widget/surfaces/reviews-main.surface.js` now requires both product context and an explicit reviews mount before importing the bootstrap module; `loader.js` still replays the surface if the mount is inserted later. `pnpm test:widget-smoke` covers mount-absent PDPs skipping `bootstrap-*` / `render-*` chunks and the late-mount replay path.
 - 2026-06-29 Yotpo home/category DevTools follow-up: the reference storefront's home and category pages use lightweight rating/star surfaces and carousel data, not the full PDP review/media API path. The observed Yotpo loader and `staticw2` widget shell still had TTL-0 cache behavior, while versioned star-rating assets used `max-age=31536000`. Preserve Renuvex's bulk ratings model and keep review/media/Mux code behind explicit PDP review mounts or future explicit widgets. See [[Storefront_CDN_Performance_Benchmark]].
 - 2026-06-29 multi-provider DevTools follow-up: Okendo, Judge.me, Yotpo, and ikas-native examples all support the same split: long-cache static/versioned assets, dynamic review APIs that are often no-cache/no-store or POST GraphQL, and lightweight home/category surfaces. The finding argues for Renuvex first-render isolation and lazy media/lightbox work before KV, write-path edge moves, or provider/CDN swaps. See [[Storefront_CDN_Performance_Benchmark]].
 

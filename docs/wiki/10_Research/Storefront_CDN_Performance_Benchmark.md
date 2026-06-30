@@ -3,8 +3,8 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-06-28
-updated: 2026-06-29
-last_verified: 2026-06-29
+updated: 2026-06-30
+last_verified: 2026-06-30
 confidence: high
 tags:
   - widget
@@ -27,6 +27,7 @@ source_files:
   - "scripts/build-widget.mjs"
   - "public/widget-runtime/build-manifest.json"
   - "src/widget/core/origins.js"
+  - "src/widget/surfaces/reviews-main.surface.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/reviews-api.js"
 ---
@@ -312,6 +313,52 @@ Implemented optimization:
    widget.
 5. Keep listing badge and structured-data work outside the PDP review section's
    first visible render path.
+
+## 2026-06-30 Chunk Graph And Mount-Absent Guard Follow-Up
+
+The next audit focused on whether the many widget runtime chunks were accidental
+dead code or a correct result of the bundler graph.
+
+Official esbuild documentation and Context7 evidence matched the local
+`scripts/build-widget.mjs` configuration:
+
+- Code splitting only applies to ESM output.
+- `import()` creates a separate chunk that is loaded only when that expression is evaluated.
+- Multiple entry points and dynamic import targets can create small shared chunks for common code.
+- The chunk graph is generated from currently reachable code, not from planned future features.
+
+Current local manifest evidence showed that the largest video-related outputs
+remain lazy:
+
+- `dist-F5RX6YFS.js` for `@mux/mux-player`.
+- `gerwig-J4LRWRX2.js` for the Mux Player theme.
+- `upchunk-KBSCWYRQ.js` for Mux upload.
+
+Those files are not part of the initial static chain. They are reachable from
+the review render path only when video playback or upload code is actually used.
+
+The audit did find one avoidable source-level load:
+
+- `src/widget/surfaces/reviews-main.surface.js` detected every product context
+  with a product ID.
+- That made mount-absent PDPs import `reviews-section/bootstrap.js`.
+- `bootstrap.js` then returned early after its own explicit-mount guard, so the
+  visible behavior was correct but the asset graph paid an unnecessary
+  `bootstrap-*` request and related shared chunk work.
+
+Implemented fix:
+
+1. Move the explicit reviews-mount check into the `reviews-main` surface
+   descriptor before `loadReviewsMainModule()` is called.
+2. Keep the existing late-mount replay path in `loader.js`, so a reviews mount
+   inserted after initial boot still loads and renders the review surface.
+3. Update the widget network smoke contract to assert that mount-absent PDPs
+   skip both `bootstrap-*` and `render-*`, while the late-mount replay test
+   continues to pass.
+
+This is a targeted surface-isolation fix. It does not change CDN provider,
+Cloudflare Worker V2 read cache, API response shape, DB, Redis, QStash, Mux, or
+upload behavior.
 
 ## 2026-06-29 Yotpo Home And Category DevTools Evidence
 
