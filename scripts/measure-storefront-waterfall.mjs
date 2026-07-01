@@ -57,6 +57,12 @@ async function measureOnce(target, runIndex) {
   await page.addInitScript(() => {
     window.__renuvexPerfEnabled = true;
     const marks = [];
+    const cls = {
+      value: 0,
+      entries: [],
+      supported: false,
+      error: '',
+    };
     const seen = new Set();
     const mark = (name) => {
       if (seen.has(name)) return;
@@ -77,7 +83,46 @@ async function measureOnce(target, runIndex) {
       if (findInTree(document, '#renuvex-reviews-widget')) mark('reviews-widget-visible');
       if (findInTree(document, '.renuvex-pr-media-gallery')) mark('media-gallery-visible');
     };
-    window.__renuvexStorefrontWaterfall = { marks };
+    const describeShiftSource = (source) => {
+      const node = source?.node;
+      if (!node || node.nodeType !== Node.ELEMENT_NODE) return null;
+      const element = /** @type {Element} */ (node);
+      const rect = source.currentRect || source.previousRect || {};
+      return {
+        tag: element.tagName.toLowerCase(),
+        id: element.id || '',
+        className: typeof element.className === 'string' ? element.className.slice(0, 160) : '',
+        src: element.getAttribute('src') || element.getAttribute('href') || '',
+        text: (element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 100),
+        rect: {
+          x: Math.round(rect.x || 0),
+          y: Math.round(rect.y || 0),
+          width: Math.round(rect.width || 0),
+          height: Math.round(rect.height || 0),
+        },
+      };
+    };
+    try {
+      if ('PerformanceObserver' in window) {
+        cls.supported = true;
+        const layoutShiftObserver = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.hadRecentInput) continue;
+            cls.value += entry.value || 0;
+            cls.entries.push({
+              value: entry.value || 0,
+              startTime: entry.startTime || 0,
+              sources: Array.from(entry.sources || []).map(describeShiftSource).filter(Boolean).slice(0, 5),
+            });
+          }
+        });
+        layoutShiftObserver.observe({ type: 'layout-shift', buffered: true });
+        window.setTimeout(() => layoutShiftObserver.disconnect(), 20_000);
+      }
+    } catch (error) {
+      cls.error = error instanceof Error ? error.message : String(error);
+    }
+    window.__renuvexStorefrontWaterfall = { marks, cls };
     const observer = new MutationObserver(scan);
     document.addEventListener('DOMContentLoaded', () => {
       mark('domcontentloaded');
@@ -174,6 +219,7 @@ async function measureOnce(target, runIndex) {
           }
         : null,
       marks: window.__renuvexStorefrontWaterfall?.marks || [],
+      cls: window.__renuvexStorefrontWaterfall?.cls || null,
       widgetTimeline: window.__renuvexPerfTimeline?.marks || [],
       dom: {
         widgetScripts: document.querySelectorAll('script[src*="/widget.js"]').length,
@@ -425,6 +471,10 @@ function formatMs(value) {
   return value === null || value === undefined ? 'n/a' : `${value} ms`;
 }
 
+function formatCls(value) {
+  return value === null || value === undefined ? 'n/a' : value.toFixed(4);
+}
+
 function printStartupSummary(startup, classification) {
   console.log('');
   console.log('## Widget startup timeline');
@@ -446,6 +496,40 @@ function printStartupSummary(startup, classification) {
   console.log(`| Static max TTFB | ${formatMs(startup.staticMaxTtfb)} |`);
   console.log(`| Read API max TTFB | ${formatMs(startup.readApiMaxTtfb)} |`);
   console.log(`| Settings max TTFB | ${formatMs(startup.settingsMaxTtfb)} |`);
+}
+
+function printClsSummary(cls) {
+  console.log('');
+  console.log('## Layout shift / CLS');
+  if (!cls) {
+    console.log('- not captured');
+    return;
+  }
+  console.log(`- supported: ${cls.supported ? 'yes' : 'no'}`);
+  if (cls.error) console.log(`- observer error: ${cls.error}`);
+  console.log(`- total CLS: ${formatCls(cls.value || 0)}`);
+  const entries = [...(cls.entries || [])].sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 8);
+  if (entries.length === 0) {
+    console.log('- shift entries: none');
+    return;
+  }
+  console.log('');
+  console.log('| Start | Value | Sources |');
+  console.log('|---:|---:|---|');
+  for (const entry of entries) {
+    const sources = (entry.sources || []).map((source) => {
+      const label = [
+        source.tag,
+        source.id ? `#${source.id}` : '',
+        source.className ? `.${source.className.replace(/\s+/g, '.')}` : '',
+      ].filter(Boolean).join('');
+      const media = source.src ? ` src=${trim(source.src, 80)}` : '';
+      const text = source.text ? ` text="${trim(source.text, 60)}"` : '';
+      const rect = source.rect ? ` rect=${source.rect.width}x${source.rect.height}@${source.rect.x},${source.rect.y}` : '';
+      return `${label}${media}${text}${rect}`;
+    }).join('; ');
+    console.log(`| ${Math.round(entry.startTime || 0)} ms | ${formatCls(entry.value || 0)} | ${trim(sources || 'unknown', 220)} |`);
+  }
 }
 
 function printReport(report) {
@@ -486,6 +570,7 @@ function printReport(report) {
   }
 
   printStartupSummary(report.startup, report.classification);
+  printClsSummary(report.runtime.cls);
 
   console.log('');
   console.log('## Summary by category');
@@ -541,6 +626,7 @@ function printRunLine(report, run) {
       `settings=${formatMs(report.startup.settingsMs)}`,
       `reviewsApi=${formatMs(report.startup.reviewsApiMs)}`,
       `render=${formatMs(report.startup.renderMs)}`,
+      `cls=${formatCls(report.runtime.cls?.value || 0)}`,
       `classification=${report.classification}`,
       report.navigationError ? `navigationError=${trim(report.navigationError, 80)}` : '',
     ].filter(Boolean).join(' | '),
@@ -596,8 +682,19 @@ function printMultiRunSummary(reports) {
   printStatsRow('Visible from render start', reports.map((report) => report.startup.visibleFromRenderStartMs));
 
   console.log('');
+  console.log('## CLS summary');
+  console.log('| Metric | Min | Median | P90 | P95 | Max |');
+  console.log('|---|---:|---:|---:|---:|---:|');
+  printClsStatsRow('Total CLS', reports.map((report) => report.runtime.cls?.value || 0));
+
+  console.log('');
   console.log('## Classification counts');
   for (const [classification, count] of countBy(reports.map((report) => report.classification))) {
     console.log(`- ${classification}: ${count}`);
   }
+}
+
+function printClsStatsRow(label, values) {
+  const row = stats(values);
+  console.log(`| ${label} | ${formatCls(row.min)} | ${formatCls(row.median)} | ${formatCls(row.p90)} | ${formatCls(row.p95)} | ${formatCls(row.max)} |`);
 }

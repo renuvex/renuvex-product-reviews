@@ -351,6 +351,71 @@ Renuvex first-render cost is low, below-the-fold listing badge work is deferred
 on PDP first load, and the remaining large CLS is still a host/theme
 layout-reservation issue rather than a Renuvex widget insertion issue.
 
+### 2026-07-01 Settings Read-Cache Post-Deploy Follow-Up
+
+After splitting settings read from lazy theme sync, deploying the Worker
+allowlist for `/api/public/settings`, and redeploying the widget runtime, the
+same dev ikas PDP was measured again with the same command:
+
+```text
+pnpm measure:storefront-waterfall -- https://dev-mertcopper.ikas.shop/premium-shortsg --runs=10
+```
+
+Chrome DevTools MCP was also used for one read-only trace against
+`https://dev-mertcopper.ikas.shop/premium-shortsg?renuvexPerf=1`. That trace
+reported LCP `1690 ms`, CLS `0.57`, and an LCP breakdown dominated by load
+delay (`1551 ms`) rather than origin TTFB (`66 ms`). The trace was saved under
+`.tmp/` for the local session and should not be committed.
+
+Startup 10-run summary:
+
+| Metric | Min | Median | P90 | P95 | Max |
+|---|---:|---:|---:|---:|---:|
+| Review widget visible | 2111 ms | 2355 ms | 3058 ms | 5031 ms | 5031 ms |
+| Renuvex static max TTFB | 396 ms | 767 ms | 1002 ms | 1073 ms | 1073 ms |
+| Settings duration | 72 ms | 96 ms | 214 ms | 244 ms | 244 ms |
+| Reviews API duration | 80 ms | 119 ms | 272 ms | 393 ms | 393 ms |
+| Runtime import duration | 325 ms | 1049 ms | 1269 ms | 1329 ms | 1329 ms |
+| Render import duration | 206 ms | 250 ms | 348 ms | 448 ms | 448 ms |
+| First render duration | 14 ms | 18 ms | 29 ms | 35 ms | 35 ms |
+| Visible from render start | 13 ms | 17 ms | 27 ms | 34 ms | 34 ms |
+
+CLS 10-run summary:
+
+| Metric | Min | Median | P90 | P95 | Max |
+|---|---:|---:|---:|---:|---:|
+| Total CLS | 0.5418 | 0.5569 | 0.5598 | 0.5598 | 0.5598 |
+
+Classifier counts:
+
+- `CDN/client-to-edge`: 7 runs
+- `injection/discovery`: 3 runs
+
+Comparison with the immediately preceding post-viewport-gate baseline:
+
+| Metric | Previous median | Settings-cache median | Change |
+|---|---:|---:|---:|
+| Review widget visible | 2422 ms | 2355 ms | -67 ms |
+| Settings duration | 155 ms | 96 ms | -59 ms |
+| Reviews API duration | 196 ms | 119 ms | -77 ms |
+| Runtime import duration | 1031 ms | 1049 ms | +18 ms |
+| First render duration | 14 ms | 18 ms | +4 ms |
+
+Interpretation:
+
+- The settings read-cache split worked: the settings marker median dropped from
+  `155 ms` to `96 ms` and P95 dropped from `292 ms` to `244 ms`.
+- End-to-end visible timing did not move by the same amount because the live
+  path is still dominated by script discovery/runtime import/static asset
+  timing and the selected Cloudflare edge route.
+- The new CLS capture in `scripts/measure-storefront-waterfall.mjs` confirmed
+  CLS median `0.5569`, matching Chrome DevTools (`0.57`). The largest detailed
+  source cluster was host/theme layout around `div#0`, header/tab content, and
+  ikas payment/theme image areas; this remains outside the Renuvex widget slot.
+- This closes the settings read-cache performance check: it is a real
+  improvement for the settings read itself, but it is not the primary lever for
+  first visible review-widget timing or total page CLS.
+
 ### ikas Dev/Test Timing Follow-Up
 
 On 2026-06-29, ikas support answered that dev/test storefronts or builder
