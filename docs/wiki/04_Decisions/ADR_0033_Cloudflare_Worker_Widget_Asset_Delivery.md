@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-28
-updated: 2026-06-28
-last_verified: 2026-06-28
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - adr
@@ -26,8 +26,11 @@ source_files:
   - "scripts/build-widget.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
   - "src/widget/core/origins.js"
+  - "src/widget/core/settings.js"
   - "src/widget/core/config.js"
   - "src/widget/classic-loader.js"
+  - "src/app/api/public/settings/route.ts"
+  - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "tests/unit/widget-origin.test.ts"
   - "tests/unit/widget-worker.test.ts"
   - "tests/unit/widget-asset-cache.test.ts"
@@ -54,7 +57,7 @@ The permanent target is a split-origin model:
 | Storefront static assets | `https://widget.renuvex.app` | Cloudflare Worker Static Assets |
 | Admin, OAuth, public API, upload, Mux, QStash, DB, webhooks | `https://app.renuvex.app` | Vercel / Next.js |
 
-Cloudflare Worker V1 did not proxy public API calls. V2 keeps the same control-plane split, but adds a narrow read-through proxy only for selected cacheable storefront reads. Mux upload, review submit, QStash receivers, settings/theme sync, rate limits, and backend observability stay on the existing Vercel origin.
+Cloudflare Worker V1 did not proxy public API calls. V2 keeps the same control-plane split, but adds a narrow read-through proxy only for selected cacheable storefront reads. Mux upload, review submit, QStash receivers, lazy theme sync, rate limits, and backend observability stay on the existing Vercel origin. Settings reads are cacheable only after ADR_0022's theme-sync side effect was split into a separate POST endpoint.
 
 ## Decision
 Use Cloudflare Worker Static Assets for the storefront widget asset surface, plus a narrow V2 read-through cache for selected public read endpoints.
@@ -76,9 +79,10 @@ V1 `/api/*` returned 404 and was intentionally fail-closed. V2 keeps `/api/*` fa
 GET /api/public/ratings
 GET /api/public/ratings-by-slug
 GET /api/public/reviews
+GET /api/public/settings
 ```
 
-`GET /api/public/settings` remains outside the Worker because the route has backend side effects for storefront theme synchronization. Upload, submit, video, widget-error, webhook, QStash, Mux, Cloudinary, and admin routes are not proxied.
+`GET /api/public/settings` is allowed because it is now a pure read that returns sanitized widget config and additive `runtime.themeSyncDue`. `POST /api/public/storefront-theme/lazy-sync` owns the rate-limited Vercel `after()` work and is not proxied. Upload, submit, video, widget-error, webhook, QStash, Mux, Cloudinary, and admin routes are not proxied.
 
 The widget runtime now has three separate origins:
 
@@ -98,7 +102,7 @@ https://app.renuvex.app
 https://widget.renuvex.app
 ```
 
-The classic loader still imports runtime chunks from the script/asset origin. Runtime write, upload, settings, video, and error-reporting calls use the API/write origin. Only ratings/reviews list reads use the read API origin.
+The classic loader still imports runtime chunks from the script/asset origin. Runtime write, upload, video, theme lazy-sync, and error-reporting calls use the API/write origin. Settings, ratings, and reviews list reads use the read API origin.
 
 ## Implementation
 - `src/widget/core/origins.js` owns asset/API/read-API origin resolution.
@@ -137,6 +141,7 @@ V2 public-read proxy cache contract:
 | `/api/public/ratings` | Cacheable only with `storeId` and normalized sorted `productIds` |
 | `/api/public/ratings-by-slug` | Cacheable only with `storeId` and normalized sorted `slugs` |
 | `/api/public/reviews` | Cacheable only with `storeId`, `productId`, and normalized known filters/page/cursor params |
+| `/api/public/settings` | Cacheable only with `publicApiKey` |
 | Unknown params or long URLs | Bypass cache and pass through to `app.renuvex.app` |
 | Non-200, non-JSON, `Set-Cookie`, 4xx/5xx/429 | Not cached |
 
@@ -195,6 +200,12 @@ V2 source verification on 2026-06-28:
 - `pnpm exec tsc --noEmit`
 - `pnpm worker:widget:types`
 - `pnpm worker:widget:deploy:dry-run`
+
+Settings read-cache source verification on 2026-07-01:
+
+- `GET /api/public/settings` no longer imports `AuthTokenManager`, `syncStorefrontThemeForToken`, or schedules `after()`.
+- `POST /api/public/storefront-theme/lazy-sync` owns the stale check, rate limit, token read, and `after()` sync scheduling.
+- Worker tests cover settings cache-key normalization and keep lazy-sync/write/upload/video paths fail-closed.
 
 ## Related Source Files
 - [wrangler.widget.jsonc](wrangler.widget.jsonc)

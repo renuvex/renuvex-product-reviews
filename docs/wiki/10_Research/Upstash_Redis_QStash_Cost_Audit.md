@@ -182,8 +182,10 @@ This table reuses the storefront CDN traffic scenario:
 
 - `100,000` storefront widget pageviews per store per month.
 - Store counts: `100`, `200`, `300`, `400`, `500`, `1000`, `2000`.
-- Current read-widget shape: `3` selected read API requests per pageview
-  (`ratings:1`, `reviews:2`) in the benchmark harness.
+- Current Redis-rate-limited read-widget shape: `3` selected read API requests
+  per pageview (`ratings:1`, `reviews:2`) in the benchmark harness. Settings
+  can be Worker-cached after the read/sync split, but the settings GET does not
+  use the Redis read-rate-limit path.
 
 This is a **worst-case origin-miss bound**, not the expected Cloudflare V2 bill.
 It assumes every selected read request misses the Worker edge cache and reaches
@@ -281,7 +283,7 @@ performance concerns, and they are not currently significant cost drivers.
 The current split remains correct:
 
 - Cloudflare Worker: static assets and selected public read cache.
-- Vercel backend: write/upload/admin/OAuth/settings side effects.
+- Vercel backend: write/upload/admin/OAuth/lazy settings sync side effects.
 - Redis: origin abuse/rate-limit counters.
 - QStash: durable async media-provider work.
 

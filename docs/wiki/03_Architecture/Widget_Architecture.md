@@ -109,8 +109,9 @@ webhook origin. V2 source also defines a separate cacheable read origin through
 `STOREFRONT_WIDGET_READ_API_BASE_URL`. If unset, read calls fall back to
 `STOREFRONT_WIDGET_API_BASE_URL`, so the code can deploy before the Worker read
 proxy is activated. The classic loader imports runtime assets from the script
-origin, ratings/reviews reads can use the read origin, and settings/write/upload
-calls plus loader import-error reports use the API origin.
+origin, settings/ratings/reviews reads can use the read origin, and
+write/upload/video/lazy-sync calls plus loader import-error reports use the API
+origin.
 
 ## Responsibilities
 - Inject summary + reviews on **product detail pages**
@@ -270,7 +271,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 
 ## Caching strategy
 - `PRODUCT_VIEW` does not invalidate review browser cache directly. Review cache keys and the 60 second TTL contract are owned by `reviews-api.js`; `storefront-context.js` must not write non-matching base keys or add broad prefix invalidation without a separate cache-contract change.
-- The Cloudflare Worker delivery path mirrors the widget static cache contract. V2 permits only selected cacheable public reads (`ratings`, `ratings-by-slug`, `reviews`) through an allowlisted read-through cache. `/api/public/settings`, upload, submit, video, widget-error, admin, webhook, Mux, Cloudinary, and QStash paths must stay on `API_BASE`.
+- The Cloudflare Worker delivery path mirrors the widget static cache contract. V2 permits only selected cacheable public reads (`settings`, `ratings`, `ratings-by-slug`, `reviews`) through an allowlisted read-through cache. `/api/public/settings` is cacheable only because it is a pure read and lazy theme sync moved to `POST /api/public/storefront-theme/lazy-sync`. Upload, submit, video, widget-error, lazy-sync, admin, webhook, Mux, Cloudinary, and QStash paths must stay on `API_BASE`.
 - `/api/public/settings` and `/api/public/reviews` set `Cache-Control: s-maxage=60, stale-while-revalidate=300` (Vercel CDN).
 - Public badge, structured-data, and review summary distribution reads use the backend `ProductReviewSummary` read model. Widget response fields stay the same, but new high-read widget surfaces should prefer explicit aggregate/read-model endpoints over repeated raw `Review.groupBy()` scans. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - Widget side: `sessionStorage` (with in-memory fallback) cache in `core/cache.js` — survives same-tab navigation; settings stay fresh for 5 minutes and can be reused stale for up to 24 hours during transient settings fetch failures.
@@ -340,7 +341,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - 2026-07-01: Tightened below-the-fold listing/product-slider badge viewport gating to `rootMargin: "400px 0px"`. This keeps critical PDP surfaces eager while preventing distant product sliders from loading the listing badge chunk or bulk ratings API before the shopper gets close enough to scroll into them.
 - 2026-07-01: Added the storefront layout-reservation rule after the CLS audit. New storefront surfaces must reserve a stable owned slot before hydrating dynamic content. The PDP review surface now creates its quiet `#renuvex-reviews` shell before review data/render completion, and media gallery uses a hidden placeholder when the summary says media exists. This is not a loading skeleton; it is a CLS guard. Listing badges already follow the same pattern with invisible reserved slots.
 - 2026-06-30: Added future widget surface rules after the storefront performance and chunk-graph audits. New widget surfaces should prefer explicit mounts, keep detection cheap, lazy-load implementations, fail closed for ambiguous auto-placement, and add positive/negative network smoke coverage before production.
-- 2026-06-28: Cloudflare Worker V2 public-read cache is live for allowlisted ratings/reviews reads. Widget asset, backend API, and read API origins are separate; the read origin is `widget.renuvex.app` while settings/write/upload/video/error calls stay on `app.renuvex.app`.
+- 2026-07-01: Settings reads joined the read-origin contract after theme sync was split out into `POST /api/public/storefront-theme/lazy-sync`. Widget asset, backend API, and read API origins are separate; the read origin is `widget.renuvex.app` for settings/ratings/reviews, while write/upload/video/error/lazy-sync calls stay on `app.renuvex.app`.
 - 2026-06-06: Public rating/summary aggregate reads moved to the backend `ProductReviewSummary` read model. Widget response contracts are unchanged; future high-read surfaces should define their aggregate read model before adding public fan-out. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-06-02: Corrected shared summary filter pointer semantics after desktop testing: touch/pen filter options still activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so every summary layout can reopen the filter immediately after a sort-triggered render. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].
 - 2026-06-02: Strengthened compact/mobile rating-bar visual state: inactive filtered rows now use the explicit `.renuvex-pr-bar-dimmed` CSS state class, and stable widget entrypoints revalidate on reload while hashed runtime chunks stay immutable. Related bug: [[Bug_Filter_Menu_Shadow_DOM_Light_Dismiss]].

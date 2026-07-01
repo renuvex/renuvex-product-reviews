@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - api
@@ -24,6 +24,8 @@ source_files:
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
+  - "src/app/api/public/settings/route.ts"
+  - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/media/access.ts"
@@ -93,7 +95,8 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + trusted image URLs/video token + auto-approve). Writes `Review`, legacy `Review.images`, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. v1 rejects mixed image+video; video-bearing reviews always start `pending`. Client `slug`/`productName`/`email` are ignored. |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
 | GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read `ProductReviewSummary` by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
-| GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Widget config map (per widgetId). Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
+| GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Pure cacheable widget config read (per widgetId) plus public runtime flags including additive `runtime.themeSyncDue`. Does not read auth tokens, call ikas, or schedule theme sync. Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
+| POST `/api/public/storefront-theme/lazy-sync` body `{ publicApiKey }` | [route.ts](src/app/api/public/storefront-theme/lazy-sync/route.ts) | Best-effort storefront theme freshness trigger. Rate-limits first, returns `204` when the stored theme state is fresh, and schedules `syncStorefrontThemeForToken(..., 'lazy_storefront')` via `after()` only when stale. This route is write/control-plane and is not Worker-cached. |
 | POST `/api/public/upload/sign` body `{ storeId }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload scoped to `review_images/stores/<storeId>` after StoreSettings verification |
 | POST `/api/public/upload/register` body `{ storeId, secureUrl, metadata? }` | [route.ts](src/app/api/public/upload/register/route.ts) | Register a completed tenant-scoped Cloudinary upload in `PendingReviewImage` for cleanup. Optional signed Cloudinary upload-response metadata is verified server-side before dimensions/format/bytes are staged for `ReviewMedia`. |
 | GET `/api/public/upload/video/capability?storeId=` | [route.ts](src/app/api/public/upload/video/capability/route.ts) | Fresh `no-store` video capability check with a 60/min/IP fixed-window limit. Returns only `{ enabled, reason }`; quota counts and provider configuration remain server-private. |
@@ -104,12 +107,13 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | DELETE `/api/public/upload/video` | [route.ts](src/app/api/public/upload/video/route.ts) | Atomically mark the session aborted and create its provider-aware cleanup outbox job. Provider calls are worker-owned; the public route does not call Mux directly. |
 
 ### Caching
-Storefront configuration and review GET responses use the documented edge-cache policy. The video capability endpoint is intentionally excluded and sends `Cache-Control: no-store` because reserved and consumed quota can change between wizard openings. See [[Caching_And_Performance]].
+Storefront configuration and review GET responses use the documented edge-cache policy. Theme lazy-sync, video capability, upload, submit, and other write/control-plane endpoints are intentionally excluded. The video capability endpoint sends `Cache-Control: no-store` because reserved and consumed quota can change between wizard openings. See [[Caching_And_Performance]].
 
 ### Rate limits (Upstash Redis)
 - `/api/public/reviews` POST → 3 / 10min / IP
 - `/api/public/upload/sign` POST → 10 / 10min / IP
 - `/api/public/ratings` + `/api/public/ratings-by-slug` GET → 300 / 60sec / IP, shared key
+- `/api/public/storefront-theme/lazy-sync` POST -> 10 / 10min / storeId+IP
 - `/api/public/upload/video/capability` GET -> 60 / 60sec / IP
 - `/api/public/upload/register` POST -> 30 / 10min / IP
 - `/api/public/upload/video/initiate` POST -> 10 / 10min / IP, plus store-level monthly quota reservation.

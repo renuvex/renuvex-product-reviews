@@ -4,7 +4,7 @@
 // reviews-section/bootstrap.js prevents listing-only pages from loading the full
 // review widget chunk just to read settings.
 
-import { PUBLIC_API_KEY, API_BASE } from './config.js';
+import { PUBLIC_API_KEY, API_BASE, READ_API_BASE } from './config.js';
 import { cacheGet, cacheSet } from './cache.js';
 import { fetchWithTimeout } from './fetch.js';
 import { setAutoPlacementEnabled, setReviewsMountEnabled, setThemeAdapterKey } from '../themes/current-adapter.js';
@@ -12,9 +12,11 @@ import { getPreviewSettingsStorage } from './namespace.js';
 import { markWidgetPerf } from './perf-timeline.js';
 
 var SETTINGS_CACHE_KEY = 'renuvex_pr_settings_' + PUBLIC_API_KEY;
+var THEME_LAZY_SYNC_CACHE_KEY = 'renuvex_pr_theme_lazy_sync_' + PUBLIC_API_KEY;
 var SETTINGS_CACHE_TTL = 5 * 60 * 1000;
 var SETTINGS_CACHE_STALE_TTL = 24 * 60 * 60 * 1000;
 var SETTINGS_404_TTL = 30 * 1000;
+var THEME_LAZY_SYNC_TTL = 30 * 60 * 1000;
 
 // On a PDP with product carousels the reviews-main and listing-badge surfaces
 // both call fetchSettings() before either has populated the cache. Sharing the
@@ -31,7 +33,24 @@ function applyRuntimeSettings(settings) {
   // auto-placement on an unsupported theme.
   setAutoPlacementEnabled(runtime.autoPlacementEnabled === true);
   setReviewsMountEnabled(runtime.reviewsMountEnabled === true);
+  scheduleThemeLazySync(runtime);
   return settings;
+}
+
+function scheduleThemeLazySync(runtime) {
+  if (window.__ikasPreviewMode || !(runtime && runtime.themeSyncDue === true)) return;
+  var cachedAttempt = cacheGet(THEME_LAZY_SYNC_CACHE_KEY);
+  if (cachedAttempt) {
+    var lastAttemptAt = Number(cachedAttempt);
+    if (Number.isFinite(lastAttemptAt) && Date.now() - lastAttemptAt < THEME_LAZY_SYNC_TTL) return;
+  }
+
+  cacheSet(THEME_LAZY_SYNC_CACHE_KEY, String(Date.now()));
+  void fetchWithTimeout(API_BASE + '/api/public/storefront-theme/lazy-sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ publicApiKey: PUBLIC_API_KEY }),
+  }, 3000).catch(function () {});
 }
 
 export function fetchSettings() {
@@ -106,7 +125,7 @@ async function loadSettings() {
   }
 
   try {
-    var res = await fetchWithTimeout(API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
+    var res = await fetchWithTimeout(READ_API_BASE + '/api/public/settings?publicApiKey=' + encodeURIComponent(PUBLIC_API_KEY));
     if (!res.ok) {
       if (res.status === 404) {
         cacheSet(SETTINGS_CACHE_KEY, JSON.stringify({ t: Date.now(), notFound: true }));

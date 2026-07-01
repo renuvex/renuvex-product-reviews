@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-29
-last_verified: 2026-06-29
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - hot-context
@@ -94,6 +94,7 @@ source_files:
   - "src/lib/storefront-theme.ts"
   - "src/lib/storefront-theme-sync.ts"
   - "src/app/api/public/settings/route.ts"
+  - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/widget-error/route.ts"
@@ -113,40 +114,38 @@ source_files:
 # Hot Context
 
 ## Current Focus
-- ikas review/rating app: admin, storefront widget, badges, uploads, moderation, and Mux review video.
+- ikas review/rating app: admin, storefront widget, badges, uploads, moderation, Mux video.
 
 ## Must Know
 - Source/config/tests/runtime win; wiki routes.
 - Prompt procedures live in `09_Prompts`; do not create `08_Prompts`.
 - Never document secrets.
-- `package.json` pins Next.js `16.2.1`; older Next.js 15 docs are stale unless re-verified.
-- For video work, no deploy, migration apply, env write, provider write, or teardown happens without explicit stop/go approval.
+- `package.json` pins Next.js `16.2.1`; older Next.js 15 notes are stale unless re-verified.
+- No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-06-29: Cloudflare Worker source fix is ready: asset `304` responses preserve the same cache policy as `200`; deploy is a separate approval.
-- 2026-07-01: `pnpm budget:widget` is a hard local artifact budget gate in CI after `pnpm build:widget`; `pnpm budget:widget:network` remains warn-only deployed/synthetic evidence.
+- 2026-07-01: Worker-cached `GET /api/public/settings` source is ready. Settings is pure read with `runtime.themeSyncDue`; `POST /api/public/storefront-theme/lazy-sync` owns Vercel `after()` sync. Rollout: Vercel route deploy first, then Worker/runtime deploy.
+- 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.
 - 2026-06-30: Upstash audit: Redis measured `0` recent commands/bandwidth; QStash has no DLQ/schedules. See [[Upstash_Redis_QStash_Cost_Audit]].
-- 2026-06-29: ikas support said dev/test StorefrontJSScript timing should match production; do not treat dev-store timing as dev-only slowdown.
-- 2026-06-28: Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. `settings`, upload, submit, video, metrics, and widget-error remain on `app.renuvex.app`.
-- 2026-06-29: AWS CloudFront/S3 widget CDN canary is live on the default CloudFront hostname and verified for the current widget asset graph. No production DNS or ikas script cutover happened.
-- 2026-06-28: Worker asset delivery is live. `widget.renuvex.app` is static Worker origin (`renuvex-widget-assets`); `app.renuvex.app` remains backend/API/upload/Mux/QStash.
-- 2026-06-28: Media-gallery lightbox opens now show a bottom rail with one first trusted image/video per media-backed review; ordinary review opens keep current-review media thumbnails.
-- 2026-06-27/2026-07-01: Existing videos stay visible when video uploads are disabled; media gallery reads use `hasMedia=true` when the first review summary reports `mediaReviewCount > 0`, and are skipped when `mediaReviewCount === 0`.
-- 2026-06-23: Review Video playback uses official Mux Player. Storefront videos expose public `playbackId`; admin preview uses signed Mux Player attributes. Mux Data tracking/cookies stay disabled.
+- 2026-06-29: ikas support said dev/test StorefrontJSScript timing should match production.
+- 2026-06-28: Worker asset delivery is live for `widget.renuvex.app`; Worker V2 read cache is live for ratings/reviews. `app.renuvex.app` remains backend/write/upload/Mux/QStash.
+- 2026-06-29: AWS CloudFront/S3 widget CDN canary is verified; no production DNS or ikas script cutover happened.
+- 2026-06-28: Media-gallery lightbox bottom rail uses one first trusted image/video per media-backed review.
+- 2026-06-27/2026-07-01: Existing videos stay visible when uploads are disabled; media gallery fetches only when `mediaReviewCount > 0`.
+- 2026-06-23: Review Video playback uses official Mux Player; Mux Data tracking/cookies stay disabled.
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
-- 2026-06-21: Mux cutover is live; contract migration, Cloudflare/R2 teardown, Vercel env cleanup, and canary asset cleanup were verified. See [[ADR_0032_Review_Video_On_Mux]] and [[Review_Video_Canary_Runbook]].
-- 2026-06-21: Mux abandoned-ready cleanup deletes known/recovered assets and refunds eligible unsubmitted consumed quota.
+- 2026-06-21: Mux cutover and cleanup are live; see [[ADR_0032_Review_Video_On_Mux]].
 
 ## Current Risks / Open Questions
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
-- Worker V2 read cutover is complete. Keep storefront read origin on `widget.renuvex.app`; backend/write/upload stays on `app.renuvex.app`.
+- Worker V2 read origin: `widget.renuvex.app`; backend/write/upload origin: `app.renuvex.app`.
 - CDN benchmark: Cloudflare V2 and AWS canary work; production cutover needs region/cost/rollback checks.
 - Worker rollback: restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, DNS-only.
 - Old video-provider cleanup gates are closed; preserve Cloudflare DNS/zone and Worker delivery infrastructure.
 - Supabase RLS/default-grants hardening is a public-launch blocker.
-- Theme adapters depend on Admin API `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
-- Deferred gaps: unsupported-theme warning UI, authenticated ikas dashboard smoke, Sentry post-deploy health.
+- Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
+- Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 
 ## Read Next
 - [[Current_Status]]

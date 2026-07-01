@@ -100,6 +100,13 @@ function normalizedReadCacheUrl(url: URL): URL | null {
   const params = url.searchParams;
   const normalized = new URL(url.origin + url.pathname);
 
+  if (url.pathname === '/api/public/settings') {
+    if (!hasOnlyKnownParams(params, new Set(['publicApiKey']))) return null;
+    appendIfPresent(normalized.searchParams, params, 'publicApiKey');
+    if (!normalized.searchParams.get('publicApiKey')) return null;
+    return normalized;
+  }
+
   if (url.pathname === '/api/public/ratings') {
     if (!hasOnlyKnownParams(params, new Set(['storeId', 'productIds']))) return null;
     appendIfPresent(normalized.searchParams, params, 'storeId');
@@ -144,7 +151,8 @@ function normalizedReadCacheUrl(url: URL): URL | null {
 }
 
 function isCacheablePublicReadPath(pathname: string): boolean {
-  return pathname === '/api/public/ratings' ||
+  return pathname === '/api/public/settings' ||
+    pathname === '/api/public/ratings' ||
     pathname === '/api/public/ratings-by-slug' ||
     pathname === '/api/public/reviews';
 }

@@ -67,7 +67,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 
 ## Cloudflare Worker widget delivery
 - Live architecture: `widget.renuvex.app` serves storefront static widget assets through Cloudflare Worker Static Assets; `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash origin.
-- Worker V2 public-read proxying is live for `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. `GET /api/public/settings` and every write/upload/video route stay on `app.renuvex.app`.
+- Worker V2 public-read proxying is live for `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. Source support for Worker-cached `GET /api/public/settings` is ready after the read/sync split, but it needs the normal rollout order: Vercel route deploy first, then Worker asset/allowlist deploy. Every write/upload/video/lazy-sync route stays on `app.renuvex.app`.
 - Live Worker: `renuvex-widget-assets`.
 - Worker custom domain: `widget.renuvex.app -> renuvex-widget-assets`.
 - Cloudflare-created DNS record: read-only proxied `AAAA 100::` for `widget.renuvex.app`.
@@ -105,7 +105,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Keep `NEXT_PUBLIC_DEPLOY_URL` and the app's URL in sync. Mismatch breaks OAuth (`getRedirectUri` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when `localhost` config meets non-localhost host, but it's a fallback).
 - Keep `STOREFRONT_WIDGET_BASE_URL` in sync with the public widget host. The helper trims accidental whitespace and rejects localhost/private/non-HTTPS URLs by default so local development cannot overwrite real storefront script records with `http://localhost:3000/widget.js`.
 - Keep `STOREFRONT_WIDGET_API_BASE_URL` in sync with the backend/API origin when the widget asset origin is separate. Production target is `https://app.renuvex.app`; unset means same-origin fallback and should be treated as rollback/local compatibility only after the Worker cutover.
-- After Worker V2 cutover, keep `STOREFRONT_WIDGET_READ_API_BASE_URL=https://widget.renuvex.app` or rely on `STOREFRONT_WIDGET_BASE_URL=https://widget.renuvex.app` as the build-time fallback. Only ratings/reviews reads use Cloudflare; settings/write/upload/video/error paths remain on `STOREFRONT_WIDGET_API_BASE_URL`.
+- After Worker V2 cutover, keep `STOREFRONT_WIDGET_READ_API_BASE_URL=https://widget.renuvex.app` or rely on `STOREFRONT_WIDGET_BASE_URL=https://widget.renuvex.app` as the build-time fallback. Settings/ratings/reviews reads use Cloudflare; write/upload/video/error/lazy-sync paths remain on `STOREFRONT_WIDGET_API_BASE_URL`.
 - Domain migration order: Vercel project/domain -> Vercel env (`NEXT_PUBLIC_DEPLOY_URL`, `STOREFRONT_WIDGET_BASE_URL`) -> ikas Partner callback/app URLs -> deploy -> manual script repair/reconcile -> live storefront test -> observability cleanup. This migration is complete for `app.renuvex.app` and `widget.renuvex.app`; the legacy Vercel alias compatibility window is closed.
 
 ## Related Source Files

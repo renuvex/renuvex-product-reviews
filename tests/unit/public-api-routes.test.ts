@@ -138,6 +138,13 @@ function stableOzyThemeState() {
   };
 }
 
+function staleOzyThemeState() {
+  return {
+    ...stableOzyThemeState(),
+    lastCheckedAt: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
+  };
+}
+
 function setCloudinaryEnv() {
   process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'renuvex';
   delete process.env.CLOUDINARY_CLOUD_NAME;
@@ -343,8 +350,28 @@ describe('/api/public/settings', () => {
       themeAdapterSource: 'auto',
       autoPlacementEnabled: true,
       reviewsMountEnabled: true,
+      themeSyncDue: false,
     });
     expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it('exposes themeSyncDue without scheduling storefront theme sync', async () => {
+    prismaMock.storeSettings.findUnique.mockResolvedValue({
+      storeId: 'store-1',
+      storefrontTheme: staleOzyThemeState(),
+      videoMonthlyLimit: 10,
+    });
+    prismaMock.widgetSettings.findMany.mockResolvedValue([]);
+
+    const { GET } = await import('@/app/api/public/settings/route');
+    const response = await GET(new Request('https://app.test/api/public/settings?publicApiKey=store-1'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.runtime.themeSyncDue).toBe(true);
+    expect(afterMock).not.toHaveBeenCalled();
+    expect(getByMerchantIdMock).not.toHaveBeenCalled();
+    expect(syncStorefrontThemeForTokenMock).not.toHaveBeenCalled();
   });
 
   it('exposes video capability only when global, merchant, and quota gates are all open', async () => {
@@ -364,6 +391,114 @@ describe('/api/public/settings', () => {
     const body = await response.json();
 
     expect(body.widgets.reviews.videoReviewsEnabled).toBe(true);
+  });
+});
+
+describe('/api/public/storefront-theme/lazy-sync', () => {
+  it('rejects invalid bodies before rate limit or storage', async () => {
+    const { POST } = await import('@/app/api/public/storefront-theme/lazy-sync/route');
+
+    const response = await POST(new Request('https://app.test/api/public/storefront-theme/lazy-sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ publicApiKey: '' }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe('invalid_public_api_key');
+    expect(checkFixedWindowRateLimitMock).not.toHaveBeenCalled();
+    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns 204 for fresh theme state without reading auth token', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true, retryAfterSec: 600 });
+    prismaMock.storeSettings.findUnique.mockResolvedValue({
+      storeId: 'store-1',
+      storefrontTheme: stableOzyThemeState(),
+    });
+    const { POST } = await import('@/app/api/public/storefront-theme/lazy-sync/route');
+
+    const response = await POST(new Request('https://app.test/api/public/storefront-theme/lazy-sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9' },
+      body: JSON.stringify({ publicApiKey: 'store-1' }),
+    }));
+
+    expect(response.status).toBe(204);
+    expect(checkFixedWindowRateLimitMock).toHaveBeenCalledWith({
+      key: 'renuvex_pr_theme_lazy_sync:store-1:127.0.0.1',
+      max: 10,
+      windowSec: 600,
+      label: 'storefront-theme-lazy-sync',
+    });
+    expect(getByMerchantIdMock).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it('schedules lazy storefront theme sync after accepting stale state', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true, retryAfterSec: 600 });
+    prismaMock.storeSettings.findUnique.mockResolvedValue({
+      storeId: 'store-1',
+      storefrontTheme: staleOzyThemeState(),
+    });
+    getByMerchantIdMock.mockResolvedValue({ merchantId: 'store-1', accessToken: 'redacted-token' });
+    syncStorefrontThemeForTokenMock.mockResolvedValue({ changed: false });
+    const { POST } = await import('@/app/api/public/storefront-theme/lazy-sync/route');
+
+    const response = await POST(new Request('https://app.test/api/public/storefront-theme/lazy-sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ publicApiKey: 'store-1' }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(202);
+    expect(body.status).toBe('accepted');
+    expect(afterMock).toHaveBeenCalledTimes(1);
+
+    const scheduled = afterMock.mock.calls[0][0] as () => Promise<void>;
+    await scheduled();
+
+    expect(getByMerchantIdMock).toHaveBeenCalledWith('store-1');
+    expect(syncStorefrontThemeForTokenMock).toHaveBeenCalledWith(
+      { merchantId: 'store-1', accessToken: 'redacted-token' },
+      { reason: 'lazy_storefront', persistUnchangedCheck: true },
+    );
+  });
+
+  it('rate limits lazy sync before reading storefront theme state', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSec: 42 });
+    const { POST } = await import('@/app/api/public/storefront-theme/lazy-sync/route');
+
+    const response = await POST(new Request('https://app.test/api/public/storefront-theme/lazy-sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ publicApiKey: 'store-1' }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('42');
+    expect(body.error).toBe('rate_limited');
+    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 for unknown stores', async () => {
+    checkFixedWindowRateLimitMock.mockResolvedValue({ allowed: true, retryAfterSec: 600 });
+    prismaMock.storeSettings.findUnique.mockResolvedValue(null);
+    const { POST } = await import('@/app/api/public/storefront-theme/lazy-sync/route');
+
+    const response = await POST(new Request('https://app.test/api/public/storefront-theme/lazy-sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ publicApiKey: 'missing-store' }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error).toBe('store_not_found');
+    expect(afterMock).not.toHaveBeenCalled();
   });
 });
 

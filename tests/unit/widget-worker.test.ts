@@ -95,10 +95,10 @@ describe('widget Worker delivery contract', () => {
     expect(seen).toEqual(['https://widget.renuvex.app/widget-runtime/chunks/chunk-ABC123.js']);
   });
 
-  it('keeps stable entrypoints revalidated and fails closed for public API paths', async () => {
+  it('keeps stable entrypoints revalidated and fails closed for write API paths', async () => {
     const { env } = assetEnv();
     const stable = await worker.fetch(new Request('https://widget.renuvex.app/widget.js'), env);
-    const api = await worker.fetch(new Request('https://widget.renuvex.app/api/public/settings'), env);
+    const api = await worker.fetch(new Request('https://widget.renuvex.app/api/public/upload/video/capability?storeId=s1'), env);
 
     expect(stable.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate');
     expect(api.status).toBe(404);
@@ -127,6 +127,10 @@ describe('widget Worker delivery contract', () => {
   it('normalizes tenant-safe cache keys for approved public read routes', () => {
     expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/ratings?storeId=s1&productIds=b,a,a'))?.toString())
       .toBe('https://widget.renuvex.app/api/public/ratings?storeId=s1&productIds=a%2Cb');
+    expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/settings?publicApiKey=s1'))?.toString())
+      .toBe('https://widget.renuvex.app/api/public/settings?publicApiKey=s1');
+    expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/settings?publicApiKey=s1&debug=1')))
+      .toBeNull();
     expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/ratings-by-slug?storeId=s1&slugs=z,a'))?.toString())
       .toBe('https://widget.renuvex.app/api/public/ratings-by-slug?storeId=s1&slugs=a%2Cz');
     expect(__workerTest.normalizedReadCacheUrl(new URL('https://widget.renuvex.app/api/public/reviews?storeId=s1&productId=p1&hasMedia=true'))?.toString())
@@ -147,6 +151,22 @@ describe('widget Worker delivery contract', () => {
     expect(second.headers.get('X-Renuvex-Edge-Cache')).toBe('HIT');
     expect(seen).toEqual(['https://app.renuvex.app/api/public/ratings?storeId=s1&productIds=a%2Cb']);
     expect(Array.from(store.keys())).toEqual(['https://widget.renuvex.app/api/public/ratings?storeId=s1&productIds=a%2Cb']);
+  });
+
+  it('proxies and caches public settings reads by publicApiKey only', async () => {
+    const { env, seen, store } = readProxyEnv((request) => jsonResponse({ widgets: {}, runtime: { requestUrl: request.url } }));
+    const request = new Request('https://widget.renuvex.app/api/public/settings?publicApiKey=s1');
+
+    const first = await worker.fetch(request, env);
+    const second = await worker.fetch(request, env);
+    const firstBody = await first.json();
+
+    expect(first.status).toBe(200);
+    expect(first.headers.get('X-Renuvex-Edge-Cache')).toBe('MISS');
+    expect(second.headers.get('X-Renuvex-Edge-Cache')).toBe('HIT');
+    expect(firstBody.runtime.requestUrl).toBe('https://app.renuvex.app/api/public/settings?publicApiKey=s1');
+    expect(seen).toEqual(['https://app.renuvex.app/api/public/settings?publicApiKey=s1']);
+    expect(Array.from(store.keys())).toEqual(['https://widget.renuvex.app/api/public/settings?publicApiKey=s1']);
   });
 
   it('bypasses cache for unknown query params while still reaching the backend origin', async () => {
@@ -177,13 +197,13 @@ describe('widget Worker delivery contract', () => {
     expect(withCookie.store.size).toBe(0);
   });
 
-  it('keeps settings and write paths outside the Worker V2 read proxy', async () => {
+  it('keeps lazy sync and write paths outside the Worker V2 read proxy', async () => {
     const { env } = readProxyEnv();
-    const settings = await worker.fetch(new Request('https://widget.renuvex.app/api/public/settings?publicApiKey=s1'), env);
+    const lazySync = await worker.fetch(new Request('https://widget.renuvex.app/api/public/storefront-theme/lazy-sync', { method: 'POST' }), env);
     const upload = await worker.fetch(new Request('https://widget.renuvex.app/api/public/upload/video/capability?storeId=s1'), env);
     const post = await worker.fetch(new Request('https://widget.renuvex.app/api/public/ratings', { method: 'POST' }), env);
 
-    expect(settings.status).toBe(404);
+    expect(lazySync.status).toBe(405);
     expect(upload.status).toBe(404);
     expect(post.status).toBe(405);
   });

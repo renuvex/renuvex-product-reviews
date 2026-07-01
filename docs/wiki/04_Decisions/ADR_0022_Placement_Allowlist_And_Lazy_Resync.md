@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - adr
@@ -24,8 +24,11 @@ related:
   - "[[Open_Questions]]"
 source_files:
   - "src/lib/storefront-theme.ts"
+  - "src/lib/storefront-theme-lazy-sync.ts"
   - "src/lib/storefront-theme-sync.ts"
   - "src/app/api/public/settings/route.ts"
+  - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
+  - "workers/widget-delivery/src/index.ts"
   - "src/widget/core/settings.js"
   - "src/widget/themes/current-adapter.js"
   - "src/widget/rating-badge/index.js"
@@ -108,9 +111,13 @@ Gating points:
 
 ### Layer 2 — Storefront-driven lazy resync
 
-`/api/public/settings` becomes the second sync trigger (in addition to install / dashboard_open / settings_save / cron / verification). On every request the route reads `parseStorefrontThemeState(store.storefrontTheme)?.lastCheckedAt`. If `Date.now() - lastChecked > STALE_THRESHOLD_MS` (30 minutes for v1), the route uses Next.js `after()` to fire `syncStorefrontThemeForToken(token, { reason: 'lazy_storefront', persistUnchangedCheck: true })` as background work. The response is unchanged — no added latency for the storefront visitor.
+`/api/public/settings` is now a pure, cacheable read endpoint. It reads the stored theme state and returns `runtime.themeSyncDue: boolean` beside the existing public runtime flags. It does not import `AuthTokenManager`, does not call ikas, and does not schedule `after()` work.
 
-`StorefrontThemeSyncReason` gains a `'lazy_storefront'` variant so observability can distinguish this trigger from cron/dashboard. `persistUnchangedCheck: true` ensures `lastCheckedAt` advances even when nothing changed, providing natural per-merchant debounce: a successful (or even an unchanged) check resets the 30-minute window, so subsequent requests in the same window skip the trigger automatically without needing an in-memory dedupe map.
+The storefront widget treats `themeSyncDue === true` as a non-blocking signal. It keeps rendering from the settings payload, then sends a best-effort `POST /api/public/storefront-theme/lazy-sync` to the backend/control-plane origin (`API_BASE`, not the Worker read origin). The widget de-dupes attempts in sessionStorage for the same 30-minute window so multiple surfaces in one tab do not fan out sync requests.
+
+`POST /api/public/storefront-theme/lazy-sync` is the sync trigger. It first rate-limits by `publicApiKey + ip`, reads `StoreSettings.storefrontTheme`, and returns `204` without reading an auth token when the theme is not stale. Only if the state is stale does it use Next.js `after()` to schedule `syncStorefrontThemeForToken(token, { reason: 'lazy_storefront', persistUnchangedCheck: true })`. This keeps the storefront visitor off the ikas Admin API critical path while allowing `/api/public/settings` to move into the Cloudflare Worker read cache.
+
+`StorefrontThemeSyncReason` includes a `'lazy_storefront'` variant so observability can distinguish this trigger from cron/dashboard. `persistUnchangedCheck: true` ensures `lastCheckedAt` advances even when nothing changed, providing natural per-merchant debounce: a successful unchanged check resets the 30-minute window, so later requests in that window skip the trigger without an in-memory server dedupe map.
 
 ### What changes for the first visitor after a theme switch
 
@@ -122,8 +129,8 @@ The trade-off is explicitly accepted. Mitigations beyond v1 (synchronous resync 
 - **`adapterMatchedBy === 'theme_id'` is the only safe gating signal.** Theme display names are merchant-editable (see code comment in `storefront-theme.ts:73-77` and Log entry 2026-05-23). Empirical proof on 2026-05-26 (Siva → "Siva test") and 2026-05-27 (Ares → "dsfdf") confirm that renames flip `activeThemeName` while leaving every id stable; conversely `metadataIdentity` excludes the name on purpose, so a rename does not even push the state into `pending_verification`. Using `themeAdapterKey === 'ozy'` alone would let a rename of, say, "Ozyma" into a non-Ozy storefront grant Ozy auto-placement if the API ever omits `themeId`. Restricting unlock to `theme_id` matches keeps the fail-safe explicit.
 - **Catalog ids are stable across merchants.** The 2026-05-27 cross-merchant test confirmed `activeThemeId` is identical for two independent merchants using the same theme. A single id in `THEME_ADAPTER_BY_THEME_ID` covers every merchant using that theme; theme version upgrades do not invalidate the entry. This is the contract Shopify-style id-based adapter selection assumes; we verified ikas mirrors it.
 - **Reviews are not gated by `autoPlacementEnabled`.** ADR_0021 isolates the review section in a Shadow DOM rooted on a light-DOM host; the merchant places the mount with `data-renuvex-widget="reviews"`. The combination is structurally safe regardless of theme. Tying reviews to the badge allowlist would force an unsupported theme that has otherwise placed the mount correctly to lose the review section for no isolation benefit.
-- **Lazy resync is the maximally cheap freshness mechanism available.** It uses an existing request hot path (`/api/public/settings`), an existing sync function (`syncStorefrontThemeForToken`), and an existing Next.js primitive (`after()` for post-response work). `lastCheckedAt` already acts as a debounce surface when `persistUnchangedCheck: true` is passed. No new infrastructure, no plan upgrade, no queue.
-- **`after()` is the correct runtime tool** on Vercel for guaranteed post-response work; `void fn()` can be cancelled when the function freezes between invocations. `after()` extends the function's lifecycle until the work completes (or the platform timeout fires).
+- **Lazy resync remains cheap, but the read side is now cache-safe.** The hot settings request returns only sanitized widget config and non-sensitive runtime flags. The actual ikas Admin API call is moved to a separate POST endpoint that is never Worker-cached.
+- **`after()` remains the correct runtime tool** on Vercel for the actual background sync; it now lives in `POST /api/public/storefront-theme/lazy-sync`, not in the cacheable settings read route. `void fn()` can be cancelled when the function freezes between invocations. `after()` extends the function's lifecycle until the work completes or the platform timeout fires.
 - **Single-flag is insufficient.** Combining badge placement gating and reviews mounting under one boolean would either force unsupported-theme merchants who placed the explicit review mount to lose their reviews, OR open auto-placement on themes whose only signal is opt-in mount. Two flags keep the policies decoupled and allow future per-theme tuning.
 
 ## Alternatives Considered
@@ -171,7 +178,9 @@ Without one of these signals, tuning is premature — there is no production tra
 ## Related Source Files
 - [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts) — flag derivation + reason type
 - [src/lib/storefront-theme-sync.ts](src/lib/storefront-theme-sync.ts) — reused sync function
-- [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts) — lazy resync trigger
+- [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts) — pure public settings read + `runtime.themeSyncDue`
+- [src/app/api/public/storefront-theme/lazy-sync/route.ts](src/app/api/public/storefront-theme/lazy-sync/route.ts) — rate-limited lazy resync trigger
+- [src/lib/storefront-theme-lazy-sync.ts](src/lib/storefront-theme-lazy-sync.ts) — shared stale-threshold helper
 - [src/widget/core/settings.js](src/widget/core/settings.js) — applies runtime flags to widget runtime
 - [src/widget/themes/current-adapter.js](src/widget/themes/current-adapter.js) — flag setters/getters
 - [src/widget/rating-badge/inject.js](src/widget/rating-badge/inject.js) — PDP badge gate

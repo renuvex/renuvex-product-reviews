@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-29
-last_verified: 2026-06-29
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - performance
@@ -29,9 +29,12 @@ source_files:
   - "src/lib/review-summary.ts"
   - "src/widget/core/cache.js"
   - "src/app/api/public/settings/route.ts"
+  - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
+  - "src/lib/storefront-theme-lazy-sync.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/ratings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
+  - "workers/widget-delivery/src/index.ts"
   - "tests/unit/widget-asset-cache.test.ts"
   - "tests/unit/widget-worker.test.ts"
 ---
@@ -113,6 +116,7 @@ Assets:
 V1 Worker delivery is live for static assets. V2 source adds a narrow public-read
 proxy for only these GET endpoints:
 
+- `/api/public/settings`
 - `/api/public/ratings`
 - `/api/public/ratings-by-slug`
 - `/api/public/reviews`
@@ -121,10 +125,12 @@ The read proxy keeps browser-facing `Cache-Control: public, max-age=0,
 must-revalidate`, stores eligible 200 JSON responses at the Worker edge for 60
 seconds, and marks diagnostics with `X-Renuvex-Edge-Cache: HIT | MISS | BYPASS`.
 It does not cache non-200 responses, `Set-Cookie` responses, unknown query
-parameters, or overly long URLs. `/api/public/settings` stays on
-`app.renuvex.app` because that route has backend theme-sync side effects.
-Upload, submit, video, widget-error, admin, webhook, Mux, Cloudinary, QStash,
-and DB writes are not proxied by the Worker.
+parameters, or overly long URLs. `/api/public/settings` is eligible only because
+theme sync is separated from the read path: the response is a pure read with
+additive `runtime.themeSyncDue`, while the widget sends any required
+best-effort sync as `POST /api/public/storefront-theme/lazy-sync` to
+`app.renuvex.app`. Upload, submit, video, widget-error, lazy-sync, admin,
+webhook, Mux, Cloudinary, QStash, and DB writes are not proxied by the Worker.
 
 2026-06-29 source hardening: Worker Static Assets must preserve the same
 asset cache policy on conditional `304 Not Modified` responses as on `200`
@@ -138,6 +144,12 @@ now treats `200` and `304` as cacheable asset responses so stable files keep
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
 
 Settings have a 5-minute fresh window in the widget and a 24-hour stale tolerance for transient settings fetch failures. The trusted Cloudinary cloud name is **not** in settings — it is injected as a build-time constant into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]); no per-store runtime image-policy cache exists.
+
+Settings reads use `READ_API_BASE`; in production this can be the Worker read
+origin. If the cached settings payload says `runtime.themeSyncDue === true`,
+the widget schedules a non-blocking POST to
+`API_BASE /api/public/storefront-theme/lazy-sync`. That POST is rate-limited,
+never edge-cached, and does not block rendering.
 
 ## DB query patterns
 See [[Database_Schema]] for index coverage. Notable hot paths:
@@ -181,6 +193,9 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)
 - [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
 - [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts)
+- [src/app/api/public/storefront-theme/lazy-sync/route.ts](src/app/api/public/storefront-theme/lazy-sync/route.ts)
+- [src/lib/storefront-theme-lazy-sync.ts](src/lib/storefront-theme-lazy-sync.ts)
+- [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
 - [src/lib/review-media.ts](src/lib/review-media.ts)
 - [src/widget/core/cache.js](src/widget/core/cache.js)
 
@@ -195,6 +210,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-07-01: Split storefront settings read from theme lazy sync. `GET /api/public/settings` is now a pure cacheable read with additive `runtime.themeSyncDue`; `POST /api/public/storefront-theme/lazy-sync` owns the rate-limited Vercel-side `after()` sync path. Worker V2 source can cache settings reads while lazy sync and all write/upload/video routes stay on `app.renuvex.app`.
 - 2026-06-29: Review widget first render no longer waits for the media-gallery read. Main review data renders first; the media gallery is scheduled afterward and hydrates through an append-only section update, so the summary, filters, write button, review list, and current focus are not rebuilt when the delayed media read returns.
 - 2026-06-29: Hardened Cloudflare Worker asset headers so conditional `304` responses preserve the same stable/immutable cache policy as `200` asset responses.
 - 2026-06-28: Cloudflare Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. Settings/write/upload/video paths remain on `app.renuvex.app`.

@@ -240,7 +240,7 @@ Runtime theme selection is not a per-theme bundle split. The live widget receive
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
-- 2026-06-28: Added the widget read-origin split and Cloudflare Worker V2 read cache map. `config.js` now exposes `ASSET_BASE`, `API_BASE`, and `READ_API_BASE`; Worker delivery remains fail-closed except for allowlisted ratings/reviews reads.
+- 2026-07-01: Settings reads now use the read-origin split after lazy theme sync moved to a separate POST route. `config.js` exposes `ASSET_BASE`, `API_BASE`, and `READ_API_BASE`; Worker delivery remains fail-closed except for allowlisted settings/ratings/reviews reads.
 - 2026-06-11: Moved review-section non-list state CSS into [reviews-section/styles/states.js](src/widget/reviews-section/styles/states.js). [reviews-section/styles.js](src/widget/reviews-section/styles.js) remains the `CLASSIC_CSS` aggregator; [reviews-section/styles/review-primitives.js](src/widget/reviews-section/styles/review-primitives.js) no longer owns empty/error state selectors.
 - 2026-06-02: Clarified shared filter action semantics: touch/pen filter options activate on `pointerdown` with the same-gesture shield, while desktop mouse options activate on normal `click` so filters can reopen immediately after sort-triggered summary renders.
 - 2026-06-01: Hardened summary shared primitives: [summary-layouts/shared/popover-registry.js](src/widget/summary-layouts/shared/popover-registry.js) now exposes a handle lifecycle contract, [summary-layouts/shared/bar-chart.js](src/widget/summary-layouts/shared/bar-chart.js) exposes keyboard/ARIA toggle semantics, and [reviews-section/styles/summary-controls.js](src/widget/reviews-section/styles/summary-controls.js) owns bar focus/count resilience.

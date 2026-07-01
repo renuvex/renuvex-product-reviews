@@ -3,8 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - ikas
@@ -18,9 +18,11 @@ related:
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/storefront-theme.ts"
+  - "src/lib/storefront-theme-lazy-sync.ts"
   - "src/lib/storefront-theme-sync.ts"
   - "src/app/api/admin/storefront-theme/sync/route.ts"
   - "src/app/api/public/settings/route.ts"
+  - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "src/widget/themes/"
   - "src/widget/core/settings.js"
   - "src/widget/core/product-title.js"
@@ -85,7 +87,7 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
 - `store/customerFavoriteProducts/created`, `store/customerFavoriteProducts/updated`
 - `store/stock/created`, `store/stock/updated`
 
-**There is no `store/theme/*` (or storefront/script) webhook scope.** The Admin API exposes 55 total operations; storefront theme events are not among them. The merchant-facing "Bildirim Adresi" panel covers billing notifications and the app-uninstall notification only — not theme changes. Shopify's equivalent `THEMES_PUBLISH` webhook does not have an ikas counterpart. A feature request to ikas is parallel work; in the meantime [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] uses the public `/api/public/settings` endpoint as a third sync trigger (`reason: 'lazy_storefront'`) to keep `StoreSettings.storefrontTheme` fresh between dashboard opens / daily cron without merchant action.
+**There is no `store/theme/*` (or storefront/script) webhook scope.** The Admin API exposes 55 total operations; storefront theme events are not among them. The merchant-facing "Bildirim Adresi" panel covers billing notifications and the app-uninstall notification only — not theme changes. Shopify's equivalent `THEMES_PUBLISH` webhook does not have an ikas counterpart. A feature request to ikas is parallel work; in the meantime [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] uses public settings as a freshness signal and `POST /api/public/storefront-theme/lazy-sync` as the non-blocking sync trigger (`reason: 'lazy_storefront'`) to keep `StoreSettings.storefrontTheme` fresh between dashboard opens / daily cron without putting ikas Admin API work in the cacheable read path.
 
 ## Unknown-theme behavior and CSS isolation (verified 2026-05-25 → 2026-05-29)
 - **Identity tracking is correct.** Adapter selection follows the stable `themeId`, not the
@@ -121,11 +123,15 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
   unaffected — it continues to render on any theme via `data-renuvex-widget="reviews"` plus
   the shadow-isolation guarantee from ADR_0021.
 - **Lazy resync replaces missing webhook.** `/api/public/settings` now reads the persisted
-  `lastCheckedAt`; when stale (>30 min) it fires `syncStorefrontThemeForToken(..., 'lazy_storefront')`
-  via Next.js `after()` so the storefront visitor sees no added latency. Per-merchant
-  debounce is implicit: `persistUnchangedCheck: true` advances `lastCheckedAt` on every
-  check, so subsequent requests within the threshold skip the trigger automatically.
-  The 30-minute threshold is v1; tuning signals and playbook captured in
+  `lastCheckedAt` and exposes only `runtime.themeSyncDue`. It does not read auth tokens,
+  call ikas, or schedule `after()` work. When the flag is true, the widget sends a
+  non-blocking `POST /api/public/storefront-theme/lazy-sync` to the backend origin.
+  That route rate-limits first, returns `204` without token access when the theme is not
+  stale, and only stale requests schedule `syncStorefrontThemeForToken(..., 'lazy_storefront')`
+  via Next.js `after()`. Per-merchant debounce remains implicit:
+  `persistUnchangedCheck: true` advances `lastCheckedAt` on every unchanged check, so
+  subsequent requests within the threshold skip token access automatically. The
+  30-minute threshold is v1; tuning signals and playbook are captured in
   [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] "Future Tuning Signals".
 - **First visitor after a theme change** still sees the stale adapter for one storefront
   cache cycle (`s-maxage=60, stale-while-revalidate=300`). Under ADR_0022's fail-closed
@@ -146,8 +152,11 @@ The Admin API `saveWebhooks` mutation accepts exactly 10 scopes:
 ## Related Source Files
 - [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts)
 - [src/lib/storefront-theme.ts](src/lib/storefront-theme.ts)
+- [src/lib/storefront-theme-lazy-sync.ts](src/lib/storefront-theme-lazy-sync.ts)
 - [src/lib/storefront-theme-sync.ts](src/lib/storefront-theme-sync.ts)
 - [src/app/api/admin/storefront-theme/sync/route.ts](src/app/api/admin/storefront-theme/sync/route.ts)
+- [src/app/api/public/settings/route.ts](src/app/api/public/settings/route.ts)
+- [src/app/api/public/storefront-theme/lazy-sync/route.ts](src/app/api/public/storefront-theme/lazy-sync/route.ts)
 - [src/widget/themes/](src/widget/themes/)
 - [src/widget/reviews-section/styles.js](src/widget/reviews-section/styles.js)
 - [src/widget/reviews-section/bootstrap.js](src/widget/reviews-section/bootstrap.js)

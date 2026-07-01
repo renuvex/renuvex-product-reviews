@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-28
-last_verified: 2026-06-28
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - widget
@@ -22,10 +22,13 @@ source_files:
   - "wrangler.widget.jsonc"
   - "src/widget/classic-loader.js"
   - "src/widget/core/origins.js"
+  - "src/widget/core/settings.js"
   - "src/widget/index.js"
   - "src/widget/loader.js"
   - "src/widget/core/lazy-modules.js"
   - "workers/widget-delivery/src/index.ts"
+  - "src/app/api/public/settings/route.ts"
+  - "src/app/api/public/storefront-theme/lazy-sync/route.ts"
   - "src/widget/rating-badge/index.js"
   - "src/widget/reviews-section/bootstrap.js"
   - "src/widget/reviews-section/review-form-modal/copy.js"
@@ -38,7 +41,7 @@ source_files:
 # Storefront Widget Overview
 
 ## Summary
-A single ikas-injected `widget.js` URL that runs on every storefront page. As of Phase 2 implementation work on 2026-05-17, `public/widget.js` is a small classic compatibility loader and the actual runtime/modules live under `public/widget-runtime/*` as ESM chunks. As of the 2026-06-28 Cloudflare Worker cutover, the widget has a split-origin contract: `STOREFRONT_WIDGET_BASE_URL` is the script/static-asset origin, `STOREFRONT_WIDGET_API_BASE_URL` is the backend/API origin embedded into the widget build, and optional `STOREFRONT_WIDGET_READ_API_BASE_URL` is the cacheable ratings/reviews read origin for Worker V2. The deployed pre-Phase-2 widget measured `177763` bytes during the 2026-05-15 audit. The runtime detects context and renders product review block (PDP), rating badge near the title, or listing/search rating badges. The PDP review block also includes a separate photo/video review detail lightbox. All other widget concepts (carousel/popup/Q&A) are partially scaffolded or unverified; see [[Open_Questions]].
+A single ikas-injected `widget.js` URL that runs on every storefront page. As of Phase 2 implementation work on 2026-05-17, `public/widget.js` is a small classic compatibility loader and the actual runtime/modules live under `public/widget-runtime/*` as ESM chunks. As of the 2026-06-28 Cloudflare Worker cutover, the widget has a split-origin contract: `STOREFRONT_WIDGET_BASE_URL` is the script/static-asset origin, `STOREFRONT_WIDGET_API_BASE_URL` is the backend/API origin embedded into the widget build, and optional `STOREFRONT_WIDGET_READ_API_BASE_URL` is the cacheable settings/ratings/reviews read origin for Worker V2. The deployed pre-Phase-2 widget measured `177763` bytes during the 2026-05-15 audit. The runtime detects context and renders product review block (PDP), rating badge near the title, or listing/search rating badges. The PDP review block also includes a separate photo/video review detail lightbox. All other widget concepts (carousel/popup/Q&A) are partially scaffolded or unverified; see [[Open_Questions]].
 
 ## Where the widget runs
 - **Product detail pages** — independent PDP rating badge near title plus optional explicit-mount review block with summary, list, media gallery, photo/video detail lightbox, and "Write a Review" CTA.
@@ -74,7 +77,7 @@ Detailed scope and source evidence live in [[Open_Questions]] under "Widget i18n
 ## Render lifecycle
 See [[Widget_Architecture]] for full details. Key points:
 - `public/widget.js` classic loader imports `public/widget-runtime/runtime.js`; PDP badge, review section, and listing modules are lazy chunks.
-- Asset imports stay on the script origin (`https://widget.renuvex.app`). Upload, submit, settings, metrics, video, and widget-error calls use the explicit API origin (`https://app.renuvex.app`) when `STOREFRONT_WIDGET_API_BASE_URL` is set; unset falls back to script origin for rollback/local compatibility. Ratings/reviews list reads use `STOREFRONT_WIDGET_READ_API_BASE_URL` when set; after Worker V2 cutover the build also falls back to `STOREFRONT_WIDGET_BASE_URL`, and only then to the API origin.
+- Asset imports stay on the script origin (`https://widget.renuvex.app`). Upload, submit, metrics, video, widget-error, and theme lazy-sync calls use the explicit API origin (`https://app.renuvex.app`) when `STOREFRONT_WIDGET_API_BASE_URL` is set; unset falls back to script origin for rollback/local compatibility. Settings, ratings, and reviews list reads use `STOREFRONT_WIDGET_READ_API_BASE_URL` when set; after Worker V2 cutover the build also falls back to `STOREFRONT_WIDGET_BASE_URL`, and only then to the API origin.
 - MutationObserver re-bootstraps on SPA-style theme nav.
 - Layout-aware settings via `supports` declarations on each layout — admin hides irrelevant fields.
 - Real-time preview via `RENUVEX_PR_SETTINGS_UPDATE` postMessage.
@@ -85,7 +88,7 @@ Cloudflare Worker Static Assets is the live delivery layer for `widget.renuvex.a
 - denied: `/api/*` and every other path, returning fail-closed `404`;
 - no secrets, DB, Mux, QStash, Cloudinary, or R2 bindings.
 
-V2 is live for an allowlisted read-through cache on only `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. `GET /api/public/settings` and every write/upload/video route stay on `app.renuvex.app`. The Worker remains fail-closed for non-allowlisted `/api/*` paths.
+V2 source supports an allowlisted read-through cache for `GET /api/public/settings`, `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. `GET /api/public/settings` is safe to cache only because theme sync moved to `POST /api/public/storefront-theme/lazy-sync` on the backend/control-plane origin. Every write/upload/video/widget-error/lazy-sync route stays on `app.renuvex.app`. The Worker remains fail-closed for non-allowlisted `/api/*` paths.
 
 The prepared asset directory is generated by [scripts/prepare-widget-worker-assets.mjs](scripts/prepare-widget-worker-assets.mjs), which copies current manifest outputs plus retained committed runtime hashes. Do not deploy the full `public/` tree.
 
@@ -119,6 +122,7 @@ The prepared asset directory is generated by [scripts/prepare-widget-worker-asse
 - [[Roadmap]]
 
 ## Change Log
+- 2026-07-01: Settings reads joined the read-origin contract after theme sync was split out. `GET /api/public/settings` returns `runtime.themeSyncDue`; the widget sends any lazy theme sync as a non-blocking POST to the backend API origin.
 - 2026-06-28: Added the Cloudflare Worker V2 public-read cache source contract. `widget.renuvex.app` remains the static widget origin and can become the selected ratings/reviews read origin after Worker/env cutover; `app.renuvex.app` remains backend/API/upload/write origin.
 - 2026-06-21: Documented the Turkish-first localization boundary. The current widget has no i18n layer; future English/German support requires a string catalog, locale source, and accessibility-string migration.
 - 2026-05-24/25: Updated widget identity notes for ADR_0020. Renuvex Product Reviews is the active namespace; legacy preview-message aliases were removed during the contract cleanup.

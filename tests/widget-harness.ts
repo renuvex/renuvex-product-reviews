@@ -16,6 +16,7 @@ export type RuntimeOptions = {
   autoPlacementEnabled?: boolean;
   reviewsMountEnabled?: boolean;
   themeAdapterKey?: string;
+  themeSyncDue?: boolean;
 };
 
 export type IkasEventSequenceItem = {
@@ -145,6 +146,7 @@ export function settingsResponse(options: SmokeOptions): unknown {
       adapterSource: runtime.themeAdapterKey === 'generic' ? 'generic_unknown' : 'auto',
       autoPlacementEnabled: runtime.autoPlacementEnabled !== false,
       reviewsMountEnabled: runtime.reviewsMountEnabled !== false,
+      themeSyncDue: runtime.themeSyncDue === true,
     },
   };
 }
@@ -197,6 +199,16 @@ function apiOrigins(): string[] {
 
 export async function routeWidgetApi(page: Page, pathPattern: string, handler: (route: Route) => Promise<void>): Promise<void> {
   await Promise.all(apiOrigins().map((origin) => page.route(`${origin}${pathPattern}`, handler)));
+}
+
+async function routeThemeLazySync(page: Page): Promise<void> {
+  await routeWidgetApi(page, '/api/public/storefront-theme/lazy-sync', async (route) => {
+    await route.fulfill({
+      status: 202,
+      headers: { ...jsonHeaders(), 'Cache-Control': 'no-store' },
+      body: JSON.stringify({ status: 'accepted' }),
+    });
+  });
 }
 
 function resolveReviewCloudName(): string {
@@ -319,6 +331,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
       body: JSON.stringify(settingsResponse(options)),
     });
   });
+  await routeThemeLazySync(page);
   await routeWidgetApi(page, '/api/public/upload/video/capability**', async (route) => {
     const configured = options.videoCapability;
     if (configured?.abort) {
@@ -406,6 +419,7 @@ export async function setupPreviewRoutes(page: Page, options: SmokeOptions = {})
       body: JSON.stringify(settingsResponse(options)),
     });
   });
+  await routeThemeLazySync(page);
   await routeWidgetApi(page, '/api/preview/reviews**', async (route) => {
     const url = new URL(route.request().url());
     await route.fulfill({
@@ -470,6 +484,7 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
       body: JSON.stringify(settingsResponse(options)),
     });
   });
+  await routeThemeLazySync(page);
   await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -525,6 +540,7 @@ async function setupListingProbePage(page: Page, body: string): Promise<RequestL
       body: JSON.stringify(settingsResponse({})),
     });
   });
+  await routeThemeLazySync(page);
   await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
     await route.fulfill({
       status: 200,

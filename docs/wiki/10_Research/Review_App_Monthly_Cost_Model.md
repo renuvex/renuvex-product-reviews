@@ -38,7 +38,7 @@ The model assumes the current target architecture:
 
 - Cloudflare Worker V2 for storefront static assets and selected public read
   cache.
-- Vercel for admin, OAuth, write APIs, upload APIs, settings side effects,
+- Vercel for admin, OAuth, write APIs, upload APIs, lazy settings sync,
   Mux webhook/QStash receivers, and backend control plane.
 - Supabase Postgres for the main database.
 - Upstash Redis only for rate-limit/idempotency counters.

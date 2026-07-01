@@ -155,9 +155,24 @@ test('review mount present loads reviews, media gallery, badge, and render chunk
   expect(hasChunk(log, 'bootstrap-')).toBe(true);
   expect(hasChunk(log, 'render-')).toBe(true);
   expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(countUrls(log, '/api/public/storefront-theme/lazy-sync')).toBe(0);
   expect(countUrls(log, '/api/public/ratings')).toBe(1);
   expect(countUrls(log, '/api/public/reviews?')).toBeGreaterThanOrEqual(2);
   expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('hasMedia=true'))).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('settings runtime themeSyncDue schedules best-effort lazy sync on backend origin', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    runtime: { themeSyncDue: true },
+  });
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  await expect.poll(() => countUrls(log, '/api/public/storefront-theme/lazy-sync')).toBe(1);
   expect(widgetErrors(log)).toEqual([]);
 });
 

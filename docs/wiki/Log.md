@@ -27,6 +27,12 @@ source_files:
 
 # Project Log
 
+## 2026-07-01 - performance | Split public settings read from lazy theme sync
+- Refactored `GET /api/public/settings` into a pure public read that returns the existing widget settings/runtime shape plus additive `runtime.themeSyncDue`; it no longer imports auth-token or storefront-theme sync code and no longer schedules `after()` work.
+- Added `POST /api/public/storefront-theme/lazy-sync` as the rate-limited backend/control-plane path. It returns `204` without token access when the stored theme state is fresh, and only stale requests schedule `syncStorefrontThemeForToken(..., { reason: 'lazy_storefront', persistUnchangedCheck: true })` through Next.js `after()`.
+- Updated the widget to fetch settings from `READ_API_BASE` and to send lazy sync as a best-effort non-blocking POST to `API_BASE`, preserving preview mode and keeping upload/submit/video/error paths off the Worker read cache.
+- Extended the Worker read-cache allowlist to include `GET /api/public/settings?publicApiKey=...`; lazy-sync and every write/upload/video route remain fail-closed on the Worker.
+
 ## 2026-07-01 - performance | Add viewport-gated listing badge hydration
 - Added viewport-aware lazy hydration for below-the-fold listing/product-slider badges. Far below-the-fold product-card candidates now wait behind `core/listing-viewport-gate.js` before loading the `listing-badges-*` chunk or sending the bulk ratings request.
 - Critical PDP surfaces remain eager: product title badge, structured data, explicit review widget, and visible review/media rendering are not delayed.
