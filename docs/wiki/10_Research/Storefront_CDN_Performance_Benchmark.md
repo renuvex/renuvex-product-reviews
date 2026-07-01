@@ -310,6 +310,47 @@ Decision from this run:
   media-gallery reservation, but this cannot reserve host payment/footer/theme
   surfaces before the widget script exists.
 
+### 2026-07-01 Post-Viewport-Gate Follow-Up
+
+After deploying the `400px` viewport gate for below-the-fold listing/product
+slider badges, the same dev ikas PDP was measured again:
+
+```text
+pnpm measure:storefront-waterfall -- https://dev-mertcopper.ikas.shop/premium-shortsg --runs=10
+```
+
+Startup 10-run summary:
+
+| Metric | Min | Median | P90 | P95 | Max |
+|---|---:|---:|---:|---:|---:|
+| Review widget visible | 2212 ms | 2422 ms | 2497 ms | 2772 ms | 2772 ms |
+| Renuvex static max TTFB | 302 ms | 780 ms | 811 ms | 869 ms | 869 ms |
+| Settings duration | 144 ms | 155 ms | 213 ms | 292 ms | 292 ms |
+| Reviews API duration | 77 ms | 196 ms | 409 ms | 954 ms | 954 ms |
+| Runtime import duration | 918 ms | 1031 ms | 1129 ms | 1161 ms | 1161 ms |
+| Render import duration | 241 ms | 290 ms | 402 ms | 438 ms | 438 ms |
+| First render duration | 10 ms | 14 ms | 18 ms | 26 ms | 26 ms |
+| Visible from render start | 9 ms | 12 ms | 16 ms | 25 ms | 25 ms |
+
+The automatic classifier reported `CDN/client-to-edge` for all 10 runs.
+Compared with the earlier layout-reservation baseline, the first-render and
+visible-from-render costs stayed low. The visible median moved from `2267 ms`
+to `2422 ms`, which should be treated as normal live storefront/network
+variance rather than a regression caused by the listing viewport gate: this PDP
+first-load path does not hydrate the far below-the-fold listing badge chunk
+until scroll.
+
+Chrome DevTools traces with `renuvexPerf=1` recorded LCP around `1.49-1.55s`
+and CLS `0.55`. The largest layout-shift event scored about `0.478`, followed
+by another about `0.067`; the trace still included the ikas payment icon
+requests such as `https://cdn.myikas.com/sf/assets/ozy/images/Visa.svg` during
+the shift window. The live Network panel also confirmed that initial PDP load
+did not request the `listing-badges-*` chunk, while the core review widget
+continued to load normally. This closes the post-viewport-gate baseline:
+Renuvex first-render cost is low, below-the-fold listing badge work is deferred
+on PDP first load, and the remaining large CLS is still a host/theme
+layout-reservation issue rather than a Renuvex widget insertion issue.
+
 ### ikas Dev/Test Timing Follow-Up
 
 On 2026-06-29, ikas support answered that dev/test storefronts or builder
