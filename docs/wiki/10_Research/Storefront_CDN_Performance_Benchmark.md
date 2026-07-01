@@ -235,9 +235,10 @@ Decision from this run:
   and surface sequencing, especially reducing or deferring the large
   `render-*` path and decoupling `settings` side effects before attempting to
   cache settings at the Worker.
-- CDN provider choice remains a separate decision. AWS CloudFront/S3 is a proven
-  canary and was modestly faster in local testing, but this 10-run storefront
-  result does not by itself require a production cutover away from Cloudflare.
+- CDN provider choice is closed for the current MVP: keep Cloudflare Worker V2
+  as the production storefront delivery layer. AWS CloudFront/S3 is a proven
+  optional future candidate, but the modest local speed gain does not justify
+  the materially higher cost and operational cutover work now.
 
 ## 2026-07-01 Post-Deploy Startup And CLS Baseline
 
@@ -793,11 +794,10 @@ Interpretation:
 
 - AWS CloudFront/S3 can serve the exact widget asset graph correctly and a bit
   faster than the current Cloudflare Worker route from this local Turkey path.
-- The observed gain is measurable but not large enough by itself to justify an
-  immediate production cutover without broader-region testing and operational
-  cost review.
-- The current Cloudflare Worker V2 path remains production-functional. AWS is
-  now a proven canary candidate, not yet the chosen production replacement.
+- The observed gain is measurable but not large enough to justify production
+  cutover after the cost model. AWS is useful evidence, not an active migration
+  track.
+- The current Cloudflare Worker V2 path remains the production delivery layer.
 
 ## Acceptance Criteria For The AWS Canary
 
@@ -811,11 +811,13 @@ Interpretation:
   - CloudFront/S3 canary hostname.
   - The Yotpo static reference only as a third-party benchmark, not a target contract.
 
-The first CloudFront/S3 comparison is complete. Remaining evidence before a CDN
-cutover decision: broader-region synthetic checks, operational cost comparison,
-rollback rehearsal, and a decision on whether production should use a custom
-`widget.renuvex.app` CloudFront distribution or keep Cloudflare Worker as the
-live delivery layer.
+The first CloudFront/S3 comparison is complete and the active CDN cutover
+question is closed for the current MVP. No broader AWS measurement, custom
+CloudFront hostname, or rollback rehearsal is required now. Reopen this only if
+production Cloudflare Worker p95 latency, availability, or regional routing
+becomes unacceptable after real merchant traffic; if reopened, use
+[[AWS_CloudFront_Widget_Canary_Runbook]] and redo the broader-region p50/p95,
+cost, and rollback gates before proposing a provider change.
 
 ## Related Source Files
 

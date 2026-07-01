@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-07-02
+last_verified: 2026-07-02
 confidence: high
 tags:
   - log
@@ -26,6 +26,11 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-02 - decision | Close AWS CDN cutover as active issue
+- Closed the AWS CloudFront/S3 storefront widget CDN question as an active migration track for the current MVP.
+- Evidence remains in [[Storefront_CDN_Performance_Benchmark]] and [[Storefront_CDN_Cost_Model]]: AWS was slightly faster in the local Turkey canary, but the gain does not justify the higher cost and operational cutover work now.
+- Production default remains Cloudflare Worker V2. AWS stays as an archived, reproducible canary option that can be reopened only if real merchant traffic shows unacceptable Cloudflare p95 latency, availability, or regional routing.
 
 ## 2026-07-01 - performance | Split public settings read from lazy theme sync
 - Refactored `GET /api/public/settings` into a pure public read that returns the existing widget settings/runtime shape plus additive `runtime.themeSyncDue`; it no longer imports auth-token or storefront-theme sync code and no longer schedules `after()` work.

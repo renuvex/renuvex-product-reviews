@@ -129,7 +129,7 @@ source_files:
 - 2026-06-30: Upstash audit: Redis measured `0` recent commands/bandwidth; QStash has no DLQ/schedules. See [[Upstash_Redis_QStash_Cost_Audit]].
 - 2026-06-29: ikas support said dev/test StorefrontJSScript timing should match production.
 - 2026-06-28: Worker asset delivery is live for `widget.renuvex.app`; Worker V2 read cache is live for ratings/reviews. `app.renuvex.app` remains backend/write/upload/Mux/QStash.
-- 2026-06-29: AWS CloudFront/S3 widget CDN canary is verified; no production DNS or ikas script cutover happened.
+- 2026-07-02: AWS CloudFront/S3 widget CDN cutover is closed as an active issue for the current MVP. The canary remains documented and reproducible, but Cloudflare Worker V2 stays the production delivery layer because AWS was only slightly faster and materially more expensive.
 - 2026-06-28: Media-gallery lightbox bottom rail uses one first trusted image/video per media-backed review.
 - 2026-06-27/2026-07-01: Existing videos stay visible when uploads are disabled; media gallery fetches only when `mediaReviewCount > 0`.
 - 2026-06-23: Review Video playback uses official Mux Player; Mux Data tracking/cookies stay disabled.
@@ -140,7 +140,6 @@ source_files:
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
 - Worker V2 read origin: `widget.renuvex.app`; backend/write/upload origin: `app.renuvex.app`.
-- CDN benchmark: Cloudflare V2 and AWS canary work; production cutover needs region/cost/rollback checks.
 - Worker rollback: restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, DNS-only.
 - Old video-provider cleanup gates are closed; preserve Cloudflare DNS/zone and Worker delivery infrastructure.
 - Supabase RLS/default-grants hardening is a public-launch blocker.
