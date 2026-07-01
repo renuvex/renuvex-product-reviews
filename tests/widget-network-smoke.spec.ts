@@ -91,11 +91,13 @@ async function reviewsWidgetState(page: Page): Promise<{
   mediaPlaceholders: number;
   mediaThumbs: number;
   reviewCards: number;
+  text: string;
+  transitioning: boolean;
 }> {
   return page.evaluate(() => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
     const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
-    const container = slot?.querySelector('#renuvex-reviews');
+    const container = slot?.querySelector('#renuvex-reviews') as HTMLElement | null;
     const root = container?.shadowRoot || null;
     const widget = root?.querySelector('#renuvex-reviews-widget');
     return {
@@ -104,6 +106,8 @@ async function reviewsWidgetState(page: Page): Promise<{
       mediaPlaceholders: root?.querySelectorAll('.renuvex-pr-media-gallery-section--placeholder').length || 0,
       mediaThumbs: root?.querySelectorAll('.renuvex-pr-media-gallery-thumb:not(.renuvex-pr-media-gallery-thumb--placeholder)').length || 0,
       reviewCards: root?.querySelectorAll('.renuvex-pr-review').length || 0,
+      text: root?.textContent?.trim() || '',
+      transitioning: container?.getAttribute('data-renuvex-transitioning') === 'true',
     };
   });
 }
@@ -470,6 +474,95 @@ test('stale product bootstrap cannot overwrite the current review widget', async
   expect(state.mediaThumbs).toBeGreaterThanOrEqual(1);
   expect(log.urls.some((url) => url.includes('/api/public/reviews?') && url.includes('productId=old-product') && url.includes('hasMedia=true'))).toBe(false);
   expect(countUrls(log, '/api/public/reviews?')).toBe(3);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('product transition clears rendered stale reviews while next reviews are pending', async ({ page }) => {
+  const oldReview = {
+    id: 'old-rendered-review',
+    rating: 5,
+    title: 'Old rendered review',
+    comment: 'Old product review should disappear during transition.',
+    author: 'Ada',
+    createdAt: '2026-06-05T00:00:00.000Z',
+    images: [],
+    merchantReply: null,
+    recommendation: true,
+  };
+  const newReview = {
+    id: 'new-rendered-review',
+    rating: 5,
+    title: 'New rendered review',
+    comment: 'New product review should render after fetch.',
+    author: 'Mert',
+    createdAt: '2026-06-06T00:00:00.000Z',
+    images: [],
+    merchantReply: null,
+    recommendation: true,
+  };
+  let releaseNewReviews: () => void = () => {};
+  const newReviewsGate = new Promise<void>((resolve) => {
+    releaseNewReviews = resolve;
+  });
+  let newReviewsRequested = false;
+
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    ikasEvents: [
+      { type: 'PRODUCT_VIEW', data: { productDetail: { id: 'old-product', name: 'Old Product' } } },
+      { type: 'PAGE_VIEW', data: { pageType: 'PRODUCT' } },
+    ],
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      const productId = url.searchParams.get('productId');
+      if (productId === 'old-product') {
+        await fulfillJson(route, reviewPayload([oldReview], { allCount: 1, totalCount: 1, mediaReviewCount: 0, photoReviewCount: 0 }));
+        return;
+      }
+      if (productId === 'new-product') {
+        newReviewsRequested = true;
+        await newReviewsGate;
+        await fulfillJson(route, reviewPayload([newReview], { allCount: 1, totalCount: 1, mediaReviewCount: 0, photoReviewCount: 0 }));
+        return;
+      }
+      await fulfillJson(route, reviewPayload([], { allCount: 0, totalCount: 0, mediaReviewCount: 0, photoReviewCount: 0 }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
+    productId: 'old-product',
+    reviewCards: 1,
+    transitioning: false,
+  });
+
+  const emitted = await page.evaluate(() => {
+    const emit = (window as unknown as { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+    if (typeof emit !== 'function') return false;
+    emit({ type: 'PRODUCT_VIEW', data: { productDetail: { id: 'new-product', name: 'New Product' } } });
+    return true;
+  });
+  expect(emitted).toBe(true);
+
+  await expect.poll(() => newReviewsRequested, { timeout: 1500 }).toBe(true);
+  await expect.poll(() => reviewsWidgetState(page), { timeout: 1500 }).toMatchObject({
+    productId: '',
+    reviewCards: 0,
+    transitioning: true,
+  });
+  const transitionState = await reviewsWidgetState(page);
+  expect(transitionState.text).not.toContain('Old product review should disappear during transition.');
+
+  releaseNewReviews();
+  await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
+    productId: 'new-product',
+    reviewCards: 1,
+    transitioning: false,
+  });
+  const finalState = await reviewsWidgetState(page);
+  expect(finalState.text).toContain('New product review should render after fetch.');
+  expect(finalState.text).not.toContain('Old product review should disappear during transition.');
   expect(widgetErrors(log)).toEqual([]);
 });
 

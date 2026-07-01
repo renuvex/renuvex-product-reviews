@@ -258,6 +258,7 @@ export async function render(productId, settings, reviewsData, productName, orde
 
     if (settings.enabled === false) {
       container.style.minHeight = 'auto';
+      container.removeAttribute('data-renuvex-transitioning');
       contentEl.replaceChildren(buildDisabledStateEl(settings.borderRadius !== undefined ? settings.borderRadius : 8));
 
       setRenderInProgress(false);
@@ -279,6 +280,7 @@ export async function render(productId, settings, reviewsData, productName, orde
       // sadece içeriği temizler, sRoot direct child'ları (style, sprite mirror)
       // korunur. (cloneNode shadow root'u KOPYALAMAZ; host'u klonlamak izolasyonu bozardı.)
       contentEl.replaceChildren();
+      container.removeAttribute('data-renuvex-transitioning');
 
       var widget = document.createElement('section');
       widget.id = 'renuvex-reviews-widget';

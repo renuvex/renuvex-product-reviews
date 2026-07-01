@@ -16,7 +16,7 @@ import {
 import { scheduleIdleTask } from '../core/scheduler.js';
 import { markWidgetPerf } from '../core/perf-timeline.js';
 import { createReviewsFetchError, fetchMixedMediaGalleryReviews, fetchReviews } from './reviews-api.js';
-import { findReviewsMount, reserveReviewsShell } from './reservation.js';
+import { findReviewsMount, reserveReviewsShell, resetReviewsShellForProductTransition } from './reservation.js';
 
 var bootstrapCache = {};
 var bootstrapSeq = 0;
@@ -140,6 +140,11 @@ export async function bootstrap(productId, productName) {
   bootstrapSeq++;
   var token = bootstrapSeq;
   var startedPathname = currentPathname();
+  var resetForTransition = resetReviewsShellForProductTransition(productId);
+  if (resetForTransition) {
+    resetReviewStateForProduct(productId);
+    markWidgetPerf('reviews-shell-transition-reset');
+  }
 
   var FALLBACK = { title: 'M\u00fc\u015fteri Yorumlar\u0131', enabled: true };
   // Badge widget carries visibility + sizing only. Rating icon/color still

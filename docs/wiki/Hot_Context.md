@@ -67,6 +67,7 @@ source_files:
   - "src/widget/structured-data/index.js"
   - "src/widget/structured-data/jsonld.js"
   - "src/widget/reviews-section/bootstrap.js"
+  - "src/widget/reviews-section/reservation.js"
   - "src/widget/reviews-section/reviews-api.js"
   - "src/widget/reviews-section/render.js"
   - "src/widget/reviews-section/render/theme-vars.js"
@@ -124,6 +125,7 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-02: PDP review widget is identity-aware on SPA product transitions. If product A reviews are visible and ikas emits a different product B, the old shadow content is cleared into the existing reserved shell before new settings/reviews complete; stale async responses remain ignored.
 - 2026-07-01: Worker-cached `GET /api/public/settings` source is ready. Settings is pure read with `runtime.themeSyncDue`; `POST /api/public/storefront-theme/lazy-sync` owns Vercel `after()` sync. Rollout: Vercel route deploy first, then Worker/runtime deploy.
 - 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.
 - 2026-06-30: Upstash audit: Redis measured `0` recent commands/bandwidth; QStash has no DLQ/schedules. See [[Upstash_Redis_QStash_Cost_Audit]].
