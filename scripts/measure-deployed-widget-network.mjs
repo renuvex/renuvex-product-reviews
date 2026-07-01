@@ -203,7 +203,7 @@ function pickHeaders(headers) {
 }
 
 async function configureRoutes(page, scenario) {
-  await page.route(`${API_ORIGIN}/api/public/settings**`, async (route) => {
+  await page.route(`${READ_API_ORIGIN}/api/public/settings**`, async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
