@@ -141,6 +141,26 @@ The correct current pattern is event-sourced context plus DOM observation for la
 async guards for product navigation races. See [[Ikas_Lifecycle_Mount_Questions]] and
 [[Bug_PDP_Review_Lifecycle_SPA_Race]].
 
+### Script discovery / resource-hint follow-up - 2026-07-01
+
+Status: asked, waiting for ikas answer.
+
+Question sent to ikas:
+
+> Does `StorefrontJSScript.isHighPriority` make the script discoverable earlier in the storefront
+> HTML/page lifecycle, or does it only change the relative ordering among app scripts such as
+> Facebook/Google scripts? Also, does ikas provide an official app/script mechanism for head-level
+> resource hints such as `<link rel="preconnect">`, `dns-prefetch`, `preload`, or `modulepreload`
+> for app widget origins?
+
+Why this matters: Renuvex already uses the accepted single-loader pattern, an async script tag,
+Cloudflare-hosted widget assets, Worker-cached public reads, and viewport-gated below-the-fold badge
+hydration. The remaining first-discovery timing question depends on ikas platform behavior, not on
+Renuvex DB, Redis, QStash, Mux, or Worker code. If `isHighPriority` only changes app-script ordering,
+the current `isHighPriority=false` decision remains defensible because this app does not manage
+cookies or consent. If it truly moves discovery earlier, test the change with a controlled storefront
+A/B measurement before enabling it broadly.
+
 ### Implications for this project
 
 - Keep one project-owned loader `StorefrontJSScript` per storefront. This is confirmed as an accepted ikas pattern, not a workaround.
@@ -150,6 +170,7 @@ async guards for product navigation races. See [[Ikas_Lifecycle_Mount_Questions]
 - Active theme adapter selection uses `listStorefront.themes[].isMainTheme` plus `mainStorefrontThemeId` fallback. This does not remove the need for generic placement heuristics or manual/support fallback.
 - Plan for a future migration to ikas `data-*` attributes once they are broadly available; design the loader so the context source can be swapped without rewriting widget modules.
 - For `isHighPriority` / `order`: this review app does not manage cookies/consent, so it does not need to preempt Facebook/Google scripts. Choose ordering deliberately and document the choice rather than leaving it implicit.
+- Do not add resource-hint assumptions to the injected loader until ikas confirms whether head-level hints are supported. Resource hints added after the loader is discovered cannot solve first discovery timing.
 
 ## Current Project State
 
