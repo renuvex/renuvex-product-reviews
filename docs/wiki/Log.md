@@ -178,6 +178,11 @@ source_files:
 - The runbook documents evidence-first handling for `VideoUploadSession`, `MediaProviderJob`, `WebhookEvent`, Mux upload/asset state, quota counters, pending registry rows, and public API leak checks.
 - Repair guidance keeps Mux direct-upload cancel limited to `waiting` uploads, uses asset deletion once an `asset_id` exists, protects review-consumed sessions from abandoned-upload refunds, and requires explicit approval before DB/provider mutation.
 
+## 2026-07-01 - performance | Tighten listing badge viewport gate
+- Reduced the listing/product-slider badge near-viewport margin from `900px` to `400px` in `src/widget/core/listing-viewport-gate.js`.
+- This keeps critical PDP surfaces eager while delaying far below-the-fold product sliders so they do not download the `listing-badges-*` chunk or call the bulk ratings API unless the shopper scrolls near them.
+- Local 1366x768 harness evidence: offset `1100` hydrated, while offset `1200` waited; targeted listing badge network smoke tests passed with the new threshold.
+
 ## 2026-06-21 - security | Record Supabase RLS launch gate
 - Read-only RLS audit found no browser Supabase client usage and no `NEXT_PUBLIC_SUPABASE_*` env surface in the repo; runtime DB access is server-side Prisma.
 - Supabase MCP still flags RLS disabled on most public app tables. Direct SQL checks did not show `anon`, `authenticated`, or `service_role` table privileges, and public schema has no views/functions/publication tables.

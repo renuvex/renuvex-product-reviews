@@ -10,8 +10,8 @@ import { loadListingBadgesModule } from './lazy-modules.js';
 import { ls } from './state.js';
 import { getThemeAdapter } from '../themes/current-adapter.js';
 
-var LISTING_VIEWPORT_ROOT_MARGIN = '900px 0px';
-var LISTING_VIEWPORT_MARGIN_PX = 900;
+var LISTING_VIEWPORT_ROOT_MARGIN = '400px 0px';
+var LISTING_VIEWPORT_MARGIN_PX = 400;
 var listingViewportObserver = null;
 var observedTargets = [];
 var scheduledHydrationPromise = null;

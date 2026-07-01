@@ -107,7 +107,8 @@ The "wasted" cost when a widget is disabled is the Layer 2 entry chunk download 
 
 ### Layer 2.5 — Viewport gate for below-the-fold social proof
 - Decorative or secondary social-proof surfaces that can appear far below the first viewport SHOULD be viewport-gated before their entry chunk is imported.
-- The current implementation is `core/listing-viewport-gate.js` for listing/product-slider badges. It uses `IntersectionObserver` with `rootMargin: "900px 0px"` plus a passive, non-polling scroll/resize fallback.
+- The current implementation is `core/listing-viewport-gate.js` for listing/product-slider badges. It uses `IntersectionObserver` with `rootMargin: "400px 0px"` plus a passive, non-polling scroll/resize fallback.
+- The `400px` margin is a measured product default, not a browser-recommended constant. Local harness evidence at a 1366x768 viewport showed a product row around 332px below the viewport hydrating and a row around 432px below the viewport waiting. This keeps far below-the-fold carousels from paying listing-badge JS/API cost while still preloading near-scroll social proof.
 - This gate is intentionally not used for critical PDP surfaces: product title badge, structured data, explicit review widget, and the initially visible review/media area stay eager.
 - The rule for future widgets: no scroll polling, no per-card API calls, no critical PDP lazy delay. If the surface is below-the-fold decoration or social proof, reserve/observe first and hydrate when near viewport. If the surface is core PDP content, keep it eager and optimize its internal render path instead.
 
