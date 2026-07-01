@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-06-28
-last_verified: 2026-06-29
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - log
@@ -26,6 +26,12 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-01 - performance | Close post-deploy startup and CLS baseline
+- Measured the live dev ikas PDP 10 times after the layout-reservation and Worker deploy. Review widget visible median was `2267 ms`; first-render median was `18 ms`; visible-from-render median was `16 ms`.
+- Automatic startup classification was `CDN/client-to-edge` for 9 runs and `injection/discovery` for 1 run. Read APIs, DB, Redis, QStash, Mux, and Supabase were not supported as first-load bottlenecks by this evidence.
+- Chrome DevTools trace still reported CLS `0.55`, with the worst cluster tied to an unsized ikas `Visa.svg`; third-party main-thread time was about `1296 ms` for `myikas.com` and `101 ms` for `renuvex.app`.
+- Decision: keep Cloudflare Worker V2 live; if more Renuvex source work is needed, scope it to below-the-fold listing/product-slider lazy hydration rather than moving write/upload/video paths to the edge.
 
 ## 2026-06-30 - research | Compare AWS and Cloudflare image CDN costs
 - Added [[Review_Image_CDN_Cost_Model]] with the focused AWS S3/CloudFront vs Cloudflare Images/R2/Image Transformations cost model for review images.

@@ -239,6 +239,77 @@ Decision from this run:
   canary and was modestly faster in local testing, but this 10-run storefront
   result does not by itself require a production cutover away from Cloudflare.
 
+## 2026-07-01 Post-Deploy Startup And CLS Baseline
+
+After the layout-reservation hardening and Worker redeploy, the dev ikas PDP was
+measured again with the browser-local startup markers:
+
+```text
+pnpm measure:storefront-waterfall -- https://dev-mertcopper.ikas.shop/premium-shortsg --runs=10
+```
+
+Environment and header evidence from the same measurement window:
+
+- `https://widget.renuvex.app/cdn-cgi/trace` still routed the local Turkey client
+  to Cloudflare `colo=FRA`.
+- `widget.js` returned `Server: cloudflare`, `CF-Cache-Status: HIT`, and
+  `Cache-Control: public, max-age=0, must-revalidate`.
+- `render-XRBZTT2C.js` returned `Server: cloudflare`, `CF-Cache-Status: HIT`,
+  and `Cache-Control: public, max-age=31536000, immutable`.
+
+Startup 10-run summary:
+
+| Metric | Min | Median | P90 | P95 | Max |
+|---|---:|---:|---:|---:|---:|
+| Review widget visible | 1426 ms | 2267 ms | 2575 ms | 6650 ms | 6650 ms |
+| Renuvex static max TTFB | 257 ms | 748 ms | 837 ms | 983 ms | 983 ms |
+| Settings duration | 152 ms | 159 ms | 259 ms | 1465 ms | 1465 ms |
+| Reviews API duration | 82 ms | 178 ms | 197 ms | 299 ms | 299 ms |
+| Runtime import duration | 334 ms | 979 ms | 1112 ms | 1433 ms | 1433 ms |
+| Render import duration | 250 ms | 266 ms | 292 ms | 303 ms | 303 ms |
+| First render duration | 13 ms | 18 ms | 28 ms | 30 ms | 30 ms |
+| Visible from render start | 12 ms | 16 ms | 25 ms | 29 ms | 29 ms |
+
+Automatic classification counted `CDN/client-to-edge` in 9 runs and
+`injection/discovery` in 1 run. That is materially different from treating every
+remaining delay as an ikas injection problem. In this post-deploy sample, first
+render itself is not the bottleneck, read APIs are not the bottleneck, and the
+largest repeated delay is the static asset/client-to-edge path plus runtime
+import chain.
+
+A Chrome DevTools trace with `renuvexPerf=1` recorded:
+
+- LCP `1974 ms`; the LCP image was an ikas CDN product image and the LCP
+  breakdown was dominated by host-page resource load delay, not by Renuvex API
+  or render time.
+- CLS `0.55`; the worst shift cluster scored `0.5478` and DevTools identified
+  an unsized ikas payment image,
+  `https://cdn.myikas.com/sf/assets/ozy/images/Visa.svg`, as the concrete
+  potential root cause for the largest shift.
+- Third-party main-thread time was about `1296 ms` for `myikas.com` and about
+  `101 ms` for `renuvex.app`.
+- Forced reflow total was `279 ms`; ikas chunks dominated the call tree, while
+  Renuvex contributed smaller slices from the review render and listing badge
+  paths.
+
+Decision from this run:
+
+- Treat item 7 as measured and closed: post-deploy startup and CLS have a
+  current baseline.
+- Do not blame DB, Redis, QStash, Mux, Supabase, or video upload paths for the
+  first visible review-widget timing based on this data.
+- Keep the Cloudflare Worker V2 split live, but do not call the current
+  Cloudflare route the final performance winner. The local Turkey route still
+  hits `FRA` and static max TTFB remains high.
+- If optimizing Renuvex source further, the next bounded code target is optional
+  viewport-aware lazy hydration for below-the-fold listing/product-slider
+  badges. The trace does not justify moving write/upload/video paths to the
+  edge or adding KV.
+- Total live CLS is still not proven fixed because the dominant current culprit
+  is ikas/theme layout reservation. Renuvex should keep its own quiet shell and
+  media-gallery reservation, but this cannot reserve host payment/footer/theme
+  surfaces before the widget script exists.
+
 ### ikas Dev/Test Timing Follow-Up
 
 On 2026-06-29, ikas support answered that dev/test storefronts or builder
