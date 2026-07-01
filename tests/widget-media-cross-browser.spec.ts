@@ -187,13 +187,15 @@ async function setupVideoWidget(
 }
 
 async function mediaBox(page: Page, selector: string) {
-  return page.evaluate((selector) => {
+  return page.evaluate(async (selector) => {
     const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
     const container = anchor?.querySelector('[data-renuvex-slot="product-reviews"] #renuvex-reviews');
     const root = (container as Element & { shadowRoot: ShadowRoot | null } | null)?.shadowRoot || null;
     const element = root?.querySelector<HTMLElement>(selector);
     const widget = root?.querySelector<HTMLElement>('#renuvex-reviews-widget');
     if (!element || !widget) throw new Error(`Missing media selector: ${selector}`);
+    element.scrollIntoView({ block: 'center', inline: 'center' });
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     const rect = element.getBoundingClientRect();
     const computedStyle = getComputedStyle(element);
     const computedWidth = Number.parseFloat(computedStyle.width);
@@ -204,13 +206,21 @@ async function mediaBox(page: Page, selector: string) {
     const playRect = play?.getBoundingClientRect();
     const playIconRect = playIcon?.getBoundingClientRect();
     const playStyle = play ? getComputedStyle(play) : null;
+    const playIconStyle = playIcon ? getComputedStyle(playIcon) : null;
+    const playWidth = playRect?.width ||
+      play?.offsetWidth ||
+      (playStyle ? Number.parseFloat(playStyle.width) : 0) ||
+      0;
+    const playIconWidth = playIconRect?.width ||
+      (playIconStyle ? Number.parseFloat(playIconStyle.width) : 0) ||
+      0;
     return {
       width: rect.width || computedWidth,
       height: rect.height || computedHeight,
       durationBadges: element.querySelectorAll('.renuvex-pr-media-duration').length,
       hasPlayIcon: !!playIcon,
-      playWidth: playRect?.width || 0,
-      playIconWidth: playIconRect?.width || 0,
+      playWidth,
+      playIconWidth,
       playBackground: playStyle?.backgroundColor || '',
       posterTag: poster?.tagName || '',
       posterSrc: poster?.getAttribute('src') || '',
@@ -453,15 +463,17 @@ for (const layoutCase of LAYOUT_SIZE_CASES) {
     await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
     await expect.poll(() => hasReviewsWidget(page)).toBe(true);
 
-    const box = await mediaBox(page, layoutCase.selector);
     const expectedWidth = isMobileProject(testInfo) ? layoutCase.mobileWidth : layoutCase.desktopWidth;
+    const expectedPlay = expectedMediaPlaySizes(expectedWidth);
+    await expect.poll(async () => (await mediaBox(page, layoutCase.selector)).playWidth).toBeGreaterThan(expectedPlay.container - 1);
+
+    const box = await mediaBox(page, layoutCase.selector);
     expect(box.width).toBeGreaterThan(expectedWidth - 2);
     expect(box.width).toBeLessThan(expectedWidth + 2);
     expect(box.height).toBeGreaterThan(0);
     expect(box.durationBadges).toBe(0);
     expect(box.hasPlayIcon).toBe(true);
     expect(box.playBackground).toBe('rgba(0, 0, 0, 0.35)');
-    const expectedPlay = expectedMediaPlaySizes(expectedWidth);
     expect(box.playWidth).toBeGreaterThan(expectedPlay.container - 1);
     expect(box.playWidth).toBeLessThan(expectedPlay.container + 1);
     expect(box.playIconWidth).toBeGreaterThan(expectedPlay.icon - 1);
@@ -488,6 +500,7 @@ test('video lightbox uses Mux Player contract and closes on browser back', async
   await clickInReviewsShadow(page, '.renuvex-pr-review-card .renuvex-pr-media-video-thumb');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-modal-overlay')).toBe(true);
   await expect.poll(async () => (await lightboxVideoState(page)).themeRegistered).toBe(true);
+  await expect.poll(async () => (await lightboxVideoState(page)).centerPlayButton).toBe('');
 
   const state = await lightboxVideoState(page);
   expect(state).toMatchObject({

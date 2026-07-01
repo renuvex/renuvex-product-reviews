@@ -109,6 +109,23 @@ export var GALLERY_CSS = `
     border-radius:var(--renuvex-pr-radius,6px);
     border:1px solid var(--renuvex-pr-media-gallery-image-border,rgba(0,0,0,0.05));
   }
+  .renuvex-pr-review-gallery-media > .renuvex-pr-media-video-thumb{
+    display:grid;
+    place-items:center;
+  }
+  .renuvex-pr-review-gallery-media > .renuvex-pr-media-video-thumb > .renuvex-pr-media-poster,
+  .renuvex-pr-review-gallery-media > .renuvex-pr-media-video-thumb > .renuvex-pr-media-play{
+    grid-area:1 / 1;
+  }
+  .renuvex-pr-review-gallery-media > .renuvex-pr-media-video-thumb > .renuvex-pr-media-play{
+    position:relative;
+    left:auto;
+    top:auto;
+    transform:none;
+    justify-self:center;
+    align-self:center;
+    z-index:1;
+  }
   @media (max-width:600px){
     /* Tek kolonda full-bleed'i geri getir. Yukarıdaki masaüstü 2-kolon kuralı kökü
        max-width:1200/margin:auto ile non-full-bleed yapıyor; bu media-scoped olmadığı

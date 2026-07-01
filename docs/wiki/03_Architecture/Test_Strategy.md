@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-06-28
-last_verified: 2026-06-28
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - testing
@@ -131,6 +131,8 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 The media config uses Playwright's official desktop and device descriptors for Desktop Chrome, Desktop Firefox, Desktop Safari, Pixel 7, and iPhone 15. It keeps one active worker per Playwright project to avoid browser-engine memory contention and uses isolated tests with screenshots on failure. Trace recording follows Playwright's CI guidance: local media runs keep tracing off, while CI records traces only on the first retry of a failed test. Local media scripts are single-project entry points (`test:widget-media:*`), with `pnpm test:widget-media` kept as the fast Chromium desktop default. GitHub Actions does not run a local full-matrix wrapper; the PR workflow runs the three highest-value shopper targets as separate matrix jobs, and the scheduled `Media Cross-Browser` workflow runs all five projects daily as separate matrix jobs.
 
 Current Windows-local evidence: `iphone-webkit` can finish the media test bodies and still hang during Playwright/WebKit teardown, leaving orphan `WebKitNetworkProcess.exe` entries that Windows reports as non-running when killed. The source tests should stay intact; use single-test iPhone WebKit runs for local diagnosis and rely on the Ubuntu GitHub Actions media matrix for the release gate. If the Ubuntu iPhone matrix job shows the same teardown symptom, split that project further with official Playwright/GitHub Actions sharding rather than rewriting the media tests from scratch.
+
+2026-07-01 WebKit media note: gallery video thumbnails can visibly render the play overlay while `getBoundingClientRect().width` for the inner play span reports `0` under WebKit. The cross-browser media helper therefore scrolls the target into view, waits two animation frames, and falls back from rect size to `offsetWidth` / computed CSS width for the play icon contract. The gallery layout also keeps video poster/play overlay in a grid cell so WebKit does not depend on an out-of-flow absolutely positioned child inside the CSS-column gallery card.
 
 The media suite deliberately separates playback contracts:
 

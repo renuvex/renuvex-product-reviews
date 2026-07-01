@@ -141,7 +141,7 @@ source_files:
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
 - Worker V2 read cutover is complete. Keep storefront read origin on `widget.renuvex.app`; backend/write/upload stays on `app.renuvex.app`.
-- CDN benchmark: Cloudflare V2 and AWS canary work; production cutover still needs broader-region checks, cost review, rollback rehearsal, and approval.
+- CDN benchmark: Cloudflare V2 and AWS canary work; production cutover needs region/cost/rollback checks.
 - Worker rollback: restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, DNS-only.
 - Old video-provider cleanup gates are closed; preserve Cloudflare DNS/zone and Worker delivery infrastructure.
 - Supabase RLS/default-grants hardening is a public-launch blocker.
