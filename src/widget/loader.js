@@ -14,7 +14,8 @@ import {
 } from './core/storefront-context.js';
 import { mountMatching, mountSurfaceByKey } from './core/registry.js';
 import { registerCoreSurfaces } from './surfaces/index.js';
-import { loadListingBadgesModule, loadReviewsRenderModule, loadReviewsMainModule } from './core/lazy-modules.js';
+import { loadReviewsRenderModule, loadReviewsMainModule } from './core/lazy-modules.js';
+import { scheduleListingBadgeHydration } from './core/listing-viewport-gate.js';
 import { hasListingFallbackCandidates } from './listing-badges/fallback-candidates.js';
 import {
   dispatchPreviewSettingsUpdated,
@@ -34,12 +35,6 @@ import {
 var lastPreviewSettingsFingerprint = '';
 var lastPreviewSettingsAt = 0;
 var reviewMountReplayObserver = null;
-
-function renderListingBadgesFallback() {
-  return loadListingBadgesModule().then(function (mod) {
-    mod.renderListingBadges();
-  });
-}
 
 function collectReviewMountsFromNode(node, mounts) {
   if (!node || node.nodeType !== 1) return;
@@ -137,8 +132,8 @@ function initWidget() {
   setTimeout(function () {
     if (ls.rendered) return;
     if (!hasListingFallbackCandidates()) return;
-    renderListingBadgesFallback().catch(function (err) {
-      console.error('[renuvex-pr] listing badge fallback error:', err);
+    scheduleListingBadgeHydration().catch(function (err) {
+      console.error('[renuvex-pr] listing badge fallback schedule error:', err);
     });
   }, 2000);
 }

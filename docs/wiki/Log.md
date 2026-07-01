@@ -27,6 +27,12 @@ source_files:
 
 # Project Log
 
+## 2026-07-01 - performance | Add viewport-gated listing badge hydration
+- Added viewport-aware lazy hydration for below-the-fold listing/product-slider badges. Far below-the-fold product-card candidates now wait behind `core/listing-viewport-gate.js` before loading the `listing-badges-*` chunk or sending the bulk ratings request.
+- Critical PDP surfaces remain eager: product title badge, structured data, explicit review widget, and visible review/media rendering are not delayed.
+- Local network smoke coverage verifies no early listing chunk/API for below-the-fold candidates, scroll-triggered hydration with one bulk ratings read, no-`IntersectionObserver` eager fallback, fail-closed disabled/unsupported theme paths, and duplicate navigation guards.
+- Scope note: this reduces Renuvex JS/API cost for unviewed lower product sliders; it does not address ikas/theme CLS or Cloudflare TR-to-FRA routing.
+
 ## 2026-07-01 - performance | Close post-deploy startup and CLS baseline
 - Measured the live dev ikas PDP 10 times after the layout-reservation and Worker deploy. Review widget visible median was `2267 ms`; first-render median was `18 ms`; visible-from-render median was `16 ms`.
 - Automatic startup classification was `CDN/client-to-edge` for 9 runs and `injection/discovery` for 1 run. Read APIs, DB, Redis, QStash, Mux, and Supabase were not supported as first-load bottlenecks by this evidence.

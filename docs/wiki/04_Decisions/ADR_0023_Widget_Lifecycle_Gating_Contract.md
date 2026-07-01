@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-27
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - adr
@@ -27,6 +27,7 @@ source_files:
   - "src/widget/loader.js"
   - "src/widget/core/registry.js"
   - "src/widget/core/lazy-modules.js"
+  - "src/widget/core/listing-viewport-gate.js"
   - "src/widget/surfaces/index.js"
   - "src/widget/surfaces/rating-badge.surface.js"
   - "src/widget/surfaces/structured-data.surface.js"
@@ -104,6 +105,12 @@ Every widget surface follows the same three-layer gating model. The layers are o
 
 The "wasted" cost when a widget is disabled is the Layer 2 entry chunk download (~10-15 KB), which is small and cached. The big wins — BIG content chunk, API calls, DOM probes — all live in Layer 3 and are reliably gated.
 
+### Layer 2.5 — Viewport gate for below-the-fold social proof
+- Decorative or secondary social-proof surfaces that can appear far below the first viewport SHOULD be viewport-gated before their entry chunk is imported.
+- The current implementation is `core/listing-viewport-gate.js` for listing/product-slider badges. It uses `IntersectionObserver` with `rootMargin: "900px 0px"` plus a passive, non-polling scroll/resize fallback.
+- This gate is intentionally not used for critical PDP surfaces: product title badge, structured data, explicit review widget, and the initially visible review/media area stay eager.
+- The rule for future widgets: no scroll polling, no per-card API calls, no critical PDP lazy delay. If the surface is below-the-fold decoration or social proof, reserve/observe first and hydrate when near viewport. If the surface is core PDP content, keep it eager and optimize its internal render path instead.
+
 ### Telemetry contract
 - Each chunk entry function logs **once on enable check** (info or warn level) with the gate decision, e.g. `console.warn('[renuvex-pr] reviews surface gated: enabled=false')`. Sentry captures these as breadcrumbs (zero quota cost, only sent on errors).
 - ADR_0022 already added theme-level telemetry (`generic_unknown` log on state transitions). Per-widget enable telemetry follows the same pattern: structured payload, breadcrumb-grade, no event quota.
@@ -168,6 +175,8 @@ When adding a new widget surface, follow this checklist:
 
 9. **Define aggregate read models before adding high-read public fan-out.** If the widget needs storefront counts, averages, distributions, or other repeated product/store summaries, add or reuse a backend read model instead of scanning raw source tables from every public request. Review rating surfaces use `ProductReviewSummary`; see [[ADR_0026_Product_Review_Summary_Read_Model]].
 
+10. **Choose eager vs viewport-gated hydration deliberately.** Critical PDP surfaces load eagerly. Below-the-fold listing, carousel, recommendation, or other decorative social-proof surfaces should use an `IntersectionObserver` gate before loading their chunk/API path, with a safe no-`IntersectionObserver` eager fallback and bulk APIs only.
+
 ## Reasoning
 - **Three-layer model matches what every major review app does** (Yotpo, Okendo, Loox, Stamped, Judge.me): single bootstrap, lazy chunks per surface, settings-driven gating inside. We are converging on the industry pattern, not innovating away from it.
 - **The Layer 2 entry chunk download is the right trade-off.** Pre-fetching settings at init to make Layer 2 conditional would: (a) add settings latency to every page even when no widget surface is triggered, (b) require restructuring `loader.js initWidget` to be async, (c) introduce a chicken-and-egg between adapter selection and surface detection. The 10-15 KB per disabled widget per page is paid only on first load (subsequent loads are cached).
@@ -208,6 +217,7 @@ When adding a new widget surface, follow this checklist:
 - [src/widget/loader.js](src/widget/loader.js) — `initWidget`, surface registration, event routing
 - [src/widget/core/registry.js](src/widget/core/registry.js) — `register` / `mountMatching`
 - [src/widget/core/lazy-modules.js](src/widget/core/lazy-modules.js) — `loadXxxModule` lazy dispatch
+- [src/widget/core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js) — below-the-fold listing/product-slider badge viewport gate
 - [src/widget/surfaces/index.js](src/widget/surfaces/index.js) — `registerCoreSurfaces`
 - [src/widget/surfaces/reviews-main.surface.js](src/widget/surfaces/reviews-main.surface.js) — reviews surface descriptor
 - [src/widget/surfaces/listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js) — listing badge surface descriptor

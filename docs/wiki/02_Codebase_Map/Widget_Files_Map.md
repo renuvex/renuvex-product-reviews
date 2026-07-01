@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-28
-last_verified: 2026-06-28
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 source_files:
   - "scripts/build-widget.mjs"
@@ -20,6 +20,7 @@ source_files:
   - "src/widget/core/settings.js"
   - "src/widget/core/rating-summary.js"
   - "src/widget/core/link-scope.js"
+  - "src/widget/core/listing-viewport-gate.js"
   - "src/widget/listing-badges/index.js"
   - "src/widget/listing-badges/dom.js"
   - "src/widget/listing-badges/collect.js"
@@ -96,6 +97,7 @@ src/widget/
 │  ├─ lazy-modules.js             # Dynamic import boundaries for widget modules.
 │  ├─ settings.js                 # Shared public settings fetch/cache.
 │  ├─ link-scope.js              # Shared scoped link discovery for listing DOM fallbacks.
+│  ├─ listing-viewport-gate.js   # Near-viewport gate for below-the-fold listing/product-slider badges.
 │  ├─ state.js                    # Module-level mutable state (currentSettings, currentProductId, ...)
 │  ├─ fetch.js                    # API helpers used by API_BASE/READ_API_BASE callers
 │  ├─ cache.js                    # sessionStorage wrapper with in-memory fallback (cacheGet/cacheSet)

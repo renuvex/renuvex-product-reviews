@@ -118,6 +118,7 @@ export var ls = {
   inProgress:   false,
   queued:       false,
   navCleanup:   false,
+  viewportScheduled: false,
 };
 
 // VIEW_LISTING'den gelen slug→name map

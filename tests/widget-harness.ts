@@ -40,6 +40,7 @@ export type SmokeOptions = {
     abort?: Parameters<Route['abort']>[0];
   };
   badgeSettings?: Record<string, unknown>;
+  listingOffsetTop?: number;
   hasMore?: boolean;
   approvedReviewCount?: number;
   reviewsGetHandler?: (route: Route) => Promise<void>;
@@ -469,18 +470,18 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
       body: JSON.stringify(settingsResponse(options)),
     });
   });
-  await routeWidgetApi(page, '/api/public/ratings-by-slug**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: jsonHeaders(),
-      body: JSON.stringify(ratingsBySlugResponse()),
-    });
-  });
   await routeWidgetApi(page, '/api/public/ratings**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: jsonHeaders(),
       body: JSON.stringify(ratingsResponse()),
+    });
+  });
+  await routeWidgetApi(page, '/api/public/ratings-by-slug**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: jsonHeaders(),
+      body: JSON.stringify(ratingsBySlugResponse()),
     });
   });
   await routeWidgetApi(page, '/api/public/widget-error**', async (route) => {
@@ -690,6 +691,9 @@ function productListingFallbackHtml(options: SmokeOptions = {}): string {
   const eventsScript = options.ikasEvents
     ? ikasEventsScript(options.ikasEvents, options.ikasEventMode)
     : '';
+  const listingSpacer = typeof options.listingOffsetTop === 'number'
+    ? `<div aria-hidden="true" style="height:${Math.max(0, Math.round(options.listingOffsetTop))}px"></div>`
+    : '';
   return `<!doctype html>
 <html lang="tr">
   <head>
@@ -700,6 +704,7 @@ function productListingFallbackHtml(options: SmokeOptions = {}): string {
   </head>
   <body>
     <main>
+      ${listingSpacer}
       <section class="listing-grid">
         <article class="product-card">
           <a href="/premium-shorts">

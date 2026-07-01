@@ -2,18 +2,12 @@
 
 import { extractSlug, SYSTEM_SLUGS } from './core/helpers.js';
 import { ls } from './core/state.js';
-import { loadListingBadgesModule } from './core/lazy-modules.js';
+import { scheduleListingBadgeHydration } from './core/listing-viewport-gate.js';
 import { collectLinksFromScopes, getMainContentScopes } from './core/link-scope.js';
 import { getThemeAdapter } from './themes/current-adapter.js';
 
 var mutationDebounceTimer = null;
 var mutationObserver = null;
-
-function renderListingBadgesLazy() {
-  return loadListingBadgesModule().then(function (mod) {
-    mod.renderListingBadges();
-  });
-}
 
 function getObserverListingScopes() {
   var activeAdapter = getThemeAdapter();
@@ -56,8 +50,8 @@ export function startMutationObserver() {
     mutationDebounceTimer = setTimeout(function() {
       if (!hasUnbadgedListingLinks()) return;
       ls.rendered = false;
-      renderListingBadgesLazy().catch(function (err) {
-        console.error('[renuvex-pr] listing badge lazy render error:', err);
+      scheduleListingBadgeHydration().catch(function (err) {
+        console.error('[renuvex-pr] listing badge viewport schedule error:', err);
       });
     }, 300);
   });

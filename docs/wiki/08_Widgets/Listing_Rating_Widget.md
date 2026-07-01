@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-01
-last_verified: 2026-06-01
+updated: 2026-07-01
+last_verified: 2026-07-01
 confidence: high
 tags:
   - widget
@@ -29,6 +29,7 @@ source_files:
   - "src/widget/core/badge.js"
   - "src/widget/core/helpers.js"
   - "src/widget/core/link-scope.js"
+  - "src/widget/core/listing-viewport-gate.js"
   - "src/widget/observer.js"
   - "src/widget/core/storefront-context.js"
   - "src/app/api/public/ratings/route.ts"
@@ -55,6 +56,7 @@ Star+count badge injected into product cards on collection / search / category p
 | [ratings.js](src/widget/listing-badges/ratings.js) | Bulk fetch `/api/public/ratings?productIds=...`; falls back to slug only when no product id exists |
 | [inject.js](src/widget/listing-badges/inject.js) | Insert star+count badge into each card |
 | [listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js) | Lazy surface descriptor for page/listing/search contexts |
+| [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js) | Near-viewport gate for below-the-fold listing/product-slider badge hydration |
 | [themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js) | Ozy fallback placement adapter for container/title/ignore rules |
 
 ## API
@@ -74,6 +76,7 @@ Star+count badge injected into product cards on collection / search / category p
 - Server caches at edge with `s-maxage=60, stale-while-revalidate=300`.
 - DOM discovery is scoped to theme product containers first, then `main/[role=main]` fallback; it no longer starts from every link in the whole document.
 - MutationObserver re-render checks use the same scoped discovery path, so lazy product-card changes do not trigger a whole-document `document.querySelectorAll('a[href]')` scan.
+- Below-the-fold listing/product-slider candidates are registered with `IntersectionObserver` through [core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js). The default `rootMargin` is `900px 0px`: near/above-viewport cards hydrate at current speed, while far below-the-fold cards do not load the `listing-badges-*` chunk or call `/api/public/ratings*` until the shopper scrolls near them. A passive scroll/resize check exists only as a non-polling safety fallback if the observer callback does not fire.
 - Badge slots are reserved before rating data finishes loading and replaced in place when real ratings arrive, reducing listing-card layout shift.
 - Listing badge slots mount as siblings immediately after product title elements by default. There is no publicApiKey allowlist or legacy in-title branch; supported theme exceptions must use the adapter mount-point override.
 
@@ -108,6 +111,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 ## Related Source Files
 - [src/widget/listing-badges/](src/widget/listing-badges/)
 - [src/widget/surfaces/listing-badge.surface.js](src/widget/surfaces/listing-badge.surface.js)
+- [src/widget/core/listing-viewport-gate.js](src/widget/core/listing-viewport-gate.js)
 - [src/widget/themes/ozy/adapter.js](src/widget/themes/ozy/adapter.js)
 - [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts)
 - [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
@@ -123,6 +127,7 @@ This protects against obvious footer/menu/header false positives, but it is not 
 - [[ADR_0015_Canonical_Product_Identity]]
 
 ## Change Log
+- 2026-07-01: Added viewport-aware lazy hydration for below-the-fold listing/product-slider badge candidates. Far below-the-fold candidates now wait behind an `IntersectionObserver` gate before loading the listing badge chunk or sending the bulk ratings read; above/near-viewport cards and the no-`IntersectionObserver` fallback keep the previous eager behavior. Network smoke covers no early `listing-badges-*` chunk, scroll-triggered hydration, one bulk ratings request, disabled/unsupported theme fail-closed behavior, and duplicate navigation guards.
 - 2026-06-01: Completed ADR_0017 listing mount rollout cleanup. Removed the temporary publicApiKey gate and legacy in-`<h2>` mount branch; browser coverage now pins that listing badge slots mount as title siblings and keep one bulk ratings request.
 - 2026-05-24/25: Listing badge stars now render via the shared SVG `<symbol>` sprite (`<use>`) instead of inline `<path>` (~4.6 KB/badge of duplicated path data removed); the badge is labelled via an sr-only `aria-labelledby` span and aligned via `data-renuvex-align`. See [[ADR_0019_Icon_Sprite_Rendering]].
 - 2026-05-19: Listing badge star icon + color are now single-sourced from the `reviews` widget (`reviewIcon`/`reviewStarColor`) instead of a hardcoded `star:classic` and the dead `badge.color`. `index.js` parses the icon and sets the star color CSS variables on the listing path itself, so cold listing entry shows the correct icon/color without depending on the PDP `render.js`. `iconPair` is threaded through `injectBadges` → `createBadgeEl`. See [[ADR_0016_Rating_Visual_System]].

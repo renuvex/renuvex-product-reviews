@@ -6,7 +6,7 @@
 // - VIEW_SEARCH_RESULTS: search productDetails[]
 
 import { ls } from '../core/state.js';
-import { loadListingBadgesModule } from '../core/lazy-modules.js';
+import { scheduleListingBadgeHydration } from '../core/listing-viewport-gate.js';
 
 var LISTING_PAGE_TYPES = {
   INDEX: true,
@@ -34,8 +34,6 @@ export var listingBadgeSurface = {
     // Listing/search product events can arrive after PAGE_VIEW. Re-run without
     // cleanup so newly available product names can improve placement fallback.
     ls.rendered = false;
-    return loadListingBadgesModule().then(function (mod) {
-      mod.renderListingBadges();
-    });
+    return scheduleListingBadgeHydration();
   },
 };

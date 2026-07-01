@@ -689,6 +689,44 @@ test('product-like listing DOM triggers the fallback chunk and slug ratings call
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('below-the-fold product listing waits for viewport before loading listing badges', async ({ page }) => {
+  const log = await setupProductListingFallbackPage(page, { listingOffsetTop: 2600 });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+  await page.waitForTimeout(2600);
+
+  expect(hasRuntime(log)).toBe(true);
+  expect(hasChunk(log, 'listing-badges-')).toBe(false);
+  expect(countUrls(log, '/api/public/settings')).toBe(0);
+  expect(countUrls(log, '/api/public/ratings-by-slug')).toBe(0);
+  expect(await countListingBadges(page)).toBe(0);
+  expect(await countListingPlaceholders(page)).toBe(0);
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 5000 }).toBe(1);
+  await expect.poll(() => countListingBadges(page), { timeout: 3000 }).toBe(2);
+
+  expect(hasChunk(log, 'listing-badges-')).toBe(true);
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('listing fallback remains eager when IntersectionObserver is unavailable', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: undefined,
+    });
+  });
+  const log = await setupProductListingFallbackPage(page, { listingOffsetTop: 2600 });
+  await page.goto(`${MERCHANT_ORIGIN}/clothing`);
+
+  await expect.poll(() => countUrls(log, '/api/public/ratings-by-slug'), { timeout: 5000 }).toBe(1);
+
+  expect(hasChunk(log, 'listing-badges-')).toBe(true);
+  expect(countUrls(log, '/api/public/settings')).toBe(1);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('synchronous listing event is replayed after loader subscribes', async ({ page }) => {
   const listingOnlyEvent = listingIkasEvents().filter((event) => event.type === 'VIEW_LISTING');
   const log = await setupProductListingFallbackPage(page, {
