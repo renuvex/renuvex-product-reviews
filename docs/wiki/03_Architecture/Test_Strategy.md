@@ -136,6 +136,16 @@ Current Windows-local evidence: `iphone-webkit` can finish the media test bodies
 
 2026-07-01 CI closure: GitHub Actions run `28531383697` on commit `0d3e53cd` passed the Ubuntu media PR matrix, including `media-pr-gate (iphone-webkit, webkit)`. This confirms the WebKit media contract on the release gate environment; the remaining Windows-local iPhone WebKit teardown timeout is a local runner/browser-process issue, not a release blocker.
 
+To re-run and verify the release-gate iPhone WebKit media matrix from the CLI after a push:
+
+```bash
+gh run list --branch main --limit 5 --json databaseId,headSha,status,conclusion,workflowName,displayTitle,url
+gh run watch <run-id> --exit-status
+gh run view <run-id> --json jobs,status,conclusion,url
+```
+
+The required job name is `media-pr-gate (iphone-webkit, webkit)`. A valid release-gate closure requires that job's `Run media project` step to pass on GitHub Actions Ubuntu. Do not treat local Windows `iphone-webkit` teardown timeouts as release blockers unless the Ubuntu matrix reproduces the same failure.
+
 The media suite deliberately separates playback contracts:
 
 - Storefront video lightbox uses official Mux Player and verifies `playback-id`, `preload="metadata"`, `stream-type="on-demand"`, `playsinline`, no autoplay, `disable-tracking`, `disable-cookies`, supported control-hiding CSS variables, browser-back disposal, and player cleanup.
