@@ -134,6 +134,8 @@ Current Windows-local evidence: `iphone-webkit` can finish the media test bodies
 
 2026-07-01 WebKit media note: gallery video thumbnails can visibly render the play overlay while `getBoundingClientRect().width` for the inner play span reports `0` under WebKit. The cross-browser media helper therefore scrolls the target into view, waits two animation frames, and falls back from rect size to `offsetWidth` / computed CSS width for the play icon contract. The gallery layout also keeps video poster/play overlay in a grid cell so WebKit does not depend on an out-of-flow absolutely positioned child inside the CSS-column gallery card.
 
+2026-07-01 CI closure: GitHub Actions run `28531383697` on commit `0d3e53cd` passed the Ubuntu media PR matrix, including `media-pr-gate (iphone-webkit, webkit)`. This confirms the WebKit media contract on the release gate environment; the remaining Windows-local iPhone WebKit teardown timeout is a local runner/browser-process issue, not a release blocker.
+
 The media suite deliberately separates playback contracts:
 
 - Storefront video lightbox uses official Mux Player and verifies `playback-id`, `preload="metadata"`, `stream-type="on-demand"`, `playsinline`, no autoplay, `disable-tracking`, `disable-cookies`, supported control-hiding CSS variables, browser-back disposal, and player cleanup.
