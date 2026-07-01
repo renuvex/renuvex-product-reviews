@@ -120,7 +120,7 @@ Mount behavior: [render.js](src/widget/reviews-section/render.js) prefers a merc
 
 ## Media gallery
 - Dedicated horizontal gallery above the review list, independent of sort/filter/load-more.
-- The top gallery uses `hasMedia=true&limit=15&orderBy=newest` only when the first review summary reports `mediaReviewCount > 0`, so empty/no-media products avoid the deferred gallery request. Approved video posters can still appear beside review images even when new video uploads are disabled. Stores with only photos receive the same image rows because `hasMedia=true` means `Review.hasImages OR Review.hasVideo`. The top gallery remains bootstrap-owned and hides when the review list is already filtered by the photo/media facet.
+- The top gallery uses `hasMedia=true&limit=15&orderBy=newest` only when the first review summary reports `mediaReviewCount > 0`, so empty/no-media products avoid the deferred gallery request. When media exists, the initial render reserves a hidden gallery slot and the deferred response hydrates that same slot instead of inserting a new section above the review list. Approved video posters can still appear beside review images even when new video uploads are disabled. Stores with only photos receive the same image rows because `hasMedia=true` means `Review.hasImages OR Review.hasVideo`. The top gallery remains bootstrap-owned and hides when the review list is already filtered by the photo/media facet.
 - Cap fixed at 15 (no admin setting), newest-first rotation.
 - Full doc: [[Media_Gallery]]. Historical decision: [[ADR_0007_Photo_Strip_Cap_And_Rotation]].
 

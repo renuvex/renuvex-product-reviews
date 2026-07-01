@@ -88,6 +88,7 @@ function wait(ms: number): Promise<void> {
 async function reviewsWidgetState(page: Page): Promise<{
   productId: string;
   emptyText: string;
+  mediaPlaceholders: number;
   mediaThumbs: number;
   reviewCards: number;
 }> {
@@ -100,8 +101,29 @@ async function reviewsWidgetState(page: Page): Promise<{
     return {
       productId: widget?.getAttribute('data-renuvex-product-id') || '',
       emptyText: root?.querySelector('.renuvex-pr-state-msg')?.textContent?.trim() || '',
-      mediaThumbs: root?.querySelectorAll('.renuvex-pr-media-gallery-thumb').length || 0,
+      mediaPlaceholders: root?.querySelectorAll('.renuvex-pr-media-gallery-section--placeholder').length || 0,
+      mediaThumbs: root?.querySelectorAll('.renuvex-pr-media-gallery-thumb:not(.renuvex-pr-media-gallery-thumb--placeholder)').length || 0,
       reviewCards: root?.querySelectorAll('.renuvex-pr-review').length || 0,
+    };
+  });
+}
+
+async function reviewsShellState(page: Page): Promise<{
+  exists: boolean;
+  reserved: boolean;
+  minHeight: number;
+  hasWidget: boolean;
+}> {
+  return page.evaluate(() => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews') as HTMLElement | null;
+    const root = container?.shadowRoot || null;
+    return {
+      exists: !!container,
+      reserved: container?.getAttribute('data-renuvex-reserved') === 'true',
+      minHeight: container ? parseFloat(container.style.minHeight || '0') : 0,
+      hasWidget: !!(root && root.querySelector('#renuvex-reviews-widget')),
     };
   });
 }
@@ -168,6 +190,48 @@ test('review mount with zero media summary skips deferred media gallery request'
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('review mount reserves a stable shell before delayed reviews render', async ({ page }) => {
+  let mainRequested = false;
+  let releaseMain!: () => void;
+  const mainGate = new Promise<void>((resolve) => {
+    releaseMain = resolve;
+  });
+
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.get('hasMedia') === 'true') {
+        await fulfillJson(route, reviewPayload([]));
+        return;
+      }
+      mainRequested = true;
+      await mainGate;
+      await fulfillJson(route, reviewPayload([], {
+        allCount: 0,
+        totalCount: 0,
+        ratingCounts: [0, 0, 0, 0, 0],
+        avgRating: '0.0',
+        mediaReviewCount: 0,
+      }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => mainRequested).toBe(true);
+  await expect.poll(() => reviewsShellState(page)).toMatchObject({
+    exists: true,
+    reserved: true,
+    hasWidget: false,
+  });
+  expect((await reviewsShellState(page)).minHeight).toBeGreaterThanOrEqual(220);
+
+  releaseMain();
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('startup perf timeline is opt-in only', async ({ page }) => {
   await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: true });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
@@ -200,6 +264,7 @@ test('startup perf timeline records loader, import, API, and render marks when e
     'reviews-main-import-done',
     'reviews-api-start',
     'reviews-api-done',
+    'reviews-shell-reserved',
     'render-import-start',
     'render-import-done',
     'first-render-start',
@@ -273,6 +338,7 @@ test('review section renders before delayed media gallery response', async ({ pa
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
     reviewCards: 1,
+    mediaPlaceholders: 1,
     mediaThumbs: 0,
   });
   expect(mediaRequested).toBe(false);
@@ -285,7 +351,10 @@ test('review section renders before delayed media gallery response', async ({ pa
   await expect.poll(() => mediaRequested).toBe(true);
 
   releaseMedia();
-  await expect.poll(async () => (await reviewsWidgetState(page)).mediaThumbs).toBe(1);
+  await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
+    mediaPlaceholders: 0,
+    mediaThumbs: 1,
+  });
   expect(widgetErrors(log)).toEqual([]);
 });
 

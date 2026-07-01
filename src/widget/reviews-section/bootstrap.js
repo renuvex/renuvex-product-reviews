@@ -16,6 +16,7 @@ import {
 import { scheduleIdleTask } from '../core/scheduler.js';
 import { markWidgetPerf } from '../core/perf-timeline.js';
 import { createReviewsFetchError, fetchMixedMediaGalleryReviews, fetchReviews } from './reviews-api.js';
+import { findReviewsMount, reserveReviewsShell } from './reservation.js';
 
 var bootstrapCache = {};
 var bootstrapSeq = 0;
@@ -156,9 +157,11 @@ export async function bootstrap(productId, productName) {
 
     // ADR_0024: review section is opt-in via an explicit mount. If the mount is
     // absent, stop before reviews/media-gallery fetches and before render.js loads.
-    if (!document.querySelector('[data-renuvex-widget="reviews"]')) return;
+    if (!findReviewsMount()) return;
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
 
+    reserveReviewsShell(productId, reviewsSettings);
+    markWidgetPerf('reviews-shell-reserved');
     resetReviewStateForProduct(productId);
 
     var renderModulePromise = loadRenderModule();
@@ -189,7 +192,8 @@ export async function bootstrap(productId, productName) {
     if (!isCurrentBootstrap(token, productId, startedPathname)) return;
     console.error('[renuvex-pr] bootstrap error:', err);
     // Render fetch-error state only when the merchant has an explicit mount.
-    if (document.querySelector('[data-renuvex-widget="reviews"]')) {
+    if (findReviewsMount()) {
+      reserveReviewsShell(productId, FALLBACK);
       var fallbackRenderModule = await loadRenderModule();
       if (!isCurrentBootstrap(token, productId, startedPathname)) return;
       await fallbackRenderModule.render(productId, FALLBACK, createReviewsFetchError(), productName, undefined, undefined, BADGE_FALLBACK);

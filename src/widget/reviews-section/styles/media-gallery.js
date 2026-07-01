@@ -21,6 +21,7 @@ export var MEDIA_GALLERY_CSS = `
   @media(max-width:600px){.renuvex-pr-media-gallery-arrow{display:none;}}
 
   .renuvex-pr-media-gallery-section{margin:24px 0 32px;padding:0 var(--renuvex-pr-pad-review-mobile);display:block;}
+  .renuvex-pr-media-gallery-section--placeholder{visibility:hidden;pointer-events:none;}
   .renuvex-pr-media-gallery-strip{display:flex;gap:10px;overflow-x:auto;padding:4px 0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .renuvex-pr-media-gallery-strip::-webkit-scrollbar{display:none;}
   .renuvex-pr-media-gallery-thumb{flex:0 0 var(--renuvex-pr-thumbnail-size,90px);width:var(--renuvex-pr-thumbnail-size,90px);height:auto;aspect-ratio:var(--renuvex-pr-media-gallery-thumb-aspect,1/1);border-radius:var(--renuvex-pr-radius,8px);object-fit:cover;cursor:pointer;transition:transform 0.2s ease;border:1px solid var(--renuvex-pr-media-gallery-image-border,rgba(0,0,0,0.05));}

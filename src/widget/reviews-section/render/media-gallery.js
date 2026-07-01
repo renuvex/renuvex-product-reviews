@@ -15,6 +15,38 @@ import { iconUseNode } from '../../icons/star-sprite.js';
 import { UI_CARET_LEFT, UI_CARET_RIGHT } from '../../icons/index.js';
 import { createMediaThumbnail } from '../media-thumbnail.js';
 
+export function buildMediaGalleryPlaceholder(opts) {
+  var settings = opts.settings || {};
+  var root = opts.root;
+  var currentMediaFilter = opts.currentMediaFilter || 'none';
+  if (!(settings.showMediaGallery !== false && currentMediaFilter === 'none')) return null;
+
+  var gallerySection = document.createElement('div');
+  gallerySection.className = 'renuvex-pr-media-gallery-section renuvex-pr-media-gallery-section--placeholder';
+  gallerySection.setAttribute('aria-hidden', 'true');
+
+  var thumbAspect = settings.reviewLayout === 'card' ? '1/1' : '3/4';
+  if (root) root.style.setProperty('--renuvex-pr-media-gallery-thumb-aspect', thumbAspect);
+
+  if (settings.showMediaGalleryTitle !== false) {
+    var galleryTitle = document.createElement('div');
+    galleryTitle.className = 'renuvex-pr-media-gallery-title';
+    galleryTitle.textContent = settingText(settings.mediaGalleryTitle, 'M\u00fc\u015fteri G\u00f6rselleri');
+    gallerySection.appendChild(galleryTitle);
+  }
+
+  var stripWrap = document.createElement('div');
+  stripWrap.className = 'renuvex-pr-media-gallery-strip-wrap';
+  var mediaStrip = document.createElement('div');
+  mediaStrip.className = 'renuvex-pr-media-gallery-strip';
+  var placeholderThumb = document.createElement('div');
+  placeholderThumb.className = 'renuvex-pr-media-gallery-thumb renuvex-pr-media-gallery-thumb--placeholder';
+  mediaStrip.appendChild(placeholderThumb);
+  stripWrap.appendChild(mediaStrip);
+  gallerySection.appendChild(stripWrap);
+  return gallerySection;
+}
+
 // opts: { settings, root, currentMediaFilter, openReviewModal, wireLightboxTrigger }
 export function buildMediaGallery(opts) {
   var settings = opts.settings;

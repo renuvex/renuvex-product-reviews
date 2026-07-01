@@ -337,6 +337,7 @@ Preview iframe HTML lives at [src/app/(preview)/preview/route.ts](src/app/(previ
 - [[Yotpo_Protein_Ocean_Widget_Research]]
 
 ## Change Log
+- 2026-07-01: Added the storefront layout-reservation rule after the CLS audit. New storefront surfaces must reserve a stable owned slot before hydrating dynamic content. The PDP review surface now creates its quiet `#renuvex-reviews` shell before review data/render completion, and media gallery uses a hidden placeholder when the summary says media exists. This is not a loading skeleton; it is a CLS guard. Listing badges already follow the same pattern with invisible reserved slots.
 - 2026-06-30: Added future widget surface rules after the storefront performance and chunk-graph audits. New widget surfaces should prefer explicit mounts, keep detection cheap, lazy-load implementations, fail closed for ambiguous auto-placement, and add positive/negative network smoke coverage before production.
 - 2026-06-28: Cloudflare Worker V2 public-read cache is live for allowlisted ratings/reviews reads. Widget asset, backend API, and read API origins are separate; the read origin is `widget.renuvex.app` while settings/write/upload/video/error calls stay on `app.renuvex.app`.
 - 2026-06-06: Public rating/summary aggregate reads moved to the backend `ProductReviewSummary` read model. Widget response contracts are unchanged; future high-read surfaces should define their aggregate read model before adding public fan-out. Related: [[ADR_0026_Product_Review_Summary_Read_Model]].

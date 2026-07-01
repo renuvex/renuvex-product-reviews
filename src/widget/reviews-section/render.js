@@ -13,21 +13,20 @@ import { getIconFromSettings } from '../icons/index.js';
 import { getLayout, getLayoutsCSS } from '../summary-layouts/index.js';
 import { getReviewLayout, getReviewLayoutsCSS } from '../review-layouts/index.js';
 import { openWriteForm } from '../summary-layouts/shared/write-action.js';
-import { createOwnedSlot, setSlotContext } from '../core/slot.js';
 import { probeWidgetVisibility } from '../core/health.js';
 import { attachShadowHost, injectShadowStyles, getOrCreateShadowContent, HOST_RESET_CSS } from '../core/shadow.js';
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot } from '../icons/star-sprite.js';
-import { isReviewsMountEnabled } from '../themes/current-adapter.js';
 import { settingText } from '../core/helpers.js';
 import { markWidgetPerf } from '../core/perf-timeline.js';
 import { beginReviewRequest, isCurrentReviewRequest } from './render/request-token.js';
 import { SIZE_PRESETS, THUMBNAIL_PRESETS, THUMBNAIL_PRESETS_MOBILE } from './render/size-presets.js';
 import { buildDisabledStateEl, buildEmptyReviewsState, buildFilteredEmptyReviewsState, buildReviewsErrorState } from './render/states.js';
 import { applyManualTheme } from './render/theme-vars.js';
-import { buildMediaGallery } from './render/media-gallery.js';
+import { buildMediaGallery, buildMediaGalleryPlaceholder } from './render/media-gallery.js';
 import { createReviewHandlers } from './render/handlers.js';
 import { buildPaginationControl } from './render/pagination.js';
+import { findReviewsMount, getOrCreateReviewsSlot } from './reservation.js';
 import {
   renderInProgress, pendingRender,
   setRenderInProgress, setPendingRender,
@@ -50,29 +49,10 @@ import {
 // redeploy. Today the flag is true whenever any active-theme metadata is
 // known (`buildPublicThemeRuntime`); the FALLBACK_RUNTIME path keeps it
 // false, so the no-metadata case never renders.
-function findReviewsMount() {
-  if (!isReviewsMountEnabled()) return null;
-  return document.querySelector('[data-renuvex-widget="reviews"]');
-}
-
 // ADR_0024: getRatingSummary() was here; removed with the badge inject call
 // below. The rating badge surface now derives its avg/count from the LIGHT
 // /api/public/ratings endpoint instead of mining it out of the full reviews
 // payload — see src/widget/core/rating-summary.js fetchRatingSummary.
-
-function getOrCreateReviewsSlot(anchorEl, productId) {
-  var slot = anchorEl.querySelector('[data-renuvex-slot="product-reviews"]');
-  if (!slot) {
-    slot = createOwnedSlot({
-      slot: 'product-reviews',
-      className: 'renuvex-pr-reviews-slot',
-      context: { surface: 'reviews', productId: productId || '' },
-    });
-    anchorEl.appendChild(slot);
-  }
-  setSlotContext(slot, { surface: 'reviews', productId: productId || '' });
-  return slot;
-}
 
 function mediaPlaySizeForThumbnail(thumbnailPx) {
   return Math.round(Math.max(36, Math.min(52, thumbnailPx * 0.38)));
@@ -88,6 +68,13 @@ function findGalleryInsertionPoint(widget) {
   );
 }
 
+function responseSummaryExpectsMediaGallery(reviewsData) {
+  var data = reviewsData && reviewsData.data;
+  if (!data) return false;
+  var mediaCount = Number(data.mediaReviewCount);
+  return Number.isFinite(mediaCount) && mediaCount > 0;
+}
+
 export function renderDeferredMediaGallery(productId, settings) {
   if (String(currentProductId || '') !== String(productId || '')) return false;
 
@@ -95,9 +82,6 @@ export function renderDeferredMediaGallery(productId, settings) {
   var sRoot = container && container.shadowRoot;
   var widget = sRoot && sRoot.getElementById('renuvex-reviews-widget');
   if (!widget || widget.getAttribute('data-renuvex-product-id') !== String(productId || '')) return false;
-
-  var existing = widget.querySelector('.renuvex-pr-media-gallery-section');
-  if (existing) existing.remove();
 
   var mediaGallerySection = buildMediaGallery({
     settings: settings,
@@ -109,7 +93,9 @@ export function renderDeferredMediaGallery(productId, settings) {
   });
   if (!mediaGallerySection) return false;
 
-  widget.insertBefore(mediaGallerySection, findGalleryInsertionPoint(widget));
+  var existing = widget.querySelector('.renuvex-pr-media-gallery-section');
+  if (existing) existing.replaceWith(mediaGallerySection);
+  else widget.insertBefore(mediaGallerySection, findGalleryInsertionPoint(widget));
   return true;
 }
 
@@ -391,6 +377,14 @@ export async function render(productId, settings, reviewsData, productName, orde
           wireLightboxTrigger: wireLightboxTrigger,
         });
         if (mediaGallerySection) widget.appendChild(mediaGallerySection);
+        else if (responseSummaryExpectsMediaGallery(data)) {
+          var mediaGalleryPlaceholder = buildMediaGalleryPlaceholder({
+            settings: settings,
+            root: root,
+            currentMediaFilter: currentMediaFilter,
+          });
+          if (mediaGalleryPlaceholder) widget.appendChild(mediaGalleryPlaceholder);
+        }
 
         if (reviews.length === 0) {
           widget.appendChild(buildFilteredEmptyReviewsState());
