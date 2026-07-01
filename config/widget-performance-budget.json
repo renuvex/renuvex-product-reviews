@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "description": "Storefront widget performance budgets. CI enforces local artifact budgets; live network scenario budgets are report-only unless run explicitly.",
+  "artifactBudgets": {
+    "widgetJsMaxBytes": 7000,
+    "stableRuntimeShimMaxBytes": 2000,
+    "runtimeEntryMaxBytes": 25000,
+    "alwaysLoadedGraphMaxBytes": 85000,
+    "bootstrapStaticGraphMaxBytes": 70000,
+    "listingBadgesStaticGraphMaxBytes": 75000,
+    "ratingBadgeStaticGraphMaxBytes": 65000,
+    "structuredDataStaticGraphMaxBytes": 25000,
+    "reviewRenderEntryMaxBytes": 260000,
+    "reviewRenderStaticGraphMaxBytes": 330000,
+    "reviewDeferredDynamicGraphMaxBytes": 1400000,
+    "maxSingleManifestOutputBytes": 950000,
+    "maxManifestOutputCount": 40
+  },
+  "syntheticNetworkBudgets": {
+    "mount-present badge-on": {
+      "scriptCountMax": 24,
+      "encodedTransferBytesMax": 140000,
+      "decodedBytesMax": 370000,
+      "apiCalls": {
+        "settings": 1,
+        "ratings": 1,
+        "reviews": 2,
+        "widgetError": 0
+      },
+      "requiredChunkPrefixes": [
+        "bootstrap-",
+        "rating-badge-",
+        "render-",
+        "structured-data-"
+      ],
+      "forbiddenChunkPrefixes": [
+        "listing-badges-"
+      ]
+    },
+    "mount-absent badge-on": {
+      "scriptCountMax": 18,
+      "encodedTransferBytesMax": 70000,
+      "decodedBytesMax": 115000,
+      "apiCalls": {
+        "settings": 1,
+        "ratings": 1,
+        "reviews": 0,
+        "widgetError": 0
+      },
+      "requiredChunkPrefixes": [
+        "rating-badge-",
+        "structured-data-"
+      ],
+      "forbiddenChunkPrefixes": [
+        "bootstrap-",
+        "listing-badges-",
+        "render-"
+      ]
+    },
+    "mount-present badge-off": {
+      "scriptCountMax": 24,
+      "encodedTransferBytesMax": 140000,
+      "decodedBytesMax": 370000,
+      "apiCalls": {
+        "settings": 1,
+        "ratings": 1,
+        "reviews": 2,
+        "widgetError": 0
+      },
+      "requiredChunkPrefixes": [
+        "bootstrap-",
+        "render-",
+        "structured-data-"
+      ],
+      "forbiddenChunkPrefixes": [
+        "listing-badges-"
+      ]
+    },
+    "mount-absent badge-off": {
+      "scriptCountMax": 18,
+      "encodedTransferBytesMax": 70000,
+      "decodedBytesMax": 115000,
+      "apiCalls": {
+        "settings": 1,
+        "ratings": 0,
+        "reviews": 0,
+        "widgetError": 0
+      },
+      "forbiddenChunkPrefixes": [
+        "bootstrap-",
+        "listing-badges-",
+        "render-"
+      ]
+    }
+  }
+}

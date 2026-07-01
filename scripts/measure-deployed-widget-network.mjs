@@ -10,6 +10,7 @@ const PUBLIC_KEY = process.env.MEASURE_PUBLIC_API_KEY || 'ci-public-key';
 const REVIEW_CLOUD_NAME = resolveReviewCloudName();
 const PRODUCT_ID = 'product-1';
 const PRODUCT_NAME = 'Premium';
+const JSON_ONLY = process.argv.includes('--json');
 
 const scenarios = [
   { key: 'mount-present badge-on', mountReviews: true, badgeEnabled: true },
@@ -402,7 +403,11 @@ try {
   for (const scenario of scenarios) {
     results.push(await measureScenario(browser, scenario));
   }
-  printReport(results);
+  if (JSON_ONLY) {
+    console.log(JSON.stringify(results, null, 2));
+  } else {
+    printReport(results);
+  }
   const errors = validate(results);
   if (errors.length > 0) {
     console.error(`\nContract failures:`);

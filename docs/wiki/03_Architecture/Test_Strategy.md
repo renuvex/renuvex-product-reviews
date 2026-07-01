@@ -26,6 +26,7 @@ source_files:
   - ".github/workflows/media-cross-browser.yml"
   - ".github/pull_request_template.md"
   - "scripts/check-widget-runtime.mjs"
+  - "scripts/check-widget-performance-budget.mjs"
   - "scripts/prepare-widget-worker-assets.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
   - "scripts/measure-storefront-waterfall.mjs"
@@ -94,6 +95,7 @@ source_files:
   - "scripts/reconcile-legacy-review-media.mjs"
   - "workers/widget-delivery/src/index.ts"
   - "wrangler.widget.jsonc"
+  - "config/widget-performance-budget.json"
 ---
 
 # Test Strategy
@@ -116,6 +118,7 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 
 | Layer | Command | Scope |
 |---|---|---|
+| Widget performance budget | `pnpm budget:widget` | Deterministic local artifact budget after `pnpm build:widget`; fails on loader/runtime/always-loaded graph, major lazy surface graph, largest output, or manifest-count regressions. Live deployed request budgets stay report-only via `pnpm budget:widget:network`. |
 | Widget network/chunk smoke | `pnpm test:widget-smoke` | Built `public/widget.js` and content-hashed runtime chunks; validates API fan-out, lazy chunk boundaries, badge/review/structured-data combinations, unsupported theme behavior, listing fallback gating, and local transfer evidence without byte-budget gating. |
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, media gallery toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |
 | Storefront interactions | `pnpm test:widget-interactions` | Media-gallery lightbox, review-image lightbox, summary filter/popover light-dismiss, keyboard close, review wizard validation, step flow, mocked review submit, and body-scroll-lock regression (opening either overlay locks scroll on BOTH `<html>` and `<body>` and restores on close — ADR_0025). |
@@ -224,7 +227,7 @@ The suite uses risk-based pairwise coverage instead of a full cartesian matrix. 
 - Live dev-store post-deploy smoke is not replaced by CI. Runtime-affecting widget changes should still be checked on the dev storefront after deploy.
 - Playwright iPhone/Pixel emulation does not replace physical iPhone Safari and Android Chrome video acceptance. Native codec playback and weak-network behavior still require real devices before rollout.
 - Sentry production health checks are not part of CI. Use Sentry MCP or the dashboard after deploys that change runtime error reporting.
-- Transfer-size budgets are not enforced yet. Current network tests attach local transfer evidence and assert relative behavior, not byte ceilings.
+- Live transfer-size budgets are not enforced in CI. Current network tests attach local transfer evidence, while `pnpm budget:widget` enforces deterministic local artifact ceilings and `pnpm budget:widget:network` reports deployed synthetic request budgets in warn mode.
 - Google Rich Results / Search Console verification is not in CI. Runtime JSON-LD is automated; search-engine rendering remains a live SEO playbook item.
 
 ## Change Rule

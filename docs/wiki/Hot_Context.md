@@ -46,6 +46,7 @@ source_files:
   - "tests/unit/widget-hover-gating.test.ts"
   - "tests/unit/widget-settings.test.ts"
   - "scripts/check-widget-runtime.mjs"
+  - "scripts/check-widget-performance-budget.mjs"
   - "scripts/prepare-widget-worker-assets.mjs"
   - "scripts/measure-deployed-widget-network.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
@@ -105,6 +106,7 @@ source_files:
   - "src/lib/media/sessions.ts"
   - "workers/widget-delivery/src/index.ts"
   - "wrangler.widget.jsonc"
+  - "config/widget-performance-budget.json"
   - "docs/wiki/10_Research/Storefront_CDN_Performance_Benchmark.md"
 ---
 
@@ -122,6 +124,7 @@ source_files:
 
 ## Recent Important Changes
 - 2026-06-29: Cloudflare Worker source fix is ready: asset `304` responses preserve the same cache policy as `200`; deploy is a separate approval.
+- 2026-07-01: `pnpm budget:widget` is a hard local artifact budget gate in CI after `pnpm build:widget`; `pnpm budget:widget:network` remains warn-only deployed/synthetic evidence.
 - 2026-06-30: Upstash audit: Redis measured `0` recent commands/bandwidth; QStash has no DLQ/schedules. See [[Upstash_Redis_QStash_Cost_Audit]].
 - 2026-06-29: ikas support said dev/test StorefrontJSScript timing should match production; do not treat dev-store timing as dev-only slowdown.
 - 2026-06-28: Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. `settings`, upload, submit, video, metrics, and widget-error remain on `app.renuvex.app`.

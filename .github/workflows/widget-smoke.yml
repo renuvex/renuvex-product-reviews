@@ -35,6 +35,9 @@ jobs:
         env:
           NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: renuvex
 
+      - name: Check widget performance budget
+        run: pnpm budget:widget
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
