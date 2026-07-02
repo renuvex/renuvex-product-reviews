@@ -7,6 +7,7 @@ import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
 import { registerPopover } from '../shared/popover-registry.js';
+import { buildRecommendationBlock, getRecommendationPercent } from '../shared/recommendation.js';
 import { partialStarsHTML, settingText } from '../../core/helpers.js';
 import { starUseSvg, iconUseSvg } from '../../icons/star-sprite.js';
 import { UI_CARET_DOWN } from '../../icons/index.js';
@@ -273,13 +274,10 @@ export function render(opts) {
 
   // showRecommendation hâlâ destekli — panel altında küçük metin
   if ((settings.showRecommendation !== false)) {
-    var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
-    var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
+    var recommendPct = getRecommendationPercent(ratingCounts, allCount);
     if (recommendPct > 0) {
-      var rec = document.createElement('div');
-      rec.className = 'renuvex-pr-summary-block renuvex-pr-summary-recommend';
+      var rec = buildRecommendationBlock(settings, recommendPct);
       rec.style.marginTop = '8px';
-      rec.innerHTML = '<span class="renuvex-pr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
       panelInner.appendChild(rec);
     }
   }

@@ -326,6 +326,9 @@ export const WIDGETS: WidgetDef[] = [
           // Boş bırakılırsa render tarafında 'Yorum' fallback'i kullanılır. 5 summary
           // layout'u da aynı key'i okur (settings.countLabel).
           { type: 'text',   key: 'countLabel',           label: 'Yorum Sayısı Etiketi', placeholder: 'Yorum', default: 'Yorum', maxLength: 20 },
+          // "%82 bu ürünü tavsiye ediyor" metnindeki yüzde sonrası açıklama.
+          // Yüzde değeri sistem tarafından hesaplanır; sadece label merchant-editable.
+          { type: 'text',   key: 'recommendationLabel',  label: 'Tavsiye Yüzdesi Metni', placeholder: 'bu ürünü tavsiye ediyor', default: 'bu ürünü tavsiye ediyor', maxLength: 40, showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' } },
           // Mağaza yanıtı bloğunun üstündeki rol etiketi. Hem inline reply (_shared.js)
           // hem modal lightbox (review-modal.js) aynı anahtarı okur. currentSettings
           // global state'ten geliyor; settings yoksa 'Mağaza Sahibi' fallback'i kullanılır.

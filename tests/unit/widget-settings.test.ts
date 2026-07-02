@@ -13,16 +13,19 @@ describe('widget settings schema traversal', () => {
     expect(defaults.videoReviewsEnabled).toBe(false);
     expect(defaults.formStepContentTitle).toBe('Deneyiminizi anlatın');
     expect(defaults.formStepAuthorTitle).toBe('Hakkınızda');
+    expect(defaults.recommendationLabel).toBe('bu ürünü tavsiye ediyor');
 
     expect(sanitizeSettings('reviews', {
       formStepRatingTitle: 'Puanınızı seçin',
       formStepPhotosSubtitle: 'İsterseniz fotoğraf ekleyin.',
       formStepMediaSubtitle: 'Fotoğraf ya da kısa video ekleyin.',
+      recommendationLabel: 'müşteriler öneriyor',
       unknownNestedCopy: 'drop-me',
     })).toEqual({
       formStepRatingTitle: 'Puanınızı seçin',
       formStepPhotosSubtitle: 'İsterseniz fotoğraf ekleyin.',
       formStepMediaSubtitle: 'Fotoğraf ya da kısa video ekleyin.',
+      recommendationLabel: 'müşteriler öneriyor',
     });
   });
 
@@ -134,5 +137,15 @@ describe('widget settings schema traversal', () => {
     expect(validateSettings('reviews', {
       formStepMediaSubtitle: 'x'.repeat(91),
     })).toBe('formStepMediaSubtitle en fazla 90 karakter olmalı');
+  });
+
+  it('validates recommendation label as a bounded merchant text field', () => {
+    expect(validateSettings('reviews', {
+      recommendationLabel: 'x'.repeat(40),
+    })).toBeNull();
+
+    expect(validateSettings('reviews', {
+      recommendationLabel: 'x'.repeat(41),
+    })).toBe('recommendationLabel en fazla 40 karakter olmalı');
   });
 });

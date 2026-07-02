@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-07-02
+last_verified: 2026-07-02
 confidence: high
 source_files:
   - "src/components/home-page/widgets/widgetDefs.ts"
@@ -20,6 +20,7 @@ source_files:
   - "src/widget/reviews-section/styles/lightbox.js"
   - "src/lib/mux-player/review-player-theme.ts"
   - "src/widget/reviews-section/review-form-modal/copy.js"
+  - "src/widget/summary-layouts/shared/recommendation.js"
   - "src/widget/reviews-section/review-form-modal/styles.js"
   - "src/widget/reviews-section/review-form-modal/steps/step-rating.js"
   - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"
@@ -139,6 +140,8 @@ Today, merchants can edit selected visible strings, especially review-form wizar
 
 Future English/German support should add a string catalog, a locale source, and a localized settings model before exposing per-language copy fields. If per-storefront locale support is chosen, it should be designed together with the multi-storefront settings question in [[Open_Questions]].
 
+The summary recommendation suffix (`%82 bu ürünü tavsiye ediyor`) is merchant-editable through `Metin > Tavsiye Yüzdesi Metni` (`recommendationLabel`, max 40 characters). The percentage remains system-generated from 4-star + 5-star approved review counts. Storefront rendering uses `summary-layouts/shared/recommendation.js`, inserts merchant copy as text (not `innerHTML`), trims whitespace back to `bu ürünü tavsiye ediyor`, and wraps long unbroken words with the shared recommendation CSS safe area.
+
 ## Removing / changing fields
 - **Removing a field**: just delete from `widgetDefs.ts`. `sanitizeSettings` filters unknown keys at read time, so old DB rows still work.
 - **Renaming a field**: harder — write a one-time migration to copy `oldKey` → `newKey` in JSON, or add a back-compat shim in `sanitizeSettings`.
@@ -183,6 +186,7 @@ Future English/German support should add a string catalog, a locale source, and 
 - 2026-06-09: `Sayfalama` color group gained explicit active-page colors — `paginationActiveBgColor` (fill, default `#111111`) and `paginationActiveTextColor` (number, default `#ffffff`) — decoupled from the passive `paginationTextColor`. Every pagination color is an explicit field.
 - 2026-06-09: Added the `paginationMode` design select (Tasarım: `loadMore` | `numbered`) and a `Sayfalama` color group. The load-more and pagination color groups are `showWhen`-gated on `paginationMode`, so only the active mode's colors show in `Renkler`. Schema-driven end-to-end — `widget-settings.ts` (defaults/sanitize/validate) and `SettingsPanel` auto-pick the new fields with no code change. See [[Product_Review_Widget]].
 - 2026-06-06: Added nested `Metin > Yorum Formu` copy settings for review wizard step headings and photo subtitle. Settings traversal is recursive via `collectSettingFields(...)`; storefront copy renders as safe text with whitespace fallback and long-word wrapping.
+- 2026-07-02: Added `recommendationLabel` for the summary recommendation suffix. It is a flat widget setting, layout-gated to recommendation-capable summaries, limited to 40 characters, and rendered via the shared recommendation helper as safe text with long-word wrapping.
 - 2026-06-01: Review form wizard close (X) color was decoupled from `formPrimaryTextColor`; runtime derives close icon and hover colors from `formBgColor` with deterministic contrast helpers in `theme-vars.js`.
 - 2026-05-14: **Filter Icon Registry Clarified**: Replaced the filter `star` option with `funnel`, kept `star -> funnel` only as a filter-only legacy alias, and separated admin preview rendering by review vs filter registry.
 - 2026-05-12: **Icon Registries Simplified**: Filter icons reduced to 4 core choices; Review icons modernized with unified Phosphor weight. Existing legacy keys fall back safely via registry.

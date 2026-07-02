@@ -111,6 +111,7 @@ export function baseReviewsSettings(overrides: Record<string, unknown> = {}): Re
     showMediaGallery: true,
     showMediaGalleryTitle: true,
     showRecommendation: true,
+    recommendationLabel: 'bu ürünü tavsiye ediyor',
     richSnippetsEnabled: true,
     reviewIcon: 'star',
     reviewStarColor: '#f59e0b',

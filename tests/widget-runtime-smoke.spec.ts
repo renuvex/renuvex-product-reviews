@@ -1267,6 +1267,7 @@ test('merchant text settings trim whitespace before falling back', async ({ page
       mediaGalleryTitle: '   ',
       writeButtonText: '   ',
       countLabel: '   ',
+      recommendationLabel: '   ',
       merchantReplyLabel: '   ',
     },
   });
@@ -1283,6 +1284,7 @@ test('merchant text settings trim whitespace before falling back', async ({ page
     return {
       title: root?.querySelector('.renuvex-pr-title')?.textContent?.trim() || '',
       count: root?.querySelector('.renuvex-pr-compact-trigger-text')?.textContent?.trim() || '',
+      recommend: root?.querySelector('.renuvex-pr-summary-recommend')?.textContent?.trim() || '',
       write: root?.querySelector('.renuvex-pr-write-btn')?.textContent?.trim() || '',
       mediaGalleryTitle: root?.querySelector('.renuvex-pr-media-gallery-title')?.textContent?.trim() || '',
       replyLabel: root?.querySelector('.renuvex-pr-reply-label')?.textContent?.trim() || '',
@@ -1292,6 +1294,7 @@ test('merchant text settings trim whitespace before falling back', async ({ page
 
   expect(labels.title).toBe('Müşteri Yorumları');
   expect(labels.count).toMatch(/^\d+ Yorum$/);
+  expect(labels.recommend).toBe('%92 bu ürünü tavsiye ediyor');
   expect(labels.write).toBe('Yorum Yap');
   expect(labels.mediaGalleryTitle).toBe('Müşteri Görselleri');
   expect(labels.replyLabel).toBe('Mağaza Sahibi');
@@ -1636,6 +1639,55 @@ test('media gallery preserves approved video when new video uploads are disabled
   expect(log.urls.some((url) => url.includes('hasImages=true') && !url.includes('limit=15'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
+
+for (const summaryLayout of ['classic', 'split', 'compact'] as const) {
+  test(`${summaryLayout} summary renders merchant recommendation label as safe wrapped text`, async ({ page }) => {
+    const recommendationLabel = '<svg data-x=x></svg>';
+    const log = await setupWidgetRoutes(page, {
+      mountReviews: true,
+      reviewsSettings: {
+        summaryLayout,
+        reviewLayout: 'list',
+        recommendationLabel,
+      },
+      reviewsGetHandler: async (route) => {
+        await fulfillJson(route, reviewsPayload([
+          { id: 'r-1', title: 'Recommended', rating: 5 },
+          { id: 'r-2', title: 'Also recommended', rating: 4 },
+          { id: 'r-3', title: 'Neutral', rating: 3 },
+        ], {
+          allCount: 3,
+          totalCount: 3,
+          ratingCounts: [0, 0, 1, 1, 1],
+          avgRating: '4.0',
+        }));
+      },
+    });
+
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+
+    const state = await page.evaluate(() => {
+      const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+      const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+      const container = slot?.querySelector('#renuvex-reviews');
+      const root = container?.shadowRoot || null;
+      const rec = root?.querySelector('.renuvex-pr-summary-recommend') as HTMLElement | null;
+      return {
+        text: rec?.textContent?.trim() || '',
+        parsedSvgCount: rec?.querySelectorAll('svg[data-x]').length ?? -1,
+        overflowWrap: rec ? getComputedStyle(rec).overflowWrap : '',
+        wordBreak: rec ? getComputedStyle(rec).wordBreak : '',
+      };
+    });
+
+    expect(state.text).toBe(`%67 ${recommendationLabel}`);
+    expect(state.parsedSvgCount).toBe(0);
+    expect(state.overflowWrap).toBe('anywhere');
+    expect(state.wordBreak).toBe('break-word');
+    expect(widgetErrors(log)).toEqual([]);
+  });
+}
 
 test('rating bar chart filters from keyboard without changing badge or summary totals', async ({ page }) => {
   const ratingCounts = [0, 0, 1, 2, 9];

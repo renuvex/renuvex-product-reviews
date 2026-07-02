@@ -322,6 +322,7 @@ describe('/api/public/settings', () => {
           enabled: true,
           summaryLayout: 'compact',
           reviewLayout: 'gallery',
+          recommendationLabel: 'müşteriler öneriyor',
           videoReviewsEnabled: true,
           unknownKey: 'drop-me',
         },
@@ -342,6 +343,7 @@ describe('/api/public/settings', () => {
     expect(response.status).toBe(200);
     expect(body.widgets.reviews.summaryLayout).toBe('compact');
     expect(body.widgets.reviews.reviewLayout).toBe('gallery');
+    expect(body.widgets.reviews.recommendationLabel).toBe('müşteriler öneriyor');
     expect(body.widgets.reviews.videoReviewsEnabled).toBe(false);
     expect(body.widgets.reviews.unknownKey).toBeUndefined();
     expect(body.widgets.badge.enabled).toBe(false);

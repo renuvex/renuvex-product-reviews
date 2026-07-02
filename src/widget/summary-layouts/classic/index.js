@@ -5,6 +5,7 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
+import { buildRecommendationBlock, getRecommendationPercent } from '../shared/recommendation.js';
 import { settingText } from '../../core/helpers.js';
 import { ensureStarSprite, starUseSvg } from '../../icons/star-sprite.js';
 import { CLASSIC_SUMMARY_CSS } from './styles.js';
@@ -39,8 +40,7 @@ export function render(opts) {
   var summary = document.createElement('div');
   summary.className = 'renuvex-pr-summary';
 
-  var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
-  var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
+  var recommendPct = getRecommendationPercent(ratingCounts, allCount);
 
   // Ortalama puan
   var avgBlock = document.createElement('div');
@@ -58,10 +58,7 @@ export function render(opts) {
 
   // Tavsiye yüzdesi (opsiyonel)
   if ((settings.showRecommendation !== false) && recommendPct > 0) {
-    var recBlock = document.createElement('div');
-    recBlock.className = 'renuvex-pr-summary-block renuvex-pr-summary-recommend';
-    recBlock.innerHTML = '<span class="renuvex-pr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
-    summary.appendChild(recBlock);
+    summary.appendChild(buildRecommendationBlock(settings, recommendPct));
   }
 
   // Bar chart

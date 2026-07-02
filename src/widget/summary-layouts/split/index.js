@@ -8,6 +8,7 @@
 import { buildBarChart } from '../shared/bar-chart.js';
 import { buildActionsBlock } from '../shared/actions-block.js';
 import { openWriteForm } from '../shared/write-action.js';
+import { buildRecommendationBlock, getRecommendationPercent } from '../shared/recommendation.js';
 import { settingText } from '../../core/helpers.js';
 import { ensureStarSprite, starUseSvg } from '../../icons/star-sprite.js';
 import { SPLIT_CSS } from './styles.js';
@@ -95,11 +96,8 @@ export function render(opts) {
   // showRecommendation:false veya recommendPct:0 ise visibility:hidden ile gizlenir
   // ama height KORUNUR. Element DOM'dan çıkarılırsa sol kolon küçülür → bar chart kayar (BUG).
   // Görünmez + yer kaplayan element sol kolonun boyutunu her zaman sabit tutar.
-  var recommendCount = (ratingCounts[3] || 0) + (ratingCounts[4] || 0);
-  var recommendPct = allCount > 0 ? Math.round((recommendCount / allCount) * 100) : 0;
-  var rec = document.createElement('div');
-  rec.className = 'renuvex-pr-summary-block renuvex-pr-summary-recommend';
-  rec.innerHTML = '<span class="renuvex-pr-recommend-pct">%' + recommendPct + '</span> bu ürünü tavsiye ediyor';
+  var recommendPct = getRecommendationPercent(ratingCounts, allCount);
+  var rec = buildRecommendationBlock(settings, recommendPct);
   var hideRec = (settings.showRecommendation === false) || (recommendPct === 0);
   if (hideRec) { rec.classList.add('renuvex-pr-split-rec-hidden'); }
   left.appendChild(rec);

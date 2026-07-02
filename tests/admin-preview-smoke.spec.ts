@@ -52,6 +52,7 @@ test('admin widget schema stays aligned with summary and review layout registrie
   const reviewLayoutField = fields.find((field) => field.key === 'reviewLayout');
   const thumbnailSizeField = fields.find((field) => field.key === 'thumbnailSize');
   const recommendationField = fields.find((field) => field.key === 'showRecommendation');
+  const recommendationLabelField = fields.find((field) => field.key === 'recommendationLabel');
   const barFillField = fields.find((field) => field.key === 'barFillColor');
   const richSnippetsField = fields.find((field) => field.key === 'richSnippetsEnabled');
   const textGroup = reviewsWidget?.settings.find((group) => group.title === 'Metin');
@@ -72,6 +73,13 @@ test('admin widget schema stays aligned with summary and review layout registrie
 
   expect(thumbnailSizeField?.showWhen).toEqual({ layoutKey: 'reviewLayout', supports: 'thumbnailSize' });
   expect(recommendationField?.showWhen).toEqual({ layoutKey: 'summaryLayout', supports: 'recommendation' });
+  expect(recommendationLabelField).toEqual(expect.objectContaining({
+    type: 'text',
+    label: 'Tavsiye Yüzdesi Metni',
+    default: 'bu ürünü tavsiye ediyor',
+    maxLength: 40,
+    showWhen: { layoutKey: 'summaryLayout', supports: 'recommendation' },
+  }));
   expect(barFillField?.showWhen).toEqual({ layoutKey: 'summaryLayout', supports: 'barChart' });
   expect(richSnippetsField).toEqual(expect.objectContaining({
     type: 'toggle',

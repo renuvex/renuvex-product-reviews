@@ -71,11 +71,22 @@ describe('layout rendering safety + CSS invariants', () => {
     // Guards the Bug_Compact_Count_Label_HTML_Injection class: untrusted text must
     // go through textContent. innerHTML stays for controlled markup only (sprite
     // SVG + numbers). See pagination.js which documents the "never innerHTML" rule.
-    const FORBIDDEN = /\.innerHTML\s*=\s*[^;]*\b(r\.author|r\.title|r\.comment|r\.merchantReply|countLabel)\b/;
-    const files = [...LAYOUT_INDEX_FILES, path.join(SUMMARY_DIR, 'shared', 'bar-chart.js')];
+    const FORBIDDEN = /\.innerHTML\s*=\s*[^;]*\b(r\.author|r\.title|r\.comment|r\.merchantReply|countLabel|recommendationLabel)\b/;
+    const files = [
+      ...LAYOUT_INDEX_FILES,
+      path.join(SUMMARY_DIR, 'shared', 'bar-chart.js'),
+      path.join(SUMMARY_DIR, 'shared', 'recommendation.js'),
+    ];
     for (const file of files) {
       expect(FORBIDDEN.test(read(file)), `${file} interpolates untrusted text into innerHTML`).toBe(false);
     }
+  });
+
+  test('recommendation text has long-word wrapping protection', () => {
+    const css = read(path.join(SUMMARY_DIR, 'shared', 'summary-base.js'));
+    expect(css).toMatch(/\.renuvex-pr-summary-recommend\{[^}]*max-width:\s*100%/);
+    expect(css).toMatch(/\.renuvex-pr-summary-recommend\{[^}]*overflow-wrap:\s*anywhere/);
+    expect(css).toMatch(/\.renuvex-pr-summary-recommend\{[^}]*word-break:\s*break-word/);
   });
 
   test('bar chart keeps zero-review bars non-interactive', () => {
