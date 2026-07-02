@@ -51,6 +51,7 @@ export function createWizardState(opts) {
     videoUpload: null,
     videoSubmitted: false,
     videoEnabled: opts.videoEnabled === true,
+    videoCapabilityStatus: opts.videoCapabilityStatus || (opts.videoEnabled === true ? 'enabled' : 'unavailable'),
     videoUnavailableReason: opts.videoUnavailableReason || null,
     fingerprints: [], // Persistence için: 'name_size' formatında parmak izleri
     productId: opts.productId || '',

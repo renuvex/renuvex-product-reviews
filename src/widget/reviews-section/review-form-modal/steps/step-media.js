@@ -86,6 +86,11 @@ export function createStepMedia(state, opts) {
     return state.get().videoUpload || null;
   }
 
+  function currentVideoCapabilityStatus() {
+    var snapshot = state.get();
+    return snapshot.videoCapabilityStatus || (snapshot.videoEnabled ? 'enabled' : 'unavailable');
+  }
+
   function beginVideoAttempt() {
     activeVideoAttemptId += 1;
     return activeVideoAttemptId;
@@ -227,15 +232,21 @@ export function createStepMedia(state, opts) {
     var photosFull = photoCount() >= MAX_PHOTOS;
     var videoSelected = !!currentVideo();
     var hasMedia = photosSelected || videoSelected;
+    var capabilityStatus = currentVideoCapabilityStatus();
+    var videoPending = capabilityStatus === 'pending';
+    var videoUnavailable = capabilityStatus === 'unavailable';
     photoButton.hidden = hasMedia;
-    videoButton.hidden = hasMedia;
+    videoButton.hidden = hasMedia || videoUnavailable;
     photoButton.disabled = videoSelected || photosFull;
-    videoButton.disabled = photosSelected || videoSelected;
+    videoButton.disabled = photosSelected || videoSelected || videoPending;
+    if (videoPending && !hasMedia) videoButton.setAttribute('aria-busy', 'true');
+    else videoButton.removeAttribute('aria-busy');
     mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--has-media', hasMedia);
     mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--photo-selected', photosSelected);
     mediaCard.classList.toggle('renuvex-pr-fwizard-media-card--video-selected', videoSelected);
     photoButton.classList.toggle('renuvex-pr-fwizard-media-action--active', photosSelected);
     videoButton.classList.toggle('renuvex-pr-fwizard-media-action--active', videoSelected);
+    videoButton.classList.toggle('renuvex-pr-fwizard-media-action--pending', videoPending && !hasMedia);
   }
 
   function updateVideoState(patch) {

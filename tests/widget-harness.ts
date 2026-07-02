@@ -39,6 +39,7 @@ export type SmokeOptions = {
     reason?: string | null;
     status?: number;
     abort?: Parameters<Route['abort']>[0];
+    delayMs?: number;
   };
   badgeSettings?: Record<string, unknown>;
   listingOffsetTop?: number;
@@ -334,6 +335,9 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
   await routeThemeLazySync(page);
   await routeWidgetApi(page, '/api/public/upload/video/capability**', async (route) => {
     const configured = options.videoCapability;
+    if (configured?.delayMs) {
+      await new Promise((resolve) => setTimeout(resolve, configured.delayMs));
+    }
     if (configured?.abort) {
       await route.abort(configured.abort);
       return;

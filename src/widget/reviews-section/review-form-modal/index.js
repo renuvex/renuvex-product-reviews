@@ -23,13 +23,26 @@ import {
 // CSS is now injected into the wizard's shadow root by createWizardShell.open()
 // — see modal-shell.js. No head-level <style> injection is needed.
 
+function shouldRenderMediaStep(snapshot) {
+  return !!(
+    snapshot &&
+    snapshot.videoEnabled === true &&
+    snapshot.videoCapabilityStatus !== 'unavailable'
+  );
+}
+
+function stepRenderKey(stepNum, snapshot) {
+  if (stepNum === 2) return shouldRenderMediaStep(snapshot) ? '2:media' : '2:photos';
+  return String(stepNum);
+}
+
 // stepOpts: step-specific callback'ler (validity, success).
 function renderStep(stepNum, state, stepOpts) {
   stepOpts = stepOpts || {};
   if (stepNum === 1) return createStepRating(state, {
     canNavigate: stepOpts.canNavigate,
   });
-  if (stepNum === 2 && state.get().videoEnabled) return createStepMedia(state, {
+  if (stepNum === 2 && shouldRenderMediaStep(state.get())) return createStepMedia(state, {
     canNavigate: stepOpts.canNavigate,
     blobMap: stepOpts.blobMap,
     urlToFinger: stepOpts.urlToFinger,
@@ -72,6 +85,7 @@ function buildThanksScreen() {
 export function openReviewFormModal(opts) {
   opts = opts || {};
   ensurePendingVideoCancelDelivery();
+  var closed = false;
 
   var state = createWizardState({
     productId: opts.productId,
@@ -79,6 +93,7 @@ export function openReviewFormModal(opts) {
     videoEnabled: typeof opts.videoEnabled === 'boolean'
       ? opts.videoEnabled
       : currentSettings && currentSettings.videoReviewsEnabled === true,
+    videoCapabilityStatus: opts.videoCapabilityStatus,
     videoUnavailableReason: opts.videoUnavailableReason || null,
   });
 
@@ -122,6 +137,7 @@ export function openReviewFormModal(opts) {
     returnFocusElement: opts.returnFocusElement || null,
     openedByKeyboard: typeof opts.openedByKeyboard === 'boolean' ? opts.openedByKeyboard : null,
     onClose: function () {
+      closed = true;
       window.removeEventListener('popstate', onPopState);
       // Manual close (X / ESC): neutralize the pushed history entry via the shared
       // modal-history module. It uses replaceState (no popstate side-effect on a
@@ -332,9 +348,12 @@ export function openReviewFormModal(opts) {
 
   // State değişimlerinde yeniden çiz (sadece step değişince)
   var lastStep = state.get().currentStep;
+  var lastRenderKey = stepRenderKey(lastStep, state.get());
   var unsubscribeState = state.onChange(function (s) {
-    if (s.currentStep !== lastStep) {
+    var nextRenderKey = stepRenderKey(s.currentStep, s);
+    if (s.currentStep !== lastStep || nextRenderKey !== lastRenderKey) {
       lastStep = s.currentStep;
+      lastRenderKey = nextRenderKey;
       rerenderStep();
     } else {
       // Step değişmediyse ama veri değiştiyse (foto vb.) footer'ı güncelle
@@ -354,5 +373,14 @@ export function openReviewFormModal(opts) {
 
   return {
     close: shell.close,
+    setVideoCapability: function (capability) {
+      if (closed) return;
+      var enabled = !!(capability && capability.enabled === true);
+      state.set({
+        videoEnabled: enabled,
+        videoCapabilityStatus: enabled ? 'enabled' : 'unavailable',
+        videoUnavailableReason: capability && capability.reason ? capability.reason : null,
+      });
+    },
   };
 }

@@ -27,6 +27,11 @@ source_files:
 
 # Project Log
 
+## 2026-07-02 - fix | Make review wizard video capability non-blocking
+- Changed the storefront `Yorum Yap` CTA contract so the review wizard opens immediately instead of waiting for the no-store video capability probe.
+- If cached settings enable video, Step 2 starts with `Video Ekle` pending/disabled until capability resolves; proven capability failures fall back to photo-only, while admin-disabled video skips the probe entirely.
+- This keeps Mux/session/quota work behind an enabled video action and avoids first-interaction latency after mobile browser resume or cold network wake-up.
+
 ## 2026-07-02 - fix | Harden offline SVG icon sizing fallback
 - Fixed an offline refresh / partial-load path where sprite-based rating stars could render huge if widget CSS was missing or delayed.
 - Star and generic icon use-site SVG output now carries intrinsic `1em` fallback dimensions plus `focusable="false"`; normal CSS preset sizing remains the source of truth when styles load.

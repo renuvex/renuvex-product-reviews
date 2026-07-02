@@ -6,7 +6,7 @@ import { openReviewFormModal } from '../../reviews-section/review-form-modal/ind
 import { fetchReviewVideoCapability } from '../../reviews-section/review-form-modal/media/video-capability.js';
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 
-var openPromise = null;
+var activeModal = null;
 
 function videoEnabledFromSettings() {
   return currentSettings && currentSettings.videoReviewsEnabled === true;
@@ -21,55 +21,51 @@ function fallbackCapabilityAfterRequestError(error) {
   return { enabled: false, reason: 'capability_unavailable' };
 }
 
-function setButtonBusy(button) {
-  if (!button) return function () {};
-  var wasDisabled = button.disabled;
-  var previousBusy = button.getAttribute('aria-busy');
-  button.disabled = true;
-  button.setAttribute('aria-busy', 'true');
-  return function () {
-    button.disabled = wasDisabled;
-    if (previousBusy === null) button.removeAttribute('aria-busy');
-    else button.setAttribute('aria-busy', previousBusy);
-  };
-}
-
-async function resolveCapabilityAndOpen(triggerButton, openedByKeyboard) {
-  var capability;
-  if (typeof window !== 'undefined' && window.__ikasPreviewMode) {
-    capability = {
-      enabled: videoEnabledFromSettings(),
-      reason: null,
-    };
-  } else {
-    try {
-      capability = await fetchReviewVideoCapability();
-    } catch (error) {
-      capability = fallbackCapabilityAfterRequestError(error);
-    }
-  }
-
-  openReviewFormModal({
+function openModal(triggerButton, openedByKeyboard, settingsVideoEnabled, initialCapabilityStatus) {
+  var modal = openReviewFormModal({
     productId: currentProductId || '',
     productName: currentProductName || '',
-    videoEnabled: capability.enabled,
-    videoUnavailableReason: capability.reason,
+    videoEnabled: settingsVideoEnabled,
+    videoCapabilityStatus: initialCapabilityStatus,
+    videoUnavailableReason: null,
     returnFocusElement: triggerButton,
     openedByKeyboard: openedByKeyboard,
+    onClose: function () {
+      if (activeModal === modal) activeModal = null;
+    },
   });
+  activeModal = modal;
+  return modal;
+}
+
+function resolveCapabilityForModal(modal) {
+  fetchReviewVideoCapability()
+    .then(function (capability) {
+      if (activeModal === modal && modal && modal.setVideoCapability) {
+        modal.setVideoCapability(capability);
+      }
+    })
+    .catch(function (error) {
+      if (activeModal === modal && modal && modal.setVideoCapability) {
+        modal.setVideoCapability(fallbackCapabilityAfterRequestError(error));
+      }
+    });
 }
 
 export function openWriteForm(event) {
+  if (activeModal) return activeModal;
+
   var button = event && event.currentTarget && event.currentTarget.tagName === 'BUTTON'
     ? event.currentTarget
     : null;
-  var restoreButton = setButtonBusy(button);
+  var settingsVideoEnabled = videoEnabledFromSettings();
+  var isPreview = typeof window !== 'undefined' && window.__ikasPreviewMode;
+  var initialCapabilityStatus = settingsVideoEnabled
+    ? (isPreview ? 'enabled' : 'pending')
+    : 'unavailable';
 
-  if (!openPromise) {
-    openPromise = resolveCapabilityAndOpen(button, wasLastInputKeyboard()).finally(function () {
-      openPromise = null;
-    });
-  }
+  var modal = openModal(button, wasLastInputKeyboard(), settingsVideoEnabled, initialCapabilityStatus);
 
-  return openPromise.finally(restoreButton);
+  if (settingsVideoEnabled && !isPreview) resolveCapabilityForModal(modal);
+  return modal;
 }

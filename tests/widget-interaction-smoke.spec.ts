@@ -152,6 +152,16 @@ async function visibleCountInOverlay(page: Page, overlaySelector: string, select
   }, { overlaySelector, selector });
 }
 
+async function attrInOverlay(page: Page, overlaySelector: string, selector: string, attr: string) {
+  return page.evaluate(({ overlaySelector, selector, attr }) => {
+    const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
+      .map((host) => (host as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot)
+      .filter((candidate): candidate is ShadowRoot => !!candidate)
+      .find((candidate) => !!candidate.querySelector(overlaySelector));
+    return root?.querySelector(selector)?.getAttribute(attr) || null;
+  }, { overlaySelector, selector, attr });
+}
+
 async function countNestedInOverlay(page: Page, overlaySelector: string, selector: string, nestedSelector: string) {
   return page.evaluate(({ overlaySelector, selector, nestedSelector }) => {
     const root = Array.from(document.querySelectorAll('[data-renuvex-shadow-overlay]'))
@@ -720,6 +730,75 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
     images: [uploadedUrl],
   });
   expect((submittedBodies[0].images as string[]).every((url) => !url.startsWith('blob:'))).toBe(true);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('review CTA opens the wizard before video capability resolves', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { videoReviewsEnabled: true },
+    videoCapability: { enabled: true, delayMs: 2000 },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(
+    () => hasOverlay(page, '.renuvex-pr-fwizard-overlay'),
+    { timeout: 600 },
+  ).toBe(true);
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
+  await expect.poll(() => visibleCountInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action')).toBe(2);
+  expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(1)')).toBe(false);
+  expect(await isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)')).toBe(true);
+  expect(await attrInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)', 'aria-busy')).toBe('true');
+
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)');
+  expect(log.urls.some((url) => url.includes('/api/public/upload/video/initiate'))).toBe(false);
+
+  await expect.poll(
+    () => isOverlayControlDisabled(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)'),
+    { timeout: 3500 },
+  ).toBe(false);
+  expect(await attrInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-media-action:nth-child(2)', 'aria-busy')).toBeNull();
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('admin-disabled video skips capability and keeps the photo-only wizard', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { videoReviewsEnabled: false },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-star:nth-child(5)');
+
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-photos')).toBe(true);
+  expect(log.urls.some((url) => url.includes('/api/public/upload/video/capability'))).toBe(false);
+  expect(widgetErrors(log)).toEqual([]);
+});
+
+test('late video capability result is ignored after the wizard closes', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: { videoReviewsEnabled: true },
+    videoCapability: { enabled: true, delayMs: 600 },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-write-btn');
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(true);
+  await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close');
+
+  await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
+  await page.waitForTimeout(800);
+  expect(await hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 
