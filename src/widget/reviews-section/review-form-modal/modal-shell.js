@@ -9,7 +9,7 @@
 import { wasLastInputKeyboard } from '../../shared/input-modality.js';
 import { iconUseNode, registerSpriteRoot, unregisterSpriteRoot } from '../../icons/star-sprite.js';
 import { UI_CLOSE } from '../../icons/index.js';
-import { createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../../core/shadow.js';
+import { appendGatedShadowOverlay, createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../../core/shadow.js';
 import { BASE_RESET_CSS } from '../../shared/base-reset.js';
 import { lockBodyScroll, restoreBodyScroll } from '../../core/body-scroll-lock.js';
 import { getReturnFocusElement, restoreFocus, trapFocus } from '../../shared/focus-trap.js';
@@ -139,7 +139,7 @@ export function createWizardShell(opts) {
     // :active press dip), not just the tap-highlight reset HOST_RESET_CSS carries.
     shadow = createOverlayShadowHost();
     injectShadowStyles(shadow.root, HOST_RESET_CSS + BASE_RESET_CSS + FWIZARD_CSS);
-    shadow.root.appendChild(overlay);
+    appendGatedShadowOverlay(shadow.root, overlay);
     registerSpriteRoot(shadow.root);
     lockBodyScroll();
     // Fade-in için bir tick bekle (DOM ekleme sonrası class transition tetiklensin)

@@ -27,6 +27,10 @@ source_files:
 
 # Project Log
 
+## 2026-07-02 - fix | Gate shadow content in offline partial-load states
+- Added a shared Shadow DOM style gate so review section content and body-level overlays stay hidden if their shadow stylesheet is missing or not applied during offline refresh / partial-load snapshots.
+- Updated [[Bug_Offline_Refresh_Unstyled_SVG_Star]] and [[Render_Output_Contract]]: future shadow surfaces must use `getOrCreateShadowContent()` or `appendGatedShadowOverlay()` instead of appending raw visible content directly.
+
 ## 2026-07-02 - fix | Harden offline media thumbnail fallback
 - Expanded the offline/partial-load fallback hardening from SVG icons to review media thumbnails.
 - `createMediaThumbnail()` now separates source-quality dimensions used for Cloudinary/Mux transforms from small HTML display fallback dimensions used when CSS is missing or delayed.

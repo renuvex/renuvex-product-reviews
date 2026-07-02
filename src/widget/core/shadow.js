@@ -26,7 +26,9 @@
 // blue tap flash again — the light<->shadow asymmetry called out in ADR_0021.
 export var HOST_RESET_CSS =
   ':host{display:block;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:inherit;color:inherit;line-height:inherit;font-size:inherit;letter-spacing:inherit;text-align:start;}' +
-  ':host *,:host *::before,:host *::after{box-sizing:border-box;}';
+  ':host *,:host *::before,:host *::after{box-sizing:border-box;}' +
+  ':host [data-renuvex-shadow-content]{display:block!important;visibility:visible!important;}' +
+  ':host [data-renuvex-shadow-gated-overlay]{display:flex!important;visibility:visible!important;}';
 
 // Attach (or reuse) an open shadow root on an existing light-DOM host element.
 // The host element stays in light DOM so external references (badge scroll-to,
@@ -47,6 +49,28 @@ export function injectShadowStyles(root, css) {
     root.appendChild(el);
   }
   el.textContent = css || '';
+}
+
+// Fail-quiet style gate for partial-load/offline states. Shadow content is
+// hidden by inline fallback until HOST_RESET_CSS is present in the same shadow
+// root. This prevents raw/native HTML from showing if CSS is missing.
+export function gateShadowContent(el, kind) {
+  if (!el) return null;
+  if (kind === 'overlay') {
+    el.setAttribute('data-renuvex-shadow-gated-overlay', '');
+  } else {
+    el.setAttribute('data-renuvex-shadow-content', '');
+  }
+  el.style.display = 'none';
+  el.style.visibility = 'hidden';
+  return el;
+}
+
+export function appendGatedShadowOverlay(root, overlay) {
+  if (!root || !overlay) return null;
+  gateShadowContent(overlay, 'overlay');
+  root.appendChild(overlay);
+  return overlay;
 }
 
 // Create a body-level light-DOM host carrying its own shadow root, for overlays
@@ -78,9 +102,10 @@ export function getActiveElementWithin(root) {
 export function getOrCreateShadowContent(root) {
   if (!root) return null;
   var el = root.querySelector('[data-renuvex-shadow-content]');
-  if (el) return el;
-  el = document.createElement('div');
-  el.setAttribute('data-renuvex-shadow-content', '');
-  root.appendChild(el);
+  if (!el) {
+    el = document.createElement('div');
+    root.appendChild(el);
+  }
+  gateShadowContent(el, 'content');
   return el;
 }

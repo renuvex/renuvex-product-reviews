@@ -21,7 +21,7 @@ import { currentSettings } from '../core/state.js';
 import {
   RENUVEX_PR_SETTINGS_UPDATED_PREVIEW,
 } from '../core/namespace.js';
-import { createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../core/shadow.js';
+import { appendGatedShadowOverlay, createOverlayShadowHost, injectShadowStyles, HOST_RESET_CSS } from '../core/shadow.js';
 import { CLASSIC_CSS } from './styles.js';
 import { BASE_RESET_CSS } from '../shared/base-reset.js';
 import { registerSpriteRoot, unregisterSpriteRoot, iconUseNode } from '../icons/star-sprite.js';
@@ -672,7 +672,7 @@ export function openReviewModal(r, clickedUrl, allReviews, options) {
   // modal CSS rules (from CLASSIC_CSS) are injected into this shadow root.
   shadow = createOverlayShadowHost();
   injectShadowStyles(shadow.root, HOST_RESET_CSS + BASE_RESET_CSS + CLASSIC_CSS);
-  shadow.root.appendChild(overlay);
+  appendGatedShadowOverlay(shadow.root, overlay);
   // Mirror the icon sprite so star/icon <use> refs resolve inside this shadow.
   registerSpriteRoot(shadow.root);
   // Focus the dialog container (role=dialog) itself, NOT the first control, so opening

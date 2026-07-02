@@ -782,9 +782,91 @@ for (const layoutCase of LAYOUT_MATRIX) {
       expect(await hasInReviewsShadow(page, '.renuvex-pr-title')).toBe(false);
     }
 
+    const styleGate = await page.evaluate(() => {
+      const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+      const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+      const container = slot?.querySelector('#renuvex-reviews');
+      const root = container?.shadowRoot || null;
+      const content = root?.querySelector<HTMLElement>('[data-renuvex-shadow-content]');
+      const style = root?.querySelector('style[data-renuvex-shadow-style]');
+      if (!content || !style) throw new Error('Missing shadow content or style gate style');
+      const before = getComputedStyle(content);
+      const styledDisplay = before.display;
+      const styledVisibility = before.visibility;
+      style.remove();
+      const after = getComputedStyle(content);
+      const unstyledDisplay = after.display;
+      const unstyledVisibility = after.visibility;
+      return {
+        attr: content.hasAttribute('data-renuvex-shadow-content'),
+        inlineDisplay: content.style.display,
+        inlineVisibility: content.style.visibility,
+        styledDisplay,
+        styledVisibility,
+        unstyledDisplay,
+        unstyledVisibility,
+      };
+    });
+
+    expect(styleGate.attr).toBe(true);
+    expect(styleGate.inlineDisplay).toBe('none');
+    expect(styleGate.inlineVisibility).toBe('hidden');
+    expect(styleGate.styledDisplay).not.toBe('none');
+    expect(styleGate.styledVisibility).toBe('visible');
+    expect(styleGate.unstyledDisplay).toBe('none');
+    expect(styleGate.unstyledVisibility).toBe('hidden');
+
     expect(widgetErrors(log)).toEqual([]);
   });
 }
+
+test('lightbox overlay is hidden by the shadow style gate when its stylesheet is missing', async ({ page }) => {
+  const log = await setupWidgetRoutes(page, {
+    mountReviews: true,
+    reviewsSettings: {
+      summaryLayout: 'classic',
+      reviewLayout: 'card',
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+  await clickInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb');
+
+  const gate = await page.evaluate(() => {
+    const host = Array.from(document.querySelectorAll<HTMLElement>('[data-renuvex-shadow-overlay]'))
+      .find((candidate) => !!candidate.shadowRoot?.querySelector('.renuvex-pr-modal-overlay'));
+    const root = host?.shadowRoot || null;
+    const overlay = root?.querySelector<HTMLElement>('.renuvex-pr-modal-overlay');
+    const style = root?.querySelector('style[data-renuvex-shadow-style]');
+    if (!overlay || !style) throw new Error('Missing lightbox overlay or style gate style');
+    const before = getComputedStyle(overlay);
+    const styledDisplay = before.display;
+    const styledVisibility = before.visibility;
+    style.remove();
+    const after = getComputedStyle(overlay);
+    const unstyledDisplay = after.display;
+    const unstyledVisibility = after.visibility;
+    return {
+      attr: overlay.hasAttribute('data-renuvex-shadow-gated-overlay'),
+      inlineDisplay: overlay.style.display,
+      inlineVisibility: overlay.style.visibility,
+      styledDisplay,
+      styledVisibility,
+      unstyledDisplay,
+      unstyledVisibility,
+    };
+  });
+
+  expect(gate.attr).toBe(true);
+  expect(gate.inlineDisplay).toBe('none');
+  expect(gate.inlineVisibility).toBe('hidden');
+  expect(gate.styledDisplay).toBe('flex');
+  expect(gate.styledVisibility).toBe('visible');
+  expect(gate.unstyledDisplay).toBe('none');
+  expect(gate.unstyledVisibility).toBe('hidden');
+  expect(widgetErrors(log)).toEqual([]);
+});
 
 for (const emptyCase of [
   { name: 'default CTA', reviewsSettings: {}, ctaText: 'Yorum Yap' },

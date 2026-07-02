@@ -21,6 +21,7 @@ related:
   - "[[ADR_0019_Icon_Sprite_Rendering]]"
   - "[[Competitor_Pricing_And_Plans]]"
 source_files:
+  - "src/widget/core/shadow.js"
   - "src/widget/core/helpers.js"
   - "src/widget/core/badge.js"
   - "src/widget/icons/star-sprite.js"
@@ -62,6 +63,12 @@ Required because ikas gives no stable mount point/slot ([[ADR_0018_Widget_Owners
 ## Styling
 - **Class-first.** Color/layout/sizing via classes + component-scope CSS variables (`--renuvex-pr-badge-icon-size`, `--renuvex-pr-review-star-color`). Inline `style` only for genuinely per-instance dynamic values.
 - Star wrapper layout lives in `.renuvex-pr-stars` / `.renuvex-pr-stars-partial` classes, not inline.
+
+## Shadow content style gate
+- Every user-visible Shadow DOM surface must fail quiet if its shadow stylesheet is missing or not applied. Do not append raw visible review/modal content directly to a shadow root.
+- Review section content must live under `[data-renuvex-shadow-content]`, created through `getOrCreateShadowContent()` in [shadow.js](src/widget/core/shadow.js). The helper hides the wrapper by inline fallback; `HOST_RESET_CSS` reveals it only when the shadow stylesheet exists in that root.
+- Body-level overlays such as the lightbox and review-form wizard must be appended through `appendGatedShadowOverlay()`. The helper hides raw overlay DOM by inline fallback; `HOST_RESET_CSS` reveals overlays with their intended flex display only when styles are present.
+- This contract is not a loading skeleton. It is a degraded-state guard for offline refresh / partial-load / missing-style snapshots: shoppers should see either the styled widget or the quiet reserved shell, never native gray controls or raw unstyled widget DOM.
 
 ## Accessibility
 - Decorative star rows: `aria-hidden="true"`; the **container** carries the name via sr-only text + `aria-labelledby` (translation-friendly, preferred) or `role="img"`+`aria-label` where there is no nearby text.

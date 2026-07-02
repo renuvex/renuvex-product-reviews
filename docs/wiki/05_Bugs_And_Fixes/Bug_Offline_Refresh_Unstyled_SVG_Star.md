@@ -13,18 +13,24 @@ tags:
   - offline
   - cls
   - sprite
+  - shadow-dom
 related:
   - "[[Bug_Icon_Sprite_Inner_Dimension_Strip]]"
   - "[[Bug_Icon_Use_Node_Blank_Glyphs]]"
   - "[[ADR_0019_Icon_Sprite_Rendering]]"
   - "[[Render_Output_Contract]]"
 source_files:
+  - "src/widget/core/shadow.js"
   - "src/widget/icons/star-sprite.js"
   - "src/widget/reviews-section/media-thumbnail.js"
+  - "src/widget/reviews-section/render.js"
+  - "src/widget/reviews-section/review-modal.js"
+  - "src/widget/reviews-section/review-form-modal/modal-shell.js"
   - "src/widget/review-layouts/card/index.js"
   - "src/widget/review-layouts/list/index.js"
   - "src/widget/review-layouts/gallery/index.js"
   - "src/widget/reviews-section/render/media-gallery.js"
+  - "tests/unit/widget-shadow-style-gate.test.ts"
   - "tests/unit/widget-icon-sprite.test.ts"
   - "tests/unit/widget-media-thumbnail.test.ts"
   - "tests/widget-runtime-smoke.spec.ts"
@@ -41,6 +47,8 @@ Android Chrome offline refresh / partial-load states could show widget-owned pri
 - review media thumbnails and media-gallery video posters could render near their source quality dimensions instead of the visible thumbnail dimensions.
 
 This is a degraded-state hardening bug, not a normal online styling bug. The widget is not expected to fully work offline, but partial markup must not expand enough to break the merchant page.
+
+Follow-up Android Chrome offline screenshots after the primitive fix showed that stars and thumbnails were now bounded, but the review section could still appear as raw unstyled HTML: stacked text, native gray buttons, and default browser flow. That proved the first fix was necessary but not sufficient; the remaining class was a Shadow DOM no-style visibility problem.
 
 ## Root Cause
 
@@ -64,6 +72,14 @@ The previous sprite fixes were still valid:
 
 This bug was a broader no-style sizing contract gap at shared render primitives.
 
+### Shadow content style gate
+
+The later screenshots showed a second contract gap: review content was appended into the shadow root as soon as data/rendering was ready, and `injectShadowStyles()` also appended a `<style data-renuvex-shadow-style>` into that root. In a normal online path the style is present, so the widget renders correctly.
+
+In offline refresh / partial-load snapshots, however, the browser can retain or run enough JavaScript/data to create DOM while the shadow CSS is missing or not applied. Since `[data-renuvex-shadow-content]` and overlay roots were visible by default, shoppers could see the raw DOM before the widget design contract existed.
+
+This is the third-party widget variant of FOUC: content is present without its component stylesheet. The correct behavior is fail-quiet: CSS-ready content is visible; CSS-missing content stays hidden inside the reserved shell.
+
 ## Fix
 
 - `starUseSvg('full'|'outline')` now emits `width="1em" height="1em" focusable="false"` on the outer SVG.
@@ -76,8 +92,16 @@ This bug was a broader no-style sizing contract gap at shared render primitives.
 - Review card media uses a 110x110 fallback.
 - List/gallery review media and portrait media-gallery tiles use a 110x147 fallback.
 - Existing source-quality constants stay unchanged, so styled retina quality is not reduced.
+- Shadow section content now uses a style gate:
+  - `getOrCreateShadowContent()` applies inline `display:none; visibility:hidden` fallback to `[data-renuvex-shadow-content]`.
+  - `HOST_RESET_CSS` reveals the wrapper with `display:block!important; visibility:visible!important` only when the shadow stylesheet is present.
+- Body-level overlay surfaces now use the same contract:
+  - lightbox and review-form wizard overlays are appended through `appendGatedShadowOverlay()`;
+  - they are hidden by inline fallback and revealed by `HOST_RESET_CSS` with `display:flex!important; visibility:visible!important`.
 
 CSS remains the primary sizing system during normal operation. Intrinsic SVG and image fallback dimensions exist only to keep degraded/offline/unstyled renders bounded until CSS is available.
+
+The style gate intentionally does not duplicate the whole widget stylesheet inline. If the shadow stylesheet is missing, the safer behavior is a quiet reserved shell or hidden overlay, not a partially styled storefront widget.
 
 ## Prevention
 
@@ -88,4 +112,6 @@ Do not pass CDN/source quality dimensions as HTML display fallback dimensions. N
 Regression coverage:
 - Unit tests pin `starUseSvg()` and generic icon fallback dimensions.
 - Unit tests pin image/video thumbnail source-vs-display dimension separation.
+- Unit tests pin the shadow style-gate contract and the `HOST_RESET_CSS` reveal rules.
 - Runtime smoke tests verify summary, review-row, and badge star SVGs carry the fallback attributes while the styled average star remains in the expected preset range.
+- Runtime smoke tests remove the shadow stylesheet after render and verify the review content and lightbox overlay hide instead of showing raw HTML.
