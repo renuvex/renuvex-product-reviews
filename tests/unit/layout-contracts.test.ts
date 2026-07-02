@@ -89,6 +89,17 @@ describe('layout rendering safety + CSS invariants', () => {
     expect(css).toMatch(/\.renuvex-pr-summary-recommend\{[^}]*word-break:\s*break-word/);
   });
 
+  test('merchant CTA and count labels have long-word wrapping protection', () => {
+    const controlsCss = read(path.join(WIDGET, 'reviews-section', 'styles', 'summary-controls.js'));
+    const summaryCss = read(path.join(SUMMARY_DIR, 'shared', 'summary-base.js'));
+    expect(controlsCss).toMatch(/\.renuvex-pr-write-btn\{[^}]*white-space:\s*normal/);
+    expect(controlsCss).toMatch(/\.renuvex-pr-write-btn\{[^}]*overflow-wrap:\s*anywhere/);
+    expect(controlsCss).toMatch(/\.renuvex-pr-write-btn\{[^}]*word-break:\s*break-word/);
+    expect(summaryCss).toMatch(/\.renuvex-pr-summary-count\{[^}]*max-width:\s*100%/);
+    expect(summaryCss).toMatch(/\.renuvex-pr-summary-count\{[^}]*overflow-wrap:\s*anywhere/);
+    expect(summaryCss).toMatch(/\.renuvex-pr-summary-count\{[^}]*word-break:\s*break-word/);
+  });
+
   test('bar chart keeps zero-review bars non-interactive', () => {
     const src = read(path.join(SUMMARY_DIR, 'shared', 'bar-chart.js'));
     expect(src, 'must gate interactivity on the review count').toMatch(/var clickable\s*=\s*cnt\s*>\s*0/);

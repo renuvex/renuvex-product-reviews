@@ -236,6 +236,36 @@ async function dimensionsInReviewsShadow(page: Page, selector: string): Promise<
   }, selector);
 }
 
+async function textBoxMetricsInReviewsShadow(page: Page, selector: string): Promise<{
+  text: string;
+  width: number;
+  clientWidth: number;
+  scrollWidth: number;
+  overflowWrap: string;
+  wordBreak: string;
+  whiteSpace: string;
+}> {
+  return page.evaluate((selector) => {
+    const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+    const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+    const container = slot?.querySelector('#renuvex-reviews');
+    const root = container?.shadowRoot || null;
+    const el = root?.querySelector(selector) as HTMLElement | null;
+    if (!el) throw new Error(`Missing text box: ${selector}`);
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return {
+      text: el.textContent?.trim() || '',
+      width: rect.width,
+      clientWidth: el.clientWidth,
+      scrollWidth: el.scrollWidth,
+      overflowWrap: style.overflowWrap,
+      wordBreak: style.wordBreak,
+      whiteSpace: style.whiteSpace,
+    };
+  }, selector);
+}
+
 async function controlMetricsInReviewsShadow(page: Page, selector: string): Promise<{
   fontSize: number;
   height: number;
@@ -1685,6 +1715,66 @@ for (const summaryLayout of ['classic', 'split', 'compact'] as const) {
     expect(state.parsedSvgCount).toBe(0);
     expect(state.overflowWrap).toBe('anywhere');
     expect(state.wordBreak).toBe('break-word');
+    expect(widgetErrors(log)).toEqual([]);
+  });
+}
+
+for (const summaryLayout of ['classic', 'split'] as const) {
+  test(`${summaryLayout} summary wraps long merchant CTA and count label text on mobile`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    const writeButtonText = 'MMMMMMMMMMMMMMMMMMMMMMMMM';
+    const countLabel = 'MMMMMMMMMMMMMMMMMMMM';
+    const log = await setupWidgetRoutes(page, {
+      mountReviews: true,
+      reviewsSettings: {
+        summaryLayout,
+        reviewLayout: 'card',
+        writeButtonText,
+        countLabel,
+      },
+      reviewsGetHandler: async (route) => {
+        const url = new URL(route.request().url());
+        const hasImages = url.searchParams.get('hasImages') === 'true';
+
+        if (hasImages) {
+          await fulfillJson(route, reviewsPayload([], {
+            allCount: 10000,
+            totalCount: 0,
+            ratingCounts: [0, 0, 0, 0, 10000],
+            avgRating: '5.0',
+          }));
+          return;
+        }
+
+        await fulfillJson(route, reviewsPayload([
+          { id: `long-text-${summaryLayout}`, rating: 5, title: 'Long text review' },
+        ], {
+          allCount: 10000,
+          totalCount: 10000,
+          ratingCounts: [0, 0, 0, 0, 10000],
+          avgRating: '5.0',
+        }));
+      },
+    });
+
+    await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+    await expect.poll(() => hasReviewsWidget(page)).toBe(true);
+    await expect.poll(() => textInReviewsShadow(page, '.renuvex-pr-summary-count')).toContain(countLabel);
+
+    const count = await textBoxMetricsInReviewsShadow(page, '.renuvex-pr-summary-count');
+    const button = await textBoxMetricsInReviewsShadow(page, '.renuvex-pr-write-btn');
+
+    expect(count.text).toBe(`10.000 ${countLabel}`);
+    expect(count.scrollWidth).toBeLessThanOrEqual(count.clientWidth + 1);
+    expect(count.overflowWrap).toBe('anywhere');
+    expect(count.wordBreak).toBe('break-word');
+    expect(count.whiteSpace).toBe('normal');
+
+    expect(button.text).toBe(writeButtonText);
+    expect(button.scrollWidth).toBeLessThanOrEqual(button.clientWidth + 1);
+    expect(button.overflowWrap).toBe('anywhere');
+    expect(button.wordBreak).toBe('break-word');
+    expect(button.whiteSpace).toBe('normal');
     expect(widgetErrors(log)).toEqual([]);
   });
 }

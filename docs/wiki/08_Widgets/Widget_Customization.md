@@ -15,6 +15,7 @@ source_files:
   - "src/widget/reviews-section/render/size-presets.js"
   - "src/widget/reviews-section/render/pagination.js"
   - "src/widget/reviews-section/styles/review-primitives.js"
+  - "src/widget/reviews-section/styles/summary-controls.js"
   - "src/widget/reviews-section/render/theme-vars.js"
   - "src/widget/reviews-section/video-playback.js"
   - "src/widget/reviews-section/styles/lightbox.js"
@@ -142,6 +143,8 @@ Future English/German support should add a string catalog, a locale source, and 
 
 The summary recommendation suffix (`%82 bu ürünü tavsiye ediyor`) is merchant-editable through `Metin > Tavsiye Yüzdesi Metni` (`recommendationLabel`, max 40 characters). The percentage remains system-generated from 4-star + 5-star approved review counts. Storefront rendering uses `summary-layouts/shared/recommendation.js`, inserts merchant copy as text (not `innerHTML`), trims whitespace back to `bu ürünü tavsiye ediyor`, and wraps long unbroken words with the shared recommendation CSS safe area.
 
+Merchant-controlled CTA/count copy also has a targeted long-word contract. `writeButtonText` (`Yorum Yap Butonu Metni`, max 25) and `countLabel` (`Yorum Sayısı Etiketi`, max 20) are still rendered as plain text and wrap long unbroken words in their own controls. Do not apply a global `overflow-wrap:anywhere` rule to every widget label: numeric columns, rating counts, fixed system labels, file names, and compact controls intentionally keep nowrap or ellipsis behavior.
+
 ## Removing / changing fields
 - **Removing a field**: just delete from `widgetDefs.ts`. `sanitizeSettings` filters unknown keys at read time, so old DB rows still work.
 - **Renaming a field**: harder — write a one-time migration to copy `oldKey` → `newKey` in JSON, or add a back-compat shim in `sanitizeSettings`.
@@ -187,6 +190,7 @@ The summary recommendation suffix (`%82 bu ürünü tavsiye ediyor`) is merchant
 - 2026-06-09: Added the `paginationMode` design select (Tasarım: `loadMore` | `numbered`) and a `Sayfalama` color group. The load-more and pagination color groups are `showWhen`-gated on `paginationMode`, so only the active mode's colors show in `Renkler`. Schema-driven end-to-end — `widget-settings.ts` (defaults/sanitize/validate) and `SettingsPanel` auto-pick the new fields with no code change. See [[Product_Review_Widget]].
 - 2026-06-06: Added nested `Metin > Yorum Formu` copy settings for review wizard step headings and photo subtitle. Settings traversal is recursive via `collectSettingFields(...)`; storefront copy renders as safe text with whitespace fallback and long-word wrapping.
 - 2026-07-02: Added `recommendationLabel` for the summary recommendation suffix. It is a flat widget setting, layout-gated to recommendation-capable summaries, limited to 40 characters, and rendered via the shared recommendation helper as safe text with long-word wrapping.
+- 2026-07-02: Hardened `writeButtonText` and classic/split `countLabel` against long unbroken merchant copy. The fix is selector-scoped (`.renuvex-pr-write-btn`, `.renuvex-pr-summary-count`) and intentionally does not globalize wrapping across numeric/fixed controls.
 - 2026-06-01: Review form wizard close (X) color was decoupled from `formPrimaryTextColor`; runtime derives close icon and hover colors from `formBgColor` with deterministic contrast helpers in `theme-vars.js`.
 - 2026-05-14: **Filter Icon Registry Clarified**: Replaced the filter `star` option with `funnel`, kept `star -> funnel` only as a filter-only legacy alias, and separated admin preview rendering by review vs filter registry.
 - 2026-05-12: **Icon Registries Simplified**: Filter icons reduced to 4 core choices; Review icons modernized with unified Phosphor weight. Existing legacy keys fall back safely via registry.
