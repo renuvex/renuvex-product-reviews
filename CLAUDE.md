@@ -203,6 +203,11 @@ export async function GET(request: NextRequest) {
 - Reject PRs that introduce raw GraphQL usage outside `graphql-requests.ts`.
 - Keep naming consistent with `ikas` brand and command patterns.
 
+## Test Organization
+- Widget tests are intentionally broad because storefront behavior spans Shadow DOM, SPA navigation, media upload, Mux playback, lazy hydration, and accessibility.
+- Do not keep appending unrelated scenarios to large smoke files. When adding a new behavior area, prefer a focused spec file and shared helpers.
+- Existing large smoke specs may be extended only when the new assertion belongs to the same scenario family.
+
 ## Widget Runtime Build Artifacts
 - `public/widget-runtime/build-manifest.json` is the canonical live output map for the current widget runtime build.
 - `scripts/build-widget.mjs` intentionally keeps old content-hashed `public/widget-runtime/runtime-*.js` and `public/widget-runtime/chunks/*.js` files for `RUNTIME_RETENTION_DAYS` so cached widget loaders do not 404 immediately after deploys.
