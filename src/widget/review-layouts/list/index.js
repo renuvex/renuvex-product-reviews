@@ -3,7 +3,13 @@
 // Fotoğraf yoksa orta kolon foto kolonunu kapsar (no-media modifier).
 // Mobile (<600px) dikey diziliş — styles.js'te tanımlı.
 
-import { starsHTML, formatDate, REVIEW_MEDIA_THUMB_WIDTH } from '../../core/helpers.js';
+import {
+  starsHTML,
+  formatDate,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_PORTRAIT_HEIGHT,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+  REVIEW_MEDIA_THUMB_WIDTH,
+} from '../../core/helpers.js';
 import { getTrustedReviewMedia } from '../../core/review-media.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { createMediaThumbnail } from '../../reviews-section/media-thumbnail.js';
@@ -95,8 +101,9 @@ export function render(r, allReviews) {
     trustedMedia.forEach(function(item) {
       var thumb = createMediaThumbnail(item, {
         sourceWidth: REVIEW_MEDIA_THUMB_WIDTH,
-        width: REVIEW_MEDIA_THUMB_WIDTH,
-        height: Math.round(REVIEW_MEDIA_THUMB_WIDTH * 4 / 3),
+        sourceHeight: Math.round(REVIEW_MEDIA_THUMB_WIDTH * 4 / 3),
+        displayWidth: REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+        displayHeight: REVIEW_MEDIA_DISPLAY_FALLBACK_PORTRAIT_HEIGHT,
         onOpen: function() { openReviewModal(r, item.url, allReviews); },
       });
       if (thumb) mediaCol.appendChild(thumb);

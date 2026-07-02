@@ -733,6 +733,16 @@ for (const layoutCase of LAYOUT_MATRIX) {
       const badgeStars = Array.from(document.querySelectorAll<SVGElement>('.renuvex-pr-rating-badge .renuvex-pr-star-svg'));
       const summaryAvgSvg = root?.querySelector<SVGElement>('.renuvex-pr-avg-star .renuvex-pr-star-svg') || null;
       const reviewStarSvg = root?.querySelector<SVGElement>('.renuvex-pr-review-stars .renuvex-pr-star-svg') || null;
+      const mediaAttrs = Array.from(root?.querySelectorAll<HTMLImageElement>([
+        'img.renuvex-pr-img',
+        '.renuvex-pr-review-list-media img',
+        '.renuvex-pr-review-gallery-media img',
+        'img.renuvex-pr-media-gallery-thumb',
+        '.renuvex-pr-media-gallery-thumb img',
+      ].join(',')) || []).map((img) => ({
+        width: img.getAttribute('width') || '',
+        height: img.getAttribute('height') || '',
+      }));
       const rect = (svg: SVGElement | null) => {
         if (!svg) return null;
         const box = svg.getBoundingClientRect();
@@ -741,6 +751,7 @@ for (const layoutCase of LAYOUT_MATRIX) {
       return {
         shadowStarAttrs: shadowStars.map(attrs),
         badgeStarAttrs: badgeStars.map(attrs),
+        mediaAttrs,
         summaryAvgRect: rect(summaryAvgSvg),
         reviewStarRect: rect(reviewStarSvg),
       };
@@ -750,6 +761,11 @@ for (const layoutCase of LAYOUT_MATRIX) {
     expect(iconContract.badgeStarAttrs.length).toBeGreaterThan(0);
     for (const attr of [...iconContract.shadowStarAttrs, ...iconContract.badgeStarAttrs]) {
       expect(attr).toEqual({ width: '1em', height: '1em', focusable: 'false' });
+    }
+    expect(iconContract.mediaAttrs.length).toBeGreaterThan(0);
+    for (const attr of iconContract.mediaAttrs) {
+      expect(['110']).toContain(attr.width);
+      expect(['110', '147']).toContain(attr.height);
     }
     if (iconContract.summaryAvgRect) {
       expect(iconContract.summaryAvgRect.width).toBeGreaterThanOrEqual(40);

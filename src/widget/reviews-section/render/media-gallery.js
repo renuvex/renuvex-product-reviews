@@ -9,7 +9,13 @@
 // not render (gallery off, media/photo filter active, or no media reviews). It does NOT
 // call render(); openReviewModal + wireLightboxTrigger are injected by the caller.
 
-import { REVIEW_MEDIA_THUMB_WIDTH, settingText } from '../../core/helpers.js';
+import {
+  REVIEW_MEDIA_DISPLAY_FALLBACK_PORTRAIT_HEIGHT,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+  REVIEW_MEDIA_THUMB_WIDTH,
+  settingText,
+} from '../../core/helpers.js';
 import { getFirstTrustedReviewMedia, getTrustedReviewMedia } from '../../core/review-media.js';
 import { iconUseNode } from '../../icons/star-sprite.js';
 import { UI_CARET_LEFT, UI_CARET_RIGHT } from '../../icons/index.js';
@@ -84,11 +90,13 @@ export function buildMediaGallery(opts) {
   mediaStrip.className = 'renuvex-pr-media-gallery-strip';
 
   // Backend cap=15 garantili; defansif iç sınır da 15.
-  // `<img>` width/height attribute'ları CSS `--renuvex-pr-media-gallery-thumb-aspect` ile uyumlu
-  // olmalı (card: 1/1, list/gallery: 3/4) — CLS rezervi tarayıcı tarafından doğru
-  // hesaplanır. width REVIEW_MEDIA_THUMB_WIDTH (300); height layout'a göre.
-  var stripWidth = REVIEW_MEDIA_THUMB_WIDTH;
-  var stripHeight = settings.reviewLayout === 'card' ? REVIEW_MEDIA_THUMB_WIDTH : Math.round(REVIEW_MEDIA_THUMB_WIDTH * 4 / 3);
+  // Source size controls CDN/Mux quality; display fallback controls no-style
+  // intrinsic dimensions. These are intentionally separate contracts.
+  var stripSourceWidth = REVIEW_MEDIA_THUMB_WIDTH;
+  var stripSourceHeight = settings.reviewLayout === 'card' ? REVIEW_MEDIA_THUMB_WIDTH : Math.round(REVIEW_MEDIA_THUMB_WIDTH * 4 / 3);
+  var stripDisplayHeight = settings.reviewLayout === 'card'
+    ? REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT
+    : REVIEW_MEDIA_DISPLAY_FALLBACK_PORTRAIT_HEIGHT;
   var thumbCount = 0;
   galleryReviews.forEach(function (r) {
     if (thumbCount >= 15) return;
@@ -96,9 +104,10 @@ export function buildMediaGallery(opts) {
     if (!firstMedia) return;
     var thumb = createMediaThumbnail(firstMedia, {
       className: 'renuvex-pr-media-gallery-thumb',
-      sourceWidth: REVIEW_MEDIA_THUMB_WIDTH,
-      width: stripWidth,
-      height: stripHeight,
+      sourceWidth: stripSourceWidth,
+      sourceHeight: stripSourceHeight,
+      displayWidth: REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+      displayHeight: stripDisplayHeight,
       loading: thumbCount < 3 ? 'eager' : 'lazy',
       onOpen: function () { openReviewModal(r, firstMedia.url, galleryReviews, { source: 'mediaGallery' }); },
     });

@@ -356,6 +356,11 @@ export var REVIEW_MEDIA_THUMB_WIDTH = 300;  // media gallery + card/list thumbna
 export var GALLERY_TILE_WIDTH = 600;        // gallery masonry tile (200-400 px display, retina yedeği)
 export var LIGHTBOX_MINI_THUMB_WIDTH = 200; // lightbox altı mini görsel şeridi (60-80 px display)
 export var LIGHTBOX_MAIN_WIDTH = 1200;      // lightbox ana görsel + preload (default)
+// CSS eksik/gecikmişse tarayıcının kullanacağı intrinsic display fallback.
+// Bunlar CDN transform kalite genişlikleri değildir; source* ile karıştırılmamalı.
+export var REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH = 110;
+export var REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT = 110;
+export var REVIEW_MEDIA_DISPLAY_FALLBACK_PORTRAIT_HEIGHT = 147;
 
 export function optimizeImageUrl(url, width) {
   if (!url || url.indexOf('res.cloudinary.com') === -1) return url;

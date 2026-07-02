@@ -6,7 +6,13 @@
 // Mobile'da da aynı split korunur — foto asla metnin üstüne çıkmaz.
 // Masonry için CSS columns parent'a (#renuvex-reviews-widget) :has() ile uygulanır.
 
-import { starsHTML, formatDate, GALLERY_TILE_WIDTH } from '../../core/helpers.js';
+import {
+  starsHTML,
+  formatDate,
+  GALLERY_TILE_WIDTH,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_PORTRAIT_HEIGHT,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+} from '../../core/helpers.js';
 import { getFirstTrustedReviewMedia } from '../../core/review-media.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { createMediaThumbnail } from '../../reviews-section/media-thumbnail.js';
@@ -90,8 +96,9 @@ export function render(r, allReviews) {
     mediaWrap.className = 'renuvex-pr-review-gallery-media';
     var thumb = createMediaThumbnail(firstMedia, {
       sourceWidth: GALLERY_TILE_WIDTH,
-      width: GALLERY_TILE_WIDTH,
-      height: Math.round(GALLERY_TILE_WIDTH * 4 / 3),
+      sourceHeight: Math.round(GALLERY_TILE_WIDTH * 4 / 3),
+      displayWidth: REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+      displayHeight: REVIEW_MEDIA_DISPLAY_FALLBACK_PORTRAIT_HEIGHT,
       onOpen: function() { openReviewModal(r, firstMedia.url, allReviews); },
     });
     if (thumb) mediaWrap.appendChild(thumb);

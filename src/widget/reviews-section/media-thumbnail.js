@@ -1,4 +1,10 @@
-import { buildResponsiveImgAttrs, hideOnImageError } from '../core/helpers.js';
+import {
+  buildResponsiveImgAttrs,
+  hideOnImageError,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+  REVIEW_MEDIA_THUMB_WIDTH,
+} from '../core/helpers.js';
 import {
   mediaPreviewUrl,
   muxPosterSrcSet,
@@ -8,11 +14,28 @@ import { iconUseNode } from '../icons/star-sprite.js';
 import { PLAY_ICON } from '../icons/index.js';
 import { wireLightboxTrigger } from './lightbox-trigger.js';
 
+function positiveInt(value) {
+  var number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.round(number) : 0;
+}
+
+function firstPositive() {
+  for (var i = 0; i < arguments.length; i++) {
+    var value = positiveInt(arguments[i]);
+    if (value) return value;
+  }
+  return 0;
+}
+
 export function createMediaThumbnail(item, opts) {
   opts = opts || {};
+  var sourceWidth = firstPositive(opts.sourceWidth, REVIEW_MEDIA_THUMB_WIDTH);
+  var sourceHeight = firstPositive(opts.sourceHeight, sourceWidth);
+  var displayWidth = firstPositive(opts.displayWidth, REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH);
+  var displayHeight = firstPositive(opts.displayHeight, REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT);
   var videoPosterOpts = item && item.type === 'video' ? {
-    width: opts.width || opts.sourceWidth || 0,
-    height: opts.height || opts.width || opts.sourceWidth || 0,
+    width: sourceWidth,
+    height: sourceHeight,
     fit: 'crop',
   } : null;
   var previewUrl = videoPosterOpts
@@ -21,15 +44,15 @@ export function createMediaThumbnail(item, opts) {
   if (!previewUrl) return null;
   var img = document.createElement('img');
   var attrs = item.type === 'image'
-    ? buildResponsiveImgAttrs(previewUrl, opts.sourceWidth)
+    ? buildResponsiveImgAttrs(previewUrl, sourceWidth)
     : { src: previewUrl, srcset: muxPosterSrcSet(item.posterUrl, videoPosterOpts) };
   img.src = attrs.src;
   if (attrs.srcset) img.srcset = attrs.srcset;
   img.loading = opts.loading || 'lazy';
   img.decoding = 'async';
   if (item.type === 'image') img.setAttribute('data-renuvex-img-url', item.url);
-  if (opts.width) img.width = opts.width;
-  if (opts.height) img.height = opts.height;
+  img.width = displayWidth;
+  img.height = displayHeight;
   img.alt = '';
   hideOnImageError(img);
 

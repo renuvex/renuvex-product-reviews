@@ -3,7 +3,13 @@
 // DOM order: stars/date -> title -> author -> body -> photos -> merchant reply.
 // Card visual CSS lives in styles.js; shared review primitives stay in the base stylesheet.
 
-import { starsHTML, formatDate, REVIEW_MEDIA_THUMB_WIDTH } from '../../core/helpers.js';
+import {
+  starsHTML,
+  formatDate,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT,
+  REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+  REVIEW_MEDIA_THUMB_WIDTH,
+} from '../../core/helpers.js';
 import { getTrustedReviewMedia } from '../../core/review-media.js';
 import { openReviewModal } from '../../reviews-section/review-modal.js';
 import { createMediaThumbnail } from '../../reviews-section/media-thumbnail.js';
@@ -78,8 +84,9 @@ export function render(r, allReviews) {
       var thumb = createMediaThumbnail(item, {
         className: 'renuvex-pr-img',
         sourceWidth: REVIEW_MEDIA_THUMB_WIDTH,
-        width: REVIEW_MEDIA_THUMB_WIDTH,
-        height: REVIEW_MEDIA_THUMB_WIDTH,
+        sourceHeight: REVIEW_MEDIA_THUMB_WIDTH,
+        displayWidth: REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
+        displayHeight: REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT,
         onOpen: function() { openReviewModal(r, item.url, allReviews); },
       });
       if (thumb) gallery.appendChild(thumb);

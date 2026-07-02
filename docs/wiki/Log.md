@@ -27,6 +27,11 @@ source_files:
 
 # Project Log
 
+## 2026-07-02 - fix | Harden offline media thumbnail fallback
+- Expanded the offline/partial-load fallback hardening from SVG icons to review media thumbnails.
+- `createMediaThumbnail()` now separates source-quality dimensions used for Cloudinary/Mux transforms from small HTML display fallback dimensions used when CSS is missing or delayed.
+- Card thumbnails now carry 110x110 fallback dimensions; list/gallery and media-gallery portrait thumbnails carry 110x147 fallback dimensions. Normal CSS preset sizing remains the source of truth when styles load.
+
 ## 2026-07-02 - fix | Make review wizard video capability non-blocking
 - Changed the storefront `Yorum Yap` CTA contract so the review wizard opens immediately instead of waiting for the no-store video capability probe.
 - If cached settings enable video, Step 2 starts with `Video Ekle` pending/disabled until capability resolves; proven capability failures fall back to photo-only, while admin-disabled video skips the probe entirely.

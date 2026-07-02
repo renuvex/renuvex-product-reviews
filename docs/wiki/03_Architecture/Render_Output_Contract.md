@@ -51,6 +51,14 @@ Required because ikas gives no stable mount point/slot ([[ADR_0018_Widget_Owners
 - Every widget-owned use-site SVG must carry an intrinsic size fallback. Shared helpers emit `width="1em" height="1em" focusable="false"` unless the trusted source SVG already defines explicit dimensions. This prevents offline refresh / partial-load / no-style states from letting an SVG expand to viewport-sized layout. Do not hand-roll raw `<svg><use></use></svg>` markup.
 - **No empty `style=""`** attributes; size/color come from CSS variables/classes, emit `style` only when a value exists.
 
+## Media thumbnail intrinsic sizing
+- Widget-owned review thumbnails must be produced through `createMediaThumbnail()`; do not hand-roll raw `<img>` / poster markup in layouts.
+- Keep source quality and display fallback dimensions separate:
+  - `sourceWidth` / `sourceHeight` are for Cloudinary/Mux transforms and responsive `srcset`;
+  - `displayWidth` / `displayHeight` are the small HTML `width` / `height` fallback used when CSS is missing or delayed.
+- Never use source quality constants such as `REVIEW_MEDIA_THUMB_WIDTH` or `GALLERY_TILE_WIDTH` directly as HTML display fallback dimensions. The current fallback contract is 110x110 for square card media and 110x147 for portrait list/gallery/media-gallery tiles.
+- Normal CSS remains the source of truth for final styled size; intrinsic attributes only bound degraded/offline/partial-load rendering and help reserve a stable aspect ratio.
+
 ## Styling
 - **Class-first.** Color/layout/sizing via classes + component-scope CSS variables (`--renuvex-pr-badge-icon-size`, `--renuvex-pr-review-star-color`). Inline `style` only for genuinely per-instance dynamic values.
 - Star wrapper layout lives in `.renuvex-pr-stars` / `.renuvex-pr-stars-partial` classes, not inline.
