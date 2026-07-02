@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-28
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-07-02
+last_verified: 2026-07-02
 confidence: high
 tags:
   - adr
@@ -191,8 +191,14 @@ Live cutover verification on 2026-06-28:
 - `https://widget.renuvex.app/__health` returned `{"ok":true,"service":"renuvex-widget-assets"}`.
 - `https://widget.renuvex.app/widget.js` and `/widget-runtime/runtime.js` returned `server: cloudflare`, CORS `*`, and `Cache-Control: public, max-age=0, must-revalidate`.
 - Hashed runtime/chunk assets returned `Cache-Control: public, max-age=31536000, immutable`.
-- `https://widget.renuvex.app/api/public/settings` returned `404`, so `/api/*` stayed fail-closed.
+- At the initial 2026-06-28 asset cutover, `https://widget.renuvex.app/api/public/settings` returned `404`, so `/api/*` stayed fail-closed before V2 settings read-cache rollout.
 - `pnpm measure:deployed-widget` passed against `MEASURE_WIDGET_ORIGIN=https://widget.renuvex.app` and `MEASURE_WIDGET_API_ORIGIN=https://app.renuvex.app`; measured widget API calls went to the backend origin and widget-error count stayed `0`.
+
+V2 settings read-cache live verification on 2026-07-02:
+
+- `GET https://widget.renuvex.app/api/public/settings?publicApiKey=<storeId>` returned `200` from Cloudflare.
+- A repeated request returned `X-Renuvex-Edge-Cache: HIT`.
+- The response includes `runtime.themeSyncDue`; `POST /api/public/storefront-theme/lazy-sync` remains on `app.renuvex.app` and is not proxied by the Worker.
 
 V2 source verification on 2026-06-28:
 

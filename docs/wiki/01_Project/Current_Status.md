@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-20
-last_verified: 2026-06-20
+updated: 2026-07-02
+last_verified: 2026-07-02
 confidence: high
 source_files: []
 tags:
@@ -21,7 +21,7 @@ related:
 # Current Status - Renuvex Product Reviews
 
 ## Current Phase
-Active development. Core image-review features are functional end-to-end. Provider-agnostic video review infrastructure, Mux upload/moderation contracts, storefront render, wizard flow, and the cross-browser media suite are implemented locally. Mux deploy, DB migration apply, webhook setup, Preview canary, production credential proof, and physical-device acceptance remain gated.
+Active development on the production test store. Core review, image, Mux video, moderation, storefront widget, Cloudflare Worker delivery, and public read-cache paths are implemented and live. The project is still pre-public-launch; remaining work is product polish, security hardening, operational smoke coverage, and future feature expansion rather than a pending Mux/Worker migration.
 
 ## Working Features
 - OAuth install flow for ikas merchants — code-signature validation, token exchange, JWT issuance, session cookie
@@ -42,6 +42,9 @@ Active development. Core image-review features are functional end-to-end. Provid
   - Product rating badge (small inline star+count)
   - Listing-page rating badges (auto-discovers product cards on collection/search pages; Storefront Events path now reads by canonical ikas product id)
   - Mutation observer for SPA-style theme navigation
+  - Route- and identity-aware review reset on SPA product transitions, so stale review cards clear into the existing reserved shell while the new product loads
+  - Below-the-fold listing/product-slider badge hydration through `IntersectionObserver`, while critical PDP surfaces stay eager
+  - Offline/partial-load hardening: shared icon/media fallbacks and Shadow DOM style gates prevent raw unstyled review surfaces from breaking the host page if CSS/runtime chunks are missing
 - Public review submission API:
   - Profanity filter (TR + EN)
   - IP-based rate limit (3 reviews / 10 min via Upstash Redis)
@@ -55,13 +58,19 @@ Active development. Core image-review features are functional end-to-end. Provid
   - Settings persistence in `WidgetSettings` (one row per `(storeId, widgetId)`)
 - Caching: public GETs use `s-maxage=60, stale-while-revalidate=300` at the edge
 - Daily maintenance cron (`/api/admin/daily-maintenance`, 03:00 UTC) plus monthly Cloudinary fallback cleanup (`/api/admin/cleanup-images`, day 1 04:00 UTC)
+- Cloudflare Worker delivery for `widget.renuvex.app` static assets plus V2 read-cache for `settings`, `ratings`, `ratings-by-slug`, and `reviews`; write/upload/video/lazy-sync paths stay on `app.renuvex.app`
+- Mux review-video upload, webhook/reconcile, admin signed preview, public Mux Player playback, quota cleanup, abandoned-upload cleanup, approve/reject/delete, and retry UX are live and covered by tests/manual canary evidence
+- Widget artifact budget gate: `pnpm budget:widget` enforces local bundle size/request-budget guardrails after `pnpm build:widget`
 - Theme variant build is not a reliable current gate: the stale `--theme=new-theme` alias is tracked as Phase 3 cleanup in [[ADR_0013_Modular_Widget_Loader_Architecture]].
 - Sentry observability on the panel (Node + Edge + browser): error capture, masked Session Replay, traces (prod 10%), server log ingestion, source map upload via Vercel-Sentry integration. PII auto-attach disabled to prevent ikas OAuth/JWT leakage. See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]].
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
 
-## In Progress
-- Video review migration: active local code uses Mux direct upload, Mux webhook dedup/audit, provider-neutral media jobs, admin signed playback, and public playback IDs after approval. Preview deployment, webhook creation/env write, Preview canary, production credential proof, and physical-device acceptance remain open. See [[Review_Video_Canary_Runbook]], [[Review_Video_Physical_Device_Acceptance_2026-06]], and [[ADR_0032_Review_Video_On_Mux]].
-- ADR_0013 Phase 3 source hardening is implemented: non-destructive StorefrontJSScript create/update lifecycle, daily script reconcile through daily maintenance, hashed runtime entry with stable shim, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]]. Post-deploy storefront/Sentry verification and deployed transfer-size measurement remain.
+## In Progress / Active Follow-Ups
+- Public launch security gate: Supabase RLS/default grants hardening remains open. Runtime DB access is server-side Prisma today, but public launch should still close the Supabase policy/grant audit.
+- Operational smoke gates: authenticated dashboard smoke and Sentry post-deploy health checks should be run after meaningful admin/runtime deploys.
+- Video operations: the Mux path is live and stable; periodic Mux asset reconciliation dry-run/reporting remains a deferred ops hardening item.
+- Product readiness gaps: real i18n/aria localization, unsupported-theme warning UI, and non-Ozy theme adapter coverage remain separate product/platform work.
+- ADR_0013 source hardening remains live: non-destructive StorefrontJSScript create/update lifecycle, daily script reconcile through daily maintenance, hashed runtime entry with stable shim, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]].
 
 ## Known Issues / Gaps
 - Structured-data injection exists in the widget runtime, but it is currently coupled to the rating badge/review-count path and still needs SEO validation and a clearer server/client strategy. See [[Structured_Data_And_Rich_Snippets]] and [[Yotpo_Style_Widget_Modular_Architecture]].
@@ -71,7 +80,7 @@ Active development. Core image-review features are functional end-to-end. Provid
 - No multi-language storefront UI yet. The widget is Turkish-first; source still has hardcoded Turkish visible text, `tr-TR` formatting, and Turkish accessibility labels. Scope: [[Roadmap]] and [[Open_Questions]].
 - Q&A widget (`qa` id in `WidgetDef`) is registered but implementation status unconfirmed — flag in [[Open_Questions]]
 - Carousel/popup widgets similar — registered IDs but implementation depth unknown without further read
-- Real-device video acceptance is not automated. CI covers Chromium, Firefox, WebKit, Pixel emulation, and iPhone WebKit emulation; physical iPhone Safari and Android Chrome remain release gates.
+- Real-device video acceptance is not fully automated. CI covers Chromium, Firefox, WebKit, Pixel emulation, iPhone WebKit emulation, and the Ubuntu GitHub Actions iPhone WebKit matrix; final public launch should still include manual iOS/Android spot checks for video and widget flows.
 - Current script injection relies on DB-tracked script ids because active MCP still does not expose `listStorefrontJSScript`; source intentionally avoids destructive cleanup while ikas docs/MCP disagree. See [[Ikas_Storefront_Script_Capabilities]].
 - Large new storefront surfaces should use the Phase 2 loader/module split pattern and must not be statically imported into the always-loaded runtime. See [[Yotpo_Style_Widget_Modular_Architecture]].
 - DOM-only listing badge fallback now resolves current slugs through `ProductSnapshot` before reading reviews by product id. If a snapshot is missing, the old slug query remains as a last-resort compatibility path; run `/api/admin/sync-products` to repair drift.
@@ -87,19 +96,20 @@ Active development. Core image-review features are functional end-to-end. Provid
 - [[ADR_0015_Canonical_Product_Identity]] — `(storeId, productId)` is the canonical review product identity; slug/name are display snapshots and slug reads are fallback-only
 
 ## Next Recommended Steps
-1. Verify product webhook registration/backfill on the dev store after deploy, then run `/api/admin/sync-products` once for existing merchants.
-2. After deploy, verify `/widget.js`, hashed runtime/chunk cache headers, `/api/admin/daily-maintenance`, `/api/admin/reconcile-storefront-scripts`, and dev-store PDP/category/search behavior; then re-measure deployed widget transfer size.
-3. After the structured-data deploy, re-run `pnpm verify:deployed-jsonld` and Google Rich Results Test on a public PDP with approved reviews.
-4. Implement review-request email flow (post-purchase delay + token-gated submit URL).
-5. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
-6. Add CSV import/export for reviews.
-7. Build a minimal analytics view in admin (counts, average rating trend).
-8. Consider tests for the public submission endpoint (highest blast-radius surface).
+1. Close Supabase RLS/default-grants public-launch hardening.
+2. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
+3. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
+4. Validate structured-data SEO on a public PDP with approved reviews.
+5. Implement review-request email flow (post-purchase delay + token-gated submit URL).
+6. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
+7. Add CSV import/export for reviews.
+8. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-06-20
+2026-07-02
 
 ## Change Log
+- 2026-07-02: Refreshed status after Mux and Cloudflare Worker migrations moved from gated/pending to live. Current open work is security/ops/product readiness rather than Mux deploy or Worker rollout.
 - 2026-06-14: Added dry-run-first Review Video V1 canary operations and a controlled activation/rollback runbook. No production merchant gate or global flag was enabled by this change.
 - 2026-06-14: Recorded provider-agnostic video implementation and the Phase 4 five-project Playwright media matrix. Provider details are superseded by [[ADR_0032_Review_Video_On_Mux]].
 - 2026-06-15: Corrected the production acceptance state from source/DB/provider evidence. Controlled provider uploads and cleanup completed; physical-device and 72-hour acceptance remain pending. Live settings showed the internal-store global gate effective before the pending-admin hardening deploy, so activation is held until the Production flag is disabled and re-verified.

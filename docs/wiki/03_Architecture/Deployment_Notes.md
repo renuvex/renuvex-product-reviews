@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-15
-last_verified: 2026-06-15
+updated: 2026-07-02
+last_verified: 2026-07-02
 confidence: high
 tags:
   - deployment
@@ -67,7 +67,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 
 ## Cloudflare Worker widget delivery
 - Live architecture: `widget.renuvex.app` serves storefront static widget assets through Cloudflare Worker Static Assets; `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash origin.
-- Worker V2 public-read proxying is live for `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. Source support for Worker-cached `GET /api/public/settings` is ready after the read/sync split, but it needs the normal rollout order: Vercel route deploy first, then Worker asset/allowlist deploy. Every write/upload/video/lazy-sync route stays on `app.renuvex.app`.
+- Worker V2 public-read proxying is live for `GET /api/public/settings`, `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. Settings is cacheable because the read route is pure and theme sync moved to `POST /api/public/storefront-theme/lazy-sync`. Every write/upload/video/lazy-sync route stays on `app.renuvex.app`.
 - Live Worker: `renuvex-widget-assets`.
 - Worker custom domain: `widget.renuvex.app -> renuvex-widget-assets`.
 - Cloudflare-created DNS record: read-only proxied `AAAA 100::` for `widget.renuvex.app`.
@@ -81,8 +81,12 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
   - `https://widget.renuvex.app/__health` returned `{"ok":true,"service":"renuvex-widget-assets"}`.
   - `https://widget.renuvex.app/widget.js` returned `server: cloudflare`, `Access-Control-Allow-Origin: *`, and `Cache-Control: public, max-age=0, must-revalidate`.
   - Hashed runtime/chunk assets returned `Cache-Control: public, max-age=31536000, immutable`.
-  - `https://widget.renuvex.app/api/public/settings` returned `404`, confirming the Worker remains fail-closed for public API paths.
+  - At this point `https://widget.renuvex.app/api/public/settings` returned `404`, confirming the initial Worker asset cutover kept public API paths fail-closed before V2 read-cache rollout.
   - `pnpm measure:deployed-widget` with `MEASURE_WIDGET_ORIGIN=https://widget.renuvex.app` and `MEASURE_WIDGET_API_ORIGIN=https://app.renuvex.app` passed four controlled scenarios with zero widget-error calls.
+- V2 settings read-cache verification on 2026-07-02:
+  - `https://widget.renuvex.app/api/public/settings?publicApiKey=<storeId>` returned `200` from Cloudflare.
+  - A repeated request returned `X-Renuvex-Edge-Cache: HIT`.
+  - The response includes `runtime.themeSyncDue`; lazy sync stays on `app.renuvex.app` through `POST /api/public/storefront-theme/lazy-sync`.
 
 ## Local development
 1. `pnpm install`
@@ -125,7 +129,8 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
-- 2026-06-28: Updated Cloudflare Worker V2 public-read cache rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. V2 is live for allowlisted ratings/reviews reads; `app.renuvex.app` remains backend/API/write origin.
+- 2026-07-02: Refreshed live Worker notes after verifying settings read-cache is now live on `widget.renuvex.app` with `MISS -> HIT`; lazy-sync and write/upload/video routes remain on `app.renuvex.app`.
+- 2026-06-28: Updated initial Cloudflare Worker V2 public-read cache rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. At that stage V2 was live for allowlisted ratings/reviews reads; settings joined the Worker read-cache after the later read/sync split.
 - 2026-06-28: Added Cloudflare Worker widget delivery rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. `widget.renuvex.app` becomes an asset-only target; `app.renuvex.app` remains backend/API.
 - 2026-06-21: Removed the legacy pre-custom-domain Vercel alias after verifying Vercel Production env and live storefront script tags use `app.renuvex.app` / `widget.renuvex.app`.
 - 2026-06-14: Promoted `app.renuvex.app` as the ikas app/admin/API origin and `widget.renuvex.app` as the storefront widget origin. Live storefront checks confirmed the custom widget domain; the old Vercel alias was kept only for a temporary compatibility window.

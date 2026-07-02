@@ -27,6 +27,10 @@ source_files:
 
 # Project Log
 
+## 2026-07-02 - docs | Refresh live status and deployment notes
+- Updated [[Current_Status]], [[Deployment_Notes]], and [[Hot_Context]] to remove stale Mux/Worker pending language.
+- Verified live `GET /api/public/settings` on `widget.renuvex.app` returns from Cloudflare and repeats with `X-Renuvex-Edge-Cache: HIT`; lazy-sync and write/upload/video paths remain on `app.renuvex.app`.
+
 ## 2026-07-02 - fix | Gate shadow content in offline partial-load states
 - Added a shared Shadow DOM style gate so review section content and body-level overlays stay hidden if their shadow stylesheet is missing or not applied during offline refresh / partial-load snapshots.
 - Updated [[Bug_Offline_Refresh_Unstyled_SVG_Star]] and [[Render_Output_Contract]]: future shadow surfaces must use `getOrCreateShadowContent()` or `appendGatedShadowOverlay()` instead of appending raw visible content directly.

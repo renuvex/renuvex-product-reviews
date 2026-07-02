@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-07-02
+last_verified: 2026-07-02
 confidence: high
 tags:
   - performance
@@ -113,7 +113,7 @@ Assets:
 | `/widget-runtime/runtime-*.js` | `public, max-age=31536000, immutable` |
 | `/widget-runtime/chunks/*.js` | `public, max-age=31536000, immutable` |
 
-V1 Worker delivery is live for static assets. V2 source adds a narrow public-read
+Worker delivery is live for static assets and V2 adds a narrow public-read
 proxy for only these GET endpoints:
 
 - `/api/public/settings`
@@ -210,11 +210,12 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - [[ADR_0027_Review_Media_Read_Model]]
 
 ## Change Log
+- 2026-07-02: Verified `GET /api/public/settings` is live on the Cloudflare Worker read-cache path with `MISS -> HIT`; settings joins ratings/ratings-by-slug/reviews as an allowlisted public read while lazy-sync and write/upload/video routes remain on `app.renuvex.app`.
 - 2026-07-01: Split storefront settings read from theme lazy sync. `GET /api/public/settings` is now a pure cacheable read with additive `runtime.themeSyncDue`; `POST /api/public/storefront-theme/lazy-sync` owns the rate-limited Vercel-side `after()` sync path. Worker V2 source can cache settings reads while lazy sync and all write/upload/video routes stay on `app.renuvex.app`.
 - 2026-06-29: Review widget first render no longer waits for the media-gallery read. Main review data renders first; the media gallery is scheduled afterward and hydrates through an append-only section update, so the summary, filters, write button, review list, and current focus are not rebuilt when the delayed media read returns.
 - 2026-06-29: Hardened Cloudflare Worker asset headers so conditional `304` responses preserve the same stable/immutable cache policy as `200` asset responses.
-- 2026-06-28: Cloudflare Worker V2 public-read cache is live for `ratings`, `ratings-by-slug`, and `reviews`. Settings/write/upload/video paths remain on `app.renuvex.app`.
-- 2026-06-28: Cloudflare Worker Static Assets is live for `widget.renuvex.app`; Worker V2 read-through caching is live for allowlisted public ratings/reviews reads and remains fail-closed for settings/write/upload/video paths.
+- 2026-06-28: Initial Cloudflare Worker V2 public-read cache went live for `ratings`, `ratings-by-slug`, and `reviews`; settings stayed on `app.renuvex.app` until the 2026-07-01 read/sync split and 2026-07-02 live verification.
+- 2026-06-28: Cloudflare Worker Static Assets went live for `widget.renuvex.app`; the initial Worker read-through cache allowed only public ratings/reviews reads and remained fail-closed for settings/write/upload/video paths until later V2 settings rollout.
 - 2026-06-24: Added `scripts/clean-widget-runtime-untracked.mjs` and npm wrappers to separate local untracked widget build leftovers from the committed seven-day runtime retention contract. The default command is dry-run; `--apply` deletes only untracked files outside the current manifest.
 - 2026-06-08: Public review-list exact `totalCount` / `totalPages` moved from raw `Review.count()` to `ProductReviewSummary` buckets, preserving response shape while removing the remaining aggregate scan from the public read path.
 - 2026-06-07: Public photo-review filtering moved from `Review.images` text matching to indexed `Review.hasImages`; normalized image rows live in `ReviewMedia`. See [[ADR_0027_Review_Media_Read_Model]].
