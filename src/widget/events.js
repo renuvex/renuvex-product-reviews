@@ -4,7 +4,7 @@
 // işleme artık core/storefront-context.js içindedir (ADR_0013). Bu dosyada
 // yalnızca IkasEvents'ten BAĞIMSIZ olan iki parça kalır:
 //   - attachModalBadgeListener: quick-view modal için son tıklanan ürün slug'ı
-//   - attachHistoryListener:    SPA navigasyonunda eski PDP badge/schema'yı temizler
+//   - attachHistoryListener:    SPA navigasyonunda eski PDP surfaces'lerini temizler
 
 import { setLastClickedSlug } from './core/state.js';
 import { extractSlug } from './core/helpers.js';
@@ -40,10 +40,25 @@ export function attachModalBadgeListener() {
 var historyPatched = false;
 var lastPathname = typeof location !== 'undefined' ? location.pathname : '';
 
-function cleanupStaleRatingBadge() {
+function cleanupStaleReviewSection() {
+  try {
+    var container = document.getElementById('renuvex-reviews');
+    var root = container && container.shadowRoot;
+    var content = root && root.querySelector('[data-renuvex-shadow-content]');
+    var widget = content && content.querySelector('#renuvex-reviews-widget');
+    if (!container || !content || !widget) return;
+
+    content.replaceChildren();
+    container.setAttribute('data-renuvex-transitioning', 'true');
+  } catch (_) {}
+}
+
+function cleanupStalePdpSurfaces() {
   try {
     if (location.pathname === lastPathname) return;
     lastPathname = location.pathname;
+
+    cleanupStaleReviewSection();
 
     if (typeof window.__renuvexPrCleanupPdpBadge === 'function') {
       window.__renuvexPrCleanupPdpBadge();
@@ -78,7 +93,7 @@ export function attachHistoryListener() {
     var origPush = history.pushState;
     history.pushState = function() {
       var ret = origPush.apply(this, arguments);
-      cleanupStaleRatingBadge();
+      cleanupStalePdpSurfaces();
       return ret;
     };
     history.pushState.__renuvexPrPatched = true;
@@ -87,7 +102,7 @@ export function attachHistoryListener() {
     var origReplace = history.replaceState;
     history.replaceState = function() {
       var ret = origReplace.apply(this, arguments);
-      cleanupStaleRatingBadge();
+      cleanupStalePdpSurfaces();
       return ret;
     };
     history.replaceState.__renuvexPrPatched = true;
@@ -95,6 +110,6 @@ export function attachHistoryListener() {
 
   // popstate/hashchange use the same named handler reference, so repeat
   // addEventListener calls are no-ops by the DOM spec — already idempotent.
-  window.addEventListener('popstate', cleanupStaleRatingBadge);
-  window.addEventListener('hashchange', cleanupStaleRatingBadge);
+  window.addEventListener('popstate', cleanupStalePdpSurfaces);
+  window.addEventListener('hashchange', cleanupStalePdpSurfaces);
 }

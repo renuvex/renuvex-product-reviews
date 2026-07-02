@@ -566,6 +566,90 @@ test('product transition clears rendered stale reviews while next reviews are pe
   expect(widgetErrors(log)).toEqual([]);
 });
 
+test('history route change clears rendered stale reviews before product event arrives', async ({ page }) => {
+  const oldReview = {
+    id: 'old-history-review',
+    rating: 5,
+    title: 'Old history review',
+    comment: 'Old product review should be cleared on route change before product event.',
+    author: 'Ada',
+    createdAt: '2026-06-05T00:00:00.000Z',
+    images: [],
+    merchantReply: null,
+    recommendation: true,
+  };
+  const newReview = {
+    id: 'new-history-review',
+    rating: 5,
+    title: 'New history review',
+    comment: 'New product review should render after the product event.',
+    author: 'Mert',
+    createdAt: '2026-06-06T00:00:00.000Z',
+    images: [],
+    merchantReply: null,
+    recommendation: true,
+  };
+
+  const log = await setupWidgetRoutes(page, {
+    badgeEnabled: true,
+    mountReviews: true,
+    ikasEvents: [
+      { type: 'PRODUCT_VIEW', data: { productDetail: { id: 'old-product', name: 'Old Product' } } },
+      { type: 'PAGE_VIEW', data: { pageType: 'PRODUCT' } },
+    ],
+    reviewsGetHandler: async (route) => {
+      const url = new URL(route.request().url());
+      const productId = url.searchParams.get('productId');
+      if (productId === 'old-product') {
+        await fulfillJson(route, reviewPayload([oldReview], { allCount: 1, totalCount: 1, mediaReviewCount: 0, photoReviewCount: 0 }));
+        return;
+      }
+      if (productId === 'new-product') {
+        await fulfillJson(route, reviewPayload([newReview], { allCount: 1, totalCount: 1, mediaReviewCount: 0, photoReviewCount: 0 }));
+        return;
+      }
+      await fulfillJson(route, reviewPayload([], { allCount: 0, totalCount: 0, mediaReviewCount: 0, photoReviewCount: 0 }));
+    },
+  });
+
+  await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
+  await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
+    productId: 'old-product',
+    reviewCards: 1,
+    transitioning: false,
+  });
+
+  await page.evaluate(() => {
+    window.history.pushState({}, '', '/new-product-route');
+  });
+
+  await expect.poll(() => reviewsWidgetState(page), { timeout: 1000 }).toMatchObject({
+    productId: '',
+    reviewCards: 0,
+    transitioning: true,
+  });
+  const routeTransitionState = await reviewsWidgetState(page);
+  expect(routeTransitionState.text).not.toContain('Old product review should be cleared on route change before product event.');
+
+  const emitted = await page.evaluate(() => {
+    const emit = (window as unknown as { __renuvexEmitIkasEvent?: (event: unknown) => void }).__renuvexEmitIkasEvent;
+    if (typeof emit !== 'function') return false;
+    emit({ type: 'PRODUCT_VIEW', data: { productDetail: { id: 'new-product', name: 'New Product' } } });
+    return true;
+  });
+  expect(emitted).toBe(true);
+
+  await expect.poll(() => reviewsWidgetState(page)).toMatchObject({
+    productId: 'new-product',
+    reviewCards: 1,
+    transitioning: false,
+  });
+  const finalState = await reviewsWidgetState(page);
+  expect(finalState.text).toContain('New product review should render after the product event.');
+  expect(finalState.text).not.toContain('Old product review should be cleared on route change before product event.');
+  expect(widgetErrors(log)).toEqual([]);
+});
+
 test('clean product PAGE_VIEW skips listing entry and side effects', async ({ page }) => {
   const log = await setupWidgetRoutes(page, { badgeEnabled: true, mountReviews: false });
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
