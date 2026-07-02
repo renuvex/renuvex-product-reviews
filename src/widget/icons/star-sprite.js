@@ -117,7 +117,11 @@ export function ensureStarSprite(iconPair) {
 
 export function starUseSvg(state) {
   var id = state === 'outline' ? STAR_SYMBOL_OUTLINE_ID : STAR_SYMBOL_FULL_ID;
-  return '<svg class="renuvex-pr-star-svg" viewBox="0 0 256 256" aria-hidden="true"><use href="#' + id + '"/></svg>';
+  return '<svg class="renuvex-pr-star-svg" viewBox="0 0 256 256" width="1em" height="1em" aria-hidden="true" focusable="false"><use href="#' + id + '"/></svg>';
+}
+
+export function svgUseSizeAttrs(width, height) {
+  return ' width="' + (width || '1em') + '" height="' + (height || '1em') + '"';
 }
 
 // ── Generic one-off icon (content-hashed id, injected once) ──────────────────
@@ -135,9 +139,8 @@ export function iconUseSvg(svgString, className) {
   var w = getAttr(svgString, 'width');
   var h = getAttr(svgString, 'height');
   var out = '<svg class="' + (className || 'renuvex-pr-icon-svg') + '" viewBox="' + vb + '"';
-  if (w) out += ' width="' + w + '"';
-  if (h) out += ' height="' + h + '"';
-  out += ' aria-hidden="true"><use href="#' + id + '"/></svg>';
+  out += svgUseSizeAttrs(w, h);
+  out += ' aria-hidden="true" focusable="false"><use href="#' + id + '"/></svg>';
   return out;
 }
 

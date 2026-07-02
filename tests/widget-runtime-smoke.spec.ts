@@ -689,6 +689,47 @@ for (const layoutCase of LAYOUT_MATRIX) {
     expect(await hasInReviewsShadow(page, '.renuvex-pr-media-gallery-section')).toBe(true);
     expect(await countInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb')).toBeGreaterThanOrEqual(1);
 
+    const iconContract = await page.evaluate(() => {
+      const anchor = document.querySelector('[data-renuvex-widget="reviews"]');
+      const slot = anchor?.querySelector('[data-renuvex-slot="product-reviews"]');
+      const container = slot?.querySelector('#renuvex-reviews');
+      const root = container?.shadowRoot || null;
+      const attrs = (svg: SVGElement) => ({
+        width: svg.getAttribute('width') || '',
+        height: svg.getAttribute('height') || '',
+        focusable: svg.getAttribute('focusable') || '',
+      });
+      const shadowStars = Array.from(root?.querySelectorAll<SVGElement>('.renuvex-pr-star-svg') || []);
+      const badgeStars = Array.from(document.querySelectorAll<SVGElement>('.renuvex-pr-rating-badge .renuvex-pr-star-svg'));
+      const summaryAvgSvg = root?.querySelector<SVGElement>('.renuvex-pr-avg-star .renuvex-pr-star-svg') || null;
+      const reviewStarSvg = root?.querySelector<SVGElement>('.renuvex-pr-review-stars .renuvex-pr-star-svg') || null;
+      const rect = (svg: SVGElement | null) => {
+        if (!svg) return null;
+        const box = svg.getBoundingClientRect();
+        return { width: box.width, height: box.height };
+      };
+      return {
+        shadowStarAttrs: shadowStars.map(attrs),
+        badgeStarAttrs: badgeStars.map(attrs),
+        summaryAvgRect: rect(summaryAvgSvg),
+        reviewStarRect: rect(reviewStarSvg),
+      };
+    });
+
+    expect(iconContract.shadowStarAttrs.length).toBeGreaterThan(0);
+    expect(iconContract.badgeStarAttrs.length).toBeGreaterThan(0);
+    for (const attr of [...iconContract.shadowStarAttrs, ...iconContract.badgeStarAttrs]) {
+      expect(attr).toEqual({ width: '1em', height: '1em', focusable: 'false' });
+    }
+    if (iconContract.summaryAvgRect) {
+      expect(iconContract.summaryAvgRect.width).toBeGreaterThanOrEqual(40);
+      expect(iconContract.summaryAvgRect.width).toBeLessThanOrEqual(90);
+      expect(iconContract.summaryAvgRect.height).toBeGreaterThanOrEqual(40);
+      expect(iconContract.summaryAvgRect.height).toBeLessThanOrEqual(90);
+    }
+    expect(iconContract.reviewStarRect?.width || 0).toBeGreaterThan(0);
+    expect(iconContract.reviewStarRect?.width || 0).toBeLessThanOrEqual(40);
+
     if (layoutCase.expectsTitle) {
       expect(await textInReviewsShadow(page, '.renuvex-pr-title')).toBe('Musteri Yorumlari');
     } else {

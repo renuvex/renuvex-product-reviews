@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-25
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-07-02
+last_verified: 2026-07-02
 confidence: high
 tags:
   - widget
@@ -48,6 +48,7 @@ Required because ikas gives no stable mount point/slot ([[ADR_0018_Widget_Owners
 ## Icons (stars and all widget icons)
 - **Single SVG `<symbol>` sprite** (`#renuvex-pr-icon-sprite`), referenced via `<use href="#renuvex-pr-sym-…">`. Never inline full `<path>` per use site ([[ADR_0019_Icon_Sprite_Rendering]] — measured 76 KB→~2 KB).
 - Read-only stars: `partialStarsHTML` (clip-path half-star) for averages/badges; `starsHTML`/`renderStarRow` for whole-star rows. Both call `ensureStarSprite` first.
+- Every widget-owned use-site SVG must carry an intrinsic size fallback. Shared helpers emit `width="1em" height="1em" focusable="false"` unless the trusted source SVG already defines explicit dimensions. This prevents offline refresh / partial-load / no-style states from letting an SVG expand to viewport-sized layout. Do not hand-roll raw `<svg><use></use></svg>` markup.
 - **No empty `style=""`** attributes; size/color come from CSS variables/classes, emit `style` only when a value exists.
 
 ## Styling

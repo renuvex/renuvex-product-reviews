@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { svgStringToSymbol, iconUseNode } from '../../src/widget/icons/star-sprite.js';
+import { svgStringToSymbol, iconUseNode, starUseSvg, svgUseSizeAttrs } from '../../src/widget/icons/star-sprite.js';
 import {
   FILTER_ICONS,
   ICONS,
@@ -100,6 +100,21 @@ describe('shared UI icons (Phosphor family)', () => {
 
   test('iconUseNode is SSR-safe (returns null without a DOM)', () => {
     expect(iconUseNode(UI_CLOSE)).toBeNull();
+  });
+});
+
+describe('sprite icon intrinsic size fallback', () => {
+  test('starUseSvg emits a safe intrinsic size for degraded/no-style renders', () => {
+    expect(starUseSvg('full')).toBe(
+      '<svg class="renuvex-pr-star-svg" viewBox="0 0 256 256" width="1em" height="1em" aria-hidden="true" focusable="false"><use href="#renuvex-pr-sym-star-full"/></svg>',
+    );
+    expect(starUseSvg('outline')).toContain('width="1em" height="1em"');
+    expect(starUseSvg('outline')).toContain('focusable="false"');
+  });
+
+  test('generic icon <use> output falls back to 1em only when source dimensions are missing', () => {
+    expect(svgUseSizeAttrs(null, null)).toBe(' width="1em" height="1em"');
+    expect(svgUseSizeAttrs('24', '32')).toBe(' width="24" height="32"');
   });
 });
 

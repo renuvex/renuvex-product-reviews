@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-05-24
-updated: 2026-05-29
-last_verified: 2026-05-29
+updated: 2026-07-02
+last_verified: 2026-07-02
 confidence: high
 tags:
   - adr
@@ -55,7 +55,7 @@ Competitor research: Loox uses an SVG **symbol sprite** (`<symbol>` defined once
 ### 1. Star geometry is delivered via an SVG symbol sprite
 A new module [src/widget/icons/star-sprite.js](src/widget/icons/star-sprite.js) exposes `ensureStarSprite(iconPair)` and `starUseSvg(state)`:
 - `ensureStarSprite` derives **two `<symbol>`s** (`#renuvex-pr-sym-star-full`, `#renuvex-pr-sym-star-outline`) from the active icon's existing `ICONS` SVG strings (regex `<svg…>`→`<symbol…>`, preserving `viewBox` + fill/stroke), parses them with `DOMParser` (`image/svg+xml`), and injects one hidden `<div id="renuvex-pr-icon-sprite">` into `document.body`. Idempotent and **keyed by the icon geometry**, so a live-preview icon swap replaces the symbols in place. Hidden via `position:absolute;width:0;height:0;overflow:hidden` (never `display:none`, which breaks `<use>` rendering).
-- `starUseSvg('full'|'outline')` returns `<svg class="renuvex-pr-star-svg" viewBox="0 0 256 256" aria-hidden="true"><use href="#…"/></svg>`.
+- `starUseSvg('full'|'outline')` returns `<svg class="renuvex-pr-star-svg" viewBox="0 0 256 256" width="1em" height="1em" aria-hidden="true" focusable="false"><use href="#…"/></svg>`.
 
 The read-only star renderers in [src/widget/core/helpers.js](src/widget/core/helpers.js) (`partialStarsHTML`, `starsHTML`) and [src/widget/icons/review-icons.js](src/widget/icons/review-icons.js) (`renderStarRow`) call `ensureStarSprite` at the top (so the symbol exists before the returned `<use>` markup is inserted — **correct-by-construction**, no race, no rollout gate) and emit `starUseSvg(...)` instead of the inline string. The `clip-path` half-star engine is unchanged: bg layer `<use href="#…outline">`, fg layer `<use href="#…full">` + `clip-path:inset(0 50% 0 0)` on the wrapper.
 
@@ -87,7 +87,7 @@ widget-owned icon is defined once as a `<symbol>` and referenced via `<use>`:
   close (`modal-shell.js`), wizard back arrow (`progress-bar.js`), photo
   upload/plus (`step-photos.js`). These give ~no DOM win (single instances) but
   unify the mechanism; `iconUseSvg` preserves each icon's
-  `viewBox`/`width`/`height`/stroke so rendering is byte-identical.
+  `viewBox`/`width`/`height`/stroke so rendering is byte-identical when source dimensions exist, and falls back to `width="1em" height="1em"` when they do not.
 - **Sole exception:** the widget-*disabled* empty-state placeholder
   (`render.js`) stays inline — it renders only when the merchant turns the
   widget OFF (never customer-facing) and carries a one-off inline `style`.
@@ -112,6 +112,7 @@ only the two star symbols and never clobbers the one-off icon symbols.
 - Star geometry now depends on `#renuvex-pr-icon-sprite` existing in the DOM. `ensureStarSprite` runs synchronously inside every read-only renderer before its `<use>` markup is inserted, so the dependency is satisfied by construction; there is no flag/gate to retire.
 - Theme-agnostic: the sprite lives in shared `icons/` core, not in any theme adapter or per-theme bundle. **Future themes beyond ozy inherit it automatically** — a new theme implements only DOM mount/selectors (see [[ADR_0017_Badge_Architecture]] / current-adapter), never icon rendering.
 - Generic one-off symbol ids include source length plus two independent hash passes, and injected symbols carry a source key. The icon set is still trusted/local, but this avoids silent reuse if the helper is later called with a different SVG that collides with an existing id.
+- Offline/partial-load hardening: sprite geometry may render before all widget CSS is available, so every use-site SVG emitted by the shared helpers carries an intrinsic size fallback. CSS still owns the final preset sizes, but no-style states are bounded instead of growing to viewport-sized SVGs.
 - SEO unaffected: the `AggregateRating` JSON-LD in [structured-data/jsonld.js](src/widget/structured-data/jsonld.js) is independent of the visual icon DOM.
 - **Amends [[ADR_0017_Badge_Architecture]]** for the PDP badge: its "every badge gets `role=figure` + `aria-label`", static badge id, and inline `justify-content` are superseded here (link role, `aria-labelledby` sr-only, `data-renuvex-align`). The listing badge's `role="figure"` and `pointer-events:none` card-link behavior are unchanged.
 - ADR_0020 later removed the legacy namespace aliases; active sprite, badge, and slot markers are Renuvex-only.

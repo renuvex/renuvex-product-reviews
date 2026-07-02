@@ -27,6 +27,11 @@ source_files:
 
 # Project Log
 
+## 2026-07-02 - fix | Harden offline SVG icon sizing fallback
+- Fixed an offline refresh / partial-load path where sprite-based rating stars could render huge if widget CSS was missing or delayed.
+- Star and generic icon use-site SVG output now carries intrinsic `1em` fallback dimensions plus `focusable="false"`; normal CSS preset sizing remains the source of truth when styles load.
+- Added [[Bug_Offline_Refresh_Unstyled_SVG_Star]] and updated [[Render_Output_Contract]] / [[ADR_0019_Icon_Sprite_Rendering]] so future widget icons use the shared helpers instead of raw `<svg><use>` output.
+
 ## 2026-07-02 - decision | Close AWS CDN cutover as active issue
 - Closed the AWS CloudFront/S3 storefront widget CDN question as an active migration track for the current MVP.
 - Evidence remains in [[Storefront_CDN_Performance_Benchmark]] and [[Storefront_CDN_Cost_Model]]: AWS was slightly faster in the local Turkey canary, but the gain does not justify the higher cost and operational cutover work now.
