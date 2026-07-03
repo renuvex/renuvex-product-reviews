@@ -11,7 +11,7 @@ script lifecycle reconciliation for ikas `StorefrontJSScript` records.
 - Prisma and Supabase Postgres
 - ikas Admin GraphQL with generated clients
 - Tailwind CSS and shadcn/ui
-- Cloudinary for review images
+- AWS S3 and CloudFront for review images
 - Upstash Redis for public endpoint rate limits
 - Sentry for server/widget error visibility
 
