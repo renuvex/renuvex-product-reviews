@@ -136,7 +136,7 @@ Verified on 2026-07-03 with read-only commands:
 | Existing CloudFront distributions | Only canary distribution `E2IGB2R73IV6SE` |
 | Existing CloudFormation stacks in `eu-central-1` | Only `renuvex-widget-cdn-canary` |
 | Candidate review-image buckets | `renuvex-review-images-989086371563-eu-central-1` and `renuvex-review-images-prod-989086371563-eu-central-1` returned S3 `404` on `head-bucket` |
-| ACM certificates in `us-east-1` | `renuvex-review-images` can list certificates; `media.renuvex.app` certificate is now `PENDING_VALIDATION` after the approved request below |
+| ACM certificates in `us-east-1` | `media.renuvex.app` certificate is `ISSUED` after Cloudflare DNS validation |
 | `media.renuvex.app` public DNS | no public record from `1.1.1.1` or `8.8.8.8`; local resolver returned `192.168.1.1`, so local DNS is not proof of public configuration |
 
 The target review-image resource contract is recorded in [[ADR_0034_AWS_Review_Image_Migration]]. No AWS resource creation, DNS change, env write, deploy, provider deletion, or git push is approved by this preflight.
@@ -257,6 +257,18 @@ ACM custom-domain certificate step:
 - No Cloudflare DNS, CloudFront alias, Vercel env, DB, Cloudinary, provider
   activation, or production traffic changes were made in this certificate
   request step.
+
+ACM DNS validation result:
+
+- The validation CNAME was added in Cloudflare DNS after approval.
+- Public DNS resolvers `1.1.1.1` and `8.8.8.8` resolve
+  `_e919e0e40f3d814f0810f6fa8fd87910.media.renuvex.app` to
+  `_b93788e2f31d953784a45bf3926af915.jkddzztszm.acm-validations.aws`.
+- ACM status is now `ISSUED`; domain validation status is `SUCCESS`.
+- Issued at: `2026-07-03T13:06:44.215000+03:00`.
+- In use by: empty; the certificate is still not attached to CloudFront.
+- No CloudFront alias, media CNAME, Vercel env, DB, Cloudinary, provider
+  activation, or production traffic changes were made in this validation step.
 
 Review-image local template contracts:
 
