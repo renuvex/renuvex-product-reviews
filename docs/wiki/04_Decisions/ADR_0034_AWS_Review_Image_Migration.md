@@ -92,7 +92,7 @@ Draft. This page records verified Cloudinary state and the image-provider bounda
 
 ## Implementation Progress
 
-Implementation work started on branch `codex/aws-review-images-migration` on 2026-07-03. The branch is pushed as draft PR #2, with GitHub Quality Gate, media PR gates, and Vercel preview checks passing on the latest pushed commit. AWS review-image infrastructure, ACM validation, CloudFront aliasing, the final `media.renuvex.app` DNS record, runtime IAM/OIDC, Vercel AWS runtime env additions, and the additive Prisma production migration were created or applied only through separate approved mutation gates. Production app deploy, Cloudflare Worker production deploy, Cloudinary teardown, provider activation, and provider deletes are still not approved by this ADR alone.
+Implementation work started on branch `codex/aws-review-images-migration` on 2026-07-03. PR #2 was squash-merged to `main`, the production app and Cloudflare Worker were deployed through separate approved gates, and Vercel production now sets `REVIEW_IMAGE_PROVIDER=aws_s3`. AWS review-image infrastructure, ACM validation, CloudFront aliasing, the final `media.renuvex.app` DNS record, runtime IAM/OIDC, Vercel AWS runtime env additions, and the additive Prisma production migration were created or applied only through separate approved mutation gates. Cloudinary teardown and provider deletes are still not approved by this ADR alone.
 
 Implemented so far on the migration branch:
 
@@ -105,11 +105,34 @@ Implemented so far on the migration branch:
 - Pending and orphan cleanup extensions for AWS image object families, including DB used-set evidence, S3 family scanning, quarantine reuse, and idempotent family delete.
 - Review-image CloudFormation source template and local template validation script.
 - Live AWS review-image stack, ACM certificate, CloudFront alias, and
-  `media.renuvex.app` DNS are created and verified. The stack is not yet used
-  by production traffic because the app provider is still not activated.
+  `media.renuvex.app` DNS are created and verified. Production provider
+  activation is live after the Vercel production redeploy that includes
+  `REVIEW_IMAGE_PROVIDER=aws_s3`.
 - Hardening pass for direct-upload CORS, CloudFront S3 read scope, CloudFront invalidation on public variant revocation, and publish-then-DB-failure compensation. The template validator now checks these infrastructure contracts instead of only checking resource presence.
 
-Still not done in this implementation pass: production app deploy, Cloudflare Worker production deploy, provider activation, live acceptance, Cloudinary teardown, and removal of Cloudinary dependency/build constants.
+Still not done in this implementation pass: full post-fix live acceptance, Cloudinary teardown, and removal of Cloudinary dependency/build constants.
+
+Cutover/live acceptance status on 2026-07-03:
+
+- Vercel production deployment `dpl_E96wKnrsukyHPhba8h7uNkc2MtqG` is `Ready`
+  and aliased to `app.renuvex.app`; production env includes
+  `REVIEW_IMAGE_PROVIDER` and the AWS review-image runtime keys.
+- Read-only DB checks found one `aws_s3` image `ReviewMedia` row with
+  `variantStatus = "public_ready"`, `processingStatus = "ready"`,
+  `visible = true`, and an approved parent review. Public reads for the product
+  return one `media.renuvex.app` image with `thumbnailUrl` and 14 variants while
+  legacy Cloudinary test media remains visible for older reviews.
+- S3 read-only checks found the AWS object family under both private and public
+  prefixes: private original plus generated private variants, and public
+  variants for CloudFront delivery.
+- Acceptance found a cache-header contract issue: public variant responses were
+  still returning `Cache-Control: private, max-age=0, no-store`. Source analysis
+  showed public publish used S3 `CopyObject` with `MetadataDirective: "COPY"`.
+  AWS CopyObject requires replacing metadata when provided metadata should take
+  effect. The local fix changes public publish to `MetadataDirective: "REPLACE"`
+  while explicitly preserving Renuvex store/asset/variant metadata and adding a
+  unit test for the CopyObject contract. This fix is not deployed until the next
+  approved commit/push/deploy gate.
 
 Runtime cutover preflight on 2026-07-03 showed:
 

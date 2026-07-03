@@ -471,6 +471,20 @@ function contentTypeForFormat(format: AwsReviewImageFormat): string {
   return format === 'webp' ? 'image/webp' : 'image/jpeg';
 }
 
+function metadataForVariant(input: {
+  storeId: string;
+  assetId: string;
+  variantId: AwsReviewImageVariantId;
+  format: AwsReviewImageFormat;
+}): Record<string, string> {
+  return {
+    'renuvex-store-id': input.storeId,
+    'renuvex-asset-id': input.assetId,
+    'renuvex-variant-id': input.variantId,
+    'renuvex-variant-format': input.format,
+  };
+}
+
 async function putObjectTags(key: string, tagSet: Record<string, string>) {
   const config = getAwsReviewImagesConfig();
   await getAwsReviewImagesS3Client().send(new PutObjectTaggingCommand({
@@ -557,12 +571,12 @@ async function buildVariant(input: {
     ContentType: contentType,
     CacheControl: 'private, max-age=0, no-store',
     ChecksumSHA256: checksumSha256,
-    Metadata: {
-      'renuvex-store-id': input.storeId,
-      'renuvex-asset-id': input.assetId,
-      'renuvex-variant-id': input.variant.id,
-      'renuvex-variant-format': input.format,
-    },
+    Metadata: metadataForVariant({
+      storeId: input.storeId,
+      assetId: input.assetId,
+      variantId: input.variant.id,
+      format: input.format,
+    }),
     Tagging: new URLSearchParams({
       renuvex_state: 'private_ready',
       renuvex_store_id: input.storeId,
@@ -679,7 +693,13 @@ export async function publishAwsReviewImageVariants(manifestValue: unknown) {
       CopySource: encodeCopySource(config.bucket, variant.key),
       ContentType: variant.contentType,
       CacheControl: 'public, max-age=31536000, immutable',
-      MetadataDirective: 'COPY',
+      MetadataDirective: 'REPLACE',
+      Metadata: metadataForVariant({
+        storeId: manifest.storeId,
+        assetId: manifest.assetId,
+        variantId: variant.id,
+        format: variant.format,
+      }),
       TaggingDirective: 'REPLACE',
       Tagging: new URLSearchParams({
         renuvex_state: 'public_ready',
