@@ -29,6 +29,7 @@
     "budget:widget": "node scripts/check-widget-performance-budget.mjs",
     "budget:widget:network": "node scripts/check-widget-performance-budget.mjs --include-network --warn",
     "verify:deployed-jsonld": "node scripts/verify-deployed-jsonld.mjs",
+    "audit:provider-legacy": "node scripts/audit-provider-legacy.mjs",
     "verify:preview-db-isolation": "node scripts/verify-preview-db-isolation.mjs",
     "verify:video-infrastructure": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=pre-webhook --expect-disabled",
     "verify:video-infrastructure:post-webhook": "node --env-file=.env.local scripts/verify-mux-infrastructure.mjs --phase=post-webhook",
