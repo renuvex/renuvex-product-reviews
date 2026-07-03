@@ -117,4 +117,9 @@ if (raw.includes('/review-images/v1/*') || raw.includes('/review-images/v1/priva
   throw new Error('CloudFront S3 read policy must not include broad review-image or private-original prefixes.');
 }
 
+const previewPublicKeyOutput = template.Outputs?.PreviewPublicKeyId?.Value;
+if (!previewPublicKeyOutput || previewPublicKeyOutput.Ref !== 'ReviewImagesPreviewPublicKey') {
+  throw new Error('Outputs.PreviewPublicKeyId must expose the CloudFront public key id.');
+}
+
 console.log('review-images CloudFormation template validation passed');

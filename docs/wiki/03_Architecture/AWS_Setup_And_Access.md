@@ -161,6 +161,9 @@ Review-image local template contracts:
   previously public variant paths. The runtime env therefore needs
   `AWS_REVIEW_IMAGES_CLOUDFRONT_DISTRIBUTION_ID` in addition to the bucket,
   region, OIDC role ARN, public base URL, and signed-preview key settings.
+- The stack must output the bucket name, distribution id, distribution domain,
+  preview key group id, and preview public key id. The private signing key is
+  not a stack output and must never be written to the wiki.
 
 Run this local guard before any approved review-image stack change set:
 

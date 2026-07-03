@@ -417,6 +417,11 @@
       "Value": {
         "Ref": "ReviewImagesPreviewKeyGroup"
       }
+    },
+    "PreviewPublicKeyId": {
+      "Value": {
+        "Ref": "ReviewImagesPreviewPublicKey"
+      }
     }
   }
 }
