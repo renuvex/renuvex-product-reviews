@@ -110,13 +110,16 @@ Implemented so far on the migration branch:
   `REVIEW_IMAGE_PROVIDER=aws_s3`.
 - Hardening pass for direct-upload CORS, CloudFront S3 read scope, CloudFront invalidation on public variant revocation, and publish-then-DB-failure compensation. The template validator now checks these infrastructure contracts instead of only checking resource presence.
 
-Still not done in this implementation pass: full post-fix live acceptance, Cloudinary teardown, and removal of Cloudinary dependency/build constants.
+Still not done in this implementation pass: Cloudinary teardown and removal of Cloudinary dependency/build constants. Those remain separate approved gates.
 
 Cutover/live acceptance status on 2026-07-03:
 
-- Vercel production deployment `dpl_E96wKnrsukyHPhba8h7uNkc2MtqG` is `Ready`
-  and aliased to `app.renuvex.app`; production env includes
-  `REVIEW_IMAGE_PROVIDER` and the AWS review-image runtime keys.
+- Vercel production deployment `dpl_5f1tYG7WDvDY5gxpfxuAWwme96Cx` is `Ready`
+  and aliased to `app.renuvex.app` after PR #3
+  (`fix(media): preserve public image cache metadata`) was squash-merged to
+  `main` as `12a70a369e97ac9263b61147ee86eadf51ec2efc`. Production env includes
+  `REVIEW_IMAGE_PROVIDER` and the AWS review-image runtime keys. The prior
+  rollback deployment for this rollout was `dpl_E96wKnrsukyHPhba8h7uNkc2MtqG`.
 - Read-only DB checks found one `aws_s3` image `ReviewMedia` row with
   `variantStatus = "public_ready"`, `processingStatus = "ready"`,
   `visible = true`, and an approved parent review. Public reads for the product
@@ -125,14 +128,25 @@ Cutover/live acceptance status on 2026-07-03:
 - S3 read-only checks found the AWS object family under both private and public
   prefixes: private original plus generated private variants, and public
   variants for CloudFront delivery.
-- Acceptance found a cache-header contract issue: public variant responses were
-  still returning `Cache-Control: private, max-age=0, no-store`. Source analysis
-  showed public publish used S3 `CopyObject` with `MetadataDirective: "COPY"`.
-  AWS CopyObject requires replacing metadata when provided metadata should take
-  effect. The local fix changes public publish to `MetadataDirective: "REPLACE"`
-  while explicitly preserving Renuvex store/asset/variant metadata and adding a
-  unit test for the CopyObject contract. This fix is not deployed until the next
-  approved commit/push/deploy gate.
+- Acceptance first found a cache-header contract issue: public variant responses
+  were still returning `Cache-Control: private, max-age=0, no-store`. Source
+  analysis showed public publish used S3 `CopyObject` with
+  `MetadataDirective: "COPY"`. AWS CopyObject requires replacing metadata when
+  provided metadata should take effect. PR #3 changed public publish to
+  `MetadataDirective: "REPLACE"` while explicitly preserving Renuvex
+  store/asset/variant metadata and added a unit test for the CopyObject
+  contract.
+- Post-fix live acceptance created and approved a new AWS image review
+  (`Review.id = ea3ca472-0f2b-4aaa-9ddb-29b6ab1db391`,
+  `ReviewMedia.id = 2bdc4d8e-ab52-48b9-9368-41928cc691b0`,
+  `providerAssetId = 8eb79e51-115f-4438-8c8f-2899f0b7c4e2`) for store
+  `02786d4b-a09b-4b36-ad8c-56e6d396f6fd` and product
+  `37fb6e3d-6085-4ac1-b0eb-7aaa63ada934`. DB checks show
+  `variantStatus = "public_ready"`, `processingStatus = "ready"`, and
+  `visible = true`; public reads return `media.renuvex.app` URL,
+  `thumbnailUrl`, 14 variants, and no private leak markers. The public variant
+  HEAD response is `200 image/jpeg` with
+  `Cache-Control: public, max-age=31536000, immutable`.
 
 Runtime cutover preflight on 2026-07-03 showed:
 

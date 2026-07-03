@@ -127,17 +127,14 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-03: AWS review-image provider is active in Vercel production after deploy `dpl_E96wKnrsukyHPhba8h7uNkc2MtqG`. Read-only acceptance found one approved `aws_s3` image returning `media.renuvex.app` variants, plus a public variant cache-header issue caused by S3 CopyObject metadata copy behavior; a local fix replaces metadata before the next approved deploy.
-- 2026-07-03: AWS review-image PR #2 was merged and the additive production DB migration is applied. Cloudinary env/dependency/code paths remain only for rollback/legacy test media until a separate teardown gate.
+- 2026-07-03: AWS image provider is active. PR #3 deployed as `dpl_5f1tYG7WDvDY5gxpfxuAWwme96Cx`; a live test review proved `media.renuvex.app` delivery, 14 variants, no public leak markers, and immutable cache headers.
+- 2026-07-03: PR #2 and the additive DB migration are live. Cloudinary env/dependency/code paths remain only for rollback/legacy test media until a separate teardown gate.
 - 2026-07-02: PDP review widget clears stale shadow content during SPA product transitions; manual dev-storefront acceptance confirmed the neutral shell instead of stale review cards.
 - 2026-07-02: Worker-cached `GET /api/public/settings` is live. A read-only check returned `200` from Cloudflare with `X-Renuvex-Edge-Cache: MISS` and then `HIT`; `POST /api/public/storefront-theme/lazy-sync` remains on `app.renuvex.app`.
 - 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.
 - 2026-06-30: Upstash audit: Redis measured `0` recent commands/bandwidth; QStash has no DLQ/schedules. See [[Upstash_Redis_QStash_Cost_Audit]].
-- 2026-06-29: ikas support said dev/test StorefrontJSScript timing should match production.
 - 2026-06-28/2026-07-02: Worker asset delivery is live for `widget.renuvex.app`; Worker V2 read cache is live for settings, ratings, ratings-by-slug, and reviews. `app.renuvex.app` remains backend/write/upload/video/Mux/QStash.
 - 2026-07-02: AWS CloudFront/S3 widget CDN cutover is closed as an active issue for the current MVP. The canary remains documented and reproducible, but Cloudflare Worker V2 stays the production delivery layer because AWS was only slightly faster and materially more expensive.
-- 2026-06-28: Media-gallery lightbox bottom rail uses one first trusted image/video per media-backed review.
-- 2026-06-27/2026-07-01: Existing videos stay visible when uploads are disabled; media gallery fetches only when `mediaReviewCount > 0`.
 - 2026-06-23: Review Video playback uses official Mux Player; Mux Data tracking/cookies stay disabled.
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-21: Mux cutover and cleanup are live; see [[ADR_0032_Review_Video_On_Mux]].
