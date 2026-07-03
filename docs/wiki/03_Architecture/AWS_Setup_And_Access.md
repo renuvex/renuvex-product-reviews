@@ -232,9 +232,10 @@ Post-create read-only checks:
 - CloudFront default behavior is signed-key-group protected for private preview
   paths; the public variants behavior for `review-images/v1/public/*` is not
   key-group protected and permits `GET`/`HEAD` only.
-- The current review-image operator role lacks `s3:GetBucketPolicyStatus`, so
-  bucket policy public-status summary could not be read directly. The bucket
-  policy and Public Access Block were still read and verified directly.
+- The review-image operator role now includes `s3:GetBucketPolicyStatus`; the
+  bucket policy status was read successfully and reports `IsPublic=false`.
+  The bucket policy and Public Access Block were also read and verified
+  directly.
 - No Vercel env, DB, Cloudflare Worker/DNS, Cloudinary, provider activation, or
   production traffic changes were made in this execute step.
 
