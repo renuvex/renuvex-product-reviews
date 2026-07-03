@@ -13,6 +13,11 @@ import {
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 5, 9, 4, 0, 0);
 
+function awsPublicId(name: string) {
+  const hash = Array.from(name).reduce((acc, char) => acc + char.charCodeAt(0), 0).toString().padStart(12, '0');
+  return `aws_s3:s1:00000000-0000-4000-8000-${hash}`;
+}
+
 describe('evaluateScanTrust', () => {
   const t = DEFAULT_CLEANUP_THRESHOLDS;
 
@@ -72,14 +77,13 @@ describe('evaluateSweepCap', () => {
 });
 
 describe('storeIdFromPublicId', () => {
-  it('extracts the store id from a review-image publicId', () => {
-    expect(storeIdFromPublicId('review_images/stores/store-1/abc123')).toBe('store-1');
-    expect(storeIdFromPublicId('review_images/stores/store-1/nested/abc123')).toBe('store-1');
+  it('extracts the store id from an AWS review-image publicId', () => {
+    expect(storeIdFromPublicId('aws_s3:store-1:00000000-0000-4000-8000-000000000001')).toBe('store-1');
   });
 
   it('returns null for a non-matching path', () => {
     expect(storeIdFromPublicId('something/else/x')).toBeNull();
-    expect(storeIdFromPublicId('review_images/stores/')).toBeNull();
+    expect(storeIdFromPublicId('aws_s3:store-1:not-a-uuid')).toBeNull();
   });
 });
 
@@ -145,10 +149,12 @@ const oldAsset = (publicId: string) => ({ publicId, createdAt: NOW - 40 * DAY })
 
 describe('runOrphanImageCleanup (two-phase core)', () => {
   it('phase 1: marks new orphans without deleting anything (first run)', async () => {
+    const keep = awsPublicId('keep');
+    const orphan = awsPublicId('orphan');
     const { deps, upserted, removed, deleted } = makeDeps({
-      used: ['review_images/stores/s1/keep'],
+      used: [keep],
       mediaCount: 1,
-      assets: [oldAsset('review_images/stores/s1/keep'), oldAsset('review_images/stores/s1/orphan')],
+      assets: [oldAsset(keep), oldAsset(orphan)],
       quarantine: [],
     });
 
@@ -158,17 +164,18 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
     expect(result.currentOrphans).toBe(1);
     expect(result.quarantinedNew).toBe(1);
     expect(result.deleted).toBe(0);
-    expect(upserted.map((e) => e.publicId)).toEqual(['review_images/stores/s1/orphan']);
+    expect(upserted.map((e) => e.publicId)).toEqual([orphan]);
     expect(deleted).toEqual([]);
     expect(removed).toEqual([]);
   });
 
   it('phase 2: sweeps an orphan that has sat past the grace window and is still orphaned', async () => {
-    const orphan = 'review_images/stores/s1/orphan';
+    const keep = awsPublicId('keep');
+    const orphan = awsPublicId('orphan');
     const { deps, removed, deleted } = makeDeps({
-      used: ['review_images/stores/s1/keep'],
+      used: [keep],
       mediaCount: 1,
-      assets: [oldAsset('review_images/stores/s1/keep'), oldAsset(orphan)],
+      assets: [oldAsset(keep), oldAsset(orphan)],
       quarantine: [{ publicId: orphan, quarantinedAt: NOW - 10 * DAY }],
     });
 
@@ -182,11 +189,12 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
   });
 
   it('does not sweep a quarantined orphan that is still within the grace window', async () => {
-    const orphan = 'review_images/stores/s1/orphan';
+    const keep = awsPublicId('keep');
+    const orphan = awsPublicId('orphan');
     const { deps, deleted } = makeDeps({
-      used: ['review_images/stores/s1/keep'],
+      used: [keep],
       mediaCount: 1,
-      assets: [oldAsset('review_images/stores/s1/keep'), oldAsset(orphan)],
+      assets: [oldAsset(keep), oldAsset(orphan)],
       quarantine: [{ publicId: orphan, quarantinedAt: NOW - 2 * DAY }], // < 7d grace
     });
 
@@ -197,11 +205,12 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
   });
 
   it('releases (un-quarantines) an asset that is no longer an orphan, never deleting it', async () => {
-    const wasOrphan = 'review_images/stores/s1/wasOrphan';
+    const keep = awsPublicId('keep');
+    const wasOrphan = awsPublicId('wasOrphan');
     const { deps, removed, deleted } = makeDeps({
-      used: ['review_images/stores/s1/keep', wasOrphan], // now attached
+      used: [keep, wasOrphan], // now attached
       mediaCount: 2,
-      assets: [oldAsset('review_images/stores/s1/keep'), oldAsset(wasOrphan)],
+      assets: [oldAsset(keep), oldAsset(wasOrphan)],
       quarantine: [{ publicId: wasOrphan, quarantinedAt: NOW - 10 * DAY }], // past grace, but re-attached
     });
 
@@ -215,10 +224,11 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
   });
 
   it('does not treat assets newer than the age guard as orphans', async () => {
+    const keep = awsPublicId('keep');
     const { deps, upserted } = makeDeps({
-      used: ['review_images/stores/s1/keep'],
+      used: [keep],
       mediaCount: 1,
-      assets: [oldAsset('review_images/stores/s1/keep'), { publicId: 'review_images/stores/s1/fresh', createdAt: NOW - 5 * DAY }],
+      assets: [oldAsset(keep), { publicId: awsPublicId('fresh'), createdAt: NOW - 5 * DAY }],
       quarantine: [],
     });
 
@@ -232,8 +242,8 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
     const { deps, upserted, deleted } = makeDeps({
       used: [],
       mediaCount: 5,
-      assets: [oldAsset('review_images/stores/s1/a'), oldAsset('review_images/stores/s1/b')],
-      quarantine: [{ publicId: 'review_images/stores/s1/a', quarantinedAt: NOW - 10 * DAY }],
+      assets: [oldAsset(awsPublicId('a')), oldAsset(awsPublicId('b'))],
+      quarantine: [{ publicId: awsPublicId('a'), quarantinedAt: NOW - 10 * DAY }],
     });
 
     const result = await runOrphanImageCleanup(deps, DEFAULT_CLEANUP_THRESHOLDS, { force: true });
@@ -247,11 +257,12 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
 
   it('G3: trips when the sweep would exceed the absolute cap; keeps quarantine, deletes nothing', async () => {
     const thresholds: CleanupThresholds = { ...DEFAULT_CLEANUP_THRESHOLDS, maxRatio: 1, maxAbsolute: 2 };
-    const o = ['o1', 'o2', 'o3'].map((n) => `review_images/stores/s1/${n}`);
+    const keep = awsPublicId('keep');
+    const o = ['o1', 'o2', 'o3'].map(awsPublicId);
     const { deps, deleted, removed } = makeDeps({
-      used: ['review_images/stores/s1/keep'],
+      used: [keep],
       mediaCount: 1,
-      assets: [oldAsset('review_images/stores/s1/keep'), ...o.map(oldAsset)],
+      assets: [oldAsset(keep), ...o.map(oldAsset)],
       quarantine: o.map((publicId) => ({ publicId, quarantinedAt: NOW - 10 * DAY })),
     });
 
@@ -266,11 +277,12 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
 
   it('G3: force overrides the absolute cap and sweeps', async () => {
     const thresholds: CleanupThresholds = { ...DEFAULT_CLEANUP_THRESHOLDS, maxRatio: 1, maxAbsolute: 2 };
-    const o = ['o1', 'o2', 'o3'].map((n) => `review_images/stores/s1/${n}`);
+    const keep = awsPublicId('keep');
+    const o = ['o1', 'o2', 'o3'].map(awsPublicId);
     const { deps, deleted } = makeDeps({
-      used: ['review_images/stores/s1/keep'],
+      used: [keep],
       mediaCount: 1,
-      assets: [oldAsset('review_images/stores/s1/keep'), ...o.map(oldAsset)],
+      assets: [oldAsset(keep), ...o.map(oldAsset)],
       quarantine: o.map((publicId) => ({ publicId, quarantinedAt: NOW - 10 * DAY })),
     });
 

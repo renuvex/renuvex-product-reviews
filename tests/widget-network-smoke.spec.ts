@@ -6,7 +6,6 @@ import {
   PUBLIC_KEY,
   PRODUCT_ID,
   PRODUCT_NAME,
-  REVIEW_CLOUD_NAME,
   countJsonLd,
   countListingBadges,
   countListingPlaceholders,
@@ -18,6 +17,7 @@ import {
   hasReviewsWidget,
   hasRuntime,
   listingIkasEvents,
+  reviewImage,
   setupExternalProductLikeLinksPage,
   setupGenericLinksPage,
   setupNavFooterProductLikeLinksPage,
@@ -38,7 +38,21 @@ function jsonHeaders(): Record<string, string> {
 }
 
 function trustedReviewImage(name: string): string {
-  return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/${name}.jpg`;
+  return reviewImage(name, PUBLIC_KEY);
+}
+
+function trustedReviewImageMediaFromUrl(url: string, position = 0): Record<string, unknown> {
+  return {
+    type: 'image',
+    url,
+    thumbnailUrl: url,
+    posterUrl: null,
+    durationMs: null,
+    width: 1200,
+    height: 1600,
+    position,
+    variants: [],
+  };
 }
 
 function reviewPayload(
@@ -53,15 +67,23 @@ function reviewPayload(
     mediaReviewCount?: number;
   } = {},
 ): unknown {
+  const normalizedReviews = reviews.map((review) => {
+    if (Array.isArray(review.media)) return review;
+    const images = Array.isArray(review.images) ? review.images.filter((url): url is string => typeof url === 'string') : [];
+    return {
+      ...review,
+      media: images.map((url, index) => trustedReviewImageMediaFromUrl(url, index)),
+    };
+  });
   const allCount = options.allCount ?? reviews.length;
-  const inferredPhotoReviewCount = reviews.filter((review) => Array.isArray(review.images) && review.images.length > 0).length;
-  const inferredMediaReviewCount = reviews.filter((review) => (
+  const inferredPhotoReviewCount = normalizedReviews.filter((review) => Array.isArray(review.images) && review.images.length > 0).length;
+  const inferredMediaReviewCount = normalizedReviews.filter((review) => (
     (Array.isArray(review.images) && review.images.length > 0) ||
     (Array.isArray(review.media) && review.media.length > 0)
   )).length;
   return {
     data: {
-      reviews,
+      reviews: normalizedReviews,
       allCount,
       totalCount: options.totalCount ?? allCount,
       ratingCounts: options.ratingCounts ?? [0, 0, 0, 0, allCount],

@@ -1,4 +1,5 @@
 import { type Page, type Route } from '@playwright/test';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -10,7 +11,6 @@ export const MERCHANT_ORIGIN = 'https://merchant.test';
 export const PUBLIC_KEY = 'ci-public-key';
 export const PRODUCT_ID = 'product-1';
 export const PRODUCT_NAME = 'Premium';
-export const REVIEW_CLOUD_NAME = resolveReviewCloudName();
 
 export type RuntimeOptions = {
   autoPlacementEnabled?: boolean;
@@ -213,19 +213,35 @@ async function routeThemeLazySync(page: Page): Promise<void> {
   });
 }
 
-function resolveReviewCloudName(): string {
-  const raw = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    process.env.CLOUDINARY_CLOUD_NAME ||
-    readEnvFileValue(path.join(process.cwd(), '.env.local'), 'NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') ||
-    readEnvFileValue(path.join(process.cwd(), '.env.local'), 'CLOUDINARY_CLOUD_NAME') ||
-    readEnvFileValue(path.join(process.cwd(), '.env'), 'NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') ||
-    readEnvFileValue(path.join(process.cwd(), '.env'), 'CLOUDINARY_CLOUD_NAME') ||
-    'renuvex';
-  return /^[A-Za-z0-9_-]+$/.test(raw) ? raw : 'renuvex';
+function deterministicReviewImageAssetId(name: string): string {
+  const bytes = createHash('sha256').update(name).digest('hex').slice(0, 32);
+  return `${bytes.slice(0, 8)}-${bytes.slice(8, 12)}-4${bytes.slice(13, 16)}-8${bytes.slice(17, 20)}-${bytes.slice(20, 32)}`;
 }
 
-function reviewImage(name: string, storeId = PUBLIC_KEY): string {
-  return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${storeId}/${name}.jpg`;
+export function reviewImage(name: string, storeId = PUBLIC_KEY, variant = 'w1200', format = 'jpeg'): string {
+  const assetId = deterministicReviewImageAssetId(`${storeId}:${name}`);
+  return `https://media.renuvex.app/review-images/v1/public/stores/${storeId}/assets/${assetId}/variants/${variant}.${format}`;
+}
+
+export function reviewImageMedia(name: string, storeId = PUBLIC_KEY, position = 0): Record<string, unknown> {
+  return {
+    type: 'image',
+    url: reviewImage(name, storeId, 'w1200', 'jpeg'),
+    thumbnailUrl: reviewImage(name, storeId, 'thumb_320x427', 'webp'),
+    posterUrl: null,
+    durationMs: null,
+    width: 1200,
+    height: 1600,
+    position,
+    variants: [
+      { id: 'w300', format: 'webp', width: 300, height: 400, url: reviewImage(name, storeId, 'w300', 'webp') },
+      { id: 'w600', format: 'webp', width: 600, height: 800, url: reviewImage(name, storeId, 'w600', 'webp') },
+      { id: 'w1200', format: 'webp', width: 1200, height: 1600, url: reviewImage(name, storeId, 'w1200', 'webp') },
+      { id: 'w300', format: 'jpeg', width: 300, height: 400, url: reviewImage(name, storeId, 'w300', 'jpeg') },
+      { id: 'w600', format: 'jpeg', width: 600, height: 800, url: reviewImage(name, storeId, 'w600', 'jpeg') },
+      { id: 'w1200', format: 'jpeg', width: 1200, height: 1600, url: reviewImage(name, storeId, 'w1200', 'jpeg') },
+    ],
+  };
 }
 
 function reviewRows(_hasImages: boolean, storeId = PUBLIC_KEY): Array<Record<string, unknown>> {
@@ -238,6 +254,7 @@ function reviewRows(_hasImages: boolean, storeId = PUBLIC_KEY): Array<Record<str
       author: 'Mert W.',
       createdAt: '2026-05-28T00:00:00.000Z',
       images: [reviewImage('ci-review-1', storeId), reviewImage('ci-review-1b', storeId)],
+      media: [reviewImageMedia('ci-review-1', storeId, 0), reviewImageMedia('ci-review-1b', storeId, 1)],
       merchantReply: 'Thanks for the detailed review.',
       recommendation: true,
     },
@@ -249,6 +266,7 @@ function reviewRows(_hasImages: boolean, storeId = PUBLIC_KEY): Array<Record<str
       author: 'Ada K.',
       createdAt: '2026-05-27T00:00:00.000Z',
       images: [reviewImage('ci-review-2', storeId)],
+      media: [reviewImageMedia('ci-review-2', storeId)],
       merchantReply: null,
       recommendation: true,
     },
@@ -260,6 +278,7 @@ function reviewRows(_hasImages: boolean, storeId = PUBLIC_KEY): Array<Record<str
       author: 'Can B.',
       createdAt: '2026-05-26T00:00:00.000Z',
       images: [],
+      media: [],
       merchantReply: null,
       recommendation: false,
     },
@@ -325,7 +344,7 @@ export async function setupWidgetRoutes(page: Page, options: SmokeOptions = {}):
 
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
-  await page.route('https://res.cloudinary.com/**', fulfillImage);
+  await page.route('https://media.renuvex.app/**', fulfillImage);
   await routeWidgetApi(page, '/api/public/settings**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -416,7 +435,7 @@ export async function setupPreviewRoutes(page: Page, options: SmokeOptions = {})
 
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
-  await page.route('https://res.cloudinary.com/**', fulfillImage);
+  await page.route('https://media.renuvex.app/**', fulfillImage);
   await routeWidgetApi(page, '/api/preview/settings**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -481,7 +500,7 @@ export async function setupProductListingFallbackPage(page: Page, options: Smoke
   const log = createRequestLog(page);
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
-  await page.route('https://res.cloudinary.com/**', fulfillImage);
+  await page.route('https://media.renuvex.app/**', fulfillImage);
   await routeWidgetApi(page, '/api/public/settings**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -537,7 +556,7 @@ async function setupListingProbePage(page: Page, body: string): Promise<RequestL
   const log = createRequestLog(page);
   await page.route(`${WIDGET_ORIGIN}/widget.js**`, fulfillLocalPublicAsset);
   await page.route(`${WIDGET_ORIGIN}/widget-runtime/**`, fulfillLocalPublicAsset);
-  await page.route('https://res.cloudinary.com/**', fulfillImage);
+  await page.route('https://media.renuvex.app/**', fulfillImage);
   await routeWidgetApi(page, '/api/public/settings**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -671,7 +690,7 @@ function productHtml(options: SmokeOptions): string {
   // Light-DOM control: the hostile rule (e.g. img{width:100%!important}) balloons this to
   // its 600px container, proving the rule is live so the shadow assertion can't false-pass.
   const controlBlock = options.hostileThemeCss
-    ? `<div style="width:600px"><img class="renuvex-iso-control" width="40" height="40" src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/iso-control.jpg" alt=""></div>`
+    ? `<div style="width:600px"><img class="renuvex-iso-control" width="40" height="40" src="${reviewImage('iso-control')}" alt=""></div>`
     : '';
   const events = options.ikasEvents || defaultProductEvents();
   const reviewMountHtml = options.mountReviews === false
@@ -729,13 +748,13 @@ function productListingFallbackHtml(options: SmokeOptions = {}): string {
       <section class="listing-grid">
         <article class="product-card">
           <a href="/premium-shorts">
-            <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/listing-1.jpg" alt="">
+            <img src="${reviewImage('listing-1')}" alt="">
             <h2>Premium Shorts</h2>
           </a>
         </article>
         <article class="product-card">
           <a href="/linen-shirt">
-            <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/listing-2.jpg" alt="">
+            <img src="${reviewImage('listing-2')}" alt="">
             <h2>Linen Shirt</h2>
           </a>
         </article>
@@ -757,19 +776,19 @@ function externalProductLikeLinksHtml(): string {
     <main>
       <section>
         <a href="https://other-store.test/premium-shorts">
-          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/external-1.jpg" alt="">
+          <img src="${reviewImage('external-1')}" alt="">
           External premium shorts
         </a>
         <a href="https://other-store.test/linen-shirt">
-          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/external-2.jpg" alt="">
+          <img src="${reviewImage('external-2')}" alt="">
           External linen shirt
         </a>
         <a href="/cart">
-          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/cart.jpg" alt="">
+          <img src="${reviewImage('cart')}" alt="">
           Cart
         </a>
         <a href="/account">
-          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/account.jpg" alt="">
+          <img src="${reviewImage('account')}" alt="">
           Account
         </a>
       </section>
@@ -790,7 +809,7 @@ function singleProductLikeLinkHtml(): string {
     <main>
       <section>
         <a href="/premium-shorts">
-          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/single-1.jpg" alt="">
+          <img src="${reviewImage('single-1')}" alt="">
           Premium Shorts
         </a>
       </section>
@@ -811,7 +830,7 @@ function navFooterProductLikeLinksHtml(): string {
     <header>
       <nav>
         <a href="/premium-shorts">
-          <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/nav-1.jpg" alt="">
+          <img src="${reviewImage('nav-1')}" alt="">
           Premium Shorts
         </a>
       </nav>
@@ -821,7 +840,7 @@ function navFooterProductLikeLinksHtml(): string {
     </main>
     <footer>
       <a href="/linen-shirt">
-        <img src="https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/footer-1.jpg" alt="">
+        <img src="${reviewImage('footer-1')}" alt="">
         Linen Shirt
       </a>
     </footer>

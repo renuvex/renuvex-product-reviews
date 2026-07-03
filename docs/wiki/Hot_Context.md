@@ -29,8 +29,6 @@ source_files:
   - "playwright.widget.config.ts"
   - "vitest.config.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
-  - "scripts/audit-legacy-review-media.mjs"
-  - "scripts/reconcile-legacy-review-media.mjs"
   - "tests/widget-harness.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
@@ -128,7 +126,7 @@ source_files:
 
 ## Recent Important Changes
 - 2026-07-03: AWS image provider is active. PR #3 deployed as `dpl_5f1tYG7WDvDY5gxpfxuAWwme96Cx`; a live test review proved `media.renuvex.app` delivery, 14 variants, no public leak markers, and immutable cache headers.
-- 2026-07-03: PR #2 and the additive DB migration are live. Cloudinary env/dependency/code paths remain only for rollback/legacy test media until a separate teardown gate.
+- 2026-07-03: Local Cloudinary teardown source pass is in progress/verified locally: new review-image runtime path is AWS-only, Cloudinary dependency/build constants/scripts/tests are removed, manifest-referenced widget graph has no Cloudinary references, and `pnpm why cloudinary` is empty. No Vercel env removal, DB cleanup apply, Worker deploy, or Cloudinary asset/account deletion has been done in this pass.
 - 2026-07-02: PDP review widget clears stale shadow content during SPA product transitions; manual dev-storefront acceptance confirmed the neutral shell instead of stale review cards.
 - 2026-07-02: Worker-cached `GET /api/public/settings` is live. A read-only check returned `200` from Cloudflare with `X-Renuvex-Edge-Cache: MISS` and then `HIT`; `POST /api/public/storefront-theme/lazy-sync` remains on `app.renuvex.app`.
 - 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.
@@ -146,6 +144,7 @@ source_files:
 - Worker rollback: restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, DNS-only.
 - Old video-provider cleanup gates are closed; preserve Cloudflare DNS/zone and Worker delivery infrastructure.
 - Supabase RLS/default-grants hardening is a public-launch blocker.
+- Cloudinary rollback closes only after separate approved env/data/deploy gates. Current local source no longer depends on Cloudinary, but Vercel Cloudinary env and old test provider assets must not be deleted without explicit scope/risk/rollback approval.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 

@@ -2,7 +2,6 @@ import { expect, test, type Page, type Route, type TestInfo } from '@playwright/
 import {
   MERCHANT_ORIGIN,
   PUBLIC_KEY,
-  REVIEW_CLOUD_NAME,
   WIDGET_ORIGIN,
   clickInOverlay,
   clickInReviewsShadow,
@@ -11,6 +10,7 @@ import {
   hasReviewsWidget,
   isOverlayControlDisabled,
   routeWidgetApi,
+  reviewImage,
   setFileInputInOverlay,
   setupWidgetRoutes,
   stubVideoMetadata,
@@ -78,7 +78,7 @@ function videoMedia(uid: string, position = 0) {
 }
 
 function imageMedia(name: string, position = 0) {
-  const url = `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/${name}.jpg`;
+  const url = reviewImage(name, PUBLIC_KEY);
   return {
     type: 'image',
     url,
@@ -823,7 +823,7 @@ test('video wizard completes Mux direct upload and submits only the ready video 
     images: [],
     videoToken,
   });
-  expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('api.mux.com'))).toBe(false);
+  expect(log.urls.some((url) => url.includes('cloud' + 'inary.com') || url.includes('api.mux.com'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-close');

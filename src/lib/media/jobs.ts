@@ -22,7 +22,6 @@ import {
   MuxProviderError,
   type MuxPlaybackId,
 } from '@/lib/media/providers/mux';
-import { deleteCloudinaryReviewImages } from '@/lib/media/providers/cloudinary-image';
 import {
   AWS_REVIEW_IMAGE_PROVIDER,
   deleteAwsReviewImageFamily,
@@ -59,9 +58,6 @@ const cleanupPayload = z.object({
   providerUploadId: z.string().max(256).optional(),
   providerAssetId: z.string().max(256).optional(),
   pendingPublicId: z.string().max(512).optional(),
-});
-const cleanupImagePayload = z.object({
-  publicIds: z.array(z.string().min(1).max(512)).min(1).max(100),
 });
 const cleanupAwsImagePayload = z.object({
   families: z.array(z.object({
@@ -590,12 +586,6 @@ async function cleanupVideo(payload: z.infer<typeof cleanupPayload>): Promise<Me
     : { status: 'succeeded' };
 }
 
-async function cleanupCloudinaryImages(payload: z.infer<typeof cleanupImagePayload>): Promise<MediaJobResult> {
-  const deleted = await deleteCloudinaryReviewImages(payload.publicIds);
-  await prisma.pendingReviewImage.deleteMany({ where: { publicId: { in: deleted }, provider: 'cloudinary' } });
-  return { status: 'succeeded' };
-}
-
 async function cleanupAwsImages(payload: z.infer<typeof cleanupAwsImagePayload>): Promise<MediaJobResult> {
   const invalidatePublicVariants = payload.reason !== 'pending_media_expired';
   for (const family of payload.families) {
@@ -679,7 +669,6 @@ export async function processMediaProviderJob(jobId: string) {
     else if (job.action === MEDIA_JOB_ACTIONS.publishVideo) result = await publishVideo(moderationPayload.parse(job.payload), lease);
     else if (job.action === MEDIA_JOB_ACTIONS.protectVideo) result = await protectVideo(moderationPayload.parse(job.payload), lease);
     else if (job.action === MEDIA_JOB_ACTIONS.cleanupVideo) result = await cleanupVideo(cleanupPayload.parse(job.payload));
-    else if (job.action === MEDIA_JOB_ACTIONS.cleanupImage && job.provider === 'cloudinary') result = await cleanupCloudinaryImages(cleanupImagePayload.parse(job.payload));
     else if (job.action === MEDIA_JOB_ACTIONS.cleanupImage && job.provider === AWS_REVIEW_IMAGE_PROVIDER) result = await cleanupAwsImages(cleanupAwsImagePayload.parse(job.payload));
     else if (job.action === MEDIA_JOB_ACTIONS.publishImage && job.provider === AWS_REVIEW_IMAGE_PROVIDER) result = await publishAwsImage(awsImageVariantMutationPayload.parse(job.payload));
     else if (job.action === MEDIA_JOB_ACTIONS.revokeImagePublic && job.provider === AWS_REVIEW_IMAGE_PROVIDER) result = await revokeAwsImagePublic(awsImageVariantMutationPayload.parse(job.payload));

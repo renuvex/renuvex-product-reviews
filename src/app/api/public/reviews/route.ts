@@ -4,19 +4,12 @@ import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
 import { Redis } from '@upstash/redis';
 import {
-  getConfiguredCloudinaryCloudName,
-  getReviewImagePublicId,
-  sanitizeReviewImageUrls,
-} from '@/lib/review-images';
-import {
   buildAwsReviewMediaCreateManyData,
-  buildReviewMediaCreateManyData,
   publicImagesFromMediaOrLegacy,
   publicMediaFromMediaOrLegacy,
   type AwsPendingReviewImageMediaRow,
   type PublicReviewMediaRow,
 } from '@/lib/review-media';
-import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 import { applyReviewSummaryVisibilityChange, filteredReviewTotal, summaryStats } from '@/lib/review-summary';
 import { hashMediaToken } from '@/lib/media/video-policy';
 import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
@@ -24,7 +17,6 @@ import { supersedeSessionLifecycleJobs } from '@/lib/media/outbox';
 import {
   AWS_REVIEW_IMAGE_PROVIDER,
   buildAwsReviewImagePublicDescriptor,
-  isAwsReviewImageProviderEnabled,
   publishAwsReviewImageVariants,
   revokeAwsReviewImagePublicVariants,
   sanitizeAwsReviewImageRefs,
@@ -90,21 +82,6 @@ type PublicReviewRow = {
   images: string | null;
   media?: PublicReviewMediaRow[];
   createdAt: Date;
-};
-
-type PendingReviewImageMetadataRow = {
-  publicId: string;
-  assetId: string | null;
-  version: string | null;
-  resourceType: string | null;
-  format: string | null;
-  mimeType: string | null;
-  width: number | null;
-  height: number | null;
-  bytes: number | null;
-  metadataSource: string | null;
-  metadataStatus: string | null;
-  metadataFetchedAt: Date | null;
 };
 
 type AwsPendingReviewImageForSubmit = AwsPendingReviewImageMediaRow & {
@@ -371,8 +348,8 @@ async function verifyReviewTarget(storeId: string, productId: string) {
   return store && product ? product : null;
 }
 
-function formatPublicReview(review: PublicReviewRow, cloudName: string | null, storeId: string) {
-  const media = publicMediaFromMediaOrLegacy(review.media, review.images, cloudName, storeId);
+function formatPublicReview(review: PublicReviewRow, storeId: string) {
+  const media = publicMediaFromMediaOrLegacy(review.media, review.images, storeId);
   return {
     id: review.id,
     rating: review.rating,
@@ -380,30 +357,10 @@ function formatPublicReview(review: PublicReviewRow, cloudName: string | null, s
     comment: review.comment,
     author: maskAuthor(review.author),
     merchantReply: review.merchantReply,
-    images: publicImagesFromMediaOrLegacy(review.media, review.images, cloudName, storeId),
+    images: publicImagesFromMediaOrLegacy(review.media, review.images, storeId),
     media,
     createdAt: review.createdAt.toISOString(),
   };
-}
-
-function pendingMetadataMap(rows: PendingReviewImageMetadataRow[]): Map<string, ReviewMediaMetadataWrite> {
-  const metadataByPublicId = new Map<string, ReviewMediaMetadataWrite>();
-  for (const row of rows) {
-    metadataByPublicId.set(row.publicId, {
-      assetId: row.assetId ?? undefined,
-      version: row.version ?? undefined,
-      resourceType: row.resourceType ?? undefined,
-      format: row.format ?? undefined,
-      mimeType: row.mimeType ?? undefined,
-      width: row.width ?? undefined,
-      height: row.height ?? undefined,
-      bytes: row.bytes ?? undefined,
-      metadataSource: row.metadataSource ?? undefined,
-      metadataStatus: row.metadataStatus ?? undefined,
-      metadataFetchedAt: row.metadataFetchedAt ?? undefined,
-    });
-  }
-  return metadataByPublicId;
 }
 
 function publicUrlsFromAwsPendingRows(rows: AwsPendingReviewImageMediaRow[]): string[] {
@@ -459,8 +416,6 @@ export async function GET(req: Request) {
     })) {
       return withCors(NextResponse.json({ error: 'Cursor bu sorgu ile uyumlu değil' }, { status: 400 }));
     }
-    const cloudName = getConfiguredCloudinaryCloudName();
-
     const baseWhere = {
       storeId,
       productId,
@@ -500,7 +455,7 @@ export async function GET(req: Request) {
           review: lastVisibleReview,
         })
       : null;
-    const formattedReviews = reviews.map((review) => formatPublicReview(review, cloudName, storeId));
+    const formattedReviews = reviews.map((review) => formatPublicReview(review, storeId));
 
     const res = withCors(NextResponse.json({
       data: {
@@ -580,26 +535,11 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
     }
 
-    const useAwsImages = isAwsReviewImageProviderEnabled();
-    const cloudName = useAwsImages ? null : getConfiguredCloudinaryCloudName();
-    const imageResult = useAwsImages
-      ? { ok: true as const, urls: [] as string[] }
-      : sanitizeReviewImageUrls(images, cloudName, storeIdText);
-    if (!imageResult.ok) {
-      if (imageResult.error === 'missing_cloud') {
-        console.error('[POST] Reviews image validation misconfigured: missing Cloudinary cloud name');
-        return withCors(NextResponse.json({ error: 'Görsel yükleme yapılandırması eksik.' }, { status: 500 }));
-      }
-      return withCors(NextResponse.json({ error: 'Geçersiz yorum görseli.' }, { status: 400 }));
-    }
-
-    const awsImageRefsResult = useAwsImages
-      ? sanitizeAwsReviewImageRefs(images)
-      : { ok: true as const, refs: [] };
+    const awsImageRefsResult = sanitizeAwsReviewImageRefs(images);
     if (!awsImageRefsResult.ok) {
       return withCors(NextResponse.json({ error: 'Invalid review image reference.' }, { status: 400 }));
     }
-    const imageCount = useAwsImages ? awsImageRefsResult.refs.length : imageResult.urls.length;
+    const imageCount = awsImageRefsResult.refs.length;
 
     if (videoTokenText && imageCount > 0) {
       return withCors(NextResponse.json({ error: 'Aynı yoruma fotoğraf ve video birlikte eklenemez.' }, { status: 400 }));
@@ -683,11 +623,7 @@ export async function POST(request: Request) {
     // Atomic commit: create Review and remove any PendingReviewImage rows
     // tied to the publicIds this review consumes. Rows that were never
     // registered are silently ignored — the weekly fallback scan catches them.
-    const committedPublicIds = useAwsImages
-      ? awsPendingRows.map((row) => row.publicId)
-      : imageResult.urls
-          .map((url) => getReviewImagePublicId(url, cloudName, storeIdText))
-          .filter((id): id is string => !!id);
+    const committedPublicIds = awsPendingRows.map((row) => row.publicId);
     const committedAwsPublicUrls = initialStatus === 'approved' ? publicUrlsFromAwsPendingRows(awsPendingRows) : [];
 
     const newReview = await prisma.$transaction(async (tx) => {
@@ -733,60 +669,20 @@ export async function POST(request: Request) {
           comment: commentText ?? '',
           author: authorText,
           email: '',
-          images: useAwsImages
-            ? (committedAwsPublicUrls.length ? JSON.stringify(committedAwsPublicUrls) : null)
-            : (imageResult.urls.length ? JSON.stringify(imageResult.urls) : null),
+          images: committedAwsPublicUrls.length ? JSON.stringify(committedAwsPublicUrls) : null,
           hasImages: imageCount > 0,
           hasVideo: !!videoSession,
           status: initialStatus,
         },
       });
 
-      const pendingMetadata = committedPublicIds.length > 0
-        ? await tx.pendingReviewImage.findMany({
-            where: { publicId: { in: committedPublicIds }, storeId: storeIdText },
-            select: {
-              publicId: true,
-              assetId: true,
-              version: true,
-              resourceType: true,
-              format: true,
-              mimeType: true,
-              width: true,
-              height: true,
-              bytes: true,
-              metadataSource: true,
-              metadataStatus: true,
-              metadataFetchedAt: true,
-            },
-          })
-        : [];
-
-      const mediaRows = buildReviewMediaCreateManyData({
-        urls: imageResult.urls,
-        cloudName,
+      const awsMediaRows = buildAwsReviewMediaCreateManyData({
+        rows: awsPendingRows,
         storeId: storeIdText,
         productId: productIdText,
         reviewId: created.id,
         visible: initialStatus === 'approved',
-        metadataByPublicId: pendingMetadataMap(pendingMetadata),
       });
-      if (mediaRows.length > 0) {
-        await tx.reviewMedia.createMany({
-          data: mediaRows,
-          skipDuplicates: true,
-        });
-      }
-
-      const awsMediaRows = useAwsImages
-        ? buildAwsReviewMediaCreateManyData({
-            rows: awsPendingRows,
-            storeId: storeIdText,
-            productId: productIdText,
-            reviewId: created.id,
-            visible: initialStatus === 'approved',
-          })
-        : [];
       if (awsMediaRows.length > 0) {
         await tx.reviewMedia.createMany({
           data: awsMediaRows,

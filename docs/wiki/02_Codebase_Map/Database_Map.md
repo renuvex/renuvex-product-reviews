@@ -33,9 +33,6 @@ source_files:
   - "src/lib/media/outbox.ts"
   - "src/lib/media/sessions.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
-  - "scripts/backfill-review-media.mjs"
-  - "scripts/audit-legacy-review-media.mjs"
-  - "scripts/reconcile-legacy-review-media.mjs"
 ---
 
 # Database Map
@@ -59,12 +56,12 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow; additive `hasVideo` marks video-bearing reviews and `moderationVersion` dedupes async provider moderation jobs |
-| `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted media rows. Images remain Cloudinary; videos carry provider/providerAssetId/poster/duration/processing/source fields and still use `visible` + `Review.status` as the public gate. |
+| `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted media rows. New images are AWS-backed (`provider='aws_s3'`) and use `variantManifest`; videos use Mux. `visible` + `Review.status` remains the public gate. |
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks storefront script/theme sync state and additive `videoMonthlyLimit` quota gate (default `0`, so video stays closed). |
 | `WidgetSettings` | `id` (uuid), unique `(storeId, widgetId)` | Per-widget JSON settings |
 | `ProductSnapshot` | `id` (uuid), unique `(storeId, productId)` | Current ikas product slug/name snapshot for fallback resolution |
-| `PendingReviewImage` | `publicId` | Legacy-named pending media registry. Cloudinary image uploads and Mux video sessions both stage here behind provider-aware fields until review submit or cleanup. |
+| `PendingReviewImage` | `publicId` | Legacy-named pending media registry. AWS image upload intents and Mux video sessions stage here behind provider-aware fields until review submit or cleanup. |
 | `MediaCleanupRun` | `id` (uuid) | Audit log, one row per `cleanup-images` cron run (scan/quarantine/sweep counts, breaker status, `sampleDeleted` sample). See [[ADR_0030_Cleanup_Hardening]] |
 | `OrphanImageQuarantine` | `publicId` | Two-phase orphan-deletion state: orphans are marked here, then hard-deleted only after a grace window if still orphaned. See [[ADR_0030_Cleanup_Hardening]] |
 | `VideoUploadSession` | `id` (uuid), unique `tokenHash` | Hashed shopper upload session, Mux upload/asset/playback ids, status, poster/playback metadata, explicit `quotaState`, and 24h expiry. Raw tokens are never stored. |
@@ -87,7 +84,7 @@ On `ProductReviewSummary`:
 - unique `[storeId, productId]` - public badge, structured-data, `/api/public/ratings`, review summary distribution, and `/api/public/reviews` `totalCount` / `totalPages` read this aggregate row instead of recomputing from raw `Review.groupBy()` or `Review.count()` on every storefront request.
 
 On `ReviewMedia`:
-- unique `publicId` - one committed media asset belongs to one review row (`cloudinary` image public id or prefixed `mux:<assetId>` video id).
+- unique `publicId` - one committed media asset belongs to one review row (`aws_s3:<storeId>:<assetId>` image id or prefixed `mux:<assetId>` video id). The DB default remains additive/legacy-safe, but new source writes provider explicitly.
 - `[provider, providerAssetId]` - provider-scoped video/image asset lookup without parsing URLs.
 - `[resourceType, provider, processingStatus]` - video processing/reconciliation and provider-aware cleanup.
 - unique `[reviewId, position]` plus `[reviewId, position]` index - stable per-review image ordering.
@@ -102,7 +99,7 @@ On video lifecycle:
 - `VideoUploadSession`: `tokenHash`, provider-scoped upload/asset ids, `publicId`, `(storeId, productId, status, createdAt)`, and `(status, expiresAt)` support token lookup, webhook/session reconciliation, and pending cleanup. `quotaState=reserved|released|consumed` makes quota transitions idempotent under concurrent webhook/cancel/failure handling.
 - `VideoUploadPerformanceSample`: unique `uploadSessionId` keeps metrics idempotent; `(storeId, productId, createdAt)`, `(provider, finalStatus, createdAt)`, and `createdAt` indexes support canary/performance diagnostics without persisting secrets or raw client identity.
 - `StoreVideoUsage`: unique `(storeId, month)` keeps quota reservation atomic under serializable transactions.
-- `MediaProviderJob`: `dedupeKey`, `status/availableAt`, `lockedAt`, `provider/action/status`, and `uploadSessionId` keep provider jobs resumable, stale-lock recoverable, and deduped. It owns provider mutations, bounded Mux reconciliation, exact upload-session expiry, and expired Cloudinary pending-image cleanup. Future-scheduled lifecycle jobs are healthy state, not due/stuck work.
+- `MediaProviderJob`: `dedupeKey`, `status/availableAt`, `lockedAt`, `provider/action/status`, and `uploadSessionId` keep provider jobs resumable, stale-lock recoverable, and deduped. It owns provider mutations, bounded Mux reconciliation, exact upload-session expiry, and AWS image cleanup/publish/revoke work. Future-scheduled lifecycle jobs are healthy state, not due/stuck work.
 - `MediaProviderLease`: the primary key is the serialization key (`video-session:<id>` or `mux-asset:<assetId>`); `leaseVersion` is a fencing token and expired leases can be atomically replaced.
 
 On `Review` cursor pagination:
@@ -156,10 +153,10 @@ code run together, so a migration must not break the old code.
 - `Review.images` is **legacy TEXT containing `JSON.stringify(string[])`**. New writes keep it as a compatibility mirror; public image display reads `ReviewMedia` first and falls back to the legacy mirror during transition/backfill.
 - `Review.hasImages` is the indexed public photo-review facet. Do not reintroduce `Review.images contains` for public filters.
 - `ProductReviewSummary` is a read model, not source of truth. If manual DB edits/imports bypass normal review write paths, run `pnpm reviews:summaries:rebuild`. It owns exact public counts for unfiltered, rating-filtered, photo-filtered, photo+rating-filtered, media-filtered, and media+rating-filtered review list responses.
-- `ReviewMedia` is the normalized media read model. If legacy/imported data bypassed normal review write paths, run `pnpm reviews:media:backfill --cloudName=<cloudinaryCloudName>`; the script rejects placeholder cloud names. If media metadata is missing, run `pnpm reviews:media:metadata:backfill --cloudName=<cloudinaryCloudName>` first as dry-run, then add `--apply` after reviewing the plan.
-- Review Video is Mux-only in the local schema. A safe deploy must keep global `VIDEO_REVIEWS_ENABLED=false` and `StoreSettings.videoMonthlyLimit=0` until Mux/QStash infrastructure and Preview canary tests are configured. Existing image rows continue as `provider='cloudinary'`, `processingStatus='ready'`.
+- `ReviewMedia` is the normalized media read model. New review-image writes use AWS `variantManifest` / `provider='aws_s3'`; legacy Cloudinary rows are pre-public test data and are retired by the separate Cloudinary teardown data-alignment gate, not migrated.
+- Review Video is Mux-only in the local schema. New review-image rows are AWS-backed; Mux video rows keep their provider lifecycle in `MediaProviderJob`.
 - Review Video upload performance diagnostics are stored in `VideoUploadPerformanceSample`. Treat the table as operational evidence, not source-of-truth lifecycle state; `VideoUploadSession`, `WebhookEvent`, and `MediaProviderJob` remain authoritative for provider lifecycle.
-- Legacy global Cloudinary paths (`review_images/...` without `stores/<storeId>`) are not trusted tenant media. Audit them with `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and reconcile copy-first with `pnpm reviews:media:reconcile --cloudName=<cloudinaryCloudName> --storeId=<merchantId> --allowLegacyGlobal --apply`. Use `--dropMissingLegacy` only for verified missing source assets. See [[Legacy_Review_Media_Reconciliation]].
+- Legacy global Cloudinary paths (`review_images/...` without `stores/<storeId>`) are not trusted tenant media. The old reconciliation scripts were removed during the AWS-only teardown; do not reintroduce Cloudinary trust for storefront reads.
 - `Review.status` is a string column, not a Postgres enum. Code uses `'pending' | 'approved' | 'rejected'` literals. Be consistent.
 - `StoreSettings.storefrontScripts` is a JSON map `{ [storefrontId]: ikasScriptId }` used as an idempotency cache. Remote ikas script listing is the source of truth when available, so re-installs adopt/update existing scripts instead of creating duplicates. See [[Auth_And_Installation_Flow]].
 - `StoreSettings.storefrontTheme` stores non-sensitive active storefront/theme sync state resolved from `listStorefront.themes[].isMainTheme`. Current app-layer shape is `{ syncStatus, stable, pending, lastCheckedAt, verificationDueAt, verifiedAt }`; public settings expose only the stable `runtime.themeAdapterKey/source` to select Ozy vs generic adapter.
@@ -170,8 +167,6 @@ code run together, so a migration must not break the old code.
 - [prisma/migrations/](prisma/migrations/)
 - [src/lib/prisma.ts](src/lib/prisma.ts)
 - [src/lib/review-media.ts](src/lib/review-media.ts)
-- [scripts/audit-legacy-review-media.mjs](scripts/audit-legacy-review-media.mjs)
-- [scripts/reconcile-legacy-review-media.mjs](scripts/reconcile-legacy-review-media.mjs)
 - [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts)
 
 ## Obsidian Links

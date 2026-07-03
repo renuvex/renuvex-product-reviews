@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
-import { getConfiguredCloudinaryCloudName, parseStoredReviewImages } from '@/lib/review-images';
 import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
 import { dispatchMediaProviderJob } from '@/lib/media/jobs';
 import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
@@ -67,15 +66,15 @@ export async function GET(request: Request) {
       prisma.review.count({ where }),
     ]);
 
-    const cloudName = getConfiguredCloudinaryCloudName();
     const sanitizedReviews = reviews.map(review => ({
       ...review,
-      images: JSON.stringify(parseStoredReviewImages(review.images, cloudName, review.storeId)),
+      images: JSON.stringify([]),
       media: review.media.map((item) => {
         const awsDescriptor = item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER
           ? buildAwsReviewImagePublicDescriptor(item.variantManifest)
           : null;
         const awsPublicReady = item.provider === AWS_REVIEW_IMAGE_PROVIDER && item.variantStatus === 'public_ready' && item.visible;
+        const awsImage = item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER;
         return {
           id: item.id,
           type: item.resourceType === 'video' ? 'video' : 'image',
@@ -83,7 +82,7 @@ export async function GET(request: Request) {
           providerAssetId: item.providerAssetId,
           variantStatus: item.variantStatus,
           url: item.resourceType === 'image'
-            ? (item.provider === AWS_REVIEW_IMAGE_PROVIDER ? (awsPublicReady ? awsDescriptor?.url ?? null : null) : item.url)
+            ? (awsPublicReady ? awsDescriptor?.url ?? null : null)
             : null,
           thumbnailUrl: item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER && awsPublicReady
             ? awsDescriptor?.thumbnailUrl ?? null
@@ -95,9 +94,9 @@ export async function GET(request: Request) {
           position: item.position,
           processingStatus: item.processingStatus,
           visible: item.visible,
-          previewMode: item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER && !awsPublicReady ? 'signed' : 'public',
+          previewMode: awsImage ? (awsPublicReady ? 'public' : 'signed') : 'unsupported',
           canPreview: item.resourceType === 'image'
-            ? (item.provider === AWS_REVIEW_IMAGE_PROVIDER ? Boolean(item.variantManifest) : Boolean(item.url))
+            ? (awsImage ? Boolean(item.variantManifest) : false)
             : item.processingStatus === 'ready',
         };
       }),

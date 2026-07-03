@@ -40,7 +40,7 @@ import * as gallery from './gallery/index.js';
  * @property {string|null} [comment]
  * @property {string} author                 Masked display name.
  * @property {string|null} [merchantReply]
- * @property {string[]} [images]             Trusted Cloudinary URLs.
+ * @property {string[]} [images]             Compatibility mirror of public AWS image URLs.
  * @property {Array<Object>} [media]         Additive structured media rows.
  * @property {string} [createdAt]            ISO timestamp.
  */

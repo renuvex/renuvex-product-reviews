@@ -1,11 +1,10 @@
 // reviews-section/review-form-modal/steps/step-photos.js
 // Step 2 — Fotoğraf yükleme (opsiyonel).
 // Başlık + alt başlık + çerçeveli kart + büyük "Fotoğraf Ekle"
-// butonu + thumbnail önizleme. Cloudinary upload akışı wizard içinde izole.
+// butonu + thumbnail önizleme. AWS upload akışı wizard içinde izole.
 
 import { PUBLIC_API_KEY, API_BASE } from '../../../core/config.js';
 import { fetchWithTimeout } from '../../../core/fetch.js';
-import { isTrustedReviewImageUrl } from '../../../core/helpers.js';
 import { iconUseSvg, iconUseNode } from '../../../icons/star-sprite.js';
 import { PHOTO_ICON, PLUS_ICON, UI_CLOSE } from '../../../icons/index.js';
 import { reviewFormCopy } from '../copy.js';
@@ -381,62 +380,7 @@ export function createStepPhotos(state, opts) {
             state.set({ pendingImages: pAws, images: cAws });
             continue;
           }
-          if (!sign.folder) throw new Error('sign folder missing');
-          var fd = new FormData();
-          fd.append('file', f);
-          fd.append('api_key', sign.api_key);
-          fd.append('timestamp', sign.timestamp);
-          fd.append('signature', sign.signature);
-          fd.append('folder', sign.folder);
-
-          var up = await fetch('https://api.cloudinary.com/v1_1/' + sign.cloud_name + '/image/upload', { method: 'POST', body: fd });
-          var upData = await up.json();
-
-          if (upData.secure_url && isTrustedReviewImageUrl(upData.secure_url)) {
-            // KRİTİK KONTROL: Kullanıcı bu yükleme sürerken görseli silmiş mi?
-            var stillPending = (state.get().pendingImages || []).some(function (p) { return p.url === objUrl; });
-            if (!stillPending) {
-              continue;
-            }
-
-            // Flaş etkisini önlemek için yerel URL ile bulut URL'sini eşleştir
-            blobMap[upData.secure_url] = objUrl;
-            urlToFinger[upData.secure_url] = urlToFinger[objUrl]; // cloud URL → aynı parmak izi
-
-            var p2 = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
-            var c2 = (state.get().images || []).slice();
-            c2.push(upData.secure_url);
-            state.set({ pendingImages: p2, images: c2 });
-
-            // Server-side pending registry — submit edilmezse cleanup cron'u
-            // bu publicId'yi 24 saat sonra Cloudinary'den siler. Submit edilirse
-            // /api/public/reviews POST'u kaydı atomik olarak temizler.
-            // Fire-and-forget: registry hatası upload akışını bozmaz; haftalık
-            // fallback cron yine de kaçırılanı yakalar.
-            try {
-              fetchWithTimeout(API_BASE + '/api/public/upload/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  storeId: PUBLIC_API_KEY,
-                  secureUrl: upData.secure_url,
-                  metadata: {
-                    assetId: upData.asset_id,
-                    publicId: upData.public_id,
-                    version: upData.version,
-                    resourceType: upData.resource_type,
-                    format: upData.format,
-                    width: upData.width,
-                    height: upData.height,
-                    bytes: upData.bytes,
-                    signature: upData.signature,
-                  },
-                }),
-              }).catch(function () { /* sessiz */ });
-            } catch (_) { /* sessiz */ }
-          } else {
-            throw new Error('invalid image url');
-          }
+          throw new Error('unsupported image provider');
         } catch (err) {
           console.error('[renuvex-pr] Image upload failed:', err);
           var errMsg = err.message === 'rate_limit' ? 'Çok fazla deneme. Bekleyin.' : 'Yükleme başarısız.';

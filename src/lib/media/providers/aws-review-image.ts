@@ -126,7 +126,7 @@ function requireEnv(name: string): string {
 }
 
 export function getReviewImageProviderId(): string {
-  return (process.env.REVIEW_IMAGE_PROVIDER || 'cloudinary').trim() || 'cloudinary';
+  return (process.env.REVIEW_IMAGE_PROVIDER || AWS_REVIEW_IMAGE_PROVIDER).trim() || AWS_REVIEW_IMAGE_PROVIDER;
 }
 
 export function isAwsReviewImageProviderEnabled(): boolean {

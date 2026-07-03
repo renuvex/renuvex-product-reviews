@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-28
-last_verified: 2026-05-28
+updated: 2026-07-03
+last_verified: 2026-07-03
 tags:
   - dependencies
 related:
@@ -58,7 +58,13 @@ related:
 
 | Package | Used for |
 |---|---|
-| `cloudinary` | Server-side: signed-upload param signing + cleanup `resources` listing/delete |
+| `@aws-sdk/client-s3`, `@aws-sdk/s3-presigned-post` | AWS review-image presigned POST, object validation, tagging/metadata, variant publish/revoke/cleanup, and scoped S3 listing. |
+| `@aws-sdk/client-cloudfront`, `@aws-sdk/cloudfront-signer` | CloudFront invalidation and short-lived signed admin preview URLs. |
+| `@vercel/oidc-aws-credentials-provider` | Vercel OIDC-backed AWS runtime credentials; avoids static AWS access keys in Vercel env. |
+| `sharp` | Direct image decode/metadata stripping/variant generation for AWS review images. |
+| `@mux/mux-node`, `@mux/mux-player`, `@mux/upchunk` | Mux review-video upload, admin/public playback, and chunked browser upload UX. |
+
+`cloudinary` was removed during the AWS-only review-image teardown source pass; `pnpm why cloudinary` should be empty.
 
 ## UI
 

@@ -31,20 +31,22 @@ describe('cleanupPendingUploads', () => {
     jobsMock.failSessionAndQueueCleanup.mockResolvedValue({ id: 'job-video' });
   });
 
-  it('queues expired Cloudinary image cleanup through the provider outbox', async () => {
+  it('queues expired AWS image-family cleanup through the provider outbox', async () => {
+    const assetA = '11111111-1111-4111-8111-111111111111';
+    const assetB = '22222222-2222-4222-8222-222222222222';
     prismaMock.pendingReviewImage.findMany.mockResolvedValue([
-      { publicId: 'image-b', storeId: 'store-1', provider: 'cloudinary', providerAssetId: null, uploadSessionId: null, sourceAssetId: null },
-      { publicId: 'image-a', storeId: 'store-1', provider: 'cloudinary', providerAssetId: null, uploadSessionId: null, sourceAssetId: null },
+      { publicId: `aws_s3:store-1:${assetB}`, storeId: 'store-1', provider: 'aws_s3', providerAssetId: assetB, uploadSessionId: null, sourceAssetId: null },
+      { publicId: `aws_s3:store-1:${assetA}`, storeId: 'store-1', provider: 'aws_s3', providerAssetId: assetA, uploadSessionId: null, sourceAssetId: null },
     ]);
     const { cleanupPendingUploads } = await import('@/lib/cleanup-pending-uploads');
 
     const result = await cleanupPendingUploads();
 
     expect(jobsMock.enqueueMediaProviderJob).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      provider: 'cloudinary',
+      provider: 'aws_s3',
       action: MEDIA_JOB_ACTIONS.cleanupImage,
       resourceType: 'image',
-      payload: { publicIds: ['image-a', 'image-b'] },
+      payload: { families: [{ storeId: 'store-1', assetId: assetA }, { storeId: 'store-1', assetId: assetB }], reason: 'pending_media_expired' },
     }));
     expect(jobsMock.dispatchMediaProviderJob).toHaveBeenCalledWith('job-image');
     expect(result).toEqual(expect.objectContaining({

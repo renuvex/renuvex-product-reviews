@@ -1,10 +1,10 @@
 ---
 type: decision
 project: renuvex-product-reviews
-status: active
+status: superseded
 created: 2026-06-07
-updated: 2026-06-08
-last_verified: 2026-06-08
+updated: 2026-07-03
+last_verified: 2026-07-03
 confidence: high
 tags:
   - adr
@@ -27,16 +27,12 @@ source_files:
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/admin/reviews/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
-  - "scripts/backfill-review-media.mjs"
-  - "scripts/audit-legacy-review-media.mjs"
-  - "scripts/reconcile-legacy-review-media.mjs"
-  - "scripts/review-media-reconciliation-lib.mjs"
 ---
 
 # ADR_0027 - Review Media Read Model
 
 ## Status
-Accepted
+Accepted; superseded for image-provider behavior by [[ADR_0034_AWS_Review_Image_Migration]].
 
 ## Context
 `Review.images` was originally a TEXT field containing `JSON.stringify(string[])`. That was simple, but public `hasImages=true` reads had to use string `contains` checks against the JSON text. This is not the right long-term shape for stores with many photo reviews, photo strips, media-heavy widgets, or indexed photo filters.
@@ -77,6 +73,7 @@ Add a normalized media read model while keeping the public API response shape st
 - Monthly Cloudinary fallback cleanup should prefer `ReviewMedia.publicId`; legacy `Review.images` remains only a transition fallback.
 - Review-list cursor/keyset pagination is now handled by [[ADR_0028_Review_Cursor_Pagination]].
 - Review media dimensions, format, bytes, thumbnail URL exposure, and signed upload-response verification are additive follow-up work covered by [[ADR_0029_Review_Media_Metadata]].
+- 2026-07-03: the Cloudinary reconciliation scripts listed in the historical decision were removed during the AWS-only image teardown. New image writes/read paths use AWS `ReviewMedia.variantManifest` and the AWS cleanup family model from [[ADR_0034_AWS_Review_Image_Migration]].
 
 ## Legacy Reconciliation Status
 2026-06-08 initial audit with `--cloudName=dtn7jhhuy` found 30 non-empty legacy `Review.images` rows, 43 total legacy URLs, 3 tenant-scoped trusted URLs already normalized into `ReviewMedia`, and 40 old global `review_images/...` URLs across 27 approved reviews. Duplicate public IDs, orphan `ReviewMedia`, and summary photo-count mismatches were all zero.
@@ -91,7 +88,3 @@ The test-store apply copied 10 available legacy assets into tenant-scoped paths,
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
 - [src/app/api/admin/reviews/route.ts](src/app/api/admin/reviews/route.ts)
 - [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
-- [scripts/backfill-review-media.mjs](scripts/backfill-review-media.mjs)
-- [scripts/audit-legacy-review-media.mjs](scripts/audit-legacy-review-media.mjs)
-- [scripts/reconcile-legacy-review-media.mjs](scripts/reconcile-legacy-review-media.mjs)
-- [scripts/review-media-reconciliation-lib.mjs](scripts/review-media-reconciliation-lib.mjs)

@@ -43,7 +43,6 @@ jobs:
       - name: Build widget
         run: pnpm build:widget
         env:
-          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: renuvex
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps ${{ matrix.browser }}

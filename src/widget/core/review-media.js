@@ -1,4 +1,4 @@
-import { getTrustedReviewImages, isTrustedReviewImageUrl } from './helpers.js';
+import { isTrustedReviewImageUrl } from './helpers.js';
 
 function isTrustedMuxUrl(value) {
   if (typeof value !== 'string' || !value) return false;
@@ -148,13 +148,6 @@ export function getTrustedReviewMedia(review) {
         position: typeof item.position === 'number' ? item.position : result.length,
       });
     }
-  });
-
-  getTrustedReviewImages(review).forEach(function (url) {
-    var key = 'image:' + url;
-    if (seen[key]) return;
-    seen[key] = true;
-    result.push({ type: 'image', url: url, thumbnailUrl: null, posterUrl: null, durationMs: null, width: null, height: null, position: result.length });
   });
 
   return result.sort(function (a, b) { return a.position - b.position; });

@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-07-03
+last_verified: 2026-07-03
 confidence: high
 tags:
   - widget
@@ -51,7 +51,6 @@ source_files:
   - "src/app/api/public/settings/route.ts"
   - "src/app/api/public/ratings-by-slug/route.ts"
   - "src/lib/review-media.ts"
-  - "scripts/backfill-review-media.mjs"
   - "docs/wiki/10_Research/Widget_Transfer_Measurement_2026-05-29.md"
 ---
 
@@ -67,7 +66,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - Initial requests on PDP with a review mount: settings, ratings, reviews, and the media-gallery fetch. Badge-only PDPs use settings + ratings and skip the review render/BIG chunks plus reviews/media-gallery APIs (ADR_0024).
 - A PDP that also has product carousels mounts the listing-badge surface alongside reviews-main; `core/settings.js` shares one in-flight settings request across both surfaces, so `/api/public/settings` is fetched once, not twice (fixed 2026-05-17).
 - Initial requests on listing page: 1 (`/api/public/ratings-by-slug` — bulk).
-- Image upload: client-direct to Cloudinary; no proxy through our server.
+- Image upload: client-direct browser upload to AWS S3 with server-issued presigned POST; no image bytes proxy through our server.
 - 2026-05-24 (ADR_0019): read-only rating stars render via one injected SVG `<symbol>` sprite + `<use>` instead of inlining the full `<path>` per star. Measured before the change on the live dev store: ~76 KB of duplicated `<path>` data on a busy PDP (10 reviews) and ~4.6 KB per listing badge (linear in catalog size). The sprite defines the geometry once, so each star becomes a small `<use>` ref. Re-measure live DOM path bytes after deploy.
 - 2026-05-27 (ADR_0024): PDP title badge is separated into a `rating-badge-*` lazy chunk. If the merchant omits `<div data-renuvex-widget="reviews"></div>`, the storefront avoids review render/BIG chunks and the reviews/media-gallery API calls. `reviews-section/bootstrap.js` must not statically import `render.js`; it dynamically imports the renderer only after the explicit mount check and review fetch path.
 - 2026-05-27 follow-up: review/media-gallery fetch helpers live in `reviews-section/reviews-api.js`, not bootstrap. The 2-second listing fallback in `loader.js` now requires product-card-like DOM candidates (same-origin product-like links with nearby images) before loading the listing-badges entry chunk, reducing false-positive loads on clean PDPs.
@@ -82,7 +81,7 @@ The widget runs on every storefront page in the world that hosts our merchants. 
 - 2026-06-07 media read path: widget request/response shape is unchanged, but public `hasImages=true` reads now use indexed `Review.hasImages` and images are formatted from normalized `ReviewMedia` first. This is a backend read-path optimization for media-gallery / photo-filter scale, not a widget bundle change.
 - 2026-06-08 filtered count read path: widget request/response shape is unchanged, but `/api/public/reviews` now returns exact `totalCount` / `totalPages` from `ProductReviewSummary` buckets instead of raw `Review.count()`, including rating+photo filter combinations. This is a backend read-path optimization, not a widget bundle change.
 - 2026-06-27/2026-07-01 media display/filter path: media gallery fetches use `hasMedia=true` only when the first review summary reports media exists; if `ProductReviewSummary.mediaReviewCount === 0`, the deferred gallery read is skipped. Existing approved videos are still not hidden by disabling new uploads. The shopper-facing filter uses `ProductReviewSummary.mediaReviewCount > photoReviewCount` to decide between `Fotoğraf ve Video` / `hasMedia=true` and `Fotoğraflı` / `hasImages=true`, keeping totals read-model backed instead of raw `Review.count()`.
-- 2026-06-08 media metadata path: widget register now forwards signed Cloudinary upload-response metadata to `/api/public/upload/register`; public reads stay DB-only and expose additive `media[]` metadata for future image-heavy layouts. Cloudinary Admin API is only for dry-run-first backfill/repair (`pnpm reviews:media:metadata:backfill`), never storefront GET.
+- 2026-07-03 AWS image teardown: widget upload/register no longer emits Cloudinary upload fields or trusts Cloudinary render URLs. New image media uses AWS `variantManifest` descriptors and public URLs under `https://media.renuvex.app/review-images/v1/public/...`; public reads stay DB-only.
 
 - 2026-06-28 CDN latency snapshot: Cloudflare Worker V2 delivery is functionally live, but local Turkey measurements routed `widget.renuvex.app` to Cloudflare `FRA` and showed materially higher median TTFB than the sampled Yotpo CDN reference. Treat this as a dated decision-support snapshot, not a global CDN verdict. See [[Storefront_CDN_Performance_Benchmark]] before deciding on AWS CloudFront/S3 canary work.
 - 2026-06-29/2026-07-01 storefront first-render isolation: the Yotpo comparison did not support blaming missing cache headers, Supabase, Redis, QStash, Mux, or DB writes for first visible review-widget delay. The verified blocker was `reviews-section/bootstrap.js` waiting for both the main review request and `fetchMixedMediaGalleryReviews(...hasMedia=true&limit=15)` before the first render. The source now renders the main review payload first, schedules the media gallery read after first render via `src/widget/core/scheduler.js`, skips that deferred read when `mediaReviewCount === 0`, and hydrates only `.renuvex-pr-media-gallery-section` through an append-only `renderDeferredMediaGallery()` path when media exists. It does not rebuild the summary, filter, write button, review list, or current focus state when the delayed gallery arrives. `pnpm test:widget-smoke` covers delayed and skipped media-gallery paths and the V2 test harness routes `STOREFRONT_WIDGET_READ_API_BASE_URL` separately from backend/write origin. See [[Storefront_CDN_Performance_Benchmark]].
@@ -120,8 +119,8 @@ Yotpo/Protein Ocean reference:
 - **Bundle size**: avoid heavy deps. The widget is plain JS — no framework. Don't add one without an ADR.
 - **Edge cache TTL**: currently 60s. Trade-off vs moderation latency. Don't lower without reason; consider raising for read-heavy merchants.
 - **Listing-page badges**: bulk endpoint with single round-trip — preserve this pattern when adding features.
-- **Image transformations**: prefer Cloudinary URL params (`f_auto,q_auto,w_400`) over post-load resizing.
-- **Media read model**: future media-heavy widgets should read `ReviewMedia` metadata or a dedicated read model, not parse `Review.images` text or call Cloudinary Admin API from storefront reads.
+- **Image variants**: prefer pre-generated AWS `variants/srcset` descriptors over post-load resizing or ad hoc URL transformation.
+- **Media read model**: future media-heavy widgets should read `ReviewMedia` metadata/variant descriptors or a dedicated read model, not parse `Review.images` text or call provider Admin APIs from storefront reads.
 - **Review list pagination**: load-more should use `nextCursor` / cursor requests. Keep legacy `page` only for compatibility or explicit numbered pagination UI.
 - **Review list counts**: exact totals should come from `ProductReviewSummary` buckets. Do not add public `Review.count()` fan-out for new storefront filters without first extending the read model.
 - **Module split**: current Phase 2 work uses one classic ikas-compatible loader plus lazy ESM modules. New major surfaces such as Q&A, media gallery upgrades, review summaries, analytics, and schema should follow the same loader/registry pattern.

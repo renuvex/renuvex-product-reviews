@@ -131,22 +131,13 @@ function resolveStorefrontWidgetOrigin(envKey) {
   return parsed.toString().replace(/\/$/, '');
 }
 
-function normalizePublicCloudName(value) {
-  const cloudName = typeof value === 'string' ? value.trim() : '';
-  return /^[A-Za-z0-9_-]+$/.test(cloudName) ? cloudName : '';
-}
-
 const storefrontWidgetApiBaseUrl = resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_API_BASE_URL');
 const storefrontWidgetReadApiBaseUrl =
   resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_READ_API_BASE_URL') ||
   resolveStorefrontWidgetOrigin('STOREFRONT_WIDGET_BASE_URL');
-const defaultReviewImageCloudName = normalizePublicCloudName(
-  getEnvValue('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') || getEnvValue('CLOUDINARY_CLOUD_NAME'),
-);
 
 function createDefine(runtimePath) {
   return {
-    __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(defaultReviewImageCloudName),
     __RENUVEX_PR_API_BASE_URL__: JSON.stringify(storefrontWidgetApiBaseUrl),
     __RENUVEX_PR_READ_API_BASE_URL__: JSON.stringify(storefrontWidgetReadApiBaseUrl),
     __RENUVEX_PR_RUNTIME_PATH__: JSON.stringify(runtimePath),

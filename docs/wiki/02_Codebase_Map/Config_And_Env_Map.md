@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-21
+updated: 2026-07-03
 tags:
   - config
   - env
@@ -50,12 +50,20 @@ related:
 | `DATABASE_URL` | Supabase **transaction pooler** (port 6543, `?pgbouncer=true`) — for runtime queries |
 | `DIRECT_URL` | Supabase **session pooler** (port 5432) — for migrations |
 
-### Cloudinary
+### Review images on AWS
 | Var | Purpose |
 |---|---|
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (public). Injected into the Next/admin bundle by [next.config.js](next.config.js) and into the public widget bundle by [scripts/build-widget.mjs](scripts/build-widget.mjs) as `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`. |
-| `CLOUDINARY_API_KEY` | API key |
-| `CLOUDINARY_API_SECRET` | Used to sign uploads in [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts) |
+| `REVIEW_IMAGE_PROVIDER` | Production image provider selector. Current production target is `aws_s3`; source no longer has a Cloudinary production branch. |
+| `AWS_REVIEW_IMAGES_REGION` | AWS region for review-image S3 runtime operations. |
+| `AWS_REVIEW_IMAGES_BUCKET` | Private S3 bucket for review-image originals/variants. |
+| `AWS_REVIEW_IMAGES_PUBLIC_BASE_URL` | Public CloudFront/custom-domain base URL. Production target: `https://media.renuvex.app`. |
+| `AWS_REVIEW_IMAGES_ROLE_ARN` | Vercel OIDC-assumed AWS runtime role ARN. Do not replace with static AWS keys without a new approval. |
+| `AWS_REVIEW_IMAGES_OIDC_AUDIENCE` | Vercel OIDC audience used by the runtime role trust policy. |
+| `AWS_REVIEW_IMAGES_CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution id used for exact invalidations on approved revoke/takedown paths. |
+| `AWS_REVIEW_IMAGES_CLOUDFRONT_KEY_PAIR_ID` | CloudFront public key id for short-lived admin private-preview signed URLs. |
+| `AWS_REVIEW_IMAGES_CLOUDFRONT_PRIVATE_KEY_B64` | Base64-encoded CloudFront private key for admin private-preview signing. Secret; never log or document the value. |
+
+Legacy Cloudinary env keys may still exist in Vercel/local settings until the separate env teardown approval. They are not required by current source after the AWS-only teardown pass and should be removed only after code deploy, live AWS acceptance, DB data alignment, and rollback-closure approval.
 
 ### Upstash Redis (rate limiting)
 | Var | Purpose |
@@ -106,7 +114,7 @@ See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]] for the
 | File | Purpose |
 |---|---|
 | [ikas.config.json](ikas.config.json) | ikas dev tooling: port (3000), oauth redirect path (`/api/oauth/callback/ikas`), run command |
-| [next.config.js](next.config.js) | Next.js config |
+| [next.config.js](next.config.js) | Next.js config, including the `media.renuvex.app` public image remote pattern when Next/Image is used for public AWS image delivery. |
 | [vercel.json](vercel.json) | `regions: ["fra1"]`, daily Vercel-compatible maintenance cron, monthly fallback cleanup cron, widget static asset cache headers |
 | [wrangler.widget.jsonc](wrangler.widget.jsonc) | Cloudflare Worker Static Assets config for live `widget.renuvex.app` delivery. Source includes V2 public-read proxy support with non-secret `BACKEND_API_ORIGIN=https://app.renuvex.app`; no routes/custom domains are stored in source. Future Worker redeploys or domain/DNS edits remain separately approved. |
 | [components.json](components.json) | shadcn/ui CLI/MCP config |

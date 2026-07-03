@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-07-03
+last_verified: 2026-07-03
 confidence: high
 tags:
   - api
@@ -41,7 +41,7 @@ source_files:
   - "src/lib/media/jobs.ts"
   - "src/lib/media/moderation.ts"
   - "src/lib/media/moderation-intent.ts"
-  - "src/lib/media/providers/cloudinary-image.ts"
+  - "src/lib/media/providers/aws-review-image.ts"
   - "src/lib/media/providers/mux.ts"
   - "src/lib/media/reconciliation.ts"
   - "src/lib/media/sessions.ts"
@@ -49,9 +49,6 @@ source_files:
   - "src/lib/media/video-processing.ts"
   - "src/app/api/webhooks/mux/route.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
-  - "scripts/backfill-review-media.mjs"
-  - "scripts/audit-legacy-review-media.mjs"
-  - "scripts/reconcile-legacy-review-media.mjs"
 ---
 
 # Backend / API Map
@@ -77,10 +74,10 @@ Three groups of API routes:
 | POST `/api/admin/inject-scripts` | [route.ts](src/app/api/admin/inject-scripts/route.ts) | Non-destructively create/update this app's loader script on each storefront; recreates only for known missing/deleted script ids |
 | POST `/api/admin/storefront-theme/sync` | [route.ts](src/app/api/admin/storefront-theme/sync/route.ts) | Lightweight active theme sync from ikas `listStorefront`; no script create/update |
 | POST `/api/admin/sync-products` | [route.ts](src/app/api/admin/sync-products/route.ts) | Register product webhooks and backfill `ProductSnapshot` from ikas `listProduct` |
-| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Vercel cron: daily batch storefront theme verification plus pending upload cleanup + storefront script reconciliation + bounded durable `ReviewMedia` metadata backfill (Cloudinary Admin API, self-healing; `src/lib/review-media-metadata-backfill.ts`); route also supports lightweight sub-daily theme verification if the deploy plan supports it |
+| GET `/api/admin/daily-maintenance` (Bearer CRON) | [route.ts](src/app/api/admin/daily-maintenance/route.ts) | Vercel cron: daily batch storefront theme verification plus pending upload cleanup and storefront script reconciliation. Cloudinary metadata backfill is removed after the AWS-only image teardown source pass; route also supports lightweight sub-daily theme verification if the deploy plan supports it |
 | GET `/api/admin/reconcile-storefront-scripts` (Bearer CRON) | [route.ts](src/app/api/admin/reconcile-storefront-scripts/route.ts) | Explicit non-destructive storefront script reconciliation for existing merchants |
 | GET `/api/admin/cleanup-pending-uploads` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts) | Explicit PendingReviewImage cleanup using the same helper as daily maintenance |
-| GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Monthly Cloudinary `review_images/*` fallback scan → delete orphans |
+| GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Monthly AWS review-image family orphan scan with the existing two-phase quarantine/circuit-breaker model. It groups by `storeId + assetId` and does not perform bucket-wide blind deletes |
 | GET `/api/ikas/get-merchant` | [route.ts](src/app/api/ikas/get-merchant/route.ts) | Demo: fetches merchant via ikas Admin GQL |
 
 ### Auth gate
@@ -92,13 +89,13 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 |---|---|---|
 | OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&hasMedia&limit&cursor` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. Exact `totalCount` / `totalPages` for unfiltered/rating/photo/media filters come from summary buckets; `hasMedia=true` means approved `(hasImages OR hasVideo)`. Legacy `page/limit` remains supported; responses include signed `nextCursor` and cursor requests use keyset pagination without `skip`. Tampered, unsigned, or context-mismatched cursors return `400`. `hasImages=true` uses indexed `Review.hasImages`; `hasMedia=true` is used by the media gallery and by the public `Fotoğraf ve Video` filter when summary counts prove the product has approved video media, and cannot be combined with `hasImages`. Response `images` remains image-only; additive `media[]` exposes `{ type, url, posterUrl, thumbnailUrl, durationMs, width, height, position }` without provider ids. Additive `photoReviewCount` and `mediaReviewCount` expose read-model counts so the widget can separate existing video display from new upload capability. |
-| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + trusted image URLs/video token + auto-approve). Writes `Review`, legacy `Review.images`, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. v1 rejects mixed image+video; video-bearing reviews always start `pending`. Client `slug`/`productName`/`email` are ignored. |
+| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Writes `Review`, compatibility `Review.images` only for render-ready public AWS URLs, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. v1 rejects mixed image+video; video-bearing reviews always start `pending`. Client `slug`/`productName`/`email` are ignored. |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
 | GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read `ProductReviewSummary` by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Pure cacheable widget config read (per widgetId) plus public runtime flags including additive `runtime.themeSyncDue`. Does not read auth tokens, call ikas, or schedule theme sync. Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
 | POST `/api/public/storefront-theme/lazy-sync` body `{ publicApiKey }` | [route.ts](src/app/api/public/storefront-theme/lazy-sync/route.ts) | Best-effort storefront theme freshness trigger. Rate-limits first, returns `204` when the stored theme state is fresh, and schedules `syncStorefrontThemeForToken(..., 'lazy_storefront')` via `after()` only when stale. This route is write/control-plane and is not Worker-cached. |
-| POST `/api/public/upload/sign` body `{ storeId }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Cloudinary signed direct upload scoped to `review_images/stores/<storeId>` after StoreSettings verification |
-| POST `/api/public/upload/register` body `{ storeId, secureUrl, metadata? }` | [route.ts](src/app/api/public/upload/register/route.ts) | Register a completed tenant-scoped Cloudinary upload in `PendingReviewImage` for cleanup. Optional signed Cloudinary upload-response metadata is verified server-side before dimensions/format/bytes are staged for `ReviewMedia`. |
+| POST `/api/public/upload/sign` body `{ storeId, fileName, contentType, bytes, checksumAlgorithm:"SHA256", checksumSha256 }` | [route.ts](src/app/api/public/upload/sign/route.ts) | Creates an AWS `PendingReviewImage` upload intent and returns an S3 presigned POST contract (`provider:"aws_s3"`, `uploadUrl`, fields, `assetId`, `uploadSessionId`, `objectKey`). No AWS credentials, public URL, or original filename are returned. |
+| POST `/api/public/upload/register` body `{ storeId, provider:"aws_s3", assetId, uploadSessionId, objectKey, contentType, bytes, checksumAlgorithm:"SHA256", checksumSha256 }` | [route.ts](src/app/api/public/upload/register/route.ts) | Validates the AWS intent and S3 object/head/tag/checksum evidence, generates private variants, and marks the pending image `private_ready` before review submit can use it. |
 | GET `/api/public/upload/video/capability?storeId=` | [route.ts](src/app/api/public/upload/video/capability/route.ts) | Fresh `no-store` video capability check with a 60/min/IP fixed-window limit. Returns only `{ enabled, reason }`; quota counts and provider configuration remain server-private. |
 | POST `/api/public/upload/video/initiate` | [route.ts](src/app/api/public/upload/video/initiate/route.ts) | Start gated Mux direct upload; validates feature gates, quota, product/store ownership, MIME, and 150MB size. Returns opaque session token, Mux upload URL, suggested chunk size, and chunk attempts without exposing provider ids or credentials. |
 | POST `/api/public/upload/video/complete` | [route.ts](src/app/api/public/upload/video/complete/route.ts) | Mark direct upload complete, enqueue `resolve_video_asset`, and move session toward processing without trusting client-side provider ids. |
@@ -158,16 +155,15 @@ Detail in [[Security_And_Rate_Limits]].
 ## Notes
 - **There is no `/api/admin/auth/me` style endpoint.** The JWT itself carries everything. If the UI needs more, it calls `/api/ikas/get-merchant`.
 - **Cron routes must be authenticated.** Always set `CRON_SECRET` in deploy env. Cron routes now refuse to run without it.
-- **Review image URLs are policy-controlled.** Public review writes and reads must use [src/lib/review-images.ts](src/lib/review-images.ts); widget renderers consume the matching cloud name from the build-time injected constant (see [[ADR_0008_Cloud_Name_Build_Time_Only]]).
+- **Review images are AWS-only for new uploads.** Public review writes accept AWS image refs, not raw image URLs. Public reads render image media only from DB-backed AWS public variant manifests under `media.renuvex.app`; widget renderers consume structured `media[]` first.
 - **Media filtering is indexed/read-model backed.** Public `hasImages=true` must use `Review.hasImages`; public `hasMedia=true` must use `Review.hasImages OR Review.hasVideo`. Do not reintroduce `Review.images contains` string filters.
 - **Public review counts are read-model owned.** `/api/public/reviews` must derive `totalCount` / `totalPages` from `ProductReviewSummary` buckets, including `photoRating*Count` for `hasImages=true&rating=N` and `mediaRating*Count` for `hasMedia=true&rating=N`; do not reintroduce hot-path `Review.count()` for current storefront filters.
-- **Cloudinary used-image cleanup is media-first.** `/api/admin/cleanup-images` prefers `ReviewMedia.publicId`; legacy `Review.images` remains a transition fallback until the media backfill is complete everywhere.
-- **Cloudinary metadata is write-time/read-model data.** Public reads should use `ReviewMedia` metadata or nullable fallback values; do not call Cloudinary Admin API from storefront GET paths.
-- **Legacy global review image paths need copy-first reconciliation.** Do not make `/api/public/reviews` or widget helpers trust old global `review_images/...` URLs. Use `pnpm reviews:media:audit --cloudName=<cloudinaryCloudName>` and the scoped `reviews:media:reconcile` script instead. See [[Legacy_Review_Media_Reconciliation]].
+- **AWS image cleanup is family-scoped.** `/api/admin/cleanup-images`, pending cleanup, and media jobs operate on `storeId + assetId` families covering private originals, private variants, and public variants. Missing provider objects are idempotent success; DB rows are removed only after provider cleanup confirms absence/success.
+- **Legacy pre-public Cloudinary rows are not copied to AWS.** Source no longer trusts or renders Cloudinary media after teardown; DB data alignment requires a separate dry-run/apply approval and must preserve AWS/Mux rows.
 - **Status enums are strings, not Prisma enums.** `'pending' | 'approved' | 'rejected'` lives in code, not in the DB schema. If you add a state, search for the literals to update everywhere.
 - **Video provider identity is server-private.** Public/admin list responses expose normalized media fields only; provider ids are used only in server adapters, jobs, webhooks, and signed admin playback.
 - **Video capability is advisory, reservation is authoritative.** The widget uses the fresh capability endpoint to hide unavailable video upload before opening the wizard. `/api/public/upload/video/initiate` repeats every gate and the atomic quota reservation remains the concurrency authority. Quota exhaustion returns `429 video_quota_exceeded`; rate limiting returns `429 rate_limited` with `Retry-After`; disabled and provider-unavailable states return `403` and `503` respectively.
-- **Media provider mutations are outbox-owned.** Do not call Mux publish/delete or expired Cloudinary pending-image deletes directly from UI/cron routes except by enqueueing `MediaProviderJob` and dispatching QStash; this keeps retries, idempotency, stale-lock recovery, and DLQ/manual repair observable.
+- **Media provider mutations are outbox-owned.** Do not call Mux publish/delete or AWS image publish/revoke/cleanup directly from UI routes except through the provider/job path documented in source; this keeps retries, idempotency, stale-lock recovery, and DLQ/manual repair observable.
 - **QStash is a wakeup layer, not the source of truth.** Session failure/cancel state and the matching cleanup job are committed in the same DB transaction. Repeated delivery is safe; same-asset provider calls are lease-serialized and stale moderation jobs converge Mux playback state to the latest DB-visible state.
 - **Mux readiness is self-healing.** Upload completion creates a deduped `resolve_video_asset` / `reconcile_video` path. The webhook remains the fast path, while bounded canonical-status checks recover missed/delayed delivery without exposing provider identity through the public status endpoint. Upload reservation similarly creates `expire_upload_session` in the same serializable transaction.
 
@@ -180,8 +176,6 @@ Detail in [[Security_And_Rate_Limits]].
 - [src/lib/review-summary.ts](src/lib/review-summary.ts)
 - [src/lib/widget-settings.ts](src/lib/widget-settings.ts)
 - [scripts/rebuild-product-review-summaries.mjs](scripts/rebuild-product-review-summaries.mjs)
-- [scripts/audit-legacy-review-media.mjs](scripts/audit-legacy-review-media.mjs)
-- [scripts/reconcile-legacy-review-media.mjs](scripts/reconcile-legacy-review-media.mjs)
 
 ## Obsidian Links
 - [[API_Design]]
@@ -197,6 +191,7 @@ Detail in [[Security_And_Rate_Limits]].
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-07-03: AWS-only review-image source teardown removed Cloudinary upload/register branches, metadata backfill, provider cleanup scripts, dependency, and widget trust. Public image upload now uses AWS S3 presigned POST + register, reads use provider-neutral AWS public variant descriptors, and cleanup uses AWS object-family evidence.
 - 2026-06-20: Added `/api/public/upload/video/metrics` and returned `chunkAttempts` from video initiate so Mux direct-upload transfer/retry timing can be measured separately from processing/webhook lifecycle.
 - 2026-06-15: Added the uncached public video capability endpoint, quota-aware access reasons, structured initiate errors, and read-only admin video usage metadata. Cached public settings remain unchanged; atomic initiate reservation is still authoritative.
 - 2026-06-23: Admin video preview route now returns signed Mux Player attributes additively while keeping legacy signed URL fields during rollout overlap. Public review media returns additive `playbackId` for approved videos so storefront playback can prefer official Mux Player without exposing provider ids or signed/private playback ids.

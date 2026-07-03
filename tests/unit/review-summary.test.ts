@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   applyReviewSummaryVisibilityChange,
   filteredReviewTotal,
@@ -74,11 +74,6 @@ type ReviewSummaryClient = Parameters<typeof applyReviewSummaryVisibilityChange>
 function asReviewSummaryClient(client: ReturnType<typeof fakeClient>): ReviewSummaryClient {
   return client as unknown as ReviewSummaryClient;
 }
-
-beforeEach(() => {
-  delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  delete process.env.CLOUDINARY_CLOUD_NAME;
-});
 
 describe('review summary read model', () => {
   it('upserts a product summary when an approved review becomes visible', async () => {
@@ -185,12 +180,11 @@ describe('review summary read model', () => {
   });
 
   it('recomputes one product summary exactly from approved review rows', async () => {
-    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'renuvex';
     const client = fakeClient();
     client.review.findMany.mockResolvedValue([
       approvedReview({
         rating: 5,
-        images: JSON.stringify(['https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/a.jpg']),
+        hasImages: true,
         createdAt: new Date('2026-05-28T00:00:00.000Z'),
       }),
       approvedReview({ rating: 4, createdAt: new Date('2026-05-27T00:00:00.000Z') }),

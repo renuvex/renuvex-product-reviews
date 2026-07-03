@@ -126,16 +126,6 @@ async function configureControlledRoutes(page, scenario) {
   await page.route(`${WIDGET_ORIGIN}/api/public/widget-error**`, async (route) => {
     await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
   });
-  await page.route('https://res.cloudinary.com/**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'image/svg+xml; charset=utf-8',
-      },
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"></svg>',
-    });
-  });
   await page.route(`${MERCHANT_ORIGIN}/**`, async (route) => {
     await route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: productHtml(scenario) });
   });

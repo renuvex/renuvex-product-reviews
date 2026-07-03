@@ -24,7 +24,6 @@ source_files:
   - "scripts/prepare-widget-worker-assets.mjs"
   - "scripts/clean-widget-runtime-untracked.mjs"
   - "scripts/rebuild-product-review-summaries.mjs"
-  - "scripts/backfill-review-media.mjs"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/widget/core/cache.js"
