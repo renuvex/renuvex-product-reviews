@@ -27,6 +27,9 @@ export const MEDIA_JOB_ACTIONS = {
   protectVideo: 'protect_video',
   cleanupVideo: 'cleanup_video',
   cleanupImage: 'cleanup_image',
+  publishImage: 'publish_image',
+  revokeImagePublic: 'revoke_image_public',
+  reconcileImageVariants: 'reconcile_image_variants',
   reconcileVideo: 'reconcile_video',
   expireUploadSession: 'expire_upload_session',
 } as const;

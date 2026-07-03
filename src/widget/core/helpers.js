@@ -236,6 +236,16 @@ export function formatDate(iso) {
 var REVIEW_IMAGE_ALLOWED_EXT = { jpg: true, jpeg: true, png: true, webp: true, gif: true, avif: true };
 var REVIEW_IMAGE_ROOT_FOLDER = 'review_images';
 var REVIEW_IMAGE_TENANT_FOLDER = 'stores';
+var AWS_REVIEW_IMAGE_PUBLIC_HOST = 'media.renuvex.app';
+var AWS_REVIEW_IMAGE_VARIANTS = {
+  w200: true,
+  w300: true,
+  w400: true,
+  w600: true,
+  w1200: true,
+  thumb_320x427: true,
+  thumb_640x854: true,
+};
 
 function normalizeReviewImageCloudName(cloudName) {
   var normalizedCloudName = typeof cloudName === 'string' ? cloudName.trim() : '';
@@ -247,21 +257,14 @@ function normalizeReviewImageStoreId(storeId) {
   return /^[A-Za-z0-9_-]{1,128}$/.test(normalizedStoreId) ? normalizedStoreId : '';
 }
 
-// Trusted Cloudinary cloud name — ADR_0008 gereği build-time'da bir kez set edilir,
-// runtime'da değişmez. scripts/build-widget.mjs `__RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__`
-// sabitini bundle'a inject eder (env: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME). Settings
-// endpoint artık `imagePolicy` field'ı taşımaz; cloud name app-level config'tir,
-// merchant-level değildir. Eğer bu sabit boşsa deploy config hatası vardır — modül
-// yüklenirken bir kez error log basılır, sonra runtime'da fail-closed davranılır.
+// Trusted legacy Cloudinary cloud name is build-time only. AWS review images are
+// trusted separately via media.renuvex.app, so an empty Cloudinary value hides
+// only legacy Cloudinary URLs.
 var trustedReviewImageCloudName = normalizeReviewImageCloudName(
   typeof __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string'
     ? __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__
     : ''
 );
-
-if (!trustedReviewImageCloudName) {
-  console.error('[renuvex-pr] NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is missing at build time; review images will be hidden until widget is rebuilt with a valid cloud name.');
-}
 
 function isPreviewPlaceholderImage(url) {
   return typeof window !== 'undefined' &&
@@ -271,6 +274,29 @@ function isPreviewPlaceholderImage(url) {
     !url.search &&
     !url.hash &&
     /\.(png|jpe?g|webp|gif|avif)$/i.test(url.pathname);
+}
+
+function isTrustedAwsReviewImageUrl(url) {
+  if (!url || url.protocol !== 'https:' || url.hostname !== AWS_REVIEW_IMAGE_PUBLIC_HOST || url.username || url.password || url.port || url.search || url.hash) return false;
+  var lowerPath = url.pathname.toLowerCase();
+  if (lowerPath.indexOf('%2f') !== -1 || lowerPath.indexOf('%5c') !== -1) return false;
+  var parts = url.pathname.split('/').filter(Boolean);
+  var trustedStoreId = normalizeReviewImageStoreId(PUBLIC_API_KEY);
+  if (!trustedStoreId || parts.length !== 9) return false;
+  if (
+    parts[0] !== 'review-images' ||
+    parts[1] !== 'v1' ||
+    parts[2] !== 'public' ||
+    parts[3] !== 'stores' ||
+    parts[4] !== trustedStoreId ||
+    parts[5] !== 'assets' ||
+    !/^[0-9a-f-]{36}$/i.test(parts[6]) ||
+    parts[7] !== 'variants'
+  ) {
+    return false;
+  }
+  var file = parts[8].split('.');
+  return file.length === 2 && AWS_REVIEW_IMAGE_VARIANTS[file[0]] === true && (file[1] === 'webp' || file[1] === 'jpeg');
 }
 
 export function isTrustedReviewImageUrl(value) {
@@ -286,6 +312,7 @@ export function isTrustedReviewImageUrl(value) {
   }
 
   if (isPreviewPlaceholderImage(url)) return true;
+  if (isTrustedAwsReviewImageUrl(url)) return true;
   // Build-time inject boşsa modül yüklenirken zaten error loglandı; burada
   // sessizce fail-closed davran (UI'de görsel görünmez, log spam'i yok).
   if (!trustedReviewImageCloudName) return false;
@@ -415,6 +442,29 @@ export function attachImageErrorHandler(img, onFail) {
 // kapanır, kırık-ikon görünmez.
 export function hideOnImageError(img) {
   attachImageErrorHandler(img, function (el) { el.style.display = 'none'; });
+}
+
+export function buildReviewImageAttrs(item, baseWidth) {
+  var fallbackUrl = item && (item.url || item.thumbnailUrl);
+  var variants = item && Array.isArray(item.variants) ? item.variants.slice() : [];
+  if (!variants.length) return buildResponsiveImgAttrs(fallbackUrl, baseWidth);
+  var w1 = (typeof baseWidth === 'number' && baseWidth > 0) ? Math.round(baseWidth) : LIGHTBOX_MAIN_WIDTH;
+  var w2 = w1 * 2;
+  var webp = variants.filter(function (variant) { return variant && variant.format === 'webp' && typeof variant.width === 'number' && variant.url; })
+    .sort(function (a, b) { return a.width - b.width; });
+  var jpeg = variants.filter(function (variant) { return variant && variant.format === 'jpeg' && typeof variant.width === 'number' && variant.url; })
+    .sort(function (a, b) { return a.width - b.width; });
+  var preferred = webp.length ? webp : jpeg;
+  function pick(width) {
+    for (var i = 0; i < preferred.length; i++) {
+      if (preferred[i].width >= width) return preferred[i].url;
+    }
+    return preferred.length ? preferred[preferred.length - 1].url : '';
+  }
+  var src1 = pick(w1);
+  var src2 = pick(w2) || src1;
+  if (!src1) return buildResponsiveImgAttrs(fallbackUrl, baseWidth);
+  return { src: src1, srcset: src1 + ' 1x, ' + src2 + ' 2x' };
 }
 
 // renderStars / ensureStarStyles / STAR_COLOR removed during the Shadow DOM

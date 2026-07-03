@@ -145,8 +145,27 @@ export default function HomePage({ token, storeName }: HomePageProps) {
   };
 
   const handleMediaOpen = async (media: ReviewMedia, reviewStatus: string) => {
-    if (media.type === 'image' && media.url) {
-      setMediaPreview({ mediaId: media.id, type: 'image', url: media.url, loading: false, reviewStatus });
+    if (media.type === 'image') {
+      if (media.url && media.previewMode !== 'signed') {
+        setMediaPreview({ mediaId: media.id, type: 'image', url: media.url, loading: false, reviewStatus });
+        return;
+      }
+      if (!media.canPreview) return;
+      setMediaPreview({ mediaId: media.id, type: 'image', url: null, loading: true, reviewStatus });
+      try {
+        const response = await axios.get(`/api/admin/reviews/image-preview?mediaId=${encodeURIComponent(media.id)}`, {
+          headers: await freshAuthHeader(token),
+        });
+        const signedUrl = response.data?.data?.url;
+        if (typeof signedUrl !== 'string' || !signedUrl) throw new Error('image_preview_url_missing');
+        setMediaPreview(current => (
+          current?.mediaId === media.id ? { ...current, url: signedUrl, loading: false } : current
+        ));
+      } catch (error) {
+        console.error('Image preview could not be opened:', error);
+        setMediaPreview(current => (current?.mediaId === media.id ? null : current));
+        toast.error('Gorsel onizlemesi acilamadi. Lutfen tekrar deneyin.');
+      }
       return;
     }
     if (media.type !== 'video' || media.processingStatus !== 'ready') return;

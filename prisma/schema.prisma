@@ -50,40 +50,50 @@ model Review {
 }
 
 model ReviewMedia {
-  id                String    @id @default(uuid())
-  reviewId          String
-  storeId           String
-  productId         String
-  url               String    @db.VarChar(2048)
-  publicId          String    @unique @db.VarChar(512)
-  assetId           String?   @db.VarChar(128)
-  version           String?   @db.VarChar(64)
-  resourceType      String    @default("image") @db.VarChar(32)
-  provider          String    @default("cloudinary") @db.VarChar(64)
-  providerAssetId   String?   @db.VarChar(512)
-  posterUrl         String?   @db.VarChar(2048)
-  durationMs        Int?
-  processingStatus  String    @default("ready") @db.VarChar(32)
-  sourceProvider    String?   @db.VarChar(64)
-  sourceAssetId     String?   @db.VarChar(1024)
-  format            String?   @db.VarChar(32)
-  mimeType          String?   @db.VarChar(128)
-  width             Int?
-  height            Int?
-  bytes             Int?
-  metadataSource    String    @default("unknown") @db.VarChar(64)
-  metadataStatus    String    @default("pending") @db.VarChar(64)
-  metadataFetchedAt DateTime?
-  position          Int
-  visible           Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  review            Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  id                      String    @id @default(uuid())
+  reviewId                String
+  storeId                 String
+  productId               String
+  url                     String    @db.VarChar(2048)
+  publicId                String    @unique @db.VarChar(512)
+  assetId                 String?   @db.VarChar(128)
+  version                 String?   @db.VarChar(64)
+  resourceType            String    @default("image") @db.VarChar(32)
+  provider                String    @default("cloudinary") @db.VarChar(64)
+  providerAssetId         String?   @db.VarChar(512)
+  posterUrl               String?   @db.VarChar(2048)
+  durationMs              Int?
+  processingStatus        String    @default("ready") @db.VarChar(32)
+  sourceProvider          String?   @db.VarChar(64)
+  sourceAssetId           String?   @db.VarChar(1024)
+  format                  String?   @db.VarChar(32)
+  mimeType                String?   @db.VarChar(128)
+  width                   Int?
+  height                  Int?
+  bytes                   Int?
+  sourceChecksumAlgorithm String?   @db.VarChar(16)
+  sourceChecksumSha256    String?   @db.VarChar(128)
+  metadataSource          String    @default("unknown") @db.VarChar(64)
+  metadataStatus          String    @default("pending") @db.VarChar(64)
+  metadataFetchedAt       DateTime?
+  variantStatus           String    @default("pending") @db.VarChar(32)
+  variantGeneratedAt      DateTime?
+  variantPublishedAt      DateTime?
+  variantRevokedAt        DateTime?
+  variantErrorCode        String?   @db.VarChar(128)
+  variantManifest         Json?
+  position                Int
+  visible                 Boolean   @default(false)
+  createdAt               DateTime  @default(now())
+  review                  Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, position])
   @@index([reviewId, position])
   @@index([storeId, productId, visible, createdAt])
   @@index([metadataStatus, createdAt])
   @@index([provider, providerAssetId])
+  @@index([provider, storeId, providerAssetId])
+  @@index([provider, resourceType, variantStatus, createdAt])
   @@index([processingStatus, createdAt])
 }
 
@@ -163,36 +173,46 @@ model ProductSnapshot {
 // safety. Provider-specific cleanup is routed through the media adapters.
 // See ADR_0012 and ADR_0031 for the lifecycle contracts.
 model PendingReviewImage {
-  publicId          String    @id
-  storeId           String?
-  productId         String?
-  uploadSessionId   String?   @unique
-  url               String?   @db.VarChar(2048)
-  assetId           String?   @db.VarChar(128)
-  version           String?   @db.VarChar(64)
-  resourceType      String    @default("image") @db.VarChar(32)
-  provider          String    @default("cloudinary") @db.VarChar(64)
-  providerAssetId   String?   @db.VarChar(512)
-  posterUrl         String?   @db.VarChar(2048)
-  durationMs        Int?
-  processingStatus  String    @default("ready") @db.VarChar(32)
-  sourceProvider    String?   @db.VarChar(64)
-  sourceAssetId     String?   @db.VarChar(1024)
-  format            String?   @db.VarChar(32)
-  mimeType          String?   @db.VarChar(128)
-  width             Int?
-  height            Int?
-  bytes             Int?
-  metadataSource    String    @default("unknown") @db.VarChar(64)
-  metadataStatus    String    @default("pending") @db.VarChar(64)
-  metadataFetchedAt DateTime?
-  createdAt         DateTime  @default(now())
-  ipHash            String?
+  publicId                String    @id
+  storeId                 String?
+  productId               String?
+  uploadSessionId         String?   @unique
+  url                     String?   @db.VarChar(2048)
+  assetId                 String?   @db.VarChar(128)
+  version                 String?   @db.VarChar(64)
+  resourceType            String    @default("image") @db.VarChar(32)
+  provider                String    @default("cloudinary") @db.VarChar(64)
+  providerAssetId         String?   @db.VarChar(512)
+  posterUrl               String?   @db.VarChar(2048)
+  durationMs              Int?
+  processingStatus        String    @default("ready") @db.VarChar(32)
+  sourceProvider          String?   @db.VarChar(64)
+  sourceAssetId           String?   @db.VarChar(1024)
+  format                  String?   @db.VarChar(32)
+  mimeType                String?   @db.VarChar(128)
+  width                   Int?
+  height                  Int?
+  bytes                   Int?
+  sourceChecksumAlgorithm String?   @db.VarChar(16)
+  sourceChecksumSha256    String?   @db.VarChar(128)
+  metadataSource          String    @default("unknown") @db.VarChar(64)
+  metadataStatus          String    @default("pending") @db.VarChar(64)
+  metadataFetchedAt       DateTime?
+  variantStatus           String    @default("pending") @db.VarChar(32)
+  variantGeneratedAt      DateTime?
+  variantErrorCode        String?   @db.VarChar(128)
+  variantManifest         Json?
+  uploadExpiresAt         DateTime?
+  uploadRegisteredAt      DateTime?
+  createdAt               DateTime  @default(now())
+  ipHash                  String?
 
   @@index([createdAt])
   @@index([storeId, createdAt])
   @@index([metadataStatus, createdAt])
   @@index([provider, providerAssetId])
+  @@index([provider, storeId, providerAssetId])
+  @@index([provider, variantStatus, createdAt])
   @@index([processingStatus, createdAt])
 }
 

@@ -4,7 +4,14 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { getConfiguredCloudinaryCloudName, parseStoredReviewImages } from '@/lib/review-images';
 import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
 import { dispatchMediaProviderJob } from '@/lib/media/jobs';
-import { VIDEO_PROVIDER } from '@/lib/media/constants';
+import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
+import { enqueueMediaProviderJob } from '@/lib/media/outbox';
+import {
+  AWS_REVIEW_IMAGE_PROVIDER,
+  buildAwsReviewImagePublicDescriptor,
+  publishAwsReviewImageVariants,
+  revokeAwsReviewImagePublicVariants,
+} from '@/lib/media/providers/aws-review-image';
 import {
   enqueueVideoReviewCleanup,
   getReviewForModerationUpdate,
@@ -14,6 +21,16 @@ import {
 } from '@/lib/media/moderation';
 
 const REVIEW_NOT_FOUND = 'review-not-found';
+
+async function compensatePublishedAwsReviewImages(manifests: unknown[], context: string) {
+  for (const manifest of manifests) {
+    try {
+      await revokeAwsReviewImagePublicVariants(manifest);
+    } catch (error) {
+      console.error(`${context} AWS image publish compensation failed:`, error instanceof Error ? error.message : error);
+    }
+  }
+}
 
 /**
  * Handle GET requests: Fetch reviews for the authenticated merchant (paginated)
@@ -54,18 +71,36 @@ export async function GET(request: Request) {
     const sanitizedReviews = reviews.map(review => ({
       ...review,
       images: JSON.stringify(parseStoredReviewImages(review.images, cloudName, review.storeId)),
-      media: review.media.map((item) => ({
-        id: item.id,
-        type: item.resourceType === 'video' ? 'video' : 'image',
-        url: item.resourceType === 'image' ? item.url : null,
-        posterUrl: item.posterUrl,
-        durationMs: item.durationMs,
-        width: item.width,
-        height: item.height,
-        position: item.position,
-        processingStatus: item.processingStatus,
-        visible: item.visible,
-      })),
+      media: review.media.map((item) => {
+        const awsDescriptor = item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER
+          ? buildAwsReviewImagePublicDescriptor(item.variantManifest)
+          : null;
+        const awsPublicReady = item.provider === AWS_REVIEW_IMAGE_PROVIDER && item.variantStatus === 'public_ready' && item.visible;
+        return {
+          id: item.id,
+          type: item.resourceType === 'video' ? 'video' : 'image',
+          provider: item.provider,
+          providerAssetId: item.providerAssetId,
+          variantStatus: item.variantStatus,
+          url: item.resourceType === 'image'
+            ? (item.provider === AWS_REVIEW_IMAGE_PROVIDER ? (awsPublicReady ? awsDescriptor?.url ?? null : null) : item.url)
+            : null,
+          thumbnailUrl: item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER && awsPublicReady
+            ? awsDescriptor?.thumbnailUrl ?? null
+            : null,
+          posterUrl: item.posterUrl,
+          durationMs: item.durationMs,
+          width: item.width,
+          height: item.height,
+          position: item.position,
+          processingStatus: item.processingStatus,
+          visible: item.visible,
+          previewMode: item.resourceType === 'image' && item.provider === AWS_REVIEW_IMAGE_PROVIDER && !awsPublicReady ? 'signed' : 'public',
+          canPreview: item.resourceType === 'image'
+            ? (item.provider === AWS_REVIEW_IMAGE_PROVIDER ? Boolean(item.variantManifest) : Boolean(item.url))
+            : item.processingStatus === 'ready',
+        };
+      }),
     }));
 
     return NextResponse.json({
@@ -104,6 +139,22 @@ export async function DELETE(request: Request) {
           select: { id: true, providerAssetId: true, processingStatus: true },
         }) ?? [];
         const cleanupJobs = await enqueueVideoReviewCleanup(tx, existing, videoMedia);
+        const awsImageMedia = await tx.reviewMedia.findMany({
+          where: { reviewId: id, resourceType: 'image', provider: AWS_REVIEW_IMAGE_PROVIDER },
+          select: { storeId: true, providerAssetId: true },
+        });
+        for (const media of awsImageMedia) {
+          if (!media.providerAssetId) continue;
+          cleanupJobs.push(await enqueueMediaProviderJob(tx, {
+            dedupeKey: `cleanup-aws-image:${id}:${media.providerAssetId}`,
+            storeId: media.storeId,
+            reviewId: id,
+            provider: AWS_REVIEW_IMAGE_PROVIDER,
+            action: MEDIA_JOB_ACTIONS.cleanupImage,
+            resourceType: 'image',
+            payload: { families: [{ storeId: media.storeId, assetId: media.providerAssetId }], reason: 'review_deleted' },
+          }));
+        }
 
         await tx.review.delete({
           where: { id },
@@ -154,6 +205,39 @@ export async function PUT(request: Request) {
       );
     }
 
+    const awsImagePublishPreflightIds = new Set<string>();
+    const awsImagePublishPreflightManifests: unknown[] = [];
+    if (status === 'approved') {
+      const reviewForAwsPreflight = await prisma.review.findFirst({
+        where: { id, storeId: user.merchantId },
+        select: { id: true, hasVideo: true },
+      });
+      if (reviewForAwsPreflight && !reviewForAwsPreflight.hasVideo) {
+        const awsImagesToPublish = await prisma.reviewMedia.findMany({
+          where: {
+            reviewId: id,
+            resourceType: 'image',
+            provider: AWS_REVIEW_IMAGE_PROVIDER,
+            variantStatus: { not: 'public_ready' },
+          },
+          select: { id: true, variantManifest: true },
+        }) ?? [];
+        try {
+          for (const item of awsImagesToPublish) {
+            await publishAwsReviewImageVariants(item.variantManifest);
+            awsImagePublishPreflightIds.add(item.id);
+            awsImagePublishPreflightManifests.push(item.variantManifest);
+          }
+        } catch (error) {
+          console.error('Error publishing AWS review images:', error instanceof Error ? error.message : error);
+          if (awsImagePublishPreflightManifests.length > 0) {
+            await compensatePublishedAwsReviewImages(awsImagePublishPreflightManifests, 'Admin review update');
+          }
+          return NextResponse.json({ error: 'Image publication failed.' }, { status: 500 });
+        }
+      }
+    }
+
     try {
       const result = await prisma.$transaction(async (tx) => {
         const existing = await getReviewForModerationUpdate(tx, id, user.merchantId);
@@ -175,11 +259,35 @@ export async function PUT(request: Request) {
           return rejectVideoReview(tx, existing, videoMedia, merchantReply);
         }
 
+        const awsImageMedia = status !== undefined
+          ? (await tx.reviewMedia.findMany({
+              where: { reviewId: id, resourceType: 'image', provider: AWS_REVIEW_IMAGE_PROVIDER },
+              select: { id: true, variantManifest: true, variantStatus: true },
+            }) ?? [])
+          : [];
+        if (status === 'approved' && awsImageMedia.length > 0) {
+          for (const item of awsImageMedia) {
+            if (item.variantStatus !== 'public_ready' && !awsImagePublishPreflightIds.has(item.id)) {
+              throw new Error('aws_image_publish_preflight_changed');
+            }
+          }
+        }
+
+        const awsPublicUrlsForLegacyMirror = status === 'approved' && awsImageMedia.length > 0
+          ? awsImageMedia.map((item) => buildAwsReviewImagePublicDescriptor(item.variantManifest)?.url).filter((url): url is string => Boolean(url))
+          : null;
+        if (status === 'approved' && awsImageMedia.length > 0 && awsPublicUrlsForLegacyMirror?.length !== awsImageMedia.length) {
+          throw new Error('aws_image_public_descriptor_invalid');
+        }
+        const shouldClearAwsLegacyMirror = (status === 'pending' || status === 'rejected') && awsImageMedia.length > 0;
+
         const updated = await tx.review.update({
           where: { id },
           data: {
             ...(status !== undefined && { status }),
             ...(merchantReply !== undefined && { merchantReply }),
+            ...(awsPublicUrlsForLegacyMirror ? { images: JSON.stringify(awsPublicUrlsForLegacyMirror) } : {}),
+            ...(shouldClearAwsLegacyMirror ? { images: JSON.stringify([]) } : {}),
           },
         });
         if (status !== undefined && existing.status !== updated.status) {
@@ -187,13 +295,44 @@ export async function PUT(request: Request) {
             where: { reviewId: id },
             data: { visible: updated.status === 'approved' },
           });
+          if (awsImageMedia.length > 0 && updated.status === 'approved') {
+            await tx.reviewMedia.updateMany({
+              where: { reviewId: id, resourceType: 'image', provider: AWS_REVIEW_IMAGE_PROVIDER },
+              data: { variantStatus: 'public_ready', variantPublishedAt: new Date(), variantRevokedAt: null },
+            });
+          }
+          if (awsImageMedia.length > 0 && updated.status !== 'approved') {
+            await tx.reviewMedia.updateMany({
+              where: { reviewId: id, resourceType: 'image', provider: AWS_REVIEW_IMAGE_PROVIDER },
+              data: { variantStatus: 'private_ready', variantRevokedAt: new Date() },
+            });
+          }
+        }
+        const jobs = [];
+        if (status !== undefined && updated.status !== 'approved' && awsImageMedia.length > 0) {
+          for (const item of awsImageMedia) {
+            if (item.variantStatus !== 'public_ready') continue;
+            jobs.push(await enqueueMediaProviderJob(tx, {
+              dedupeKey: `revoke-aws-image-public:${id}:${item.id}:${updated.updatedAt.getTime()}`,
+              storeId: existing.storeId,
+              reviewId: id,
+              mediaId: item.id,
+              provider: AWS_REVIEW_IMAGE_PROVIDER,
+              action: MEDIA_JOB_ACTIONS.revokeImagePublic,
+              resourceType: 'image',
+              payload: { reviewId: id, mediaId: item.id, variantManifest: item.variantManifest },
+            }));
+          }
         }
         await applyReviewSummaryVisibilityChange(tx, existing, updated);
-        return { updated, jobs: [], processing: false as const };
+        return { updated, jobs, processing: false as const };
       });
       await Promise.all(result.jobs.map((job) => dispatchMediaProviderJob(job.id)));
       return NextResponse.json({ data: result.updated, processing: result.processing }, { status: result.processing ? 202 : 200 });
     } catch (error) {
+      if (awsImagePublishPreflightManifests.length > 0) {
+        await compensatePublishedAwsReviewImages(awsImagePublishPreflightManifests, 'Admin review update');
+      }
       if (error instanceof VideoModerationError) {
         return NextResponse.json({ error: 'Video henüz onaylanmaya hazır değil.' }, { status: 409 });
       }

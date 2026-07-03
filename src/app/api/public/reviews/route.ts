@@ -9,9 +9,11 @@ import {
   sanitizeReviewImageUrls,
 } from '@/lib/review-images';
 import {
+  buildAwsReviewMediaCreateManyData,
   buildReviewMediaCreateManyData,
   publicImagesFromMediaOrLegacy,
   publicMediaFromMediaOrLegacy,
+  type AwsPendingReviewImageMediaRow,
   type PublicReviewMediaRow,
 } from '@/lib/review-media';
 import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
@@ -19,6 +21,14 @@ import { applyReviewSummaryVisibilityChange, filteredReviewTotal, summaryStats }
 import { hashMediaToken } from '@/lib/media/video-policy';
 import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
 import { supersedeSessionLifecycleJobs } from '@/lib/media/outbox';
+import {
+  AWS_REVIEW_IMAGE_PROVIDER,
+  buildAwsReviewImagePublicDescriptor,
+  isAwsReviewImageProviderEnabled,
+  publishAwsReviewImageVariants,
+  revokeAwsReviewImagePublicVariants,
+  sanitizeAwsReviewImageRefs,
+} from '@/lib/media/providers/aws-review-image';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -28,6 +38,17 @@ const redis = new Redis({
 
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_SEC = 10 * 60; // 10 dakika
+
+async function compensatePublishedAwsReviewImages(manifests: unknown[], context: string) {
+  for (const manifest of manifests) {
+    try {
+      await revokeAwsReviewImagePublicVariants(manifest);
+    } catch (error) {
+      console.error(`${context} AWS image publish compensation failed:`, error instanceof Error ? error.message : error);
+    }
+  }
+}
+
 const PUBLIC_REVIEW_SELECT = {
   id: true,
   rating: true,
@@ -52,6 +73,8 @@ const PUBLIC_REVIEW_SELECT = {
       format: true,
       mimeType: true,
       bytes: true,
+      variantStatus: true,
+      variantManifest: true,
     },
   },
   createdAt: true,
@@ -83,6 +106,34 @@ type PendingReviewImageMetadataRow = {
   metadataStatus: string | null;
   metadataFetchedAt: Date | null;
 };
+
+type AwsPendingReviewImageForSubmit = AwsPendingReviewImageMediaRow & {
+  uploadExpiresAt: Date | null;
+};
+
+const AWS_PENDING_IMAGE_SELECT = {
+  publicId: true,
+  storeId: true,
+  productId: true,
+  uploadSessionId: true,
+  assetId: true,
+  providerAssetId: true,
+  sourceAssetId: true,
+  format: true,
+  mimeType: true,
+  width: true,
+  height: true,
+  bytes: true,
+  sourceChecksumAlgorithm: true,
+  sourceChecksumSha256: true,
+  metadataSource: true,
+  metadataStatus: true,
+  metadataFetchedAt: true,
+  variantStatus: true,
+  variantGeneratedAt: true,
+  variantManifest: true,
+  uploadExpiresAt: true,
+} as const;
 
 type ReviewOrderByKey = 'newest' | 'highest' | 'lowest';
 
@@ -355,6 +406,13 @@ function pendingMetadataMap(rows: PendingReviewImageMetadataRow[]): Map<string, 
   return metadataByPublicId;
 }
 
+function publicUrlsFromAwsPendingRows(rows: AwsPendingReviewImageMediaRow[]): string[] {
+  return rows.flatMap((row) => {
+    const descriptor = buildAwsReviewImagePublicDescriptor(row.variantManifest);
+    return descriptor?.url ? [descriptor.url] : [];
+  });
+}
+
 export async function OPTIONS() {
   return corsOptions();
 }
@@ -462,6 +520,9 @@ export async function GET(req: Request) {
     res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
     return res;
   } catch (error: any) {
+    if (error instanceof Error && error.message === 'invalid_image_ref') {
+      return withCors(NextResponse.json({ error: 'Image upload is not ready, expired, or belongs to another store.' }, { status: 400 }));
+    }
     console.error('[GET] Reviews ERROR:', error);
     return withCors(NextResponse.json({ error: error.message }, { status: 500 }));
   }
@@ -472,6 +533,7 @@ export async function GET(req: Request) {
  */
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  const publishedAwsVariantManifests: unknown[] = [];
 
   try {
     let body: any;
@@ -518,8 +580,11 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Çok fazla yorum gönderdiniz. Lütfen birkaç dakika bekleyin.' }, { status: 429 }));
     }
 
-    const cloudName = getConfiguredCloudinaryCloudName();
-    const imageResult = sanitizeReviewImageUrls(images, cloudName, storeIdText);
+    const useAwsImages = isAwsReviewImageProviderEnabled();
+    const cloudName = useAwsImages ? null : getConfiguredCloudinaryCloudName();
+    const imageResult = useAwsImages
+      ? { ok: true as const, urls: [] as string[] }
+      : sanitizeReviewImageUrls(images, cloudName, storeIdText);
     if (!imageResult.ok) {
       if (imageResult.error === 'missing_cloud') {
         console.error('[POST] Reviews image validation misconfigured: missing Cloudinary cloud name');
@@ -528,7 +593,15 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Geçersiz yorum görseli.' }, { status: 400 }));
     }
 
-    if (videoTokenText && imageResult.urls.length > 0) {
+    const awsImageRefsResult = useAwsImages
+      ? sanitizeAwsReviewImageRefs(images)
+      : { ok: true as const, refs: [] };
+    if (!awsImageRefsResult.ok) {
+      return withCors(NextResponse.json({ error: 'Invalid review image reference.' }, { status: 400 }));
+    }
+    const imageCount = useAwsImages ? awsImageRefsResult.refs.length : imageResult.urls.length;
+
+    if (videoTokenText && imageCount > 0) {
       return withCors(NextResponse.json({ error: 'Aynı yoruma fotoğraf ve video birlikte eklenemez.' }, { status: 400 }));
     }
 
@@ -559,12 +632,63 @@ export async function POST(request: Request) {
 
     const initialStatus = videoTokenText ? 'pending' : (shouldAutoApprove ? 'approved' : 'pending');
 
+    let awsPendingRows: AwsPendingReviewImageForSubmit[] = [];
+    if (awsImageRefsResult.refs.length > 0) {
+      const requestedSessions = awsImageRefsResult.refs.map((ref) => ref.uploadSessionId);
+      const pendingRows = await prisma.pendingReviewImage.findMany({
+        where: {
+          storeId: storeIdText,
+          provider: AWS_REVIEW_IMAGE_PROVIDER,
+          uploadSessionId: { in: requestedSessions },
+        },
+        select: AWS_PENDING_IMAGE_SELECT,
+      });
+      const rowsBySession = new Map(pendingRows.map((row) => [row.uploadSessionId, row as AwsPendingReviewImageForSubmit]));
+      awsPendingRows = awsImageRefsResult.refs.map((ref) => {
+        const row = rowsBySession.get(ref.uploadSessionId);
+        if (!row) throw new Error('invalid_image_ref');
+        if (
+          row.storeId !== storeIdText ||
+          row.providerAssetId !== ref.assetId ||
+          row.sourceAssetId !== ref.objectKey ||
+          row.mimeType !== ref.contentType ||
+          row.bytes !== ref.bytes ||
+          row.sourceChecksumAlgorithm !== 'SHA256' ||
+          row.sourceChecksumSha256 !== ref.checksumSha256 ||
+          row.variantStatus !== 'private_ready' ||
+          !row.variantManifest ||
+          (row.uploadExpiresAt && row.uploadExpiresAt <= new Date())
+        ) {
+          throw new Error('invalid_image_ref');
+        }
+        return row;
+      });
+    }
+
+    if (initialStatus === 'approved' && awsPendingRows.length > 0) {
+      try {
+        for (const row of awsPendingRows) {
+          await publishAwsReviewImageVariants(row.variantManifest);
+          publishedAwsVariantManifests.push(row.variantManifest);
+        }
+      } catch (error) {
+        console.error('[POST] Reviews AWS image publish failed:', error instanceof Error ? error.message : error);
+        if (publishedAwsVariantManifests.length > 0) {
+          await compensatePublishedAwsReviewImages(publishedAwsVariantManifests, '[POST] Reviews');
+        }
+        return withCors(NextResponse.json({ error: 'Image publication failed.' }, { status: 500 }));
+      }
+    }
+
     // Atomic commit: create Review and remove any PendingReviewImage rows
     // tied to the publicIds this review consumes. Rows that were never
     // registered are silently ignored — the weekly fallback scan catches them.
-    const committedPublicIds = imageResult.urls
-      .map((url) => getReviewImagePublicId(url, cloudName, storeIdText))
-      .filter((id): id is string => !!id);
+    const committedPublicIds = useAwsImages
+      ? awsPendingRows.map((row) => row.publicId)
+      : imageResult.urls
+          .map((url) => getReviewImagePublicId(url, cloudName, storeIdText))
+          .filter((id): id is string => !!id);
+    const committedAwsPublicUrls = initialStatus === 'approved' ? publicUrlsFromAwsPendingRows(awsPendingRows) : [];
 
     const newReview = await prisma.$transaction(async (tx) => {
       const videoSession = videoTokenText
@@ -609,8 +733,10 @@ export async function POST(request: Request) {
           comment: commentText ?? '',
           author: authorText,
           email: '',
-          images: imageResult.urls.length ? JSON.stringify(imageResult.urls) : null,
-          hasImages: imageResult.urls.length > 0,
+          images: useAwsImages
+            ? (committedAwsPublicUrls.length ? JSON.stringify(committedAwsPublicUrls) : null)
+            : (imageResult.urls.length ? JSON.stringify(imageResult.urls) : null),
+          hasImages: imageCount > 0,
           hasVideo: !!videoSession,
           status: initialStatus,
         },
@@ -648,6 +774,22 @@ export async function POST(request: Request) {
       if (mediaRows.length > 0) {
         await tx.reviewMedia.createMany({
           data: mediaRows,
+          skipDuplicates: true,
+        });
+      }
+
+      const awsMediaRows = useAwsImages
+        ? buildAwsReviewMediaCreateManyData({
+            rows: awsPendingRows,
+            storeId: storeIdText,
+            productId: productIdText,
+            reviewId: created.id,
+            visible: initialStatus === 'approved',
+          })
+        : [];
+      if (awsMediaRows.length > 0) {
+        await tx.reviewMedia.createMany({
+          data: awsMediaRows,
           skipDuplicates: true,
         });
       }
@@ -709,6 +851,9 @@ export async function POST(request: Request) {
       },
     }, { status: 201 }));
   } catch (error: any) {
+    if (publishedAwsVariantManifests.length > 0) {
+      await compensatePublishedAwsReviewImages(publishedAwsVariantManifests, '[POST] Reviews');
+    }
     if (error instanceof Error && error.message === 'invalid_video_session') {
       return withCors(NextResponse.json({ error: 'Video yüklemesi hazır değil, süresi dolmuş veya bu ürüne ait değil.' }, { status: 400 }));
     }

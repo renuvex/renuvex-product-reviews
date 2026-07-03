@@ -6,7 +6,7 @@ import {
   optimizeImageUrl,
   LIGHTBOX_MAIN_WIDTH,
   LIGHTBOX_MINI_THUMB_WIDTH,
-  buildResponsiveImgAttrs,
+  buildReviewImageAttrs,
   attachImageErrorHandler,
   hideOnImageError,
   settingText,
@@ -207,7 +207,7 @@ function modalThumbImageAttrs(item) {
       srcset: muxPosterSrcSet(url, opts),
     };
   }
-  return buildResponsiveImgAttrs(url, LIGHTBOX_MINI_THUMB_WIDTH);
+  return buildReviewImageAttrs(item, LIGHTBOX_MINI_THUMB_WIDTH);
 }
 
 function buildMediaGalleryRailThumb(entry, isActive, onSelect) {
@@ -316,7 +316,9 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   } else {
     var mainImg = document.createElement('img');
     mainImg.className = 'renuvex-pr-modal-main-img' + (animClass ? ' ' + animClass : '');
-    mainImg.src = optimizeImageUrl(currentMedia ? currentMedia.url : '');
+    var mainAttrs = buildReviewImageAttrs(currentMedia, LIGHTBOX_MAIN_WIDTH);
+    mainImg.src = mainAttrs.src;
+    if (mainAttrs.srcset) mainImg.srcset = mainAttrs.srcset;
     mainImg.decoding = 'async';
     mainImg.width = LIGHTBOX_MAIN_WIDTH;
     mainImg.height = Math.round(LIGHTBOX_MAIN_WIDTH * 4 / 3);
@@ -413,10 +415,9 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
     var thumbBar = document.createElement('div');
     thumbBar.className = 'renuvex-pr-modal-thumbs';
     mediaItems.forEach(function(item, i) {
-      var url = item.type === 'video' ? item.posterUrl : item.url;
       var th = document.createElement('img');
       // Lightbox altı mini şerit 60-80 px — küçük responsive varyant yeter.
-      var thumbAttrs = buildResponsiveImgAttrs(url, LIGHTBOX_MINI_THUMB_WIDTH);
+      var thumbAttrs = modalThumbImageAttrs(item);
       th.src = thumbAttrs.src;
       th.srcset = thumbAttrs.srcset;
       th.loading = 'lazy';

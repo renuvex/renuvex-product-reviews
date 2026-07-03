@@ -1,5 +1,5 @@
 import {
-  buildResponsiveImgAttrs,
+  buildReviewImageAttrs,
   hideOnImageError,
   REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT,
   REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
@@ -44,7 +44,7 @@ export function createMediaThumbnail(item, opts) {
   if (!previewUrl) return null;
   var img = document.createElement('img');
   var attrs = item.type === 'image'
-    ? buildResponsiveImgAttrs(previewUrl, sourceWidth)
+    ? buildReviewImageAttrs(item, sourceWidth)
     : { src: previewUrl, srcset: muxPosterSrcSet(item.posterUrl, videoPosterOpts) };
   img.src = attrs.src;
   if (attrs.srcset) img.srcset = attrs.srcset;

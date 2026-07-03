@@ -1,0 +1,216 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Renuvex review image Vercel OIDC runtime role stack (ADR_0034).",
+  "Parameters": {
+    "VercelTeamSlug": {
+      "Type": "String",
+      "Default": "renuvex",
+      "AllowedValues": [
+        "renuvex"
+      ]
+    },
+    "VercelProjectName": {
+      "Type": "String",
+      "Default": "renuvex-product-reviews",
+      "AllowedValues": [
+        "renuvex-product-reviews"
+      ]
+    },
+    "VercelEnvironment": {
+      "Type": "String",
+      "Default": "production",
+      "AllowedValues": [
+        "production"
+      ]
+    },
+    "OidcAudience": {
+      "Type": "String",
+      "Default": "sts.amazonaws.com",
+      "AllowedValues": [
+        "sts.amazonaws.com"
+      ]
+    },
+    "RuntimeRoleName": {
+      "Type": "String",
+      "Default": "renuvex-review-images-vercel-runtime",
+      "AllowedPattern": "^[A-Za-z0-9+=,.@_-]{1,64}$"
+    },
+    "ReviewImagesBucketName": {
+      "Type": "String",
+      "Default": "renuvex-review-images-prod-989086371563-eu-central-1",
+      "AllowedPattern": "^renuvex-review-images-[a-z0-9-]+$"
+    },
+    "ReviewImagesDistributionId": {
+      "Type": "String",
+      "Default": "E1205OOLPZDB00",
+      "AllowedPattern": "^[A-Z0-9]{8,32}$"
+    }
+  },
+  "Resources": {
+    "VercelOidcProvider": {
+      "Type": "AWS::IAM::OIDCProvider",
+      "Properties": {
+        "Url": {
+          "Fn::Sub": "https://oidc.vercel.com/${VercelTeamSlug}"
+        },
+        "ClientIdList": [
+          {
+            "Fn::Sub": "https://vercel.com/${VercelTeamSlug}"
+          },
+          {
+            "Ref": "OidcAudience"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "review-images-runtime"
+          }
+        ]
+      }
+    },
+    "ReviewImagesVercelRuntimeRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Ref": "RuntimeRoleName"
+        },
+        "Description": "Runtime role assumed by Vercel production through team-scoped OIDC for review image S3/CloudFront operations.",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowVercelProductionProjectOidc",
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": {
+                  "Fn::GetAtt": [
+                    "VercelOidcProvider",
+                    "Arn"
+                  ]
+                }
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "oidc.vercel.com/renuvex:aud": {
+                    "Ref": "OidcAudience"
+                  },
+                  "oidc.vercel.com/renuvex:sub": {
+                    "Fn::Sub": "owner:${VercelTeamSlug}:project:${VercelProjectName}:environment:${VercelEnvironment}"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-image-runtime-access",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "ReviewImageObjectReadWritePrivateAndPublicPrefixes",
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:GetObjectTagging",
+                    "s3:PutObject",
+                    "s3:PutObjectTagging",
+                    "s3:DeleteObject"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}/review-images/v1/private/*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}/review-images/v1/public/*"
+                    }
+                  ]
+                },
+                {
+                  "Sid": "ReviewImageFamilyListPrivateAndPublicPrefixes",
+                  "Effect": "Allow",
+                  "Action": "s3:ListBucket",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}"
+                  },
+                  "Condition": {
+                    "StringLike": {
+                      "s3:prefix": [
+                        "review-images/v1/private/*",
+                        "review-images/v1/public/*"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "Sid": "ReviewImageExactDistributionInvalidation",
+                  "Effect": "Allow",
+                  "Action": "cloudfront:CreateInvalidation",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${ReviewImagesDistributionId}"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "review-images-runtime"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "OidcProviderArn": {
+      "Description": "Vercel team-scoped OIDC provider ARN.",
+      "Value": {
+        "Fn::GetAtt": [
+          "VercelOidcProvider",
+          "Arn"
+        ]
+      }
+    },
+    "RuntimeRoleArn": {
+      "Description": "Vercel runtime role ARN for AWS review image operations.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewImagesVercelRuntimeRole",
+          "Arn"
+        ]
+      }
+    },
+    "RuntimeRoleName": {
+      "Description": "Vercel runtime role name.",
+      "Value": {
+        "Ref": "ReviewImagesVercelRuntimeRole"
+      }
+    },
+    "OidcAudience": {
+      "Description": "Custom OIDC audience expected by the runtime role trust policy.",
+      "Value": {
+        "Ref": "OidcAudience"
+      }
+    },
+    "TrustSubject": {
+      "Description": "Exact Vercel production subject allowed to assume the runtime role.",
+      "Value": {
+        "Fn::Sub": "owner:${VercelTeamSlug}:project:${VercelProjectName}:environment:${VercelEnvironment}"
+      }
+    }
+  }
+}

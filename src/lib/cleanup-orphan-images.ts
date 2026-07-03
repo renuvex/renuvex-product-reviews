@@ -23,6 +23,13 @@
 import { v2 as cloudinary } from 'cloudinary';
 import type { PrismaClient } from '@prisma/client';
 import { getConfiguredCloudinaryCloudName, getReviewImagePublicId, parseStoredReviewImages } from '@/lib/review-images';
+import {
+  AWS_REVIEW_IMAGE_PROVIDER,
+  deleteAwsReviewImageFamily,
+  isAwsReviewImageProviderEnabled,
+  listAwsReviewImageObjectFamilies,
+  parseAwsReviewImagePublicId,
+} from '@/lib/media/providers/aws-review-image';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CLOUDINARY_DELETE_BATCH = 100; // Cloudinary delete_resources cap
@@ -124,6 +131,8 @@ export function evaluateSweepCap(sweepCount: number, thresholds: CleanupThreshol
 // publicId format: review_images/stores/<storeId>/<hash>. Best-effort store scope
 // for forensics; null when the path does not match (never blocks cleanup).
 export function storeIdFromPublicId(publicId: string): string | null {
+  const aws = parseAwsReviewImagePublicId(publicId);
+  if (aws) return aws.storeId;
   const parts = publicId.split('/');
   if (parts.length >= 4 && parts[0] === 'review_images' && parts[1] === 'stores') return parts[2] || null;
   return null;
@@ -265,7 +274,7 @@ export async function runOrphanImageCleanup(
   };
 }
 
-type PrismaForCleanup = Pick<PrismaClient, 'reviewMedia' | 'review' | 'orphanImageQuarantine'>;
+type PrismaForCleanup = Pick<PrismaClient, 'reviewMedia' | 'review' | 'pendingReviewImage' | 'orphanImageQuarantine'>;
 
 async function loadUsedPublicIds(prisma: PrismaForCleanup, cloudName: string): Promise<Set<string>> {
   const used = new Set<string>();
@@ -293,6 +302,33 @@ async function loadUsedPublicIds(prisma: PrismaForCleanup, cloudName: string): P
     }
   }
 
+  return used;
+}
+
+async function loadUsedAwsPublicIds(prisma: PrismaForCleanup): Promise<Set<string>> {
+  const used = new Set<string>();
+  const mediaRows = await prisma.reviewMedia.findMany({
+    where: { provider: AWS_REVIEW_IMAGE_PROVIDER, resourceType: 'image' },
+    select: { publicId: true },
+  });
+  for (const row of mediaRows) {
+    if (parseAwsReviewImagePublicId(row.publicId)) used.add(row.publicId);
+  }
+
+  const pendingRows = await prisma.pendingReviewImage.findMany({
+    where: {
+      provider: AWS_REVIEW_IMAGE_PROVIDER,
+      resourceType: 'image',
+      OR: [
+        { uploadExpiresAt: null },
+        { uploadExpiresAt: { gt: new Date() } },
+      ],
+    },
+    select: { publicId: true },
+  });
+  for (const row of pendingRows) {
+    if (parseAwsReviewImagePublicId(row.publicId)) used.add(row.publicId);
+  }
   return used;
 }
 
@@ -377,6 +413,58 @@ export function createOrphanCleanupDeps(prisma: PrismaForCleanup): OrphanCleanup
   };
 }
 
+export function createAwsOrphanCleanupDeps(prisma: PrismaForCleanup): OrphanCleanupDeps {
+  return {
+    loadUsedPublicIds: () => loadUsedAwsPublicIds(prisma),
+    countReviewMedia: () => prisma.reviewMedia.count({
+      where: { provider: AWS_REVIEW_IMAGE_PROVIDER, resourceType: 'image' },
+    }),
+    listAllAssets: async () => {
+      const families = await listAwsReviewImageObjectFamilies();
+      return families.map((family) => ({ publicId: family.publicId, createdAt: family.createdAt }));
+    },
+    listQuarantine: async () => {
+      const rows = await prisma.orphanImageQuarantine.findMany({
+        where: { publicId: { startsWith: `${AWS_REVIEW_IMAGE_PROVIDER}:` } },
+        select: { publicId: true, quarantinedAt: true },
+      });
+      return rows.map((row) => ({ publicId: row.publicId, quarantinedAt: row.quarantinedAt.getTime() }));
+    },
+    upsertQuarantine: async (entries) => {
+      const ids = entries.map((entry) => entry.publicId);
+      const seenAt = new Date();
+      for (let i = 0; i < ids.length; i += DB_IN_BATCH) {
+        await prisma.orphanImageQuarantine.updateMany({
+          where: { publicId: { in: ids.slice(i, i + DB_IN_BATCH) } },
+          data: { lastSeenAt: seenAt, scanCount: { increment: 1 } },
+        });
+      }
+      for (let i = 0; i < entries.length; i += DB_IN_BATCH) {
+        await prisma.orphanImageQuarantine.createMany({
+          data: entries.slice(i, i + DB_IN_BATCH).map((entry) => ({ publicId: entry.publicId, storeId: entry.storeId })),
+          skipDuplicates: true,
+        });
+      }
+    },
+    removeQuarantine: async (publicIds) => {
+      for (let i = 0; i < publicIds.length; i += DB_IN_BATCH) {
+        await prisma.orphanImageQuarantine.deleteMany({ where: { publicId: { in: publicIds.slice(i, i + DB_IN_BATCH) } } });
+      }
+    },
+    deleteAssets: async (publicIds) => {
+      let deleted = 0;
+      for (const publicId of publicIds) {
+        const parsed = parseAwsReviewImagePublicId(publicId);
+        if (!parsed) continue;
+        await deleteAwsReviewImageFamily(parsed.storeId, parsed.assetId, { invalidatePublicVariants: true });
+        deleted += 1;
+      }
+      return deleted;
+    },
+    now: () => Date.now(),
+  };
+}
+
 export type CleanupImagesResult =
   | { status: 'skipped_no_cloudinary_config' }
   | (OrphanCleanupResult & { thresholds: CleanupThresholds });
@@ -388,7 +476,7 @@ export async function runCleanupImages(
   prisma: PrismaForCleanup,
   options: { force?: boolean; thresholds?: CleanupThresholds } = {},
 ): Promise<CleanupImagesResult> {
-  const deps = createOrphanCleanupDeps(prisma);
+  const deps = isAwsReviewImageProviderEnabled() ? createAwsOrphanCleanupDeps(prisma) : createOrphanCleanupDeps(prisma);
   if (!deps) return { status: 'skipped_no_cloudinary_config' };
   const thresholds = options.thresholds ?? cleanupThresholdsFromEnv();
   const result = await runOrphanImageCleanup(deps, thresholds, { force: options.force });

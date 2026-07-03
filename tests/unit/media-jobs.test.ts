@@ -38,6 +38,12 @@ const prismaMock = vi.hoisted(() => ({
 const cloudinaryMock = vi.hoisted(() => ({
   deleteCloudinaryReviewImages: vi.fn(),
 }));
+const awsImageMock = vi.hoisted(() => ({
+  AWS_REVIEW_IMAGE_PROVIDER: 'aws_s3',
+  deleteAwsReviewImageFamily: vi.fn(),
+  publishAwsReviewImageVariants: vi.fn(),
+  revokeAwsReviewImagePublicVariants: vi.fn(),
+}));
 const muxMock = vi.hoisted(() => {
   class TestMuxProviderError extends Error {
     constructor(public readonly code: string, message = code, public readonly status?: number) {
@@ -64,6 +70,7 @@ const processingMock = vi.hoisted(() => ({ applyMuxAssetState: vi.fn() }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/media/providers/cloudinary-image', () => cloudinaryMock);
+vi.mock('@/lib/media/providers/aws-review-image', () => awsImageMock);
 vi.mock('@/lib/media/providers/mux', () => muxMock);
 vi.mock('@/lib/media/video-processing', () => processingMock);
 vi.mock('@/lib/review-summary', () => ({ applyReviewSummaryVisibilityChange: vi.fn() }));
@@ -124,6 +131,9 @@ describe('media provider jobs', () => {
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
     qstashMock.publishJSON.mockResolvedValue({ messageId: 'message-1' });
     cloudinaryMock.deleteCloudinaryReviewImages.mockResolvedValue(['image-a', 'image-b']);
+    awsImageMock.deleteAwsReviewImageFamily.mockResolvedValue({ deletedObjects: 2 });
+    awsImageMock.publishAwsReviewImageVariants.mockResolvedValue(undefined);
+    awsImageMock.revokeAwsReviewImagePublicVariants.mockResolvedValue(undefined);
     muxMock.cancelMuxUpload.mockResolvedValue(undefined);
     muxMock.createMuxPlaybackId.mockResolvedValue({ id: 'public-1', policy: 'public' });
     muxMock.deleteMuxAsset.mockResolvedValue(undefined);
@@ -160,6 +170,54 @@ describe('media provider jobs', () => {
     expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({
       where: { publicId: { in: ['image-a', 'image-b'] }, provider: 'cloudinary' },
     });
+  });
+
+  it('cleans expired AWS pending image families without CloudFront invalidation', async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
+    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
+      id: 'job-aws-pending-cleanup',
+      provider: 'aws_s3',
+      action: MEDIA_JOB_ACTIONS.cleanupImage,
+      payload: {
+        families: [{ storeId: 'store-1', assetId: UUID_1 }],
+        reason: 'pending_media_expired',
+      },
+      attempts: 1,
+      maxAttempts: 8,
+    });
+    const { processMediaProviderJob } = await import('@/lib/media/jobs');
+
+    const result = await processMediaProviderJob('job-aws-pending-cleanup');
+
+    expect(result).toEqual({ processed: true, status: 'succeeded' });
+    expect(awsImageMock.deleteAwsReviewImageFamily).toHaveBeenCalledWith('store-1', UUID_1, { invalidatePublicVariants: false });
+    expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({
+      where: {
+        provider: 'aws_s3',
+        OR: [{ storeId: 'store-1', providerAssetId: UUID_1 }],
+      },
+    });
+  });
+
+  it('invalidates public variants when cleaning an AWS image family that may have been public', async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
+    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
+      id: 'job-aws-review-cleanup',
+      provider: 'aws_s3',
+      action: MEDIA_JOB_ACTIONS.cleanupImage,
+      payload: {
+        families: [{ storeId: 'store-1', assetId: UUID_1 }],
+        reason: 'review_deleted',
+      },
+      attempts: 1,
+      maxAttempts: 8,
+    });
+    const { processMediaProviderJob } = await import('@/lib/media/jobs');
+
+    const result = await processMediaProviderJob('job-aws-review-cleanup');
+
+    expect(result).toEqual({ processed: true, status: 'succeeded' });
+    expect(awsImageMock.deleteAwsReviewImageFamily).toHaveBeenCalledWith('store-1', UUID_1, { invalidatePublicVariants: true });
   });
 
   it('serializes provider mutations and converges a stale approval to the latest protected state', async () => {
