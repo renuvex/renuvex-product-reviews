@@ -198,6 +198,46 @@ fresh create change set was opened:
 - No Vercel env, DB, Cloudflare Worker/DNS, Cloudinary, provider activation, or
   production traffic changes were made in this retry step.
 
+The retry change set was then executed after explicit approval and the stack
+reached `CREATE_COMPLETE`.
+
+Created stack outputs and resource ids:
+
+- Bucket: `renuvex-review-images-prod-989086371563-eu-central-1`.
+- Distribution id: `E1205OOLPZDB00`.
+- Distribution domain: `d2vvn9hb97q5dv.cloudfront.net`.
+- Preview key group id: `1ba37813-d720-41fd-a807-3b7a3abe4bbb`.
+- Preview public key id: `K1MR82PBYWDEFH`.
+
+Post-create read-only checks:
+
+- S3 Public Access Block has all four controls enabled.
+- S3 encryption is SSE-S3 (`AES256`), with SSE-C blocked.
+- S3 versioning is enabled.
+- S3 ownership controls are `BucketOwnerEnforced`.
+- S3 CORS allows browser presigned `POST` uploads only, with `ETag` and
+  `x-amz-checksum-sha256` exposed.
+- S3 lifecycle has incomplete multipart abort after 1 day, noncurrent version
+  expiration after 7 days, and pending private object expiration after 2 days
+  for `review-images/v1/private/` objects tagged `renuvex_state=pending`.
+- Bucket policy denies insecure transport and allows CloudFront service
+  `s3:GetObject` only from distribution `E1205OOLPZDB00`, scoped to
+  `review-images/v1/public/*` and private admin preview variant paths. It does
+  not grant CloudFront read access to private originals.
+- CloudFront OAC uses SigV4 with `SigningBehavior: always`.
+- CloudFront cache policy forwards no viewer headers, cookies, or query strings
+  to S3, and uses one-year immutable TTLs.
+- CloudFront response headers include `nosniff`, HSTS, referrer policy, and
+  frame denial.
+- CloudFront default behavior is signed-key-group protected for private preview
+  paths; the public variants behavior for `review-images/v1/public/*` is not
+  key-group protected and permits `GET`/`HEAD` only.
+- The current review-image operator role lacks `s3:GetBucketPolicyStatus`, so
+  bucket policy public-status summary could not be read directly. The bucket
+  policy and Public Access Block were still read and verified directly.
+- No Vercel env, DB, Cloudflare Worker/DNS, Cloudinary, provider activation, or
+  production traffic changes were made in this execute step.
+
 Review-image local template contracts:
 
 - S3 bucket remains private with Block Public Access, Bucket Owner Enforced
