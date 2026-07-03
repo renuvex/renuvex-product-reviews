@@ -152,12 +152,34 @@ The failed change set and its empty `REVIEW_IN_PROGRESS` placeholder stack were
 deleted after explicit approval. A replacement change set was then created:
 
 - Change set: `review-images-initial-fixed-20260703063044`.
-- Status: `CREATE_COMPLETE`, `ExecutionStatus: AVAILABLE`.
+- Initial status: `CREATE_COMPLETE`, `ExecutionStatus: AVAILABLE`.
 - Validation events: `CREATE_CHANGESET` succeeded; no validation error events.
 - Planned resources: S3 bucket, bucket policy, CloudFront cache policy,
   response headers policy, OAC, public key, key group, and distribution.
-- Current stack status remains `REVIEW_IN_PROGRESS` with an empty resource list
-  until the change set is explicitly executed.
+- The change set was explicitly executed and then rolled back. Current stack
+  status is `ROLLBACK_COMPLETE`.
+- Root cause: `ReviewImagesPreviewPublicKey`
+  (`AWS::CloudFront::PublicKey`) failed with
+  `Access denied for operation 'AWS::CloudFront::PublicKey'`.
+- Cascade failures for the bucket, cache policy, response headers policy, and
+  OAC were rollback side effects. The stack event listed the S3 bucket as
+  `DELETE_SKIPPED`, but a post-rollback `head-bucket` returned S3 `404`, so the
+  target bucket is not currently readable as an existing bucket through the
+  `renuvex-review-images` profile.
+- CloudTrail correlation was attempted in `eu-central-1` and `us-east-1`, but
+  the role currently lacks `cloudtrail:LookupEvents`. This is not required for
+  stack creation, but it limits deeper read-only failure correlation.
+- Before retrying, the review-image operator permission set must include
+  CloudFront public-key and key-group lifecycle actions used by the template:
+  `cloudfront:CreatePublicKey`, `cloudfront:GetPublicKey`,
+  `cloudfront:GetPublicKeyConfig`, `cloudfront:UpdatePublicKey`,
+  `cloudfront:DeletePublicKey`, `cloudfront:ListPublicKeys`,
+  `cloudfront:CreateKeyGroup`, `cloudfront:GetKeyGroup`,
+  `cloudfront:GetKeyGroupConfig`, `cloudfront:UpdateKeyGroup`,
+  `cloudfront:DeleteKeyGroup`, and `cloudfront:ListKeyGroups`.
+- Because the stack is now `ROLLBACK_COMPLETE`, a retry requires an explicitly
+  approved cleanup of the failed stack placeholder before creating a new change
+  set.
 
 Review-image local template contracts:
 
