@@ -270,6 +270,27 @@ ACM DNS validation result:
 - No CloudFront alias, media CNAME, Vercel env, DB, Cloudinary, provider
   activation, or production traffic changes were made in this validation step.
 
+CloudFront custom-domain update change set:
+
+- Change set was created after explicit approval but not executed.
+- Change set: `review-images-custom-domain-20260703130911`.
+- Change set ARN:
+  `arn:aws:cloudformation:eu-central-1:989086371563:changeSet/review-images-custom-domain-20260703130911/310e4129-ec20-490e-877f-e26de796776f`.
+- Status: `CREATE_COMPLETE`, `ExecutionStatus: AVAILABLE`.
+- Parameters:
+  - `MediaDomainName=media.renuvex.app`.
+  - `AcmCertificateArn=arn:aws:acm:us-east-1:989086371563:certificate/c4b05b95-3384-43b9-a0dc-518472fbc03e`.
+  - `BucketName` and `CloudFrontPublicKeyEncoded` keep the previous stack
+    values.
+- Planned change: `ReviewImagesDistribution`
+  (`AWS::CloudFront::Distribution`) `Modify`, `Replacement=False`.
+- Validation events: `CREATE_CHANGESET` succeeded; no validation error events.
+- Current live stack is still `CREATE_COMPLETE` with `AcmCertificateArn=""`;
+  live CloudFront distribution still has no aliases and still uses the default
+  CloudFront certificate, because the change set has not been executed yet.
+- No media CNAME, Vercel env, DB, Cloudinary, provider activation, or
+  production traffic changes were made in this change-set step.
+
 Review-image local template contracts:
 
 - S3 bucket remains private with Block Public Access, Bucket Owner Enforced
