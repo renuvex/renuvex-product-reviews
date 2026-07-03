@@ -127,7 +127,8 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-03: AWS review-image branch `codex/aws-review-images-migration` is draft PR #2; PR gates, Vercel preview, and the additive production DB migration are verified. Production still defaults to Cloudinary until the provider cutover gate.
+- 2026-07-03: AWS review-image provider is active in Vercel production after deploy `dpl_E96wKnrsukyHPhba8h7uNkc2MtqG`. Read-only acceptance found one approved `aws_s3` image returning `media.renuvex.app` variants, plus a public variant cache-header issue caused by S3 CopyObject metadata copy behavior; a local fix replaces metadata before the next approved deploy.
+- 2026-07-03: AWS review-image PR #2 was merged and the additive production DB migration is applied. Cloudinary env/dependency/code paths remain only for rollback/legacy test media until a separate teardown gate.
 - 2026-07-02: PDP review widget clears stale shadow content during SPA product transitions; manual dev-storefront acceptance confirmed the neutral shell instead of stale review cards.
 - 2026-07-02: Worker-cached `GET /api/public/settings` is live. A read-only check returned `200` from Cloudflare with `X-Renuvex-Edge-Cache: MISS` and then `HIT`; `POST /api/public/storefront-theme/lazy-sync` remains on `app.renuvex.app`.
 - 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.
