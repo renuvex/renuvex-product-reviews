@@ -141,9 +141,25 @@ Verified on 2026-07-03 with read-only commands:
 
 The target review-image resource contract is recorded in [[ADR_0034_AWS_Review_Image_Migration]]. No AWS resource creation, DNS change, env write, deploy, provider deletion, or git push is approved by this preflight.
 
-The review-image stack is still local source only. No CloudFormation stack,
-bucket, CloudFront distribution, ACM certificate, DNS record, Vercel env, or
-provider teardown was created by the local implementation pass.
+The review-image stack has not been executed. A 2026-07-03 create change set
+attempt created a CloudFormation `REVIEW_IN_PROGRESS` placeholder stack named
+`renuvex-review-images-prod`, but the change set failed AWS early property
+validation before execution. `list-stack-resources` returned an empty resource
+list, so no bucket, CloudFront distribution, ACM certificate, DNS record, Vercel
+env, or provider teardown was created by that attempt.
+
+Current blocker from the failed change set:
+
+- Change set: `review-images-initial-20260703061502`.
+- Status: `FAILED`, `ExecutionStatus: UNAVAILABLE`.
+- Status reason: `AWS::EarlyValidation::PropertyValidation`.
+- The `renuvex-review-images` role does not currently have
+  `cloudformation:DescribeEvents`, so it cannot read the validation path from
+  the new CloudFormation validation events API. Add read-only
+  `cloudformation:DescribeEvents` to the review-image operator role, or use an
+  already-approved read-only/admin diagnostic profile, before retrying.
+- Because this is a `CREATE` change set, cleanup of the failed change set and
+  placeholder stack is a separate AWS mutation and needs explicit approval.
 
 Review-image local template contracts:
 
