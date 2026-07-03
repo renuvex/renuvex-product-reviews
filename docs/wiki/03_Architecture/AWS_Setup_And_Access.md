@@ -136,7 +136,7 @@ Verified on 2026-07-03 with read-only commands:
 | Existing CloudFront distributions | Only canary distribution `E2IGB2R73IV6SE` |
 | Existing CloudFormation stacks in `eu-central-1` | Only `renuvex-widget-cdn-canary` |
 | Candidate review-image buckets | `renuvex-review-images-989086371563-eu-central-1` and `renuvex-review-images-prod-989086371563-eu-central-1` returned S3 `404` on `head-bucket` |
-| ACM certificates in `us-east-1` | none |
+| ACM certificates in `us-east-1` | `renuvex-review-images` can list certificates; no existing certificates and no `media.renuvex.app` certificate found |
 | `media.renuvex.app` public DNS | no public record from `1.1.1.1` or `8.8.8.8`; local resolver returned `192.168.1.1`, so local DNS is not proof of public configuration |
 
 The target review-image resource contract is recorded in [[ADR_0034_AWS_Review_Image_Migration]]. No AWS resource creation, DNS change, env write, deploy, provider deletion, or git push is approved by this preflight.
