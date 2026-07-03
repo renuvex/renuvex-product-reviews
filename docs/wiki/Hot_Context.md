@@ -126,6 +126,7 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-03: AWS review-image additive production DB migration is applied and verified; provider activation is still gated, so production remains on Cloudinary.
 - 2026-07-02: PDP review widget is route- and identity-aware on SPA product transitions. On pathname changes, `events.js` clears already-rendered review shadow content into the existing reserved shell before a delayed next `PRODUCT_VIEW` arrives; if ikas later emits a different product B, the shell stays clear while new settings/reviews load and stale async responses remain ignored. Post-deploy manual acceptance on the real dev storefront confirmed fast product transitions now show the neutral shell instead of stale review cards.
 - 2026-07-02: Worker-cached `GET /api/public/settings` is live. A read-only check returned `200` from Cloudflare with `X-Renuvex-Edge-Cache: MISS` and then `HIT`; `POST /api/public/storefront-theme/lazy-sync` remains on `app.renuvex.app`.
 - 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.

@@ -92,11 +92,11 @@ Draft. This page records verified Cloudinary state and the image-provider bounda
 
 ## Implementation Progress
 
-Local implementation work started on branch `codex/aws-review-images-migration` on 2026-07-03. The code remains local-only and has not been pushed. AWS review-image infrastructure, ACM validation, CloudFront aliasing, and the final `media.renuvex.app` DNS record were created only through separate approved mutation gates. Vercel env writes, Prisma production migration deploy, app/widget deploy, Cloudflare Worker deploy, Cloudinary teardown, provider activation, and provider deletes are still not approved by this ADR alone.
+Local implementation work started on branch `codex/aws-review-images-migration` on 2026-07-03. The code remains local-only and has not been pushed. AWS review-image infrastructure, ACM validation, CloudFront aliasing, the final `media.renuvex.app` DNS record, runtime IAM/OIDC, Vercel AWS runtime env additions, and the additive Prisma production migration were created or applied only through separate approved mutation gates. App/widget deploy, Cloudflare Worker deploy, Cloudinary teardown, provider activation, and provider deletes are still not approved by this ADR alone.
 
 Implemented locally so far:
 
-- Additive Prisma schema and migration for AWS image checksum, upload TTL/register evidence, variant lifecycle state, and variant manifests.
+- Additive Prisma schema and production migration for AWS image checksum, upload TTL/register evidence, variant lifecycle state, and variant manifests.
 - AWS review-image provider module for Vercel OIDC-backed S3 access, presigned POST upload intents, S3 object/head/tag/checksum validation, Sharp private variant generation, public variant publish/revoke, family cleanup, and CloudFront signed admin preview URLs.
 - Upload sign/register routes with `REVIEW_IMAGE_PROVIDER=aws_s3` branch while preserving Cloudinary rollback code paths.
 - Public review submit/read path that accepts AWS image refs, rejects unready/cross-store/expired refs, publishes variants before public visibility for auto-approved image reviews, and returns provider-neutral public variants.
@@ -109,7 +109,7 @@ Implemented locally so far:
   by production traffic because the app provider is still not activated.
 - Hardening pass for direct-upload CORS, CloudFront S3 read scope, CloudFront invalidation on public variant revocation, and publish-then-DB-failure compensation. The template validator now checks these infrastructure contracts instead of only checking resource presence.
 
-Still not done in this implementation pass: runtime IAM/OIDC confirmation or creation, Vercel env additions, Prisma migration deploy, app/widget deploy, Cloudflare Worker/widget deploy, full CI/browser test pass, Cloudinary teardown, and removal of Cloudinary dependency/build constants.
+Still not done in this implementation pass: app/widget deploy, Cloudflare Worker/widget deploy, provider activation, full CI/browser test pass, Cloudinary teardown, and removal of Cloudinary dependency/build constants.
 
 Runtime cutover preflight on 2026-07-03 showed:
 
@@ -127,8 +127,12 @@ Runtime cutover preflight on 2026-07-03 showed:
   production only. Preview does not list them, matching the production-only IAM
   trust policy. `REVIEW_IMAGE_PROVIDER` is still unset in Vercel, so runtime
   remains on the Cloudinary default until the separate cutover gate.
-- Production DB has not yet applied
-  `20260703090000_add_aws_review_image_fields`.
+- Production DB applied `20260703090000_add_aws_review_image_fields` after
+  explicit approval. `prisma migrate status` reports the schema is up to date.
+  Read-only catalog checks confirmed the new nullable checksum, upload,
+  variant timestamp/error/manifest columns plus non-null
+  `variantStatus DEFAULT 'pending'` on `PendingReviewImage` and `ReviewMedia`,
+  and the four provider/status indexes exist.
 - The current AWS review-image operator can read STS identity and IAM OIDC
   state. The target OIDC provider, target runtime role, and runtime IAM
   CloudFormation stack do not exist yet.

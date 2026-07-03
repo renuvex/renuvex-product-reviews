@@ -352,9 +352,18 @@ Runtime cutover preflight:
 - Cloudinary env keys remain in Vercel as the pre-acceptance rollback path.
 - Local `.env.local` also does not yet contain the AWS review-image keys or
   `VERCEL_OIDC_TOKEN`.
-- `prisma migrate status`, with `.env.local` loaded into the process without
-  printing values, reports
-  `20260703090000_add_aws_review_image_fields` as not yet applied.
+- `prisma migrate deploy`, with `.env.local` loaded into the process without
+  printing values, applied `20260703090000_add_aws_review_image_fields` after
+  explicit approval. Follow-up `prisma migrate status` reports the database
+  schema is up to date.
+- Read-only catalog checks confirmed the new AWS review-image columns exist on
+  `PendingReviewImage` and `ReviewMedia`, including nullable checksum/upload/
+  variant evidence fields and non-null `variantStatus DEFAULT 'pending'`.
+- Read-only `pg_indexes` checks confirmed the four provider/status indexes:
+  `ReviewMedia_provider_storeId_providerAssetId_idx`,
+  `ReviewMedia_provider_resourceType_variantStatus_createdAt_idx`,
+  `PendingReviewImage_provider_storeId_providerAssetId_idx`, and
+  `PendingReviewImage_provider_variantStatus_createdAt_idx`.
 - `prisma validate`, with `.env.local` loaded, passes.
 - The `renuvex-review-images` AWS profile can read STS identity and IAM OIDC
   state. `iam:ListOpenIDConnectProviders` currently returns no OIDC providers.
