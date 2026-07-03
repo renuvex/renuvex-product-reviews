@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { cleanupPendingUploads } from '@/lib/cleanup-pending-uploads';
 import { reconcileStorefrontScripts } from '@/lib/reconcile-storefront-scripts';
 import { reconcileStorefrontThemes } from '@/lib/storefront-theme-sync';
-import { runReviewMediaMetadataBackfill } from '@/lib/review-media-metadata-backfill';
 import { reportCronTaskError } from '@/lib/cron-observability';
 import {
   ensureVideoLifecycleJobs,
@@ -37,7 +35,6 @@ export async function GET(request: Request) {
   let pendingUploads = null;
   let storefrontScripts = null;
   let storefrontThemes = null;
-  let reviewMediaMetadata = null;
   let videoReconciliation = null;
   let videoLifecycleJobs = null;
   let mediaJobs = null;
@@ -66,14 +63,6 @@ export async function GET(request: Request) {
       const message = error instanceof Error ? error.message : 'unknown';
       reportCronTaskError('daily-maintenance', 'reconcile-storefront-scripts', error);
       errors.push({ task: 'reconcile-storefront-scripts', error: message });
-    }
-
-    try {
-      reviewMediaMetadata = await runReviewMediaMetadataBackfill(prisma);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown';
-      reportCronTaskError('daily-maintenance', 'review-media-metadata-backfill', error);
-      errors.push({ task: 'review-media-metadata-backfill', error: message });
     }
 
     try {
@@ -108,7 +97,6 @@ export async function GET(request: Request) {
         storefrontThemes,
         pendingUploads,
         storefrontScripts,
-        reviewMediaMetadata,
         videoLifecycleJobs,
         videoReconciliation,
         mediaJobs,

@@ -1,12 +1,3 @@
-function normalizePublicCloudName(value) {
-  const cloudName = typeof value === 'string' ? value.trim() : '';
-  return /^[A-Za-z0-9_-]+$/.test(cloudName) ? cloudName : '';
-}
-
-const cloudinaryCloudName = normalizePublicCloudName(
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME,
-);
-
 const imageRemotePatterns = [
   {
     protocol: 'https',
@@ -14,13 +5,6 @@ const imageRemotePatterns = [
     pathname: '/review-images/v1/public/**',
   },
 ];
-if (cloudinaryCloudName) {
-  imageRemotePatterns.push({
-    protocol: 'https',
-    hostname: 'res.cloudinary.com',
-    pathname: `/${cloudinaryCloudName}/image/upload/**`,
-  });
-}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -30,16 +14,11 @@ const nextConfig = {
   images: {
     remotePatterns: imageRemotePatterns,
   },
-  webpack: (config, { webpack }) => {
+  webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
     };
-    config.plugins.push(
-      new webpack.DefinePlugin({
-        __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__: JSON.stringify(cloudinaryCloudName),
-      }),
-    );
     return config;
   },
 };

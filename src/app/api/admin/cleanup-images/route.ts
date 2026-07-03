@@ -85,12 +85,6 @@ export async function GET(request: Request) {
   try {
     const result = await runCleanupImages(prisma, { force });
 
-    if (result.status === 'skipped_no_cloudinary_config') {
-      reportCronTaskError('cleanup-images', 'cleanup-images', new Error('Cloudinary config missing'));
-      await persistAudit({ startedAt, startMs, status: 'skipped', trigger, forced: force, error: 'cloudinary_config_missing' });
-      return NextResponse.json({ error: 'Cloudinary config missing' }, { status: 500 });
-    }
-
     await persistAudit({
       startedAt,
       startMs,

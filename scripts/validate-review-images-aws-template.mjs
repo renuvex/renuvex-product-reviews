@@ -31,7 +31,6 @@ for (const resource of requiredResources) {
 const forbiddenSecretHints = [
   'PRIVATE KEY-----',
   'AWS_SECRET_ACCESS_KEY',
-  'CLOUDINARY_API_SECRET',
   'DATABASE_URL',
 ];
 for (const hint of forbiddenSecretHints) {

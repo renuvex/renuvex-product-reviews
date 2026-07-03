@@ -70,10 +70,11 @@ describe('createMediaThumbnail intrinsic fallback dimensions', () => {
     vi.unstubAllGlobals();
   });
 
-  test('uses source width for Cloudinary quality and display width for no-style fallback', () => {
+  test('uses display fallback dimensions and leaves AWS image URLs untransformed', () => {
+    const url = 'https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/00000000-0000-4000-8000-000000000001/variants/w300.jpeg';
     const thumb = createMediaThumbnail({
       type: 'image',
-      url: 'https://res.cloudinary.com/demo/image/upload/v123/review_images/stores/store-1/photo.jpg',
+      url,
     }, {
       sourceWidth: 300,
       sourceHeight: 300,
@@ -84,8 +85,8 @@ describe('createMediaThumbnail intrinsic fallback dimensions', () => {
     expect(thumb.tagName).toBe('IMG');
     expect(thumb.width).toBe(110);
     expect(thumb.height).toBe(110);
-    expect(thumb.src).toContain('/upload/q_auto/f_auto/c_scale,w_300/');
-    expect(thumb.srcset).toContain('/upload/q_auto/f_auto/c_scale,w_600/');
+    expect(thumb.src).toBe(url);
+    expect(thumb.srcset).toBe(`${url} 1x, ${url} 2x`);
   });
 
   test('uses source dimensions for Mux poster transforms and small display fallback', () => {

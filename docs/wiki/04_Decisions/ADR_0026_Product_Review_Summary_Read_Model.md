@@ -75,7 +75,6 @@ Add `ProductReviewSummary` as a per `(storeId, productId)` aggregate read model:
 - [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts)
 - [src/app/api/admin/reviews/route.ts](src/app/api/admin/reviews/route.ts)
 - [scripts/rebuild-product-review-summaries.mjs](scripts/rebuild-product-review-summaries.mjs)
-- [scripts/backfill-review-media.mjs](scripts/backfill-review-media.mjs)
 
 ## Related Notes
 - [[Database_Schema]]

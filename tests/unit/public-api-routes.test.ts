@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHash } from 'crypto';
 
 const prismaMock = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
@@ -41,8 +40,11 @@ const prismaMock = vi.hoisted(() => ({
   },
   pendingReviewImage: {
     findMany: vi.fn(),
+    findFirst: vi.fn(),
     findUnique: vi.fn(),
     upsert: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
     deleteMany: vi.fn(),
   },
   videoUploadSession: {
@@ -65,6 +67,62 @@ const redisMock = vi.hoisted(() => ({
 }));
 const sentryCaptureExceptionMock = vi.hoisted(() => vi.fn());
 const getUserFromRequestMock = vi.hoisted(() => vi.fn());
+const awsImageMock = vi.hoisted(() => ({
+  AWS_REVIEW_IMAGE_PROVIDER: 'aws_s3',
+  buildAwsReviewImagePublicId: (storeId: string, assetId: string) => `aws_s3:${storeId}:${assetId}`,
+  base64Sha256ToHex: (value: string) => Buffer.from(value, 'base64').toString('hex'),
+  normalizeAwsReviewImageContentType: vi.fn((value: unknown) => (value === 'image/jpeg' || value === 'image/png' || value === 'image/webp' ? value : null)),
+  normalizeAwsReviewImageBytes: vi.fn((value: unknown) => (Number.isInteger(value) && Number(value) > 0 && Number(value) <= 10 * 1024 * 1024 ? Number(value) : null)),
+  normalizeAwsReviewImageChecksum: vi.fn((value: unknown) => (typeof value === 'string' && value.length >= 44 ? value : null)),
+  createAwsReviewImageUploadIntent: vi.fn(),
+  sanitizeAwsReviewImageRef: vi.fn((value: unknown) => {
+    const record = value as Record<string, unknown>;
+    return record?.provider === 'aws_s3' &&
+      typeof record.assetId === 'string' &&
+      typeof record.uploadSessionId === 'string' &&
+      typeof record.objectKey === 'string' &&
+      typeof record.contentType === 'string' &&
+      typeof record.bytes === 'number' &&
+      record.checksumAlgorithm === 'SHA256' &&
+      typeof record.checksumSha256 === 'string'
+      ? record
+      : null;
+  }),
+  sanitizeAwsReviewImageRefs: vi.fn((value: unknown) => {
+    if (value === undefined || value === null) return { ok: true, refs: [] };
+    if (!Array.isArray(value)) return { ok: false, error: 'not_array' };
+    if (value.length > 3) return { ok: false, error: 'too_many' };
+    const refs: unknown[] = [];
+    const seen = new Set<string>();
+    for (const item of value) {
+      const ref = awsImageMock.sanitizeAwsReviewImageRef(item) as {
+        assetId: string;
+        uploadSessionId: string;
+      } | null;
+      if (!ref) return { ok: false, error: 'invalid_ref' };
+      const key = `${ref.assetId}:${ref.uploadSessionId}`;
+      if (seen.has(ref.assetId) || seen.has(ref.uploadSessionId) || seen.has(key)) return { ok: false, error: 'duplicate_ref' };
+      seen.add(ref.assetId);
+      seen.add(ref.uploadSessionId);
+      seen.add(key);
+      refs.push(ref);
+    }
+    return { ok: true, refs };
+  }),
+  validateAwsReviewImageOriginal: vi.fn(),
+  generateAwsReviewImagePrivateVariants: vi.fn(),
+  publishAwsReviewImageVariants: vi.fn(),
+  revokeAwsReviewImagePublicVariants: vi.fn(),
+  buildAwsReviewImagePublicDescriptor: vi.fn((manifest: unknown) => {
+    const record = manifest as { url?: string; thumbnailUrl?: string; variants?: unknown[] } | null;
+    if (!record?.url || !record.thumbnailUrl) return null;
+    return { url: record.url, thumbnailUrl: record.thumbnailUrl, variants: Array.isArray(record.variants) ? record.variants : [] };
+  }),
+  isTrustedAwsReviewImagePublicUrl: vi.fn((value: unknown, storeId?: unknown) => (
+    typeof value === 'string' &&
+    value.startsWith(`https://media.renuvex.app/review-images/v1/public/stores/${storeId || 'store-1'}/assets/`)
+  )),
+}));
 
 vi.mock('next/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('next/server')>();
@@ -107,9 +165,43 @@ vi.mock('@sentry/nextjs', () => ({
   captureException: sentryCaptureExceptionMock,
 }));
 
+vi.mock('@/lib/media/providers/aws-review-image', () => awsImageMock);
+
 const OZY_THEME_ID = '57225e07-aa38-4d38-9688-f6730ee16143';
-const VALID_REVIEW_IMAGE_URL = 'https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/review-a.jpg';
-const SECOND_VALID_REVIEW_IMAGE_URL = 'https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/review-b.png';
+const AWS_IMAGE_ASSET_ID = '11111111-1111-4111-8111-111111111111';
+const SECOND_AWS_IMAGE_ASSET_ID = '22222222-2222-4222-8222-222222222222';
+const AWS_IMAGE_UPLOAD_SESSION_ID = '33333333-3333-4333-8333-333333333333';
+const SECOND_AWS_IMAGE_UPLOAD_SESSION_ID = '44444444-4444-4444-8444-444444444444';
+const AWS_IMAGE_CHECKSUM = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+const AWS_REVIEW_IMAGE_URL = `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${AWS_IMAGE_ASSET_ID}/variants/w1200.jpeg`;
+const SECOND_AWS_REVIEW_IMAGE_URL = `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${SECOND_AWS_IMAGE_ASSET_ID}/variants/w1200.jpeg`;
+const AWS_REVIEW_IMAGE_THUMB_URL = `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${AWS_IMAGE_ASSET_ID}/variants/thumb_320x427.webp`;
+
+function awsImageRef(overrides: Record<string, unknown> = {}) {
+  return {
+    provider: 'aws_s3',
+    assetId: AWS_IMAGE_ASSET_ID,
+    uploadSessionId: AWS_IMAGE_UPLOAD_SESSION_ID,
+    objectKey: `review-images/v1/private/stores/store-1/assets/${AWS_IMAGE_ASSET_ID}/original.jpg`,
+    contentType: 'image/jpeg',
+    bytes: 450000,
+    checksumAlgorithm: 'SHA256',
+    checksumSha256: AWS_IMAGE_CHECKSUM,
+    ...overrides,
+  };
+}
+
+function awsVariantManifest(overrides: Record<string, unknown> = {}) {
+  return {
+    url: AWS_REVIEW_IMAGE_URL,
+    thumbnailUrl: AWS_REVIEW_IMAGE_THUMB_URL,
+    variants: [
+      { id: 'w1200', format: 'jpeg', width: 1200, height: 1600, url: AWS_REVIEW_IMAGE_URL },
+      { id: 'thumb_320x427', format: 'webp', width: 320, height: 427, url: AWS_REVIEW_IMAGE_THUMB_URL },
+    ],
+    ...overrides,
+  };
+}
 
 function stableOzyThemeState() {
   const now = new Date().toISOString();
@@ -143,17 +235,6 @@ function staleOzyThemeState() {
     ...stableOzyThemeState(),
     lastCheckedAt: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
   };
-}
-
-function setCloudinaryEnv() {
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'renuvex';
-  delete process.env.CLOUDINARY_CLOUD_NAME;
-}
-
-function cloudinaryResponseSignature(publicId: string, version: string, apiSecret: string) {
-  return createHash('sha1')
-    .update(`public_id=${publicId}&version=${version}${apiSecret}`, 'utf8')
-    .digest('hex');
 }
 
 function validReviewPayload(overrides: Record<string, unknown> = {}) {
@@ -250,9 +331,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   prismaMock.$queryRaw.mockReset();
   process.env.REVIEW_CURSOR_SECRET = 'unit-test-review-cursor-secret';
-  delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  delete process.env.CLOUDINARY_CLOUD_NAME;
-  delete process.env.CLOUDINARY_API_SECRET;
   delete process.env.VIDEO_REVIEWS_ENABLED;
   prismaMock.storeSettings.findUnique.mockReset();
   prismaMock.widgetSettings.findMany.mockReset();
@@ -279,9 +357,13 @@ beforeEach(() => {
   prismaMock.reviewMedia.deleteMany.mockReset();
   prismaMock.pendingReviewImage.findMany.mockReset();
   prismaMock.pendingReviewImage.findMany.mockResolvedValue([]);
+  prismaMock.pendingReviewImage.findFirst.mockReset();
+  prismaMock.pendingReviewImage.findFirst.mockResolvedValue(null);
   prismaMock.pendingReviewImage.findUnique.mockReset();
   prismaMock.pendingReviewImage.findUnique.mockResolvedValue(null);
   prismaMock.pendingReviewImage.upsert.mockReset();
+  prismaMock.pendingReviewImage.update.mockReset();
+  prismaMock.pendingReviewImage.updateMany.mockReset();
   prismaMock.pendingReviewImage.deleteMany.mockReset();
   prismaMock.videoUploadSession.findUnique.mockReset();
   prismaMock.videoUploadSession.updateMany.mockReset();
@@ -295,6 +377,19 @@ beforeEach(() => {
   redisMock.expire.mockReset();
   sentryCaptureExceptionMock.mockReset();
   getUserFromRequestMock.mockReset();
+  awsImageMock.createAwsReviewImageUploadIntent.mockReset();
+  awsImageMock.validateAwsReviewImageOriginal.mockReset();
+  awsImageMock.validateAwsReviewImageOriginal.mockResolvedValue(Buffer.from('image'));
+  awsImageMock.generateAwsReviewImagePrivateVariants.mockReset();
+  awsImageMock.generateAwsReviewImagePrivateVariants.mockResolvedValue({
+    source: { width: 1200, height: 1600 },
+    generatedAt: '2026-06-08T00:00:00.000Z',
+    ...awsVariantManifest(),
+  });
+  awsImageMock.publishAwsReviewImageVariants.mockReset();
+  awsImageMock.publishAwsReviewImageVariants.mockResolvedValue(undefined);
+  awsImageMock.revokeAwsReviewImagePublicVariants.mockReset();
+  awsImageMock.revokeAwsReviewImagePublicVariants.mockResolvedValue(undefined);
 });
 
 describe('/api/public/settings', () => {
@@ -600,126 +695,91 @@ describe('/api/public/ratings-by-slug', () => {
 });
 
 describe('/api/public/upload/register', () => {
-  it('stores verified Cloudinary upload metadata on the pending image row', async () => {
-    setCloudinaryEnv();
-    process.env.CLOUDINARY_API_SECRET = 'unit-cloudinary-secret';
+  it('validates an AWS upload intent and marks private variants ready', async () => {
     redisMock.incr.mockResolvedValue(1);
     prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
-    prismaMock.pendingReviewImage.upsert.mockResolvedValue({});
-    const publicId = 'review_images/stores/store-1/review-a';
-    const version = '1790000000';
+    prismaMock.pendingReviewImage.findFirst.mockResolvedValue({
+      publicId: `aws_s3:store-1:${AWS_IMAGE_ASSET_ID}`,
+      storeId: 'store-1',
+      uploadSessionId: AWS_IMAGE_UPLOAD_SESSION_ID,
+      provider: 'aws_s3',
+      providerAssetId: AWS_IMAGE_ASSET_ID,
+      sourceAssetId: awsImageRef().objectKey,
+      mimeType: 'image/jpeg',
+      bytes: 450000,
+      sourceChecksumAlgorithm: 'SHA256',
+      sourceChecksumSha256: AWS_IMAGE_CHECKSUM,
+      uploadExpiresAt: new Date(Date.now() + 60_000),
+      variantStatus: 'pending',
+    });
+    prismaMock.pendingReviewImage.update.mockResolvedValue({});
     const { POST } = await import('@/app/api/public/upload/register/route');
 
     const response = await POST(new Request('https://app.test/api/public/upload/register', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
-      body: JSON.stringify({
-        storeId: 'store-1',
-        secureUrl: VALID_REVIEW_IMAGE_URL,
-        metadata: {
-          assetId: 'asset-123',
-          publicId,
-          version,
-          resourceType: 'image',
-          format: 'jpg',
-          width: 1200,
-          height: 1600,
-          bytes: 450000,
-          signature: cloudinaryResponseSignature(publicId, version, 'unit-cloudinary-secret'),
-        },
-      }),
+      body: JSON.stringify({ storeId: 'store-1', ...awsImageRef() }),
     }));
 
     expect(response.status).toBe(200);
-    expect(prismaMock.pendingReviewImage.upsert).toHaveBeenCalledWith({
-      where: { publicId },
-      update: expect.objectContaining({
-        assetId: 'asset-123',
-        version,
-        resourceType: 'image',
-        format: 'jpg',
-        mimeType: 'image/jpeg',
-        width: 1200,
-        height: 1600,
-        bytes: 450000,
-        metadataSource: 'upload_response',
+    expect(awsImageMock.validateAwsReviewImageOriginal).toHaveBeenCalledWith(expect.objectContaining({
+      storeId: 'store-1',
+      assetId: AWS_IMAGE_ASSET_ID,
+      uploadSessionId: AWS_IMAGE_UPLOAD_SESSION_ID,
+    }));
+    expect(awsImageMock.generateAwsReviewImagePrivateVariants).toHaveBeenCalled();
+    expect(prismaMock.pendingReviewImage.update).toHaveBeenCalledWith({
+      where: { publicId: `aws_s3:store-1:${AWS_IMAGE_ASSET_ID}` },
+      data: expect.objectContaining({
+        url: null,
+        assetId: AWS_IMAGE_ASSET_ID,
+        provider: 'aws_s3',
+        providerAssetId: AWS_IMAGE_ASSET_ID,
         metadataStatus: 'complete',
-        metadataFetchedAt: expect.any(Date),
-      }),
-      create: expect.objectContaining({
-        publicId,
-        storeId: 'store-1',
-        assetId: 'asset-123',
-        metadataStatus: 'complete',
+        variantStatus: 'private_ready',
+        uploadRegisteredAt: expect.any(Date),
       }),
     });
   });
 
-  it('keeps register backwards compatible when metadata is absent', async () => {
-    setCloudinaryEnv();
+  it('returns ok without regenerating variants for an already registered AWS image', async () => {
     redisMock.incr.mockResolvedValue(1);
     prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
-    prismaMock.pendingReviewImage.upsert.mockResolvedValue({});
+    prismaMock.pendingReviewImage.findFirst.mockResolvedValue({
+      sourceAssetId: awsImageRef().objectKey,
+      mimeType: 'image/jpeg',
+      bytes: 450000,
+      sourceChecksumAlgorithm: 'SHA256',
+      sourceChecksumSha256: AWS_IMAGE_CHECKSUM,
+      uploadExpiresAt: new Date(Date.now() + 60_000),
+      variantStatus: 'private_ready',
+    });
     const { POST } = await import('@/app/api/public/upload/register/route');
 
     const response = await POST(new Request('https://app.test/api/public/upload/register', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
-      body: JSON.stringify({ storeId: 'store-1', secureUrl: VALID_REVIEW_IMAGE_URL }),
+      body: JSON.stringify({ storeId: 'store-1', ...awsImageRef() }),
     }));
 
     expect(response.status).toBe(200);
-    expect(prismaMock.pendingReviewImage.upsert).toHaveBeenCalledWith({
-      where: { publicId: 'review_images/stores/store-1/review-a' },
-      update: {},
-      create: {
-        publicId: 'review_images/stores/store-1/review-a',
-        storeId: 'store-1',
-        ipHash: expect.any(String),
-      },
-    });
+    expect(awsImageMock.validateAwsReviewImageOriginal).not.toHaveBeenCalled();
+    expect(prismaMock.pendingReviewImage.update).not.toHaveBeenCalled();
   });
 
-  it('does not trust metadata when the Cloudinary upload signature is invalid', async () => {
-    setCloudinaryEnv();
-    process.env.CLOUDINARY_API_SECRET = 'unit-cloudinary-secret';
+  it('rejects invalid AWS image references before touching pending rows', async () => {
     redisMock.incr.mockResolvedValue(1);
     prismaMock.storeSettings.findUnique.mockResolvedValue({ storeId: 'store-1' });
-    prismaMock.pendingReviewImage.upsert.mockResolvedValue({});
-    const publicId = 'review_images/stores/store-1/review-a';
     const { POST } = await import('@/app/api/public/upload/register/route');
 
     const response = await POST(new Request('https://app.test/api/public/upload/register', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
-      body: JSON.stringify({
-        storeId: 'store-1',
-        secureUrl: VALID_REVIEW_IMAGE_URL,
-        metadata: {
-          publicId,
-          version: '1790000000',
-          resourceType: 'image',
-          format: 'jpg',
-          width: 1200,
-          height: 1600,
-          bytes: 450000,
-          signature: 'bad-signature',
-        },
-      }),
+      body: JSON.stringify({ storeId: 'store-1', secureUrl: AWS_REVIEW_IMAGE_URL }),
     }));
 
-    expect(response.status).toBe(200);
-    expect(prismaMock.pendingReviewImage.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      update: expect.objectContaining({
-        metadataSource: 'upload_response',
-        metadataStatus: 'invalid_signature',
-        metadataFetchedAt: expect.any(Date),
-      }),
-      create: expect.objectContaining({
-        publicId,
-        metadataStatus: 'invalid_signature',
-      }),
-    }));
+    expect(response.status).toBe(400);
+    expect(prismaMock.pendingReviewImage.findFirst).not.toHaveBeenCalled();
   });
 });
 
@@ -782,7 +842,7 @@ describe('/api/public/reviews', () => {
     redisMock.incr.mockResolvedValue(4);
 
     const response = await postPublicReview(validReviewPayload({
-      images: [VALID_REVIEW_IMAGE_URL],
+      images: [awsImageRef()],
     }));
     const body = await response.json();
 
@@ -859,8 +919,7 @@ describe('/api/public/reviews', () => {
     }));
   });
 
-  it('formats public review images from ReviewMedia before the legacy mirror', async () => {
-    setCloudinaryEnv();
+  it('formats public AWS review images from ReviewMedia and ignores the legacy mirror', async () => {
     prismaMock.review.findMany.mockResolvedValue([
       {
         id: 'review-1',
@@ -869,10 +928,38 @@ describe('/api/public/reviews', () => {
         comment: 'Works well',
         author: 'Mert Copper',
         merchantReply: null,
-        images: JSON.stringify(['https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/legacy.jpg']),
+        images: JSON.stringify(['https://legacy.example/review.jpg']),
         media: [
-          { url: SECOND_VALID_REVIEW_IMAGE_URL, position: 1, width: null, height: null, format: null, mimeType: null, bytes: null },
-          { url: VALID_REVIEW_IMAGE_URL, position: 0, width: 1200, height: 1600, format: 'jpg', mimeType: 'image/jpeg', bytes: 450000 },
+          {
+            url: SECOND_AWS_REVIEW_IMAGE_URL,
+            position: 1,
+            resourceType: 'image',
+            provider: 'aws_s3',
+            variantStatus: 'public_ready',
+            variantManifest: awsVariantManifest({
+              url: SECOND_AWS_REVIEW_IMAGE_URL,
+              thumbnailUrl: `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${SECOND_AWS_IMAGE_ASSET_ID}/variants/thumb_320x427.webp`,
+              variants: [{ id: 'w1200', format: 'jpeg', width: 1200, height: 1600, url: SECOND_AWS_REVIEW_IMAGE_URL }],
+            }),
+            width: null,
+            height: null,
+            format: null,
+            mimeType: null,
+            bytes: null,
+          },
+          {
+            url: AWS_REVIEW_IMAGE_URL,
+            position: 0,
+            resourceType: 'image',
+            provider: 'aws_s3',
+            variantStatus: 'public_ready',
+            variantManifest: awsVariantManifest(),
+            width: 1200,
+            height: 1600,
+            format: 'jpg',
+            mimeType: 'image/jpeg',
+            bytes: 450000,
+          },
         ],
         createdAt: new Date('2026-05-28T00:00:00.000Z'),
       },
@@ -893,11 +980,11 @@ describe('/api/public/reviews', () => {
       }),
     }));
     expect(prismaMock.review.count).not.toHaveBeenCalled();
-    expect(body.data.reviews[0].images).toEqual([VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL]);
+    expect(body.data.reviews[0].images).toEqual([AWS_REVIEW_IMAGE_URL, SECOND_AWS_REVIEW_IMAGE_URL]);
     expect(body.data.reviews[0].media).toEqual([
       expect.objectContaining({
-        url: VALID_REVIEW_IMAGE_URL,
-        thumbnailUrl: 'https://res.cloudinary.com/renuvex/image/upload/c_fill,g_auto,w_320,h_427,q_auto,f_auto/v1/review_images/stores/store-1/review-a.jpg',
+        url: AWS_REVIEW_IMAGE_URL,
+        thumbnailUrl: AWS_REVIEW_IMAGE_THUMB_URL,
         position: 0,
         width: 1200,
         height: 1600,
@@ -906,7 +993,7 @@ describe('/api/public/reviews', () => {
         bytes: 450000,
       }),
       expect.objectContaining({
-        url: SECOND_VALID_REVIEW_IMAGE_URL,
+        url: SECOND_AWS_REVIEW_IMAGE_URL,
         position: 1,
         width: null,
         height: null,
@@ -966,7 +1053,6 @@ describe('/api/public/reviews', () => {
   });
 
   it('applies review GET pagination, sorting, rating, and trusted image filters', async () => {
-    setCloudinaryEnv();
     prismaMock.review.findMany.mockResolvedValue([]);
     prismaMock.productReviewSummary.findUnique.mockResolvedValue(null);
     const { GET } = await import('@/app/api/public/reviews/route');
@@ -1002,7 +1088,7 @@ describe('/api/public/reviews', () => {
     }));
   });
 
-  it('uses the indexed image filter when hasImages is requested without Cloudinary config', async () => {
+  it('uses the indexed image filter when hasImages is requested', async () => {
     prismaMock.review.findMany.mockResolvedValue([]);
     prismaMock.productReviewSummary.findUnique.mockResolvedValue(null);
     const { GET } = await import('@/app/api/public/reviews/route');
@@ -1372,15 +1458,21 @@ describe('/api/public/reviews', () => {
   it('rejects invalid image payloads before target lookup', async () => {
     const invalidImagePayloads = [
       validReviewPayload({ images: 'not-array' }),
-      validReviewPayload({ images: [VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL, VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL] }),
+      validReviewPayload({
+        images: [
+          awsImageRef(),
+          awsImageRef({ assetId: SECOND_AWS_IMAGE_ASSET_ID, uploadSessionId: SECOND_AWS_IMAGE_UPLOAD_SESSION_ID }),
+          awsImageRef({ assetId: '55555555-5555-4555-8555-555555555555', uploadSessionId: '66666666-6666-4666-8666-666666666666' }),
+          awsImageRef({ assetId: '77777777-7777-4777-8777-777777777777', uploadSessionId: '88888888-8888-4888-8888-888888888888' }),
+        ],
+      }),
       validReviewPayload({ images: ['https://example.com/review.jpg'] }),
-      validReviewPayload({ images: ['https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/other-store/review-a.jpg'] }),
-      validReviewPayload({ images: ['https://res.cloudinary.com/renuvex/image/upload/v1/review_images/stores/store-1/review-a.svg'] }),
+      validReviewPayload({ images: [awsImageRef({ provider: 'other' })] }),
+      validReviewPayload({ images: [awsImageRef(), awsImageRef()] }),
     ];
 
     for (const payload of invalidImagePayloads) {
       vi.clearAllMocks();
-      setCloudinaryEnv();
       redisMock.incr.mockResolvedValue(1);
       const response = await postPublicReview(payload);
 
@@ -1390,77 +1482,89 @@ describe('/api/public/reviews', () => {
     }
   });
 
-  it('returns a server error for image submits when Cloudinary config is missing', async () => {
-    redisMock.incr.mockResolvedValue(1);
-
-    const response = await postPublicReview(validReviewPayload({
-      images: [VALID_REVIEW_IMAGE_URL],
-    }));
-    const body = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(body.error).toBeTruthy();
-    expect(prismaMock.storeSettings.findUnique).not.toHaveBeenCalled();
-    expect(prismaMock.review.create).not.toHaveBeenCalled();
-  });
-
-  it('stores trusted review images and clears consumed pending image records', async () => {
-    setCloudinaryEnv();
+  it('stores approved AWS review images and clears consumed pending image records', async () => {
     setupVerifiedReviewTarget('all');
+    const secondRef = awsImageRef({
+      assetId: SECOND_AWS_IMAGE_ASSET_ID,
+      uploadSessionId: SECOND_AWS_IMAGE_UPLOAD_SESSION_ID,
+      objectKey: `review-images/v1/private/stores/store-1/assets/${SECOND_AWS_IMAGE_ASSET_ID}/original.jpg`,
+    });
     prismaMock.pendingReviewImage.findMany.mockResolvedValue([
       {
-        publicId: 'review_images/stores/store-1/review-a',
-        assetId: 'asset-a',
-        version: '1790000000',
+        publicId: `aws_s3:store-1:${AWS_IMAGE_ASSET_ID}`,
+        storeId: 'store-1',
+        productId: null,
+        uploadSessionId: AWS_IMAGE_UPLOAD_SESSION_ID,
+        assetId: AWS_IMAGE_ASSET_ID,
+        providerAssetId: AWS_IMAGE_ASSET_ID,
+        sourceAssetId: awsImageRef().objectKey,
         resourceType: 'image',
         format: 'jpg',
         mimeType: 'image/jpeg',
         width: 1200,
         height: 1600,
         bytes: 450000,
-        metadataSource: 'upload_response',
+        sourceChecksumAlgorithm: 'SHA256',
+        sourceChecksumSha256: AWS_IMAGE_CHECKSUM,
+        metadataSource: 'aws_s3_register',
         metadataStatus: 'complete',
         metadataFetchedAt: new Date('2026-06-08T00:00:00.000Z'),
+        variantStatus: 'private_ready',
+        variantGeneratedAt: new Date('2026-06-08T00:00:00.000Z'),
+        variantManifest: awsVariantManifest(),
+        uploadExpiresAt: new Date(Date.now() + 60_000),
+      },
+      {
+        publicId: `aws_s3:store-1:${SECOND_AWS_IMAGE_ASSET_ID}`,
+        storeId: 'store-1',
+        productId: null,
+        uploadSessionId: SECOND_AWS_IMAGE_UPLOAD_SESSION_ID,
+        assetId: SECOND_AWS_IMAGE_ASSET_ID,
+        providerAssetId: SECOND_AWS_IMAGE_ASSET_ID,
+        sourceAssetId: secondRef.objectKey,
+        resourceType: 'image',
+        format: 'jpg',
+        mimeType: 'image/jpeg',
+        width: 1200,
+        height: 1600,
+        bytes: 450000,
+        sourceChecksumAlgorithm: 'SHA256',
+        sourceChecksumSha256: AWS_IMAGE_CHECKSUM,
+        metadataSource: 'aws_s3_register',
+        metadataStatus: 'complete',
+        metadataFetchedAt: new Date('2026-06-08T00:00:00.000Z'),
+        variantStatus: 'private_ready',
+        variantGeneratedAt: new Date('2026-06-08T00:00:00.000Z'),
+        variantManifest: awsVariantManifest({
+          url: SECOND_AWS_REVIEW_IMAGE_URL,
+          thumbnailUrl: `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${SECOND_AWS_IMAGE_ASSET_ID}/variants/thumb_320x427.webp`,
+          variants: [{ id: 'w1200', format: 'jpeg', width: 1200, height: 1600, url: SECOND_AWS_REVIEW_IMAGE_URL }],
+        }),
+        uploadExpiresAt: new Date(Date.now() + 60_000),
       },
     ]);
 
     const response = await postPublicReview(validReviewPayload({
-      images: [VALID_REVIEW_IMAGE_URL, VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL],
+      images: [awsImageRef(), secondRef],
     }));
 
     expect(response.status).toBe(201);
     expect(redisMock.expire).toHaveBeenCalledWith('renuvex_pr_rl:203.0.113.5', 600);
     expect(prismaMock.review.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        images: JSON.stringify([VALID_REVIEW_IMAGE_URL, SECOND_VALID_REVIEW_IMAGE_URL]),
+        images: JSON.stringify([AWS_REVIEW_IMAGE_URL, SECOND_AWS_REVIEW_IMAGE_URL]),
         hasImages: true,
         status: 'approved',
       }),
     }));
+    expect(awsImageMock.publishAwsReviewImageVariants).toHaveBeenCalledTimes(2);
     expect(prismaMock.pendingReviewImage.findMany).toHaveBeenCalledWith({
       where: {
-        publicId: {
-          in: [
-            'review_images/stores/store-1/review-a',
-            'review_images/stores/store-1/review-b',
-          ],
-        },
         storeId: 'store-1',
+        provider: 'aws_s3',
+        uploadSessionId: { in: [AWS_IMAGE_UPLOAD_SESSION_ID, SECOND_AWS_IMAGE_UPLOAD_SESSION_ID] },
       },
-      select: {
-        publicId: true,
-        assetId: true,
-        version: true,
-        resourceType: true,
-        format: true,
-        mimeType: true,
-        width: true,
-        height: true,
-        bytes: true,
-        metadataSource: true,
-        metadataStatus: true,
-        metadataFetchedAt: true,
-      },
+      select: expect.any(Object),
     });
     expect(prismaMock.reviewMedia.createMany).toHaveBeenCalledWith({
       data: [
@@ -1468,19 +1572,21 @@ describe('/api/public/reviews', () => {
           reviewId: 'review-created',
           storeId: 'store-1',
           productId: 'product-1',
-          url: VALID_REVIEW_IMAGE_URL,
-          publicId: 'review_images/stores/store-1/review-a',
-          assetId: 'asset-a',
-          version: '1790000000',
+          url: AWS_REVIEW_IMAGE_URL,
+          publicId: `aws_s3:store-1:${AWS_IMAGE_ASSET_ID}`,
+          assetId: AWS_IMAGE_ASSET_ID,
+          provider: 'aws_s3',
+          providerAssetId: AWS_IMAGE_ASSET_ID,
           resourceType: 'image',
           format: 'jpg',
           mimeType: 'image/jpeg',
           width: 1200,
           height: 1600,
           bytes: 450000,
-          metadataSource: 'upload_response',
+          metadataSource: 'aws_s3_register',
           metadataStatus: 'complete',
           metadataFetchedAt: new Date('2026-06-08T00:00:00.000Z'),
+          variantStatus: 'public_ready',
           position: 0,
           visible: true,
         }),
@@ -1488,8 +1594,8 @@ describe('/api/public/reviews', () => {
           reviewId: 'review-created',
           storeId: 'store-1',
           productId: 'product-1',
-          url: SECOND_VALID_REVIEW_IMAGE_URL,
-          publicId: 'review_images/stores/store-1/review-b',
+          url: SECOND_AWS_REVIEW_IMAGE_URL,
+          publicId: `aws_s3:store-1:${SECOND_AWS_IMAGE_ASSET_ID}`,
           position: 1,
           visible: true,
         }),
@@ -1499,10 +1605,7 @@ describe('/api/public/reviews', () => {
     expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({
       where: {
         publicId: {
-          in: [
-            'review_images/stores/store-1/review-a',
-            'review_images/stores/store-1/review-b',
-          ],
+          in: [`aws_s3:store-1:${AWS_IMAGE_ASSET_ID}`, `aws_s3:store-1:${SECOND_AWS_IMAGE_ASSET_ID}`],
         },
         storeId: 'store-1',
       },
@@ -1510,10 +1613,9 @@ describe('/api/public/reviews', () => {
   });
 
   it('rejects mixed photo and video review media before creating a review', async () => {
-    setCloudinaryEnv();
     redisMock.incr.mockResolvedValue(1);
     const response = await postPublicReview(validReviewPayload({
-      images: [VALID_REVIEW_IMAGE_URL],
+      images: [awsImageRef()],
       videoToken: 'v'.repeat(43),
     }));
 

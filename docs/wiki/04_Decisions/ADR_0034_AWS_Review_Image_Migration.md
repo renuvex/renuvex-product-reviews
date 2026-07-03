@@ -30,13 +30,10 @@ source_files:
   - "prisma/schema.prisma"
   - "src/lib/review-images.ts"
   - "src/lib/review-media.ts"
-  - "src/lib/review-media-metadata.ts"
-  - "src/lib/review-media-metadata-backfill.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/cleanup-pending-uploads.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/media/jobs.ts"
-  - "src/lib/media/providers/cloudinary-image.ts"
   - "src/lib/media/providers/aws-review-image.ts"
   - "src/app/api/public/upload/sign/route.ts"
   - "src/app/api/public/upload/register/route.ts"
@@ -63,21 +60,13 @@ source_files:
   - "prisma/migrations/20260703090000_add_aws_review_image_fields/migration.sql"
   - "scripts/validate-review-images-aws-template.mjs"
   - "scripts/build-widget.mjs"
-  - "scripts/backfill-review-media.mjs"
-  - "scripts/backfill-review-media-metadata.mjs"
-  - "scripts/audit-legacy-review-media.mjs"
-  - "scripts/reconcile-legacy-review-media.mjs"
   - "scripts/rebuild-product-review-summaries.mjs"
-  - "scripts/review-media-reconciliation-lib.mjs"
   - "tests/widget-harness.ts"
   - "tests/widget-interaction-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-media-cross-browser.spec.ts"
   - "tests/unit/public-api-routes.test.ts"
-  - "tests/unit/review-media-metadata.test.ts"
-  - "tests/unit/review-media-metadata-backfill.test.ts"
-  - "tests/unit/review-media-reconciliation.test.ts"
   - "tests/unit/review-summary.test.ts"
   - "tests/unit/cleanup-pending-uploads.test.ts"
   - "tests/unit/cleanup-orphan-images.test.ts"
@@ -110,7 +99,13 @@ Implemented so far on the migration branch:
   `REVIEW_IMAGE_PROVIDER=aws_s3`.
 - Hardening pass for direct-upload CORS, CloudFront S3 read scope, CloudFront invalidation on public variant revocation, and publish-then-DB-failure compensation. The template validator now checks these infrastructure contracts instead of only checking resource presence.
 
-Still not done in this implementation pass: Cloudinary teardown and removal of Cloudinary dependency/build constants. Those remain separate approved gates.
+Cloudinary source teardown local status on 2026-07-03:
+
+- Review-image production source now accepts only `aws_s3` for new image uploads. The Cloudinary upload/sign/register branch, SDK dependency, provider adapter, metadata backfill modules, legacy reconciliation/backfill scripts, Next/Image Cloudinary remote pattern, widget build cloud-name define, CI Cloudinary env injection, and Cloudinary-specific unit tests were removed locally.
+- Public review reads and widget rendering now rely on provider-neutral AWS public variant descriptors under `media.renuvex.app`; Cloudinary URL fallback is not a production render path after this source pass.
+- Pending cleanup, orphan cleanup, and media jobs route image work through AWS object-family cleanup. Mux video paths remain unchanged.
+- Local verification evidence from this pass: `pnpm why cloudinary` is empty; `rg` over `src`, `tests`, `scripts`, `.github`, `next.config.js`, `package.json`, `pnpm-lock.yaml`, and `.env.example` found no Cloudinary references; the manifest-referenced widget graph has no Cloudinary references.
+- Still not done by this local source pass: Vercel Cloudinary env removal, local secret cleanup, production deploy/Worker deploy, DB data alignment apply for legacy pre-public Cloudinary rows, and Cloudinary asset/account deletion. Each remains a separate approval gate with scope, risk, rollback, and live evidence.
 
 Cutover/live acceptance status on 2026-07-03:
 

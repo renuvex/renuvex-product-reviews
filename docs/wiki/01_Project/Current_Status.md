@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-02
-last_verified: 2026-07-02
+updated: 2026-07-03
+last_verified: 2026-07-03
 confidence: high
 source_files: []
 tags:
@@ -31,7 +31,7 @@ Active development on the production test store. Core review, image, Mux video, 
   - Product review widget (modal submission + listing) with multiple review-layouts (card, gallery, list) and summary-layouts (classic, compact, hero, minimal, split)
   - Media gallery above review list — dedicated newest-first fetch, cap 15, independent of sort/filter/load-more (see [[Media_Gallery]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]])
   - Review fetch failures render a retryable error state instead of the normal empty-review state
-  - Trusted review image policy: cloud name is a single build-time constant injected by the widget build script ([[ADR_0008_Cloud_Name_Build_Time_Only]]); settings response no longer carries `imagePolicy`
+  - Trusted review image policy is AWS-only for new images: storefront renders structured `media[]` descriptors whose image URLs must be under `https://media.renuvex.app/review-images/v1/public/...`; settings response no longer carries `imagePolicy`.
   - Review image load failures degrade gracefully: thumbnails hide broken assets, lightbox main image shows a neutral placeholder, and failures log with `console.warn`
   - Product review section is opt-in on PDP via `<div data-renuvex-widget="reviews"></div>`; missing mount means no review section, while PDP title badge and listing badges remain independent and are controlled by the `badge` widget toggle
   - Photo review lightbox traps keyboard focus, exposes dialog semantics, and uses desktop/tablet/mobile responsive shells with mobile viewport-unit fallbacks
@@ -48,8 +48,8 @@ Active development on the production test store. Core review, image, Mux video, 
 - Public review submission API:
   - Profanity filter (TR + EN)
   - IP-based rate limit (3 reviews / 10 min via Upstash Redis)
-  - Image upload via tenant-scoped Cloudinary signed direct-upload (10 uploads / 10 min limit)
-  - Trusted review image URL policy rejects third-party/data image URLs before storage and storefront render
+  - Image upload via AWS S3 presigned POST intent/register flow (10 uploads / 10 min limit), with SHA-256 checksum, size/type validation, private variant generation, and public CloudFront variants only after approval.
+  - Trusted review image URL policy rejects third-party/data/private/signed image URLs before storage and storefront render.
   - Auto-approve modes: `manual` / `4plus` / `5stars` / `all`
   - Author masking on output (`Mert W.`)
 - Admin dashboard:
@@ -57,10 +57,11 @@ Active development on the production test store. Core review, image, Mux video, 
   - Widget editor with per-widget settings panel and live iframe preview at `/preview`
   - Settings persistence in `WidgetSettings` (one row per `(storeId, widgetId)`)
 - Caching: public GETs use `s-maxage=60, stale-while-revalidate=300` at the edge
-- Daily maintenance cron (`/api/admin/daily-maintenance`, 03:00 UTC) plus monthly Cloudinary fallback cleanup (`/api/admin/cleanup-images`, day 1 04:00 UTC)
+- Daily maintenance cron (`/api/admin/daily-maintenance`, 03:00 UTC) plus monthly AWS image orphan cleanup (`/api/admin/cleanup-images`, day 1 04:00 UTC)
 - Cloudflare Worker delivery for `widget.renuvex.app` static assets plus V2 read-cache for `settings`, `ratings`, `ratings-by-slug`, and `reviews`; write/upload/video/lazy-sync paths stay on `app.renuvex.app`
 - Mux review-video upload, webhook/reconcile, admin signed preview, public Mux Player playback, quota cleanup, abandoned-upload cleanup, approve/reject/delete, and retry UX are live and covered by tests/manual canary evidence
 - Widget artifact budget gate: `pnpm budget:widget` enforces local bundle size/request-budget guardrails after `pnpm build:widget`
+- Cloudinary teardown source pass is locally verified: production code/tests/scripts/config no longer reference Cloudinary, `cloudinary` is removed from `package.json`/lockfile, and the current widget manifest graph contains no Cloudinary references. Vercel env removal, legacy DB data alignment, Worker deploy, and provider asset/account deletion remain separate approval gates.
 - Theme variant build is not a reliable current gate: the stale `--theme=new-theme` alias is tracked as Phase 3 cleanup in [[ADR_0013_Modular_Widget_Loader_Architecture]].
 - Sentry observability on the panel (Node + Edge + browser): error capture, masked Session Replay, traces (prod 10%), server log ingestion, source map upload via Vercel-Sentry integration. PII auto-attach disabled to prevent ikas OAuth/JWT leakage. See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]].
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
@@ -69,6 +70,7 @@ Active development on the production test store. Core review, image, Mux video, 
 - Public launch security gate: Supabase RLS/default grants hardening remains open. Runtime DB access is server-side Prisma today, but public launch should still close the Supabase policy/grant audit.
 - Operational smoke gates: authenticated dashboard smoke and Sentry post-deploy health checks should be run after meaningful admin/runtime deploys.
 - Video operations: the Mux path is live and stable; periodic Mux asset reconciliation dry-run/reporting remains a deferred ops hardening item.
+- Image operations: source is AWS-only for new review images. Legacy pre-public Cloudinary test rows/assets are not copied to AWS; retiring or hiding them in DB requires a separate dry-run/apply approval.
 - Product readiness gaps: real i18n/aria localization, unsupported-theme warning UI, and non-Ozy theme adapter coverage remain separate product/platform work.
 - ADR_0013 source hardening remains live: non-destructive StorefrontJSScript create/update lifecycle, daily script reconcile through daily maintenance, hashed runtime entry with stable shim, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]].
 
@@ -90,7 +92,7 @@ Active development on the production test store. Core review, image, Mux video, 
 - [[ADR_0002_Widget_Injection_Strategy]] — single bundled widget.js injected via ikas StorefrontJSScript
 - [[ADR_0003_Review_Data_Model]] — denormalized Review table; storeId = merchantId; slug + status indexes
 - [[ADR_0004_Ikas_Integration_Strategy]] — OAuth via @ikas/admin-api-client + Codegen GraphQL operations
-- [[ADR_0006_Trusted_Review_Image_URL_Policy]] — review image URLs must be trusted Cloudinary assets before storage or storefront render
+- [[ADR_0034_AWS_Review_Image_Migration]] — review image upload, delivery, trust, variants, admin preview, and cleanup target AWS S3/CloudFront for new images.
 - [[ADR_0009_Sentry_Observability_Strategy]] — `@sentry/nextjs` on the panel, env-based DSN, `sendDefaultPii: false`, prod-only sample rates, masked Replay; widget bundle excluded
 - [[ADR_0010_Widget_Error_Forwarding]] — tiny widget-side reporter forwards uncaught widget errors via `/api/public/widget-error` so the visibility gap from ADR_0009 is closed without adding a second SDK to the storefront bundle
 - [[ADR_0015_Canonical_Product_Identity]] — `(storeId, productId)` is the canonical review product identity; slug/name are display snapshots and slug reads are fallback-only
@@ -106,9 +108,10 @@ Active development on the production test store. Core review, image, Mux video, 
 8. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-07-02
+2026-07-03
 
 ## Change Log
+- 2026-07-03: Recorded local Cloudinary teardown source pass: AWS-only image upload/render/cleanup code, dependency/config/script/test cleanup, and widget manifest graph verification. Env removal, DB data alignment, Worker deploy, and provider deletion remain approval-gated.
 - 2026-07-02: Refreshed status after Mux and Cloudflare Worker migrations moved from gated/pending to live. Current open work is security/ops/product readiness rather than Mux deploy or Worker rollout.
 - 2026-06-14: Added dry-run-first Review Video V1 canary operations and a controlled activation/rollback runbook. No production merchant gate or global flag was enabled by this change.
 - 2026-06-14: Recorded provider-agnostic video implementation and the Phase 4 five-project Playwright media matrix. Provider details are superseded by [[ADR_0032_Review_Video_On_Mux]].

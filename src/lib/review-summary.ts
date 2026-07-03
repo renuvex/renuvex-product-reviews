@@ -1,5 +1,4 @@
 import type { Prisma, ProductReviewSummary } from '@prisma/client';
-import { getConfiguredCloudinaryCloudName, parseStoredReviewImages } from '@/lib/review-images';
 
 export const APPROVED_REVIEW_STATUS = 'approved';
 
@@ -85,8 +84,7 @@ function mediaRatingBucketKey(rating: number): keyof Pick<
 }
 
 function reviewHasTrustedImages(review: ReviewSummaryReview): boolean {
-  if (review.hasImages === true) return true;
-  return parseStoredReviewImages(review.images, getConfiguredCloudinaryCloudName(), review.storeId).length > 0;
+  return review.hasImages === true;
 }
 
 function reviewHasMedia(review: ReviewSummaryReview): boolean {

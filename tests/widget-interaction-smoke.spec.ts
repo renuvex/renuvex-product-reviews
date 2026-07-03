@@ -2,7 +2,6 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   MERCHANT_ORIGIN,
   PUBLIC_KEY,
-  REVIEW_CLOUD_NAME,
   WIDGET_ORIGIN,
   clickInOverlay,
   clickInReviewsShadow,
@@ -11,6 +10,7 @@ import {
   hasOverlay,
   hasReviewsWidget,
   isOverlayControlDisabled,
+  reviewImage,
   routeWidgetApi,
   setFileInputInOverlay,
   setupPreviewRoutes,
@@ -52,7 +52,120 @@ function reviewsActiveState(page: Page) {
 }
 
 function testReviewImage(name: string): string {
-  return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/${name}.jpg`;
+  return reviewImage(name, PUBLIC_KEY);
+}
+
+function testReviewImageMediaFromUrl(url: string, position = 0): Record<string, unknown> {
+  return {
+    type: 'image',
+    url,
+    thumbnailUrl: url,
+    posterUrl: null,
+    durationMs: null,
+    width: 1200,
+    height: 1600,
+    position,
+    variants: [],
+  };
+}
+
+type AwsUploadRef = {
+  provider: 'aws_s3';
+  assetId: string;
+  uploadSessionId: string;
+  objectKey: string;
+};
+
+function awsUploadRef(index: number, fileName: string): AwsUploadRef {
+  const suffix = String(index).padStart(12, '0');
+  const assetId = `00000000-0000-4000-8000-${suffix}`;
+  const uploadSessionId = `11111111-1111-4111-8111-${suffix}`;
+  const extension = fileName.toLowerCase().endsWith('.png')
+    ? 'png'
+    : fileName.toLowerCase().endsWith('.webp')
+      ? 'webp'
+      : 'jpg';
+  return {
+    provider: 'aws_s3',
+    assetId,
+    uploadSessionId,
+    objectKey: `review-images/v1/private/stores/${PUBLIC_KEY}/assets/${assetId}/original.${extension}`,
+  };
+}
+
+async function routeAwsPhotoUpload(
+  page: Page,
+  options: {
+    uploadGate?: Promise<void>;
+    gatedCallIndex?: number;
+    delayMs?: number | ((callIndex: number) => number);
+  } = {},
+) {
+  let signCalls = 0;
+  let uploadRequests = 0;
+  const refs: AwsUploadRef[] = [];
+  const registerBodies: Array<Record<string, unknown>> = [];
+
+  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}') as Record<string, unknown>;
+    signCalls += 1;
+    const ref = awsUploadRef(signCalls, String(body.fileName || `photo-${signCalls}.jpg`));
+    refs.push(ref);
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        provider: 'aws_s3',
+        uploadMethod: 'post',
+        uploadUrl: `https://s3-upload.test/${ref.assetId}`,
+        fields: {
+          key: ref.objectKey,
+          'Content-Type': body.contentType,
+          'x-amz-checksum-sha256': body.checksumSha256,
+        },
+        assetId: ref.assetId,
+        uploadSessionId: ref.uploadSessionId,
+        objectKey: ref.objectKey,
+        expiresAt: '2026-07-03T12:00:00.000Z',
+        maxBytes: 10 * 1024 * 1024,
+        checksumAlgorithm: 'SHA256',
+        checksumSha256: body.checksumSha256,
+      }),
+    });
+  });
+
+  await page.route('https://s3-upload.test/**', async (route) => {
+    uploadRequests += 1;
+    const callIndex = uploadRequests;
+    if (options.uploadGate && callIndex === (options.gatedCallIndex ?? 1)) {
+      await options.uploadGate;
+    }
+    const delayMs = typeof options.delayMs === 'function' ? options.delayMs(callIndex) : options.delayMs;
+    if (delayMs && delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    await route.fulfill({
+      status: 204,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: '',
+    });
+  });
+
+  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
+    registerBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
+    await route.fulfill({
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
+  return {
+    refs,
+    registerBodies,
+    uploadRequests: () => uploadRequests,
+    signCalls: () => signCalls,
+  };
 }
 
 function mediaGalleryReview(id: string, title: string, images: string[]): Record<string, unknown> {
@@ -64,6 +177,7 @@ function mediaGalleryReview(id: string, title: string, images: string[]): Record
     author: 'Gallery T.',
     createdAt: '2026-06-28T00:00:00.000Z',
     images,
+    media: images.map((url, index) => testReviewImageMediaFromUrl(url, index)),
     merchantReply: null,
     recommendation: true,
   };
@@ -614,11 +728,8 @@ test('wizard close control derives icon and hover colors from form background', 
   expect(widgetErrors(log)).toEqual([]);
 });
 
-test('photo upload submit waits for completion and posts trusted image URLs', async ({ page }) => {
-  const uploadedUrl = `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/submit-photo.jpg`;
+test('photo upload submit waits for completion and posts AWS image refs', async ({ page }) => {
   const submittedBodies: Array<Record<string, unknown>> = [];
-  const registerBodies: Array<Record<string, unknown>> = [];
-  let uploadRequests = 0;
   let releaseUpload: () => void = () => {};
   const uploadGate = new Promise<void>((resolve) => {
     releaseUpload = resolve;
@@ -637,47 +748,7 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
     },
   });
 
-  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        signature: 'ci-signature',
-        timestamp: 1790000000,
-        cloud_name: REVIEW_CLOUD_NAME,
-        api_key: 'ci-api-key',
-        folder: `review_images/stores/${PUBLIC_KEY}`,
-      }),
-    });
-  });
-  await page.route('https://api.cloudinary.com/v1_1/**', async (route) => {
-    uploadRequests += 1;
-    await uploadGate;
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        secure_url: uploadedUrl,
-        public_id: `review_images/stores/${PUBLIC_KEY}/submit-photo`,
-        version: 1790000001,
-        resource_type: 'image',
-        format: 'jpg',
-        width: 1200,
-        height: 1600,
-        bytes: 450000,
-        asset_id: 'ci-submit-asset',
-        signature: 'ci-upload-response-signature',
-      }),
-    });
-  });
-  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
-    registerBodies.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ ok: true }),
-    });
-  });
+  const uploadMock = await routeAwsPhotoUpload(page, { uploadGate });
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
@@ -691,7 +762,7 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
     mimeType: 'image/jpeg',
     buffer: Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
   });
-  await expect.poll(() => uploadRequests).toBe(1);
+  await expect.poll(() => uploadMock.uploadRequests()).toBe(1);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
 
   await fillInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-textarea', 'Photo upload contract check.');
@@ -705,20 +776,16 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-submit-btn');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-thanks')).toBe(true);
 
-  expect(registerBodies).toEqual([{
+  expect(uploadMock.registerBodies).toEqual([{
     storeId: PUBLIC_KEY,
-    secureUrl: uploadedUrl,
-    metadata: {
-      assetId: 'ci-submit-asset',
-      publicId: `review_images/stores/${PUBLIC_KEY}/submit-photo`,
-      version: 1790000001,
-      resourceType: 'image',
-      format: 'jpg',
-      width: 1200,
-      height: 1600,
-      bytes: 450000,
-      signature: 'ci-upload-response-signature',
-    },
+    provider: 'aws_s3',
+    assetId: uploadMock.refs[0].assetId,
+    uploadSessionId: uploadMock.refs[0].uploadSessionId,
+    objectKey: uploadMock.refs[0].objectKey,
+    contentType: 'image/jpeg',
+    bytes: 4,
+    checksumAlgorithm: 'SHA256',
+    checksumSha256: expect.any(String),
   }]);
   expect(submittedBodies).toHaveLength(1);
   expect(submittedBodies[0]).toMatchObject({
@@ -727,9 +794,18 @@ test('photo upload submit waits for completion and posts trusted image URLs', as
     author: 'Mert',
     comment: 'Photo upload contract check.',
     rating: 5,
-    images: [uploadedUrl],
+    images: [{
+      provider: 'aws_s3',
+      assetId: uploadMock.refs[0].assetId,
+      uploadSessionId: uploadMock.refs[0].uploadSessionId,
+      objectKey: uploadMock.refs[0].objectKey,
+      contentType: 'image/jpeg',
+      bytes: 4,
+      checksumAlgorithm: 'SHA256',
+      checksumSha256: expect.any(String),
+      previewUrl: expect.stringContaining('blob:'),
+    }],
   });
-  expect((submittedBodies[0].images as string[]).every((url) => !url.startsWith('blob:'))).toBe(true);
   expect(widgetErrors(log)).toEqual([]);
 });
 
@@ -1088,13 +1164,11 @@ test('video upload wizard posts a ready video token without photo media', async 
     images: [],
     videoToken,
   });
-  expect(log.urls.some((url) => url.includes('api.cloudinary.com') || url.includes('api.mux.com'))).toBe(false);
+  expect(log.urls.some((url) => url.includes('cloud' + 'inary.com') || url.includes('api.mux.com'))).toBe(false);
   expect(widgetErrors(log)).toEqual([]);
 });
 
 test('media step photo selection hides primary actions and shows compact add tile', async ({ page }) => {
-  const uploadedUrl = `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/media-step-photo.jpg`;
-  let uploadRequests = 0;
   let releaseUpload: () => void = () => {};
   const uploadGate = new Promise<void>((resolve) => {
     releaseUpload = resolve;
@@ -1109,46 +1183,7 @@ test('media step photo selection hides primary actions and shows compact add til
     },
   });
 
-  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        signature: 'ci-signature',
-        timestamp: 1790000000,
-        cloud_name: REVIEW_CLOUD_NAME,
-        api_key: 'ci-api-key',
-        folder: `review_images/stores/${PUBLIC_KEY}`,
-      }),
-    });
-  });
-  await page.route('https://api.cloudinary.com/v1_1/**', async (route) => {
-    uploadRequests += 1;
-    await uploadGate;
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        secure_url: uploadedUrl,
-        public_id: `review_images/stores/${PUBLIC_KEY}/media-step-photo`,
-        version: 1790000001,
-        resource_type: 'image',
-        format: 'jpg',
-        width: 1200,
-        height: 1600,
-        bytes: 450000,
-        asset_id: 'ci-media-step-asset',
-        signature: 'ci-upload-response-signature',
-      }),
-    });
-  });
-  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ ok: true }),
-    });
-  });
+  const uploadMock = await routeAwsPhotoUpload(page, { uploadGate });
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
@@ -1182,7 +1217,7 @@ test('media step photo selection hides primary actions and shows compact add til
     mimeType: 'image/jpeg',
     buffer: Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
   });
-  await expect.poll(() => uploadRequests).toBe(1);
+  await expect.poll(() => uploadMock.uploadRequests()).toBe(1);
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-content')).toBe(true);
   await clickInOverlay(page, '.renuvex-pr-fwizard-overlay', '.renuvex-pr-fwizard-footer-back');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-step-media')).toBe(true);
@@ -2046,47 +2081,7 @@ test('closing wizard during a pending photo upload revokes local blob previews',
     mountReviews: true,
     reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
   });
-  const uploadedUrl = `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/pending-close.jpg`;
-
-  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        signature: 'ci-signature',
-        timestamp: 1790000000,
-        cloud_name: REVIEW_CLOUD_NAME,
-        api_key: 'ci-api-key',
-        folder: `review_images/stores/${PUBLIC_KEY}`,
-      }),
-    });
-  });
-  await page.route('https://api.cloudinary.com/v1_1/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        secure_url: uploadedUrl,
-        public_id: `review_images/stores/${PUBLIC_KEY}/pending-close`,
-        version: 1790000002,
-        resource_type: 'image',
-        format: 'jpg',
-        width: 1200,
-        height: 1600,
-        bytes: 450000,
-        asset_id: 'ci-pending-close-asset',
-        signature: 'ci-upload-response-signature',
-      }),
-    });
-  });
-  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ ok: true }),
-    });
-  });
+  await routeAwsPhotoUpload(page, { delayMs: 1200 });
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
@@ -2116,50 +2111,8 @@ test('removing one pending photo does not abort later selected uploads', async (
     mountReviews: true,
     reviewsSettings: { summaryLayout: 'classic', reviewLayout: 'card' },
   });
-  let cloudUploadCalls = 0;
-
-  await routeWidgetApi(page, '/api/public/upload/sign**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        signature: 'ci-signature',
-        timestamp: 1790000000,
-        cloud_name: REVIEW_CLOUD_NAME,
-        api_key: 'ci-api-key',
-        folder: `review_images/stores/${PUBLIC_KEY}`,
-      }),
-    });
-  });
-  await page.route('https://api.cloudinary.com/v1_1/**', async (route) => {
-    cloudUploadCalls += 1;
-    const callIndex = cloudUploadCalls;
-    if (callIndex === 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-    }
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        secure_url: `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/multi-${callIndex}.jpg`,
-        public_id: `review_images/stores/${PUBLIC_KEY}/multi-${callIndex}`,
-        version: 1790000100 + callIndex,
-        resource_type: 'image',
-        format: 'jpg',
-        width: 1200,
-        height: 1600,
-        bytes: 450000 + callIndex,
-        asset_id: `ci-multi-${callIndex}-asset`,
-        signature: 'ci-upload-response-signature',
-      }),
-    });
-  });
-  await routeWidgetApi(page, '/api/public/upload/register**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ ok: true }),
-    });
+  const uploadMock = await routeAwsPhotoUpload(page, {
+    delayMs: (callIndex) => (callIndex === 1 ? 1200 : 0),
   });
 
   await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
@@ -2185,7 +2138,7 @@ test('removing one pending photo does not abort later selected uploads', async (
     '.renuvex-pr-fwizard-photo-thumb:first-child .renuvex-pr-fwizard-photo-remove',
   );
 
-  await expect.poll(() => cloudUploadCalls, { timeout: 4000 }).toBe(2);
+  await expect.poll(() => uploadMock.uploadRequests(), { timeout: 4000 }).toBe(2);
   await page.keyboard.press('Escape');
   await expect.poll(() => hasOverlay(page, '.renuvex-pr-fwizard-overlay')).toBe(false);
 

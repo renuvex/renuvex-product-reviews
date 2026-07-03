@@ -1,10 +1,10 @@
 ---
 type: decision
 project: renuvex-product-reviews
-status: active
+status: superseded
 created: 2026-06-08
-updated: 2026-06-09
-last_verified: 2026-06-09
+updated: 2026-07-03
+last_verified: 2026-07-03
 confidence: high
 tags:
   - adr
@@ -21,22 +21,18 @@ related:
 source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260608203000_add_review_media_metadata/migration.sql"
-  - "src/lib/review-media-metadata.ts"
   - "src/lib/review-media.ts"
   - "src/lib/review-images.ts"
   - "src/app/api/public/upload/register/route.ts"
   - "src/app/api/public/reviews/route.ts"
   - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"
-  - "scripts/backfill-review-media-metadata.mjs"
-  - "src/lib/review-media-metadata-backfill.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
-  - "tests/unit/review-media-metadata-backfill.test.ts"
 ---
 
 # ADR_0029 - Review Media Metadata
 
 ## Status
-Accepted
+Accepted; superseded for image-provider behavior by [[ADR_0034_AWS_Review_Image_Migration]].
 
 ## Context
 [[ADR_0027_Review_Media_Read_Model]] normalized review image ownership into `ReviewMedia`, but the row still only carried URL/publicId/position/visibility. That was enough for indexed `hasImages=true` reads, but not enough for media-heavy storefront design work: future photo strip/gallery/lightbox variants need durable dimensions, format, bytes, and version metadata without calling Cloudinary on every public read.
@@ -72,6 +68,7 @@ Cloudinary upload responses include signed asset metadata. Public read paths sho
 - The cron backfill's first production run is also the definitive proof of production Cloudinary api_key health: success advances rows to `complete`; a stale key surfaces as a counted error in the `daily-maintenance` `errors[]` response with zero row corruption.
 - `Review.images` remains a legacy mirror; do not remove it until a later expand/contract cleanup proves no runtime or ops fallback still depends on it.
 - Cleanup hardening, AI moderation, video support, and design consumption of metadata remain separate phases.
+- 2026-07-03: Cloudinary upload-response metadata verification and Cloudinary Admin API backfill code were removed during the AWS-only image teardown. Current image metadata/variant truth is the AWS `variantManifest` on `PendingReviewImage` / `ReviewMedia`; daily maintenance no longer calls Cloudinary metadata backfill.
 
 ## Scale Evolution — Authoritative Metadata Source
 Honest trade-off in the current write path: the Cloudinary upload-response **signature covers
@@ -108,12 +105,9 @@ Revisit when approaching scale; **not a launch blocker** (cosmetic, self-inflict
 ## Related Source Files
 - [prisma/schema.prisma](prisma/schema.prisma)
 - [prisma/migrations/20260608203000_add_review_media_metadata/migration.sql](prisma/migrations/20260608203000_add_review_media_metadata/migration.sql)
-- [src/lib/review-media-metadata.ts](src/lib/review-media-metadata.ts)
 - [src/lib/review-media.ts](src/lib/review-media.ts)
 - [src/lib/review-images.ts](src/lib/review-images.ts)
 - [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts)
 - [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)
 - [src/widget/reviews-section/review-form-modal/steps/step-photos.js](src/widget/reviews-section/review-form-modal/steps/step-photos.js)
-- [scripts/backfill-review-media-metadata.mjs](scripts/backfill-review-media-metadata.mjs)
-- [src/lib/review-media-metadata-backfill.ts](src/lib/review-media-metadata-backfill.ts)
 - [src/app/api/admin/daily-maintenance/route.ts](src/app/api/admin/daily-maintenance/route.ts)

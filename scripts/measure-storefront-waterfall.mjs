@@ -307,7 +307,7 @@ function classifyUrl(url, target) {
     return 'renuvex-app-origin';
   }
   if (url.host.includes('mux.com')) return 'mux';
-  if (url.host.includes('cloudinary.com')) return 'cloudinary';
+  if (url.host === 'media.renuvex.app') return 'renuvex-media-cdn';
   if (url.host === target.host || url.host.endsWith('.ikas.shop') || url.host.includes('ikas')) return 'ikas-storefront';
   if (url.host.includes('yotpo.com')) return 'yotpo';
   return 'other';

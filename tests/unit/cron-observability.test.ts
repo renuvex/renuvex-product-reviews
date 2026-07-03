@@ -15,15 +15,15 @@ beforeEach(() => {
 
 describe('reportCronTaskError', () => {
   it('captures the error to Sentry with cron/task tags and extra', () => {
-    reportCronTaskError('daily-maintenance', 'review-media-metadata-backfill', new Error('401 unknown api_key'), {
+    reportCronTaskError('daily-maintenance', 'cleanup-pending-uploads', new Error('maintenance failure'), {
       processed: 3,
     });
 
     expect(captureException).toHaveBeenCalledTimes(1);
     const [err, ctx] = captureException.mock.calls[0] as [Error, { tags: unknown; extra: Record<string, unknown> }];
-    expect(err.message).toContain('401 unknown api_key');
-    expect(ctx.tags).toEqual({ source: 'cron', cron: 'daily-maintenance', task: 'review-media-metadata-backfill' });
-    expect(ctx.extra).toMatchObject({ cron: 'daily-maintenance', task: 'review-media-metadata-backfill', processed: 3 });
+    expect(err.message).toContain('maintenance failure');
+    expect(ctx.tags).toEqual({ source: 'cron', cron: 'daily-maintenance', task: 'cleanup-pending-uploads' });
+    expect(ctx.extra).toMatchObject({ cron: 'daily-maintenance', task: 'cleanup-pending-uploads', processed: 3 });
   });
 
   it('wraps a non-Error value into an Error', () => {

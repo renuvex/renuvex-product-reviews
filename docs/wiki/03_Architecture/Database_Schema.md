@@ -100,7 +100,7 @@ Common queries:
 - Admin: `findMany({ storeId, status? })` ordered by `createdAt desc`
 
 ### `ReviewMedia`
-Normalized review image rows. `Review.images` remains as a legacy mirror, but new public image reads prefer this table.
+Normalized review media rows. `Review.images` remains as a compatibility mirror, but new public image reads require AWS `ReviewMedia` rows with public variant descriptors.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -108,18 +108,22 @@ Normalized review image rows. `Review.images` remains as a legacy mirror, but ne
 | `reviewId` | String | FK to `Review.id`; cascades on review delete |
 | `storeId` | String | Denormalized tenant key for media queries and cleanup |
 | `productId` | String | Denormalized ikas product id for product media queries |
-| `url` | String `@db.VarChar(2048)` | Trusted Cloudinary URL |
-| `publicId` | String `@unique @db.VarChar(512)` | Cloudinary public id; cleanup source of truth |
-| `assetId` | String? `@db.VarChar(128)` | Cloudinary asset id when available |
-| `version` | String? `@db.VarChar(64)` | Cloudinary asset version from upload/Admin API |
-| `resourceType` | String `@default("image") @db.VarChar(32)` | Currently image-only |
+| `url` | String `@db.VarChar(2048)` | Public render fallback URL for ready media; AWS image URLs must be under `media.renuvex.app` |
+| `publicId` | String `@unique @db.VarChar(512)` | Provider family id; AWS uses `aws_s3:<storeId>:<assetId>` |
+| `assetId` | String? `@db.VarChar(128)` | Legacy/provider-specific asset id when available |
+| `version` | String? `@db.VarChar(64)` | Legacy/provider-specific version when available |
+| `resourceType` | String `@default("image") @db.VarChar(32)` | `image` or `video` |
+| `provider` | String `@default("cloudinary") @db.VarChar(64)` | Additive legacy DB default; new review-image source writes `aws_s3` explicitly |
+| `providerAssetId` | String? `@db.VarChar(512)` | Provider asset id; AWS image asset id or Mux asset id |
 | `format` | String? `@db.VarChar(32)` | Normalized image format (`jpg`, `png`, `webp`, `gif`, `avif`) |
 | `mimeType` | String? `@db.VarChar(128)` | Derived MIME type for the format |
 | `width` / `height` | Int? | Intrinsic image dimensions |
-| `bytes` | Int? | Cloudinary-reported asset size |
+| `bytes` | Int? | Provider-reported or decoded asset size |
+| `sourceChecksumAlgorithm` / `sourceChecksumSha256` | String? | AWS upload integrity evidence |
 | `metadataSource` | String `@default("unknown") @db.VarChar(64)` | `upload_response`, `admin_api`, or `unknown` |
 | `metadataStatus` | String `@default("pending") @db.VarChar(64)` | `complete`, `partial`, `pending`, `invalid_signature`, `missing_asset` |
 | `metadataFetchedAt` | DateTime? | Last metadata capture/repair time |
+| `variantStatus` / `variantManifest` | mixed | AWS image variant readiness and public/private variant descriptors |
 | `position` | Int | Stable per-review display order |
 | `visible` | Boolean | Mirrors review public visibility; pending/rejected media stays hidden |
 | `createdAt` | DateTime | |
@@ -128,14 +132,16 @@ Indexes:
 - unique `[reviewId, position]`
 - `[reviewId, position]`
 - `[storeId, productId, visible, createdAt]`
-- `[metadataStatus, createdAt]` - metadata repair/backfill scans
+- `[metadataStatus, createdAt]` - metadata diagnostics / legacy repair scans
+- `[provider, providerAssetId]` and `[provider, storeId, providerAssetId]` - provider-scoped lookup
+- `[provider, resourceType, variantStatus, createdAt]` - AWS image variant cleanup/readiness scans
 
 Maintained by:
 - `/api/public/reviews` POST for new trusted review images
 - `/api/admin/reviews` PUT when status transitions change public visibility
 - `Review` cascade on DELETE
-- `scripts/backfill-review-media.mjs` for legacy/import repair
-- `scripts/backfill-review-media-metadata.mjs` for Cloudinary metadata repair
+- `scripts/rebuild-product-review-summaries.mjs` for summary repair when media visibility drifts
+- AWS review-image register/publish paths for durable variant metadata
 
 ### `ProductReviewSummary`
 Product-level aggregate read model for public storefront rating surfaces. Raw `Review` rows remain the source of truth.
@@ -164,7 +170,7 @@ Maintained by:
 - `/api/admin/reviews` PUT when status transitions change public visibility
 - `/api/admin/reviews` DELETE when an approved review is hard-deleted
 - `scripts/rebuild-product-review-summaries.mjs` for repair/backfill
-- `scripts/backfill-review-media.mjs` repairs photo count state after media normalization; `scripts/rebuild-product-review-summaries.mjs` fully rebuilds all summary buckets
+- `scripts/rebuild-product-review-summaries.mjs` fully rebuilds all summary buckets, including AWS image and Mux video media counts
 - Migration `20260608170000_add_review_summary_photo_rating_counts` backfills existing summary rows from approved `Review.hasImages=true` rows. Migration `20260625090000_add_review_summary_media_counts` backfills approved `(hasImages OR hasVideo)` media buckets. Rebuild remains the operational repair tool for manual/import drift.
 
 Read by:
@@ -224,28 +230,31 @@ Indexes:
 Maintained by install-time `listProduct` backfill, `/api/admin/sync-products`, and `/api/webhooks/ikas/products`.
 
 ### `PendingReviewImage`
-Registry of Cloudinary uploads not yet attached to a `Review`. See [[ADR_0012_Pending_Upload_Registry]].
+Provider-agnostic registry of uploads not yet attached to a `Review`. The model name is legacy, but current review-image source writes AWS S3 upload intents. See [[ADR_0012_Pending_Upload_Registry]] and [[ADR_0034_AWS_Review_Image_Migration]].
 
 | Field | Type | Notes |
 |---|---|---|
-| `publicId` | String `@id` | Cloudinary `public_id` derived from the upload's `secure_url` |
-| `storeId` | String? | Merchant/tenant that owns the pending upload; nullable only for pre-D3 rows |
-| media metadata fields | mixed | Signed Cloudinary upload response metadata staged until review submit (`assetId`, `version`, `format`, dimensions, bytes, status/source timestamps) |
+| `publicId` | String `@id` | Provider family id; AWS uses `aws_s3:<storeId>:<assetId>` |
+| `storeId` | String? | Merchant/tenant that owns the pending upload; nullable only for legacy rows |
+| `uploadSessionId` | String? `@unique` | AWS upload intent/session id returned by `/api/public/upload/sign` |
+| provider/source fields | mixed | Provider, asset id, S3 source key, checksum, processing and variant state |
+| media metadata fields | mixed | Decoded/provider metadata staged until review submit (`format`, dimensions, bytes, status/source timestamps) |
 | `createdAt` | DateTime `@default(now())` | Used by the cleanup cron's age filter |
 | `ipHash` | String? | sha256(ip).slice(0,32) — optional abuse signal, not user identity |
 
 Indexes:
 - `[createdAt]` — cleanup cron walks this
 - `[storeId, createdAt]` — tenant-scoped pending upload lookup / future tenant cleanup
-- `[metadataStatus, createdAt]` - metadata diagnostics / repair
+- `[metadataStatus, createdAt]` - metadata diagnostics / legacy repair
+- `[provider, providerAssetId]`, `[provider, storeId, providerAssetId]`, `[provider, variantStatus, createdAt]` - AWS image intent/register/cleanup scans
 
 Lifecycle:
-1. Widget POSTs `{storeId}` to `/api/public/upload/sign`; the endpoint verifies `StoreSettings` and signs `review_images/stores/<storeId>`.
-2. Widget uploads to the signed Cloudinary folder, then POSTs `{storeId, secureUrl, metadata?}` to `/api/public/upload/register`.
-3. The register endpoint validates the URL against the tenant-scoped trusted policy, verifies signed Cloudinary upload-response metadata when present, and upserts a `PendingReviewImage` row with `storeId` and metadata status.
-4. `/api/public/reviews` POST reads pending metadata, creates `ReviewMedia`, inserts the review, and deletes `PendingReviewImage` rows inside one `prisma.$transaction`.
-5. `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily; `/api/admin/cleanup-pending-uploads` remains an explicit maintenance endpoint for the same helper. It deletes rows where `createdAt < now - 24h` plus their Cloudinary assets.
-6. Monthly `/api/admin/cleanup-images` is the safety-net fallback for uploads that bypassed the registry — it paginates Cloudinary via `next_cursor`, only considers assets older than 30 days, and (per [[ADR_0030_Cleanup_Hardening]]) **marks orphans into `OrphanImageQuarantine` and hard-deletes them only after a grace window if still orphaned**, behind a circuit-breaker, writing a `MediaCleanupRun` audit row.
+1. Widget POSTs `{storeId, fileName, contentType, bytes, checksumAlgorithm, checksum}` to `/api/public/upload/sign`; the endpoint creates an AWS pending intent and returns a presigned S3 POST.
+2. Widget uploads directly to S3 and then POSTs `{storeId, assetId, uploadSessionId, objectKey, bytes, contentType, checksum}` to `/api/public/upload/register`.
+3. The register endpoint validates the pending intent, S3 object key, metadata, size/type/checksum, and generates private AWS variants before marking the pending row `private_ready`.
+4. `/api/public/reviews` POST accepts only same-store `private_ready` AWS image refs, creates `ReviewMedia`, publishes public variants if auto-approved, inserts the review, and deletes consumed pending rows inside provider-safe transactions.
+5. `/api/admin/daily-maintenance` runs the pending-upload cleanup helper daily; `/api/admin/cleanup-pending-uploads` remains an explicit maintenance endpoint for the same helper. It deletes expired rows plus their AWS image object family.
+6. Monthly `/api/admin/cleanup-images` is the safety-net fallback for orphaned AWS image families and keeps the two-phase quarantine/circuit-breaker model from [[ADR_0030_Cleanup_Hardening]].
 
 ### `MediaCleanupRun`
 Audit log for the `cleanup-images` cron — one row per run. See [[ADR_0030_Cleanup_Hardening]].
@@ -257,8 +266,8 @@ Audit log for the `cleanup-images` cron — one row per run. See [[ADR_0030_Clea
 | `finishedAt` | DateTime? | Run end |
 | `status` | String `@default("ok") @db.VarChar(32)` | `ok` / `tripped` / `error` / `skipped` |
 | `trigger` | String `@default("cron") @db.VarChar(32)` | `cron` / `manual` (manual when `?force=1`) |
-| `scanned` | Int | Cloudinary assets walked |
-| `usedCount` | Int | publicIds in use (ReviewMedia + legacy) |
+| `scanned` | Int | Provider asset families walked |
+| `usedCount` | Int | Provider family ids in use (`ReviewMedia` + unexpired pending rows) |
 | `candidates` | Int | Current orphans flagged this run |
 | `quarantinedNew` | Int | Newly added to quarantine this run |
 | `released` | Int | Un-quarantined (no longer orphan) this run |
@@ -279,7 +288,7 @@ Two-phase orphan-deletion state for `cleanup-images`: an orphan is marked here (
 
 | Field | Type | Notes |
 |---|---|---|
-| `publicId` | String `@id @db.VarChar(512)` | Cloudinary public id of the quarantined asset |
+| `publicId` | String `@id @db.VarChar(512)` | Provider family id of the quarantined asset |
 | `storeId` | String? | Best-effort tenant scope parsed from the publicId path |
 | `reason` | String `@default("orphan_scan") @db.VarChar(64)` | Why quarantined |
 | `quarantinedAt` | DateTime `@default(now())` | Phase-1 mark time; grace window measured from here (preserved across re-marks) |
@@ -305,7 +314,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - `Review.images` is now a legacy mirror. The normalized media model is `ReviewMedia`; public photo filters should use `Review.hasImages`, and public media filters should use `Review.hasImages OR Review.hasVideo`.
 - `ReviewMedia` metadata is additive. Public `images: string[]` remains the compatibility contract; `media[]` is an additive structured field for future media-heavy UI.
 - No soft-delete. `prisma.review.delete` is hard delete.
-- Orphan Cloudinary asset deletion **is** two-phase (mark → grace → sweep) via `OrphanImageQuarantine`; this is storage GC, not review soft-delete. See [[ADR_0030_Cleanup_Hardening]].
+- Orphan provider asset deletion **is** two-phase (mark → grace → sweep) via `OrphanImageQuarantine`; this is storage GC, not review soft-delete. AWS image cleanup deletes the object family, not a single URL. See [[ADR_0030_Cleanup_Hardening]] and [[ADR_0034_AWS_Review_Image_Migration]].
 
 ## Related Source Files
 - [prisma/schema.prisma](prisma/schema.prisma)
@@ -324,6 +333,7 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
+- 2026-07-03: Updated active schema notes for AWS-only review images. Legacy Cloudinary defaults/rows can exist in additive schema/data, but current source writes AWS image provider ids and AWS variant manifests.
 - 2026-06-09: Added `MediaCleanupRun` (cleanup audit log) and `OrphanImageQuarantine` (two-phase orphan-deletion state) models; `cleanup-images` now marks-then-sweeps orphans behind a circuit-breaker. Additive single-deploy migration. See [[ADR_0030_Cleanup_Hardening]].
 - 2026-06-08: Added Cloudinary image metadata columns to `ReviewMedia` and `PendingReviewImage`; upload/register now stages verified upload-response metadata and review submit carries it into committed media rows. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: Added `photoRating1Count` ... `photoRating5Count` to `ProductReviewSummary` so public review-list filtered totals come from the read model instead of raw `Review.count()`.

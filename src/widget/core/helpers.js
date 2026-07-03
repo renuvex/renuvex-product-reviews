@@ -1,7 +1,5 @@
 // helpers.js — Genel yardımcı fonksiyonlar
 
-/* global __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__ */
-
 import { renderStarRow, getIconFromSettings } from '../icons/index.js';
 import { ensureStarSprite, starUseSvg } from '../icons/star-sprite.js';
 import { PUBLIC_API_KEY } from './config.js';
@@ -233,9 +231,6 @@ export function formatDate(iso) {
   return new Date(iso).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-var REVIEW_IMAGE_ALLOWED_EXT = { jpg: true, jpeg: true, png: true, webp: true, gif: true, avif: true };
-var REVIEW_IMAGE_ROOT_FOLDER = 'review_images';
-var REVIEW_IMAGE_TENANT_FOLDER = 'stores';
 var AWS_REVIEW_IMAGE_PUBLIC_HOST = 'media.renuvex.app';
 var AWS_REVIEW_IMAGE_VARIANTS = {
   w200: true,
@@ -247,24 +242,10 @@ var AWS_REVIEW_IMAGE_VARIANTS = {
   thumb_640x854: true,
 };
 
-function normalizeReviewImageCloudName(cloudName) {
-  var normalizedCloudName = typeof cloudName === 'string' ? cloudName.trim() : '';
-  return /^[A-Za-z0-9_-]+$/.test(normalizedCloudName) ? normalizedCloudName : '';
-}
-
 function normalizeReviewImageStoreId(storeId) {
   var normalizedStoreId = typeof storeId === 'string' ? storeId.trim() : '';
   return /^[A-Za-z0-9_-]{1,128}$/.test(normalizedStoreId) ? normalizedStoreId : '';
 }
-
-// Trusted legacy Cloudinary cloud name is build-time only. AWS review images are
-// trusted separately via media.renuvex.app, so an empty Cloudinary value hides
-// only legacy Cloudinary URLs.
-var trustedReviewImageCloudName = normalizeReviewImageCloudName(
-  typeof __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__ === 'string'
-    ? __RENUVEX_PR_DEFAULT_CLOUDINARY_CLOUD_NAME__
-    : ''
-);
 
 function isPreviewPlaceholderImage(url) {
   return typeof window !== 'undefined' &&
@@ -313,52 +294,11 @@ export function isTrustedReviewImageUrl(value) {
 
   if (isPreviewPlaceholderImage(url)) return true;
   if (isTrustedAwsReviewImageUrl(url)) return true;
-  // Build-time inject boşsa modül yüklenirken zaten error loglandı; burada
-  // sessizce fail-closed davran (UI'de görsel görünmez, log spam'i yok).
-  if (!trustedReviewImageCloudName) return false;
-  if (
-    url.protocol !== 'https:' ||
-    url.hostname !== 'res.cloudinary.com' ||
-    url.username ||
-    url.password ||
-    url.port ||
-    url.search ||
-    url.hash
-  ) {
-    return false;
-  }
-
-  var lowerPath = url.pathname.toLowerCase();
-  if (lowerPath.indexOf('%2f') !== -1 || lowerPath.indexOf('%5c') !== -1) return false;
-
-  var parts = url.pathname.split('/').filter(Boolean);
-  var trustedStoreId = normalizeReviewImageStoreId(PUBLIC_API_KEY);
-  if (!trustedStoreId) return false;
-
-  if (parts.length < 8) return false;
-  if (parts[0] !== trustedReviewImageCloudName || parts[1] !== 'image' || parts[2] !== 'upload') return false;
-  if (
-    !/^v\d+$/.test(parts[3]) ||
-    parts[4] !== REVIEW_IMAGE_ROOT_FOLDER ||
-    parts[5] !== REVIEW_IMAGE_TENANT_FOLDER ||
-    parts[6] !== trustedStoreId
-  ) {
-    return false;
-  }
-  for (var i = 7; i < parts.length; i++) {
-    if (parts[i] === '.' || parts[i] === '..') return false;
-  }
-
-  var fileName = parts[parts.length - 1];
-  var dotIdx = fileName.lastIndexOf('.');
-  if (dotIdx === -1) return false;
-  return !!REVIEW_IMAGE_ALLOWED_EXT[fileName.slice(dotIdx + 1).toLowerCase()];
+  return false;
 }
 
 export function getTrustedReviewImages(review) {
   var images = review && review.images && Array.isArray(review.images) ? review.images : [];
-  // Build-time inject yokken `isTrustedReviewImageUrl` zaten false döner;
-  // log gürültüsü yapma — modül load anındaki tek error log yeterli.
   var trusted = [];
   images.forEach(function(url) {
     if (!isTrustedReviewImageUrl(url)) return;
@@ -373,11 +313,6 @@ export function getFirstTrustedReviewImage(review) {
   return images.length ? images[0] : null;
 }
 
-// Cloudinary transformation builder — Cloudinary URL'lerine q_auto/f_auto + c_scale,w_<width>
-// ekler. Default width LIGHTBOX_MAIN_WIDTH (1200): lightbox ana görsel + preload için.
-// Diğer çağrılar (thumbnail/tile/mini) ihtiyaca uygun width'i ikinci parametre olarak geçer.
-// Cloudinary olmayan URL'ler olduğu gibi döner — third-party host'lar için no-op.
-//
 // Sabitler — anlamlı isimle hangi çağrı yerine ait olduğunu belgeler. ADR_0007 ve [[Media_Gallery]].
 export var REVIEW_MEDIA_THUMB_WIDTH = 300;  // media gallery + card/list thumbnail (90-140 px display, retina yedeği)
 export var GALLERY_TILE_WIDTH = 600;        // gallery masonry tile (200-400 px display, retina yedeği)
@@ -390,14 +325,12 @@ export var REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT = 110;
 export var REVIEW_MEDIA_DISPLAY_FALLBACK_PORTRAIT_HEIGHT = 147;
 
 export function optimizeImageUrl(url, width) {
-  if (!url || url.indexOf('res.cloudinary.com') === -1) return url;
-  var w = (typeof width === 'number' && width > 0) ? Math.round(width) : LIGHTBOX_MAIN_WIDTH;
-  return url.replace('/upload/', '/upload/q_auto/f_auto/c_scale,w_' + w + '/');
+  return url || '';
 }
 
 // Responsive image attribute builder — `<img src srcset>` çifti üretir.
 // 1x: baseWidth, 2x: baseWidth × 2. Tarayıcı DPR'ye göre otomatik seçer.
-// Cloudinary olmayan URL'ler için src ve srcset aynı URL — no-op.
+// AWS variants are pre-generated; fallback URLs use the same URL for both density slots.
 // Kullanım:
 //   var attrs = buildResponsiveImgAttrs(url, REVIEW_MEDIA_THUMB_WIDTH);
 //   img.src = attrs.src; img.srcset = attrs.srcset;
@@ -407,7 +340,6 @@ export function buildResponsiveImgAttrs(url, baseWidth) {
   var w2 = w1 * 2;
   var src1 = optimizeImageUrl(url, w1);
   var src2 = optimizeImageUrl(url, w2);
-  // Cloudinary değilse her ikisi de URL'in kendisidir; srcset duplikasyonu zararsız.
   return { src: src1, srcset: src1 + ' 1x, ' + src2 + ' 2x' };
 }
 

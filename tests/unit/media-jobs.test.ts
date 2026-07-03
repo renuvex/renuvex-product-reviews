@@ -35,9 +35,6 @@ const prismaMock = vi.hoisted(() => ({
     upsert: vi.fn(),
   },
 }));
-const cloudinaryMock = vi.hoisted(() => ({
-  deleteCloudinaryReviewImages: vi.fn(),
-}));
 const awsImageMock = vi.hoisted(() => ({
   AWS_REVIEW_IMAGE_PROVIDER: 'aws_s3',
   deleteAwsReviewImageFamily: vi.fn(),
@@ -69,7 +66,6 @@ const qstashMock = vi.hoisted(() => ({ publishJSON: vi.fn() }));
 const processingMock = vi.hoisted(() => ({ applyMuxAssetState: vi.fn() }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }));
-vi.mock('@/lib/media/providers/cloudinary-image', () => cloudinaryMock);
 vi.mock('@/lib/media/providers/aws-review-image', () => awsImageMock);
 vi.mock('@/lib/media/providers/mux', () => muxMock);
 vi.mock('@/lib/media/video-processing', () => processingMock);
@@ -130,7 +126,6 @@ describe('media provider jobs', () => {
     prismaMock.$executeRaw.mockResolvedValue(1);
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
     qstashMock.publishJSON.mockResolvedValue({ messageId: 'message-1' });
-    cloudinaryMock.deleteCloudinaryReviewImages.mockResolvedValue(['image-a', 'image-b']);
     awsImageMock.deleteAwsReviewImageFamily.mockResolvedValue({ deletedObjects: 2 });
     awsImageMock.publishAwsReviewImageVariants.mockResolvedValue(undefined);
     awsImageMock.revokeAwsReviewImagePublicVariants.mockResolvedValue(undefined);
@@ -142,34 +137,6 @@ describe('media provider jobs', () => {
     muxMock.getMuxUpload.mockResolvedValue({ id: 'upload-1', status: 'asset_created', asset_id: 'asset-1' });
     muxMock.listMuxPlaybackIds.mockResolvedValue([]);
     processingMock.applyMuxAssetState.mockResolvedValue({ ok: true, status: 'processing' });
-  });
-
-  it('claims stale processing jobs and cleans Cloudinary images through the outbox', async () => {
-    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
-      id: 'job-1',
-      provider: 'cloudinary',
-      action: MEDIA_JOB_ACTIONS.cleanupImage,
-      payload: { publicIds: ['image-a', 'image-b'] },
-      attempts: 1,
-      maxAttempts: 8,
-    });
-    const { processMediaProviderJob } = await import('@/lib/media/jobs');
-
-    const result = await processMediaProviderJob('job-1');
-
-    expect(result).toEqual({ processed: true, status: 'succeeded' });
-    expect(prismaMock.mediaProviderJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({
-        OR: expect.arrayContaining([
-          expect.objectContaining({ status: 'processing', lockedAt: expect.objectContaining({ lt: expect.any(Date) }) }),
-          expect.objectContaining({ status: 'processing', lockedAt: null }),
-        ]),
-      }),
-    }));
-    expect(cloudinaryMock.deleteCloudinaryReviewImages).toHaveBeenCalledWith(['image-a', 'image-b']);
-    expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({
-      where: { publicId: { in: ['image-a', 'image-b'] }, provider: 'cloudinary' },
-    });
   });
 
   it('cleans expired AWS pending image families without CloudFront invalidation', async () => {

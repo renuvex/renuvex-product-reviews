@@ -1,13 +1,10 @@
 import { chromium } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 const WIDGET_ORIGIN = process.env.MEASURE_WIDGET_ORIGIN || 'https://widget.renuvex.app';
 const API_ORIGIN = process.env.MEASURE_WIDGET_API_ORIGIN || 'https://app.renuvex.app';
 const READ_API_ORIGIN = process.env.MEASURE_WIDGET_READ_API_ORIGIN || WIDGET_ORIGIN;
 const MERCHANT_ORIGIN = process.env.MEASURE_MERCHANT_ORIGIN || 'https://merchant-measure.test';
 const PUBLIC_KEY = process.env.MEASURE_PUBLIC_API_KEY || 'ci-public-key';
-const REVIEW_CLOUD_NAME = resolveReviewCloudName();
 const PRODUCT_ID = 'product-1';
 const PRODUCT_NAME = 'Premium';
 const JSON_ONLY = process.argv.includes('--json');
@@ -82,31 +79,7 @@ function ratingsResponse() {
 }
 
 function reviewImage(name) {
-  return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${PUBLIC_KEY}/${name}.jpg`;
-}
-
-function readEnvFileValue(filePath, key) {
-  try {
-    const body = readFileSync(filePath, 'utf8');
-    const pattern = new RegExp(`^\\s*${key}\\s*=\\s*(.*)\\s*$`, 'm');
-    const match = body.match(pattern);
-    if (!match) return '';
-    return match[1].trim().replace(/^['"]|['"]$/g, '');
-  } catch (_) {
-    return '';
-  }
-}
-
-function resolveReviewCloudName() {
-  const raw = process.env.MEASURE_CLOUDINARY_CLOUD_NAME ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    process.env.CLOUDINARY_CLOUD_NAME ||
-    readEnvFileValue(resolve(process.cwd(), '.env.local'), 'NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') ||
-    readEnvFileValue(resolve(process.cwd(), '.env.local'), 'CLOUDINARY_CLOUD_NAME') ||
-    readEnvFileValue(resolve(process.cwd(), '.env'), 'NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME') ||
-    readEnvFileValue(resolve(process.cwd(), '.env'), 'CLOUDINARY_CLOUD_NAME') ||
-    'renuvex';
-  return /^[A-Za-z0-9_-]+$/.test(raw) ? raw : 'renuvex';
+  return `https://media.renuvex.app/review-images/v1/public/stores/${PUBLIC_KEY}/assets/00000000-0000-4000-8000-000000000001/variants/${name}.jpeg`;
 }
 
 function reviewsResponse() {
@@ -120,7 +93,19 @@ function reviewsResponse() {
           comment: 'Works well in deployed transfer measurement.',
           author: 'Mert W.',
           createdAt: '2026-05-28T00:00:00.000Z',
-          images: [reviewImage('deployed-measure-1')],
+          images: [reviewImage('w1200')],
+          media: [{
+            type: 'image',
+            url: reviewImage('w1200'),
+            thumbnailUrl: reviewImage('thumb_320x427'),
+            variants: [
+              { id: 'w300', format: 'webp', width: 300, height: 225, url: reviewImage('w300').replace('.jpeg', '.webp') },
+              { id: 'w1200', format: 'jpeg', width: 1200, height: 900, url: reviewImage('w1200') },
+            ],
+            posterUrl: null,
+            durationMs: null,
+            position: 0,
+          }],
           merchantReply: null,
           recommendation: true,
         },
@@ -227,7 +212,7 @@ async function configureRoutes(page, scenario) {
   await page.route(`${API_ORIGIN}/api/public/widget-error**`, async (route) => {
     await route.fulfill({ status: 204, headers: jsonHeaders(), body: '' });
   });
-  await page.route('https://res.cloudinary.com/**', async (route) => {
+  await page.route('https://media.renuvex.app/**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: imageHeaders(),

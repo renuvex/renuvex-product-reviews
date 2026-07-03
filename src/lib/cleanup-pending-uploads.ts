@@ -5,8 +5,7 @@ import { dispatchMediaProviderJob, enqueueMediaProviderJob, failSessionAndQueueC
 import { AWS_REVIEW_IMAGE_PROVIDER } from '@/lib/media/providers/aws-review-image';
 
 const PENDING_TTL_HOURS = 24;
-const BATCH_SIZE = 200; // safely under Cloudinary's 100/request delete cap x 2 calls
-const CLOUDINARY_DELETE_BATCH_SIZE = 100;
+const BATCH_SIZE = 200;
 const AWS_IMAGE_FAMILY_BATCH_SIZE = 50;
 
 export type CleanupPendingUploadsSummary = {
@@ -26,11 +25,6 @@ function chunk<T>(items: T[], size: number): T[][] {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
-}
-
-function cleanupImageDedupeKey(publicIds: string[]) {
-  const digest = createHash('sha256').update(publicIds.join('\0')).digest('hex').slice(0, 48);
-  return `cleanup-image:${digest}`;
 }
 
 function cleanupAwsImageDedupeKey(families: Array<{ storeId: string; assetId: string }>) {
@@ -67,19 +61,7 @@ export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSumm
     return { message: 'No expired pending uploads.', deleted: 0 };
   }
 
-  const imageIds = expired.filter((row) => row.provider === 'cloudinary').map((row) => row.publicId).sort();
   const jobs = [];
-  for (const imageChunk of chunk(imageIds, CLOUDINARY_DELETE_BATCH_SIZE)) {
-    const job = await prisma.$transaction((tx) => enqueueMediaProviderJob(tx, {
-      dedupeKey: cleanupImageDedupeKey(imageChunk),
-      provider: 'cloudinary',
-      action: MEDIA_JOB_ACTIONS.cleanupImage,
-      resourceType: 'image',
-      payload: { publicIds: imageChunk },
-    }));
-    jobs.push(job);
-  }
-
   const awsFamilies = expired
     .filter((row) => row.provider === AWS_REVIEW_IMAGE_PROVIDER && row.storeId && row.providerAssetId)
     .map((row) => ({ storeId: row.storeId!, assetId: row.providerAssetId! }))
@@ -131,8 +113,8 @@ export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSumm
     message: 'Cleanup complete.',
     deletedRows: 0,
     deletedAssets: 0,
-    queuedImageJobs: Math.ceil(imageIds.length / CLOUDINARY_DELETE_BATCH_SIZE) + Math.ceil(awsFamilies.length / AWS_IMAGE_FAMILY_BATCH_SIZE),
-    queuedImageAssets: imageIds.length + awsFamilies.length,
+    queuedImageJobs: Math.ceil(awsFamilies.length / AWS_IMAGE_FAMILY_BATCH_SIZE),
+    queuedImageAssets: awsFamilies.length,
     queuedVideoJobs,
     queuedExpiredSessions,
   };

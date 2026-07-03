@@ -1,9 +1,11 @@
 import type { Prisma } from '@prisma/client';
-import { buildReviewImageThumbnailUrl, getReviewImagePublicId, isTrustedReviewImageUrl, parseStoredReviewImages } from '@/lib/review-images';
 import { isTrustedMuxDeliveryUrl, parseMuxPlaybackIdFromDeliveryUrl } from '@/lib/media/providers/mux';
-import { AWS_REVIEW_IMAGE_PROVIDER, buildAwsReviewImagePublicDescriptor, isTrustedAwsReviewImagePublicUrl } from '@/lib/media/providers/aws-review-image';
+import {
+  AWS_REVIEW_IMAGE_PROVIDER,
+  buildAwsReviewImagePublicDescriptor,
+  isTrustedAwsReviewImagePublicUrl,
+} from '@/lib/media/providers/aws-review-image';
 import { VIDEO_PROVIDER } from '@/lib/media/constants';
-import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 
 export type PublicReviewMediaRow = {
   url: string;
@@ -21,34 +23,6 @@ export type PublicReviewMediaRow = {
   variantStatus?: string | null;
   variantManifest?: Prisma.JsonValue | null;
 };
-
-export type ReviewMediaWriteInput = {
-  urls: string[];
-  cloudName: string | null;
-  storeId: string;
-  productId: string;
-  reviewId: string;
-  visible: boolean;
-  metadataByPublicId?: Map<string, ReviewMediaMetadataWrite>;
-};
-
-export function buildReviewMediaCreateManyData(input: ReviewMediaWriteInput): Prisma.ReviewMediaCreateManyInput[] {
-  return input.urls.flatMap((url, position) => {
-    const publicId = getReviewImagePublicId(url, input.cloudName, input.storeId);
-    if (!publicId) return [];
-    const metadata = input.metadataByPublicId?.get(publicId) ?? {};
-    return [{
-      reviewId: input.reviewId,
-      storeId: input.storeId,
-      productId: input.productId,
-      url,
-      publicId,
-      ...metadata,
-      position,
-      visible: input.visible,
-    }];
-  });
-}
 
 export type AwsPendingReviewImageMediaRow = {
   publicId: string;
@@ -137,30 +111,12 @@ export type PublicReviewMedia = {
   }>;
 };
 
-function publicMediaFromUrl(url: string, position: number, cloudName: string | null, storeId: string): PublicReviewMedia | null {
-  if (!isTrustedReviewImageUrl(url, cloudName, storeId)) return null;
-  return {
-    type: 'image',
-    url,
-    thumbnailUrl: buildReviewImageThumbnailUrl(url, cloudName, storeId),
-    posterUrl: null,
-    durationMs: null,
-    position,
-    width: null,
-    height: null,
-    format: null,
-    mimeType: null,
-    bytes: null,
-  };
-}
-
 export function publicMediaFromMediaOrLegacy(
   media: PublicReviewMediaRow[] | null | undefined,
-  legacyImages: string | null | undefined,
-  cloudName: string | null,
+  _legacyImages: string | null | undefined,
   storeId: string,
 ): PublicReviewMedia[] {
-  const mediaItems = (media ?? [])
+  return (media ?? [])
     .slice()
     .sort((a, b) => a.position - b.position)
     .flatMap<PublicReviewMedia>((item) => {
@@ -184,32 +140,15 @@ export function publicMediaFromMediaOrLegacy(
           bytes: item.bytes ?? null,
         }];
       }
+
       if (item.resourceType && item.resourceType !== 'image') return [];
-      if (item.provider === AWS_REVIEW_IMAGE_PROVIDER) {
-        if (item.variantStatus !== 'public_ready') return [];
-        const descriptor = buildAwsReviewImagePublicDescriptor(item.variantManifest);
-        if (!descriptor || !isTrustedAwsReviewImagePublicUrl(descriptor.url, storeId)) return [];
-        return [{
-          type: 'image' as const,
-          url: descriptor.url,
-          thumbnailUrl: descriptor.thumbnailUrl,
-          posterUrl: null,
-          durationMs: null,
-          position: item.position,
-          width: item.width ?? null,
-          height: item.height ?? null,
-          format: item.format ?? null,
-          mimeType: item.mimeType ?? null,
-          bytes: item.bytes ?? null,
-          variants: descriptor.variants.filter((variant) => isTrustedAwsReviewImagePublicUrl(variant.url, storeId)),
-        }];
-      }
-      if (item.provider && item.provider !== 'cloudinary') return [];
-      if (!isTrustedReviewImageUrl(item.url, cloudName, storeId)) return [];
+      if (item.provider !== AWS_REVIEW_IMAGE_PROVIDER || item.variantStatus !== 'public_ready') return [];
+      const descriptor = buildAwsReviewImagePublicDescriptor(item.variantManifest);
+      if (!descriptor || !isTrustedAwsReviewImagePublicUrl(descriptor.url, storeId)) return [];
       return [{
         type: 'image' as const,
-        url: item.url,
-        thumbnailUrl: buildReviewImageThumbnailUrl(item.url, cloudName, storeId),
+        url: descriptor.url,
+        thumbnailUrl: descriptor.thumbnailUrl,
         posterUrl: null,
         durationMs: null,
         position: item.position,
@@ -218,24 +157,17 @@ export function publicMediaFromMediaOrLegacy(
         format: item.format ?? null,
         mimeType: item.mimeType ?? null,
         bytes: item.bytes ?? null,
+        variants: descriptor.variants.filter((variant) => isTrustedAwsReviewImagePublicUrl(variant.url, storeId)),
       }];
-    });
-
-  if (mediaItems.length > 0) return mediaItems;
-  return parseStoredReviewImages(legacyImages, cloudName, storeId)
-    .flatMap((url, position) => {
-      const item = publicMediaFromUrl(url, position, cloudName, storeId);
-      return item ? [item] : [];
     });
 }
 
 export function publicImagesFromMediaOrLegacy(
   media: PublicReviewMediaRow[] | null | undefined,
   legacyImages: string | null | undefined,
-  cloudName: string | null,
   storeId: string,
 ): string[] {
-  return publicMediaFromMediaOrLegacy(media, legacyImages, cloudName, storeId)
+  return publicMediaFromMediaOrLegacy(media, legacyImages, storeId)
     .filter((item) => item.type === 'image')
     .map((item) => item.url);
 }

@@ -9,8 +9,8 @@ import { isVideoReviewsGloballyEnabled } from '@/lib/media/config';
 // ADR_0022: public settings is a pure read path. It only exposes whether
 // storefront theme sync is due; the best-effort sync side effect lives in
 // /api/public/storefront-theme/lazy-sync so this response can be edge cached.
-// ADR_0008: `imagePolicy.cloudName` is not carried in settings. The Cloudinary
-// cloud name is app-level config injected into the widget bundle at build time.
+// Review image delivery is provider-neutral in public settings. AWS media
+// descriptors are returned by the reviews API, not by this settings endpoint.
 
 export async function OPTIONS() {
   return corsOptions();

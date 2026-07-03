@@ -2,7 +2,6 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 import {
   MERCHANT_ORIGIN,
   PUBLIC_KEY,
-  REVIEW_CLOUD_NAME,
   clickInReviewsShadow,
   countInReviewsShadow,
   elementWidth,
@@ -10,6 +9,7 @@ import {
   hasJsonLd,
   hasPdpBadge,
   hasReviewsWidget,
+  reviewImage,
   setupWidgetRoutes,
   textInReviewsShadow,
   waitForWidgetIdle,
@@ -153,7 +153,21 @@ const CONTROL_SIZE_CASES = [
 ] as const;
 
 function trustedReviewImage(name: string, storeId = PUBLIC_KEY): string {
-  return `https://res.cloudinary.com/${REVIEW_CLOUD_NAME}/image/upload/v1/review_images/stores/${storeId}/${name}.jpg`;
+  return reviewImage(name, storeId);
+}
+
+function trustedReviewImageMediaFromUrl(url: string, position = 0): Record<string, unknown> {
+  return {
+    type: 'image',
+    url,
+    thumbnailUrl: url,
+    posterUrl: null,
+    durationMs: null,
+    width: 1200,
+    height: 1600,
+    position,
+    variants: [],
+  };
 }
 
 function trustedReviewVideoMedia(name: string, position = 0): Record<string, unknown> {
@@ -172,6 +186,8 @@ function trustedReviewVideoMedia(name: string, position = 0): Record<string, unk
 }
 
 function runtimeReview(input: RuntimeReview): Record<string, unknown> {
+  const images = input.images || [];
+  const media = input.media || images.map((url, index) => trustedReviewImageMediaFromUrl(url, index));
   return {
     rating: 5,
     comment: `${input.title} body`,
@@ -181,6 +197,7 @@ function runtimeReview(input: RuntimeReview): Record<string, unknown> {
     merchantReply: null,
     recommendation: true,
     ...input,
+    media,
   };
 }
 
@@ -2249,7 +2266,7 @@ test('media gallery remains independent across sort and load-more, then hides fo
   await expect.poll(() => hasReviewsWidget(page)).toBe(true);
   await expect.poll(() => countInReviewsShadow(page, '.renuvex-pr-media-gallery-thumb')).toBe(1);
   const initialStripSrc = await firstMediaGallerySrc(page);
-  expect(initialStripSrc).toContain('strip-alpha');
+  expect(initialStripSrc).toBe(trustedReviewImage('strip-alpha'));
   expect(stripCalls).toBe(1);
 
   await clickFilterItemAt(page, 1);

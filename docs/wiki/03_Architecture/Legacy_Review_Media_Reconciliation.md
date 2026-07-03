@@ -15,11 +15,7 @@ related:
   - "[[Database_Map]]"
   - "[[Backend_API_Map]]"
   - "[[Test_Strategy]]"
-source_files:
-  - "scripts/audit-legacy-review-media.mjs"
-  - "scripts/reconcile-legacy-review-media.mjs"
-  - "scripts/review-media-reconciliation-lib.mjs"
-  - "tests/unit/review-media-reconciliation.test.ts"
+source_files: []
 ---
 
 # Legacy Review Media Reconciliation
