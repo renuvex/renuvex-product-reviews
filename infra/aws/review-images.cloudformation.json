@@ -110,17 +110,13 @@
             {
               "Id": "expire-stale-pending-private-objects",
               "Status": "Enabled",
-              "Filter": {
-                "And": {
-                  "Prefix": "review-images/v1/private/",
-                  "Tags": [
-                    {
-                      "Key": "renuvex_state",
-                      "Value": "pending"
-                    }
-                  ]
+              "Prefix": "review-images/v1/private/",
+              "TagFilters": [
+                {
+                  "Key": "renuvex_state",
+                  "Value": "pending"
                 }
-              },
+              ],
               "ExpirationInDays": 2
             }
           ]

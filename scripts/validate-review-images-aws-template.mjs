@@ -68,6 +68,23 @@ if (uploadCors.AllowedMethods?.some((method) => method !== 'POST')) {
   throw new Error('ReviewImagesBucket upload CORS must not allow browser GET/PUT/DELETE for private objects.');
 }
 
+const lifecycleRules = bucket.Properties?.LifecycleConfiguration?.Rules ?? [];
+const stalePendingRule = lifecycleRules.find((rule) => rule.Id === 'expire-stale-pending-private-objects');
+if (!stalePendingRule) {
+  throw new Error('ReviewImagesBucket must expire stale pending private objects.');
+}
+if (stalePendingRule.Filter) {
+  throw new Error('ReviewImagesBucket lifecycle rule must use CloudFormation Prefix/TagFilters syntax, not Filter.');
+}
+const pendingTagFilters = stalePendingRule.TagFilters ?? [];
+if (
+  stalePendingRule.Prefix !== 'review-images/v1/private/' ||
+  !pendingTagFilters.some((tag) => tag.Key === 'renuvex_state' && tag.Value === 'pending') ||
+  stalePendingRule.ExpirationInDays !== 2
+) {
+  throw new Error('ReviewImagesBucket stale pending lifecycle rule must target pending private review-image objects for 2-day expiry.');
+}
+
 const oac = template.Resources.ReviewImagesOriginAccessControl;
 const oacConfig = oac.Properties?.OriginAccessControlConfig;
 if (oacConfig?.SigningBehavior !== 'always' || oacConfig?.OriginAccessControlOriginType !== 's3') {

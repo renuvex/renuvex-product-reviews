@@ -153,11 +153,13 @@ Current blocker from the failed change set:
 - Change set: `review-images-initial-20260703061502`.
 - Status: `FAILED`, `ExecutionStatus: UNAVAILABLE`.
 - Status reason: `AWS::EarlyValidation::PropertyValidation`.
-- The `renuvex-review-images` role does not currently have
-  `cloudformation:DescribeEvents`, so it cannot read the validation path from
-  the new CloudFormation validation events API. Add read-only
-  `cloudformation:DescribeEvents` to the review-image operator role, or use an
-  already-approved read-only/admin diagnostic profile, before retrying.
+- After read-only `cloudformation:DescribeEvents` was added, the validation path
+  was confirmed as
+  `/Resources/ReviewImagesBucket/Properties/LifecycleConfiguration/Rules/2` with
+  `Unsupported property [Filter]`.
+- The local template fix changes that S3 lifecycle rule to CloudFormation's
+  supported `Prefix` plus `TagFilters` syntax while preserving the same
+  pending-private-object cleanup intent.
 - Because this is a `CREATE` change set, cleanup of the failed change set and
   placeholder stack is a separate AWS mutation and needs explicit approval.
 
