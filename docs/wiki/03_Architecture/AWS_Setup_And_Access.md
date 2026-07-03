@@ -181,6 +181,23 @@ deleted after explicit approval. A replacement change set was then created:
   approved cleanup of the failed stack placeholder before creating a new change
   set.
 
+After the CloudFront public-key/key-group permissions were added, the
+`ROLLBACK_COMPLETE` placeholder stack was deleted after explicit approval and a
+fresh create change set was opened:
+
+- Change set: `review-images-initial-retry-20260703065740`.
+- Change set ARN:
+  `arn:aws:cloudformation:eu-central-1:989086371563:changeSet/review-images-initial-retry-20260703065740/b528f8f1-cd2e-475e-bb61-3c5b6683abd0`.
+- Status: `CREATE_COMPLETE`, `ExecutionStatus: AVAILABLE`.
+- Validation events: `CREATE_CHANGESET` succeeded; no validation error events.
+- Planned resources: S3 bucket, bucket policy, CloudFront cache policy,
+  response headers policy, OAC, public key, key group, and distribution.
+- Current stack status is `REVIEW_IN_PROGRESS`; stack resource list is empty
+  and the target bucket still returns S3 `404`, because the change set has not
+  been executed yet.
+- No Vercel env, DB, Cloudflare Worker/DNS, Cloudinary, provider activation, or
+  production traffic changes were made in this retry step.
+
 Review-image local template contracts:
 
 - S3 bucket remains private with Block Public Access, Bucket Owner Enforced
