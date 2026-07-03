@@ -291,6 +291,26 @@ CloudFront custom-domain update change set:
 - No media CNAME, Vercel env, DB, Cloudinary, provider activation, or
   production traffic changes were made in this change-set step.
 
+CloudFront custom-domain update execution:
+
+- The custom-domain change set was executed after explicit approval.
+- Stack status: `UPDATE_COMPLETE`.
+- Failed CloudFormation events: none.
+- CloudFront distribution `E1205OOLPZDB00` status: `Deployed`.
+- CloudFront aliases now include `media.renuvex.app`.
+- Viewer certificate now uses ACM certificate
+  `arn:aws:acm:us-east-1:989086371563:certificate/c4b05b95-3384-43b9-a0dc-518472fbc03e`.
+- CloudFront certificate config is `sni-only` with minimum protocol version
+  `TLSv1.2_2021`; the distribution no longer uses the default CloudFront
+  certificate for the configured alias.
+- ACM certificate `InUseBy` now includes
+  `arn:aws:cloudfront::989086371563:distribution/E1205OOLPZDB00`.
+- Public DNS resolvers still do not have a `media.renuvex.app` CNAME to the
+  distribution because the final Cloudflare media CNAME has not been created
+  yet.
+- No Vercel env, DB, Cloudinary, provider activation, or production traffic
+  changes were made in this execution step.
+
 Review-image local template contracts:
 
 - S3 bucket remains private with Block Public Access, Bucket Owner Enforced
