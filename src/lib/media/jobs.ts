@@ -23,6 +23,12 @@ import {
   type MuxPlaybackId,
 } from '@/lib/media/providers/mux';
 import { deleteCloudinaryReviewImages } from '@/lib/media/providers/cloudinary-image';
+import {
+  AWS_REVIEW_IMAGE_PROVIDER,
+  deleteAwsReviewImageFamily,
+  publishAwsReviewImageVariants,
+  revokeAwsReviewImagePublicVariants,
+} from '@/lib/media/providers/aws-review-image';
 import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
 import { getVideoSessionForUpdate, releaseVideoQuota } from '@/lib/media/sessions';
 import { matchesVideoModerationIntent } from '@/lib/media/moderation-intent';
@@ -57,6 +63,18 @@ const cleanupPayload = z.object({
 const cleanupImagePayload = z.object({
   publicIds: z.array(z.string().min(1).max(512)).min(1).max(100),
 });
+const cleanupAwsImagePayload = z.object({
+  families: z.array(z.object({
+    storeId: z.string().min(1).max(128),
+    assetId: z.string().uuid(),
+  })).min(1).max(50),
+  reason: z.string().max(128).optional(),
+});
+const awsImageVariantMutationPayload = z.object({
+  reviewId: z.string().uuid().optional(),
+  mediaId: z.string().uuid().optional(),
+  variantManifest: z.record(z.string(), z.unknown()),
+});
 const reconcileVideoPayload = z.object({
   sessionId: z.string().uuid(),
   providerUploadId: z.string().min(1).max(256).optional(),
@@ -84,6 +102,20 @@ function mediaJobSerialKey(job: { action: string; payload: Prisma.JsonValue }): 
   if (sessionId && job.action !== MEDIA_JOB_ACTIONS.cleanupImage) return `video-session:${sessionId}`;
   const providerAssetId = typeof payload.providerAssetId === 'string' ? payload.providerAssetId : '';
   if (providerAssetId) return `mux-asset:${providerAssetId}`;
+  const mediaId = typeof payload.mediaId === 'string' ? payload.mediaId : '';
+  if (
+    mediaId &&
+    (job.action === MEDIA_JOB_ACTIONS.publishImage || job.action === MEDIA_JOB_ACTIONS.revokeImagePublic)
+  ) {
+    return `image-media:${mediaId}`;
+  }
+  const families = Array.isArray(payload.families) ? payload.families : null;
+  if (families && families.length === 1) {
+    const family = families[0] as Record<string, Prisma.JsonValue>;
+    if (typeof family.storeId === 'string' && typeof family.assetId === 'string') {
+      return `image-family:${family.storeId}:${family.assetId}`;
+    }
+  }
   const providerUploadId = typeof payload.providerUploadId === 'string' ? payload.providerUploadId : '';
   if (providerUploadId) return `mux-upload:${providerUploadId}`;
   return null;
@@ -564,6 +596,45 @@ async function cleanupCloudinaryImages(payload: z.infer<typeof cleanupImagePaylo
   return { status: 'succeeded' };
 }
 
+async function cleanupAwsImages(payload: z.infer<typeof cleanupAwsImagePayload>): Promise<MediaJobResult> {
+  const invalidatePublicVariants = payload.reason !== 'pending_media_expired';
+  for (const family of payload.families) {
+    await deleteAwsReviewImageFamily(family.storeId, family.assetId, { invalidatePublicVariants });
+  }
+  await prisma.pendingReviewImage.deleteMany({
+    where: {
+      provider: AWS_REVIEW_IMAGE_PROVIDER,
+      OR: payload.families.map((family) => ({
+        storeId: family.storeId,
+        providerAssetId: family.assetId,
+      })),
+    },
+  });
+  return { status: 'succeeded' };
+}
+
+async function publishAwsImage(payload: z.infer<typeof awsImageVariantMutationPayload>): Promise<MediaJobResult> {
+  await publishAwsReviewImageVariants(payload.variantManifest);
+  if (payload.mediaId) {
+    await prisma.reviewMedia.updateMany({
+      where: { id: payload.mediaId, provider: AWS_REVIEW_IMAGE_PROVIDER, resourceType: 'image' },
+      data: { variantStatus: 'public_ready', variantPublishedAt: new Date(), variantRevokedAt: null },
+    });
+  }
+  return { status: 'succeeded' };
+}
+
+async function revokeAwsImagePublic(payload: z.infer<typeof awsImageVariantMutationPayload>): Promise<MediaJobResult> {
+  await revokeAwsReviewImagePublicVariants(payload.variantManifest);
+  if (payload.mediaId) {
+    await prisma.reviewMedia.updateMany({
+      where: { id: payload.mediaId, provider: AWS_REVIEW_IMAGE_PROVIDER, resourceType: 'image' },
+      data: { variantStatus: 'private_ready', variantRevokedAt: new Date() },
+    });
+  }
+  return { status: 'succeeded' };
+}
+
 export async function processMediaProviderJob(jobId: string) {
   const now = new Date();
   const staleBefore = new Date(now.getTime() - MEDIA_JOB_STALE_LOCK_MS);
@@ -608,7 +679,10 @@ export async function processMediaProviderJob(jobId: string) {
     else if (job.action === MEDIA_JOB_ACTIONS.publishVideo) result = await publishVideo(moderationPayload.parse(job.payload), lease);
     else if (job.action === MEDIA_JOB_ACTIONS.protectVideo) result = await protectVideo(moderationPayload.parse(job.payload), lease);
     else if (job.action === MEDIA_JOB_ACTIONS.cleanupVideo) result = await cleanupVideo(cleanupPayload.parse(job.payload));
-    else if (job.action === MEDIA_JOB_ACTIONS.cleanupImage) result = await cleanupCloudinaryImages(cleanupImagePayload.parse(job.payload));
+    else if (job.action === MEDIA_JOB_ACTIONS.cleanupImage && job.provider === 'cloudinary') result = await cleanupCloudinaryImages(cleanupImagePayload.parse(job.payload));
+    else if (job.action === MEDIA_JOB_ACTIONS.cleanupImage && job.provider === AWS_REVIEW_IMAGE_PROVIDER) result = await cleanupAwsImages(cleanupAwsImagePayload.parse(job.payload));
+    else if (job.action === MEDIA_JOB_ACTIONS.publishImage && job.provider === AWS_REVIEW_IMAGE_PROVIDER) result = await publishAwsImage(awsImageVariantMutationPayload.parse(job.payload));
+    else if (job.action === MEDIA_JOB_ACTIONS.revokeImagePublic && job.provider === AWS_REVIEW_IMAGE_PROVIDER) result = await revokeAwsImagePublic(awsImageVariantMutationPayload.parse(job.payload));
     else if (job.action === MEDIA_JOB_ACTIONS.reconcileVideo) result = await reconcileMuxVideo(reconcileVideoPayload.parse(job.payload));
     else if (job.action === MEDIA_JOB_ACTIONS.expireUploadSession) result = await expireUploadSession(expireUploadSessionPayload.parse(job.payload));
     else throw new Error('unsupported_media_job_action');

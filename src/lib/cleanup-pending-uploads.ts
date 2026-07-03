@@ -2,10 +2,12 @@ import { createHash } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
 import { dispatchMediaProviderJob, enqueueMediaProviderJob, failSessionAndQueueCleanup } from '@/lib/media/jobs';
+import { AWS_REVIEW_IMAGE_PROVIDER } from '@/lib/media/providers/aws-review-image';
 
 const PENDING_TTL_HOURS = 24;
 const BATCH_SIZE = 200; // safely under Cloudinary's 100/request delete cap x 2 calls
 const CLOUDINARY_DELETE_BATCH_SIZE = 100;
+const AWS_IMAGE_FAMILY_BATCH_SIZE = 50;
 
 export type CleanupPendingUploadsSummary = {
   message: string;
@@ -29,6 +31,14 @@ function chunk<T>(items: T[], size: number): T[][] {
 function cleanupImageDedupeKey(publicIds: string[]) {
   const digest = createHash('sha256').update(publicIds.join('\0')).digest('hex').slice(0, 48);
   return `cleanup-image:${digest}`;
+}
+
+function cleanupAwsImageDedupeKey(families: Array<{ storeId: string; assetId: string }>) {
+  const digest = createHash('sha256')
+    .update(families.map((family) => `${family.storeId}:${family.assetId}`).sort().join('\0'))
+    .digest('hex')
+    .slice(0, 48);
+  return `cleanup-aws-image:${digest}`;
 }
 
 export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSummary> {
@@ -70,6 +80,21 @@ export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSumm
     jobs.push(job);
   }
 
+  const awsFamilies = expired
+    .filter((row) => row.provider === AWS_REVIEW_IMAGE_PROVIDER && row.storeId && row.providerAssetId)
+    .map((row) => ({ storeId: row.storeId!, assetId: row.providerAssetId! }))
+    .sort((a, b) => `${a.storeId}:${a.assetId}`.localeCompare(`${b.storeId}:${b.assetId}`));
+  for (const familyChunk of chunk(awsFamilies, AWS_IMAGE_FAMILY_BATCH_SIZE)) {
+    const job = await prisma.$transaction((tx) => enqueueMediaProviderJob(tx, {
+      dedupeKey: cleanupAwsImageDedupeKey(familyChunk),
+      provider: AWS_REVIEW_IMAGE_PROVIDER,
+      action: MEDIA_JOB_ACTIONS.cleanupImage,
+      resourceType: 'image',
+      payload: { families: familyChunk, reason: 'pending_media_expired' },
+    }));
+    jobs.push(job);
+  }
+
   const videoRows = expired.filter((row) => row.provider === VIDEO_PROVIDER);
   const handledSessionIds = new Set<string>();
   let queuedVideoJobs = 0;
@@ -106,8 +131,8 @@ export async function cleanupPendingUploads(): Promise<CleanupPendingUploadsSumm
     message: 'Cleanup complete.',
     deletedRows: 0,
     deletedAssets: 0,
-    queuedImageJobs: Math.ceil(imageIds.length / CLOUDINARY_DELETE_BATCH_SIZE),
-    queuedImageAssets: imageIds.length,
+    queuedImageJobs: Math.ceil(imageIds.length / CLOUDINARY_DELETE_BATCH_SIZE) + Math.ceil(awsFamilies.length / AWS_IMAGE_FAMILY_BATCH_SIZE),
+    queuedImageAssets: imageIds.length + awsFamilies.length,
     queuedVideoJobs,
     queuedExpiredSessions,
   };

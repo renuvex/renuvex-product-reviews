@@ -124,6 +124,7 @@ source_files: []
 - [[ADR_0019_Icon_Sprite_Rendering]]
 - [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]
 - [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
+- [[ADR_0034_AWS_Review_Image_Migration]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]

@@ -120,6 +120,19 @@ export function getTrustedReviewMedia(review) {
       return;
     }
     if (item.type === 'image' && isTrustedReviewImageUrl(item.url)) {
+      var imageVariants = [];
+      if (Array.isArray(item.variants)) {
+        item.variants.forEach(function (variant) {
+          if (!variant || typeof variant !== 'object' || !isTrustedReviewImageUrl(variant.url)) return;
+          imageVariants.push({
+            id: typeof variant.id === 'string' ? variant.id : '',
+            format: typeof variant.format === 'string' ? variant.format : '',
+            width: typeof variant.width === 'number' ? variant.width : null,
+            height: typeof variant.height === 'number' ? variant.height : null,
+            url: variant.url.trim(),
+          });
+        });
+      }
       var imageKey = 'image:' + item.url.trim();
       if (seen[imageKey]) return;
       seen[imageKey] = true;
@@ -127,6 +140,7 @@ export function getTrustedReviewMedia(review) {
         type: 'image',
         url: item.url.trim(),
         thumbnailUrl: item.thumbnailUrl || null,
+        variants: imageVariants,
         posterUrl: null,
         durationMs: null,
         width: typeof item.width === 'number' ? item.width : null,

@@ -1,0 +1,422 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Renuvex review image storage and delivery stack (ADR_0034).",
+  "Parameters": {
+    "BucketName": {
+      "Type": "String",
+      "Default": "renuvex-review-images-prod-989086371563-eu-central-1"
+    },
+    "MediaDomainName": {
+      "Type": "String",
+      "Default": "media.renuvex.app"
+    },
+    "AcmCertificateArn": {
+      "Type": "String",
+      "Default": "",
+      "Description": "ACM certificate ARN in us-east-1. Leave empty for default CloudFront domain verification."
+    },
+    "CloudFrontPublicKeyEncoded": {
+      "Type": "String",
+      "NoEcho": true,
+      "MinLength": 1,
+      "Description": "PEM public key for signed admin preview URLs."
+    }
+  },
+  "Conditions": {
+    "HasCustomCertificate": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "AcmCertificateArn"
+            },
+            ""
+          ]
+        }
+      ]
+    }
+  },
+  "Resources": {
+    "ReviewImagesBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketName": {
+          "Ref": "BucketName"
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "CorsConfiguration": {
+          "CorsRules": [
+            {
+              "Id": "browser-presigned-post-upload",
+              "AllowedMethods": [
+                "POST"
+              ],
+              "AllowedOrigins": [
+                "*"
+              ],
+              "AllowedHeaders": [
+                "*"
+              ],
+              "ExposedHeaders": [
+                "ETag",
+                "x-amz-checksum-sha256"
+              ],
+              "MaxAge": 300
+            }
+          ]
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "abort-incomplete-multipart",
+              "Status": "Enabled",
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 1
+              }
+            },
+            {
+              "Id": "expire-noncurrent-versions",
+              "Status": "Enabled",
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 7
+              }
+            },
+            {
+              "Id": "expire-stale-pending-private-objects",
+              "Status": "Enabled",
+              "Filter": {
+                "And": {
+                  "Prefix": "review-images/v1/private/",
+                  "Tags": [
+                    {
+                      "Key": "renuvex_state",
+                      "Value": "pending"
+                    }
+                  ]
+                }
+              },
+              "ExpirationInDays": 2
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "review-images"
+          }
+        ]
+      }
+    },
+    "ReviewImagesOriginAccessControl": {
+      "Type": "AWS::CloudFront::OriginAccessControl",
+      "Properties": {
+        "OriginAccessControlConfig": {
+          "Name": "renuvex-review-images-oac",
+          "Description": "CloudFront OAC for private S3 review image bucket",
+          "OriginAccessControlOriginType": "s3",
+          "SigningBehavior": "always",
+          "SigningProtocol": "sigv4"
+        }
+      }
+    },
+    "ReviewImagesCachePolicy": {
+      "Type": "AWS::CloudFront::CachePolicy",
+      "Properties": {
+        "CachePolicyConfig": {
+          "Name": "renuvex-review-images-immutable",
+          "DefaultTTL": 31536000,
+          "MaxTTL": 31536000,
+          "MinTTL": 31536000,
+          "ParametersInCacheKeyAndForwardedToOrigin": {
+            "CookiesConfig": {
+              "CookieBehavior": "none"
+            },
+            "EnableAcceptEncodingBrotli": true,
+            "EnableAcceptEncodingGzip": true,
+            "HeadersConfig": {
+              "HeaderBehavior": "none"
+            },
+            "QueryStringsConfig": {
+              "QueryStringBehavior": "none"
+            }
+          }
+        }
+      }
+    },
+    "ReviewImagesResponseHeadersPolicy": {
+      "Type": "AWS::CloudFront::ResponseHeadersPolicy",
+      "Properties": {
+        "ResponseHeadersPolicyConfig": {
+          "Name": "renuvex-review-images-security",
+          "SecurityHeadersConfig": {
+            "ContentTypeOptions": {
+              "Override": true
+            },
+            "FrameOptions": {
+              "FrameOption": "DENY",
+              "Override": true
+            },
+            "ReferrerPolicy": {
+              "ReferrerPolicy": "strict-origin-when-cross-origin",
+              "Override": true
+            },
+            "StrictTransportSecurity": {
+              "AccessControlMaxAgeSec": 63072000,
+              "IncludeSubdomains": true,
+              "Override": true,
+              "Preload": true
+            }
+          }
+        }
+      }
+    },
+    "ReviewImagesPreviewPublicKey": {
+      "Type": "AWS::CloudFront::PublicKey",
+      "Properties": {
+        "PublicKeyConfig": {
+          "CallerReference": {
+            "Fn::Sub": "${AWS::StackName}-preview-public-key"
+          },
+          "Name": "renuvex-review-images-preview-key",
+          "EncodedKey": {
+            "Ref": "CloudFrontPublicKeyEncoded"
+          }
+        }
+      }
+    },
+    "ReviewImagesPreviewKeyGroup": {
+      "Type": "AWS::CloudFront::KeyGroup",
+      "Properties": {
+        "KeyGroupConfig": {
+          "Name": "renuvex-review-images-preview-key-group",
+          "Items": [
+            {
+              "Ref": "ReviewImagesPreviewPublicKey"
+            }
+          ]
+        }
+      }
+    },
+    "ReviewImagesDistribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Enabled": true,
+          "HttpVersion": "http2and3",
+          "PriceClass": "PriceClass_100",
+          "Aliases": {
+            "Fn::If": [
+              "HasCustomCertificate",
+              [
+                {
+                  "Ref": "MediaDomainName"
+                }
+              ],
+              {
+                "Ref": "AWS::NoValue"
+              }
+            ]
+          },
+          "ViewerCertificate": {
+            "Fn::If": [
+              "HasCustomCertificate",
+              {
+                "AcmCertificateArn": {
+                  "Ref": "AcmCertificateArn"
+                },
+                "MinimumProtocolVersion": "TLSv1.2_2021",
+                "SslSupportMethod": "sni-only"
+              },
+              {
+                "CloudFrontDefaultCertificate": true
+              }
+            ]
+          },
+          "Origins": [
+            {
+              "Id": "review-images-s3",
+              "DomainName": {
+                "Fn::GetAtt": [
+                  "ReviewImagesBucket",
+                  "RegionalDomainName"
+                ]
+              },
+              "OriginAccessControlId": {
+                "Ref": "ReviewImagesOriginAccessControl"
+              },
+              "S3OriginConfig": {
+                "OriginAccessIdentity": ""
+              }
+            }
+          ],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "review-images-s3",
+            "ViewerProtocolPolicy": "redirect-to-https",
+            "AllowedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "CachePolicyId": {
+              "Ref": "ReviewImagesCachePolicy"
+            },
+            "ResponseHeadersPolicyId": {
+              "Ref": "ReviewImagesResponseHeadersPolicy"
+            },
+            "Compress": true,
+            "TrustedKeyGroups": [
+              {
+                "Ref": "ReviewImagesPreviewKeyGroup"
+              }
+            ]
+          },
+          "CacheBehaviors": [
+            {
+              "PathPattern": "review-images/v1/public/*",
+              "TargetOriginId": "review-images-s3",
+              "ViewerProtocolPolicy": "https-only",
+              "AllowedMethods": [
+                "GET",
+                "HEAD"
+              ],
+              "CachedMethods": [
+                "GET",
+                "HEAD"
+              ],
+              "CachePolicyId": {
+                "Ref": "ReviewImagesCachePolicy"
+              },
+              "ResponseHeadersPolicyId": {
+                "Ref": "ReviewImagesResponseHeadersPolicy"
+              },
+              "Compress": true
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "review-images"
+          }
+        ]
+      }
+    },
+    "ReviewImagesBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "ReviewImagesBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DenyInsecureTransport",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucket}"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucket}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            },
+            {
+              "Sid": "AllowCloudFrontReadOnly",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+              },
+              "Action": "s3:GetObject",
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucket}/review-images/v1/public/*"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucket}/review-images/v1/private/stores/*/assets/*/variants/*"
+                }
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "AWS:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${ReviewImagesDistribution}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketName": {
+      "Value": {
+        "Ref": "ReviewImagesBucket"
+      }
+    },
+    "DistributionId": {
+      "Value": {
+        "Ref": "ReviewImagesDistribution"
+      }
+    },
+    "DistributionDomainName": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewImagesDistribution",
+          "DomainName"
+        ]
+      }
+    },
+    "PreviewKeyGroupId": {
+      "Value": {
+        "Ref": "ReviewImagesPreviewKeyGroup"
+      }
+    }
+  }
+}

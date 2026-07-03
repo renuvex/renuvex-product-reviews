@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { buildReviewImageThumbnailUrl, getReviewImagePublicId, isTrustedReviewImageUrl, parseStoredReviewImages } from '@/lib/review-images';
 import { isTrustedMuxDeliveryUrl, parseMuxPlaybackIdFromDeliveryUrl } from '@/lib/media/providers/mux';
+import { AWS_REVIEW_IMAGE_PROVIDER, buildAwsReviewImagePublicDescriptor, isTrustedAwsReviewImagePublicUrl } from '@/lib/media/providers/aws-review-image';
 import { VIDEO_PROVIDER } from '@/lib/media/constants';
 import type { ReviewMediaMetadataWrite } from '@/lib/review-media-metadata';
 
@@ -17,6 +18,8 @@ export type PublicReviewMediaRow = {
   format?: string | null;
   mimeType?: string | null;
   bytes?: number | null;
+  variantStatus?: string | null;
+  variantManifest?: Prisma.JsonValue | null;
 };
 
 export type ReviewMediaWriteInput = {
@@ -47,6 +50,71 @@ export function buildReviewMediaCreateManyData(input: ReviewMediaWriteInput): Pr
   });
 }
 
+export type AwsPendingReviewImageMediaRow = {
+  publicId: string;
+  storeId: string | null;
+  productId: string | null;
+  uploadSessionId: string | null;
+  assetId: string | null;
+  providerAssetId: string | null;
+  sourceAssetId: string | null;
+  format: string | null;
+  mimeType: string | null;
+  width: number | null;
+  height: number | null;
+  bytes: number | null;
+  sourceChecksumAlgorithm: string | null;
+  sourceChecksumSha256: string | null;
+  metadataSource: string | null;
+  metadataStatus: string | null;
+  metadataFetchedAt: Date | null;
+  variantStatus: string | null;
+  variantGeneratedAt: Date | null;
+  variantManifest: Prisma.JsonValue | null;
+};
+
+export function buildAwsReviewMediaCreateManyData(input: {
+  rows: AwsPendingReviewImageMediaRow[];
+  storeId: string;
+  productId: string;
+  reviewId: string;
+  visible: boolean;
+}): Prisma.ReviewMediaCreateManyInput[] {
+  return input.rows.map((row, position) => {
+    const descriptor = buildAwsReviewImagePublicDescriptor(row.variantManifest);
+    return {
+      reviewId: input.reviewId,
+      storeId: input.storeId,
+      productId: input.productId,
+      url: descriptor?.url ?? '',
+      publicId: row.publicId,
+      assetId: row.assetId,
+      resourceType: 'image',
+      provider: AWS_REVIEW_IMAGE_PROVIDER,
+      providerAssetId: row.providerAssetId,
+      processingStatus: row.variantStatus === 'private_ready' || row.variantStatus === 'public_ready' ? 'ready' : 'pending',
+      sourceProvider: AWS_REVIEW_IMAGE_PROVIDER,
+      sourceAssetId: row.sourceAssetId,
+      format: row.format,
+      mimeType: row.mimeType,
+      width: row.width,
+      height: row.height,
+      bytes: row.bytes,
+      sourceChecksumAlgorithm: row.sourceChecksumAlgorithm,
+      sourceChecksumSha256: row.sourceChecksumSha256,
+      metadataSource: row.metadataSource ?? 'aws_s3_register',
+      metadataStatus: row.metadataStatus ?? 'complete',
+      metadataFetchedAt: row.metadataFetchedAt,
+      variantStatus: input.visible ? 'public_ready' : 'private_ready',
+      variantGeneratedAt: row.variantGeneratedAt,
+      variantPublishedAt: input.visible ? new Date() : null,
+      variantManifest: row.variantManifest as Prisma.InputJsonValue,
+      position,
+      visible: input.visible,
+    };
+  });
+}
+
 export type PublicReviewMedia = {
   type: 'image' | 'video';
   url: string;
@@ -60,6 +128,13 @@ export type PublicReviewMedia = {
   format: string | null;
   mimeType: string | null;
   bytes: number | null;
+  variants?: Array<{
+    id: string;
+    format: string;
+    width: number;
+    height: number;
+    url: string;
+  }>;
 };
 
 function publicMediaFromUrl(url: string, position: number, cloudName: string | null, storeId: string): PublicReviewMedia | null {
@@ -110,6 +185,25 @@ export function publicMediaFromMediaOrLegacy(
         }];
       }
       if (item.resourceType && item.resourceType !== 'image') return [];
+      if (item.provider === AWS_REVIEW_IMAGE_PROVIDER) {
+        if (item.variantStatus !== 'public_ready') return [];
+        const descriptor = buildAwsReviewImagePublicDescriptor(item.variantManifest);
+        if (!descriptor || !isTrustedAwsReviewImagePublicUrl(descriptor.url, storeId)) return [];
+        return [{
+          type: 'image' as const,
+          url: descriptor.url,
+          thumbnailUrl: descriptor.thumbnailUrl,
+          posterUrl: null,
+          durationMs: null,
+          position: item.position,
+          width: item.width ?? null,
+          height: item.height ?? null,
+          format: item.format ?? null,
+          mimeType: item.mimeType ?? null,
+          bytes: item.bytes ?? null,
+          variants: descriptor.variants.filter((variant) => isTrustedAwsReviewImagePublicUrl(variant.url, storeId)),
+        }];
+      }
       if (item.provider && item.provider !== 'cloudinary') return [];
       if (!isTrustedReviewImageUrl(item.url, cloudName, storeId)) return [];
       return [{

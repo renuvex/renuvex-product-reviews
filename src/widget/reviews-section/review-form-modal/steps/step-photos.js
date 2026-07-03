@@ -77,12 +77,42 @@ export function createStepPhotos(state, opts) {
   var urlToFinger = opts.urlToFinger || {}; // blobUrl veya cloudUrl -> parmak izi (silme anında fingerprint kaldırmak için)
 
   // State'teki tüm görselleri (bitenler ve yüklenmekte olanlar) tam reaktif olarak DOM'a yansıtır
+  function imageItemKey(value) {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') return value.uploadSessionId || value.assetId || value.objectKey || value.previewUrl || '';
+    return '';
+  }
+
+  function imageItemDisplayUrl(value) {
+    if (typeof value === 'string') return blobMap[value] || value;
+    if (value && typeof value === 'object') {
+      var key = imageItemKey(value);
+      return blobMap[key] || value.previewUrl || '';
+    }
+    return '';
+  }
+
+  function bufferToBase64(buffer) {
+    var bytes = new Uint8Array(buffer);
+    var binary = '';
+    for (var i = 0; i < bytes.length; i += 0x8000) {
+      var chunk = bytes.subarray(i, i + 0x8000);
+      binary += String.fromCharCode.apply(null, Array.prototype.slice.call(chunk));
+    }
+    return btoa(binary);
+  }
+
+  async function fileSha256Base64(file) {
+    if (!window.crypto || !window.crypto.subtle) throw new Error('checksum_unavailable');
+    return bufferToBase64(await window.crypto.subtle.digest('SHA-256', await file.arrayBuffer()));
+  }
+
   function syncUI() {
     if (isExiting) return;
 
     var completed = state.get().images || [];
     var pending = state.get().pendingImages || [];
-    var all = completed.map(function (u) { return { url: u, isPending: false }; })
+    var all = completed.map(function (u) { return { url: imageItemKey(u), image: u, isPending: false }; })
       .concat(pending.map(function (p) { return { url: p.url, file: p.file, isPending: true, error: p.error }; }));
 
     // Tam temizlik ve yeniden çizim — Index kaymalarını ve kırık ikonları kökten çözer.
@@ -90,7 +120,7 @@ export function createStepPhotos(state, opts) {
     previews.innerHTML = '';
 
     all.forEach(function (item) {
-      var displayUrl = blobMap[item.url] || item.url;
+      var displayUrl = item.image ? imageItemDisplayUrl(item.image) : (blobMap[item.url] || item.url);
       var node = createThumbNode(item, displayUrl);
       previews.appendChild(node);
     });
@@ -160,7 +190,7 @@ export function createStepPhotos(state, opts) {
       if (item.isPending) {
         patch.pendingImages = (state.get().pendingImages || []).filter(function (x) { return x.url !== item.url; });
       } else {
-        patch.images = (state.get().images || []).filter(function (x) { return x !== item.url; });
+        patch.images = (state.get().images || []).filter(function (x) { return imageItemKey(x) !== item.url; });
       }
 
       state.set(patch);
@@ -250,6 +280,12 @@ export function createStepPhotos(state, opts) {
         else alert(sizeMsg);
         continue;
       }
+      if (['image/jpeg', 'image/png', 'image/webp'].indexOf(file.type) === -1) {
+        var typeMsg = 'Sadece JPG, PNG veya WebP fotograf yukleyebilirsin.';
+        if (opts.showToast) opts.showToast(typeMsg, 'error');
+        else alert(typeMsg);
+        continue;
+      }
       var objUrl = URL.createObjectURL(file);
       urlToFinger[objUrl] = finger; // blob URL → parmak izi (silme anında fingerprint kaldırabilmek için)
       newPending.push({ url: objUrl, file: file, error: null });
@@ -280,16 +316,71 @@ export function createStepPhotos(state, opts) {
         }
 
         try {
+          var checksumSha256 = await fileSha256Base64(f);
           var signRes = await fetchWithTimeout(API_BASE + '/api/public/upload/sign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ storeId: PUBLIC_API_KEY }),
+            body: JSON.stringify({
+              storeId: PUBLIC_API_KEY,
+              fileName: f.name || 'review-image',
+              contentType: f.type,
+              bytes: f.size,
+              checksumAlgorithm: 'SHA256',
+              checksumSha256: checksumSha256,
+            }),
           });
           if (!signRes.ok) {
             if (signRes.status === 429) throw new Error('rate_limit');
             throw new Error('sign failed');
           }
           var sign = await signRes.json();
+          if (sign.provider === 'aws_s3') {
+            if (!sign.uploadUrl || !sign.fields || !sign.assetId || !sign.uploadSessionId || !sign.objectKey) throw new Error('sign fields missing');
+            var awsFd = new FormData();
+            Object.keys(sign.fields).forEach(function (key) {
+              awsFd.append(key, sign.fields[key]);
+            });
+            awsFd.append('file', f);
+            var awsUpload = await fetch(sign.uploadUrl, { method: 'POST', body: awsFd });
+            if (awsUpload.status !== 204) throw new Error('upload failed');
+            var stillPendingAws = (state.get().pendingImages || []).some(function (p) { return p.url === objUrl; });
+            if (!stillPendingAws) continue;
+            var imageRef = {
+              provider: 'aws_s3',
+              assetId: sign.assetId,
+              uploadSessionId: sign.uploadSessionId,
+              objectKey: sign.objectKey,
+              contentType: f.type,
+              bytes: f.size,
+              checksumAlgorithm: 'SHA256',
+              checksumSha256: checksumSha256,
+              previewUrl: objUrl,
+            };
+            var regRes = await fetchWithTimeout(API_BASE + '/api/public/upload/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                storeId: PUBLIC_API_KEY,
+                provider: 'aws_s3',
+                assetId: imageRef.assetId,
+                uploadSessionId: imageRef.uploadSessionId,
+                objectKey: imageRef.objectKey,
+                contentType: imageRef.contentType,
+                bytes: imageRef.bytes,
+                checksumAlgorithm: imageRef.checksumAlgorithm,
+                checksumSha256: imageRef.checksumSha256,
+              }),
+            });
+            if (!regRes.ok) throw new Error('register failed');
+            var key = imageItemKey(imageRef);
+            blobMap[key] = objUrl;
+            urlToFinger[key] = urlToFinger[objUrl];
+            var pAws = (state.get().pendingImages || []).filter(function (p) { return p.url !== objUrl; });
+            var cAws = (state.get().images || []).slice();
+            cAws.push(imageRef);
+            state.set({ pendingImages: pAws, images: cAws });
+            continue;
+          }
           if (!sign.folder) throw new Error('sign folder missing');
           var fd = new FormData();
           fd.append('file', f);

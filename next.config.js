@@ -7,21 +7,28 @@ const cloudinaryCloudName = normalizePublicCloudName(
   process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME,
 );
 
+const imageRemotePatterns = [
+  {
+    protocol: 'https',
+    hostname: 'media.renuvex.app',
+    pathname: '/review-images/v1/public/**',
+  },
+];
+if (cloudinaryCloudName) {
+  imageRemotePatterns.push({
+    protocol: 'https',
+    hostname: 'res.cloudinary.com',
+    pathname: `/${cloudinaryCloudName}/image/upload/**`,
+  });
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
     NEXT_PUBLIC_DEPLOY_URL: process.env.NEXT_PUBLIC_DEPLOY_URL,
   },
   images: {
-    remotePatterns: cloudinaryCloudName
-      ? [
-          {
-            protocol: 'https',
-            hostname: 'res.cloudinary.com',
-            pathname: `/${cloudinaryCloudName}/image/upload/**`,
-          },
-        ]
-      : [],
+    remotePatterns: imageRemotePatterns,
   },
   webpack: (config, { webpack }) => {
     config.resolve.fallback = {

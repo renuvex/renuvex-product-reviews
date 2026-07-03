@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-06-29
-last_verified: 2026-06-29
+updated: 2026-07-03
+last_verified: 2026-07-03
 confidence: high
 tags:
   - aws
@@ -16,15 +16,19 @@ tags:
   - skills
 related:
   - "[[AWS_CloudFront_Widget_Canary_Runbook]]"
+  - "[[ADR_0034_AWS_Review_Image_Migration]]"
   - "[[Storefront_CDN_Performance_Benchmark]]"
   - "[[Deployment_Notes]]"
   - "[[Caching_And_Performance]]"
 source_files:
+  - "docs/wiki/04_Decisions/ADR_0034_AWS_Review_Image_Migration.md"
   - "infra/aws/widget-cdn-canary.cloudformation.json"
   - "infra/aws/widget-canary-operator-policy.example.json"
+  - "infra/aws/review-images.cloudformation.json"
   - "scripts/prepare-widget-aws-canary-assets.mjs"
   - "scripts/deploy-widget-aws-canary-assets.mjs"
   - "scripts/validate-widget-aws-canary-template.mjs"
+  - "scripts/validate-review-images-aws-template.mjs"
   - ".agents/skills/aws-iam/SKILL.md"
   - ".agents/skills/securing-s3-buckets/SKILL.md"
   - ".agents/skills/routing-traffic-with-route53-and-cloudfront/SKILL.md"
@@ -82,6 +86,7 @@ Profiles:
 |---|---|
 | `renuvex-readonly` | Read-only evidence gathering and audits. |
 | `renuvex-widget-canary` | Limited CloudFront/S3/CloudFormation operator for the widget CDN canary. |
+| `renuvex-review-images` | Limited review-image AWS migration/operator profile. Use only for approved review-image infrastructure work; read-only checks are allowed. |
 
 The `AdministratorAccess` permission set exists for manual emergency or console
 operations, but it is not the normal automation profile and should not be made
@@ -91,6 +96,12 @@ The limited canary role is:
 
 ```text
 arn:aws:iam::989086371563:role/aws-reserved/sso.amazonaws.com/eu-central-1/AWSReservedSSO_RenuvexWidgetCanaryOperator_18c9a9d7b13068e9
+```
+
+The review-image migration role is:
+
+```text
+arn:aws:iam::989086371563:role/aws-reserved/sso.amazonaws.com/eu-central-1/AWSReservedSSO_RenuvexReviewImageAccess_1c1689a6660b1865
 ```
 
 The permission policy source of truth is
@@ -112,6 +123,50 @@ Verified on 2026-06-29:
 
 The canary does not own `widget.renuvex.app`, `app.renuvex.app`, ikas script
 records, Vercel env, Supabase, Mux, Cloudinary, or QStash.
+
+## Review Image Migration Preflight
+
+Verified on 2026-07-03 with read-only commands:
+
+| Check | Result |
+|---|---|
+| `aws --version` | `aws-cli/2.35.11` |
+| `renuvex-review-images` identity | Account `989086371563`, role `RenuvexReviewImageAccess`, region `eu-central-1` |
+| Existing S3 buckets via `renuvex-readonly` | Only `renuvex-widget-canary-989086371563-eu-central-1` |
+| Existing CloudFront distributions | Only canary distribution `E2IGB2R73IV6SE` |
+| Existing CloudFormation stacks in `eu-central-1` | Only `renuvex-widget-cdn-canary` |
+| Candidate review-image buckets | `renuvex-review-images-989086371563-eu-central-1` and `renuvex-review-images-prod-989086371563-eu-central-1` returned S3 `404` on `head-bucket` |
+| ACM certificates in `us-east-1` | none |
+| `media.renuvex.app` public DNS | no public record from `1.1.1.1` or `8.8.8.8`; local resolver returned `192.168.1.1`, so local DNS is not proof of public configuration |
+
+The target review-image resource contract is recorded in [[ADR_0034_AWS_Review_Image_Migration]]. No AWS resource creation, DNS change, env write, deploy, provider deletion, or git push is approved by this preflight.
+
+The review-image stack is still local source only. No CloudFormation stack,
+bucket, CloudFront distribution, ACM certificate, DNS record, Vercel env, or
+provider teardown was created by the local implementation pass.
+
+Review-image local template contracts:
+
+- S3 bucket remains private with Block Public Access, Bucket Owner Enforced
+  ownership, SSE-S3, versioning, retain policies, lifecycle backstops, and
+  HTTPS-only bucket policy.
+- Browser direct upload CORS is `POST` only with wildcard origin/header for the
+  MVP because merchant storefront origins are not yet enumerated. Authorization
+  remains the presigned POST policy plus backend register validation, not CORS.
+- CloudFront OAC uses `SigningBehavior: always`.
+- CloudFront S3 read policy is scoped to public variants and private admin
+  preview variants only. It must not grant CloudFront read access to private
+  originals.
+- Public variant revoke/delete paths require exact CloudFront invalidation for
+  previously public variant paths. The runtime env therefore needs
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_DISTRIBUTION_ID` in addition to the bucket,
+  region, OIDC role ARN, public base URL, and signed-preview key settings.
+
+Run this local guard before any approved review-image stack change set:
+
+```powershell
+pnpm aws:review-images:validate-template
+```
 
 ## Operational Rules
 
@@ -179,6 +234,7 @@ Template validation:
 
 ```powershell
 pnpm aws:widget:validate-template
+pnpm aws:review-images:validate-template
 ```
 
 Asset dry-run:
