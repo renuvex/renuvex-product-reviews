@@ -92,7 +92,7 @@ Draft. This page records verified Cloudinary state and the image-provider bounda
 
 ## Implementation Progress
 
-Local implementation work started on branch `codex/aws-review-images-migration` on 2026-07-03. The first code pass is still local-only and does not approve or perform AWS stack creation, DNS/cert changes, Vercel env writes, Prisma production migration deploy, Cloudflare Worker deploy, Cloudinary teardown, or provider deletes.
+Local implementation work started on branch `codex/aws-review-images-migration` on 2026-07-03. The code remains local-only and has not been pushed. AWS review-image infrastructure, ACM validation, CloudFront aliasing, and the final `media.renuvex.app` DNS record were created only through separate approved mutation gates. Vercel env writes, Prisma production migration deploy, app/widget deploy, Cloudflare Worker deploy, Cloudinary teardown, provider activation, and provider deletes are still not approved by this ADR alone.
 
 Implemented locally so far:
 
@@ -104,9 +104,26 @@ Implemented locally so far:
 - Storefront widget trust/render changes for `media.renuvex.app` public variants, plus AWS S3 POST upload/register flow in the photo wizard.
 - Pending and orphan cleanup extensions for AWS image object families, including DB used-set evidence, S3 family scanning, quarantine reuse, and idempotent family delete.
 - Review-image CloudFormation source template and local template validation script.
+- Live AWS review-image stack, ACM certificate, CloudFront alias, and
+  `media.renuvex.app` DNS are created and verified. The stack is not yet used
+  by production traffic because the app provider is still not activated.
 - Hardening pass for direct-upload CORS, CloudFront S3 read scope, CloudFront invalidation on public variant revocation, and publish-then-DB-failure compensation. The template validator now checks these infrastructure contracts instead of only checking resource presence.
 
-Still not done in this local implementation pass: production AWS stack/change set, ACM/DNS, Vercel env additions, Prisma migration deploy, Cloudflare Worker/widget deploy, full CI/browser test pass, Cloudinary teardown, and removal of Cloudinary dependency/build constants.
+Still not done in this implementation pass: runtime IAM/OIDC confirmation or creation, Vercel env additions, Prisma migration deploy, app/widget deploy, Cloudflare Worker/widget deploy, full CI/browser test pass, Cloudinary teardown, and removal of Cloudinary dependency/build constants.
+
+Runtime cutover preflight on 2026-07-03 showed:
+
+- Vercel OIDC is enabled with team issuer mode for team `renuvex`; production
+  claims are `iss=https://oidc.vercel.com/renuvex`,
+  `aud=https://vercel.com/renuvex`, and
+  `sub=owner:renuvex:project:renuvex-product-reviews:environment:production`.
+- Vercel production/preview/development env and local `.env.local` do not yet
+  contain the AWS review-image runtime keys.
+- Production DB has not yet applied
+  `20260703090000_add_aws_review_image_fields`.
+- The current AWS review-image operator can read STS identity but lacks
+  `iam:GetRole` and `iam:ListOpenIDConnectProviders`, so runtime role/OIDC
+  state cannot be confirmed from CLI yet.
 
 ## Documentation Scope
 This ADR is allowed to exceed the wiki audit 1200-word advisory while the Cloudinary-to-AWS image migration is being designed. Do not compress away migration-critical context, edge cases, rollback details, cleanup rules, or test requirements for word count alone. Prune after the migration is complete and verified.

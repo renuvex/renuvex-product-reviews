@@ -137,7 +137,7 @@ Verified on 2026-07-03 with read-only commands:
 | Existing CloudFormation stacks in `eu-central-1` | Only `renuvex-widget-cdn-canary` |
 | Candidate review-image buckets | `renuvex-review-images-989086371563-eu-central-1` and `renuvex-review-images-prod-989086371563-eu-central-1` returned S3 `404` on `head-bucket` |
 | ACM certificates in `us-east-1` | `media.renuvex.app` certificate is `ISSUED` after Cloudflare DNS validation |
-| `media.renuvex.app` public DNS | no public record from `1.1.1.1` or `8.8.8.8`; local resolver returned `192.168.1.1`, so local DNS is not proof of public configuration |
+| `media.renuvex.app` public DNS | Initially absent during preflight; later created and verified in the "Cloudflare final media DNS result" section below. |
 
 The target review-image resource contract is recorded in [[ADR_0034_AWS_Review_Image_Migration]]. No AWS resource creation, DNS change, env write, deploy, provider deletion, or git push is approved by this preflight.
 
@@ -326,6 +326,37 @@ Cloudflare final media DNS result:
   certificate subject/SAN is `media.renuvex.app`, issued by Amazon RSA 2048 M01.
 - No Vercel env, DB, Cloudinary, provider activation, or production traffic
   changes were made in this DNS verification step.
+
+Runtime cutover preflight:
+
+- Vercel CLI `50.28.0` is authenticated as `mert-copper`.
+- Local project link points at Vercel project `renuvex-product-reviews` under
+  team `renuvex`.
+- Vercel project OIDC is enabled with team issuer mode.
+- Latest production OIDC claims observed through Vercel project metadata:
+  - `iss=https://oidc.vercel.com/renuvex`
+  - `aud=https://vercel.com/renuvex`
+  - `sub=owner:renuvex:project:renuvex-product-reviews:environment:production`
+- Vercel production, preview, and development env lists do not yet include the
+  AWS review-image env keys (`REVIEW_IMAGE_PROVIDER`,
+  `AWS_REVIEW_IMAGES_REGION`, `AWS_REVIEW_IMAGES_BUCKET`,
+  `AWS_REVIEW_IMAGES_PUBLIC_BASE_URL`, `AWS_REVIEW_IMAGES_ROLE_ARN`,
+  `AWS_REVIEW_IMAGES_OIDC_AUDIENCE`,
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_DISTRIBUTION_ID`,
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_KEY_PAIR_ID`, or
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_PRIVATE_KEY_B64`).
+- Local `.env.local` also does not yet contain the AWS review-image keys or
+  `VERCEL_OIDC_TOKEN`.
+- `prisma migrate status`, with `.env.local` loaded into the process without
+  printing values, reports
+  `20260703090000_add_aws_review_image_fields` as not yet applied.
+- `prisma validate`, with `.env.local` loaded, passes.
+- The `renuvex-review-images` AWS profile can read STS identity but currently
+  cannot call `iam:GetRole` or `iam:ListOpenIDConnectProviders`. Therefore the
+  runtime IAM role/OIDC provider state cannot be confirmed from CLI yet.
+- The next live mutation gate must handle runtime IAM/OIDC verification or
+  creation before Vercel env activation. Static AWS access keys are not the
+  planned fallback.
 
 Review-image local template contracts:
 
