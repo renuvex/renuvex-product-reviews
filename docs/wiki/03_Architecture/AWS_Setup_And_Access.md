@@ -311,6 +311,22 @@ CloudFront custom-domain update execution:
 - No Vercel env, DB, Cloudinary, provider activation, or production traffic
   changes were made in this execution step.
 
+Cloudflare final media DNS result:
+
+- The final `media` CNAME was added in Cloudflare DNS after approval.
+- Public resolver `1.1.1.1` resolves `media.renuvex.app` to
+  `d2vvn9hb97q5dv.cloudfront.net`, and then to CloudFront edge A records.
+- Public resolver `8.8.8.8` resolves the CNAME to
+  `d2vvn9hb97q5dv.cloudfront.net`; A-record propagation may lag by resolver
+  cache, but the CNAME target is correct.
+- `https://media.renuvex.app/review-images/v1/public/__healthcheck__` reaches
+  CloudFront over TLS and returns expected `403 Forbidden` because no test
+  object exists at that path.
+- TLS SNI validation for `media.renuvex.app` is authorized. The presented
+  certificate subject/SAN is `media.renuvex.app`, issued by Amazon RSA 2048 M01.
+- No Vercel env, DB, Cloudinary, provider activation, or production traffic
+  changes were made in this DNS verification step.
+
 Review-image local template contracts:
 
 - S3 bucket remains private with Block Public Access, Bucket Owner Enforced
