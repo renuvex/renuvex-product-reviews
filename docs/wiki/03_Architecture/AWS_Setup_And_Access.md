@@ -142,26 +142,22 @@ Verified on 2026-07-03 with read-only commands:
 The target review-image resource contract is recorded in [[ADR_0034_AWS_Review_Image_Migration]]. No AWS resource creation, DNS change, env write, deploy, provider deletion, or git push is approved by this preflight.
 
 The review-image stack has not been executed. A 2026-07-03 create change set
-attempt created a CloudFormation `REVIEW_IN_PROGRESS` placeholder stack named
-`renuvex-review-images-prod`, but the change set failed AWS early property
-validation before execution. `list-stack-resources` returned an empty resource
-list, so no bucket, CloudFront distribution, ACM certificate, DNS record, Vercel
-env, or provider teardown was created by that attempt.
+attempt failed AWS early property validation because the S3 lifecycle rule used
+an unsupported `Filter` property. After read-only `cloudformation:DescribeEvents`
+was added, the validation path was confirmed as
+`/Resources/ReviewImagesBucket/Properties/LifecycleConfiguration/Rules/2`. The
+template now uses CloudFormation's supported `Prefix` plus `TagFilters` syntax.
 
-Current blocker from the failed change set:
+The failed change set and its empty `REVIEW_IN_PROGRESS` placeholder stack were
+deleted after explicit approval. A replacement change set was then created:
 
-- Change set: `review-images-initial-20260703061502`.
-- Status: `FAILED`, `ExecutionStatus: UNAVAILABLE`.
-- Status reason: `AWS::EarlyValidation::PropertyValidation`.
-- After read-only `cloudformation:DescribeEvents` was added, the validation path
-  was confirmed as
-  `/Resources/ReviewImagesBucket/Properties/LifecycleConfiguration/Rules/2` with
-  `Unsupported property [Filter]`.
-- The local template fix changes that S3 lifecycle rule to CloudFormation's
-  supported `Prefix` plus `TagFilters` syntax while preserving the same
-  pending-private-object cleanup intent.
-- Because this is a `CREATE` change set, cleanup of the failed change set and
-  placeholder stack is a separate AWS mutation and needs explicit approval.
+- Change set: `review-images-initial-fixed-20260703063044`.
+- Status: `CREATE_COMPLETE`, `ExecutionStatus: AVAILABLE`.
+- Validation events: `CREATE_CHANGESET` succeeded; no validation error events.
+- Planned resources: S3 bucket, bucket policy, CloudFront cache policy,
+  response headers policy, OAC, public key, key group, and distribution.
+- Current stack status remains `REVIEW_IN_PROGRESS` with an empty resource list
+  until the change set is explicitly executed.
 
 Review-image local template contracts:
 
