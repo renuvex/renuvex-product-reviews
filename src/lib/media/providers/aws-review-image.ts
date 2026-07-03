@@ -161,7 +161,7 @@ function awsReviewImagesCredentialConfig(config: AwsReviewImagesConfig) {
     ? {
         credentials: awsCredentialsProvider({
           roleArn: config.roleArn,
-          audience: process.env.AWS_REVIEW_IMAGES_OIDC_AUDIENCE?.trim() || 'https://sts.amazonaws.com',
+          audience: process.env.AWS_REVIEW_IMAGES_OIDC_AUDIENCE?.trim() || 'sts.amazonaws.com',
           roleSessionName: 'renuvex-review-images-runtime',
           clientConfig: { region: config.region },
         }),

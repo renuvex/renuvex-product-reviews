@@ -21,6 +21,7 @@
     "aws:widget:prepare-assets": "node scripts/prepare-widget-aws-canary-assets.mjs",
     "aws:widget:validate-template": "node scripts/validate-widget-aws-canary-template.mjs",
     "aws:review-images:validate-template": "node scripts/validate-review-images-aws-template.mjs",
+    "aws:review-images:validate-runtime-iam-template": "node scripts/validate-review-images-runtime-iam-template.mjs",
     "aws:widget:deploy-assets:dry-run": "pnpm aws:widget:prepare-assets && node scripts/deploy-widget-aws-canary-assets.mjs",
     "aws:widget:deploy-assets": "pnpm aws:widget:prepare-assets && node scripts/deploy-widget-aws-canary-assets.mjs --apply",
     "measure:deployed-widget": "node scripts/measure-deployed-widget-network.mjs",

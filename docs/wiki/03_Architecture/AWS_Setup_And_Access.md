@@ -337,26 +337,65 @@ Runtime cutover preflight:
   - `iss=https://oidc.vercel.com/renuvex`
   - `aud=https://vercel.com/renuvex`
   - `sub=owner:renuvex:project:renuvex-product-reviews:environment:production`
-- Vercel production, preview, and development env lists do not yet include the
-  AWS review-image env keys (`REVIEW_IMAGE_PROVIDER`,
+- Vercel production env now includes the eight AWS review-image runtime keys:
   `AWS_REVIEW_IMAGES_REGION`, `AWS_REVIEW_IMAGES_BUCKET`,
   `AWS_REVIEW_IMAGES_PUBLIC_BASE_URL`, `AWS_REVIEW_IMAGES_ROLE_ARN`,
   `AWS_REVIEW_IMAGES_OIDC_AUDIENCE`,
   `AWS_REVIEW_IMAGES_CLOUDFRONT_DISTRIBUTION_ID`,
-  `AWS_REVIEW_IMAGES_CLOUDFRONT_KEY_PAIR_ID`, or
-  `AWS_REVIEW_IMAGES_CLOUDFRONT_PRIVATE_KEY_B64`).
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_KEY_PAIR_ID`, and
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_PRIVATE_KEY_B64`.
+- The AWS review-image env keys are production-only; preview does not list them,
+  which matches the production-only runtime IAM trust policy.
+- `REVIEW_IMAGE_PROVIDER` is still not set in Vercel, so the code default remains
+  `cloudinary`. Do not add `REVIEW_IMAGE_PROVIDER=aws_s3` until the separate
+  cutover gate.
+- Cloudinary env keys remain in Vercel as the pre-acceptance rollback path.
 - Local `.env.local` also does not yet contain the AWS review-image keys or
   `VERCEL_OIDC_TOKEN`.
 - `prisma migrate status`, with `.env.local` loaded into the process without
   printing values, reports
   `20260703090000_add_aws_review_image_fields` as not yet applied.
 - `prisma validate`, with `.env.local` loaded, passes.
-- The `renuvex-review-images` AWS profile can read STS identity but currently
-  cannot call `iam:GetRole` or `iam:ListOpenIDConnectProviders`. Therefore the
-  runtime IAM role/OIDC provider state cannot be confirmed from CLI yet.
-- The next live mutation gate must handle runtime IAM/OIDC verification or
-  creation before Vercel env activation. Static AWS access keys are not the
-  planned fallback.
+- The `renuvex-review-images` AWS profile can read STS identity and IAM OIDC
+  state. `iam:ListOpenIDConnectProviders` currently returns no OIDC providers.
+- The target Vercel OIDC provider
+  `arn:aws:iam::989086371563:oidc-provider/oidc.vercel.com/renuvex`, target role
+  `renuvex-review-images-vercel-runtime`, and target CloudFormation stack
+  `renuvex-review-images-runtime-iam` do not exist yet.
+- The next live mutation gate must create the runtime IAM/OIDC stack before
+  Vercel env activation. Static AWS access keys are not the planned fallback.
+
+Runtime IAM stack status:
+
+- On 2026-07-03, change set
+  `renuvex-review-images-runtime-iam-create-20260703` was created for stack
+  `renuvex-review-images-runtime-iam` in `eu-central-1`.
+- The change set was executed after explicit approval and the stack reached
+  `CREATE_COMPLETE`.
+- Created resources are exactly two:
+  `ReviewImagesVercelRuntimeRole` (`AWS::IAM::Role`) and
+  `VercelOidcProvider` (`AWS::IAM::OIDCProvider`).
+- OIDC provider ARN:
+  `arn:aws:iam::989086371563:oidc-provider/oidc.vercel.com/renuvex`.
+- Runtime role ARN:
+  `arn:aws:iam::989086371563:role/renuvex-review-images-vercel-runtime`.
+- OIDC provider audiences are `https://vercel.com/renuvex` and
+  `sts.amazonaws.com`.
+- Runtime role trust policy allows only
+  `sts:AssumeRoleWithWebIdentity` from the Vercel team OIDC provider with
+  `aud=sts.amazonaws.com` and
+  `sub=owner:renuvex:project:renuvex-product-reviews:environment:production`.
+- Runtime inline policy simulator checks:
+  - allowed: review-image private-prefix S3 object read/write/tag/delete,
+    prefix-scoped `s3:ListBucket`, and `cloudfront:CreateInvalidation` only on
+    distribution `E1205OOLPZDB00`.
+  - denied: unrelated S3 object prefix, unrelated S3 list prefix, unrelated
+    CloudFront distribution invalidation, `s3:PutBucketPolicy`,
+    `cloudfront:UpdateDistribution`, `iam:PassRole`, and
+    `cloudformation:CreateStack`.
+- `iam:GetContextKeysForPrincipalPolicy` is not granted to the operator profile;
+  this only blocked an extra read-only introspection command, not the runtime
+  role verification.
 
 Review-image local template contracts:
 
@@ -377,11 +416,29 @@ Review-image local template contracts:
 - The stack must output the bucket name, distribution id, distribution domain,
   preview key group id, and preview public key id. The private signing key is
   not a stack output and must never be written to the wiki.
+- The runtime IAM stack lives separately at
+  `infra/aws/review-images-runtime-iam.cloudformation.json`. It creates only the
+  Vercel team-scoped OIDC provider and the
+  `renuvex-review-images-vercel-runtime` role.
+- The runtime role trust policy is production-only and exact-match:
+  `iss=https://oidc.vercel.com/renuvex`,
+  `aud=sts.amazonaws.com`, and
+  `sub=owner:renuvex:project:renuvex-product-reviews:environment:production`.
+  The OIDC provider also includes the default Vercel team audience
+  `https://vercel.com/renuvex` for provider completeness, but the runtime role
+  trust allows only the custom AWS audience. This follows the current Vercel AWS
+  OIDC guide's custom-audience contract.
+- Runtime permissions are limited to review-image private/public S3 object
+  prefixes, prefix-scoped `s3:ListBucket`, and exact CloudFront invalidation for
+  distribution `E1205OOLPZDB00`. The role must not include `iam:PassRole`,
+  CloudFormation permissions, bucket policy/admin permissions, or CloudFront
+  distribution lifecycle permissions.
 
 Run this local guard before any approved review-image stack change set:
 
 ```powershell
 pnpm aws:review-images:validate-template
+pnpm aws:review-images:validate-runtime-iam-template
 ```
 
 ## Operational Rules

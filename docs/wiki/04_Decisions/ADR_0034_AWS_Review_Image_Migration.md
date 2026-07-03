@@ -117,13 +117,37 @@ Runtime cutover preflight on 2026-07-03 showed:
   claims are `iss=https://oidc.vercel.com/renuvex`,
   `aud=https://vercel.com/renuvex`, and
   `sub=owner:renuvex:project:renuvex-product-reviews:environment:production`.
-- Vercel production/preview/development env and local `.env.local` do not yet
-  contain the AWS review-image runtime keys.
+- Vercel production env contains the eight AWS review-image runtime keys
+  (`AWS_REVIEW_IMAGES_REGION`, `AWS_REVIEW_IMAGES_BUCKET`,
+  `AWS_REVIEW_IMAGES_PUBLIC_BASE_URL`, `AWS_REVIEW_IMAGES_ROLE_ARN`,
+  `AWS_REVIEW_IMAGES_OIDC_AUDIENCE`,
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_DISTRIBUTION_ID`,
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_KEY_PAIR_ID`, and
+  `AWS_REVIEW_IMAGES_CLOUDFRONT_PRIVATE_KEY_B64`). They are scoped to
+  production only. Preview does not list them, matching the production-only IAM
+  trust policy. `REVIEW_IMAGE_PROVIDER` is still unset in Vercel, so runtime
+  remains on the Cloudinary default until the separate cutover gate.
 - Production DB has not yet applied
   `20260703090000_add_aws_review_image_fields`.
-- The current AWS review-image operator can read STS identity but lacks
-  `iam:GetRole` and `iam:ListOpenIDConnectProviders`, so runtime role/OIDC
-  state cannot be confirmed from CLI yet.
+- The current AWS review-image operator can read STS identity and IAM OIDC
+  state. The target OIDC provider, target runtime role, and runtime IAM
+  CloudFormation stack do not exist yet.
+- Runtime OIDC will use the Vercel team issuer
+  `https://oidc.vercel.com/renuvex`, custom audience `sts.amazonaws.com`, and
+  exact production subject
+  `owner:renuvex:project:renuvex-product-reviews:environment:production`.
+  Source, `.env.example`, and the runtime IAM template use the same audience
+  string to avoid trust-policy/token mismatch.
+- The runtime IAM CloudFormation change set
+  `renuvex-review-images-runtime-iam-create-20260703` was executed after
+  explicit approval. Stack `renuvex-review-images-runtime-iam` is
+  `CREATE_COMPLETE` and created only the Vercel team OIDC provider plus the
+  `renuvex-review-images-vercel-runtime` role. Post-checks confirmed exact
+  production trust conditions, OIDC audiences, review-image-prefix S3 runtime
+  access, exact CloudFront invalidation access for distribution `E1205OOLPZDB00`,
+  and implicit denies for unrelated S3 prefixes, unrelated CloudFront
+  distributions, bucket-policy admin, CloudFront distribution update,
+  `iam:PassRole`, and CloudFormation stack creation.
 
 ## Documentation Scope
 This ADR is allowed to exceed the wiki audit 1200-word advisory while the Cloudinary-to-AWS image migration is being designed. Do not compress away migration-critical context, edge cases, rollback details, cleanup rules, or test requirements for word count alone. Prune after the migration is complete and verified.
@@ -1405,7 +1429,7 @@ Verified current rollout facts on 2026-07-03:
 
 - Vercel MCP can read the `Renuvex` team and `renuvex-product-reviews` project. Production alias `app.renuvex.app` points to deployment `dpl_DNFyzg4ZXYJqtTeiZ8zzWKrWfrnm` from commit `20b382b02ccb68b247f494a8d2b191c5ea272990` (`docs(wiki): refresh live deployment status`).
 - Vercel CLI works when scoped to the `renuvex` team. The previous CLI failure was a user/scope mismatch, not proof that Vercel is unavailable.
-- Vercel env currently lists the Cloudinary image keys (`NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) but does not list the planned AWS review-image env keys (`AWS_REVIEW_IMAGES_BUCKET`, `AWS_REVIEW_IMAGES_REGION`, `AWS_REVIEW_IMAGES_CLOUDFRONT_DOMAIN`, or `REVIEW_IMAGE_PROVIDER`).
+- Vercel env keeps the Cloudinary image keys (`NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) for rollback. The AWS review-image runtime keys are present in production only, but `REVIEW_IMAGE_PROVIDER=aws_s3` is not set yet.
 - Vercel runtime errors show only a Node `url.parse()` deprecation warning in the checked window. It is a technical debt item, not an AWS image migration blocker.
 - The Cloudflare Worker remains widget asset/read-cache infrastructure. It does not own upload/register/review writes or cleanup. Those paths remain on the Vercel backend.
 - `scripts/build-widget.mjs` keeps old content-hashed widget runtime/chunk files for `RUNTIME_RETENTION_DAYS = 7`, and the Worker asset preparation copies tracked old runtime assets. A deployed widget change can therefore overlap with old cached/open storefront runtimes for a short period.
