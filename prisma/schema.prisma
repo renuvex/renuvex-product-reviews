@@ -394,6 +394,25 @@ model MediaCleanupRun {
   @@index([status, startedAt])
 }
 
+// Idempotency guard for QStash scheduled maintenance jobs. The composite key
+// represents one logical scheduled run, while status/lockedUntil let failed or
+// stale attempts be retried without overlapping a currently running attempt.
+model ScheduledJobRunLock {
+  task         String    @db.VarChar(64)
+  scheduleSlot String    @db.VarChar(32)
+  status       String    @default("processing") @db.VarChar(32)
+  attempts     Int       @default(1)
+  lockedUntil  DateTime?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  lastError    String?   @db.VarChar(512)
+  updatedAt    DateTime  @updatedAt
+
+  @@id([task, scheduleSlot])
+  @@index([startedAt])
+  @@index([status, startedAt])
+}
+
 // Two-phase orphan deletion (ADR_0030). The monthly cleanup-images cron MARKS an
 // orphan here (phase 1) instead of deleting it; a later run hard-DELETES it
 // (phase 2) only if it is still orphaned after the grace window. Rows are

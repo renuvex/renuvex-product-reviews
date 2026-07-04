@@ -125,6 +125,7 @@ source_files: []
 - [[ADR_0020_Renuvex_Product_Reviews_Namespace_Migration]]
 - [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
 - [[ADR_0034_AWS_Review_Image_Migration]]
+- [[ADR_0035_QStash_Scheduler_For_Maintenance]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -188,4 +189,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-04 (refreshed AWS review-image public URL contract)
+**Last Updated:** 2026-07-04 (added QStash maintenance scheduler ADR)

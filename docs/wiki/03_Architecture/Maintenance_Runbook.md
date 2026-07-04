@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - runbook
@@ -17,13 +17,16 @@ related:
   - "[[Backend_API_Map]]"
   - "[[ADR_0029_Review_Media_Metadata]]"
   - "[[ADR_0030_Cleanup_Hardening]]"
+  - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
   - "[[Database_Map]]"
   - "[[Async_Media_Pipeline]]"
   - "[[Review_Video_Manual_Repair_Runbook]]"
 source_files:
   - "src/lib/cron-observability.ts"
+  - "src/lib/scheduled-jobs.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
+  - "src/app/api/internal/scheduled-jobs/route.ts"
   - "src/app/api/internal/media-jobs/route.ts"
   - "src/lib/media/outbox.ts"
   - "src/lib/media/dispatcher.ts"
@@ -32,13 +35,32 @@ source_files:
   - "src/lib/media/reconciliation.ts"
   - "src/lib/media/providers/mux.ts"
   - "tests/unit/media-jobs.test.ts"
+  - "tests/unit/scheduled-jobs.test.ts"
+  - "tests/unit/scheduled-jobs-route.test.ts"
   - "scripts/video-canary-ops.mjs"
+  - "prisma/schema.prisma"
   - "vercel.json"
 ---
 
 # Maintenance Cron Runbook
 
 Operational reference for the scheduled background jobs and how their failures surface.
+
+## Scheduler status
+
+The QStash scheduler cutover is staged by [[ADR_0035_QStash_Scheduler_For_Maintenance]].
+
+- Current active scheduler before QStash schedule acceptance: `vercel.json` crons.
+- New QStash receiver: `POST /api/internal/scheduled-jobs`.
+- Accepted QStash task bodies:
+  - `{ "task": "daily-maintenance-full" }`
+  - `{ "task": "cleanup-images" }`
+- QStash receiver auth: `Upstash-Signature` verification with the existing QStash signing keys.
+- `CRON_SECRET` remains only for manual/admin `GET` endpoints.
+- `ScheduledJobRunLock` stores `task + scheduleSlot` idempotency. Succeeded slots return
+  `already_processed`; in-progress slots avoid overlapping work; failed slots can be retried.
+- QStash schedule creation, pause/delete, and final `vercel.json.crons` removal are separate
+  approved gates.
 
 ## Cron jobs (`vercel.json`)
 | Cron | Schedule (UTC) | What it does |
@@ -47,6 +69,18 @@ Operational reference for the scheduled background jobs and how their failures s
 | `GET /api/admin/cleanup-images` | `0 4 1 * *` (monthly) | AWS review-image orphan **two-phase** cleanup behind a circuit-breaker (ADR_0012 + [[ADR_0030_Cleanup_Hardening]]): scan scoped S3 object families, mark orphan families, then sweep after grace if still orphaned. Writes a `MediaCleanupRun` audit row. |
 
 Both require `Authorization: Bearer <CRON_SECRET>`.
+
+## Planned QStash schedules
+
+These schedules are not considered active until they exist in Upstash and live logs prove delivery.
+
+| Label | Cron (UTC) | Destination | Body |
+|---|---|---|---|
+| `renuvex-daily-maintenance` | `0 3 * * *` | `POST https://app.renuvex.app/api/internal/scheduled-jobs` | `{ "task": "daily-maintenance-full" }` |
+| `renuvex-cleanup-images` | `0 4 1 * *` | same | `{ "task": "cleanup-images" }` |
+
+Use explicit retries (`5`) and a timeout compatible with the current Vercel function limit.
+Do not place `CRON_SECRET` in QStash headers.
 
 ## How failures surface (observability)
 A task failure was previously caught into `errors[]` + an HTTP 500 and **alerted nobody** (Sentry

@@ -20,6 +20,7 @@ related:
   - "[[ADR_0032_Review_Video_On_Mux]]"
   - "[[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]"
   - "[[ADR_0034_AWS_Review_Image_Migration]]"
+  - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Test_Strategy]]"
 source_files:
@@ -124,13 +125,11 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-04: AWS image orphan scan now includes public-only `reviews/{assetId}/` synthetic quarantine ids.
-- 2026-07-04: AWS image lightbox full-size fix is live; local follow-up aligns thumbnail `data-renuvex-img-url` to WebP-first full-size URLs.
-- 2026-07-04: AWS public image URLs use `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>`; private preview paths are unchanged.
-- 2026-07-04: Admin AWS private-image thumbnails now use signed `thumb_320x427`; image modal loading copy no longer says video.
-- 2026-07-04: Legacy image-provider DB alignment completed: 12 media, 6 pending, 8 image flags/mirrors, 26 quarantine rows, 1 job retired, 1 summary rebuilt.
-- 2026-07-04: AWS-only image source pass is merged/deployed. PR #5 is `244b0997`, Vercel production is `dpl_4Cqv9KsYsMJhuaAmrGSmZiGnJqga`, Worker version is `29571b47-2f2b-449f-8bbc-ce15d14c0832`, and live acceptance passed without private leak markers.
-- 2026-07-03: AWS image provider is active. PR #3 deployed as `dpl_5f1tYG7WDvDY5gxpfxuAWwme96Cx`; a live test review proved `media.renuvex.app` delivery, 14 variants, no public leak markers, and immutable cache headers.
+- 2026-07-04: QStash scheduler groundwork is staged: signed internal endpoint, explicit maintenance task bodies, and `ScheduledJobRunLock`; schedule creation and Vercel cron removal remain separate approval gates.
+- 2026-07-04: AWS image orphan scan includes public-only `reviews/{assetId}/` synthetic quarantine ids.
+- 2026-07-04: AWS image lightbox/full-size and admin thumbnail fixes are live; public URLs use `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>`.
+- 2026-07-04: Legacy image-provider DB alignment completed; AWS-only image source pass is merged/deployed and live acceptance passed without private leak markers.
+- 2026-07-03: AWS image provider is active; live test proved `media.renuvex.app` delivery, 14 variants, no public leak markers, and immutable cache headers.
 - 2026-07-02: PDP review widget clears stale shadow content during SPA product transitions; manual dev-storefront acceptance confirmed the neutral shell instead of stale review cards.
 - 2026-07-02: Worker-cached `GET /api/public/settings` is live. A read-only check returned `200` from Cloudflare with `X-Renuvex-Edge-Cache: MISS` and then `HIT`; `POST /api/public/storefront-theme/lazy-sync` remains on `app.renuvex.app`.
 - 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.
@@ -138,7 +137,6 @@ source_files:
 - 2026-06-28/2026-07-02: Worker asset delivery is live for `widget.renuvex.app`; Worker V2 read cache is live for settings, ratings, ratings-by-slug, and reviews. `app.renuvex.app` remains backend/write/upload/video/Mux/QStash.
 - 2026-07-02: AWS widget CDN canary is closed; Cloudflare Worker V2 stays production delivery.
 - 2026-06-23: Review Video playback uses official Mux Player; Mux Data tracking/cookies stay disabled.
-- 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-21: Mux cutover and cleanup are live; see [[ADR_0032_Review_Video_On_Mux]].
 
 ## Current Risks / Open Questions
