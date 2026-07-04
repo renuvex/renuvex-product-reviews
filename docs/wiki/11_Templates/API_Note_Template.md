@@ -3,15 +3,24 @@ type: api
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-07-04
+last_verified: 2026-07-04
+confidence: medium
 tags:
   - template
   - api
 related:
   - "[[Backend_API_Map]]"
+source_files: []
 ---
 
 # API — `<METHOD> /api/<path>`
+
+## Agent Brief
+Use this page when changing `<METHOD> /api/<path>`. Auth: <public/admin/internal>.
+Verify first: `src/app/api/.../route.ts` and the shared helpers it imports. Do
+not assume request/response shape, cache headers, rate limits, or side effects
+without checking source and tests.
 
 ## Summary
 One-line description.

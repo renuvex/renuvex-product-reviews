@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 const args = new Set(process.argv.slice(2));
 const jsonOutput = args.has("--json");
 const changedSourceCheck = args.has("--changed-source-check");
+const strictMode = args.has("--strict");
 
 const root = process.cwd();
 const wikiRoot = path.join(root, "docs", "wiki");
@@ -17,6 +18,11 @@ const REQUIRED_FRONTMATTER_FIELDS = [
   "project",
   "created",
   "updated",
+  "tags",
+  "related",
+];
+
+const RECOMMENDED_FRONTMATTER_FIELDS = [
   "last_verified",
   "confidence",
   "source_files",
@@ -56,9 +62,11 @@ const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
 const DATE_FIELDS = ["created", "updated", "last_verified"];
 
 const MAX_HOT_CONTEXT_WORDS = 500;
+const MAX_HOT_CONTEXT_SOURCE_FILES = 20;
 const MAX_PROMPT_PAGE_WORDS = 1200;
-const MAX_NORMAL_PAGE_WORDS = 1200;
 const MAX_AGENTS_WORDS = 600;
+const LONG_PAGE_WORDS = 1200;
+const AGENT_BRIEF_WORDS = 250;
 
 const HOT_CONTEXT_REQUIRED_HEADINGS = [
   "## Current Focus",
@@ -86,6 +94,20 @@ const allowedPromptFiles = new Set([
 ]);
 
 const PROMPTS_DIR_NAME = "09_Prompts";
+
+const AGENT_BRIEF_TYPES = new Set([
+  "architecture",
+  "api",
+  "bug",
+  "codebase",
+  "database",
+  "decision",
+  "ikas",
+  "maintenance",
+  "research",
+  "status",
+  "widget",
+]);
 
 const results = {
   tool: "wiki-audit",
@@ -133,6 +155,21 @@ function wordCount(text) {
     .replace(/^---\r?\n[\s\S]*?\r?\n---/, "")
     .split(/\s+/)
     .filter(Boolean).length;
+}
+
+function hasAgentBrief(text) {
+  return /^## Agent Brief\s*$/im.test(text);
+}
+
+function getAgentBriefWordCount(text) {
+  const start = text.search(/^## Agent Brief\s*$/im);
+  if (start === -1) return 0;
+
+  const afterHeading = text.slice(start).replace(/^## Agent Brief\s*\r?\n/im, "");
+  const nextHeading = afterHeading.search(/^##\s+/m);
+  const body = nextHeading === -1 ? afterHeading : afterHeading.slice(0, nextHeading);
+
+  return body.split(/\s+/).filter(Boolean).length;
 }
 
 function stripYamlScalar(value) {
@@ -205,6 +242,10 @@ function addByRel(level, relativePath, message) {
   const item = { file: relativePath, message };
   if (level === "ERROR") results.errors.push(item);
   else results.warnings.push(item);
+}
+
+function addStrictable(file, message) {
+  add(strictMode ? "ERROR" : "WARN", file, message);
 }
 
 function finalizeHealth() {
@@ -332,10 +373,20 @@ function validateWikiLinks(file, text, lookup) {
   }
 }
 
-function validateHotContext(file, text) {
+function validateHotContext(file, text, fm) {
   for (const heading of HOT_CONTEXT_REQUIRED_HEADINGS) {
     if (!text.includes(heading)) {
       add("ERROR", file, `Hot_Context missing required heading: ${heading}`);
+    }
+  }
+
+  if (fm?.keys?.has("source_files")) {
+    const sourceFileCount = asList(fm.values.source_files).filter((item) => item && item !== "[]").length;
+    if (sourceFileCount > MAX_HOT_CONTEXT_SOURCE_FILES) {
+      addStrictable(
+        file,
+        `Hot_Context source_files should stay hot-path focused (${sourceFileCount}/${MAX_HOT_CONTEXT_SOURCE_FILES}). Move detailed routing to focused wiki pages.`
+      );
     }
   }
 }
@@ -428,6 +479,14 @@ for (const file of files) {
       }
     }
 
+    if (strictMode) {
+      for (const field of RECOMMENDED_FRONTMATTER_FIELDS) {
+        if (!fm.keys.has(field)) {
+          add("WARN", file, `missing recommended frontmatter field: ${field}`);
+        }
+      }
+    }
+
     validateEnum(file, fm, "type", ALLOWED_TYPES);
     validateEnum(file, fm, "status", ALLOWED_STATUSES);
     validateEnum(file, fm, "confidence", ALLOWED_CONFIDENCE);
@@ -444,7 +503,7 @@ for (const file of files) {
   const wc = wordCount(text);
 
   if (relative === "docs/wiki/Hot_Context.md") {
-    validateHotContext(file, text);
+    validateHotContext(file, text, fm);
     if (wc > MAX_HOT_CONTEXT_WORDS) {
       add("ERROR", file, `Hot_Context exceeds ${MAX_HOT_CONTEXT_WORDS} words. Current: ${wc}`);
     }
@@ -458,8 +517,28 @@ for (const file of files) {
     add("WARN", file, `prompt page exceeds ${MAX_PROMPT_PAGE_WORDS} words. Current: ${wc}`);
   }
 
-  if (!relative.includes(`docs/wiki/${PROMPTS_DIR_NAME}/`) && !isArchive && wc > MAX_NORMAL_PAGE_WORDS) {
-    add("WARN", file, `page exceeds ${MAX_NORMAL_PAGE_WORDS} words. Current: ${wc}`);
+  const pageType = scalar(fm?.values?.type);
+  const pageStatus = scalar(fm?.values?.status);
+  if (
+    fm &&
+    pageStatus === "active" &&
+    AGENT_BRIEF_TYPES.has(pageType) &&
+    !relative.includes(`docs/wiki/${PROMPTS_DIR_NAME}/`) &&
+    !isArchive &&
+    !isTemplate &&
+    wc > LONG_PAGE_WORDS
+  ) {
+    if (!hasAgentBrief(text)) {
+      addStrictable(
+        file,
+        `long active ${pageType} page should have a ## Agent Brief for low-token routing. Current: ${wc} words.`
+      );
+    } else {
+      const briefWords = getAgentBriefWordCount(text);
+      if (briefWords > AGENT_BRIEF_WORDS) {
+        add("WARN", file, `Agent Brief exceeds ${AGENT_BRIEF_WORDS} words. Current: ${briefWords}`);
+      }
+    }
   }
 }
 

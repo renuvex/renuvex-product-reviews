@@ -26,6 +26,15 @@ source_files:
 
 # ADR_0035 - QStash Scheduler For Maintenance
 
+## Agent Brief
+Use this ADR when changing scheduler source-of-truth, QStash schedules,
+`/api/internal/scheduled-jobs`, or maintenance idempotency. Current decision:
+QStash schedules trigger daily full maintenance and monthly image cleanup with
+signed POST bodies; `CRON_SECRET` remains only for manual/admin endpoints; and
+`ScheduledJobRunLock` prevents duplicate same-slot execution. Do not use
+QStash `nextScheduleTime` as the health gate; rely on delivery logs, DLQ, and
+runtime DB lock evidence.
+
 ## Context
 
 The app previously had two maintenance crons in `vercel.json`: daily maintenance and monthly

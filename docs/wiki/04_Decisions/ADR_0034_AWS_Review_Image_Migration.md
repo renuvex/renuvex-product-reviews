@@ -48,6 +48,17 @@ source_files:
 
 # ADR_0034 - AWS Review Image Migration
 
+## Agent Brief
+Use this ADR for the final AWS-only review-image contracts: upload intent,
+S3 object layout, variant generation, public URL shape, admin signed preview,
+schema fields, cleanup family behavior, runtime IAM, and rollback boundaries.
+Current truth: new review images are AWS-only; Cloudinary is no longer a
+production image provider and old pre-public data was not migrated. Verify
+implementation in `src/lib/media/providers/aws-review-image.ts`, public upload
+routes, admin image-preview route, `prisma/schema.prisma`, and AWS templates
+before changing behavior. Provider or infrastructure mutations still need a
+separate approval gate.
+
 ## Status
 
 Accepted and implemented for the current test/pre-public environment.

@@ -3,7 +3,7 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-30
+updated: 2026-07-04
 last_verified: 2026-06-30
 confidence: high
 tags:
@@ -90,6 +90,16 @@ source_files:
 ---
 
 # Widget Architecture
+
+## Agent Brief
+Use this page when a task touches the storefront widget loader, runtime modules,
+surface lifecycle, Shadow DOM, Cloudflare Worker delivery, widget build output,
+or widget smoke gates. Current truth: widget assets are delivered by the
+Cloudflare Worker path, runtime chunks are content-hashed, and old runtime files
+are intentionally retained for cache safety. Start with `src/widget/loader.js`,
+`src/widget/index.js`, `scripts/build-widget.mjs`, and focused widget tests from
+`source_files`; then follow imports for the touched surface. Source/runtime
+behavior wins over this page.
 
 ## Summary
 A classic ikas-compatible storefront entry (`public/widget.js`) loaded by every storefront page, which imports an ESM runtime and lazy chunks from `public/widget-runtime/*`. It detects context (product page, listing/search page, preview iframe), fetches per-merchant settings, and renders summaries, listings, badges, the review submission modal, and the photo review detail lightbox. The runtime is intentionally framework-free.

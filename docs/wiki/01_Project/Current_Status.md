@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 source_files: []
 tags:
@@ -19,6 +19,15 @@ related:
 ---
 
 # Current Status - Renuvex Product Reviews
+
+## Agent Brief
+Use this page only for a fast project-state snapshot. It is intentionally not a
+deep implementation source; when details matter, follow links to the relevant
+ADR, architecture page, or source file. Current truth: the project is
+pre-public-launch; AWS review images, Mux video, Cloudflare Worker widget
+delivery, QStash maintenance scheduling, and public read-cache paths are live.
+Remaining public-launch blockers are mainly security hardening, operational
+observability, authenticated dashboard smoke, and product polish.
 
 ## Current Phase
 Active development on the production test store. Core review, image, Mux video, moderation, storefront widget, Cloudflare Worker delivery, and public read-cache paths are implemented and live. The project is still pre-public-launch; remaining work is product polish, security hardening, operational smoke coverage, and future feature expansion rather than a pending Mux/Worker migration.

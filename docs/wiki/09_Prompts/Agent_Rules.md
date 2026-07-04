@@ -3,8 +3,8 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - agent-rules
@@ -27,7 +27,7 @@ This page is the detailed project-memory procedure for AI coding agents. `AGENTS
 1. `AGENTS.md`
 2. `docs/wiki/Hot_Context.md`
 3. `docs/wiki/Index.md`
-4. 2-5 relevant wiki pages
+4. `## Agent Brief` sections in the 2-5 relevant wiki pages
 5. related source/config/test files
 
 ## Strict Rules
@@ -48,6 +48,12 @@ Add or update wiki content only when it creates durable project memory: architec
 Do not update wiki for minor visual-only, copy-only, formatting-only, or low-impact changes.
 
 If evidence is weak, add a focused item to [[Open_Questions]] instead of guessing.
+
+Long critical pages are allowed when they preserve decisions, runbooks, evidence,
+or incident history. To keep agent token cost low, any active long page should
+start with `## Agent Brief`: when to read it, current truth, source files to
+verify first, and assumptions to avoid. Keep `Hot_Context.md` and `Index.md`
+short; move detailed source routing to focused pages.
 
 ## Source Dependency Verification
 

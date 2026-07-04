@@ -16,6 +16,11 @@ source_files: []
 
 # ADR_XXXX — Decision Title
 
+## Agent Brief
+Use this ADR when: <task trigger>. Current decision: <one short statement>.
+Verify first: `<primary/source/file>`. Do not assume: <rollback/security/data
+risk>. Read the full ADR only when the task needs trade-offs or history.
+
 ## Status
 Proposed | Accepted | Superseded by ADR_YYYY_Title | Deprecated
 

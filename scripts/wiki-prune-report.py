@@ -11,8 +11,24 @@ ROOT = Path.cwd()
 WIKI = ROOT / "docs" / "wiki"
 
 MAX_HOT_CONTEXT_WORDS = 500
+MAX_HOT_CONTEXT_SOURCE_FILES = 20
 MAX_PAGE_WORDS = 1200
+HUGE_PAGE_WORDS = 3000
 STALE_DAYS = 60
+
+AGENT_BRIEF_TYPES = {
+    "architecture",
+    "api",
+    "bug",
+    "codebase",
+    "database",
+    "decision",
+    "ikas",
+    "maintenance",
+    "research",
+    "status",
+    "widget",
+}
 
 def read(path):
     return path.read_text(encoding="utf-8", errors="ignore")
@@ -27,6 +43,29 @@ def frontmatter_value(text, key):
         return None
     return m.group(1).strip().strip('"').strip("'")
 
+def frontmatter_list_count(text, key):
+    lines = text.splitlines()
+    count = 0
+    in_key = False
+
+    for line in lines:
+        if re.match(rf"^{key}:\s*(\[.*\])?\s*$", line):
+            in_key = True
+            inline = line.split(":", 1)[1].strip()
+            if inline == "[]":
+                return 0
+            continue
+
+        if in_key:
+            if line.strip() == "---":
+                break
+            if re.match(r"^[A-Za-z0-9_-]+:", line):
+                break
+            if re.match(r"^\s*-\s+", line):
+                count += 1
+
+    return count
+
 def parse_date(value):
     if not value:
         return None
@@ -39,6 +78,9 @@ def duplicate_heading_score(text):
     headings = re.findall(r"^#{2,4}\s+(.+)$", text, flags=re.MULTILINE)
     normalized = [h.strip().lower() for h in headings]
     return len(normalized) - len(set(normalized))
+
+def has_agent_brief(text):
+    return bool(re.search(r"^## Agent Brief\s*$", text, flags=re.MULTILINE | re.IGNORECASE))
 
 def main():
     parser = argparse.ArgumentParser()
@@ -80,10 +122,30 @@ def main():
                 "message": f"Hot_Context exceeds {MAX_HOT_CONTEXT_WORDS} words ({wc}). Summarize active context."
             })
 
-        if wc > MAX_PAGE_WORDS and "archive" not in rel:
+        if file.name == "Hot_Context.md":
+            source_file_count = frontmatter_list_count(text, "source_files")
+            if source_file_count > MAX_HOT_CONTEXT_SOURCE_FILES:
+                result["suggestions"].append({
+                    "file": rel,
+                    "message": f"Hot_Context has {source_file_count} source_files. Keep only hot-path anchors; move detailed routing to focused pages."
+                })
+
+        if (
+            wc > MAX_PAGE_WORDS
+            and "archive" not in rel
+            and status == "active"
+            and page_type in AGENT_BRIEF_TYPES
+            and not has_agent_brief(text)
+        ):
             result["suggestions"].append({
                 "file": rel,
-                "message": f"Page exceeds {MAX_PAGE_WORDS} words ({wc}). Consider summarizing or splitting only if concepts differ."
+                "message": f"Long active {page_type} page has no Agent Brief ({wc} words). Add a 150-250 word routing brief before pruning."
+            })
+
+        if wc > HUGE_PAGE_WORDS and "archive" not in rel and page_type == "log":
+            result["suggestions"].append({
+                "file": rel,
+                "message": f"Large log page ({wc} words). Consider rolling old entries into archive/history only if current routing stays clear."
             })
 
         if last_verified and (today - last_verified).days > STALE_DAYS:

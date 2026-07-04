@@ -3,8 +3,8 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - widget
@@ -55,6 +55,16 @@ source_files:
 ---
 
 # Widget Performance
+
+## Agent Brief
+Use this page for storefront widget byte budget, lazy-loading, request fan-out,
+runtime chunking, and Cloudflare Worker delivery performance decisions. Current
+hard local gate is `pnpm budget:widget` after `pnpm build:widget`; live network
+budgets are report-oriented unless explicitly promoted. Verify current artifact
+sizes in `public/widget-runtime/build-manifest.json`, budget thresholds in
+`config/widget-performance-budget.json`, and behavior through focused widget
+smoke tests. Do not claim live performance gains without a fresh deployed
+measurement.
 
 ## Summary
 The widget runs on every storefront page in the world that hosts our merchants. Bundle size, time to interactive, and request fan-out are the three numbers that matter.

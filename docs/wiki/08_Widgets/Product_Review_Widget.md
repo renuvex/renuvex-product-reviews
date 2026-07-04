@@ -3,7 +3,7 @@ type: widget
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-24
+updated: 2026-07-04
 last_verified: 2026-06-24
 confidence: high
 tags:
@@ -55,6 +55,16 @@ source_files:
 ---
 
 # Product Review Widget
+
+## Agent Brief
+Use this page for PDP review block behavior: summary layouts, review layouts,
+filter/sort controls, pagination, media gallery, review wizard, image/video
+rendering, and the review detail lightbox. Verify source first in
+`src/widget/reviews-section/*`, especially `bootstrap.js`, `render/*`,
+`media-thumbnail.js`, `video-playback.js`, and review-modal step files. Current
+media truth is AWS review images plus Mux video; Cloudinary is no longer a
+production review-image path. Keep widget UI changes covered by focused widget
+runtime/media/interactions tests.
 
 ## Summary
 The full review block on a product detail page: rating summary (with bar chart for distribution), filter/sort controls, the review list, media gallery, a "Write a Review" CTA that opens a multi-step submission modal, and a separate media review detail lightbox. Composed of swappable summary and review layouts.

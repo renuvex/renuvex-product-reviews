@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-01
-last_verified: 2026-07-01
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - testing
@@ -96,6 +96,16 @@ source_files:
 ---
 
 # Test Strategy
+
+## Agent Brief
+Use this page before changing widget runtime, public APIs, admin media preview,
+upload/media providers, cleanup jobs, Cloudflare Worker delivery, or release
+gates. Current suite shape: unit tests cover backend/provider contracts;
+Playwright widget projects cover runtime, interactions, and media behavior; and
+Worker delivery has separate dry-run/build/budget gates. Do not run every test
+blindly for tiny changes; choose focused tests from the touched layer, then add
+broader gates when the change crosses provider, widget, or public API
+boundaries.
 
 ## Summary
 The automated test suite has six layers: widget network/chunk contracts, widget layout/runtime rendering, storefront interactions, cross-browser review media, admin preview/settings behavior, and backend/theme-state unit tests. The suite is designed to catch regressions in public widget behavior without depending on real ikas auth, production DB data, AWS/Mux provider uploads, or live merchant credentials.

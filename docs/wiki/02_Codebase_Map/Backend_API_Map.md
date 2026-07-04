@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - api
@@ -53,8 +53,18 @@ source_files:
 
 # Backend / API Map
 
+## Agent Brief
+Use this page to route backend work to the right API family. Admin routes are
+JWT-gated merchant operations, public routes are storefront/widget calls,
+internal routes are signed provider/job endpoints, and ikas routes are
+server-side Admin GraphQL calls. Verify route behavior in `src/app/api/*` and
+shared helpers before editing. High-risk paths are public review reads/uploads,
+AWS image register/approval, Mux video, QStash-signed internal jobs, rate
+limits, and any endpoint that mutates reviews, media, summaries, or provider
+state.
+
 ## Summary
-Three groups of API routes:
+Main API route groups:
 - **`/api/admin/*`** — gated by JWT (`getUserFromRequest`), called by the merchant admin UI.
 - **`/api/public/*`** — CORS-open (`Access-Control-Allow-Origin: *`), called by `widget.js` from any storefront. Rate-limited via Upstash Redis.
 - **`/api/oauth/*`** — install / callback flow.

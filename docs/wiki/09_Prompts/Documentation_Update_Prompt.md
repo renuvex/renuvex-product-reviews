@@ -3,8 +3,8 @@ type: prompt
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-13
-last_verified: 2026-05-13
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - prompts
@@ -33,6 +33,8 @@ source_files:
 - Use `source_files` as focused verification starting points, not exhaustive dependency graphs.
 - Put uncertain information in [[Open_Questions]] instead of guessing.
 - Keep procedures in `09_Prompts`; this repo already uses `08_Widgets` for widget domain memory.
+- Keep hot-path wiki reads short. Long critical pages are acceptable when they
+  start with `## Agent Brief` and preserve durable evidence.
 
 ## Advisory Wiki Commands
 
@@ -56,6 +58,7 @@ For every `.md` under `docs/wiki/` (except `Index.md`, which has a different sha
 - [ ] `updated` field is reasonably current (>30 days old → flag for review).
 - [ ] Has a `# Title` H1.
 - [ ] Has a `## Summary` section.
+- [ ] If active and long, has a short `## Agent Brief` before deep detail.
 - [ ] Has a `## Obsidian Links` (or `## Related Notes`) section with at least one link.
 
 ### Cross-file checks
@@ -80,6 +83,11 @@ For every `.md` under `docs/wiki/` (except `Index.md`, which has a different sha
 - [ ] `02_Codebase_Map/Folder_Structure.md` — does the tree match the real `src/` layout?
 - [ ] `02_Codebase_Map/Important_Files.md` — are listed files still present?
 - [ ] `04_Decisions/*.md` — any decisions that the code now contradicts? Should they be marked superseded with a new ADR?
+
+### Low-token routing discipline
+- [ ] `Hot_Context.md` contains only active, high-signal context and a small set of anchor `source_files`.
+- [ ] Long active ADR/runbook/architecture/research pages are not blindly pruned; they have concise `## Agent Brief` sections.
+- [ ] Detailed source routing lives in focused pages, not the hot-path context page.
 
 ### Wiki update logging discipline
 - [ ] Pages that have been substantively edited since the last lint pass should have their frontmatter `updated: YYYY-MM-DD` reflect that.

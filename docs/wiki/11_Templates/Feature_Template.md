@@ -3,12 +3,15 @@ type: status
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-07-04
+last_verified: 2026-07-04
+confidence: medium
 tags:
   - template
   - feature
 related:
   - "[[Feature_Map]]"
+source_files: []
 ---
 
 # Feature — Name

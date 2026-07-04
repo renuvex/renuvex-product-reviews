@@ -3,12 +3,15 @@ type: prompt
 project: renuvex-product-reviews
 status: draft
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-07-04
+last_verified: 2026-07-04
+confidence: medium
 tags:
   - template
   - prompt
 related:
   - "[[Index]]"
+source_files: []
 ---
 
 # Prompt Name

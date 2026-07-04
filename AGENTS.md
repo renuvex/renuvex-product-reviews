@@ -240,10 +240,11 @@ Use **Conventional Commits** format:
   1. `AGENTS.md`
   2. `/docs/wiki/Hot_Context.md`
   3. `/docs/wiki/Index.md`
-  4. only the relevant 2-5 wiki pages
+  4. `## Agent Brief` sections in only the relevant 2-5 wiki pages
   5. then the related source/config/test files.
 - Source code is the source of truth. If the wiki conflicts with source files, configs, or runtime behavior, trust the source code and update the wiki.
 - Wiki pages mentioning implementation details should point to focused `source_files` so future agents can verify them.
+- Keep hot-path wiki reads short. Long critical pages are allowed when they preserve decisions/runbooks/evidence, but they should start with `## Agent Brief` for low-token routing.
 - Update wiki files only when useful for durable project memory. Do not update wiki for minor noise (tiny visual tweaks, formatting, low-impact refactors).
 - Preserve ADRs, significant bug history, and problem-resolution notes. Large cleanup, archiving, or deleting requires user confirmation.
 - Never document secrets, API keys, tokens, private credentials, or real env values.

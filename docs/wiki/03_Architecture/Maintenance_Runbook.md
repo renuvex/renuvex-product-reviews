@@ -44,6 +44,16 @@ source_files:
 
 # Maintenance Scheduler Runbook
 
+## Agent Brief
+Use this runbook for scheduled maintenance operations, QStash schedule health,
+manual admin maintenance endpoints, media-provider job delivery, and cleanup
+failure playbooks. Current source of truth: QStash schedules trigger
+`POST /api/internal/scheduled-jobs`; Vercel Cron has been removed as scheduler
+source-of-truth. Real cleanup deletes are guarded by `MediaCleanupRun`,
+`OrphanImageQuarantine`, idempotent provider jobs, and breaker rules. Never run
+manual cleanup, force flags, provider deletes, schedule mutation, or deploy
+commands without explicit scope, risk, rollback, and approval.
+
 Operational reference for the scheduled background jobs and how their failures surface.
 
 ## Scheduler status

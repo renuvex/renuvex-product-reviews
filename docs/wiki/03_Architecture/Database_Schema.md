@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-09
-last_verified: 2026-06-09
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - database
@@ -33,8 +33,17 @@ source_files:
 
 # Database Schema
 
+## Agent Brief
+Use this page for durable Prisma model shape and migration-history orientation,
+not as the final source of truth. Verify all field names, defaults, indexes,
+and relations in `prisma/schema.prisma` first, then inspect the migration files
+that introduced the touched model. Current high-risk areas are review media,
+AWS image pending/variant fields, Mux media jobs, summary read models,
+two-phase orphan cleanup, and `ScheduledJobRunLock` scheduler idempotency.
+Production migrations must remain expand/contract safe.
+
 ## Summary
-PostgreSQL via Prisma. Ten models. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
+PostgreSQL via Prisma. Source of truth: [prisma/schema.prisma](prisma/schema.prisma).
 
 ## Models
 

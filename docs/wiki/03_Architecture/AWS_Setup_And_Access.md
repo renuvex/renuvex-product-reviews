@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - aws
@@ -36,15 +36,25 @@ source_files:
 
 # AWS Setup And Access
 
+## Agent Brief
+Use this page for AWS access, Identity Center profiles, review-image S3 and
+CloudFront resources, runtime IAM, ACM/DNS history, cost guardrails, and AWS
+skill/documentation sources. Current production AWS use is review-image storage
+and delivery through private S3 plus CloudFront OAC on `media.renuvex.app`;
+Cloudflare Worker remains the widget delivery path. Use `renuvex-readonly` for
+audits by default. Any AWS stack, DNS, logging, alarm, S3 delete, invalidation,
+or provider mutation still requires explicit scope, risk, rollback, and
+approval before execution.
+
 ## Purpose
 
 This page records the AWS access model used by this repository so future agents
 do not re-create the same Identity Center, CLI, S3, CloudFront, and skill-source
 decisions from memory.
 
-AWS is currently used only for a non-invasive storefront widget CDN canary. The
-production storefront delivery path remains Cloudflare Worker unless a later
-decision explicitly changes it.
+AWS is currently used for review-image storage and delivery. The older widget
+CDN canary remains documented for history, but production storefront widget
+delivery stays on the Cloudflare Worker path.
 
 ## Verified Local Tooling
 

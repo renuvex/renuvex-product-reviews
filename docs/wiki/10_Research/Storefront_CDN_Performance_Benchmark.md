@@ -3,8 +3,8 @@ type: research
 project: renuvex-product-reviews
 status: active
 created: 2026-06-28
-updated: 2026-06-30
-last_verified: 2026-06-30
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - widget
@@ -33,6 +33,16 @@ source_files:
 ---
 
 # Storefront CDN Performance Benchmark
+
+## Agent Brief
+Use this research page only when comparing storefront widget/CDN delivery,
+Cloudflare Worker read-cache behavior, or historical CloudFront canary evidence.
+It is intentionally long because it preserves measurement history. Current
+production decision remains Cloudflare Worker for widget delivery; AWS
+CloudFront is used for review-image media, not widget delivery. Do not infer
+global CDN performance from one local run. For current gates, prefer
+`Widget_Performance`, `Widget_Architecture`, `scripts/measure-deployed-widget-network.mjs`,
+and fresh browser/network measurements.
 
 ## Summary
 
