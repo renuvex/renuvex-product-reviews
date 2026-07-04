@@ -125,6 +125,7 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-04: AWS public-scale guardrail decision is documented: add minimal CloudFront CloudWatch alarms and short-retention CloudFront standard logs before public launch; defer S3 Inventory/Metadata until growth; do not enable broad S3 data events or S3 server access logging by default. See [[AWS_Setup_And_Access]].
 - 2026-07-04: QStash maintenance scheduler cutover is active: signed internal endpoint, explicit task bodies, `ScheduledJobRunLock`, and QStash schedules replace Vercel Cron.
 - 2026-07-04: QStash `nextScheduleTime` is not a health gate; use delivery logs/DLQ plus `ScheduledJobRunLock` runtime evidence.
 - 2026-07-04: AWS image orphan scan includes public-only `reviews/{assetId}/` synthetic quarantine ids.

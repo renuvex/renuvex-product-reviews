@@ -455,6 +455,83 @@ pnpm aws:review-images:validate-template
 pnpm aws:review-images:validate-runtime-iam-template
 ```
 
+## Public-Scale Cost And Observability Guardrails
+
+Status snapshot on 2026-07-04:
+
+- `renuvex-readonly` can verify billing and observability state; the narrower
+  `renuvex-review-images` operator is not the right audit profile for billing
+  and CloudWatch inventory.
+- AWS Budget `Renuvex AWS Monthly Guardrail` exists, is healthy, and currently
+  has a `10 USD` monthly limit. Cost Anomaly Detection monitor
+  `Default-Services-Monitor` exists.
+- CloudWatch alarms are not configured in `us-east-1` or `eu-central-1`.
+- S3 Storage Lens default account dashboard is active with free metrics.
+- CloudFront standard logging is disabled for the media distribution
+  `E1205OOLPZDB00` (`media.renuvex.app`) and the widget canary distribution.
+- CloudTrail trails are not configured; only normal Event History is available.
+- S3 server access logging and S3 Metadata are not configured for the review
+  image bucket.
+
+The image object multiplier is intentional but important for scale planning.
+Each uploaded review-image asset keeps a private original plus 14 private
+variants. Approved assets also publish 14 public variants. Therefore, at
+`100,000,000` asset families:
+
+| Approved share | Approximate S3 object count |
+|---:|---:|
+| 25% | 1.85B |
+| 50% | 2.2B |
+| 100% | 2.9B |
+
+Public-launch guardrails that should be added before broad traffic:
+
+- Minimal CloudWatch alarm set for the media CloudFront distribution. Use
+  `us-east-1` because CloudFront global metrics are reported there. Start with
+  `5xxErrorRate`; add `TotalErrorRate` if it provides useful signal without
+  noisy alerts. Do not use high-resolution or custom metrics for this first
+  set.
+- CloudFront standard logs for the media distribution only, delivered to an S3
+  log bucket/prefix with a short `7` or `14` day lifecycle. Do not route logs to
+  CloudWatch Logs, Firehose, or Parquet conversion unless a later incident or
+  analytics requirement justifies the extra system and cost.
+
+Growth-stage guardrails:
+
+- Move large cleanup/orphan/cost audits from raw S3 listing toward S3 Inventory
+  or S3 Metadata Tables plus Athena before object counts make raw list scans
+  operationally expensive. The application cleanup model still stays two-phase:
+  quarantine first, then delete only after grace period and breakers.
+- Keep S3 Storage Lens on free metrics for now. Consider Advanced metrics only
+  when storage growth needs prefix-level or recommendation detail that the free
+  account dashboard cannot answer.
+
+Do not enable by default:
+
+- Broad CloudTrail S3 data events, especially `GetObject` read events for
+  public media. They can become expensive at global CDN traffic scale. If audit
+  depth is needed, prefer a short-lived, scoped write/delete audit.
+- S3 server access logging for the review-image bucket. Public traffic is
+  served through CloudFront, so CloudFront standard logs are the first useful
+  log source. S3 server logging is best-effort and still creates S3 storage and
+  request cost.
+- CloudFront real-time logs, high-resolution CloudWatch metrics, custom metrics,
+  or Firehose/Parquet log pipelines until there is a concrete operational need.
+
+Any alarm, log bucket, log delivery, trail, Inventory, Metadata, Athena, or
+Storage Lens Advanced change is an AWS provider mutation. Before applying it,
+write the exact scope, risk, and rollback plan and wait for explicit approval.
+
+References:
+
+- [CloudFront metrics in CloudWatch](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html)
+- [CloudFront standard logging](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/standard-logging.html)
+- [S3 Inventory](https://docs.aws.amazon.com/AmazonS3/latest/userguide/configure-inventory.html)
+- [S3 Metadata tables](https://docs.aws.amazon.com/AmazonS3/latest/userguide/metadata-tables-overview.html)
+- [S3 Storage Lens pricing](https://aws.amazon.com/s3/storage-lens/)
+- [CloudTrail pricing](https://aws.amazon.com/cloudtrail/pricing/)
+- [CloudFront real-time logs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/real-time-logs.html)
+
 ## Operational Rules
 
 - Root credentials are not an operational path.
