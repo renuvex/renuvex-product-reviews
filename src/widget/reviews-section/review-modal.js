@@ -316,7 +316,7 @@ function buildLeft(r, reviewIdx, photoIdx, reviewsWithPhotos, modal, requestClos
   } else {
     var mainImg = document.createElement('img');
     mainImg.className = 'renuvex-pr-modal-main-img' + (animClass ? ' ' + animClass : '');
-    var mainAttrs = buildReviewImageAttrs(currentMedia, LIGHTBOX_MAIN_WIDTH);
+    var mainAttrs = buildReviewImageAttrs(currentMedia, LIGHTBOX_MAIN_WIDTH, { preferFullSize: true });
     mainImg.src = mainAttrs.src;
     if (mainAttrs.srcset) mainImg.srcset = mainAttrs.srcset;
     mainImg.decoding = 'async';

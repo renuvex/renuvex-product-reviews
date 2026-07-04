@@ -86,7 +86,7 @@ describe('createMediaThumbnail intrinsic fallback dimensions', () => {
     expect(thumb.width).toBe(110);
     expect(thumb.height).toBe(110);
     expect(thumb.src).toBe(url);
-    expect(thumb.srcset).toBe(`${url} 1x, ${url} 2x`);
+    expect(thumb.srcset).toBeUndefined();
   });
 
   test('uses source dimensions for Mux poster transforms and small display fallback', () => {

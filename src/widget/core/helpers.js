@@ -321,7 +321,7 @@ export function buildResponsiveImgAttrs(url, baseWidth) {
   var w2 = w1 * 2;
   var src1 = optimizeImageUrl(url, w1);
   var src2 = optimizeImageUrl(url, w2);
-  return { src: src1, srcset: src1 + ' 1x, ' + src2 + ' 2x' };
+  return { src: src1, srcset: src2 && src2 !== src1 ? src1 + ' 1x, ' + src2 + ' 2x' : '' };
 }
 
 // Image error fallback — endüstri standardı graceful degradation pattern.
@@ -357,7 +357,32 @@ export function hideOnImageError(img) {
   attachImageErrorHandler(img, function (el) { el.style.display = 'none'; });
 }
 
-export function buildReviewImageAttrs(item, baseWidth) {
+function isFullSizeReviewVariant(variant) {
+  return !!(variant && typeof variant.id === 'string' && /^w\d+$/.test(variant.id));
+}
+
+function reviewVariantRank(variant) {
+  var id = variant && typeof variant.id === 'string' ? variant.id : '';
+  if (id === 'w200') return 10;
+  if (id === 'w300') return 20;
+  if (id === 'w400') return 30;
+  if (id === 'w600') return 40;
+  if (id === 'w1200') return 50;
+  if (id === 'thumb_320x427') return 60;
+  if (id === 'thumb_640x854') return 70;
+  return 0;
+}
+
+function sortReviewVariantsByDisplaySize(variants) {
+  return variants.sort(function (a, b) {
+    var widthDiff = a.width - b.width;
+    if (widthDiff) return widthDiff;
+    return reviewVariantRank(a) - reviewVariantRank(b);
+  });
+}
+
+export function buildReviewImageAttrs(item, baseWidth, opts) {
+  opts = opts || {};
   var fallbackUrl = item && (item.url || item.thumbnailUrl);
   var variants = item && Array.isArray(item.variants) ? item.variants.slice() : [];
   if (!variants.length) return buildResponsiveImgAttrs(fallbackUrl, baseWidth);
@@ -367,7 +392,13 @@ export function buildReviewImageAttrs(item, baseWidth) {
     .sort(function (a, b) { return a.width - b.width; });
   var jpeg = variants.filter(function (variant) { return variant && variant.format === 'jpeg' && typeof variant.width === 'number' && variant.url; })
     .sort(function (a, b) { return a.width - b.width; });
+  sortReviewVariantsByDisplaySize(webp);
+  sortReviewVariantsByDisplaySize(jpeg);
   var preferred = webp.length ? webp : jpeg;
+  if (opts.preferFullSize === true) {
+    var fullSize = preferred.filter(isFullSizeReviewVariant);
+    if (fullSize.length) preferred = fullSize;
+  }
   function pick(width) {
     for (var i = 0; i < preferred.length; i++) {
       if (preferred[i].width >= width) return preferred[i].url;
@@ -377,7 +408,7 @@ export function buildReviewImageAttrs(item, baseWidth) {
   var src1 = pick(w1);
   var src2 = pick(w2) || src1;
   if (!src1) return buildResponsiveImgAttrs(fallbackUrl, baseWidth);
-  return { src: src1, srcset: src1 + ' 1x, ' + src2 + ' 2x' };
+  return { src: src1, srcset: src2 && src2 !== src1 ? src1 + ' 1x, ' + src2 + ' 2x' : '' };
 }
 
 // renderStars / ensureStarStyles / STAR_COLOR removed during the Shadow DOM
