@@ -167,4 +167,93 @@ describe('AWS review image provider', () => {
       'review-images/v1/public/stores/store-1/assets/11111111-1111-4111-8111-111111111111/',
     ]);
   });
+
+  it('discovers public-only reviews prefix families with a synthetic public id', async () => {
+    const { listAwsReviewImageObjectFamilies } = await import('@/lib/media/providers/aws-review-image');
+    const storeScopedAssetId = '11111111-1111-4111-8111-111111111111';
+    const publicOnlyAssetId = '22222222-2222-4222-8222-222222222222';
+
+    s3SendMock.mockImplementation(async (command) => {
+      const input = command.input as { Prefix?: string };
+      if (input.Prefix === 'review-images/v1/private/stores/') {
+        return {
+          Contents: [{
+            Key: `review-images/v1/private/stores/store-1/assets/${storeScopedAssetId}/variants/w1200.webp`,
+            LastModified: new Date('2026-07-01T00:00:00.000Z'),
+          }],
+        };
+      }
+      if (input.Prefix === 'review-images/v1/public/stores/') {
+        return { Contents: [] };
+      }
+      if (input.Prefix === 'reviews/') {
+        return {
+          Contents: [
+            {
+              Key: `reviews/${storeScopedAssetId}/w1200.webp`,
+              LastModified: new Date('2026-07-02T00:00:00.000Z'),
+            },
+            {
+              Key: `reviews/${publicOnlyAssetId}/thumb_640x854.webp`,
+              LastModified: new Date('2026-07-03T00:00:00.000Z'),
+            },
+          ],
+        };
+      }
+      return {};
+    });
+
+    const families = await listAwsReviewImageObjectFamilies();
+
+    expect(families).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        publicId: `aws_s3:store-1:${storeScopedAssetId}`,
+        storeId: 'store-1',
+        assetId: storeScopedAssetId,
+        scope: 'store_family',
+      }),
+      expect.objectContaining({
+        publicId: `aws_s3:public:${publicOnlyAssetId}`,
+        storeId: null,
+        assetId: publicOnlyAssetId,
+        scope: 'public_only',
+      }),
+    ]));
+    expect(families.map((family) => family.publicId)).not.toContain(`aws_s3:public:${storeScopedAssetId}`);
+  });
+
+  it('deletes only the simplified reviews prefix for public-only orphan families', async () => {
+    const { deleteAwsReviewImagePublicVariantPrefix } = await import('@/lib/media/providers/aws-review-image');
+    const assetId = '22222222-2222-4222-8222-222222222222';
+
+    s3SendMock.mockImplementation(async (command) => {
+      const input = command.input as { Prefix?: string };
+      if (input.Prefix === `reviews/${assetId}/`) {
+        return {
+          Contents: [
+            { Key: `reviews/${assetId}/thumb_640x854.webp` },
+            { Key: `reviews/${assetId}/w1200.jpeg` },
+          ],
+        };
+      }
+      return {};
+    });
+
+    const result = await deleteAwsReviewImagePublicVariantPrefix(assetId, { invalidatePublicVariants: false });
+
+    expect(result.deletedObjects).toBe(2);
+    expect(s3SendMock.mock.calls.map((call) => call[0].input?.Prefix).filter(Boolean)).toEqual([
+      `reviews/${assetId}/`,
+    ]);
+    expect(s3SendMock.mock.calls[1]?.[0]?.input).toMatchObject({
+      Bucket: 'review-image-bucket',
+      Delete: {
+        Objects: [
+          { Key: `reviews/${assetId}/thumb_640x854.webp` },
+          { Key: `reviews/${assetId}/w1200.jpeg` },
+        ],
+        Quiet: true,
+      },
+    });
+  });
 });

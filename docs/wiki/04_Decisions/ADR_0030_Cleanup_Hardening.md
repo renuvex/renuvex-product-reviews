@@ -3,13 +3,13 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-06-09
-last_verified: 2026-06-09
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - adr
   - cleanup
-  - cloudinary
+  - aws
   - safety
   - cron
 related:
@@ -23,9 +23,11 @@ source_files:
   - "prisma/schema.prisma"
   - "prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql"
   - "src/lib/cleanup-orphan-images.ts"
+  - "src/lib/media/providers/aws-review-image.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
   - "src/lib/cron-observability.ts"
   - "tests/unit/cleanup-orphan-images.test.ts"
+  - "tests/unit/aws-review-image-provider.test.ts"
   - "vercel.json"
 ---
 
@@ -35,16 +37,16 @@ source_files:
 Accepted
 
 ## Context
-`cleanup-images` (monthly cron, `0 4 1 * *`, ADR_0012 fallback path) reclaims Cloudinary
-storage by diffing the entire `review_images/` folder against the in-use set (`ReviewMedia.publicId`
-+ legacy `Review.images`) and **hard-deleting** every unused asset older than 30 days.
+`cleanup-images` (monthly cron, `0 4 1 * *`, ADR_0012 fallback path) was introduced for the
+Cloudinary era, but the active runtime is now AWS-only for review images. The job reclaims unused AWS
+review-image object families by diffing provider evidence against the in-use set (`ReviewMedia` +
+unexpired `PendingReviewImage`).
 
-The delete is **irreversible** (past Cloudinary's backup retention). The whole operation rests on the
-in-use set being *complete*. If that set is under-populated for any reason — a `cloudName`/`publicId`
-regression, a partial DB read, a bad migration — live customer review photos are flagged as orphans
-and mass-deleted. The 30-day age guard only protects *recent* uploads; a 2-year-old genuine photo is
-not protected by age. Pre-hardening the job had **no upper bound and no audit trail**, so a
-catastrophic mass-delete would be both unstoppable and invisible until a merchant noticed missing
+The whole operation rests on the in-use set being complete. If that set is under-populated by a
+provider-id or publicId regression, a partial DB read, or a bad migration, live customer review photos
+could be flagged as orphans. The 30-day age guard only protects recent uploads; older genuine photos
+need a separate quarantine/grace guard. Pre-hardening the job had no upper bound and no audit trail,
+so a catastrophic mass-delete would be both unstoppable and invisible until a merchant noticed missing
 photos.
 
 Industry practice for unattended destructive jobs converges on the same controls:
@@ -67,6 +69,15 @@ error reporting + audit.
     `graceDays`=7. Assets that stop being orphans (re-found in use) are **auto-released** from
     quarantine and never deleted.
   - Consequence: the **first run after deploy marks only**; deletions begin one grace window later.
+- **AWS object-family discovery** (`src/lib/media/providers/aws-review-image.ts`):
+  - Normal AWS image families are keyed as `aws_s3:{storeId}:{assetId}` and cover the private
+    original, private variants, simplified public `reviews/{assetId}/` variants, and transitional
+    legacy public variants.
+  - Public-only simplified URL leftovers under `reviews/{assetId}/` are reported as synthetic
+    quarantine ids: `aws_s3:public:{assetId}`. The used set also adds this synthetic id from parsed
+    normal public ids and `providerAssetId`, so legitimate public objects are not falsely marked orphan.
+  - Public-only sweep deletes only the `reviews/{assetId}/` public prefix and uses the same
+    quarantine grace window plus G1/G2/G3 breakers. There is no immediate public-object delete.
 - **Circuit-breaker** (pure functions `evaluateScanTrust` + `evaluateSweepCap`):
   - **G1 empty-used-set** — `usedCount==0` while `ReviewMedia` has rows ⇒ abort (no mark, no sweep).
     **NOT force-overridable** (deleting the whole library is never intended).
@@ -99,8 +110,8 @@ a large fraction) are also covered.
 - Irreversible deletion in an unattended job must **fail safe**: stop and ask, not delete and hope.
 - Two-phase + grace + auto-release means a transiently-misflagged asset (or one a later backfill
   re-attaches) is **never** deleted.
-- The audit trail turns "a photo vanished" from unrecoverable into a forensic lookup
-  (`MediaCleanupRun.sampleDeleted` + date) plus a Cloudinary restore within retention.
+- The audit trail turns "a photo vanished" from opaque into a forensic lookup
+  (`MediaCleanupRun.sampleDeleted` + date) plus provider-side recovery if retention/versioning allows.
 - Normal monthly volume is tiny, so tight thresholds do not false-trip in practice; they bite only on
   anomalies (good) or genuine bulk review deletions (rare, handled by `?force=1`).
 
@@ -111,10 +122,9 @@ a large fraction) are also covered.
   a large absolute number; insufficient for photo-heavy stores. Kept as the secondary guard.
 - **Absolute-only guard (Entra-style):** kept as the *primary* guard, but paired with the ratio so
   small libraries (where 200 is a big fraction) are also protected.
-- **Soft-delete to a Cloudinary "trash"/tag instead of DB quarantine:** rejected for now — adds
-  Cloudinary-account-dependent state; DB quarantine + 30-day age guard + audit `sampleDeleted` +
-  Cloudinary backup retention already provide a recoverable window. Revisit if managed trash/restore
-  is adopted.
+- **Provider trash/tag state instead of DB quarantine:** rejected for now because it would add
+  provider-specific recovery state. DB quarantine + age guard + audit `sampleDeleted` keeps the
+  cleanup evidence provider-neutral.
 - **Extend the breaker to `cleanup-pending-uploads`:** rejected — that job deletes from a
   self-authored registry (`PendingReviewImage`), bounded and **not** diff-derived, so it lacks the
   catastrophic-diff risk this ADR addresses.
@@ -124,8 +134,11 @@ a large fraction) are also covered.
   passes. Expected; documented in [[Maintenance_Runbook]].
 - A breaker **trip** is intentional and alert-worthy: investigate the `MediaCleanupRun` row + the
   Sentry issue before re-running with `?force=1`.
-- Deleting a review still (correctly) cascades its `ReviewMedia` away → the asset becomes an orphan →
-  quarantined → swept after grace.
+- Deleting a review still (correctly) cascades its `ReviewMedia` away -> the asset becomes an orphan ->
+  quarantined -> swept after grace.
+- AWS simplified public URL cleanup includes `reviews/{assetId}/` public-only leftovers via
+  `aws_s3:public:{assetId}`; these are quarantined and swept under the same controls as normal
+  `storeId + assetId` families.
 - Thresholds (200 / 30% / 7d grace / 30d age) are **starting points** — calibrate from real audit
   rows. Lowering is free safety; raising needs justification.
 - AI moderation, video, and an async media pipeline remain separate phases (see
@@ -135,6 +148,8 @@ a large fraction) are also covered.
 - [prisma/schema.prisma](prisma/schema.prisma)
 - [prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql](prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql)
 - [src/lib/cleanup-orphan-images.ts](src/lib/cleanup-orphan-images.ts)
+- [src/lib/media/providers/aws-review-image.ts](src/lib/media/providers/aws-review-image.ts)
 - [src/app/api/admin/cleanup-images/route.ts](src/app/api/admin/cleanup-images/route.ts)
 - [src/lib/cron-observability.ts](src/lib/cron-observability.ts)
 - [tests/unit/cleanup-orphan-images.test.ts](tests/unit/cleanup-orphan-images.test.ts)
+- [tests/unit/aws-review-image-provider.test.ts](tests/unit/aws-review-image-provider.test.ts)

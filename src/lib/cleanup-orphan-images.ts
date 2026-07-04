@@ -5,9 +5,13 @@
 import type { PrismaClient } from '@prisma/client';
 import {
   AWS_REVIEW_IMAGE_PROVIDER,
+  buildAwsReviewImagePublicOnlyPublicId,
   deleteAwsReviewImageFamily,
+  deleteAwsReviewImagePublicVariantPrefix,
   listAwsReviewImageObjectFamilies,
+  normalizeAwsReviewImageAssetId,
   parseAwsReviewImagePublicId,
+  parseAwsReviewImagePublicOnlyPublicId,
 } from '@/lib/media/providers/aws-review-image';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -91,6 +95,16 @@ export function evaluateSweepCap(sweepCount: number, thresholds: CleanupThreshol
 
 export function storeIdFromPublicId(publicId: string): string | null {
   return parseAwsReviewImagePublicId(publicId)?.storeId ?? null;
+}
+
+function addUsedAwsReviewImagePublicIds(used: Set<string>, row: { publicId: string; providerAssetId?: string | null }) {
+  const parsedPublicId = parseAwsReviewImagePublicId(row.publicId);
+  if (parsedPublicId) {
+    used.add(row.publicId);
+    used.add(buildAwsReviewImagePublicOnlyPublicId(parsedPublicId.assetId));
+  }
+  const providerAssetId = normalizeAwsReviewImageAssetId(row.providerAssetId);
+  if (providerAssetId) used.add(buildAwsReviewImagePublicOnlyPublicId(providerAssetId));
 }
 
 export type OrphanCleanupDeps = {
@@ -215,10 +229,10 @@ async function loadUsedAwsPublicIds(prisma: PrismaForCleanup): Promise<Set<strin
   const used = new Set<string>();
   const mediaRows = await prisma.reviewMedia.findMany({
     where: { provider: AWS_REVIEW_IMAGE_PROVIDER, resourceType: 'image' },
-    select: { publicId: true },
+    select: { publicId: true, providerAssetId: true },
   });
   for (const row of mediaRows) {
-    if (parseAwsReviewImagePublicId(row.publicId)) used.add(row.publicId);
+    addUsedAwsReviewImagePublicIds(used, row);
   }
 
   const pendingRows = await prisma.pendingReviewImage.findMany({
@@ -230,10 +244,10 @@ async function loadUsedAwsPublicIds(prisma: PrismaForCleanup): Promise<Set<strin
         { uploadExpiresAt: { gt: new Date() } },
       ],
     },
-    select: { publicId: true },
+    select: { publicId: true, providerAssetId: true },
   });
   for (const row of pendingRows) {
-    if (parseAwsReviewImagePublicId(row.publicId)) used.add(row.publicId);
+    addUsedAwsReviewImagePublicIds(used, row);
   }
   return used;
 }
@@ -280,9 +294,16 @@ export function createAwsOrphanCleanupDeps(prisma: PrismaForCleanup): OrphanClea
       let deleted = 0;
       for (const publicId of publicIds) {
         const parsed = parseAwsReviewImagePublicId(publicId);
-        if (!parsed) continue;
-        await deleteAwsReviewImageFamily(parsed.storeId, parsed.assetId, { invalidatePublicVariants: true });
-        deleted += 1;
+        if (parsed) {
+          await deleteAwsReviewImageFamily(parsed.storeId, parsed.assetId, { invalidatePublicVariants: true });
+          deleted += 1;
+          continue;
+        }
+        const publicOnly = parseAwsReviewImagePublicOnlyPublicId(publicId);
+        if (publicOnly) {
+          await deleteAwsReviewImagePublicVariantPrefix(publicOnly.assetId, { invalidatePublicVariants: true });
+          deleted += 1;
+        }
       }
       return deleted;
     },

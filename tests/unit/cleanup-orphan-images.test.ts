@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanupThresholdsFromEnv,
+  createAwsOrphanCleanupDeps,
   DEFAULT_CLEANUP_THRESHOLDS,
   evaluateScanTrust,
   evaluateSweepCap,
@@ -16,6 +17,10 @@ const NOW = Date.UTC(2026, 5, 9, 4, 0, 0);
 function awsPublicId(name: string) {
   const hash = Array.from(name).reduce((acc, char) => acc + char.charCodeAt(0), 0).toString().padStart(12, '0');
   return `aws_s3:s1:00000000-0000-4000-8000-${hash}`;
+}
+
+function awsPublicOnlyId(assetId: string) {
+  return `aws_s3:public:${assetId}`;
 }
 
 describe('evaluateScanTrust', () => {
@@ -84,6 +89,45 @@ describe('storeIdFromPublicId', () => {
   it('returns null for a non-matching path', () => {
     expect(storeIdFromPublicId('something/else/x')).toBeNull();
     expect(storeIdFromPublicId('aws_s3:store-1:not-a-uuid')).toBeNull();
+  });
+
+  it('returns null for a public-only AWS review-image quarantine id', () => {
+    expect(storeIdFromPublicId('aws_s3:public:22222222-2222-4222-8222-222222222222')).toBeNull();
+  });
+});
+
+describe('createAwsOrphanCleanupDeps', () => {
+  it('adds public-only ids from parsed publicId and providerAssetId to the used set', async () => {
+    const mediaAssetId = '11111111-1111-4111-8111-111111111111';
+    const pendingAssetId = '22222222-2222-4222-8222-222222222222';
+    const prisma = {
+      reviewMedia: {
+        count: async () => 1,
+        findMany: async () => [{
+          publicId: `aws_s3:store-1:${mediaAssetId}`,
+          providerAssetId: null,
+        }],
+      },
+      pendingReviewImage: {
+        findMany: async () => [{
+          publicId: `aws_s3:store-1:${pendingAssetId}`,
+          providerAssetId: pendingAssetId,
+        }],
+      },
+      orphanImageQuarantine: {
+        findMany: async () => [],
+        updateMany: async () => ({ count: 0 }),
+        createMany: async () => ({ count: 0 }),
+        deleteMany: async () => ({ count: 0 }),
+      },
+    } as unknown as Parameters<typeof createAwsOrphanCleanupDeps>[0];
+
+    const used = await createAwsOrphanCleanupDeps(prisma).loadUsedPublicIds();
+
+    expect(used.has(`aws_s3:store-1:${mediaAssetId}`)).toBe(true);
+    expect(used.has(awsPublicOnlyId(mediaAssetId))).toBe(true);
+    expect(used.has(`aws_s3:store-1:${pendingAssetId}`)).toBe(true);
+    expect(used.has(awsPublicOnlyId(pendingAssetId))).toBe(true);
   });
 });
 
@@ -169,6 +213,25 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
     expect(removed).toEqual([]);
   });
 
+  it('phase 1: quarantines a public-only reviews prefix orphan without deleting it', async () => {
+    const keep = awsPublicId('keep');
+    const publicOnlyOrphan = awsPublicOnlyId('22222222-2222-4222-8222-222222222222');
+    const { deps, upserted, deleted } = makeDeps({
+      used: [keep],
+      mediaCount: 1,
+      assets: [oldAsset(keep), oldAsset(publicOnlyOrphan)],
+      quarantine: [],
+    });
+
+    const result = await runOrphanImageCleanup(deps, DEFAULT_CLEANUP_THRESHOLDS);
+
+    expect(result.status).toBe('ok');
+    expect(result.quarantinedNew).toBe(1);
+    expect(result.deleted).toBe(0);
+    expect(upserted).toEqual([{ publicId: publicOnlyOrphan, storeId: null }]);
+    expect(deleted).toEqual([]);
+  });
+
   it('phase 2: sweeps an orphan that has sat past the grace window and is still orphaned', async () => {
     const keep = awsPublicId('keep');
     const orphan = awsPublicId('orphan');
@@ -186,6 +249,24 @@ describe('runOrphanImageCleanup (two-phase core)', () => {
     expect(deleted).toEqual([orphan]);
     expect(removed).toContain(orphan);
     expect(result.sampleDeleted).toEqual([orphan]);
+  });
+
+  it('phase 2: sweeps a public-only reviews prefix orphan only after grace', async () => {
+    const keep = awsPublicId('keep');
+    const publicOnlyOrphan = awsPublicOnlyId('22222222-2222-4222-8222-222222222222');
+    const { deps, removed, deleted } = makeDeps({
+      used: [keep],
+      mediaCount: 1,
+      assets: [oldAsset(keep), oldAsset(publicOnlyOrphan)],
+      quarantine: [{ publicId: publicOnlyOrphan, quarantinedAt: NOW - 10 * DAY }],
+    });
+
+    const result = await runOrphanImageCleanup(deps, DEFAULT_CLEANUP_THRESHOLDS);
+
+    expect(result.status).toBe('ok');
+    expect(result.deleted).toBe(1);
+    expect(deleted).toEqual([publicOnlyOrphan]);
+    expect(removed).toContain(publicOnlyOrphan);
   });
 
   it('does not sweep a quarantined orphan that is still within the grace window', async () => {

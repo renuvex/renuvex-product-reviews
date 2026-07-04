@@ -26,6 +26,7 @@ export const AWS_REVIEW_IMAGE_PUBLIC_BASE_URL_FALLBACK = 'https://media.renuvex.
 export const AWS_REVIEW_IMAGE_PRIVATE_PREFIX = 'review-images/v1/private';
 export const AWS_REVIEW_IMAGE_PUBLIC_PREFIX = 'reviews';
 export const AWS_REVIEW_IMAGE_LEGACY_PUBLIC_PREFIX = 'review-images/v1/public';
+const AWS_REVIEW_IMAGE_PUBLIC_ONLY_STORE_ID = 'public';
 
 export const AWS_REVIEW_IMAGE_VARIANTS = [
   { id: 'w200', width: 200, fit: 'inside' },
@@ -108,6 +109,18 @@ export type AwsReviewImagesConfig = {
 type ParsedAwsReviewImagePublicId = {
   storeId: string;
   assetId: string;
+};
+
+type ParsedAwsReviewImagePublicOnlyId = {
+  assetId: string;
+};
+
+export type AwsReviewImageObjectFamily = {
+  publicId: string;
+  storeId: string | null;
+  assetId: string;
+  createdAt: number;
+  scope: 'store_family' | 'public_only';
 };
 
 const ALLOWED_CONTENT_TYPES: Record<string, 'jpg' | 'png' | 'webp'> = {
@@ -231,12 +244,25 @@ export function buildAwsReviewImagePublicId(storeId: string, assetId: string): s
   return `${AWS_REVIEW_IMAGE_PROVIDER}:${storeId}:${assetId}`;
 }
 
+export function buildAwsReviewImagePublicOnlyPublicId(assetId: string): string {
+  return `${AWS_REVIEW_IMAGE_PROVIDER}:${AWS_REVIEW_IMAGE_PUBLIC_ONLY_STORE_ID}:${assetId}`;
+}
+
 export function parseAwsReviewImagePublicId(publicId: string): ParsedAwsReviewImagePublicId | null {
   const parts = publicId.split(':');
   if (parts.length !== 3 || parts[0] !== AWS_REVIEW_IMAGE_PROVIDER) return null;
+  if (parts[1] === AWS_REVIEW_IMAGE_PUBLIC_ONLY_STORE_ID) return null;
   const storeId = normalizeReviewImageStoreId(parts[1]);
   const assetId = normalizeAwsReviewImageAssetId(parts[2]);
   return storeId && assetId ? { storeId, assetId } : null;
+}
+
+export function parseAwsReviewImagePublicOnlyPublicId(publicId: string): ParsedAwsReviewImagePublicOnlyId | null {
+  const parts = publicId.split(':');
+  if (parts.length !== 3 || parts[0] !== AWS_REVIEW_IMAGE_PROVIDER) return null;
+  if (parts[1] !== AWS_REVIEW_IMAGE_PUBLIC_ONLY_STORE_ID) return null;
+  const assetId = normalizeAwsReviewImageAssetId(parts[2]);
+  return assetId ? { assetId } : null;
 }
 
 export function normalizeAwsReviewImageAssetId(value: unknown): string | null {
@@ -778,15 +804,31 @@ export async function deleteAwsReviewImageFamily(storeId: string, assetId: strin
   return { deletedObjects: objects.length };
 }
 
-export async function listAwsReviewImageObjectFamilies(): Promise<Array<{
-  publicId: string;
-  storeId: string;
-  assetId: string;
-  createdAt: number;
-}>> {
+export async function deleteAwsReviewImagePublicVariantPrefix(assetId: string, options: { invalidatePublicVariants?: boolean } = {}) {
+  const normalizedAssetId = normalizeAwsReviewImageAssetId(assetId);
+  if (!normalizedAssetId) throw new Error('aws_review_image_asset_id_invalid');
+  const config = getAwsReviewImagesConfig();
+  const publicPrefix = `${AWS_REVIEW_IMAGE_PUBLIC_PREFIX}/${normalizedAssetId}/`;
+  const objects = (await listFamilyObjects(publicPrefix)).flatMap((object) => object.Key ? [{ Key: object.Key }] : []);
+  for (let index = 0; index < objects.length; index += 1000) {
+    const batch = objects.slice(index, index + 1000);
+    if (batch.length === 0) continue;
+    await getAwsReviewImagesS3Client().send(new DeleteObjectsCommand({
+      Bucket: config.bucket,
+      Delete: { Objects: batch, Quiet: true },
+    }));
+  }
+  if (options.invalidatePublicVariants) {
+    await invalidateAwsReviewImagePublicVariantPaths(buildAwsReviewImagePublicVariantKeys(normalizedAssetId));
+  }
+  return { deletedObjects: objects.length };
+}
+
+export async function listAwsReviewImageObjectFamilies(): Promise<AwsReviewImageObjectFamily[]> {
   const config = getAwsReviewImagesConfig();
   const client = getAwsReviewImagesS3Client();
-  const families = new Map<string, { publicId: string; storeId: string; assetId: string; createdAt: number }>();
+  const families = new Map<string, AwsReviewImageObjectFamily>();
+  const storeScopedAssetIds = new Set<string>();
   const prefixes = [
     `${AWS_REVIEW_IMAGE_PRIVATE_PREFIX}/stores/`,
     `${AWS_REVIEW_IMAGE_LEGACY_PUBLIC_PREFIX}/stores/`,
@@ -808,6 +850,7 @@ export async function listAwsReviewImageObjectFamilies(): Promise<Array<{
         const assetId = normalizeAwsReviewImageAssetId(match[2]);
         if (!storeId || !assetId) continue;
         const publicId = buildAwsReviewImagePublicId(storeId, assetId);
+        storeScopedAssetIds.add(assetId);
         const createdAt = object.LastModified?.getTime() ?? Date.now();
         const existing = families.get(publicId);
         families.set(publicId, {
@@ -815,11 +858,41 @@ export async function listAwsReviewImageObjectFamilies(): Promise<Array<{
           storeId,
           assetId,
           createdAt: existing ? Math.min(existing.createdAt, createdAt) : createdAt,
+          scope: 'store_family',
         });
       }
       ContinuationToken = result.NextContinuationToken;
     } while (ContinuationToken);
   }
+
+  let ContinuationToken: string | undefined;
+  do {
+    const result = await client.send(new ListObjectsV2Command({
+      Bucket: config.bucket,
+      Prefix: `${AWS_REVIEW_IMAGE_PUBLIC_PREFIX}/`,
+      ContinuationToken,
+      MaxKeys: 1000,
+    }));
+    for (const object of result.Contents ?? []) {
+      if (!object.Key) continue;
+      const match = /^reviews\/([^/]+)\//.exec(object.Key);
+      if (!match) continue;
+      const assetId = normalizeAwsReviewImageAssetId(match[1]);
+      if (!assetId || storeScopedAssetIds.has(assetId)) continue;
+      const publicId = buildAwsReviewImagePublicOnlyPublicId(assetId);
+      const createdAt = object.LastModified?.getTime() ?? Date.now();
+      const existing = families.get(publicId);
+      families.set(publicId, {
+        publicId,
+        storeId: null,
+        assetId,
+        createdAt: existing ? Math.min(existing.createdAt, createdAt) : createdAt,
+        scope: 'public_only',
+      });
+    }
+    ContinuationToken = result.NextContinuationToken;
+  } while (ContinuationToken);
+
   return [...families.values()];
 }
 
