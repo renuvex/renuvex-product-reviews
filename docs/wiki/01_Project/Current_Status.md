@@ -54,6 +54,7 @@ Active development on the production test store. Core review, image, Mux video, 
   - Author masking on output (`Mert W.`)
 - Admin dashboard:
   - Review list with status filter, pagination, replies, delete
+  - Pending/private AWS review images use authenticated short-lived preview URLs for both moderation thumbnails and full-size image modal previews; signed responses stay `private, no-store` and are not stored in list API data.
   - Widget editor with per-widget settings panel and live iframe preview at `/preview`
   - Settings persistence in `WidgetSettings` (one row per `(storeId, widgetId)`)
 - Caching: public GETs use `s-maxage=60, stale-while-revalidate=300` at the edge
@@ -111,6 +112,7 @@ Active development on the production test store. Core review, image, Mux video, 
 2026-07-04
 
 ## Change Log
+- 2026-07-04: Fixed admin AWS private-image thumbnails after live acceptance exposed the text fallback in pending reviews. The list now lazy-loads the signed `thumb_320x427` variant through the authenticated image-preview endpoint, and the image modal loading state no longer uses video copy.
 - 2026-07-04: Applied the approved pre-public legacy image DB alignment. The apply retired 12 legacy image `ReviewMedia` rows, 6 stale pending rows, 8 legacy image flags/mirrors, 26 quarantine rows, 1 old provider job, and rebuilt one affected product summary. Post-checks report zero remaining legacy image-provider DB targets; no provider assets were mutated.
 - 2026-07-04: Recorded PR #5 production deployment and Cloudflare Worker deployment for AWS-only image source pass. Live AWS-only acceptance review `8962e9c8-7c7f-49db-9e16-cb68bbeff428` proved 14 variants, public `media.renuvex.app` delivery, immutable CloudFront cache headers, and no legacy-provider/private leak markers.
 - 2026-07-03: Recorded local AWS-only image source pass: AWS-only image upload/render/cleanup code, dependency/config/script/test cleanup, and widget manifest graph verification. Env removal, DB data alignment, and Worker deploy remained approval-gated at that checkpoint.

@@ -144,6 +144,15 @@ export default function HomePage({ token, storeName }: HomePageProps) {
     }
   };
 
+  const getImagePreviewUrl = useCallback(async (mediaId: string, variant: 'thumb_320x427' | 'w1200' = 'w1200') => {
+    if (!token) return null;
+    const response = await axios.get(`/api/admin/reviews/image-preview?mediaId=${encodeURIComponent(mediaId)}&variant=${encodeURIComponent(variant)}`, {
+      headers: await freshAuthHeader(token),
+    });
+    const signedUrl = response.data?.data?.url;
+    return typeof signedUrl === 'string' && signedUrl ? signedUrl : null;
+  }, [token]);
+
   const handleMediaOpen = async (media: ReviewMedia, reviewStatus: string) => {
     if (media.type === 'image') {
       if (media.url && media.previewMode !== 'signed') {
@@ -153,10 +162,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
       if (!media.canPreview) return;
       setMediaPreview({ mediaId: media.id, type: 'image', url: null, loading: true, reviewStatus });
       try {
-        const response = await axios.get(`/api/admin/reviews/image-preview?mediaId=${encodeURIComponent(media.id)}`, {
-          headers: await freshAuthHeader(token),
-        });
-        const signedUrl = response.data?.data?.url;
+        const signedUrl = await getImagePreviewUrl(media.id, 'w1200');
         if (typeof signedUrl !== 'string' || !signedUrl) throw new Error('image_preview_url_missing');
         setMediaPreview(current => (
           current?.mediaId === media.id ? { ...current, url: signedUrl, loading: false } : current
@@ -308,7 +314,10 @@ export default function HomePage({ token, storeName }: HomePageProps) {
         <div className="fixed inset-0 bg-black/85 z-[99999] flex items-center justify-center" onClick={() => setMediaPreview(null)} role="dialog" aria-modal="true" aria-label="Yorum medyası önizlemesi">
           <button type="button" className="absolute top-4 right-5 flex h-10 w-10 items-center justify-center text-white bg-transparent border-none cursor-pointer" aria-label="Kapat" onClick={() => setMediaPreview(null)}><X size={24} /></button>
           {mediaPreview.loading ? (
-            <div className="flex items-center gap-2 text-white" role="status"><LoaderCircle className="animate-spin" size={22} /> Video hazırlanıyor...</div>
+            <div className="flex items-center gap-2 text-white" role="status">
+              <LoaderCircle className="animate-spin" size={22} />
+              {mediaPreview.type === 'image' ? 'Gorsel yukleniyor...' : 'Video hazırlanıyor...'}
+            </div>
           ) : mediaPreview.type === 'video' && mediaPreview.playbackId && mediaPreview.playbackToken && mediaPreview.thumbnailToken ? (
             <div className={videoPreviewShellClassName} onClick={(event) => event.stopPropagation()}>
               {isUnapprovedVideoPreview(mediaPreview) && (
@@ -373,6 +382,7 @@ export default function HomePage({ token, storeName }: HomePageProps) {
             onDeleteReply={handleDeleteReply}
             onDeleteReview={handleDeleteReview}
             onMediaOpen={handleMediaOpen}
+            getImagePreviewUrl={getImagePreviewUrl}
             onPageChange={(p) => fetchReviews(activeTab, p)}
             onPageSizeChange={(size) => { setPageSize(size); fetchReviews(activeTab, 1, size); }}
           />

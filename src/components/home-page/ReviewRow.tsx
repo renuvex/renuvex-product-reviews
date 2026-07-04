@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Check, X, ChevronDown, ChevronUp, MoreVertical, Trash2, MessageSquareX, Reply, Play } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, X, ChevronDown, ChevronUp, MoreVertical, Trash2, MessageSquareX, Reply, Play, ImageIcon, LoaderCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { colors, componentStyles, radii, typography } from '@/lib/design-tokens';
 import { Review, ReviewMedia, COMMENT_LIMIT } from './types';
@@ -11,10 +11,69 @@ interface ReviewRowProps {
   onDeleteReply: (id: string) => void;
   onDeleteReview: (id: string) => void;
   onMediaOpen: (media: ReviewMedia, reviewStatus: string) => void;
+  getImagePreviewUrl: (mediaId: string, variant: 'thumb_320x427' | 'w1200') => Promise<string | null>;
   renderStars: (n: number) => React.ReactNode;
 }
 
-export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDeleteReview, onMediaOpen, renderStars }: ReviewRowProps) {
+function ReviewImageThumbnail({
+  item,
+  getImagePreviewUrl,
+}: {
+  item: ReviewMedia;
+  getImagePreviewUrl: ReviewRowProps['getImagePreviewUrl'];
+}) {
+  const immediateSrc = item.thumbnailUrl || item.url || null;
+  const [signedThumbnailUrl, setSignedThumbnailUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const needsSignedThumbnail = !immediateSrc && item.previewMode === 'signed' && item.canPreview === true;
+  const src = immediateSrc || signedThumbnailUrl;
+
+  useEffect(() => {
+    let cancelled = false;
+    setSignedThumbnailUrl(null);
+    setFailed(false);
+    if (!needsSignedThumbnail) {
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
+    setLoading(true);
+    getImagePreviewUrl(item.id, 'thumb_320x427')
+      .then((url) => {
+        if (cancelled) return;
+        if (url) setSignedThumbnailUrl(url);
+        else setFailed(true);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [getImagePreviewUrl, immediateSrc, item.canPreview, item.id, item.previewMode, needsSignedThumbnail]);
+
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+    );
+  }
+  if (loading) {
+    return (
+      <span className="absolute inset-0 flex items-center justify-center text-muted-foreground" aria-label="Gorsel kucuk onizlemesi yukleniyor">
+        <LoaderCircle className="animate-spin" size={14} />
+      </span>
+    );
+  }
+  return (
+    <span className="absolute inset-0 flex items-center justify-center text-muted-foreground" aria-label={failed ? 'Gorsel kucuk onizlemesi yuklenemedi' : 'Gorsel'}>
+      <ImageIcon size={15} />
+    </span>
+  );
+}
+
+export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDeleteReview, onMediaOpen, getImagePreviewUrl, renderStars }: ReviewRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -83,12 +142,7 @@ export function ReviewRow({ review, onStatusChange, onReply, onDeleteReply, onDe
                 aria-label="Yorum gorselini ac"
                 title="Gorseli ac"
               >
-                {(item.thumbnailUrl || item.url) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.thumbnailUrl || item.url || ''} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                ) : (
-                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-muted-foreground">IMG</span>
-                )}
+                <ReviewImageThumbnail item={item} getImagePreviewUrl={getImagePreviewUrl} />
               </button>
             ) : (
               <button

@@ -125,7 +125,8 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-04: Legacy image-provider DB alignment completed: 12 media, 6 pending, 8 image flags/mirrors, 26 quarantine rows, 1 job retired, 1 summary rebuilt. Local env and repo-local provider docs are cleaned.
+- 2026-07-04: Admin AWS private-image thumbnails now use signed `thumb_320x427`; image modal loading copy no longer says video.
+- 2026-07-04: Legacy image-provider DB alignment completed: 12 media, 6 pending, 8 image flags/mirrors, 26 quarantine rows, 1 job retired, 1 summary rebuilt.
 - 2026-07-04: AWS-only image source pass is merged/deployed. PR #5 is `244b0997`, Vercel production is `dpl_4Cqv9KsYsMJhuaAmrGSmZiGnJqga`, Worker version is `29571b47-2f2b-449f-8bbc-ce15d14c0832`, and live acceptance passed without private leak markers.
 - 2026-07-03: AWS image provider is active. PR #3 deployed as `dpl_5f1tYG7WDvDY5gxpfxuAWwme96Cx`; a live test review proved `media.renuvex.app` delivery, 14 variants, no public leak markers, and immutable cache headers.
 - 2026-07-02: PDP review widget clears stale shadow content during SPA product transitions; manual dev-storefront acceptance confirmed the neutral shell instead of stale review cards.
