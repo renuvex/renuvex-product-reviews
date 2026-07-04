@@ -36,8 +36,8 @@ widget static assets. It exists only to compare CDN behavior against the live
 Cloudflare Worker and Vercel surfaces before making any final CDN decision.
 
 The canary must not change `widget.renuvex.app`, `app.renuvex.app`, ikas
-`StorefrontJSScript` records, Vercel settings, Supabase, Mux, Cloudinary,
-QStash, or review data.
+`StorefrontJSScript` records, Vercel settings, Supabase, Mux, review-image
+provider accounts, QStash, or review data.
 
 ## Identity Model
 

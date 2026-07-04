@@ -86,7 +86,7 @@ See [[Widget_Architecture]] for full details. Key points:
 Cloudflare Worker Static Assets is the live delivery layer for `widget.renuvex.app`. V1 is asset-only:
 - allowed: `/widget.js`, `/widget-runtime/runtime.js`, `/widget-runtime/runtime-*.js`, `/widget-runtime/chunks/*.js`, `/widget-runtime/build-manifest.json`, `/__health`;
 - denied: `/api/*` and every other path, returning fail-closed `404`;
-- no secrets, DB, Mux, QStash, Cloudinary, or R2 bindings.
+- no secrets, DB, Mux, QStash, image-provider, or R2 bindings.
 
 V2 source supports an allowlisted read-through cache for `GET /api/public/settings`, `GET /api/public/ratings`, `GET /api/public/ratings-by-slug`, and `GET /api/public/reviews`. `GET /api/public/settings` is safe to cache only because theme sync moved to `POST /api/public/storefront-theme/lazy-sync` on the backend/control-plane origin. Every write/upload/video/widget-error/lazy-sync route stays on `app.renuvex.app`. The Worker remains fail-closed for non-allowlisted `/api/*` paths.
 

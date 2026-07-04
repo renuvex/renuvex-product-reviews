@@ -59,7 +59,7 @@ model ReviewMedia {
   assetId                 String?   @db.VarChar(128)
   version                 String?   @db.VarChar(64)
   resourceType            String    @default("image") @db.VarChar(32)
-  provider                String    @default("cloudinary") @db.VarChar(64)
+  provider                String    @default("aws_s3") @db.VarChar(64)
   providerAssetId         String?   @db.VarChar(512)
   posterUrl               String?   @db.VarChar(2048)
   durationMs              Int?
@@ -181,7 +181,7 @@ model PendingReviewImage {
   assetId                 String?   @db.VarChar(128)
   version                 String?   @db.VarChar(64)
   resourceType            String    @default("image") @db.VarChar(32)
-  provider                String    @default("cloudinary") @db.VarChar(64)
+  provider                String    @default("aws_s3") @db.VarChar(64)
   providerAssetId         String?   @db.VarChar(512)
   posterUrl               String?   @db.VarChar(2048)
   durationMs              Int?

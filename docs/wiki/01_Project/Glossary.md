@@ -42,7 +42,7 @@ related:
 - **Iron-session** — encrypted cookie session for OAuth state (CSRF). Wrapped in [src/lib/session.ts](src/lib/session.ts).
 - **Codegen** — `pnpm codegen` regenerates [src/lib/ikas-client/generated/graphql.ts](src/lib/ikas-client/generated/graphql.ts) from operations defined in [graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts).
 - **Upstash Redis** — serverless Redis used for IP rate-limit counters across Vercel instances.
-- **Cloudinary signed upload** — server endpoint produces an HMAC signature; client uploads directly to Cloudinary without proxying through our server.
+- **AWS image upload intent** — server endpoint creates a tenant-scoped upload intent and returns a short-lived S3 presigned POST; client uploads directly to S3 without proxying through our server.
 
 ## Obsidian Links
 - [[Project_Overview]]

@@ -33,7 +33,7 @@ Next.js App Router route handlers, partitioned by trust level: `/api/admin/*` (J
 
 ### Validation
 - OAuth callback uses zod ([src/lib/validation.ts](src/lib/validation.ts) + per-route schema).
-- Public review POST does manual validation (length, range, type, profanity) and validates `images` through the trusted Cloudinary URL policy in [src/lib/review-images.ts](src/lib/review-images.ts). Should migrate to zod for consistency. Tracked in [[Open_Questions]].
+- Public review POST does manual validation (length, range, type, profanity) and validates uploaded AWS image refs through [src/lib/review-images.ts](src/lib/review-images.ts). Should migrate to zod for consistency. Tracked in [[Open_Questions]].
 - Widget settings PUT runs `validateSettings(widgetId, settings)` from [src/lib/widget-settings.ts](src/lib/widget-settings.ts) — type-checked against `widgetDefs.ts`.
 
 ### Rate limits

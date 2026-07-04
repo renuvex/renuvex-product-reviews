@@ -53,7 +53,7 @@ related:
 ### Review images on AWS
 | Var | Purpose |
 |---|---|
-| `REVIEW_IMAGE_PROVIDER` | Production image provider selector. Current production target is `aws_s3`; source no longer has a Cloudinary production branch. |
+| `REVIEW_IMAGE_PROVIDER` | Production image provider selector. Current production target is `aws_s3`; source has no legacy image-provider production branch. |
 | `AWS_REVIEW_IMAGES_REGION` | AWS region for review-image S3 runtime operations. |
 | `AWS_REVIEW_IMAGES_BUCKET` | Private S3 bucket for review-image originals/variants. |
 | `AWS_REVIEW_IMAGES_PUBLIC_BASE_URL` | Public CloudFront/custom-domain base URL. Production target: `https://media.renuvex.app`. |
@@ -63,7 +63,7 @@ related:
 | `AWS_REVIEW_IMAGES_CLOUDFRONT_KEY_PAIR_ID` | CloudFront public key id for short-lived admin private-preview signed URLs. |
 | `AWS_REVIEW_IMAGES_CLOUDFRONT_PRIVATE_KEY_B64` | Base64-encoded CloudFront private key for admin private-preview signing. Secret; never log or document the value. |
 
-Legacy Cloudinary env keys may still exist in Vercel/local settings until the separate env teardown approval. They are not required by current source after the AWS-only teardown pass and should be removed only after code deploy, live AWS acceptance, DB data alignment, and rollback-closure approval.
+Legacy image-provider env keys have been removed from the active app/runtime surface after AWS acceptance and DB alignment. Current source requires the AWS review-image env set for production image upload.
 
 ### Upstash Redis (rate limiting)
 | Var | Purpose |

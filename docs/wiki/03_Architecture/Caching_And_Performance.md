@@ -129,7 +129,7 @@ theme sync is separated from the read path: the response is a pure read with
 additive `runtime.themeSyncDue`, while the widget sends any required
 best-effort sync as `POST /api/public/storefront-theme/lazy-sync` to
 `app.renuvex.app`. Upload, submit, video, widget-error, lazy-sync, admin,
-webhook, Mux, Cloudinary, QStash, and DB writes are not proxied by the Worker.
+webhook, Mux, image-provider, QStash, and DB writes are not proxied by the Worker.
 
 2026-06-29 source hardening: Worker Static Assets must preserve the same
 asset cache policy on conditional `304 Not Modified` responses as on `200`
@@ -142,7 +142,7 @@ now treats `200` and `304` as cacheable asset responses so stable files keep
 ## Widget client cache
 [src/widget/core/cache.js](src/widget/core/cache.js) wraps `sessionStorage` with an in-memory fallback. Avoids redundant fetches when the user clicks pagination, opens/closes modal, navigates between products in the same tab, etc. **Persists** for the duration of the browser tab (sessionStorage semantics) — cleared when the tab is closed.
 
-Settings have a 5-minute fresh window in the widget and a 24-hour stale tolerance for transient settings fetch failures. The trusted Cloudinary cloud name is **not** in settings — it is injected as a build-time constant into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]); no per-store runtime image-policy cache exists.
+Settings have a 5-minute fresh window in the widget and a 24-hour stale tolerance for transient settings fetch failures. Image trust is not a settings field; storefront media rendering uses provider-neutral public descriptors from `/api/public/reviews`.
 
 Settings reads use `READ_API_BASE`; in production this can be the Worker read
 origin. If the cached settings payload says `runtime.themeSyncDue === true`,
@@ -175,7 +175,7 @@ See [[Database_Schema]] for index coverage. Notable hot paths:
 - Adding heavy features → keep them behind the lazy ESM module boundary, not statically imported by the always-loaded loader/runtime.
 
 ## Image performance
-- Cloudinary URLs come pre-CDN'd. Storefront images can use Cloudinary transformations (`f_auto,q_auto,w_400`) — verify the widget URLs include these params.
+- Review images are pre-generated into AWS variants and delivered through `media.renuvex.app` with immutable CloudFront caching. Storefront code should prefer `media[].variants` / `srcset` over deriving provider URLs.
 - No lazy-loading attribute set on image tags by default — review when adding photo gallery to listing pages.
 
 ## Possible improvements (not done)

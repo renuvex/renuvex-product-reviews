@@ -122,7 +122,7 @@ Verified on 2026-06-29:
 | Uploaded object count | `446` |
 
 The canary does not own `widget.renuvex.app`, `app.renuvex.app`, ikas script
-records, Vercel env, Supabase, Mux, Cloudinary, or QStash.
+records, Vercel env, Supabase, Mux, review-image provider accounts, or QStash.
 
 ## Review Image Migration Preflight
 
@@ -195,8 +195,9 @@ fresh create change set was opened:
 - Current stack status is `REVIEW_IN_PROGRESS`; stack resource list is empty
   and the target bucket still returns S3 `404`, because the change set has not
   been executed yet.
-- No Vercel env, DB, Cloudflare Worker/DNS, Cloudinary, provider activation, or
-  production traffic changes were made in this retry step.
+- No Vercel env, DB, Cloudflare Worker/DNS, review-image provider account,
+  provider activation, or production traffic changes were made in this retry
+  step.
 
 The retry change set was then executed after explicit approval and the stack
 reached `CREATE_COMPLETE`.
@@ -236,8 +237,9 @@ Post-create read-only checks:
   bucket policy status was read successfully and reports `IsPublic=false`.
   The bucket policy and Public Access Block were also read and verified
   directly.
-- No Vercel env, DB, Cloudflare Worker/DNS, Cloudinary, provider activation, or
-  production traffic changes were made in this execute step.
+- No Vercel env, DB, Cloudflare Worker/DNS, review-image provider account,
+  provider activation, or production traffic changes were made in this execute
+  step.
 
 ACM custom-domain certificate step:
 
@@ -254,9 +256,9 @@ ACM custom-domain certificate step:
     `_e919e0e40f3d814f0810f6fa8fd87910.media.renuvex.app.`
   - Value:
     `_b93788e2f31d953784a45bf3926af915.jkddzztszm.acm-validations.aws.`
-- No Cloudflare DNS, CloudFront alias, Vercel env, DB, Cloudinary, provider
-  activation, or production traffic changes were made in this certificate
-  request step.
+- No Cloudflare DNS, CloudFront alias, Vercel env, DB, review-image provider
+  account, provider activation, or production traffic changes were made in this
+  certificate request step.
 
 ACM DNS validation result:
 
@@ -267,8 +269,9 @@ ACM DNS validation result:
 - ACM status is now `ISSUED`; domain validation status is `SUCCESS`.
 - Issued at: `2026-07-03T13:06:44.215000+03:00`.
 - In use by: empty; the certificate is still not attached to CloudFront.
-- No CloudFront alias, media CNAME, Vercel env, DB, Cloudinary, provider
-  activation, or production traffic changes were made in this validation step.
+- No CloudFront alias, media CNAME, Vercel env, DB, review-image provider
+  account, provider activation, or production traffic changes were made in this
+  validation step.
 
 CloudFront custom-domain update change set:
 
@@ -288,8 +291,8 @@ CloudFront custom-domain update change set:
 - Current live stack is still `CREATE_COMPLETE` with `AcmCertificateArn=""`;
   live CloudFront distribution still has no aliases and still uses the default
   CloudFront certificate, because the change set has not been executed yet.
-- No media CNAME, Vercel env, DB, Cloudinary, provider activation, or
-  production traffic changes were made in this change-set step.
+- No media CNAME, Vercel env, DB, review-image provider account, provider
+  activation, or production traffic changes were made in this change-set step.
 
 CloudFront custom-domain update execution:
 
@@ -308,8 +311,8 @@ CloudFront custom-domain update execution:
 - Public DNS resolvers still do not have a `media.renuvex.app` CNAME to the
   distribution because the final Cloudflare media CNAME has not been created
   yet.
-- No Vercel env, DB, Cloudinary, provider activation, or production traffic
-  changes were made in this execution step.
+- No Vercel env, DB, review-image provider account, provider activation, or
+  production traffic changes were made in this execution step.
 
 Cloudflare final media DNS result:
 
@@ -324,8 +327,8 @@ Cloudflare final media DNS result:
   object exists at that path.
 - TLS SNI validation for `media.renuvex.app` is authorized. The presented
   certificate subject/SAN is `media.renuvex.app`, issued by Amazon RSA 2048 M01.
-- No Vercel env, DB, Cloudinary, provider activation, or production traffic
-  changes were made in this DNS verification step.
+- No Vercel env, DB, review-image provider account, provider activation, or
+  production traffic changes were made in this DNS verification step.
 
 Runtime cutover preflight:
 
@@ -346,12 +349,11 @@ Runtime cutover preflight:
   `AWS_REVIEW_IMAGES_CLOUDFRONT_PRIVATE_KEY_B64`.
 - The AWS review-image env keys are production-only; preview does not list them,
   which matches the production-only runtime IAM trust policy.
-- `REVIEW_IMAGE_PROVIDER` is still not set in Vercel, so the code default remains
-  `cloudinary`. Do not add `REVIEW_IMAGE_PROVIDER=aws_s3` until the separate
-  cutover gate.
-- Cloudinary env keys remain in Vercel as the pre-acceptance rollback path.
-- Local `.env.local` also does not yet contain the AWS review-image keys or
-  `VERCEL_OIDC_TOKEN`.
+- 2026-07-04 cutover follow-up: Vercel production sets
+  `REVIEW_IMAGE_PROVIDER=aws_s3`, the review-image runtime is AWS-only, and the
+  production env list no longer contains legacy image-provider key names.
+- Local `.env.local` no longer contains legacy image-provider key names. It may
+  still omit production-only AWS review-image keys and `VERCEL_OIDC_TOKEN`.
 - `prisma migrate deploy`, with `.env.local` loaded into the process without
   printing values, applied `20260703090000_add_aws_review_image_fields` after
   explicit approval. Follow-up `prisma migrate status` reports the database
@@ -460,8 +462,8 @@ pnpm aws:review-images:validate-runtime-iam-template
   invalidation, DNS change, or production cutover requires explicit approval.
 - Never record AWS access keys, SSO tokens, session credentials, or secret values
   in the wiki.
-- Keep canary code deployable but non-invasive: no DB, Mux, QStash, Cloudinary,
-  or ikas write paths belong in the AWS canary.
+- Keep canary code deployable but non-invasive: no DB, Mux, QStash,
+  review-image provider account, or ikas write paths belong in the AWS canary.
 
 ## Skill And Documentation Sources
 
