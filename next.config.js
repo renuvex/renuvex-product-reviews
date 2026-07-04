@@ -2,7 +2,7 @@ const imageRemotePatterns = [
   {
     protocol: 'https',
     hostname: 'media.renuvex.app',
-    pathname: '/review-images/v1/public/**',
+    pathname: '/reviews/**',
   },
 ];
 

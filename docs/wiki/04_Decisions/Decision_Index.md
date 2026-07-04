@@ -51,7 +51,7 @@ related:
 | [[ADR_0030_Cleanup_Hardening]] | `cleanup-images` orphan deletion is hardened with a circuit-breaker (G1 empty-used-set / G2 30% ratio / G3 200 absolute), two-phase quarantine (mark now, sweep after a grace window), a `MediaCleanupRun` audit log, and `source:cron` Sentry error alerts (failures + breaker trips). `?force=1` overrides G2/G3 but never G1. | Accepted |
 | [[ADR_0032_Review_Video_On_Mux]] | Review video provider is **Mux** while retaining the provider-agnostic model and durable lifecycle. Active path uses Mux direct upload (UpChunk), Mux webhook dedup/audit, provider-neutral media jobs, signed admin playback, and public playback IDs after approval. Production Mux canary evidence allowed the contract migration to enter the active deploy path; external Cloudflare Stream/R2 teardown remains separately gated. | Accepted |
 | [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]] | `widget.renuvex.app` is the Cloudflare Worker Static Assets origin and narrow public-read cache for settings/ratings/reviews, while `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash/write origin. Worker fails closed for non-allowlisted `/api/*`; API and read origins are explicit widget build-time settings with rollback fallback. | Accepted |
-| [[ADR_0034_AWS_Review_Image_Migration]] | Draft AWS review image migration ADR. Records the verified Cloudinary current state, AWS-backed provider direction, provider boundary, variant/security/cleanup guardrails, and the remaining decisions that must close before an executable migration plan. | Draft |
+| [[ADR_0034_AWS_Review_Image_Migration]] | AWS-only review image contract. New image uploads use S3/CloudFront, finite generated variants, `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>` public URLs, signed private admin preview, DB-backed public reads, and breaker-guarded AWS object-family cleanup. | Accepted |
 
 ## Superseded / Deprecated
 
@@ -72,7 +72,8 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
-- 2026-07-02: Added draft [[ADR_0034_AWS_Review_Image_Migration]] with verified Cloudinary current state. The draft now records the AWS-backed provider direction, provider boundary, variant/security/cleanup guardrails, and planning-readiness gaps. No deploy, env, DB, provider mutation, or Cloudinary teardown is approved by this draft.
+- 2026-07-04: Pruned [[ADR_0034_AWS_Review_Image_Migration]] after AWS-only cutover. It now keeps the final S3/CloudFront URL, variant, trust, admin preview, cleanup, IAM, rollback, and acceptance contracts instead of the migration working log.
+- 2026-07-02: Added draft [[ADR_0034_AWS_Review_Image_Migration]] with verified Cloudinary current state and AWS migration guardrails.
 - 2026-07-01: Revised [[ADR_0022_Placement_Allowlist_And_Lazy_Resync]] and [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]] after splitting public settings reads from storefront theme lazy sync. Settings can now join the Worker read-cache allowlist; lazy sync stays a Vercel POST/control-plane route.
 - 2026-06-28: Added [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]] for the split storefront asset/backend origin model and the Worker Static Assets delivery contract.
 - 2026-06-21: Updated [[ADR_0032_Review_Video_On_Mux]] after Mux production canary closeout. The contract migration is now staged as `20260621003000_review_video_mux_contract_drop_legacy_columns`; Vercel cleanup is limited to old Cloudflare Stream/R2 video env vars, and external resource teardown remains separate.
