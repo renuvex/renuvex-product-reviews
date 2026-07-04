@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - hot-context
@@ -125,8 +125,9 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-04: Legacy image-provider DB alignment completed: 12 media, 6 pending, 8 image flags/mirrors, 26 quarantine rows, 1 job retired, 1 summary rebuilt. Local env and repo-local provider docs are cleaned.
+- 2026-07-04: AWS-only image source pass is merged/deployed. PR #5 is `244b0997`, Vercel production is `dpl_4Cqv9KsYsMJhuaAmrGSmZiGnJqga`, Worker version is `29571b47-2f2b-449f-8bbc-ce15d14c0832`, and live acceptance passed without private leak markers.
 - 2026-07-03: AWS image provider is active. PR #3 deployed as `dpl_5f1tYG7WDvDY5gxpfxuAWwme96Cx`; a live test review proved `media.renuvex.app` delivery, 14 variants, no public leak markers, and immutable cache headers.
-- 2026-07-03: Local Cloudinary teardown source pass is in progress/verified locally: new review-image runtime path is AWS-only, Cloudinary dependency/build constants/scripts/tests are removed, manifest-referenced widget graph has no Cloudinary references, and `pnpm why cloudinary` is empty. No Vercel env removal, DB cleanup apply, Worker deploy, or Cloudinary asset/account deletion has been done in this pass.
 - 2026-07-02: PDP review widget clears stale shadow content during SPA product transitions; manual dev-storefront acceptance confirmed the neutral shell instead of stale review cards.
 - 2026-07-02: Worker-cached `GET /api/public/settings` is live. A read-only check returned `200` from Cloudflare with `X-Renuvex-Edge-Cache: MISS` and then `HIT`; `POST /api/public/storefront-theme/lazy-sync` remains on `app.renuvex.app`.
 - 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.
@@ -144,7 +145,7 @@ source_files:
 - Worker rollback: restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, DNS-only.
 - Old video-provider cleanup gates are closed; preserve Cloudflare DNS/zone and Worker delivery infrastructure.
 - Supabase RLS/default-grants hardening is a public-launch blocker.
-- Cloudinary rollback closes only after separate approved env/data/deploy gates. Current local source no longer depends on Cloudinary, but Vercel Cloudinary env and old test provider assets must not be deleted without explicit scope/risk/rollback approval.
+- AWS-only image runtime, legacy DB alignment, Vercel env cleanup, and local env cleanup are complete. Provider account assets are out of app scope.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
 

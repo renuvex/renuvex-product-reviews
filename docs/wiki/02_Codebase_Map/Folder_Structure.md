@@ -18,7 +18,7 @@ related:
 ## Summary
 Top-level layout. Three big buckets: the Next.js app (`src/app/*`), the storefront widget source (`src/widget/*`), and the Prisma DB (`prisma/`). The widget bundle is checked into `public/widget.js`. Update this page whenever a top-level folder is added, removed, or renamed.
 
-Cloudflare Worker widget delivery adds a small fourth top-level code bucket: `workers/widget-delivery/`. It serves `widget.renuvex.app` static assets and V2 allowlisted public reads only, uses `wrangler.widget.jsonc`, and must not own settings side effects, writes, upload, DB, Mux, QStash, Cloudinary, R2, or webhook behavior.
+Cloudflare Worker widget delivery adds a small fourth top-level code bucket: `workers/widget-delivery/`. It serves `widget.renuvex.app` static assets and V2 allowlisted public reads only, uses `wrangler.widget.jsonc`, and must not own settings side effects, writes, upload, DB, Mux, QStash, image-provider, R2, or webhook behavior.
 
 ## Tree (annotated)
 
@@ -96,7 +96,7 @@ renuvex-product-reviews/
 │  │  ├─ cors.ts                 # withCors / corsOptions — wide-open for /api/public/*
 │  │  ├─ design-tokens.ts        # Color tokens shared admin/widget
 │  │  ├─ prisma.ts               # Prisma singleton
-│  │  ├─ review-images.ts        # Trusted review image URL policy (Cloudinary allowlist)
+│  │  ├─ review-images.ts        # Trusted review image URL policy (AWS media host allowlist)
 │  │  ├─ session.ts              # iron-session wrappers
 │  │  ├─ utils.ts                # cn() etc.
 │  │  ├─ validation.ts           # zod helpers

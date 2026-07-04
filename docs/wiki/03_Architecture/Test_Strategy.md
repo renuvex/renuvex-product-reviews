@@ -98,7 +98,7 @@ source_files:
 # Test Strategy
 
 ## Summary
-The automated test suite has six layers: widget network/chunk contracts, widget layout/runtime rendering, storefront interactions, cross-browser review media, admin preview/settings behavior, and backend/theme-state unit tests. The suite is designed to catch regressions in public widget behavior without depending on real ikas auth, production DB data, Cloudinary uploads, Mux assets/direct uploads, or live merchant credentials.
+The automated test suite has six layers: widget network/chunk contracts, widget layout/runtime rendering, storefront interactions, cross-browser review media, admin preview/settings behavior, and backend/theme-state unit tests. The suite is designed to catch regressions in public widget behavior without depending on real ikas auth, production DB data, AWS/Mux provider uploads, or live merchant credentials.
 
 ## Worker Delivery Gates
 Cloudflare Worker widget delivery has a separate local gate because it validates an edge asset target without deploying it:
@@ -162,7 +162,7 @@ Playwright device descriptors emulate viewport, input, and browser-engine behavi
 
 Storefront interactions, runtime smoke, and unit tests also pin the summary filter same-gesture shield: touch/pen filter option activation closes the menu on `pointerdown`, arms the popover registry shield, keeps the exposed write button at `pointer-events:none` / `opacity:1` for that gesture, keeps selected-filter rating bar dim opacity intact while pointer-blocking bar rows, and clears the shield when the trailing click is swallowed. Runtime smoke treats that shield as transient: it asserts dimmed rating rows are pointer-blocked while the shield is armed, then simulates the swallowed trailing click and asserts the controls return to `pointer-events:auto`. Desktop mouse option selection is pinned separately to the normal `click` path: every summary layout keeps the filter button at `pointer-events:auto` / `cursor:pointer` and can reopen it immediately after a sort-triggered render. This protects physical mobile compat-event behavior without disabling ADR_0011 `:active` feedback for real future taps or desktop repeat-selection ergonomics.
 
-Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains the final trusted Cloudinary URL instead of a local `blob:` preview URL.
+Storefront interactions also pin the photo-upload submit bridge: pending uploads keep the author-step submit button disabled, and the submit payload contains AWS uploaded-image refs instead of a local `blob:` preview URL.
 
 Storefront interactions and unit tests also pin review form wizard close-control contrast: `theme-vars.js` derives the close icon color and hover background from `formBgColor`, and the browser test verifies the real shadow-DOM button stays readable even when `formPrimaryTextColor` matches a dark form background. Unit tests also pin wizard nav-button hover gating: desktop hover feedback is limited to fine pointers while the same visual feedback remains available as transient `:active` press feedback on touch devices, preventing sticky mobile hover without changing the design token.
 
@@ -196,13 +196,13 @@ These commands are not hard byte-budget gates. They produce repeatable productio
 | Command | Scope |
 |---|---|
 | `pnpm measure:deployed-widget` | Loads deployed `widget.js` and immutable `widget-runtime/*` chunks from `https://widget.renuvex.app`, defaults backend/error/write mocks to `https://app.renuvex.app`, defaults cacheable settings/ratings/reviews mocks to `https://widget.renuvex.app`, and reports script count, chunk list, encoded transfer bytes, decoded bytes, API calls, and cache/content-encoding headers for mount-present/mount-absent and badge-on/badge-off combinations. |
-| `pnpm measure:storefront-waterfall -- <storefront-url>` | Opens a real storefront PDP/category URL in Chromium, appends `renuvexPerf=1`, observes the page for `MEASURE_STOREFRONT_WAIT_MS` milliseconds after DOMContentLoaded, and reports Renuvex static assets, Worker read API, Vercel backend API, ikas storefront, Mux, Cloudinary, Yotpo, console errors, browser marks, widget startup markers, encoded bytes, cache headers, TTFB, and total request timing by category. Use `--runs=10` or `MEASURE_STOREFRONT_RUNS=10` for min/median/p90/p95 startup summaries. |
+| `pnpm measure:storefront-waterfall -- <storefront-url>` | Opens a real storefront PDP/category URL in Chromium, appends `renuvexPerf=1`, observes the page for `MEASURE_STOREFRONT_WAIT_MS` milliseconds after DOMContentLoaded, and reports Renuvex static assets, Worker read API, Vercel backend API, ikas storefront, Mux, image-provider, Yotpo, console errors, browser marks, widget startup markers, encoded bytes, cache headers, TTFB, and total request timing by category. Use `--runs=10` or `MEASURE_STOREFRONT_RUNS=10` for min/median/p90/p95 startup summaries. |
 | `pnpm verify:deployed-jsonld` | Loads the deployed widget in a controlled browser harness and verifies the JSON-LD runtime contract: visible rating/review paths emit one parseable `Product` + `AggregateRating`, no-visible-surface and rich-snippet-disabled paths emit none. `SEO_PDP_URL=<public-url>` switches it to a real public PDP URL check. |
 
 Record notable evidence in `docs/wiki/10_Research/` instead of adding brittle byte thresholds immediately.
 
 ## Test Harness
-`tests/widget-harness.ts` serves a fake widget origin and a fake ikas-like merchant page. Tests intercept `/api/public/*` requests and Cloudinary image URLs, so browser tests exercise real built widget files while keeping external services mocked. This is deliberate: source imports are useful for unit tests, but widget smoke tests must validate the browser-visible loader/runtime shape.
+`tests/widget-harness.ts` serves a fake widget origin and a fake ikas-like merchant page. Tests intercept `/api/public/*` requests and provider image URLs, so browser tests exercise real built widget files while keeping external services mocked. This is deliberate: source imports are useful for unit tests, but widget smoke tests must validate the browser-visible loader/runtime shape.
 
 ## Review API Matrix
 The highest-risk public write surface is `POST /api/public/reviews`. Unit tests cover:
@@ -210,7 +210,7 @@ The highest-risk public write surface is `POST /api/public/reviews`. Unit tests 
 - syntactic validation before rate-limit/storage,
 - profanity rejection before rate-limit/storage,
 - Redis fixed-window rate-limit behavior,
-- trusted Cloudinary image policy and pending-image cleanup,
+- trusted AWS image policy and pending-image cleanup,
 - store/product target verification before write,
 - approval policy modes (`manual`, `all`, `5stars`, `4plus`, and boolean legacy values).
 
@@ -218,9 +218,9 @@ The highest-risk public write surface is `POST /api/public/reviews`. Unit tests 
 
 Product review summary unit coverage pins `ProductReviewSummary` creation, decrement, `hasImages` photo-count deltas, `hasVideo`/media-count deltas, photo/media rating buckets, merchant-reply no-op behavior, exact repair recompute, filtered public total derivation, `/api/public/ratings` summary reads without raw `Review.groupBy()`, and admin status-transition writes. Public review submit tests also pin `ReviewMedia` creation, pending metadata carry-over, and admin status tests pin media visibility changes. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0027_Review_Media_Read_Model]], and [[ADR_0029_Review_Media_Metadata]].
 
-Legacy review media reconciliation unit coverage pins the maintenance-script classifier: tenant-scoped URLs are trusted, old global `review_images/...` URLs require copy-first reconciliation, wrong-store/foreign-cloud URLs stay untrusted, target public IDs are deterministic, placeholder Cloudinary API credentials are rejected before apply, and local env files can replace placeholder shell env values. Operational dry-runs are also part of the evidence: after the 2026-06-08 test-store reconciliation, `pnpm reviews:media:reconcile --cloudName=dtn7jhhuy --allowLegacyGlobal --dryRun` must report `plannedCopies=0`. See [[Legacy_Review_Media_Reconciliation]].
+Legacy review media reconciliation coverage is superseded by the AWS-only image provider contract and DB alignment evidence. Current tests should pin AWS upload refs, variant manifests, public media descriptors, and object-family cleanup. See [[ADR_0034_AWS_Review_Image_Migration]].
 
-The browser interaction layer verifies the upload-to-submit bridge separately: after Cloudinary returns a tenant-scoped trusted URL and upload-response metadata, `/api/public/upload/register` receives `{storeId, secureUrl, metadata}` and `/api/public/reviews` receives the URL in `images`. Unit tests verify that register remains backwards compatible when metadata is absent and rejects untrusted dimensions when the Cloudinary response signature is invalid.
+The browser interaction layer verifies the upload-to-submit bridge separately: after the widget receives an AWS upload intent, completes S3 POST, and registers the object, `/api/public/reviews` receives uploaded-image refs rather than local `blob:` URLs. Unit tests verify register rejects invalid store/type/size/checksum/object metadata.
 
 ## Combination Strategy
 The suite uses risk-based pairwise coverage instead of a full cartesian matrix. Full cartesian layout x icon x color x toggle x theme coverage would become slow and noisy. New layout or surface work should add the smallest matrix that covers:

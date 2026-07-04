@@ -46,7 +46,7 @@ source_files:
 | IP rate limit (3 / 10min) | ✅ | same file, Upstash Redis |
 | Profanity filter (TR + EN) | ✅ | same file, `PROFANITY_LIST` constant |
 | Auto-approve modes (`manual` / `4plus` / `5stars` / `all`) | ✅ | same file |
-| Image upload (Cloudinary signed, tenant-scoped) | ✅ | [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts) |
+| Image upload (AWS S3 presigned POST, tenant-scoped) | ✅ | [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts) |
 | Author masking on public output | ✅ | `maskAuthor` in public reviews route |
 | Public read with rating filter, photo filter, sort | ✅ | same file (GET) |
 | Ratings-by-slug bulk endpoint (listing badges) | ✅ | [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts) |

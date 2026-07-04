@@ -95,12 +95,12 @@ related:
 - **Why it matters:** Prevents public review submissions from storing third-party tracking images and filters legacy DB image rows before public/admin responses.
 - **Be careful:**
   - Keep this policy aligned with widget `getTrustedReviewImages()` in [src/widget/core/helpers.js](src/widget/core/helpers.js).
-  - No-image reviews must still succeed when Cloudinary env is missing; only non-empty image payloads require a valid cloud name.
+  - No-image reviews must still succeed without image-provider env. Non-empty image payloads require server-created AWS upload refs.
   - Do not reintroduce broad `https://` or `data:image` acceptance in public API or widget rendering.
 
 ### [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts)
-- **What:** Issues short-lived Cloudinary upload signature for a verified store; rate-limited 10/10min/IP.
-- **Be careful:** The signature only authorizes uploads to `folder=review_images/stores/<storeId>`. Do not return a client-chosen folder or remove StoreSettings verification.
+- **What:** Issues short-lived AWS S3 presigned POST upload intents for a verified store; rate-limited 10/10min/IP.
+- **Be careful:** The intent only authorizes tenant-scoped object keys. Do not return AWS credentials, client-chosen object keys, or remove StoreSettings verification.
 
 ### [src/lib/cors.ts](src/lib/cors.ts)
 - **What:** `withCors` adds `Access-Control-Allow-Origin: *` to all `/api/public/*` responses.
@@ -137,7 +137,7 @@ related:
 
 ### [workers/widget-delivery/src/index.ts](workers/widget-delivery/src/index.ts)
 - **What:** Cloudflare Worker Static Assets entry for `widget.renuvex.app`.
-- **Be careful:** Static/read-edge only by design. It may serve widget runtime files, `/__health`, and allowlisted public reads; every other `/api/*` path must remain fail-closed. Do not add secrets, DB, Mux, QStash, Cloudinary, R2, or provider calls to this Worker.
+- **Be careful:** Static/read-edge only by design. It may serve widget runtime files, `/__health`, and allowlisted public reads; every other `/api/*` path must remain fail-closed. Do not add secrets, DB, Mux, QStash, image-provider, R2, or provider calls to this Worker.
 
 ### [wrangler.widget.jsonc](wrangler.widget.jsonc)
 - **What:** Cloudflare Worker config for widget static asset delivery.
@@ -148,7 +148,7 @@ related:
 - **Be careful:** It must stay manifest-aware and retention-aware. Do not replace it with a full `public/` copy.
 
 ### [vercel.json](vercel.json)
-- **What:** `regions: ["fra1"]`, daily maintenance cron (`/api/admin/daily-maintenance`), monthly Cloudinary fallback cleanup, and widget static asset cache headers.
+- **What:** `regions: ["fra1"]`, daily maintenance cron (`/api/admin/daily-maintenance`), monthly AWS image cleanup, and widget static asset cache headers.
 - **Be careful:** Cron routes require `Bearer ${CRON_SECRET}` and refuse to run if `CRON_SECRET` is missing in Vercel env.
 
 ## Observability (Sentry)

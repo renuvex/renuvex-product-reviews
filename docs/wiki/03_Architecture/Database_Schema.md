@@ -113,7 +113,7 @@ Normalized review media rows. `Review.images` remains as a compatibility mirror,
 | `assetId` | String? `@db.VarChar(128)` | Legacy/provider-specific asset id when available |
 | `version` | String? `@db.VarChar(64)` | Legacy/provider-specific version when available |
 | `resourceType` | String `@default("image") @db.VarChar(32)` | `image` or `video` |
-| `provider` | String `@default("cloudinary") @db.VarChar(64)` | Additive legacy DB default; new review-image source writes `aws_s3` explicitly |
+| `provider` | String `@default("aws_s3") @db.VarChar(64)` | AWS review-image default after cutover |
 | `providerAssetId` | String? `@db.VarChar(512)` | Provider asset id; AWS image asset id or Mux asset id |
 | `format` | String? `@db.VarChar(32)` | Normalized image format (`jpg`, `png`, `webp`, `gif`, `avif`) |
 | `mimeType` | String? `@db.VarChar(128)` | Derived MIME type for the format |
@@ -333,18 +333,18 @@ History documented in [[Database_Map]]. Notable themes: index churn (added → c
 - [[Widget_Customization]]
 
 ## Change Log
-- 2026-07-03: Updated active schema notes for AWS-only review images. Legacy Cloudinary defaults/rows can exist in additive schema/data, but current source writes AWS image provider ids and AWS variant manifests.
+- 2026-07-04: Updated provider defaults to `aws_s3` after AWS-only cutover and legacy DB alignment. Current source writes AWS image provider ids and AWS variant manifests.
 - 2026-06-09: Added `MediaCleanupRun` (cleanup audit log) and `OrphanImageQuarantine` (two-phase orphan-deletion state) models; `cleanup-images` now marks-then-sweeps orphans behind a circuit-breaker. Additive single-deploy migration. See [[ADR_0030_Cleanup_Hardening]].
-- 2026-06-08: Added Cloudinary image metadata columns to `ReviewMedia` and `PendingReviewImage`; upload/register now stages verified upload-response metadata and review submit carries it into committed media rows. Related: [[ADR_0029_Review_Media_Metadata]].
+- 2026-06-08: Added image metadata columns to `ReviewMedia` and `PendingReviewImage`; upload/register now stages verified upload-response metadata and review submit carries it into committed media rows. Related: [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-08: Added `photoRating1Count` ... `photoRating5Count` to `ProductReviewSummary` so public review-list filtered totals come from the read model instead of raw `Review.count()`.
 - 2026-06-07: Added `Review.hasImages` and `ReviewMedia` for indexed public photo-review filters and normalized trusted media rows. Related: [[ADR_0027_Review_Media_Read_Model]].
 - 2026-06-08: Added partial review cursor indexes and moved widget load-more to cursor/keyset pagination while preserving legacy page reads. Related: [[ADR_0028_Review_Cursor_Pagination]].
 - 2026-06-06: Added `ProductReviewSummary` as the product-level aggregate read model for public rating badge, structured-data, and review summary distribution reads. See [[ADR_0026_Product_Review_Summary_Read_Model]].
 - 2026-05-23: Upgraded `StoreSettings.storefrontTheme` app-layer shape to v2 stable/pending sync state; no DB migration needed because the column remains nullable JSON.
 - 2026-05-23: Added nullable `StoreSettings.storefrontTheme` JSONB for active theme metadata used by runtime adapter selection.
-- 2026-05-18: Added nullable `PendingReviewImage.storeId` plus `[storeId, createdAt]` for D3 tenant-scoped Cloudinary uploads. New writes always set `storeId`; nullable exists for safe migration over old rows.
+- 2026-05-18: Added nullable `PendingReviewImage.storeId` plus `[storeId, createdAt]` for D3 tenant-scoped image uploads. New writes always set `storeId`; nullable exists for safe migration over old rows.
 - 2026-05-18: Removed redundant Review prefix indexes `[storeId, productId]` and `[storeId, slug]`; retained `[storeId, productId, status]`, `[storeId, status]`, and `[storeId, slug, status]`.
 - 2026-05-17: Removed unused `ProductSnapshot.deleted` column + `[storeId, slug, deleted]` index — ikas has no product-delete webhook scope, so it was always false. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added `[storeId, productId, status]` index for canonical product-id listing/search rating reads. Related: [[ADR_0015_Canonical_Product_Identity]].
 - 2026-05-17: Added `ProductSnapshot` read model for current ikas product id/slug/name resolution.
-- 2026-05-12: Added `PendingReviewImage` model — registry of Cloudinary uploads not yet attached to a Review. See [[ADR_0012_Pending_Upload_Registry]].
+- 2026-05-12: Added `PendingReviewImage` model — registry of image uploads not yet attached to a Review. See [[ADR_0012_Pending_Upload_Registry]].

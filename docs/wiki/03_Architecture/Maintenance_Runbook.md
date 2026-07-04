@@ -43,7 +43,7 @@ Operational reference for the scheduled background jobs and how their failures s
 ## Cron jobs (`vercel.json`)
 | Cron | Schedule (UTC) | What it does |
 |---|---|---|
-| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, and video session/job reconciliation when video infrastructure is configured. Cloudinary metadata backfill is removed after the AWS-only image teardown source pass. |
+| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, and video session/job reconciliation when video infrastructure is configured. Legacy image metadata backfill is removed after the AWS-only image teardown source pass. |
 | `GET /api/admin/cleanup-images` | `0 4 1 * *` (monthly) | AWS review-image orphan **two-phase** cleanup behind a circuit-breaker (ADR_0012 + [[ADR_0030_Cleanup_Hardening]]): scan scoped S3 object families, mark orphan families, then sweep after grace if still orphaned. Writes a `MediaCleanupRun` audit row. |
 
 Both require `Authorization: Bearer <CRON_SECRET>`.

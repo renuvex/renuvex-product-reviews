@@ -61,7 +61,7 @@ Active development on the production test store. Core review, image, Mux video, 
 - Cloudflare Worker delivery for `widget.renuvex.app` static assets plus V2 read-cache for `settings`, `ratings`, `ratings-by-slug`, and `reviews`; write/upload/video/lazy-sync paths stay on `app.renuvex.app`
 - Mux review-video upload, webhook/reconcile, admin signed preview, public Mux Player playback, quota cleanup, abandoned-upload cleanup, approve/reject/delete, and retry UX are live and covered by tests/manual canary evidence
 - Widget artifact budget gate: `pnpm budget:widget` enforces local bundle size/request-budget guardrails after `pnpm build:widget`
-- Cloudinary teardown source pass is locally verified: production code/tests/scripts/config no longer reference Cloudinary, `cloudinary` is removed from `package.json`/lockfile, and the current widget manifest graph contains no Cloudinary references. Vercel env removal, legacy DB data alignment, Worker deploy, and provider asset/account deletion remain separate approval gates.
+- AWS-only review-image source pass is merged and deployed: production code/tests/scripts/config no longer depend on the legacy image provider, the SDK dependency is removed from `package.json`/lockfile, the current Worker-served widget manifest graph contains no legacy provider references, and live AWS-only image acceptance passed through sign, S3 POST, register, submit, admin approve, and public render. Legacy pre-public DB alignment, Vercel env removal, and local secret cleanup are complete; provider account assets are out of app scope.
 - Theme variant build is not a reliable current gate: the stale `--theme=new-theme` alias is tracked as Phase 3 cleanup in [[ADR_0013_Modular_Widget_Loader_Architecture]].
 - Sentry observability on the panel (Node + Edge + browser): error capture, masked Session Replay, traces (prod 10%), server log ingestion, source map upload via Vercel-Sentry integration. PII auto-attach disabled to prevent ikas OAuth/JWT leakage. See [[Sentry_Operations]] and [[ADR_0009_Sentry_Observability_Strategy]].
 - Widget-side uncaught errors forwarded to Sentry via a 637-byte (gzip) in-widget reporter and a rate-limited public endpoint (`/api/public/widget-error`). No SDK shipped to the widget bundle; storefront customer privacy and Core Web Vitals preserved. See [[ADR_0010_Widget_Error_Forwarding]].
@@ -70,7 +70,7 @@ Active development on the production test store. Core review, image, Mux video, 
 - Public launch security gate: Supabase RLS/default grants hardening remains open. Runtime DB access is server-side Prisma today, but public launch should still close the Supabase policy/grant audit.
 - Operational smoke gates: authenticated dashboard smoke and Sentry post-deploy health checks should be run after meaningful admin/runtime deploys.
 - Video operations: the Mux path is live and stable; periodic Mux asset reconciliation dry-run/reporting remains a deferred ops hardening item.
-- Image operations: source is AWS-only for new review images. Legacy pre-public Cloudinary test rows/assets are not copied to AWS; retiring or hiding them in DB requires a separate dry-run/apply approval.
+- Image operations: source/runtime is AWS-only for new review images. Legacy provider DB targets are zero after the approved apply; temporary alignment scripts were removed after completion. Existing provider account assets were not copied to AWS and are outside the app runtime.
 - Product readiness gaps: real i18n/aria localization, unsupported-theme warning UI, and non-Ozy theme adapter coverage remain separate product/platform work.
 - ADR_0013 source hardening remains live: non-destructive StorefrontJSScript create/update lifecycle, daily script reconcile through daily maintenance, hashed runtime entry with stable shim, and canonical product identity via [[ADR_0015_Canonical_Product_Identity]].
 
@@ -108,10 +108,12 @@ Active development on the production test store. Core review, image, Mux video, 
 8. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-07-03
+2026-07-04
 
 ## Change Log
-- 2026-07-03: Recorded local Cloudinary teardown source pass: AWS-only image upload/render/cleanup code, dependency/config/script/test cleanup, and widget manifest graph verification. Env removal, DB data alignment, Worker deploy, and provider deletion remain approval-gated.
+- 2026-07-04: Applied the approved pre-public legacy image DB alignment. The apply retired 12 legacy image `ReviewMedia` rows, 6 stale pending rows, 8 legacy image flags/mirrors, 26 quarantine rows, 1 old provider job, and rebuilt one affected product summary. Post-checks report zero remaining legacy image-provider DB targets; no provider assets were mutated.
+- 2026-07-04: Recorded PR #5 production deployment and Cloudflare Worker deployment for AWS-only image source pass. Live AWS-only acceptance review `8962e9c8-7c7f-49db-9e16-cb68bbeff428` proved 14 variants, public `media.renuvex.app` delivery, immutable CloudFront cache headers, and no legacy-provider/private leak markers.
+- 2026-07-03: Recorded local AWS-only image source pass: AWS-only image upload/render/cleanup code, dependency/config/script/test cleanup, and widget manifest graph verification. Env removal, DB data alignment, and Worker deploy remained approval-gated at that checkpoint.
 - 2026-07-02: Refreshed status after Mux and Cloudflare Worker migrations moved from gated/pending to live. Current open work is security/ops/product readiness rather than Mux deploy or Worker rollout.
 - 2026-06-14: Added dry-run-first Review Video V1 canary operations and a controlled activation/rollback runbook. No production merchant gate or global flag was enabled by this change.
 - 2026-06-14: Recorded provider-agnostic video implementation and the Phase 4 five-project Playwright media matrix. Provider details are superseded by [[ADR_0032_Review_Video_On_Mux]].
@@ -131,8 +133,8 @@ Active development on the production test store. Core review, image, Mux video, 
 - 2026-05-17: Added ProductSnapshot read model, ikas product webhook receiver, install/manual backfill, and snapshot-backed slug fallback.
 - 2026-05-17: Phase 2 module split implemented and verified: classic `public/widget.js` loader + ESM `public/widget-runtime/*` chunks.
 - 2026-05-15: Added current-state corrections from the read-only widget architecture audit: deployed `widget.js` measured `177763` bytes, JSON-LD exists but needs validation/decoupling, and future Yotpo-like surfaces should follow [[Yotpo_Style_Widget_Modular_Architecture]].
-- 2026-05-12: **Pending Image Registry**: Replaced Cloudinary scan-and-diff with a robust DB-tracked `PendingReviewImage` registry. Eliminates 500-asset cap and race conditions. ([[ADR_0012_Pending_Upload_Registry]])
+- 2026-05-12: **Pending Image Registry**: Replaced provider scan-and-diff with a robust DB-tracked `PendingReviewImage` registry. Eliminates 500-asset cap and race conditions. ([[ADR_0012_Pending_Upload_Registry]])
 - 2026-05-12: **Accessibility & Touch**: Adopted widget-scope touch-feedback contract and standardized focus trapping for modally-presented UI (Lightbox, Filter Menu). ([[ADR_0011_Widget_Touch_Feedback_And_Focus_Modality]])
 - 2026-05-11: **Observability Layer**: Deployed Sentry SDK on panel (Node+Edge+Browser) with PII masking, and implemented a tiny 637-byte custom reporter for the widget bundle to forward errors without shipping an SDK to storefronts. ([[ADR_0009_Sentry_Observability_Strategy]], [[ADR_0010_Widget_Error_Forwarding]])
-- 2026-05-11: **Cloudinary Build-Time Migration**: Removed runtime image-policy contract. Cloud name is now a build-time constant. ([[ADR_0008_Cloud_Name_Build_Time_Only]])
+- 2026-05-11: **Legacy Image Build-Time Migration**: Removed runtime image-policy contract. Cloud name is now a build-time constant. ([[ADR_0008_Cloud_Name_Build_Time_Only]])
 - *(Note: Detailed bug fixes and minor operational updates are recorded in `05_Bugs_And_Fixes` and the repository commit log).*
