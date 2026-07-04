@@ -223,16 +223,19 @@ Post-create read-only checks:
   for `review-images/v1/private/` objects tagged `renuvex_state=pending`.
 - Bucket policy denies insecure transport and allows CloudFront service
   `s3:GetObject` only from distribution `E1205OOLPZDB00`, scoped to
-  `review-images/v1/public/*` and private admin preview variant paths. It does
-  not grant CloudFront read access to private originals.
+  `reviews/*`, transitional `review-images/v1/public/*`, and private admin
+  preview variant paths. It does not grant CloudFront read access to private
+  originals.
 - CloudFront OAC uses SigV4 with `SigningBehavior: always`.
 - CloudFront cache policy forwards no viewer headers, cookies, or query strings
   to S3, and uses one-year immutable TTLs.
 - CloudFront response headers include `nosniff`, HSTS, referrer policy, and
   frame denial.
 - CloudFront default behavior is signed-key-group protected for private preview
-  paths; the public variants behavior for `review-images/v1/public/*` is not
-  key-group protected and permits `GET`/`HEAD` only.
+  paths; the public review image behavior for `reviews/*` is not key-group
+  protected and permits `GET`/`HEAD` only. The older
+  `review-images/v1/public/*` behavior is transitional for pre-public test
+  objects until the separate post-acceptance cleanup gate removes it.
 - The review-image operator role now includes `s3:GetBucketPolicyStatus`; the
   bucket policy status was read successfully and reports `IsPublic=false`.
   The bucket policy and Public Access Block were also read and verified
@@ -322,7 +325,7 @@ Cloudflare final media DNS result:
 - Public resolver `8.8.8.8` resolves the CNAME to
   `d2vvn9hb97q5dv.cloudfront.net`; A-record propagation may lag by resolver
   cache, but the CNAME target is correct.
-- `https://media.renuvex.app/review-images/v1/public/__healthcheck__` reaches
+- `https://media.renuvex.app/reviews/__healthcheck__` reaches
   CloudFront over TLS and returns expected `403 Forbidden` because no test
   object exists at that path.
 - TLS SNI validation for `media.renuvex.app` is authorized. The presented

@@ -31,7 +31,7 @@ Active development on the production test store. Core review, image, Mux video, 
   - Product review widget (modal submission + listing) with multiple review-layouts (card, gallery, list) and summary-layouts (classic, compact, hero, minimal, split)
   - Media gallery above review list — dedicated newest-first fetch, cap 15, independent of sort/filter/load-more (see [[Media_Gallery]], [[ADR_0007_Photo_Strip_Cap_And_Rotation]])
   - Review fetch failures render a retryable error state instead of the normal empty-review state
-  - Trusted review image policy is AWS-only for new images: storefront renders structured `media[]` descriptors whose image URLs must be under `https://media.renuvex.app/review-images/v1/public/...`; settings response no longer carries `imagePolicy`.
+  - Trusted review image policy is AWS-only for new images: storefront renders structured `media[]` descriptors whose image URLs must be under `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>`; settings response no longer carries `imagePolicy`.
   - Review image load failures degrade gracefully: thumbnails hide broken assets, lightbox main image shows a neutral placeholder, and failures log with `console.warn`
   - Product review section is opt-in on PDP via `<div data-renuvex-widget="reviews"></div>`; missing mount means no review section, while PDP title badge and listing badges remain independent and are controlled by the `badge` widget toggle
   - Photo review lightbox traps keyboard focus, exposes dialog semantics, and uses desktop/tablet/mobile responsive shells with mobile viewport-unit fallbacks

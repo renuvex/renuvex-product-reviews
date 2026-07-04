@@ -220,7 +220,7 @@ function deterministicReviewImageAssetId(name: string): string {
 
 export function reviewImage(name: string, storeId = PUBLIC_KEY, variant = 'w1200', format = 'jpeg'): string {
   const assetId = deterministicReviewImageAssetId(`${storeId}:${name}`);
-  return `https://media.renuvex.app/review-images/v1/public/stores/${storeId}/assets/${assetId}/variants/${variant}.${format}`;
+  return `https://media.renuvex.app/reviews/${assetId}/${variant}.${format}`;
 }
 
 export function reviewImageMedia(name: string, storeId = PUBLIC_KEY, position = 0): Record<string, unknown> {

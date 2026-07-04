@@ -24,7 +24,8 @@ export const AWS_REVIEW_IMAGE_UPLOAD_TTL_SECONDS = 10 * 60;
 export const AWS_REVIEW_IMAGE_UPLOAD_TTL_MS = AWS_REVIEW_IMAGE_UPLOAD_TTL_SECONDS * 1000;
 export const AWS_REVIEW_IMAGE_PUBLIC_BASE_URL_FALLBACK = 'https://media.renuvex.app';
 export const AWS_REVIEW_IMAGE_PRIVATE_PREFIX = 'review-images/v1/private';
-export const AWS_REVIEW_IMAGE_PUBLIC_PREFIX = 'review-images/v1/public';
+export const AWS_REVIEW_IMAGE_PUBLIC_PREFIX = 'reviews';
+export const AWS_REVIEW_IMAGE_LEGACY_PUBLIC_PREFIX = 'review-images/v1/public';
 
 export const AWS_REVIEW_IMAGE_VARIANTS = [
   { id: 'w200', width: 200, fit: 'inside' },
@@ -261,15 +262,25 @@ export function buildAwsReviewImagePrivateVariantKey(storeId: string, assetId: s
   return `${AWS_REVIEW_IMAGE_PRIVATE_PREFIX}/stores/${storeId}/assets/${assetId}/variants/${variantId}.${format}`;
 }
 
-export function buildAwsReviewImagePublicVariantKey(storeId: string, assetId: string, variantId: string, format: AwsReviewImageFormat): string {
-  return `${AWS_REVIEW_IMAGE_PUBLIC_PREFIX}/stores/${storeId}/assets/${assetId}/variants/${variantId}.${format}`;
+export function buildAwsReviewImagePublicVariantKey(assetId: string, variantId: string, format: AwsReviewImageFormat): string {
+  return `${AWS_REVIEW_IMAGE_PUBLIC_PREFIX}/${assetId}/${variantId}.${format}`;
 }
 
-function buildAwsReviewImagePublicVariantKeys(storeId: string, assetId: string): string[] {
+function buildAwsReviewImagePublicVariantKeys(assetId: string): string[] {
   const keys: string[] = [];
   for (const variant of AWS_REVIEW_IMAGE_VARIANTS) {
     for (const format of AWS_REVIEW_IMAGE_FORMATS) {
-      keys.push(buildAwsReviewImagePublicVariantKey(storeId, assetId, variant.id, format));
+      keys.push(buildAwsReviewImagePublicVariantKey(assetId, variant.id, format));
+    }
+  }
+  return keys;
+}
+
+function buildAwsReviewImageLegacyPublicVariantKeys(storeId: string, assetId: string): string[] {
+  const keys: string[] = [];
+  for (const variant of AWS_REVIEW_IMAGE_VARIANTS) {
+    for (const format of AWS_REVIEW_IMAGE_FORMATS) {
+      keys.push(`${AWS_REVIEW_IMAGE_LEGACY_PUBLIC_PREFIX}/stores/${storeId}/assets/${assetId}/variants/${variant.id}.${format}`);
     }
   }
   return keys;
@@ -284,12 +295,10 @@ export function buildAwsReviewImagePublicUrl(key: string): string {
   return `${publicBaseUrl}/${key.split('/').map(encodeURIComponent).join('/')}`;
 }
 
-export function isTrustedAwsReviewImagePublicUrl(value: unknown, storeId?: unknown): value is string {
+export function isTrustedAwsReviewImagePublicUrl(value: unknown, _storeId?: unknown): value is string {
   if (typeof value !== 'string') return false;
   const raw = value.trim();
   if (!raw || raw.length > 2048) return false;
-  const normalizedStoreId = normalizeReviewImageStoreId(storeId);
-  if (!normalizedStoreId) return false;
 
   let url: URL;
   let base: URL;
@@ -313,20 +322,8 @@ export function isTrustedAwsReviewImagePublicUrl(value: unknown, storeId?: unkno
   const lowerPath = url.pathname.toLowerCase();
   if (lowerPath.includes('%2f') || lowerPath.includes('%5c')) return false;
   const parts = url.pathname.split('/').filter(Boolean);
-  if (parts.length !== 9) return false;
-  if (
-    parts[0] !== 'review-images' ||
-    parts[1] !== 'v1' ||
-    parts[2] !== 'public' ||
-    parts[3] !== 'stores' ||
-    parts[4] !== normalizedStoreId ||
-    parts[5] !== 'assets' ||
-    !normalizeAwsReviewImageAssetId(parts[6]) ||
-    parts[7] !== 'variants'
-  ) {
-    return false;
-  }
-  const [variantId, extension, extra] = parts[8].split('.');
+  if (parts.length !== 3 || parts[0] !== AWS_REVIEW_IMAGE_PUBLIC_PREFIX || !normalizeAwsReviewImageAssetId(parts[1])) return false;
+  const [variantId, extension, extra] = parts[2].split('.');
   if (extra !== undefined) return false;
   return AWS_REVIEW_IMAGE_VARIANTS.some((variant) => variant.id === variantId)
     && (extension === 'webp' || extension === 'jpeg');
@@ -561,7 +558,7 @@ async function buildVariant(input: {
     ? await resized.webp({ quality: 82 }).toBuffer({ resolveWithObject: true })
     : await resized.jpeg({ quality: 86, mozjpeg: true }).toBuffer({ resolveWithObject: true });
   const key = buildAwsReviewImagePrivateVariantKey(input.storeId, input.assetId, input.variant.id, input.format);
-  const publicKey = buildAwsReviewImagePublicVariantKey(input.storeId, input.assetId, input.variant.id, input.format);
+  const publicKey = buildAwsReviewImagePublicVariantKey(input.assetId, input.variant.id, input.format);
   const contentType = contentTypeForFormat(input.format);
   const checksumSha256 = checksumBufferBase64(encoded.data);
   await getAwsReviewImagesS3Client().send(new PutObjectCommand({
@@ -757,10 +754,12 @@ async function listFamilyObjects(prefix: string): Promise<_Object[]> {
 export async function deleteAwsReviewImageFamily(storeId: string, assetId: string, options: { invalidatePublicVariants?: boolean } = {}) {
   const config = getAwsReviewImagesConfig();
   const privatePrefix = `${AWS_REVIEW_IMAGE_PRIVATE_PREFIX}/stores/${storeId}/assets/${assetId}/`;
-  const publicPrefix = `${AWS_REVIEW_IMAGE_PUBLIC_PREFIX}/stores/${storeId}/assets/${assetId}/`;
+  const publicPrefix = `${AWS_REVIEW_IMAGE_PUBLIC_PREFIX}/${assetId}/`;
+  const legacyPublicPrefix = `${AWS_REVIEW_IMAGE_LEGACY_PUBLIC_PREFIX}/stores/${storeId}/assets/${assetId}/`;
   const objects = [
     ...(await listFamilyObjects(privatePrefix)),
     ...(await listFamilyObjects(publicPrefix)),
+    ...(await listFamilyObjects(legacyPublicPrefix)),
   ].flatMap((object) => object.Key ? [{ Key: object.Key }] : []);
   for (let index = 0; index < objects.length; index += 1000) {
     const batch = objects.slice(index, index + 1000);
@@ -771,7 +770,10 @@ export async function deleteAwsReviewImageFamily(storeId: string, assetId: strin
     }));
   }
   if (options.invalidatePublicVariants) {
-    await invalidateAwsReviewImagePublicVariantPaths(buildAwsReviewImagePublicVariantKeys(storeId, assetId));
+    await invalidateAwsReviewImagePublicVariantPaths([
+      ...buildAwsReviewImagePublicVariantKeys(assetId),
+      ...buildAwsReviewImageLegacyPublicVariantKeys(storeId, assetId),
+    ]);
   }
   return { deletedObjects: objects.length };
 }
@@ -787,7 +789,7 @@ export async function listAwsReviewImageObjectFamilies(): Promise<Array<{
   const families = new Map<string, { publicId: string; storeId: string; assetId: string; createdAt: number }>();
   const prefixes = [
     `${AWS_REVIEW_IMAGE_PRIVATE_PREFIX}/stores/`,
-    `${AWS_REVIEW_IMAGE_PUBLIC_PREFIX}/stores/`,
+    `${AWS_REVIEW_IMAGE_LEGACY_PUBLIC_PREFIX}/stores/`,
   ];
   for (const Prefix of prefixes) {
     let ContinuationToken: string | undefined;

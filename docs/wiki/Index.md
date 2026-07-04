@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-03
-last_verified: 2026-07-03
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - index
@@ -188,4 +188,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-03 (refreshed AWS review-image teardown source status and active config/API maps)
+**Last Updated:** 2026-07-04 (refreshed AWS review-image public URL contract)

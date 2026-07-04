@@ -2287,9 +2287,12 @@ test('media gallery remains independent across sort and load-more, then hides fo
 });
 
 for (const reviewLayout of ['card', 'list', 'gallery'] as const) {
-  test(`${reviewLayout} review layout renders only trusted tenant image URLs`, async ({ page }) => {
+  test(`${reviewLayout} review layout renders only trusted public image URLs`, async ({ page }) => {
     const trusted = trustedReviewImage(`trusted-${reviewLayout}`);
-    const wrongTenant = trustedReviewImage(`wrong-${reviewLayout}`, 'other-store');
+    const oldPublicPath = `https://media.renuvex.app/review-images/v1/public/stores/${PUBLIC_KEY}/assets/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/variants/w1200.jpeg`;
+    const privatePath = `https://media.renuvex.app/review-images/v1/private/stores/${PUBLIC_KEY}/assets/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/variants/w1200.jpeg`;
+    const signedPublicPath = `${trusted}?Expires=1783125432&Key-Pair-Id=K1MR82PBYWDEFH&Signature=fake`;
+    const s3BucketPath = 'https://renuvex-review-images-prod-989086371563-eu-central-1.s3.eu-central-1.amazonaws.com/reviews/cccccccc-cccc-4ccc-8ccc-cccccccccccc/w1200.jpeg';
     const log = await setupWidgetRoutes(page, {
       mountReviews: true,
       reviewsSettings: { summaryLayout: 'classic', reviewLayout },
@@ -2305,7 +2308,11 @@ for (const reviewLayout of ['card', 'list', 'gallery'] as const) {
         }
 
         await fulfillJson(route, reviewsPayload([
-          { id: `trusted-policy-${reviewLayout}`, title: `Trusted ${reviewLayout}`, images: [wrongTenant, trusted] },
+          {
+            id: `trusted-policy-${reviewLayout}`,
+            title: `Trusted ${reviewLayout}`,
+            images: [oldPublicPath, privatePath, signedPublicPath, s3BucketPath, trusted],
+          },
         ]));
       },
     });
@@ -2313,7 +2320,6 @@ for (const reviewLayout of ['card', 'list', 'gallery'] as const) {
     await page.goto(`${MERCHANT_ORIGIN}/premium-shorts`);
     await expect.poll(() => hasReviewsWidget(page)).toBe(true);
     await expect.poll(() => reviewImageUrls(page)).toEqual([trusted]);
-    expect((await reviewImageUrls(page)).some((url) => url.includes('/other-store/'))).toBe(false);
     expect(widgetErrors(log)).toEqual([]);
   });
 }

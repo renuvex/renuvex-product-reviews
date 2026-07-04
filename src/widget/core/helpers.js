@@ -2,7 +2,6 @@
 
 import { renderStarRow, getIconFromSettings } from '../icons/index.js';
 import { ensureStarSprite, starUseSvg } from '../icons/star-sprite.js';
-import { PUBLIC_API_KEY } from './config.js';
 
 export var SYSTEM_SLUGS = /^(account|pages|blog|search|cart|checkout|siparis|odeme|kategori|category|urun|products?)/;
 
@@ -242,11 +241,6 @@ var AWS_REVIEW_IMAGE_VARIANTS = {
   thumb_640x854: true,
 };
 
-function normalizeReviewImageStoreId(storeId) {
-  var normalizedStoreId = typeof storeId === 'string' ? storeId.trim() : '';
-  return /^[A-Za-z0-9_-]{1,128}$/.test(normalizedStoreId) ? normalizedStoreId : '';
-}
-
 function isPreviewPlaceholderImage(url) {
   return typeof window !== 'undefined' &&
     window.__ikasPreviewMode === true &&
@@ -262,21 +256,8 @@ function isTrustedAwsReviewImageUrl(url) {
   var lowerPath = url.pathname.toLowerCase();
   if (lowerPath.indexOf('%2f') !== -1 || lowerPath.indexOf('%5c') !== -1) return false;
   var parts = url.pathname.split('/').filter(Boolean);
-  var trustedStoreId = normalizeReviewImageStoreId(PUBLIC_API_KEY);
-  if (!trustedStoreId || parts.length !== 9) return false;
-  if (
-    parts[0] !== 'review-images' ||
-    parts[1] !== 'v1' ||
-    parts[2] !== 'public' ||
-    parts[3] !== 'stores' ||
-    parts[4] !== trustedStoreId ||
-    parts[5] !== 'assets' ||
-    !/^[0-9a-f-]{36}$/i.test(parts[6]) ||
-    parts[7] !== 'variants'
-  ) {
-    return false;
-  }
-  var file = parts[8].split('.');
+  if (parts.length !== 3 || parts[0] !== 'reviews' || !/^[0-9a-f-]{36}$/i.test(parts[1])) return false;
+  var file = parts[2].split('.');
   return file.length === 2 && AWS_REVIEW_IMAGE_VARIANTS[file[0]] === true && (file[1] === 'webp' || file[1] === 'jpeg');
 }
 

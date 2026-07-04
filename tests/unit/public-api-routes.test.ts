@@ -118,9 +118,9 @@ const awsImageMock = vi.hoisted(() => ({
     if (!record?.url || !record.thumbnailUrl) return null;
     return { url: record.url, thumbnailUrl: record.thumbnailUrl, variants: Array.isArray(record.variants) ? record.variants : [] };
   }),
-  isTrustedAwsReviewImagePublicUrl: vi.fn((value: unknown, storeId?: unknown) => (
+  isTrustedAwsReviewImagePublicUrl: vi.fn((value: unknown) => (
     typeof value === 'string' &&
-    value.startsWith(`https://media.renuvex.app/review-images/v1/public/stores/${storeId || 'store-1'}/assets/`)
+    /^https:\/\/media\.renuvex\.app\/reviews\/[0-9a-f-]{36}\/[A-Za-z0-9_]+\.(?:webp|jpeg)$/i.test(value)
   )),
 }));
 
@@ -173,9 +173,9 @@ const SECOND_AWS_IMAGE_ASSET_ID = '22222222-2222-4222-8222-222222222222';
 const AWS_IMAGE_UPLOAD_SESSION_ID = '33333333-3333-4333-8333-333333333333';
 const SECOND_AWS_IMAGE_UPLOAD_SESSION_ID = '44444444-4444-4444-8444-444444444444';
 const AWS_IMAGE_CHECKSUM = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
-const AWS_REVIEW_IMAGE_URL = `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${AWS_IMAGE_ASSET_ID}/variants/w1200.jpeg`;
-const SECOND_AWS_REVIEW_IMAGE_URL = `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${SECOND_AWS_IMAGE_ASSET_ID}/variants/w1200.jpeg`;
-const AWS_REVIEW_IMAGE_THUMB_URL = `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${AWS_IMAGE_ASSET_ID}/variants/thumb_320x427.webp`;
+const AWS_REVIEW_IMAGE_URL = `https://media.renuvex.app/reviews/${AWS_IMAGE_ASSET_ID}/w1200.jpeg`;
+const SECOND_AWS_REVIEW_IMAGE_URL = `https://media.renuvex.app/reviews/${SECOND_AWS_IMAGE_ASSET_ID}/w1200.jpeg`;
+const AWS_REVIEW_IMAGE_THUMB_URL = `https://media.renuvex.app/reviews/${AWS_IMAGE_ASSET_ID}/thumb_320x427.webp`;
 
 function awsImageRef(overrides: Record<string, unknown> = {}) {
   return {
@@ -938,7 +938,7 @@ describe('/api/public/reviews', () => {
             variantStatus: 'public_ready',
             variantManifest: awsVariantManifest({
               url: SECOND_AWS_REVIEW_IMAGE_URL,
-              thumbnailUrl: `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${SECOND_AWS_IMAGE_ASSET_ID}/variants/thumb_320x427.webp`,
+              thumbnailUrl: `https://media.renuvex.app/reviews/${SECOND_AWS_IMAGE_ASSET_ID}/thumb_320x427.webp`,
               variants: [{ id: 'w1200', format: 'jpeg', width: 1200, height: 1600, url: SECOND_AWS_REVIEW_IMAGE_URL }],
             }),
             width: null,
@@ -1537,7 +1537,7 @@ describe('/api/public/reviews', () => {
         variantGeneratedAt: new Date('2026-06-08T00:00:00.000Z'),
         variantManifest: awsVariantManifest({
           url: SECOND_AWS_REVIEW_IMAGE_URL,
-          thumbnailUrl: `https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/${SECOND_AWS_IMAGE_ASSET_ID}/variants/thumb_320x427.webp`,
+          thumbnailUrl: `https://media.renuvex.app/reviews/${SECOND_AWS_IMAGE_ASSET_ID}/thumb_320x427.webp`,
           variants: [{ id: 'w1200', format: 'jpeg', width: 1200, height: 1600, url: SECOND_AWS_REVIEW_IMAGE_URL }],
         }),
         uploadExpiresAt: new Date(Date.now() + 60_000),

@@ -20,7 +20,6 @@ related:
   - "[[ADR_0032_Review_Video_On_Mux]]"
   - "[[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]"
   - "[[ADR_0034_AWS_Review_Image_Migration]]"
-  - "[[Storefront_CDN_Performance_Benchmark]]"
   - "[[Theme_Adapter_Playbook]]"
   - "[[Test_Strategy]]"
 source_files:
@@ -125,6 +124,7 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-04: AWS review-image public URL contract is being simplified to `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>`; private/admin preview paths are unchanged and old public prefix access is transitional.
 - 2026-07-04: Admin AWS private-image thumbnails now use signed `thumb_320x427`; image modal loading copy no longer says video.
 - 2026-07-04: Legacy image-provider DB alignment completed: 12 media, 6 pending, 8 image flags/mirrors, 26 quarantine rows, 1 job retired, 1 summary rebuilt.
 - 2026-07-04: AWS-only image source pass is merged/deployed. PR #5 is `244b0997`, Vercel production is `dpl_4Cqv9KsYsMJhuaAmrGSmZiGnJqga`, Worker version is `29571b47-2f2b-449f-8bbc-ce15d14c0832`, and live acceptance passed without private leak markers.
@@ -134,7 +134,7 @@ source_files:
 - 2026-07-01: `pnpm budget:widget` is hard local artifact budget gate after `pnpm build:widget`; network budget stays warn-only.
 - 2026-06-30: Upstash audit: Redis measured `0` recent commands/bandwidth; QStash has no DLQ/schedules. See [[Upstash_Redis_QStash_Cost_Audit]].
 - 2026-06-28/2026-07-02: Worker asset delivery is live for `widget.renuvex.app`; Worker V2 read cache is live for settings, ratings, ratings-by-slug, and reviews. `app.renuvex.app` remains backend/write/upload/video/Mux/QStash.
-- 2026-07-02: AWS CloudFront/S3 widget CDN cutover is closed as an active issue for the current MVP. The canary remains documented and reproducible, but Cloudflare Worker V2 stays the production delivery layer because AWS was only slightly faster and materially more expensive.
+- 2026-07-02: AWS widget CDN canary is closed; Cloudflare Worker V2 stays production delivery.
 - 2026-06-23: Review Video playback uses official Mux Player; Mux Data tracking/cookies stay disabled.
 - 2026-06-08: Public review reads now use `ProductReviewSummary`, cursor/keyset pagination, indexed `Review.hasImages`, and `ReviewMedia`/`PendingReviewImage` metadata. See [[ADR_0026_Product_Review_Summary_Read_Model]], [[ADR_0028_Review_Cursor_Pagination]], and [[ADR_0029_Review_Media_Metadata]].
 - 2026-06-21: Mux cutover and cleanup are live; see [[ADR_0032_Review_Video_On_Mux]].
@@ -142,8 +142,7 @@ source_files:
 ## Current Risks / Open Questions
 - Storefront is Turkish-first; future EN/DE needs real i18n, not only merchant copy.
 - Keep post-deploy smoke after runtime widget changes.
-- Worker V2 read origin: `widget.renuvex.app`; backend/write/upload/video/lazy-sync origin: `app.renuvex.app`.
-- Worker rollback: restore `widget.renuvex.app CNAME 2d886046bc2da89b.vercel-dns-017.com`, TTL `600`, DNS-only.
+- Worker V2 read origin: `widget.renuvex.app`; write/upload/video/lazy-sync origin: `app.renuvex.app`.
 - Old video-provider cleanup gates are closed; preserve Cloudflare DNS/zone and Worker delivery infrastructure.
 - Supabase RLS/default-grants hardening is a public-launch blocker.
 - AWS-only image runtime, legacy DB alignment, Vercel env cleanup, and local env cleanup are complete. Provider account assets are out of app scope.

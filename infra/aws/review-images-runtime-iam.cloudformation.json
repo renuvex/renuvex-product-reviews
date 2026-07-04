@@ -130,6 +130,9 @@
                       "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}/review-images/v1/private/*"
                     },
                     {
+                      "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}/reviews/*"
+                    },
+                    {
                       "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}/review-images/v1/public/*"
                     }
                   ]
@@ -145,6 +148,7 @@
                     "StringLike": {
                       "s3:prefix": [
                         "review-images/v1/private/*",
+                        "reviews/*",
                         "review-images/v1/public/*"
                       ]
                     }

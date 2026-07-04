@@ -71,7 +71,7 @@ describe('createMediaThumbnail intrinsic fallback dimensions', () => {
   });
 
   test('uses display fallback dimensions and leaves AWS image URLs untransformed', () => {
-    const url = 'https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/00000000-0000-4000-8000-000000000001/variants/w300.jpeg';
+    const url = 'https://media.renuvex.app/reviews/00000000-0000-4000-8000-000000000001/w300.jpeg';
     const thumb = createMediaThumbnail({
       type: 'image',
       url,

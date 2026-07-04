@@ -96,12 +96,19 @@ if (!Array.isArray(defaultBehavior?.TrustedKeyGroups) || defaultBehavior.Trusted
   throw new Error('Default CloudFront behavior must require a trusted key group for private paths.');
 }
 const cacheBehaviors = distribution.Properties?.DistributionConfig?.CacheBehaviors ?? [];
-const publicBehavior = cacheBehaviors.find((behavior) => behavior.PathPattern === 'review-images/v1/public/*');
+const publicBehavior = cacheBehaviors.find((behavior) => behavior.PathPattern === 'reviews/*');
 if (!publicBehavior) {
-  throw new Error('CloudFront distribution must include an unsigned public variants cache behavior.');
+  throw new Error('CloudFront distribution must include an unsigned public reviews cache behavior.');
 }
 if (publicBehavior.TrustedKeyGroups) {
-  throw new Error('Public variants cache behavior must not require signed URLs.');
+  throw new Error('Public reviews cache behavior must not require signed URLs.');
+}
+const legacyPublicBehavior = cacheBehaviors.find((behavior) => behavior.PathPattern === 'review-images/v1/public/*');
+if (!legacyPublicBehavior) {
+  throw new Error('CloudFront distribution must keep the legacy public variants behavior until the post-acceptance cleanup gate.');
+}
+if (legacyPublicBehavior.TrustedKeyGroups) {
+  throw new Error('Legacy public variants cache behavior must not require signed URLs.');
 }
 
 const bucketPolicy = template.Resources.ReviewImagesBucketPolicy;
@@ -125,6 +132,7 @@ const cloudFrontReadResources = asArray(cloudFrontRead.Resource).map(fnSubValue)
 const expectedCloudFrontReadResources = [
   'arn:${AWS::Partition}:s3:::${ReviewImagesBucket}/review-images/v1/private/stores/*/assets/*/variants/*',
   'arn:${AWS::Partition}:s3:::${ReviewImagesBucket}/review-images/v1/public/*',
+  'arn:${AWS::Partition}:s3:::${ReviewImagesBucket}/reviews/*',
 ].sort();
 if (JSON.stringify(cloudFrontReadResources) !== JSON.stringify(expectedCloudFrontReadResources)) {
   throw new Error('CloudFront S3 read policy must be scoped to public variants and private variants only.');

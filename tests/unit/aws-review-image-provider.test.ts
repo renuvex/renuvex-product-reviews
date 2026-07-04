@@ -84,8 +84,8 @@ describe('AWS review image provider', () => {
         height: 100,
         bytes: 2048,
         key: 'review-images/v1/private/stores/store-1/assets/11111111-1111-4111-8111-111111111111/variants/w1200.jpeg',
-        publicKey: 'review-images/v1/public/stores/store-1/assets/11111111-1111-4111-8111-111111111111/variants/w1200.jpeg',
-        url: 'https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/11111111-1111-4111-8111-111111111111/variants/w1200.jpeg',
+        publicKey: 'reviews/11111111-1111-4111-8111-111111111111/w1200.jpeg',
+        url: 'https://media.renuvex.app/reviews/11111111-1111-4111-8111-111111111111/w1200.jpeg',
         contentType: 'image/jpeg',
         checksumSha256: 'def',
       }],
@@ -94,7 +94,7 @@ describe('AWS review image provider', () => {
     const copyInput = s3SendMock.mock.calls[0]?.[0]?.input;
     expect(copyInput).toMatchObject({
       Bucket: 'review-image-bucket',
-      Key: 'review-images/v1/public/stores/store-1/assets/11111111-1111-4111-8111-111111111111/variants/w1200.jpeg',
+      Key: 'reviews/11111111-1111-4111-8111-111111111111/w1200.jpeg',
       ContentType: 'image/jpeg',
       CacheControl: 'public, max-age=31536000, immutable',
       MetadataDirective: 'REPLACE',
@@ -109,7 +109,62 @@ describe('AWS review image provider', () => {
     expect(new URLSearchParams(String(copyInput.Tagging)).get('renuvex_state')).toBe('public_ready');
     expect(s3SendMock.mock.calls[1]?.[0]?.input).toMatchObject({
       Bucket: 'review-image-bucket',
-      Key: 'review-images/v1/public/stores/store-1/assets/11111111-1111-4111-8111-111111111111/variants/w1200.jpeg',
+      Key: 'reviews/11111111-1111-4111-8111-111111111111/w1200.jpeg',
     });
+  });
+
+  it('builds simplified public descriptors and trusts only the new public URL shape', async () => {
+    const {
+      buildAwsReviewImagePublicDescriptor,
+      isTrustedAwsReviewImagePublicUrl,
+    } = await import('@/lib/media/providers/aws-review-image');
+
+    const descriptor = buildAwsReviewImagePublicDescriptor({
+      schemaVersion: 1,
+      provider: 'aws_s3',
+      variantSetVersion: 'review-images-v1',
+      storeId: 'store-1',
+      assetId: '11111111-1111-4111-8111-111111111111',
+      generatedAt: '2026-07-03T00:00:00.000Z',
+      source: {
+        key: 'review-images/v1/private/stores/store-1/assets/11111111-1111-4111-8111-111111111111/original.png',
+        contentType: 'image/png',
+        width: 100,
+        height: 100,
+        bytes: 1024,
+        checksumAlgorithm: 'SHA256',
+        checksumSha256: 'abc',
+      },
+      variants: [{
+        id: 'thumb_320x427',
+        format: 'webp',
+        width: 320,
+        height: 427,
+        bytes: 2048,
+        key: 'review-images/v1/private/stores/store-1/assets/11111111-1111-4111-8111-111111111111/variants/thumb_320x427.webp',
+        publicKey: 'reviews/11111111-1111-4111-8111-111111111111/thumb_320x427.webp',
+        url: 'https://media.renuvex.app/reviews/11111111-1111-4111-8111-111111111111/thumb_320x427.webp',
+        contentType: 'image/webp',
+        checksumSha256: 'def',
+      }],
+    });
+
+    expect(descriptor?.url).toBe('https://media.renuvex.app/reviews/11111111-1111-4111-8111-111111111111/thumb_320x427.webp');
+    expect(isTrustedAwsReviewImagePublicUrl('https://media.renuvex.app/reviews/11111111-1111-4111-8111-111111111111/thumb_320x427.webp')).toBe(true);
+    expect(isTrustedAwsReviewImagePublicUrl('https://media.renuvex.app/reviews/11111111-1111-4111-8111-111111111111/thumb_320x427.webp?width=320')).toBe(false);
+    expect(isTrustedAwsReviewImagePublicUrl('https://media.renuvex.app/review-images/v1/public/stores/store-1/assets/11111111-1111-4111-8111-111111111111/variants/thumb_320x427.webp')).toBe(false);
+    expect(isTrustedAwsReviewImagePublicUrl('https://review-image-bucket.s3.eu-central-1.amazonaws.com/reviews/11111111-1111-4111-8111-111111111111/thumb_320x427.webp')).toBe(false);
+  });
+
+  it('lists private, new public, and transitional legacy public prefixes when deleting an image family', async () => {
+    const { deleteAwsReviewImageFamily } = await import('@/lib/media/providers/aws-review-image');
+
+    await deleteAwsReviewImageFamily('store-1', '11111111-1111-4111-8111-111111111111', { invalidatePublicVariants: false });
+
+    expect(s3SendMock.mock.calls.map((call) => call[0].input?.Prefix).filter(Boolean)).toEqual([
+      'review-images/v1/private/stores/store-1/assets/11111111-1111-4111-8111-111111111111/',
+      'reviews/11111111-1111-4111-8111-111111111111/',
+      'review-images/v1/public/stores/store-1/assets/11111111-1111-4111-8111-111111111111/',
+    ]);
   });
 });

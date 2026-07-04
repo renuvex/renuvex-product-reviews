@@ -301,6 +301,26 @@
           },
           "CacheBehaviors": [
             {
+              "PathPattern": "reviews/*",
+              "TargetOriginId": "review-images-s3",
+              "ViewerProtocolPolicy": "https-only",
+              "AllowedMethods": [
+                "GET",
+                "HEAD"
+              ],
+              "CachedMethods": [
+                "GET",
+                "HEAD"
+              ],
+              "CachePolicyId": {
+                "Ref": "ReviewImagesCachePolicy"
+              },
+              "ResponseHeadersPolicyId": {
+                "Ref": "ReviewImagesResponseHeadersPolicy"
+              },
+              "Compress": true
+            },
+            {
               "PathPattern": "review-images/v1/public/*",
               "TargetOriginId": "review-images-s3",
               "ViewerProtocolPolicy": "https-only",
@@ -370,6 +390,9 @@
               },
               "Action": "s3:GetObject",
               "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucket}/reviews/*"
+                },
                 {
                   "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReviewImagesBucket}/review-images/v1/public/*"
                 },

@@ -79,7 +79,7 @@ function ratingsResponse() {
 }
 
 function reviewImage(name) {
-  return `https://media.renuvex.app/review-images/v1/public/stores/${PUBLIC_KEY}/assets/00000000-0000-4000-8000-000000000001/variants/${name}.jpeg`;
+  return `https://media.renuvex.app/reviews/00000000-0000-4000-8000-000000000001/${name}.jpeg`;
 }
 
 function reviewsResponse() {

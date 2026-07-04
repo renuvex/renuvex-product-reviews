@@ -115,8 +115,9 @@ assert(
   JSON.stringify(objectResources) === JSON.stringify([
     'arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}/review-images/v1/private/*',
     'arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}/review-images/v1/public/*',
+    'arn:${AWS::Partition}:s3:::${ReviewImagesBucketName}/reviews/*',
   ].sort()),
-  'Runtime role object permissions must be scoped to private/public review-image prefixes.',
+  'Runtime role object permissions must be scoped to private, public review, and transitional legacy public prefixes.',
 );
 
 const listStatement = policyStatements.find((statement) => statement.Sid === 'ReviewImageFamilyListPrivateAndPublicPrefixes');
@@ -125,8 +126,9 @@ assert(
   JSON.stringify(listStatement.Condition.StringLike['s3:prefix'].sort()) === JSON.stringify([
     'review-images/v1/private/*',
     'review-images/v1/public/*',
+    'reviews/*',
   ].sort()),
-  'Runtime role ListBucket prefixes must be restricted to review-image private/public prefixes.',
+  'Runtime role ListBucket prefixes must be restricted to review-image private, public review, and transitional legacy public prefixes.',
 );
 
 const invalidationStatement = policyStatements.find((statement) => statement.Sid === 'ReviewImageExactDistributionInvalidation');
