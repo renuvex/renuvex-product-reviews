@@ -78,6 +78,10 @@ Both require `Authorization: Bearer <CRON_SECRET>`.
 
 Schedules use explicit retries (`5`) and a timeout compatible with the current Vercel function limit.
 Do not place `CRON_SECRET` in QStash headers.
+Do not use `nextScheduleTime` as an acceptance or health gate: Upstash docs/types expose it as
+optional schedule metadata, but live schedule responses may omit it. Treat the schedule definition
+and `isPaused:false` as configuration proof; treat QStash delivery logs/DLQ plus
+`ScheduledJobRunLock` `succeeded` rows as runtime proof.
 
 ## How failures surface (observability)
 A task failure was previously caught into `errors[]` + an HTTP 500 and **alerted nobody** (Sentry

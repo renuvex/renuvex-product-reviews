@@ -72,6 +72,9 @@ Move maintenance scheduling to QStash.
   through `source:cron`.
 - QStash schedule logs and DLQ replace the Vercel Crons dashboard as the run
   history source.
+- `nextScheduleTime` is not a health gate. Upstash docs/types expose it as
+  optional metadata and live responses may omit it; runtime acceptance depends
+  on delivery evidence, DLQ state, and `ScheduledJobRunLock`.
 
 ## Rollback
 

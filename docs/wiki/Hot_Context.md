@@ -126,6 +126,7 @@ source_files:
 
 ## Recent Important Changes
 - 2026-07-04: QStash maintenance scheduler cutover is active: signed internal endpoint, explicit task bodies, `ScheduledJobRunLock`, and QStash schedules replace Vercel Cron.
+- 2026-07-04: QStash `nextScheduleTime` is not a health gate; use delivery logs/DLQ plus `ScheduledJobRunLock` runtime evidence.
 - 2026-07-04: AWS image orphan scan includes public-only `reviews/{assetId}/` synthetic quarantine ids.
 - 2026-07-04: AWS image lightbox/full-size and admin thumbnail fixes are live; public URLs use `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>`.
 - 2026-07-04: Legacy image-provider DB alignment completed; AWS-only image source pass is merged/deployed and live acceptance passed without private leak markers.
