@@ -58,6 +58,7 @@ source_files:
   - "src/widget/reviews-section/review-form-modal/steps/step-photos.js"
   - "infra/aws/review-images.cloudformation.json"
   - "prisma/migrations/20260703090000_add_aws_review_image_fields/migration.sql"
+  - "prisma/migrations/20260704001000_default_review_image_provider_aws_s3/migration.sql"
   - "scripts/validate-review-images-aws-template.mjs"
   - "scripts/build-widget.mjs"
   - "scripts/rebuild-product-review-summaries.mjs"
@@ -99,13 +100,17 @@ Implemented so far on the migration branch:
   `REVIEW_IMAGE_PROVIDER=aws_s3`.
 - Hardening pass for direct-upload CORS, CloudFront S3 read scope, CloudFront invalidation on public variant revocation, and publish-then-DB-failure compensation. The template validator now checks these infrastructure contracts instead of only checking resource presence.
 
-Cloudinary source teardown local status on 2026-07-03:
+Cloudinary source teardown status on 2026-07-03/2026-07-04:
 
 - Review-image production source now accepts only `aws_s3` for new image uploads. The Cloudinary upload/sign/register branch, SDK dependency, provider adapter, metadata backfill modules, legacy reconciliation/backfill scripts, Next/Image Cloudinary remote pattern, widget build cloud-name define, CI Cloudinary env injection, and Cloudinary-specific unit tests were removed locally.
 - Public review reads and widget rendering now rely on provider-neutral AWS public variant descriptors under `media.renuvex.app`; Cloudinary URL fallback is not a production render path after this source pass.
 - Pending cleanup, orphan cleanup, and media jobs route image work through AWS object-family cleanup. Mux video paths remain unchanged.
 - Local verification evidence from this pass: `pnpm why cloudinary` is empty; `rg` over `src`, `tests`, `scripts`, `.github`, `next.config.js`, `package.json`, `pnpm-lock.yaml`, and `.env.example` found no Cloudinary references; the manifest-referenced widget graph has no Cloudinary references.
-- Still not done by this local source pass: Vercel Cloudinary env removal, local secret cleanup, production deploy/Worker deploy, DB data alignment apply for legacy pre-public Cloudinary rows, and Cloudinary asset/account deletion. Each remains a separate approval gate with scope, risk, rollback, and live evidence.
+- PR #5 (`refactor(media): remove cloudinary review images`) was squash-merged to `main` as `244b0997ced618c9c073e26f3f062cd261d743c3`. Vercel production deployment `dpl_4Cqv9KsYsMJhuaAmrGSmZiGnJqga` is `Ready` and aliased to `app.renuvex.app`.
+- The Cloudflare Worker was deployed after the app was ready. Current Worker version `29571b47-2f2b-449f-8bbc-ce15d14c0832` serves manifest built at `2026-07-03T19:55:11.993Z` with entry `widget-runtime/runtime-XWAV5MDK.js`. A live scan of 32 current manifest-referenced widget assets found no Cloudinary strings and no failed asset fetches.
+- Temporary DB alignment scripts produced the read-only/apply evidence and were removed after completion. The 2026-07-04 pre-apply run found 12 legacy image `ReviewMedia` rows, 6 stale `PendingReviewImage` rows, 8 approved reviews with `hasImages=true` and no AWS image, 26 legacy quarantine rows, 1 old provider job, and one affected product summary. Projected AWS-only alignment preserved approved review counts and rating buckets, while reducing the test product's photo/media summary buckets by 8.
+- The apply ran after separate approval with exact expected counts and a confirmation token. It wrote an ignored local JSON backup before the transaction, then retired only DB test residue: 12 media rows, 6 pending rows, 26 quarantine rows, 1 old provider job, 8 legacy image flags/mirrors, and 1 affected summary rebuild. After final project-surface cleanup, local ignored cleanup backups were removed. Post-checks report zero remaining legacy image-provider `ReviewMedia`, `PendingReviewImage`, provider jobs, quarantine rows, or `hasImages` rows without AWS image media. Provider assets deleted: 0. Env mutations: 0.
+- Vercel env removal and local secret cleanup are complete. Provider account assets are not part of the app runtime and were not mutated by this pass.
 
 Cutover/live acceptance status on 2026-07-03:
 
@@ -142,6 +147,23 @@ Cutover/live acceptance status on 2026-07-03:
   `thumbnailUrl`, 14 variants, and no private leak markers. The public variant
   HEAD response is `200 image/jpeg` with
   `Cache-Control: public, max-age=31536000, immutable`.
+- Post-Cloudinary-teardown live acceptance created and approved a new AWS-only
+  image review (`Review.id = 8962e9c8-7c7f-49db-9e16-cb68bbeff428`,
+  `ReviewMedia.id = 28f1ac6c-3f43-439e-a766-a8b51f4fa301`,
+  `providerAssetId = afa4073e-4486-4275-8ade-bccb6583ca91`) for the same
+  test store/product. The live path completed `/api/public/upload/sign` with
+  `provider = "aws_s3"` and no public URL, browser-style S3 POST with `204`,
+  `/api/public/upload/register`, public review submit, admin API approval, and
+  public review read. DB evidence shows `Review.status = "approved"`,
+  `Review.hasImages = true`, `ReviewMedia.provider = "aws_s3"`,
+  `processingStatus = "ready"`, `variantStatus = "public_ready"`,
+  `visible = true`, and zero remaining pending rows for the consumed upload.
+  Public API evidence returned one `media.renuvex.app` image URL plus
+  `thumbnailUrl`, no Cloudinary markers, no S3 bucket hostnames, no signed URL,
+  and no private-key markers. CDN HEAD returned `200 image/jpeg` with
+  `Cache-Control: public, max-age=31536000, immutable`. S3 read-only evidence
+  found one private original plus 14 private variants and 14 public variants
+  under the deterministic asset-family prefixes.
 
 Runtime cutover preflight on 2026-07-03 showed:
 

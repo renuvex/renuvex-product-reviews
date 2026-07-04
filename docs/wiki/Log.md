@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-02
-last_verified: 2026-07-02
+updated: 2026-07-04
+last_verified: 2026-07-04
 confidence: high
 tags:
   - log
@@ -26,6 +26,11 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-04 - acceptance | Deploy Cloudinary teardown source pass
+- PR #5 (`refactor(media): remove cloudinary review images`) was squash-merged as `244b0997`; Vercel production deployment `dpl_4Cqv9KsYsMJhuaAmrGSmZiGnJqga` is `Ready`.
+- Cloudflare Worker version `29571b47-2f2b-449f-8bbc-ce15d14c0832` now serves the current widget manifest; scanning all 32 current manifest-referenced assets found no Cloudinary strings.
+- Live AWS-only image acceptance review `8962e9c8-7c7f-49db-9e16-cb68bbeff428` proved sign -> S3 POST -> register -> submit -> admin approve -> public render, with 14 variants, immutable CloudFront cache headers, and no Cloudinary/private leak markers. Legacy DB alignment was applied after a separate approval; Vercel Cloudinary env removal, local secret cleanup, and Cloudinary asset/account deletion remain separate approval gates.
 
 ## 2026-07-02 - docs | Refresh live status and deployment notes
 - Updated [[Current_Status]], [[Deployment_Notes]], and [[Hot_Context]] to remove stale Mux/Worker pending language.
@@ -216,6 +221,12 @@ source_files:
 - Reduced the listing/product-slider badge near-viewport margin from `900px` to `400px` in `src/widget/core/listing-viewport-gate.js`.
 - This keeps critical PDP surfaces eager while delaying far below-the-fold product sliders so they do not download the `listing-badges-*` chunk or call the bulk ratings API unless the shopper scrolls near them.
 - Local 1366x768 harness evidence: offset `1100` hydrated, while offset `1200` waited; targeted listing badge network smoke tests passed with the new threshold.
+
+## 2026-07-04 - ops | Dry-run legacy Cloudinary DB alignment
+- Added a temporary read-only Prisma report for the AWS-only image teardown data gate.
+- Pre-apply DB evidence: 12 legacy Cloudinary `ReviewMedia` rows, 6 stale Cloudinary `PendingReviewImage` rows, 8 approved reviews with Cloudinary images and no AWS image, 26 Cloudinary-like quarantine rows, and one affected product summary.
+- Projected AWS-only alignment preserved approved review counts and rating buckets, while reducing only photo/media summary buckets for the test product.
+- Added a guarded apply script and executed it after approval with exact expected counts. The apply retired 12 media rows, 6 pending rows, 26 quarantine rows, 1 old provider job, 8 legacy image flags/mirrors, and rebuilt 1 summary. Post-checks report zero remaining legacy image-provider DB targets; no provider calls, env changes, or provider asset deletes were executed. The temporary scripts were removed after completion.
 
 ## 2026-06-21 - security | Record Supabase RLS launch gate
 - Read-only RLS audit found no browser Supabase client usage and no `NEXT_PUBLIC_SUPABASE_*` env surface in the repo; runtime DB access is server-side Prisma.

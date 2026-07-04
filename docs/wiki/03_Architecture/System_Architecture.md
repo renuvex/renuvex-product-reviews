@@ -23,7 +23,7 @@ source_files:
 # System Architecture
 
 ## Summary
-A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary application runtimes: the **merchant admin** (React iframe inside ikas Admin), the **storefront widget** (vanilla JS bundle injected into customer storefronts), and **API routes** that serve both. The Cloudflare Worker widget-delivery target is intentionally a fourth edge delivery layer: it serves `widget.renuvex.app` static widget files and, after V2 cutover, only selected cacheable public reads. It does not own settings side effects, upload, submit, Mux, QStash, DB, Cloudinary, or webhook behavior. State lives in Postgres (Supabase) and Cloudinary; rate limits in Upstash Redis.
+A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary application runtimes: the **merchant admin** (React iframe inside ikas Admin), the **storefront widget** (vanilla JS bundle injected into customer storefronts), and **API routes** that serve both. The Cloudflare Worker widget-delivery target is intentionally a fourth edge delivery layer: it serves `widget.renuvex.app` static widget files and, after V2 cutover, only selected cacheable public reads. It does not own settings side effects, upload, submit, Mux, QStash, DB, image-provider, or webhook behavior. State lives in Postgres (Supabase); review images live in AWS S3/CloudFront; rate limits in Upstash Redis.
 
 ## Components
 
@@ -49,7 +49,7 @@ A Next.js 16 (16.2) app on Vercel (eu-central / fra1) with three primary applica
 └──────────────────────┬───────────────┬──────────────┬───────────┘
                        │               │              │
                        ▼               ▼              ▼
-                 Postgres        Cloudinary      Upstash Redis
+                 Postgres        AWS S3/CloudFront  Upstash Redis
                  (Supabase)      review_images/stores/<storeId>/   (rate limits)
                                   signed uploads
 
@@ -79,7 +79,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 1. Customer opens product page; ikas serves the `<script src="…/widget.js…">` tag.
 2. Widget reads `publicApiKey` (`= merchantId`) from script src and computes `ASSET_BASE` from the script origin.
 3. Widget calls `READ_API_BASE /api/public/settings` (cached 60s/300s SWR), then `READ_API_BASE /api/public/reviews?storeId&productId`. If settings returns `runtime.themeSyncDue`, the widget sends a non-blocking `POST API_BASE /api/public/storefront-theme/lazy-sync`. In the Worker delivery target, `ASSET_BASE` is `https://widget.renuvex.app`, `API_BASE` is `https://app.renuvex.app`, and `READ_API_BASE` is `https://widget.renuvex.app` for allowlisted public settings/ratings/reviews reads.
-4. Customer clicks "Write a review" → multi-step modal → optional image uploads via Cloudinary (signed direct upload).
+4. Customer clicks "Write a review" → multi-step modal → optional image uploads via AWS S3 presigned POST and register.
 5. Submit → `POST /api/public/reviews` → server enforces profanity filter + rate limit → writes Review with status by auto-approve mode.
 
 ### Storefront listing badges
@@ -102,11 +102,11 @@ See [[Auth_And_Installation_Flow]] for full trace.
 - **Auth boundary** at `getUserFromRequest`. Public APIs are CORS-open and rate-limited by IP.
 - **Rate limit / abuse** via Upstash Redis (incr+expire pattern). Detail in [[Security_And_Rate_Limits]].
 - **Caching** via Vercel edge. Detail in [[Caching_And_Performance]].
-- **Image lifecycle**: client uploads directly to Cloudinary; URLs stored in `Review.images` (TEXT JSON); daily maintenance expires abandoned pending uploads and monthly fallback scans Cloudinary orphans not referenced by any Review.
+- **Image lifecycle**: client uploads directly to S3; `ReviewMedia` stores AWS variant manifests and `Review.images` is compatibility-only; daily maintenance expires abandoned pending uploads and monthly cleanup scans AWS object families from DB evidence.
 - **Theme lifecycle**: private/admin-triggered sync plus maintenance verification. The storefront browser never calls ikas Admin APIs.
 
 ## Deployment topology
-- Vercel project. Region `fra1`. Postgres on Supabase. Redis on Upstash. Cloudinary for images. ikas-side: registered app pointing OAuth callback to `<DEPLOY_URL>/api/oauth/callback/ikas`.
+- Vercel project. Region `fra1`. Postgres on Supabase. Redis on Upstash. AWS S3/CloudFront for review images. ikas-side: registered app pointing OAuth callback to `<DEPLOY_URL>/api/oauth/callback/ikas`.
 - Live widget static delivery: Cloudflare Worker Static Assets for `widget.renuvex.app`, with V2 source support for only selected public-read proxying and no data/provider bindings. `app.renuvex.app` remains the backend/API/write origin.
 - See [[Deployment_Notes]].
 

@@ -55,7 +55,7 @@ Required because ikas gives no stable mount point/slot ([[ADR_0018_Widget_Owners
 ## Media thumbnail intrinsic sizing
 - Widget-owned review thumbnails must be produced through `createMediaThumbnail()`; do not hand-roll raw `<img>` / poster markup in layouts.
 - Keep source quality and display fallback dimensions separate:
-  - `sourceWidth` / `sourceHeight` are for Cloudinary/Mux transforms and responsive `srcset`;
+  - `sourceWidth` / `sourceHeight` are for AWS image/Mux media variants and responsive `srcset`;
   - `displayWidth` / `displayHeight` are the small HTML `width` / `height` fallback used when CSS is missing or delayed.
 - Never use source quality constants such as `REVIEW_MEDIA_THUMB_WIDTH` or `GALLERY_TILE_WIDTH` directly as HTML display fallback dimensions. The current fallback contract is 110x110 for square card media and 110x147 for portrait list/gallery/media-gallery tiles.
 - Normal CSS remains the source of truth for final styled size; intrinsic attributes only bound degraded/offline/partial-load rendering and help reserve a stable aspect ratio.

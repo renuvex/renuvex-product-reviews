@@ -131,10 +131,9 @@ Still open: real authenticated ikas dashboard iframe smoke, live post-deploy dev
 `pnpm build:widget --theme=new-theme` produces a separate bundle. How is the right theme bundle picked at runtime? Is `widget-new-theme.js` ever auto-injected, or is it manual? See [scripts/build-widget.mjs](scripts/build-widget.mjs).
 
 ## Image lifecycle
-- Upload happens via Cloudinary signed direct upload from widget.
-- Cleanup runs daily through `/api/admin/daily-maintenance`, with monthly `/api/admin/cleanup-images` fallback for assets that bypassed the registry.
-- Question: what if a review is rejected before approval — does its uploaded image get cleaned up? Is the cleanup safe-listing only `approved` review images, or all linked images?
-- Question (2026-05-11): cleanup cron'un tetiklenme mekanizması (Vercel cron / external scheduler / manuel)? [[Bug_Review_Image_Error_Fallback]] içindeki 1-7 günlük orphan penceresi bu cevaba bağlı; daha sık tetiklenirse storefront kırık-image riski azalır.
+- Upload happens through AWS S3 presigned POST plus server-side register/variant generation.
+- Cleanup runs daily through `/api/admin/daily-maintenance`, with monthly `/api/admin/cleanup-images` fallback for object families that bypassed the registry.
+- Question: after launch, should rejected image reviews keep private admin-preview variants for support for a fixed retention period, or should they be queued for immediate object-family cleanup?
 
 ## CORS
 `Access-Control-Allow-Origin: *` on public APIs. Reasonable for read; for POST `/api/public/reviews` consider whether request-origin allowlisting (per merchant configured storefront domains) would meaningfully improve abuse resistance.
@@ -196,17 +195,7 @@ language source, e.g. the ikas storefront locale).
    (`countLabel` etc.) are single-value today; per-language values would need the same i18n layer.
 
 ## Authoritative review-media metadata source — revisit at scale
-The review-media metadata write path trusts the Cloudinary upload-response (signature covers
-`public_id`+`version`, **not** dimensions), so a client can forge its own image's `width/height/bytes`
-— **cosmetic, self-inflicted, no security / cross-tenant effect** (clamped ints, numeric attributes).
-The daily-maintenance cron (`admin_api`) is authoritative for `pending`/`partial` rows but currently
-**skips `complete` rows**, so a forged-`complete` row is not auto-corrected today.
-- **Decide at scale (thousands of stores / 1M+ images):** add a Cloudinary upload **webhook**
-  (`notification_url`, server-to-server, signed) as the **primary** authoritative source + keep the
-  cron pull as the **safety-net**; or, cheaper interim, extend the cron to re-verify
-  `upload_response` rows once via the Admin API.
-- **Not a launch blocker.** Full cost/performance analysis of the three sources (A client / B cron /
-  C webhook): [[ADR_0029_Review_Media_Metadata]] (Scale Evolution).
+The AWS image path decodes uploaded images server-side during register and stores normalized metadata/variants in `ReviewMedia` / `PendingReviewImage`. At scale, decide whether S3 Inventory/S3 Metadata should be added as an operational audit layer for object-family reconciliation. This is not a storefront hot-path requirement.
 
 ## Async media pipeline — build trigger + design choices (deferred)
 We deliberately defer the async media pipeline (queue + background workers for media metadata,

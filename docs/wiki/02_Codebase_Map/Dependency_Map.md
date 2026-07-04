@@ -64,7 +64,7 @@ related:
 | `sharp` | Direct image decode/metadata stripping/variant generation for AWS review images. |
 | `@mux/mux-node`, `@mux/mux-player`, `@mux/upchunk` | Mux review-video upload, admin/public playback, and chunked browser upload UX. |
 
-`cloudinary` was removed during the AWS-only review-image teardown source pass; `pnpm why cloudinary` should be empty.
+The legacy image SDK was removed during the AWS-only review-image teardown source pass; provider SDK dependency checks should stay empty.
 
 ## UI
 

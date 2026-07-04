@@ -31,7 +31,7 @@ source_files:
 # Security & Rate Limits
 
 ## Summary
-Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> admin API. Storefront (CORS-open) -> public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, ProductSnapshot-based public review target verification, signed Cloudinary uploads, trusted Cloudinary image URL allowlisting, public response whitelisting, server-side cron secret.
+Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> admin API. Storefront (CORS-open) -> public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, ProductSnapshot-based public review target verification, AWS S3 presigned uploads, trusted AWS media URL allowlisting, public response whitelisting, server-side cron secret.
 
 ## Trust boundaries
 
@@ -71,7 +71,7 @@ IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theor
   - `author` 1..40 chars
   - `title` ≤ 60 chars
   - `comment` ≤ 2000 chars
-  - `images` must pass the trusted Cloudinary URL policy in [src/lib/review-images.ts](src/lib/review-images.ts)
+  - image refs must pass the AWS upload-ref and trusted media policy in [src/lib/review-images.ts](src/lib/review-images.ts)
   - profanity filter on title/comment/author
   - public `slug`, `productName`, and `email` body fields are ignored; review identity/name snapshots come from `ProductSnapshot`, and public email is stored blank until a verified buyer flow exists
 - **Admin settings PUT**: `validateSettings(widgetId, settings)` runs the schema in [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
@@ -87,13 +87,13 @@ Hard-coded list of TR + EN slurs (~25 entries) in [src/app/api/public/reviews/ro
 Public review responses replace last name with initial: `Mert Wilson` → `Mert W.`. Done at the response builder ([src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts)). Original full name remains in DB for moderator visibility.
 
 ## Image upload security
-- Server signs Cloudinary upload params (HMAC) with `folder=review_images/stores/<storeId>` baked in after verifying `StoreSettings`.
-- Client uploads directly to Cloudinary (origin-direct) — avoids proxying body through our server.
-- Public review POST stores only trusted Cloudinary secure URLs from the configured cloud and the matching tenant folder. Third-party HTTPS URLs, cross-tenant Cloudinary paths, and `data:image` payloads are rejected.
+- Server creates tenant-scoped AWS S3 presigned POST upload intents after verifying `StoreSettings`.
+- Client uploads directly to S3 — avoids proxying image bodies through our server.
+- Public review POST stores only server-created AWS image refs that match the tenant/upload session. Third-party HTTPS URLs, cross-tenant object refs, and `data:image` payloads are rejected.
 - Public/admin read paths parse legacy `Review.images` defensively and expose only trusted URLs; invalid legacy image data becomes `images: []`.
-- Widget rendering uses the build-time injected Cloudinary cloud name ([[ADR_0008_Cloud_Name_Build_Time_Only]]) and `getTrustedReviewImages()` before rendering photos or opening the photo lightbox.
+- Widget rendering uses AWS public media descriptors and `getTrustedReviewMedia()` before rendering photos or opening the lightbox.
 - Preview fixtures may use `placehold.co` images only when `window.__ikasPreviewMode === true`.
-- Daily `/api/admin/daily-maintenance` expires abandoned `PendingReviewImage` rows and reconciles storefront scripts; monthly `/api/admin/cleanup-images` remains the Cloudinary fallback scan. Cron routes require `CRON_SECRET` and return 500 if it is missing.
+- Daily `/api/admin/daily-maintenance` expires abandoned `PendingReviewImage` rows and reconciles storefront scripts; monthly `/api/admin/cleanup-images` remains the AWS image object-family fallback scan. Cron routes require `CRON_SECRET` and return 500 if it is missing.
 - Image URLs remain stored as a JSON-stringified array in `Review.images`; all parsing and validation belongs in [src/lib/review-images.ts](src/lib/review-images.ts).
 
 ## CORS
@@ -109,7 +109,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Single secret (`CLIENT_SECRET`) for ikas OAuth + JWT. Rotation invalidates JWTs (acceptable — short-lived).
 - `SECRET_COOKIE_PASSWORD` for iron-session.
 - `REVIEW_CURSOR_SECRET` signs public review cursors (HMAC-SHA256); server-only and separate from `CLIENT_SECRET`.
-- `CLOUDINARY_API_SECRET`, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only.
+- AWS review-image private key material, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only.
 - ⚠️ Never log secrets or full tokens. Code uses `console.error('[scope] ERROR', err)` patterns — keep err objects from leaking sensitive headers.
 - ⚠️ The `/callback` client page receives the session JWT as a URL query param. A `console.log('OAuth callback params:', params.toString())` that printed it to the browser console was removed — never re-add param logging there. See [[Auth_And_Installation_Flow]].
 
@@ -165,8 +165,8 @@ Official references:
 - 2026-06-21: Recorded the Supabase Data API / RLS audit. Current repo uses server-side Prisma, no browser Supabase client was found, and checked SQL grants did not show direct `anon`/`authenticated` table access; RLS hardening remains a public-launch gate.
 - 2026-05-25: Removed a `console.log` in the `/callback` client page that printed the full query string (including the session JWT) to the browser console. Source: [src/app/callback/page.tsx](src/app/callback/page.tsx).
 - 2026-05-24: Namespace migration changed public Redis rate-limit prefixes from `ikr_*` to `renuvex_pr_*`. Limits and windows are unchanged.
-- 2026-05-18: D3 tenant-scoped Cloudinary uploads: upload signatures now require a verified `storeId` and sign `review_images/stores/<storeId>`; register/review read/write paths and widget filtering reject cross-tenant image paths.
+- 2026-05-18: D3 tenant-scoped image uploads: upload signatures required a verified `storeId` and sign `review_images/stores/<storeId>`; register/review read/write paths and widget filtering reject cross-tenant image paths.
 - 2026-05-18: Added D4 public rating API read limit: `/api/public/ratings` and `/api/public/ratings-by-slug` share a generous 300 requests/min/IP Redis fixed-window counter. 429 responses are `no-store`; Redis/config failures fail open server-side to preserve storefront rendering.
 - 2026-05-18: Hardened public review write/read contracts. `POST /api/public/reviews` now verifies the target store/product via `StoreSettings` + `ProductSnapshot`, ignores client-supplied `slug`/`productName`/`email`, and `GET /api/public/reviews` returns an explicit public field whitelist instead of a raw Review row spread.
-- 2026-05-10: Implemented the trusted review image URL policy. Public POST now rejects third-party/data image URLs, read APIs filter legacy rows, and the widget renders only trusted Cloudinary review images. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
+- 2026-05-10: Implemented the trusted review image URL policy. Public POST now rejects third-party/data image URLs, read APIs filter legacy rows, and the widget renders only trusted review images. Related ADR: [[ADR_0006_Trusted_Review_Image_URL_Policy]].
 - 2026-05-10: Added the open image URL allowlisting risk found during the review detail lightbox audit. Related source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/widget/reviews-section/review-modal.js](src/widget/reviews-section/review-modal.js), related bug: [[Bug_Review_Detail_Lightbox_Risks]].

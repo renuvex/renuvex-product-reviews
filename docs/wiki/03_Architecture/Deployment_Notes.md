@@ -20,7 +20,7 @@ related:
 # Deployment Notes
 
 ## Summary
-Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. Cloudinary for images. Two scheduled jobs: daily maintenance and monthly Cloudinary fallback cleanup. Build runs `prisma generate && prisma migrate deploy && next build`.
+Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. AWS S3/CloudFront for review images. Two scheduled jobs: daily maintenance and monthly AWS image cleanup. Build runs `prisma generate && prisma migrate deploy && next build`.
 
 ## Vercel
 - **Region**: `["fra1"]` ([vercel.json](vercel.json)). Reasonable proximity to ikas/Supabase EU regions.
@@ -37,10 +37,10 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Migrations apply on each deploy via `prisma migrate deploy`.
 - Connection storms during cold-start: PgBouncer transaction-mode mitigates per-instance pools, but cold serverless instances can still spike. Watch for "too many connections" errors.
 
-## Cloudinary
-- Account credentials in env (`CLOUDINARY_*`).
-- New review images live under tenant folders: `review_images/stores/<storeId>/`.
-- Monthly fallback cleanup uses `cloudinary.api.resources({ ... type: 'upload', prefix: 'review_images/' })` to enumerate.
+## Review Images
+- AWS S3 stores private originals and variants; CloudFront serves public variants from media.renuvex.app.
+- Runtime credentials come from the approved AWS/OIDC setup. Do not use static provider secrets for image upload.
+- Daily and monthly cleanup operate on AWS object families through DB-backed evidence.
 
 ## Upstash Redis
 - REST-based (works in serverless without long-lived sockets).
