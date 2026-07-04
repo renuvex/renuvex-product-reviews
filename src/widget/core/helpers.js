@@ -381,34 +381,48 @@ function sortReviewVariantsByDisplaySize(variants) {
   });
 }
 
+function sortedReviewImageVariants(item, format) {
+  var variants = item && Array.isArray(item.variants) ? item.variants.slice() : [];
+  return sortReviewVariantsByDisplaySize(variants.filter(function (variant) {
+    return variant && variant.format === format && typeof variant.width === 'number' && variant.url;
+  }));
+}
+
+function pickReviewVariantUrl(variants, width) {
+  for (var i = 0; i < variants.length; i++) {
+    if (variants[i].width >= width) return variants[i].url;
+  }
+  return variants.length ? variants[variants.length - 1].url : '';
+}
+
 export function buildReviewImageAttrs(item, baseWidth, opts) {
   opts = opts || {};
   var fallbackUrl = item && (item.url || item.thumbnailUrl);
-  var variants = item && Array.isArray(item.variants) ? item.variants.slice() : [];
-  if (!variants.length) return buildResponsiveImgAttrs(fallbackUrl, baseWidth);
+  var hasVariants = !!(item && Array.isArray(item.variants) && item.variants.length);
+  if (!hasVariants) return buildResponsiveImgAttrs(fallbackUrl, baseWidth);
   var w1 = (typeof baseWidth === 'number' && baseWidth > 0) ? Math.round(baseWidth) : LIGHTBOX_MAIN_WIDTH;
   var w2 = w1 * 2;
-  var webp = variants.filter(function (variant) { return variant && variant.format === 'webp' && typeof variant.width === 'number' && variant.url; })
-    .sort(function (a, b) { return a.width - b.width; });
-  var jpeg = variants.filter(function (variant) { return variant && variant.format === 'jpeg' && typeof variant.width === 'number' && variant.url; })
-    .sort(function (a, b) { return a.width - b.width; });
-  sortReviewVariantsByDisplaySize(webp);
-  sortReviewVariantsByDisplaySize(jpeg);
+  var webp = sortedReviewImageVariants(item, 'webp');
+  var jpeg = sortedReviewImageVariants(item, 'jpeg');
   var preferred = webp.length ? webp : jpeg;
   if (opts.preferFullSize === true) {
-    var fullSize = preferred.filter(isFullSizeReviewVariant);
-    if (fullSize.length) preferred = fullSize;
+    var fullSizeWebp = webp.filter(isFullSizeReviewVariant);
+    var fullSizeJpeg = jpeg.filter(isFullSizeReviewVariant);
+    preferred = fullSizeWebp.length ? fullSizeWebp : fullSizeJpeg.length ? fullSizeJpeg : preferred.filter(isFullSizeReviewVariant);
+    if (!preferred.length) preferred = webp.length ? webp : jpeg;
   }
-  function pick(width) {
-    for (var i = 0; i < preferred.length; i++) {
-      if (preferred[i].width >= width) return preferred[i].url;
-    }
-    return preferred.length ? preferred[preferred.length - 1].url : '';
-  }
-  var src1 = pick(w1);
-  var src2 = pick(w2) || src1;
+  var src1 = pickReviewVariantUrl(preferred, w1);
+  var src2 = pickReviewVariantUrl(preferred, w2) || src1;
   if (!src1) return buildResponsiveImgAttrs(fallbackUrl, baseWidth);
   return { src: src1, srcset: src2 && src2 !== src1 ? src1 + ' 1x, ' + src2 + ' 2x' : '' };
+}
+
+export function buildReviewImageFullSizeUrl(item) {
+  var fallbackUrl = item && (item.url || item.thumbnailUrl);
+  var fullSizeWebp = sortedReviewImageVariants(item, 'webp').filter(isFullSizeReviewVariant);
+  var fullSizeJpeg = sortedReviewImageVariants(item, 'jpeg').filter(isFullSizeReviewVariant);
+  var preferred = fullSizeWebp.length ? fullSizeWebp : fullSizeJpeg;
+  return pickReviewVariantUrl(preferred, LIGHTBOX_MAIN_WIDTH) || fallbackUrl || '';
 }
 
 // renderStars / ensureStarStyles / STAR_COLOR removed during the Shadow DOM

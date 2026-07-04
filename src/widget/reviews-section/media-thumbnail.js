@@ -1,5 +1,6 @@
 import {
   buildReviewImageAttrs,
+  buildReviewImageFullSizeUrl,
   hideOnImageError,
   REVIEW_MEDIA_DISPLAY_FALLBACK_SQUARE_HEIGHT,
   REVIEW_MEDIA_DISPLAY_FALLBACK_WIDTH,
@@ -50,7 +51,10 @@ export function createMediaThumbnail(item, opts) {
   if (attrs.srcset) img.srcset = attrs.srcset;
   img.loading = opts.loading || 'lazy';
   img.decoding = 'async';
-  if (item.type === 'image') img.setAttribute('data-renuvex-img-url', item.url);
+  if (item.type === 'image') {
+    var fullSizeUrl = buildReviewImageFullSizeUrl(item);
+    if (fullSizeUrl) img.setAttribute('data-renuvex-img-url', fullSizeUrl);
+  }
   img.width = displayWidth;
   img.height = displayHeight;
   img.alt = '';

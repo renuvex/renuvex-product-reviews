@@ -89,6 +89,31 @@ describe('createMediaThumbnail intrinsic fallback dimensions', () => {
     expect(thumb.srcset).toBeUndefined();
   });
 
+  test('keeps thumbnail src small while exposing full-size WebP data URL', () => {
+    const assetId = '00000000-0000-4000-8000-000000000002';
+    const base = `https://media.renuvex.app/reviews/${assetId}`;
+    const thumb = createMediaThumbnail({
+      type: 'image',
+      url: `${base}/w1200.jpeg`,
+      thumbnailUrl: `${base}/thumb_320x427.webp`,
+      variants: [
+        { id: 'w200', format: 'webp', width: 200, height: 250, url: `${base}/w200.webp` },
+        { id: 'w1200', format: 'webp', width: 201, height: 251, url: `${base}/w1200.webp` },
+        { id: 'thumb_640x854', format: 'webp', width: 201, height: 251, url: `${base}/thumb_640x854.webp` },
+        { id: 'w1200', format: 'jpeg', width: 201, height: 251, url: `${base}/w1200.jpeg` },
+      ],
+    }, {
+      sourceWidth: 300,
+      sourceHeight: 400,
+      displayWidth: 110,
+      displayHeight: 147,
+    }) as unknown as FakeElement;
+
+    expect(thumb.src).toBe(`${base}/thumb_640x854.webp`);
+    expect(thumb.srcset).toBeUndefined();
+    expect(thumb.getAttribute('data-renuvex-img-url')).toBe(`${base}/w1200.webp`);
+  });
+
   test('uses source dimensions for Mux poster transforms and small display fallback', () => {
     const thumb = createMediaThumbnail({
       type: 'video',

@@ -28,7 +28,7 @@ source_files:
 2026-07-04
 
 ## Status
-Fixed locally on 2026-07-04; live storefront verification requires widget deploy.
+Full-size lightbox fix is live as of 2026-07-04. Follow-up DOM attribute alignment is local until the next widget deploy.
 
 ## Area
 Storefront widget, review image lightbox, AWS image variants.
@@ -56,9 +56,11 @@ That was acceptable for thumbnail surfaces but wrong for the modal main image, w
 - Lightbox main images call `buildReviewImageAttrs(currentMedia, LIGHTBOX_MAIN_WIDTH, { preferFullSize: true })`.
 - Variant tie-breaking is deterministic by known variant id.
 - Duplicate density `srcset` values are suppressed when 1x and 2x resolve to the same immutable AWS URL.
+- Thumbnail `data-renuvex-img-url` now uses the same WebP-first full-size URL selection; JPEG remains the fallback when no full-size WebP variant exists.
 
 ## Acceptance
 - Unit coverage pins the small-original tie case so lightbox source selection returns `w1200.webp`, not `thumb_640x854.webp`.
 - Thumbnail fallback behavior remains unchanged for non-lightbox thumbnail surfaces.
+- Thumbnail DOM coverage pins `src=thumb_640x854.webp` with `data-renuvex-img-url=w1200.webp`.
 - `pnpm exec vitest run tests/unit/widget-review-image-attrs.test.ts tests/unit/widget-media-thumbnail.test.ts` passes.
 - `pnpm build:widget`, `pnpm budget:widget`, `pnpm check:widget-js`, and `pnpm exec tsc --noEmit` pass.
