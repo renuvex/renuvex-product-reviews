@@ -42,16 +42,15 @@ source_files:
   - "vercel.json"
 ---
 
-# Maintenance Cron Runbook
+# Maintenance Scheduler Runbook
 
 Operational reference for the scheduled background jobs and how their failures surface.
 
 ## Scheduler status
 
-The QStash scheduler cutover is staged by [[ADR_0035_QStash_Scheduler_For_Maintenance]].
+QStash is the active maintenance scheduler per [[ADR_0035_QStash_Scheduler_For_Maintenance]].
 
-- Current active scheduler before QStash schedule acceptance: `vercel.json` crons.
-- New QStash receiver: `POST /api/internal/scheduled-jobs`.
+- Active receiver: `POST /api/internal/scheduled-jobs`.
 - Accepted QStash task bodies:
   - `{ "task": "daily-maintenance-full" }`
   - `{ "task": "cleanup-images" }`
@@ -59,27 +58,25 @@ The QStash scheduler cutover is staged by [[ADR_0035_QStash_Scheduler_For_Mainte
 - `CRON_SECRET` remains only for manual/admin `GET` endpoints.
 - `ScheduledJobRunLock` stores `task + scheduleSlot` idempotency. Succeeded slots return
   `already_processed`; in-progress slots avoid overlapping work; failed slots can be retried.
-- QStash schedule creation, pause/delete, and final `vercel.json.crons` removal are separate
-  approved gates.
+- `vercel.json` no longer declares Vercel Cron jobs.
+- QStash schedule pause/delete remains a provider mutation and requires explicit approval.
 
-## Cron jobs (`vercel.json`)
-| Cron | Schedule (UTC) | What it does |
+## Manual admin endpoints
+| Endpoint | Former cadence | What it does |
 |---|---|---|
 | `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, and video session/job reconciliation when video infrastructure is configured. Legacy image metadata backfill is removed after the AWS-only image teardown source pass. |
 | `GET /api/admin/cleanup-images` | `0 4 1 * *` (monthly) | AWS review-image orphan **two-phase** cleanup behind a circuit-breaker (ADR_0012 + [[ADR_0030_Cleanup_Hardening]]): scan scoped S3 object families, mark orphan families, then sweep after grace if still orphaned. Writes a `MediaCleanupRun` audit row. |
 
 Both require `Authorization: Bearer <CRON_SECRET>`.
 
-## Planned QStash schedules
-
-These schedules are not considered active until they exist in Upstash and live logs prove delivery.
+## QStash schedules
 
 | Label | Cron (UTC) | Destination | Body |
 |---|---|---|---|
 | `renuvex-daily-maintenance` | `0 3 * * *` | `POST https://app.renuvex.app/api/internal/scheduled-jobs` | `{ "task": "daily-maintenance-full" }` |
 | `renuvex-cleanup-images` | `0 4 1 * *` | same | `{ "task": "cleanup-images" }` |
 
-Use explicit retries (`5`) and a timeout compatible with the current Vercel function limit.
+Schedules use explicit retries (`5`) and a timeout compatible with the current Vercel function limit.
 Do not place `CRON_SECRET` in QStash headers.
 
 ## How failures surface (observability)
@@ -92,10 +89,10 @@ auto-captures only *unhandled* errors). Closed via `src/lib/cron-observability.t
   response stays `200` (a controlled protective outcome, not a crash); the alert comes from the issue.
 - **"Did the scheduled job run at all?" is intentionally NOT tracked in Sentry.** We dropped the
   `captureCheckIn` cron monitors: the Sentry plan includes only **one** cron monitor, and serverless
-  check-ins proved noisy/fragile (false "missed" alerts at the tight margin). Use the
-  **Vercel → Crons** dashboard for run history. These crons are idempotent + self-healing, so a single
+  check-ins proved noisy/fragile (false "missed" alerts at the tight margin). Use Upstash QStash
+  schedule logs and DLQ for run history. These jobs are idempotent + self-healing, so a single
   missed run is low-impact.
-- Defense-in-depth stays: the `errors[]` + HTTP 500 (Vercel non-200 cron signal), and every
+- Defense-in-depth stays: the `errors[]` + HTTP 500 (QStash retry/DLQ signal), and every
   `cleanup-images` run writes a `MediaCleanupRun` audit row
   (`status` ok|tripped|error|skipped + scan/quarantine/sweep counts + `sampleDeleted`).
 
@@ -157,17 +154,17 @@ Response: `status` (ok|tripped), `scanned`, `currentOrphans`, `quarantinedNew`, 
 | `cleanup-images` `task:breaker-tripped` reason `empty-used-set` (G1) | In-use diff is broken (e.g. provider/family-id regression) — **0 deleted, real photos protected** | **Do not force.** Investigate why `usedCount=0` while `ReviewMedia` / unexpired `PendingReviewImage` has AWS image rows; fix the diff, then re-trigger. G1 is never force-overridable. |
 | `cleanup-images` `task:breaker-tripped` reason `ratio …` (G2) / `sweep … > …` (G3) | A genuine bulk cleanup **or** an anomaly | Inspect the latest `MediaCleanupRun` (`candidates`, `sampleDeleted`). If intended, re-run `?force=1`; else fix the cause. |
 | `task:reconcile-storefront-themes` / `reconcile-storefront-scripts` error | ikas token expired / Admin API down | Check ikas auth token + Admin API (see [[Auth_And_Installation_Flow]]) |
-| A cron **didn't run** (expected effect missing / Vercel shows a failed run) | Vercel cron did not fire / function crashed | Check **Vercel → Crons** + function logs; confirm `vercel.json` cron + deploy is live. (No Sentry "missed" alert — that detection lives in the Vercel dashboard, not Sentry.) |
+| A scheduled job **didn't run** (expected effect missing / QStash shows no success) | QStash schedule paused, delivery failed, or function crashed | Check QStash schedules, logs, and DLQ; confirm the production deploy has `/api/internal/scheduled-jobs` live. (No Sentry "missed" alert - delivery history lives in QStash, not Sentry.) |
 
 ## Notes
 - **Why no Sentry cron monitors:** the Sentry plan includes a single cron monitor, and `captureCheckIn`
   check-ins from short-lived serverless invocations were noisy/fragile (false "missed" alerts at the
-  tight check-in margin). We alert via `captureException` (task failures + breaker trips) and use the
-  Vercel → Crons dashboard for run history. `next.config.js` still sets `automaticVercelMonitors: true`,
+  tight check-in margin). We alert via `captureException` (task failures + breaker trips) and use
+  QStash schedules/logs/DLQ for run history. `next.config.js` still sets `automaticVercelMonitors: true`,
   but that instruments **Pages Router** crons only — these are App Router handlers, so it is a no-op
   here. If cron-monitor budget is later expanded, re-introducing `captureCheckIn` is the lever (it
   lives in `cron-observability.ts` git history, ADR_0030).
-- Observability is **additive** — the existing `errors[]` + HTTP 500 (Vercel non-200 cron signal) stays as defense-in-depth.
+- Observability is **additive** — the existing `errors[]` + HTTP 500 (QStash retry/DLQ signal) stays as defense-in-depth.
 - No secrets/tokens are sent to Sentry (`sendDefaultPii:false`; extras carry only counts + task/cron names).
 - `cleanup-images` uses a circuit-breaker + a `MediaCleanupRun` audit log + two-phase `OrphanImageQuarantine` ([[ADR_0030_Cleanup_Hardening]]). Thresholds are env-tunable (`CLEANUP_MAX_DELETE_ABSOLUTE`=200, `CLEANUP_MAX_DELETE_RATIO`=0.30, `CLEANUP_QUARANTINE_GRACE_DAYS`=7, `CLEANUP_ORPHAN_AGE_DAYS`=30); calibrate from real audit rows.
 - Review media lifecycle is DB-first: `VideoUploadSession`, `PendingReviewImage`, `WebhookEvent`, and `MediaProviderJob` are the source of truth; AWS S3/CloudFront and Mux are provider state. Never repair by editing provider state alone without matching DB state.

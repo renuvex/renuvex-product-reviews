@@ -28,21 +28,23 @@ source_files:
 
 ## Context
 
-The app has two maintenance crons in `vercel.json`: daily maintenance and monthly
+The app previously had two maintenance crons in `vercel.json`: daily maintenance and monthly
 AWS image orphan cleanup. Vercel Cron is simple, but it has no application-owned
 retry/DLQ contract. The project already uses QStash for durable media-provider
 jobs with signed receivers, retries, and delivery logs.
 
-Read-only evidence before this decision:
+Evidence before this decision:
 - Production QStash env names exist in Vercel.
 - QStash media-job delivery is active.
 - QStash schedules were empty and DLQ was empty.
 - `daily-maintenance` had a hidden retry risk: full maintenance only ran inside
   the UTC 03:00 first-five-minute window unless `?full=1` was present.
+- The production deployment serving `/api/internal/scheduled-jobs` returned
+  `401` for unsigned requests and failed closed.
 
 ## Decision
 
-Move maintenance scheduling to QStash in stages.
+Move maintenance scheduling to QStash.
 
 - Add `POST /api/internal/scheduled-jobs` as the QStash-only scheduler receiver.
 - Verify every scheduler request with `Upstash-Signature`; do not forward
@@ -54,8 +56,11 @@ Move maintenance scheduling to QStash in stages.
   `task + scheduleSlot`.
 - Keep existing admin `GET` endpoints for manual/rollback operations guarded by
   `CRON_SECRET`.
-- Keep Vercel Cron active until QStash schedules are created, verified, and
-  accepted. Removing `vercel.json.crons` is a separate deploy gate.
+- Use two active QStash schedules:
+  - `renuvex-daily-maintenance-full`, cron `0 3 * * *`.
+  - `renuvex-cleanup-images`, cron `0 4 1 * *`.
+- Remove `vercel.json.crons`; Vercel Cron is no longer the scheduler source of
+  truth.
 
 ## Consequences
 
@@ -65,15 +70,13 @@ Move maintenance scheduling to QStash in stages.
   in-progress slots avoid overlapping work.
 - Cleanup breaker trips remain controlled `200` responses and continue to alert
   through `source:cron`.
-- The transition is additive until QStash schedule creation and Vercel cron
-  removal are explicitly approved.
+- QStash schedule logs and DLQ replace the Vercel Crons dashboard as the run
+  history source.
 
 ## Rollback
 
-- Before Vercel cron removal, pause/delete QStash schedules and keep Vercel Cron
-  as the active scheduler.
-- After Vercel cron removal, rollback to the previous Vercel deployment or
-  deploy a hotfix that restores `vercel.json.crons`.
+- Pause QStash schedules and roll back to the last Vercel deployment with
+  `vercel.json.crons`, or deploy a hotfix that restores those crons.
 - No rollback step deletes DB rows, AWS objects, Mux assets, or QStash messages
   without a separate approved scope.
 

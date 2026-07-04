@@ -1,15 +1,5 @@
 {
   "regions": ["fra1"],
-  "crons": [
-    {
-      "path": "/api/admin/daily-maintenance",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/admin/cleanup-images",
-      "schedule": "0 4 1 * *"
-    }
-  ],
   "headers": [
     {
       "source": "/widget.js",

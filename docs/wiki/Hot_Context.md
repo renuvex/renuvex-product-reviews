@@ -125,7 +125,7 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-04: QStash scheduler groundwork is staged: signed internal endpoint, explicit maintenance task bodies, and `ScheduledJobRunLock`; schedule creation and Vercel cron removal remain separate approval gates.
+- 2026-07-04: QStash maintenance scheduler cutover is active: signed internal endpoint, explicit task bodies, `ScheduledJobRunLock`, and QStash schedules replace Vercel Cron.
 - 2026-07-04: AWS image orphan scan includes public-only `reviews/{assetId}/` synthetic quarantine ids.
 - 2026-07-04: AWS image lightbox/full-size and admin thumbnail fixes are live; public URLs use `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>`.
 - 2026-07-04: Legacy image-provider DB alignment completed; AWS-only image source pass is merged/deployed and live acceptance passed without private leak markers.
