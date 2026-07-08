@@ -41,6 +41,10 @@ exposure for the storefront widget scenarios used in [[Storefront_CDN_Cost_Model
 It separates current observed usage, source-code billing triggers, and
 high-traffic scenario bounds.
 
+Update: as of the July 2026 maintenance scheduler cutover, QStash also owns two
+low-volume schedules (`daily-maintenance-full` and `cleanup-images`). This does
+not put QStash in the storefront render path.
+
 No Upstash, Vercel, Cloudflare, database, or DNS mutation was performed for this
 audit.
 
@@ -149,8 +153,8 @@ but the source route itself does not currently call Redis for GET reviews.
 
 ### QStash
 
-QStash is used only for durable media-provider jobs. It is not in the normal
-static widget render path.
+QStash is used for durable media-provider jobs and low-volume scheduled
+maintenance. It is not in the normal static widget render path.
 
 `src/lib/media/dispatcher.ts` publishes QStash messages with:
 
@@ -256,9 +260,9 @@ Keep both Upstash products in the architecture:
 - Do not use Redis as a read-through cache yet. Cloudflare Worker V2 already
   caches selected public read endpoints at the edge; adding Redis cache now
   would add invalidation complexity before evidence says it is needed.
-- Keep QStash for media-provider outbox dispatch. It gives delayed delivery,
-  retries, signature verification, and manual repair visibility for Mux and
-  Cloudinary cleanup paths.
+- Keep QStash for media-provider outbox dispatch and maintenance scheduling. It
+  gives delayed delivery, retries, signature verification, and manual repair
+  visibility for provider jobs.
 - Do not move static/read storefront rendering through QStash. QStash is for
   async jobs, not page render paths.
 

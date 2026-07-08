@@ -47,11 +47,11 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Two env vars: `KV_REST_API_URL`, `KV_REST_API_TOKEN`.
 - Present in `.env.example`. Configure the real values in Vercel Production/Preview envs; never commit real tokens.
 
-## Future cron upgrade path
-- **Current state**: daily 03:00 UTC maintenance cron is intentionally Hobby-compatible and deploy-safe.
-- **After Vercel Pro/Enterprise upgrade**: change only `/api/admin/daily-maintenance` in [vercel.json](vercel.json) to a sub-daily expression such as `*/5 * * * *`, redeploy, and verify Vercel Cron Jobs. The route already gates heavier cleanup/script reconciliation to the 03:00 UTC daily window, so more frequent invocations stay lightweight.
-- **When to add QStash**: only if fast per-merchant delayed verification is required while staying on Hobby, or if we need durable retries, deduplication, callbacks, or flow control independent of Vercel Cron. Do not add QStash merely because Redis exists; Redis handles rate limits, QStash is a separate queue/scheduler product.
-- **If QStash is added later**: add env placeholders only with the implementation (`QSTASH_TOKEN` plus signing keys), create a verified internal endpoint for delayed theme verification, use one idempotency/flow-control key per merchant, and keep the daily Vercel cron as a backup.
+## Maintenance scheduler
+- **Current state**: QStash is the maintenance scheduler source of truth. It calls `POST /api/internal/scheduled-jobs` for daily full maintenance at `03:00 UTC` and monthly image cleanup at `04:00 UTC` on day 1.
+- **Vercel Cron**: [vercel.json](vercel.json) no longer declares cron jobs. Restoring Vercel Cron is a rollback/hotfix action, not the default path.
+- **Idempotency and health**: `ScheduledJobRunLock` owns duplicate protection by `task + scheduleSlot`; use QStash delivery logs/DLQ and DB lock rows as health evidence.
+- **Sub-daily theme verification**: if required later, add a separate QStash-backed design with its own idempotency key instead of reintroducing broad Vercel Cron polling by default.
 
 ## ikas app config
 - Register the app in ikas Partners.
@@ -105,7 +105,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 ## Notes
 - **Don't bypass the widget bundle commit step.** If you forget to commit `public/widget.js`, deploys ship the old widget. CI does not regenerate.
 - Migrations run on **every** deploy. Avoid migrations that can't safely run during traffic (long-running locks). For risky migrations, consider an out-of-band deploy.
-- Cron routes require `CRON_SECRET`; without it they return 500. Set it in Vercel env before deploy. Vercel Hobby cron supports daily schedules only; 2-5 minute theme verification requires Pro/Enterprise cron or an external delayed queue such as QStash.
+- Manual cron-style admin routes still require `CRON_SECRET`; QStash scheduled execution uses `Upstash-Signature` on `/api/internal/scheduled-jobs` and must not send `CRON_SECRET`.
 - Keep `NEXT_PUBLIC_DEPLOY_URL` and the app's URL in sync. Mismatch breaks OAuth (`getRedirectUri` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when `localhost` config meets non-localhost host, but it's a fallback).
 - Keep `STOREFRONT_WIDGET_BASE_URL` in sync with the public widget host. The helper trims accidental whitespace and rejects localhost/private/non-HTTPS URLs by default so local development cannot overwrite real storefront script records with `http://localhost:3000/widget.js`.
 - Keep `STOREFRONT_WIDGET_API_BASE_URL` in sync with the backend/API origin when the widget asset origin is separate. Production target is `https://app.renuvex.app`; unset means same-origin fallback and should be treated as rollback/local compatibility only after the Worker cutover.

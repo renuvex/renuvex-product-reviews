@@ -42,7 +42,7 @@ The model assumes the current target architecture:
   Mux webhook/QStash receivers, and backend control plane.
 - Supabase Postgres for the main database.
 - Upstash Redis only for rate-limit/idempotency counters.
-- Upstash QStash only for durable media-provider jobs.
+- Upstash QStash for durable media-provider jobs and the low-volume maintenance scheduler.
 - Mux for video.
 - AWS SES for email.
 - AWS S3 plus CloudFront as the future image-storage/CDN candidate in this

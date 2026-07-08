@@ -95,7 +95,7 @@ See [[Auth_And_Installation_Flow]] for full trace.
 1. Install and manual script repair update scripts and theme metadata from the same ikas `listStorefront` read.
 2. Dashboard open and settings save call only lightweight theme sync; they do not reconcile StorefrontJSScript records.
 3. If a different active `themeId` is observed, it is stored as pending while public settings keep serving the previous stable adapter.
-4. The maintenance cron verifies pending themes and promotes them to stable only when the same `themeId` is still active. Current Vercel config runs this daily for plan compatibility; sub-daily verification can be enabled later with Pro/Enterprise cron or a delayed queue.
+4. QStash daily maintenance verifies pending themes and promotes them to stable only when the same `themeId` is still active. Sub-daily verification would need a separate QStash-backed delayed verification design.
 
 ## Cross-cutting concerns
 

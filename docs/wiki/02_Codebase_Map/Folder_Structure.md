@@ -29,7 +29,7 @@ renuvex-product-reviews/
 ├─ next.config.js                # Next.js config
 ├─ package.json                  # pnpm scripts + deps
 ├─ tsconfig.json
-├─ vercel.json                   # region: fra1, daily/monthly crons, widget cache headers
+├─ vercel.json                   # region: fra1, widget cache headers; maintenance schedules live in QStash
 ├─ components.json               # shadcn/ui config
 ├─ eslint.config.mjs
 ├─ postcss.config.mjs

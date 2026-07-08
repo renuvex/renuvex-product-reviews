@@ -60,7 +60,7 @@ The widget runs inside arbitrary merchant themes. ikas does not expose a browser
 - Admin dashboard open calls `POST /api/admin/storefront-theme/sync`, which only reads `listStorefront` and updates theme metadata. It does not create or update StorefrontJSScript records.
 - Settings save schedules the same lightweight sync with Next.js `after()`, so widget setting writes are not blocked by ikas Admin API latency.
 - When a sync observes a different active `themeId` from the current stable state, it writes the new metadata as `pending_verification` and keeps the previous stable adapter in public settings.
-- Cron verifies pending themes after the delay window when maintenance runs. If the same pending theme is still active, it promotes it to stable; if ikas reports the old theme again, pending is cleared. Current Vercel config runs this daily for plan compatibility; true 2-5 minute verification needs Pro/Enterprise cron or a delayed queue such as QStash.
+- QStash daily maintenance verifies pending themes after the delay window. If the same pending theme is still active, it promotes it to stable; if ikas reports the old theme again, pending is cleared. True 2-5 minute verification would need a separate QStash-backed delayed verification design; the storefront widget never performs this server-side check.
 - The public storefront widget never calls ikas Admin APIs. Theme detection stays server-side to avoid exposing tokens, storefront latency, and rate-limit risk.
 
 ## Theme Integration Points Today

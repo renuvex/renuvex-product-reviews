@@ -83,8 +83,8 @@ All variables in this section are environment-scoped. Preview deployments must u
 | `VIDEO_UPLOAD_CHUNK_ATTEMPTS` | Optional UpChunk retry tuning. Defaults to `5`; accepted values are clamped to `3..8`. |
 | `MUX_WEBHOOK_SECRET` | Server-only Mux webhook signing secret for `/api/webhooks/mux`; not required for upload/API initiation. Write it only after the deployed endpoint exists in the matching Mux environment. |
 | `MUX_SIGNING_KEY_ID` / `MUX_SIGNING_KEY_PRIVATE` | Server-only Mux signing key used for pending/admin signed playback and thumbnail tokens. |
-| `QSTASH_TOKEN` | Publishes durable media-provider jobs. |
-| `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` | Verifies QStash raw-body signatures on `/api/internal/media-jobs`. |
+| `QSTASH_TOKEN` | Publishes durable media-provider jobs and manages QStash maintenance schedules. |
+| `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` | Verifies QStash raw-body signatures on `/api/internal/media-jobs` and `/api/internal/scheduled-jobs`. |
 | `MEDIA_JOB_BASE_URL` | HTTPS app origin used by QStash to call `/api/internal/media-jobs`. |
 
 ### Cron
