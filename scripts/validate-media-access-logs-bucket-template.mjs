@@ -22,6 +22,7 @@ function fnSubValue(value) {
 }
 
 const expectedEffectiveLogPrefix = 'AWSLogs/${AWS::AccountId}/CloudFront/cloudfront/media/';
+const expectedDeliveryWritePrefix = 'AWSLogs/${AWS::AccountId}/CloudFront/';
 
 const requiredResources = ['MediaAccessLogsBucket', 'MediaAccessLogsBucketPolicy'];
 
@@ -102,8 +103,8 @@ assert(deliveryWrite?.Effect === 'Allow', 'Bucket policy must allow CloudWatch L
 assert(deliveryWrite?.Principal?.Service === 'delivery.logs.amazonaws.com', 'Delivery write principal must be delivery.logs.amazonaws.com.');
 assert(deliveryWrite?.Action === 's3:PutObject', 'Delivery write must allow only s3:PutObject.');
 assert(
-  fnSubValue(deliveryWrite?.Resource) === `arn:\${AWS::Partition}:s3:::\${MediaAccessLogsBucket}/${expectedEffectiveLogPrefix}*`,
-  'Delivery write resource must be scoped to the effective media log prefix only.',
+  fnSubValue(deliveryWrite?.Resource) === `arn:\${AWS::Partition}:s3:::\${MediaAccessLogsBucket}/${expectedDeliveryWritePrefix}*`,
+  'Delivery write resource must match the CloudFront AWSLogs delivery prefix used by CloudWatch Logs.',
 );
 assert(refValue(deliveryWrite?.Condition?.StringEquals?.['aws:SourceAccount']) === 'AWS::AccountId', 'Delivery write must scope by source account.');
 assert(

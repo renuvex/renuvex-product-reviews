@@ -582,10 +582,12 @@ Public-launch guardrails and current status:
   cookies are not written to durable logs. During the first delivery post-check,
   AWS reported the effective S3 suffix as
   `AWSLogs/{account-id}/CloudFront/cloudfront/media/{DistributionId}/{yyyy}/{MM}/{dd}/{HH}/`;
-  the bucket policy and lifecycle must match this effective prefix, not only the
-  requested `cloudfront/media/...` suffix. Local template and validator fixes are
-  staged to align the bucket stack with that effective prefix before final log
-  object acceptance.
+  the lifecycle must match this effective media prefix, not only the requested
+  `cloudfront/media/...` suffix. CloudWatch Logs also appended its required S3
+  write statement under `AWSLogs/{account-id}/CloudFront/*`; the bucket template
+  now preserves that CloudFront delivery write prefix while keeping lifecycle
+  retention scoped to the narrower media log prefix. First log object proof:
+  `AWSLogs/989086371563/CloudFront/cloudfront/media/E1205OOLPZDB00/2026/07/08/06/E1205OOLPZDB00.2026-07-08-06.a718d770.gz`.
 
 Growth-stage guardrails:
 

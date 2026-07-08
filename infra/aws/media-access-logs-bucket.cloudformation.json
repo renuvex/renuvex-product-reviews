@@ -128,7 +128,7 @@
               },
               "Action": "s3:PutObject",
               "Resource": {
-                "Fn::Sub": "arn:${AWS::Partition}:s3:::${MediaAccessLogsBucket}/AWSLogs/${AWS::AccountId}/CloudFront/cloudfront/media/*"
+                "Fn::Sub": "arn:${AWS::Partition}:s3:::${MediaAccessLogsBucket}/AWSLogs/${AWS::AccountId}/CloudFront/*"
               },
               "Condition": {
                 "StringEquals": {
