@@ -571,9 +571,9 @@ Public-launch guardrails and current status:
   log bucket/prefix with a short `7` or `14` day lifecycle. Do not route logs to
   CloudWatch Logs, Firehose, or Parquet conversion unless a later incident or
   analytics requirement justifies the extra system and cost.
-- 2026-07-08: CloudFront standard logging v2 is partially deployed for the media
+- 2026-07-08: CloudFront standard logging v2 is deployed for the media
   distribution. Bucket stack `renuvex-media-access-logs-bucket-prod` is
-  `CREATE_COMPLETE` in `eu-central-1` and owns bucket
+  `UPDATE_COMPLETE` in `eu-central-1` and owns bucket
   `renuvex-review-images-logs-prod-989086371563-euc1`; delivery stack
   `renuvex-media-access-logs-delivery-prod` is `CREATE_COMPLETE` in `us-east-1`
   and owns delivery `arn:aws:logs:us-east-1:989086371563:delivery:izOPizvP6vARqkaL`
@@ -582,11 +582,13 @@ Public-launch guardrails and current status:
   cookies are not written to durable logs. During the first delivery post-check,
   AWS reported the effective S3 suffix as
   `AWSLogs/{account-id}/CloudFront/cloudfront/media/{DistributionId}/{yyyy}/{MM}/{dd}/{HH}/`;
-  the lifecycle must match this effective media prefix, not only the requested
-  `cloudfront/media/...` suffix. CloudWatch Logs also appended its required S3
-  write statement under `AWSLogs/{account-id}/CloudFront/*`; the bucket template
-  now preserves that CloudFront delivery write prefix while keeping lifecycle
-  retention scoped to the narrower media log prefix. First log object proof:
+  the lifecycle now targets `AWSLogs/989086371563/CloudFront/cloudfront/media/`
+  with 14-day current and noncurrent expiration. The bucket policy allows
+  `delivery.logs.amazonaws.com` `s3:PutObject` only under
+  `AWSLogs/989086371563/CloudFront/*`, scoped to source account `989086371563`,
+  required ACL `bucket-owner-full-control`, and delivery source
+  `renuvex-media-cf-access-logs`. Legacy CloudFront logging remains disabled.
+  First log object proof:
   `AWSLogs/989086371563/CloudFront/cloudfront/media/E1205OOLPZDB00/2026/07/08/06/E1205OOLPZDB00.2026-07-08-06.a718d770.gz`.
 
 Growth-stage guardrails:

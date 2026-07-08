@@ -60,7 +60,7 @@ source_files:
 - 2026-07-04: AWS review images are production path: `media.renuvex.app/reviews/...`, immutable public variants, private signed admin previews, public-only orphan scan.
 - 2026-07-04: Cloudinary code/env/runtime cleanup is complete; old provider assets are out of app scope.
 - 2026-07-04: AWS public-scale guardrails are documented; add minimal CloudFront alarms/logs before public launch. See [[AWS_Setup_And_Access]].
-- 2026-07-08: CloudFront standard logging v2 bucket/delivery stacks are created and first S3 log object was delivered; final cleanup is a bucket stack update so lifecycle targets AWS's effective `AWSLogs/{account-id}/CloudFront/cloudfront/media/` prefix while preserving CloudWatch Logs' `AWSLogs/{account-id}/CloudFront/*` write policy. See [[AWS_Setup_And_Access]].
+- 2026-07-08: CloudFront standard logging v2 is deployed for `media.renuvex.app`; logs deliver to the EU log bucket under `AWSLogs/989086371563/CloudFront/cloudfront/media/` with 14-day lifecycle and no query/cookie fields. See [[AWS_Setup_And_Access]].
 - 2026-07-02: Cloudflare Worker remains widget asset/read-cache delivery; AWS widget CDN canary is closed.
 - 2026-06-21/23: Mux video upload/playback/cleanup is live; Mux Data tracking/cookies stay disabled. See [[ADR_0032_Review_Video_On_Mux]].
 
