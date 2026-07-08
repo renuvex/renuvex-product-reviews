@@ -467,6 +467,7 @@ Review-image local template contracts:
 Run this local guard before any approved review-image stack change set:
 
 ```powershell
+pnpm aws:lint-templates
 pnpm aws:review-images:validate-template
 pnpm aws:review-images:validate-runtime-iam-template
 ```
