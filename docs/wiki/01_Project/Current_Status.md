@@ -67,7 +67,7 @@ Active development on the production test store. Core review, image, Mux video, 
   - Widget editor with per-widget settings panel and live iframe preview at `/preview`
   - Settings persistence in `WidgetSettings` (one row per `(storeId, widgetId)`)
 - Caching: public GETs use `s-maxage=60, stale-while-revalidate=300` at the edge
-- Daily maintenance cron (`/api/admin/daily-maintenance`, 03:00 UTC) plus monthly AWS image orphan cleanup (`/api/admin/cleanup-images`, day 1 04:00 UTC)
+- QStash maintenance schedules: daily full maintenance at 03:00 UTC plus monthly AWS image orphan cleanup at day 1 04:00 UTC through signed `/api/internal/scheduled-jobs`; the admin `GET` routes remain manual `CRON_SECRET`-gated ops entrypoints.
 - Cloudflare Worker delivery for `widget.renuvex.app` static assets plus V2 read-cache for `settings`, `ratings`, `ratings-by-slug`, and `reviews`; write/upload/video/lazy-sync paths stay on `app.renuvex.app`
 - Mux review-video upload, webhook/reconcile, admin signed preview, public Mux Player playback, quota cleanup, abandoned-upload cleanup, approve/reject/delete, and retry UX are live and covered by tests/manual canary evidence
 - Widget artifact budget gate: `pnpm budget:widget` enforces local bundle size/request-budget guardrails after `pnpm build:widget`

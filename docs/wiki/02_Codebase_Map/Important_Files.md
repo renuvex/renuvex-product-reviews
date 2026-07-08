@@ -148,8 +148,8 @@ related:
 - **Be careful:** It must stay manifest-aware and retention-aware. Do not replace it with a full `public/` copy.
 
 ### [vercel.json](vercel.json)
-- **What:** `regions: ["fra1"]`, daily maintenance cron (`/api/admin/daily-maintenance`), monthly AWS image cleanup, and widget static asset cache headers.
-- **Be careful:** Cron routes require `Bearer ${CRON_SECRET}` and refuse to run if `CRON_SECRET` is missing in Vercel env.
+- **What:** `regions: ["fra1"]` plus widget static asset cache headers. Maintenance schedules live in QStash, not `vercel.json.crons`.
+- **Be careful:** Manual cron-style admin routes still require `Bearer ${CRON_SECRET}`; QStash scheduled execution uses `Upstash-Signature` on `/api/internal/scheduled-jobs`.
 
 ## Observability (Sentry)
 

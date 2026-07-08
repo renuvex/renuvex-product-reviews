@@ -43,7 +43,8 @@ How `widget.js` gets onto every storefront page. Uses ikas `StorefrontJSScript` 
 - `StoreSettings.storefrontScripts` has shape `{ [storefrontId]: ikasScriptId }`. Treat it as an idempotency cache; the remote ikas `StorefrontJSScript` record is the source of truth.
 
 ## When injection runs
-- **Daily maintenance cron** -> `GET /api/admin/daily-maintenance`. Requires `CRON_SECRET`; runs pending upload cleanup and storefront script reconciliation.
+- **QStash daily maintenance** -> signed `POST /api/internal/scheduled-jobs` with `daily-maintenance-full`; runs pending upload cleanup and storefront script reconciliation.
+- **Manual daily maintenance** -> `GET /api/admin/daily-maintenance`. Requires `CRON_SECRET`; same maintenance helper for ops/rollback use.
 - **Explicit reconcile** -> `GET /api/admin/reconcile-storefront-scripts`. Same `CRON_SECRET` gate and same reconciliation helper for manual/ops use.
 - **OAuth callback** -> auto-injects on every install. Wrapped in try/catch so install can succeed even if injection fails.
 - **Manual re-inject button** -> `POST /api/admin/inject-scripts`. Idempotent re-run.

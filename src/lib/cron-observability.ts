@@ -1,4 +1,4 @@
-// Shared cron observability for Vercel-cron routes.
+// Shared scheduled-maintenance observability for QStash and manual admin routes.
 //
 // Closes the silent-failure gap the previous "catch -> errors[] -> 500" pattern
 // left open: a task ran but failed, and because handled errors are NOT
@@ -8,9 +8,9 @@
 //
 // NOTE: we intentionally do NOT register Sentry cron *check-in monitors*. The
 // Sentry plan includes a single cron monitor, and check-ins from short-lived
-// serverless cron invocations proved noisy/fragile (false "missed" alerts). The
-// "did the scheduled job run at all" signal lives in the Vercel -> Crons
-// dashboard instead. See ADR_0030 / [[Maintenance_Runbook]].
+// serverless scheduled invocations proved noisy/fragile (false "missed" alerts).
+// The "did the scheduled job run at all" signal lives in QStash delivery logs,
+// DLQ, and ScheduledJobRunLock rows. See ADR_0030 / [[Maintenance_Runbook]].
 
 import * as Sentry from '@sentry/nextjs';
 

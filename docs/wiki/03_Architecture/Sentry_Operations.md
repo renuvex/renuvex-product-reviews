@@ -44,7 +44,7 @@ Sentry is the observability surface for the Next.js panel app. The organization 
 - `sentry.edge.config.ts` — Edge runtime init.
 - `src/instrumentation-client.ts` — browser init; also exports `onRouterTransitionStart` for App Router navigation traces.
 - `src/app/global-error.tsx` — App Router root error boundary; captures uncaught render errors.
-- `next.config.js` — wrapped with `withSentryConfig`. `widenClientFileUpload: true`, `automaticVercelMonitors: true` (instruments **Pages Router** crons only — these are App-Router handlers, so it is a no-op here; the maintenance crons alert via `captureException` / `source:cron`, **not** Sentry cron monitors; see [[Maintenance_Runbook]] / ADR_0030), debug-logging tree-shake enabled.
+- `next.config.js` — wrapped with `withSentryConfig`. `widenClientFileUpload: true`, `automaticVercelMonitors: true` (instruments **Pages Router** crons only; current maintenance runs through QStash-signed App Router handlers, so this setting is a no-op here. Maintenance task failures alert via `captureException` / `source:cron`, **not** Sentry cron monitors; see [[Maintenance_Runbook]] / ADR_0030), debug-logging tree-shake enabled.
 
 ## Configuration Contract
 - **DSN**: read from env, never hardcoded.
