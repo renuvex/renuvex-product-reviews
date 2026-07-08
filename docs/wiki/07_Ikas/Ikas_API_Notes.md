@@ -3,7 +3,7 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-17
+updated: 2026-07-08
 tags:
   - ikas
   - graphql
@@ -35,6 +35,31 @@ ikas Admin GraphQL operations we currently use, plus how to add new ones safely.
 | `listProduct` | Query | Product snapshot backfill/webhook repair | Maintain `ProductSnapshot` for current slug/name fallback |
 
 Source: [src/lib/ikas-client/graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts) and generated client at [src/lib/ikas-client/generated/graphql.ts](src/lib/ikas-client/generated/graphql.ts).
+
+## Billing And License Signals
+
+Direct ikas developer feedback on 2026-07-08 clarified that the plan/billing
+webhook and `getMerchantLicence` are complementary, not replacements:
+
+- Billing webhook is a push notification sent to the app's configured webhook
+  URL when a plan is purchased or subscription/payment state changes. Its role is
+  to trigger app-side licensing work immediately from the event payload
+  (`merchantId`, `region`, `period`, payment details, etc.).
+- `getMerchantLicence` is a pull query for checking the merchant's current
+  license/subscription state on demand. It can expose values such as
+  `activeSubscriptionCode`, `appSubscriptions`, `status`, and
+  `lastPaymentDate`.
+- Target flow for paid plans: receive webhook -> trigger local activation/update
+  -> verify current state with `getMerchantLicence`. Also call
+  `getMerchantLicence` on app/admin opening or test flows to recover from missed
+  webhooks and confirm that purchase state is reflected in ikas.
+- Plan purchase test acceptance uses the same two signals: the webhook must be
+  received and `getMerchantLicence` must show the expected license state.
+
+This project does not currently implement either a billing webhook receiver or a
+`getMerchantLicence` GraphQL operation. Add the operation through the normal MCP
+list/introspect -> `graphql-requests.ts` -> `pnpm codegen` flow when paid plan
+enforcement is built.
 
 ## Adding a new operation
 1. Discover via `mcp__ikas__list` (catalog) → `mcp__ikas__introspect` (shape).
