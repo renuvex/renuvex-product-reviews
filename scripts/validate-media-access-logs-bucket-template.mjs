@@ -21,6 +21,8 @@ function fnSubValue(value) {
   return value && typeof value === 'object' && typeof value['Fn::Sub'] === 'string' ? value['Fn::Sub'] : null;
 }
 
+const expectedEffectiveLogPrefix = 'AWSLogs/${AWS::AccountId}/CloudFront/cloudfront/media/';
+
 const requiredResources = ['MediaAccessLogsBucket', 'MediaAccessLogsBucketPolicy'];
 
 for (const resource of requiredResources) {
@@ -79,7 +81,7 @@ const lifecycleRules = bucket.Properties?.LifecycleConfiguration?.Rules ?? [];
 const logExpiryRule = lifecycleRules.find((rule) => rule.Id === 'expire-media-cloudfront-access-logs');
 assert(logExpiryRule, 'MediaAccessLogsBucket must include a short-retention lifecycle rule.');
 assert(logExpiryRule.Status === 'Enabled', 'Log expiry lifecycle rule must be enabled.');
-assert(logExpiryRule.Prefix === 'cloudfront/media/', 'Log expiry lifecycle rule must target only the media CloudFront log prefix.');
+assert(fnSubValue(logExpiryRule.Prefix) === expectedEffectiveLogPrefix, 'Log expiry lifecycle rule must target the effective CloudWatch Logs S3 delivery prefix.');
 assert(refValue(logExpiryRule.ExpirationInDays) === 'RetentionDays', 'Log expiry must use RetentionDays.');
 assert(refValue(logExpiryRule.NoncurrentVersionExpiration?.NoncurrentDays) === 'RetentionDays', 'Noncurrent versions must expire with RetentionDays.');
 assert(logExpiryRule.AbortIncompleteMultipartUpload?.DaysAfterInitiation === 1, 'Incomplete multipart uploads must be aborted after 1 day.');
@@ -100,8 +102,8 @@ assert(deliveryWrite?.Effect === 'Allow', 'Bucket policy must allow CloudWatch L
 assert(deliveryWrite?.Principal?.Service === 'delivery.logs.amazonaws.com', 'Delivery write principal must be delivery.logs.amazonaws.com.');
 assert(deliveryWrite?.Action === 's3:PutObject', 'Delivery write must allow only s3:PutObject.');
 assert(
-  fnSubValue(deliveryWrite?.Resource) === 'arn:${AWS::Partition}:s3:::${MediaAccessLogsBucket}/cloudfront/media/*',
-  'Delivery write resource must be scoped to the media log prefix only.',
+  fnSubValue(deliveryWrite?.Resource) === `arn:\${AWS::Partition}:s3:::\${MediaAccessLogsBucket}/${expectedEffectiveLogPrefix}*`,
+  'Delivery write resource must be scoped to the effective media log prefix only.',
 );
 assert(refValue(deliveryWrite?.Condition?.StringEquals?.['aws:SourceAccount']) === 'AWS::AccountId', 'Delivery write must scope by source account.');
 assert(
@@ -115,6 +117,6 @@ assert(
 );
 
 assert(template.Outputs?.BucketArn?.Value?.['Fn::GetAtt']?.[0] === 'MediaAccessLogsBucket', 'Template must output the bucket ARN.');
-assert(template.Outputs?.LogPrefix?.Value === 'cloudfront/media/', 'Template must output the static log prefix.');
+assert(fnSubValue(template.Outputs?.LogPrefix?.Value) === expectedEffectiveLogPrefix, 'Template must output the effective CloudWatch Logs S3 delivery prefix.');
 
 console.log('media access logs bucket CloudFormation template validation passed');

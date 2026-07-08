@@ -63,7 +63,9 @@
             {
               "Id": "expire-media-cloudfront-access-logs",
               "Status": "Enabled",
-              "Prefix": "cloudfront/media/",
+              "Prefix": {
+                "Fn::Sub": "AWSLogs/${AWS::AccountId}/CloudFront/cloudfront/media/"
+              },
               "ExpirationInDays": {
                 "Ref": "RetentionDays"
               },
@@ -126,7 +128,7 @@
               },
               "Action": "s3:PutObject",
               "Resource": {
-                "Fn::Sub": "arn:${AWS::Partition}:s3:::${MediaAccessLogsBucket}/cloudfront/media/*"
+                "Fn::Sub": "arn:${AWS::Partition}:s3:::${MediaAccessLogsBucket}/AWSLogs/${AWS::AccountId}/CloudFront/cloudfront/media/*"
               },
               "Condition": {
                 "StringEquals": {
@@ -165,7 +167,9 @@
     },
     "LogPrefix": {
       "Description": "Static S3 prefix reserved for media CloudFront access logs.",
-      "Value": "cloudfront/media/"
+      "Value": {
+        "Fn::Sub": "AWSLogs/${AWS::AccountId}/CloudFront/cloudfront/media/"
+      }
     },
     "RetentionDays": {
       "Description": "Configured log retention period in days.",

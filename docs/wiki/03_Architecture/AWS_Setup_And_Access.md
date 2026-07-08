@@ -571,21 +571,21 @@ Public-launch guardrails and current status:
   log bucket/prefix with a short `7` or `14` day lifecycle. Do not route logs to
   CloudWatch Logs, Firehose, or Parquet conversion unless a later incident or
   analytics requirement justifies the extra system and cost.
-- 2026-07-08: Local IaC for this final public-launch logging guardrail was
-  staged but not deployed. The bucket stack is
-  `infra/aws/media-access-logs-bucket.cloudformation.json` and must be deployed
-  in `eu-central-1`; it creates bucket
-  `renuvex-review-images-logs-prod-989086371563-euc1`, keeps it private,
-  enables SSE-S3, versioning, HTTPS-only policy, CloudWatch Logs delivery write
-  to `cloudfront/media/*`, and `7` or `14` day lifecycle retention. The delivery
-  stack is `infra/aws/media-access-logs-delivery.cloudformation.json` and must
-  be deployed in `us-east-1`; it creates CloudWatch Logs standard logging v2
-  `DeliverySource`, `DeliveryDestination`, and `Delivery` for distribution
-  `E1205OOLPZDB00`. The selected fields intentionally exclude `cs-uri-query`
-  and `cs(Cookie)` so signed admin preview query strings and cookies are not
-  written to durable logs. Local validators and AWS `validate-template` passed
-  for both templates. No change set has been created yet, and CloudFront logging
-  remains disabled until an explicit AWS mutation gate.
+- 2026-07-08: CloudFront standard logging v2 is partially deployed for the media
+  distribution. Bucket stack `renuvex-media-access-logs-bucket-prod` is
+  `CREATE_COMPLETE` in `eu-central-1` and owns bucket
+  `renuvex-review-images-logs-prod-989086371563-euc1`; delivery stack
+  `renuvex-media-access-logs-delivery-prod` is `CREATE_COMPLETE` in `us-east-1`
+  and owns delivery `arn:aws:logs:us-east-1:989086371563:delivery:izOPizvP6vARqkaL`
+  for distribution `E1205OOLPZDB00`. The selected fields intentionally exclude
+  `cs-uri-query` and `cs(Cookie)` so signed admin preview query strings and
+  cookies are not written to durable logs. During the first delivery post-check,
+  AWS reported the effective S3 suffix as
+  `AWSLogs/{account-id}/CloudFront/cloudfront/media/{DistributionId}/{yyyy}/{MM}/{dd}/{HH}/`;
+  the bucket policy and lifecycle must match this effective prefix, not only the
+  requested `cloudfront/media/...` suffix. Local template and validator fixes are
+  staged to align the bucket stack with that effective prefix before final log
+  object acceptance.
 
 Growth-stage guardrails:
 
