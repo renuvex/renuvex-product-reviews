@@ -85,7 +85,7 @@ assert(!destination.Properties?.DeliveryDestinationPolicy, 'Delivery destination
 const delivery = template.Resources.MediaAccessLogsDelivery;
 assert(delivery.Type === 'AWS::Logs::Delivery', 'MediaAccessLogsDelivery must be AWS::Logs::Delivery.');
 assert(asArray(delivery.DependsOn).includes('MediaAccessLogsDeliverySource'), 'Delivery must depend on the delivery source.');
-assert(asArray(delivery.DependsOn).includes('MediaAccessLogsDeliveryDestination'), 'Delivery must depend on the delivery destination.');
+assert(!asArray(delivery.DependsOn).includes('MediaAccessLogsDeliveryDestination'), 'Delivery destination dependency is already enforced by DeliveryDestinationArn GetAtt.');
 assert(refValue(delivery.Properties?.DeliverySourceName) === 'DeliverySourceName', 'Delivery must use DeliverySourceName.');
 assert(delivery.Properties?.DeliveryDestinationArn?.['Fn::GetAtt']?.[0] === 'MediaAccessLogsDeliveryDestination', 'Delivery must target the local delivery destination.');
 assert(delivery.Properties?.FieldDelimiter === '\t', 'Delivery must use tab-delimited plain logs.');

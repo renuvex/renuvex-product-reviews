@@ -82,8 +82,7 @@
     "MediaAccessLogsDelivery": {
       "Type": "AWS::Logs::Delivery",
       "DependsOn": [
-        "MediaAccessLogsDeliverySource",
-        "MediaAccessLogsDeliveryDestination"
+        "MediaAccessLogsDeliverySource"
       ],
       "Properties": {
         "DeliverySourceName": {
