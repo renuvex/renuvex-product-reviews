@@ -1,0 +1,259 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Renuvex media CloudFront observability guardrails. Deploy in us-east-1 because CloudFront metrics are global and reported there.",
+  "Parameters": {
+    "MediaDistributionId": {
+      "Type": "String",
+      "Default": "E1205OOLPZDB00",
+      "AllowedPattern": "^[A-Z0-9]+$",
+      "Description": "CloudFront distribution id for media.renuvex.app."
+    },
+    "AlarmEmail": {
+      "Type": "String",
+      "Default": "",
+      "NoEcho": true,
+      "AllowedPattern": "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+      "Description": "Optional email endpoint for SNS alarm notifications. Leave empty to create the topic without an email subscription."
+    }
+  },
+  "Conditions": {
+    "HasAlarmEmail": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "AlarmEmail"
+            },
+            ""
+          ]
+        }
+      ]
+    }
+  },
+  "Resources": {
+    "MediaAlarmKey": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "Description": "Customer managed KMS key for Renuvex media CloudWatch alarm SNS notifications.",
+        "EnableKeyRotation": false,
+        "KeySpec": "SYMMETRIC_DEFAULT",
+        "KeyUsage": "ENCRYPT_DECRYPT",
+        "PendingWindowInDays": 7,
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "EnableAccountKmsAdministration",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                }
+              },
+              "Action": "kms:*",
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowCloudWatchAlarmsForEncryptedSnsTopic",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudwatch.amazonaws.com"
+              },
+              "Action": [
+                "kms:Decrypt",
+                "kms:GenerateDataKey*"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                },
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:renuvex-media-cloudfront-*"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "media-observability"
+          }
+        ]
+      }
+    },
+    "MediaAlarmKeyAlias": {
+      "Type": "AWS::KMS::Alias",
+      "Properties": {
+        "AliasName": "alias/renuvex-media-observability",
+        "TargetKeyId": {
+          "Ref": "MediaAlarmKey"
+        }
+      }
+    },
+    "MediaAlarmTopic": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "TopicName": {
+          "Fn::Sub": "${AWS::StackName}-notifications"
+        },
+        "DisplayName": "Renuvex Media CloudFront Alarms",
+        "KmsMasterKeyId": {
+          "Fn::GetAtt": [
+            "MediaAlarmKey",
+            "Arn"
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "media-observability"
+          }
+        ]
+      }
+    },
+    "MediaAlarmTopicPolicy": {
+      "Type": "AWS::SNS::TopicPolicy",
+      "Properties": {
+        "Topics": [
+          {
+            "Ref": "MediaAlarmTopic"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowCloudWatchAlarmPublish",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudwatch.amazonaws.com"
+              },
+              "Action": "sns:Publish",
+              "Resource": {
+                "Ref": "MediaAlarmTopic"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                },
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:renuvex-media-cloudfront-*"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "MediaAlarmEmailSubscription": {
+      "Type": "AWS::SNS::Subscription",
+      "Condition": "HasAlarmEmail",
+      "Properties": {
+        "TopicArn": {
+          "Ref": "MediaAlarmTopic"
+        },
+        "Protocol": "email",
+        "Endpoint": {
+          "Ref": "AlarmEmail"
+        }
+      }
+    },
+    "MediaCloudFront5xxErrorRateAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": "renuvex-media-cloudfront-5xx-error-rate",
+        "AlarmDescription": "media.renuvex.app CloudFront 5xxErrorRate > 1% for 5 consecutive 1-minute periods. CloudFront metrics must be alarmed in us-east-1 with DistributionId and Region=Global dimensions.",
+        "Namespace": "AWS/CloudFront",
+        "MetricName": "5xxErrorRate",
+        "Dimensions": [
+          {
+            "Name": "DistributionId",
+            "Value": {
+              "Ref": "MediaDistributionId"
+            }
+          },
+          {
+            "Name": "Region",
+            "Value": "Global"
+          }
+        ],
+        "Statistic": "Average",
+        "Period": 60,
+        "EvaluationPeriods": 5,
+        "DatapointsToAlarm": 5,
+        "Threshold": 1,
+        "ComparisonOperator": "GreaterThanThreshold",
+        "TreatMissingData": "notBreaching",
+        "Unit": "Percent",
+        "ActionsEnabled": true,
+        "AlarmActions": [
+          {
+            "Ref": "MediaAlarmTopic"
+          }
+        ],
+        "OKActions": [
+          {
+            "Ref": "MediaAlarmTopic"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "media-observability"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "AlarmTopicArn": {
+      "Description": "SNS topic used by media CloudFront alarms.",
+      "Value": {
+        "Ref": "MediaAlarmTopic"
+      }
+    },
+    "AlarmKmsKeyArn": {
+      "Description": "Customer managed KMS key used for encrypted alarm notifications.",
+      "Value": {
+        "Fn::GetAtt": [
+          "MediaAlarmKey",
+          "Arn"
+        ]
+      }
+    },
+    "CloudFront5xxAlarmName": {
+      "Description": "CloudWatch alarm name for media CloudFront 5xx error rate.",
+      "Value": {
+        "Ref": "MediaCloudFront5xxErrorRateAlarm"
+      }
+    },
+    "MediaDistributionId": {
+      "Description": "CloudFront distribution monitored by this stack.",
+      "Value": {
+        "Ref": "MediaDistributionId"
+      }
+    }
+  }
+}

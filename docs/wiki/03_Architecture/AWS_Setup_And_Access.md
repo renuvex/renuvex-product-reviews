@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-08
+last_verified: 2026-07-08
 confidence: high
 tags:
   - aws
@@ -25,10 +25,12 @@ source_files:
   - "infra/aws/widget-cdn-canary.cloudformation.json"
   - "infra/aws/widget-canary-operator-policy.example.json"
   - "infra/aws/review-images.cloudformation.json"
+  - "infra/aws/media-observability.cloudformation.json"
   - "scripts/prepare-widget-aws-canary-assets.mjs"
   - "scripts/deploy-widget-aws-canary-assets.mjs"
   - "scripts/validate-widget-aws-canary-template.mjs"
   - "scripts/validate-review-images-aws-template.mjs"
+  - "scripts/validate-media-observability-template.mjs"
   - ".agents/skills/aws-iam/SKILL.md"
   - ".agents/skills/securing-s3-buckets/SKILL.md"
   - ".agents/skills/routing-traffic-with-route53-and-cloudfront/SKILL.md"
@@ -467,7 +469,7 @@ pnpm aws:review-images:validate-runtime-iam-template
 
 ## Public-Scale Cost And Observability Guardrails
 
-Status snapshot on 2026-07-04:
+Status snapshot on 2026-07-05:
 
 - `renuvex-readonly` can verify billing and observability state; the narrower
   `renuvex-review-images` operator is not the right audit profile for billing
@@ -475,7 +477,8 @@ Status snapshot on 2026-07-04:
 - AWS Budget `Renuvex AWS Monthly Guardrail` exists, is healthy, and currently
   has a `10 USD` monthly limit. Cost Anomaly Detection monitor
   `Default-Services-Monitor` exists.
-- CloudWatch alarms are not configured in `us-east-1` or `eu-central-1`.
+- Minimal media CloudWatch alarming is active in `us-east-1` through stack
+  `renuvex-media-observability-prod`.
 - S3 Storage Lens default account dashboard is active with free metrics.
 - CloudFront standard logging is disabled for the media distribution
   `E1205OOLPZDB00` (`media.renuvex.app`) and the widget canary distribution.
@@ -494,13 +497,72 @@ variants. Approved assets also publish 14 public variants. Therefore, at
 | 50% | 2.2B |
 | 100% | 2.9B |
 
-Public-launch guardrails that should be added before broad traffic:
+Public-launch guardrails and current status:
 
-- Minimal CloudWatch alarm set for the media CloudFront distribution. Use
+- Minimal CloudWatch alarm set for the media CloudFront distribution uses
   `us-east-1` because CloudFront global metrics are reported there. Start with
-  `5xxErrorRate`; add `TotalErrorRate` if it provides useful signal without
-  noisy alerts. Do not use high-resolution or custom metrics for this first
-  set.
+  `5xxErrorRate`; do not use high-resolution or custom metrics for this first
+  set. Local IaC for this first alarm lives in
+  `infra/aws/media-observability.cloudformation.json`.
+  Alarm notifications use SNS with a customer managed KMS key, not
+  `alias/aws/sns`, because CloudWatch service publishing to encrypted SNS topics
+  needs an explicit KMS key policy for `cloudwatch.amazonaws.com`. Key rotation
+  stays disabled by default because alarm messages do not carry secrets and KMS
+  rotation can increase long-term cost.
+- 2026-07-05: A create change set was prepared for stack
+  `renuvex-media-observability-prod` in `us-east-1`
+  (`media-observability-create-20260705-004613`). It is not executed. The
+  change set contains `AWS::KMS::Key`, `AWS::KMS::Alias`, `AWS::SNS::Topic`,
+  `AWS::SNS::TopicPolicy`, `AWS::SNS::Subscription`, and
+  `AWS::CloudWatch::Alarm`. CloudFormation pre-deploy events showed the
+  `renuvex-review-images` operator cannot run full validation for these
+  resources yet: missing `sns:GetTopicAttributes`,
+  `cloudwatch:DescribeAlarms`, and `kms:ListAliases`. Do not execute until the
+  observability operator permissions are explicitly expanded and rechecked.
+- 2026-07-08: The observability permissions were rechecked through read-only
+  AWS CLI calls. `cloudwatch:DescribeAlarms`, `sns:ListTopics`, and
+  `kms:ListAliases` now succeed through `renuvex-review-images`; exact
+  not-yet-created resource probes return `NotFound` instead of `AccessDenied`.
+  The 2026-07-05 change set keeps stale validation events and should not be used
+  as current evidence. A fresh change set
+  `media-observability-create-20260708-041420` was created and not executed.
+  Status is `CREATE_COMPLETE`, `ExecutionStatus: AVAILABLE`; `describe-events`
+  returns only `CREATE_CHANGESET` `IN_PROGRESS` and `SUCCEEDED` stack events,
+  with no `VALIDATION_ERROR` events. Planned resources remain limited to
+  `AWS::KMS::Key`, `AWS::KMS::Alias`, `AWS::SNS::Topic`,
+  `AWS::SNS::TopicPolicy`, `AWS::SNS::Subscription`, and
+  `AWS::CloudWatch::Alarm`. Stack status remains `REVIEW_IN_PROGRESS` until an
+  explicitly approved execute gate.
+- 2026-07-08: The fresh media observability change set was executed after
+  explicit approval and stack `renuvex-media-observability-prod` reached
+  `CREATE_COMPLETE`. Change set execution status is `EXECUTE_COMPLETE`.
+  Created resources:
+  - CloudWatch alarm: `renuvex-media-cloudfront-5xx-error-rate`.
+  - SNS topic:
+    `arn:aws:sns:us-east-1:989086371563:renuvex-media-observability-prod-notifications`.
+  - KMS key:
+    `arn:aws:kms:us-east-1:989086371563:key/fd4c140d-c85b-4e6e-a6e8-03fb21934ae0`.
+  - KMS alias: `alias/renuvex-media-observability`.
+  - Email subscription resource:
+    `arn:aws:sns:us-east-1:989086371563:renuvex-media-observability-prod-notifications:1b306dc7-31e5-419f-94f3-6f16b885b2b9`.
+  Post-checks: alarm state is `OK`, actions are enabled, alarm and OK actions
+  both target the encrypted SNS topic, dimensions are `DistributionId=E1205OOLPZDB00`
+  and `Region=Global`, threshold is `5xxErrorRate > 1%` for `5/5` one-minute
+  periods, `TreatMissingData=notBreaching`, SNS topic uses the customer managed
+  KMS key, KMS key is enabled and customer managed, KMS rotation is disabled by
+  design, and the key policy allows `cloudwatch.amazonaws.com` only for
+  `renuvex-media-cloudfront-*` alarms in account `989086371563`.
+  The email subscription was confirmed on 2026-07-08; `list-subscriptions-by-topic`
+  returns the subscription ARN instead of `PendingConfirmation`, so the SNS email
+  delivery path is no longer blocked by subscription state. No alarm test via
+  `SetAlarmState` was run because it is a separate provider mutation and needs
+  explicit approval. The previous minor IAM gap is resolved: `cloudformation:ListChangeSets`
+  now succeeds through `renuvex-review-images` for this stack.
+- `TotalErrorRate` should not be created as a raw alarm during the test/low
+  traffic phase. Live read-only checks showed `5xxErrorRate=0` while
+  `TotalErrorRate` was frequently high because it includes 4xx responses and
+  low-volume test requests. If needed after public traffic begins, implement it
+  only as a gated warning alarm with request-volume guardrails.
 - CloudFront standard logs for the media distribution only, delivered to an S3
   log bucket/prefix with a short `7` or `14` day lifecycle. Do not route logs to
   CloudWatch Logs, Firehose, or Parquet conversion unless a later incident or
