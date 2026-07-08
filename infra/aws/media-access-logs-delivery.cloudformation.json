@@ -1,0 +1,196 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Renuvex media CloudFront standard logging v2 delivery. Deploy in us-east-1 because CloudFront logging v2 is configured through the CloudWatch Logs API in us-east-1.",
+  "Parameters": {
+    "MediaDistributionId": {
+      "Type": "String",
+      "Default": "E1205OOLPZDB00",
+      "AllowedPattern": "^[A-Z0-9]+$",
+      "Description": "CloudFront distribution id for media.renuvex.app."
+    },
+    "DeliverySourceName": {
+      "Type": "String",
+      "Default": "renuvex-media-cf-access-logs",
+      "AllowedPattern": "^[A-Za-z0-9_-]{1,60}$",
+      "Description": "Stable CloudWatch Logs delivery source name for the media distribution."
+    },
+    "DeliveryDestinationName": {
+      "Type": "String",
+      "Default": "renuvex-media-cf-access-logs-s3",
+      "AllowedPattern": "^[A-Za-z0-9_-]{1,60}$",
+      "Description": "Stable CloudWatch Logs delivery destination name for the media S3 log bucket."
+    },
+    "DestinationBucketArn": {
+      "Type": "String",
+      "Default": "arn:aws:s3:::renuvex-review-images-logs-prod-989086371563-euc1",
+      "AllowedPattern": "^arn:aws:s3:::renuvex-review-images-[a-z0-9.-]{3,41}$",
+      "Description": "S3 bucket ARN created by the eu-central-1 media access logs bucket stack."
+    },
+    "S3SuffixPath": {
+      "Type": "String",
+      "Default": "cloudfront/media/{DistributionId}/{yyyy}/{MM}/{dd}/{HH}/",
+      "AllowedPattern": "^cloudfront/media/\\{DistributionId\\}/\\{yyyy\\}/\\{MM\\}/\\{dd\\}/\\{HH\\}/$",
+      "Description": "Partitioned prefix for delivered CloudFront access log objects."
+    }
+  },
+  "Resources": {
+    "MediaAccessLogsDeliverySource": {
+      "Type": "AWS::Logs::DeliverySource",
+      "Properties": {
+        "Name": {
+          "Ref": "DeliverySourceName"
+        },
+        "ResourceArn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${MediaDistributionId}"
+        },
+        "LogType": "ACCESS_LOGS",
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "media-access-logs"
+          }
+        ]
+      }
+    },
+    "MediaAccessLogsDeliveryDestination": {
+      "Type": "AWS::Logs::DeliveryDestination",
+      "Properties": {
+        "Name": {
+          "Ref": "DeliveryDestinationName"
+        },
+        "DeliveryDestinationType": "S3",
+        "DestinationResourceArn": {
+          "Ref": "DestinationBucketArn"
+        },
+        "OutputFormat": "plain",
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "media-access-logs"
+          }
+        ]
+      }
+    },
+    "MediaAccessLogsDelivery": {
+      "Type": "AWS::Logs::Delivery",
+      "DependsOn": [
+        "MediaAccessLogsDeliverySource",
+        "MediaAccessLogsDeliveryDestination"
+      ],
+      "Properties": {
+        "DeliverySourceName": {
+          "Ref": "DeliverySourceName"
+        },
+        "DeliveryDestinationArn": {
+          "Fn::GetAtt": [
+            "MediaAccessLogsDeliveryDestination",
+            "Arn"
+          ]
+        },
+        "FieldDelimiter": "\t",
+        "RecordFields": [
+          "date",
+          "time",
+          "x-edge-location",
+          "sc-bytes",
+          "c-ip",
+          "cs-method",
+          "cs(Host)",
+          "cs-uri-stem",
+          "sc-status",
+          "cs(Referer)",
+          "cs(User-Agent)",
+          "x-edge-result-type",
+          "x-edge-request-id",
+          "x-host-header",
+          "cs-protocol",
+          "cs-bytes",
+          "time-taken",
+          "x-forwarded-for",
+          "ssl-protocol",
+          "ssl-cipher",
+          "x-edge-response-result-type",
+          "cs-protocol-version",
+          "c-port",
+          "time-to-first-byte",
+          "x-edge-detailed-result-type",
+          "sc-content-type",
+          "sc-content-len",
+          "sc-range-start",
+          "sc-range-end",
+          "c-country",
+          "cache-behavior-path-pattern"
+        ],
+        "S3EnableHiveCompatiblePath": false,
+        "S3SuffixPath": {
+          "Ref": "S3SuffixPath"
+        },
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "media-access-logs"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "DeliverySourceName": {
+      "Description": "CloudWatch Logs delivery source name.",
+      "Value": {
+        "Ref": "DeliverySourceName"
+      }
+    },
+    "DeliverySourceArn": {
+      "Description": "CloudWatch Logs delivery source ARN.",
+      "Value": {
+        "Fn::GetAtt": [
+          "MediaAccessLogsDeliverySource",
+          "Arn"
+        ]
+      }
+    },
+    "DeliveryDestinationArn": {
+      "Description": "CloudWatch Logs delivery destination ARN.",
+      "Value": {
+        "Fn::GetAtt": [
+          "MediaAccessLogsDeliveryDestination",
+          "Arn"
+        ]
+      }
+    },
+    "DeliveryArn": {
+      "Description": "CloudWatch Logs delivery ARN.",
+      "Value": {
+        "Fn::GetAtt": [
+          "MediaAccessLogsDelivery",
+          "Arn"
+        ]
+      }
+    },
+    "MediaDistributionId": {
+      "Description": "CloudFront distribution configured for media access logs.",
+      "Value": {
+        "Ref": "MediaDistributionId"
+      }
+    },
+    "S3SuffixPath": {
+      "Description": "S3 suffix path used by CloudWatch Logs delivery.",
+      "Value": {
+        "Ref": "S3SuffixPath"
+      }
+    }
+  }
+}

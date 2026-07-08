@@ -26,11 +26,15 @@ source_files:
   - "infra/aws/widget-canary-operator-policy.example.json"
   - "infra/aws/review-images.cloudformation.json"
   - "infra/aws/media-observability.cloudformation.json"
+  - "infra/aws/media-access-logs-bucket.cloudformation.json"
+  - "infra/aws/media-access-logs-delivery.cloudformation.json"
   - "scripts/prepare-widget-aws-canary-assets.mjs"
   - "scripts/deploy-widget-aws-canary-assets.mjs"
   - "scripts/validate-widget-aws-canary-template.mjs"
   - "scripts/validate-review-images-aws-template.mjs"
   - "scripts/validate-media-observability-template.mjs"
+  - "scripts/validate-media-access-logs-bucket-template.mjs"
+  - "scripts/validate-media-access-logs-delivery-template.mjs"
   - ".agents/skills/aws-iam/SKILL.md"
   - ".agents/skills/securing-s3-buckets/SKILL.md"
   - ".agents/skills/routing-traffic-with-route53-and-cloudfront/SKILL.md"
@@ -567,6 +571,21 @@ Public-launch guardrails and current status:
   log bucket/prefix with a short `7` or `14` day lifecycle. Do not route logs to
   CloudWatch Logs, Firehose, or Parquet conversion unless a later incident or
   analytics requirement justifies the extra system and cost.
+- 2026-07-08: Local IaC for this final public-launch logging guardrail was
+  staged but not deployed. The bucket stack is
+  `infra/aws/media-access-logs-bucket.cloudformation.json` and must be deployed
+  in `eu-central-1`; it creates bucket
+  `renuvex-review-images-logs-prod-989086371563-euc1`, keeps it private,
+  enables SSE-S3, versioning, HTTPS-only policy, CloudWatch Logs delivery write
+  to `cloudfront/media/*`, and `7` or `14` day lifecycle retention. The delivery
+  stack is `infra/aws/media-access-logs-delivery.cloudformation.json` and must
+  be deployed in `us-east-1`; it creates CloudWatch Logs standard logging v2
+  `DeliverySource`, `DeliveryDestination`, and `Delivery` for distribution
+  `E1205OOLPZDB00`. The selected fields intentionally exclude `cs-uri-query`
+  and `cs(Cookie)` so signed admin preview query strings and cookies are not
+  written to durable logs. Local validators and AWS `validate-template` passed
+  for both templates. No change set has been created yet, and CloudFront logging
+  remains disabled until an explicit AWS mutation gate.
 
 Growth-stage guardrails:
 

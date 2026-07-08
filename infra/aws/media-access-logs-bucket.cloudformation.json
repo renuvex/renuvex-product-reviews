@@ -1,0 +1,183 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Renuvex media CloudFront standard logging v2 S3 bucket. Deploy in eu-central-1; delivery configuration is managed separately in us-east-1.",
+  "Parameters": {
+    "BucketName": {
+      "Type": "String",
+      "Default": "renuvex-review-images-logs-prod-989086371563-euc1",
+      "AllowedPattern": "^renuvex-review-images-[a-z0-9.-]{3,41}$",
+      "Description": "Private S3 bucket for short-retention media CloudFront access logs."
+    },
+    "RetentionDays": {
+      "Type": "Number",
+      "Default": 14,
+      "AllowedValues": [
+        7,
+        14
+      ],
+      "Description": "Number of days to retain CloudFront access logs."
+    },
+    "DeliverySourceName": {
+      "Type": "String",
+      "Default": "renuvex-media-cf-access-logs",
+      "AllowedPattern": "^[A-Za-z0-9_-]{1,60}$",
+      "Description": "CloudWatch Logs delivery source name created by the us-east-1 delivery stack."
+    }
+  },
+  "Resources": {
+    "MediaAccessLogsBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketName": {
+          "Ref": "BucketName"
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "expire-media-cloudfront-access-logs",
+              "Status": "Enabled",
+              "Prefix": "cloudfront/media/",
+              "ExpirationInDays": {
+                "Ref": "RetentionDays"
+              },
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": {
+                  "Ref": "RetentionDays"
+                }
+              },
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 1
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "media-access-logs"
+          }
+        ]
+      }
+    },
+    "MediaAccessLogsBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "MediaAccessLogsBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DenyInsecureTransport",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:s3:::${MediaAccessLogsBucket}"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:s3:::${MediaAccessLogsBucket}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            },
+            {
+              "Sid": "AllowCloudWatchLogsDeliveryWrite",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "delivery.logs.amazonaws.com"
+              },
+              "Action": "s3:PutObject",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:s3:::${MediaAccessLogsBucket}/cloudfront/media/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  },
+                  "s3:x-amz-acl": "bucket-owner-full-control"
+                },
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:logs:us-east-1:${AWS::AccountId}:delivery-source:${DeliverySourceName}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketName": {
+      "Description": "S3 bucket that stores media CloudFront access logs.",
+      "Value": {
+        "Ref": "MediaAccessLogsBucket"
+      }
+    },
+    "BucketArn": {
+      "Description": "S3 bucket ARN for the us-east-1 CloudWatch Logs delivery destination.",
+      "Value": {
+        "Fn::GetAtt": [
+          "MediaAccessLogsBucket",
+          "Arn"
+        ]
+      }
+    },
+    "LogPrefix": {
+      "Description": "Static S3 prefix reserved for media CloudFront access logs.",
+      "Value": "cloudfront/media/"
+    },
+    "RetentionDays": {
+      "Description": "Configured log retention period in days.",
+      "Value": {
+        "Ref": "RetentionDays"
+      }
+    },
+    "DeliverySourceName": {
+      "Description": "Expected CloudWatch Logs delivery source allowed by the bucket policy.",
+      "Value": {
+        "Ref": "DeliverySourceName"
+      }
+    }
+  }
+}
