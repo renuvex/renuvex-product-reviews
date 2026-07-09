@@ -3,7 +3,7 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-08
+updated: 2026-07-09
 tags:
   - ikas
   - graphql
@@ -11,6 +11,7 @@ related:
   - "[[Index]]"
   - "[[Ikas_Platform_Notes]]"
   - "[[ADR_0004_Ikas_Integration_Strategy]]"
+  - "[[Ikas_Order_Review_Request_Notes]]"
 ---
 
 # ikas API Notes
@@ -61,6 +62,27 @@ This project does not currently implement either a billing webhook receiver or a
 list/introspect -> `graphql-requests.ts` -> `pnpm codegen` flow when paid plan
 enforcement is built.
 
+## Order Review Request Signals
+
+Direct ikas developer feedback on 2026-07-09 clarified the order webhook and
+`listOrder` contract for post-order single-use action links. The detailed
+record is in [[Ikas_Order_Review_Request_Notes]].
+
+Key points:
+
+- `store/order/created` and `store/order/updated` are valid webhook scopes when
+  backed by the matching Orders read permission; customer-data use may require
+  Customers read.
+- Use webhook events as wake-up signals, then call `listOrder` for canonical
+  current order state.
+- Physical delivery uses `orderPackageStatus=DELIVERED`; `shippingMethod` must
+  branch pickup and no-shipment/digital cases.
+- Reconciliation should use `listOrder(updatedAt)` with page/limit pagination,
+  `limit<=200`, and `hasNext`.
+- On `store/app/deleted`, personal data such as email, address, order
+  references, and order-line references must be deleted or anonymized within 24
+  hours.
+
 ## Adding a new operation
 1. Discover via `mcp__ikas__list` (catalog) → `mcp__ikas__introspect` (shape).
 2. Define the gql document in [graphql-requests.ts](src/lib/ikas-client/graphql-requests.ts).
@@ -88,3 +110,4 @@ enforcement is built.
 - [[ADR_0004_Ikas_Integration_Strategy]]
 - [[Auth_And_Installation_Flow]]
 - [[Ikas_Widget_Injection_Notes]]
+- [[Ikas_Order_Review_Request_Notes]]

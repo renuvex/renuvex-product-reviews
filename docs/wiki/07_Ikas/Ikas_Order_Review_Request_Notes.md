@@ -1,0 +1,120 @@
+---
+type: api
+project: renuvex-product-reviews
+status: active
+created: 2026-07-09
+updated: 2026-07-09
+last_verified: 2026-07-09
+confidence: high
+tags:
+  - ikas
+  - orders
+  - review-request
+  - email
+  - webhooks
+related:
+  - "[[Ikas_API_Notes]]"
+  - "[[ADR_0036_Review_Request_Email_Architecture]]"
+  - "[[ADR_0004_Ikas_Integration_Strategy]]"
+source_files:
+  - "src/lib/ikas-client/graphql-requests.ts"
+  - "src/app/api/webhooks/ikas/products/route.ts"
+---
+
+# ikas Order Review Request Notes
+
+## Agent Brief
+
+Use this page when designing review-request emails, verified-buyer evidence,
+order webhooks, or order reconciliation. This page records direct ikas
+developer feedback received on 2026-07-09. It is platform evidence, not an
+implementation plan. Verify current ikas MCP/docs before adding GraphQL
+operations or webhook registrations, and do not mutate provider state without a
+separate approved plan.
+
+## Platform Feedback Summary
+
+Direct ikas developer feedback on 2026-07-09 clarified the order-trigger
+contract for a post-order single-use action link:
+
+- `store/order/created` and `store/order/updated` are valid webhook scopes for
+  this flow.
+- App review does not need a special extra permission only for these webhook
+  scopes, but the app must have the matching API access permission. For order
+  review requests this means Orders read access; customer data use may also
+  require Customers read access.
+- The canonical high-level physical-delivery field is `orderPackageStatus`.
+  Delivered physical orders reach `DELIVERED`.
+- `shippingMethod` must also be checked because the terminal state differs by
+  order type. `CLICK_AND_COLLECT` orders may terminate at `READY_FOR_PICK_UP`.
+  Digital or no-shipment orders may not have a shipping-delivery step.
+- `orderPackages[].orderPackageFulfillStatus` and `orderLineItems[].status` are
+  detail fields for package/line-level logic, not the first high-level trigger.
+- `listOrder.customer.email` and `listOrder.customer.notificationsAccepted` may
+  be used for post-order customer communication.
+- ikas distinguishes marketing/commercial messages from transactional
+  notifications: when `notificationsAccepted=false`, marketing/commercial
+  sending should not happen; order confirmation, shipping, delivery, and similar
+  transactional notifications are independent of that setting.
+- `store/order/updated` payload can contain customer email, line item ids,
+  product/variant ids, and package status fields.
+- The recommended robust flow is still webhook wake-up -> canonical `listOrder`
+  re-read, because webhook ordering or delivery delay can make payload-only
+  processing stale.
+- General ikas webhooks support HMAC signature verification. Use the documented
+  signature/header mechanism and the existing project signature pattern as the
+  baseline for any future order webhook receiver.
+- If the webhook endpoint returns a non-`200`, ikas retries three more times.
+- Missed webhook reconciliation should use periodic `listOrder` reads filtered
+  by `updatedAt`.
+- `listOrder` pagination is page/limit based. The maximum `limit` is `200`, and
+  callers should advance while `hasNext` is true.
+- `store/app/deleted` is the uninstall signal. Stored personal data such as
+  email, address, order references, and order-line references must be deleted or
+  anonymized within 24 hours.
+
+## Product And Implementation Implications
+
+- Do not send review-request email directly inside an order webhook handler.
+  The handler should verify the signature, persist/idempotently record the
+  event, and enqueue or wake canonical order reconciliation.
+- The canonical order state must come from `listOrder`, not only from the
+  webhook payload.
+- Eligibility logic must be tenant-aware and order-type-aware:
+  - physical shipment: use `orderPackageStatus=DELIVERED` as the high-level
+    trigger, then check package/line details when needed;
+  - click-and-collect: treat `READY_FOR_PICK_UP` as its own terminal state;
+  - digital/no-shipment: define a separate product decision because there may be
+    no delivery package transition;
+  - partial delivery: avoid sending for all order lines just because the order
+    has a partial terminal signal; line/package mapping is required.
+- `notificationsAccepted=false` is not a platform-level blocker for clearly
+  transactional notifications. Whether a review-request email is treated as
+  transactional enough, or whether Renuvex requires `notificationsAccepted=true`
+  for the MVP, remains a product/legal decision and should be explicit before
+  launch.
+- The future schema must support uninstall cleanup/anonymization within 24
+  hours. Storing raw email/order identifiers without a deletion plan is not
+  acceptable.
+- Reconciliation should be QStash-scheduled or job-dispatched with bounded
+  windows and rate-limit-aware pagination; raw broad scans should be avoided.
+
+## Open Implementation Work
+
+- Add the needed ikas GraphQL documents through MCP list/introspect, then
+  `graphql-requests.ts` and `pnpm codegen`.
+- Design additive Prisma models for order eligibility evidence,
+  review-request lifecycle, one-time tokens, send attempts, provider events,
+  suppression, and uninstall cleanup evidence.
+- Design the order webhook receiver with HMAC verification, idempotency, and
+  canonical `listOrder` re-read.
+- Design reconciliation by `updatedAt` with page/limit pagination and `hasNext`.
+- Define the product/legal consent rule for review-request email when
+  `notificationsAccepted=false`.
+- Define the uninstall cleanup/anonymization job and acceptance evidence.
+
+## Obsidian Links
+
+- [[Ikas_API_Notes]]
+- [[ADR_0036_Review_Request_Email_Architecture]]
+- [[ADR_0004_Ikas_Integration_Strategy]]

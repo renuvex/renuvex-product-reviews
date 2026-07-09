@@ -82,6 +82,7 @@ source_files: []
 ## ikas
 - [[Ikas_Platform_Notes]]
 - [[Ikas_API_Notes]]
+- [[Ikas_Order_Review_Request_Notes]]
 - [[Ikas_Widget_Injection_Notes]]
 - [[Ikas_Storefront_Script_Capabilities]]
 - [[Ikas_Storefront_Events]]
@@ -190,4 +191,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-09 (prepared source-only SES foundation package)
+**Last Updated:** 2026-07-09 (recorded ikas order review-request platform feedback)

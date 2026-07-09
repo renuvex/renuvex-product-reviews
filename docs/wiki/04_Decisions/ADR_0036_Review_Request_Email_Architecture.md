@@ -18,6 +18,7 @@ related:
   - "[[ADR_0004_Ikas_Integration_Strategy]]"
   - "[[ADR_0035_QStash_Scheduler_For_Maintenance]]"
   - "[[Ikas_API_Notes]]"
+  - "[[Ikas_Order_Review_Request_Notes]]"
   - "[[Roadmap]]"
 source_files:
   - "package.json"
@@ -51,9 +52,11 @@ Use this draft when researching or designing post-purchase review-request
 email, verified-buyer submission, Amazon SES delivery, or email-job scheduling.
 The provider boundary, SES regional/sender/runtime/feedback contract,
 provider-neutral tenant direction, and source-only SES foundation package are
-accepted. The ikas eligibility, consent, retention, exact Prisma schema, and
-rollout contracts remain open. Verify the source files above and current
-ikas/AWS runtime evidence before extending this ADR.
+accepted. Direct ikas feedback now confirms the order webhook/listOrder,
+delivery-state, reconciliation, and uninstall-retention platform contract. The
+exact Prisma schema, product/legal consent stance, and rollout contracts remain
+open. Verify the source files above and current ikas/AWS runtime evidence before
+extending this ADR.
 Do not create AWS resources, DNS records, DB migrations, QStash schedules,
 Vercel environment variables, or deploys from this document without a separate
 scope, risk, rollback note, and explicit approval.
@@ -67,14 +70,16 @@ The target product capability is not implemented today. AWS SES in
 application boundaries, tenant-aware ownership, QStash dispatch, and a signed
 SES feedback path are accepted directions. The repository now contains the
 source package for SES identity/configuration-set/feedback IaC, the dedicated
-runtime IAM role, and a signed SNS feedback endpoint skeleton. The ikas
-trigger/consent contract, exact additive schema, token lifecycle, outbound send
-implementation, and rollout remain open.
+runtime IAM role, and a signed SNS feedback endpoint skeleton. Direct ikas
+feedback on 2026-07-09 now confirms the high-level order webhook,
+canonical `listOrder` re-read, delivery-state, reconciliation, and uninstall
+cleanup contract. The exact additive schema, token lifecycle, product/legal
+consent stance, outbound send implementation, and rollout remain open.
 
 ## Status
 
-Proposed - infrastructure source package prepared; application contract remains
-open.
+Proposed - infrastructure source package prepared; ikas platform contract
+recorded; application schema and rollout remain open.
 
 This ADR does not authorize AWS stack creation, DNS records, Vercel env writes,
 DB migrations, deploys, or provider mutation.
@@ -153,22 +158,41 @@ ikas MCP was re-verified on 2026-07-09:
 - Pagination defaults to 50 and has a documented maximum of 200 records per
   page.
 
-The schema proves that these fields and scopes exist. It does not prove:
+Direct ikas developer feedback received on 2026-07-09 closes the platform
+semantics that were previously open. See [[Ikas_Order_Review_Request_Notes]]
+for the detailed support-answer record. The current confirmed contract is:
 
-- which status is the canonical review-request trigger for physical, digital,
-  no-shipment, click-and-collect, or partially fulfilled orders;
-- whether `notificationsAccepted` governs this post-purchase transactional
-  message;
-- whether an order webhook contains enough canonical data or should only wake a
-  `listOrder` re-read;
-- the supported reconciliation cadence and rate limits after webhook failure;
-- the retention/uninstall contract for customer email, order id, and order-line
-  id;
-- whether order webhooks use exactly the same signature/payload semantics as
-  the already implemented product webhook receiver.
+- `store/order/created` and `store/order/updated` are valid webhook scopes for
+  this flow when the app has the matching API access permission. Orders read is
+  required; customer-data usage may require Customers read.
+- `orderPackageStatus` is the high-level physical delivery field.
+  `DELIVERED` is the physical-delivery terminal state.
+- `shippingMethod` must be checked because `CLICK_AND_COLLECT` may terminate at
+  `READY_FOR_PICK_UP`, while digital/no-shipment orders may not have a shipping
+  delivery step.
+- `orderPackages[].orderPackageFulfillStatus` and `orderLineItems[].status`
+  are detail fields for package/line-level decisions and partial delivery.
+- `customer.email` and `customer.notificationsAccepted` may be used for
+  post-order customer communication. ikas distinguishes marketing/commercial
+  sending from transactional notifications; `notificationsAccepted=false` blocks
+  marketing/commercial sending, while order confirmation, shipping, delivery,
+  and similar transactional notifications are independent of that field.
+- `store/order/updated` payload can contain email, line item ids,
+  product/variant ids, and package status fields, but the robust flow is still
+  webhook wake-up -> canonical `listOrder` re-read.
+- General ikas webhooks support HMAC signature verification.
+- Non-`200` webhook responses are retried three more times.
+- Missed-event reconciliation should use periodic `listOrder` reads filtered by
+  `updatedAt`, with page/limit pagination, maximum `limit=200`, and `hasNext`
+  paging.
+- `store/app/deleted` is the uninstall signal; stored personal data such as
+  email, address, order references, and order-line references must be deleted or
+  anonymized within 24 hours.
 
-These questions remain with ikas. They must not be inferred from GraphQL field
-names alone.
+Remaining decisions are now product/legal and implementation decisions, not
+unknown platform facts: exact consent posture for review requests when
+`notificationsAccepted=false`, digital/no-shipment timing, partial-delivery
+line eligibility, schema shape, token lifetime, and rollout order.
 
 ### Database state
 
@@ -296,6 +320,28 @@ The application currently has none of the following:
 - Email templates are rendered and versioned by the application rather than
   stored as authoritative SES templates.
 
+### ikas order contract
+
+- Order webhooks are wake-up signals, not the canonical durable order source.
+  The future receiver must verify the HMAC signature, apply idempotency, and
+  re-read the order through `listOrder` before deciding eligibility or sending.
+- The first accepted webhook scopes are `store/order/created` and
+  `store/order/updated`, backed by Orders read access and any customer-data
+  permission ikas requires for the final app review package.
+- Physical-order review requests use `orderPackageStatus=DELIVERED` as the
+  high-level trigger, then consult package/line detail for partial delivery.
+- `CLICK_AND_COLLECT` and digital/no-shipment orders must use explicit separate
+  eligibility branches; they must not be folded blindly into the physical
+  delivery branch.
+- Reconciliation uses `listOrder(updatedAt)` windows with `limit<=200` and
+  `hasNext` pagination. The cadence and window overlap are implementation
+  decisions, but the job must tolerate missed webhooks and duplicate updates.
+- `store/app/deleted` must trigger deletion or anonymization of stored customer
+  email, address, order references, and order-line references within 24 hours.
+- `notificationsAccepted=false` is not a platform-level blocker for clearly
+  transactional notifications, but the final review-request consent rule is a
+  product/legal decision that must be explicit before launch.
+
 ### Sender and region
 
 - The MVP uses one SES region: `eu-central-1`. Global recipients do not require
@@ -394,14 +440,14 @@ The application currently has none of the following:
 
 ### Decisions still open
 
-- Canonical ikas trigger for physical, digital, pickup, no-shipment, cancelled,
-  refunded, returned, and partially fulfilled orders.
-- Whether and how `notificationsAccepted` applies to transactional versus
-  promotional review-request content.
-- Webhook wake-up versus canonical `listOrder` re-read and reconciliation
-  cadence/rate limits.
-- Install/uninstall retention and deletion behavior for customer/order data and
-  SES tenants.
+- Product/legal consent posture for review-request email when
+  `notificationsAccepted=false`.
+- Exact digital/no-shipment timing, click-and-collect timing, partial-delivery
+  line eligibility, cancellation/refund/return invalidation, and resend rules.
+- Reconciliation cadence, overlap window, and rate-limit handling details.
+- Install/uninstall cleanup implementation for customer/order data and SES
+  tenants; the ikas platform requirement is deletion/anonymization within 24
+  hours after `store/app/deleted`.
 - Exact Prisma models, columns, constraints, retention windows, token lifetime,
   merchant controls, template model, display name, Reply-To validation,
   merchant-domain sender onboarding, and rollout sequence.
@@ -481,8 +527,9 @@ answers determine which evidence must be stored and when it must be invalidated.
 - The source package is ready for a future mutation plan, but the next gate must
   still request explicit approval before creating CloudFormation change sets or
   adding DNS/env values.
-- The next ADR section must define the external ikas contract and exact additive
-  schema while separating verified platform facts from product/legal decisions.
+- The external ikas platform contract is now recorded; the next gate should
+  design the exact additive schema and rollout while separating platform facts
+  from product/legal decisions.
 - Every future mutation remains separately gated.
 
 ## Evidence
@@ -518,6 +565,8 @@ External contract evidence:
 
 - ikas MCP `list`, `introspect("listOrder")`, and
   `introspect("saveWebhooks")`, re-verified 2026-07-09.
+- Direct ikas developer feedback on 2026-07-09, summarized in
+  [[Ikas_Order_Review_Request_Notes]].
 - [ikas Orders API](https://ikas.dev/docs/api/admin-api/orders)
 - [ikas Webhooks API](https://ikas.dev/docs/api/admin-api/webhooks)
 - [Amazon SES production access and sandbox](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html)
@@ -556,10 +605,17 @@ External contract evidence:
 - [[ADR_0004_Ikas_Integration_Strategy]]
 - [[ADR_0035_QStash_Scheduler_For_Maintenance]]
 - [[Ikas_API_Notes]]
+- [[Ikas_Order_Review_Request_Notes]]
 - [[Roadmap]]
 
 ## Change Log
 
+- 2026-07-09: Recorded direct ikas order/review-request platform feedback:
+  order webhooks are valid wake-up signals, canonical order state should be
+  re-read with `listOrder`, physical delivery uses `orderPackageStatus`, pickup
+  and digital/no-shipment require separate branches, reconciliation uses
+  `updatedAt` pagination, and uninstall requires personal-data deletion or
+  anonymization within 24 hours.
 - 2026-07-09: Prepared the SES foundation source package without provider
   mutation: CloudFormation templates, validators, disabled env placeholders, and
   a fail-closed signed SNS feedback endpoint skeleton. AWS stacks, DNS, Vercel

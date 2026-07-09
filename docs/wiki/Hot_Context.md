@@ -64,7 +64,7 @@ source_files:
 - 2026-07-04: Cloudinary code/env/runtime cleanup is complete; old provider assets are out of app scope.
 - 2026-07-04: AWS public-scale guardrails are documented; add minimal CloudFront alarms/logs before public launch. See [[AWS_Setup_And_Access]].
 - 2026-07-08: CloudFront standard logging v2 is deployed for `media.renuvex.app`; logs deliver to the EU log bucket under `AWSLogs/989086371563/CloudFront/cloudfront/media/` with 14-day lifecycle and no query/cookie fields. See [[AWS_Setup_And_Access]].
-- 2026-07-09: Review-request email infrastructure direction is recorded: provider-neutral boundaries, QStash opaque jobs, SES `eu-central-1`, `requests@reviews.renuvex.app`, Vercel OIDC, tenant-aware ownership, and signed SNS/SQS feedback. ikas eligibility/consent and exact schema remain open. See [[ADR_0036_Review_Request_Email_Architecture]].
+- 2026-07-09: Review-request email infrastructure direction is recorded: provider-neutral boundaries, QStash opaque jobs, SES `eu-central-1`, `requests@reviews.renuvex.app`, Vercel OIDC, tenant-aware ownership, and signed SNS/SQS feedback. ikas confirmed order webhooks + canonical `listOrder` re-read + delivery/pickup/digital branching + `updatedAt` reconciliation + uninstall 24h personal-data cleanup; exact schema and product/legal consent stance remain open. See [[ADR_0036_Review_Request_Email_Architecture]] and [[Ikas_Order_Review_Request_Notes]].
 - 2026-07-09: SES email source package is prepared only: CloudFormation templates, validators, disabled env placeholders, and a fail-closed signed SNS feedback endpoint skeleton. No AWS SES resources, DNS, Vercel env, DB schema, deploy, or email sending exists yet. See [[ADR_0036_Review_Request_Email_Architecture]] and [[AWS_Setup_And_Access]].
 - 2026-07-02: Cloudflare Worker remains widget asset/read-cache delivery; AWS widget CDN canary is closed.
 - 2026-06-21/23: Mux video upload/playback/cleanup is live; Mux Data tracking/cookies stay disabled. See [[ADR_0032_Review_Video_On_Mux]].
@@ -76,7 +76,7 @@ source_files:
 - Supabase RLS/default-grants hardening is a public-launch blocker.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
-- Review-request email implementation is blocked on ikas trigger, consent, reconciliation, and uninstall/retention answers; do not infer them from GraphQL field names.
+- Review-request email implementation is no longer blocked on ikas platform trigger/reconciliation/uninstall facts, but exact schema, consent stance, token lifecycle, and rollout remain open.
 
 ## Read Next
 - [[Current_Status]]

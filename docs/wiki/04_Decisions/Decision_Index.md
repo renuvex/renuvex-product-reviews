@@ -54,7 +54,7 @@ related:
 | [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]] | `widget.renuvex.app` is the Cloudflare Worker Static Assets origin and narrow public-read cache for settings/ratings/reviews, while `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash/write origin. Worker fails closed for non-allowlisted `/api/*`; API and read origins are explicit widget build-time settings with rollback fallback. | Accepted |
 | [[ADR_0034_AWS_Review_Image_Migration]] | AWS-only review image contract. New image uploads use S3/CloudFront, finite generated variants, `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>` public URLs, signed private admin preview, DB-backed public reads, and breaker-guarded AWS object-family cleanup. | Accepted |
 | [[ADR_0035_QStash_Scheduler_For_Maintenance]] | Maintenance scheduling moves to a staged QStash contract: a signed internal scheduler endpoint, explicit task bodies, DB slot locks for idempotency, and Vercel Cron removal only after QStash schedule acceptance. | Accepted |
-| [[ADR_0036_Review_Request_Email_Architecture]] | Post-purchase review-request email draft with accepted SES sender/region/OIDC/feedback, provider-neutral boundaries, tenant-aware ownership, and source-only SES foundation package. ikas eligibility and exact schema remain open. | Proposed |
+| [[ADR_0036_Review_Request_Email_Architecture]] | Post-purchase review-request email draft with accepted SES sender/region/OIDC/feedback, provider-neutral boundaries, tenant-aware ownership, source-only SES foundation package, and verified ikas order webhook/listOrder contract. Exact schema and consent stance remain open. | Proposed |
 
 ## Superseded / Deprecated
 
@@ -75,6 +75,7 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-07-09: Updated [[ADR_0036_Review_Request_Email_Architecture]] after direct ikas feedback confirmed order webhook wake-up, canonical `listOrder` re-read, delivery/pickup/digital branching, `updatedAt` reconciliation, and uninstall 24h personal-data cleanup.
 - 2026-07-09: Updated [[ADR_0036_Review_Request_Email_Architecture]] after preparing the source-only SES foundation package; no AWS/DNS/env/DB/deploy mutation is implied.
 - 2026-07-09: Expanded [[ADR_0036_Review_Request_Email_Architecture]] with the accepted SES infrastructure and tenant-aware provider-boundary contract; ikas eligibility, consent, retention, and exact schema remain proposed.
 - 2026-07-09: Added draft [[ADR_0036_Review_Request_Email_Architecture]] with the verified pre-implementation ikas, DB, QStash, AWS SES, DNS, and storefront current state.

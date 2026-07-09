@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-09
+last_verified: 2026-07-09
 confidence: high
 tags:
   - log
@@ -26,6 +26,20 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-09 - docs | Record ikas order review-request platform contract
+- Direct ikas feedback confirmed that `store/order/created` and
+  `store/order/updated` are valid wake-up scopes for post-order single-use
+  action links when backed by matching API permissions.
+- The future review-request flow should verify webhook HMAC, re-read canonical
+  order state with `listOrder`, branch physical delivery, click-and-collect,
+  digital/no-shipment, and partial delivery explicitly, and reconcile missed
+  events through `updatedAt` pagination.
+- Uninstall is signaled by `store/app/deleted`; stored personal data such as
+  email, address, order references, and order-line references must be deleted or
+  anonymized within 24 hours. Details live in
+  [[Ikas_Order_Review_Request_Notes]] and
+  [[ADR_0036_Review_Request_Email_Architecture]].
 
 ## 2026-07-04 - acceptance | Deploy Cloudinary teardown source pass
 - PR #5 (`refactor(media): remove cloudinary review images`) was squash-merged as `244b0997`; Vercel production deployment `dpl_4Cqv9KsYsMJhuaAmrGSmZiGnJqga` is `Ready`.
