@@ -22,9 +22,11 @@ related:
 source_files:
   - "package.json"
   - ".env.example"
+  - "infra/aws/review-images-runtime-iam.cloudformation.json"
   - "prisma/schema.prisma"
   - "src/globals/config.ts"
   - "src/lib/ikas-client/graphql-requests.ts"
+  - "src/lib/media/providers/aws-review-image.ts"
   - "src/lib/product-snapshots.ts"
   - "src/app/api/webhooks/ikas/products/route.ts"
   - "src/app/api/public/reviews/route.ts"
@@ -41,29 +43,30 @@ source_files:
 
 Use this draft when researching or designing post-purchase review-request
 email, verified-buyer submission, Amazon SES delivery, or email-job scheduling.
-Only the current state is established. No provider, schema, ikas eligibility,
-consent, retention, or rollout decision has been accepted. Verify the source
-files above and current ikas/AWS runtime evidence before extending this ADR.
+The provider boundary, SES regional/sender/runtime/feedback contract, and
+provider-neutral tenant direction are accepted. The ikas eligibility, consent,
+retention, exact Prisma schema, and rollout contracts remain open. Verify the
+source files above and current ikas/AWS runtime evidence before extending this
+ADR.
 Do not create AWS resources, DNS records, DB migrations, QStash schedules,
 Vercel environment variables, or deploys from this document without a separate
 scope, risk, rollback note, and explicit approval.
 
 ## Summary
 
-This first checkpoint records the verified pre-implementation state for a
-future global-MVP review-request email feature. The target product capability is
-not implemented today. The application has reusable pieces - ikas order-read
-scope, signed ikas product webhooks, QStash delivery, and an AWS account with
-SES available - but it does not yet have an order event contract, review-request
-data model, email provider boundary, email job dispatcher, verified submission
-token, SES identity, or feedback-processing path.
+This ADR records the verified pre-implementation state and the first accepted
+infrastructure contract for a future global-MVP review-request email feature.
+The target product capability is not implemented today. AWS SES in
+`eu-central-1`, a review-specific sender domain, Vercel OIDC, provider-neutral
+application boundaries, tenant-aware ownership, QStash dispatch, and a signed
+SES feedback path are accepted directions. The ikas trigger/consent contract,
+exact additive schema, token lifecycle, templates, and rollout remain open.
 
 ## Status
 
-Proposed - current-state research only.
+Proposed - infrastructure contract accepted; application contract remains open.
 
-The decision is intentionally open. This checkpoint does not authorize
-implementation or provider mutation.
+This ADR does not authorize implementation or provider mutation.
 
 ## Date
 
@@ -229,10 +232,12 @@ not evidence that an additional AWS account is needed.
 
 Read-only DNS verification on 2026-07-09 found an existing DMARC record for
 `renuvex.app` with policy `p=quarantine` and relaxed DKIM/SPF alignment. No SES
-identity or custom MAIL FROM records have been created. The sender identity,
-visible From address, custom MAIL FROM subdomain, DKIM records, SPF records, and
-DMARC rollout effects remain undecided and must be checked against existing
-domain/email use before DNS mutation.
+identity or custom MAIL FROM records have been created. The selected application
+identity is `reviews.renuvex.app`, the visible From address is
+`requests@reviews.renuvex.app`, and the custom MAIL FROM domain is
+`bounce.reviews.renuvex.app`. Their DKIM, MX, SPF, and any explicit subdomain
+DMARC records are not deployed. The final DMARC reporting mailbox and
+`BehaviorOnMxFailure` choice remain DNS-rollout decisions.
 
 ### Missing application behavior
 
@@ -254,32 +259,145 @@ The application currently has none of the following:
 
 ## Decision
 
-Not decided in this checkpoint.
+### Application boundaries
 
-Possible boundaries such as `EmailProvider`, `EmailJobDispatcher`,
-`SesEmailProvider`, and `QStashEmailJobDispatcher` are design candidates, not
-accepted contracts. Their method shapes and ownership must follow the final
-ikas eligibility/consent contract and an additive database design.
+- The application owns order eligibility, consent interpretation, scheduling,
+  template rendering, locale, one-time review tokens, idempotency, and durable
+  audit evidence.
+- `EmailProvider` is a narrow provider-neutral send boundary. Its first
+  implementation will be `SesEmailProvider`.
+- `EmailJobDispatcher` is a separate provider-neutral delayed-job boundary. Its
+  first implementation will be `QStashEmailJobDispatcher`.
+- QStash payloads carry an opaque application job id, not customer email,
+  order details, rendered content, or review tokens.
+- Email templates are rendered and versioned by the application rather than
+  stored as authoritative SES templates.
+
+### Sender and region
+
+- The MVP uses one SES region: `eu-central-1`. Global recipients do not require
+  one SES installation per customer country.
+- The verified SES domain identity is `reviews.renuvex.app`.
+- The visible From address is `requests@reviews.renuvex.app`.
+- The custom MAIL FROM domain is `bounce.reviews.renuvex.app`; it is reserved
+  for SES feedback and is not used as a visible sender, website, or inbox.
+- Easy DKIM uses the SES-supported 2048-bit key length.
+- The display name and merchant Reply-To policy remain product decisions. A
+  merchant address must not be used as Reply-To until its ownership and
+  fallback behavior are defined.
+
+### Runtime credentials and IAM
+
+- Vercel production obtains short-lived AWS credentials through the existing
+  Vercel OIDC provider and AWS STS `AssumeRoleWithWebIdentity`.
+- Email sending uses a new dedicated runtime role; the review-image runtime role
+  is not expanded with SES permissions.
+- The trust policy is scoped to the exact Vercel team, project, production
+  environment, and configured audience.
+- Runtime permission is limited to `ses:SendEmail` for the selected SES identity
+  and configuration set, constrained by the exact `ses:FromAddress`.
+- Static AWS access keys, `ses:*`, `SendRawEmail`, SES control-plane operations,
+  tenant lifecycle permissions, and `iam:PassRole` are excluded from the send
+  role.
+
+### Tenant-aware, provider-neutral ownership
+
+- `storeId` remains the application tenant identity and source of truth.
+- The email-domain schema is provider-neutral. AWS SES tenant identifiers are
+  provider references, not primary business identity.
+- The future additive schema must separate at least tenant/provider mapping,
+  normalized order-line eligibility, review-request lifecycle, hashed one-time
+  tokens, dispatch/send attempts, provider events, recipient/tenant
+  suppression, and template/locale evidence.
+- Existing `Review.email`, `MediaProviderJob`, `WebhookEvent`, and
+  `ScheduledJobRunLock` are not repurposed for these independent lifecycles.
+- SES Tenant Management is the target for multi-merchant production. A store's
+  tenant uses shared Renuvex identity/configuration-set resources, tenant-level
+  bounce/complaint suppression, and the standard reputation policy.
+- Tenant provisioning and removal use a separate control-plane boundary and
+  role after the ikas install/uninstall and retention contract is known.
+
+### SES observability and feedback
+
+- The shared configuration set is `renuvex-review-requests-prod`.
+- The first event destination captures `SEND`, `REJECT`, `BOUNCE`,
+  `COMPLAINT`, `DELIVERY`, `DELIVERY_DELAY`, and `RENDERING_FAILURE`.
+- `OPEN` and `CLICK` tracking are disabled by default; the application does not
+  add tracking pixels or rewrite links merely for analytics.
+- SES publishes events to a same-region encrypted SNS topic. The topic uses SNS
+  `SignatureVersion=2`.
+- SNS delivers to a dedicated HTTPS application endpoint. The receiver verifies
+  the signature, certificate source/chain, exact topic ARN, message type, and
+  idempotency key before processing.
+- An encrypted same-region SQS queue is the SNS subscription DLQ with 14-day
+  retention. Provider events are persisted durably before business processing;
+  raw payloads and recipient addresses are not written to application logs.
+
+### Deferred AWS features
+
+- Shared SES IPs are used initially. Dedicated IPs require proven sustained
+  volume and a deliberate warm-up plan.
+- Virtual Deliverability Manager remains disabled. Configuration-set events,
+  tenant metrics, and suppression provide the initial evidence without paid
+  engagement tracking or optimized-delivery delay.
+- SES Global Endpoints remain disabled. A second region is justified only by a
+  measured availability/SLA requirement because identities, configuration sets,
+  feedback resources, tenants, and quotas must remain aligned across regions.
+
+### Decisions still open
+
+- Canonical ikas trigger for physical, digital, pickup, no-shipment, cancelled,
+  refunded, returned, and partially fulfilled orders.
+- Whether and how `notificationsAccepted` applies to transactional versus
+  promotional review-request content.
+- Webhook wake-up versus canonical `listOrder` re-read and reconciliation
+  cadence/rate limits.
+- Install/uninstall retention and deletion behavior for customer/order data and
+  SES tenants.
+- Exact Prisma models, columns, constraints, retention windows, token lifetime,
+  merchant controls, template model, display name, Reply-To policy, and rollout
+  sequence.
 
 ## Reasoning
 
-Recording current state first prevents implementation from accidentally
-coupling order semantics, scheduling, email delivery, and provider-specific
-credentials. It also makes unresolved platform policy visible before schema or
-runtime contracts become expensive to change.
+Separating application ownership from delivery and dispatch prevents order
+semantics, provider credentials, and at-least-once scheduling from becoming one
+coupled workflow. A review-specific authenticated subdomain limits reputation
+blast radius. Vercel OIDC removes static AWS credentials. Provider-neutral
+tenant ownership preserves a future provider migration path while SES tenants
+isolate merchant reputation and suppression.
+
+Deferring the exact schema is intentional: ikas trigger, consent, and retention
+answers determine which evidence must be stored and when it must be invalidated.
 
 ## Alternatives Considered
 
-No implementation alternative is accepted yet. Provider, scheduler, schema,
-token, template, consent, regional, and rollout alternatives will be evaluated
-after the ikas answers and the SES/domain preflight are complete.
+- `noreply@renuvex.app` was rejected as the default sender. It is shorter but
+  shares root-domain reputation and communicates less purpose than the selected
+  review-specific sender.
+- A single account-wide sending stream without SES tenants is cheaper and
+  simpler, but its reputation and suppression blast radius crosses merchants.
+- Per-merchant custom domains provide stronger merchant branding but require
+  merchant DNS onboarding and are deferred as an optional future capability.
+- Static AWS access keys in Vercel were rejected in favor of short-lived OIDC
+  credentials.
+- VDM, dedicated IPs, and Global Endpoints were rejected for the MVP because
+  current traffic and SLA evidence do not justify their cost and operational
+  surface.
+- Direct sending inside an ikas webhook was rejected because it cannot safely
+  provide delay, retry, cancellation re-check, idempotency, or durable evidence.
 
 ## Consequences
 
 - No source, schema, environment, DNS, AWS, QStash, or deployment behavior
   changes from this ADR checkpoint.
-- The next ADR section must define the external ikas contract and explicitly
-  separate verified facts from product/legal decisions.
+- Future code must preserve the provider/dispatcher boundaries and keep PII out
+  of QStash payloads.
+- AWS setup needs SES identity/configuration-set/feedback IaC, a separate OIDC
+  runtime role, DNS records, sandbox removal, and live mailbox-simulator tests;
+  each remains a separately approved mutation package.
+- The next ADR section must define the external ikas contract and exact additive
+  schema while separating verified platform facts from product/legal decisions.
 - Every future mutation remains separately gated.
 
 ## Evidence
@@ -299,6 +417,8 @@ Project evidence:
 - `src/lib/scheduled-jobs.ts`
 - `package.json`
 - `.env.example`
+- `infra/aws/review-images-runtime-iam.cloudformation.json`
+- `src/lib/media/providers/aws-review-image.ts`
 - `infra/aws/`
 
 External contract evidence:
@@ -311,6 +431,12 @@ External contract evidence:
 - [Amazon SES identities](https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html)
 - [Amazon SES custom MAIL FROM](https://docs.aws.amazon.com/ses/latest/dg/mail-from.html)
 - [Amazon SES configuration sets](https://docs.aws.amazon.com/ses/latest/dg/managing-configuration-sets.html)
+- [Amazon SES tenant management](https://docs.aws.amazon.com/ses/latest/dg/tenants.html)
+- [Amazon SES tenant suppression](https://docs.aws.amazon.com/ses/latest/dg/sending-email-suppression-list-tenant-level.html)
+- [Amazon SES sender reputation practices](https://docs.aws.amazon.com/ses/latest/dg/tips-and-best-practices.html)
+- [Amazon SNS signature verification](https://docs.aws.amazon.com/sns/latest/dg/sns-verify-signature-of-message.html)
+- [Amazon SNS dead-letter queues](https://docs.aws.amazon.com/sns/latest/dg/sns-dead-letter-queues.html)
+- [Vercel OIDC for AWS](https://vercel.com/docs/oidc/aws)
 - [QStash at-least-once delivery](https://upstash.com/docs/qstash/features/at-least-once)
 - [QStash delayed delivery](https://upstash.com/docs/qstash/features/delay)
 
@@ -334,3 +460,11 @@ External contract evidence:
 - [[ADR_0035_QStash_Scheduler_For_Maintenance]]
 - [[Ikas_API_Notes]]
 - [[Roadmap]]
+
+## Change Log
+
+- 2026-07-09: Accepted the first infrastructure contract: SES in
+  `eu-central-1`, `requests@reviews.renuvex.app`, custom MAIL FROM, Vercel OIDC,
+  provider-neutral application boundaries, tenant-aware ownership, QStash
+  opaque-job dispatch, signed SNS feedback with SQS DLQ, and explicit VDM/global
+  endpoint deferral. ikas semantics and the exact additive schema remain open.
