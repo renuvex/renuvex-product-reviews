@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-09
+last_verified: 2026-07-09
 confidence: high
 tags:
   - index
@@ -126,6 +126,7 @@ source_files: []
 - [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]
 - [[ADR_0034_AWS_Review_Image_Migration]]
 - [[ADR_0035_QStash_Scheduler_For_Maintenance]]
+- [[ADR_0036_Review_Request_Email_Architecture]]
 
 ## Bugs And Fixes
 - [[Bug_Index]]
@@ -189,4 +190,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-04 (added QStash maintenance scheduler ADR)
+**Last Updated:** 2026-07-09 (added review-request email architecture current-state ADR)
