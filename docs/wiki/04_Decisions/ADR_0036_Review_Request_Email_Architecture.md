@@ -60,8 +60,9 @@ implementation using EventBridge, SQS, Lambda, and SES. Existing QStash media
 and maintenance scheduling remains in place and is not part of the email
 cutover. Direct ikas feedback confirms the order webhook/listOrder,
 delivery-state, reconciliation, and uninstall-retention platform contract. The
-exact Prisma schema, product/legal consent stance, Lambda DB/secret strategy,
-and rollout contracts remain open. Verify the source files above and current
+review-request DB/lifecycle contract is accepted as an additive schema
+direction, but product/legal consent stance, Lambda DB/secret strategy, AWS
+mutation packages, and rollout contracts remain open. Verify the source files above and current
 ikas/AWS runtime evidence before extending this ADR.
 Do not create AWS resources, DNS records, DB migrations, QStash schedules,
 Vercel environment variables, or deploys from this document without a separate
@@ -83,13 +84,15 @@ feedback IaC, the dedicated runtime IAM role, and a signed SNS feedback endpoint
 skeleton; it does not yet contain the AWS email queue/worker implementation.
 Direct ikas feedback on 2026-07-09 confirms the high-level order webhook,
 canonical `listOrder` re-read, delivery-state, reconciliation, and uninstall
-cleanup contract. The exact additive schema, token lifecycle, product/legal
-consent stance, Lambda DB/secret strategy, and rollout remain open.
+cleanup contract. The additive DB/lifecycle contract is accepted in this ADR;
+product/legal consent stance, Lambda DB/secret strategy, AWS resource rollout,
+and production access remain open.
 
 ## Status
 
-Proposed - infrastructure source package prepared; ikas platform contract
-recorded; application schema and rollout remain open.
+Proposed - infrastructure source package prepared; ikas platform contract and
+additive DB/lifecycle contract recorded; implementation and rollout remain
+open.
 
 This ADR does not authorize AWS stack creation, DNS records, Vercel env writes,
 DB migrations, deploys, or provider mutation.
@@ -444,10 +447,10 @@ The application currently has none of the following:
 - `storeId` remains the application tenant identity and source of truth.
 - The email-domain schema is provider-neutral. AWS SES tenant identifiers are
   provider references, not primary business identity.
-- The future additive schema must separate at least tenant/provider mapping,
-  normalized order-line eligibility, review-request lifecycle, hashed one-time
-  tokens, dispatch/send attempts, provider events, recipient/tenant
-  suppression, and template/locale evidence.
+- The additive schema must separate tenant/provider mapping, normalized
+  order-line eligibility, review-request lifecycle, hashed one-time tokens,
+  dispatch/send attempts, provider events, recipient/tenant suppression, and
+  template/locale evidence.
 - Existing `Review.email`, `MediaProviderJob`, `WebhookEvent`, and
   `ScheduledJobRunLock` are not repurposed for these independent lifecycles.
 - SES Tenant Management is the target for multi-merchant production. A store's
@@ -455,6 +458,152 @@ The application currently has none of the following:
   bounce/complaint suppression, and the standard reputation policy.
 - Tenant provisioning and removal use a separate control-plane boundary and
   role after the ikas install/uninstall and retention contract is known.
+
+### DB schema and lifecycle contract
+
+This section is the accepted additive schema direction. It is not yet a Prisma
+migration and does not authorize applying a migration. Model names may receive
+minor implementation-level adjustments only if source constraints require it;
+the lifecycle boundaries and privacy rules are fixed.
+
+Required additive models:
+
+- `ReviewEmailSettings`: one row per `storeId` for review-request email
+  controls. It stores enablement, trigger mode, first request delay in days,
+  reminder enablement/delay/count, sender display name, validated Reply-To
+  reference, logo/button-color/locale/template version, and consent mode.
+  First release uses bounded controls, not a free-form template builder.
+- `IkasOrderWebhookEvent`: durable ikas order webhook idempotency/audit. It
+  stores webhook `id`, `scope`, `merchantId`, `authorizedAppId`, received time,
+  processing status, payload digest, and normalized `ikasOrderId` if present.
+  It must not store the raw webhook payload or customer PII.
+- `IkasOrderSnapshot`: canonical order evidence after signed webhook wake-up or
+  reconciliation. It stores `storeId`, `authorizedAppId`, `ikasOrderId`,
+  order number, shipping method, order/package/payment status, ordered/updated
+  timestamps, `notificationsAccepted`, guest-checkout flag, `customerId` when
+  present, `customerEmailHash`, and encrypted customer email only if the
+  approved encryption/secret strategy is in place. It must not persist address,
+  phone, IP, user-agent, full raw order payload, or payment details.
+- `IkasOrderLineSnapshot`: normalized line-level eligibility evidence. It
+  stores `storeId`, `ikasOrderId`, `ikasOrderLineItemId`, product id, variant
+  id, line status, status timestamp, quantity, product/variant display names,
+  optional package id/status link, `eligibleAt`, and `ineligibleReason`.
+  Unique key: `storeId + ikasOrderLineItemId`.
+- `ReviewRequest`: one logical request per eligible order line. It stores
+  `storeId`, `productId`, order snapshot id, order-line snapshot id, lifecycle
+  status, `sendAfter`, `expiresAt`, first/reminder sent timestamps, submitted
+  timestamp, cancellation reason, and optional `reviewId`. Unique key:
+  `storeId + orderLineSnapshotId`.
+- `ReviewRequestToken`: one-time link state. Raw tokens are never stored.
+  Store only an HMAC/SHA-256 token hash, request id, status, `expiresAt`,
+  `consumedAt`, and revocation reason. Consuming one token invalidates the
+  request for further submissions.
+- `ReviewEmailJob`: DB source of truth for email dispatch. It stores request id,
+  job kind (`request` or `reminder`), status, `sendAfter`, dedupe key,
+  queued/locked/completed timestamps, attempt counters, and sanitized last
+  error code. EventBridge due scans claim this table in bounded batches before
+  publishing to SQS.
+- `ReviewEmailAttempt`: one row per provider send attempt. It stores job id,
+  attempt number, provider (`ses`), SES message id when available, status,
+  sent/completed timestamps, and sanitized error code. It does not store the
+  rendered email body or recipient email.
+- `ReviewEmailEvent`: signed SES feedback evidence. It stores SNS message id,
+  SES message id, event type, attempt id when matched, received/processed
+  timestamps, status, and a digest of the normalized event. It does not store
+  raw SNS/SES payloads or recipient addresses.
+- `ReviewEmailSuppression`: recipient/tenant suppression derived from bounce,
+  complaint, unsubscribe, or manual policy. It stores `storeId`, email hash,
+  reason, source, provider event reference, and timestamps.
+- `IkasOrderReconciliationCursor`: bounded missed-webhook recovery cursor per
+  store. It stores the last successful `updatedAt` checkpoint, overlap window
+  evidence, last success/error timestamps, and status.
+- `StoreDataErasureRun`: uninstall/data-retention evidence. It records
+  `storeId`, trigger source, started/finished timestamps, status, anonymized or
+  deleted row counts by model, and sanitized error code.
+
+Required additive changes to `Review`:
+
+- `reviewRequestId String? @unique`
+- `verifiedBuyer Boolean @default(false)`
+- `verifiedAt DateTime?`
+- `verificationSource String?`
+
+Indexes and constraints follow the existing migration safety rule:
+
+- All migration changes are additive. No destructive schema change, `NOT NULL`
+  without default, or dirty-data unique constraint is allowed in the first
+  deploy.
+- Every foreign key used for joins or cascade/delete/anonymization receives an
+  explicit index because Postgres does not automatically index foreign keys.
+- Due-scan and worker queries use composite indexes with equality columns first
+  and range columns last, for example `(status, sendAfter)`,
+  `(storeId, status, sendAfter)`, `(provider, providerMessageId)`,
+  `(storeId, customerEmailHash)`, and `(status, updatedAt)`.
+- Worker claim operations must use short transactions and non-blocking row
+  claiming (`FOR UPDATE SKIP LOCKED` or Prisma-safe SQL equivalent) so multiple
+  workers do not serialize on the same pending job rows.
+- DB constraints should enforce stable uniqueness and idempotency where
+  possible; product/business limits such as first-request delay max should be
+  app-validated so future plans can widen them without a DB contract break.
+
+Lifecycle states:
+
+- `ReviewRequest.status`: `pending`, `scheduled`, `queued`, `sent`,
+  `submitted`, `cancelled`, `expired`, `suppressed`, `error`.
+- `ReviewEmailJob.status`: `pending`, `queued`, `processing`, `sent`,
+  `skipped`, `retrying`, `failed`, `cancelled`.
+- `ReviewEmailAttempt.status`: `started`, `sent`, `rejected`, `failed`,
+  `delivery_confirmed`, `bounced`, `complained`, `delayed`.
+- `ReviewRequestToken.status`: `active`, `consumed`, `expired`, `revoked`.
+
+Lifecycle flow:
+
+1. `store/order/created` or `store/order/updated` webhook arrives.
+2. The receiver verifies ikas HMAC signature with the existing SDK helper
+   pattern, records `IkasOrderWebhookEvent`, and returns only after idempotent
+   enqueue/wake-up evidence is durable.
+3. The canonical order state is read with `listOrder(id: { eq })`; webhook
+   payload state is never final business truth.
+4. Order and line snapshots are upserted without raw payload persistence.
+5. Eligibility creates or updates `ReviewRequest`, token state, and
+   `ReviewEmailJob` rows; cancellations/refunds/returns update existing rows
+   to closed states instead of creating duplicate active jobs.
+6. EventBridge Scheduler runs a recurring due-scan. The due scanner claims
+   eligible `ReviewEmailJob` rows from DB and sends only opaque job ids to SQS.
+7. Lambda consumes SQS, re-reads DB, re-checks settings, suppression, order
+   eligibility, token validity, and recipient availability, then sends via SES.
+8. SES feedback events update `ReviewEmailAttempt`, `ReviewEmailEvent`, and
+   suppression rows after signed SNS verification.
+9. A token submission creates a normal `Review` row with `verifiedBuyer=true`
+   and links `Review.reviewRequestId`; moderation/publication behavior remains
+   the existing review workflow.
+10. `store/app/deleted` or equivalent uninstall signal triggers deletion or
+    anonymization of customer email/order references within 24 hours and records
+    `StoreDataErasureRun`.
+
+Eligibility defaults for the first implementation:
+
+- Physical shipment: send after `shippingMethod=SHIPMENT` and
+  `orderPackageStatus=DELIVERED`; partial delivery requires line/package
+  mapping and cannot fan out blindly to all lines.
+- Click-and-collect: use `READY_FOR_PICK_UP` as a separate trigger branch.
+- Digital delivery and no-shipment: remain closed until an explicit product
+  decision defines their terminal state and delay policy.
+- Cancellation, refund, return, unable-to-deliver, missing customer email,
+  invalid email, suppression, disabled store settings, or expired token close
+  or skip pending requests/jobs.
+- First-release consent mode is strict: send only when the order has a customer
+  email and `notificationsAccepted=true`. ikas says transactional messages may
+  be independent of that flag, but using that route for review requests remains
+  a product/legal decision, not a default.
+
+Uninstall registration caveat:
+
+- Direct ikas feedback and the installed SDK enum both include
+  `store/app/deleted`; however the MCP `saveWebhooks` introspection text for
+  valid scopes does not list it. The cleanup requirement is accepted, but the
+  exact registration mechanism for the uninstall signal must be re-verified
+  before implementation.
 
 ### SES observability and feedback
 
@@ -487,15 +636,17 @@ The application currently has none of the following:
 
 - Product/legal consent posture for review-request email when
   `notificationsAccepted=false`.
-- Exact digital/no-shipment timing, click-and-collect timing, partial-delivery
-  line eligibility, cancellation/refund/return invalidation, and resend rules.
+- Exact digital/no-shipment timing, advanced partial-delivery edge cases, resend
+  rules, and reminder-count defaults beyond the first bounded release.
 - Reconciliation cadence, overlap window, and rate-limit handling details.
-- Install/uninstall cleanup implementation for customer/order data and SES
-  tenants; the ikas platform requirement is deletion/anonymization within 24
-  hours after `store/app/deleted`.
-- Exact Prisma models, columns, constraints, retention windows, token lifetime,
-  merchant controls, template model, display name, Reply-To validation,
-  merchant-domain sender onboarding, and rollout sequence.
+- Install/uninstall cleanup implementation and the exact registration mechanism
+  for the uninstall signal; the ikas platform requirement is
+  deletion/anonymization within 24 hours after uninstall.
+- Lambda DB connectivity and secret strategy: direct database access via
+  pooled connection, API-mediated sender worker, or another approved secure
+  pattern must be decided before creating the Lambda/SQS implementation.
+- Exact token lifetime, reminder delay/count defaults, Reply-To validation
+  mechanism, merchant-domain sender onboarding, and rollout sequence.
 
 ## Reasoning
 
@@ -512,8 +663,11 @@ high-volume review-request system on a per-message HTTP scheduler when the
 delivery provider, feedback path, queues, retries, and worker observability can
 all live inside the same AWS boundary.
 
-Deferring the exact schema is intentional: ikas trigger, consent, and retention
-answers determine which evidence must be stored and when it must be invalidated.
+The DB contract is now explicit enough to plan an additive migration before AWS
+resource creation. The remaining open decisions affect product policy,
+credential boundaries, and rollout rather than whether the business lifecycle
+needs separate order snapshots, request tokens, jobs, attempts, provider events,
+suppression, and erasure evidence.
 
 ## Alternatives Considered
 
@@ -543,8 +697,34 @@ answers determine which evidence must be stored and when it must be invalidated.
 - One EventBridge one-time schedule per email was rejected because completed
   one-time schedules remain counted against quota until deleted; DB-backed due
   scans plus SQS avoid that cleanup/quota surface.
+- Reusing `WebhookEvent`, `MediaProviderJob`, or `ScheduledJobRunLock` for
+  review-request email was rejected. Those tables are tuned for provider media
+  webhooks, media provider mutations, and maintenance slots; email requires
+  separate order, recipient, token, provider-event, suppression, and erasure
+  lifecycles.
 
 ## Implementation Checkpoint
+
+2026-07-10 DB/lifecycle contract review:
+
+- Re-verified `listOrder` and `saveWebhooks` through ikas MCP. `listOrder`
+  exposes the fields and filters needed for canonical order re-read and
+  `saveWebhooks` lists `store/order/created` and `store/order/updated`.
+- Re-verified the installed ikas SDK webhook type. The webhook envelope has
+  `id`, `createdAt`, `scope`, `merchantId`, `data`, `signature`, and
+  `authorizedAppId`; the helper signs/verifies the `data` string with
+  HMAC-SHA256.
+- Re-verified AWS live state with the `renuvex-readonly` SSO role in account
+  `989086371563`: SES is healthy but still sandboxed in `eu-central-1`;
+  identities and configuration sets are empty; SQS queues, SNS topics, Lambda
+  functions, EventBridge Scheduler schedules, and review-email CloudFormation
+  stacks are not present.
+- Re-verified source state: `@aws-sdk/client-sesv2` and
+  `@aws-sdk/client-sqs` are not installed; SES feedback tests exist, but there
+  is no outbound SES sender, email queue, due scanner, Lambda worker, or Prisma
+  review-request schema.
+- Accepted the additive DB/lifecycle contract above as the next implementation
+  target. No Prisma migration was created in this checkpoint.
 
 2026-07-09 source package:
 
@@ -573,11 +753,14 @@ answers determine which evidence must be stored and when it must be invalidated.
 
 ## Consequences
 
-- No source, schema, environment, DNS, AWS, QStash, or deployment behavior
-  changes from this ADR checkpoint.
+- No source runtime, schema, environment, DNS, AWS, QStash, or deployment
+  behavior changes from this ADR checkpoint.
 - Future code must preserve the provider/dispatcher boundaries and keep PII out
   of dispatcher payloads, including SQS messages.
-- Future schema should keep sender mode, merchant branding, template version,
+- The next implementation gate is an additive Prisma migration plan for the
+  accepted DB/lifecycle contract. AWS queue/Lambda/EventBridge resources should
+  not be created until the migration and application boundaries are designed.
+- Future schema must keep sender mode, merchant branding, template version,
   Reply-To, and provider identity references separate so the product can add
   merchant-domain sending later without replacing the initial Renuvex sender
   path.
@@ -589,9 +772,10 @@ answers determine which evidence must be stored and when it must be invalidated.
 - The source package is ready for a future mutation plan, but the next gate must
   still request explicit approval before creating CloudFormation change sets or
   adding DNS/env values.
-- The external ikas platform contract is now recorded; the next gate should
-  design the exact additive schema and rollout while separating platform facts
-  from product/legal decisions.
+- The external ikas platform contract and additive DB/lifecycle contract are
+  now recorded; the next gate should produce the schema migration and backend
+  implementation plan while separating platform facts from product/legal
+  decisions.
 - Every future mutation remains separately gated.
 
 ## Evidence
@@ -622,28 +806,40 @@ Project evidence:
 - `infra/aws/review-images-runtime-iam.cloudformation.json`
 - `src/lib/media/providers/aws-review-image.ts`
 - `infra/aws/`
+- `node_modules/@ikas/admin-api-client/dist/models/webhook/models.d.ts`
+- `node_modules/@ikas/admin-api-client/dist/helpers/webhook-helpers.js`
 
 External contract evidence:
 
 - ikas MCP `list`, `introspect("listOrder")`, and
-  `introspect("saveWebhooks")`, re-verified 2026-07-09.
+  `introspect("saveWebhooks")`, re-verified 2026-07-10.
 - Direct ikas developer feedback on 2026-07-09, summarized in
   [[Ikas_Order_Review_Request_Notes]].
+- AWS CLI read-only verification on 2026-07-10 with
+  `renuvex-readonly`: `sts get-caller-identity`, `sesv2 get-account`,
+  `sesv2 list-email-identities`, `sesv2 list-configuration-sets`,
+  `sqs list-queues`, `sns list-topics`, `lambda list-functions`,
+  `scheduler list-schedules`, and filtered CloudFormation stack listing.
 - [ikas Orders API](https://ikas.dev/docs/api/admin-api/orders)
 - [ikas Webhooks API](https://ikas.dev/docs/api/admin-api/webhooks)
 - [Amazon SES production access and sandbox](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html)
 - [Amazon SES identities](https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html)
 - [Amazon SES custom MAIL FROM](https://docs.aws.amazon.com/ses/latest/dg/mail-from.html)
 - [Amazon SES configuration sets](https://docs.aws.amazon.com/ses/latest/dg/managing-configuration-sets.html)
+- [Amazon SES event publishing](https://docs.aws.amazon.com/ses/latest/dg/monitor-using-event-publishing.html)
+- [Amazon SES event destinations](https://docs.aws.amazon.com/ses/latest/dg/event-destinations-manage.html)
 - [Amazon SES tenant management](https://docs.aws.amazon.com/ses/latest/dg/tenants.html)
 - [Amazon SES tenant suppression](https://docs.aws.amazon.com/ses/latest/dg/sending-email-suppression-list-tenant-level.html)
 - [Amazon SES sender reputation practices](https://docs.aws.amazon.com/ses/latest/dg/tips-and-best-practices.html)
 - [Amazon SNS signature verification](https://docs.aws.amazon.com/sns/latest/dg/sns-verify-signature-of-message.html)
 - [Amazon SNS dead-letter queues](https://docs.aws.amazon.com/sns/latest/dg/sns-dead-letter-queues.html)
+- [Amazon SNS subscription DLQ configuration](https://docs.aws.amazon.com/sns/latest/dg/sns-configure-dead-letter-queue.html)
+- [Amazon EventBridge Scheduler](https://docs.aws.amazon.com/eventbridge/latest/userguide/using-eventbridge-scheduler.html)
 - [Amazon EventBridge Scheduler schedule types](https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html)
 - [Amazon EventBridge Scheduler targets](https://docs.aws.amazon.com/scheduler/latest/APIReference/API_Target.html)
 - [Amazon SQS pricing](https://aws.amazon.com/sqs/pricing/)
 - [AWS Lambda with SQS](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
+- [AWS Lambda SQS event source configuration](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html)
 - [Vercel OIDC for AWS](https://vercel.com/docs/oidc/aws)
 - [QStash pricing](https://upstash.com/pricing/qstash)
 - [QStash at-least-once delivery](https://upstash.com/docs/qstash/features/at-least-once)
@@ -677,6 +873,12 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-10: Re-ran the ikas/AWS/backend review for the review-request email
+  lifecycle and accepted the additive DB schema direction. Added the required
+  order webhook audit, order/line snapshots, request/token, email job/attempt,
+  SES event, suppression, reconciliation cursor, erasure-run, and verified
+  buyer fields. Recorded the `store/app/deleted` registration caveat: ikas
+  feedback and SDK enum include it, but `saveWebhooks` MCP scope text does not.
 - 2026-07-10: Revised the email dispatch decision after the AWS/QStash
   architecture review: existing QStash media and maintenance jobs remain in
   place, while the first review-request email dispatcher targets AWS-native
@@ -702,5 +904,5 @@ External contract evidence:
   provider-neutral application boundaries, tenant-aware ownership, QStash
   opaque-job dispatch, signed SNS feedback with SQS DLQ, and explicit VDM/global
   endpoint deferral. This was superseded for email dispatch on 2026-07-10 by the
-  AWS-native dispatcher decision; ikas semantics and the exact additive schema
-  remain open.
+  AWS-native dispatcher decision and superseded for DB shape by the 2026-07-10
+  additive DB/lifecycle contract.

@@ -54,7 +54,7 @@ related:
 | [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]] | `widget.renuvex.app` is the Cloudflare Worker Static Assets origin and narrow public-read cache for settings/ratings/reviews, while `app.renuvex.app` remains the Vercel backend/API/upload/Mux/QStash/write origin. Worker fails closed for non-allowlisted `/api/*`; API and read origins are explicit widget build-time settings with rollback fallback. | Accepted |
 | [[ADR_0034_AWS_Review_Image_Migration]] | AWS-only review image contract. New image uploads use S3/CloudFront, finite generated variants, `https://media.renuvex.app/reviews/<assetId>/<variant>.<format>` public URLs, signed private admin preview, DB-backed public reads, and breaker-guarded AWS object-family cleanup. | Accepted |
 | [[ADR_0035_QStash_Scheduler_For_Maintenance]] | Maintenance scheduling moves to a staged QStash contract: a signed internal scheduler endpoint, explicit task bodies, DB slot locks for idempotency, and Vercel Cron removal only after QStash schedule acceptance. | Accepted |
-| [[ADR_0036_Review_Request_Email_Architecture]] | Post-purchase review-request email draft with accepted SES sender/region/feedback, AWS-native email dispatch direction (EventBridge due scans, SQS, Lambda, SES), provider-neutral boundaries, tenant-aware ownership, source-only SES foundation package, and verified ikas order webhook/listOrder contract. Existing QStash stays for media/maintenance. Exact schema and consent stance remain open. | Proposed |
+| [[ADR_0036_Review_Request_Email_Architecture]] | Post-purchase review-request email draft with accepted SES sender/region/feedback, AWS-native email dispatch direction (EventBridge due scans, SQS, Lambda, SES), provider-neutral boundaries, tenant-aware ownership, source-only SES foundation package, verified ikas order webhook/listOrder contract, and accepted additive DB/lifecycle contract. Existing QStash stays for media/maintenance. Consent, Lambda DB/secret strategy, AWS mutations, and rollout remain open. | Proposed |
 
 ## Superseded / Deprecated
 
@@ -75,10 +75,11 @@ related:
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-07-10: Updated [[ADR_0036_Review_Request_Email_Architecture]] after the full ikas/AWS/backend re-check to accept the additive review-request DB/lifecycle contract while keeping AWS mutations and rollout separately gated.
 - 2026-07-10: Revised [[ADR_0036_Review_Request_Email_Architecture]] after the AWS/QStash architecture review: existing QStash media/maintenance jobs stay in place, while new review-request email dispatch targets AWS-native EventBridge due scans, SQS buffering, Lambda sending, and SES delivery.
 - 2026-07-09: Updated [[ADR_0036_Review_Request_Email_Architecture]] after direct ikas feedback confirmed order webhook wake-up, canonical `listOrder` re-read, delivery/pickup/digital branching, `updatedAt` reconciliation, and uninstall 24h personal-data cleanup.
 - 2026-07-09: Updated [[ADR_0036_Review_Request_Email_Architecture]] after preparing the source-only SES foundation package; no AWS/DNS/env/DB/deploy mutation is implied.
-- 2026-07-09: Expanded [[ADR_0036_Review_Request_Email_Architecture]] with the accepted SES infrastructure and tenant-aware provider-boundary contract; ikas eligibility, consent, retention, and exact schema remain proposed.
+- 2026-07-09: Expanded [[ADR_0036_Review_Request_Email_Architecture]] with the accepted SES infrastructure and tenant-aware provider-boundary contract; DB shape was later superseded by the 2026-07-10 additive lifecycle contract.
 - 2026-07-09: Added draft [[ADR_0036_Review_Request_Email_Architecture]] with the verified pre-implementation ikas, DB, QStash, AWS SES, DNS, and storefront current state.
 - 2026-07-04: Added [[ADR_0035_QStash_Scheduler_For_Maintenance]] for the staged QStash maintenance scheduler cutover contract.
 - 2026-07-04: Pruned [[ADR_0034_AWS_Review_Image_Migration]] after AWS-only cutover. It now keeps the final S3/CloudFront URL, variant, trust, admin preview, cleanup, IAM, rollback, and acceptance contracts instead of the migration working log.

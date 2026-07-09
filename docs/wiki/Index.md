@@ -191,4 +191,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-10 (revised review-request email dispatch direction to AWS-native while keeping existing QStash media/maintenance jobs)
+**Last Updated:** 2026-07-10 (accepted review-request email DB/lifecycle contract after ikas/AWS/backend re-check)

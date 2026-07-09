@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-09
-last_verified: 2026-07-09
+updated: 2026-07-10
+last_verified: 2026-07-10
 confidence: high
 tags:
   - ikas
@@ -103,9 +103,10 @@ contract for a post-order single-use action link:
 
 - Add the needed ikas GraphQL documents through MCP list/introspect, then
   `graphql-requests.ts` and `pnpm codegen`.
-- Design additive Prisma models for order eligibility evidence,
-  review-request lifecycle, one-time tokens, send attempts, provider events,
-  suppression, and uninstall cleanup evidence.
+- Implement the additive Prisma models accepted in
+  [[ADR_0036_Review_Request_Email_Architecture]] for order eligibility
+  evidence, review-request lifecycle, one-time tokens, send attempts, provider
+  events, suppression, and uninstall cleanup evidence.
 - Design the order webhook receiver with HMAC verification, idempotency, and
   canonical `listOrder` re-read.
 - Design reconciliation by `updatedAt` with page/limit pagination and `hasNext`.
