@@ -28,6 +28,8 @@ source_files:
   - "infra/aws/media-observability.cloudformation.json"
   - "infra/aws/media-access-logs-bucket.cloudformation.json"
   - "infra/aws/media-access-logs-delivery.cloudformation.json"
+  - "infra/aws/review-email-foundation.cloudformation.json"
+  - "infra/aws/review-email-runtime-iam.cloudformation.json"
   - "scripts/prepare-widget-aws-canary-assets.mjs"
   - "scripts/deploy-widget-aws-canary-assets.mjs"
   - "scripts/validate-widget-aws-canary-template.mjs"
@@ -627,6 +629,58 @@ References:
 - [S3 Storage Lens pricing](https://aws.amazon.com/s3/storage-lens/)
 - [CloudTrail pricing](https://aws.amazon.com/cloudtrail/pricing/)
 - [CloudFront real-time logs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/real-time-logs.html)
+
+## Review-Request Email SES Source Package
+
+Status snapshot on 2026-07-09:
+
+- SES `eu-central-1` is healthy but still in sandbox:
+  `ProductionAccessEnabled=false`, quota `200` messages per 24 hours and
+  `1` message per second.
+- No SES email identities or configuration sets existed during the read-only
+  preflight.
+- Source-only templates are now present:
+  `infra/aws/review-email-foundation.cloudformation.json` and
+  `infra/aws/review-email-runtime-iam.cloudformation.json`.
+- Local validators:
+  `scripts/validate-review-email-foundation-template.mjs` and
+  `scripts/validate-review-email-runtime-iam-template.mjs`.
+- Package guard:
+
+```powershell
+pnpm aws:review-email:validate-templates
+pnpm aws:lint-templates
+```
+
+- AWS read-only `cloudformation validate-template` passed for both templates in
+  `eu-central-1` through the `renuvex-review-images` profile. The runtime IAM
+  template reports `CAPABILITY_NAMED_IAM`, which is expected because it creates
+  the named role `renuvex-review-email-vercel-runtime`.
+- No SES stack, DNS record, production-access request, Vercel env value, DB
+  migration, QStash job, deploy, or real email send exists from this source
+  package checkpoint.
+
+Template contract:
+
+- Foundation stack target name for a future mutation plan:
+  `renuvex-review-email-foundation-prod`.
+- Sender domain: `reviews.renuvex.app`.
+- Visible sender address: `requests@reviews.renuvex.app`.
+- Custom MAIL FROM domain: `bounce.reviews.renuvex.app`.
+- Configuration set: `renuvex-review-requests-prod`.
+- SNS feedback topic uses `SignatureVersion=2`; selected event types are
+  `SEND`, `REJECT`, `BOUNCE`, `COMPLAINT`, `DELIVERY`, `DELIVERY_DELAY`, and
+  `RENDERING_FAILURE`. `OPEN` and `CLICK` tracking remain disabled.
+- HTTPS feedback subscription is conditional and defaults off until the endpoint
+  rollout/confirmation process is approved.
+- The runtime IAM stack intentionally reuses the existing Vercel team OIDC
+  provider ARN instead of creating a duplicate provider. It grants only
+  `ses:SendEmail` from `requests@reviews.renuvex.app` through the sender
+  identity/configuration set.
+
+Before any SES mutation, write the exact scope, risk, rollback, expected DNS
+records, sandbox/production-access implications, and approval gate. Do not
+infer that the source templates mean the resources are already deployed.
 
 ## Operational Rules
 

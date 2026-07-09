@@ -1,0 +1,171 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Renuvex review-request email Vercel runtime IAM role. Deploy in eu-central-1 only after explicit approval.",
+  "Parameters": {
+    "RuntimeRoleName": {
+      "Type": "String",
+      "Default": "renuvex-review-email-vercel-runtime",
+      "AllowedPattern": "^[A-Za-z0-9+=,.@_-]{1,64}$",
+      "Description": "IAM role name for Vercel production review-request email sending."
+    },
+    "VercelOidcProviderArn": {
+      "Type": "String",
+      "Default": "arn:aws:iam::989086371563:oidc-provider/oidc.vercel.com/renuvex",
+      "AllowedPattern": "^arn:aws:iam::989086371563:oidc-provider/oidc\\.vercel\\.com/renuvex$",
+      "Description": "Existing Vercel team OIDC provider ARN. This stack intentionally does not create a duplicate provider."
+    },
+    "OidcAudience": {
+      "Type": "String",
+      "Default": "sts.amazonaws.com",
+      "AllowedValues": [
+        "sts.amazonaws.com"
+      ],
+      "Description": "Custom Vercel OIDC audience used for AWS STS."
+    },
+    "VercelTeamSlug": {
+      "Type": "String",
+      "Default": "renuvex",
+      "AllowedValues": [
+        "renuvex"
+      ]
+    },
+    "VercelProjectName": {
+      "Type": "String",
+      "Default": "renuvex-product-reviews",
+      "AllowedValues": [
+        "renuvex-product-reviews"
+      ]
+    },
+    "VercelEnvironment": {
+      "Type": "String",
+      "Default": "production",
+      "AllowedValues": [
+        "production"
+      ]
+    },
+    "SenderDomain": {
+      "Type": "String",
+      "Default": "reviews.renuvex.app",
+      "AllowedValues": [
+        "reviews.renuvex.app"
+      ]
+    },
+    "FromAddress": {
+      "Type": "String",
+      "Default": "requests@reviews.renuvex.app",
+      "AllowedValues": [
+        "requests@reviews.renuvex.app"
+      ]
+    },
+    "ConfigurationSetName": {
+      "Type": "String",
+      "Default": "renuvex-review-requests-prod",
+      "AllowedPattern": "^[a-zA-Z0-9_-]{1,64}$"
+    }
+  },
+  "Resources": {
+    "ReviewEmailVercelRuntimeRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Ref": "RuntimeRoleName"
+        },
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowExactVercelProductionOidcSubject",
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": {
+                  "Ref": "VercelOidcProviderArn"
+                }
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "oidc.vercel.com/renuvex:aud": {
+                    "Ref": "OidcAudience"
+                  },
+                  "oidc.vercel.com/renuvex:sub": {
+                    "Fn::Sub": "owner:${VercelTeamSlug}:project:${VercelProjectName}:environment:${VercelEnvironment}"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-email-runtime-send",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "ReviewEmailSendFromManagedIdentity",
+                  "Effect": "Allow",
+                  "Action": "ses:SendEmail",
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SenderDomain}"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${ConfigurationSetName}"
+                    }
+                  ],
+                  "Condition": {
+                    "StringEquals": {
+                      "ses:FromAddress": {
+                        "Ref": "FromAddress"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-request-email"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "RuntimeRoleArn": {
+      "Description": "Vercel production runtime role ARN for SES review-request sends.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailVercelRuntimeRole",
+          "Arn"
+        ]
+      }
+    },
+    "RuntimeRoleName": {
+      "Description": "Vercel production runtime role name for SES review-request sends.",
+      "Value": {
+        "Ref": "ReviewEmailVercelRuntimeRole"
+      }
+    },
+    "TrustedVercelSubject": {
+      "Description": "Exact Vercel OIDC subject allowed to assume the role.",
+      "Value": {
+        "Fn::Sub": "owner:${VercelTeamSlug}:project:${VercelProjectName}:environment:${VercelEnvironment}"
+      }
+    },
+    "AllowedFromAddress": {
+      "Description": "Exact From address allowed by the runtime IAM policy.",
+      "Value": {
+        "Ref": "FromAddress"
+      }
+    }
+  }
+}

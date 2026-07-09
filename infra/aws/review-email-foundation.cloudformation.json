@@ -1,0 +1,485 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Renuvex review-request email SES foundation. Deploy in eu-central-1 only after explicit approval.",
+  "Parameters": {
+    "SenderDomain": {
+      "Type": "String",
+      "Default": "reviews.renuvex.app",
+      "AllowedValues": [
+        "reviews.renuvex.app"
+      ],
+      "Description": "SES domain identity used for review-request email."
+    },
+    "MailFromDomain": {
+      "Type": "String",
+      "Default": "bounce.reviews.renuvex.app",
+      "AllowedValues": [
+        "bounce.reviews.renuvex.app"
+      ],
+      "Description": "Custom MAIL FROM domain for SES bounce handling."
+    },
+    "ConfigurationSetName": {
+      "Type": "String",
+      "Default": "renuvex-review-requests-prod",
+      "AllowedPattern": "^[a-zA-Z0-9_-]{1,64}$",
+      "Description": "SES configuration set for review-request email."
+    },
+    "FeedbackEndpointUrl": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "^$|^https://app\\.renuvex\\.app/api/internal/email-events/ses$",
+      "Description": "Optional HTTPS endpoint for SNS feedback subscription. Empty keeps subscription creation disabled."
+    }
+  },
+  "Conditions": {
+    "HasFeedbackEndpoint": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "FeedbackEndpointUrl"
+            },
+            ""
+          ]
+        }
+      ]
+    }
+  },
+  "Resources": {
+    "ReviewEmailEventsKey": {
+      "Type": "AWS::KMS::Key",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "Encrypts Renuvex SES review-request feedback SNS topic.",
+        "EnableKeyRotation": false,
+        "KeySpec": "SYMMETRIC_DEFAULT",
+        "KeyUsage": "ENCRYPT_DECRYPT",
+        "PendingWindowInDays": 7,
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "EnableAccountKmsAdministration",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                }
+              },
+              "Action": "kms:*",
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSesConfigurationSetToPublishEncryptedFeedback",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ses.amazonaws.com"
+              },
+              "Action": [
+                "kms:Decrypt",
+                "kms:GenerateDataKey*"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                },
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${ConfigurationSetName}"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-request-email"
+          }
+        ]
+      }
+    },
+    "ReviewEmailEventsKeyAlias": {
+      "Type": "AWS::KMS::Alias",
+      "Properties": {
+        "AliasName": "alias/renuvex-review-email-events",
+        "TargetKeyId": {
+          "Ref": "ReviewEmailEventsKey"
+        }
+      }
+    },
+    "ReviewEmailEventsTopic": {
+      "Type": "AWS::SNS::Topic",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "TopicName": {
+          "Fn::Sub": "${AWS::StackName}-events"
+        },
+        "KmsMasterKeyId": {
+          "Fn::GetAtt": [
+            "ReviewEmailEventsKey",
+            "Arn"
+          ]
+        },
+        "SignatureVersion": "2",
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-request-email"
+          }
+        ]
+      }
+    },
+    "ReviewEmailEventsTopicPolicy": {
+      "Type": "AWS::SNS::TopicPolicy",
+      "Properties": {
+        "Topics": [
+          {
+            "Ref": "ReviewEmailEventsTopic"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowSesConfigurationSetPublish",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ses.amazonaws.com"
+              },
+              "Action": "sns:Publish",
+              "Resource": {
+                "Ref": "ReviewEmailEventsTopic"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                },
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${ConfigurationSetName}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ReviewEmailEventsDlq": {
+      "Type": "AWS::SQS::Queue",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "QueueName": {
+          "Fn::Sub": "${AWS::StackName}-events-dlq"
+        },
+        "MessageRetentionPeriod": 1209600,
+        "SqsManagedSseEnabled": true,
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-request-email"
+          }
+        ]
+      }
+    },
+    "ReviewEmailEventsDlqPolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "Queues": [
+          {
+            "Ref": "ReviewEmailEventsDlq"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowSnsTopicToRedriveFailedNotifications",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "sns.amazonaws.com"
+              },
+              "Action": "sqs:SendMessage",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ReviewEmailEventsDlq",
+                  "Arn"
+                ]
+              },
+              "Condition": {
+                "ArnEquals": {
+                  "aws:SourceArn": {
+                    "Ref": "ReviewEmailEventsTopic"
+                  }
+                },
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ReviewEmailEventsHttpsSubscription": {
+      "Type": "AWS::SNS::Subscription",
+      "Condition": "HasFeedbackEndpoint",
+      "Properties": {
+        "TopicArn": {
+          "Ref": "ReviewEmailEventsTopic"
+        },
+        "Protocol": "https",
+        "Endpoint": {
+          "Ref": "FeedbackEndpointUrl"
+        },
+        "RawMessageDelivery": false,
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "ReviewEmailEventsDlq",
+              "Arn"
+            ]
+          }
+        },
+        "DeliveryPolicy": {
+          "healthyRetryPolicy": {
+            "numRetries": 10,
+            "minDelayTarget": 20,
+            "maxDelayTarget": 300,
+            "numMinDelayRetries": 2,
+            "numMaxDelayRetries": 8,
+            "numNoDelayRetries": 0,
+            "backoffFunction": "exponential"
+          }
+        }
+      }
+    },
+    "ReviewEmailConfigurationSet": {
+      "Type": "AWS::SES::ConfigurationSet",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Name": {
+          "Ref": "ConfigurationSetName"
+        },
+        "SendingOptions": {
+          "SendingEnabled": true
+        },
+        "ReputationOptions": {
+          "ReputationMetricsEnabled": true
+        },
+        "SuppressionOptions": {
+          "SuppressedReasons": [
+            "BOUNCE",
+            "COMPLAINT"
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-request-email"
+          }
+        ]
+      }
+    },
+    "ReviewEmailConfigurationSetEventDestination": {
+      "Type": "AWS::SES::ConfigurationSetEventDestination",
+      "Properties": {
+        "ConfigurationSetName": {
+          "Ref": "ReviewEmailConfigurationSet"
+        },
+        "EventDestination": {
+          "Name": "renuvex-review-request-feedback",
+          "Enabled": true,
+          "MatchingEventTypes": [
+            "SEND",
+            "REJECT",
+            "BOUNCE",
+            "COMPLAINT",
+            "DELIVERY",
+            "DELIVERY_DELAY",
+            "RENDERING_FAILURE"
+          ],
+          "SnsDestination": {
+            "TopicARN": {
+              "Ref": "ReviewEmailEventsTopic"
+            }
+          }
+        }
+      }
+    },
+    "ReviewEmailIdentity": {
+      "Type": "AWS::SES::EmailIdentity",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "EmailIdentity": {
+          "Ref": "SenderDomain"
+        },
+        "ConfigurationSetAttributes": {
+          "ConfigurationSetName": {
+            "Ref": "ReviewEmailConfigurationSet"
+          }
+        },
+        "DkimAttributes": {
+          "SigningEnabled": true
+        },
+        "DkimSigningAttributes": {
+          "NextSigningKeyLength": "RSA_2048_BIT"
+        },
+        "FeedbackAttributes": {
+          "EmailForwardingEnabled": false
+        },
+        "MailFromAttributes": {
+          "BehaviorOnMxFailure": "REJECT_MESSAGE",
+          "MailFromDomain": {
+            "Ref": "MailFromDomain"
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "review-request-email"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "SenderDomain": {
+      "Description": "SES sender domain identity.",
+      "Value": {
+        "Ref": "ReviewEmailIdentity"
+      }
+    },
+    "ConfigurationSetName": {
+      "Description": "SES configuration set name.",
+      "Value": {
+        "Ref": "ReviewEmailConfigurationSet"
+      }
+    },
+    "EventsTopicArn": {
+      "Description": "SNS topic ARN for signed SES feedback events.",
+      "Value": {
+        "Ref": "ReviewEmailEventsTopic"
+      }
+    },
+    "EventsDlqArn": {
+      "Description": "SQS DLQ ARN for failed SNS feedback deliveries.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailEventsDlq",
+          "Arn"
+        ]
+      }
+    },
+    "DkimDNSTokenName1": {
+      "Description": "First SES Easy DKIM DNS CNAME host.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailIdentity",
+          "DkimDNSTokenName1"
+        ]
+      }
+    },
+    "DkimDNSTokenValue1": {
+      "Description": "First SES Easy DKIM DNS CNAME value.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailIdentity",
+          "DkimDNSTokenValue1"
+        ]
+      }
+    },
+    "DkimDNSTokenName2": {
+      "Description": "Second SES Easy DKIM DNS CNAME host.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailIdentity",
+          "DkimDNSTokenName2"
+        ]
+      }
+    },
+    "DkimDNSTokenValue2": {
+      "Description": "Second SES Easy DKIM DNS CNAME value.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailIdentity",
+          "DkimDNSTokenValue2"
+        ]
+      }
+    },
+    "DkimDNSTokenName3": {
+      "Description": "Third SES Easy DKIM DNS CNAME host.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailIdentity",
+          "DkimDNSTokenName3"
+        ]
+      }
+    },
+    "DkimDNSTokenValue3": {
+      "Description": "Third SES Easy DKIM DNS CNAME value.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailIdentity",
+          "DkimDNSTokenValue3"
+        ]
+      }
+    },
+    "MailFromMxRecordName": {
+      "Description": "Custom MAIL FROM MX record name.",
+      "Value": {
+        "Ref": "MailFromDomain"
+      }
+    },
+    "MailFromMxRecordValue": {
+      "Description": "Custom MAIL FROM MX record value.",
+      "Value": {
+        "Fn::Sub": "10 feedback-smtp.${AWS::Region}.amazonses.com"
+      }
+    },
+    "MailFromSpfRecordName": {
+      "Description": "Custom MAIL FROM SPF TXT record name.",
+      "Value": {
+        "Ref": "MailFromDomain"
+      }
+    },
+    "MailFromSpfRecordValue": {
+      "Description": "Custom MAIL FROM SPF TXT record value.",
+      "Value": "v=spf1 include:amazonses.com -all"
+    }
+  }
+}

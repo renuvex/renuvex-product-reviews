@@ -35,6 +35,12 @@ source_files:
   - "src/app/api/internal/media-jobs/route.ts"
   - "src/app/api/internal/scheduled-jobs/route.ts"
   - "src/lib/scheduled-jobs.ts"
+  - "src/lib/email/ses-sns.ts"
+  - "src/app/api/internal/email-events/ses/route.ts"
+  - "infra/aws/review-email-foundation.cloudformation.json"
+  - "infra/aws/review-email-runtime-iam.cloudformation.json"
+  - "scripts/validate-review-email-foundation-template.mjs"
+  - "scripts/validate-review-email-runtime-iam-template.mjs"
 ---
 
 # ADR_0036 - Review Request Email Architecture
@@ -43,11 +49,11 @@ source_files:
 
 Use this draft when researching or designing post-purchase review-request
 email, verified-buyer submission, Amazon SES delivery, or email-job scheduling.
-The provider boundary, SES regional/sender/runtime/feedback contract, and
-provider-neutral tenant direction are accepted. The ikas eligibility, consent,
-retention, exact Prisma schema, and rollout contracts remain open. Verify the
-source files above and current ikas/AWS runtime evidence before extending this
-ADR.
+The provider boundary, SES regional/sender/runtime/feedback contract,
+provider-neutral tenant direction, and source-only SES foundation package are
+accepted. The ikas eligibility, consent, retention, exact Prisma schema, and
+rollout contracts remain open. Verify the source files above and current
+ikas/AWS runtime evidence before extending this ADR.
 Do not create AWS resources, DNS records, DB migrations, QStash schedules,
 Vercel environment variables, or deploys from this document without a separate
 scope, risk, rollback note, and explicit approval.
@@ -59,14 +65,19 @@ infrastructure contract for a future global-MVP review-request email feature.
 The target product capability is not implemented today. AWS SES in
 `eu-central-1`, a review-specific sender domain, Vercel OIDC, provider-neutral
 application boundaries, tenant-aware ownership, QStash dispatch, and a signed
-SES feedback path are accepted directions. The ikas trigger/consent contract,
-exact additive schema, token lifecycle, templates, and rollout remain open.
+SES feedback path are accepted directions. The repository now contains the
+source package for SES identity/configuration-set/feedback IaC, the dedicated
+runtime IAM role, and a signed SNS feedback endpoint skeleton. The ikas
+trigger/consent contract, exact additive schema, token lifecycle, outbound send
+implementation, and rollout remain open.
 
 ## Status
 
-Proposed - infrastructure contract accepted; application contract remains open.
+Proposed - infrastructure source package prepared; application contract remains
+open.
 
-This ADR does not authorize implementation or provider mutation.
+This ADR does not authorize AWS stack creation, DNS records, Vercel env writes,
+DB migrations, deploys, or provider mutation.
 
 ## Date
 
@@ -218,15 +229,27 @@ In `eu-central-1`:
 
 In the repository:
 
-- `@aws-sdk/client-sesv2` is not installed.
-- `.env.example` has no SES or email-provider variables.
-- `infra/aws` has no SES, email-event, or email-runtime IAM template.
-- There is no SES sender, configuration-set integration, feedback endpoint, or
-  production-access runbook.
+- `@aws-sdk/client-sesv2` is still not installed because no outbound SES send
+  implementation exists yet.
+- `.env.example` now documents disabled-by-default SES review-email placeholders
+  without secrets.
+- `infra/aws/review-email-foundation.cloudformation.json` defines the proposed
+  SES identity, configuration set, signed SNS feedback topic, HTTPS
+  subscription, and 14-day SQS DLQ.
+- `infra/aws/review-email-runtime-iam.cloudformation.json` defines the proposed
+  dedicated Vercel production OIDC runtime role for `ses:SendEmail`.
+- `src/app/api/internal/email-events/ses/route.ts` is a signed SNS feedback
+  receiver skeleton. It verifies SNS `SignatureVersion=2`, exact topic ARN,
+  trusted SNS signing certificate URL, and RSA-SHA256 signature before returning
+  sanitized metadata. It does not auto-confirm subscriptions or write provider
+  events to the database yet.
+- `scripts/validate-review-email-foundation-template.mjs` and
+  `scripts/validate-review-email-runtime-iam-template.mjs` enforce the local
+  IaC contract.
 
-The SES account is therefore available but not configured for application
-email. The absence of identities and production access is a deployment blocker,
-not evidence that an additional AWS account is needed.
+The SES account is therefore available and the source package is prepared, but
+AWS resources are not created, production access is not granted, DNS records are
+not deployed, Vercel env is not written, and no application email is sent.
 
 ### Sender DNS state
 
@@ -415,6 +438,33 @@ answers determine which evidence must be stored and when it must be invalidated.
 - Direct sending inside an ikas webhook was rejected because it cannot safely
   provide delay, retry, cancellation re-check, idempotency, or durable evidence.
 
+## Implementation Checkpoint
+
+2026-07-09 source package:
+
+- Added the SES feedback verification helper and internal endpoint:
+  `src/lib/email/ses-sns.ts` and
+  `src/app/api/internal/email-events/ses/route.ts`.
+- Added source-only CloudFormation templates:
+  `infra/aws/review-email-foundation.cloudformation.json` and
+  `infra/aws/review-email-runtime-iam.cloudformation.json`.
+- The foundation template targets `eu-central-1`, sender domain
+  `reviews.renuvex.app`, visible sender
+  `requests@reviews.renuvex.app`, custom MAIL FROM
+  `bounce.reviews.renuvex.app`, configuration set
+  `renuvex-review-requests-prod`, SNS `SignatureVersion=2`, selected SES event
+  types excluding `OPEN`/`CLICK`, and a 14-day encrypted SQS DLQ.
+- The runtime IAM template does not create a duplicate Vercel OIDC provider. It
+  takes the existing provider ARN and creates only
+  `renuvex-review-email-vercel-runtime`, with an exact production subject and
+  `ses:SendEmail` scoped to the sender identity/configuration set and
+  `ses:FromAddress=requests@reviews.renuvex.app`.
+- Local validators and AWS read-only `cloudformation validate-template` pass
+  for both templates. The runtime IAM template requires
+  `CAPABILITY_NAMED_IAM` if a future approved change set creates it.
+- No AWS stack, DNS, Vercel env, DB, QStash schedule, deploy, or email send was
+  performed in this checkpoint.
+
 ## Consequences
 
 - No source, schema, environment, DNS, AWS, QStash, or deployment behavior
@@ -428,6 +478,9 @@ answers determine which evidence must be stored and when it must be invalidated.
 - AWS setup needs SES identity/configuration-set/feedback IaC, a separate OIDC
   runtime role, DNS records, sandbox removal, and live mailbox-simulator tests;
   each remains a separately approved mutation package.
+- The source package is ready for a future mutation plan, but the next gate must
+  still request explicit approval before creating CloudFormation change sets or
+  adding DNS/env values.
 - The next ADR section must define the external ikas contract and exact additive
   schema while separating verified platform facts from product/legal decisions.
 - Every future mutation remains separately gated.
@@ -449,6 +502,14 @@ Project evidence:
 - `src/lib/scheduled-jobs.ts`
 - `package.json`
 - `.env.example`
+- `src/lib/email/ses-sns.ts`
+- `src/app/api/internal/email-events/ses/route.ts`
+- `tests/unit/ses-sns-events.test.ts`
+- `tests/unit/ses-events-route.test.ts`
+- `infra/aws/review-email-foundation.cloudformation.json`
+- `infra/aws/review-email-runtime-iam.cloudformation.json`
+- `scripts/validate-review-email-foundation-template.mjs`
+- `scripts/validate-review-email-runtime-iam-template.mjs`
 - `infra/aws/review-images-runtime-iam.cloudformation.json`
 - `src/lib/media/providers/aws-review-image.ts`
 - `infra/aws/`
@@ -484,6 +545,10 @@ External contract evidence:
 - [src/lib/media/dispatcher.ts](src/lib/media/dispatcher.ts)
 - [src/app/api/internal/media-jobs/route.ts](src/app/api/internal/media-jobs/route.ts)
 - [src/app/api/internal/scheduled-jobs/route.ts](src/app/api/internal/scheduled-jobs/route.ts)
+- [src/lib/email/ses-sns.ts](src/lib/email/ses-sns.ts)
+- [src/app/api/internal/email-events/ses/route.ts](src/app/api/internal/email-events/ses/route.ts)
+- [infra/aws/review-email-foundation.cloudformation.json](infra/aws/review-email-foundation.cloudformation.json)
+- [infra/aws/review-email-runtime-iam.cloudformation.json](infra/aws/review-email-runtime-iam.cloudformation.json)
 
 ## Obsidian Links
 
@@ -495,6 +560,10 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-09: Prepared the SES foundation source package without provider
+  mutation: CloudFormation templates, validators, disabled env placeholders, and
+  a fail-closed signed SNS feedback endpoint skeleton. AWS stacks, DNS, Vercel
+  env, DB schema, outbound sending, and rollout remain separately gated.
 - 2026-07-09: Added the product sender-mode direction: first release uses a
   Renuvex-managed sender with bounded merchant branding controls; merchant
   custom-domain sending and full free-form template editing are deferred but

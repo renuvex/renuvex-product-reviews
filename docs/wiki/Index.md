@@ -190,4 +190,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-09 (added review-request email architecture current-state ADR)
+**Last Updated:** 2026-07-09 (prepared source-only SES foundation package)
