@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-08
-last_verified: 2026-07-08
+updated: 2026-07-10
+last_verified: 2026-07-10
 confidence: high
 tags:
   - aws
@@ -38,6 +38,9 @@ source_files:
   - "scripts/validate-media-access-logs-bucket-template.mjs"
   - "scripts/validate-media-access-logs-delivery-template.mjs"
   - ".agents/skills/aws-iam/SKILL.md"
+  - ".agents/skills/aws-messaging-and-streaming/SKILL.md"
+  - ".agents/skills/aws-serverless/SKILL.md"
+  - ".agents/skills/creating-secrets-using-best-practices/SKILL.md"
   - ".agents/skills/securing-s3-buckets/SKILL.md"
   - ".agents/skills/routing-traffic-with-route53-and-cloudfront/SKILL.md"
 ---
@@ -709,6 +712,9 @@ matches the task.
 | `querying-aws-s3` | S3 object inventory, metadata, and future asset audits. |
 | `aws-ses` | Future Amazon SES outbound email work. |
 | `aws-mail-manager` | Future Amazon SES Mail Manager inbound/routing work. |
+| `aws-messaging-and-streaming` | Future SQS, SNS, and EventBridge queue/scheduler architecture for review-request email jobs. |
+| `aws-serverless` | Future Lambda, EventBridge Scheduler, and SQS event-source implementation work for AWS-native email dispatch. |
+| `creating-secrets-using-best-practices` | Future AWS Secrets Manager setup for Lambda/runtime secrets if the email worker needs AWS-side DB/API credentials. |
 | `aws-observability` | CloudWatch logs, metrics, traces, and operational visibility. |
 | `setting-up-cloudwatch-alarm-notifications` | CloudWatch alarm notification channels. |
 | `aws-sdk-js-v3-usage` | JavaScript/TypeScript AWS SDK v3 code if the app later introduces AWS runtime calls. |

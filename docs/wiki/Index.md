@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-09
-last_verified: 2026-07-09
+updated: 2026-07-10
+last_verified: 2026-07-10
 confidence: high
 tags:
   - index
@@ -191,4 +191,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-09 (recorded ikas order review-request platform feedback)
+**Last Updated:** 2026-07-10 (revised review-request email dispatch direction to AWS-native while keeping existing QStash media/maintenance jobs)

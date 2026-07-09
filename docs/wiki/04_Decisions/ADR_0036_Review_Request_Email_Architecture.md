@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: draft
 created: 2026-07-09
-updated: 2026-07-09
-last_verified: 2026-07-09
+updated: 2026-07-10
+last_verified: 2026-07-10
 confidence: high
 tags:
   - adr
@@ -12,6 +12,9 @@ tags:
   - review-request
   - ikas
   - aws-ses
+  - aws-sqs
+  - aws-lambda
+  - eventbridge
   - qstash
 related:
   - "[[Decision_Index]]"
@@ -52,11 +55,14 @@ Use this draft when researching or designing post-purchase review-request
 email, verified-buyer submission, Amazon SES delivery, or email-job scheduling.
 The provider boundary, SES regional/sender/runtime/feedback contract,
 provider-neutral tenant direction, and source-only SES foundation package are
-accepted. Direct ikas feedback now confirms the order webhook/listOrder,
+accepted. Review-request email dispatch now targets an AWS-native first
+implementation using EventBridge, SQS, Lambda, and SES. Existing QStash media
+and maintenance scheduling remains in place and is not part of the email
+cutover. Direct ikas feedback confirms the order webhook/listOrder,
 delivery-state, reconciliation, and uninstall-retention platform contract. The
-exact Prisma schema, product/legal consent stance, and rollout contracts remain
-open. Verify the source files above and current ikas/AWS runtime evidence before
-extending this ADR.
+exact Prisma schema, product/legal consent stance, Lambda DB/secret strategy,
+and rollout contracts remain open. Verify the source files above and current
+ikas/AWS runtime evidence before extending this ADR.
 Do not create AWS resources, DNS records, DB migrations, QStash schedules,
 Vercel environment variables, or deploys from this document without a separate
 scope, risk, rollback note, and explicit approval.
@@ -66,15 +72,19 @@ scope, risk, rollback note, and explicit approval.
 This ADR records the verified pre-implementation state and the first accepted
 infrastructure contract for a future global-MVP review-request email feature.
 The target product capability is not implemented today. AWS SES in
-`eu-central-1`, a review-specific sender domain, Vercel OIDC, provider-neutral
-application boundaries, tenant-aware ownership, QStash dispatch, and a signed
-SES feedback path are accepted directions. The repository now contains the
-source package for SES identity/configuration-set/feedback IaC, the dedicated
-runtime IAM role, and a signed SNS feedback endpoint skeleton. Direct ikas
-feedback on 2026-07-09 now confirms the high-level order webhook,
+`eu-central-1`, a review-specific sender domain, provider-neutral application
+boundaries, tenant-aware ownership, AWS-native email job dispatch, and a signed
+SES feedback path are accepted directions. Existing QStash usage remains scoped
+to media jobs and maintenance schedules. The future review-request email flow
+uses a separate `AwsEmailJobDispatcher` boundary backed by EventBridge
+recurring due scans, SQS buffering, Lambda sending, and SES delivery. The
+repository now contains the source package for SES identity/configuration-set/
+feedback IaC, the dedicated runtime IAM role, and a signed SNS feedback endpoint
+skeleton; it does not yet contain the AWS email queue/worker implementation.
+Direct ikas feedback on 2026-07-09 confirms the high-level order webhook,
 canonical `listOrder` re-read, delivery-state, reconciliation, and uninstall
 cleanup contract. The exact additive schema, token lifecycle, product/legal
-consent stance, outbound send implementation, and rollout remain open.
+consent stance, Lambda DB/secret strategy, and rollout remain open.
 
 ## Status
 
@@ -227,9 +237,11 @@ email without a deliberate schema decision would mix unrelated lifecycles.
 - There is no email queue, email flow-control key, email dispatcher, email
   internal receiver, or email schedule.
 
-QStash is therefore a proven current capability, not yet an accepted email
-architecture. Any future email payload must avoid durable customer/order PII
-when an opaque application job id is sufficient.
+QStash is therefore a proven current capability for media and maintenance, not
+the accepted first implementation for review-request email dispatch. This ADR
+does not migrate existing QStash jobs to AWS. Any future dispatcher payload,
+whether AWS or otherwise, must carry opaque application job ids rather than
+customer email, order details, rendered content, or review tokens.
 
 ### Amazon SES and AWS state
 
@@ -255,6 +267,9 @@ In the repository:
 
 - `@aws-sdk/client-sesv2` is still not installed because no outbound SES send
   implementation exists yet.
+- `@aws-sdk/client-sqs`, Lambda worker packaging, and an EventBridge due-scan
+  implementation are not present because AWS-native email dispatch is not
+  implemented yet.
 - `.env.example` now documents disabled-by-default SES review-email placeholders
   without secrets.
 - `infra/aws/review-email-foundation.cloudformation.json` defines the proposed
@@ -301,6 +316,7 @@ The application currently has none of the following:
 - bounce/complaint/delivery event processing;
 - suppression-aware send prevention;
 - email-specific rate/concurrency limits;
+- AWS email due scanner, SQS queue, Lambda sender, and worker observability;
 - email audit and operational runbook;
 - live email acceptance tests.
 
@@ -314,11 +330,36 @@ The application currently has none of the following:
 - `EmailProvider` is a narrow provider-neutral send boundary. Its first
   implementation will be `SesEmailProvider`.
 - `EmailJobDispatcher` is a separate provider-neutral delayed-job boundary. Its
-  first implementation will be `QStashEmailJobDispatcher`.
-- QStash payloads carry an opaque application job id, not customer email,
+  first implementation will be `AwsEmailJobDispatcher`, not QStash.
+- `OrderProvider` remains a separate boundary. Its first implementation will
+  be `IkasOrderProvider` over signed ikas webhooks plus canonical `listOrder`
+  re-reads.
+- Dispatcher payloads carry an opaque application job id, not customer email,
   order details, rendered content, or review tokens.
 - Email templates are rendered and versioned by the application rather than
   stored as authoritative SES templates.
+
+### Email dispatch and scheduler boundary
+
+- Existing QStash media dispatch, daily maintenance, and monthly image cleanup
+  schedules remain on their current signed QStash endpoints and DB lock model.
+  This ADR does not authorize or require a QStash-to-AWS migration for those
+  existing workloads.
+- Review-request email uses an AWS-native first implementation:
+  EventBridge Scheduler runs a recurring due-scan trigger; a due scanner claims
+  eligible DB rows in bounded batches; SQS buffers opaque send-job ids; Lambda
+  consumes SQS, re-validates DB/order/send eligibility, calls SES, and records
+  send attempts/provider message ids.
+- The DB remains the source of truth for `sendAfter`, token state, recipient
+  eligibility, suppression, attempts, and final lifecycle. AWS queues are
+  delivery machinery, not durable business truth.
+- One EventBridge one-time schedule per email is rejected for the first design.
+  Completed one-time schedules still count against account quota until deleted,
+  which creates unnecessary quota and cleanup risk at large email volume.
+- QStash remains an available future dispatcher adapter, but is not the default
+  email implementation because message/retry-based pricing and external HTTP
+  scheduler dependence are weaker for high-volume global review-request email
+  than SQS/Lambda/SES inside AWS.
 
 ### ikas order contract
 
@@ -383,13 +424,17 @@ The application currently has none of the following:
 ### Runtime credentials and IAM
 
 - Vercel production obtains short-lived AWS credentials through the existing
-  Vercel OIDC provider and AWS STS `AssumeRoleWithWebIdentity`.
-- Email sending uses a new dedicated runtime role; the review-image runtime role
-  is not expanded with SES permissions.
-- The trust policy is scoped to the exact Vercel team, project, production
-  environment, and configured audience.
-- Runtime permission is limited to `ses:SendEmail` for the selected SES identity
-  and configuration set, constrained by the exact `ses:FromAddress`.
+  Vercel OIDC provider when app-side AWS calls are needed.
+- The AWS-native email worker path requires a separate Lambda execution role
+  with least-privilege access to its SQS queue, SES send action, CloudWatch
+  logs, and any approved Secrets Manager/SSM secrets needed for DB/API access.
+- Email sending uses dedicated email roles; the review-image runtime role is
+  not expanded with SES, SQS, Lambda, or scheduler permissions.
+- The Vercel OIDC trust policy, where used, is scoped to the exact Vercel team,
+  project, production environment, and configured audience.
+- Runtime permission is limited to the selected SES identity/configuration set
+  and exact sender address. The first Lambda role may send via SES; app-side
+  Vercel SES sending remains optional and separately justified.
 - Static AWS access keys, `ses:*`, `SendRawEmail`, SES control-plane operations,
   tenant lifecycle permissions, and `iam:PassRole` are excluded from the send
   role.
@@ -457,9 +502,15 @@ The application currently has none of the following:
 Separating application ownership from delivery and dispatch prevents order
 semantics, provider credentials, and at-least-once scheduling from becoming one
 coupled workflow. A review-specific authenticated subdomain limits reputation
-blast radius. Vercel OIDC removes static AWS credentials. Provider-neutral
-tenant ownership preserves a future provider migration path while SES tenants
-isolate merchant reputation and suppression.
+blast radius. Short-lived AWS credentials and AWS execution roles remove static
+access keys. Provider-neutral tenant ownership preserves a future provider
+migration path while SES tenants isolate merchant reputation and suppression.
+
+Keeping existing QStash media/maintenance flows stable avoids an unnecessary
+platform migration. Starting the new email workflow on AWS avoids building a
+high-volume review-request system on a per-message HTTP scheduler when the
+delivery provider, feedback path, queues, retries, and worker observability can
+all live inside the same AWS boundary.
 
 Deferring the exact schema is intentional: ikas trigger, consent, and retention
 answers determine which evidence must be stored and when it must be invalidated.
@@ -483,6 +534,15 @@ answers determine which evidence must be stored and when it must be invalidated.
   surface.
 - Direct sending inside an ikas webhook was rejected because it cannot safely
   provide delay, retry, cancellation re-check, idempotency, or durable evidence.
+- QStash as the first review-request email dispatcher was rejected after the
+  high-volume cost/operational review. QStash remains correct for existing
+  media and maintenance jobs, but AWS SQS/Lambda/EventBridge is the better
+  first email-job foundation for global scale.
+- A full QStash-to-AWS migration was rejected for this phase. Existing QStash
+  workloads are already working and are not on the email feature critical path.
+- One EventBridge one-time schedule per email was rejected because completed
+  one-time schedules remain counted against quota until deleted; DB-backed due
+  scans plus SQS avoid that cleanup/quota surface.
 
 ## Implementation Checkpoint
 
@@ -516,14 +576,16 @@ answers determine which evidence must be stored and when it must be invalidated.
 - No source, schema, environment, DNS, AWS, QStash, or deployment behavior
   changes from this ADR checkpoint.
 - Future code must preserve the provider/dispatcher boundaries and keep PII out
-  of QStash payloads.
+  of dispatcher payloads, including SQS messages.
 - Future schema should keep sender mode, merchant branding, template version,
   Reply-To, and provider identity references separate so the product can add
   merchant-domain sending later without replacing the initial Renuvex sender
   path.
-- AWS setup needs SES identity/configuration-set/feedback IaC, a separate OIDC
-  runtime role, DNS records, sandbox removal, and live mailbox-simulator tests;
-  each remains a separately approved mutation package.
+- AWS setup needs SES identity/configuration-set/feedback IaC, email SQS/DLQ,
+  EventBridge due-scan trigger, Lambda sender, least-privilege Lambda/IAM roles,
+  a Secrets Manager or SSM strategy if AWS workers need DB/API credentials, DNS
+  records, sandbox removal, alarms, and live mailbox-simulator tests. Each
+  remains a separately approved mutation package.
 - The source package is ready for a future mutation plan, but the next gate must
   still request explicit approval before creating CloudFormation change sets or
   adding DNS/env values.
@@ -578,7 +640,12 @@ External contract evidence:
 - [Amazon SES sender reputation practices](https://docs.aws.amazon.com/ses/latest/dg/tips-and-best-practices.html)
 - [Amazon SNS signature verification](https://docs.aws.amazon.com/sns/latest/dg/sns-verify-signature-of-message.html)
 - [Amazon SNS dead-letter queues](https://docs.aws.amazon.com/sns/latest/dg/sns-dead-letter-queues.html)
+- [Amazon EventBridge Scheduler schedule types](https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html)
+- [Amazon EventBridge Scheduler targets](https://docs.aws.amazon.com/scheduler/latest/APIReference/API_Target.html)
+- [Amazon SQS pricing](https://aws.amazon.com/sqs/pricing/)
+- [AWS Lambda with SQS](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
 - [Vercel OIDC for AWS](https://vercel.com/docs/oidc/aws)
+- [QStash pricing](https://upstash.com/pricing/qstash)
 - [QStash at-least-once delivery](https://upstash.com/docs/qstash/features/at-least-once)
 - [QStash delayed delivery](https://upstash.com/docs/qstash/features/delay)
 
@@ -610,6 +677,12 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-10: Revised the email dispatch decision after the AWS/QStash
+  architecture review: existing QStash media and maintenance jobs remain in
+  place, while the first review-request email dispatcher targets AWS-native
+  EventBridge due scans, SQS buffering, Lambda sending, and SES delivery behind
+  provider-neutral boundaries. Per-email one-time EventBridge schedules and a
+  full QStash teardown are explicitly rejected for this phase.
 - 2026-07-09: Recorded direct ikas order/review-request platform feedback:
   order webhooks are valid wake-up signals, canonical order state should be
   re-read with `listOrder`, physical delivery uses `orderPackageStatus`, pickup
@@ -628,4 +701,6 @@ External contract evidence:
   `eu-central-1`, `requests@reviews.renuvex.app`, custom MAIL FROM, Vercel OIDC,
   provider-neutral application boundaries, tenant-aware ownership, QStash
   opaque-job dispatch, signed SNS feedback with SQS DLQ, and explicit VDM/global
-  endpoint deferral. ikas semantics and the exact additive schema remain open.
+  endpoint deferral. This was superseded for email dispatch on 2026-07-10 by the
+  AWS-native dispatcher decision; ikas semantics and the exact additive schema
+  remain open.
