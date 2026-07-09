@@ -286,6 +286,31 @@ The application currently has none of the following:
   merchant address must not be used as Reply-To until its ownership and
   fallback behavior are defined.
 
+### Merchant sender modes and branding
+
+- The first public sender mode is Renuvex-managed delivery:
+  `Store Display Name <requests@reviews.renuvex.app>`.
+- Merchant-specific branding is allowed in this first mode only as application
+  data: display name, Reply-To address, logo, button color, locale, and
+  template version. These fields do not require merchant DNS onboarding.
+- Merchant Reply-To must be validated before use and must have a safe fallback
+  to the Renuvex sender if ownership or formatting is not acceptable.
+- A future merchant-domain sender mode is intentionally supported by the data
+  model, but deferred from the first SES foundation:
+  `Store Display Name <reviews@merchant-domain.example>`.
+- Merchant-domain sending requires a separate onboarding workflow for SES
+  identity provisioning, DKIM DNS records, custom MAIL FROM or bounce domain
+  policy, verification polling, failure states, and support documentation.
+- The current ikas admin notification UI was observed as a useful product
+  reference because it separates platform-domain sending from merchant-domain
+  sending. It does not prove that this app can reuse ikas email settings or
+  ikas email infrastructure.
+- The first admin surface should not be a full free-form email builder. It
+  should start with bounded controls: enable/disable, send delay, sender display
+  name, Reply-To, logo, button color, locale, and preview. Free-form template
+  editing is deferred until compliance, localization, deliverability, and
+  support rules are defined.
+
 ### Runtime credentials and IAM
 
 - Vercel production obtains short-lived AWS credentials through the existing
@@ -355,8 +380,8 @@ The application currently has none of the following:
 - Install/uninstall retention and deletion behavior for customer/order data and
   SES tenants.
 - Exact Prisma models, columns, constraints, retention windows, token lifetime,
-  merchant controls, template model, display name, Reply-To policy, and rollout
-  sequence.
+  merchant controls, template model, display name, Reply-To validation,
+  merchant-domain sender onboarding, and rollout sequence.
 
 ## Reasoning
 
@@ -379,6 +404,9 @@ answers determine which evidence must be stored and when it must be invalidated.
   simpler, but its reputation and suppression blast radius crosses merchants.
 - Per-merchant custom domains provide stronger merchant branding but require
   merchant DNS onboarding and are deferred as an optional future capability.
+- A full merchant-editable template builder was rejected for the first email
+  release. It increases compliance, localization, spam-risk, and support
+  surface before the order-trigger and consent contract is known.
 - Static AWS access keys in Vercel were rejected in favor of short-lived OIDC
   credentials.
 - VDM, dedicated IPs, and Global Endpoints were rejected for the MVP because
@@ -393,6 +421,10 @@ answers determine which evidence must be stored and when it must be invalidated.
   changes from this ADR checkpoint.
 - Future code must preserve the provider/dispatcher boundaries and keep PII out
   of QStash payloads.
+- Future schema should keep sender mode, merchant branding, template version,
+  Reply-To, and provider identity references separate so the product can add
+  merchant-domain sending later without replacing the initial Renuvex sender
+  path.
 - AWS setup needs SES identity/configuration-set/feedback IaC, a separate OIDC
   runtime role, DNS records, sandbox removal, and live mailbox-simulator tests;
   each remains a separately approved mutation package.
@@ -463,6 +495,10 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-09: Added the product sender-mode direction: first release uses a
+  Renuvex-managed sender with bounded merchant branding controls; merchant
+  custom-domain sending and full free-form template editing are deferred but
+  kept compatible with the future data model.
 - 2026-07-09: Accepted the first infrastructure contract: SES in
   `eu-central-1`, `requests@reviews.renuvex.app`, custom MAIL FROM, Vercel OIDC,
   provider-neutral application boundaries, tenant-aware ownership, QStash
