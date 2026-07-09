@@ -42,7 +42,6 @@ jobs:
 
       - name: Build widget
         run: pnpm build:widget
-        env:
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
