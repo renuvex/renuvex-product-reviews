@@ -14,6 +14,17 @@ export type CreateStorefrontJSScriptInput = {
   storefrontId: string;
 }
 
+export type DateFilterInput = {
+  eq?: number;
+  gt?: number;
+  gte?: number;
+  in?: Array<number>;
+  lt?: number;
+  lte?: number;
+  ne?: number;
+  nin?: Array<number>;
+}
+
 export type PaginationInput = {
   limit?: number;
   page?: number;
@@ -140,6 +151,60 @@ export interface ListProductsForSyncQuery {
   listProduct: ListProductsForSyncQueryData;
 }
 
+export type ListOrdersForReviewRequestsQueryVariables = {
+  pagination?: PaginationInput;
+  id?: StringFilterInput;
+  updatedAt?: DateFilterInput;
+}
+
+export type ListOrdersForReviewRequestsQueryData = {
+  count: number;
+  hasNext: boolean;
+  limit: number;
+  page: number;
+  data: Array<{
+  id: string;
+  orderNumber?: string;
+  merchantId: string;
+  orderPackageStatus?: OrderPackageStatusEnum;
+  orderPaymentStatus?: OrderPaymentStatusEnum;
+  orderedAt?: number;
+  shippingMethod: OrderShippingMethodEnum;
+  status: OrderStatusEnum;
+  updatedAt?: number;
+  customerId?: string;
+  customer?: {
+  id?: string;
+  email?: string;
+  isGuestCheckout?: boolean;
+  notificationsAccepted?: boolean;
+};
+  orderLineItems: Array<{
+  id: string;
+  deleted: boolean;
+  quantity: number;
+  status: OrderLineItemStatusEnum;
+  statusUpdatedAt?: number;
+  variant: {
+  id?: string;
+  name: string;
+  productId?: string;
+};
+}>;
+  orderPackages?: Array<{
+  id: string;
+  deleted: boolean;
+  orderLineItemIds: Array<string>;
+  orderPackageFulfillStatus: OrderPackageFulfillStatusEnum;
+  updatedAt?: number;
+}>;
+}>;
+}
+
+export interface ListOrdersForReviewRequestsQuery {
+  listOrder: ListOrdersForReviewRequestsQueryData;
+}
+
 export type SaveProductWebhooksMutationVariables = {
   input: WebhookInput;
 }
@@ -155,6 +220,23 @@ export type SaveProductWebhooksMutationData = Array<{
 
 export interface SaveProductWebhooksMutation {
   saveWebhooks: SaveProductWebhooksMutationData;
+}
+
+export type SaveOrderWebhooksMutationVariables = {
+  input: WebhookInput;
+}
+
+export type SaveOrderWebhooksMutationData = Array<{
+  id: string;
+  endpoint: string;
+  scope: string;
+  createdAt?: number;
+  updatedAt?: number;
+  deleted: boolean;
+}>
+
+export interface SaveOrderWebhooksMutation {
+  saveWebhooks: SaveOrderWebhooksMutationData;
 }
 
 export class GeneratedQueries {
@@ -232,6 +314,57 @@ export class GeneratedQueries {
 `;
     return this.client.query<Partial<ListProductsForSyncQuery>>({ query, variables });
   }
+
+  async listOrdersForReviewRequests(variables: ListOrdersForReviewRequestsQueryVariables): Promise<APIResult<Partial<ListOrdersForReviewRequestsQuery>>> {
+    const query = `
+  query listOrdersForReviewRequests($pagination: PaginationInput, $id: StringFilterInput, $updatedAt: DateFilterInput) {
+    listOrder(pagination: $pagination, id: $id, updatedAt: $updatedAt) {
+      count
+      hasNext
+      limit
+      page
+      data {
+        id
+        orderNumber
+        merchantId
+        orderPackageStatus
+        orderPaymentStatus
+        orderedAt
+        shippingMethod
+        status
+        updatedAt
+        customerId
+        customer {
+          id
+          email
+          isGuestCheckout
+          notificationsAccepted
+        }
+        orderLineItems {
+          id
+          deleted
+          quantity
+          status
+          statusUpdatedAt
+          variant {
+            id
+            name
+            productId
+          }
+        }
+        orderPackages {
+          id
+          deleted
+          orderLineItemIds
+          orderPackageFulfillStatus
+          updatedAt
+        }
+      }
+    }
+  }
+`;
+    return this.client.query<Partial<ListOrdersForReviewRequestsQuery>>({ query, variables });
+  }
 }
 
 export class GeneratedMutations {
@@ -283,6 +416,22 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<SaveProductWebhooksMutation>>({ mutation, variables });
+  }
+
+  async saveOrderWebhooks(variables: SaveOrderWebhooksMutationVariables): Promise<APIResult<Partial<SaveOrderWebhooksMutation>>> {
+    const mutation = `
+  mutation saveOrderWebhooks($input: WebhookInput!) {
+    saveWebhooks(input: $input) {
+      id
+      endpoint
+      scope
+      createdAt
+      updatedAt
+      deleted
+    }
+  }
+`;
+    return this.client.mutate<Partial<SaveOrderWebhooksMutation>>({ mutation, variables });
   }
 }
 

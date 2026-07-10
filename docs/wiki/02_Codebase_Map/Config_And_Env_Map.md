@@ -3,7 +3,7 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-03
+updated: 2026-07-10
 tags:
   - config
   - env
@@ -17,6 +17,12 @@ related:
 # Config & Env Map
 
 > Names + purposes only. Never commit real values. See [.env.example](.env.example) for the template.
+
+## Agent Brief
+Use this page when adding or auditing environment variables, static config, or
+provider feature flags. It records names and purpose only; verify actual usage
+in source and never document real secret values. Vercel env writes still require
+separate approval.
 
 ## Environment variables
 
@@ -95,6 +101,19 @@ All variables in this section are environment-scoped. Preview deployments must u
 | `STOREFRONT_THEME_CRON_LIMIT` | Optional max merchants checked by each lightweight theme sync cron run. Default: `100`. |
 | `STOREFRONT_THEME_PENDING_SCAN_LIMIT` | Optional max pending theme rows scanned before due verification. Default: `500`. |
 | `STOREFRONT_THEME_CRON_CONCURRENCY` | Optional concurrency for ikas `listStorefront` calls in theme maintenance. Default: `5`. |
+
+### Review request email
+| Var | Purpose |
+|---|---|
+| `REVIEW_EMAIL_ENABLED` | Global review-request email feature flag. Source routes fail closed or ignore order webhooks while this is not exactly `true`. |
+| `REVIEW_EMAIL_PROVIDER` | Future provider selector. Current source placeholder is `ses`; outbound sending is not implemented yet. |
+| `REVIEW_EMAIL_HASH_SECRET` | Server-only HMAC key for customer email hashes. Required before enabling the feature. |
+| `REVIEW_EMAIL_PII_ENCRYPTION_KEY_B64` | Server-only 32-byte base64 AES-GCM key for protected customer email storage. Required before enabling the feature. |
+| `REVIEW_REQUEST_TOKEN_CURRENT_KEY_VERSION` | Positive integer selecting the key used for newly prepared review-request tokens. |
+| `REVIEW_REQUEST_TOKEN_KEYS_JSON` | Server-only version-to-HMAC-secret key ring. Keep every version referenced by an unexpired `prepared` or `active` token; maintenance fails closed if a required key is missing. |
+| `REVIEW_REQUEST_SESSION_SECRET` | Server-only HMAC key for the two-hour host-only review-request session. Raw session values are never stored. |
+| `REVIEW_REQUEST_PUBLIC_BASE_URL` | Clean HTTPS origin for review links, currently `https://reviews.renuvex.app`. Tokens are placed in the URL fragment, not the query string. |
+| `AWS_REVIEW_EMAIL_REGION`, `AWS_REVIEW_EMAIL_FROM`, `AWS_REVIEW_EMAIL_CONFIGURATION_SET`, `AWS_SES_EVENTS_SNS_TOPIC_ARN` | SES foundation/feedback placeholders for the future AWS rollout. No AWS resource or outbound sender is created by env presence alone. There is intentionally no direct Vercel `ses:SendEmail` role env in the V3 source package; sender credentials belong to the future Lambda worker package. |
 
 ### Sentry
 | Var | Purpose | Where |

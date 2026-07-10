@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-21
+updated: 2026-07-10
 last_verified: 2026-06-21
 confidence: high
 tags:
@@ -25,10 +25,23 @@ source_files:
   - "src/app/api/public/upload/sign/route.ts"
   - "src/app/api/public/upload/register/route.ts"
   - "src/app/api/public/upload/video/capability/route.ts"
+  - "src/app/api/public/review-request/route.ts"
+  - "src/lib/review-email/public-access.ts"
+  - "src/instrumentation-client.ts"
   - "src/app/api/public/widget-error/route.ts"
 ---
 
 # Security & Rate Limits
+
+## Agent Brief
+Use this page for public/admin/internal trust boundaries, Redis limits, secret
+handling, review media validation, and Supabase Data API/RLS posture. For the
+disabled review-request email source package, the critical rules are: ikas HMAC
+before processing, canonical order re-read, no raw token/recipient in durable
+payloads, fragment-to-HttpOnly session exchange on the isolated review host,
+browser telemetry disabled on `/request`, atomic one-review submission, and RLS
+on the new sensitive tables. Runtime/provider mutations still require a separate
+approved rollout; source and live DB state must not be conflated.
 
 ## Summary
 Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> admin API. Storefront (CORS-open) -> public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, ProductSnapshot-based public review target verification, AWS S3 presigned uploads, trusted AWS media URL allowlisting, public response whitelisting, server-side cron secret.
@@ -41,6 +54,7 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | `/api/admin/*` | HS256 JWT (`getUserFromRequest`) | `merchantId` from JWT subject |
 | `/api/ikas/*` | HS256 JWT (same) | same |
 | `/api/public/*` | None — CORS-open; write routes add per-route checks | `storeId` from query/body, verified per route where writes happen |
+| `/request` + `/api/public/review-request` | One-time fragment token -> host-only HttpOnly session; isolated review host | Request/token/session tenant ids are server-owned; query tokens are rejected |
 | `/api/admin/daily-maintenance` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
 | `/api/admin/cleanup-pending-uploads` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
 | `/api/admin/cleanup-images` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
@@ -55,9 +69,10 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | `POST /api/public/upload/register` | 30 | 10 min | `renuvex_pr_upload_reg_rl:<ip>` |
 | `GET /api/public/ratings` + `GET /api/public/ratings-by-slug` | 300 combined | 60 sec | `renuvex_pr_ratings_rl:<ip>` |
 | `GET /api/public/upload/video/capability` | 60 | 60 sec | `renuvex_pr_video_cap:<ip-hash>` |
+| `POST/GET /api/public/review-request` | 30 combined | 60 sec | `renuvex_review_request:<ip-hash>` |
 | `POST /api/public/widget-error` | 30 | 60 sec | `renuvex_pr_werr_rl:<ip>` |
 
-Pattern: `INCR` then `EXPIRE` on first hit. Rating read limits and the video capability probe use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable, so listing badges and text/photo review submission do not disappear during a transient Redis issue. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/upload/video/capability/route.ts](src/app/api/public/upload/video/capability/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
+Pattern: `INCR` then `EXPIRE` on first hit. Rating reads, video capability, and review-request exchange/session reads use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable. Review-request Redis keys contain only a SHA-256 IP digest, never the raw token or session. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/upload/video/capability/route.ts](src/app/api/public/upload/video/capability/route.ts), [src/app/api/public/review-request/route.ts](src/app/api/public/review-request/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
 
 IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theory if upstream is misconfigured — acceptable today.
 
@@ -73,7 +88,8 @@ IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theor
   - `comment` ≤ 2000 chars
   - image refs must pass the AWS upload-ref and trusted media policy in [src/lib/review-images.ts](src/lib/review-images.ts)
   - profanity filter on title/comment/author
-  - public `slug`, `productName`, and `email` body fields are ignored; review identity/name snapshots come from `ProductSnapshot`, and public email is stored blank until a verified buyer flow exists
+  - public `slug`, `productName`, and `email` body fields are ignored; review identity/name snapshots come from `ProductSnapshot`. The source-only verified-buyer flow consumes a host-only request session and still stores public `Review.email` blank.
+- **Review-request link**: the raw 256-bit token is held in the URL fragment, removed before navigation, exchanged through POST body for a two-hour host-only HttpOnly session, and stored only as a versioned HMAC hash. `/request` disables browser Sentry/Replay before SDK initialization so Replay `initialUrl` cannot capture the fragment. Responses are `private, no-store`, `no-referrer`, `noindex`, and frame-denied.
 - **Admin settings PUT**: `validateSettings(widgetId, settings)` runs the schema in [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
 - **DB caps**: `comment` and `merchantReply` are `@db.VarChar(2000)`.
 
@@ -110,6 +126,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - `SECRET_COOKIE_PASSWORD` for iron-session.
 - `REVIEW_CURSOR_SECRET` signs public review cursors (HMAC-SHA256); server-only and separate from `CLIENT_SECRET`.
 - AWS review-image private key material, `KV_REST_API_TOKEN`, `CRON_SECRET` — server-only.
+- Review-email hash/encryption secrets, versioned token key ring, and session secret are server-only. Never put raw review-request tokens, sessions, recipient email, or rendered content in logs, Sentry, Redis keys, DB event payloads, or future queue messages.
 - ⚠️ Never log secrets or full tokens. Code uses `console.error('[scope] ERROR', err)` patterns — keep err objects from leaking sensitive headers.
 - ⚠️ The `/callback` client page receives the session JWT as a URL query param. A `console.log('OAuth callback params:', params.toString())` that printed it to the browser console was removed — never re-add param logging there. See [[Auth_And_Installation_Flow]].
 
@@ -122,6 +139,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Direct SQL privilege checks did not show table access for `anon`, `authenticated`, or `service_role`: no public schema usage and no table `SELECT`, `INSERT`, `UPDATE`, or `DELETE` privileges were present in the checked grants.
 - The public schema had no views, materialized views, functions, or realtime publication tables during the audit.
 - This does not prove the Supabase Dashboard Data API exposure setting by itself; it only proves the repo and SQL surfaces checked above.
+- The source-only review-email migration enables RLS on its 13 new sensitive tables and conditionally revokes browser-role grants. This is locally verified but does not change the still-unapplied production RLS state described above.
 
 Decision:
 - Do not enable RLS blindly while the schema is still changing in the test-stage app. Enabling RLS without matching policies can block intended API behavior.
@@ -162,6 +180,7 @@ Official references:
 - [[ADR_0006_Trusted_Review_Image_URL_Policy]]
 
 ## Change Log
+- 2026-07-10: Recorded review-request fragment/session isolation, 30/min hashed-IP rate limit, browser Sentry/Replay exclusion, atomic verified-buyer submit, and source-only RLS hardening.
 - 2026-06-21: Recorded the Supabase Data API / RLS audit. Current repo uses server-side Prisma, no browser Supabase client was found, and checked SQL grants did not show direct `anon`/`authenticated` table access; RLS hardening remains a public-launch gate.
 - 2026-05-25: Removed a `console.log` in the `/callback` client page that printed the full query string (including the session JWT) to the browser console. Source: [src/app/callback/page.tsx](src/app/callback/page.tsx).
 - 2026-05-24: Namespace migration changed public Redis rate-limit prefixes from `ikr_*` to `renuvex_pr_*`. Limits and windows are unchanged.

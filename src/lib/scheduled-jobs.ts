@@ -10,6 +10,9 @@ import {
   reconcileProcessingVideos,
   redispatchDueMediaJobs,
 } from '@/lib/media/reconciliation';
+import { isReviewEmailEnabled } from '@/lib/review-email/config';
+import { runReviewEmailLifecycleMaintenance } from '@/lib/review-email/maintenance';
+import { retryFailedStoreReviewEmailErasures } from '@/lib/review-email/erasure';
 
 export const SCHEDULED_JOB_TASKS = ['daily-maintenance-full', 'cleanup-images'] as const;
 export type ScheduledJobTask = (typeof SCHEDULED_JOB_TASKS)[number];
@@ -24,6 +27,8 @@ export type DailyMaintenanceResult = {
   videoLifecycleJobs: unknown;
   videoReconciliation: unknown;
   mediaJobs: unknown;
+  reviewEmailLifecycle: unknown;
+  storeDataErasure: unknown;
   errors: Array<{ task: string; error: string }>;
 };
 
@@ -66,6 +71,8 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
   let videoReconciliation = null;
   let videoLifecycleJobs = null;
   let mediaJobs = null;
+  let reviewEmailLifecycle = null;
+  let storeDataErasure = null;
 
   try {
     storefrontThemes = await reconcileStorefrontThemes();
@@ -115,6 +122,32 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
       reportCronTaskError('daily-maintenance', 'media-job-redispatch', error);
       errors.push({ task: 'media-job-redispatch', error: message });
     }
+
+    if (isReviewEmailEnabled()) {
+      try {
+        reviewEmailLifecycle = await runReviewEmailLifecycleMaintenance(prisma);
+      } catch (error) {
+        const message = errorMessage(error);
+        reportCronTaskError('daily-maintenance', 'review-email-lifecycle', error);
+        errors.push({ task: 'review-email-lifecycle', error: message });
+      }
+    }
+
+    try {
+      storeDataErasure = await retryFailedStoreReviewEmailErasures();
+      if (storeDataErasure.failed > 0 || storeDataErasure.exhausted > 0) {
+        reportCronTaskError(
+          'daily-maintenance',
+          'store-data-erasure-retry',
+          new Error('Store data erasure requires operator review'),
+          storeDataErasure,
+        );
+      }
+    } catch (error) {
+      const message = errorMessage(error);
+      reportCronTaskError('daily-maintenance', 'store-data-erasure-retry', error);
+      errors.push({ task: 'store-data-erasure-retry', error: message });
+    }
   }
 
   const data: DailyMaintenanceResult = {
@@ -125,6 +158,8 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
     videoLifecycleJobs,
     videoReconciliation,
     mediaJobs,
+    reviewEmailLifecycle,
+    storeDataErasure,
     errors,
   };
   return { status: errors.length ? 500 : 200, body: { data } };

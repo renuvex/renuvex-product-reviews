@@ -33,9 +33,16 @@ function notificationMessage(overrides: Record<string, unknown> = {}) {
       eventType: 'Bounce',
       mail: {
         messageId: 'ses-message-1',
+        timestamp: '2026-07-09T11:59:59.000Z',
         destination: ['customer@example.com'],
+        tags: {
+          renuvex_attempt: ['0123456789abcdef0123456789abcdef'],
+        },
       },
       bounce: {
+        bounceType: 'Permanent',
+        bounceSubType: 'General',
+        timestamp: '2026-07-09T12:00:01.000Z',
         bouncedRecipients: [{ emailAddress: 'customer@example.com' }],
       },
     }),
@@ -135,6 +142,11 @@ describe('SES SNS event verification', () => {
       type: 'Notification',
       sesEventType: 'BOUNCE',
       sesMessageId: 'ses-message-1',
+      attemptCorrelationId: '0123456789abcdef0123456789abcdef',
+      bounceType: 'Permanent',
+      bounceSubType: 'General',
+      complaintFeedbackType: null,
+      providerTimestamp: new Date('2026-07-09T12:00:01.000Z'),
     });
     expect(JSON.stringify(result)).not.toContain('customer@example.com');
   });

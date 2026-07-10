@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-21
-last_verified: 2026-06-21
+updated: 2026-07-10
+last_verified: 2026-07-10
 confidence: high
 tags:
   - database
@@ -27,7 +27,9 @@ source_files:
   - "prisma/migrations/20260613010000_add_review_video_v1_foundation/migration.sql"
   - "prisma/migrations/20260620190000_add_video_upload_performance_sample/migration.sql"
   - "prisma/migrations/20260621003000_review_video_mux_contract_drop_legacy_columns/migration.sql"
+  - "prisma/migrations/20260710120000_add_review_request_email_lifecycle/migration.sql"
   - "src/lib/cleanup-orphan-images.ts"
+  - "src/lib/review-email/"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/media/outbox.ts"
@@ -37,8 +39,15 @@ source_files:
 
 # Database Map
 
+## Agent Brief
+Use this page to route Prisma/Postgres work. It summarizes the active review,
+media, cleanup, video, and review-request email lifecycle tables plus the
+index strategy. Source of truth remains [prisma/schema.prisma](prisma/schema.prisma)
+and the matching migration files; never use this page to justify `prisma db
+push` or destructive production schema changes.
+
 ## Summary
-Postgres (Supabase) accessed via Prisma. Core review/media models now include the image-era tables plus the additive video lifecycle tables: `VideoUploadSession`, `StoreVideoUsage`, and `MediaProviderJob`. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
+Postgres (Supabase) accessed via Prisma. Core review/media models now include the image-era tables, the additive video lifecycle tables, and the source-only review-request email lifecycle tables. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
 
 ## Files
 
@@ -55,7 +64,7 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | Model | Primary key | Purpose |
 |---|---|---|
 | `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
-| `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow; additive `hasVideo` marks video-bearing reviews and `moderationVersion` dedupes async provider moderation jobs |
+| `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow; additive `hasVideo` marks video-bearing reviews and `moderationVersion` dedupes async provider moderation jobs. Review-request tokens can set `reviewRequestId`, `verifiedBuyer`, `verifiedAt`, and `verificationSource`. |
 | `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted media rows. New images are AWS-backed (`provider='aws_s3'`) and use `variantManifest`; videos use Mux. `visible` + `Review.status` remains the public gate. |
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
 | `StoreSettings` | `id` (uuid), unique `storeId` | Per-merchant config; tracks storefront script/theme sync state and additive `videoMonthlyLimit` quota gate (default `0`, so video stays closed). |
@@ -69,6 +78,14 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `StoreVideoUsage` | `(storeId, month)` | Atomic monthly quota reserve/consume counters for feature-gated video uploads. |
 | `MediaProviderJob` | `id` (uuid), unique `dedupeKey` | DB outbox for provider operations (`resolve_video_asset`, `reconcile_video`, `expire_upload_session`, `publish_video`, `protect_video`, `cleanup_video`, `cleanup_image`) dispatched through QStash with idempotent retries, stale-lock recovery, and DLQ/manual-repair state. |
 | `MediaProviderLease` | `key` | Expiring per-session/per-asset provider mutation lease with a fencing version. It serializes publish/protect/delete work without holding a database transaction open during a provider HTTP call. |
+| `ReviewEmailSettings` | `storeId` | Merchant review-request email settings: enable flag, delivery trigger mode, strict consent mode, first/reminder delay, sender display name, Reply-To, logo, color, locale, and template version. |
+| `IkasOrderWebhookEvent` | `id` (uuid), unique `providerEventId` | Idempotent ikas order webhook audit/wake-up state for review-request email; stores only normalized ids/status and a payload digest, never the raw payload. |
+| `IkasOrderSnapshot` / `IkasOrderLineSnapshot` | `id` (uuid), unique order/line keys | Canonical order and order-line eligibility evidence from `listOrder`, with hashed/encrypted customer email and package/line status evidence. |
+| `ReviewRequest` / `ReviewRequestToken` | `id` (uuid), unique store/order-line request, token hash, and attempt link | DB-owned lifecycle and versioned one-time token state. Tokens start `prepared`, become `active` only at `sendInitiatedAt`, and expire 30 days later; raw values exist only in sender memory. Request expiry is extended to cover each scheduled reminder plus its token window rather than using a fixed 60-day guess. |
+| `ReviewRequestSession` | `id` (uuid), unique `sessionHash` | Two-hour host-only browser session created by fragment-token exchange. The cookie is HttpOnly; only an HMAC hash is stored. |
+| `ReviewEmailJob` / `ReviewEmailAttempt` / `ReviewEmailEvent` | `id` (uuid), unique dedupe/correlation/provider ids | Source-only email job, provider attempt, and signed SES event evidence. Jobs include explicit lease/dispatch states; attempts distinguish `prepared`, `awaiting_confirmation`, and terminal `outcome_unknown`. AWS queues will carry only opaque job ids later. |
+| `ReviewEmailSuppression` | `storeId+emailHash+scope` | Recipient/store suppression from bounce/complaint evidence without storing raw email in dispatcher payloads. |
+| `IkasOrderReconciliationCursor` / `StoreDataErasureRun` | `storeId` / `id` | Reconciliation window/page cursor with lease fencing, and uninstall/personal-data erasure evidence with bounded exponential retries. |
 
 ## Index strategy
 On `Review`:
@@ -101,6 +118,13 @@ On video lifecycle:
 - `StoreVideoUsage`: unique `(storeId, month)` keeps quota reservation atomic under serializable transactions.
 - `MediaProviderJob`: `dedupeKey`, `status/availableAt`, `lockedAt`, `provider/action/status`, and `uploadSessionId` keep provider jobs resumable, stale-lock recoverable, and deduped. It owns provider mutations, bounded Mux reconciliation, exact upload-session expiry, and AWS image cleanup/publish/revoke work. Future-scheduled lifecycle jobs are healthy state, not due/stuck work.
 - `MediaProviderLease`: the primary key is the serialization key (`video-session:<id>` or `mux-asset:<assetId>`); `leaseVersion` is a fencing token and expired leases can be atomically replaced.
+
+On review-request email lifecycle:
+- `Review.verifiedBuyer` slices use `[storeId, verifiedBuyer, createdAt]`.
+- `Review.reviewRequestId`, request store/order-line ownership, `ReviewRequestToken.tokenHash`, token-attempt ownership, `ReviewRequestSession.sessionHash`, job request/kind/sequence, attempt correlation/number, SES message ids, and suppression store/email/reason constraints keep parallel submit, token lookup, dispatch, callbacks, and suppression idempotent.
+- The submit path conditionally transitions `ReviewRequest`, token, and session in the same DB transaction as `Review.create`; `Review.reviewRequestId @unique` is the final database-level one-review guarantee.
+- Reminder jobs are created only after first-send acceptance and use actual `firstSentAt + reminderDelayDays`. Each scheduled reminder extends request expiry to at least `sendAfter + 30 days`, so max-delay reminders cannot be invalidated by an earlier request deadline.
+- Reconciliation ownership uses `leaseOwner + leaseVersion` compare-and-set and persists the same window/page until completion. Thirteen email-domain tables have RLS enabled; no browser role receives direct table access.
 
 On `Review` cursor pagination:
 - partial `[storeId, productId, createdAt desc, id desc] where status='approved'` - public `newest` review list/load-more.

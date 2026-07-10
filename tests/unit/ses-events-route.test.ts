@@ -2,6 +2,13 @@ import { createSign, generateKeyPairSync } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSnsStringToSign, type SnsMessageEnvelope } from '@/lib/email/ses-sns';
 
+const persistMock = vi.hoisted(() => ({
+  persistSesEmailEvent: vi.fn().mockResolvedValue({ status: 'created', matchedAttempt: false }),
+}));
+
+vi.mock('@/lib/prisma', () => ({ prisma: {} }));
+vi.mock('@/lib/review-email/ses-events', () => persistMock);
+
 const TOPIC_ARN = 'arn:aws:sns:eu-central-1:989086371563:renuvex-review-email-foundation-prod-events';
 const SIGNING_CERT_URL = 'https://sns.eu-central-1.amazonaws.com/SimpleNotificationService-test.pem';
 
@@ -113,7 +120,9 @@ describe('SES email event route', () => {
       messageId: 'sns-message-route-1',
       sesEventType: 'DELIVERY',
       sesMessageId: 'ses-message-route-1',
+      persisted: { status: 'created', matchedAttempt: false },
     });
+    expect(persistMock.persistSesEmailEvent).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(body)).not.toContain('recipient@example.com');
   });
 });

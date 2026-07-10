@@ -13,6 +13,8 @@ import { NextRequest, NextResponse, after } from 'next/server';
 import z from 'zod';
 import { ensureStorefrontScripts } from '@/lib/storefront-scripts';
 import { buildProductWebhookEndpoint, registerProductWebhooks, syncAllProductsForStore } from '@/lib/product-snapshots';
+import { isReviewEmailEnabled } from '@/lib/review-email/config';
+import { buildOrderWebhookEndpoint, registerOrderWebhooks } from '@/lib/review-email/ikas-orders';
 
 const callbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
@@ -142,13 +144,49 @@ export async function GET(request: NextRequest) {
       console.error('Widget script injection failed:', scriptError);
     }
 
-    try {
-      const host = request.headers.get('host');
-      if (host) {
+    const host = request.headers.get('host');
+    if (host) {
+      try {
         await registerProductWebhooks(ikas, buildProductWebhookEndpoint(host));
+      } catch (webhookError) {
+        console.error('Product webhook registration failed:', webhookError);
       }
-    } catch (webhookError) {
-      console.error('Product webhook registration failed:', webhookError);
+
+      if (isReviewEmailEnabled()) {
+        try {
+          await registerOrderWebhooks(ikas, buildOrderWebhookEndpoint(host));
+          await prisma.reviewEmailSettings.upsert({
+            where: { storeId: merchantId },
+            create: {
+              storeId: merchantId,
+              orderWebhookStatus: 'verified',
+              orderWebhookVerifiedAt: new Date(),
+            },
+            update: {
+              orderWebhookStatus: 'verified',
+              orderWebhookVerifiedAt: new Date(),
+              orderWebhookLastErrorCode: null,
+            },
+          });
+        } catch (webhookError) {
+          await prisma.reviewEmailSettings.upsert({
+            where: { storeId: merchantId },
+            create: {
+              storeId: merchantId,
+              enabled: false,
+              orderWebhookStatus: 'error',
+              orderWebhookLastErrorCode: 'registration_failed',
+            },
+            update: {
+              enabled: false,
+              orderWebhookStatus: 'error',
+              orderWebhookVerifiedAt: null,
+              orderWebhookLastErrorCode: 'registration_failed',
+            },
+          }).catch(() => undefined);
+          console.error('Order webhook registration failed:', webhookError);
+        }
+      }
     }
 
     // Backfill snapshots after the response is sent so a large catalog cannot

@@ -24,6 +24,8 @@ related:
 source_files:
   - "src/lib/cron-observability.ts"
   - "src/lib/scheduled-jobs.ts"
+  - "src/lib/review-email/maintenance.ts"
+  - "src/lib/review-email/erasure.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
   - "src/app/api/internal/scheduled-jobs/route.ts"
@@ -74,7 +76,7 @@ QStash is the active maintenance scheduler per [[ADR_0035_QStash_Scheduler_For_M
 ## Manual admin endpoints
 | Endpoint | Former cadence | What it does |
 |---|---|---|
-| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, and video session/job reconciliation when video infrastructure is configured. Legacy image metadata backfill is removed after the AWS-only image teardown source pass. |
+| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, video session/job reconciliation when configured, and bounded failed review-email erasure retries. Review-email token/session/request/attempt maintenance runs only when its feature flag is enabled; erasure retries run independently so uninstall cleanup cannot be disabled by the feature flag. |
 | `GET /api/admin/cleanup-images` | `0 4 1 * *` (monthly) | AWS review-image orphan **two-phase** cleanup behind a circuit-breaker (ADR_0012 + [[ADR_0030_Cleanup_Hardening]]): scan scoped S3 object families, mark orphan families, then sweep after grace if still orphaned. Writes a `MediaCleanupRun` audit row. |
 
 Both require `Authorization: Bearer <CRON_SECRET>`.

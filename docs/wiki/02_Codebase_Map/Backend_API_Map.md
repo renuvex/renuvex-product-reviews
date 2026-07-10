@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-10
+last_verified: 2026-07-10
 confidence: high
 tags:
   - api
@@ -48,6 +48,11 @@ source_files:
   - "src/lib/media/video-policy.ts"
   - "src/lib/media/video-processing.ts"
   - "src/app/api/webhooks/mux/route.ts"
+  - "src/app/api/webhooks/ikas/orders/route.ts"
+  - "src/app/api/ikas/review-email-settings/route.ts"
+  - "src/app/api/internal/review-email/due-jobs/route.ts"
+  - "src/app/api/internal/review-email/reconcile-orders/route.ts"
+  - "src/app/api/public/review-request/route.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
 ---
 
@@ -89,7 +94,10 @@ Main API route groups:
 | GET `/api/admin/cleanup-pending-uploads` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts) | Explicit PendingReviewImage cleanup using the same helper as daily maintenance |
 | GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Monthly AWS review-image family orphan scan with the existing two-phase quarantine/circuit-breaker model. It groups by `storeId + assetId` and does not perform bucket-wide blind deletes |
 | POST `/api/internal/scheduled-jobs` | [route.ts](src/app/api/internal/scheduled-jobs/route.ts) | QStash-signed scheduler receiver for `daily-maintenance-full` and `cleanup-images`. Verifies raw-body `Upstash-Signature`, uses `ScheduledJobRunLock` for `task + scheduleSlot` idempotency, and replaces Vercel Cron as the scheduler source of truth. |
+| POST `/api/internal/review-email/due-jobs` | [route.ts](src/app/api/internal/review-email/due-jobs/route.ts) | `CRON_SECRET`-gated source-only review-email due-job claimer. Claims due `ReviewEmailJob` rows with DB `FOR UPDATE SKIP LOCKED` and returns opaque job ids for a future dispatcher; it does not send email. |
+| POST `/api/internal/review-email/reconcile-orders` | [route.ts](src/app/api/internal/review-email/reconcile-orders/route.ts) | `CRON_SECRET`-gated source-only order reconciliation entrypoint. Re-reads ikas `listOrder(updatedAt)` for one store/app and updates review-request lifecycle rows. |
 | GET `/api/ikas/get-merchant` | [route.ts](src/app/api/ikas/get-merchant/route.ts) | Demo: fetches merchant via ikas Admin GQL |
+| GET/PUT `/api/ikas/review-email-settings` | [route.ts](src/app/api/ikas/review-email-settings/route.ts) | Iframe JWT-gated review-email settings API. The feature remains disabled unless `REVIEW_EMAIL_ENABLED=true` and required secrets are configured. |
 
 ### Auth gate
 All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts) — verifies JWT, returns `{ merchantId, authorizedAppId }`. Returns 401 if missing/invalid.
@@ -100,7 +108,9 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 |---|---|---|
 | OPTIONS `/api/public/*` | each route | CORS preflight via `corsOptions()` |
 | GET `/api/public/reviews?storeId&productId&page&orderBy&rating&hasImages&hasMedia&limit&cursor` | [route.ts](src/app/api/public/reviews/route.ts) | Approved review rows + `ProductReviewSummary` distribution/average/count with explicit public field whitelist. Exact `totalCount` / `totalPages` for unfiltered/rating/photo/media filters come from summary buckets; `hasMedia=true` means approved `(hasImages OR hasVideo)`. Legacy `page/limit` remains supported; responses include signed `nextCursor` and cursor requests use keyset pagination without `skip`. Tampered, unsigned, or context-mismatched cursors return `400`. `hasImages=true` uses indexed `Review.hasImages`; `hasMedia=true` is used by the media gallery and by the public `Fotoğraf ve Video` filter when summary counts prove the product has approved video media, and cannot be combined with `hasImages`. Response `images` remains image-only; additive `media[]` exposes `{ type, url, posterUrl, thumbnailUrl, durationMs, width, height, position }` without provider ids. Additive `photoReviewCount` and `mediaReviewCount` expose read-model counts so the widget can separate existing video display from new upload capability. |
-| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Writes `Review`, compatibility `Review.images` only for render-ready public AWS URLs, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. v1 rejects mixed image+video; video-bearing reviews always start `pending`. Client `slug`/`productName`/`email` are ignored. |
+| POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Writes `Review`, compatibility `Review.images` only for render-ready public AWS URLs, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. On the isolated review-request host, an active HttpOnly session is atomically consumed in the same transaction; DB uniqueness on `Review.reviewRequestId` prevents parallel duplicate verified reviews. Tokenless storefront submissions remain unchanged. |
+| POST `/api/public/review-request` body `{ token }` | [route.ts](src/app/api/public/review-request/route.ts) | Exchanges a raw token received in the `/request#token=...` fragment for a short-lived, host-only HttpOnly session. The fragment is removed before API navigation; raw tokens are not accepted in query strings or stored in DB/log payloads. |
+| GET `/api/public/review-request` | same | Resolves only the HttpOnly review-request session and returns sanitized store/product/request state. Both methods are host-isolated and return `private, no-store` with `Referrer-Policy: no-referrer`. |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
 | GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read `ProductReviewSummary` by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Pure cacheable widget config read (per widgetId) plus public runtime flags including additive `runtime.themeSyncDue`. Does not read auth tokens, call ikas, or schedule theme sync. Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
@@ -122,6 +132,7 @@ Storefront configuration and review GET responses use the documented edge-cache 
 - `/api/public/upload/sign` POST → 10 / 10min / IP
 - `/api/public/ratings` + `/api/public/ratings-by-slug` GET → 300 / 60sec / IP, shared key
 - `/api/public/storefront-theme/lazy-sync` POST -> 10 / 10min / storeId+IP
+- `/api/public/review-request` POST/GET -> 30 / 60sec / hashed IP, shared key
 - `/api/public/upload/video/capability` GET -> 60 / 60sec / IP
 - `/api/public/upload/register` POST -> 30 / 10min / IP
 - `/api/public/upload/video/initiate` POST -> 10 / 10min / IP, plus store-level monthly quota reservation.
@@ -139,6 +150,7 @@ Detail in [[Security_And_Rate_Limits]].
 | Method + Path | Source | Purpose |
 |---|---|---|
 | POST `/api/webhooks/ikas/products` | [route.ts](src/app/api/webhooks/ikas/products/route.ts) | Validate ikas webhook signature, process product create/update events, refresh `ProductSnapshot` |
+| POST `/api/webhooks/ikas/orders` | [route.ts](src/app/api/webhooks/ikas/orders/route.ts) | Verifies ikas HMAC before branching. `store/order/created` and `store/order/updated` are feature-flagged wake-up signals that dedupe `IkasOrderWebhookEvent`, re-read canonical `listOrder`, then create/cancel lifecycle rows. `store/app/deleted` runs PII/auth-token erasure even when review email is disabled; failed erasures are retried by bounded maintenance. |
 | POST `/api/webhooks/mux` | [route.ts](src/app/api/webhooks/mux/route.ts) | Validate Mux raw-body signature, dedupe/audit `WebhookEvent`, resolve upload/asset ids, and enqueue provider-neutral media jobs. Webhook storage never persists payloads, tokens, signed URLs, or upload URLs. |
 
 ## OAuth
@@ -146,7 +158,7 @@ Detail in [[Security_And_Rate_Limits]].
 | Method + Path | Source | Purpose |
 |---|---|---|
 | GET `/api/oauth/authorize/ikas?storeName=` | [route.ts](src/app/api/oauth/authorize/ikas/route.ts) | Set CSRF state in session, redirect to ikas authorize URL |
-| GET `/api/oauth/callback/ikas?code&state&signature` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Validate sig+state, exchange code, fetch merchant/app, upsert AuthToken, **auto-inject widget script per storefront**, register product webhooks, JWT, redirect to admin; `ProductSnapshot` backfill runs post-response via `after()` |
+| GET `/api/oauth/callback/ikas?code&state&signature` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Validate sig+state, exchange code, fetch merchant/app, upsert AuthToken, **auto-inject widget script per storefront**, register product webhooks, and, only when the email feature is enabled, register order/uninstall webhooks with fail-closed settings state; then issue JWT and redirect. `ProductSnapshot` backfill runs post-response via `after()`. |
 
 ## Preview iframe
 

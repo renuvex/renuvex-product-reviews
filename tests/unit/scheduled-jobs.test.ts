@@ -10,6 +10,7 @@ const maintenanceMock = vi.hoisted(() => ({
   runCleanupImages: vi.fn(),
   reportCronTaskError: vi.fn(),
   mediaCleanupRunCreate: vi.fn(),
+  retryFailedStoreReviewEmailErasures: vi.fn(),
 }));
 
 vi.mock('@/lib/cleanup-pending-uploads', () => ({ cleanupPendingUploads: maintenanceMock.cleanupPendingUploads }));
@@ -22,6 +23,9 @@ vi.mock('@/lib/media/reconciliation', () => ({
 }));
 vi.mock('@/lib/cleanup-orphan-images', () => ({ runCleanupImages: maintenanceMock.runCleanupImages }));
 vi.mock('@/lib/cron-observability', () => ({ reportCronTaskError: maintenanceMock.reportCronTaskError }));
+vi.mock('@/lib/review-email/erasure', () => ({
+  retryFailedStoreReviewEmailErasures: maintenanceMock.retryFailedStoreReviewEmailErasures,
+}));
 vi.mock('@/lib/prisma', () => ({ prisma: { mediaCleanupRun: { create: maintenanceMock.mediaCleanupRunCreate } } }));
 
 describe('scheduled job helpers', () => {
@@ -47,6 +51,12 @@ describe('scheduled job helpers', () => {
       thresholds: { ageDays: 30, graceDays: 7, maxRatio: 0.3, minScanForRatio: 50, maxAbsolute: 200 },
     });
     maintenanceMock.mediaCleanupRunCreate.mockResolvedValue({});
+    maintenanceMock.retryFailedStoreReviewEmailErasures.mockResolvedValue({
+      claimed: 0,
+      succeeded: 0,
+      failed: 0,
+      exhausted: 0,
+    });
   });
 
   it('keeps the manual daily-maintenance time-window behavior', async () => {

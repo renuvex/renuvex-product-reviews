@@ -21,6 +21,19 @@ import {
   revokeAwsReviewImagePublicVariants,
   sanitizeAwsReviewImageRefs,
 } from '@/lib/media/providers/aws-review-image';
+import {
+  claimReviewRequestForSubmission,
+  resolveActiveReviewRequestSession,
+  ReviewRequestTokenError,
+} from '@/lib/review-email/tokens';
+import { isReviewEmailEnabled } from '@/lib/review-email/config';
+import {
+  assertReviewRequestPublicHost,
+  clearReviewRequestSessionCookie,
+  getReviewRequestSessionCookie,
+  isReviewRequestPublicHost,
+  ReviewRequestHostError,
+} from '@/lib/review-email/public-access';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -550,6 +563,27 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Ürün doğrulanamadı. Lütfen sayfayı yenileyip tekrar deneyin.' }, { status: 400 }));
     }
 
+    const rawReviewRequestSession = getReviewRequestSessionCookie(request);
+    const reviewRequestHost = isReviewEmailEnabled() && isReviewRequestPublicHost(request);
+    let verifiedReviewRequestSession: Awaited<ReturnType<typeof resolveActiveReviewRequestSession>> | null = null;
+    if (rawReviewRequestSession || reviewRequestHost) {
+      try {
+        assertReviewRequestPublicHost(request);
+        verifiedReviewRequestSession = await resolveActiveReviewRequestSession(prisma, rawReviewRequestSession);
+        if (
+          verifiedReviewRequestSession.request.storeId !== storeIdText ||
+          verifiedReviewRequestSession.request.productId !== productIdText
+        ) {
+          return withCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
+        }
+      } catch (error) {
+        if (error instanceof ReviewRequestTokenError || error instanceof ReviewRequestHostError) {
+          return withCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
+        }
+        throw error;
+      }
+    }
+
     const reviewsWidget = await prisma.widgetSettings.findUnique({
       where: { storeId_widgetId: { storeId: storeIdText, widgetId: 'reviews' } },
     });
@@ -626,7 +660,17 @@ export async function POST(request: Request) {
     const committedPublicIds = awsPendingRows.map((row) => row.publicId);
     const committedAwsPublicUrls = initialStatus === 'approved' ? publicUrlsFromAwsPendingRows(awsPendingRows) : [];
 
+    const reviewCreatedAt = new Date();
     const newReview = await prisma.$transaction(async (tx) => {
+      if (verifiedReviewRequestSession) {
+        await claimReviewRequestForSubmission(tx, {
+          sessionId: verifiedReviewRequestSession.id,
+          tokenId: verifiedReviewRequestSession.tokenId,
+          requestId: verifiedReviewRequestSession.requestId,
+          now: reviewCreatedAt,
+        });
+      }
+
       const videoSession = videoTokenText
         ? await tx.videoUploadSession.findUnique({ where: { tokenHash: hashMediaToken(videoTokenText) } })
         : null;
@@ -673,6 +717,10 @@ export async function POST(request: Request) {
           hasImages: imageCount > 0,
           hasVideo: !!videoSession,
           status: initialStatus,
+          reviewRequestId: verifiedReviewRequestSession?.requestId ?? null,
+          verifiedBuyer: Boolean(verifiedReviewRequestSession),
+          verifiedAt: verifiedReviewRequestSession ? reviewCreatedAt : null,
+          verificationSource: verifiedReviewRequestSession ? 'review_request_email' : null,
         },
       });
 
@@ -739,19 +787,24 @@ export async function POST(request: Request) {
       return created;
     });
 
-    return withCors(NextResponse.json({
+    const response = NextResponse.json({
       message: 'Yorum alındı',
       data: {
         id: newReview.id,
         status: newReview.status,
       },
-    }, { status: 201 }));
+    }, { status: 201 });
+    if (verifiedReviewRequestSession) clearReviewRequestSessionCookie(response);
+    return withCors(response, request);
   } catch (error: any) {
     if (publishedAwsVariantManifests.length > 0) {
       await compensatePublishedAwsReviewImages(publishedAwsVariantManifests, '[POST] Reviews');
     }
     if (error instanceof Error && error.message === 'invalid_video_session') {
       return withCors(NextResponse.json({ error: 'Video yüklemesi hazır değil, süresi dolmuş veya bu ürüne ait değil.' }, { status: 400 }));
+    }
+    if (error instanceof ReviewRequestTokenError || error instanceof ReviewRequestHostError) {
+      return withCors(NextResponse.json({ error: 'Geçersiz yorum bağlantısı.' }, { status: 400 }));
     }
     console.error('[POST] Reviews ERROR:', error);
     return withCors(NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 }));

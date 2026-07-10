@@ -191,4 +191,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-10 (accepted review-request email DB/lifecycle contract after ikas/AWS/backend re-check)
+**Last Updated:** 2026-07-10 (review-request email lifecycle V3 implemented and locally verified; still disabled and not deployed)

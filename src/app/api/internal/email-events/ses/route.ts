@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SesSnsMessageError, verifySesSnsMessage } from '@/lib/email/ses-sns';
+import { prisma } from '@/lib/prisma';
+import { persistSesEmailEvent } from '@/lib/review-email/ses-events';
 
 export const runtime = 'nodejs';
 
@@ -26,6 +28,9 @@ export async function POST(request: Request) {
 
   try {
     const message = await verifySesSnsMessage(rawBody, { expectedTopicArn });
+    const persisted = message.type === 'Notification'
+      ? await persistSesEmailEvent(prisma, message, rawBody)
+      : null;
 
     return NextResponse.json(
       {
@@ -35,6 +40,7 @@ export async function POST(request: Request) {
           messageId: message.messageId,
           sesEventType: message.sesEventType,
           sesMessageId: message.sesMessageId,
+          persisted,
         },
       },
       { status: 202 },

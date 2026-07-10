@@ -79,8 +79,69 @@ export const LIST_PRODUCTS_FOR_SYNC = gql`
   }
 `;
 
+export const LIST_ORDERS_FOR_REVIEW_REQUESTS = gql`
+  query listOrdersForReviewRequests($pagination: PaginationInput, $id: StringFilterInput, $updatedAt: DateFilterInput) {
+    listOrder(pagination: $pagination, id: $id, updatedAt: $updatedAt) {
+      count
+      hasNext
+      limit
+      page
+      data {
+        id
+        orderNumber
+        merchantId
+        orderPackageStatus
+        orderPaymentStatus
+        orderedAt
+        shippingMethod
+        status
+        updatedAt
+        customerId
+        customer {
+          id
+          email
+          isGuestCheckout
+          notificationsAccepted
+        }
+        orderLineItems {
+          id
+          deleted
+          quantity
+          status
+          statusUpdatedAt
+          variant {
+            id
+            name
+            productId
+          }
+        }
+        orderPackages {
+          id
+          deleted
+          orderLineItemIds
+          orderPackageFulfillStatus
+          updatedAt
+        }
+      }
+    }
+  }
+`;
+
 export const SAVE_PRODUCT_WEBHOOKS = gql`
   mutation saveProductWebhooks($input: WebhookInput!) {
+    saveWebhooks(input: $input) {
+      id
+      endpoint
+      scope
+      createdAt
+      updatedAt
+      deleted
+    }
+  }
+`;
+
+export const SAVE_ORDER_WEBHOOKS = gql`
+  mutation saveOrderWebhooks($input: WebhookInput!) {
     saveWebhooks(input: $input) {
       id
       endpoint

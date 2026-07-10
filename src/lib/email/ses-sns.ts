@@ -1,4 +1,5 @@
 import { createVerify } from 'node:crypto';
+import { REVIEW_EMAIL_ATTEMPT_TAG_NAME } from '@/lib/review-email/constants';
 
 const SUPPORTED_SNS_TYPES = new Set([
   'Notification',
@@ -26,6 +27,11 @@ export interface VerifiedSesSnsMessage {
   type: SesSnsMessageType;
   sesEventType: string | null;
   sesMessageId: string | null;
+  attemptCorrelationId: string | null;
+  bounceType: string | null;
+  bounceSubType: string | null;
+  complaintFeedbackType: string | null;
+  providerTimestamp: Date | null;
 }
 
 export interface VerifySesSnsMessageOptions {
@@ -206,24 +212,86 @@ function verifySignature(envelope: SnsMessageEnvelope, certificatePem: string): 
   return verifier.verify(certificatePem, envelope.Signature, 'base64');
 }
 
-function normalizeSesEventType(message: string): { sesEventType: string | null; sesMessageId: string | null } {
+type NormalizedSesEvent = Pick<
+  VerifiedSesSnsMessage,
+  | 'sesEventType'
+  | 'sesMessageId'
+  | 'attemptCorrelationId'
+  | 'bounceType'
+  | 'bounceSubType'
+  | 'complaintFeedbackType'
+  | 'providerTimestamp'
+>;
+
+const EMPTY_SES_EVENT: NormalizedSesEvent = {
+  sesEventType: null,
+  sesMessageId: null,
+  attemptCorrelationId: null,
+  bounceType: null,
+  bounceSubType: null,
+  complaintFeedbackType: null,
+  providerTimestamp: null,
+};
+
+function boundedText(record: Record<string, unknown> | null, key: string, maxLength = 64): string | null {
+  const value = record?.[key];
+  return typeof value === 'string' && value.length > 0 && value.length <= maxLength ? value : null;
+}
+
+function eventTimestamp(parsed: Record<string, unknown>, eventType: string | null): Date | null {
+  const sectionName = eventType === 'BOUNCE'
+    ? 'bounce'
+    : eventType === 'COMPLAINT'
+      ? 'complaint'
+      : eventType === 'DELIVERY'
+        ? 'delivery'
+        : eventType === 'DELIVERY_DELAY'
+          ? 'deliveryDelay'
+          : null;
+  const section = sectionName && isRecord(parsed[sectionName]) ? parsed[sectionName] as Record<string, unknown> : null;
+  const mail = isRecord(parsed.mail) ? parsed.mail as Record<string, unknown> : null;
+  const raw = boundedText(section, 'timestamp', 64) ?? boundedText(mail, 'timestamp', 64);
+  if (!raw) return null;
+  const timestamp = new Date(raw);
+  return Number.isNaN(timestamp.getTime()) ? null : timestamp;
+}
+
+function attemptCorrelationFromTags(mail: Record<string, unknown> | null): string | null {
+  const tags = mail && isRecord(mail.tags) ? mail.tags as Record<string, unknown> : null;
+  const values = tags?.[REVIEW_EMAIL_ATTEMPT_TAG_NAME];
+  if (!Array.isArray(values) || values.length !== 1) return null;
+  const value = values[0];
+  return typeof value === 'string' && /^[a-f0-9]{32}$/.test(value) ? value : null;
+}
+
+function normalizeSesEventType(message: string): NormalizedSesEvent {
   try {
     const parsed = JSON.parse(message) as unknown;
     if (!isRecord(parsed)) {
-      return { sesEventType: null, sesMessageId: null };
+      return EMPTY_SES_EVENT;
     }
 
     const rawEventType = typeof parsed.eventType === 'string' ? parsed.eventType : null;
     const normalizedKey = rawEventType?.replace(/[^A-Za-z]/g, '').toUpperCase() ?? '';
     const sesEventType = SES_EVENT_TYPE_ALIASES.get(normalizedKey) ?? null;
 
-    const mail = isRecord(parsed.mail) ? parsed.mail : null;
+    const mail = isRecord(parsed.mail) ? parsed.mail as Record<string, unknown> : null;
     const rawMessageId = mail && typeof mail.messageId === 'string' ? mail.messageId : null;
     const sesMessageId = rawMessageId && rawMessageId.length <= 256 ? rawMessageId : null;
+    const bounce = isRecord(parsed.bounce) ? parsed.bounce as Record<string, unknown> : null;
+    const complaint = isRecord(parsed.complaint) ? parsed.complaint as Record<string, unknown> : null;
 
-    return { sesEventType, sesMessageId };
+    return {
+      sesEventType,
+      sesMessageId,
+      attemptCorrelationId: attemptCorrelationFromTags(mail),
+      bounceType: boundedText(bounce, 'bounceType'),
+      bounceSubType: boundedText(bounce, 'bounceSubType'),
+      complaintFeedbackType: boundedText(complaint, 'complaintFeedbackType'),
+      providerTimestamp: eventTimestamp(parsed, sesEventType),
+    };
   } catch {
-    return { sesEventType: null, sesMessageId: null };
+    return EMPTY_SES_EVENT;
   }
 }
 
@@ -255,7 +323,7 @@ export async function verifySesSnsMessage(
 
   const event = envelope.Type === 'Notification'
     ? normalizeSesEventType(envelope.Message)
-    : { sesEventType: null, sesMessageId: null };
+    : EMPTY_SES_EVENT;
 
   return {
     messageId: envelope.MessageId,
@@ -263,5 +331,10 @@ export async function verifySesSnsMessage(
     type: envelope.Type,
     sesEventType: event.sesEventType,
     sesMessageId: event.sesMessageId,
+    attemptCorrelationId: event.attemptCorrelationId,
+    bounceType: event.bounceType,
+    bounceSubType: event.bounceSubType,
+    complaintFeedbackType: event.complaintFeedbackType,
+    providerTimestamp: event.providerTimestamp,
   };
 }

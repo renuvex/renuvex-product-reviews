@@ -3,7 +3,7 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-25
+updated: 2026-07-10
 last_verified: 2026-05-25
 confidence: high
 tags:
@@ -59,6 +59,8 @@ ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in P
       - For each storefront: adopt/create/update StorefrontJSScript
            pointing to <STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>
        - registerProductWebhooks → saveWebhooks for store/product/created|updated
+       - when REVIEW_EMAIL_ENABLED=true: separately register order created/updated + app-deleted webhooks;
+         persist verified/error state and keep merchant email settings disabled on registration failure
        - JwtHelpers.createToken(merchantId, authorizedAppId)  [HS256, 4h]
        - 302 → /callback?token=...&redirectUrl=<ikasAdmin>/authorized-app/<id>
        - after(response): syncAllProductsForStore → ProductSnapshot backfill (non-blocking)
@@ -77,6 +79,7 @@ Source files:
 - [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
 - [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts)
 - [src/lib/product-snapshots.ts](src/lib/product-snapshots.ts)
+- [src/lib/review-email/ikas-orders.ts](src/lib/review-email/ikas-orders.ts)
 - [src/app/callback/page.tsx](src/app/callback/page.tsx)
 - [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts)
 - [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
@@ -114,6 +117,7 @@ Source files:
 
 ## Notes
 - **Product snapshot backfill is non-blocking.** The callback awaits product webhook registration (one `saveWebhooks` mutation) but runs the full `ProductSnapshot` backfill (`syncAllProductsForStore`) via Next.js `after()`, *after* the 302 response is sent. Install latency stays independent of catalog size; a backfill cut short by the serverless function timeout is recovered by product webhooks or `POST /api/admin/sync-products`. See [[ADR_0015_Canonical_Product_Identity]].
+- **Review-email webhook registration is fail-closed and feature-gated.** Product registration remains independent. When review email is enabled, OAuth attempts the separate order/uninstall registration; failure records a sanitized error and forces `ReviewEmailSettings.enabled=false`. The source is not deployed, so live ikas acceptance remains a rollout test. See [[ADR_0036_Review_Request_Email_Architecture]].
 - **Embedded vs standalone**: the app supports both — running embedded in ikas Admin (iframe + AppBridge) or standalone in a browser tab (after manual store-name entry). Production usage is iframe.
 - **OAuth scope** currently `read_orders,write_orders,read_products,read_inventories,write_inventories`. Likely template inheritance — review if write_* are needed for a review app. Tracked in [[Open_Questions]].
 

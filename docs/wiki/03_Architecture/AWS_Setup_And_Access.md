@@ -29,7 +29,6 @@ source_files:
   - "infra/aws/media-access-logs-bucket.cloudformation.json"
   - "infra/aws/media-access-logs-delivery.cloudformation.json"
   - "infra/aws/review-email-foundation.cloudformation.json"
-  - "infra/aws/review-email-runtime-iam.cloudformation.json"
   - "scripts/prepare-widget-aws-canary-assets.mjs"
   - "scripts/deploy-widget-aws-canary-assets.mjs"
   - "scripts/validate-widget-aws-canary-template.mjs"
@@ -642,12 +641,9 @@ Status snapshot on 2026-07-09:
   `1` message per second.
 - No SES email identities or configuration sets existed during the read-only
   preflight.
-- Source-only templates are now present:
-  `infra/aws/review-email-foundation.cloudformation.json` and
-  `infra/aws/review-email-runtime-iam.cloudformation.json`.
-- Local validators:
-  `scripts/validate-review-email-foundation-template.mjs` and
-  `scripts/validate-review-email-runtime-iam-template.mjs`.
+- The source-only foundation template is
+  `infra/aws/review-email-foundation.cloudformation.json`; its local validator
+  is `scripts/validate-review-email-foundation-template.mjs`.
 - Package guard:
 
 ```powershell
@@ -655,10 +651,8 @@ pnpm aws:review-email:validate-templates
 pnpm aws:lint-templates
 ```
 
-- AWS read-only `cloudformation validate-template` passed for both templates in
-  `eu-central-1` through the `renuvex-review-images` profile. The runtime IAM
-  template reports `CAPABILITY_NAMED_IAM`, which is expected because it creates
-  the named role `renuvex-review-email-vercel-runtime`.
+- AWS read-only `cloudformation validate-template` passed for the foundation
+  template in `eu-central-1` through the `renuvex-review-images` profile.
 - No SES stack, DNS record, production-access request, Vercel env value, DB
   migration, QStash job, deploy, or real email send exists from this source
   package checkpoint.
@@ -676,10 +670,11 @@ Template contract:
   `RENDERING_FAILURE`. `OPEN` and `CLICK` tracking remain disabled.
 - HTTPS feedback subscription is conditional and defaults off until the endpoint
   rollout/confirmation process is approved.
-- The runtime IAM stack intentionally reuses the existing Vercel team OIDC
-  provider ARN instead of creating a duplicate provider. It grants only
-  `ses:SendEmail` from `requests@reviews.renuvex.app` through the sender
-  identity/configuration set.
+- The earlier source-only direct Vercel `ses:SendEmail` runtime-role template
+  was removed in lifecycle V3. The accepted high-volume architecture sends
+  through a future SQS/Lambda worker, so sender IAM belongs to that worker's
+  separately reviewed IaC package. Vercel must not receive direct SES send
+  permission merely because the foundation stack exists.
 
 Before any SES mutation, write the exact scope, risk, rollback, expected DNS
 records, sandbox/production-access implications, and approval gate. Do not
