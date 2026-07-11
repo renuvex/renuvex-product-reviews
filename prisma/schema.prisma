@@ -20,33 +20,37 @@ model AuthToken {
   expireDate      DateTime
   refreshToken    String
   scope           String?
+
+  @@index([merchantId, updatedAt])
 }
 
 model Review {
-  id                 String         @id @default(uuid())
-  storeId            String
-  productId          String
-  rating             Int
-  comment            String?        @db.VarChar(2000)
-  author             String
-  email              String?
-  status             String         @default("pending")
-  merchantReply      String?        @db.VarChar(2000)
-  images             String?
-  hasImages          Boolean        @default(false)
-  hasVideo           Boolean        @default(false)
-  moderationVersion  Int            @default(0)
-  reviewRequestId    String?        @unique
-  verifiedBuyer      Boolean        @default(false)
-  verifiedAt         DateTime?
-  verificationSource String?        @db.VarChar(64)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  productName        String?
-  slug               String
-  title              String?
-  media              ReviewMedia[]
-  reviewRequest      ReviewRequest? @relation(fields: [reviewRequestId], references: [id], onDelete: SetNull)
+  id                     String                @id @default(uuid())
+  storeId                String
+  productId              String
+  rating                 Int
+  comment                String?               @db.VarChar(2000)
+  author                 String
+  email                  String?
+  status                 String                @default("pending")
+  merchantReply          String?               @db.VarChar(2000)
+  images                 String?
+  hasImages              Boolean               @default(false)
+  hasVideo               Boolean               @default(false)
+  moderationVersion      Int                   @default(0)
+  reviewRequestId        String?               @unique
+  reviewRequestReceiptId String?               @unique
+  verifiedBuyer          Boolean               @default(false)
+  verifiedAt             DateTime?
+  verificationSource     String?               @db.VarChar(64)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  productName            String?
+  slug                   String
+  title                  String?
+  media                  ReviewMedia[]
+  reviewRequest          ReviewRequest?        @relation(fields: [reviewRequestId], references: [id], onDelete: SetNull)
+  reviewRequestReceipt   ReviewRequestReceipt? @relation(fields: [reviewRequestReceiptId], references: [id], onDelete: SetNull)
 
   @@index([storeId, productId, status])
   @@index([storeId, productId, status, hasVideo])
@@ -438,6 +442,21 @@ model OrphanImageQuarantine {
 
 // --- Review request email lifecycle (ADR_0036) ------------------------------
 
+model IkasStoreInstallation {
+  storeId          String    @id
+  authorizedAppId  String    @unique @db.VarChar(128)
+  generation       Int       @default(1)
+  stateVersion     Int       @default(1)
+  status           String    @default("active") @db.VarChar(32)
+  activatedAt      DateTime  @default(now())
+  erasureStartedAt DateTime?
+  erasedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status, updatedAt])
+}
+
 model ReviewEmailSettings {
   id                        String    @id @default(uuid())
   storeId                   String    @unique
@@ -476,7 +495,7 @@ model IkasOrderWebhookEvent {
   status          String    @default("received") @db.VarChar(32)
   receivedAt      DateTime  @default(now())
   processedAt     DateTime?
-  lastError       String?   @db.VarChar(512)
+  lastErrorCode   String?   @db.VarChar(128)
 
   @@index([storeId, receivedAt])
   @@index([status, receivedAt])
@@ -484,30 +503,34 @@ model IkasOrderWebhookEvent {
 }
 
 model IkasOrderSnapshot {
-  id                     String                  @id @default(uuid())
-  storeId                String
-  authorizedAppId        String                  @db.VarChar(128)
-  ikasOrderId            String                  @db.VarChar(128)
-  orderNumber            String?                 @db.VarChar(128)
-  shippingMethod         String                  @db.VarChar(64)
-  orderStatus            String                  @db.VarChar(64)
-  orderPackageStatus     String?                 @db.VarChar(64)
-  orderPaymentStatus     String?                 @db.VarChar(64)
-  orderedAt              DateTime?
-  ikasUpdatedAt          DateTime?
-  notificationsAccepted  Boolean?
-  guestCheckout          Boolean?
-  customerId             String?                 @db.VarChar(128)
-  customerEmailHash      String?                 @db.VarChar(128)
-  customerEmailEncrypted String?                 @db.Text
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  lines                  IkasOrderLineSnapshot[]
-  reviewRequests         ReviewRequest[]
+  id                                String                  @id @default(uuid())
+  storeId                           String
+  authorizedAppId                   String                  @db.VarChar(128)
+  ikasOrderId                       String                  @db.VarChar(128)
+  orderNumber                       String?                 @db.VarChar(128)
+  shippingMethod                    String                  @db.VarChar(64)
+  orderStatus                       String                  @db.VarChar(64)
+  orderPackageStatus                String?                 @db.VarChar(64)
+  orderPaymentStatus                String?                 @db.VarChar(64)
+  orderedAt                         DateTime?
+  ikasUpdatedAt                     DateTime?
+  notificationsAccepted             Boolean?
+  guestCheckout                     Boolean?
+  customerId                        String?                 @db.VarChar(128)
+  customerEmailHash                 String?                 @db.VarChar(128)
+  customerEmailFoldedHash           String?                 @db.VarChar(128)
+  customerEmailHashKeyVersion       Int?
+  customerEmailNormalizationVersion Int                     @default(1)
+  customerEmailEncrypted            String?                 @db.Text
+  createdAt                         DateTime                @default(now())
+  updatedAt                         DateTime                @updatedAt
+  lines                             IkasOrderLineSnapshot[]
+  reviewRequests                    ReviewRequest[]
 
   @@unique([storeId, ikasOrderId])
   @@index([storeId, ikasUpdatedAt])
   @@index([storeId, customerEmailHash])
+  @@index([storeId, customerEmailFoldedHash])
   @@index([orderPackageStatus, ikasUpdatedAt])
 }
 
@@ -541,39 +564,44 @@ model IkasOrderLineSnapshot {
 }
 
 model ReviewRequest {
-  id                            String                 @id @default(uuid())
-  storeId                       String
-  productId                     String                 @db.VarChar(128)
-  orderSnapshotId               String
-  orderLineSnapshotId           String
-  status                        String                 @default("scheduled") @db.VarChar(32)
-  eligibleAt                    DateTime?
-  sendAfter                     DateTime?
-  firstDelayDaysSnapshot        Int                    @default(1)
-  reminderDelayDaysSnapshot     Int                    @default(1)
-  maxReminderCountSnapshot      Int                    @default(1)
-  triggerModeSnapshot           String                 @default("delivery") @db.VarChar(32)
-  consentModeSnapshot           String                 @default("strict_notifications_accepted") @db.VarChar(64)
-  notificationsAcceptedSnapshot Boolean?
-  templateVersionSnapshot       String                 @default("default_v1") @db.VarChar(64)
-  localeSnapshot                String                 @default("tr") @db.VarChar(16)
-  recipientEmailHash            String?                @db.VarChar(128)
-  recipientEmailEncrypted       String?                @db.Text
-  firstSentAt                   DateTime?
-  lastReminderSentAt            DateTime?
-  reminderCount                 Int                    @default(0)
-  submittedAt                   DateTime?
-  expiresAt                     DateTime?
-  cancelledAt                   DateTime?
-  cancellationReason            String?                @db.VarChar(128)
-  createdAt                     DateTime               @default(now())
-  updatedAt                     DateTime               @updatedAt
-  orderSnapshot                 IkasOrderSnapshot      @relation(fields: [orderSnapshotId], references: [id], onDelete: Cascade)
-  orderLineSnapshot             IkasOrderLineSnapshot  @relation(fields: [orderLineSnapshotId], references: [id], onDelete: Cascade)
-  tokens                        ReviewRequestToken[]
-  sessions                      ReviewRequestSession[]
-  jobs                          ReviewEmailJob[]
-  review                        Review?
+  id                                 String                 @id @default(uuid())
+  storeId                            String
+  productId                          String                 @db.VarChar(128)
+  orderSnapshotId                    String
+  orderLineSnapshotId                String
+  receiptId                          String?                @unique
+  status                             String                 @default("scheduled") @db.VarChar(32)
+  eligibleAt                         DateTime?
+  sendAfter                          DateTime?
+  firstDelayDaysSnapshot             Int                    @default(1)
+  reminderDelayDaysSnapshot          Int                    @default(1)
+  maxReminderCountSnapshot           Int                    @default(1)
+  triggerModeSnapshot                String                 @default("delivery") @db.VarChar(32)
+  consentModeSnapshot                String                 @default("strict_notifications_accepted") @db.VarChar(64)
+  notificationsAcceptedSnapshot      Boolean?
+  templateVersionSnapshot            String                 @default("default_v1") @db.VarChar(64)
+  localeSnapshot                     String                 @default("tr") @db.VarChar(16)
+  recipientEmailHash                 String?                @db.VarChar(128)
+  recipientEmailFoldedHash           String?                @db.VarChar(128)
+  recipientEmailHashKeyVersion       Int?
+  recipientEmailNormalizationVersion Int                    @default(1)
+  recipientEmailEncrypted            String?                @db.Text
+  firstSentAt                        DateTime?
+  lastReminderSentAt                 DateTime?
+  reminderCount                      Int                    @default(0)
+  submittedAt                        DateTime?
+  expiresAt                          DateTime?
+  cancelledAt                        DateTime?
+  cancellationReason                 String?                @db.VarChar(128)
+  createdAt                          DateTime               @default(now())
+  updatedAt                          DateTime               @updatedAt
+  orderSnapshot                      IkasOrderSnapshot      @relation(fields: [orderSnapshotId], references: [id], onDelete: Restrict)
+  orderLineSnapshot                  IkasOrderLineSnapshot  @relation(fields: [orderLineSnapshotId], references: [id], onDelete: Restrict)
+  receipt                            ReviewRequestReceipt?  @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  tokens                             ReviewRequestToken[]
+  sessions                           ReviewRequestSession[]
+  jobs                               ReviewEmailJob[]
+  review                             Review?
 
   @@unique([storeId, orderLineSnapshotId])
   @@index([orderSnapshotId])
@@ -687,6 +715,7 @@ model ReviewEmailEvent {
   eventType             String?             @db.VarChar(64)
   attemptId             String?
   status                String              @default("received") @db.VarChar(32)
+  ignoredReason         String?             @db.VarChar(128)
   payloadDigest         String?             @db.VarChar(64)
   bounceType            String?             @db.VarChar(64)
   bounceSubType         String?             @db.VarChar(64)
@@ -703,19 +732,184 @@ model ReviewEmailEvent {
 }
 
 model ReviewEmailSuppression {
-  id              String    @id @default(uuid())
-  storeId         String
-  emailHash       String    @db.VarChar(128)
-  reason          String    @db.VarChar(64)
-  source          String    @db.VarChar(64)
-  providerEventId String?   @db.VarChar(256)
-  createdAt       DateTime  @default(now())
-  expiresAt       DateTime?
-  releasedAt      DateTime?
+  id                        String    @id @default(uuid())
+  storeId                   String
+  emailHash                 String    @db.VarChar(128)
+  emailHashKeyVersion       Int?
+  emailNormalizationVersion Int       @default(1)
+  reason                    String    @db.VarChar(64)
+  source                    String    @db.VarChar(64)
+  providerEventId           String?   @db.VarChar(256)
+  createdAt                 DateTime  @default(now())
+  expiresAt                 DateTime?
+  releasedAt                DateTime?
 
   @@unique([storeId, emailHash, reason])
   @@index([storeId, emailHash])
   @@index([reason, createdAt])
+}
+
+model ReviewEmailSubjectBlock {
+  id                     String   @id @default(uuid())
+  storeId                String
+  installationGeneration Int
+  foldedSubjectHash      String   @db.VarChar(128)
+  foldedHashKeyVersion   Int
+  normalizationVersion   Int      @default(2)
+  reason                 String   @default("subject_erasure") @db.VarChar(64)
+  sourceRunId            String?  @db.VarChar(64)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([storeId, installationGeneration, foldedSubjectHash], map: "ReviewEmailSubjectBlock_subject_key")
+  @@index([storeId, installationGeneration, createdAt], map: "ReviewEmailSubjectBlock_store_generation_created_idx")
+}
+
+model ReviewRequestReceipt {
+  id                      String                          @id @default(uuid())
+  storeId                 String
+  installationGeneration  Int
+  orderProductFingerprint String                          @db.VarChar(128)
+  fingerprintKeyVersion   Int
+  normalizationVersion    Int                             @default(2)
+  exactSubjectHash        String?                         @db.VarChar(128)
+  exactSubjectKeyVersion  Int?
+  analyticsManifest       Json?
+  analyticsClosedAt       DateTime?
+  analyticsCloseReason    String?                         @db.VarChar(64)
+  metricsReversedAt       DateTime?
+  createdAt               DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+  request                 ReviewRequest?
+  review                  Review?
+  contributions           ReviewEmailMetricContribution[]
+
+  @@unique([storeId, installationGeneration, orderProductFingerprint], map: "ReviewRequestReceipt_order_product_key")
+  @@index([storeId, installationGeneration, exactSubjectHash], map: "ReviewRequestReceipt_subject_idx")
+  @@index([storeId, analyticsClosedAt, updatedAt])
+}
+
+model ReviewEmailDataSubjectRun {
+  id                           String    @id @default(uuid())
+  storeId                      String
+  installationGeneration       Int
+  action                       String    @default("erase") @db.VarChar(32)
+  normalizationVersion         Int       @default(2)
+  exactSubjectHash             String?   @db.VarChar(128)
+  exactSubjectKeyVersion       Int?
+  foldedSubjectHash            String?   @db.VarChar(128)
+  foldedSubjectKeyVersion      Int?
+  idempotencyKeyHash           String    @db.VarChar(64)
+  requestDigest                String    @db.VarChar(64)
+  requestDigestKeyVersion      Int?
+  journalKey                   String?   @db.VarChar(1024)
+  journalPayloadSha256         String?   @db.VarChar(64)
+  journalVersionId             String?   @db.VarChar(1024)
+  journalEtag                  String?   @db.VarChar(128)
+  journalChecksumSha256        String?   @db.VarChar(128)
+  journalRetentionBaseAt       DateTime?
+  journalObjectLockRetainUntil DateTime?
+  journalStatus                String    @default("pending") @db.VarChar(32)
+  status                       String    @default("pending") @db.VarChar(32)
+  attempts                     Int       @default(0)
+  nextRetryAt                  DateTime?
+  rowCounts                    Json?
+  progress                     Json?
+  sanitizedErrorCode           String?   @db.VarChar(128)
+  subjectHashesClearedAt       DateTime?
+  startedAt                    DateTime  @default(now())
+  finishedAt                   DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+
+  @@unique([storeId, idempotencyKeyHash])
+  @@index([storeId, installationGeneration, createdAt], map: "ReviewEmailDSR_store_generation_created_idx")
+  @@index([storeId, exactSubjectHash])
+  @@index([status, nextRetryAt])
+  @@index([journalStatus, createdAt])
+}
+
+model ReviewEmailDailyMetric {
+  id                     String   @id @default(uuid())
+  storeId                String
+  installationGeneration Int
+  metricDate             DateTime
+  kind                   String   @db.VarChar(32)
+  templateVersion        String   @db.VarChar(64)
+  locale                 String   @db.VarChar(16)
+  accepted               Int      @default(0)
+  delivered              Int      @default(0)
+  delayed                Int      @default(0)
+  bounced                Int      @default(0)
+  complained             Int      @default(0)
+  rejected               Int      @default(0)
+  failed                 Int      @default(0)
+  outcomeUnknown         Int      @default(0)
+  skipped                Int      @default(0)
+  reviewedRequests       Int      @default(0)
+  reviewsViaReminder     Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([storeId, installationGeneration, metricDate, kind, templateVersion, locale], map: "ReviewEmailDailyMetric_dimensions_key")
+  @@index([storeId, installationGeneration, metricDate], map: "ReviewEmailDailyMetric_store_generation_date_idx")
+}
+
+model ReviewEmailMetricContribution {
+  id                     String                @id @default(uuid())
+  receiptId              String?
+  storeId                String
+  installationGeneration Int
+  exactSubjectHash       String?               @db.VarChar(128)
+  dedupeKey              String                @unique @db.VarChar(256)
+  metricDate             DateTime
+  kind                   String                @db.VarChar(32)
+  templateVersion        String                @db.VarChar(64)
+  locale                 String                @db.VarChar(16)
+  metric                 String                @db.VarChar(64)
+  delta                  Int
+  reversedAt             DateTime?
+  createdAt              DateTime              @default(now())
+  receipt                ReviewRequestReceipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+
+  @@index([receiptId, createdAt])
+  @@index([storeId, exactSubjectHash, createdAt], map: "ReviewEmailContribution_subject_created_idx")
+  @@index([reversedAt, createdAt])
+}
+
+model ReviewEmailPurgeRun {
+  id                 String    @id @default(uuid())
+  mode               String    @db.VarChar(16)
+  status             String    @default("running") @db.VarChar(32)
+  batchSize          Int       @default(100)
+  batchesProcessed   Int       @default(0)
+  candidates         Json?
+  deleted            Json?
+  elapsedMs          Int       @default(0)
+  sanitizedErrorCode String?   @db.VarChar(128)
+  startedAt          DateTime  @default(now())
+  finishedAt         DateTime?
+
+  @@index([status, startedAt])
+  @@index([mode, startedAt])
+}
+
+model ReviewEmailJournalCoverageCheck {
+  id                    String    @id @default(uuid())
+  status                String    @default("running") @db.VarChar(32)
+  restoreTargetAt       DateTime?
+  coverageStartAt       DateTime?
+  earliestSafeRestoreAt DateTime?
+  checkedObjects        Int       @default(0)
+  missingIntents        Int       @default(0)
+  conflictingObjects    Int       @default(0)
+  orphanIntents         Int       @default(0)
+  details               Json?
+  sanitizedErrorCode    String?   @db.VarChar(128)
+  startedAt             DateTime  @default(now())
+  finishedAt            DateTime?
+
+  @@index([status, startedAt])
 }
 
 model IkasOrderReconciliationCursor {
@@ -732,7 +926,7 @@ model IkasOrderReconciliationCursor {
   status           String    @default("idle") @db.VarChar(32)
   lastSuccessAt    DateTime?
   lastErrorAt      DateTime?
-  lastError        String?   @db.VarChar(512)
+  lastErrorCode    String?   @db.VarChar(128)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -740,20 +934,31 @@ model IkasOrderReconciliationCursor {
 }
 
 model StoreDataErasureRun {
-  id            String    @id @default(uuid())
-  storeId       String
-  triggerSource String    @db.VarChar(64)
-  status        String    @default("processing") @db.VarChar(32)
-  attempts      Int       @default(1)
-  nextRetryAt   DateTime?
-  rowCounts     Json?
-  progress      Json?
-  startedAt     DateTime  @default(now())
-  finishedAt    DateTime?
-  error         String?   @db.VarChar(512)
-  createdAt     DateTime  @default(now())
+  id                     String    @id @default(uuid())
+  storeId                String
+  authorizedAppId        String?   @db.VarChar(128)
+  installationGeneration Int?
+  triggerSource          String    @db.VarChar(64)
+  status                 String    @default("processing") @db.VarChar(32)
+  attempts               Int       @default(0)
+  nextRetryAt            DateTime?
+  journalKey             String?   @db.VarChar(1024)
+  journalPayloadSha256   String?   @db.VarChar(64)
+  journalVersionId       String?   @db.VarChar(1024)
+  journalEtag            String?   @db.VarChar(128)
+  journalChecksumSha256  String?   @db.VarChar(128)
+  journalRetentionBaseAt DateTime?
+  journalRetainUntil     DateTime?
+  journalStatus          String    @default("pending") @db.VarChar(32)
+  rowCounts              Json?
+  progress               Json?
+  startedAt              DateTime  @default(now())
+  finishedAt             DateTime?
+  sanitizedErrorCode     String?   @db.VarChar(128)
+  createdAt              DateTime  @default(now())
 
   @@index([storeId, startedAt])
   @@index([status, startedAt])
   @@index([status, nextRetryAt])
+  @@index([journalStatus, startedAt])
 }

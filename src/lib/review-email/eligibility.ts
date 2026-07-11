@@ -1,9 +1,5 @@
 import { addDays } from '@/lib/review-email/time';
-import {
-  CLOSED_ORDER_LINE_STATUSES,
-  CLOSED_ORDER_PACKAGE_STATUSES,
-  DEFAULT_TOKEN_EXPIRES_DAYS,
-} from '@/lib/review-email/constants';
+import { CLOSED_ORDER_LINE_STATUSES, CLOSED_ORDER_PACKAGE_STATUSES, DEFAULT_TOKEN_EXPIRES_DAYS } from '@/lib/review-email/constants';
 import type { EffectiveReviewEmailSettings } from '@/lib/review-email/settings';
 
 export type NormalizedOrderPackage = {
@@ -39,6 +35,11 @@ export type NormalizedOrder = {
   guestCheckout: boolean | null;
   customerId: string | null;
   customerEmailHash: string | null;
+  customerEmailFoldedHash: string | null;
+  customerEmailHashKeyVersion: number | null;
+  customerEmailNormalizationVersion: number;
+  customerEmailLookupHashes: string[];
+  customerEmailExactLookupHashes: string[];
   customerEmailEncrypted: string | null;
   lines: NormalizedOrderLine[];
   packages: NormalizedOrderPackage[];
@@ -71,7 +72,7 @@ function closedReason(order: NormalizedOrder, line: NormalizedOrderLine): string
   if (order.orderPackageStatus && CLOSED_ORDER_PACKAGE_STATUSES.has(order.orderPackageStatus)) {
     return `order_${order.orderPackageStatus.toLowerCase()}`;
   }
-  if (order.orderStatus === 'CANCELLED' || order.orderStatus === 'REFUNDED' || order.orderStatus === 'PARTIALLY_REFUNDED') {
+  if (order.orderStatus === 'CANCELLED' || order.orderStatus === 'REFUNDED') {
     return `order_${order.orderStatus.toLowerCase()}`;
   }
   return null;

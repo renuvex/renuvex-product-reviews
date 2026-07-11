@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-11
+last_verified: 2026-07-11
 confidence: high
 tags:
   - runbook
@@ -26,6 +26,9 @@ source_files:
   - "src/lib/scheduled-jobs.ts"
   - "src/lib/review-email/maintenance.ts"
   - "src/lib/review-email/erasure.ts"
+  - "src/lib/review-email/retention.ts"
+  - "src/lib/review-email/journal-coverage.ts"
+  - "src/lib/ikas-installation-lifecycle.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
   - "src/app/api/admin/cleanup-images/route.ts"
   - "src/app/api/internal/scheduled-jobs/route.ts"
@@ -76,10 +79,40 @@ QStash is the active maintenance scheduler per [[ADR_0035_QStash_Scheduler_For_M
 ## Manual admin endpoints
 | Endpoint | Former cadence | What it does |
 |---|---|---|
-| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, video session/job reconciliation when configured, and bounded failed review-email erasure retries. Review-email token/session/request/attempt maintenance runs only when its feature flag is enabled; erasure retries run independently so uninstall cleanup cannot be disabled by the feature flag. |
+| `GET /api/admin/daily-maintenance` | `0 3 * * *` (daily 03:00) | Storefront theme reconcile (always) + on full run: pending-upload cleanup, storefront-script reconcile, video session/job reconciliation when configured, retryable DSR/uninstall erasure, and bounded review-email lifecycle/retention maintenance. Retention still runs while outbound review email is disabled so expired evidence cannot accumulate behind a feature flag. |
 | `GET /api/admin/cleanup-images` | `0 4 1 * *` (monthly) | AWS review-image orphan **two-phase** cleanup behind a circuit-breaker (ADR_0012 + [[ADR_0030_Cleanup_Hardening]]): scan scoped S3 object families, mark orphan families, then sweep after grace if still orphaned. Writes a `MediaCleanupRun` audit row. |
 
 Both require `Authorization: Bearer <CRON_SECRET>`.
+
+Review-email erasure retries retain the signed `authorizedAppId` and resolved
+installation generation. Each retry takes the same store advisory lock as OAuth
+activation and order ingest. If a reinstall has a different current identity,
+the old retry finishes as `stale_ignored` and performs no deletion. A run that
+predates installation identity evidence is exhausted fail-closed rather than
+guessing which installation to erase.
+
+Review-email V5 retention defaults to `report`. Each invocation scans at most
+5 batches of 100 rows and stops after 10 seconds. `enforce` is a separate
+production gate; it physically removes eligible terminal token/session rows,
+180-day detail, and 210-day closed/reversed contribution tombstones. Receipt,
+subject-block, daily aggregate, and immutable S3 journal lifecycles follow
+[[ADR_0036_Review_Request_Email_Architecture]]. A longer database restore
+window must not be enabled before journal retention and coverage are extended
+through their separately approved operator workflow.
+Coverage filters the boundary day by canonical journal payload `createdAt`.
+One latest S3 lifecycle delete marker is expected only after the configured
+active retention interval; early/non-latest/marker-only/multiple markers or
+multiple data versions fail closed. `35/42` are current copy-register results,
+not hard-coded retention constants.
+
+Store uninstall uses `POST /api/internal/review-email/store-erasure` as a
+QStash-signed continuation endpoint. Every destructive phase requires verified
+immutable journal evidence first, processes bounded batches, and persists its
+phase/counters. Normal continuation resets the failure counter; only actual
+failures consume the eight-attempt error budget. Daily maintenance is the
+fallback if one-off dispatch fails. Restore coverage is operator-only via
+`pnpm aws:review-email:journal-coverage -- --approved-change-id=...`; `--replay`
+also requires outbound review email to be disabled.
 
 ## QStash schedules
 

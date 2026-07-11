@@ -38,14 +38,21 @@ function order(overrides: Partial<NormalizedOrder> = {}): NormalizedOrder {
     guestCheckout: false,
     customerId: 'customer-1',
     customerEmailHash: 'email-hash',
+    customerEmailFoldedHash: 'folded-email-hash',
+    customerEmailHashKeyVersion: 1,
+    customerEmailNormalizationVersion: 2,
+    customerEmailLookupHashes: ['email-hash'],
+    customerEmailExactLookupHashes: ['email-hash'],
     customerEmailEncrypted: 'email-encrypted',
     lines: [line()],
-    packages: [{
-      id: 'package-1',
-      status: 'DELIVERED',
-      orderLineItemIds: ['line-1'],
-      updatedAt: new Date('2026-07-01T09:00:00.000Z'),
-    }],
+    packages: [
+      {
+        id: 'package-1',
+        status: 'DELIVERED',
+        orderLineItemIds: ['line-1'],
+        updatedAt: new Date('2026-07-01T09:00:00.000Z'),
+      },
+    ],
     ...overrides,
   };
 }
@@ -82,5 +89,17 @@ describe('review email eligibility timing', () => {
       eligible: false,
       reason: 'notifications_not_accepted',
     });
+  });
+
+  it('does not close an unaffected delivered line for a partial order cancellation or refund', () => {
+    expect(evaluateLineEligibility(order({
+      orderStatus: 'PARTIALLY_REFUNDED',
+      orderPackageStatus: 'PARTIALLY_CANCELLED',
+    }), line())).toMatchObject({ eligible: true });
+
+    expect(evaluateLineEligibility(order({
+      orderStatus: 'PARTIALLY_REFUNDED',
+      orderPackageStatus: 'PARTIALLY_REFUNDED',
+    }), line({ status: 'REFUNDED' }))).toMatchObject({ eligible: false, reason: 'line_refunded' });
   });
 });

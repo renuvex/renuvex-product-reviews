@@ -7,7 +7,6 @@ import { getIkas, getIkasV1, getRedirectUri } from '@/helpers/api-helpers';
 import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { AuthToken } from '@/models/auth-token';
-import { AuthTokenManager } from '@/models/auth-token/manager';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse, after } from 'next/server';
 import z from 'zod';
@@ -15,6 +14,8 @@ import { ensureStorefrontScripts } from '@/lib/storefront-scripts';
 import { buildProductWebhookEndpoint, registerProductWebhooks, syncAllProductsForStore } from '@/lib/product-snapshots';
 import { isReviewEmailEnabled } from '@/lib/review-email/config';
 import { buildOrderWebhookEndpoint, registerOrderWebhooks } from '@/lib/review-email/ikas-orders';
+import { activateIkasStoreInstallation } from '@/lib/ikas-installation-lifecycle';
+import { updateReviewEmailWebhookStateForInstallation } from '@/lib/review-email/settings';
 
 const callbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
@@ -124,11 +125,9 @@ export async function GET(request: NextRequest) {
       salesChannelId: authorizedAppResponse.data.getAuthorizedApp.salesChannelId || null,
     } as AuthToken;
 
-    // Aynı merchantId'ye ait eski token'ları sil (yeniden kurulumda birikmesin)
-    await prisma.authToken.deleteMany({ where: { merchantId } });
-
-    // Store the token for future use
-    await AuthTokenManager.put(token);
+    // Replace the merchant token and activate a new installation generation in
+    // one transaction so stale uninstall events cannot target the new install.
+    await activateIkasStoreInstallation(token);
 
     // Ensure storeSettings record exists for this merchant
     await prisma.storeSettings.upsert({
@@ -152,39 +151,41 @@ export async function GET(request: NextRequest) {
         console.error('Product webhook registration failed:', webhookError);
       }
 
-      if (isReviewEmailEnabled()) {
+      const reviewEmailSettings = isReviewEmailEnabled()
+        ? await prisma.reviewEmailSettings.findUnique({
+            where: { storeId: merchantId },
+            select: { enabled: true },
+          })
+        : null;
+      if (reviewEmailSettings?.enabled) {
+        let orderWebhookRegistered = false;
         try {
           await registerOrderWebhooks(ikas, buildOrderWebhookEndpoint(host));
-          await prisma.reviewEmailSettings.upsert({
-            where: { storeId: merchantId },
-            create: {
-              storeId: merchantId,
-              orderWebhookStatus: 'verified',
-              orderWebhookVerifiedAt: new Date(),
-            },
-            update: {
-              orderWebhookStatus: 'verified',
-              orderWebhookVerifiedAt: new Date(),
-              orderWebhookLastErrorCode: null,
-            },
-          });
+          orderWebhookRegistered = true;
         } catch (webhookError) {
-          await prisma.reviewEmailSettings.upsert({
-            where: { storeId: merchantId },
-            create: {
-              storeId: merchantId,
-              enabled: false,
-              orderWebhookStatus: 'error',
-              orderWebhookLastErrorCode: 'registration_failed',
-            },
-            update: {
-              enabled: false,
-              orderWebhookStatus: 'error',
-              orderWebhookVerifiedAt: null,
-              orderWebhookLastErrorCode: 'registration_failed',
+          await updateReviewEmailWebhookStateForInstallation(prisma, {
+            storeId: merchantId,
+            authorizedAppId,
+            disable: true,
+            webhookState: {
+              status: 'error',
+              verifiedAt: null,
+              lastErrorCode: 'registration_failed',
             },
           }).catch(() => undefined);
           console.error('Order webhook registration failed:', webhookError);
+        }
+        if (orderWebhookRegistered) {
+          await updateReviewEmailWebhookStateForInstallation(prisma, {
+            storeId: merchantId,
+            authorizedAppId,
+            disable: false,
+            webhookState: {
+              status: 'verified',
+              verifiedAt: new Date(),
+              lastErrorCode: null,
+            },
+          });
         }
       }
     }

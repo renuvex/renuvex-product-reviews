@@ -70,9 +70,10 @@ export async function onCheckToken(token?: AuthToken): Promise<{ accessToken: st
         token.expireDate = newExpireDate;
 
         // Persist the updated token.
-        await AuthTokenManager.put(token);
+        const persisted = await AuthTokenManager.updateExisting(token);
+        if (!persisted) return { accessToken: undefined };
 
-        return { accessToken: token.accessToken, tokenData: token };
+        return { accessToken: persisted.accessToken, tokenData: persisted };
       }
     }
 

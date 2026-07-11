@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { reportCronTaskError } = vi.hoisted(() => ({ reportCronTaskError: vi.fn() }));
+const { reportCronTaskError, runReviewEmailRetentionPurge } = vi.hoisted(() => ({
+  reportCronTaskError: vi.fn(),
+  runReviewEmailRetentionPurge: vi.fn(),
+}));
 vi.mock('@/lib/cron-observability', () => ({ reportCronTaskError }));
+vi.mock('@/lib/review-email/retention', () => ({ runReviewEmailRetentionPurge }));
 
 import { runReviewEmailLifecycleMaintenance } from '@/lib/review-email/maintenance';
 
@@ -16,6 +20,10 @@ describe('review email lifecycle maintenance', () => {
   beforeEach(() => {
     configuredKeyRing();
     reportCronTaskError.mockReset();
+    runReviewEmailRetentionPurge.mockReset();
+    runReviewEmailRetentionPurge.mockResolvedValue({
+      runId: 'purge-1', mode: 'report', batches: 1, candidates: {}, deleted: {}, elapsedMs: 1,
+    });
   });
 
   afterEach(() => {
@@ -39,7 +47,14 @@ describe('review email lifecycle maintenance', () => {
       reviewEmailAttempt: {
         findMany: vi.fn()
           .mockResolvedValueOnce([{ id: 'prepared-1', jobId: 'job-1' }])
-          .mockResolvedValueOnce([{ id: 'unknown-1', jobId: 'job-2', job: { requestId: 'request-2', kind: 'request' } }]),
+          .mockResolvedValueOnce([{
+            id: 'unknown-1',
+            jobId: 'job-2',
+            sendInitiatedAt: new Date('2026-07-09T00:00:00.000Z'),
+            templateVersion: 'default_v1',
+            locale: 'tr',
+            job: { requestId: 'request-2', kind: 'request', request: { receiptId: null } },
+          }]),
       },
       reviewRequestSession: { updateMany: vi.fn().mockResolvedValue({ count: 3 }) },
       reviewRequest: {
@@ -60,6 +75,7 @@ describe('review email lifecycle maintenance', () => {
       expiredSessions: 3,
       expiredRequests: 1,
       activeKeyVersions: [1],
+      retention: { runId: 'purge-1', mode: 'report', batches: 1, candidates: {}, deleted: {}, elapsedMs: 1 },
     });
     expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: 'abandoned_before_send' }),

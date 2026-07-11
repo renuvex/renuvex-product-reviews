@@ -9,8 +9,11 @@ const maintenanceMock = vi.hoisted(() => ({
   redispatchDueMediaJobs: vi.fn(),
   runCleanupImages: vi.fn(),
   reportCronTaskError: vi.fn(),
+  reportReviewEmailFailure: vi.fn(),
   mediaCleanupRunCreate: vi.fn(),
   retryFailedStoreReviewEmailErasures: vi.fn(),
+  retryPendingReviewEmailDataSubjectRuns: vi.fn(),
+  runReviewEmailLifecycleMaintenance: vi.fn(),
 }));
 
 vi.mock('@/lib/cleanup-pending-uploads', () => ({ cleanupPendingUploads: maintenanceMock.cleanupPendingUploads }));
@@ -23,8 +26,18 @@ vi.mock('@/lib/media/reconciliation', () => ({
 }));
 vi.mock('@/lib/cleanup-orphan-images', () => ({ runCleanupImages: maintenanceMock.runCleanupImages }));
 vi.mock('@/lib/cron-observability', () => ({ reportCronTaskError: maintenanceMock.reportCronTaskError }));
+vi.mock('@/lib/review-email/failures', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/review-email/failures')>(),
+  reportReviewEmailFailure: maintenanceMock.reportReviewEmailFailure,
+}));
 vi.mock('@/lib/review-email/erasure', () => ({
   retryFailedStoreReviewEmailErasures: maintenanceMock.retryFailedStoreReviewEmailErasures,
+}));
+vi.mock('@/lib/review-email/maintenance', () => ({
+  runReviewEmailLifecycleMaintenance: maintenanceMock.runReviewEmailLifecycleMaintenance,
+}));
+vi.mock('@/lib/review-email/data-subject', () => ({
+  retryPendingReviewEmailDataSubjectRuns: maintenanceMock.retryPendingReviewEmailDataSubjectRuns,
 }));
 vi.mock('@/lib/prisma', () => ({ prisma: { mediaCleanupRun: { create: maintenanceMock.mediaCleanupRunCreate } } }));
 
@@ -54,8 +67,19 @@ describe('scheduled job helpers', () => {
     maintenanceMock.retryFailedStoreReviewEmailErasures.mockResolvedValue({
       claimed: 0,
       succeeded: 0,
+      pending: 0,
       failed: 0,
       exhausted: 0,
+    });
+    maintenanceMock.retryPendingReviewEmailDataSubjectRuns.mockResolvedValue({ claimed: 0, succeeded: 0, failed: 0, exhausted: 0 });
+    maintenanceMock.runReviewEmailLifecycleMaintenance.mockResolvedValue({
+      stalePreparedAttempts: 0,
+      outcomeUnknownAttempts: 0,
+      expiredTokens: 0,
+      expiredSessions: 0,
+      expiredRequests: 0,
+      activeKeyVersions: [],
+      retention: { runId: 'purge-1', mode: 'report', batches: 1, candidates: {}, deleted: {}, elapsedMs: 1 },
     });
   });
 
@@ -97,6 +121,24 @@ describe('scheduled job helpers', () => {
       'daily-maintenance',
       'cleanup-pending-uploads',
       expect.any(Error),
+    );
+  });
+
+  it('does not expose raw review-email maintenance failures through scheduler results', async () => {
+    const canary = 'Customer@Example.com\r\nraw-token postgres://user:secret@db.internal/reviews';
+    maintenanceMock.runReviewEmailLifecycleMaintenance.mockRejectedValue(new Error(canary));
+    const { runDailyMaintenance } = await import('@/lib/scheduled-jobs');
+
+    const result = await runDailyMaintenance({ full: true });
+
+    expect(result.status).toBe(500);
+    expect(result.body.data).toMatchObject({
+      errors: [{ task: 'review-email-lifecycle', error: 'retention_purge_failed' }],
+    });
+    expect(JSON.stringify(result)).not.toContain(canary);
+    expect(maintenanceMock.reportReviewEmailFailure).toHaveBeenCalledWith(
+      'retention_purge',
+      { code: 'retention_purge_failed', retryable: true },
     );
   });
 

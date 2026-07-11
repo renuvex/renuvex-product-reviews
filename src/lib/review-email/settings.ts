@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import {
   DEFAULT_FIRST_DELAY_DAYS,
   DEFAULT_MAX_REMINDER_COUNT,
@@ -9,8 +9,11 @@ import {
 } from '@/lib/review-email/constants';
 import { assertReviewEmailRuntimeConfigured, isReviewEmailEnabled } from '@/lib/review-email/config';
 import { encryptText, hashEmail, normalizeEmail } from '@/lib/review-email/pii';
+import { requireActiveIkasStoreInstallation } from '@/lib/ikas-installation-lifecycle';
+import { cancelActiveReviewEmailJobsForStore } from '@/lib/review-email/jobs';
 
 type SettingsDb = Pick<PrismaClient, 'reviewEmailSettings'>;
+type SettingsTransactionDb = Pick<PrismaClient, '$transaction'>;
 
 export type ReviewEmailSettingsWrite = {
   enabled: boolean;
@@ -183,9 +186,7 @@ export function buildReviewEmailSettingsWrite(input: unknown): ReviewEmailSettin
   }
 
   const triggerMode: 'delivery' =
-    typeof body.triggerMode === 'string' && REVIEW_EMAIL_TRIGGER_MODES.includes(body.triggerMode as 'delivery')
-      ? 'delivery'
-      : 'delivery';
+    typeof body.triggerMode === 'string' && REVIEW_EMAIL_TRIGGER_MODES.includes(body.triggerMode as 'delivery') ? 'delivery' : 'delivery';
   const consentMode: 'strict_notifications_accepted' =
     typeof body.consentMode === 'string' && REVIEW_EMAIL_CONSENT_MODES.includes(body.consentMode as 'strict_notifications_accepted')
       ? 'strict_notifications_accepted'
@@ -255,15 +256,17 @@ export function buildReviewEmailSettingsWrite(input: unknown): ReviewEmailSettin
   };
 }
 
-export async function persistReviewEmailSettings(
+export type ReviewEmailWebhookState = {
+  status?: string;
+  verifiedAt?: Date | null;
+  lastErrorCode?: string | null;
+};
+
+async function persistReviewEmailSettings(
   db: SettingsDb,
   storeId: string,
   data: ReviewEmailSettingsWrite,
-  webhookState: {
-    status?: string;
-    verifiedAt?: Date | null;
-    lastErrorCode?: string | null;
-  } = {},
+  webhookState: ReviewEmailWebhookState = {},
 ): Promise<EffectiveReviewEmailSettings> {
   const webhookData = {
     ...(webhookState.status !== undefined ? { orderWebhookStatus: webhookState.status } : {}),
@@ -278,6 +281,75 @@ export async function persistReviewEmailSettings(
   return toEffective(storeId, row);
 }
 
-export async function upsertReviewEmailSettings(db: SettingsDb, storeId: string, input: unknown): Promise<EffectiveReviewEmailSettings> {
-  return persistReviewEmailSettings(db, storeId, buildReviewEmailSettingsWrite(input));
+async function cancelUnsentReviewEmailWork(tx: Prisma.TransactionClient, storeId: string, now: Date): Promise<void> {
+  const reason = 'store_email_disabled';
+  await cancelActiveReviewEmailJobsForStore(tx, storeId, reason, now);
+  const unsentRequests = await tx.reviewRequest.findMany({
+    where: {
+      storeId,
+      status: { in: ['scheduled', 'error'] },
+      firstSentAt: null,
+    },
+    select: { id: true },
+  });
+  const requestIds = unsentRequests.map((request) => request.id);
+  if (!requestIds.length) return;
+
+  await tx.reviewRequest.updateMany({
+    where: { id: { in: requestIds }, status: { in: ['scheduled', 'error'] }, firstSentAt: null },
+    data: { status: 'cancelled', cancelledAt: now, cancellationReason: reason },
+  });
+  await tx.reviewRequestToken.updateMany({
+    where: { requestId: { in: requestIds }, status: { in: ['prepared', 'active'] } },
+    data: { status: 'revoked', revokedAt: now, revocationReason: reason },
+  });
+  await tx.reviewRequestSession.updateMany({
+    where: { requestId: { in: requestIds }, status: 'active' },
+    data: { status: 'revoked', revokedAt: now, revocationReason: reason },
+  });
+}
+
+export async function persistReviewEmailSettingsForInstallation(
+  db: SettingsTransactionDb,
+  storeId: string,
+  authorizedAppId: string,
+  data: ReviewEmailSettingsWrite,
+  webhookState: ReviewEmailWebhookState = {},
+  now = new Date(),
+): Promise<EffectiveReviewEmailSettings> {
+  return db.$transaction(async (tx) => {
+    await requireActiveIkasStoreInstallation(tx, storeId, authorizedAppId);
+    const settings = await persistReviewEmailSettings(tx, storeId, data, webhookState);
+    if (!settings.enabled) await cancelUnsentReviewEmailWork(tx, storeId, now);
+    return settings;
+  });
+}
+
+export async function updateReviewEmailWebhookStateForInstallation(
+  db: SettingsTransactionDb,
+  input: {
+    storeId: string;
+    authorizedAppId: string;
+    webhookState: ReviewEmailWebhookState;
+    disable: boolean;
+    now?: Date;
+  },
+): Promise<boolean> {
+  const now = input.now ?? new Date();
+  return db.$transaction(async (tx) => {
+    await requireActiveIkasStoreInstallation(tx, input.storeId, input.authorizedAppId);
+    const updated = await tx.reviewEmailSettings.updateMany({
+      where: { storeId: input.storeId },
+      data: {
+        ...(input.disable ? { enabled: false } : {}),
+        ...(input.webhookState.status !== undefined ? { orderWebhookStatus: input.webhookState.status } : {}),
+        ...(input.webhookState.verifiedAt !== undefined ? { orderWebhookVerifiedAt: input.webhookState.verifiedAt } : {}),
+        ...(input.webhookState.lastErrorCode !== undefined ? { orderWebhookLastErrorCode: input.webhookState.lastErrorCode } : {}),
+      },
+    });
+    if (input.disable && updated.count === 1) {
+      await cancelUnsentReviewEmailWork(tx, input.storeId, now);
+    }
+    return updated.count === 1;
+  });
 }

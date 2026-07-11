@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-11
+last_verified: 2026-07-11
 confidence: high
 tags:
   - adr
@@ -29,13 +29,21 @@ source_files:
   - "infra/aws/review-images-runtime-iam.cloudformation.json"
   - "prisma/schema.prisma"
   - "prisma/migrations/20260710120000_add_review_request_email_lifecycle/migration.sql"
+  - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
+  - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
+  - "config/review-email-copy-register.json"
+  - "infra/aws/review-email-erasure-journal.cloudformation.json"
+  - "infra/aws/review-email-erasure-journal-iam.cloudformation.json"
+  - "src/lib/ikas-installation-lifecycle.ts"
   - "src/globals/config.ts"
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/review-email/"
   - "src/app/api/ikas/review-email-settings/route.ts"
+  - "src/app/api/ikas/review-email-data-subject/route.ts"
   - "src/app/api/webhooks/ikas/orders/route.ts"
   - "src/app/api/internal/review-email/due-jobs/route.ts"
   - "src/app/api/internal/review-email/reconcile-orders/route.ts"
+  - "src/app/api/internal/review-email/store-erasure/route.ts"
   - "src/app/api/public/review-request/route.ts"
   - "src/app/request/page.tsx"
   - "src/lib/media/providers/aws-review-image.ts"
@@ -51,6 +59,13 @@ source_files:
   - "src/app/api/internal/email-events/ses/route.ts"
   - "infra/aws/review-email-foundation.cloudformation.json"
   - "scripts/validate-review-email-foundation-template.mjs"
+  - "scripts/calculate-review-email-journal-retention.mjs"
+  - "scripts/validate-review-email-erasure-journal-templates.mjs"
+  - "scripts/initialize-review-email-journal-genesis.mjs"
+  - "scripts/extend-review-email-journal-retention.mjs"
+  - "scripts/run-review-email-journal-coverage.ts"
+  - "tests/integration/review-email-installation-fence.test.ts"
+  - "tests/integration/review-email-v5-db-guarantees.test.ts"
 ---
 
 # ADR_0036 - Review Request Email Architecture
@@ -66,14 +81,18 @@ implementation using EventBridge, SQS, Lambda, and SES. Existing QStash media
 and maintenance scheduling remains in place and is not part of the email
 cutover. Direct ikas feedback confirms the order webhook/listOrder,
 delivery-state, reconciliation, and uninstall-retention platform contract. The
-review-request DB/lifecycle V3 source implementation now exists behind a
+review-request DB/lifecycle V5 source implementation now exists behind a
 disabled feature flag: additive/RLS-hardened Prisma migration, canonical
 `listOrder` re-read, leased reconciliation, immutable settings/recipient
 snapshots, explicit prepared and ambiguous send states, versioned one-time
 tokens, host-isolated browser sessions, atomic verified-buyer submit, dynamic
-request expiry, SES feedback persistence, and retryable erasure. AWS dispatch
+request expiry, SES feedback persistence, installation-generation fencing,
+rotatable versioned PII protection, exact-subject DSR, reversible aggregate
+analytics, bounded retention, immutable S3 erasure journal intent, crash-safe
+`412` recovery, restore coverage checks, and retryable erasure. AWS dispatch
 resources, outbound SES sending, production migration/deploy, Lambda DB/secret
-strategy, and product/legal consent expansion remain open. Verify the source files above and current
+strategy, journal-stack rollout, and product/legal consent expansion remain
+open. Verify the source files above and current
 ikas/AWS runtime evidence before extending this ADR.
 Do not apply DB migrations, create AWS resources, DNS records, QStash schedules,
 Vercel environment variables, or deploys from this document without a separate
@@ -83,7 +102,8 @@ scope, risk, rollback note, and explicit approval.
 
 This ADR records the verified state and accepted infrastructure/application
 contract for a future global-MVP review-request email feature. The first
-DB/backend lifecycle source package is implemented but remains disabled until
+DB/backend lifecycle and V5 retention/DSR/journal source package is implemented
+but remains disabled until
 migration/deploy and provider rollout are separately approved. AWS SES in
 `eu-central-1`, a review-specific sender domain, provider-neutral application
 boundaries, tenant-aware ownership, AWS-native email job dispatch, and a signed
@@ -92,8 +112,10 @@ to media jobs and maintenance schedules. The future review-request email flow
 uses a separate `AwsEmailJobDispatcher` boundary backed by EventBridge
 recurring due scans, SQS buffering, Lambda sending, and SES delivery. The
 repository now contains the source package for SES identity/configuration-set/
-feedback IaC, a signed SNS feedback endpoint, and the additive review-request
-lifecycle schema/backend. It intentionally does not contain a direct Vercel SES
+feedback IaC, a signed SNS feedback endpoint, the additive review-request
+lifecycle schema/backend, exact-subject DSR API, reversible daily metrics,
+bounded purge, and separately gated immutable journal IaC. It intentionally
+does not contain a direct Vercel SES
 send role: outbound IAM belongs to the future AWS SQS/Lambda worker package. It
 does not yet contain outbound SES sending or the AWS email queue/worker
 implementation.
@@ -106,8 +128,9 @@ rollout, production migration/deploy, and production access remain open.
 ## Status
 
 Accepted - infrastructure source package prepared; ikas platform contract and
-additive DB/backend lifecycle implementation exist in source. The feature is
-still off until production migration/deploy and provider rollout are approved.
+additive V5 DB/backend lifecycle, retention, analytics, DSR, and journal
+implementation exist in source. The feature is still off until production
+migration/deploy and provider rollout are approved.
 
 This ADR does not authorize AWS stack creation, DNS records, Vercel env writes,
 DB migrations, deploys, or provider mutation.
@@ -347,10 +370,19 @@ Implemented in source, disabled until rollout:
 - dynamic request expiry that covers every scheduled reminder plus its token
   window; it is not a fixed 60-day constant;
 - strict first-release consent mode requiring `notificationsAccepted=true`;
+- canonical `merchantId` validation plus a store-scoped installation-generation
+  fence shared by order ingest, webhook audit, reconciliation lease creation,
+  settings mutation, OAuth activation, and uninstall erasure;
+- disabled merchant/global gates before canonical order PII or due-job work is
+  persisted/claimed;
+- versioned HMAC/AES-GCM PII values. New writes use the current key version and
+  suppression lookup covers every retained version; versions `1..current`
+  cannot be removed without an explicit re-key/erasure migration;
 - SES feedback persistence into provider event/attempt/suppression tables after
   signed SNS verification;
 - `store/app/deleted` route handling and bounded retryable review-email/auth-token
-  erasure for the uninstall retention contract;
+  erasure for the uninstall retention contract. A stale uninstall identity is
+  ignored after reinstall and cannot delete or resurrect another generation;
 - bounded maintenance for stale attempts, ambiguous outcomes, token/session/
   request expiry, key-ring safety, and failed erasure retries.
 
@@ -360,7 +392,8 @@ Still missing:
 - AWS EventBridge/SQS/Lambda due scanner/sender resources;
 - Lambda DB/API/secret strategy and worker observability;
 - live product UI for review-request settings and template preview;
-- live ikas acceptance of the combined order/uninstall registration;
+- provider-side verification and live acceptance of the separately configured
+  uninstall signal plus the MCP-valid order-webhook registration;
 - production migration/deploy, SES sandbox exit, DNS/env rollout, and live email
   acceptance tests.
 
@@ -498,9 +531,11 @@ Still missing:
 
 ### DB schema and lifecycle contract
 
-Migration `20260710120000_add_review_request_email_lifecycle` implements this
-contract in source. It is additive and locally verified from an empty PostgreSQL
-16 database, but it is not applied to production by this checkpoint.
+Migrations `20260710120000_add_review_request_email_lifecycle` and
+`20260710150000_harden_review_email_installation_lifecycle` implement this
+contract in source. Both are additive and locally verified from an empty
+PostgreSQL 16 database, but they are not applied to production by this
+checkpoint.
 
 Implemented ownership and privacy boundaries:
 
@@ -508,6 +543,10 @@ Implemented ownership and privacy boundaries:
   registration health. Defaults are first request `1` day after eligibility,
   one reminder `1` day after first provider acceptance, trigger `delivery`, and
   strict `notificationsAccepted=true` consent.
+- `IkasStoreInstallation` is the store-scoped lifecycle fence. It binds one
+  active `authorizedAppId` to a monotonically increasing generation and keeps
+  an erased tombstone so a delayed uninstall/retry or OAuth callback cannot
+  affect another generation.
 - `IkasOrderWebhookEvent`, `IkasOrderSnapshot`, and
   `IkasOrderLineSnapshot` store normalized, tenant-scoped canonical evidence.
   Raw webhook/order payloads, addresses, phone numbers, payment details, IPs,
@@ -537,7 +576,9 @@ Database-level guarantees:
   `ReviewRequestSession.sessionHash`, job request/kind/sequence and dedupe key,
   attempt correlation/job-number, webhook/SNS ids, and suppression identity.
 - Due jobs use bounded `FOR UPDATE SKIP LOCKED` claims. Reconciliation page
-  checkpoints require matching lease owner/version. All 13 sensitive
+  checkpoints require matching lease owner/version. Installation state changes
+  use a transaction-scoped 64-bit PostgreSQL advisory lock plus the lifecycle
+  row. All 14 sensitive
   email-domain tables have RLS enabled and browser roles receive no direct
   grants.
 - Product timing limits stay in app validation (`firstDelayDays 0..30`,
@@ -572,13 +613,20 @@ Implemented state and expiry rules:
 - The key ring must retain every version referenced by an unexpired prepared or
   active token. Maintenance fails closed if any active version is absent, so
   multiple rotations remain safe without assuming a single previous key.
+- The separate customer-email PII key ring embeds a key version into every
+  HMAC/ciphertext. Runtime config must retain every PII version from `1` through
+  `current`; this prevents an old suppression hash from becoming invisible
+  after repeated rotations. Key retirement requires an explicit data re-key or
+  erasure migration.
 - Bounded maintenance eagerly expires tokens, two-hour sessions, and requests;
   resolve/submit paths also fail closed and lazily mark expired credentials.
 
 Implemented flow:
 
-1. A signed order webhook acts only as a wake-up signal; canonical `listOrder`
-   is re-read and normalized. Periodic reconciliation covers missed events.
+1. A signed order webhook acts only as a wake-up signal. Active installation,
+   merchant-enabled state, and canonical `merchantId` are checked before order
+   PII is stored; canonical `listOrder` is then re-read and normalized.
+   Periodic reconciliation uses the same fence and covers missed events.
 2. Eligible physical/click-and-collect lines create one request and first job
    idempotently. Cancellation/refund/return/missing-line transitions close
    existing work.
@@ -600,7 +648,9 @@ Implemented flow:
 7. Signed SES feedback updates attempts/events/suppression. Permanent bounce or
    complaint revokes active links and pending reminders.
 8. A verified `store/app/deleted` event erases review-email/order/auth PII even
-   when the feature flag is off. Failed erasures retry independently with a
+   when the feature flag is off. Erasure, OAuth activation, webhook audit,
+   settings mutation, order sync, and reconciliation acquisition serialize on
+   the same store lifecycle fence. Failed erasures retry independently with a
    bounded backoff; live registration/acceptance remains a rollout gate.
 
 Eligibility defaults for the first implementation:
@@ -621,11 +671,14 @@ Eligibility defaults for the first implementation:
 
 Uninstall registration caveat:
 
-- Direct ikas feedback and the installed SDK enum include
-  `store/app/deleted`; source now requests it with the order scopes and handles
-  it independently of the feature flag. Because this source is not deployed,
-  live ikas acceptance of the combined registration remains an explicit
-  rollout test rather than an assumed runtime fact.
+- Direct ikas support identifies `store/app/deleted` as the uninstall signal,
+  but current MCP introspection for `saveWebhooks` does not list that scope.
+  Source therefore registers only the MCP-valid order scopes and keeps the
+  signed uninstall receiver separate. Enablement fails closed unless
+  `IKAS_APP_DELETED_WEBHOOK_VERIFIED=true` is set after provider-side app
+  configuration is actually verified. This operator attestation and a live
+  uninstall acceptance test remain rollout gates; source does not pretend the
+  order-webhook mutation registered the uninstall signal.
 
 ### SES observability and feedback
 
@@ -661,9 +714,10 @@ Uninstall registration caveat:
 - Exact digital/no-shipment timing, advanced partial-delivery edge cases, resend
   rules, and reminder-count defaults beyond the first bounded release.
 - Reconciliation cadence, overlap window, and rate-limit handling details.
-- Install/uninstall cleanup implementation and the exact registration mechanism
-  for the uninstall signal; the ikas platform requirement is
-  deletion/anonymization within 24 hours after uninstall.
+- The exact provider-side registration/configuration mechanism for the
+  uninstall signal remains a live ikas rollout gate. The source receiver and
+  journal-first bounded erasure implementation exist; the ikas platform
+  requirement remains deletion/anonymization within 24 hours.
 - Lambda DB connectivity and secret strategy: direct database access via
   pooled connection, API-mediated sender worker, or another approved secure
   pattern must be decided before creating the Lambda/SQS implementation.
@@ -727,11 +781,137 @@ suppression, and erasure evidence.
 
 ## Implementation Checkpoint
 
-2026-07-10 DB/backend lifecycle source implementation:
+2026-07-10 V5 correctness hardening after the nine-finding source audit:
+
+- DSR request digests are derived from versioned HMAC subject hashes, not raw
+  canonical email. Frozen inventory and journal evidence now distinguish order
+  snapshots matched directly by the exact subject from snapshots linked only by
+  a matched request. Both active exact-HMAC candidates and folded suppression
+  candidates are frozen, so retry and restore replay do not depend on raw email
+  surviving process memory.
+- `ReviewRequest` holds explicit non-deferrable `ON DELETE RESTRICT` references
+  to its order and line snapshots; line-to-order remains `ON DELETE CASCADE`.
+  DSR locks candidate order parents in ID order, deletes only matched request
+  families, recounts remaining references, and then either deletes the final
+  direct-subject order family, scrubs customer PII on a shared order, or
+  preserves a snapshot whose current subject changed. Linked-only parents are
+  never selected for deletion. Normal execution and journal replay call the
+  same transaction helper.
+- DSR runs use a leased, bounded retry state machine. Crash/error work is
+  retried by daily maintenance, exhausted runs surface through cron
+  observability, and only `succeeded` runs are eligible for retention purge.
+- Journal retention starts at a persisted first-write timestamp. Active-horizon
+  coverage verifies full metadata, content length/type, SSE-S3, checksum,
+  canonical bytes, exact version, and Object Lock. It performs the actual
+  erasure replay before passing. The horizon is filtered by payload `createdAt`,
+  including the boundary day. One latest lifecycle delete marker is accepted
+  only after `version.lastModified + activeRetentionDays`; early, non-latest,
+  marker-only, multi-marker, and multi-version keys fail closed. Version scans
+  consume both S3 continuation markers on every page.
+- The permanent genesis object now requires Object Legal Hold `ON` and a
+  dedicated genesis operator role. Restore coverage uses a separate read-only
+  role; runtime writer IAM still has no delete, retention-change, legal-hold
+  mutation, or governance-bypass rights.
+- Uninstall erasure is journal-first and bounded. It deletes review/customer
+  content, enqueues idempotent AWS/Mux cleanup jobs, recalculates summaries, and
+  removes order/email/auth PII in batches. QStash signed continuations provide
+  prompt progress while daily maintenance remains the fallback. Normal batch
+  continuation does not consume the consecutive-failure budget.
+- Analytics reversal uses the receipt manifest as the one-time authority even
+  after the 210-day contribution row expires. A later subject erasure replaces
+  a prior detail-retention close reason, and late provider events remain fenced.
+- Partial order/package cancellation or refund no longer closes unaffected
+  delivered lines. `saveWebhooks` receives only current MCP-valid order scopes;
+  uninstall readiness is a separate provider verification gate.
+- Review-email persistence and observability use context-specific allowlisted
+  lower-snake-case error codes. Unknown exceptions become fixed fallback codes;
+  raw messages, stacks, emails, tokens, URLs, provider bodies, queries, and
+  connection strings are not written to DB, console, or Sentry. Sentry receives
+  a synthetic code-only `Error` plus an optional opaque run/event ID. SES/SNS
+  bounded message-ID evidence remains unchanged.
+- Verification evidence after this hardening: all `56` migrations applied to a
+  clean PostgreSQL 16 database, `466` unit tests and `12` PostgreSQL integration
+  tests passed, including the shared-order DSR/reconciliation race, parent-FK
+  rejection, conditional scrub/delete, changed-subject preservation, journal
+  replay, lifecycle-marker, and error-canary contracts. No production
+  DB/provider/env/deploy mutation occurred.
+
+2026-07-10 V5 retention, analytics, DSR, and journal source implementation:
+
+- Added expand-only migration
+  `20260710210000_add_review_email_retention_analytics_journal`. It introduces
+  exact-subject blocks, durable order-product receipts, idempotent DSR runs,
+  signed daily metrics/contributions, bounded purge evidence, and journal
+  coverage checks. `Review.reviewRequestReceiptId` is unique and uses
+  `ON DELETE SET NULL`; DSR idempotency is uniquely enforced by
+  `(storeId, idempotencyKeyHash)`. All new sensitive tables have RLS enabled and
+  browser-role grants revoked.
+- Email identity normalization now preserves local-part case for DSR selection,
+  lowercases/Punycodes only the domain, and uses a separate folded identity only
+  for suppression and pre-persistence reingestion fencing. Folded matches never
+  select or delete subject data; Gmail dot/plus rewriting is not performed.
+- The JWT-authenticated `POST/GET /api/ikas/review-email-data-subject` contract
+  derives the tenant only from the token, requires explicit erasure confirmation
+  and a UUID `Idempotency-Key`, rejects key reuse with a different digest, rate
+  limits requests, and returns private/no-store responses. One exact subject may
+  legitimately select multiple orders, requests, and reviews.
+- Receipt-locked contribution transactions apply unique signed deltas to daily
+  metrics. DSR closes analytics first, reverses the compact manifest once,
+  tombstones contribution dedupe evidence, and prevents late SES events from
+  recreating suppression, receipts, or aggregate counts.
+- DSR review deletion and media cleanup outbox creation share one transaction
+  with `applyReviewSummaryRemovals()`. Counts, rating/media buckets, average,
+  and the remaining approved-review `MAX(createdAt)` are recalculated; admin
+  review deletion uses the same helper.
+- Retention is bounded at batch `100`, at most `5` batches and `10` seconds per
+  run. Defaults are terminal token/session grace `7` days, detail `180` days,
+  and contribution tombstones `210` days. Rollout begins in `report` mode;
+  `enforce` is a separate production gate. Receipt, subject block, and daily
+  aggregate live for the active installation; uninstall removes their DB rows.
+- `config/review-email-copy-register.json` is the machine-readable copy-policy
+  source. Default approved DB restore horizon `30` days yields journal active
+  retention `35` days and physical/Object-Lock target `42` days. These are
+  parameters, not runtime self-adjustment: drift blocks rollout and requires a
+  separately approved CloudFormation update.
+- The journal uses deterministic canonical JSON, a stable per-run S3 key,
+  `If-None-Match: *`, SHA-256 checksum metadata, versioning, Governance Object
+  Lock, and a writer role without delete, retention-change, or bypass rights.
+  A PUT-success/DB-crash retry treats `412` as success only after version,
+  metadata, content type, encryption, checksum, exact bytes, and retention all
+  match; any conflict fails closed before erasure and emits a sanitized Sentry
+  issue tagged `source:review-email-journal`, `task:journal-conflict`. The live
+  notification action for that issue is a separate rollout verification gate.
+- Immutable genesis and coverage checks fence restores. Outbound email remains
+  disabled until every journal intent after the restore target validates and
+  orphan S3 evidence is replayed idempotently. Extending existing object-version
+  retention uses a dedicated role that can only move retention forward and
+  requires a separate operator approval; expired journal history cannot be
+  reconstructed retroactively.
+- Earlier baseline evidence (superseded by the hardening checkpoint above): all `56` migrations apply to a clean PostgreSQL 16 database;
+  Prisma schema diff is empty; the seven V5 tables report RLS enabled; the full
+  unit suite passed (`443` tests); and the local-only integration suite passed
+  (`5` tests), including DSR/receipt/review uniqueness and a real bounded purge
+  report scan. TypeScript, ESLint, local template validators, and regional
+  `cfn-lint` pass; a direct Next.js 16.2.1 production build also completes
+  without invoking the repository's migration-deploy wrapper. No production
+  DB, AWS, Vercel, DNS, env, deploy, or provider mutation was performed.
+
+Production rollout remains explicitly staged: additive DB migration, journal
+bucket/IAM change sets, genesis creation, Vercel env, retention report
+acceptance, retention enforce, and outbound SES/AWS dispatch are separate
+mutation gates. The copy register's 30-day restore value is an approved source
+contract and must be checked against the actual managed database restore
+configuration before journal activation.
+
+2026-07-10 V3 DB/backend lifecycle source implementation:
 
 - Added additive migration
   `prisma/migrations/20260710120000_add_review_request_email_lifecycle/` and
   the matching Prisma models/fields.
+- Added additive hardening migration
+  `prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/`
+  with `IkasStoreInstallation`, erasure generation evidence, and the
+  `AuthToken(merchantId, updatedAt)` index.
 - Added `src/lib/review-email/` lifecycle helpers for settings, protected PII,
   ikas order normalization, eligibility timing, versioned token/session state,
   send-attempt recovery, reconciliation leases, SES feedback persistence,
@@ -749,14 +929,19 @@ suppression, and erasure evidence.
   clocks start from different lifecycle events.
 - SES feedback route now persists signed notification evidence and suppression
   state instead of only returning sanitized metadata.
+- Follow-up correctness audit added a shared install-generation fence, removed
+  token refresh upsert/recreation, made disabled order ingest and internal
+  scheduler routes fail closed, versioned customer-email HMAC/AES-GCM values,
+  and made stale uninstall retries no-op after reinstall.
 - Removed the contradictory direct Vercel SES runtime-role source template;
   sender IAM belongs to the future SQS/Lambda worker package.
-- Validation evidence: all 54 migrations apply to an empty PostgreSQL 16 DB;
-  Prisma migration/schema diff is empty; 13 sensitive tables report RLS; the
-  critical unique indexes exist. Full unit suite (`407` tests), TypeScript,
-  ESLint, ikas codegen, CloudFormation
-  validators/lint, and direct Next.js production build pass locally. Production
-  migration/deploy was not run.
+- Validation evidence: all 55 migrations apply to an empty PostgreSQL 16 DB;
+  Prisma migration/schema diff is empty; `IkasStoreInstallation` reports RLS;
+  the lifecycle and auth-token indexes exist. A real two-connection PostgreSQL
+  integration test proves uninstall/reinstall serialization and stale-uninstall
+  rejection. Full unit suite (`426` tests), TypeScript, ESLint, and direct
+  Next.js production build pass locally. Production migration/deploy was not
+  run.
 
 2026-07-10 DB/lifecycle contract review:
 
@@ -807,9 +992,11 @@ suppression, and erasure evidence.
   behavior are unchanged until a separate approved rollout.
 - Future code must preserve the provider/dispatcher boundaries and keep PII out
   of dispatcher payloads, including SQS messages.
-- The next implementation gate is not another DB shape exercise; it is the
-  outbound email/provider-worker layer and the product UI/rollout plan. AWS
-  queue/Lambda/EventBridge resources still require a separate mutation package.
+- The V5 schema and lifecycle shape are implemented locally. The next gates are
+  rollout packages, not ad hoc schema edits: production additive migration,
+  journal bucket/IAM change sets and genesis, report-mode acceptance, then the
+  outbound email/provider-worker layer and product UI. AWS journal,
+  queue/Lambda/EventBridge resources each require separate mutation approval.
 - The schema keeps sender mode, merchant branding, template version, Reply-To,
   and provider identity references separate so the product can add
   merchant-domain sending later without replacing the initial Renuvex sender
@@ -822,6 +1009,10 @@ suppression, and erasure evidence.
 - The source package is ready for a future mutation plan, but the next gate must
   still request explicit approval before creating CloudFormation change sets or
   adding DNS/env values.
+- A database restore horizon may not be increased merely by changing the
+  managed-database setting. The copy register, CloudFormation retention, all
+  existing journal versions, and coverage evidence must first satisfy the
+  longer window through the separately authorized extension workflow.
 - The external ikas platform contract and additive DB/lifecycle implementation
   are now recorded. The next gate should keep platform facts separate from the
   remaining product/legal and AWS runtime decisions.
@@ -887,6 +1078,10 @@ External contract evidence:
 - [Amazon SQS pricing](https://aws.amazon.com/sqs/pricing/)
 - [AWS Lambda with SQS](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
 - [AWS Lambda SQS event source configuration](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html)
+- [Amazon S3 conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html)
+- [Enforcing conditional writes with S3 bucket policy](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes-enforce.html)
+- [Amazon S3 Object Lock](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html)
+- [S3 lifecycle with Object Lock](https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-and-other-bucket-config.html)
 - [Vercel OIDC for AWS](https://vercel.com/docs/oidc/aws)
 - [QStash pricing](https://upstash.com/pricing/qstash)
 - [QStash at-least-once delivery](https://upstash.com/docs/qstash/features/at-least-once)
@@ -919,6 +1114,28 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-11: Closed the pre-commit V5 blockers without changing the public
+  feature scope. Added direct-vs-linked DSR inventory, `RESTRICT` request-parent
+  FKs, conditional shared-order PII scrub, exact-horizon lifecycle-marker
+  coverage with dual-marker pagination proof, and code-only failure
+  observability. Production migration history and AWS journal absence were
+  verified read-only before editing; no live mutation occurred.
+- 2026-07-10: Implemented the disabled V5 retention/analytics/DSR/journal
+  source package. Added exact-subject erasure with folded-only suppression,
+  receipt-fenced reversible aggregates, bounded report/enforce purge, shared
+  review-summary removal, deterministic immutable S3 journal intent with strict
+  `412` recovery, restore coverage checks, copy-register-derived `35/42` day
+  defaults, and separately authorized retention extension. A clean PostgreSQL
+  16 run applied all 56 migrations and passed 5 integration tests; 443 unit
+  tests and local IaC/type/lint gates passed. No live mutation occurred.
+- 2026-07-10: Hardened the disabled V3 source after a full correctness audit.
+  Added an additive install-generation lifecycle fence, stale-uninstall
+  protection, disabled-store no-PII gates, canonical merchant binding,
+  reconciliation/webhook creation fencing, non-resurrecting token refresh,
+  and a versioned customer-email PII key ring. A disposable PostgreSQL 16 test
+  caught and corrected Prisma handling of the `void` advisory-lock result, then
+  proved concurrent uninstall/reinstall serialization. No production mutation
+  was performed.
 - 2026-07-10: Re-ran the ikas/AWS/backend review for the review-request email
   lifecycle and accepted the additive DB schema direction. Added the required
   order webhook audit, order/line snapshots, request/token, email job/attempt,

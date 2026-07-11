@@ -17,6 +17,7 @@ function review(overrides: Partial<Review> = {}): Review {
     email: '',
     status: 'pending',
     reviewRequestId: null,
+    reviewRequestReceiptId: null,
     verifiedBuyer: false,
     verifiedAt: null,
     verificationSource: null,

@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-11
+last_verified: 2026-07-11
 confidence: high
 tags:
   - database
@@ -28,6 +28,9 @@ source_files:
   - "prisma/migrations/20260620190000_add_video_upload_performance_sample/migration.sql"
   - "prisma/migrations/20260621003000_review_video_mux_contract_drop_legacy_columns/migration.sql"
   - "prisma/migrations/20260710120000_add_review_request_email_lifecycle/migration.sql"
+  - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
+  - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
+  - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
   - "src/lib/review-media.ts"
@@ -47,7 +50,7 @@ and the matching migration files; never use this page to justify `prisma db
 push` or destructive production schema changes.
 
 ## Summary
-Postgres (Supabase) accessed via Prisma. Core review/media models now include the image-era tables, the additive video lifecycle tables, and the source-only review-request email lifecycle tables. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
+Postgres (Supabase) accessed via Prisma. Core review/media models now include the image-era tables, the additive video lifecycle tables, and the disabled source-only review-request email V5 lifecycle/receipt/DSR/analytics/retention tables. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
 
 ## Files
 
@@ -57,13 +60,14 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | [prisma/migrations/](prisma/migrations/) | Migration history (29+ files, 2026-03 → 2026-06) |
 | [src/lib/prisma.ts](src/lib/prisma.ts) | Prisma client singleton |
 | [src/models/auth-token/index.ts](src/models/auth-token/index.ts) | `AuthToken` interface |
-| [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts) | `AuthTokenManager.{get,put,delete}` |
+| [src/models/auth-token/manager.ts](src/models/auth-token/manager.ts) | `AuthTokenManager` reads tokens and refreshes existing rows without recreating erased installations; install/delete writes belong to the lifecycle helper and erasure transaction. |
 
 ## Models (one-line summaries)
 
 | Model | Primary key | Purpose |
 |---|---|---|
-| `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refreshed by `onCheckToken` |
+| `AuthToken` | `authorizedAppId` | OAuth tokens per app installation; refresh updates only an existing tenant-matching row. `[merchantId, updatedAt]` supports reinstall cleanup and latest-token lookup. |
+| `IkasStoreInstallation` | `storeId`, unique `authorizedAppId` | Active/erasing/erased installation generation and tombstone used by the shared PostgreSQL transaction advisory-lock fence. |
 | `Review` | `id` (uuid) | Reviews; denormalized (`productName`, `slug`); status workflow; additive `hasVideo` marks video-bearing reviews and `moderationVersion` dedupes async provider moderation jobs. Review-request tokens can set `reviewRequestId`, `verifiedBuyer`, `verifiedAt`, and `verificationSource`. |
 | `ReviewMedia` | `id` (uuid), unique `publicId` | Normalized trusted media rows. New images are AWS-backed (`provider='aws_s3'`) and use `variantManifest`; videos use Mux. `visible` + `Review.status` remains the public gate. |
 | `ProductReviewSummary` | `id` (uuid), unique `(storeId, productId)` | Product-level aggregate read model for public badge, structured-data, summary distribution, and exact filtered review-list counts |
@@ -85,9 +89,33 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `ReviewRequestSession` | `id` (uuid), unique `sessionHash` | Two-hour host-only browser session created by fragment-token exchange. The cookie is HttpOnly; only an HMAC hash is stored. |
 | `ReviewEmailJob` / `ReviewEmailAttempt` / `ReviewEmailEvent` | `id` (uuid), unique dedupe/correlation/provider ids | Source-only email job, provider attempt, and signed SES event evidence. Jobs include explicit lease/dispatch states; attempts distinguish `prepared`, `awaiting_confirmation`, and terminal `outcome_unknown`. AWS queues will carry only opaque job ids later. |
 | `ReviewEmailSuppression` | `storeId+emailHash+scope` | Recipient/store suppression from bounce/complaint evidence without storing raw email in dispatcher payloads. |
-| `IkasOrderReconciliationCursor` / `StoreDataErasureRun` | `storeId` / `id` | Reconciliation window/page cursor with lease fencing, and uninstall/personal-data erasure evidence with bounded exponential retries. |
+| `ReviewEmailSubjectBlock` | unique `storeId+installationGeneration+foldedSubjectHash` | Active-installation reingestion/suppression fence. Folded identity never selects DSR deletion targets. |
+| `ReviewRequestReceipt` | unique `storeId+installationGeneration+orderProductFingerprint` | Durable duplicate-request receipt plus exact-subject link and compact signed analytics manifest. `analyticsClosedAt` fences late provider events; DSR clears subject/manifest fields while preserving the order-product fingerprint. |
+| `ReviewEmailDailyMetric` / `ReviewEmailMetricContribution` | unique metric dimensions / unique contribution dedupe | Customer-direct-identifier-free merchant analytics. Signed deltas support idempotent inserts and one-time DSR reversal; contribution tombstones retain dedupe evidence for 210 days. |
+| `ReviewEmailDataSubjectRun` | unique `storeId+idempotencyKeyHash` | Exact-subject DSR workflow, request digest, progress, deterministic journal key/digest, S3 VersionId/ETag/checksum/retention evidence, and sanitized retry/error state. |
+| `ReviewEmailPurgeRun` | `id` (uuid) | Bounded review-email retention report/enforce evidence: batch, duration, candidate, delete, and sanitized failure counts. |
+| `ReviewEmailJournalCoverageCheck` | `id` (uuid) | Restore/journal coverage result, genesis/earliest-safe-restore evidence, verified/replayed/conflicting counts, and sanitized failure code. |
+| `IkasOrderReconciliationCursor` / `StoreDataErasureRun` | `storeId` / `id` | Reconciliation window/page cursor acquired only for an active enabled installation, and uninstall/personal-data erasure evidence with authorized-app/generation identity plus bounded exponential retries. |
 
 ## Index strategy
+On install lifecycle tables:
+- `AuthToken[merchantId, updatedAt]` supports merchant-scoped token replacement, erasure, and latest-install lookup without a table scan.
+- unique `IkasStoreInstallation.authorizedAppId` prevents one installation identity from binding to multiple stores; `[status, updatedAt]` supports bounded operational scans.
+
+On review-email V5 tables:
+- unique `ReviewEmailDataSubjectRun[storeId, idempotencyKeyHash]` makes concurrent DSR creation idempotent within a tenant; `requestDigest` detects unsafe key reuse.
+- unique `ReviewRequestReceipt[storeId, installationGeneration, orderProductFingerprint]` prevents duplicate request creation across webhook/reconciliation retries.
+- unique `Review.reviewRequestReceiptId` and existing unique `Review.reviewRequestId` provide DB-level one-review-per-request/receipt guarantees; both relations use `ON DELETE SET NULL` for retention/erasure.
+- `ReviewRequest.orderSnapshotId` and `orderLineSnapshotId` use explicit
+  non-deferrable `ON DELETE RESTRICT`; `IkasOrderLineSnapshot.orderSnapshotId`
+  remains `ON DELETE CASCADE`. A parent order/line cannot remove a live request,
+  while deleting a request first permits bounded order-family cleanup.
+- exact-subject and folded-subject indexes are separate by design. Folded indexes support suppression only and must never become an erasure selector.
+
+Review-email operational failure columns are bounded code fields
+(`lastErrorCode` / `sanitizedErrorCode`, `VARCHAR(128)`). They never store raw
+exception text; unknown failures use fixed context fallbacks.
+
 On `Review`:
 - `[storeId, productId, status]` — canonical listing/search badge resolution by ikas product id
 - `[storeId, status]` — admin filtered list

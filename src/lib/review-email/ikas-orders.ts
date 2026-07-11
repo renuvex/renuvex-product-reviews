@@ -12,7 +12,7 @@ import {
   REVIEW_EMAIL_RECONCILIATION_INITIAL_LOOKBACK_DAYS,
   REVIEW_EMAIL_RECONCILIATION_LEASE_MINUTES,
   REVIEW_EMAIL_RECONCILIATION_OVERLAP_MINUTES,
-  REVIEW_EMAIL_WEBHOOK_SCOPES,
+  ORDER_REVIEW_WEBHOOK_SCOPES,
 } from '@/lib/review-email/constants';
 import {
   evaluateLineEligibility,
@@ -23,20 +23,31 @@ import {
   type NormalizedOrderPackage,
 } from '@/lib/review-email/eligibility';
 import { getEffectiveReviewEmailSettings } from '@/lib/review-email/settings';
-import { protectedEmail } from '@/lib/review-email/pii';
+import { buildOrderProductFingerprint, buildOrderProductFingerprintCandidates, protectedEmail } from '@/lib/review-email/pii';
 import { timestampToDate } from '@/lib/review-email/time';
 import { cancelPendingReviewEmailJobs } from '@/lib/review-email/jobs';
+import { IkasInstallationError, requireActiveIkasStoreInstallation } from '@/lib/ikas-installation-lifecycle';
+import { lockReviewEmailSubject } from '@/lib/review-email/subject-lock';
+import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
 
 type IkasClient = ikasAdminGraphQLAPIClient<AuthToken>;
 type IkasOrder = ListOrdersForReviewRequestsQueryData['data'][number];
 type LifecycleDb = PrismaClient;
 
 export type OrderReviewSyncResult = {
+  state: 'processed' | 'installation_inactive' | 'store_disabled';
   orderId: string;
   linesSeen: number;
   requestsScheduled: number;
   requestsCancelled: number;
 };
+
+export class ReviewEmailTenantMismatchError extends Error {
+  constructor() {
+    super('review_email_order_tenant_mismatch');
+    this.name = 'ReviewEmailTenantMismatchError';
+  }
+}
 
 function asString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -51,12 +62,7 @@ export function digestPayload(rawBody: string): string {
 export function getOrderIdFromWebhookData(data: unknown): string | null {
   if (!data || typeof data !== 'object') return null;
   const record = data as Record<string, unknown>;
-  return (
-    asString(record.id) ||
-    asString(record.orderId) ||
-    asString(record.orderID) ||
-    getOrderIdFromWebhookData(record.order)
-  );
+  return asString(record.id) || asString(record.orderId) || asString(record.orderID) || getOrderIdFromWebhookData(record.order);
 }
 
 export function buildOrderWebhookEndpoint(host: string) {
@@ -69,7 +75,7 @@ export async function registerOrderWebhooks(ikas: IkasClient, endpoint: string):
   const response = await ikas.mutations.saveOrderWebhooks({
     input: {
       endpoint,
-      scopes: [...REVIEW_EMAIL_WEBHOOK_SCOPES],
+      scopes: [...ORDER_REVIEW_WEBHOOK_SCOPES],
     },
   });
 
@@ -117,11 +123,10 @@ function normalizeLines(order: IkasOrder): NormalizedOrderLine[] {
     }));
 }
 
-export function normalizeIkasOrderForReviewRequests(input: {
-  storeId: string;
-  authorizedAppId: string;
-  order: IkasOrder;
-}): NormalizedOrder {
+export function normalizeIkasOrderForReviewRequests(input: { storeId: string; authorizedAppId: string; order: IkasOrder }): NormalizedOrder {
+  if (input.order.merchantId !== input.storeId) {
+    throw new ReviewEmailTenantMismatchError();
+  }
   const protectedCustomerEmail = protectedEmail(input.order.customer?.email);
   return {
     storeId: input.storeId,
@@ -138,18 +143,18 @@ export function normalizeIkasOrderForReviewRequests(input: {
     guestCheckout: input.order.customer?.isGuestCheckout ?? null,
     customerId: input.order.customer?.id ?? input.order.customerId ?? null,
     customerEmailHash: protectedCustomerEmail?.hash ?? null,
+    customerEmailFoldedHash: protectedCustomerEmail?.foldedHash ?? null,
+    customerEmailHashKeyVersion: protectedCustomerEmail?.hashKeyVersion ?? null,
+    customerEmailNormalizationVersion: protectedCustomerEmail?.normalizationVersion ?? 2,
+    customerEmailLookupHashes: protectedCustomerEmail?.foldedLookupHashes ?? [],
+    customerEmailExactLookupHashes: protectedCustomerEmail?.exactLookupHashes ?? [],
     customerEmailEncrypted: protectedCustomerEmail?.encrypted ?? null,
     lines: normalizeLines(input.order),
     packages: normalizePackages(input.order),
   };
 }
 
-async function cancelRequestForLine(
-  tx: Prisma.TransactionClient,
-  lineSnapshotId: string,
-  reason: string,
-  now: Date,
-): Promise<boolean> {
+async function cancelRequestForLine(tx: Prisma.TransactionClient, lineSnapshotId: string, reason: string, now: Date): Promise<boolean> {
   const request = await tx.reviewRequest.findFirst({
     where: {
       orderLineSnapshotId: lineSnapshotId,
@@ -158,35 +163,60 @@ async function cancelRequestForLine(
     select: { id: true },
   });
   if (!request) return false;
-  const cancelled = await tx.reviewRequest.updateMany({
-    where: { id: request.id, status: { in: ['scheduled', 'sending', 'sent', 'sent_unknown', 'error'] } },
-    data: { status: reason === 'suppressed' ? 'suppressed' : 'cancelled', cancelledAt: now, cancellationReason: reason },
-  });
-  if (cancelled.count !== 1) return false;
-  await cancelPendingReviewEmailJobs(tx, request.id, reason, now);
-  await tx.reviewRequestToken.updateMany({
-    where: { requestId: request.id, status: { in: ['prepared', 'active'] } },
-    data: { status: 'revoked', revokedAt: now, revocationReason: reason },
-  });
-  await tx.reviewRequestSession.updateMany({
-    where: { requestId: request.id, status: 'active' },
-    data: { status: 'revoked', revokedAt: now, revocationReason: reason },
-  });
-  return true;
+  return cancelRequestById(tx, request.id, reason, now);
 }
 
 async function hasSuppression(tx: Prisma.TransactionClient, order: NormalizedOrder, now: Date): Promise<boolean> {
-  if (!order.customerEmailHash) return false;
+  if (!order.customerEmailLookupHashes.length) return false;
   const row = await tx.reviewEmailSuppression.findFirst({
     where: {
       storeId: order.storeId,
-      emailHash: order.customerEmailHash,
+      emailHash: { in: order.customerEmailLookupHashes },
       releasedAt: null,
       OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
     },
     select: { id: true },
   });
   return Boolean(row);
+}
+
+async function hasSubjectBlock(
+  tx: Prisma.TransactionClient,
+  input: { storeId: string; installationGeneration: number; foldedLookupHashes: string[] },
+): Promise<boolean> {
+  if (input.foldedLookupHashes.length === 0) return false;
+  const row = await tx.reviewEmailSubjectBlock.findFirst({
+    where: {
+      storeId: input.storeId,
+      installationGeneration: input.installationGeneration,
+      foldedSubjectHash: { in: input.foldedLookupHashes },
+    },
+    select: { id: true },
+  });
+  return Boolean(row);
+}
+
+async function cancelRequestById(
+  tx: Prisma.TransactionClient,
+  requestId: string,
+  reason: string,
+  now: Date,
+): Promise<boolean> {
+  const cancelled = await tx.reviewRequest.updateMany({
+    where: { id: requestId, status: { in: ['scheduled', 'sending', 'sent', 'sent_unknown', 'error'] } },
+    data: { status: reason === 'suppressed' || reason === 'subject_erased' ? 'suppressed' : 'cancelled', cancelledAt: now, cancellationReason: reason },
+  });
+  if (cancelled.count !== 1) return false;
+  await cancelPendingReviewEmailJobs(tx, requestId, reason, now);
+  await tx.reviewRequestToken.updateMany({
+    where: { requestId, status: { in: ['prepared', 'active'] } },
+    data: { status: 'revoked', revokedAt: now, revocationReason: reason },
+  });
+  await tx.reviewRequestSession.updateMany({
+    where: { requestId, status: 'active' },
+    data: { status: 'revoked', revokedAt: now, revocationReason: reason },
+  });
+  return true;
 }
 
 export async function syncIkasOrderForReviewRequests(
@@ -199,182 +229,284 @@ export async function syncIkasOrderForReviewRequests(
   },
 ): Promise<OrderReviewSyncResult> {
   const now = input.now ?? new Date();
-  const order = normalizeIkasOrderForReviewRequests(input);
-  const settings = await getEffectiveReviewEmailSettings(db, input.storeId);
+  try {
+    return await db.$transaction(async (tx) => {
+      const installation = await requireActiveIkasStoreInstallation(tx, input.storeId, input.authorizedAppId);
+      const settings = await getEffectiveReviewEmailSettings(tx, input.storeId);
+      if (!settings.enabled) {
+        return {
+          state: 'store_disabled' as const,
+          orderId: input.order.id,
+          linesSeen: 0,
+          requestsScheduled: 0,
+          requestsCancelled: 0,
+        };
+      }
+      const order = normalizeIkasOrderForReviewRequests(input);
 
-  return db.$transaction(async (tx) => {
-    const orderSnapshot = await tx.ikasOrderSnapshot.upsert({
-      where: { storeId_ikasOrderId: { storeId: order.storeId, ikasOrderId: order.ikasOrderId } },
-      create: {
+      if (order.customerEmailFoldedHash) {
+        await lockReviewEmailSubject(tx, {
+          storeId: order.storeId,
+          installationGeneration: installation.generation,
+          foldedSubjectHash: order.customerEmailFoldedHash,
+        });
+      }
+      const subjectBlocked = await hasSubjectBlock(tx, {
         storeId: order.storeId,
-        authorizedAppId: order.authorizedAppId,
-        ikasOrderId: order.ikasOrderId,
-        orderNumber: order.orderNumber,
-        shippingMethod: order.shippingMethod,
-        orderStatus: order.orderStatus,
-        orderPackageStatus: order.orderPackageStatus,
-        orderPaymentStatus: order.orderPaymentStatus,
-        orderedAt: order.orderedAt,
-        ikasUpdatedAt: order.updatedAt,
-        notificationsAccepted: order.notificationsAccepted,
-        guestCheckout: order.guestCheckout,
-        customerId: order.customerId,
-        customerEmailHash: order.customerEmailHash,
-        customerEmailEncrypted: order.customerEmailEncrypted,
-      },
-      update: {
-        authorizedAppId: order.authorizedAppId,
-        orderNumber: order.orderNumber,
-        shippingMethod: order.shippingMethod,
-        orderStatus: order.orderStatus,
-        orderPackageStatus: order.orderPackageStatus,
-        orderPaymentStatus: order.orderPaymentStatus,
-        orderedAt: order.orderedAt,
-        ikasUpdatedAt: order.updatedAt,
-        notificationsAccepted: order.notificationsAccepted,
-        guestCheckout: order.guestCheckout,
-        customerId: order.customerId,
-        customerEmailHash: order.customerEmailHash,
-        customerEmailEncrypted: order.customerEmailEncrypted,
-      },
-    });
+        installationGeneration: installation.generation,
+        foldedLookupHashes: order.customerEmailLookupHashes,
+      });
 
-    const suppressed = await hasSuppression(tx, order, now);
-    const existingLineRows = await tx.ikasOrderLineSnapshot.findMany({
-      where: { storeId: order.storeId, ikasOrderId: order.ikasOrderId },
-      select: { id: true, ikasOrderLineItemId: true, eligibleAt: true },
-    });
-    const existingLines = new Map(existingLineRows.map((line) => [line.ikasOrderLineItemId, line]));
-    const canonicalLineIds = new Set(order.lines.map((line) => line.id));
-    let requestsScheduled = 0;
-    let requestsCancelled = 0;
-
-    for (const line of order.lines) {
-      const eligibility = evaluateLineEligibility(order, line, now);
-      const priorLine = existingLines.get(line.id);
-      const stableEligibleAt = eligibility.eligible
-        ? priorLine?.eligibleAt ?? eligibility.eligibleAt
-        : null;
-      const lineSnapshot = await tx.ikasOrderLineSnapshot.upsert({
-        where: { storeId_ikasOrderLineItemId: { storeId: order.storeId, ikasOrderLineItemId: line.id } },
+      const orderSnapshot = await tx.ikasOrderSnapshot.upsert({
+        where: { storeId_ikasOrderId: { storeId: order.storeId, ikasOrderId: order.ikasOrderId } },
         create: {
           storeId: order.storeId,
-          orderSnapshotId: orderSnapshot.id,
+          authorizedAppId: order.authorizedAppId,
           ikasOrderId: order.ikasOrderId,
-          ikasOrderLineItemId: line.id,
-          productId: line.productId,
-          variantId: line.variantId,
-          lineStatus: line.status,
-          lineStatusUpdatedAt: line.statusUpdatedAt,
-          quantity: line.quantity,
-          productName: line.productName,
-          variantName: line.variantName,
-          packageId: eligibility.packageId,
-          packageStatus: eligibility.packageStatus,
-          eligibleAt: stableEligibleAt,
-          ineligibleReason: eligibility.eligible ? null : eligibility.reason,
+          orderNumber: order.orderNumber,
+          shippingMethod: order.shippingMethod,
+          orderStatus: order.orderStatus,
+          orderPackageStatus: order.orderPackageStatus,
+          orderPaymentStatus: order.orderPaymentStatus,
+          orderedAt: order.orderedAt,
+          ikasUpdatedAt: order.updatedAt,
+          notificationsAccepted: order.notificationsAccepted,
+          guestCheckout: order.guestCheckout,
+          customerId: subjectBlocked ? null : order.customerId,
+          customerEmailHash: subjectBlocked ? null : order.customerEmailHash,
+          customerEmailFoldedHash: subjectBlocked ? null : order.customerEmailFoldedHash,
+          customerEmailHashKeyVersion: subjectBlocked ? null : order.customerEmailHashKeyVersion,
+          customerEmailNormalizationVersion: order.customerEmailNormalizationVersion,
+          customerEmailEncrypted: subjectBlocked ? null : order.customerEmailEncrypted,
         },
         update: {
-          orderSnapshotId: orderSnapshot.id,
-          ikasOrderId: order.ikasOrderId,
-          productId: line.productId,
-          variantId: line.variantId,
-          lineStatus: line.status,
-          lineStatusUpdatedAt: line.statusUpdatedAt,
-          quantity: line.quantity,
-          productName: line.productName,
-          variantName: line.variantName,
-          packageId: eligibility.packageId,
-          packageStatus: eligibility.packageStatus,
+          authorizedAppId: order.authorizedAppId,
+          orderNumber: order.orderNumber,
+          shippingMethod: order.shippingMethod,
+          orderStatus: order.orderStatus,
+          orderPackageStatus: order.orderPackageStatus,
+          orderPaymentStatus: order.orderPaymentStatus,
+          orderedAt: order.orderedAt,
+          ikasUpdatedAt: order.updatedAt,
+          notificationsAccepted: order.notificationsAccepted,
+          guestCheckout: order.guestCheckout,
+          customerId: subjectBlocked ? null : order.customerId,
+          customerEmailHash: subjectBlocked ? null : order.customerEmailHash,
+          customerEmailFoldedHash: subjectBlocked ? null : order.customerEmailFoldedHash,
+          customerEmailHashKeyVersion: subjectBlocked ? null : order.customerEmailHashKeyVersion,
+          customerEmailNormalizationVersion: order.customerEmailNormalizationVersion,
+          customerEmailEncrypted: subjectBlocked ? null : order.customerEmailEncrypted,
+        },
+      });
+
+      const suppressed = subjectBlocked || await hasSuppression(tx, order, now);
+      const existingLineRows = await tx.ikasOrderLineSnapshot.findMany({
+        where: { storeId: order.storeId, ikasOrderId: order.ikasOrderId },
+        select: { id: true, ikasOrderLineItemId: true, productId: true, eligibleAt: true },
+      });
+      const existingLines = new Map(existingLineRows.map((line) => [line.ikasOrderLineItemId, line]));
+      const canonicalLineIds = new Set(order.lines.map((line) => line.id));
+      const canonicalProductIds = new Set(order.lines.map((line) => line.productId));
+      let requestsScheduled = 0;
+      let requestsCancelled = 0;
+
+      const canonicalLines: Array<{
+        line: NormalizedOrderLine;
+        snapshot: { id: string };
+        eligibleAt: Date | null;
+        ineligibleReason: string | null;
+      }> = [];
+
+      for (const line of order.lines) {
+        const eligibility = evaluateLineEligibility(order, line, now);
+        const priorLine = existingLines.get(line.id);
+        const stableEligibleAt = eligibility.eligible ? (priorLine?.eligibleAt ?? eligibility.eligibleAt) : null;
+        const lineSnapshot = await tx.ikasOrderLineSnapshot.upsert({
+          where: { storeId_ikasOrderLineItemId: { storeId: order.storeId, ikasOrderLineItemId: line.id } },
+          create: {
+            storeId: order.storeId,
+            orderSnapshotId: orderSnapshot.id,
+            ikasOrderId: order.ikasOrderId,
+            ikasOrderLineItemId: line.id,
+            productId: line.productId,
+            variantId: line.variantId,
+            lineStatus: line.status,
+            lineStatusUpdatedAt: line.statusUpdatedAt,
+            quantity: line.quantity,
+            productName: line.productName,
+            variantName: line.variantName,
+            packageId: eligibility.packageId,
+            packageStatus: eligibility.packageStatus,
+            eligibleAt: stableEligibleAt,
+            ineligibleReason: eligibility.eligible ? null : eligibility.reason,
+          },
+          update: {
+            orderSnapshotId: orderSnapshot.id,
+            ikasOrderId: order.ikasOrderId,
+            productId: line.productId,
+            variantId: line.variantId,
+            lineStatus: line.status,
+            lineStatusUpdatedAt: line.statusUpdatedAt,
+            quantity: line.quantity,
+            productName: line.productName,
+            variantName: line.variantName,
+            packageId: eligibility.packageId,
+            packageStatus: eligibility.packageStatus,
+            eligibleAt: stableEligibleAt,
+            ineligibleReason: eligibility.eligible ? null : eligibility.reason,
+          },
+        });
+        canonicalLines.push({
+          line,
+          snapshot: lineSnapshot,
           eligibleAt: stableEligibleAt,
           ineligibleReason: eligibility.eligible ? null : eligibility.reason,
-        },
-      });
-
-      if (!eligibility.eligible) {
-        if (await cancelRequestForLine(tx, lineSnapshot.id, eligibility.reason, now)) requestsCancelled += 1;
-        continue;
-      }
-      if (!stableEligibleAt) {
-        if (await cancelRequestForLine(tx, lineSnapshot.id, 'missing_eligibility_timestamp', now)) requestsCancelled += 1;
-        continue;
-      }
-      const existing = await tx.reviewRequest.findUnique({
-        where: { storeId_orderLineSnapshotId: { storeId: order.storeId, orderLineSnapshotId: lineSnapshot.id } },
-        select: { id: true, status: true, sendAfter: true },
-      });
-      if (suppressed) {
-        if (await cancelRequestForLine(tx, lineSnapshot.id, 'suppressed', now)) requestsCancelled += 1;
-        continue;
-      }
-      if (existing && ['submitted', 'cancelled', 'expired', 'suppressed', 'sent', 'sent_unknown', 'sending'].includes(existing.status)) {
-        continue;
-      }
-      if (!settings.enabled) {
-        if (await cancelRequestForLine(tx, lineSnapshot.id, 'store_email_disabled', now)) requestsCancelled += 1;
-        continue;
+        });
       }
 
-      const sendAfter = existing?.sendAfter ?? firstRequestSendAfter(stableEligibleAt, settings);
-      const request = await tx.reviewRequest.upsert({
-        where: { storeId_orderLineSnapshotId: { storeId: order.storeId, orderLineSnapshotId: lineSnapshot.id } },
-        create: {
-          storeId: order.storeId,
-          productId: line.productId,
-          orderSnapshotId: orderSnapshot.id,
-          orderLineSnapshotId: lineSnapshot.id,
-          status: 'scheduled',
-          eligibleAt: stableEligibleAt,
-          sendAfter,
-          firstDelayDaysSnapshot: settings.firstDelayDays,
-          reminderDelayDaysSnapshot: settings.reminderDelayDays,
-          maxReminderCountSnapshot: settings.reminderEnabled ? settings.maxReminderCount : 0,
-          triggerModeSnapshot: settings.triggerMode,
-          consentModeSnapshot: settings.consentMode,
-          notificationsAcceptedSnapshot: order.notificationsAccepted,
-          templateVersionSnapshot: settings.templateVersion,
-          localeSnapshot: settings.locale,
-          recipientEmailHash: order.customerEmailHash,
-          recipientEmailEncrypted: order.customerEmailEncrypted,
-          expiresAt: initialRequestExpiresAt(sendAfter),
-        },
-        update: {},
-      });
+      for (const missingLine of existingLineRows.filter((line) => !canonicalLineIds.has(line.ikasOrderLineItemId))) {
+        await tx.ikasOrderLineSnapshot.update({
+          where: { id: missingLine.id },
+          data: { eligibleAt: null, ineligibleReason: 'line_missing_from_canonical_order' },
+        });
+        if (!canonicalProductIds.has(missingLine.productId) && await cancelRequestForLine(tx, missingLine.id, 'line_missing_from_canonical_order', now)) {
+          requestsCancelled += 1;
+        }
+      }
 
-      await tx.reviewEmailJob.upsert({
-        where: { requestId_kind_sequence: { requestId: request.id, kind: 'request', sequence: 0 } },
-        create: {
-          requestId: request.id,
-          storeId: order.storeId,
-          productId: line.productId,
-          kind: 'request',
-          sequence: 0,
-          status: 'pending',
-          sendAfter,
-          dedupeKey: `review-email:${request.id}:request:0`,
-        },
-        update: {},
-      });
-      if (!existing) requestsScheduled += 1;
+      const productGroups = new Map<string, typeof canonicalLines>();
+      for (const entry of canonicalLines) {
+        const group = productGroups.get(entry.line.productId) ?? [];
+        group.push(entry);
+        productGroups.set(entry.line.productId, group);
+      }
+
+      for (const [productId, group] of productGroups) {
+        const existingRequests = await tx.reviewRequest.findMany({
+          where: { storeId: order.storeId, orderSnapshotId: orderSnapshot.id, productId },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, status: true, sendAfter: true, receiptId: true },
+        });
+        const eligible = group
+          .filter((entry) => entry.eligibleAt)
+          .sort((left, right) => left.eligibleAt!.getTime() - right.eligibleAt!.getTime() || left.line.id.localeCompare(right.line.id));
+        const representative = eligible[0];
+        if (!representative?.eligibleAt) {
+          const reason = group.find((entry) => entry.ineligibleReason)?.ineligibleReason ?? 'missing_eligibility_timestamp';
+          for (const request of existingRequests) {
+            if (await cancelRequestById(tx, request.id, reason, now)) requestsCancelled += 1;
+          }
+          continue;
+        }
+        if (suppressed) {
+          const reason = subjectBlocked ? 'subject_erased' : 'suppressed';
+          for (const request of existingRequests) {
+            if (await cancelRequestById(tx, request.id, reason, now)) requestsCancelled += 1;
+          }
+          continue;
+        }
+
+        const fingerprintInput = { ikasOrderId: order.ikasOrderId, productId };
+        const fingerprint = buildOrderProductFingerprint(fingerprintInput);
+        const fingerprintKeyVersion = Number(fingerprint.split(':')[1]);
+        const existingReceipt = await tx.reviewRequestReceipt.findFirst({
+          where: {
+            storeId: order.storeId,
+            installationGeneration: installation.generation,
+            orderProductFingerprint: { in: buildOrderProductFingerprintCandidates(fingerprintInput) },
+          },
+        });
+        const receipt = existingReceipt ?? await tx.reviewRequestReceipt.create({
+          data: {
+            storeId: order.storeId,
+            installationGeneration: installation.generation,
+            orderProductFingerprint: fingerprint,
+            fingerprintKeyVersion,
+            normalizationVersion: order.customerEmailNormalizationVersion,
+            exactSubjectHash: order.customerEmailHash,
+            exactSubjectKeyVersion: order.customerEmailHashKeyVersion,
+          },
+        });
+        if (receipt.analyticsClosedAt) continue;
+
+        const existing = existingRequests.find((request) => request.receiptId === receipt.id) ?? existingRequests[0] ?? null;
+        if (existing && ['submitted', 'cancelled', 'expired', 'suppressed', 'sent', 'sent_unknown', 'sending'].includes(existing.status)) {
+          if (!existing.receiptId) {
+            await tx.reviewRequest.updateMany({ where: { id: existing.id, receiptId: null }, data: { receiptId: receipt.id } });
+          }
+          continue;
+        }
+
+        const sendAfter = existing?.sendAfter ?? firstRequestSendAfter(representative.eligibleAt, settings);
+        const request = existing
+          ? await tx.reviewRequest.update({
+              where: { id: existing.id },
+              data: { receiptId: receipt.id },
+            })
+          : await tx.reviewRequest.create({
+              data: {
+                storeId: order.storeId,
+                productId,
+                orderSnapshotId: orderSnapshot.id,
+                orderLineSnapshotId: representative.snapshot.id,
+                receiptId: receipt.id,
+                status: 'scheduled',
+                eligibleAt: representative.eligibleAt,
+                sendAfter,
+                firstDelayDaysSnapshot: settings.firstDelayDays,
+                reminderDelayDaysSnapshot: settings.reminderDelayDays,
+                maxReminderCountSnapshot: settings.reminderEnabled ? settings.maxReminderCount : 0,
+                triggerModeSnapshot: settings.triggerMode,
+                consentModeSnapshot: settings.consentMode,
+                notificationsAcceptedSnapshot: order.notificationsAccepted,
+                templateVersionSnapshot: settings.templateVersion,
+                localeSnapshot: settings.locale,
+                recipientEmailHash: order.customerEmailHash,
+                recipientEmailFoldedHash: order.customerEmailFoldedHash,
+                recipientEmailHashKeyVersion: order.customerEmailHashKeyVersion,
+                recipientEmailNormalizationVersion: order.customerEmailNormalizationVersion,
+                recipientEmailEncrypted: order.customerEmailEncrypted,
+                expiresAt: initialRequestExpiresAt(sendAfter),
+              },
+            });
+
+        await tx.reviewEmailJob.upsert({
+          where: { requestId_kind_sequence: { requestId: request.id, kind: 'request', sequence: 0 } },
+          create: {
+            requestId: request.id,
+            storeId: order.storeId,
+            productId,
+            kind: 'request',
+            sequence: 0,
+            status: 'pending',
+            sendAfter,
+            dedupeKey: `review-email:${request.id}:request:0`,
+          },
+          update: {},
+        });
+        if (!existing) requestsScheduled += 1;
+      }
+
+      return {
+        state: 'processed' as const,
+        orderId: order.ikasOrderId,
+        linesSeen: order.lines.length,
+        requestsScheduled,
+        requestsCancelled,
+      };
+    });
+  } catch (error) {
+    if (error instanceof IkasInstallationError && error.code === 'ikas_installation_inactive') {
+      return {
+        state: 'installation_inactive',
+        orderId: input.order.id,
+        linesSeen: 0,
+        requestsScheduled: 0,
+        requestsCancelled: 0,
+      };
     }
-
-    for (const missingLine of existingLineRows.filter((line) => !canonicalLineIds.has(line.ikasOrderLineItemId))) {
-      await tx.ikasOrderLineSnapshot.update({
-        where: { id: missingLine.id },
-        data: { eligibleAt: null, ineligibleReason: 'line_missing_from_canonical_order' },
-      });
-      if (await cancelRequestForLine(tx, missingLine.id, 'line_missing_from_canonical_order', now)) {
-        requestsCancelled += 1;
-      }
-    }
-
-    return {
-      orderId: order.ikasOrderId,
-      linesSeen: order.lines.length,
-      requestsScheduled,
-      requestsCancelled,
-    };
-  });
+    throw error;
+  }
 }
 
 export type OrderReconciliationLease = {
@@ -387,80 +519,93 @@ export type OrderReconciliationLease = {
   leaseExpiresAt: Date;
 };
 
+export type OrderReconciliationLeaseAcquisition =
+  | { state: 'acquired'; lease: OrderReconciliationLease }
+  | { state: 'lease_busy' | 'installation_inactive' | 'store_disabled' };
+
+type ReconciliationLeaseDb = Pick<PrismaClient, '$transaction'>;
 type ReconciliationDb = Pick<PrismaClient, 'ikasOrderReconciliationCursor'>;
 
 export async function acquireOrderReconciliationLease(
-  db: ReconciliationDb,
+  db: ReconciliationLeaseDb,
   input: { storeId: string; authorizedAppId: string; owner: string; now?: Date },
-): Promise<OrderReconciliationLease | null> {
+): Promise<OrderReconciliationLeaseAcquisition> {
   const now = input.now ?? new Date();
   const leaseExpiresAt = new Date(now.getTime() + REVIEW_EMAIL_RECONCILIATION_LEASE_MINUTES * 60 * 1000);
-  await db.ikasOrderReconciliationCursor.upsert({
-    where: { storeId: input.storeId },
-    create: {
-      storeId: input.storeId,
-      authorizedAppId: input.authorizedAppId,
-      overlapMinutes: REVIEW_EMAIL_RECONCILIATION_OVERLAP_MINUTES,
-      status: 'idle',
-    },
-    update: {},
-  });
+  try {
+    return await db.$transaction(async (tx) => {
+      const installation = await requireActiveIkasStoreInstallation(tx, input.storeId, input.authorizedAppId);
+      const settings = await getEffectiveReviewEmailSettings(tx, input.storeId);
+      if (!settings.enabled) return { state: 'store_disabled' as const };
 
-  const current = await db.ikasOrderReconciliationCursor.findUniqueOrThrow({
-    where: { storeId: input.storeId },
-  });
-  if (current.leaseExpiresAt && current.leaseExpiresAt > now && current.leaseOwner !== input.owner) {
-    return null;
+      await tx.ikasOrderReconciliationCursor.upsert({
+        where: { storeId: input.storeId },
+        create: {
+          storeId: input.storeId,
+          authorizedAppId: input.authorizedAppId,
+          overlapMinutes: REVIEW_EMAIL_RECONCILIATION_OVERLAP_MINUTES,
+          status: 'idle',
+        },
+        update: {},
+      });
+
+      const current = await tx.ikasOrderReconciliationCursor.findUniqueOrThrow({
+        where: { storeId: input.storeId },
+      });
+      if (current.leaseExpiresAt && current.leaseExpiresAt > now && current.leaseOwner !== input.owner) {
+        return { state: 'lease_busy' as const };
+      }
+
+      const overlapMs = current.overlapMinutes * 60 * 1000;
+      const defaultStart = new Date(now.getTime() - REVIEW_EMAIL_RECONCILIATION_INITIAL_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
+      const proposedWindowStart = current.windowStart ?? new Date((current.lastCheckpointAt ?? defaultStart).getTime() - overlapMs);
+      const windowStart = proposedWindowStart < installation.activatedAt ? installation.activatedAt : proposedWindowStart;
+      const windowEnd = current.windowEnd ?? now;
+      const nextPage = current.windowStart ? current.nextPage : 1;
+      const version = current.leaseVersion + 1;
+      const claimed = await tx.ikasOrderReconciliationCursor.updateMany({
+        where: {
+          storeId: input.storeId,
+          leaseVersion: current.leaseVersion,
+          OR: [{ leaseExpiresAt: null }, { leaseExpiresAt: { lte: now } }, { leaseOwner: input.owner }],
+        },
+        data: {
+          authorizedAppId: input.authorizedAppId,
+          leaseOwner: input.owner,
+          leaseExpiresAt,
+          leaseVersion: version,
+          windowStart,
+          windowEnd,
+          nextPage,
+          status: 'running',
+          lastErrorAt: null,
+          lastErrorCode: null,
+        },
+      });
+      if (claimed.count !== 1) return { state: 'lease_busy' as const };
+
+      return {
+        state: 'acquired' as const,
+        lease: {
+          storeId: input.storeId,
+          owner: input.owner,
+          version,
+          windowStart,
+          windowEnd,
+          nextPage,
+          leaseExpiresAt,
+        },
+      };
+    });
+  } catch (error) {
+    if (error instanceof IkasInstallationError && error.code === 'ikas_installation_inactive') {
+      return { state: 'installation_inactive' };
+    }
+    throw error;
   }
-
-  const overlapMs = current.overlapMinutes * 60 * 1000;
-  const defaultStart = new Date(now.getTime() - REVIEW_EMAIL_RECONCILIATION_INITIAL_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-  const windowStart = current.windowStart ?? new Date((current.lastCheckpointAt ?? defaultStart).getTime() - overlapMs);
-  const windowEnd = current.windowEnd ?? now;
-  const nextPage = current.windowStart ? current.nextPage : 1;
-  const version = current.leaseVersion + 1;
-  const claimed = await db.ikasOrderReconciliationCursor.updateMany({
-    where: {
-      storeId: input.storeId,
-      leaseVersion: current.leaseVersion,
-      OR: [
-        { leaseExpiresAt: null },
-        { leaseExpiresAt: { lte: now } },
-        { leaseOwner: input.owner },
-      ],
-    },
-    data: {
-      authorizedAppId: input.authorizedAppId,
-      leaseOwner: input.owner,
-      leaseExpiresAt,
-      leaseVersion: version,
-      windowStart,
-      windowEnd,
-      nextPage,
-      status: 'running',
-      lastErrorAt: null,
-      lastError: null,
-    },
-  });
-  if (claimed.count !== 1) return null;
-
-  return {
-    storeId: input.storeId,
-    owner: input.owner,
-    version,
-    windowStart,
-    windowEnd,
-    nextPage,
-    leaseExpiresAt,
-  };
 }
 
-async function checkpointOrderReconciliationPage(
-  db: ReconciliationDb,
-  lease: OrderReconciliationLease,
-  nextPage: number,
-  now: Date,
-): Promise<void> {
+async function checkpointOrderReconciliationPage(db: ReconciliationDb, lease: OrderReconciliationLease, nextPage: number, now: Date): Promise<void> {
   const leaseExpiresAt = new Date(now.getTime() + REVIEW_EMAIL_RECONCILIATION_LEASE_MINUTES * 60 * 1000);
   const updated = await db.ikasOrderReconciliationCursor.updateMany({
     where: {
@@ -474,11 +619,7 @@ async function checkpointOrderReconciliationPage(
   if (updated.count !== 1) throw new Error('review_email_reconciliation_lease_lost');
 }
 
-async function completeOrderReconciliationLease(
-  db: ReconciliationDb,
-  lease: OrderReconciliationLease,
-  now: Date,
-): Promise<void> {
+async function completeOrderReconciliationLease(db: ReconciliationDb, lease: OrderReconciliationLease, now: Date): Promise<void> {
   const updated = await db.ikasOrderReconciliationCursor.updateMany({
     where: {
       storeId: lease.storeId,
@@ -494,7 +635,7 @@ async function completeOrderReconciliationLease(
       status: 'idle',
       lastSuccessAt: now,
       lastErrorAt: null,
-      lastError: null,
+      lastErrorCode: null,
       leaseOwner: null,
       leaseExpiresAt: null,
     },
@@ -502,12 +643,8 @@ async function completeOrderReconciliationLease(
   if (updated.count !== 1) throw new Error('review_email_reconciliation_lease_lost');
 }
 
-async function failOrderReconciliationLease(
-  db: ReconciliationDb,
-  lease: OrderReconciliationLease,
-  error: unknown,
-  now: Date,
-): Promise<void> {
+async function failOrderReconciliationLease(db: ReconciliationDb, lease: OrderReconciliationLease, error: unknown, now: Date): Promise<void> {
+  const failure = normalizeReviewEmailFailure('order_reconciliation', error, { retryable: true });
   await db.ikasOrderReconciliationCursor.updateMany({
     where: {
       storeId: lease.storeId,
@@ -518,11 +655,12 @@ async function failOrderReconciliationLease(
     data: {
       status: 'error',
       lastErrorAt: now,
-      lastError: (error instanceof Error ? error.message : 'unknown').slice(0, 512),
+      lastErrorCode: failure.code,
       leaseOwner: null,
       leaseExpiresAt: null,
     },
   });
+  reportReviewEmailFailure('order_reconciliation', failure);
 }
 
 export async function reconcileIkasOrdersForReviewRequests(
@@ -535,7 +673,7 @@ export async function reconcileIkasOrdersForReviewRequests(
     now?: Date;
   },
 ): Promise<{
-  state: 'completed' | 'lease_busy';
+  state: 'completed' | 'lease_busy' | 'installation_inactive' | 'store_disabled';
   pages: number;
   orders: number;
   requestsScheduled: number;
@@ -545,15 +683,22 @@ export async function reconcileIkasOrdersForReviewRequests(
 }> {
   const startedAt = input.now ?? new Date();
   const limit = Math.min(Math.max(input.limit ?? 200, 1), 200);
-  const lease = await acquireOrderReconciliationLease(prisma, {
+  const acquisition = await acquireOrderReconciliationLease(prisma, {
     storeId: input.storeId,
     authorizedAppId: input.authorizedAppId,
     owner: input.owner ?? randomUUID(),
     now: startedAt,
   });
-  if (!lease) {
-    return { state: 'lease_busy', pages: 0, orders: 0, requestsScheduled: 0, requestsCancelled: 0 };
+  if (acquisition.state !== 'acquired') {
+    return {
+      state: acquisition.state,
+      pages: 0,
+      orders: 0,
+      requestsScheduled: 0,
+      requestsCancelled: 0,
+    };
   }
+  const lease = acquisition.lease;
 
   let page = lease.nextPage;
   let pages = 0;
@@ -578,6 +723,20 @@ export async function reconcileIkasOrdersForReviewRequests(
           authorizedAppId: input.authorizedAppId,
           order,
         });
+        if (result.state !== 'processed') {
+          if (result.state === 'store_disabled') {
+            await completeOrderReconciliationLease(prisma, lease, new Date());
+          }
+          return {
+            state: result.state,
+            pages,
+            orders,
+            requestsScheduled,
+            requestsCancelled,
+            windowStart: lease.windowStart,
+            windowEnd: lease.windowEnd,
+          };
+        }
         orders += 1;
         requestsScheduled += result.requestsScheduled;
         requestsCancelled += result.requestsCancelled;
@@ -604,5 +763,5 @@ export async function reconcileIkasOrdersForReviewRequests(
 }
 
 export function reviewRequestWebhookScopeSet(): ReadonlySet<string> {
-  return new Set<string>(REVIEW_EMAIL_WEBHOOK_SCOPES);
+  return new Set<string>(ORDER_REVIEW_WEBHOOK_SCOPES);
 }

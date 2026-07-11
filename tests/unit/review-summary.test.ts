@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   applyReviewSummaryVisibilityChange,
+  applyReviewSummaryRemovals,
   filteredReviewTotal,
   publicRatingFromSummary,
   recomputeProductReviewSummary,
@@ -133,6 +134,24 @@ describe('review summary read model', () => {
     expect(client.productReviewSummary.findUnique).not.toHaveBeenCalled();
     expect(client.productReviewSummary.create).not.toHaveBeenCalled();
     expect(client.productReviewSummary.update).not.toHaveBeenCalled();
+  });
+
+  it('recalculates lastReviewAt from the remaining approved rows after a batch removal', async () => {
+    const client = fakeClient();
+    client.productReviewSummary.findUnique
+      .mockResolvedValueOnce(summary())
+      .mockResolvedValueOnce(summary({ approvedCount: 1, ratingSum: 4, rating5Count: 0 }));
+    client.review.aggregate.mockResolvedValue({ _max: { createdAt: new Date('2026-05-20T00:00:00.000Z') } });
+
+    await applyReviewSummaryRemovals(asReviewSummaryClient(client), [approvedReview()]);
+
+    expect(client.review.aggregate).toHaveBeenCalledWith({
+      where: { storeId: 'store-1', productId: 'product-1', status: 'approved' },
+      _max: { createdAt: true },
+    });
+    expect(client.productReviewSummary.update).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: { averageRating: 4, lastReviewAt: new Date('2026-05-20T00:00:00.000Z') },
+    }));
   });
 
   it('uses the indexed hasImages flag for photo review summary deltas', async () => {

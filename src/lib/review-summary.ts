@@ -341,6 +341,22 @@ export async function applyReviewSummaryVisibilityChange(
   }
 }
 
+export async function applyReviewSummaryRemovals(
+  client: SummaryClient,
+  reviews: readonly ReviewSummaryReview[],
+) {
+  const deltas = new Map<string, SummaryDelta>();
+  for (const review of reviews) {
+    const key = deltaKey(review.storeId, review.productId);
+    const delta = deltas.get(key) ?? emptyDelta(review.storeId, review.productId);
+    addReviewToDelta(delta, review, -1);
+    deltas.set(key, delta);
+  }
+  for (const delta of deltas.values()) {
+    await applyProductReviewSummaryDelta(client, delta);
+  }
+}
+
 export async function recomputeProductReviewSummary(client: SummaryClient, storeId: string, productId: string) {
   const reviews = await client.review.findMany({
     where: { storeId, productId, status: APPROVED_REVIEW_STATUS },

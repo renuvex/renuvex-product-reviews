@@ -1,12 +1,13 @@
 import { AuthToken } from './index';
 import { prisma } from '@/lib/prisma';
+import type { AuthToken as PrismaAuthToken } from '@prisma/client';
 
 /**
- * AuthTokenManager provides methods to manage AuthTokens.
- * This implementation uses a local JSON file for storage (for development only).
+ * AuthTokenManager provides read and refresh operations for persisted ikas
+ * tokens. Installation activation is owned by ikas-installation-lifecycle.ts.
  */
 export class AuthTokenManager {
-  private static toModel(db: any): AuthToken {
+  private static toModel(db: PrismaAuthToken): AuthToken {
     return {
       authorizedAppId: db.authorizedAppId,
       merchantId: db.merchantId,
@@ -52,26 +53,16 @@ export class AuthTokenManager {
   }
 
   /**
-   * Store a new AuthToken if it does not already exist.
-   * @param token - The AuthToken to store.
-   * @returns The stored AuthToken.
+   * Refreshes an existing installation token without recreating a row removed
+   * by uninstall erasure.
    */
-  static async put(token: AuthToken): Promise<AuthToken> {
-    const upserted = await prisma.authToken.upsert({
-      where: { authorizedAppId: token.authorizedAppId },
-      update: {
-        merchantId: token.merchantId,
-        salesChannelId: token.salesChannelId || undefined,
-        accessToken: token.accessToken,
-        tokenType: token.tokenType,
-        expiresIn: token.expiresIn,
-        expireDate: new Date(token.expireDate),
-        refreshToken: token.refreshToken,
-        scope: token.scope,
-      },
-      create: {
+  static async updateExisting(token: AuthToken): Promise<AuthToken | undefined> {
+    const updated = await prisma.authToken.updateMany({
+      where: {
         authorizedAppId: token.authorizedAppId,
         merchantId: token.merchantId,
+      },
+      data: {
         salesChannelId: token.salesChannelId || undefined,
         accessToken: token.accessToken,
         tokenType: token.tokenType,
@@ -81,17 +72,8 @@ export class AuthTokenManager {
         scope: token.scope,
       },
     });
-    return this.toModel(upserted);
-  }
-
-  /**
-   * Deletes an AuthToken from the database.
-   * @param authorizedAppId - The ID of the authorized app.
-   */
-  static async delete(authorizedAppId: string): Promise<void> {
-    await prisma.authToken.delete({
-      where: { authorizedAppId },
-    });
+    if (updated.count !== 1) return undefined;
+    return this.get(token.authorizedAppId);
   }
 
   /**

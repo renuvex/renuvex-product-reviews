@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-10
+last_verified: 2026-07-10
 confidence: high
 source_files: []
 tags:
@@ -28,6 +28,12 @@ pre-public-launch; AWS review images, Mux video, Cloudflare Worker widget
 delivery, QStash maintenance scheduling, and public read-cache paths are live.
 Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
+The review-request email V5 DB/backend package exists only in disabled,
+correctness-hardened source. Production resources and live behavior do not yet exist.
+It adds install-generation fencing, exact-subject DSR, reversible daily
+analytics, bounded retention, and separately gated immutable erasure-journal
+IaC. Production migration, journal/AWS rollout, outbound dispatch, UI, and live
+email acceptance remain future approved work.
 
 ## Current Phase
 Active development on the production test store. Core review, image, Mux video, moderation, storefront widget, Cloudflare Worker delivery, and public read-cache paths are implemented and live. The project is still pre-public-launch; remaining work is product polish, security hardening, operational smoke coverage, and future feature expansion rather than a pending Mux/Worker migration.
@@ -86,7 +92,7 @@ Active development on the production test store. Core review, image, Mux video, 
 
 ## Known Issues / Gaps
 - Structured-data injection exists in the widget runtime, but it is currently coupled to the rating badge/review-count path and still needs SEO validation and a clearer server/client strategy. See [[Structured_Data_And_Rich_Snippets]] and [[Yotpo_Style_Widget_Modular_Architecture]].
-- No review-request emails / post-purchase triggers
+- No live review-request emails / post-purchase sending. The disabled V5 DB/backend/retention/DSR/journal source is locally verified, including real restore replay and journal-first bounded uninstall. Production migration, actual DB restore-window verification, journal stack/genesis, provider-side app-deleted registration, AWS EventBridge/SQS/Lambda/SES dispatch, settings UI, and live ikas acceptance remain open.
 - No CSV import/export of reviews
 - No analytics dashboard (review volume over time, conversion lift, etc.)
 - No multi-language storefront UI yet. The widget is Turkish-first; source still has hardcoded Turkish visible text, `tr-TR` formatting, and Turkish accessibility labels. Scope: [[Roadmap]] and [[Open_Questions]].
@@ -112,13 +118,13 @@ Active development on the production test store. Core review, image, Mux video, 
 2. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
 3. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
 4. Validate structured-data SEO on a public PDP with approved reviews.
-5. Implement review-request email flow (post-purchase delay + token-gated submit URL).
+5. Continue review-request email rollout with the AWS dispatcher/sender implementation plan, then separately gate production migration, SES/DNS/env, settings UI, and live acceptance.
 6. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
 7. Add CSV import/export for reviews.
 8. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-07-04
+2026-07-10
 
 ## Change Log
 - 2026-07-04: Fixed admin AWS private-image thumbnails after live acceptance exposed the text fallback in pending reviews. The list now lazy-loads the signed `thumb_320x427` variant through the authenticated image-preview endpoint, and the image modal loading state no longer uses video copy.

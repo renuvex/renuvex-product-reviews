@@ -1,23 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
-import {
-  DEFAULT_TOKEN_EXPIRES_DAYS,
-  REVIEW_EMAIL_JOB_LEASE_MINUTES,
-  REVIEW_EMAIL_PREPARED_ATTEMPT_TTL_MINUTES,
-} from '@/lib/review-email/constants';
+import { DEFAULT_TOKEN_EXPIRES_DAYS, REVIEW_EMAIL_JOB_LEASE_MINUTES, REVIEW_EMAIL_PREPARED_ATTEMPT_TTL_MINUTES } from '@/lib/review-email/constants';
 import { addDays } from '@/lib/review-email/time';
 import { decryptText } from '@/lib/review-email/pii';
 import { buildReviewRequestEmailUrl } from '@/lib/review-email/public-access';
 import { prepareReviewRequestToken, activatePreparedReviewRequestToken } from '@/lib/review-email/tokens';
+import { isReviewEmailEnabled } from '@/lib/review-email/config';
+import { recordReviewEmailMetricContribution } from '@/lib/review-email/analytics';
+import { normalizeReviewEmailFailure } from '@/lib/review-email/failures';
 
-const ACTIVE_JOB_STATUSES = [
-  'pending',
-  'leased',
-  'dispatched',
-  'processing',
-  'retrying',
-  'awaiting_confirmation',
-] as const;
+export const REVIEW_EMAIL_ACTIVE_JOB_STATUSES = ['pending', 'leased', 'dispatched', 'processing', 'retrying', 'awaiting_confirmation'] as const;
 const CLOSED_REQUEST_STATUSES = ['submitted', 'cancelled', 'expired', 'suppressed'] as const;
 
 type JobDb = Pick<PrismaClient, '$queryRaw' | '$transaction' | 'reviewEmailJob'>;
@@ -113,14 +105,9 @@ export async function markReviewEmailJobDispatched(
   return updated.count === 1;
 }
 
-export async function cancelPendingReviewEmailJobs(
-  tx: Prisma.TransactionClient,
-  requestId: string,
-  reason: string,
-  now = new Date(),
-): Promise<void> {
+export async function cancelPendingReviewEmailJobs(tx: Prisma.TransactionClient, requestId: string, reason: string, now = new Date()): Promise<void> {
   await tx.reviewEmailJob.updateMany({
-    where: { requestId, status: { in: [...ACTIVE_JOB_STATUSES] } },
+    where: { requestId, status: { in: [...REVIEW_EMAIL_ACTIVE_JOB_STATUSES] } },
     data: {
       status: 'cancelled',
       completedAt: now,
@@ -131,12 +118,25 @@ export async function cancelPendingReviewEmailJobs(
   });
 }
 
-export async function markReviewEmailJobSkipped(
-  db: Pick<PrismaClient, 'reviewEmailJob'>,
-  jobId: string,
+export async function cancelActiveReviewEmailJobsForStore(
+  tx: Prisma.TransactionClient,
+  storeId: string,
   reason: string,
   now = new Date(),
-) {
+): Promise<void> {
+  await tx.reviewEmailJob.updateMany({
+    where: { storeId, status: { in: [...REVIEW_EMAIL_ACTIVE_JOB_STATUSES] } },
+    data: {
+      status: 'cancelled',
+      completedAt: now,
+      leaseOwner: null,
+      leaseExpiresAt: null,
+      lastErrorCode: reason,
+    },
+  });
+}
+
+export async function markReviewEmailJobSkipped(db: Pick<PrismaClient, 'reviewEmailJob'>, jobId: string, reason: string, now = new Date()) {
   return db.reviewEmailJob.update({
     where: { id: jobId },
     data: {
@@ -172,11 +172,7 @@ async function closeRequestBeforeSend(
   });
 }
 
-async function abandonPreparedAttempt(
-  tx: Prisma.TransactionClient,
-  attemptId: string,
-  now: Date,
-): Promise<void> {
+async function abandonPreparedAttempt(tx: Prisma.TransactionClient, attemptId: string, now: Date): Promise<void> {
   await tx.reviewEmailAttempt.updateMany({
     where: { id: attemptId, status: 'prepared', sendInitiatedAt: null },
     data: {
@@ -196,6 +192,9 @@ export async function prepareReviewEmailSend(
   jobId: string,
   input: { now?: Date } = {},
 ): Promise<PreparedReviewEmailSend> {
+  if (!isReviewEmailEnabled()) {
+    throw new ReviewEmailJobError('review_email_feature_disabled');
+  }
   const now = input.now ?? new Date();
   const staleBefore = new Date(now.getTime() - REVIEW_EMAIL_PREPARED_ATTEMPT_TTL_MINUTES * 60 * 1000);
 
@@ -283,11 +282,9 @@ export async function prepareReviewEmailSend(
           lastErrorCode: currentSettings?.enabled ? 'reminders_disabled' : 'store_email_disabled',
         },
       });
-      throw new ReviewEmailJobError(
-        currentSettings?.enabled ? 'review_email_reminders_disabled' : 'review_email_store_disabled',
-      );
+      throw new ReviewEmailJobError(currentSettings?.enabled ? 'review_email_reminders_disabled' : 'review_email_store_disabled');
     }
-    if (!job.request.recipientEmailHash || !job.request.recipientEmailEncrypted) {
+    if (!job.request.recipientEmailHash || !job.request.recipientEmailFoldedHash || !job.request.recipientEmailEncrypted) {
       await closeRequestBeforeSend(tx, {
         requestId: job.requestId,
         status: 'cancelled',
@@ -299,7 +296,7 @@ export async function prepareReviewEmailSend(
     const suppression = await tx.reviewEmailSuppression.findFirst({
       where: {
         storeId: job.storeId,
-        emailHash: job.request.recipientEmailHash,
+        emailHash: job.request.recipientEmailFoldedHash,
         releasedAt: null,
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
       },
@@ -373,9 +370,7 @@ export async function markReviewEmailSendInitiated(
 
     const activated = await activatePreparedReviewRequestToken(tx, { attemptId, sendInitiatedAt: now });
     const requestExpiresAt =
-      attempt.job.request.expiresAt && attempt.job.request.expiresAt > activated.expiresAt
-        ? attempt.job.request.expiresAt
-        : activated.expiresAt;
+      attempt.job.request.expiresAt && attempt.job.request.expiresAt > activated.expiresAt ? attempt.job.request.expiresAt : activated.expiresAt;
     const requestUpdated = await tx.reviewRequest.updateMany({
       where: {
         id: attempt.job.requestId,
@@ -499,6 +494,18 @@ export async function finalizeAcceptedReviewEmailAttempt(
     },
   });
 
+  if (attempt.job.request.receiptId) {
+    await recordReviewEmailMetricContribution(tx, {
+      receiptId: attempt.job.request.receiptId,
+      dedupeKey: `review-email-attempt:${attempt.id}:accepted`,
+      metricDate: attempt.acceptedAt ?? acceptedAt,
+      kind: attempt.job.kind,
+      templateVersion: attempt.templateVersion,
+      locale: attempt.locale,
+      metric: 'accepted',
+    });
+  }
+
   if (attempt.job.kind === 'request') {
     const firstSentAt = attempt.job.request.firstSentAt ?? acceptedAt;
     const updated = await tx.reviewRequest.updateMany({
@@ -534,11 +541,13 @@ export async function markReviewEmailSendAccepted(
   attemptId: string,
   input: { providerMessageId: string; acceptedAt?: Date },
 ): Promise<void> {
-  await db.$transaction((tx) => finalizeAcceptedReviewEmailAttempt(tx, {
-    attemptId,
-    providerMessageId: input.providerMessageId,
-    acceptedAt: input.acceptedAt,
-  }));
+  await db.$transaction((tx) =>
+    finalizeAcceptedReviewEmailAttempt(tx, {
+      attemptId,
+      providerMessageId: input.providerMessageId,
+      acceptedAt: input.acceptedAt,
+    }),
+  );
 }
 
 export async function markReviewEmailSendAwaitingConfirmation(
@@ -549,7 +558,7 @@ export async function markReviewEmailSendAwaitingConfirmation(
   await db.$transaction(async (tx) => {
     const attempt = await tx.reviewEmailAttempt.findUnique({
       where: { id: attemptId },
-      include: { job: true },
+      include: { job: { include: { request: true } } },
     });
     if (!attempt || !attempt.sendInitiatedAt || !['sending', 'awaiting_confirmation'].includes(attempt.status)) {
       throw new ReviewEmailJobError('review_email_attempt_not_sending');
@@ -582,10 +591,14 @@ export async function markReviewEmailSendFailed(
   input: { errorCode: string; retryable: boolean; rejected?: boolean; now?: Date },
 ): Promise<void> {
   const now = input.now ?? new Date();
+  const failure = normalizeReviewEmailFailure('email_send', {
+    code: input.errorCode,
+    retryable: input.retryable,
+  });
   await db.$transaction(async (tx) => {
     const attempt = await tx.reviewEmailAttempt.findUnique({
       where: { id: attemptId },
-      include: { job: true },
+      include: { job: { include: { request: true } } },
     });
     if (!attempt) throw new ReviewEmailJobError('review_email_attempt_not_found');
     if (attempt.status === 'awaiting_confirmation' || attempt.status === 'accepted' || attempt.status === 'delivery_confirmed') {
@@ -597,7 +610,7 @@ export async function markReviewEmailSendFailed(
       data: {
         status: input.rejected ? 'rejected' : 'failed',
         completedAt: now,
-        errorCode: input.errorCode.slice(0, 128),
+        errorCode: failure.code,
       },
     });
     await tx.reviewRequestToken.updateMany({
@@ -615,9 +628,20 @@ export async function markReviewEmailSendFailed(
         completedAt: input.retryable ? null : now,
         leaseOwner: null,
         leaseExpiresAt: null,
-        lastErrorCode: input.errorCode.slice(0, 128),
+        lastErrorCode: failure.code,
       },
     });
+    if (attempt.job.request.receiptId) {
+      await recordReviewEmailMetricContribution(tx, {
+        receiptId: attempt.job.request.receiptId,
+        dedupeKey: `review-email-attempt:${attempt.id}:${input.rejected ? 'rejected' : 'failed'}`,
+        metricDate: now,
+        kind: attempt.job.kind,
+        templateVersion: attempt.templateVersion,
+        locale: attempt.locale,
+        metric: input.rejected ? 'rejected' : 'failed',
+      });
+    }
     if (attempt.job.kind === 'request') {
       await tx.reviewRequest.updateMany({
         where: { id: attempt.job.requestId, status: { in: ['scheduled', 'sending'] } },

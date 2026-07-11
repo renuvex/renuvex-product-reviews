@@ -3,7 +3,8 @@ type: ikas
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-07-10
+last_verified: 2026-07-10
 tags:
   - ikas
   - oauth
@@ -27,8 +28,8 @@ ikas-specific OAuth particulars and gotchas. The full step-by-step flow lives in
 - **Scope**: configured in [src/globals/config.ts](src/globals/config.ts). Currently `read_orders,write_orders,read_products,read_inventories,write_inventories` — review necessity.
 
 ## Gotchas
-- **Re-install hygiene**: `prisma.authToken.deleteMany({ merchantId })` runs on every callback before upsert. This is intentional to clean stale rows from previous installs (e.g. a merchant uninstalling and re-installing).
-- **No uninstall webhook** wired today. Stale `AuthToken` rows for uninstalled merchants persist. Consider a periodic sweep or wiring an ikas uninstall callback if available.
+- **Re-install hygiene**: `activateIkasStoreInstallation()` serializes callback/uninstall work per merchant, increments generation for a new `authorizedAppId`, and replaces stale tokens in the same transaction. An erased identity cannot be reactivated by a delayed callback.
+- **Uninstall source exists but live acceptance is open**: the disabled review-email order endpoint handles signed `store/app/deleted`, deletes review-email/order/auth PII, retries failures, and ignores a stale generation after reinstall. Provider registration and the app-wide policy for merchants who never enable review email still require live ikas acceptance before launch.
 - **`getRedirectUri(host)`** in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) tries to recover when the configured redirect uses `localhost` but the request comes from a different public development host. Useful for local dev with a public tunnel. In prod, always set `NEXT_PUBLIC_DEPLOY_URL` correctly.
 - **JWT and OAuth share `CLIENT_SECRET`**. Rotation simultaneously invalidates JWTs and breaks ikas refresh. Plan rotations carefully.
 

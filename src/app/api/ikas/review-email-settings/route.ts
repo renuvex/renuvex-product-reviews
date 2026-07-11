@@ -4,13 +4,15 @@ import { prisma } from '@/lib/prisma';
 import {
   buildReviewEmailSettingsWrite,
   getEffectiveReviewEmailSettings,
-  persistReviewEmailSettings,
+  persistReviewEmailSettingsForInstallation,
   ReviewEmailSettingsError,
   serializeReviewEmailSettings,
 } from '@/lib/review-email/settings';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { getIkas } from '@/helpers/api-helpers';
 import { buildOrderWebhookEndpoint, registerOrderWebhooks } from '@/lib/review-email/ikas-orders';
+import { ensureActiveIkasStoreInstallation, IkasInstallationError } from '@/lib/ikas-installation-lifecycle';
+import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
 
 export async function GET(request: NextRequest) {
   const user = getUserFromRequest(request);
@@ -25,22 +27,22 @@ export async function PUT(request: NextRequest) {
     const user = getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const authToken = await AuthTokenManager.get(user.authorizedAppId);
+    if (!authToken) {
+      throw new ReviewEmailSettingsError('auth_token_not_found', 'Auth token not found', 409);
+    }
+    await ensureActiveIkasStoreInstallation(user.merchantId, user.authorizedAppId);
+
     const body = await request.json();
     const data = buildReviewEmailSettingsWrite(body);
     if (data.enabled) {
-      const authToken = await AuthTokenManager.get(user.authorizedAppId);
-      if (!authToken) {
-        throw new ReviewEmailSettingsError('auth_token_not_found', 'Auth token not found', 409);
-      }
       try {
-        await registerOrderWebhooks(
-          getIkas(authToken),
-          buildOrderWebhookEndpoint(request.headers.get('host') ?? ''),
-        );
+        await registerOrderWebhooks(getIkas(authToken), buildOrderWebhookEndpoint(request.headers.get('host') ?? ''));
       } catch {
-        await persistReviewEmailSettings(
+        await persistReviewEmailSettingsForInstallation(
           prisma,
           user.merchantId,
+          user.authorizedAppId,
           { ...data, enabled: false },
           { status: 'error', verifiedAt: null, lastErrorCode: 'registration_failed' },
         );
@@ -48,20 +50,23 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const settings = await persistReviewEmailSettings(
+    const settings = await persistReviewEmailSettingsForInstallation(
       prisma,
       user.merchantId,
+      user.authorizedAppId,
       data,
-      data.enabled
-        ? { status: 'verified', verifiedAt: new Date(), lastErrorCode: null }
-        : {},
+      data.enabled ? { status: 'verified', verifiedAt: new Date(), lastErrorCode: null } : {},
     );
     return NextResponse.json({ data: serializeReviewEmailSettings(settings) });
   } catch (error) {
     if (error instanceof ReviewEmailSettingsError) {
       return NextResponse.json({ error: error.code }, { status: error.status });
     }
-    console.error('[review-email-settings] ERROR:', error instanceof Error ? error.message : error);
+    if (error instanceof IkasInstallationError) {
+      return NextResponse.json({ error: error.code }, { status: 409 });
+    }
+    const failure = normalizeReviewEmailFailure('review_email_settings', error);
+    reportReviewEmailFailure('review_email_settings', failure);
     return NextResponse.json({ error: 'review_email_settings_failed' }, { status: 500 });
   }
 }

@@ -18,6 +18,9 @@ related:
   - "[[ADR_0004_Ikas_Integration_Strategy]]"
 source_files:
   - "src/lib/ikas-client/graphql-requests.ts"
+  - "src/lib/review-email/ikas-orders.ts"
+  - "src/lib/ikas-installation-lifecycle.ts"
+  - "src/app/api/webhooks/ikas/orders/route.ts"
   - "src/app/api/webhooks/ikas/products/route.ts"
 ---
 
@@ -72,6 +75,11 @@ contract for a post-order single-use action link:
 - `store/app/deleted` is the uninstall signal. Stored personal data such as
   email, address, order references, and order-line references must be deleted or
   anonymized within 24 hours.
+- Current `saveWebhooks` MCP introspection does not list `store/app/deleted`.
+  The application therefore registers only `store/order/created` and
+  `store/order/updated` through that mutation. The signed uninstall receiver is
+  separate and review email cannot be enabled until provider-side app
+  configuration is verified and the operator gate is set.
 
 ## Product And Implementation Implications
 
@@ -93,26 +101,29 @@ contract for a post-order single-use action link:
   transactional enough, or whether Renuvex requires `notificationsAccepted=true`
   for the MVP, remains a product/legal decision and should be explicit before
   launch.
-- The future schema must support uninstall cleanup/anonymization within 24
-  hours. Storing raw email/order identifiers without a deletion plan is not
-  acceptable.
-- Reconciliation should be QStash-scheduled or job-dispatched with bounded
-  windows and rate-limit-aware pagination; raw broad scans should be avoided.
+- The source schema now supports journal-first bounded uninstall cleanup. It stores
+  protected email/order evidence only after active-installation and
+  merchant-enabled checks, and serializes ingest/reconciliation/erasure with a
+  store-scoped installation-generation fence. Review/customer content and
+  pending media are removed in bounded batches with idempotent provider cleanup
+  outbox jobs; signed QStash continuation plus daily fallback prevents a large
+  tenant from depending on one request transaction. Live provider-side
+  uninstall registration and 24-hour acceptance are still required before launch.
+- Reconciliation uses bounded `updatedAt` windows, max-200 pagination, a DB
+  lease/version fence, and the same installation lock. Its future AWS trigger
+  must wake this DB-owned lifecycle rather than perform raw broad scans.
 
 ## Open Implementation Work
 
-- Add the needed ikas GraphQL documents through MCP list/introspect, then
-  `graphql-requests.ts` and `pnpm codegen`.
-- Implement the additive Prisma models accepted in
-  [[ADR_0036_Review_Request_Email_Architecture]] for order eligibility
-  evidence, review-request lifecycle, one-time tokens, send attempts, provider
-  events, suppression, and uninstall cleanup evidence.
-- Design the order webhook receiver with HMAC verification, idempotency, and
-  canonical `listOrder` re-read.
-- Design reconciliation by `updatedAt` with page/limit pagination and `hasNext`.
+- The ikas GraphQL document, additive Prisma lifecycle, signed order webhook
+  receiver, canonical `listOrder` re-read, and leased `updatedAt` reconciliation
+  are implemented in disabled source and locally verified.
 - Define the product/legal consent rule for review-request email when
   `notificationsAccepted=false`.
-- Define the uninstall cleanup/anonymization job and acceptance evidence.
+- Perform live ikas acceptance for the MCP-valid order registration and the
+  separately configured uninstall signal, then prove the
+  24-hour erasure path after an approved production migration/deploy.
+- Build the separately planned AWS EventBridge/SQS/Lambda sender and SES rollout.
 
 ## Obsidian Links
 

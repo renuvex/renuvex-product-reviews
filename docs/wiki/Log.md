@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-09
-last_verified: 2026-07-09
+updated: 2026-07-11
+last_verified: 2026-07-11
 confidence: high
 tags:
   - log
@@ -26,6 +26,63 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-11 - fix | Close review-email V5 integrity blockers
+- Replaced cascade-based DSR order selection with frozen direct-vs-linked
+  inventory, deterministic parent locks, `ReviewRequest` parent `RESTRICT` FKs,
+  conditional final-parent deletion, and shared-order customer-PII scrub.
+- Made journal coverage distinguish valid post-retention S3 lifecycle markers
+  from early/non-latest/marker-only/multi-version conflicts while preserving
+  dual-marker pagination and dynamic copy-register retention.
+- Replaced raw review-email exception persistence/reporting with allowlisted
+  code-only failures and synthetic Sentry evidence. Production migration history
+  and AWS journal absence were checked read-only; no live mutation occurred.
+
+## 2026-07-10 - hardening | Close review-email V5 correctness audit
+- Replaced evidence-only journal restore with strict active-horizon validation
+  and real DSR/store-uninstall replay. DSR retries no longer require raw email;
+  journal retention begins at a persisted first-write time; genesis now uses a
+  separately authorized permanent legal hold.
+- Made uninstall erasure journal-first and bounded across reviews/media,
+  pending uploads, order/email data, and auth tokens. Signed QStash continuation
+  provides prompt progress and daily maintenance remains the fallback.
+- Corrected manifest analytics reversal after contribution retention, partial
+  refund/cancellation eligibility, and ikas webhook registration scope. App
+  deleted readiness is now a fail-closed provider verification gate.
+- Clean PostgreSQL 16 evidence applied all 56 migrations; 451 unit tests and 6
+  DB integration tests passed with TypeScript, ESLint, template validation, and
+  regional `cfn-lint`. No production/provider/env/deploy mutation occurred.
+
+## 2026-07-10 - implementation | Add review-email V5 retention and DSR foundation
+- Added the disabled, expand-only V5 schema/backend for exact-subject erasure,
+  folded-only suppression, order-product receipts, reversible sparse daily
+  analytics, bounded report/enforce retention, and transaction-safe review
+  summary/media cleanup.
+- Added immutable S3 erasure-journal and IAM source templates, copy-register
+  retention calculation, deterministic genesis/coverage evidence, strict
+  PUT-crash/`412` recovery, and a separately authorized retention-extension
+  operator path. Defaults are 35 active plus 7 version-tail days; actual rollout
+  must first verify the managed DB restore horizon.
+- Clean PostgreSQL 16 evidence applied all 56 migrations and passed 5 integration
+  tests; 443 unit tests plus type, lint, local IaC validators, and `cfn-lint`
+  passed. A direct Next.js 16.2.1 production build passed without running the
+  migration-deploy wrapper. No production DB, AWS, env, DNS, deploy, or provider
+  mutation occurred.
+
+## 2026-07-10 - hardening | Fence review-email install and erasure lifecycle
+- Added an additive `IkasStoreInstallation` generation/tombstone model and a
+  shared PostgreSQL transaction advisory-lock fence across OAuth activation,
+  settings changes, webhook audit, order sync, reconciliation, and uninstall
+  erasure.
+- Disabled merchants now stop before canonical order PII/cursor persistence;
+  reconciliation derives store ownership from the authorized-app token; stale
+  uninstall events cannot delete a reinstall; token refresh cannot recreate an
+  erased auth row.
+- Customer-email HMAC/AES-GCM values now carry key versions and require all PII
+  versions through `current` to remain configured. Disposable PostgreSQL 16
+  verification applied all 55 migrations with zero drift and proved concurrent
+  uninstall/reinstall serialization; 426 unit tests, typecheck, lint, and a
+  direct Next production build passed. No production mutation occurred.
 
 ## 2026-07-09 - docs | Record ikas order review-request platform contract
 - Direct ikas feedback confirmed that `store/order/created` and

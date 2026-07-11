@@ -3,8 +3,8 @@ type: codebase
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-28
-last_verified: 2026-06-28
+updated: 2026-07-10
+last_verified: 2026-07-10
 tags:
   - critical-files
 related:
@@ -56,10 +56,10 @@ related:
 ## Auth / OAuth
 
 ### [src/app/api/oauth/callback/ikas/route.ts](src/app/api/oauth/callback/ikas/route.ts)
-- **What:** OAuth callback. HMAC-SHA256 signature validation → token exchange → fetch merchant + authorized app → upsert AuthToken → upsert StoreSettings → auto-inject widget script per storefront → JWT → redirect to admin.
+- **What:** OAuth callback. HMAC-SHA256 signature validation → token exchange → fetch merchant + authorized app → atomically activate installation generation/replace stale tokens → upsert StoreSettings → auto-inject widget script per storefront → JWT → redirect to admin.
 - **Be careful:**
   - This route does a LOT (auth + side-effects). If you add work here, prefer a separate endpoint or a defensive try/catch like the existing script-injection block (it logs but doesn't fail the install).
-  - On every install, `prisma.authToken.deleteMany({ merchantId })` runs first — this is intentional for re-install hygiene. Don't remove without a plan.
+  - Installation token writes must stay inside `activateIkasStoreInstallation()` so OAuth and uninstall share the same store-scoped generation fence. Token refresh is update-only and must not regain upsert behavior.
   - Script injection is now non-destructive: the callback delegates to `ensureStorefrontScripts()` and uses only ikas create/update mutations. Do not reintroduce zero-argument `deleteStorefrontJSScript()` unless ikas provides a targeted, verified delete/list contract.
 
 ### [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)

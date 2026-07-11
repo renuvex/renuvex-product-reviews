@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import type { VerifiedSesSnsMessage } from '@/lib/email/ses-sns';
 import { cancelPendingReviewEmailJobs, finalizeAcceptedReviewEmailAttempt } from '@/lib/review-email/jobs';
+import { recordReviewEmailMetricContribution, type ReviewEmailMetric } from '@/lib/review-email/analytics';
+import { piiHashVersion } from '@/lib/review-email/pii';
 
 type EventDb = Pick<PrismaClient, '$transaction' | 'reviewEmailEvent'>;
 
@@ -28,7 +30,7 @@ async function suppressRequestForAttempt(
       job: {
         requestId: string;
         storeId: string;
-        request: { recipientEmailHash: string | null };
+        request: { recipientEmailFoldedHash: string | null };
       };
     };
     message: VerifiedSesSnsMessage;
@@ -36,7 +38,7 @@ async function suppressRequestForAttempt(
   },
 ): Promise<void> {
   const reason = suppressionReason(input.message);
-  const emailHash = input.attempt.job.request.recipientEmailHash;
+  const emailHash = input.attempt.job.request.recipientEmailFoldedHash;
   if (!reason || !emailHash) return;
 
   await tx.reviewEmailSuppression.upsert({
@@ -53,6 +55,8 @@ async function suppressRequestForAttempt(
       reason,
       source: 'ses_event',
       providerEventId: input.message.messageId,
+      emailHashKeyVersion: piiHashVersion(emailHash),
+      emailNormalizationVersion: 2,
     },
     update: {
       source: 'ses_event',
@@ -82,6 +86,33 @@ async function suppressRequestForAttempt(
   });
 }
 
+async function recordProviderMetric(
+  tx: Prisma.TransactionClient,
+  input: {
+    attempt: {
+      id: string;
+      templateVersion: string;
+      locale: string;
+      job: { kind: string; request: { receiptId: string | null } };
+    };
+    messageId: string;
+    metric: ReviewEmailMetric;
+    metricDate: Date;
+  },
+): Promise<void> {
+  const receiptId = input.attempt.job.request.receiptId;
+  if (!receiptId) return;
+  await recordReviewEmailMetricContribution(tx, {
+    receiptId,
+    dedupeKey: `review-email-provider-event:${input.messageId}:${input.metric}`,
+    metricDate: input.metricDate,
+    kind: input.attempt.job.kind,
+    templateVersion: input.attempt.templateVersion,
+    locale: input.attempt.locale,
+    metric: input.metric,
+  });
+}
+
 export async function persistSesEmailEvent(
   db: EventDb,
   message: VerifiedSesSnsMessage,
@@ -108,7 +139,7 @@ export async function persistSesEmailEvent(
           include: {
             job: {
               include: {
-                request: { select: { recipientEmailHash: true } },
+                request: { select: { receiptId: true, recipientEmailFoldedHash: true } },
               },
             },
           },
@@ -136,6 +167,20 @@ export async function persistSesEmailEvent(
       return { status: 'created' as const, matchedAttempt: Boolean(attempt) };
     }
 
+    if (attempt.job.request.receiptId) {
+      const receipt = await tx.reviewRequestReceipt.findUnique({
+        where: { id: attempt.job.request.receiptId },
+        select: { analyticsClosedAt: true },
+      });
+      if (receipt?.analyticsClosedAt) {
+        await tx.reviewEmailEvent.update({
+          where: { snsMessageId: message.messageId },
+          data: { status: 'ignored', ignoredReason: 'ignored_subject_erased' },
+        });
+        return { status: 'created' as const, matchedAttempt: true };
+      }
+    }
+
     if (message.sesEventType === 'SEND' || message.sesEventType === 'DELIVERY') {
       await finalizeAcceptedReviewEmailAttempt(tx, {
         attemptId: attempt.id,
@@ -147,12 +192,14 @@ export async function persistSesEmailEvent(
           where: { id: attempt.id },
           data: { status: 'delivery_confirmed', deliveryConfirmedAt: now },
         });
+        await recordProviderMetric(tx, { attempt, messageId: message.messageId, metric: 'delivered', metricDate: now });
       }
     } else if (message.sesEventType === 'DELIVERY_DELAY') {
       await tx.reviewEmailAttempt.updateMany({
         where: { id: attempt.id, status: { notIn: ['bounced', 'complained', 'rejected', 'failed'] } },
         data: { status: 'delayed' },
       });
+      await recordProviderMetric(tx, { attempt, messageId: message.messageId, metric: 'delayed', metricDate: now });
     } else if (message.sesEventType === 'REJECT' || message.sesEventType === 'RENDERING_FAILURE') {
       await tx.reviewEmailAttempt.update({
         where: { id: attempt.id },
@@ -176,6 +223,12 @@ export async function persistSesEmailEvent(
           data: { status: 'error' },
         });
       }
+      await recordProviderMetric(tx, {
+        attempt,
+        messageId: message.messageId,
+        metric: message.sesEventType === 'REJECT' ? 'rejected' : 'failed',
+        metricDate: now,
+      });
     } else if (message.sesEventType === 'BOUNCE' || message.sesEventType === 'COMPLAINT') {
       await tx.reviewEmailAttempt.update({
         where: { id: attempt.id },
@@ -188,6 +241,12 @@ export async function persistSesEmailEvent(
       if (isPermanentSuppression(message)) {
         await suppressRequestForAttempt(tx, { attempt, message, now });
       }
+      await recordProviderMetric(tx, {
+        attempt,
+        messageId: message.messageId,
+        metric: message.sesEventType === 'BOUNCE' ? 'bounced' : 'complained',
+        metricDate: now,
+      });
     }
 
     return { status: 'created' as const, matchedAttempt: true };

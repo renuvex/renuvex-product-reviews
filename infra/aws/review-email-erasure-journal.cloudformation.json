@@ -1,0 +1,184 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Immutable short-horizon review-email erasure journal bucket (ADR_0036).",
+  "Parameters": {
+    "BucketName": {
+      "Type": "String",
+      "Default": "renuvex-review-email-erasure-journal-prod-989086371563-euc1",
+      "AllowedPattern": "^renuvex-review-email-erasure-journal-[a-z0-9-]+$"
+    },
+    "ActiveRetentionDays": {
+      "Type": "Number",
+      "Default": 35,
+      "MinValue": 35,
+      "MaxValue": 365
+    },
+    "ObjectLockRetentionDays": {
+      "Type": "Number",
+      "Default": 42,
+      "MinValue": 42,
+      "MaxValue": 372
+    }
+  },
+  "Resources": {
+    "ReviewEmailErasureJournalBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketName": {
+          "Ref": "BucketName"
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "ObjectLockEnabled": true,
+        "ObjectLockConfiguration": {
+          "ObjectLockEnabled": "Enabled",
+          "Rule": {
+            "DefaultRetention": {
+              "Mode": "GOVERNANCE",
+              "Days": {
+                "Ref": "ObjectLockRetentionDays"
+              }
+            }
+          }
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "BoundedErasureJournalRetention",
+              "Status": "Enabled",
+              "Prefix": "erasure-journal/v1/2",
+              "ExpirationInDays": {
+                "Ref": "ActiveRetentionDays"
+              },
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 7
+              },
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 1
+              }
+            },
+            {
+              "Id": "RemoveExpiredJournalDeleteMarkers",
+              "Status": "Enabled",
+              "Prefix": "erasure-journal/v1/2",
+              "ExpiredObjectDeleteMarker": true
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "review-email-erasure-journal"
+          },
+          {
+            "Key": "data-classification",
+            "Value": "erasure-evidence"
+          }
+        ]
+      }
+    },
+    "ReviewEmailErasureJournalBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "ReviewEmailErasureJournalBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DenyInsecureTransport",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "ReviewEmailErasureJournalBucket",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${ReviewEmailErasureJournalBucket.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            },
+            {
+              "Sid": "DenyJournalWritesWithoutIfNoneMatch",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:PutObject",
+              "Resource": {
+                "Fn::Sub": "${ReviewEmailErasureJournalBucket.Arn}/erasure-journal/v1/*"
+              },
+              "Condition": {
+                "StringNotEquals": {
+                  "s3:if-none-match": "*"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketName": {
+      "Value": {
+        "Ref": "ReviewEmailErasureJournalBucket"
+      }
+    },
+    "BucketArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ReviewEmailErasureJournalBucket",
+          "Arn"
+        ]
+      }
+    },
+    "ActiveRetentionDays": {
+      "Value": {
+        "Ref": "ActiveRetentionDays"
+      }
+    },
+    "ObjectLockRetentionDays": {
+      "Value": {
+        "Ref": "ObjectLockRetentionDays"
+      }
+    }
+  }
+}

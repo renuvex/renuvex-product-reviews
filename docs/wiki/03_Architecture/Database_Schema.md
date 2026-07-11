@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-11
+last_verified: 2026-07-11
 confidence: high
 tags:
   - database
@@ -26,6 +26,9 @@ source_files:
   - "prisma/migrations/20260608120000_add_review_cursor_indexes/migration.sql"
   - "prisma/migrations/20260608170000_add_review_summary_photo_rating_counts/migration.sql"
   - "prisma/migrations/20260609120000_add_cleanup_hardening/migration.sql"
+  - "prisma/migrations/20260710120000_add_review_request_email_lifecycle/migration.sql"
+  - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
+  - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/cleanup-orphan-images.ts"
@@ -63,8 +66,51 @@ ikas OAuth tokens, one row per app installation.
 | `refreshToken` | String | OAuth refresh token |
 | `scope` | String? | Space-separated scopes |
 
-Behavior: `onCheckToken` ([src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)) refreshes when expired and writes back via `AuthTokenManager.put`.
-On install, `prisma.authToken.deleteMany({ where: { merchantId } })` clears stale tokens for that merchant before upsert.
+Behavior: `onCheckToken` ([src/helpers/api-helpers.ts](src/helpers/api-helpers.ts)) refreshes when expired and writes back via `AuthTokenManager.updateExisting`; a deleted installation token is never recreated by refresh.
+On install, `activateIkasStoreInstallation()` holds the store lifecycle lock and atomically replaces stale merchant tokens while activating the current `authorizedAppId` generation. See [[ADR_0036_Review_Request_Email_Architecture]].
+
+### `IkasStoreInstallation`
+Store-scoped lifecycle fence for OAuth/reinstall, review-email settings/order
+ingest/reconciliation, and uninstall erasure. `authorizedAppId` is unique;
+`generation` increases for a new installation identity; `status` moves through
+`active`, `erasing`, and `erased`. The erased row remains as a tombstone so a
+delayed callback or uninstall retry cannot resurrect/delete another generation.
+All state transitions use the same transaction-scoped PostgreSQL advisory lock.
+
+### Review-email V5 retention and DSR
+
+The additive V5 tables keep customer-detail lifecycle separate from long-lived
+merchant metrics:
+
+- `ReviewRequestReceipt` is the order-product duplicate fence and analytics
+  lock target. DSR closes it before reversing contributions; late provider
+  events cannot reopen analytics.
+- `ReviewEmailDataSubjectRun` uniquely scopes an idempotency-key hash to a
+  store and stores deterministic immutable-journal evidence. Its request digest
+  is derived from a versioned HMAC subject hash, and its persisted retention
+  base prevents retries from shortening Object Lock. Raw email and raw
+  idempotency keys are not persisted.
+- `ReviewEmailMetricContribution` is a unique signed-delta ledger;
+  `ReviewEmailDailyMetric` stores sparse merchant/day aggregates.
+- `ReviewEmailSubjectBlock` uses folded identity only to stop future PII
+  ingestion. Exact case-preserving identity is the sole DSR selector.
+- `ReviewEmailPurgeRun` and `ReviewEmailJournalCoverageCheck` retain sanitized
+  maintenance/restore evidence.
+- `StoreDataErasureRun` also stores immutable journal evidence and a bounded
+  phase/counter checkpoint. Its `attempts` value counts consecutive failures,
+  not normal batch continuations.
+- `ReviewRequest` references both order and line snapshots with `ON DELETE
+  RESTRICT`; line-to-order remains cascading. DSR freezes direct-subject and
+  request-linked parent IDs separately, locks the union, then conditionally
+  deletes the final direct order or scrubs its customer PII when unrelated
+  requests still exist.
+- Review-email webhook/reconciliation/erasure maintenance tables persist only
+  bounded error codes, not exception messages.
+
+`Review.reviewRequestReceiptId` and `Review.reviewRequestId` are individually
+unique and use `ON DELETE SET NULL`, so one receipt/request cannot create two
+reviews and retention cannot cascade-delete the review accidentally. Full
+contract: [[ADR_0036_Review_Request_Email_Architecture]].
 
 ### `Review`
 Customer reviews. Public storefront submits; admin moderates.

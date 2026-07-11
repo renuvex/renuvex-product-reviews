@@ -51,7 +51,7 @@ CREATE TABLE "IkasOrderWebhookEvent" (
   "status" VARCHAR(32) NOT NULL DEFAULT 'received',
   "receivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "processedAt" TIMESTAMP(3),
-  "lastError" VARCHAR(512),
+  "lastErrorCode" VARCHAR(128),
   CONSTRAINT "IkasOrderWebhookEvent_pkey" PRIMARY KEY ("id")
 );
 
@@ -303,7 +303,7 @@ CREATE TABLE "IkasOrderReconciliationCursor" (
   "status" VARCHAR(32) NOT NULL DEFAULT 'idle',
   "lastSuccessAt" TIMESTAMP(3),
   "lastErrorAt" TIMESTAMP(3),
-  "lastError" VARCHAR(512),
+  "lastErrorCode" VARCHAR(128),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "IkasOrderReconciliationCursor_pkey" PRIMARY KEY ("storeId")
@@ -316,13 +316,13 @@ CREATE TABLE "StoreDataErasureRun" (
   "storeId" TEXT NOT NULL,
   "triggerSource" VARCHAR(64) NOT NULL,
   "status" VARCHAR(32) NOT NULL DEFAULT 'processing',
-  "attempts" INTEGER NOT NULL DEFAULT 1,
+  "attempts" INTEGER NOT NULL DEFAULT 0,
   "nextRetryAt" TIMESTAMP(3),
   "rowCounts" JSONB,
   "progress" JSONB,
   "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "finishedAt" TIMESTAMP(3),
-  "error" VARCHAR(512),
+  "sanitizedErrorCode" VARCHAR(128),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "StoreDataErasureRun_pkey" PRIMARY KEY ("id")
 );
@@ -341,11 +341,11 @@ ALTER TABLE "IkasOrderLineSnapshot"
 
 ALTER TABLE "ReviewRequest"
   ADD CONSTRAINT "ReviewRequest_orderSnapshotId_fkey"
-  FOREIGN KEY ("orderSnapshotId") REFERENCES "IkasOrderSnapshot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  FOREIGN KEY ("orderSnapshotId") REFERENCES "IkasOrderSnapshot"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 ALTER TABLE "ReviewRequest"
   ADD CONSTRAINT "ReviewRequest_orderLineSnapshotId_fkey"
-  FOREIGN KEY ("orderLineSnapshotId") REFERENCES "IkasOrderLineSnapshot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  FOREIGN KEY ("orderLineSnapshotId") REFERENCES "IkasOrderLineSnapshot"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 ALTER TABLE "ReviewEmailJob"
   ADD CONSTRAINT "ReviewEmailJob_requestId_fkey"

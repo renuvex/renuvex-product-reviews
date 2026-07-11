@@ -15,6 +15,7 @@ import {
   resolveActiveReviewRequestSession,
   ReviewRequestTokenError,
 } from '@/lib/review-email/tokens';
+import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
 
 const REVIEW_REQUEST_RATE_LIMIT_MAX = 30;
 const REVIEW_REQUEST_RATE_LIMIT_WINDOW_SEC = 60;
@@ -87,7 +88,10 @@ export async function POST(request: NextRequest) {
     if (error instanceof ReviewRequestTokenError) {
       return noStore(NextResponse.json({ error: error.code }, { status: error.status }));
     }
-    console.error('[review-request-exchange] ERROR:', error instanceof Error ? error.message : error);
+    reportReviewEmailFailure(
+      'review_request_exchange',
+      normalizeReviewEmailFailure('review_request_exchange', error),
+    );
     return noStore(NextResponse.json({ error: 'review_request_exchange_failed' }, { status: 500 }));
   }
 }
@@ -111,7 +115,10 @@ export async function GET(request: NextRequest) {
         ? NextResponse.json({ error: error.code }, { status: error.status })
         : NextResponse.json({ error: 'review_request_resolve_failed' }, { status: 500 });
     if (!(error instanceof ReviewRequestHostError) && !(error instanceof ReviewRequestTokenError)) {
-      console.error('[review-request-resolve] ERROR:', error instanceof Error ? error.message : error);
+      reportReviewEmailFailure(
+        'review_request_exchange',
+        normalizeReviewEmailFailure('review_request_exchange', error),
+      );
     }
     clearReviewRequestSessionCookie(response);
     return noStore(response);

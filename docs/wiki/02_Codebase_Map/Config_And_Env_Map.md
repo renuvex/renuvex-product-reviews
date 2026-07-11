@@ -12,6 +12,10 @@ related:
   - "[[Index]]"
   - "[[Folder_Structure]]"
   - "[[Deployment_Notes]]"
+source_files:
+  - ".env.example"
+  - "src/lib/review-email/config.ts"
+  - "config/review-email-copy-register.json"
 ---
 
 # Config & Env Map
@@ -107,13 +111,18 @@ All variables in this section are environment-scoped. Preview deployments must u
 |---|---|
 | `REVIEW_EMAIL_ENABLED` | Global review-request email feature flag. Source routes fail closed or ignore order webhooks while this is not exactly `true`. |
 | `REVIEW_EMAIL_PROVIDER` | Future provider selector. Current source placeholder is `ses`; outbound sending is not implemented yet. |
-| `REVIEW_EMAIL_HASH_SECRET` | Server-only HMAC key for customer email hashes. Required before enabling the feature. |
-| `REVIEW_EMAIL_PII_ENCRYPTION_KEY_B64` | Server-only 32-byte base64 AES-GCM key for protected customer email storage. Required before enabling the feature. |
+| `REVIEW_EMAIL_PII_CURRENT_KEY_VERSION` | Positive integer selecting the HMAC/AES-GCM key version for new protected customer-email writes. |
+| `REVIEW_EMAIL_PII_KEYS_JSON` | Server-only versioned object. Each entry contains a 32+ character `hashSecret` and base64 32-byte `encryptionKeyB64`. Runtime requires every version `1..current`; do not remove an old version until an explicit re-key/erasure migration retires all matching ciphertext and suppression hashes. |
 | `REVIEW_REQUEST_TOKEN_CURRENT_KEY_VERSION` | Positive integer selecting the key used for newly prepared review-request tokens. |
 | `REVIEW_REQUEST_TOKEN_KEYS_JSON` | Server-only version-to-HMAC-secret key ring. Keep every version referenced by an unexpired `prepared` or `active` token; maintenance fails closed if a required key is missing. |
 | `REVIEW_REQUEST_SESSION_SECRET` | Server-only HMAC key for the two-hour host-only review-request session. Raw session values are never stored. |
 | `REVIEW_REQUEST_PUBLIC_BASE_URL` | Clean HTTPS origin for review links, currently `https://reviews.renuvex.app`. Tokens are placed in the URL fragment, not the query string. |
 | `AWS_REVIEW_EMAIL_REGION`, `AWS_REVIEW_EMAIL_FROM`, `AWS_REVIEW_EMAIL_CONFIGURATION_SET`, `AWS_SES_EVENTS_SNS_TOPIC_ARN` | SES foundation/feedback placeholders for the future AWS rollout. No AWS resource or outbound sender is created by env presence alone. There is intentionally no direct Vercel `ses:SendEmail` role env in the V3 source package; sender credentials belong to the future Lambda worker package. |
+| `AWS_REVIEW_EMAIL_JOURNAL_REGION`, `AWS_REVIEW_EMAIL_JOURNAL_BUCKET`, `AWS_REVIEW_EMAIL_JOURNAL_ROLE_ARN`, `AWS_REVIEW_EMAIL_JOURNAL_OIDC_AUDIENCE` | Disabled V5 erasure-journal runtime placeholders. Values must come from separately approved CloudFormation outputs. The writer role may put/read/verify journal objects but cannot delete, shorten retention, alter legal hold, or bypass Governance Object Lock. |
+| `AWS_REVIEW_EMAIL_JOURNAL_RESTORE_ROLE_ARN` | Operator-only restore/coverage reader used by the approval-gated CLI. It is not the Vercel runtime writer role and has no write/delete/retention mutation permission. |
+| `IKAS_APP_DELETED_WEBHOOK_VERIFIED` | Operator attestation that the separately configured ikas uninstall signal is registered and accepted live. Defaults false; order `saveWebhooks` success cannot set or replace this gate. |
+| `REVIEW_EMAIL_JOURNAL_ACTIVE_RETENTION_DAYS`, `REVIEW_EMAIL_JOURNAL_OBJECT_LOCK_RETENTION_DAYS`, `REVIEW_EMAIL_JOURNAL_COVERAGE_START_AT` | Copy-register/stack invariants. Defaults are `35`, `42`, and the immutable genesis timestamp; object-lock days must equal active days plus the 7-day version tail. Drift is a rollout blocker, not an automatic runtime update. |
+| `REVIEW_EMAIL_RETENTION_MODE` | `report` by default. `enforce` enables physical bounded purge and therefore requires a separate production acceptance/approval gate. |
 
 ### Sentry
 | Var | Purpose | Where |

@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-04
-last_verified: 2026-07-04
+updated: 2026-07-11
+last_verified: 2026-07-11
 confidence: high
 tags:
   - testing
@@ -22,6 +22,7 @@ source_files:
   - "playwright.widget.config.ts"
   - "playwright.media.config.ts"
   - "vitest.config.ts"
+  - "vitest.integration.config.ts"
   - ".github/workflows/widget-smoke.yml"
   - ".github/workflows/media-cross-browser.yml"
   - ".github/pull_request_template.md"
@@ -46,6 +47,8 @@ source_files:
   - "tests/unit/media-route-contracts.test.ts"
   - "tests/unit/admin-video-preview-contract.test.ts"
   - "tests/unit/review-summary.test.ts"
+  - "tests/integration/review-email-installation-fence.test.ts"
+  - "tests/integration/review-email-v5-db-guarantees.test.ts"
   - "tests/unit/storefront-theme.test.ts"
   - "tests/unit/widget-surface-contracts.test.ts"
   - "tests/unit/structured-data-jsonld.test.ts"
@@ -133,6 +136,7 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | Cross-browser review media | `pnpm test:widget-media` | Local fast path runs Chromium desktop only. CI runs PR media coverage as isolated matrix jobs for Chromium desktop, Pixel Android emulation, and iPhone WebKit emulation. The scheduled cross-browser workflow adds Firefox desktop and desktop WebKit. The suite pins poster-first card/list/gallery rendering, size presets, no list autoplay/preload, Mux Player lightbox attributes, browser-back cleanup, Mux direct-upload wizard submit, and video-to-image navigation cleanup. |
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
 | Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). Vitest runs these unit files with a single worker because the route-level tests rely on mocked module graphs and Next route imports that showed 5s timeout flakes under parallel local Windows runs; serial execution is slower but deterministic. |
+| Review-email DB guarantees | `pnpm test:integration:review-email` | Opt-in test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves concurrent uninstall/reinstall serialization, stale-uninstall rejection, tenant-scoped DSR idempotency, one receipt/review guarantee, bounded retention and analytics reversal, request-parent `RESTRICT` enforcement, shared-order conditional PII scrub, final-parent deletion, changed-subject preservation, a real different-subject DSR/reconciliation race, and journal replay equivalence. Migrations must be applied first. It is not a production/CI DB mutation gate. |
 
 `pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
 

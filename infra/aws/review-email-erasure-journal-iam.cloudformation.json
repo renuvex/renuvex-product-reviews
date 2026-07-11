@@ -1,0 +1,334 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Least-privilege writer, restore, and retention-extension roles for the review-email erasure journal (ADR_0036).",
+  "Parameters": {
+    "JournalBucketName": {
+      "Type": "String",
+      "Default": "renuvex-review-email-erasure-journal-prod-989086371563-euc1",
+      "AllowedPattern": "^renuvex-review-email-erasure-journal-[a-z0-9-]+$"
+    },
+    "VercelOidcProviderArn": {
+      "Type": "String",
+      "AllowedPattern": "^arn:[a-z0-9-]+:iam::[0-9]{12}:oidc-provider/oidc\\.vercel\\.com/renuvex$"
+    },
+    "VercelTeamSlug": {
+      "Type": "String",
+      "Default": "renuvex",
+      "AllowedValues": [
+        "renuvex"
+      ]
+    },
+    "VercelProjectName": {
+      "Type": "String",
+      "Default": "renuvex-product-reviews",
+      "AllowedValues": [
+        "renuvex-product-reviews"
+      ]
+    },
+    "VercelEnvironment": {
+      "Type": "String",
+      "Default": "production",
+      "AllowedValues": [
+        "production"
+      ]
+    },
+    "OidcAudience": {
+      "Type": "String",
+      "Default": "sts.amazonaws.com",
+      "AllowedValues": [
+        "sts.amazonaws.com"
+      ]
+    },
+    "RestoreOperatorPrincipalArn": {
+      "Type": "String",
+      "AllowedPattern": "^arn:[a-z0-9-]+:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$"
+    },
+    "RetentionExtensionOperatorPrincipalArn": {
+      "Type": "String",
+      "AllowedPattern": "^arn:[a-z0-9-]+:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$"
+    },
+    "GenesisOperatorPrincipalArn": {
+      "Type": "String",
+      "AllowedPattern": "^arn:[a-z0-9-]+:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$"
+    }
+  },
+  "Resources": {
+    "JournalWriterRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "renuvex-review-email-journal-writer",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowVercelProductionProjectOidc",
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": {
+                  "Ref": "VercelOidcProviderArn"
+                }
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "oidc.vercel.com/renuvex:aud": {
+                    "Ref": "OidcAudience"
+                  },
+                  "oidc.vercel.com/renuvex:sub": {
+                    "Fn::Sub": "owner:${VercelTeamSlug}:project:${VercelProjectName}:environment:${VercelEnvironment}"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-email-journal-write-and-verify",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "WriteAndVerifyJournalObjects",
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:PutObject",
+                    "s3:GetObject",
+                    "s3:GetObjectVersion",
+                    "s3:GetObjectRetention"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}/erasure-journal/v1/*"
+                  }
+                },
+                {
+                  "Sid": "InspectJournalVersions",
+                  "Effect": "Allow",
+                  "Action": "s3:ListBucketVersions",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}"
+                  },
+                  "Condition": {
+                    "StringLike": {
+                      "s3:prefix": "erasure-journal/v1/*"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "app",
+            "Value": "renuvex-product-reviews"
+          },
+          {
+            "Key": "component",
+            "Value": "review-email-journal-writer"
+          }
+        ]
+      }
+    },
+    "JournalRestoreOperatorRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "renuvex-review-email-journal-restore-reader",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Ref": "RestoreOperatorPrincipalArn"
+                }
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-email-journal-restore-read-only",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:GetObjectVersion",
+                    "s3:GetObjectRetention",
+                    "s3:GetObjectLegalHold"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}/erasure-journal/v1/*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:ListBucketVersions",
+                    "s3:GetBucketObjectLockConfiguration",
+                    "s3:GetLifecycleConfiguration",
+                    "s3:GetBucketVersioning"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "JournalRetentionExtensionOperatorRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "renuvex-review-email-journal-retention-extender",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Ref": "RetentionExtensionOperatorPrincipalArn"
+                }
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-email-journal-retention-extend-only",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObjectRetention",
+                    "s3:PutObjectRetention"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}/erasure-journal/v1/*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:ListBucketVersions",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}"
+                  },
+                  "Condition": {
+                    "StringLike": {
+                      "s3:prefix": "erasure-journal/v1/*"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "JournalGenesisOperatorRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "renuvex-review-email-journal-genesis-operator",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Ref": "GenesisOperatorPrincipalArn"
+                }
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "review-email-journal-genesis-create-and-verify",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:PutObject",
+                    "s3:PutObjectLegalHold",
+                    "s3:GetObject",
+                    "s3:GetObjectVersion",
+                    "s3:GetObjectRetention",
+                    "s3:GetObjectLegalHold"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}/erasure-journal/v1/coverage/genesis.json"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:ListBucketVersions",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${JournalBucketName}"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "s3:prefix": "erasure-journal/v1/coverage/genesis.json"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "JournalWriterRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "JournalWriterRole",
+          "Arn"
+        ]
+      }
+    },
+    "JournalRestoreOperatorRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "JournalRestoreOperatorRole",
+          "Arn"
+        ]
+      }
+    },
+    "JournalRetentionExtensionOperatorRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "JournalRetentionExtensionOperatorRole",
+          "Arn"
+        ]
+      }
+    },
+    "JournalGenesisOperatorRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "JournalGenesisOperatorRole",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

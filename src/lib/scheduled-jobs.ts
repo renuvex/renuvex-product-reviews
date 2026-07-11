@@ -10,9 +10,10 @@ import {
   reconcileProcessingVideos,
   redispatchDueMediaJobs,
 } from '@/lib/media/reconciliation';
-import { isReviewEmailEnabled } from '@/lib/review-email/config';
 import { runReviewEmailLifecycleMaintenance } from '@/lib/review-email/maintenance';
 import { retryFailedStoreReviewEmailErasures } from '@/lib/review-email/erasure';
+import { retryPendingReviewEmailDataSubjectRuns } from '@/lib/review-email/data-subject';
+import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
 
 export const SCHEDULED_JOB_TASKS = ['daily-maintenance-full', 'cleanup-images'] as const;
 export type ScheduledJobTask = (typeof SCHEDULED_JOB_TASKS)[number];
@@ -28,6 +29,7 @@ export type DailyMaintenanceResult = {
   videoReconciliation: unknown;
   mediaJobs: unknown;
   reviewEmailLifecycle: unknown;
+  reviewEmailDataSubjectRetry: unknown;
   storeDataErasure: unknown;
   errors: Array<{ task: string; error: string }>;
 };
@@ -72,6 +74,7 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
   let videoLifecycleJobs = null;
   let mediaJobs = null;
   let reviewEmailLifecycle = null;
+  let reviewEmailDataSubjectRetry = null;
   let storeDataErasure = null;
 
   try {
@@ -123,14 +126,28 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
       errors.push({ task: 'media-job-redispatch', error: message });
     }
 
-    if (isReviewEmailEnabled()) {
-      try {
-        reviewEmailLifecycle = await runReviewEmailLifecycleMaintenance(prisma);
-      } catch (error) {
-        const message = errorMessage(error);
-        reportCronTaskError('daily-maintenance', 'review-email-lifecycle', error);
-        errors.push({ task: 'review-email-lifecycle', error: message });
+    try {
+      reviewEmailLifecycle = await runReviewEmailLifecycleMaintenance(prisma);
+    } catch (error) {
+      const failure = normalizeReviewEmailFailure('retention_purge', error, { retryable: true });
+      reportReviewEmailFailure('retention_purge', failure);
+      errors.push({ task: 'review-email-lifecycle', error: failure.code });
+    }
+
+    try {
+      reviewEmailDataSubjectRetry = await retryPendingReviewEmailDataSubjectRuns();
+      if (reviewEmailDataSubjectRetry.failed > 0 || reviewEmailDataSubjectRetry.exhausted > 0) {
+        reportCronTaskError(
+          'daily-maintenance',
+          'review-email-data-subject-retry',
+          new Error('Review email data-subject erasure requires operator review'),
+          reviewEmailDataSubjectRetry,
+        );
       }
+    } catch (error) {
+      const failure = normalizeReviewEmailFailure('data_subject_erasure', error, { retryable: true });
+      reportReviewEmailFailure('data_subject_erasure', failure);
+      errors.push({ task: 'review-email-data-subject-retry', error: failure.code });
     }
 
     try {
@@ -144,9 +161,9 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
         );
       }
     } catch (error) {
-      const message = errorMessage(error);
-      reportCronTaskError('daily-maintenance', 'store-data-erasure-retry', error);
-      errors.push({ task: 'store-data-erasure-retry', error: message });
+      const failure = normalizeReviewEmailFailure('store_erasure', error, { retryable: true });
+      reportReviewEmailFailure('store_erasure', failure);
+      errors.push({ task: 'store-data-erasure-retry', error: failure.code });
     }
   }
 
@@ -159,6 +176,7 @@ export async function runDailyMaintenance(input: { full: boolean }): Promise<Sch
     videoReconciliation,
     mediaJobs,
     reviewEmailLifecycle,
+    reviewEmailDataSubjectRetry,
     storeDataErasure,
     errors,
   };

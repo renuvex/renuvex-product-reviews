@@ -4,7 +4,7 @@ project: renuvex-product-reviews
 status: active
 created: 2026-05-05
 updated: 2026-07-10
-last_verified: 2026-05-25
+last_verified: 2026-07-10
 confidence: high
 tags:
   - auth
@@ -53,14 +53,16 @@ ikas OAuth 2.0 with HMAC-SHA256 code signature verification. Tokens persist in P
        - validate state matches session.state (CSRF)
        - OAuthAPI.getTokenWithAuthorizationCode → access + refresh
        - getMerchant + getAuthorizedApp via GraphQL
-       - prisma.authToken.deleteMany({ merchantId })   [reinstall hygiene]
-       - AuthTokenManager.put(token)
+       - activateIkasStoreInstallation(token)
+         [one transaction: store advisory lock, generation/tombstone check,
+          stale-token delete, current AuthToken create, installation activate]
        - prisma.storeSettings.upsert({ storeId: merchantId })
       - For each storefront: adopt/create/update StorefrontJSScript
            pointing to <STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>
        - registerProductWebhooks → saveWebhooks for store/product/created|updated
-       - when REVIEW_EMAIL_ENABLED=true: separately register order created/updated + app-deleted webhooks;
-         persist verified/error state and keep merchant email settings disabled on registration failure
+       - when REVIEW_EMAIL_ENABLED=true AND merchant ReviewEmailSettings.enabled=true:
+         separately register order created/updated + app-deleted webhooks;
+         update verified/error state through the same installation fence and disable/cancel unsent work on failure
        - JwtHelpers.createToken(merchantId, authorizedAppId)  [HS256, 4h]
        - 302 → /callback?token=...&redirectUrl=<ikasAdmin>/authorized-app/<id>
        - after(response): syncAllProductsForStore → ProductSnapshot backfill (non-blocking)
@@ -80,6 +82,7 @@ Source files:
 - [src/lib/storefront-scripts.ts](src/lib/storefront-scripts.ts)
 - [src/lib/product-snapshots.ts](src/lib/product-snapshots.ts)
 - [src/lib/review-email/ikas-orders.ts](src/lib/review-email/ikas-orders.ts)
+- [src/lib/ikas-installation-lifecycle.ts](src/lib/ikas-installation-lifecycle.ts)
 - [src/app/callback/page.tsx](src/app/callback/page.tsx)
 - [src/app/hooks/use-base-home-page.ts](src/app/hooks/use-base-home-page.ts)
 - [src/helpers/token-helpers.ts](src/helpers/token-helpers.ts)
@@ -88,13 +91,14 @@ Source files:
 - [src/lib/storefront-widget-url.ts](src/lib/storefront-widget-url.ts)
 
 ## Re-install behavior
-- Hard cleanup at step 4: `deleteMany({ merchantId })` removes all old `AuthToken` rows for the merchant.
+- `activateIkasStoreInstallation()` serializes reinstall and uninstall per store with a PostgreSQL transaction advisory lock. A new `authorizedAppId` increments the installation generation, replaces stale merchant tokens, and activates the new row atomically.
+- An erased installation cannot be reactivated by a delayed OAuth callback carrying the same `authorizedAppId`; a legitimate reinstall must arrive with the new ikas installation identity.
 - Storefront scripts: the callback delegates to `ensureStorefrontScripts()` and uses only non-destructive read/adopt/create/update. It no longer calls zero-argument `deleteStorefrontJSScript()`.
 - If `StoreSettings.storefrontScripts` was lost while remote scripts still exist, install/manual re-inject uses v1 `listStorefrontJSScript` to adopt the live app-owned script id before creating a new loader. If v1 list fails, it falls back to conservative create/update-only behavior.
 
 ## Token refresh
 - `onCheckToken(token)` in [src/helpers/api-helpers.ts](src/helpers/api-helpers.ts) is wired into the ikas client.
-- Before each ikas GraphQL call, the client invokes `onCheckToken` which checks `expireDate`, refreshes via `OAuthAPI.refreshToken` if expired, persists the new pair via `AuthTokenManager.put`, and returns the new accessToken.
+- Before each ikas GraphQL call, the client invokes `onCheckToken` which checks `expireDate`, refreshes via `OAuthAPI.refreshToken` if expired, and persists the new pair via `AuthTokenManager.updateExisting` only when the exact `(authorizedAppId, merchantId)` row still exists. Refresh never upserts/recreates a token removed by uninstall erasure.
 - If refresh fails, returns `{ accessToken: undefined }` and the call effectively fails — current code does not surface a clear error to the UI. Consider improving observability here.
 
 ## Browser → server auth (post-install)
@@ -117,7 +121,7 @@ Source files:
 
 ## Notes
 - **Product snapshot backfill is non-blocking.** The callback awaits product webhook registration (one `saveWebhooks` mutation) but runs the full `ProductSnapshot` backfill (`syncAllProductsForStore`) via Next.js `after()`, *after* the 302 response is sent. Install latency stays independent of catalog size; a backfill cut short by the serverless function timeout is recovered by product webhooks or `POST /api/admin/sync-products`. See [[ADR_0015_Canonical_Product_Identity]].
-- **Review-email webhook registration is fail-closed and feature-gated.** Product registration remains independent. When review email is enabled, OAuth attempts the separate order/uninstall registration; failure records a sanitized error and forces `ReviewEmailSettings.enabled=false`. The source is not deployed, so live ikas acceptance remains a rollout test. See [[ADR_0036_Review_Request_Email_Architecture]].
+- **Review-email webhook registration is fail-closed and feature-gated.** Product registration remains independent. OAuth attempts order/uninstall registration only when both the global feature and merchant setting are enabled. Registration state changes use the installation fence; failure records a sanitized error, forces `ReviewEmailSettings.enabled=false`, and cancels unsent work. The source is not deployed, so live ikas acceptance remains a rollout test. See [[ADR_0036_Review_Request_Email_Architecture]].
 - **Embedded vs standalone**: the app supports both — running embedded in ikas Admin (iframe + AppBridge) or standalone in a browser tab (after manual store-name entry). Production usage is iframe.
 - **OAuth scope** currently `read_orders,write_orders,read_products,read_inventories,write_inventories`. Likely template inheritance — review if write_* are needed for a review app. Tracked in [[Open_Questions]].
 

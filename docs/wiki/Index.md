@@ -191,4 +191,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-10 (review-request email lifecycle V3 implemented and locally verified; still disabled and not deployed)
+**Last Updated:** 2026-07-10 (review-request email V5 retention/analytics/DSR/journal source implemented and locally verified; still disabled and not deployed)

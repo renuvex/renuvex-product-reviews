@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
-import { applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
+import { applyReviewSummaryRemovals, applyReviewSummaryVisibilityChange } from '@/lib/review-summary';
 import { dispatchMediaProviderJob } from '@/lib/media/jobs';
 import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
 import { enqueueMediaProviderJob } from '@/lib/media/outbox';
@@ -12,12 +12,12 @@ import {
   revokeAwsReviewImagePublicVariants,
 } from '@/lib/media/providers/aws-review-image';
 import {
-  enqueueVideoReviewCleanup,
   getReviewForModerationUpdate,
   rejectVideoReview,
   requestVideoApproval,
   VideoModerationError,
 } from '@/lib/media/moderation';
+import { enqueueReviewMediaCleanup } from '@/lib/review-deletion';
 
 const REVIEW_NOT_FOUND = 'review-not-found';
 
@@ -133,32 +133,12 @@ export async function DELETE(request: Request) {
         const existing = await getReviewForModerationUpdate(tx, id, user.merchantId);
         if (!existing) throw new Error(REVIEW_NOT_FOUND);
 
-        const videoMedia = await tx.reviewMedia.findMany({
-          where: { reviewId: id, resourceType: 'video', provider: VIDEO_PROVIDER },
-          select: { id: true, providerAssetId: true, processingStatus: true },
-        }) ?? [];
-        const cleanupJobs = await enqueueVideoReviewCleanup(tx, existing, videoMedia);
-        const awsImageMedia = await tx.reviewMedia.findMany({
-          where: { reviewId: id, resourceType: 'image', provider: AWS_REVIEW_IMAGE_PROVIDER },
-          select: { storeId: true, providerAssetId: true },
-        });
-        for (const media of awsImageMedia) {
-          if (!media.providerAssetId) continue;
-          cleanupJobs.push(await enqueueMediaProviderJob(tx, {
-            dedupeKey: `cleanup-aws-image:${id}:${media.providerAssetId}`,
-            storeId: media.storeId,
-            reviewId: id,
-            provider: AWS_REVIEW_IMAGE_PROVIDER,
-            action: MEDIA_JOB_ACTIONS.cleanupImage,
-            resourceType: 'image',
-            payload: { families: [{ storeId: media.storeId, assetId: media.providerAssetId }], reason: 'review_deleted' },
-          }));
-        }
+        const cleanupJobs = await enqueueReviewMediaCleanup(tx, [existing], 'review_deleted');
 
         await tx.review.delete({
           where: { id },
         });
-        await applyReviewSummaryVisibilityChange(tx, existing, null);
+        await applyReviewSummaryRemovals(tx, [existing]);
         return cleanupJobs;
       });
       await Promise.all(jobs.map((job) => dispatchMediaProviderJob(job.id)));

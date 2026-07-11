@@ -50,8 +50,10 @@ source_files:
   - "src/app/api/webhooks/mux/route.ts"
   - "src/app/api/webhooks/ikas/orders/route.ts"
   - "src/app/api/ikas/review-email-settings/route.ts"
+  - "src/app/api/ikas/review-email-data-subject/route.ts"
   - "src/app/api/internal/review-email/due-jobs/route.ts"
   - "src/app/api/internal/review-email/reconcile-orders/route.ts"
+  - "src/app/api/internal/review-email/store-erasure/route.ts"
   - "src/app/api/public/review-request/route.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
 ---
@@ -94,10 +96,12 @@ Main API route groups:
 | GET `/api/admin/cleanup-pending-uploads` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-pending-uploads/route.ts) | Explicit PendingReviewImage cleanup using the same helper as daily maintenance |
 | GET `/api/admin/cleanup-images` (Bearer CRON) | [route.ts](src/app/api/admin/cleanup-images/route.ts) | Monthly AWS review-image family orphan scan with the existing two-phase quarantine/circuit-breaker model. It groups by `storeId + assetId` and does not perform bucket-wide blind deletes |
 | POST `/api/internal/scheduled-jobs` | [route.ts](src/app/api/internal/scheduled-jobs/route.ts) | QStash-signed scheduler receiver for `daily-maintenance-full` and `cleanup-images`. Verifies raw-body `Upstash-Signature`, uses `ScheduledJobRunLock` for `task + scheduleSlot` idempotency, and replaces Vercel Cron as the scheduler source of truth. |
-| POST `/api/internal/review-email/due-jobs` | [route.ts](src/app/api/internal/review-email/due-jobs/route.ts) | `CRON_SECRET`-gated source-only review-email due-job claimer. Claims due `ReviewEmailJob` rows with DB `FOR UPDATE SKIP LOCKED` and returns opaque job ids for a future dispatcher; it does not send email. |
-| POST `/api/internal/review-email/reconcile-orders` | [route.ts](src/app/api/internal/review-email/reconcile-orders/route.ts) | `CRON_SECRET`-gated source-only order reconciliation entrypoint. Re-reads ikas `listOrder(updatedAt)` for one store/app and updates review-request lifecycle rows. |
+| POST `/api/internal/review-email/due-jobs` | [route.ts](src/app/api/internal/review-email/due-jobs/route.ts) | `CRON_SECRET` + global-feature-gated source-only due-job claimer. Claims due `ReviewEmailJob` rows with DB `FOR UPDATE SKIP LOCKED` and returns opaque job ids for a future dispatcher; it does not send email. |
+| POST `/api/internal/review-email/reconcile-orders` | [route.ts](src/app/api/internal/review-email/reconcile-orders/route.ts) | `CRON_SECRET` + global-feature-gated source-only reconciliation entrypoint. Store ownership is derived from the authorized-app token, and active-installation/merchant-enabled checks are fenced before cursor creation or `listOrder(updatedAt)` processing. |
+| POST `/api/internal/review-email/store-erasure` | [route.ts](src/app/api/internal/review-email/store-erasure/route.ts) | QStash raw-body-signature receiver for bounded store-uninstall continuation. It accepts only an opaque run UUID; DB state plus verified immutable journal evidence owns the phase, tenant, and idempotency contract. |
 | GET `/api/ikas/get-merchant` | [route.ts](src/app/api/ikas/get-merchant/route.ts) | Demo: fetches merchant via ikas Admin GQL |
-| GET/PUT `/api/ikas/review-email-settings` | [route.ts](src/app/api/ikas/review-email-settings/route.ts) | Iframe JWT-gated review-email settings API. The feature remains disabled unless `REVIEW_EMAIL_ENABLED=true` and required secrets are configured. |
+| GET/PUT `/api/ikas/review-email-settings` | [route.ts](src/app/api/ikas/review-email-settings/route.ts) | Iframe JWT-gated review-email settings API. The feature remains disabled unless `REVIEW_EMAIL_ENABLED=true`, provider-side app-deleted webhook verification is operator-attested, and required secrets are configured. |
+| POST/GET `/api/ikas/review-email-data-subject` | [route.ts](src/app/api/ikas/review-email-data-subject/route.ts) | JWT-tenant-scoped exact-email DSR erase/status API. POST requires explicit confirmation and a UUID `Idempotency-Key`; the DB uniquely scopes its hash to the store, digest mismatch returns `409`, folded identity never deletes, and responses are private/no-store. Journal verification must succeed before destructive erasure begins. |
 
 ### Auth gate
 All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-helpers.ts](src/lib/auth-helpers.ts) — verifies JWT, returns `{ merchantId, authorizedAppId }`. Returns 401 if missing/invalid.
@@ -150,7 +154,7 @@ Detail in [[Security_And_Rate_Limits]].
 | Method + Path | Source | Purpose |
 |---|---|---|
 | POST `/api/webhooks/ikas/products` | [route.ts](src/app/api/webhooks/ikas/products/route.ts) | Validate ikas webhook signature, process product create/update events, refresh `ProductSnapshot` |
-| POST `/api/webhooks/ikas/orders` | [route.ts](src/app/api/webhooks/ikas/orders/route.ts) | Verifies ikas HMAC before branching. `store/order/created` and `store/order/updated` are feature-flagged wake-up signals that dedupe `IkasOrderWebhookEvent`, re-read canonical `listOrder`, then create/cancel lifecycle rows. `store/app/deleted` runs PII/auth-token erasure even when review email is disabled; failed erasures are retried by bounded maintenance. |
+| POST `/api/webhooks/ikas/orders` | [route.ts](src/app/api/webhooks/ikas/orders/route.ts) | Verifies ikas HMAC before branching. Order events are wake-up signals; webhook audit creation, merchant-enabled state, canonical `merchantId`, order sync, and uninstall erasure use the installation-generation fence. `store/app/deleted` runs PII/auth-token erasure even when review email is disabled; stale old-install events are ignored and failed current erasures retry. |
 | POST `/api/webhooks/mux` | [route.ts](src/app/api/webhooks/mux/route.ts) | Validate Mux raw-body signature, dedupe/audit `WebhookEvent`, resolve upload/asset ids, and enqueue provider-neutral media jobs. Webhook storage never persists payloads, tokens, signed URLs, or upload URLs. |
 
 ## OAuth
@@ -158,7 +162,7 @@ Detail in [[Security_And_Rate_Limits]].
 | Method + Path | Source | Purpose |
 |---|---|---|
 | GET `/api/oauth/authorize/ikas?storeName=` | [route.ts](src/app/api/oauth/authorize/ikas/route.ts) | Set CSRF state in session, redirect to ikas authorize URL |
-| GET `/api/oauth/callback/ikas?code&state&signature` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Validate sig+state, exchange code, fetch merchant/app, upsert AuthToken, **auto-inject widget script per storefront**, register product webhooks, and, only when the email feature is enabled, register order/uninstall webhooks with fail-closed settings state; then issue JWT and redirect. `ProductSnapshot` backfill runs post-response via `after()`. |
+| GET `/api/oauth/callback/ikas?code&state&signature` | [route.ts](src/app/api/oauth/callback/ikas/route.ts) | Validate sig+state, exchange code, fetch merchant/app, atomically activate a new installation generation and replace stale merchant tokens, **auto-inject widget script per storefront**, register product webhooks, and register order/uninstall webhooks only when global + merchant email settings are enabled; then issue JWT and redirect. `ProductSnapshot` backfill runs post-response via `after()`. |
 
 ## Preview iframe
 

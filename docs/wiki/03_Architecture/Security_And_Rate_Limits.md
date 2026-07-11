@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
-last_verified: 2026-06-21
+updated: 2026-07-11
+last_verified: 2026-07-11
 confidence: high
 tags:
   - security
@@ -27,6 +27,8 @@ source_files:
   - "src/app/api/public/upload/video/capability/route.ts"
   - "src/app/api/public/review-request/route.ts"
   - "src/lib/review-email/public-access.ts"
+  - "src/app/api/ikas/review-email-data-subject/route.ts"
+  - "src/lib/review-email/data-subject.ts"
   - "src/instrumentation-client.ts"
   - "src/app/api/public/widget-error/route.ts"
 ---
@@ -40,8 +42,18 @@ disabled review-request email source package, the critical rules are: ikas HMAC
 before processing, canonical order re-read, no raw token/recipient in durable
 payloads, fragment-to-HttpOnly session exchange on the isolated review host,
 browser telemetry disabled on `/request`, atomic one-review submission, and RLS
-on the new sensitive tables. Runtime/provider mutations still require a separate
-approved rollout; source and live DB state must not be conflated.
+on the new sensitive tables. Store-scoped install generation plus a transaction
+advisory lock fences OAuth, settings, webhook audit, canonical ingest,
+reconciliation, and erasure; disabled stores do not persist canonical order PII.
+Customer-email HMAC/AES values carry key versions and runtime retains all prior
+versions so old suppression hashes cannot silently disappear. Runtime/provider
+mutations still require a separate approved rollout; source and live DB state
+must not be conflated. V5 additionally separates exact case-preserving DSR
+identity from folded suppression identity, hashes DSR idempotency keys,
+fail-closes journal conflicts before deletion, and gives the runtime journal
+role no object-delete, retention-change, or Governance-bypass permission.
+Journal conflicts emit only a fixed Sentry error and fixed tags; no run id,
+subject, journal payload, or provider metadata is attached.
 
 ## Summary
 Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> admin API. Storefront (CORS-open) -> public API + IP rate limit + profanity filter. Defense in depth: input validation, length caps in DB & API, ProductSnapshot-based public review target verification, AWS S3 presigned uploads, trusted AWS media URL allowlisting, public response whitelisting, server-side cron secret.
@@ -59,6 +71,10 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | `/api/admin/cleanup-pending-uploads` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
 | `/api/admin/cleanup-images` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
 | `/api/admin/reconcile-storefront-scripts` | `Authorization: Bearer ${CRON_SECRET}` | n/a — global |
+| `/api/internal/review-email/due-jobs` | `Authorization: Bearer ${CRON_SECRET}` plus `REVIEW_EMAIL_ENABLED=true` | DB-owned tenant ids on claimed jobs |
+| `/api/internal/review-email/reconcile-orders` | `Authorization: Bearer ${CRON_SECRET}`, global flag, active installation, enabled merchant | store is derived from the persisted `authorizedAppId` token; caller `storeId` cannot override it |
+| `/api/internal/review-email/store-erasure` | QStash raw-body `Upstash-Signature` | accepts only an opaque run UUID; tenant/action come from the journal-verified DB run |
+| `POST/GET /api/ikas/review-email-data-subject` | iframe JWT, active `authorizedAppId`/generation; POST also requires UUID `Idempotency-Key` and exact confirmation | store is JWT `merchantId` only; body/query `storeId` is rejected and folded email identity never selects erasure data |
 
 ## Rate limits (Upstash Redis)
 
@@ -70,6 +86,7 @@ Trust boundaries: ikas Admin (signed OAuth) -> server. Browser admin (JWT) -> ad
 | `GET /api/public/ratings` + `GET /api/public/ratings-by-slug` | 300 combined | 60 sec | `renuvex_pr_ratings_rl:<ip>` |
 | `GET /api/public/upload/video/capability` | 60 | 60 sec | `renuvex_pr_video_cap:<ip-hash>` |
 | `POST/GET /api/public/review-request` | 30 combined | 60 sec | `renuvex_review_request:<ip-hash>` |
+| `POST/GET /api/ikas/review-email-data-subject` | 10 combined | 60 sec | `review_email_dsr:<merchant-id-hash>` |
 | `POST /api/public/widget-error` | 30 | 60 sec | `renuvex_pr_werr_rl:<ip>` |
 
 Pattern: `INCR` then `EXPIRE` on first hit. Rating reads, video capability, and review-request exchange/session reads use [src/lib/public-rate-limit.ts](src/lib/public-rate-limit.ts) and intentionally fail open if Redis env/config is unavailable. Review-request Redis keys contain only a SHA-256 IP digest, never the raw token or session. Source: [src/app/api/public/reviews/route.ts](src/app/api/public/reviews/route.ts), [src/app/api/public/upload/sign/route.ts](src/app/api/public/upload/sign/route.ts), [src/app/api/public/upload/register/route.ts](src/app/api/public/upload/register/route.ts), [src/app/api/public/upload/video/capability/route.ts](src/app/api/public/upload/video/capability/route.ts), [src/app/api/public/review-request/route.ts](src/app/api/public/review-request/route.ts), [src/app/api/public/ratings/route.ts](src/app/api/public/ratings/route.ts), [src/app/api/public/ratings-by-slug/route.ts](src/app/api/public/ratings-by-slug/route.ts), [src/app/api/public/widget-error/route.ts](src/app/api/public/widget-error/route.ts).
@@ -90,6 +107,16 @@ IP source: `x-forwarded-for` (first entry). Vercel sets this. Spoofable in theor
   - profanity filter on title/comment/author
   - public `slug`, `productName`, and `email` body fields are ignored; review identity/name snapshots come from `ProductSnapshot`. The source-only verified-buyer flow consumes a host-only request session and still stores public `Review.email` blank.
 - **Review-request link**: the raw 256-bit token is held in the URL fragment, removed before navigation, exchanged through POST body for a two-hour host-only HttpOnly session, and stored only as a versioned HMAC hash. `/request` disables browser Sentry/Replay before SDK initialization so Replay `initialUrl` cannot capture the fragment. Responses are `private, no-store`, `no-referrer`, `noindex`, and frame-denied.
+- **Review-email order PII**: canonical `listOrder.merchantId` must match the installation store. Webhook audit creation, order snapshots, reconciliation cursor creation, settings disable, and uninstall erasure share the installation fence; stale uninstall identities return no-op instead of touching a reinstall. DSR request digests use versioned HMAC subject hashes rather than raw canonical email.
+- **Review-email DSR parent isolation**: frozen exact-subject order matches are
+  separate from request-linked parents. Candidate orders are locked before
+  request deletion, and `RESTRICT` FKs prevent a parent delete from cascading
+  an unrelated live request. Shared direct orders retain structure but have
+  customer PII scrubbed; linked-only or changed-subject orders are untouched.
+- **Review-email failure evidence**: DB fields, console output, and Sentry accept
+  only context-allowlisted codes or fixed fallback codes. Sentry receives a
+  synthetic error and optional opaque run/event ID; raw exception messages,
+  stacks, recipient/token/URL/provider/query/connection data are excluded.
 - **Admin settings PUT**: `validateSettings(widgetId, settings)` runs the schema in [src/lib/widget-settings.ts](src/lib/widget-settings.ts).
 - **DB caps**: `comment` and `merchantReply` are `@db.VarChar(2000)`.
 
@@ -139,7 +166,7 @@ Public review responses replace last name with initial: `Mert Wilson` → `Mert 
 - Direct SQL privilege checks did not show table access for `anon`, `authenticated`, or `service_role`: no public schema usage and no table `SELECT`, `INSERT`, `UPDATE`, or `DELETE` privileges were present in the checked grants.
 - The public schema had no views, materialized views, functions, or realtime publication tables during the audit.
 - This does not prove the Supabase Dashboard Data API exposure setting by itself; it only proves the repo and SQL surfaces checked above.
-- The source-only review-email migration enables RLS on its 13 new sensitive tables and conditionally revokes browser-role grants. This is locally verified but does not change the still-unapplied production RLS state described above.
+- The source-only review-email migrations enable RLS on all 21 lifecycle/V5 sensitive tables and conditionally revoke browser-role grants. This is locally verified on disposable PostgreSQL but does not change the still-unapplied production RLS state described above.
 
 Decision:
 - Do not enable RLS blindly while the schema is still changing in the test-stage app. Enabling RLS without matching policies can block intended API behavior.

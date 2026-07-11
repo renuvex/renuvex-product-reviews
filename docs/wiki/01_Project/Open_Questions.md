@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-06-06
-last_verified: 2026-06-06
+updated: 2026-07-10
+last_verified: 2026-07-10
 confidence: medium
 tags:
   - questions
@@ -30,6 +30,14 @@ source_files:
 # Open Questions
 
 > Anything uncertain about scope, architecture, or implementation. Resolve and either delete or convert to an ADR.
+
+## Agent Brief
+
+Use this page only to locate unresolved decisions. Do not treat an item here as
+an accepted contract; verify current source/runtime and follow the linked ADR
+before implementation. Review-email V5's accepted lifecycle lives in
+[[ADR_0036_Review_Request_Email_Architecture]]; only its listed rollout and
+product/legal gates remain open.
 
 ## Wiki prompt folder numbering
 The second-brain setup template names reusable agent procedures under `08_Prompts`, but this repo already uses `08_Widgets` for widget domain memory and `09_Prompts` for AI workflows. The migration kept `09_Prompts` canonical to avoid duplicating or moving existing pages. Decide later whether a deliberate folder renumbering cleanup is worth the churn.
@@ -114,7 +122,7 @@ Need to test which Google actually reads on ikas storefronts.
 ikas merchants can have multiple storefronts (e.g. locale variants). Today, `WidgetSettings` is keyed by `(storeId, widgetId)` only, not by storefrontId. The widget script DOES carry `storefrontScripts: Json` per storefront. Decide whether settings should fork per storefront or stay global.
 
 ## Token storage TTL
-`AuthToken` rows are upserted on install; `expiresIn` honored via `onCheckToken` refresh. Is there a cleanup for stale tokens (uninstalled apps)? `prisma.authToken.deleteMany({ where: { merchantId } })` runs on re-install, but what about merchants who simply uninstall? Need an ikas-side webhook or cron sweep.
+Install now replaces merchant tokens atomically through `IkasStoreInstallation`; refresh updates only an existing exact installation row and cannot recreate an erased token. The disabled review-email V5 source handles a signed `store/app/deleted` receiver, exact-subject DSR, generation-fenced auth/PII erasure, immutable journal intent, real restore replay, and bounded retries. `saveWebhooks` registers only the MCP-valid order scopes. Still open before launch: verify the copy register against the actual managed DB restore horizon, roll out and initialize journal coverage through separate gates, configure and prove the app-deleted signal provider-side, set the operator verification gate, and run live 24-hour uninstall acceptance.
 
 ## OAuth scope correctness
 Current scope: `read_orders,write_orders,read_products,read_inventories,write_inventories`. Why does a review app need `write_orders` / `write_inventories`? Likely starter-template inheritance. Tightening scope reduces install friction and audit risk.

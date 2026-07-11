@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "contractStatus": "approved_target",
+  "liveRestoreWindowVerifiedAt": null,
+  "databaseCopies": [
+    {
+      "id": "supabase-managed-backup-and-pitr",
+      "restorable": true,
+      "maximumRestoreWindowDays": 30,
+      "containsReviewEmailPii": true,
+      "restoreRequiresJournalReplay": true
+    },
+    {
+      "id": "operator-production-dumps",
+      "restorable": false,
+      "maximumRestoreWindowDays": 0,
+      "containsReviewEmailPii": false,
+      "policy": "prohibited"
+    },
+    {
+      "id": "vercel-function-logs",
+      "restorable": false,
+      "maximumRestoreWindowDays": 0,
+      "containsReviewEmailPii": false,
+      "policy": "sanitized-only"
+    },
+    {
+      "id": "sentry-events",
+      "restorable": false,
+      "maximumRestoreWindowDays": 0,
+      "containsReviewEmailPii": false,
+      "policy": "send-default-pii-disabled"
+    }
+  ],
+  "journal": {
+    "minimumActiveRetentionDays": 35,
+    "versionTailDays": 7,
+    "calculation": "max(35,longestRegisteredDatabaseRestoreWindowDays+5)"
+  }
+}

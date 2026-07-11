@@ -26,6 +26,8 @@ function attempt(overrides: Record<string, unknown> = {}) {
     providerMessageId: null,
     acceptedAt: new Date('2026-07-10T11:00:00.000Z'),
     completedAt: new Date('2026-07-10T11:00:00.000Z'),
+    templateVersion: 'default_v1',
+    locale: 'tr',
     job: {
       id: 'job-1',
       requestId: 'request-1',
@@ -44,6 +46,8 @@ function attempt(overrides: Record<string, unknown> = {}) {
         maxReminderCountSnapshot: 1,
         reminderDelayDaysSnapshot: 1,
         recipientEmailHash: 'email-hash',
+        recipientEmailFoldedHash: 'folded-email-hash',
+        receiptId: null,
       },
     },
     ...overrides,
@@ -55,6 +59,7 @@ function txForAttempt(row: ReturnType<typeof attempt>) {
     reviewEmailEvent: {
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: 'event-1' }),
+      update: vi.fn().mockResolvedValue({ id: 'event-1' }),
     },
     reviewEmailAttempt: {
       findFirst: vi.fn().mockResolvedValue(row),
@@ -71,6 +76,7 @@ function txForAttempt(row: ReturnType<typeof attempt>) {
     },
     reviewRequestToken: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     reviewRequestSession: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    reviewRequestReceipt: { findUnique: vi.fn().mockResolvedValue(null) },
   };
 }
 
@@ -124,5 +130,27 @@ describe('SES event persistence', () => {
     expect(tx.reviewEmailJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
       where: { requestId_kind_sequence: { requestId: 'request-1', kind: 'reminder', sequence: 1 } },
     }));
+  });
+
+  it('records but ignores a late provider event after subject erasure closes analytics', async () => {
+    const row = attempt({
+      job: {
+        ...attempt().job,
+        request: { ...attempt().job.request, receiptId: 'receipt-1' },
+      },
+    });
+    const tx = txForAttempt(row);
+    tx.reviewRequestReceipt.findUnique.mockResolvedValue({ analyticsClosedAt: new Date('2026-07-10T11:30:00.000Z') });
+    const db = { $transaction: vi.fn(async (callback: (value: typeof tx) => unknown) => callback(tx)) };
+
+    const result = await persistSesEmailEvent(db as never, message(), '{}');
+
+    expect(result).toEqual({ status: 'created', matchedAttempt: true });
+    expect(tx.reviewEmailEvent.update).toHaveBeenCalledWith({
+      where: { snsMessageId: 'sns-1' },
+      data: { status: 'ignored', ignoredReason: 'ignored_subject_erased' },
+    });
+    expect(tx.reviewEmailSuppression.upsert).not.toHaveBeenCalled();
+    expect(tx.reviewEmailAttempt.update).not.toHaveBeenCalled();
   });
 });

@@ -7,6 +7,8 @@ import {
 import { getReviewRequestTokenKeyRing } from '@/lib/review-email/config';
 import { cancelPendingReviewEmailJobs } from '@/lib/review-email/jobs';
 import { reportCronTaskError } from '@/lib/cron-observability';
+import { recordReviewEmailMetricContribution } from '@/lib/review-email/analytics';
+import { runReviewEmailRetentionPurge, type ReviewEmailRetentionResult } from '@/lib/review-email/retention';
 
 export type ReviewEmailMaintenanceResult = {
   stalePreparedAttempts: number;
@@ -15,6 +17,7 @@ export type ReviewEmailMaintenanceResult = {
   expiredSessions: number;
   expiredRequests: number;
   activeKeyVersions: number[];
+  retention: ReviewEmailRetentionResult;
 };
 
 export async function runReviewEmailLifecycleMaintenance(
@@ -32,10 +35,12 @@ export async function runReviewEmailLifecycleMaintenance(
     select: { tokenKeyVersion: true },
   });
   const activeKeyVersions = activeVersions.map((row) => row.tokenKeyVersion).sort((a, b) => a - b);
-  const keyRing = getReviewRequestTokenKeyRing();
-  const missingVersions = activeKeyVersions.filter((version) => !keyRing.keys.has(version));
-  if (missingVersions.length > 0) {
-    throw new Error(`Review request token key ring is missing active version(s): ${missingVersions.join(',')}`);
+  if (activeKeyVersions.length > 0) {
+    const keyRing = getReviewRequestTokenKeyRing();
+    const missingVersions = activeKeyVersions.filter((version) => !keyRing.keys.has(version));
+    if (missingVersions.length > 0) {
+      throw new Error(`Review request token key ring is missing active version(s): ${missingVersions.join(',')}`);
+    }
   }
 
   const stalePrepared = await db.reviewEmailAttempt.findMany({
@@ -78,7 +83,14 @@ export async function runReviewEmailLifecycleMaintenance(
     },
     orderBy: { sendInitiatedAt: 'asc' },
     take: limit,
-    select: { id: true, jobId: true, job: { select: { requestId: true, kind: true } } },
+    select: {
+      id: true,
+      jobId: true,
+      sendInitiatedAt: true,
+      templateVersion: true,
+      locale: true,
+      job: { select: { requestId: true, kind: true, request: { select: { receiptId: true } } } },
+    },
   });
   let outcomeUnknownAttempts = 0;
   for (const attempt of ambiguous) {
@@ -103,6 +115,17 @@ export async function runReviewEmailLifecycleMaintenance(
           lastErrorCode: 'ses_confirmation_timeout',
         },
       });
+      if (attempt.job.request.receiptId) {
+        await recordReviewEmailMetricContribution(tx, {
+          receiptId: attempt.job.request.receiptId,
+          dedupeKey: `review-email-attempt:${attempt.id}:outcome-unknown`,
+          metricDate: attempt.sendInitiatedAt ?? now,
+          kind: attempt.job.kind,
+          templateVersion: attempt.templateVersion,
+          locale: attempt.locale,
+          metric: 'outcomeUnknown',
+        });
+      }
       if (attempt.job.kind === 'request') {
         await tx.reviewRequest.updateMany({
           where: { id: attempt.job.requestId, status: { in: ['sending', 'sent_unknown'] } },
@@ -163,6 +186,7 @@ export async function runReviewEmailLifecycleMaintenance(
     });
   }
 
+  const retention = await runReviewEmailRetentionPurge(db, { now });
   return {
     stalePreparedAttempts: stalePrepared.length,
     outcomeUnknownAttempts,
@@ -170,5 +194,6 @@ export async function runReviewEmailLifecycleMaintenance(
     expiredSessions: expiredSessions.count,
     expiredRequests,
     activeKeyVersions,
+    retention,
   };
 }

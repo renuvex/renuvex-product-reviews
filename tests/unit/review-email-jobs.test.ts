@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   finalizeAcceptedReviewEmailAttempt,
   markReviewEmailSendAwaitingConfirmation,
+  markReviewEmailSendFailed,
   markReviewEmailSendInitiated,
   prepareReviewEmailSend,
 } from '@/lib/review-email/jobs';
@@ -59,6 +60,14 @@ function txForAttempt(row: ReturnType<typeof attempt>, requestUpdateCount = 1) {
 }
 
 describe('review email job lifecycle', () => {
+  beforeEach(() => {
+    process.env.REVIEW_EMAIL_ENABLED = 'true';
+  });
+
+  afterEach(() => {
+    delete process.env.REVIEW_EMAIL_ENABLED;
+  });
+
   it('creates reminder sequence one from the actual first acceptance time', async () => {
     const acceptedAt = new Date('2026-07-05T15:30:00.000Z');
     const tx = txForAttempt(attempt());
@@ -91,10 +100,7 @@ describe('review email job lifecycle', () => {
       where: {
         id: 'request-1',
         status: { notIn: ['submitted', 'cancelled', 'expired', 'suppressed'] },
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { lt: new Date('2026-08-05T15:30:00.000Z') } },
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { lt: new Date('2026-08-05T15:30:00.000Z') } }],
       },
       data: { expiresAt: new Date('2026-08-05T15:30:00.000Z') },
     });
@@ -102,35 +108,38 @@ describe('review email job lifecycle', () => {
 
   it('keeps a max-delay reminder request alive for the reminder token window', async () => {
     const acceptedAt = new Date('2026-07-05T15:30:00.000Z');
-    const tx = txForAttempt(attempt({
-      job: {
-        id: 'job-1',
-        kind: 'request',
-        sequence: 0,
-        requestId: 'request-1',
-        request: request({ reminderDelayDaysSnapshot: 30 }),
-      },
-    }));
+    const tx = txForAttempt(
+      attempt({
+        job: {
+          id: 'job-1',
+          kind: 'request',
+          sequence: 0,
+          requestId: 'request-1',
+          request: request({ reminderDelayDaysSnapshot: 30 }),
+        },
+      }),
+    );
 
     await finalizeAcceptedReviewEmailAttempt(tx as never, {
       attemptId: 'attempt-1',
       acceptedAt,
     });
 
-    expect(tx.reviewEmailJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      create: expect.objectContaining({
-        sendAfter: new Date('2026-08-04T15:30:00.000Z'),
+    expect(tx.reviewEmailJob.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          sendAfter: new Date('2026-08-04T15:30:00.000Z'),
+        }),
       }),
-    }));
-    expect(tx.reviewRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { lt: new Date('2026-09-03T15:30:00.000Z') } },
-        ],
+    );
+    expect(tx.reviewRequest.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [{ expiresAt: null }, { expiresAt: { lt: new Date('2026-09-03T15:30:00.000Z') } }],
+        }),
+        data: { expiresAt: new Date('2026-09-03T15:30:00.000Z') },
       }),
-      data: { expiresAt: new Date('2026-09-03T15:30:00.000Z') },
-    }));
+    );
   });
 
   it('creates reminder sequence two only after reminder one is accepted', async () => {
@@ -150,13 +159,15 @@ describe('review email job lifecycle', () => {
 
     await finalizeAcceptedReviewEmailAttempt(tx as never, { attemptId: 'attempt-1', acceptedAt });
 
-    expect(tx.reviewEmailJob.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { requestId_kind_sequence: { requestId: 'request-1', kind: 'reminder', sequence: 2 } },
-      create: expect.objectContaining({
-        sequence: 2,
-        sendAfter: new Date('2026-07-08T15:30:00.000Z'),
+    expect(tx.reviewEmailJob.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { requestId_kind_sequence: { requestId: 'request-1', kind: 'reminder', sequence: 2 } },
+        create: expect.objectContaining({
+          sequence: 2,
+          sendAfter: new Date('2026-07-08T15:30:00.000Z'),
+        }),
       }),
-    }));
+    );
   });
 
   it('does not create a reminder if the request CAS reports a closed request', async () => {
@@ -190,12 +201,16 @@ describe('review email job lifecycle', () => {
     const result = await markReviewEmailSendInitiated(db as never, 'attempt-1', sendInitiatedAt);
 
     expect(result.expiresAt).toEqual(new Date('2026-08-09T12:00:00.000Z'));
-    expect(tx.reviewRequestToken.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      data: { status: 'active', expiresAt: new Date('2026-08-09T12:00:00.000Z') },
-    }));
-    expect(tx.reviewRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status: 'sending', expiresAt: new Date('2026-08-09T12:00:00.000Z') }),
-    }));
+    expect(tx.reviewRequestToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: 'active', expiresAt: new Date('2026-08-09T12:00:00.000Z') },
+      }),
+    );
+    expect(tx.reviewRequest.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'sending', expiresAt: new Date('2026-08-09T12:00:00.000Z') }),
+      }),
+    );
   });
 
   it('moves an ambiguous SES result to awaiting_confirmation without retrying', async () => {
@@ -215,14 +230,47 @@ describe('review email job lifecycle', () => {
 
     await markReviewEmailSendAwaitingConfirmation(db as never, 'attempt-1');
 
+    expect(tx.reviewEmailAttempt.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: 'awaiting_confirmation', errorCode: 'ses_result_unknown' },
+      }),
+    );
+    expect(tx.reviewEmailJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'awaiting_confirmation' }),
+      }),
+    );
+    expect(tx.reviewRequest.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: 'sent_unknown' },
+      }),
+    );
+  });
+
+  it('normalizes arbitrary sender failure codes before DB persistence', async () => {
+    const row = attempt({ status: 'sending' });
+    const tx = {
+      reviewEmailAttempt: {
+        findUnique: vi.fn().mockResolvedValue(row),
+        update: vi.fn().mockResolvedValue(row),
+      },
+      reviewRequestToken: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      reviewRequestSession: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      reviewEmailJob: { update: vi.fn().mockResolvedValue(row.job) },
+      reviewRequest: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    };
+    const db = { $transaction: vi.fn(async (callback: (value: typeof tx) => unknown) => callback(tx)) };
+
+    await markReviewEmailSendFailed(db as never, 'attempt-1', {
+      errorCode: 'Customer@Example.com\r\nraw-token postgres://user:secret@db.internal/reviews',
+      retryable: false,
+    });
+
     expect(tx.reviewEmailAttempt.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: { status: 'awaiting_confirmation', errorCode: 'ses_result_unknown' },
+      data: expect.objectContaining({ errorCode: 'review_email_send_failed' }),
     }));
     expect(tx.reviewEmailJob.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status: 'awaiting_confirmation' }),
-    }));
-    expect(tx.reviewRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      data: { status: 'sent_unknown' },
+      data: expect.objectContaining({ lastErrorCode: 'review_email_send_failed' }),
     }));
   });
 
@@ -259,14 +307,28 @@ describe('review email job lifecycle', () => {
     };
     const db = { $transaction: vi.fn(async (callback: (value: typeof tx) => unknown) => callback(tx)) };
 
-    await expect(prepareReviewEmailSend(db as never, job.id, {
-      now: new Date('2026-07-10T12:00:00.000Z'),
-    })).rejects.toMatchObject({ code: 'review_email_store_disabled' });
+    await expect(
+      prepareReviewEmailSend(db as never, job.id, {
+        now: new Date('2026-07-10T12:00:00.000Z'),
+      }),
+    ).rejects.toMatchObject({ code: 'review_email_store_disabled' });
 
-    expect(tx.reviewEmailJob.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status: 'skipped', lastErrorCode: 'store_email_disabled' }),
-    }));
+    expect(tx.reviewEmailJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'skipped', lastErrorCode: 'store_email_disabled' }),
+      }),
+    );
     expect(tx.reviewRequest.updateMany).not.toHaveBeenCalled();
     expect(tx.reviewRequestToken.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before sender preparation when the global feature is disabled', async () => {
+    delete process.env.REVIEW_EMAIL_ENABLED;
+    const db = { $transaction: vi.fn() };
+
+    await expect(prepareReviewEmailSend(db as never, 'job-1')).rejects.toMatchObject({
+      code: 'review_email_feature_disabled',
+    });
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

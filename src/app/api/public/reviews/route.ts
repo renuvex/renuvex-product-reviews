@@ -34,6 +34,7 @@ import {
   isReviewRequestPublicHost,
   ReviewRequestHostError,
 } from '@/lib/review-email/public-access';
+import { recordReviewEmailMetricContribution } from '@/lib/review-email/analytics';
 
 // Upstash Redis — tüm Vercel instance'larında ortak rate limit
 const redis = new Redis({
@@ -718,6 +719,7 @@ export async function POST(request: Request) {
           hasVideo: !!videoSession,
           status: initialStatus,
           reviewRequestId: verifiedReviewRequestSession?.requestId ?? null,
+          reviewRequestReceiptId: verifiedReviewRequestSession?.request.receiptId ?? null,
           verifiedBuyer: Boolean(verifiedReviewRequestSession),
           verifiedAt: verifiedReviewRequestSession ? reviewCreatedAt : null,
           verificationSource: verifiedReviewRequestSession ? 'review_request_email' : null,
@@ -783,6 +785,37 @@ export async function POST(request: Request) {
       }
 
       await applyReviewSummaryVisibilityChange(tx, null, created);
+
+      if (verifiedReviewRequestSession?.request.receiptId) {
+        const attempt = await tx.reviewEmailAttempt.findUnique({
+          where: { id: verifiedReviewRequestSession.token.attemptId },
+          include: { job: true },
+        });
+        const cohortAt = verifiedReviewRequestSession.request.firstSentAt ?? attempt?.sendInitiatedAt ?? reviewCreatedAt;
+        const kind = attempt?.job.kind ?? 'request';
+        const templateVersion = attempt?.templateVersion ?? verifiedReviewRequestSession.request.templateVersionSnapshot;
+        const locale = attempt?.locale ?? verifiedReviewRequestSession.request.localeSnapshot;
+        await recordReviewEmailMetricContribution(tx, {
+          receiptId: verifiedReviewRequestSession.request.receiptId,
+          dedupeKey: `review-request-receipt:${verifiedReviewRequestSession.request.receiptId}:reviewed`,
+          metricDate: cohortAt,
+          kind,
+          templateVersion,
+          locale,
+          metric: 'reviewedRequests',
+        });
+        if (kind === 'reminder') {
+          await recordReviewEmailMetricContribution(tx, {
+            receiptId: verifiedReviewRequestSession.request.receiptId,
+            dedupeKey: `review-request-receipt:${verifiedReviewRequestSession.request.receiptId}:reviewed-via-reminder`,
+            metricDate: cohortAt,
+            kind,
+            templateVersion,
+            locale,
+            metric: 'reviewsViaReminder',
+          });
+        }
+      }
 
       return created;
     });
