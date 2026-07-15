@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-15
+last_verified: 2026-07-15
 confidence: high
 tags:
   - database
@@ -30,6 +30,7 @@ source_files:
   - "prisma/migrations/20260710120000_add_review_request_email_lifecycle/migration.sql"
   - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
+  - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
@@ -50,7 +51,7 @@ and the matching migration files; never use this page to justify `prisma db
 push` or destructive production schema changes.
 
 ## Summary
-Postgres (Supabase) accessed via Prisma. Core review/media models now include the image-era tables, the additive video lifecycle tables, and the disabled source-only review-request email V5 lifecycle/receipt/DSR/analytics/retention tables. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
+Postgres (Supabase) accessed via Prisma. Core review/media models now include the image-era tables, the additive video lifecycle tables, and the disabled source-only review-request email V5 plus Multi-Product Batch/Envelope V3.2 lifecycle/receipt/DSR/analytics/retention tables. Pooler URL via `DATABASE_URL` (transaction pooler 6543, pgbouncer); migration URL via `DIRECT_URL` (session pooler 5432). Detailed field-level reference in [[Database_Schema]].
 
 ## Files
 
@@ -85,10 +86,11 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `ReviewEmailSettings` | `storeId` | Merchant review-request email settings: enable flag, delivery trigger mode, strict consent mode, first/reminder delay, sender display name, Reply-To, logo, color, locale, and template version. |
 | `IkasOrderWebhookEvent` | `id` (uuid), unique `providerEventId` | Idempotent ikas order webhook audit/wake-up state for review-request email; stores only normalized ids/status and a payload digest, never the raw payload. |
 | `IkasOrderSnapshot` / `IkasOrderLineSnapshot` | `id` (uuid), unique order/line keys | Canonical order and order-line eligibility evidence from `listOrder`, with hashed/encrypted customer email and package/line status evidence. |
-| `ReviewRequest` / `ReviewRequestToken` | `id` (uuid), unique store/order-line request, token hash, and attempt link | DB-owned lifecycle and versioned one-time token state. Tokens start `prepared`, become `active` only at `sendInitiatedAt`, and expire 30 days later; raw values exist only in sender memory. Request expiry is extended to cover each scheduled reminder plus its token window rather than using a fixed 60-day guess. |
-| `ReviewRequestSession` | `id` (uuid), unique `sessionHash` | Two-hour host-only browser session created by fragment-token exchange. The cookie is HttpOnly; only an HMAC hash is stored. |
-| `ReviewEmailJob` / `ReviewEmailAttempt` / `ReviewEmailEvent` | `id` (uuid), unique dedupe/correlation/provider ids | Source-only email job, provider attempt, and signed SES event evidence. Jobs include explicit lease/dispatch states; attempts distinguish `prepared`, `awaiting_confirmation`, and terminal `outcome_unknown`. AWS queues will carry only opaque job ids later. |
-| `ReviewEmailSuppression` | `storeId+emailHash+scope` | Recipient/store suppression from bounce/complaint evidence without storing raw email in dispatcher payloads. |
+| `ReviewEmailBatch` | `id` (uuid), unique tenant/generation/fingerprint plus live order/group | One canonical delivery-group review sequence and recipient/timing/template snapshot. It groups many product requests under one physical initial and at most one reminder, then remains as a protected duplicate tombstone after detail purge. |
+| `ReviewRequest` / `ReviewRequestToken` | `id` (uuid), unique product request, token hash, and attempt link | Product-scoped review right plus versioned request/batch access token. Batch tokens start `prepared`, activate only at `sendCommittedAt`, and expire 30 days later; raw values exist only in sender memory. Request/batch expiry extends to cover each scheduled reminder plus its token window. |
+| `ReviewRequestSession` | `id` (uuid), unique `sessionHash` | Two-hour host-only browser session created by fragment-token exchange. Multiple devices are allowed; the cookie is HttpOnly and only an HMAC hash is stored. |
+| `ReviewEmailJob` / `ReviewEmailAttempt` / `ReviewEmailEvent` | `id` (uuid), unique dedupe/correlation/transport ids | Physical-email schedule, one immutable provider-call attempt, and provider-neutral event ledger. Jobs carry lease/fencing state; attempts distinguish pre-call, committed ambiguous, accepted, and delivery evidence. Exact transport redelivery dedupes without collapsing distinct same-type provider facts. AWS queues will carry only opaque job ids later. |
+| `ReviewEmailSuppression` / `ReviewEmailUnsubscribeToken` | scoped recipient identity / unique token hash | Store/category recipient access policy from permanent bounce, complaint, or explicit unsubscribe. Every token snapshots the versioned case-preserving exact recipient HMAC from its batch as well as the folded policy key. The nullable attempt link may be purged without losing exact DSR identity or old-link suppression behavior; no plaintext recipient or new token-level ciphertext is retained. |
 | `ReviewEmailSubjectBlock` | unique `storeId+installationGeneration+foldedSubjectHash` | Active-installation reingestion/suppression fence. Folded identity never selects DSR deletion targets. |
 | `ReviewRequestReceipt` | unique `storeId+installationGeneration+orderProductFingerprint` | Durable duplicate-request receipt plus exact-subject link and compact signed analytics manifest. `analyticsClosedAt` fences late provider events; DSR clears subject/manifest fields while preserving the order-product fingerprint. |
 | `ReviewEmailDailyMetric` / `ReviewEmailMetricContribution` | unique metric dimensions / unique contribution dedupe | Customer-direct-identifier-free merchant analytics. Signed deltas support idempotent inserts and one-time DSR reversal; contribution tombstones retain dedupe evidence for 210 days. |
@@ -111,6 +113,27 @@ On review-email V5 tables:
   remains `ON DELETE CASCADE`. A parent order/line cannot remove a live request,
   while deleting a request first permits bounded order-family cleanup.
 - exact-subject and folded-subject indexes are separate by design. Folded indexes support suppression only and must never become an erasure selector.
+- unsubscribe-token DSR lookup uses `storeId` plus every retained exact-HMAC
+  candidate, regardless of token status or installation generation. Frozen
+  token ids are deleted identically by normal DSR execution and journal replay;
+  the folded policy hash is never an erasure selector.
+
+On review-email Batch/Envelope V3.2 tables:
+- unique `ReviewEmailBatch[storeId, installationGeneration, batchFingerprint]`
+  is the durable logical-group/tombstone fence. A partial unique index on
+  `(storeId, installationGeneration, orderSnapshotId, deliveryGroupKey)` keeps
+  old/new HMAC writers from creating two live batches for one order group.
+- composite FKs bind `ReviewEmailBatch` to its tenant-owned order snapshot and
+  bind `ReviewRequest`/`ReviewEmailJob` to a batch with the same `storeId`.
+  SQL XOR checks permit exactly one legacy request or new batch target during
+  expand/contract overlap.
+- unique product membership within a batch, request-level review uniqueness,
+  and transactional CAS preserve independent product reviews under concurrent
+  sessions. Attempt recipient/manifest snapshots become immutable at
+  `sendCommittedAt`.
+- partial `(transport, transportEventId)` uniqueness dedupes only exact event
+  transport redelivery. Attempt evidence uses first/last timestamps and signed
+  metric contributions instead of a lossy total-order status enum.
 
 Review-email operational failure columns are bounded code fields
 (`lastErrorCode` / `sanitizedErrorCode`, `VARCHAR(128)`). They never store raw
@@ -152,7 +175,7 @@ On review-request email lifecycle:
 - `Review.reviewRequestId`, request store/order-line ownership, `ReviewRequestToken.tokenHash`, token-attempt ownership, `ReviewRequestSession.sessionHash`, job request/kind/sequence, attempt correlation/number, SES message ids, and suppression store/email/reason constraints keep parallel submit, token lookup, dispatch, callbacks, and suppression idempotent.
 - The submit path conditionally transitions `ReviewRequest`, token, and session in the same DB transaction as `Review.create`; `Review.reviewRequestId @unique` is the final database-level one-review guarantee.
 - Reminder jobs are created only after first-send acceptance and use actual `firstSentAt + reminderDelayDays`. Each scheduled reminder extends request expiry to at least `sendAfter + 30 days`, so max-delay reminders cannot be invalidated by an earlier request deadline.
-- Reconciliation ownership uses `leaseOwner + leaseVersion` compare-and-set and persists the same window/page until completion. Thirteen email-domain tables have RLS enabled; no browser role receives direct table access.
+- Reconciliation ownership uses `leaseOwner + leaseVersion` compare-and-set and persists the same window/page until completion. Email-domain tables have RLS enabled and browser roles receive no direct table access.
 
 On `Review` cursor pagination:
 - partial `[storeId, productId, createdAt desc, id desc] where status='approved'` - public `newest` review list/load-more.

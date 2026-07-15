@@ -284,6 +284,29 @@ async function persistReviewEmailSettings(
 async function cancelUnsentReviewEmailWork(tx: Prisma.TransactionClient, storeId: string, now: Date): Promise<void> {
   const reason = 'store_email_disabled';
   await cancelActiveReviewEmailJobsForStore(tx, storeId, reason, now);
+  const unsentBatches = await tx.reviewEmailBatch.findMany({
+    where: { storeId, status: { in: ['scheduled', 'sending'] }, firstSentAt: null },
+    select: { id: true },
+  });
+  const batchIds = unsentBatches.map((batch) => batch.id);
+  if (batchIds.length) {
+    await tx.reviewEmailBatch.updateMany({
+      where: { id: { in: batchIds }, status: { in: ['scheduled', 'sending'] }, firstSentAt: null },
+      data: { status: 'cancelled', emailAccessStatus: 'store_disabled', cancelledAt: now, cancellationReason: reason },
+    });
+    await tx.reviewRequest.updateMany({
+      where: { batchId: { in: batchIds }, status: { in: ['scheduled', 'sending', 'error'] }, firstSentAt: null },
+      data: { status: 'cancelled', cancelledAt: now, cancellationReason: reason },
+    });
+    await tx.reviewRequestToken.updateMany({
+      where: { batchId: { in: batchIds }, status: { in: ['prepared', 'active'] } },
+      data: { status: 'revoked', revokedAt: now, revocationReason: reason },
+    });
+    await tx.reviewRequestSession.updateMany({
+      where: { batchId: { in: batchIds }, status: 'active' },
+      data: { status: 'revoked', revokedAt: now, revocationReason: reason },
+    });
+  }
   const unsentRequests = await tx.reviewRequest.findMany({
     where: {
       storeId,

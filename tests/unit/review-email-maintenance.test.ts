@@ -34,6 +34,7 @@ describe('review email lifecycle maintenance', () => {
   it('abandons pre-send crashes, quarantines unknown SES outcomes, and expires bounded rows', async () => {
     const tx = {
       reviewEmailAttempt: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      reviewEmailUnsubscribeToken: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
       reviewRequestToken: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
       reviewEmailJob: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
       reviewRequest: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
@@ -57,6 +58,7 @@ describe('review email lifecycle maintenance', () => {
           }]),
       },
       reviewRequestSession: { updateMany: vi.fn().mockResolvedValue({ count: 3 }) },
+      reviewEmailBatch: { findMany: vi.fn().mockResolvedValue([]) },
       reviewRequest: {
         findMany: vi.fn().mockResolvedValue([{ id: 'request-3' }]),
       },
@@ -73,6 +75,7 @@ describe('review email lifecycle maintenance', () => {
       outcomeUnknownAttempts: 1,
       expiredTokens: 2,
       expiredSessions: 3,
+      expiredBatches: 0,
       expiredRequests: 1,
       activeKeyVersions: [1],
       retention: { runId: 'purge-1', mode: 'report', batches: 1, candidates: {}, deleted: {}, elapsedMs: 1 },
@@ -80,6 +83,10 @@ describe('review email lifecycle maintenance', () => {
     expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: 'abandoned_before_send' }),
     }));
+    expect(tx.reviewEmailUnsubscribeToken.updateMany).toHaveBeenCalledWith({
+      where: { createdFromAttemptId: 'prepared-1', status: 'active' },
+      data: { status: 'revoked', revokedAt: new Date('2026-07-10T12:00:00.000Z') },
+    });
     expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: 'outcome_unknown' }),
     }));

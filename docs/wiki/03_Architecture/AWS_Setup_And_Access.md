@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-15
+last_verified: 2026-07-15
 confidence: high
 tags:
   - aws
@@ -633,6 +633,26 @@ References:
 - [CloudFront real-time logs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/real-time-logs.html)
 
 ## Review-Request Email SES Source Package
+
+Application checkpoint on 2026-07-15: Multi-Product Batch / Envelope V3.2 is
+implemented only as disabled application/database source. Its provider-neutral
+envelope, single-recipient attempt, opaque transport-event ids,
+`sendCommittedAt` ambiguity boundary, and suppression/unsubscribe contracts are
+the inputs for a future sender package. They do not mean SQS, Lambda,
+EventBridge, SES tenants, configuration-set associations, DNS, or outbound
+email are deployed.
+
+Deferred acceptance gates remain separate:
+
+- AWS sender package: queue/worker/scheduler IAM, tenant/configuration mapping,
+  provider suppression reconciliation, DLQ, alarms, and ambiguous-attempt
+  operator workflow.
+- SES sandbox/provider contract: real DKIM coverage for custom
+  `List-Unsubscribe` headers, verified-recipient send, and duplicate/out-of-order
+  delivery, delay, bounce, and complaint evidence.
+- Production canary: identity/custom MAIL FROM DNS, production access,
+  deliverability monitoring, legal copy approval, rollback, and bounded merchant
+  enablement.
 
 Status snapshot on 2026-07-09:
 

@@ -123,6 +123,9 @@ describe('media provider jobs', () => {
     prismaMock.videoUploadSession.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.videoUploadSession.update.mockResolvedValue(muxSession({ status: 'failed', quotaState: 'released' }));
     prismaMock.storeVideoUsage.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.reviewMedia.findUnique.mockReset();
+    prismaMock.reviewMedia.updateMany.mockReset();
+    prismaMock.reviewMedia.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.$executeRaw.mockResolvedValue(1);
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
     qstashMock.publishJSON.mockResolvedValue({ messageId: 'message-1' });
@@ -185,6 +188,55 @@ describe('media provider jobs', () => {
 
     expect(result).toEqual({ processed: true, status: 'succeeded' });
     expect(awsImageMock.deleteAwsReviewImageFamily).toHaveBeenCalledWith('store-1', UUID_1, { invalidatePublicVariants: true });
+  });
+
+  it('does not publish an AWS image after its review is no longer approved', async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
+    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
+      id: 'publish-image-job',
+      provider: 'aws_s3',
+      action: MEDIA_JOB_ACTIONS.publishImage,
+      payload: { reviewId: UUID_1, mediaId: UUID_2, variantManifest: { schemaVersion: 1 } },
+      attempts: 1,
+      maxAttempts: 8,
+    });
+    prismaMock.reviewMedia.findUnique.mockResolvedValue({
+      provider: 'aws_s3',
+      resourceType: 'image',
+      review: { status: 'rejected' },
+    });
+    const { processMediaProviderJob } = await import('@/lib/media/jobs');
+
+    const result = await processMediaProviderJob('publish-image-job');
+
+    expect(result).toEqual({ processed: true, status: 'superseded' });
+    expect(awsImageMock.publishAwsReviewImageVariants).not.toHaveBeenCalled();
+    expect(awsImageMock.revokeAwsReviewImagePublicVariants).toHaveBeenCalledWith({ schemaVersion: 1 });
+  });
+
+  it('revokes an AWS image when moderation changes during publication', async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ leaseVersion: 1 }]);
+    prismaMock.mediaProviderJob.findUnique.mockResolvedValue({
+      id: 'publish-image-job',
+      provider: 'aws_s3',
+      action: MEDIA_JOB_ACTIONS.publishImage,
+      payload: { reviewId: UUID_1, mediaId: UUID_2, variantManifest: { schemaVersion: 1 } },
+      attempts: 1,
+      maxAttempts: 8,
+    });
+    prismaMock.reviewMedia.findUnique.mockResolvedValue({
+      provider: 'aws_s3',
+      resourceType: 'image',
+      review: { status: 'approved' },
+    });
+    prismaMock.reviewMedia.updateMany.mockResolvedValueOnce({ count: 0 });
+    const { processMediaProviderJob } = await import('@/lib/media/jobs');
+
+    const result = await processMediaProviderJob('publish-image-job');
+
+    expect(result).toEqual({ processed: true, status: 'superseded' });
+    expect(awsImageMock.publishAwsReviewImageVariants).toHaveBeenCalledWith({ schemaVersion: 1 });
+    expect(awsImageMock.revokeAwsReviewImagePublicVariants).toHaveBeenCalledWith({ schemaVersion: 1 });
   });
 
   it('serializes provider mutations and converges a stale approval to the latest protected state', async () => {

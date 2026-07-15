@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-15
+last_verified: 2026-07-15
 confidence: high
 tags:
   - api
@@ -55,6 +55,11 @@ source_files:
   - "src/app/api/internal/review-email/reconcile-orders/route.ts"
   - "src/app/api/internal/review-email/store-erasure/route.ts"
   - "src/app/api/public/review-request/route.ts"
+  - "src/app/api/public/review-center/session/route.ts"
+  - "src/app/api/public/review-center/items/route.ts"
+  - "src/app/api/public/review-center/items/[itemId]/reviews/route.ts"
+  - "src/app/api/public/review-center/items/[itemId]/skip/route.ts"
+  - "src/app/api/public/review-center/unsubscribe/route.ts"
   - "scripts/rebuild-product-review-summaries.mjs"
 ---
 
@@ -73,7 +78,7 @@ state.
 ## Summary
 Main API route groups:
 - **`/api/admin/*`** — gated by JWT (`getUserFromRequest`), called by the merchant admin UI.
-- **`/api/public/*`** — CORS-open (`Access-Control-Allow-Origin: *`), called by `widget.js` from any storefront. Rate-limited via Upstash Redis.
+- **`/api/public/*`** — storefront/widget endpoints are CORS-open where documented; review-center endpoints are host-isolated and session scoped. Public writes are rate-limited via Upstash Redis.
 - **`/api/oauth/*`** — install / callback flow.
 - **`/api/preview/*`** — settings + fixtures for the admin live-preview iframe.
 - **`/api/ikas/*`** — server-side calls to the ikas Admin GraphQL API (example: `get-merchant`).
@@ -115,6 +120,11 @@ All admin routes start with `getUserFromRequest(request)` from [src/lib/auth-hel
 | POST `/api/public/reviews` body | same | Submit review (validation + StoreSettings/ProductSnapshot target verification + profanity + rate-limit + AWS image refs or video token + auto-approve). Writes `Review`, compatibility `Review.images` only for render-ready public AWS URLs, `Review.hasImages`, `Review.hasVideo`, `ReviewMedia`, pending media cleanup, and summary update transactionally. On the isolated review-request host, an active HttpOnly session is atomically consumed in the same transaction; DB uniqueness on `Review.reviewRequestId` prevents parallel duplicate verified reviews. Tokenless storefront submissions remain unchanged. |
 | POST `/api/public/review-request` body `{ token }` | [route.ts](src/app/api/public/review-request/route.ts) | Exchanges a raw token received in the `/request#token=...` fragment for a short-lived, host-only HttpOnly session. The fragment is removed before API navigation; raw tokens are not accepted in query strings or stored in DB/log payloads. |
 | GET `/api/public/review-request` | same | Resolves only the HttpOnly review-request session and returns sanitized store/product/request state. Both methods are host-isolated and return `private, no-store` with `Referrer-Policy: no-referrer`. |
+| POST `/api/public/review-center/session` | [route.ts](src/app/api/public/review-center/session/route.ts) | Exchanges a batch token from the URL fragment for a two-hour host-only HttpOnly session. Multiple devices are allowed; raw token values are never stored. |
+| GET `/api/public/review-center/items?cursor&limit` | [route.ts](src/app/api/public/review-center/items/route.ts) | Returns only the current batch session's product-scoped items using stable position/id pagination (`20` default, `50` max). Tenant/product scope is derived from the session, not query input. |
+| POST `/api/public/review-center/items/{itemId}/reviews` | [route.ts](src/app/api/public/review-center/items/[itemId]/reviews/route.ts) | Creates one verified review for one session-owned request. Request CAS plus DB uniqueness prevents parallel duplicate review; AWS/Mux media refs must belong to the same session and item. |
+| POST `/api/public/review-center/items/{itemId}/skip` | [route.ts](src/app/api/public/review-center/items/[itemId]/skip/route.ts) | Idempotently resolves one product without reviewing it, cancels its pending media through the outbox, and completes the batch only when every product is resolved. |
+| GET/POST `/api/public/review-center/unsubscribe?token=` | [route.ts](src/app/api/public/review-center/unsubscribe/route.ts) | Host-isolated confirmation and idempotent store/category recipient unsubscribe. POST serializes against send commit, creates durable suppression, and cancels pending physical email while leaving product review rights separate. |
 | GET `/api/public/ratings?storeId&productIds=a,b,c` | [route.ts](src/app/api/public/ratings/route.ts) | Bulk avg+count per canonical ikas product id from `ProductReviewSummary` (primary listing/search badge path; see [[ADR_0015_Canonical_Product_Identity]] and [[ADR_0026_Product_Review_Summary_Read_Model]]); shares a 300/min/IP read rate limit with `ratings-by-slug` |
 | GET `/api/public/ratings-by-slug?storeId&slugs=a,b,c` | [route.ts](src/app/api/public/ratings-by-slug/route.ts) | DOM-only fallback: resolve current slug through `ProductSnapshot`, then read `ProductReviewSummary` by product id; legacy direct slug read is last resort; shares the rating-read rate limit |
 | GET `/api/public/settings?publicApiKey=<merchantId>` | [route.ts](src/app/api/public/settings/route.ts) | Pure cacheable widget config read (per widgetId) plus public runtime flags including additive `runtime.themeSyncDue`. Does not read auth tokens, call ikas, or schedule theme sync. Cloud name **not** in response — it is build-time injected into the widget bundle (see [[ADR_0008_Cloud_Name_Build_Time_Only]]). |
@@ -137,6 +147,9 @@ Storefront configuration and review GET responses use the documented edge-cache 
 - `/api/public/ratings` + `/api/public/ratings-by-slug` GET → 300 / 60sec / IP, shared key
 - `/api/public/storefront-theme/lazy-sync` POST -> 10 / 10min / storeId+IP
 - `/api/public/review-request` POST/GET -> 30 / 60sec / hashed IP, shared key
+- `/api/public/review-center/session` -> 30 / 60sec / hashed IP
+- `/api/public/review-center/items` -> 60 / 60sec / hashed IP
+- review-center submit/skip/unsubscribe -> 30 / 60sec / action + hashed IP
 - `/api/public/upload/video/capability` GET -> 60 / 60sec / IP
 - `/api/public/upload/register` POST -> 30 / 10min / IP
 - `/api/public/upload/video/initiate` POST -> 10 / 10min / IP, plus store-level monthly quota reservation.

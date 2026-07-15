@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-15
+last_verified: 2026-07-15
 confidence: high
 tags:
   - adr
@@ -31,6 +31,7 @@ source_files:
   - "prisma/migrations/20260710120000_add_review_request_email_lifecycle/migration.sql"
   - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
+  - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
   - "config/review-email-copy-register.json"
   - "infra/aws/review-email-erasure-journal.cloudformation.json"
   - "infra/aws/review-email-erasure-journal-iam.cloudformation.json"
@@ -45,7 +46,13 @@ source_files:
   - "src/app/api/internal/review-email/reconcile-orders/route.ts"
   - "src/app/api/internal/review-email/store-erasure/route.ts"
   - "src/app/api/public/review-request/route.ts"
+  - "src/app/api/public/review-center/"
   - "src/app/request/page.tsx"
+  - "src/lib/review-email/batching.ts"
+  - "src/lib/review-email/batch-jobs.ts"
+  - "src/lib/review-email/review-center-submit.ts"
+  - "src/lib/review-email/review-center-scope.ts"
+  - "src/lib/review-email/unsubscribe.ts"
   - "src/lib/media/providers/aws-review-image.ts"
   - "src/lib/product-snapshots.ts"
   - "src/app/api/webhooks/ikas/products/route.ts"
@@ -66,6 +73,8 @@ source_files:
   - "scripts/run-review-email-journal-coverage.ts"
   - "tests/integration/review-email-installation-fence.test.ts"
   - "tests/integration/review-email-v5-db-guarantees.test.ts"
+  - "tests/integration/review-email-batch-db-guarantees.test.ts"
+  - "tests/review-center-browser.spec.ts"
 ---
 
 # ADR_0036 - Review Request Email Architecture
@@ -81,12 +90,15 @@ implementation using EventBridge, SQS, Lambda, and SES. Existing QStash media
 and maintenance scheduling remains in place and is not part of the email
 cutover. Direct ikas feedback confirms the order webhook/listOrder,
 delivery-state, reconciliation, and uninstall-retention platform contract. The
-review-request DB/lifecycle V5 source implementation now exists behind a
-disabled feature flag: additive/RLS-hardened Prisma migration, canonical
+review-request DB/lifecycle V5 and multi-product Batch/Envelope V3.2 source
+implementations now exist behind a disabled feature flag: additive/RLS-hardened
+Prisma migrations, canonical
 `listOrder` re-read, leased reconciliation, immutable settings/recipient
-snapshots, explicit prepared and ambiguous send states, versioned one-time
-tokens, host-isolated browser sessions, atomic verified-buyer submit, dynamic
-request expiry, SES feedback persistence, installation-generation fencing,
+snapshots, delivery-group batches with product-scoped requests, provider-neutral
+physical-email attempts, explicit prepared and ambiguous send states, versioned
+batch tokens, host-isolated multi-device browser sessions, atomic per-product
+verified-buyer submit/skip, dynamic request expiry, SES feedback persistence,
+installation-generation fencing,
 rotatable versioned PII protection, exact-subject DSR, reversible aggregate
 analytics, bounded retention, immutable S3 erasure journal intent, crash-safe
 `412` recovery, restore coverage checks, and retryable erasure. AWS dispatch
@@ -102,8 +114,8 @@ scope, risk, rollback note, and explicit approval.
 
 This ADR records the verified state and accepted infrastructure/application
 contract for a future global-MVP review-request email feature. The first
-DB/backend lifecycle and V5 retention/DSR/journal source package is implemented
-but remains disabled until
+DB/backend lifecycle, V5 retention/DSR/journal, and multi-product
+Batch/Envelope V3.2 source packages are implemented but remain disabled until
 migration/deploy and provider rollout are separately approved. AWS SES in
 `eu-central-1`, a review-specific sender domain, provider-neutral application
 boundaries, tenant-aware ownership, AWS-native email job dispatch, and a signed
@@ -128,8 +140,9 @@ rollout, production migration/deploy, and production access remain open.
 ## Status
 
 Accepted - infrastructure source package prepared; ikas platform contract and
-additive V5 DB/backend lifecycle, retention, analytics, DSR, and journal
-implementation exist in source. The feature is still off until production
+additive V5 DB/backend lifecycle, retention, analytics, DSR, journal, and
+multi-product Batch/Envelope V3.2 implementation exist in source. The feature
+is still off until production
 migration/deploy and provider rollout are approved.
 
 This ADR does not authorize AWS stack creation, DNS records, Vercel env writes,
@@ -142,7 +155,7 @@ DB migrations, deploys, or provider mutation.
 ## Context
 
 The planned capability is a post-purchase email that lets an eligible customer
-open a bounded, single-use submission flow for products from a real order. A
+open a bounded review-center session for independent products from a real order. A
 correct implementation would cross several independent trust boundaries:
 
 - ikas order and customer data;
@@ -531,11 +544,12 @@ Still missing:
 
 ### DB schema and lifecycle contract
 
-Migrations `20260710120000_add_review_request_email_lifecycle` and
-`20260710150000_harden_review_email_installation_lifecycle` implement this
-contract in source. Both are additive and locally verified from an empty
-PostgreSQL 16 database, but they are not applied to production by this
-checkpoint.
+Migrations `20260710120000_add_review_request_email_lifecycle`,
+`20260710150000_harden_review_email_installation_lifecycle`, and
+`20260710210000_add_review_email_retention_analytics_journal` are present in
+production migration history. The additive Multi-Product V3.2 migration
+`20260715120000_add_review_email_batch_envelope_v32` is locally verified source
+only and is not applied to production by this checkpoint.
 
 Implemented ownership and privacy boundaries:
 
@@ -552,16 +566,20 @@ Implemented ownership and privacy boundaries:
   Raw webhook/order payloads, addresses, phone numbers, payment details, IPs,
   user agents, and plaintext customer email are not persisted. Email is stored
   as HMAC plus AES-GCM ciphertext only where sending requires it.
-- `ReviewRequest` stores immutable timing/settings/recipient snapshots for one
-  store/order line. `ReviewRequestToken` stores a unique HMAC hash and key
-  version for one send attempt. `ReviewRequestSession` stores only a unique HMAC
-  session hash.
+- `ReviewEmailBatch` owns a canonical delivery-group sequence, one protected
+  recipient snapshot, immutable timing/template settings, and a durable
+  duplicate fingerprint. `ReviewRequest` remains one independent product-level
+  review right. `ReviewRequestToken` stores a unique HMAC hash and key version
+  for a batch send attempt; `ReviewRequestSession` stores only a unique HMAC
+  session hash and allows bounded multi-device access.
 - `ReviewEmailJob`, `ReviewEmailAttempt`, and `ReviewEmailEvent` separate
-  business schedule, provider attempt, and signed SNS evidence. Queue payloads
-  remain opaque job ids; recipient email and raw tokens exist only in the
-  sender process between preparation and provider invocation.
-- `ReviewEmailSuppression` blocks permanent bounce/complaint recipients without
-  plaintext email. `IkasOrderReconciliationCursor` owns a persisted
+  physical-email schedule, one immutable provider-call attempt, and
+  provider-neutral transport evidence. Queue payloads remain opaque job ids;
+  recipient email and raw tokens exist only in the sender process between
+  preparation and provider invocation.
+- `ReviewEmailSuppression` plus `ReviewEmailUnsubscribeToken` block permanent
+  bounce/complaint or explicit store/category unsubscribe without plaintext
+  email in queue/log evidence. `IkasOrderReconciliationCursor` owns a persisted
   `updatedAt` window/page through lease owner plus fencing version.
   `StoreDataErasureRun` retains non-PII evidence and bounded retry state after
   review-email/order/auth PII is deleted.
@@ -571,24 +589,31 @@ Database-level guarantees:
 - `Review.reviewRequestId @unique` plus a conditional request transition in the
   same transaction as `Review.create` allows only one verified review under
   parallel submits.
-- Unique constraints cover request store/order-line ownership,
-  `ReviewRequestToken.tokenHash`, one token per attempt,
-  `ReviewRequestSession.sessionHash`, job request/kind/sequence and dedupe key,
-  attempt correlation/job-number, webhook/SNS ids, and suppression identity.
+- Unique/partial constraints cover tenant/generation batch fingerprints, one
+  live order delivery group, one product per batch, request store/order-line
+  ownership, `ReviewRequestToken.tokenHash`, one token per attempt,
+  `ReviewRequestSession.sessionHash`, job target/kind/sequence and dedupe key,
+  attempt correlation/job-number, transport ids, and suppression identity.
+- Composite tenant FKs bind order-to-batch and batch-to-request/job ownership;
+  SQL XOR checks preserve exactly one legacy request or new batch target during
+  expand/contract deployment overlap.
 - Due jobs use bounded `FOR UPDATE SKIP LOCKED` claims. Reconciliation page
   checkpoints require matching lease owner/version. Installation state changes
   use a transaction-scoped 64-bit PostgreSQL advisory lock plus the lifecycle
-  row. All 14 sensitive
-  email-domain tables have RLS enabled and browser roles receive no direct
+  row. Email-domain tables have RLS enabled and browser roles receive no direct
   grants.
+- Review-center submit and skip transactions lock the owning batch row with
+  `FOR UPDATE` before request CAS and completion counting. This serializes
+  sibling terminal transitions so two concurrent final-item actions cannot
+  leave an otherwise resolved batch active.
 - Product timing limits stay in app validation (`firstDelayDays 0..30`,
-  `reminderDelayDays 1..30`, `maxReminderCount 0..2`) rather than brittle DB
+  `reminderDelayDays 1..30`, `maxReminderCount 0..1`) rather than brittle DB
   checks.
 
 Implemented state and expiry rules:
 
 - Request states are `scheduled`, `sending`, `sent`, `sent_unknown`,
-  `submitted`, `cancelled`, `expired`, `suppressed`, and `error`.
+  `submitted`, `skipped`, `cancelled`, `expired`, `suppressed`, and `error`.
 - Job states are `pending`, `leased`, `dispatched`, `processing`,
   `awaiting_confirmation`, `outcome_unknown`, `sent`, `skipped`, `retrying`,
   `failed`, and `cancelled`.
@@ -597,13 +622,13 @@ Implemented state and expiry rules:
   `abandoned_before_send`, and provider delivery/failure states. Token states
   are `prepared`, `active`, `consumed`, `expired`, and `revoked`; session states
   are `active`, `consumed`, `expired`, and `revoked`.
-- A raw token is generated only with the current versioned HMAC key, stored only
-  as a hash, and returned in sender memory. If the sender crashes before
-  `sendInitiatedAt`, maintenance abandons the prepared attempt/token after 15
-  minutes and permits a new attempt. Once send starts, the token becomes active
-  for 30 days from `sendInitiatedAt`.
+- A raw batch token is generated only while preparing a physical attempt with
+  the current versioned HMAC key, stored only as a hash, and returned in sender
+  memory. If the sender crashes before `sendCommittedAt`, stale preparation is
+  abandoned and a new attempt is safe. Once send is committed, the token becomes
+  active for 30 days from `sendInitiatedAt`.
 - A missing/timeout SES result moves the attempt/job to
-  `awaiting_confirmation` and the request to `sent_unknown`; it is never
+  `awaiting_confirmation` and affected batch requests to `sent_unknown`; it is never
   automatically resent. Signed SES feedback may reconcile it. After 24 hours,
   maintenance marks `outcome_unknown` and emits operator evidence.
 - Request lifetime is dynamic, not a fixed 60-day value. Initial expiry covers
@@ -627,24 +652,28 @@ Implemented flow:
    merchant-enabled state, and canonical `merchantId` are checked before order
    PII is stored; canonical `listOrder` is then re-read and normalized.
    Periodic reconciliation uses the same fence and covers missed events.
-2. Eligible physical/click-and-collect lines create one request and first job
-   idempotently. Cancellation/refund/return/missing-line transitions close
-   existing work.
+2. Eligible physical/click-and-collect lines are grouped by canonical delivery
+   evidence into one batch and initial physical-email job. Each product creates
+   one independent request; quantity/variant repeats do not fan out email.
+   Cancellation/refund/return/missing-line transitions close only affected work.
 3. A future EventBridge/SQS/Lambda dispatcher claims DB jobs and calls the
    existing prepare/initiate/finalize helpers. This AWS worker is not built or
    deployed yet.
-4. Provider acceptance creates the next reminder from actual acceptance time.
-   Submission, suppression, expiry, or current merchant reminder disablement
-   cancels/skips pending work.
+4. Provider acceptance creates at most one batch reminder from actual acceptance
+   time. The reminder manifest is rebuilt from unresolved products. Submission,
+   skip, suppression, expiry, recipient change, or current merchant reminder
+   disablement cancels/skips pending work.
 5. Email links use `https://reviews.renuvex.app/request#token=...`. The page
-   removes the fragment immediately and POSTs the token once for a host-only
-   HttpOnly session; raw tokens do not enter query/access logs or browser
+   removes the fragment immediately and POSTs the token for a host-only HttpOnly
+   batch session; raw tokens do not enter query/access logs or browser
    navigation requests. Browser Sentry and Session Replay are disabled on the
    isolated `/request` document before SDK initialization so Replay
    `initialUrl` cannot capture the fragment.
-6. Verified submit atomically consumes request/token/session and creates the
-   normal moderated `Review` with `verifiedBuyer=true`. Existing tokenless
-   storefront submit remains unchanged.
+6. Verified submit atomically claims one product request/media and creates the
+   normal moderated `Review` with `verifiedBuyer=true`. Sibling products and
+   sessions remain usable until the batch is resolved; the last submit/skip
+   completes the batch and cancels its reminder. Existing tokenless storefront
+   submit remains unchanged.
 7. Signed SES feedback updates attempts/events/suppression. Permanent bounce or
    complaint revokes active links and pending reminders.
 8. A verified `store/app/deleted` event erases review-email/order/auth PII even
@@ -780,6 +809,114 @@ suppression, and erasure evidence.
   lifecycles.
 
 ## Implementation Checkpoint
+
+### 2026-07-15 Multi-Product Batch / Envelope V3.2
+
+The disabled source now separates the review collection sequence from physical
+email delivery:
+
+- `ReviewEmailBatch` owns one canonical delivery group, one recipient snapshot,
+  timing/template snapshots, membership version, completion state, and the
+  durable versioned-HMAC duplicate tombstone. `ReviewRequest` remains the
+  independent product-level review right. `ReviewEmailJob` is one scheduled
+  physical initial/reminder occurrence; `ReviewEmailAttempt` is one immutable
+  provider-call attempt. One batch therefore produces at most one initial and
+  one reminder while every eligible product keeps a separate review record.
+- Batch identity is unique by `(storeId, installationGeneration,
+  batchFingerprint)`. A second live group for the same order/group is blocked
+  by the partial unique order/group index, including old/new HMAC writer
+  overlap. The HMAC canonical input includes schema version, tenant,
+  installation generation, ikas order id, grouping mode, and group key only.
+  Purged terminal tombstones are found by all active fingerprint key versions,
+  so reingestion cannot recreate requests or jobs.
+- Canonical `listOrder` evidence groups exact package membership as
+  `package:{packageId}`. Ambiguous package evidence fails closed; the bounded
+  `order:complete` fallback is used only when all active shipment lines are
+  terminal-delivered. A product split across packages waits for every related
+  line. Variant/quantity repeats remain one product-level request. Regrouping is
+  allowed before `sendCommittedAt`; after that boundary membership and recipient
+  are frozen. A closed batch is never reopened, and a later discovered product
+  receives only a `late_after_batch_closed` receipt fence.
+- Composite tenant FKs bind batches to order snapshots and requests/jobs to the
+  owning batch. Request-to-order and request-to-line remain `ON DELETE
+  RESTRICT`; batch/order and DSR locks use deterministic transaction ordering.
+  This prevents cross-store attachment and parent deletion while live request
+  evidence exists.
+- The provider-neutral envelope has exactly one recipient, no CC/BCC, an
+  immutable maximum-five-item content manifest plus digest, opaque attempt/job
+  ids, template/locale snapshots, review-center fragment URL, and scoped
+  unsubscribe URL. The email limit is a rendering/product choice; all eligible
+  products remain available in the paginated review center.
+- The sender authorization boundary is `sendCommittedAt`. Sender and
+  suppression/unsubscribe paths serialize on the same tenant/category/recipient
+  advisory lock and re-read installation, settings, recipient version, and
+  suppression sources. A suppression committed first prevents the call; a send
+  committed first may finish that attempt but cannot authorize another one.
+  A crash after commit is `awaiting_confirmation`/`outcome_unknown` and is never
+  automatically resent. A confirmed pre-provider failure may be retried.
+- Frequency policy is physical-email based: minimum 24-hour gap, seven-day
+  cooldown between different initial batches, and four committed attempts per
+  rolling 30 days for a store-recipient. Committed ambiguous attempts reserve
+  capacity; only audited `confirmed_not_sent` releases it.
+- `ReviewEmailEvent` is a provider-neutral transport ledger. Exact transport
+  redelivery dedupes by `(transport, transportEventId)`, while distinct valid
+  same-type facts remain separate rows. Attempt evidence is event-set based:
+  multiple delivery delays retain first/last timestamps, complaint does not
+  erase delivery, and a late delivery cannot clear bounce/complaint suppression
+  or create a reminder. Provider message correlation uses protected evidence;
+  raw payload and recipient data are not persisted.
+- Permanent bounce and complaint create durable store/category recipient
+  suppression. Transient/undetermined bounce closes the current attempt without
+  inventing durable suppression. `emailAccessStatus` is only a projection;
+  every send/reminder claim re-reads installation generation, merchant setting,
+  recipient version, active suppression/unsubscribe preference, DSR fence, and
+  terminal batch state.
+- Batch tokens are generated only when an attempt is prepared, stored only as
+  versioned hashes, and exchanged from
+  `https://reviews.renuvex.app/request#token=...` into two-hour HttpOnly
+  sessions. Multiple devices are allowed; request-level uniqueness and CAS
+  still permit only one review per product. Product skip is idempotent and
+  terminal for reminder resolution but stays in the conversion denominator.
+  Image/Mux upload ownership is bound to batch session plus request; review/media
+  claim is transactional and provider publish/cleanup remains outbox-owned.
+- Every unsubscribe token owns an immutable copy of the batch recipient's
+  case-preserving exact HMAC, its key version, and normalization version. The
+  attempt link remains nullable with `ON DELETE SET NULL`, so a retained link
+  can still create an exact-identifiable suppression after attempt retention
+  without retaining plaintext or new ciphertext. Folded identity remains only
+  a send-policy/suppression key and never selects erasure targets. DSR resolves
+  all retained exact-HMAC key candidates, freezes matching token ids as
+  `unsubscribe-token:{id}` resources, and uses the same id-scoped deletion in
+  normal execution and journal replay. Journal schema v1 remains compatible:
+  older progress and payloads without these token resources decode as an empty
+  token set.
+- DSR closes batch/request analytics before reversal, scrubs recipient and raw
+  provider identifiers, revokes tokens/sessions, and leaves a protected
+  late-event tombstone. Late provider events cannot recreate PII, suppression,
+  receipts, or metrics. Batch details use the existing 180-day policy,
+  contribution tombstones use 210 days, and dynamic journal retention remains
+  governed by the V5 copy-register formula.
+
+The additive migration is
+`20260715120000_add_review_email_batch_envelope_v32`. Legacy request-scoped
+job/token/session columns remain nullable behind SQL XOR checks for deployment
+overlap; their contract removal requires separate zero-legacy-row evidence.
+The feature remains disabled and no production migration, AWS resource, DNS,
+environment value, deployment, or email send is authorized by this checkpoint.
+
+Deferred provider gates remain explicit:
+
+- **AWS sender:** SQS/Lambda/EventBridge implementation, SES tenant/configuration
+  mapping, provider-suppression reconciliation, queue leases, and operator
+  resolution for ambiguous attempts.
+- **Sandbox/provider contract:** real raw-message DKIM/List-Unsubscribe coverage,
+  delivery/delay/bounce/complaint ordering and duplicate evidence, and verified
+  recipient end-to-end delivery.
+- **Production canary:** DNS/custom MAIL FROM, SES production access, DLQ/alarms,
+  legal/compliance copy, deliverability monitoring, and rollback evidence.
+- Unsubscribe preference survival across uninstall/reinstall is a separate
+  privacy/legal decision. The current fail-closed source default removes local
+  PII preference data during uninstall.
 
 2026-07-10 V5 correctness hardening after the nine-finding source audit:
 
@@ -1114,6 +1251,14 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-15: Implemented the disabled Multi-Product Batch / Envelope V3.2
+  source contract. Added delivery-group batches, product-scoped requests,
+  physical job/attempt separation, provider-neutral event transport,
+  send-commit/frequency/suppression fences, batch token and multi-device review
+  center, per-product submit/skip/media ownership, batch analytics/DSR/retention,
+  and additive deployment-overlap compatibility. AWS sender, sandbox/provider
+  validation, production migration, and live activation remain separately
+  gated; no live mutation occurred.
 - 2026-07-11: Closed the pre-commit V5 blockers without changing the public
   feature scope. Added direct-vs-linked DSR inventory, `RESTRICT` request-parent
   FKs, conditional shared-order PII scrub, exact-horizon lifecycle-marker

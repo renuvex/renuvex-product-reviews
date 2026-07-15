@@ -1,14 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildReviewRequestEmailUrl, isReviewRequestPublicHost } from '@/lib/review-email/public-access';
 import {
+  activatePreparedReviewEmailBatchToken,
   activatePreparedReviewRequestToken,
   claimReviewRequestForSubmission,
+  claimReviewCenterItemForSubmission,
   createRawReviewRequestToken,
+  exchangeReviewCenterTokenForSession,
   exchangeReviewRequestTokenForSession,
   hashReviewRequestToken,
+  prepareReviewEmailBatchToken,
   prepareReviewRequestToken,
+  resolveActiveReviewCenterToken,
   resolveActiveReviewRequestToken,
   ReviewRequestTokenError,
+  skipReviewCenterItem,
 } from '@/lib/review-email/tokens';
 
 const KEY_ONE = 'one-secret-with-at-least-thirty-two-characters';
@@ -34,6 +40,43 @@ function tokenRow(rawToken: string, secret: string) {
       status: 'sent',
       expiresAt: new Date('2026-08-01T00:00:00.000Z'),
       orderLineSnapshot: { productName: 'Product', variantName: 'Default' },
+    },
+  };
+}
+
+function batchTokenRow(rawToken: string, secret: string) {
+  return {
+    id: 'batch-token-1',
+    requestId: null,
+    batchId: 'batch-1',
+    attemptId: 'attempt-1',
+    tokenHash: hashReviewRequestToken(rawToken, secret),
+    tokenKeyVersion: 1,
+    status: 'active',
+    expiresAt: new Date('2026-08-01T00:00:00.000Z'),
+    consumedAt: null,
+    revokedAt: null,
+    revocationReason: null,
+    createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    batch: {
+      id: 'batch-1',
+      storeId: 'store-1',
+      status: 'active',
+      expiresAt: new Date('2026-08-01T00:00:00.000Z'),
+      requests: [
+        {
+          id: 'request-1',
+          productId: 'product-1',
+          status: 'sent',
+          orderLineSnapshot: { productName: 'Product One', variantName: 'Default' },
+        },
+        {
+          id: 'request-2',
+          productId: 'product-2',
+          status: 'sent',
+          orderLineSnapshot: { productName: 'Product Two', variantName: 'Default' },
+        },
+      ],
     },
   };
 }
@@ -201,5 +244,200 @@ describe('review request token and session lifecycle', () => {
       sessionId: 'session-1',
     })).rejects.toBeInstanceOf(ReviewRequestTokenError);
     expect(tx.reviewRequestSession.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('prepares and activates a batch token for thirty days at send commit', async () => {
+    const tx = {
+      reviewRequestToken: {
+        create: vi.fn().mockResolvedValue({ id: 'batch-token-1' }),
+        findUnique: vi.fn().mockResolvedValue({ id: 'batch-token-1', batchId: 'batch-1', status: 'prepared' }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const prepared = await prepareReviewEmailBatchToken(tx as never, {
+      batchId: 'batch-1',
+      attemptId: 'attempt-1',
+      keyRing: { currentVersion: 1, keys: new Map([[1, KEY_ONE]]) },
+    });
+    expect(tx.reviewRequestToken.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ requestId: null, batchId: 'batch-1', status: 'prepared' }),
+      select: { id: true },
+    });
+
+    const sendCommittedAt = new Date('2026-07-10T12:00:00.000Z');
+    const active = await activatePreparedReviewEmailBatchToken(tx as never, { attemptId: 'attempt-1', sendCommittedAt });
+    expect(active).toEqual({
+      tokenId: 'batch-token-1',
+      batchId: 'batch-1',
+      expiresAt: new Date('2026-08-09T12:00:00.000Z'),
+    });
+    expect(prepared.rawToken).toMatch(/^v1\.[A-Za-z0-9_-]{43}$/);
+  });
+
+  it('allows the same active batch token to create independent two-hour device sessions', async () => {
+    const rawToken = createRawReviewRequestToken(1);
+    const row = batchTokenRow(rawToken, KEY_ONE);
+    const tx = {
+      reviewRequestToken: { findFirst: vi.fn().mockResolvedValue({ id: 'batch-token-1' }) },
+      reviewRequestSession: {
+        create: vi.fn()
+          .mockResolvedValueOnce({ id: 'session-phone' })
+          .mockResolvedValueOnce({ id: 'session-desktop' }),
+      },
+    };
+    const db = {
+      reviewRequestToken: {
+        findUnique: vi.fn().mockResolvedValue(row),
+        updateMany: vi.fn(),
+      },
+      reviewRequestSession: {},
+      $transaction: vi.fn(async (callback) => callback(tx)),
+    };
+    const options = {
+      now: new Date('2026-07-10T12:00:00.000Z'),
+      keyRing: { currentVersion: 1, keys: new Map([[1, KEY_ONE]]) },
+      sessionSecret: 'session-secret-with-at-least-thirty-two-characters',
+    };
+
+    const phone = await exchangeReviewCenterTokenForSession(db as never, rawToken, options);
+    const desktop = await exchangeReviewCenterTokenForSession(db as never, rawToken, options);
+
+    expect(phone.sessionId).toBe('session-phone');
+    expect(desktop.sessionId).toBe('session-desktop');
+    expect(phone.rawSession).not.toBe(desktop.rawSession);
+    expect(tx.reviewRequestSession.create).toHaveBeenCalledTimes(2);
+    expect(db.reviewRequestToken.updateMany).not.toHaveBeenCalled();
+    await expect(resolveActiveReviewCenterToken(
+      db as never,
+      rawToken,
+      options.now,
+      options.keyRing,
+    )).resolves.toMatchObject({ id: 'batch-token-1', batchId: 'batch-1' });
+  });
+
+  it('keeps sibling access active after an intermediate product submit', async () => {
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 'batch-1' }]),
+      reviewRequest: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        count: vi.fn().mockResolvedValue(1),
+      },
+      reviewRequestSession: {
+        count: vi.fn().mockResolvedValue(1),
+        updateMany: vi.fn(),
+      },
+      reviewRequestToken: {
+        count: vi.fn().mockResolvedValue(1),
+        updateMany: vi.fn(),
+      },
+      reviewEmailBatch: { updateMany: vi.fn() },
+      reviewEmailJob: { updateMany: vi.fn() },
+    };
+
+    await expect(claimReviewCenterItemForSubmission(tx as never, {
+      sessionId: 'session-1',
+      tokenId: 'token-1',
+      batchId: 'batch-1',
+      requestId: 'request-1',
+      now: new Date('2026-07-10T12:00:00.000Z'),
+    })).resolves.toEqual({ batchCompleted: false });
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.reviewRequest.updateMany.mock.invocationCallOrder[0]!);
+    expect(tx.reviewEmailBatch.updateMany).not.toHaveBeenCalled();
+    expect(tx.reviewRequestToken.updateMany).not.toHaveBeenCalled();
+    expect(tx.reviewRequestSession.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('atomically closes the batch and revokes all access after the final product submit', async () => {
+    const now = new Date('2026-07-10T12:00:00.000Z');
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 'batch-1' }]),
+      reviewRequest: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        count: vi.fn().mockResolvedValue(0),
+      },
+      reviewRequestSession: {
+        count: vi.fn().mockResolvedValue(1),
+        updateMany: vi.fn().mockResolvedValue({ count: 2 }),
+      },
+      reviewRequestToken: {
+        count: vi.fn().mockResolvedValue(1),
+        updateMany: vi.fn().mockResolvedValue({ count: 2 }),
+      },
+      reviewEmailBatch: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      reviewEmailJob: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    };
+
+    await expect(claimReviewCenterItemForSubmission(tx as never, {
+      sessionId: 'session-1',
+      tokenId: 'token-1',
+      batchId: 'batch-1',
+      requestId: 'request-2',
+      now,
+    })).resolves.toEqual({ batchCompleted: true });
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.reviewEmailBatch.updateMany).toHaveBeenCalledWith({
+      where: { id: 'batch-1', status: { in: ['scheduled', 'sending', 'active'] } },
+      data: { status: 'completed', completedAt: now },
+    });
+    expect(tx.reviewEmailJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ batchId: 'batch-1' }),
+      data: expect.objectContaining({ status: 'cancelled', lastErrorCode: 'batch_completed' }),
+    }));
+    expect(tx.reviewRequestToken.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { batchId: 'batch-1', status: { in: ['prepared', 'active'] } },
+    }));
+    expect(tx.reviewRequestSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { batchId: 'batch-1', status: 'active' },
+    }));
+  });
+
+  it('treats a repeated product skip as idempotent without consuming sibling access', async () => {
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 'batch-1' }]),
+      reviewRequest: {
+        findFirst: vi.fn().mockResolvedValue({ status: 'skipped' }),
+        count: vi.fn().mockResolvedValue(1),
+        updateMany: vi.fn(),
+      },
+      reviewRequestSession: { count: vi.fn(), updateMany: vi.fn() },
+      reviewRequestToken: { updateMany: vi.fn() },
+      reviewEmailBatch: { updateMany: vi.fn() },
+      reviewEmailJob: { updateMany: vi.fn() },
+    };
+
+    await expect(skipReviewCenterItem(tx as never, {
+      sessionId: 'session-1',
+      tokenId: 'token-1',
+      batchId: 'batch-1',
+      requestId: 'request-1',
+    })).resolves.toEqual({ state: 'already_skipped', batchCompleted: false });
+    expect(tx.reviewRequest.updateMany).not.toHaveBeenCalled();
+    expect(tx.reviewRequestSession.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('reports submit as the winner when a concurrent skip loses its CAS', async () => {
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 'batch-1' }]),
+      reviewRequest: {
+        findFirst: vi.fn()
+          .mockResolvedValueOnce({ status: 'sent' })
+          .mockResolvedValueOnce({ status: 'submitted' }),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      },
+      reviewRequestSession: { count: vi.fn().mockResolvedValue(1) },
+      reviewRequestToken: { count: vi.fn().mockResolvedValue(1) },
+    };
+
+    await expect(skipReviewCenterItem(tx as never, {
+      sessionId: 'session-1',
+      tokenId: 'token-1',
+      batchId: 'batch-1',
+      requestId: 'request-1',
+    })).resolves.toEqual({ state: 'already_submitted', batchCompleted: false });
+
+    expect(tx.reviewRequest.findFirst).toHaveBeenCalledTimes(2);
   });
 });

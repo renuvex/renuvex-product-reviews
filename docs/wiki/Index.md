@@ -191,4 +191,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-10 (review-request email V5 retention/analytics/DSR/journal source implemented and locally verified; still disabled and not deployed)
+**Last Updated:** 2026-07-15 (disabled review-email V5 plus Multi-Product Batch / Envelope V3.2 source implemented and locally verified; production migration, AWS sender, DNS, deploy, and outbound email remain separately gated)

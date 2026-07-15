@@ -7,12 +7,25 @@ export type ReviewEmailConsentMode = (typeof REVIEW_EMAIL_CONSENT_MODES)[number]
 export const REVIEW_EMAIL_JOB_KINDS = ['request', 'reminder'] as const;
 export type ReviewEmailJobKind = (typeof REVIEW_EMAIL_JOB_KINDS)[number];
 
+export const REVIEW_EMAIL_BATCH_STATUSES = [
+  'scheduled',
+  'sending',
+  'active',
+  'completed',
+  'cancelled',
+  'expired',
+] as const;
+export type ReviewEmailBatchStatus = (typeof REVIEW_EMAIL_BATCH_STATUSES)[number];
+
+export const REVIEW_EMAIL_CATEGORY = 'review_request' as const;
+
 export const REVIEW_REQUEST_STATUSES = [
   'scheduled',
   'sending',
   'sent',
   'sent_unknown',
   'submitted',
+  'skipped',
   'cancelled',
   'expired',
   'suppressed',
@@ -51,6 +64,7 @@ export const REVIEW_EMAIL_ATTEMPT_STATUSES = [
   'bounced',
   'complained',
   'delayed',
+  'confirmed_not_sent',
 ] as const;
 export type ReviewEmailAttemptStatus = (typeof REVIEW_EMAIL_ATTEMPT_STATUSES)[number];
 
@@ -75,11 +89,16 @@ export const REVIEW_EMAIL_PURGE_MAX_BATCHES = 5;
 export const REVIEW_EMAIL_PURGE_MAX_DURATION_MS = 10_000;
 export const REVIEW_EMAIL_JOURNAL_MIN_ACTIVE_RETENTION_DAYS = 35;
 export const REVIEW_EMAIL_JOURNAL_VERSION_TAIL_DAYS = 7;
+export const REVIEW_EMAIL_MAX_MANIFEST_ITEMS = 5;
+export const REVIEW_EMAIL_MIN_PHYSICAL_GAP_HOURS = 24;
+export const REVIEW_EMAIL_INITIAL_COOLDOWN_DAYS = 7;
+export const REVIEW_EMAIL_ROLLING_CAP_DAYS = 30;
+export const REVIEW_EMAIL_ROLLING_CAP_COUNT = 4;
 
 export const REVIEW_EMAIL_SETTINGS_LIMITS = {
   firstDelayDays: { min: 0, max: 30 },
   reminderDelayDays: { min: 1, max: 30 },
-  maxReminderCount: { min: 0, max: 2 },
+  maxReminderCount: { min: 0, max: 1 },
 } as const;
 
 export const ORDER_REVIEW_WEBHOOK_SCOPES = ['store/order/created', 'store/order/updated'] as const;

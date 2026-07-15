@@ -16,7 +16,7 @@ describe('review email settings validation', () => {
   it('validates first and reminder timing ranges in app code', () => {
     expect(() => buildReviewEmailSettingsWrite({ firstDelayDays: 31 })).toThrow(ReviewEmailSettingsError);
     expect(() => buildReviewEmailSettingsWrite({ reminderDelayDays: 0 })).toThrow(ReviewEmailSettingsError);
-    expect(() => buildReviewEmailSettingsWrite({ maxReminderCount: 3 })).toThrow(ReviewEmailSettingsError);
+    expect(() => buildReviewEmailSettingsWrite({ maxReminderCount: 2 })).toThrow(ReviewEmailSettingsError);
   });
 
   it('fails closed before enablement until the provider-side uninstall webhook is verified', () => {
@@ -60,6 +60,7 @@ describe('review email settings validation', () => {
         }),
       },
       reviewEmailJob: { updateMany: vi.fn().mockResolvedValue({ count: 2 }) },
+      reviewEmailBatch: { findMany: vi.fn().mockResolvedValue([]) },
       reviewRequest: {
         findMany: vi.fn().mockResolvedValue([{ id: 'request-unsent' }]),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),

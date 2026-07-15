@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-15
+last_verified: 2026-07-15
 confidence: high
 tags:
   - ikas
@@ -22,6 +22,8 @@ source_files:
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/app/api/webhooks/ikas/orders/route.ts"
   - "src/app/api/webhooks/ikas/products/route.ts"
+  - "src/lib/review-email/batching.ts"
+  - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
 ---
 
 # ikas Order Review Request Notes
@@ -112,12 +114,25 @@ contract for a post-order single-use action link:
 - Reconciliation uses bounded `updatedAt` windows, max-200 pagination, a DB
   lease/version fence, and the same installation lock. Its future AWS trigger
   must wake this DB-owned lifecycle rather than perform raw broad scans.
+- Multi-product source groups exact package membership into one
+  `ReviewEmailBatch`, while each canonical product retains an independent
+  `ReviewRequest`. One product split across packages is not eligible until all
+  related active lines are delivered. Missing or contradictory package evidence
+  fails closed; `order:complete` is used only when every active shipment line is
+  terminal-delivered. Grouping may change before physical send commit and is
+  frozen afterward, preventing package reconciliation from producing duplicate
+  initial email.
+- Variant and quantity repeats currently dedupe at ikas product id because the
+  public review/read-model identity is product-scoped. This is a Renuvex product
+  decision, not a claim about an unpublished ikas backend rule.
 
 ## Open Implementation Work
 
 - The ikas GraphQL document, additive Prisma lifecycle, signed order webhook
   receiver, canonical `listOrder` re-read, and leased `updatedAt` reconciliation
-  are implemented in disabled source and locally verified.
+  are implemented in disabled source and locally verified. The additive
+  multi-product batch/envelope layer also exists in source; it does not send
+  email without the separately gated AWS sender and activation work.
 - Define the product/legal consent rule for review-request email when
   `notificationsAccepted=false`.
 - Perform live ikas acceptance for the MCP-valid order registration and the

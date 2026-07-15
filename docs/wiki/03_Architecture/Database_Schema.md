@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-15
+last_verified: 2026-07-15
 confidence: high
 tags:
   - database
@@ -29,6 +29,7 @@ source_files:
   - "prisma/migrations/20260710120000_add_review_request_email_lifecycle/migration.sql"
   - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
+  - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
   - "src/lib/review-media.ts"
   - "src/lib/review-summary.ts"
   - "src/lib/cleanup-orphan-images.ts"
@@ -76,6 +77,23 @@ ingest/reconciliation, and uninstall erasure. `authorizedAppId` is unique;
 `active`, `erasing`, and `erased`. The erased row remains as a tombstone so a
 delayed callback or uninstall retry cannot resurrect/delete another generation.
 All state transitions use the same transaction-scoped PostgreSQL advisory lock.
+
+### Review-email Multi-Product Batch / Envelope V3.2
+
+`ReviewEmailBatch` is the delivery-group sequence and durable duplicate
+tombstone. It owns one protected recipient/timing/template snapshot and relates
+many product-level `ReviewRequest` rows to one physical initial plus at most one
+reminder. `ReviewEmailJob` represents a scheduled physical occurrence;
+`ReviewEmailAttempt` represents a single provider-call boundary and immutable
+maximum-five-item manifest. `ReviewEmailEvent` is a provider-neutral transport
+ledger, while `ReviewEmailSuppression` and `ReviewEmailUnsubscribeToken` own
+email-channel access separately from product review eligibility.
+
+Tenant/generation fingerprint and live order/group unique indexes prevent
+duplicate batches across webhook/reconciliation and HMAC rollout races.
+Composite `(id, storeId)` FKs prevent cross-store order/batch/request/job
+attachment. Legacy request-scoped job/token/session targets remain nullable only
+for expand/contract overlap and SQL XOR constraints require exactly one target.
 
 ### Review-email V5 retention and DSR
 

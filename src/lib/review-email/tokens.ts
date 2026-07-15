@@ -108,6 +108,9 @@ export async function activatePreparedReviewRequestToken(
   if (!token || token.status !== 'prepared') {
     throw new ReviewRequestTokenError('review_request_token_not_prepared', undefined, 409);
   }
+  if (!token.requestId) {
+    throw new ReviewRequestTokenError('review_request_token_target_mismatch', undefined, 409);
+  }
 
   const expiresAt = addDays(input.sendInitiatedAt, DEFAULT_TOKEN_EXPIRES_DAYS);
   const activated = await tx.reviewRequestToken.updateMany({
@@ -144,7 +147,7 @@ export async function resolveActiveReviewRequestToken(
       },
     },
   });
-  if (!token || token.tokenKeyVersion !== parsed.version) {
+  if (!token?.request || token.tokenKeyVersion !== parsed.version) {
     throw new ReviewRequestTokenError('invalid_review_request_token');
   }
 
@@ -166,7 +169,7 @@ export async function resolveActiveReviewRequestToken(
     throw new ReviewRequestTokenError('invalid_review_request_token');
   }
 
-  return token;
+  return { ...token, request: token.request };
 }
 
 export async function exchangeReviewRequestTokenForSession(
@@ -199,10 +202,6 @@ export async function exchangeReviewRequestTokenForSession(
     });
     if (!stillActive) throw new ReviewRequestTokenError('invalid_review_request_token');
 
-    await tx.reviewRequestSession.updateMany({
-      where: { tokenId: token.id, status: 'active' },
-      data: { status: 'revoked', revokedAt: now, revocationReason: 'replaced' },
-    });
     return tx.reviewRequestSession.create({
       data: {
         requestId: token.requestId,
@@ -216,6 +215,277 @@ export async function exchangeReviewRequestTokenForSession(
   });
 
   return { rawSession, sessionId: session.id, expiresAt, token };
+}
+
+export async function prepareReviewEmailBatchToken(
+  tx: Prisma.TransactionClient,
+  input: {
+    batchId: string;
+    attemptId: string;
+    keyRing?: ReviewRequestTokenKeyRing;
+  },
+): Promise<{ id: string; rawToken: string; tokenHash: string; tokenKeyVersion: number }> {
+  const keyRing = input.keyRing ?? getReviewRequestTokenKeyRing();
+  const secret = keyRing.keys.get(keyRing.currentVersion);
+  if (!secret) throw new Error('Current review request token key is unavailable');
+
+  const rawToken = createRawReviewRequestToken(keyRing.currentVersion);
+  const tokenHash = hashReviewRequestToken(rawToken, secret);
+  const row = await tx.reviewRequestToken.create({
+    data: {
+      requestId: null,
+      batchId: input.batchId,
+      attemptId: input.attemptId,
+      tokenHash,
+      tokenKeyVersion: keyRing.currentVersion,
+      status: 'prepared',
+      expiresAt: null,
+    },
+    select: { id: true },
+  });
+  return { id: row.id, rawToken, tokenHash, tokenKeyVersion: keyRing.currentVersion };
+}
+
+export async function activatePreparedReviewEmailBatchToken(
+  tx: Prisma.TransactionClient,
+  input: { attemptId: string; sendCommittedAt: Date },
+): Promise<{ tokenId: string; batchId: string; expiresAt: Date }> {
+  const token = await tx.reviewRequestToken.findUnique({
+    where: { attemptId: input.attemptId },
+    select: { id: true, batchId: true, status: true },
+  });
+  if (!token?.batchId || token.status !== 'prepared') {
+    throw new ReviewRequestTokenError('review_email_batch_token_not_prepared', undefined, 409);
+  }
+  const expiresAt = addDays(input.sendCommittedAt, DEFAULT_TOKEN_EXPIRES_DAYS);
+  const activated = await tx.reviewRequestToken.updateMany({
+    where: { id: token.id, batchId: token.batchId, status: 'prepared', expiresAt: null },
+    data: { status: 'active', expiresAt },
+  });
+  if (activated.count !== 1) throw new ReviewRequestTokenError('review_email_batch_token_not_prepared', undefined, 409);
+  return { tokenId: token.id, batchId: token.batchId, expiresAt };
+}
+
+export async function resolveActiveReviewCenterToken(
+  db: TokenDb,
+  rawToken: string,
+  now = new Date(),
+  keyRing = getReviewRequestTokenKeyRing(),
+) {
+  const parsed = parseRawReviewRequestToken(rawToken);
+  const secret = parsed ? keyRing.keys.get(parsed.version) : null;
+  if (!parsed || !secret) throw new ReviewRequestTokenError('invalid_review_request_token');
+  const tokenHash = hashReviewRequestToken(rawToken, secret);
+  const token = await db.reviewRequestToken.findUnique({
+    where: { tokenHash },
+    include: {
+      batch: {
+        include: {
+          requests: {
+            include: { orderLineSnapshot: true },
+            orderBy: [{ batchPosition: 'asc' }, { id: 'asc' }],
+          },
+        },
+      },
+    },
+  });
+  if (!token?.batch || token.tokenKeyVersion !== parsed.version || token.batchId !== token.batch.id) {
+    throw new ReviewRequestTokenError('invalid_review_request_token');
+  }
+  if (token.status === 'active' && token.expiresAt && token.expiresAt <= now) {
+    await db.reviewRequestToken.updateMany({
+      where: { id: token.id, status: 'active', expiresAt: { lte: now } },
+      data: { status: 'expired' },
+    });
+    throw new ReviewRequestTokenError('invalid_review_request_token');
+  }
+  if (
+    token.status !== 'active' ||
+    !token.expiresAt ||
+    token.expiresAt <= now ||
+    !['sending', 'active'].includes(token.batch.status) ||
+    (token.batch.expiresAt !== null && token.batch.expiresAt <= now)
+  ) {
+    throw new ReviewRequestTokenError('invalid_review_request_token');
+  }
+  return { ...token, batch: token.batch };
+}
+
+export async function exchangeReviewCenterTokenForSession(
+  db: SessionDb & TokenDb,
+  rawToken: string,
+  input: { now?: Date; keyRing?: ReviewRequestTokenKeyRing; sessionSecret?: string } = {},
+) {
+  const now = input.now ?? new Date();
+  const token = await resolveActiveReviewCenterToken(db, rawToken, now, input.keyRing);
+  const rawSession = createRawReviewRequestSession();
+  const sessionHash = hashReviewRequestSession(rawSession, input.sessionSecret);
+  const ttlExpiresAt = new Date(now.getTime() + REVIEW_REQUEST_SESSION_TTL_MINUTES * 60 * 1000);
+  const expiresAt = token.expiresAt! < ttlExpiresAt ? token.expiresAt! : ttlExpiresAt;
+  const session = await db.$transaction(async (tx) => {
+    const stillActive = await tx.reviewRequestToken.findFirst({
+      where: { id: token.id, batchId: token.batchId, status: 'active', expiresAt: { gt: now } },
+      select: { id: true },
+    });
+    if (!stillActive) throw new ReviewRequestTokenError('invalid_review_request_token');
+    return tx.reviewRequestSession.create({
+      data: {
+        requestId: null,
+        batchId: token.batchId,
+        tokenId: token.id,
+        sessionHash,
+        status: 'active',
+        expiresAt,
+      },
+      select: { id: true },
+    });
+  });
+  return { rawSession, sessionId: session.id, expiresAt, token };
+}
+
+export async function resolveActiveReviewCenterSession(
+  db: Pick<PrismaClient, 'reviewRequestSession'>,
+  rawSession: string,
+  now = new Date(),
+  sessionSecret = getReviewRequestSessionSecret(),
+) {
+  if (!RAW_SESSION_PATTERN.test(rawSession)) throw new ReviewRequestTokenError('invalid_review_request_session');
+  const sessionHash = hashReviewRequestSession(rawSession, sessionSecret);
+  const session = await db.reviewRequestSession.findUnique({
+    where: { sessionHash },
+    include: {
+      token: true,
+      batch: {
+        include: {
+          requests: {
+            include: { orderLineSnapshot: true },
+            orderBy: [{ batchPosition: 'asc' }, { id: 'asc' }],
+          },
+        },
+      },
+    },
+  });
+  if (!session?.batch || session.batchId !== session.batch.id) throw new ReviewRequestTokenError('invalid_review_request_session');
+  if (session.status === 'active' && session.expiresAt <= now) {
+    await db.reviewRequestSession.updateMany({
+      where: { id: session.id, status: 'active', expiresAt: { lte: now } },
+      data: { status: 'expired' },
+    });
+    throw new ReviewRequestTokenError('invalid_review_request_session');
+  }
+  if (
+    session.status !== 'active' ||
+    session.expiresAt <= now ||
+    session.token.status !== 'active' ||
+    !session.token.expiresAt ||
+    session.token.expiresAt <= now ||
+    !['sending', 'active'].includes(session.batch.status) ||
+    (session.batch.expiresAt !== null && session.batch.expiresAt <= now)
+  ) {
+    throw new ReviewRequestTokenError('invalid_review_request_session');
+  }
+  return { ...session, batch: session.batch };
+}
+
+async function closeBatchIfResolved(tx: Prisma.TransactionClient, batchId: string, now: Date): Promise<boolean> {
+  const unresolved = await tx.reviewRequest.count({
+    where: { batchId, status: { in: ['scheduled', 'sending', 'sent', 'sent_unknown', 'error'] } },
+  });
+  if (unresolved > 0) return false;
+  const completed = await tx.reviewEmailBatch.updateMany({
+    where: { id: batchId, status: { in: ['scheduled', 'sending', 'active'] } },
+    data: { status: 'completed', completedAt: now },
+  });
+  if (completed.count !== 1) return false;
+  await tx.reviewEmailJob.updateMany({
+    where: { batchId, status: { in: [...CANCELLABLE_JOB_STATUSES] } },
+    data: { status: 'cancelled', completedAt: now, leaseOwner: null, leaseExpiresAt: null, lastErrorCode: 'batch_completed' },
+  });
+  await tx.reviewRequestToken.updateMany({
+    where: { batchId, status: { in: ['prepared', 'active'] } },
+    data: { status: 'revoked', revokedAt: now, revocationReason: 'batch_completed' },
+  });
+  await tx.reviewRequestSession.updateMany({
+    where: { batchId, status: 'active' },
+    data: { status: 'revoked', revokedAt: now, revocationReason: 'batch_completed' },
+  });
+  return true;
+}
+
+async function lockReviewCenterBatch(tx: Prisma.TransactionClient, batchId: string): Promise<void> {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "ReviewEmailBatch"
+    WHERE "id" = ${batchId}
+    FOR UPDATE
+  `;
+  if (rows.length !== 1) throw new ReviewRequestTokenError('review_center_item_not_found', undefined, 404);
+}
+
+export async function claimReviewCenterItemForSubmission(
+  tx: Prisma.TransactionClient,
+  input: { sessionId: string; tokenId: string; batchId: string; requestId: string; now?: Date },
+): Promise<{ batchCompleted: boolean }> {
+  const now = input.now ?? new Date();
+  await lockReviewCenterBatch(tx, input.batchId);
+  const claimed = await tx.reviewRequest.updateMany({
+    where: {
+      id: input.requestId,
+      batchId: input.batchId,
+      submittedAt: null,
+      skippedAt: null,
+      status: { in: [...SUBMITTABLE_REQUEST_STATUSES] },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
+    data: { status: 'submitted', submittedAt: now },
+  });
+  if (claimed.count !== 1) throw new ReviewRequestTokenError('review_center_item_not_submittable', undefined, 409);
+  const session = await tx.reviewRequestSession.count({
+    where: { id: input.sessionId, batchId: input.batchId, tokenId: input.tokenId, status: 'active', expiresAt: { gt: now } },
+  });
+  const token = await tx.reviewRequestToken.count({
+    where: { id: input.tokenId, batchId: input.batchId, status: 'active', expiresAt: { gt: now } },
+  });
+  if (session !== 1 || token !== 1) throw new ReviewRequestTokenError('invalid_review_request_session');
+  return { batchCompleted: await closeBatchIfResolved(tx, input.batchId, now) };
+}
+
+export async function skipReviewCenterItem(
+  tx: Prisma.TransactionClient,
+  input: { sessionId: string; tokenId: string; batchId: string; requestId: string; now?: Date },
+): Promise<{ state: 'skipped' | 'already_skipped' | 'already_submitted'; batchCompleted: boolean }> {
+  const now = input.now ?? new Date();
+  await lockReviewCenterBatch(tx, input.batchId);
+  const existing = await tx.reviewRequest.findFirst({
+    where: { id: input.requestId, batchId: input.batchId },
+    select: { status: true },
+  });
+  if (!existing) throw new ReviewRequestTokenError('review_center_item_not_found', undefined, 404);
+  if (existing.status === 'submitted') return { state: 'already_submitted', batchCompleted: false };
+  if (existing.status === 'skipped') return { state: 'already_skipped', batchCompleted: await closeBatchIfResolved(tx, input.batchId, now) };
+  const session = await tx.reviewRequestSession.count({
+    where: { id: input.sessionId, batchId: input.batchId, tokenId: input.tokenId, status: 'active', expiresAt: { gt: now } },
+  });
+  const token = await tx.reviewRequestToken.count({
+    where: { id: input.tokenId, batchId: input.batchId, status: 'active', expiresAt: { gt: now } },
+  });
+  if (session !== 1 || token !== 1) throw new ReviewRequestTokenError('invalid_review_request_session');
+  const skipped = await tx.reviewRequest.updateMany({
+    where: { id: input.requestId, batchId: input.batchId, status: { in: [...SUBMITTABLE_REQUEST_STATUSES] }, skippedAt: null },
+    data: { status: 'skipped', skippedAt: now, skipReason: 'recipient_skipped' },
+  });
+  if (skipped.count !== 1) {
+    const terminal = await tx.reviewRequest.findFirst({
+      where: { id: input.requestId, batchId: input.batchId },
+      select: { status: true },
+    });
+    if (terminal?.status === 'submitted') return { state: 'already_submitted', batchCompleted: false };
+    if (terminal?.status === 'skipped') {
+      return { state: 'already_skipped', batchCompleted: await closeBatchIfResolved(tx, input.batchId, now) };
+    }
+    throw new ReviewRequestTokenError('review_center_item_not_skippable', undefined, 409);
+  }
+  return { state: 'skipped', batchCompleted: await closeBatchIfResolved(tx, input.batchId, now) };
 }
 
 export async function resolveActiveReviewRequestSession(
@@ -237,7 +507,7 @@ export async function resolveActiveReviewRequestSession(
       },
     },
   });
-  if (!session) throw new ReviewRequestTokenError('invalid_review_request_session');
+  if (!session?.request) throw new ReviewRequestTokenError('invalid_review_request_session');
 
   if (session.status === 'active' && session.expiresAt <= now) {
     await db.reviewRequestSession.updateMany({
@@ -259,7 +529,7 @@ export async function resolveActiveReviewRequestSession(
     throw new ReviewRequestTokenError('invalid_review_request_session');
   }
 
-  return session;
+  return { ...session, request: session.request };
 }
 
 export async function claimReviewRequestForSubmission(

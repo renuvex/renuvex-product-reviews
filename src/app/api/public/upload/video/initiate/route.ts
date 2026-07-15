@@ -11,6 +11,9 @@ import { dispatchMediaProviderJob, failSessionAndQueueCleanup } from '@/lib/medi
 import { MediaRequestError, readJsonObject } from '@/lib/media/request';
 import { createReservedVideoSession, VideoQuotaError } from '@/lib/media/sessions';
 import { validateVideoUploadInput } from '@/lib/media/video-policy';
+import { resolveReviewCenterItemScope } from '@/lib/review-email/review-center-scope';
+import { ReviewRequestTokenError } from '@/lib/review-email/tokens';
+import { ReviewRequestHostError } from '@/lib/review-email/public-access';
 
 function muxCorsOrigin(request: Request): string {
   const origin = request.headers.get('origin')?.trim();
@@ -32,8 +35,9 @@ export async function POST(request: Request) {
   let createdUploadId: string | null = null;
   try {
     const body = await readJsonObject(request);
-    const storeId = typeof body.storeId === 'string' ? body.storeId.trim().slice(0, 128) : '';
-    const productId = typeof body.productId === 'string' ? body.productId.trim().slice(0, 128) : '';
+    const scope = await resolveReviewCenterItemScope(prisma, request, body.itemId);
+    const storeId = scope?.storeId ?? (typeof body.storeId === 'string' ? body.storeId.trim().slice(0, 128) : '');
+    const productId = scope?.productId ?? (typeof body.productId === 'string' ? body.productId.trim().slice(0, 128) : '');
     if (!storeId || !productId) return withCors(NextResponse.json({ error: 'missing_parameters' }, { status: 400 }), request);
     const upload = validateVideoUploadInput({ mimeType: body.mimeType, bytes: body.bytes });
     if (!upload.ok) return withCors(NextResponse.json({ error: upload.code }, { status: 400 }), request);
@@ -75,6 +79,8 @@ export async function POST(request: Request) {
       mimeType: upload.mimeType,
       bytes: upload.bytes,
       fileFingerprint: typeof body.fileFingerprint === 'string' ? body.fileFingerprint : null,
+      reviewRequestId: scope?.requestId ?? null,
+      reviewRequestSessionId: scope?.sessionId ?? null,
       monthlyLimit: access.monthlyLimit,
     });
     createdSessionId = session.id;
@@ -111,6 +117,9 @@ export async function POST(request: Request) {
       }
     }
     if (error instanceof MediaRequestError) return withCors(NextResponse.json({ error: error.code }, { status: 400 }), request);
+    if (error instanceof ReviewRequestHostError || error instanceof ReviewRequestTokenError) {
+      return withCors(NextResponse.json({ error: error.code }, { status: error.status }), request);
+    }
     if (error instanceof VideoQuotaError) return withCors(NextResponse.json({ error: 'video_quota_exceeded' }, { status: 429 }), request);
     if (error instanceof MediaConfigError) {
       console.error('[video-initiate] provider configuration is incomplete:', error.code);

@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-15
+last_verified: 2026-07-15
 confidence: high
 tags:
   - log
@@ -26,6 +26,17 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-15 - implementation | Add multi-product review-email batches
+- Added the disabled Batch/Envelope V3.2 source contract: one physical initial
+  plus at most one reminder per delivery group, independent product requests,
+  provider-neutral attempts/events, send-commit and recipient suppression
+  fences, and a host-isolated multi-item review center.
+- Added per-item submit/skip/media ownership, batch analytics/DSR/retention,
+  tenant composite FKs, deployment-overlap XOR constraints, HMAC tombstone
+  reingestion protection, and focused PostgreSQL/browser tests.
+- No production migration, AWS/DNS/env/provider mutation, deployment, or email
+  send occurred.
 
 ## 2026-07-11 - fix | Close review-email V5 integrity blockers
 - Replaced cascade-based DSR order selection with frozen direct-vs-linked

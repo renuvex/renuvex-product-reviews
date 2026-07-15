@@ -58,6 +58,13 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-15: Disabled review-email Multi-Product Batch / Envelope V3.2 source
+  is implemented: one delivery-group initial plus at most one reminder,
+  independent product requests, tenant-bound batch/job FKs, provider-neutral
+  attempts/events, send-commit/frequency/suppression guards, fragment-token
+  multi-device review center, per-item submit/skip/media ownership, and
+  V5-compatible DSR/retention. Migration/AWS/DNS/env/deploy/email sending remain
+  separately gated. See [[ADR_0036_Review_Request_Email_Architecture]].
 - 2026-07-04: Wiki low-token routing is active: hot-path pages stay short; long critical pages use `## Agent Brief`.
 - 2026-07-04: QStash maintenance scheduler is active; health gate is delivery logs/DLQ plus `ScheduledJobRunLock`, not `nextScheduleTime`.
 - 2026-07-04: AWS review images are production path: `media.renuvex.app/reviews/...`, immutable public variants, private signed admin previews, public-only orphan scan.
@@ -76,7 +83,10 @@ source_files:
 - Supabase RLS/default-grants hardening is a public-launch blocker.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
-- Review-email V5 is not live. Activation requires actual restore-window and app-deleted verification, then separate DB/journal/env/report/enforce gates. SES sender/templates, AWS dispatch, DNS/sandbox, UI, and live acceptance remain open.
+- Review-email V5/V3.2 is not live. Activation requires actual restore-window
+  and app-deleted verification, then separate DB/journal/env/report/enforce
+  gates. SES sender/templates, AWS dispatch, DNS/sandbox, merchant settings UI,
+  review-center media controls, and live acceptance remain open.
 
 ## Read Next
 - [[Current_Status]]

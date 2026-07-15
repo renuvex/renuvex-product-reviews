@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import type { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withCors, corsOptions } from '@/lib/cors';
@@ -13,12 +14,10 @@ import {
 import { applyReviewSummaryVisibilityChange, filteredReviewTotal, summaryStats } from '@/lib/review-summary';
 import { hashMediaToken } from '@/lib/media/video-policy';
 import { MEDIA_JOB_ACTIONS, VIDEO_PROVIDER } from '@/lib/media/constants';
-import { supersedeSessionLifecycleJobs } from '@/lib/media/outbox';
+import { enqueueMediaProviderJob, supersedeSessionLifecycleJobs } from '@/lib/media/outbox';
+import { dispatchMediaProviderJob } from '@/lib/media/dispatcher';
 import {
   AWS_REVIEW_IMAGE_PROVIDER,
-  buildAwsReviewImagePublicDescriptor,
-  publishAwsReviewImageVariants,
-  revokeAwsReviewImagePublicVariants,
   sanitizeAwsReviewImageRefs,
 } from '@/lib/media/providers/aws-review-image';
 import {
@@ -44,16 +43,6 @@ const redis = new Redis({
 
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_SEC = 10 * 60; // 10 dakika
-
-async function compensatePublishedAwsReviewImages(manifests: unknown[], context: string) {
-  for (const manifest of manifests) {
-    try {
-      await revokeAwsReviewImagePublicVariants(manifest);
-    } catch (error) {
-      console.error(`${context} AWS image publish compensation failed:`, error instanceof Error ? error.message : error);
-    }
-  }
-}
 
 const PUBLIC_REVIEW_SELECT = {
   id: true,
@@ -377,13 +366,6 @@ function formatPublicReview(review: PublicReviewRow, storeId: string) {
   };
 }
 
-function publicUrlsFromAwsPendingRows(rows: AwsPendingReviewImageMediaRow[]): string[] {
-  return rows.flatMap((row) => {
-    const descriptor = buildAwsReviewImagePublicDescriptor(row.variantManifest);
-    return descriptor?.url ? [descriptor.url] : [];
-  });
-}
-
 export async function OPTIONS() {
   return corsOptions();
 }
@@ -502,7 +484,6 @@ export async function GET(req: Request) {
  */
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
-  const publishedAwsVariantManifests: unknown[] = [];
 
   try {
     let body: any;
@@ -640,34 +621,18 @@ export async function POST(request: Request) {
       });
     }
 
-    if (initialStatus === 'approved' && awsPendingRows.length > 0) {
-      try {
-        for (const row of awsPendingRows) {
-          await publishAwsReviewImageVariants(row.variantManifest);
-          publishedAwsVariantManifests.push(row.variantManifest);
-        }
-      } catch (error) {
-        console.error('[POST] Reviews AWS image publish failed:', error instanceof Error ? error.message : error);
-        if (publishedAwsVariantManifests.length > 0) {
-          await compensatePublishedAwsReviewImages(publishedAwsVariantManifests, '[POST] Reviews');
-        }
-        return withCors(NextResponse.json({ error: 'Image publication failed.' }, { status: 500 }));
-      }
-    }
-
     // Atomic commit: create Review and remove any PendingReviewImage rows
     // tied to the publicIds this review consumes. Rows that were never
     // registered are silently ignored — the weekly fallback scan catches them.
     const committedPublicIds = awsPendingRows.map((row) => row.publicId);
-    const committedAwsPublicUrls = initialStatus === 'approved' ? publicUrlsFromAwsPendingRows(awsPendingRows) : [];
-
     const reviewCreatedAt = new Date();
-    const newReview = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      const mediaJobs: Array<{ id: string }> = [];
       if (verifiedReviewRequestSession) {
         await claimReviewRequestForSubmission(tx, {
           sessionId: verifiedReviewRequestSession.id,
           tokenId: verifiedReviewRequestSession.tokenId,
-          requestId: verifiedReviewRequestSession.requestId,
+          requestId: verifiedReviewRequestSession.request.id,
           now: reviewCreatedAt,
         });
       }
@@ -714,7 +679,7 @@ export async function POST(request: Request) {
           comment: commentText ?? '',
           author: authorText,
           email: '',
-          images: committedAwsPublicUrls.length ? JSON.stringify(committedAwsPublicUrls) : null,
+          images: null,
           hasImages: imageCount > 0,
           hasVideo: !!videoSession,
           status: initialStatus,
@@ -731,13 +696,26 @@ export async function POST(request: Request) {
         storeId: storeIdText,
         productId: productIdText,
         reviewId: created.id,
-        visible: initialStatus === 'approved',
+        visible: false,
       });
-      if (awsMediaRows.length > 0) {
-        await tx.reviewMedia.createMany({
-          data: awsMediaRows,
-          skipDuplicates: true,
-        });
+      for (const [index, mediaRow] of awsMediaRows.entries()) {
+        const media = await tx.reviewMedia.create({ data: mediaRow });
+        if (initialStatus === 'approved') {
+          mediaJobs.push(await enqueueMediaProviderJob(tx, {
+            dedupeKey: `publish-review-image:${created.id}:${media.id}`,
+            storeId: storeIdText,
+            reviewId: created.id,
+            mediaId: media.id,
+            provider: AWS_REVIEW_IMAGE_PROVIDER,
+            action: MEDIA_JOB_ACTIONS.publishImage,
+            resourceType: 'image',
+            payload: {
+              reviewId: created.id,
+              mediaId: media.id,
+              variantManifest: awsPendingRows[index].variantManifest as Prisma.InputJsonObject,
+            },
+          }));
+        }
       }
 
       if (videoSession) {
@@ -817,22 +795,21 @@ export async function POST(request: Request) {
         }
       }
 
-      return created;
+      return { review: created, mediaJobs };
     });
+
+    await Promise.all(result.mediaJobs.map((job) => dispatchMediaProviderJob(job.id)));
 
     const response = NextResponse.json({
       message: 'Yorum alındı',
       data: {
-        id: newReview.id,
-        status: newReview.status,
+        id: result.review.id,
+        status: result.review.status,
       },
     }, { status: 201 });
     if (verifiedReviewRequestSession) clearReviewRequestSessionCookie(response);
     return withCors(response, request);
   } catch (error: any) {
-    if (publishedAwsVariantManifests.length > 0) {
-      await compensatePublishedAwsReviewImages(publishedAwsVariantManifests, '[POST] Reviews');
-    }
     if (error instanceof Error && error.message === 'invalid_video_session') {
       return withCors(NextResponse.json({ error: 'Video yüklemesi hazır değil, süresi dolmuş veya bu ürüne ait değil.' }, { status: 400 }));
     }

@@ -13,6 +13,11 @@ export const REVIEW_EMAIL_METRICS = [
   'skipped',
   'reviewedRequests',
   'reviewsViaReminder',
+  'initialRequestsIncluded',
+  'reminderRequestsIncluded',
+  'batchesWithReview',
+  'completedBatches',
+  'skippedRequests',
 ] as const;
 
 export type ReviewEmailMetric = (typeof REVIEW_EMAIL_METRICS)[number];
@@ -74,6 +79,26 @@ async function lockReceipt(tx: Prisma.TransactionClient, receiptId: string) {
       "analyticsManifest", "analyticsClosedAt", "analyticsCloseReason", "metricsReversedAt"
     FROM "ReviewRequestReceipt"
     WHERE "id" = ${receiptId}
+    FOR UPDATE
+  `;
+  return rows[0] ?? null;
+}
+
+async function lockBatch(tx: Prisma.TransactionClient, batchId: string) {
+  const rows = await tx.$queryRaw<Array<{
+    id: string;
+    storeId: string;
+    installationGeneration: number;
+    recipientEmailHash: string | null;
+    analyticsManifest: Prisma.JsonValue | null;
+    analyticsClosedAt: Date | null;
+    analyticsCloseReason: string | null;
+    metricsReversedAt: Date | null;
+  }>>`
+    SELECT "id", "storeId", "installationGeneration", "recipientEmailHash",
+      "analyticsManifest", "analyticsClosedAt", "analyticsCloseReason", "metricsReversedAt"
+    FROM "ReviewEmailBatch"
+    WHERE "id" = ${batchId}
     FOR UPDATE
   `;
   return rows[0] ?? null;
@@ -189,6 +214,68 @@ export async function recordReviewEmailMetricContribution(
   return 'recorded';
 }
 
+export async function recordReviewEmailBatchMetricContribution(
+  tx: Prisma.TransactionClient,
+  input: {
+    batchId: string;
+    dedupeKey: string;
+    metricDate: Date;
+    kind: string;
+    templateVersion: string;
+    locale: string;
+    metric: ReviewEmailMetric;
+    delta?: number;
+  },
+): Promise<'recorded' | 'duplicate' | 'analytics_closed'> {
+  const batch = await lockBatch(tx, input.batchId);
+  if (!batch || batch.analyticsClosedAt) return 'analytics_closed';
+  const delta = input.delta ?? 1;
+  if (!Number.isInteger(delta) || delta === 0) throw new Error('review_email_metric_delta_invalid');
+  const metricDate = utcDay(input.metricDate);
+  const inserted = await tx.reviewEmailMetricContribution.createMany({
+    data: [{
+      batchId: batch.id,
+      storeId: batch.storeId,
+      installationGeneration: batch.installationGeneration,
+      exactSubjectHash: batch.recipientEmailHash,
+      dedupeKey: input.dedupeKey,
+      metricDate,
+      kind: input.kind,
+      templateVersion: input.templateVersion,
+      locale: input.locale,
+      metric: input.metric,
+      delta,
+    }],
+    skipDuplicates: true,
+  });
+  if (inserted.count !== 1) return 'duplicate';
+  await applyMetricDelta(tx, {
+    storeId: batch.storeId,
+    installationGeneration: batch.installationGeneration,
+    metricDate,
+    kind: input.kind,
+    templateVersion: input.templateVersion,
+    locale: input.locale,
+    metric: input.metric,
+    delta,
+  });
+  const manifest = parseManifest(batch.analyticsManifest);
+  manifest.push({
+    dedupeKey: input.dedupeKey,
+    metricDate: metricDate.toISOString(),
+    kind: input.kind,
+    templateVersion: input.templateVersion,
+    locale: input.locale,
+    metric: input.metric,
+    delta,
+  });
+  await tx.reviewEmailBatch.update({
+    where: { id: batch.id },
+    data: { analyticsManifest: manifest as unknown as Prisma.InputJsonValue },
+  });
+  return 'recorded';
+}
+
 export async function closeAndReverseReceiptAnalytics(
   tx: Prisma.TransactionClient,
   receiptId: string,
@@ -241,6 +328,62 @@ export async function closeAndReverseReceiptAnalytics(
       exactSubjectKeyVersion: null,
       analyticsManifest: Prisma.JsonNull,
       metricsReversedAt: input.now,
+    },
+  });
+  return { reversed, alreadyClosed: false };
+}
+
+export async function closeAndReverseBatchAnalytics(
+  tx: Prisma.TransactionClient,
+  batchId: string,
+  input: { now: Date; reason: 'subject_erasure' | 'detail_retention' | 'uninstall' },
+): Promise<{ reversed: number; alreadyClosed: boolean }> {
+  const batch = await lockBatch(tx, batchId);
+  if (!batch) return { reversed: 0, alreadyClosed: true };
+  if (batch.analyticsClosedAt && batch.metricsReversedAt) return { reversed: 0, alreadyClosed: true };
+  const manifest = parseManifest(batch.analyticsManifest);
+  await tx.reviewEmailBatch.update({
+    where: { id: batch.id },
+    data: {
+      analyticsClosedAt: batch.analyticsClosedAt ?? input.now,
+      analyticsCloseReason: input.reason,
+    },
+  });
+  if (input.reason !== 'subject_erasure' && input.reason !== 'uninstall') {
+    return { reversed: 0, alreadyClosed: Boolean(batch.analyticsClosedAt) };
+  }
+  let reversed = 0;
+  for (const entry of manifest) {
+    await tx.reviewEmailMetricContribution.updateMany({
+      where: { dedupeKey: entry.dedupeKey, batchId: batch.id, reversedAt: null },
+      data: { reversedAt: input.now, exactSubjectHash: null },
+    });
+    await applyMetricDelta(tx, {
+      storeId: batch.storeId,
+      installationGeneration: batch.installationGeneration,
+      metricDate: new Date(entry.metricDate),
+      kind: entry.kind,
+      templateVersion: entry.templateVersion,
+      locale: entry.locale,
+      metric: entry.metric,
+      delta: -entry.delta,
+    });
+    reversed += 1;
+  }
+  await tx.reviewEmailMetricContribution.updateMany({
+    where: { batchId: batch.id },
+    data: { exactSubjectHash: null },
+  });
+  await tx.reviewEmailBatch.update({
+    where: { id: batch.id },
+    data: {
+      recipientEmailHash: null,
+      recipientEmailFoldedHash: null,
+      recipientEmailHashKeyVersion: null,
+      recipientEmailEncrypted: null,
+      analyticsManifest: Prisma.JsonNull,
+      metricsReversedAt: input.now,
+      piiScrubbedAt: input.now,
     },
   });
   return { reversed, alreadyClosed: false };

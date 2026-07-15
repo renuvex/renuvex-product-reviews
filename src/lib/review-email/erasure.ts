@@ -23,7 +23,7 @@ const ERASURE_BATCH_SIZE = 100;
 const ERASURE_MAX_BATCHES = 10;
 const ERASURE_MAX_DURATION_MS = 8_000;
 
-type ErasurePhase = 'reviews' | 'pending_images' | 'video_sessions' | 'review_requests' | 'orders' | 'finalize' | 'complete';
+type ErasurePhase = 'reviews' | 'pending_images' | 'video_sessions' | 'review_requests' | 'review_batches' | 'orders' | 'finalize' | 'complete';
 type ErasureProgress = { phase: ErasurePhase; deleted: Record<string, number> };
 
 export type StoreReviewEmailErasureResult = {
@@ -48,7 +48,7 @@ function erasureRetryAt(now: Date, attempts: number): Date {
 function parseProgress(value: Prisma.JsonValue | null): ErasureProgress {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { phase: 'reviews', deleted: {} };
   const row = value as Record<string, Prisma.JsonValue>;
-  const allowed: ErasurePhase[] = ['reviews', 'pending_images', 'video_sessions', 'review_requests', 'orders', 'finalize', 'complete'];
+  const allowed: ErasurePhase[] = ['reviews', 'pending_images', 'video_sessions', 'review_requests', 'review_batches', 'orders', 'finalize', 'complete'];
   const phase = typeof row.phase === 'string' && allowed.includes(row.phase as ErasurePhase)
     ? row.phase as ErasurePhase
     : 'reviews';
@@ -213,6 +213,19 @@ async function processStoreErasureBatch(runId: string, storeId: string, now: Dat
       if (requests.length) {
         await tx.reviewRequest.deleteMany({ where: { id: { in: requests.map((request) => request.id) }, storeId } });
         progress = addCount(progress, 'reviewRequests', requests.length);
+      } else progress = { ...progress, phase: 'review_batches' };
+    } else if (progress.phase === 'review_batches') {
+      const batches = await tx.reviewEmailBatch.findMany({
+        where: { storeId },
+        orderBy: { id: 'asc' },
+        take: ERASURE_BATCH_SIZE,
+        select: { id: true, jobs: { select: { attemptsLog: { select: { id: true } } } } },
+      });
+      const attemptIds = batches.flatMap((batch) => batch.jobs.flatMap((job) => job.attemptsLog.map((attempt) => attempt.id)));
+      if (attemptIds.length) await tx.reviewEmailEvent.deleteMany({ where: { attemptId: { in: attemptIds } } });
+      if (batches.length) {
+        await tx.reviewEmailBatch.deleteMany({ where: { id: { in: batches.map((batch) => batch.id) }, storeId } });
+        progress = addCount(progress, 'reviewEmailBatches', batches.length);
       } else progress = { ...progress, phase: 'orders' };
     } else if (progress.phase === 'orders') {
       const orders = await tx.ikasOrderSnapshot.findMany({ where: { storeId }, orderBy: { id: 'asc' }, take: ERASURE_BATCH_SIZE, select: { id: true } });
@@ -223,6 +236,7 @@ async function processStoreErasureBatch(runId: string, storeId: string, now: Dat
     } else if (progress.phase === 'finalize') {
       const counts = {
         reviewEmailSettings: (await tx.reviewEmailSettings.deleteMany({ where: { storeId } })).count,
+        reviewEmailUnsubscribeTokens: (await tx.reviewEmailUnsubscribeToken.deleteMany({ where: { storeId } })).count,
         reviewEmailSuppressions: (await tx.reviewEmailSuppression.deleteMany({ where: { storeId } })).count,
         reviewEmailSubjectBlocks: (await tx.reviewEmailSubjectBlock.deleteMany({ where: { storeId } })).count,
         reviewEmailContributions: (await tx.reviewEmailMetricContribution.deleteMany({ where: { storeId } })).count,

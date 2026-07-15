@@ -32,6 +32,13 @@ export function assertReviewRequestPublicHost(request: Request): void {
   }
 }
 
+export function assertReviewRequestSameOrigin(request: Request): void {
+  const origin = request.headers.get('origin');
+  if (!origin || origin.toLowerCase() !== getReviewRequestPublicBaseUrl().origin.toLowerCase()) {
+    throw new ReviewRequestHostError();
+  }
+}
+
 export function buildReviewRequestEmailUrl(rawToken: string): string {
   const url = new URL('/request', getReviewRequestPublicBaseUrl());
   url.hash = new URLSearchParams({ token: rawToken }).toString();

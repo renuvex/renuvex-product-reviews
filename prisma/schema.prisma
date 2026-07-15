@@ -183,39 +183,43 @@ model ProductSnapshot {
 // safety. Provider-specific cleanup is routed through the media adapters.
 // See ADR_0012 and ADR_0031 for the lifecycle contracts.
 model PendingReviewImage {
-  publicId                String    @id
+  publicId                String                @id
   storeId                 String?
   productId               String?
-  uploadSessionId         String?   @unique
-  url                     String?   @db.VarChar(2048)
-  assetId                 String?   @db.VarChar(128)
-  version                 String?   @db.VarChar(64)
-  resourceType            String    @default("image") @db.VarChar(32)
-  provider                String    @default("aws_s3") @db.VarChar(64)
-  providerAssetId         String?   @db.VarChar(512)
-  posterUrl               String?   @db.VarChar(2048)
+  uploadSessionId         String?               @unique
+  url                     String?               @db.VarChar(2048)
+  assetId                 String?               @db.VarChar(128)
+  version                 String?               @db.VarChar(64)
+  resourceType            String                @default("image") @db.VarChar(32)
+  provider                String                @default("aws_s3") @db.VarChar(64)
+  providerAssetId         String?               @db.VarChar(512)
+  posterUrl               String?               @db.VarChar(2048)
   durationMs              Int?
-  processingStatus        String    @default("ready") @db.VarChar(32)
-  sourceProvider          String?   @db.VarChar(64)
-  sourceAssetId           String?   @db.VarChar(1024)
-  format                  String?   @db.VarChar(32)
-  mimeType                String?   @db.VarChar(128)
+  processingStatus        String                @default("ready") @db.VarChar(32)
+  sourceProvider          String?               @db.VarChar(64)
+  sourceAssetId           String?               @db.VarChar(1024)
+  format                  String?               @db.VarChar(32)
+  mimeType                String?               @db.VarChar(128)
   width                   Int?
   height                  Int?
   bytes                   Int?
-  sourceChecksumAlgorithm String?   @db.VarChar(16)
-  sourceChecksumSha256    String?   @db.VarChar(128)
-  metadataSource          String    @default("unknown") @db.VarChar(64)
-  metadataStatus          String    @default("pending") @db.VarChar(64)
+  sourceChecksumAlgorithm String?               @db.VarChar(16)
+  sourceChecksumSha256    String?               @db.VarChar(128)
+  metadataSource          String                @default("unknown") @db.VarChar(64)
+  metadataStatus          String                @default("pending") @db.VarChar(64)
   metadataFetchedAt       DateTime?
-  variantStatus           String    @default("pending") @db.VarChar(32)
+  variantStatus           String                @default("pending") @db.VarChar(32)
   variantGeneratedAt      DateTime?
-  variantErrorCode        String?   @db.VarChar(128)
+  variantErrorCode        String?               @db.VarChar(128)
   variantManifest         Json?
   uploadExpiresAt         DateTime?
   uploadRegisteredAt      DateTime?
-  createdAt               DateTime  @default(now())
+  reviewRequestId         String?
+  reviewRequestSessionId  String?
+  createdAt               DateTime              @default(now())
   ipHash                  String?
+  reviewRequest           ReviewRequest?        @relation(fields: [reviewRequestId], references: [id], onDelete: SetNull)
+  reviewRequestSession    ReviewRequestSession? @relation(fields: [reviewRequestSessionId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([storeId, createdAt])
@@ -224,6 +228,8 @@ model PendingReviewImage {
   @@index([provider, storeId, providerAssetId])
   @@index([provider, variantStatus, createdAt])
   @@index([processingStatus, createdAt])
+  @@index([reviewRequestId, createdAt])
+  @@index([reviewRequestSessionId, createdAt])
 }
 
 // Durable state for the video upload -> provider processing lifecycle. The
@@ -232,37 +238,43 @@ model PendingReviewImage {
 // ADR_0032 (Mux migration): video uploads use Mux direct uploads and Mux asset
 // identifiers. Provider is still written explicitly by the app; no DB default.
 model VideoUploadSession {
-  id                String                        @id @default(uuid())
-  tokenHash         String                        @unique @db.VarChar(64)
-  storeId           String
-  productId         String
-  status            String                        @default("initiated") @db.VarChar(32)
-  mimeType          String                        @db.VarChar(128)
-  bytes             Int
-  fileFingerprint   String?                       @db.VarChar(128)
-  provider          String?                       @db.VarChar(64)
-  providerUploadId  String?                       @db.VarChar(256)
-  providerAssetId   String?                       @db.VarChar(256)
-  signedPlaybackId  String?                       @db.VarChar(256)
-  publicPlaybackId  String?                       @db.VarChar(256)
-  publicId          String?                       @unique @db.VarChar(512)
-  playbackUrl       String?                       @db.VarChar(2048)
-  posterUrl         String?                       @db.VarChar(2048)
-  durationMs        Int?
-  quotaState        String                        @default("reserved") @db.VarChar(32)
-  reservedMonth     DateTime                      @db.Date
-  expiresAt         DateTime
-  consumedAt        DateTime?
-  errorCode         String?                       @db.VarChar(128)
-  createdAt         DateTime                      @default(now())
-  updatedAt         DateTime                      @updatedAt
-  performanceSample VideoUploadPerformanceSample?
+  id                     String                        @id @default(uuid())
+  tokenHash              String                        @unique @db.VarChar(64)
+  storeId                String
+  productId              String
+  status                 String                        @default("initiated") @db.VarChar(32)
+  mimeType               String                        @db.VarChar(128)
+  bytes                  Int
+  fileFingerprint        String?                       @db.VarChar(128)
+  provider               String?                       @db.VarChar(64)
+  providerUploadId       String?                       @db.VarChar(256)
+  providerAssetId        String?                       @db.VarChar(256)
+  signedPlaybackId       String?                       @db.VarChar(256)
+  publicPlaybackId       String?                       @db.VarChar(256)
+  publicId               String?                       @unique @db.VarChar(512)
+  playbackUrl            String?                       @db.VarChar(2048)
+  posterUrl              String?                       @db.VarChar(2048)
+  durationMs             Int?
+  quotaState             String                        @default("reserved") @db.VarChar(32)
+  reservedMonth          DateTime                      @db.Date
+  expiresAt              DateTime
+  consumedAt             DateTime?
+  reviewRequestId        String?
+  reviewRequestSessionId String?
+  errorCode              String?                       @db.VarChar(128)
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  performanceSample      VideoUploadPerformanceSample?
+  reviewRequest          ReviewRequest?                @relation(fields: [reviewRequestId], references: [id], onDelete: SetNull)
+  reviewRequestSession   ReviewRequestSession?         @relation(fields: [reviewRequestSessionId], references: [id], onDelete: SetNull)
 
   @@unique([provider, providerUploadId])
   @@unique([provider, providerAssetId])
   @@index([storeId, productId, status])
   @@index([status, expiresAt])
   @@index([createdAt])
+  @@index([reviewRequestId, createdAt])
+  @@index([reviewRequestSessionId, createdAt])
 }
 
 // Monthly quota counters. Reservations are taken before a Mux direct upload is
@@ -526,12 +538,74 @@ model IkasOrderSnapshot {
   updatedAt                         DateTime                @updatedAt
   lines                             IkasOrderLineSnapshot[]
   reviewRequests                    ReviewRequest[]
+  reviewEmailBatches                ReviewEmailBatch[]
 
   @@unique([storeId, ikasOrderId])
+  @@unique([id, storeId], map: "IkasOrderSnapshot_id_store_key")
   @@index([storeId, ikasUpdatedAt])
   @@index([storeId, customerEmailHash])
   @@index([storeId, customerEmailFoldedHash])
   @@index([orderPackageStatus, ikasUpdatedAt])
+}
+
+model ReviewEmailBatch {
+  id                                 String                          @id @default(uuid())
+  storeId                            String
+  installationGeneration             Int
+  orderSnapshotId                    String?
+  deliveryGroupKey                   String                          @db.VarChar(256)
+  deliveryGroupMode                  String                          @db.VarChar(32)
+  groupingVersion                    Int                             @default(1)
+  groupingFrozenAt                   DateTime?
+  membershipVersion                  Int                             @default(1)
+  batchFingerprint                   String                          @db.VarChar(128)
+  fingerprintKeyVersion              Int
+  recipientEmailHash                 String?                         @db.VarChar(128)
+  recipientEmailFoldedHash           String?                         @db.VarChar(128)
+  recipientEmailHashKeyVersion       Int?
+  recipientEmailNormalizationVersion Int                             @default(2)
+  recipientEmailEncrypted            String?                         @db.Text
+  recipientVersion                   Int                             @default(1)
+  recipientFrozenAt                  DateTime?
+  firstDelayDaysSnapshot             Int                             @default(1)
+  reminderDelayDaysSnapshot          Int                             @default(1)
+  maxReminderCountSnapshot           Int                             @default(1)
+  templateVersionSnapshot            String                          @default("default_v1") @db.VarChar(64)
+  localeSnapshot                     String                          @default("tr") @db.VarChar(16)
+  status                             String                          @default("scheduled") @db.VarChar(32)
+  emailAccessStatus                  String                          @default("allowed") @db.VarChar(32)
+  eligibleAt                         DateTime?
+  sendAfter                          DateTime?
+  firstSentAt                        DateTime?
+  firstDeliveredAt                   DateTime?
+  lastReminderSentAt                 DateTime?
+  reminderCount                      Int                             @default(0)
+  completedAt                        DateTime?
+  expiresAt                          DateTime?
+  cancelledAt                        DateTime?
+  cancellationReason                 String?                         @db.VarChar(128)
+  recipientChangedAt                 DateTime?
+  analyticsManifest                  Json?
+  analyticsClosedAt                  DateTime?
+  analyticsCloseReason               String?                         @db.VarChar(64)
+  metricsReversedAt                  DateTime?
+  piiScrubbedAt                      DateTime?
+  detailPurgedAt                     DateTime?
+  createdAt                          DateTime                        @default(now())
+  updatedAt                          DateTime                        @updatedAt
+  orderSnapshot                      IkasOrderSnapshot?              @relation(fields: [orderSnapshotId, storeId], references: [id, storeId], onDelete: Restrict)
+  requests                           ReviewRequest[]
+  jobs                               ReviewEmailJob[]
+  tokens                             ReviewRequestToken[]
+  sessions                           ReviewRequestSession[]
+  contributions                      ReviewEmailMetricContribution[]
+
+  @@unique([storeId, installationGeneration, batchFingerprint], map: "ReviewEmailBatch_fingerprint_key")
+  @@unique([id, storeId], map: "ReviewEmailBatch_id_store_key")
+  @@index([orderSnapshotId])
+  @@index([storeId, installationGeneration, status, sendAfter], map: "ReviewEmailBatch_store_generation_status_send_idx")
+  @@index([storeId, recipientEmailFoldedHash, createdAt], map: "ReviewEmailBatch_recipient_created_idx")
+  @@index([status, expiresAt])
 }
 
 model IkasOrderLineSnapshot {
@@ -569,6 +643,10 @@ model ReviewRequest {
   productId                          String                 @db.VarChar(128)
   orderSnapshotId                    String
   orderLineSnapshotId                String
+  batchId                            String?
+  batchPosition                      Int?
+  membershipVersion                  Int                    @default(1)
+  sourceLineItemIds                  Json?
   receiptId                          String?                @unique
   status                             String                 @default("scheduled") @db.VarChar(32)
   eligibleAt                         DateTime?
@@ -593,19 +671,25 @@ model ReviewRequest {
   expiresAt                          DateTime?
   cancelledAt                        DateTime?
   cancellationReason                 String?                @db.VarChar(128)
+  skippedAt                          DateTime?
+  skipReason                         String?                @db.VarChar(128)
   createdAt                          DateTime               @default(now())
   updatedAt                          DateTime               @updatedAt
   orderSnapshot                      IkasOrderSnapshot      @relation(fields: [orderSnapshotId], references: [id], onDelete: Restrict)
   orderLineSnapshot                  IkasOrderLineSnapshot  @relation(fields: [orderLineSnapshotId], references: [id], onDelete: Restrict)
+  batch                              ReviewEmailBatch?      @relation(fields: [batchId, storeId], references: [id, storeId], onDelete: Restrict)
   receipt                            ReviewRequestReceipt?  @relation(fields: [receiptId], references: [id], onDelete: SetNull)
   tokens                             ReviewRequestToken[]
   sessions                           ReviewRequestSession[]
   jobs                               ReviewEmailJob[]
   review                             Review?
+  pendingImages                      PendingReviewImage[]
+  videoUploadSessions                VideoUploadSession[]
 
   @@unique([storeId, orderLineSnapshotId])
   @@index([orderSnapshotId])
   @@index([orderLineSnapshotId])
+  @@index([batchId, batchPosition])
   @@index([status, sendAfter])
   @@index([storeId, status, sendAfter])
   @@index([storeId, productId, status])
@@ -613,7 +697,8 @@ model ReviewRequest {
 
 model ReviewRequestToken {
   id               String                 @id @default(uuid())
-  requestId        String
+  requestId        String?
+  batchId          String?
   attemptId        String                 @unique
   tokenHash        String                 @unique @db.VarChar(64)
   tokenKeyVersion  Int                    @default(1)
@@ -623,39 +708,47 @@ model ReviewRequestToken {
   revokedAt        DateTime?
   revocationReason String?                @db.VarChar(128)
   createdAt        DateTime               @default(now())
-  request          ReviewRequest          @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request          ReviewRequest?         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  batch            ReviewEmailBatch?      @relation(fields: [batchId], references: [id], onDelete: Cascade)
   attempt          ReviewEmailAttempt     @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   sessions         ReviewRequestSession[]
 
   @@index([requestId])
+  @@index([batchId])
   @@index([status, expiresAt])
 }
 
 model ReviewRequestSession {
-  id               String             @id @default(uuid())
-  requestId        String
-  tokenId          String
-  sessionHash      String             @unique @db.VarChar(64)
-  status           String             @default("active") @db.VarChar(32)
-  expiresAt        DateTime
-  consumedAt       DateTime?
-  revokedAt        DateTime?
-  revocationReason String?            @db.VarChar(128)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  request          ReviewRequest      @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  token            ReviewRequestToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  id                  String               @id @default(uuid())
+  requestId           String?
+  batchId             String?
+  tokenId             String
+  sessionHash         String               @unique @db.VarChar(64)
+  status              String               @default("active") @db.VarChar(32)
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  revokedAt           DateTime?
+  revocationReason    String?              @db.VarChar(128)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  request             ReviewRequest?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  batch               ReviewEmailBatch?    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  token               ReviewRequestToken   @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  pendingImages       PendingReviewImage[]
+  videoUploadSessions VideoUploadSession[]
 
   @@index([requestId, status])
+  @@index([batchId, status])
   @@index([tokenId])
   @@index([status, expiresAt])
 }
 
 model ReviewEmailJob {
   id               String               @id @default(uuid())
-  requestId        String
+  requestId        String?
+  batchId          String?
   storeId          String
-  productId        String               @db.VarChar(128)
+  productId        String?              @db.VarChar(128)
   kind             String               @db.VarChar(32)
   sequence         Int                  @default(0)
   status           String               @default("pending") @db.VarChar(32)
@@ -663,69 +756,101 @@ model ReviewEmailJob {
   dedupeKey        String               @unique @db.VarChar(256)
   leaseOwner       String?              @db.VarChar(128)
   leaseExpiresAt   DateTime?
+  leaseVersion     Int                  @default(0)
   dispatchedAt     DateTime?
   queueMessageId   String?              @db.VarChar(256)
   completedAt      DateTime?
+  expiresAt        DateTime?
   dispatchAttempts Int                  @default(0)
   lastErrorCode    String?              @db.VarChar(128)
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
-  request          ReviewRequest        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request          ReviewRequest?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  batch            ReviewEmailBatch?    @relation(fields: [batchId, storeId], references: [id, storeId], onDelete: Cascade)
   attemptsLog      ReviewEmailAttempt[]
 
   @@unique([requestId, kind, sequence])
   @@index([requestId, kind])
+  @@index([batchId, kind])
   @@index([storeId, status, sendAfter])
   @@index([kind, status, sendAfter])
   @@index([leaseExpiresAt])
 }
 
 model ReviewEmailAttempt {
-  id                  String              @id @default(uuid())
-  jobId               String
-  attemptNumber       Int
-  correlationId       String              @unique @db.VarChar(64)
-  provider            String              @default("ses") @db.VarChar(64)
-  providerMessageId   String?             @db.VarChar(256)
-  recipientEmailHash  String?             @db.VarChar(128)
-  templateVersion     String              @default("default_v1") @db.VarChar(64)
-  locale              String              @default("tr") @db.VarChar(16)
-  status              String              @default("prepared") @db.VarChar(32)
-  sendInitiatedAt     DateTime?
-  acceptedAt          DateTime?
-  deliveryConfirmedAt DateTime?
-  completedAt         DateTime?
-  errorCode           String?             @db.VarChar(128)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  job                 ReviewEmailJob      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  events              ReviewEmailEvent[]
-  token               ReviewRequestToken?
+  id                                 String                        @id @default(uuid())
+  jobId                              String
+  attemptNumber                      Int
+  correlationId                      String                        @unique @db.VarChar(64)
+  provider                           String                        @default("ses") @db.VarChar(64)
+  providerMessageId                  String?                       @db.VarChar(256)
+  providerMessageIdHash              String?                       @db.VarChar(128)
+  providerMessageIdHashKeyVersion    Int?
+  recipientEmailHash                 String?                       @db.VarChar(128)
+  recipientEmailFoldedHash           String?                       @db.VarChar(128)
+  recipientEmailHashKeyVersion       Int?
+  recipientEmailNormalizationVersion Int                           @default(2)
+  recipientEmailEncrypted            String?                       @db.Text
+  recipientVersion                   Int                           @default(1)
+  templateVersion                    String                        @default("default_v1") @db.VarChar(64)
+  locale                             String                        @default("tr") @db.VarChar(16)
+  contentManifest                    Json?
+  contentDigest                      String?                       @db.VarChar(64)
+  status                             String                        @default("prepared") @db.VarChar(32)
+  sendCommittedAt                    DateTime?
+  sendInitiatedAt                    DateTime?
+  confirmationDeadlineAt             DateTime?
+  acceptedAt                         DateTime?
+  firstDeliveryDelayedAt             DateTime?
+  lastDeliveryDelayedAt              DateTime?
+  deliveredAt                        DateTime?
+  bouncedAt                          DateTime?
+  complainedAt                       DateTime?
+  rejectedAt                         DateTime?
+  outcomeUnknownAt                   DateTime?
+  deliveryConfirmedAt                DateTime?
+  analyticsClosedAt                  DateTime?
+  piiScrubbedAt                      DateTime?
+  completedAt                        DateTime?
+  errorCode                          String?                       @db.VarChar(128)
+  createdAt                          DateTime                      @default(now())
+  updatedAt                          DateTime                      @updatedAt
+  job                                ReviewEmailJob                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  events                             ReviewEmailEvent[]
+  token                              ReviewRequestToken?
+  unsubscribeTokens                  ReviewEmailUnsubscribeToken[]
 
   @@unique([jobId, attemptNumber])
   @@index([jobId])
   @@index([provider, providerMessageId])
+  @@index([provider, providerMessageIdHash])
+  @@index([recipientEmailFoldedHash, sendCommittedAt])
   @@index([status, createdAt])
 }
 
 model ReviewEmailEvent {
-  id                    String              @id @default(uuid())
-  snsMessageId          String              @unique @db.VarChar(256)
-  providerMessageId     String?             @db.VarChar(256)
-  eventType             String?             @db.VarChar(64)
-  attemptId             String?
-  status                String              @default("received") @db.VarChar(32)
-  ignoredReason         String?             @db.VarChar(128)
-  payloadDigest         String?             @db.VarChar(64)
-  bounceType            String?             @db.VarChar(64)
-  bounceSubType         String?             @db.VarChar(64)
-  complaintFeedbackType String?             @db.VarChar(64)
-  providerTimestamp     DateTime?
-  receivedAt            DateTime            @default(now())
-  processedAt           DateTime?
-  attempt               ReviewEmailAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+  id                              String              @id @default(uuid())
+  snsMessageId                    String?             @unique @db.VarChar(256)
+  transport                       String?             @db.VarChar(32)
+  transportEventId                String?             @db.VarChar(256)
+  providerMessageId               String?             @db.VarChar(256)
+  providerMessageIdHash           String?             @db.VarChar(128)
+  providerMessageIdHashKeyVersion Int?
+  eventType                       String?             @db.VarChar(64)
+  attemptId                       String?
+  status                          String              @default("received") @db.VarChar(32)
+  ignoredReason                   String?             @db.VarChar(128)
+  payloadDigest                   String?             @db.VarChar(64)
+  bounceType                      String?             @db.VarChar(64)
+  bounceSubType                   String?             @db.VarChar(64)
+  complaintFeedbackType           String?             @db.VarChar(64)
+  providerTimestamp               DateTime?
+  receivedAt                      DateTime            @default(now())
+  processedAt                     DateTime?
+  attempt                         ReviewEmailAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
 
   @@index([attemptId])
+  @@index([transport, transportEventId])
   @@index([providerMessageId])
   @@index([eventType, receivedAt])
   @@index([status, receivedAt])
@@ -735,10 +860,17 @@ model ReviewEmailSuppression {
   id                        String    @id @default(uuid())
   storeId                   String
   emailHash                 String    @db.VarChar(128)
+  category                  String    @default("review_request") @db.VarChar(64)
+  recipientExactHash        String?   @db.VarChar(128)
+  recipientEmailEncrypted   String?   @db.Text
+  installationGeneration    Int?
   emailHashKeyVersion       Int?
   emailNormalizationVersion Int       @default(1)
   reason                    String    @db.VarChar(64)
   source                    String    @db.VarChar(64)
+  status                    String    @default("active") @db.VarChar(32)
+  bounceType                String?   @db.VarChar(64)
+  bounceSubType             String?   @db.VarChar(64)
   providerEventId           String?   @db.VarChar(256)
   createdAt                 DateTime  @default(now())
   expiresAt                 DateTime?
@@ -746,7 +878,32 @@ model ReviewEmailSuppression {
 
   @@unique([storeId, emailHash, reason])
   @@index([storeId, emailHash])
+  @@index([storeId, category, emailHash, status])
   @@index([reason, createdAt])
+}
+
+model ReviewEmailUnsubscribeToken {
+  id                                 String              @id @default(uuid())
+  storeId                            String
+  category                           String              @default("review_request") @db.VarChar(64)
+  recipientFoldedHash                String              @db.VarChar(128)
+  recipientExactHash                 String              @db.VarChar(128)
+  recipientExactHashKeyVersion       Int
+  recipientEmailNormalizationVersion Int                 @default(2)
+  tokenHash                          String              @unique @db.VarChar(64)
+  tokenKeyVersion                    Int                 @default(1)
+  status                             String              @default("active") @db.VarChar(32)
+  createdFromAttemptId               String?             @unique
+  usedAt                             DateTime?
+  revokedAt                          DateTime?
+  expiresAt                          DateTime?
+  createdAt                          DateTime            @default(now())
+  updatedAt                          DateTime            @updatedAt
+  createdFromAttempt                 ReviewEmailAttempt? @relation(fields: [createdFromAttemptId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, category, recipientFoldedHash, status], map: "ReviewEmailUnsubscribeToken_scope_idx")
+  @@index([storeId, recipientExactHash], map: "ReviewEmailUnsubscribeToken_store_exact_idx")
+  @@index([status, expiresAt])
 }
 
 model ReviewEmailSubjectBlock {
@@ -830,26 +987,31 @@ model ReviewEmailDataSubjectRun {
 }
 
 model ReviewEmailDailyMetric {
-  id                     String   @id @default(uuid())
-  storeId                String
-  installationGeneration Int
-  metricDate             DateTime
-  kind                   String   @db.VarChar(32)
-  templateVersion        String   @db.VarChar(64)
-  locale                 String   @db.VarChar(16)
-  accepted               Int      @default(0)
-  delivered              Int      @default(0)
-  delayed                Int      @default(0)
-  bounced                Int      @default(0)
-  complained             Int      @default(0)
-  rejected               Int      @default(0)
-  failed                 Int      @default(0)
-  outcomeUnknown         Int      @default(0)
-  skipped                Int      @default(0)
-  reviewedRequests       Int      @default(0)
-  reviewsViaReminder     Int      @default(0)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  id                       String   @id @default(uuid())
+  storeId                  String
+  installationGeneration   Int
+  metricDate               DateTime
+  kind                     String   @db.VarChar(32)
+  templateVersion          String   @db.VarChar(64)
+  locale                   String   @db.VarChar(16)
+  accepted                 Int      @default(0)
+  delivered                Int      @default(0)
+  delayed                  Int      @default(0)
+  bounced                  Int      @default(0)
+  complained               Int      @default(0)
+  rejected                 Int      @default(0)
+  failed                   Int      @default(0)
+  outcomeUnknown           Int      @default(0)
+  skipped                  Int      @default(0)
+  reviewedRequests         Int      @default(0)
+  reviewsViaReminder       Int      @default(0)
+  initialRequestsIncluded  Int      @default(0)
+  reminderRequestsIncluded Int      @default(0)
+  batchesWithReview        Int      @default(0)
+  completedBatches         Int      @default(0)
+  skippedRequests          Int      @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   @@unique([storeId, installationGeneration, metricDate, kind, templateVersion, locale], map: "ReviewEmailDailyMetric_dimensions_key")
   @@index([storeId, installationGeneration, metricDate], map: "ReviewEmailDailyMetric_store_generation_date_idx")
@@ -858,6 +1020,7 @@ model ReviewEmailDailyMetric {
 model ReviewEmailMetricContribution {
   id                     String                @id @default(uuid())
   receiptId              String?
+  batchId                String?
   storeId                String
   installationGeneration Int
   exactSubjectHash       String?               @db.VarChar(128)
@@ -871,8 +1034,10 @@ model ReviewEmailMetricContribution {
   reversedAt             DateTime?
   createdAt              DateTime              @default(now())
   receipt                ReviewRequestReceipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  batch                  ReviewEmailBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
 
   @@index([receiptId, createdAt])
+  @@index([batchId, createdAt])
   @@index([storeId, exactSubjectHash, createdAt], map: "ReviewEmailContribution_subject_created_idx")
   @@index([reversedAt, createdAt])
 }

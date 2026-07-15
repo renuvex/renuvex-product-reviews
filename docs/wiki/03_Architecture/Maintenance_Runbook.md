@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-15
+last_verified: 2026-07-15
 confidence: high
 tags:
   - runbook
@@ -27,6 +27,7 @@ source_files:
   - "src/lib/review-email/maintenance.ts"
   - "src/lib/review-email/erasure.ts"
   - "src/lib/review-email/retention.ts"
+  - "src/lib/review-email/batch-jobs.ts"
   - "src/lib/review-email/journal-coverage.ts"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
@@ -94,8 +95,10 @@ guessing which installation to erase.
 Review-email V5 retention defaults to `report`. Each invocation scans at most
 5 batches of 100 rows and stops after 10 seconds. `enforce` is a separate
 production gate; it physically removes eligible terminal token/session rows,
-180-day detail, and 210-day closed/reversed contribution tombstones. Receipt,
-subject-block, daily aggregate, and immutable S3 journal lifecycles follow
+180-day request/batch/attempt detail, and 210-day closed/reversed contribution
+and transport-event tombstones. Purged terminal batch fingerprints remain as
+active-installation duplicate fences after recipient/manifest PII is scrubbed.
+Receipt, subject-block, daily aggregate, and immutable S3 journal lifecycles follow
 [[ADR_0036_Review_Request_Email_Architecture]]. A longer database restore
 window must not be enabled before journal retention and coverage are extended
 through their separately approved operator workflow.
