@@ -3,8 +3,8 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-16
+last_verified: 2026-07-16
 confidence: high
 tags:
   - ikas
@@ -90,19 +90,29 @@ contract for a post-order single-use action link:
   event, and enqueue or wake canonical order reconciliation.
 - The canonical order state must come from `listOrder`, not only from the
   webhook payload.
+- The current GraphQL contract does not request a manual-order/source marker,
+  and normalization does not branch on order origin. Any order returned by
+  `listOrder` is therefore evaluated by the same strict recipient, consent,
+  shipping, and delivery rules. This is current source behavior, not proof that
+  every ikas manual-order variant exposes equivalent customer/package evidence;
+  dev-store acceptance is required before claiming full manual-order support.
+  No staff, shipping, or billing email is used as a fallback recipient.
 - Eligibility logic must be tenant-aware and order-type-aware:
   - physical shipment: use `orderPackageStatus=DELIVERED` as the high-level
-    trigger, then check package/line details when needed;
+    whole-order trigger/fallback; when exact package-to-line membership exists,
+    one delivered package may make only that package group eligible while the
+    order-level status is still partial;
   - click-and-collect: treat `READY_FOR_PICK_UP` as its own terminal state;
   - digital/no-shipment: define a separate product decision because there may be
     no delivery package transition;
   - partial delivery: avoid sending for all order lines just because the order
     has a partial terminal signal; line/package mapping is required.
-- `notificationsAccepted=false` is not a platform-level blocker for clearly
-  transactional notifications. Whether a review-request email is treated as
-  transactional enough, or whether Renuvex requires `notificationsAccepted=true`
-  for the MVP, remains a product/legal decision and should be explicit before
-  launch.
+- ikas does not treat `notificationsAccepted=false` as a platform-level blocker
+  for clearly transactional notifications. Renuvex nevertheless implements a
+  strict first-release policy: review-request email requires
+  `notificationsAccepted=true` and fails closed otherwise. Any future relaxation
+  must pass a separate product/legal decision; it is not an unresolved MVP
+  implementation choice.
 - The source schema now supports journal-first bounded uninstall cleanup. It stores
   protected email/order evidence only after active-installation and
   merchant-enabled checks, and serializes ingest/reconciliation/erasure with a
@@ -133,8 +143,11 @@ contract for a post-order single-use action link:
   are implemented in disabled source and locally verified. The additive
   multi-product batch/envelope layer also exists in source; it does not send
   email without the separately gated AWS sender and activation work.
-- Define the product/legal consent rule for review-request email when
-  `notificationsAccepted=false`.
+- Keep the implemented strict consent policy unless a separately approved
+  product/legal review authorizes a broader transactional interpretation.
+- Run dev-store acceptance for manually created orders before advertising that
+  flow; verify canonical customer email plus package/line delivery evidence
+  rather than adding an inferred recipient fallback.
 - Perform live ikas acceptance for the MCP-valid order registration and the
   separately configured uninstall signal, then prove the
   24-hour erasure path after an approved production migration/deploy.

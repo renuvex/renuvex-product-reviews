@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-16
+last_verified: 2026-07-16
 confidence: high
 source_files: []
 tags:
@@ -127,15 +127,16 @@ Active development on the production test store. Core review, image, Mux video, 
 2. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
 3. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
 4. Validate structured-data SEO on a public PDP with approved reviews.
-5. Review and commit the disabled V3.2 source, then separately gate production
-   migration and read-only schema health before the AWS dispatcher/sender,
-   SES/DNS/env, merchant UI, and live-acceptance packages.
+5. Keep the committed V3.2 source feature-disabled; separately approve main
+   push/production migration, then run read-only schema and disabled-state
+   health before the AWS dispatcher/sender, SES/DNS/env, merchant UI, and
+   live-acceptance packages.
 6. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
 7. Add CSV import/export for reviews.
 8. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-07-15
+2026-07-16
 
 ## Change Log
 - 2026-07-15: Added the disabled Multi-Product Batch / Envelope V3.2 source

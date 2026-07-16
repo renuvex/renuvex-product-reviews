@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-16
+last_verified: 2026-07-16
 confidence: high
 tags:
   - adr
@@ -81,7 +81,7 @@ source_files:
 
 ## Agent Brief
 
-Use this draft when researching or designing post-purchase review-request
+Use this accepted ADR when researching or designing post-purchase review-request
 email, verified-buyer submission, Amazon SES delivery, or email-job scheduling.
 The provider boundary, SES regional/sender/runtime/feedback contract,
 provider-neutral tenant direction, and source-only SES foundation package are
@@ -684,9 +684,11 @@ Implemented flow:
 
 Eligibility defaults for the first implementation:
 
-- Physical shipment: send after `shippingMethod=SHIPMENT` and
-  `orderPackageStatus=DELIVERED`; partial delivery requires line/package
-  mapping and cannot fan out blindly to all lines.
+- Physical shipment: `shippingMethod=SHIPMENT` plus
+  `orderPackageStatus=DELIVERED` is the high-level whole-order
+  trigger/fallback. When exact package-to-line evidence exists, a delivered
+  package can make only that package group eligible while the order remains
+  partially delivered; partial state never fans out blindly to all lines.
 - Click-and-collect: use `READY_FOR_PICK_UP` as a separate trigger branch.
 - Digital delivery and no-shipment: remain closed until an explicit product
   decision defines their terminal state and delay policy.
@@ -697,6 +699,12 @@ Eligibility defaults for the first implementation:
   email and `notificationsAccepted=true`. ikas says transactional messages may
   be independent of that flag, but using that route for review requests remains
   a product/legal decision, not a default.
+- The current `listOrder` document has no manual-order/source discriminator and
+  the lifecycle does not branch on origin. A manually created order returned by
+  `listOrder` follows the same strict recipient, consent, shipping, and delivery
+  checks. This source behavior is not live proof that every manual-order variant
+  exposes complete package/customer evidence; dev-store acceptance remains a
+  gate, and no alternative recipient is inferred.
 
 Uninstall registration caveat:
 
@@ -896,6 +904,17 @@ email delivery:
   receipts, or metrics. Batch details use the existing 180-day policy,
   contribution tombstones use 210 days, and dynamic journal retention remains
   governed by the V5 copy-register formula.
+
+Analytics counters deliberately separate physical-email evidence, product
+request conversion, and batch resolution. Provider outcomes are evidence facts,
+not one mutually exclusive status; for example, accepted can coexist with a
+later delivery, bounce, or complaint. Product inclusion and review counters use
+request/attempt manifests, while batch counters contribute at most once through
+dedupe keys. `outcomeUnknown` is a reversible gauge-like contribution and is
+decremented when later evidence or an audited `confirmed_not_sent` decision
+resolves it. Product skip remains in the conversion denominator. The operational
+metric glossary lives in [[Database_Map]]; open/click tracking, revenue
+attribution, and the merchant analytics UI are not implemented.
 
 The additive migration is
 `20260715120000_add_review_email_batch_envelope_v32`. Legacy request-scoped

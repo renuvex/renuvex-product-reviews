@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-16
+last_verified: 2026-07-16
 confidence: high
 tags:
   - log
@@ -26,6 +26,16 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-16 - docs | Align review-email wiki with V3.2 source
+- Replaced the stale open consent question with the implemented strict
+  `notificationsAccepted=true` MVP rule and retained broader transactional
+  sending as a separate future product/legal decision.
+- Clarified package-scoped partial delivery, documented the source-neutral
+  manual-order behavior and live acceptance gate, and added the physical
+  attempt/product request/batch analytics metric glossary.
+- Updated current-state and hot-context metadata. No runtime, migration,
+  provider, deployment, or production state changed.
 
 ## 2026-07-15 - implementation | Add multi-product review-email batches
 - Added the disabled Batch/Envelope V3.2 source contract: one physical initial

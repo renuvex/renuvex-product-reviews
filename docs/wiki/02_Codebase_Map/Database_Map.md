@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-16
+last_verified: 2026-07-16
 confidence: high
 tags:
   - database
@@ -98,6 +98,35 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `ReviewEmailPurgeRun` | `id` (uuid) | Bounded review-email retention report/enforce evidence: batch, duration, candidate, delete, and sanitized failure counts. |
 | `ReviewEmailJournalCoverageCheck` | `id` (uuid) | Restore/journal coverage result, genesis/earliest-safe-restore evidence, verified/replayed/conflicting counts, and sanitized failure code. |
 | `IkasOrderReconciliationCursor` / `StoreDataErasureRun` | `storeId` / `id` | Reconciliation window/page cursor acquired only for an active enabled installation, and uninstall/personal-data erasure evidence with authorized-app/generation identity plus bounded exponential retries. |
+
+## Review-email analytics metric contract
+
+The sparse daily aggregate separates three different units. Do not combine
+these fields into one denominator:
+
+- Physical-email attempt evidence: `accepted`, `delivered`, `delayed`,
+  `bounced`, `complained`, `rejected`, `failed`, and `outcomeUnknown`. These are
+  evidence facts rather than mutually exclusive terminal buckets. Distinct
+  provider facts are idempotent; `outcomeUnknown` receives a signed `-1`
+  correction when later evidence or audited `confirmed_not_sent` resolves it.
+- Product/request evidence: `initialRequestsIncluded` and
+  `reminderRequestsIncluded` count products in immutable attempt manifests;
+  `reviewedRequests`, `reviewsViaReminder`, and `skippedRequests` count the
+  corresponding per-product lifecycle. A skipped product remains in the
+  conversion denominator.
+- Batch evidence: `batchesWithReview` records the first review in a batch and
+  `completedBatches` records terminal resolution reached by the review-center
+  submit/skip flow. Unique contribution keys ensure each batch fact is counted
+  at most once.
+
+The retained `skipped` column is not emitted by the current Batch/Envelope
+producer and must not be exposed as a dashboard metric until it has an explicit
+producer contract. Review conversion is cohort-aligned to the first physical
+initial acceptance when available; a `sent_unknown` submission falls back to
+the source attempt's accepted/committed timestamp. Reminder attribution requires
+the submitting token's source attempt to include that request. Open/click
+tracking, revenue attribution, and the admin analytics UI are intentionally not
+implemented in this source phase.
 
 ## Index strategy
 On install lifecycle tables:
