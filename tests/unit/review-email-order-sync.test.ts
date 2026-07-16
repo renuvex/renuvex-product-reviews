@@ -7,6 +7,7 @@ function settings() {
     id: 'settings-1',
     storeId: 'store-1',
     enabled: true,
+    eligibilityStartsAt: new Date('2026-07-01T00:00:00.000Z'),
     triggerMode: 'delivery',
     consentMode: 'strict_notifications_accepted',
     firstDelayDays: 1,
@@ -170,6 +171,11 @@ describe('ikas order review request sync', () => {
         }),
       }),
     );
+    expect(tx.reviewEmailBatch.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        eligibilityStartsAtSnapshot: new Date('2026-07-01T00:00:00.000Z'),
+      }),
+    }));
   });
 
   it('cancels an active request when its line disappears from the canonical order', async () => {
@@ -568,6 +574,29 @@ describe('ikas order review request sync', () => {
     });
 
     expect(result.state).toBe('store_disabled');
+    expect(tx.ikasOrderSnapshot.upsert).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before persisting order PII when an enabled store has no activation cutoff', async () => {
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(1),
+      $queryRaw: vi.fn().mockResolvedValue([{
+        storeId: 'store-1', authorizedAppId: 'app-1', status: 'active', generation: 1,
+      }]),
+      reviewEmailSettings: {
+        findUnique: vi.fn().mockResolvedValue({ ...settings(), eligibilityStartsAt: null }),
+      },
+      ikasOrderSnapshot: { upsert: vi.fn() },
+    };
+    const db = { $transaction: vi.fn(async (callback: (value: typeof tx) => unknown) => callback(tx)) };
+
+    const result = await syncIkasOrderForReviewRequests(db as never, {
+      storeId: 'store-1',
+      authorizedAppId: 'app-1',
+      order: order() as never,
+    });
+
+    expect(result.state).toBe('eligibility_cutoff_missing');
     expect(tx.ikasOrderSnapshot.upsert).not.toHaveBeenCalled();
   });
 

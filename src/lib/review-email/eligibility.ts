@@ -63,10 +63,6 @@ function packageForLine(order: NormalizedOrder, lineId: string): NormalizedOrder
   return order.packages.find((pkg) => pkg.orderLineItemIds.includes(lineId)) ?? null;
 }
 
-function fallbackEventTime(order: NormalizedOrder, line: NormalizedOrderLine, pkg: NormalizedOrderPackage | null, now: Date): Date {
-  return line.statusUpdatedAt ?? pkg?.updatedAt ?? order.updatedAt ?? order.orderedAt ?? now;
-}
-
 function closedReason(order: NormalizedOrder, line: NormalizedOrderLine): string | null {
   if (CLOSED_ORDER_LINE_STATUSES.has(line.status)) return `line_${line.status.toLowerCase()}`;
   if (order.orderPackageStatus && CLOSED_ORDER_PACKAGE_STATUSES.has(order.orderPackageStatus)) {
@@ -78,7 +74,11 @@ function closedReason(order: NormalizedOrder, line: NormalizedOrderLine): string
   return null;
 }
 
-export function evaluateLineEligibility(order: NormalizedOrder, line: NormalizedOrderLine, now = new Date()): LineEligibility {
+export function evaluateLineEligibility(
+  order: NormalizedOrder,
+  line: NormalizedOrderLine,
+  eligibilityStartsAt: Date,
+): LineEligibility {
   const pkg = packageForLine(order, line.id);
   const packageId = pkg?.id ?? null;
   const packageStatus = pkg?.status ?? null;
@@ -89,25 +89,17 @@ export function evaluateLineEligibility(order: NormalizedOrder, line: Normalized
   if (order.notificationsAccepted !== true) return { eligible: false, reason: 'notifications_not_accepted', packageId, packageStatus };
 
   if (order.shippingMethod === 'SHIPMENT') {
-    if (line.status === 'DELIVERED' || pkg?.status === 'DELIVERED' || order.orderPackageStatus === 'DELIVERED') {
-      return {
-        eligible: true,
-        eligibleAt: fallbackEventTime(order, line, pkg, now),
-        packageId,
-        packageStatus,
-      };
+    if (line.status !== 'DELIVERED') return { eligible: false, reason: 'shipment_not_delivered', packageId, packageStatus };
+    if (!line.statusUpdatedAt) return { eligible: false, reason: 'missing_exact_delivery_timestamp', packageId, packageStatus };
+    if (line.statusUpdatedAt < eligibilityStartsAt) {
+      return { eligible: false, reason: 'delivery_before_email_activation', packageId, packageStatus };
     }
-    return { eligible: false, reason: 'shipment_not_delivered', packageId, packageStatus };
+    return { eligible: true, eligibleAt: line.statusUpdatedAt, packageId, packageStatus };
   }
 
   if (order.shippingMethod === 'CLICK_AND_COLLECT') {
     if (pkg?.status === 'READY_FOR_PICK_UP' || order.orderPackageStatus === 'READY_FOR_PICK_UP') {
-      return {
-        eligible: true,
-        eligibleAt: fallbackEventTime(order, line, pkg, now),
-        packageId,
-        packageStatus,
-      };
+      return { eligible: false, reason: 'pickup_timestamp_unverified', packageId, packageStatus };
     }
     return { eligible: false, reason: 'pickup_not_ready', packageId, packageStatus };
   }

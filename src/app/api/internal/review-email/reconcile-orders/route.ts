@@ -51,6 +51,9 @@ export async function POST(request: NextRequest) {
   if (!settings.enabled) {
     return NextResponse.json({ error: 'review_email_store_disabled' }, { status: 409 });
   }
+  if (!settings.eligibilityStartsAt) {
+    return NextResponse.json({ error: 'review_email_eligibility_cutoff_missing' }, { status: 409 });
+  }
 
   const result = await reconcileIkasOrdersForReviewRequests(getIkas(authToken), {
     storeId,

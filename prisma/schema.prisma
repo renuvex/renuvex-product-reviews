@@ -473,6 +473,7 @@ model ReviewEmailSettings {
   id                        String    @id @default(uuid())
   storeId                   String    @unique
   enabled                   Boolean   @default(false)
+  eligibilityStartsAt       DateTime?
   triggerMode               String    @default("delivery") @db.VarChar(32)
   consentMode               String    @default("strict_notifications_accepted") @db.VarChar(64)
   firstDelayDays            Int       @default(1)
@@ -567,6 +568,7 @@ model ReviewEmailBatch {
   recipientEmailEncrypted            String?                         @db.Text
   recipientVersion                   Int                             @default(1)
   recipientFrozenAt                  DateTime?
+  eligibilityStartsAtSnapshot        DateTime?
   firstDelayDaysSnapshot             Int                             @default(1)
   reminderDelayDaysSnapshot          Int                             @default(1)
   maxReminderCountSnapshot           Int                             @default(1)

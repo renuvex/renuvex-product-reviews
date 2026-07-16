@@ -23,6 +23,7 @@ import {
   recordReviewEmailBatchMetricContribution,
   recordReviewEmailMetricContribution,
 } from '@/lib/review-email/analytics';
+import { lockActiveIkasStoreInstallationGeneration } from '@/lib/ikas-installation-lifecycle';
 
 const CLOSED_BATCH_STATUSES = ['completed', 'cancelled', 'expired'] as const;
 const CLOSED_REQUEST_STATUSES = ['submitted', 'skipped', 'cancelled', 'expired', 'suppressed'] as const;
@@ -132,6 +133,20 @@ function batchJobFailure(code: string, retryable = false): BatchJobFailureOutcom
   return { state: 'error', code, retryable };
 }
 
+function cutoffAllowsBatch(
+  settings: { enabled: boolean; eligibilityStartsAt: Date | null } | null,
+  batch: { eligibilityStartsAtSnapshot: Date | null; eligibleAt: Date | null },
+): boolean {
+  return Boolean(
+    settings?.enabled &&
+    settings.eligibilityStartsAt &&
+    batch.eligibilityStartsAtSnapshot &&
+    batch.eligibleAt &&
+    settings.eligibilityStartsAt.getTime() === batch.eligibilityStartsAtSnapshot.getTime() &&
+    batch.eligibleAt >= batch.eligibilityStartsAtSnapshot
+  );
+}
+
 async function abandonPreparedBatchAttempt(
   tx: Prisma.TransactionClient,
   attemptId: string,
@@ -236,6 +251,11 @@ export async function prepareReviewEmailBatchSend(
     if (input.expectedLeaseVersion !== undefined && job.leaseVersion !== input.expectedLeaseVersion) {
       return batchJobFailure('review_email_job_lease_lost', true);
     }
+    const installation = await lockActiveIkasStoreInstallationGeneration(
+      tx,
+      job.storeId,
+      job.batch.installationGeneration,
+    );
     const latestAttempt = job.attemptsLog[0];
     const recoverableProcessing = job.status === 'processing' && Boolean(
       latestAttempt && (latestAttempt.status === 'prepared' || latestAttempt.sendCommittedAt),
@@ -296,11 +316,9 @@ export async function prepareReviewEmailBatchSend(
       category: REVIEW_EMAIL_CATEGORY,
       foldedSubjectHash: job.batch.recipientEmailFoldedHash,
     });
-    const installation = await tx.ikasStoreInstallation.findUnique({ where: { storeId: job.storeId } });
     const settings = await tx.reviewEmailSettings.findUnique({ where: { storeId: job.storeId } });
     if (
-      !installation || installation.status !== 'active' || installation.generation !== job.batch.installationGeneration ||
-      !settings?.enabled || job.batch.emailAccessStatus !== 'allowed' ||
+      !installation || !settings || !cutoffAllowsBatch(settings, job.batch) || job.batch.emailAccessStatus !== 'allowed' ||
       await effectiveSuppressionExists(tx, { storeId: job.storeId, foldedHashes, now })
     ) {
       await tx.reviewEmailJob.update({
@@ -493,6 +511,11 @@ export async function commitReviewEmailBatchSend(
       });
       return batchJobFailure('review_email_send_commit_denied');
     }
+    const installation = await lockActiveIkasStoreInstallationGeneration(
+      tx,
+      attempt.job.storeId,
+      batch.installationGeneration,
+    );
     await lockReviewEmailRecipient(tx, {
       storeId: attempt.job.storeId,
       category: REVIEW_EMAIL_CATEGORY,
@@ -500,12 +523,10 @@ export async function commitReviewEmailBatchSend(
     });
     const recipient = decryptText(attempt.recipientEmailEncrypted);
     const foldedHashes = hashFoldedEmailCandidates(recipient);
-    const installation = await tx.ikasStoreInstallation.findUnique({ where: { storeId: attempt.job.storeId } });
     const settings = await tx.reviewEmailSettings.findUnique({ where: { storeId: attempt.job.storeId } });
     const suppressed = await effectiveSuppressionExists(tx, { storeId: attempt.job.storeId, foldedHashes, now });
     if (
-      !installation || installation.status !== 'active' || installation.generation !== batch.installationGeneration ||
-      !settings?.enabled || suppressed || batch.emailAccessStatus !== 'allowed'
+      !installation || !cutoffAllowsBatch(settings, batch) || suppressed || batch.emailAccessStatus !== 'allowed'
     ) {
       await abandonPreparedBatchAttempt(tx, attempt.id, now, 'email_access_denied_before_send_commit');
       await tx.reviewEmailJob.update({

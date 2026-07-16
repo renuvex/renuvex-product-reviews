@@ -55,7 +55,7 @@ const PRESERVED_REVIEW_REQUEST_MEMBERSHIP_STATUSES = new Set([
 ]);
 
 export type OrderReviewSyncResult = {
-  state: 'processed' | 'installation_inactive' | 'store_disabled';
+  state: 'processed' | 'installation_inactive' | 'store_disabled' | 'eligibility_cutoff_missing';
   orderId: string;
   linesSeen: number;
   requestsScheduled: number;
@@ -264,6 +264,15 @@ export async function syncIkasOrderForReviewRequests(
           requestsCancelled: 0,
         };
       }
+      if (!settings.eligibilityStartsAt) {
+        return {
+          state: 'eligibility_cutoff_missing' as const,
+          orderId: input.order.id,
+          linesSeen: 0,
+          requestsScheduled: 0,
+          requestsCancelled: 0,
+        };
+      }
       const order = normalizeIkasOrderForReviewRequests(input);
 
       if (order.customerEmailFoldedHash) {
@@ -346,9 +355,13 @@ export async function syncIkasOrderForReviewRequests(
       }> = [];
 
       for (const line of order.lines) {
-        const eligibility = evaluateLineEligibility(order, line, now);
+        const eligibility = evaluateLineEligibility(order, line, settings.eligibilityStartsAt);
         const priorLine = existingLines.get(line.id);
-        const stableEligibleAt = eligibility.eligible ? (priorLine?.eligibleAt ?? eligibility.eligibleAt) : null;
+        const stableEligibleAt = eligibility.eligible
+          ? priorLine?.eligibleAt && priorLine.eligibleAt >= settings.eligibilityStartsAt
+            ? priorLine.eligibleAt
+            : eligibility.eligibleAt
+          : null;
         const lineSnapshot = await tx.ikasOrderLineSnapshot.upsert({
           where: { storeId_ikasOrderLineItemId: { storeId: order.storeId, ikasOrderLineItemId: line.id } },
           create: {
@@ -425,8 +438,10 @@ export async function syncIkasOrderForReviewRequests(
           data: { emailAccessStatus: 'suppressed', status: 'cancelled', cancelledAt: now, cancellationReason: reason },
         });
       } else {
-        const grouping = buildReviewEmailDeliveryGroups(order, now, {
+        const grouping = buildReviewEmailDeliveryGroups(order, {
+          eligibilityStartsAt: settings.eligibilityStartsAt,
           eligibleAtByLineId: new Map(canonicalLines.map((entry) => [entry.line.id, entry.eligibleAt])),
+          ineligibleReasonByLineId: new Map(canonicalLines.map((entry) => [entry.line.id, entry.ineligibleReason])),
         });
         const desiredProducts = new Set(grouping.groups.flatMap((group) => group.members.map((member) => member.productId)));
         const lineSnapshotsByIkasId = new Map(canonicalLines.map((entry) => [entry.line.id, entry.snapshot]));
@@ -522,6 +537,7 @@ export async function syncIkasOrderForReviewRequests(
                 recipientEmailHashKeyVersion: order.customerEmailHashKeyVersion,
                 recipientEmailNormalizationVersion: order.customerEmailNormalizationVersion,
                 recipientEmailEncrypted: order.customerEmailEncrypted,
+                eligibilityStartsAtSnapshot: settings.eligibilityStartsAt,
                 firstDelayDaysSnapshot: settings.firstDelayDays,
                 reminderDelayDaysSnapshot: settings.reminderDelayDays,
                 maxReminderCountSnapshot: settings.reminderEnabled ? Math.min(settings.maxReminderCount, 1) : 0,
@@ -551,6 +567,7 @@ export async function syncIkasOrderForReviewRequests(
                 recipientEmailEncrypted: order.customerEmailEncrypted,
                 recipientVersion: recipientChanged ? { increment: 1 } : undefined,
                 recipientChangedAt: recipientChanged ? now : undefined,
+                eligibilityStartsAtSnapshot: batch.eligibilityStartsAtSnapshot ?? settings.eligibilityStartsAt,
                 eligibleAt: deliveryGroup.eligibleAt,
                 sendAfter,
                 expiresAt: initialRequestExpiresAt(sendAfter),
@@ -831,7 +848,7 @@ export type OrderReconciliationLease = {
 
 export type OrderReconciliationLeaseAcquisition =
   | { state: 'acquired'; lease: OrderReconciliationLease }
-  | { state: 'lease_busy' | 'installation_inactive' | 'store_disabled' };
+  | { state: 'lease_busy' | 'installation_inactive' | 'store_disabled' | 'eligibility_cutoff_missing' };
 
 type ReconciliationLeaseDb = Pick<PrismaClient, '$transaction'>;
 type ReconciliationDb = Pick<PrismaClient, 'ikasOrderReconciliationCursor'>;
@@ -847,6 +864,7 @@ export async function acquireOrderReconciliationLease(
       const installation = await requireActiveIkasStoreInstallation(tx, input.storeId, input.authorizedAppId);
       const settings = await getEffectiveReviewEmailSettings(tx, input.storeId);
       if (!settings.enabled) return { state: 'store_disabled' as const };
+      if (!settings.eligibilityStartsAt) return { state: 'eligibility_cutoff_missing' as const };
 
       await tx.ikasOrderReconciliationCursor.upsert({
         where: { storeId: input.storeId },
@@ -983,7 +1001,7 @@ export async function reconcileIkasOrdersForReviewRequests(
     now?: Date;
   },
 ): Promise<{
-  state: 'completed' | 'lease_busy' | 'installation_inactive' | 'store_disabled';
+  state: 'completed' | 'lease_busy' | 'installation_inactive' | 'store_disabled' | 'eligibility_cutoff_missing';
   pages: number;
   orders: number;
   requestsScheduled: number;
@@ -1034,7 +1052,7 @@ export async function reconcileIkasOrdersForReviewRequests(
           order,
         });
         if (result.state !== 'processed') {
-          if (result.state === 'store_disabled') {
+          if (result.state === 'store_disabled' || result.state === 'eligibility_cutoff_missing') {
             await completeOrderReconciliationLease(prisma, lease, new Date());
           }
           return {

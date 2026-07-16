@@ -50,12 +50,14 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const verifiedAt = new Date();
     const settings = await persistReviewEmailSettingsForInstallation(
       prisma,
       user.merchantId,
       user.authorizedAppId,
       data,
-      data.enabled ? { status: 'verified', verifiedAt: new Date(), lastErrorCode: null } : {},
+      data.enabled ? { status: 'verified', verifiedAt, lastErrorCode: null } : {},
+      verifiedAt,
     );
     return NextResponse.json({ data: serializeReviewEmailSettings(settings) });
   } catch (error) {

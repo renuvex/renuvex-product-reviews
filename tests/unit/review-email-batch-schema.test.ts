@@ -12,6 +12,10 @@ const lifecycleMigration = fs.readFileSync(
   path.join(root, 'prisma', 'migrations', '20260710120000_add_review_request_email_lifecycle', 'migration.sql'),
   'utf8',
 );
+const cutoffMigration = fs.readFileSync(
+  path.join(root, 'prisma', 'migrations', '20260716120000_add_review_email_eligibility_cutoff', 'migration.sql'),
+  'utf8',
+);
 
 describe('review email multi-product batch schema contract', () => {
   it('prevents duplicate live delivery groups across HMAC write-key rotations', () => {
@@ -79,5 +83,13 @@ describe('review email multi-product batch schema contract', () => {
     expect(migration).toContain('"recipientEmailNormalizationVersion" INTEGER NOT NULL DEFAULT 2');
     expect(migration).toContain('CREATE INDEX "ReviewEmailUnsubscribeToken_store_exact_idx"');
     expect(migration).toContain('ON DELETE SET NULL ON UPDATE CASCADE');
+  });
+
+  it('adds nullable activation cutoff and immutable batch snapshot columns', () => {
+    expect(schema).toContain('eligibilityStartsAt       DateTime?');
+    expect(schema).toContain('eligibilityStartsAtSnapshot        DateTime?');
+    expect(cutoffMigration).toContain('ADD COLUMN "eligibilityStartsAt" TIMESTAMP(3)');
+    expect(cutoffMigration).toContain('ADD COLUMN "eligibilityStartsAtSnapshot" TIMESTAMP(3)');
+    expect(cutoffMigration).not.toContain('NOT NULL');
   });
 });

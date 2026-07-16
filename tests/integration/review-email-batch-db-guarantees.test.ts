@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { claimReviewCenterItemForSubmission } from '@/lib/review-email/tokens';
+import {
+  persistReviewEmailSettingsForInstallation,
+  type ReviewEmailSettingsWrite,
+} from '@/lib/review-email/settings';
 
 const integrationDatabaseUrl = process.env.REVIEW_EMAIL_INTEGRATION_DATABASE_URL;
 const integrationDescribe = integrationDatabaseUrl ? describe : describe.skip;
@@ -32,6 +36,28 @@ async function cleanup() {
   await prisma.reviewRequest.deleteMany({ where: { storeId: STORE_ID } });
   await prisma.reviewEmailBatch.deleteMany({ where: { storeId: STORE_ID } });
   await prisma.ikasOrderSnapshot.deleteMany({ where: { storeId: STORE_ID } });
+  await prisma.reviewEmailSettings.deleteMany({ where: { storeId: STORE_ID } });
+  await prisma.ikasStoreInstallation.deleteMany({ where: { storeId: STORE_ID } });
+}
+
+function settingsWrite(enabled: boolean): ReviewEmailSettingsWrite {
+  return {
+    enabled,
+    triggerMode: 'delivery',
+    consentMode: 'strict_notifications_accepted',
+    firstDelayDays: 1,
+    reminderEnabled: true,
+    reminderDelayDays: 1,
+    maxReminderCount: 1,
+    senderDisplayName: null,
+    replyToEmailHash: null,
+    replyToEmailEncrypted: null,
+    replyToName: null,
+    logoUrl: null,
+    buttonColor: null,
+    locale: 'tr',
+    templateVersion: 'default_v1',
+  };
 }
 
 async function createOrder(suffix: string) {
@@ -134,6 +160,114 @@ integrationDescribe('review email batch database guarantees (PostgreSQL)', () =>
         deliveryGroupKey: 'package:shared',
       },
     })).resolves.toBe(1);
+  });
+
+  it('cancels uncommitted work while allowing a committed attempt to finish after disable', async () => {
+    const firstCutoff = new Date('2026-07-01T00:00:00.000Z');
+    const secondCutoff = new Date('2026-07-20T00:00:00.000Z');
+    await prisma.ikasStoreInstallation.create({
+      data: {
+        storeId: STORE_ID,
+        authorizedAppId: 'cutoff-app-1',
+        generation: 1,
+        status: 'active',
+        activatedAt: firstCutoff,
+      },
+    });
+    await prisma.reviewEmailSettings.create({
+      data: {
+        storeId: STORE_ID,
+        ...settingsWrite(true),
+        eligibilityStartsAt: firstCutoff,
+      },
+    });
+
+    const pending = await createBatch('disable-pending', {
+      status: 'scheduled',
+      emailAccessStatus: 'allowed',
+      eligibilityStartsAtSnapshot: firstCutoff,
+      eligibleAt: new Date('2026-07-05T00:00:00.000Z'),
+    });
+    const pendingJob = await prisma.reviewEmailJob.create({
+      data: {
+        requestId: null,
+        batchId: pending.batch.id,
+        storeId: STORE_ID,
+        kind: 'request',
+        status: 'pending',
+        sendAfter: new Date('2026-07-06T00:00:00.000Z'),
+        dedupeKey: 'disable-pending-job',
+      },
+    });
+
+    const committed = await createBatch('disable-committed', {
+      status: 'sending',
+      emailAccessStatus: 'allowed',
+      eligibilityStartsAtSnapshot: firstCutoff,
+      eligibleAt: new Date('2026-07-05T00:00:00.000Z'),
+    });
+    const committedJob = await prisma.reviewEmailJob.create({
+      data: {
+        requestId: null,
+        batchId: committed.batch.id,
+        storeId: STORE_ID,
+        kind: 'request',
+        status: 'processing',
+        sendAfter: new Date('2026-07-06T00:00:00.000Z'),
+        dedupeKey: 'disable-committed-job',
+      },
+    });
+    await prisma.reviewEmailAttempt.create({
+      data: {
+        jobId: committedJob.id,
+        attemptNumber: 1,
+        correlationId: 'disable-committed-attempt',
+        status: 'sending',
+        sendCommittedAt: new Date('2026-07-06T00:00:00.000Z'),
+        sendInitiatedAt: new Date('2026-07-06T00:00:00.000Z'),
+        recipientEmailHash: 'exact-cutoff-test',
+        recipientEmailFoldedHash: 'folded-cutoff-test',
+        recipientEmailEncrypted: 'encrypted-cutoff-test',
+      },
+    });
+
+    await persistReviewEmailSettingsForInstallation(
+      prisma,
+      STORE_ID,
+      'cutoff-app-1',
+      settingsWrite(false),
+      {},
+      new Date('2026-07-10T00:00:00.000Z'),
+    );
+
+    await expect(prisma.reviewEmailJob.findUniqueOrThrow({ where: { id: pendingJob.id } })).resolves.toMatchObject({
+      status: 'cancelled',
+      lastErrorCode: 'store_email_disabled',
+    });
+    await expect(prisma.reviewEmailBatch.findUniqueOrThrow({ where: { id: pending.batch.id } })).resolves.toMatchObject({
+      status: 'cancelled',
+      emailAccessStatus: 'store_disabled',
+    });
+    await expect(prisma.reviewEmailJob.findUniqueOrThrow({ where: { id: committedJob.id } })).resolves.toMatchObject({
+      status: 'processing',
+    });
+    await expect(prisma.reviewEmailBatch.findUniqueOrThrow({ where: { id: committed.batch.id } })).resolves.toMatchObject({
+      status: 'sending',
+      emailAccessStatus: 'store_disabled',
+    });
+
+    const reenabled = await persistReviewEmailSettingsForInstallation(
+      prisma,
+      STORE_ID,
+      'cutoff-app-1',
+      settingsWrite(true),
+      { status: 'verified', verifiedAt: secondCutoff, lastErrorCode: null },
+      secondCutoff,
+    );
+    expect(reenabled.eligibilityStartsAt).toEqual(secondCutoff);
+    await expect(prisma.reviewEmailBatch.findUniqueOrThrow({ where: { id: pending.batch.id } })).resolves.toMatchObject({
+      status: 'cancelled',
+    });
   });
 
   it('allows one product request in a batch even when separate lines race', async () => {

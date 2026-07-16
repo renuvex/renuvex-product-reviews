@@ -129,7 +129,11 @@ export async function cancelActiveReviewEmailJobsForStore(
   now = new Date(),
 ): Promise<void> {
   await tx.reviewEmailJob.updateMany({
-    where: { storeId, status: { in: [...REVIEW_EMAIL_ACTIVE_JOB_STATUSES] } },
+    where: {
+      storeId,
+      status: { in: [...REVIEW_EMAIL_ACTIVE_JOB_STATUSES] },
+      attemptsLog: { none: { sendCommittedAt: { not: null } } },
+    },
     data: {
       status: 'cancelled',
       completedAt: now,

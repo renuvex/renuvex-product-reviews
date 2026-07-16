@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-16
+last_verified: 2026-07-16
 confidence: high
 tags:
   - testing
@@ -36,6 +36,9 @@ source_files:
   - "tests/widget-harness.ts"
   - "tests/review-center-browser.spec.ts"
   - "tests/integration/review-email-batch-db-guarantees.test.ts"
+  - "tests/unit/review-email-eligibility.test.ts"
+  - "tests/unit/review-email-batching.test.ts"
+  - "tests/unit/review-email-settings.test.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
@@ -140,7 +143,18 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
 | Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). Vitest runs these unit files with a single worker because the route-level tests rely on mocked module graphs and Next route imports that showed 5s timeout flakes under parallel local Windows runs; serial execution is slower but deterministic. |
 | Review-center browser | `pnpm test:review-center` | Isolated `reviews.renuvex.app`-style flow with mocked network: fragment token exchange/removal, session item reads, independent Product A submit, Product B continuation/skip, and terminal batch state. It does not send email or call AWS/Mux. |
-| Review-email DB guarantees | `pnpm test:integration:review-email` | Opt-in test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves install/DSR/retention guarantees plus batch fingerprint/live-group races, product membership uniqueness, job target checks, cross-store composite FKs, provider-neutral event dedupe, attempt evidence retention, DSR/event lock ordering, and journal replay equivalence. Exact-identity coverage includes same-folded/different-exact collision isolation, retained-key lookup, real retention detaching an unsubscribe token from its attempt, old-link suppression without ciphertext, normal/journal DSR deletion, and legacy progress/payload compatibility. Migrations must be applied first. It is not a production/CI DB mutation gate. |
+| Review-email DB guarantees | `pnpm test:integration:review-email` | Opt-in test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves install/DSR/retention guarantees plus batch fingerprint/live-group races, product membership uniqueness, job target checks, cross-store composite FKs, provider-neutral event dedupe, attempt evidence retention, DSR/event lock ordering, journal replay equivalence, and disable/re-enable behavior around committed versus uncommitted attempts. Exact-identity coverage includes same-folded/different-exact collision isolation, retained-key lookup, real retention detaching an unsubscribe token from its attempt, old-link suppression without ciphertext, normal/journal DSR deletion, and legacy progress/payload compatibility. Migrations must be applied first. It is not a production/CI DB mutation gate. |
+
+Review-email cutoff coverage pins the historical-delivery invariant separately:
+unit tests require exact delivered-line `statusUpdatedAt`, reject generic
+package/order timestamp fallbacks, use the latest timestamp for a multi-line
+product, preserve the reconciliation discovery window for pre-enable orders,
+fail closed on missing cutoff or click-and-collect transition evidence, and
+prove that explicit `null` evidence cannot trigger a batching fallback. The DB
+integration suite proves disable cancels only pre-commit work, a committed
+attempt remains non-resendable, and re-enable establishes a new cutoff without
+reviving cancelled backlog. Clean PostgreSQL 16 and 17 migration/application
+runs are required for this package.
 
 `pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
 

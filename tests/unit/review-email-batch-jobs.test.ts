@@ -85,6 +85,8 @@ function batch(overrides: Record<string, unknown> = {}) {
     reminderDelayDaysSnapshot: 1,
     groupingFrozenAt: null,
     recipientFrozenAt: null,
+    eligibilityStartsAtSnapshot: new Date('2026-07-01T00:00:00.000Z'),
+    eligibleAt: new Date('2026-07-10T00:00:00.000Z'),
     expiresAt: null,
     requests: [request()],
     ...overrides,
@@ -158,6 +160,10 @@ function preparedAttempt(overrides: Record<string, unknown> = {}) {
 
 function transaction(jobRow: ReturnType<typeof job> | null = job()) {
   const tx = {
+    $executeRaw: vi.fn().mockResolvedValue(1),
+    $queryRaw: vi.fn().mockResolvedValue([{
+      storeId: 'store-1', status: 'active', generation: 3,
+    }]),
     ikasStoreInstallation: {
       findUnique: vi.fn().mockResolvedValue({ status: 'active', generation: 3 }),
     },
@@ -187,7 +193,11 @@ function transaction(jobRow: ReturnType<typeof job> | null = job()) {
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     reviewEmailSettings: {
-      findUnique: vi.fn().mockResolvedValue({ enabled: true, reminderEnabled: true }),
+      findUnique: vi.fn().mockResolvedValue({
+        enabled: true,
+        eligibilityStartsAt: new Date('2026-07-01T00:00:00.000Z'),
+        reminderEnabled: true,
+      }),
     },
     reviewEmailSuppression: {
       findFirst: vi.fn().mockResolvedValue(null),
@@ -300,7 +310,7 @@ describe('review email batch sender transaction boundaries', () => {
 
   it('persists access denial before returning a sender error', async () => {
     const { db, tx } = transaction();
-    tx.reviewEmailSettings.findUnique.mockResolvedValue({ enabled: false, reminderEnabled: true });
+    tx.reviewEmailSettings.findUnique.mockResolvedValue({ enabled: false, eligibilityStartsAt: null, reminderEnabled: true });
 
     await expect(prepareReviewEmailBatchSend(db as never, 'job-1', { now: NOW })).rejects.toMatchObject({
       code: 'review_email_access_denied',
@@ -315,6 +325,17 @@ describe('review email batch sender transaction boundaries', () => {
         leaseExpiresAt: null,
         lastErrorCode: 'email_access_denied',
       },
+    });
+    expect(tx.reviewEmailAttempt.create).not.toHaveBeenCalled();
+  });
+
+  it('does not prepare a batch from an earlier activation epoch', async () => {
+    const { db, tx } = transaction(job({}, {
+      eligibilityStartsAtSnapshot: new Date('2026-06-01T00:00:00.000Z'),
+    }));
+
+    await expect(prepareReviewEmailBatchSend(db as never, 'job-1', { now: NOW })).rejects.toMatchObject({
+      code: 'review_email_access_denied',
     });
     expect(tx.reviewEmailAttempt.create).not.toHaveBeenCalled();
   });
@@ -367,6 +388,24 @@ describe('review email batch sender transaction boundaries', () => {
       data: expect.objectContaining({ status: 'cancelled', lastErrorCode: 'email_access_denied' }),
     }));
     expect(mocks.activateBatchToken).not.toHaveBeenCalled();
+  });
+
+  it('does not commit a prepared attempt after the store activation cutoff changes', async () => {
+    const { db, tx } = transaction();
+    tx.reviewEmailAttempt.findUnique.mockResolvedValue(preparedAttempt());
+    tx.reviewEmailSettings.findUnique.mockResolvedValue({
+      enabled: true,
+      eligibilityStartsAt: new Date('2026-07-14T00:00:00.000Z'),
+      reminderEnabled: true,
+    });
+
+    await expect(commitReviewEmailBatchSend(db as never, 'attempt-1', NOW)).rejects.toMatchObject({
+      code: 'review_email_send_commit_denied',
+    });
+    expect(mocks.activateBatchToken).not.toHaveBeenCalled();
+    expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ errorCode: 'email_access_denied_before_send_commit' }),
+    }));
   });
 
   it('rechecks the governor under the send-commit recipient lock', async () => {

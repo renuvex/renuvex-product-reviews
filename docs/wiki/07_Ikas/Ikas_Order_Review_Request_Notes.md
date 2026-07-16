@@ -23,7 +23,9 @@ source_files:
   - "src/app/api/webhooks/ikas/orders/route.ts"
   - "src/app/api/webhooks/ikas/products/route.ts"
   - "src/lib/review-email/batching.ts"
+  - "src/lib/review-email/eligibility.ts"
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
+  - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
 ---
 
 # ikas Order Review Request Notes
@@ -102,7 +104,9 @@ contract for a post-order single-use action link:
     whole-order trigger/fallback; when exact package-to-line membership exists,
     one delivered package may make only that package group eligible while the
     order-level status is still partial;
-  - click-and-collect: treat `READY_FOR_PICK_UP` as its own terminal state;
+  - click-and-collect: recognize `READY_FOR_PICK_UP` as the relevant current
+    terminal state, but keep production email eligibility fail-closed until ikas
+    exposes and dev-store evidence verifies an exact transition timestamp;
   - digital/no-shipment: define a separate product decision because there may be
     no delivery package transition;
   - partial delivery: avoid sending for all order lines just because the order
@@ -124,6 +128,19 @@ contract for a post-order single-use action link:
 - Reconciliation uses bounded `updatedAt` windows, max-200 pagination, a DB
   lease/version fence, and the same installation lock. Its future AWS trigger
   must wake this DB-owned lifecycle rather than perform raw broad scans.
+- Reconciliation discovery is intentionally not clamped to the merchant's
+  review-email activation timestamp. This keeps an order created before
+  enablement discoverable when its exact line delivery happens afterward.
+  Eligibility is decided per required line after canonical re-read.
+- For shipment cutoff enforcement, only
+  `OrderLineItem.statusUpdatedAt` on a currently `DELIVERED` line is accepted as
+  terminal-transition evidence. Package/order `updatedAt`, `orderedAt`, webhook
+  receipt time, and processing time are generic discovery/current-state values;
+  a later unrelated update must not make an old delivery eligible.
+- Every required line for one product must be delivered with exact timestamp
+  evidence, and the product `eligibleAt` is the latest required-line timestamp.
+  Missing evidence returns `missing_exact_delivery_timestamp` and produces no
+  lifecycle. Package delivered plus a nonterminal line also remains ineligible.
 - Multi-product source groups exact package membership into one
   `ReviewEmailBatch`, while each canonical product retains an independent
   `ReviewRequest`. One product split across packages is not eligible until all
@@ -148,6 +165,9 @@ contract for a post-order single-use action link:
 - Run dev-store acceptance for manually created orders before advertising that
   flow; verify canonical customer email plus package/line delivery evidence
   rather than adding an inferred recipient fallback.
+- Run a separate provider-contract acceptance for click-and-collect terminal
+  transition timing before enabling that branch; current status alone cannot
+  safely enforce the historical activation cutoff.
 - Perform live ikas acceptance for the MCP-valid order registration and the
   separately configured uninstall signal, then prove the
   24-hour erasure path after an approved production migration/deploy.

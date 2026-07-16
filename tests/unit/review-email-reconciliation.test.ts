@@ -34,7 +34,7 @@ describe('ikas order reconciliation lease', () => {
     const tx = {
       $executeRaw: vi.fn().mockResolvedValue(1),
       $queryRaw: vi.fn().mockResolvedValue([{ storeId: 'store-1', authorizedAppId: 'app-1', status: 'active' }]),
-      reviewEmailSettings: { findUnique: vi.fn().mockResolvedValue({ enabled: true }) },
+      reviewEmailSettings: { findUnique: vi.fn().mockResolvedValue({ enabled: true, eligibilityStartsAt: new Date('2026-07-10T00:00:00.000Z') }) },
       ikasOrderReconciliationCursor: cursorModel,
     };
     const db = {
@@ -82,7 +82,7 @@ describe('ikas order reconciliation lease', () => {
     const tx = {
       $executeRaw: vi.fn().mockResolvedValue(1),
       $queryRaw: vi.fn().mockResolvedValue([{ storeId: 'store-1', authorizedAppId: 'app-1', status: 'active' }]),
-      reviewEmailSettings: { findUnique: vi.fn().mockResolvedValue({ enabled: true }) },
+      reviewEmailSettings: { findUnique: vi.fn().mockResolvedValue({ enabled: true, eligibilityStartsAt: new Date('2026-07-10T00:00:00.000Z') }) },
       ikasOrderReconciliationCursor: cursorModel,
     };
     const db = {
@@ -121,7 +121,7 @@ describe('ikas order reconciliation lease', () => {
     const tx = {
       $executeRaw: vi.fn().mockResolvedValue(1),
       $queryRaw: vi.fn().mockResolvedValue([{ storeId: 'store-1', authorizedAppId: 'app-1', status: 'active' }]),
-      reviewEmailSettings: { findUnique: vi.fn().mockResolvedValue({ enabled: true }) },
+      reviewEmailSettings: { findUnique: vi.fn().mockResolvedValue({ enabled: true, eligibilityStartsAt: new Date('2026-07-10T00:00:00.000Z') }) },
       ikasOrderReconciliationCursor: cursorModel,
     };
     const db = {
@@ -164,6 +164,24 @@ describe('ikas order reconciliation lease', () => {
         owner: 'worker-a',
       }),
     ).resolves.toEqual({ state: 'store_disabled' });
+    expect(cursorModel.upsert).not.toHaveBeenCalled();
+  });
+
+  it('does not create a cursor when an enabled store has no activation cutoff', async () => {
+    const cursorModel = { upsert: vi.fn() };
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(1),
+      $queryRaw: vi.fn().mockResolvedValue([{ storeId: 'store-1', authorizedAppId: 'app-1', status: 'active' }]),
+      reviewEmailSettings: { findUnique: vi.fn().mockResolvedValue({ enabled: true, eligibilityStartsAt: null }) },
+      ikasOrderReconciliationCursor: cursorModel,
+    };
+    const db = { $transaction: vi.fn(async (callback: (value: typeof tx) => unknown) => callback(tx)) };
+
+    await expect(acquireOrderReconciliationLease(db as never, {
+      storeId: 'store-1',
+      authorizedAppId: 'app-1',
+      owner: 'worker-a',
+    })).resolves.toEqual({ state: 'eligibility_cutoff_missing' });
     expect(cursorModel.upsert).not.toHaveBeenCalled();
   });
 });

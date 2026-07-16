@@ -35,6 +35,8 @@ source_files:
   - "src/app/api/public/upload/register/route.ts"
   - "src/app/api/internal/scheduled-jobs/route.ts"
   - "src/lib/scheduled-jobs.ts"
+  - "src/lib/review-email/eligibility.ts"
+  - "src/lib/review-email/settings.ts"
   - "src/lib/email/ses-sns.ts"
   - "src/app/api/internal/email-events/ses/route.ts"
   - "src/lib/media/providers/aws-review-image.ts"
@@ -58,6 +60,15 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-16: Disabled review-email historical cutoff V2.2 source is
+  implemented. Successful enable/re-enable records a new activation epoch;
+  shipment eligibility requires every delivered line's exact `statusUpdatedAt`
+  at or after that epoch, and a multi-line product uses the latest evidence.
+  Package/order timestamps cannot cross the cutoff. Disable cancels pre-commit
+  work without reviving backlog, while committed ambiguous work remains
+  non-resendable. Click-and-collect remains fail-closed pending exact provider
+  timestamp evidence. The additive migration and integration suite pass on
+  disposable PostgreSQL 16/17; no production/AWS/SES/DNS/Vercel mutation exists.
 - 2026-07-15: Disabled review-email Multi-Product Batch / Envelope V3.2 source
   is implemented: one delivery-group initial plus at most one reminder,
   independent product requests, tenant-bound batch/job FKs, provider-neutral
@@ -71,7 +82,6 @@ source_files:
 - 2026-07-04: Cloudinary code/env/runtime cleanup is complete; old provider assets are out of app scope.
 - 2026-07-04: AWS public-scale guardrails are documented. See [[AWS_Setup_And_Access]].
 - 2026-07-08: CloudFront standard logging v2 is deployed for `media.renuvex.app`; logs deliver to the EU log bucket under `AWSLogs/989086371563/CloudFront/cloudfront/media/` with 14-day lifecycle and no query/cookie fields. See [[AWS_Setup_And_Access]].
-- 2026-07-11: Review-email V5 source is hardened but disabled. DSR uses exact-HMAC frozen direct/linked inventory, `RESTRICT` request-parent FKs, deterministic parent locks, conditional shared-order PII scrub, and identical normal/replay execution. Coverage accepts only configured-horizon lifecycle markers and consumes both S3 version markers. Persistent/logged failures are code-only. Defaults: request/reminder `+1 day`, token `30` days, session `2` hours, detail/contribution `180/210` days; current copy-register result is journal `35/42` days. Clean PostgreSQL proof: 56 migrations, 466 unit and 12 integration tests. No production mutation or live email exists. See [[ADR_0036_Review_Request_Email_Architecture]].
 - 2026-07-09: SES email source package is prepared only: CloudFormation templates, validators, disabled env placeholders, and a fail-closed signed SNS feedback endpoint. No AWS SES resources, DNS, Vercel env, deploy, or outbound email sending exists yet. See [[ADR_0036_Review_Request_Email_Architecture]] and [[AWS_Setup_And_Access]].
 - 2026-07-02: Cloudflare Worker remains widget asset/read-cache delivery; AWS widget CDN canary is closed.
 - 2026-06-21/23: Mux video upload/playback/cleanup is live; Mux Data tracking/cookies stay disabled. See [[ADR_0032_Review_Video_On_Mux]].

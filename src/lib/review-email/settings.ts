@@ -36,6 +36,7 @@ export type ReviewEmailSettingsWrite = {
 export type EffectiveReviewEmailSettings = {
   storeId: string;
   enabled: boolean;
+  eligibilityStartsAt: Date | null;
   triggerMode: 'delivery';
   consentMode: 'strict_notifications_accepted';
   firstDelayDays: number;
@@ -100,6 +101,7 @@ function defaultSettings(storeId: string): EffectiveReviewEmailSettings {
   return {
     storeId,
     enabled: false,
+    eligibilityStartsAt: null,
     triggerMode: 'delivery',
     consentMode: 'strict_notifications_accepted',
     firstDelayDays: DEFAULT_FIRST_DELAY_DAYS,
@@ -123,6 +125,7 @@ function defaultSettings(storeId: string): EffectiveReviewEmailSettings {
 export function serializeReviewEmailSettings(settings: EffectiveReviewEmailSettings) {
   return {
     enabled: settings.enabled,
+    eligibilityStartsAt: settings.eligibilityStartsAt?.toISOString() ?? null,
     triggerMode: settings.triggerMode,
     consentMode: settings.consentMode,
     firstDelayDays: settings.firstDelayDays,
@@ -147,6 +150,7 @@ function toEffective(storeId: string, row: Awaited<ReturnType<SettingsDb['review
   return {
     storeId,
     enabled: row.enabled,
+    eligibilityStartsAt: row.eligibilityStartsAt,
     triggerMode: row.triggerMode === 'delivery' ? 'delivery' : 'delivery',
     consentMode: row.consentMode === 'strict_notifications_accepted' ? 'strict_notifications_accepted' : 'strict_notifications_accepted',
     firstDelayDays: row.firstDelayDays,
@@ -267,7 +271,14 @@ async function persistReviewEmailSettings(
   storeId: string,
   data: ReviewEmailSettingsWrite,
   webhookState: ReviewEmailWebhookState = {},
+  now = new Date(),
 ): Promise<EffectiveReviewEmailSettings> {
+  const current = await db.reviewEmailSettings.findUnique({ where: { storeId } });
+  const eligibilityStartsAt = data.enabled
+    ? current?.enabled && current.eligibilityStartsAt
+      ? current.eligibilityStartsAt
+      : now
+    : current?.eligibilityStartsAt ?? null;
   const webhookData = {
     ...(webhookState.status !== undefined ? { orderWebhookStatus: webhookState.status } : {}),
     ...(webhookState.verifiedAt !== undefined ? { orderWebhookVerifiedAt: webhookState.verifiedAt } : {}),
@@ -275,17 +286,26 @@ async function persistReviewEmailSettings(
   };
   const row = await db.reviewEmailSettings.upsert({
     where: { storeId },
-    create: { ...data, ...webhookData, storeId },
-    update: { ...data, ...webhookData },
+    create: { ...data, ...webhookData, storeId, eligibilityStartsAt },
+    update: { ...data, ...webhookData, eligibilityStartsAt },
   });
   return toEffective(storeId, row);
 }
 
 async function cancelUnsentReviewEmailWork(tx: Prisma.TransactionClient, storeId: string, now: Date): Promise<void> {
   const reason = 'store_email_disabled';
+  await tx.reviewEmailBatch.updateMany({
+    where: { storeId, status: { in: ['scheduled', 'sending', 'active'] } },
+    data: { emailAccessStatus: 'store_disabled' },
+  });
   await cancelActiveReviewEmailJobsForStore(tx, storeId, reason, now);
   const unsentBatches = await tx.reviewEmailBatch.findMany({
-    where: { storeId, status: { in: ['scheduled', 'sending'] }, firstSentAt: null },
+    where: {
+      storeId,
+      status: { in: ['scheduled', 'sending'] },
+      firstSentAt: null,
+      jobs: { none: { attemptsLog: { some: { sendCommittedAt: { not: null } } } } },
+    },
     select: { id: true },
   });
   const batchIds = unsentBatches.map((batch) => batch.id);
@@ -342,7 +362,7 @@ export async function persistReviewEmailSettingsForInstallation(
 ): Promise<EffectiveReviewEmailSettings> {
   return db.$transaction(async (tx) => {
     await requireActiveIkasStoreInstallation(tx, storeId, authorizedAppId);
-    const settings = await persistReviewEmailSettings(tx, storeId, data, webhookState);
+    const settings = await persistReviewEmailSettings(tx, storeId, data, webhookState, now);
     if (!settings.enabled) await cancelUnsentReviewEmailWork(tx, storeId, now);
     return settings;
   });

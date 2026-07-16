@@ -1,5 +1,10 @@
 import { CLOSED_ORDER_LINE_STATUSES, CLOSED_ORDER_PACKAGE_STATUSES } from '@/lib/review-email/constants';
-import type { NormalizedOrder, NormalizedOrderLine, NormalizedOrderPackage } from '@/lib/review-email/eligibility';
+import {
+  evaluateLineEligibility,
+  type NormalizedOrder,
+  type NormalizedOrderLine,
+  type NormalizedOrderPackage,
+} from '@/lib/review-email/eligibility';
 
 export type ReviewEmailBatchMember = {
   productId: string;
@@ -52,14 +57,6 @@ export function reviewEmailBatchMembershipChanged(
   return currentKeys.length !== desiredKeys.length || currentKeys.some((key, index) => key !== desiredKeys[index]);
 }
 
-function evidenceAt(order: NormalizedOrder, line: NormalizedOrderLine, packages: NormalizedOrderPackage[], now: Date): Date {
-  const packageTime = packages
-    .map((pkg) => pkg.updatedAt)
-    .filter((value): value is Date => Boolean(value))
-    .sort((left, right) => right.getTime() - left.getTime())[0];
-  return line.statusUpdatedAt ?? packageTime ?? order.updatedAt ?? order.orderedAt ?? now;
-}
-
 function activePackagesForLine(order: NormalizedOrder, lineId: string): NormalizedOrderPackage[] {
   return order.packages
     .filter((pkg) => pkg.orderLineItemIds.includes(lineId) && !CLOSED_ORDER_PACKAGE_STATUSES.has(pkg.status))
@@ -80,8 +77,11 @@ function allShipmentLinesTerminalDelivered(order: NormalizedOrder): boolean {
 
 export function buildReviewEmailDeliveryGroups(
   order: NormalizedOrder,
-  now = new Date(),
-  input: { eligibleAtByLineId?: ReadonlyMap<string, Date | null> } = {},
+  input: {
+    eligibilityStartsAt: Date;
+    eligibleAtByLineId?: ReadonlyMap<string, Date | null>;
+    ineligibleReasonByLineId?: ReadonlyMap<string, string | null>;
+  },
 ): ReviewEmailGroupingResult {
   const productReasons = new Map<string, string>();
   if (order.shippingMethod === 'DIGITAL_DELIVERY' || order.shippingMethod === 'NO_SHIPMENT') {
@@ -122,7 +122,9 @@ export function buildReviewEmailDeliveryGroups(
     const expectedStatus = order.shippingMethod === 'SHIPMENT' ? 'DELIVERED' : 'READY_FOR_PICK_UP';
     const allLinesReady = entries.every(({ line }, index) => {
       const pkg = packageSets[index]?.[0];
-      return line.status === 'DELIVERED' || pkg?.status === expectedStatus;
+      return order.shippingMethod === 'SHIPMENT'
+        ? line.status === 'DELIVERED' && (!pkg || pkg.status === expectedStatus)
+        : pkg?.status === expectedStatus || order.orderPackageStatus === expectedStatus;
     });
     if (!allLinesReady) {
       productReasons.set(productId, order.shippingMethod === 'SHIPMENT' ? 'shipment_not_delivered' : 'pickup_not_ready');
@@ -143,8 +145,28 @@ export function buildReviewEmailDeliveryGroups(
       continue;
     }
 
-    const eligibleAt = entries
-      .map(({ line }, index) => input.eligibleAtByLineId?.get(line.id) ?? evidenceAt(order, line, packageSets[index] ?? [], now))
+    const eligibility = entries.map(({ line }) => {
+      if (input.eligibleAtByLineId?.has(line.id)) {
+        const eligibleAt = input.eligibleAtByLineId.get(line.id) ?? null;
+        return {
+          eligibleAt: eligibleAt && eligibleAt >= input.eligibilityStartsAt ? eligibleAt : null,
+          reason: input.ineligibleReasonByLineId?.get(line.id) ?? (
+            eligibleAt && eligibleAt < input.eligibilityStartsAt ? 'delivery_before_email_activation' : null
+          ),
+        };
+      }
+      const evaluated = evaluateLineEligibility(order, line, input.eligibilityStartsAt);
+      return evaluated.eligible
+        ? { eligibleAt: evaluated.eligibleAt, reason: null }
+        : { eligibleAt: null, reason: evaluated.reason };
+    });
+    const ineligible = eligibility.find((entry) => !entry.eligibleAt);
+    if (ineligible) {
+      productReasons.set(productId, ineligible.reason ?? 'missing_exact_delivery_timestamp');
+      continue;
+    }
+    const eligibleAt = eligibility
+      .map((entry) => entry.eligibleAt!)
       .sort((left, right) => right.getTime() - left.getTime())[0]!;
     const representative = [...entries].sort((left, right) => left.orderPosition - right.orderPosition || left.line.id.localeCompare(right.line.id))[0]!;
     const member: ReviewEmailBatchMember = {

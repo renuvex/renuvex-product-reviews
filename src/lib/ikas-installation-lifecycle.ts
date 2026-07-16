@@ -126,6 +126,16 @@ export async function requireActiveIkasStoreInstallation(
   return current;
 }
 
+export async function lockActiveIkasStoreInstallationGeneration(
+  tx: Prisma.TransactionClient,
+  storeId: string,
+  generation: number,
+): Promise<IkasStoreInstallation | null> {
+  const current = await lockStoreInstallation(tx, storeId);
+  if (!current || current.status !== 'active' || current.generation !== generation) return null;
+  return current;
+}
+
 export type InstallationErasureDecision =
   | { action: 'erase'; installation: IkasStoreInstallation }
   | { action: 'stale'; installation: IkasStoreInstallation };

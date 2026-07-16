@@ -2,6 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { buildReviewEmailDeliveryGroups, reviewEmailBatchMembershipChanged } from '@/lib/review-email/batching';
 import type { NormalizedOrder, NormalizedOrderLine } from '@/lib/review-email/eligibility';
 
+const ELIGIBILITY_STARTS_AT = new Date('2026-07-01T00:00:00.000Z');
+
+function buildGroups(
+  value: NormalizedOrder,
+  input: {
+    eligibleAtByLineId?: ReadonlyMap<string, Date | null>;
+    ineligibleReasonByLineId?: ReadonlyMap<string, string | null>;
+  } = {},
+) {
+  return buildReviewEmailDeliveryGroups(value, { eligibilityStartsAt: ELIGIBILITY_STARTS_AT, ...input });
+}
+
 function line(id: string, productId = id, overrides: Partial<NormalizedOrderLine> = {}): NormalizedOrderLine {
   return {
     id,
@@ -52,7 +64,7 @@ function order(lines: NormalizedOrderLine[], overrides: Partial<NormalizedOrder>
 describe('review email delivery grouping', () => {
   it('groups twenty delivered products into one package batch', () => {
     const lines = Array.from({ length: 20 }, (_, index) => line(`line-${index + 1}`, `product-${index + 1}`));
-    const result = buildReviewEmailDeliveryGroups(order(lines));
+    const result = buildGroups(order(lines));
 
     expect(result.groups).toHaveLength(1);
     expect(result.groups[0]).toMatchObject({ deliveryGroupKey: 'package:package-1', groupingMode: 'package' });
@@ -62,7 +74,7 @@ describe('review email delivery grouping', () => {
 
   it('groups twenty delivered products split ten-by-ten into two package batches', () => {
     const lines = Array.from({ length: 20 }, (_, index) => line(`line-${index + 1}`, `product-${index + 1}`));
-    const result = buildReviewEmailDeliveryGroups(order(lines, {
+    const result = buildGroups(order(lines, {
       packages: [
         {
           id: 'package-1',
@@ -103,7 +115,7 @@ describe('review email delivery grouping', () => {
       line('line-1', 'product-1', { variantId: 'small', quantity: 2 }),
       line('line-2', 'product-1', { variantId: 'large', quantity: 1 }),
     ];
-    const result = buildReviewEmailDeliveryGroups(order(lines));
+    const result = buildGroups(order(lines));
 
     expect(result.groups[0]!.members).toEqual([
       expect.objectContaining({ productId: 'product-1', sourceLineItemIds: ['line-1', 'line-2'] }),
@@ -115,7 +127,7 @@ describe('review email delivery grouping', () => {
       line('line-1', 'product-1'),
       line('line-2', 'product-1', { status: 'SHIPPED' }),
     ];
-    const result = buildReviewEmailDeliveryGroups(order(lines, {
+    const result = buildGroups(order(lines, {
       orderPackageStatus: 'PARTIALLY_DELIVERED',
       packages: [
         { id: 'package-1', status: 'DELIVERED', orderLineItemIds: ['line-1'], updatedAt: new Date('2026-07-10T09:00:00.000Z') },
@@ -130,9 +142,8 @@ describe('review email delivery grouping', () => {
   it('uses the persisted first eligibility timestamp and a safe order fallback', () => {
     const firstEligibleAt = new Date('2026-07-02T08:00:00.000Z');
     const lines = [line('line-1', 'product-1')];
-    const result = buildReviewEmailDeliveryGroups(
+    const result = buildGroups(
       order(lines, { packages: [] }),
-      new Date('2026-07-15T00:00:00.000Z'),
       { eligibleAtByLineId: new Map([['line-1', firstEligibleAt]]) },
     );
 
@@ -143,13 +154,13 @@ describe('review email delivery grouping', () => {
 
   it('keeps digital and no-shipment orders disabled in the first release', () => {
     const lines = [line('line-1', 'product-1')];
-    expect(buildReviewEmailDeliveryGroups(order(lines, { shippingMethod: 'DIGITAL_DELIVERY' })).groups).toEqual([]);
-    expect(buildReviewEmailDeliveryGroups(order(lines, { shippingMethod: 'NO_SHIPMENT' })).groups).toEqual([]);
+    expect(buildGroups(order(lines, { shippingMethod: 'DIGITAL_DELIVERY' })).groups).toEqual([]);
+    expect(buildGroups(order(lines, { shippingMethod: 'NO_SHIPMENT' })).groups).toEqual([]);
   });
 
   it('fails closed with missing_customer_email even after package delivery', () => {
     const lines = [line('line-1', 'product-1'), line('line-2', 'product-2')];
-    const result = buildReviewEmailDeliveryGroups(order(lines, {
+    const result = buildGroups(order(lines, {
       customerEmailHash: null,
       customerEmailFoldedHash: null,
       customerEmailHashKeyVersion: null,
@@ -166,7 +177,7 @@ describe('review email delivery grouping', () => {
   });
 
   it('keeps membership version stable for an idempotent canonical reread', () => {
-    const members = buildReviewEmailDeliveryGroups(order([line('line-1', 'product-1')])).groups[0]!.members;
+    const members = buildGroups(order([line('line-1', 'product-1')])).groups[0]!.members;
 
     expect(reviewEmailBatchMembershipChanged('batch-1', [{
       batchId: 'batch-1',
@@ -177,7 +188,7 @@ describe('review email delivery grouping', () => {
   });
 
   it('detects product moves and removals that must invalidate prepared attempts', () => {
-    const members = buildReviewEmailDeliveryGroups(order([line('line-1', 'product-1')])).groups[0]!.members;
+    const members = buildGroups(order([line('line-1', 'product-1')])).groups[0]!.members;
     const existing = [
       { batchId: 'batch-old', batchPosition: 0, productId: 'product-1', status: 'scheduled' },
       { batchId: 'batch-old', batchPosition: 1, productId: 'product-2', status: 'scheduled' },
@@ -185,5 +196,54 @@ describe('review email delivery grouping', () => {
 
     expect(reviewEmailBatchMembershipChanged('batch-new', existing, members)).toBe(true);
     expect(reviewEmailBatchMembershipChanged('batch-old', existing, members)).toBe(true);
+  });
+
+  it('does not turn an explicit null line-evidence row into package or order fallback evidence', () => {
+    const lines = [line('line-1', 'product-1', { statusUpdatedAt: null })];
+    const result = buildGroups(order(lines, {
+      updatedAt: new Date('2026-08-01T00:00:00.000Z'),
+      packages: [{
+        id: 'package-1',
+        status: 'DELIVERED',
+        orderLineItemIds: ['line-1'],
+        updatedAt: new Date('2026-08-01T00:00:00.000Z'),
+      }],
+    }), {
+      eligibleAtByLineId: new Map([['line-1', null]]),
+      ineligibleReasonByLineId: new Map([['line-1', 'missing_exact_delivery_timestamp']]),
+    });
+
+    expect(result.groups).toEqual([]);
+    expect(result.productReasons.get('product-1')).toBe('missing_exact_delivery_timestamp');
+  });
+
+  it('does not reuse persisted line evidence from an earlier activation epoch', () => {
+    const result = buildGroups(order([line('line-1', 'product-1')]), {
+      eligibleAtByLineId: new Map([['line-1', new Date('2026-06-30T23:59:59.000Z')]]),
+      ineligibleReasonByLineId: new Map([['line-1', null]]),
+    });
+
+    expect(result.groups).toEqual([]);
+    expect(result.productReasons.get('product-1')).toBe('delivery_before_email_activation');
+  });
+
+  it('uses the latest exact line timestamp when one product spans required lines', () => {
+    const first = line('line-1', 'product-1', { statusUpdatedAt: new Date('2026-07-05T08:00:00.000Z') });
+    const last = line('line-2', 'product-1', { statusUpdatedAt: new Date('2026-07-07T12:00:00.000Z') });
+    const result = buildGroups(order([first, last]));
+
+    expect(result.groups[0]?.members[0]?.eligibleAt).toEqual(last.statusUpdatedAt);
+    expect(result.groups[0]?.eligibleAt).toEqual(last.statusUpdatedAt);
+  });
+
+  it('waits when any required line lacks exact terminal evidence', () => {
+    const lines = [
+      line('line-1', 'product-1'),
+      line('line-2', 'product-1', { statusUpdatedAt: null }),
+    ];
+    const result = buildGroups(order(lines));
+
+    expect(result.groups).toEqual([]);
+    expect(result.productReasons.get('product-1')).toBe('missing_exact_delivery_timestamp');
   });
 });

@@ -31,6 +31,7 @@ source_files:
   - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
+  - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
@@ -83,10 +84,10 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `StoreVideoUsage` | `(storeId, month)` | Atomic monthly quota reserve/consume counters for feature-gated video uploads. |
 | `MediaProviderJob` | `id` (uuid), unique `dedupeKey` | DB outbox for provider operations (`resolve_video_asset`, `reconcile_video`, `expire_upload_session`, `publish_video`, `protect_video`, `cleanup_video`, `cleanup_image`) dispatched through QStash with idempotent retries, stale-lock recovery, and DLQ/manual-repair state. |
 | `MediaProviderLease` | `key` | Expiring per-session/per-asset provider mutation lease with a fencing version. It serializes publish/protect/delete work without holding a database transaction open during a provider HTTP call. |
-| `ReviewEmailSettings` | `storeId` | Merchant review-request email settings: enable flag, delivery trigger mode, strict consent mode, first/reminder delay, sender display name, Reply-To, logo, color, locale, and template version. |
+| `ReviewEmailSettings` | `storeId` | Merchant review-request email settings: enable flag, delivery trigger mode, strict consent mode, first/reminder delay, sender display name, Reply-To, logo, color, locale, template version, and the current disabled-to-enabled `eligibilityStartsAt` epoch. |
 | `IkasOrderWebhookEvent` | `id` (uuid), unique `providerEventId` | Idempotent ikas order webhook audit/wake-up state for review-request email; stores only normalized ids/status and a payload digest, never the raw payload. |
-| `IkasOrderSnapshot` / `IkasOrderLineSnapshot` | `id` (uuid), unique order/line keys | Canonical order and order-line eligibility evidence from `listOrder`, with hashed/encrypted customer email and package/line status evidence. |
-| `ReviewEmailBatch` | `id` (uuid), unique tenant/generation/fingerprint plus live order/group | One canonical delivery-group review sequence and recipient/timing/template snapshot. It groups many product requests under one physical initial and at most one reminder, then remains as a protected duplicate tombstone after detail purge. |
+| `IkasOrderSnapshot` / `IkasOrderLineSnapshot` | `id` (uuid), unique order/line keys | Canonical order and order-line evidence from `listOrder`, with hashed/encrypted customer email and package/line status evidence. Only a delivered line's exact `statusUpdatedAt` can prove the historical activation cutoff; generic package/order timestamps are discovery/current-state fields. |
+| `ReviewEmailBatch` | `id` (uuid), unique tenant/generation/fingerprint plus live order/group | One canonical delivery-group review sequence and recipient/timing/template/cutoff snapshot. It groups many product requests under one physical initial and at most one reminder, then remains as a protected duplicate tombstone after detail purge. |
 | `ReviewRequest` / `ReviewRequestToken` | `id` (uuid), unique product request, token hash, and attempt link | Product-scoped review right plus versioned request/batch access token. Batch tokens start `prepared`, activate only at `sendCommittedAt`, and expire 30 days later; raw values exist only in sender memory. Request/batch expiry extends to cover each scheduled reminder plus its token window. |
 | `ReviewRequestSession` | `id` (uuid), unique `sessionHash` | Two-hour host-only browser session created by fragment-token exchange. Multiple devices are allowed; the cookie is HttpOnly and only an HMAC hash is stored. |
 | `ReviewEmailJob` / `ReviewEmailAttempt` / `ReviewEmailEvent` | `id` (uuid), unique dedupe/correlation/transport ids | Physical-email schedule, one immutable provider-call attempt, and provider-neutral event ledger. Jobs carry lease/fencing state; attempts distinguish pre-call, committed ambiguous, accepted, and delivery evidence. Exact transport redelivery dedupes without collapsing distinct same-type provider facts. AWS queues will carry only opaque job ids later. |
@@ -163,6 +164,11 @@ On review-email Batch/Envelope V3.2 tables:
 - partial `(transport, transportEventId)` uniqueness dedupes only exact event
   transport redelivery. Attempt evidence uses first/last timestamps and signed
   metric contributions instead of a lossy total-order status enum.
+- `ReviewEmailSettings.eligibilityStartsAt` and
+  `ReviewEmailBatch.eligibilityStartsAtSnapshot` are nullable only for additive
+  old/new deployment overlap. Enabled lifecycle creation and sender
+  authorization fail closed when either required cutoff is absent or the batch
+  snapshot does not match the current activation epoch.
 
 Review-email operational failure columns are bounded code fields
 (`lastErrorCode` / `sanitizedErrorCode`, `VARCHAR(128)`). They never store raw
@@ -240,6 +246,8 @@ code run together, so a migration must not break the old code.
   this pattern for live multi-merchant data.
 
 ## Recent migration themes (chronological)
+- `add_review_email_eligibility_cutoff` - additive activation epoch and immutable
+  batch snapshot for exact delivered-line historical cutoff enforcement
 - `init`, `add_product_slug_cache` — bootstrap
 - `cleanup_and_auth_token_refactor`, `remove_widget_template` — early refactors
 - `add_review_status_indexes`, several `add_*_index`, `cleanup_redundant_indexes` — perf tuning
@@ -284,6 +292,10 @@ code run together, so a migration must not break the old code.
 - [[Legacy_Review_Media_Reconciliation]]
 
 ## Change Log
+- 2026-07-16: Added nullable deployment-compatible review-email activation and
+  batch cutoff fields. Runtime requires exact delivered-line `statusUpdatedAt`
+  evidence at or after the cutoff and fails closed on missing/stale snapshots;
+  package/order timestamps remain discovery/current-state evidence only.
 - 2026-06-20: Added additive `VideoUploadPerformanceSample` for sanitized Mux direct-upload performance diagnostics. The table has RLS enabled and no public policies; public clients submit through `/api/public/upload/video/metrics`.
 - 2026-06-21: Added the approved Mux contract migration `20260621003000_review_video_mux_contract_drop_legacy_columns` to remove old Cloudflare Stream/R2 `VideoUploadSession` columns and legacy unique indexes after the Mux production canary closeout showed no active video rows/jobs and no data in those legacy columns.
 - 2026-06-20: Mux contract work was staged locally. `VideoUploadSession` keeps Mux provider/upload/asset/playback ids; previous provider-specific upload/archive columns are removed from the Prisma schema. See [[ADR_0032_Review_Video_On_Mux]].

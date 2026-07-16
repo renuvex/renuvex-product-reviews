@@ -32,6 +32,7 @@ source_files:
   - "prisma/migrations/20260710150000_harden_review_email_installation_lifecycle/migration.sql"
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
+  - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
   - "config/review-email-copy-register.json"
   - "infra/aws/review-email-erasure-journal.cloudformation.json"
   - "infra/aws/review-email-erasure-journal-iam.cloudformation.json"
@@ -84,7 +85,8 @@ source_files:
 Use this accepted ADR when researching or designing post-purchase review-request
 email, verified-buyer submission, Amazon SES delivery, or email-job scheduling.
 The provider boundary, SES regional/sender/runtime/feedback contract,
-provider-neutral tenant direction, and source-only SES foundation package are
+provider-neutral tenant direction, exact terminal-delivery cutoff evidence,
+and source-only SES foundation package are
 accepted. Review-request email dispatch now targets an AWS-native first
 implementation using EventBridge, SQS, Lambda, and SES. Existing QStash media
 and maintenance scheduling remains in place and is not part of the email
@@ -369,8 +371,10 @@ Implemented in source, disabled until rollout:
 - `store/order/created` and `store/order/updated` webhook receiver that treats
   webhooks as wake-up signals and re-reads canonical order state via
   `listOrder`;
-- eligibility logic for physical delivered orders and click-and-collect ready
-  orders, while digital/no-shipment stays closed in the first release;
+- eligibility logic for physical shipments with exact delivered-line
+  `statusUpdatedAt` evidence at or after the merchant activation cutoff;
+  click-and-collect and digital/no-shipment stay closed until their terminal
+  transition timestamps are provider-verified;
 - first request job creation at `eligibleAt + firstDelayDays`;
 - reminder job creation only after provider acceptance, at actual
   `firstSentAt + reminderDelayDays`;
@@ -464,6 +468,17 @@ Still missing:
 - `CLICK_AND_COLLECT` and digital/no-shipment orders must use explicit separate
   eligibility branches; they must not be folded blindly into the physical
   delivery branch.
+- For the first production release, a shipment line is eligible only when its
+  current status is `DELIVERED` and its own `statusUpdatedAt` is present and is
+  at or after the current review-email activation cutoff. Package/order
+  `updatedAt`, `orderedAt`, webhook receipt time, and processing time are not
+  terminal-transition evidence. Package/order status remains useful for current
+  state and grouping only.
+- The current ikas contract does not expose a verified
+  `READY_FOR_PICK_UP` transition timestamp. Click-and-collect therefore remains
+  fail-closed until a separate provider-contract acceptance proves such
+  evidence; recognizing the current terminal status alone is insufficient for
+  historical cutoff safety.
 - Reconciliation uses `listOrder(updatedAt)` windows with `limit<=200` and
   `hasNext` pagination. The cadence and window overlap are implementation
   decisions, but the job must tolerate missed webhooks and duplicate updates.
@@ -548,15 +563,18 @@ Migrations `20260710120000_add_review_request_email_lifecycle`,
 `20260710150000_harden_review_email_installation_lifecycle`, and
 `20260710210000_add_review_email_retention_analytics_journal` are present in
 production migration history. The additive Multi-Product V3.2 migration
-`20260715120000_add_review_email_batch_envelope_v32` is locally verified source
-only and is not applied to production by this checkpoint.
+`20260715120000_add_review_email_batch_envelope_v32` and historical-cutoff
+migration `20260716120000_add_review_email_eligibility_cutoff` are locally
+verified source only and are not applied to production by this checkpoint.
 
 Implemented ownership and privacy boundaries:
 
 - `ReviewEmailSettings` stores bounded merchant controls and order-webhook
   registration health. Defaults are first request `1` day after eligibility,
   one reminder `1` day after first provider acceptance, trigger `delivery`, and
-  strict `notificationsAccepted=true` consent.
+  strict `notificationsAccepted=true` consent. A successful disabled-to-enabled
+  transition also records `eligibilityStartsAt`; re-enable establishes a new
+  cutoff while an enabled-to-enabled settings edit preserves the current one.
 - `IkasStoreInstallation` is the store-scoped lifecycle fence. It binds one
   active `authorizedAppId` to a monotonically increasing generation and keeps
   an erased tombstone so a delayed uninstall/retry or OAuth callback cannot
@@ -566,6 +584,9 @@ Implemented ownership and privacy boundaries:
   Raw webhook/order payloads, addresses, phone numbers, payment details, IPs,
   user agents, and plaintext customer email are not persisted. Email is stored
   as HMAC plus AES-GCM ciphertext only where sending requires it.
+- `ReviewEmailBatch.eligibilityStartsAtSnapshot` freezes the activation epoch
+  used to authorize that batch. Sender prepare/commit must match the current
+  enabled setting and reject a stale or missing snapshot.
 - `ReviewEmailBatch` owns a canonical delivery-group sequence, one protected
   recipient snapshot, immutable timing/template settings, and a durable
   duplicate fingerprint. `ReviewRequest` remains one independent product-level
@@ -652,9 +673,11 @@ Implemented flow:
    merchant-enabled state, and canonical `merchantId` are checked before order
    PII is stored; canonical `listOrder` is then re-read and normalized.
    Periodic reconciliation uses the same fence and covers missed events.
-2. Eligible physical/click-and-collect lines are grouped by canonical delivery
-   evidence into one batch and initial physical-email job. Each product creates
-   one independent request; quantity/variant repeats do not fan out email.
+2. Eligible physical shipment lines are grouped by canonical delivery evidence
+   into one batch and initial physical-email job. Each required line must be
+   `DELIVERED` with exact `statusUpdatedAt >= eligibilityStartsAt`; a product
+   spanning multiple lines uses the latest required line timestamp. Each product
+   creates one independent request; quantity/variant repeats do not fan out email.
    Cancellation/refund/return/missing-line transitions close only affected work.
 3. A future EventBridge/SQS/Lambda dispatcher claims DB jobs and calls the
    existing prepare/initiate/finalize helpers. This AWS worker is not built or
@@ -684,12 +707,16 @@ Implemented flow:
 
 Eligibility defaults for the first implementation:
 
-- Physical shipment: `shippingMethod=SHIPMENT` plus
-  `orderPackageStatus=DELIVERED` is the high-level whole-order
-  trigger/fallback. When exact package-to-line evidence exists, a delivered
-  package can make only that package group eligible while the order remains
-  partially delivered; partial state never fans out blindly to all lines.
-- Click-and-collect: use `READY_FOR_PICK_UP` as a separate trigger branch.
+- Physical shipment: `shippingMethod=SHIPMENT` plus current package/order
+  delivery state identifies candidate grouping, but every required line must
+  be `DELIVERED` and carry its own exact `statusUpdatedAt` at or after the
+  activation cutoff. A product spanning multiple lines becomes eligible at the
+  latest required line timestamp. Missing exact evidence fails closed as
+  `missing_exact_delivery_timestamp`; generic package/order update timestamps
+  never replace it.
+- Click-and-collect: remain closed in the first production activation because
+  `READY_FOR_PICK_UP` currently has no provider-verified transition timestamp
+  for historical cutoff enforcement.
 - Digital delivery and no-shipment: remain closed until an explicit product
   decision defines their terminal state and delay policy.
 - Cancellation, refund, return, unable-to-deliver, missing customer email,
@@ -936,6 +963,44 @@ Deferred provider gates remain explicit:
 - Unsubscribe preference survival across uninstall/reinstall is a separate
   privacy/legal decision. The current fail-closed source default removes local
   PII preference data during uninstall.
+
+### 2026-07-16 Historical Cutoff and Exact Terminal Evidence V2.2
+
+The disabled source now prevents old deliveries from becoming newly eligible
+because of an unrelated later order/package update:
+
+- A successful webhook-registration-backed `false -> true` settings transition
+  records `ReviewEmailSettings.eligibilityStartsAt`. A later disable/re-enable
+  records a new epoch; ordinary edits while enabled retain the existing epoch.
+- Reconciliation continues to discover orders through its bounded installation
+  and `listOrder(updatedAt)` cursor window. It is deliberately not clamped to
+  `eligibilityStartsAt`, so an order created before enablement but delivered
+  afterward can still be found. Final eligibility is enforced at the member
+  level, not by order creation time.
+- Shipment cutoff evidence comes only from a delivered line's exact
+  `OrderLineItem.statusUpdatedAt`. Package/order `updatedAt`, `orderedAt`,
+  webhook `receivedAt`, and processing time remain discovery/current-state
+  evidence and cannot cross the activation cutoff.
+- All required lines for a product must have exact delivered-line evidence.
+  The product `eligibleAt` is the maximum of those timestamps; one missing
+  timestamp blocks the entire product rather than falling back to a broader
+  timestamp.
+- New batches freeze `eligibilityStartsAtSnapshot`. Sender prepare and
+  send-commit re-read the active installation, enabled setting, and matching
+  cutoff snapshot before authorizing work.
+- Disable serializes on the installation lifecycle lock. It closes email access
+  and cancels scheduled/deferred/reminder work that has not crossed
+  `sendCommittedAt`. A committed attempt may finish, but disabled access blocks
+  reminder creation and no old cancelled backlog is revived after re-enable.
+- Click-and-collect remains fail-closed until ikas provides and a dev-store test
+  verifies an exact `READY_FOR_PICK_UP` transition timestamp. Digital and
+  no-shipment modes remain disabled as before.
+
+The additive migration is
+`20260716120000_add_review_email_eligibility_cutoff`. Production was verified
+read-only to contain no review-email lifecycle rows and not to have the V3.2
+batch migration applied. This checkpoint performs no production DB, AWS, SES,
+DNS, Vercel, or ikas mutation.
 
 2026-07-10 V5 correctness hardening after the nine-finding source audit:
 
@@ -1270,6 +1335,13 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-16: Added the disabled historical-cutoff and exact terminal-evidence
+  contract. Shipment eligibility now requires each delivered line's exact
+  `statusUpdatedAt` at or after a settings activation epoch, multi-line products
+  use the latest required timestamp, generic package/order updates cannot cross
+  the cutoff, disable cancels only pre-commit work, and click-and-collect stays
+  fail-closed pending provider timestamp evidence. Added an additive migration
+  and PostgreSQL 16/17 lifecycle proof; no live mutation occurred.
 - 2026-07-15: Implemented the disabled Multi-Product Batch / Envelope V3.2
   source contract. Added delivery-group batches, product-scoped requests,
   physical job/attempt separation, provider-neutral event transport,
