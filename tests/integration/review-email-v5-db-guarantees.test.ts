@@ -514,6 +514,10 @@ integrationDescribe('review email V5 database guarantees (PostgreSQL)', () => {
         recipientEmailFoldedHash: 'folded-exact-batch-evidence',
         recipientEmailHashKeyVersion: 1,
         recipientEmailEncrypted: 'encrypted-exact-batch-evidence',
+        consentSource: 'ikas_list_customer',
+        consentStatus: 'SUBSCRIBED',
+        consentStatusUpdatedAt: new Date('2026-07-02T09:59:00.000Z'),
+        consentCheckedAt: new Date('2026-07-02T10:00:00.000Z'),
       },
     });
     await prisma.reviewEmailUnsubscribeToken.create({
@@ -566,6 +570,10 @@ integrationDescribe('review email V5 database guarantees (PostgreSQL)', () => {
         recipientEmailHash: true,
         recipientEmailFoldedHash: true,
         recipientEmailEncrypted: true,
+        consentSource: true,
+        consentStatus: true,
+        consentStatusUpdatedAt: true,
+        consentCheckedAt: true,
         analyticsClosedAt: true,
         piiScrubbedAt: true,
       },
@@ -575,6 +583,10 @@ integrationDescribe('review email V5 database guarantees (PostgreSQL)', () => {
       recipientEmailHash: null,
       recipientEmailFoldedHash: null,
       recipientEmailEncrypted: null,
+      consentSource: null,
+      consentStatus: null,
+      consentStatusUpdatedAt: null,
+      consentCheckedAt: null,
       analyticsClosedAt: expect.any(Date),
       piiScrubbedAt: expect.any(Date),
     });

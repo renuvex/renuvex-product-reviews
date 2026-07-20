@@ -82,14 +82,22 @@ describe('review email eligibility timing', () => {
     expect(initialRequestExpiresAt(sendAfter)).toEqual(new Date('2026-08-30T10:00:00.000Z'));
   });
 
-  it('does not mark digital or notification-denied orders eligible in the first release', () => {
+  it('uses current delivery evidence instead of the historical order consent snapshot', () => {
     expect(evaluateLineEligibility(order({ shippingMethod: 'DIGITAL_DELIVERY' }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
-      eligible: false,
-      reason: 'shipping_method_disabled',
+      eligible: true,
     });
     expect(evaluateLineEligibility(order({ notificationsAccepted: false }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
+      eligible: true,
+    });
+  });
+
+  it('blocks failed payment but accepts waiting payment after delivery', () => {
+    expect(evaluateLineEligibility(order({ orderPaymentStatus: 'FAILED' }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
       eligible: false,
-      reason: 'notifications_not_accepted',
+      reason: 'payment_failed',
+    });
+    expect(evaluateLineEligibility(order({ orderPaymentStatus: 'WAITING' }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
+      eligible: true,
     });
   });
 
@@ -128,11 +136,11 @@ describe('review email eligibility timing', () => {
     });
     expect(evaluateLineEligibility(laterGenericUpdate, line({ status: 'SHIPPED' }), startsAt)).toMatchObject({
       eligible: false,
-      reason: 'shipment_not_delivered',
+      reason: 'line_not_delivered',
     });
   });
 
-  it('fails closed for click-and-collect without an exact ready transition timestamp', () => {
+  it('waits for actual click-and-collect delivery instead of ready-for-pick-up', () => {
     expect(evaluateLineEligibility(order({
       shippingMethod: 'CLICK_AND_COLLECT',
       orderPackageStatus: 'READY_FOR_PICK_UP',
@@ -144,7 +152,11 @@ describe('review email eligibility timing', () => {
       }],
     }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
       eligible: false,
-      reason: 'pickup_timestamp_unverified',
+      reason: 'package_not_delivered',
     });
+    expect(evaluateLineEligibility(order({
+      shippingMethod: 'CLICK_AND_COLLECT',
+      orderPackageStatus: 'DELIVERED',
+    }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({ eligible: true });
   });
 });

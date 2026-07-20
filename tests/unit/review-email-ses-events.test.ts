@@ -170,6 +170,57 @@ describe('SES event persistence', () => {
     expect(tx.reviewEmailJob.updateMany).toHaveBeenCalled();
   });
 
+  it('creates durable suppression and revokes access for a complaint', async () => {
+    const row = attempt();
+    const tx = txForAttempt(row);
+    const db = { $transaction: vi.fn(async (callback: (value: typeof tx) => unknown) => callback(tx)) };
+
+    await persistSesEmailEvent(db as never, message({
+      sesEventType: 'COMPLAINT',
+      bounceType: null,
+      bounceSubType: null,
+      complaintFeedbackType: 'abuse',
+    }), '{}');
+
+    expect(tx.reviewEmailSuppression.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ reason: 'complaint', status: 'active' }),
+    }));
+    expect(tx.reviewRequestToken.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'revoked', revocationReason: 'ses_complaint' }),
+    }));
+    expect(tx.reviewRequestSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'revoked', revocationReason: 'ses_complaint' }),
+    }));
+    expect(tx.reviewEmailJob.upsert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['REJECT', 'rejected', 'ses_reject'],
+    ['RENDERING_FAILURE', 'failed', 'ses_rendering_failure'],
+  ])('revokes current attempt access and creates no reminder for %s', async (eventType, status, reason) => {
+    const row = attempt();
+    const tx = txForAttempt(row);
+    const db = { $transaction: vi.fn(async (callback: (value: typeof tx) => unknown) => callback(tx)) };
+
+    await persistSesEmailEvent(db as never, message({
+      sesEventType: eventType,
+      bounceType: null,
+      bounceSubType: null,
+    }), '{}');
+
+    expect(tx.reviewEmailAttempt.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status, errorCode: reason }),
+    }));
+    expect(tx.reviewRequestToken.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'revoked', revocationReason: reason }),
+    }));
+    expect(tx.reviewRequestSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'revoked', revocationReason: reason }),
+    }));
+    expect(tx.reviewEmailSuppression.upsert).not.toHaveBeenCalled();
+    expect(tx.reviewEmailJob.upsert).not.toHaveBeenCalled();
+  });
+
   it('records late delivery evidence without reopening a bounced attempt or reminder', async () => {
     const bouncedAt = new Date('2026-07-10T11:45:00.000Z');
     const row = attempt({ status: 'bounced', bouncedAt });

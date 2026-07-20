@@ -475,7 +475,7 @@ model ReviewEmailSettings {
   enabled                   Boolean   @default(false)
   eligibilityStartsAt       DateTime?
   triggerMode               String    @default("delivery") @db.VarChar(32)
-  consentMode               String    @default("strict_notifications_accepted") @db.VarChar(64)
+  consentMode               String    @default("current_customer_subscription") @db.VarChar(64)
   firstDelayDays            Int       @default(1)
   reminderEnabled           Boolean   @default(true)
   reminderDelayDays         Int       @default(1)
@@ -620,6 +620,7 @@ model IkasOrderLineSnapshot {
   variantId           String?           @db.VarChar(128)
   lineStatus          String            @db.VarChar(64)
   lineStatusUpdatedAt DateTime?
+  firstDeliveredAt    DateTime?
   quantity            Float?
   productName         String?           @db.VarChar(512)
   variantName         String?           @db.VarChar(512)
@@ -657,7 +658,7 @@ model ReviewRequest {
   reminderDelayDaysSnapshot          Int                    @default(1)
   maxReminderCountSnapshot           Int                    @default(1)
   triggerModeSnapshot                String                 @default("delivery") @db.VarChar(32)
-  consentModeSnapshot                String                 @default("strict_notifications_accepted") @db.VarChar(64)
+  consentModeSnapshot                String                 @default("current_customer_subscription") @db.VarChar(64)
   notificationsAcceptedSnapshot      Boolean?
   templateVersionSnapshot            String                 @default("default_v1") @db.VarChar(64)
   localeSnapshot                     String                 @default("tr") @db.VarChar(16)
@@ -798,6 +799,10 @@ model ReviewEmailAttempt {
   locale                             String                        @default("tr") @db.VarChar(16)
   contentManifest                    Json?
   contentDigest                      String?                       @db.VarChar(64)
+  consentSource                      String?                       @db.VarChar(64)
+  consentStatus                      String?                       @db.VarChar(64)
+  consentStatusUpdatedAt             DateTime?
+  consentCheckedAt                   DateTime?
   status                             String                        @default("prepared") @db.VarChar(32)
   sendCommittedAt                    DateTime?
   sendInitiatedAt                    DateTime?

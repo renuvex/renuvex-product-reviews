@@ -67,6 +67,32 @@ describe('review email PII key ring', () => {
     expect(canonicalizeEmailIdentity('a..b@example.com')).toBeNull();
   });
 
+  it('keeps provider-specific dots and plus tags while folding only local-part casing', () => {
+    expect(canonicalizeEmailIdentity(' User.Name+tag@EXAMPLE.COM. ')).toEqual({
+      exactCanonical: 'User.Name+tag@example.com',
+      foldedCanonical: 'user.name+tag@example.com',
+      normalizationVersion: 2,
+    });
+    expect(canonicalizeEmailIdentity('UserName@example.com')?.foldedCanonical).not.toBe(
+      canonicalizeEmailIdentity('User.Name+tag@example.com')?.foldedCanonical,
+    );
+  });
+
+  it.each([
+    ['multiple separators', 'a@b@example.com'],
+    ['leading local dot', '.user@example.com'],
+    ['trailing local dot', 'user.@example.com'],
+    ['consecutive local dots', 'user..name@example.com'],
+    ['unicode local part', `m\u00fcsteri@example.com`],
+    ['missing domain dot', 'user@localhost'],
+    ['invalid domain label', 'user@-example.com'],
+    ['local part over 64 characters', `${'a'.repeat(65)}@example.com`],
+    ['domain label over 63 characters', `user@${'a'.repeat(64)}.com`],
+    ['raw input over 320 characters', `${'a'.repeat(64)}@${'b'.repeat(250)}.com`],
+  ])('rejects invalid canonical identity: %s', (_caseName, value) => {
+    expect(canonicalizeEmailIdentity(value)).toBeNull();
+  });
+
   it('fails closed when a ciphertext key version is removed too early', () => {
     const encryptedWithOldKey = encryptText('customer@example.com', keyRing(1, [1]));
 

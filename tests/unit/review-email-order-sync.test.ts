@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { syncIkasOrderForReviewRequests } from '@/lib/review-email/ikas-orders';
+import { buildReviewEmailDeliveryGroupKey } from '@/lib/review-email/batching';
 import { protectedEmail } from '@/lib/review-email/pii';
 
 function settings() {
@@ -9,7 +10,7 @@ function settings() {
     enabled: true,
     eligibilityStartsAt: new Date('2026-07-01T00:00:00.000Z'),
     triggerMode: 'delivery',
-    consentMode: 'strict_notifications_accepted',
+    consentMode: 'current_customer_subscription',
     firstDelayDays: 1,
     reminderEnabled: true,
     reminderDelayDays: 1,
@@ -105,7 +106,13 @@ describe('ikas order review request sync', () => {
       ikasOrderSnapshot: { upsert: vi.fn().mockResolvedValue({ id: 'order-snapshot-1' }) },
       reviewEmailSuppression: { findFirst: vi.fn().mockResolvedValue(null) },
       ikasOrderLineSnapshot: {
-        findMany: vi.fn().mockResolvedValue([{ id: 'line-snapshot-1', ikasOrderLineItemId: 'line-1', productId: 'product-1', eligibleAt: firstEligibleAt }]),
+        findMany: vi.fn().mockResolvedValue([{
+          id: 'line-snapshot-1',
+          ikasOrderLineItemId: 'line-1',
+          productId: 'product-1',
+          eligibleAt: firstEligibleAt,
+          firstDeliveredAt: firstEligibleAt,
+        }]),
         upsert: vi.fn().mockResolvedValue({ id: 'line-snapshot-1' }),
         update: vi.fn(),
       },
@@ -142,7 +149,10 @@ describe('ikas order review request sync', () => {
 
     expect(tx.ikasOrderLineSnapshot.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: expect.objectContaining({ eligibleAt: firstEligibleAt }),
+        update: expect.objectContaining({
+          eligibleAt: firstEligibleAt,
+          firstDeliveredAt: firstEligibleAt,
+        }),
       }),
     );
     expect(tx.reviewEmailSuppression.findFirst).toHaveBeenCalledWith({
@@ -162,6 +172,7 @@ describe('ikas order review request sync', () => {
           firstDelayDaysSnapshot: 1,
           reminderDelayDaysSnapshot: 1,
           maxReminderCountSnapshot: 1,
+          consentModeSnapshot: 'current_customer_subscription',
           notificationsAcceptedSnapshot: true,
           templateVersionSnapshot: 'default_v1',
           localeSnapshot: 'tr',
@@ -174,6 +185,63 @@ describe('ikas order review request sync', () => {
     expect(tx.reviewEmailBatch.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         eligibilityStartsAtSnapshot: new Date('2026-07-01T00:00:00.000Z'),
+      }),
+    }));
+  });
+
+  it('keeps immutable first delivery evidence when a later refund overwrites line statusUpdatedAt', async () => {
+    const firstDeliveredAt = new Date('2026-07-05T12:00:00.000Z');
+    const refundUpdatedAt = new Date('2026-07-12T12:00:00.000Z');
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(1),
+      $queryRaw: vi.fn().mockResolvedValue([{
+        storeId: 'store-1', authorizedAppId: 'app-1', status: 'active', generation: 1,
+      }]),
+      reviewEmailSettings: { findUnique: vi.fn().mockResolvedValue(settings()) },
+      reviewEmailSubjectBlock: { findFirst: vi.fn().mockResolvedValue(null) },
+      ikasOrderSnapshot: { upsert: vi.fn().mockResolvedValue({ id: 'order-snapshot-1' }) },
+      reviewEmailSuppression: { findFirst: vi.fn().mockResolvedValue(null) },
+      ikasOrderLineSnapshot: {
+        findMany: vi.fn().mockResolvedValue([{
+          id: 'line-snapshot-1',
+          ikasOrderLineItemId: 'line-1',
+          productId: 'product-1',
+          eligibleAt: firstDeliveredAt,
+          firstDeliveredAt,
+        }]),
+        upsert: vi.fn().mockResolvedValue({ id: 'line-snapshot-1' }),
+        update: vi.fn(),
+      },
+      reviewRequest: { findMany: vi.fn().mockResolvedValue([]) },
+      reviewEmailBatch: { findMany: vi.fn().mockResolvedValue([]) },
+      reviewRequestToken: { updateMany: vi.fn() },
+      reviewRequestSession: { updateMany: vi.fn() },
+    };
+    const db = { $transaction: vi.fn(async (callback: (value: typeof tx) => unknown) => callback(tx)) };
+    const refundedOrder = order([{
+      id: 'line-1',
+      deleted: false,
+      quantity: 1,
+      status: 'REFUND_REQUESTED',
+      statusUpdatedAt: refundUpdatedAt.getTime(),
+      variant: { id: 'variant-1', name: 'Default', productId: 'product-1' },
+    }]);
+    refundedOrder.orderPackages[0]!.orderPackageFulfillStatus = 'REFUND_REQUESTED';
+
+    await syncIkasOrderForReviewRequests(db as never, {
+      storeId: 'store-1',
+      authorizedAppId: 'app-1',
+      order: refundedOrder as never,
+      now: refundUpdatedAt,
+    });
+
+    expect(tx.ikasOrderLineSnapshot.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      update: expect.objectContaining({
+        lineStatus: 'REFUND_REQUESTED',
+        lineStatusUpdatedAt: refundUpdatedAt,
+        firstDeliveredAt,
+        eligibleAt: null,
+        ineligibleReason: 'line_refund_requested',
       }),
     }));
   });
@@ -364,14 +432,14 @@ describe('ikas order review request sync', () => {
     });
   });
 
-  it('keeps late package members in a frozen order fallback without creating a second initial email', async () => {
+  it('keeps late package members in a frozen package batch without creating a second initial email', async () => {
     const frozenAt = new Date('2026-07-06T12:00:00.000Z');
-    const fallbackBatch = {
+    const frozenBatch = {
       id: 'batch-fallback',
       storeId: 'store-1',
       installationGeneration: 1,
-      deliveryGroupKey: 'order:complete',
-      deliveryGroupMode: 'order_complete',
+      deliveryGroupKey: buildReviewEmailDeliveryGroupKey(['line-1']),
+      deliveryGroupMode: 'package',
       batchFingerprint: 'rb1:1:fallback',
       fingerprintKeyVersion: 1,
       groupingFrozenAt: frozenAt,
@@ -394,6 +462,7 @@ describe('ikas order review request sync', () => {
           ikasOrderLineItemId: 'line-1',
           productId: 'product-1',
           eligibleAt: new Date('2026-07-05T12:00:00.000Z'),
+          firstDeliveredAt: new Date('2026-07-05T12:00:00.000Z'),
         }]),
         upsert: vi.fn().mockImplementation(async ({ create }) => ({ id: `snapshot-${create.ikasOrderLineItemId}` })),
         update: vi.fn(),
@@ -418,10 +487,10 @@ describe('ikas order review request sync', () => {
         create: vi.fn().mockResolvedValue({ id: 'receipt-2', analyticsClosedAt: null }),
       },
       reviewEmailBatch: {
-        findMany: vi.fn().mockResolvedValue([fallbackBatch]),
+        findMany: vi.fn().mockResolvedValue([frozenBatch]),
         create: vi.fn(),
         update: vi.fn().mockImplementation(async ({ data }) => ({
-          ...fallbackBatch,
+          ...frozenBatch,
           membershipVersion: data.membershipVersion ? 2 : 1,
         })),
         updateMany: vi.fn(),

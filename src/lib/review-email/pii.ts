@@ -154,7 +154,7 @@ export type ReviewEmailBatchFingerprintInput = {
   storeId: string;
   installationGeneration: number;
   ikasOrderId: string;
-  groupingMode: 'package' | 'order_complete';
+  groupingMode: 'package';
   deliveryGroupKey: string;
 };
 

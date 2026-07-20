@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { CLOSED_ORDER_LINE_STATUSES, CLOSED_ORDER_PACKAGE_STATUSES } from '@/lib/review-email/constants';
+import { canonicalizeJson } from '@/lib/review-email/canonical-json';
 import {
   evaluateLineEligibility,
   type NormalizedOrder,
@@ -16,7 +18,7 @@ export type ReviewEmailBatchMember = {
 
 export type ReviewEmailDeliveryGroup = {
   deliveryGroupKey: string;
-  groupingMode: 'package' | 'order_complete';
+  groupingMode: 'package';
   eligibleAt: Date;
   members: ReviewEmailBatchMember[];
 };
@@ -63,16 +65,13 @@ function activePackagesForLine(order: NormalizedOrder, lineId: string): Normaliz
     .sort((left, right) => left.id.localeCompare(right.id));
 }
 
-function lastDeliveredPackage(packages: NormalizedOrderPackage[]): NormalizedOrderPackage {
-  return [...packages].sort((left, right) => {
-    const time = (right.updatedAt?.getTime() ?? 0) - (left.updatedAt?.getTime() ?? 0);
-    return time || right.id.localeCompare(left.id);
-  })[0]!;
-}
-
-function allShipmentLinesTerminalDelivered(order: NormalizedOrder): boolean {
-  const active = order.lines.filter((line) => !CLOSED_ORDER_LINE_STATUSES.has(line.status));
-  return active.length > 0 && active.every((line) => line.status === 'DELIVERED') && order.orderPackageStatus === 'DELIVERED';
+export function buildReviewEmailDeliveryGroupKey(orderLineItemIds: readonly string[]): string {
+  const sortedLineIds = [...new Set(orderLineItemIds)].sort();
+  const canonical = canonicalizeJson({
+    schemaVersion: 1,
+    orderLineItemIds: sortedLineIds,
+  });
+  return `package-lines-v1:${createHash('sha256').update(canonical, 'utf8').digest('hex')}`;
 }
 
 export function buildReviewEmailDeliveryGroups(
@@ -84,17 +83,12 @@ export function buildReviewEmailDeliveryGroups(
   },
 ): ReviewEmailGroupingResult {
   const productReasons = new Map<string, string>();
-  if (order.shippingMethod === 'DIGITAL_DELIVERY' || order.shippingMethod === 'NO_SHIPMENT') {
-    for (const line of order.lines) productReasons.set(line.productId, 'shipping_method_disabled');
-    return { groups: [], productReasons };
-  }
-  if (order.shippingMethod !== 'SHIPMENT' && order.shippingMethod !== 'CLICK_AND_COLLECT') {
+  if (!['SHIPMENT', 'CLICK_AND_COLLECT', 'DIGITAL_DELIVERY', 'NO_SHIPMENT'].includes(order.shippingMethod)) {
     for (const line of order.lines) productReasons.set(line.productId, 'unsupported_shipping_method');
     return { groups: [], productReasons };
   }
-  if (!order.customerEmailHash || order.notificationsAccepted !== true) {
-    const reason = order.customerEmailHash ? 'notifications_not_accepted' : 'missing_customer_email';
-    for (const line of order.lines) productReasons.set(line.productId, reason);
+  if (!order.customerEmailHash) {
+    for (const line of order.lines) productReasons.set(line.productId, 'missing_customer_email');
     return { groups: [], productReasons };
   }
 
@@ -106,10 +100,7 @@ export function buildReviewEmailDeliveryGroups(
     productLines.set(line.productId, entries);
   });
 
-  const groupedMembers = new Map<string, { groupingMode: 'package' | 'order_complete'; members: ReviewEmailBatchMember[] }>();
-  const safeOrderFallback = order.shippingMethod === 'SHIPMENT'
-    ? allShipmentLinesTerminalDelivered(order)
-    : order.orderPackageStatus === 'READY_FOR_PICK_UP';
+  const groupedMembers = new Map<string, { groupingMode: 'package'; members: ReviewEmailBatchMember[] }>();
 
   for (const [productId, entries] of productLines) {
     const packageSets = entries.map(({ line }) => activePackagesForLine(order, line.id));
@@ -118,44 +109,28 @@ export function buildReviewEmailDeliveryGroups(
       continue;
     }
 
-    const packages = [...new Map(packageSets.flat().map((pkg) => [pkg.id, pkg])).values()];
-    const expectedStatus = order.shippingMethod === 'SHIPMENT' ? 'DELIVERED' : 'READY_FOR_PICK_UP';
-    const allLinesReady = entries.every(({ line }, index) => {
-      const pkg = packageSets[index]?.[0];
-      return order.shippingMethod === 'SHIPMENT'
-        ? line.status === 'DELIVERED' && (!pkg || pkg.status === expectedStatus)
-        : pkg?.status === expectedStatus || order.orderPackageStatus === expectedStatus;
-    });
-    if (!allLinesReady) {
-      productReasons.set(productId, order.shippingMethod === 'SHIPMENT' ? 'shipment_not_delivered' : 'pickup_not_ready');
-      continue;
-    }
-
-    let deliveryGroupKey: string;
-    let groupingMode: 'package' | 'order_complete';
-    if (packages.length > 0 && packageSets.every((set) => set.length === 1)) {
-      const owner = lastDeliveredPackage(packages);
-      deliveryGroupKey = `package:${owner.id}`;
-      groupingMode = 'package';
-    } else if (packages.length === 0 && safeOrderFallback) {
-      deliveryGroupKey = 'order:complete';
-      groupingMode = 'order_complete';
-    } else {
+    if (packageSets.some((packages) => packages.length === 0)) {
       productReasons.set(productId, 'package_evidence_incomplete');
       continue;
     }
 
     const eligibility = entries.map(({ line }) => {
+      const persistedEvidence = input.eligibleAtByLineId?.has(line.id)
+        ? input.eligibleAtByLineId.get(line.id) ?? null
+        : line.statusUpdatedAt;
+      const evaluated = evaluateLineEligibility(
+        order,
+        { ...line, statusUpdatedAt: persistedEvidence },
+        input.eligibilityStartsAt,
+      );
       if (input.eligibleAtByLineId?.has(line.id)) {
-        const eligibleAt = input.eligibleAtByLineId.get(line.id) ?? null;
         return {
-          eligibleAt: eligibleAt && eligibleAt >= input.eligibilityStartsAt ? eligibleAt : null,
-          reason: input.ineligibleReasonByLineId?.get(line.id) ?? (
-            eligibleAt && eligibleAt < input.eligibilityStartsAt ? 'delivery_before_email_activation' : null
-          ),
+          eligibleAt: evaluated.eligible ? evaluated.eligibleAt : null,
+          reason: evaluated.eligible
+            ? null
+            : input.ineligibleReasonByLineId?.get(line.id) ?? evaluated.reason,
         };
       }
-      const evaluated = evaluateLineEligibility(order, line, input.eligibilityStartsAt);
       return evaluated.eligible
         ? { eligibleAt: evaluated.eligibleAt, reason: null }
         : { eligibleAt: null, reason: evaluated.reason };
@@ -165,9 +140,21 @@ export function buildReviewEmailDeliveryGroups(
       productReasons.set(productId, ineligible.reason ?? 'missing_exact_delivery_timestamp');
       continue;
     }
+
     const eligibleAt = eligibility
       .map((entry) => entry.eligibleAt!)
       .sort((left, right) => right.getTime() - left.getTime())[0]!;
+    const owner = entries
+      .map((entry, index) => ({
+        package: packageSets[index]![0]!,
+        eligibleAt: eligibility[index]!.eligibleAt!,
+      }))
+      .sort((left, right) => (
+        right.eligibleAt.getTime() - left.eligibleAt.getTime() ||
+        buildReviewEmailDeliveryGroupKey(left.package.orderLineItemIds)
+          .localeCompare(buildReviewEmailDeliveryGroupKey(right.package.orderLineItemIds))
+      ))[0]!.package;
+    const deliveryGroupKey = buildReviewEmailDeliveryGroupKey(owner.orderLineItemIds);
     const representative = [...entries].sort((left, right) => left.orderPosition - right.orderPosition || left.line.id.localeCompare(right.line.id))[0]!;
     const member: ReviewEmailBatchMember = {
       productId,
@@ -176,7 +163,7 @@ export function buildReviewEmailDeliveryGroups(
       eligibleAt,
       position: representative.orderPosition,
     };
-    const group = groupedMembers.get(deliveryGroupKey) ?? { groupingMode, members: [] };
+    const group = groupedMembers.get(deliveryGroupKey) ?? { groupingMode: 'package' as const, members: [] };
     group.members.push(member);
     groupedMembers.set(deliveryGroupKey, group);
   }

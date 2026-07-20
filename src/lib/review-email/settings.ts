@@ -18,7 +18,7 @@ type SettingsTransactionDb = Pick<PrismaClient, '$transaction'>;
 export type ReviewEmailSettingsWrite = {
   enabled: boolean;
   triggerMode: 'delivery';
-  consentMode: 'strict_notifications_accepted';
+  consentMode: 'current_customer_subscription';
   firstDelayDays: number;
   reminderEnabled: boolean;
   reminderDelayDays: number;
@@ -38,7 +38,7 @@ export type EffectiveReviewEmailSettings = {
   enabled: boolean;
   eligibilityStartsAt: Date | null;
   triggerMode: 'delivery';
-  consentMode: 'strict_notifications_accepted';
+  consentMode: 'current_customer_subscription';
   firstDelayDays: number;
   reminderEnabled: boolean;
   reminderDelayDays: number;
@@ -103,7 +103,7 @@ function defaultSettings(storeId: string): EffectiveReviewEmailSettings {
     enabled: false,
     eligibilityStartsAt: null,
     triggerMode: 'delivery',
-    consentMode: 'strict_notifications_accepted',
+    consentMode: 'current_customer_subscription',
     firstDelayDays: DEFAULT_FIRST_DELAY_DAYS,
     reminderEnabled: true,
     reminderDelayDays: DEFAULT_REMINDER_DELAY_DAYS,
@@ -152,7 +152,7 @@ function toEffective(storeId: string, row: Awaited<ReturnType<SettingsDb['review
     enabled: row.enabled,
     eligibilityStartsAt: row.eligibilityStartsAt,
     triggerMode: row.triggerMode === 'delivery' ? 'delivery' : 'delivery',
-    consentMode: row.consentMode === 'strict_notifications_accepted' ? 'strict_notifications_accepted' : 'strict_notifications_accepted',
+    consentMode: 'current_customer_subscription',
     firstDelayDays: row.firstDelayDays,
     reminderEnabled: row.reminderEnabled,
     reminderDelayDays: row.reminderDelayDays,
@@ -191,10 +191,10 @@ export function buildReviewEmailSettingsWrite(input: unknown): ReviewEmailSettin
 
   const triggerMode: 'delivery' =
     typeof body.triggerMode === 'string' && REVIEW_EMAIL_TRIGGER_MODES.includes(body.triggerMode as 'delivery') ? 'delivery' : 'delivery';
-  const consentMode: 'strict_notifications_accepted' =
-    typeof body.consentMode === 'string' && REVIEW_EMAIL_CONSENT_MODES.includes(body.consentMode as 'strict_notifications_accepted')
-      ? 'strict_notifications_accepted'
-      : 'strict_notifications_accepted';
+  const consentMode: 'current_customer_subscription' =
+    typeof body.consentMode === 'string' && REVIEW_EMAIL_CONSENT_MODES.includes(body.consentMode as 'current_customer_subscription')
+      ? 'current_customer_subscription'
+      : 'current_customer_subscription';
   const firstDelayDays = boundedInt(
     body.firstDelayDays,
     DEFAULT_FIRST_DELAY_DAYS,
@@ -258,6 +258,13 @@ export function buildReviewEmailSettingsWrite(input: unknown): ReviewEmailSettin
     locale: locale ?? 'tr',
     templateVersion: templateVersion ?? 'default_v1',
   };
+}
+
+const REQUIRED_REVIEW_EMAIL_IKAS_SCOPES = ['read_orders', 'read_customers'] as const;
+
+export function missingReviewEmailIkasScopes(scope: string | null | undefined): string[] {
+  const granted = new Set((scope ?? '').split(/[\s,]+/u).map((value) => value.trim()).filter(Boolean));
+  return REQUIRED_REVIEW_EMAIL_IKAS_SCOPES.filter((required) => !granted.has(required));
 }
 
 export type ReviewEmailWebhookState = {

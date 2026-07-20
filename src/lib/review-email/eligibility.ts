@@ -59,15 +59,14 @@ export type LineEligibility =
       packageStatus: string | null;
     };
 
-function packageForLine(order: NormalizedOrder, lineId: string): NormalizedOrderPackage | null {
-  return order.packages.find((pkg) => pkg.orderLineItemIds.includes(lineId)) ?? null;
+function packagesForLine(order: NormalizedOrder, lineId: string): NormalizedOrderPackage[] {
+  return order.packages
+    .filter((pkg) => pkg.orderLineItemIds.includes(lineId))
+    .sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function closedReason(order: NormalizedOrder, line: NormalizedOrderLine): string | null {
   if (CLOSED_ORDER_LINE_STATUSES.has(line.status)) return `line_${line.status.toLowerCase()}`;
-  if (order.orderPackageStatus && CLOSED_ORDER_PACKAGE_STATUSES.has(order.orderPackageStatus)) {
-    return `order_${order.orderPackageStatus.toLowerCase()}`;
-  }
   if (order.orderStatus === 'CANCELLED' || order.orderStatus === 'REFUNDED') {
     return `order_${order.orderStatus.toLowerCase()}`;
   }
@@ -79,36 +78,42 @@ export function evaluateLineEligibility(
   line: NormalizedOrderLine,
   eligibilityStartsAt: Date,
 ): LineEligibility {
-  const pkg = packageForLine(order, line.id);
+  const packages = packagesForLine(order, line.id);
+  const activePackages = packages.filter((pkg) => !CLOSED_ORDER_PACKAGE_STATUSES.has(pkg.status));
+  const pkg = activePackages.length === 1 ? activePackages[0]! : packages[0] ?? null;
   const packageId = pkg?.id ?? null;
   const packageStatus = pkg?.status ?? null;
   const reason = closedReason(order, line);
   if (reason) return { eligible: false, reason, packageId, packageStatus };
 
   if (!order.customerEmailHash) return { eligible: false, reason: 'missing_customer_email', packageId, packageStatus };
-  if (order.notificationsAccepted !== true) return { eligible: false, reason: 'notifications_not_accepted', packageId, packageStatus };
-
-  if (order.shippingMethod === 'SHIPMENT') {
-    if (line.status !== 'DELIVERED') return { eligible: false, reason: 'shipment_not_delivered', packageId, packageStatus };
-    if (!line.statusUpdatedAt) return { eligible: false, reason: 'missing_exact_delivery_timestamp', packageId, packageStatus };
-    if (line.statusUpdatedAt < eligibilityStartsAt) {
-      return { eligible: false, reason: 'delivery_before_email_activation', packageId, packageStatus };
-    }
-    return { eligible: true, eligibleAt: line.statusUpdatedAt, packageId, packageStatus };
+  if (order.orderPaymentStatus === 'FAILED') {
+    return { eligible: false, reason: 'payment_failed', packageId, packageStatus };
   }
 
-  if (order.shippingMethod === 'CLICK_AND_COLLECT') {
-    if (pkg?.status === 'READY_FOR_PICK_UP' || order.orderPackageStatus === 'READY_FOR_PICK_UP') {
-      return { eligible: false, reason: 'pickup_timestamp_unverified', packageId, packageStatus };
-    }
-    return { eligible: false, reason: 'pickup_not_ready', packageId, packageStatus };
+  if (!['SHIPMENT', 'CLICK_AND_COLLECT', 'DIGITAL_DELIVERY', 'NO_SHIPMENT'].includes(order.shippingMethod)) {
+    return { eligible: false, reason: 'unsupported_shipping_method', packageId, packageStatus };
   }
 
-  if (order.shippingMethod === 'DIGITAL_DELIVERY' || order.shippingMethod === 'NO_SHIPMENT') {
-    return { eligible: false, reason: 'shipping_method_disabled', packageId, packageStatus };
+  if (activePackages.length > 1) {
+    return { eligible: false, reason: 'ambiguous_package_membership', packageId, packageStatus };
   }
-
-  return { eligible: false, reason: 'unsupported_shipping_method', packageId, packageStatus };
+  if (activePackages.length === 0) {
+    const closedPackage = packages.find((candidate) => CLOSED_ORDER_PACKAGE_STATUSES.has(candidate.status));
+    return {
+      eligible: false,
+      reason: closedPackage ? `package_${closedPackage.status.toLowerCase()}` : 'package_evidence_incomplete',
+      packageId: closedPackage?.id ?? null,
+      packageStatus: closedPackage?.status ?? null,
+    };
+  }
+  if (line.status !== 'DELIVERED') return { eligible: false, reason: 'line_not_delivered', packageId, packageStatus };
+  if (pkg?.status !== 'DELIVERED') return { eligible: false, reason: 'package_not_delivered', packageId, packageStatus };
+  if (!line.statusUpdatedAt) return { eligible: false, reason: 'missing_exact_delivery_timestamp', packageId, packageStatus };
+  if (line.statusUpdatedAt < eligibilityStartsAt) {
+    return { eligible: false, reason: 'delivery_before_email_activation', packageId, packageStatus };
+  }
+  return { eligible: true, eligibleAt: line.statusUpdatedAt, packageId, packageStatus };
 }
 
 export function firstRequestSendAfter(eligibleAt: Date, settings: Pick<EffectiveReviewEmailSettings, 'firstDelayDays'>): Date {

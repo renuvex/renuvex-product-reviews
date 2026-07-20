@@ -44,7 +44,7 @@ function settingsWrite(enabled: boolean): ReviewEmailSettingsWrite {
   return {
     enabled,
     triggerMode: 'delivery',
-    consentMode: 'strict_notifications_accepted',
+    consentMode: 'current_customer_subscription',
     firstDelayDays: 1,
     reminderEnabled: true,
     reminderDelayDays: 1,

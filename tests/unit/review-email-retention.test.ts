@@ -113,6 +113,15 @@ describe('review email bounded retention', () => {
       where: { batchId: 'batch-1' },
       data: { exactSubjectHash: null },
     });
+    expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['attempt-1'] } },
+      data: expect.objectContaining({
+        consentSource: null,
+        consentStatus: null,
+        consentStatusUpdatedAt: null,
+        consentCheckedAt: null,
+      }),
+    });
     const update = tx.reviewEmailBatch.update.mock.calls[0]?.[0];
     expect(update.data).toMatchObject({
       recipientEmailHash: null,

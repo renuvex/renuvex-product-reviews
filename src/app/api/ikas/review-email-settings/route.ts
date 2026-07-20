@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import {
   buildReviewEmailSettingsWrite,
   getEffectiveReviewEmailSettings,
+  missingReviewEmailIkasScopes,
   persistReviewEmailSettingsForInstallation,
   ReviewEmailSettingsError,
   serializeReviewEmailSettings,
@@ -36,6 +37,9 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const data = buildReviewEmailSettingsWrite(body);
     if (data.enabled) {
+      if (missingReviewEmailIkasScopes(authToken.scope).length > 0) {
+        throw new ReviewEmailSettingsError('review_email_reauthorization_required', undefined, 409);
+      }
       try {
         await registerOrderWebhooks(getIkas(authToken), buildOrderWebhookEndpoint(request.headers.get('host') ?? ''));
       } catch {

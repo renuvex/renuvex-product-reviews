@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-16
-last_verified: 2026-07-16
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - testing
@@ -36,9 +36,18 @@ source_files:
   - "tests/widget-harness.ts"
   - "tests/review-center-browser.spec.ts"
   - "tests/integration/review-email-batch-db-guarantees.test.ts"
+  - "tests/unit/review-email-batch-jobs.test.ts"
+  - "tests/unit/review-email-maintenance.test.ts"
+  - "tests/unit/review-email-pii.test.ts"
+  - "tests/unit/review-email-ses-events.test.ts"
   - "tests/unit/review-email-eligibility.test.ts"
   - "tests/unit/review-email-batching.test.ts"
   - "tests/unit/review-email-settings.test.ts"
+  - "tests/unit/review-email-order-sync.test.ts"
+  - "tests/unit/review-email-ikas-send-preflight.test.ts"
+  - "tests/unit/review-email-retention.test.ts"
+  - "tests/unit/review-email-batch-schema.test.ts"
+  - "tests/unit/review-email-tokens.test.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
@@ -156,6 +165,25 @@ attempt remains non-resendable, and re-enable establishes a new cutoff without
 reviving cancelled backlog. Clean PostgreSQL 16 and 17 migration/application
 runs are required for this package.
 
+Review-email contract-hardening coverage also pins identity and ambiguous-send
+behavior. Canonicalization tests preserve local-part case for exact identity,
+lowercase only the folded policy identity, retain Gmail dots and plus tags, and
+reject malformed/unsupported addresses. Lifecycle-owner tests prove the
+token/session revocation matrix rather than duplicating it in a mock-only meta
+test: intermediate item actions retain siblings; terminal batch, recipient
+change, DSR, uninstall, and provider failure close the required access; post-send
+disable stops future email while retaining an existing review link; and expired
+credentials never revive. Maintenance prioritizes persisted
+`confirmationDeadlineAt`, uses provider-call timestamps for legacy null rows,
+and keeps `outcome_unknown` terminal and non-resendable while allowing late
+signed evidence.
+
+2026-07-16 local evidence: the full unit suite passed `556/556`; the
+review-email PostgreSQL integration suite passed `26/26` after all 58 migrations
+on disposable PostgreSQL 16 and independently `26/26` on PostgreSQL 17. Prisma
+generation, TypeScript, ESLint, and the Next.js webpack production build passed.
+These are local disposable-database results, not production migration evidence.
+
 `pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
 
 The media config uses Playwright's official desktop and device descriptors for Desktop Chrome, Desktop Firefox, Desktop Safari, Pixel 7, and iPhone 15. It keeps one active worker per Playwright project to avoid browser-engine memory contention and uses isolated tests with screenshots on failure. Trace recording follows Playwright's CI guidance: local media runs keep tracing off, while CI records traces only on the first retry of a failed test. Local media scripts are single-project entry points (`test:widget-media:*`), with `pnpm test:widget-media` kept as the fast Chromium desktop default. GitHub Actions does not run a local full-matrix wrapper; the PR workflow runs the three highest-value shopper targets as separate matrix jobs, and the scheduled `Media Cross-Browser` workflow runs all five projects daily as separate matrix jobs.
@@ -266,6 +294,14 @@ The suite uses risk-based pairwise coverage instead of a full cartesian matrix. 
 
 ## What Is Not Automated Yet
 - Real authenticated ikas dashboard iframe flows are not in CI. They still need manual-auth smoke or a future test-auth harness.
+- Manual-order source and shipment evidence are partially proven on a
+  development store. A read-only query verified `createdBy=ADMIN`, physical
+  shipment, exact package-to-line membership, delivered status, and a non-null
+  line `statusUpdatedAt`. The 2026-07-20 ikas answer confirms that the order
+  `notificationsAccepted` value is only a historical snapshot; current
+  `listCustomer.subscriptionStatus` is the send-time authorization source.
+  Unit tests cover that contract, but a real outbound manual-order email remains
+  a future SES sandbox/provider acceptance test because no sender is deployed.
 - Admin widget editor skeleton/error/retry screens are not in CI because the current admin preview harness mounts the preview runtime, not the authenticated admin page.
 - Admin widget editor iframe-preview loading overlays are not in CI for the same reason; reducer behavior is covered by unit tests and visual behavior needs manual-auth smoke or a future admin editor harness.
 - Live dev-store post-deploy smoke is not replaced by CI. Runtime-affecting widget changes should still be checked on the dev storefront after deploy.

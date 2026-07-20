@@ -205,6 +205,30 @@ export interface ListOrdersForReviewRequestsQuery {
   listOrder: ListOrdersForReviewRequestsQueryData;
 }
 
+export type ListCustomersForReviewEmailConsentQueryVariables = {
+  pagination?: PaginationInput;
+  id?: StringFilterInput;
+}
+
+export type ListCustomersForReviewEmailConsentQueryData = {
+  count: number;
+  hasNext: boolean;
+  limit: number;
+  page: number;
+  data: Array<{
+  id: string;
+  email?: string;
+  deleted: boolean;
+  subscriptionStatus?: CustomerEmailSubscriptionStatusesEnum;
+  subscriptionStatusUpdatedAt?: number;
+  updatedAt?: number;
+}>;
+}
+
+export interface ListCustomersForReviewEmailConsentQuery {
+  listCustomer: ListCustomersForReviewEmailConsentQueryData;
+}
+
 export type SaveProductWebhooksMutationVariables = {
   input: WebhookInput;
 }
@@ -364,6 +388,28 @@ export class GeneratedQueries {
   }
 `;
     return this.client.query<Partial<ListOrdersForReviewRequestsQuery>>({ query, variables });
+  }
+
+  async listCustomersForReviewEmailConsent(variables: ListCustomersForReviewEmailConsentQueryVariables): Promise<APIResult<Partial<ListCustomersForReviewEmailConsentQuery>>> {
+    const query = `
+  query listCustomersForReviewEmailConsent($pagination: PaginationInput, $id: StringFilterInput) {
+    listCustomer(pagination: $pagination, id: $id) {
+      count
+      hasNext
+      limit
+      page
+      data {
+        id
+        email
+        deleted
+        subscriptionStatus
+        subscriptionStatusUpdatedAt
+        updatedAt
+      }
+    }
+  }
+`;
+    return this.client.query<Partial<ListCustomersForReviewEmailConsentQuery>>({ query, variables });
   }
 }
 

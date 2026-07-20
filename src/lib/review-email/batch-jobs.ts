@@ -4,6 +4,7 @@ import {
   DEFAULT_TOKEN_EXPIRES_DAYS,
   REVIEW_EMAIL_CATEGORY,
   REVIEW_EMAIL_CONFIRMATION_TIMEOUT_HOURS,
+  REVIEW_EMAIL_CONSENT_EVIDENCE_TTL_SECONDS,
   REVIEW_EMAIL_INITIAL_COOLDOWN_DAYS,
   REVIEW_EMAIL_MAX_MANIFEST_ITEMS,
   REVIEW_EMAIL_MIN_PHYSICAL_GAP_HOURS,
@@ -80,6 +81,27 @@ export type ProviderNeutralReviewEmailEnvelope = {
   manifest: ReviewEmailAttemptManifest;
 };
 
+export type ReviewEmailConsentEvidence = {
+  source: 'ikas_list_customer';
+  status: 'SUBSCRIBED';
+  statusUpdatedAt: Date | null;
+  checkedAt: Date;
+  storeId: string;
+  batchId: string;
+  orderSnapshotId: string;
+  recipientVersion: number;
+  recipientExactLookupHashes: readonly string[];
+};
+
+export type ReviewEmailConsentDenialReason =
+  | 'customer_deleted'
+  | 'customer_missing'
+  | 'customer_not_subscribed'
+  | 'customer_subscription_pending'
+  | 'customer_subscription_unknown'
+  | 'order_missing'
+  | 'recipient_mismatch';
+
 export class ReviewEmailBatchJobError extends Error {
   constructor(public readonly code: string, public readonly retryable = false) {
     super(code);
@@ -129,6 +151,17 @@ function maxDate(...values: Array<Date | null | undefined>): Date | null {
   return values.filter((value): value is Date => Boolean(value)).sort((left, right) => right.getTime() - left.getTime())[0] ?? null;
 }
 
+function confirmationDeadlineForAttempt(attempt: {
+  confirmationDeadlineAt?: Date | null;
+  sendInitiatedAt?: Date | null;
+  sendCommittedAt?: Date | null;
+}): Date {
+  if (attempt.confirmationDeadlineAt) return attempt.confirmationDeadlineAt;
+  const providerCallBoundary = attempt.sendInitiatedAt ?? attempt.sendCommittedAt;
+  if (!providerCallBoundary) throw new ReviewEmailBatchJobError('review_email_attempt_not_committed');
+  return new Date(providerCallBoundary.getTime() + REVIEW_EMAIL_CONFIRMATION_TIMEOUT_HOURS * 60 * 60 * 1000);
+}
+
 function batchJobFailure(code: string, retryable = false): BatchJobFailureOutcome {
   return { state: 'error', code, retryable };
 }
@@ -145,6 +178,35 @@ function cutoffAllowsBatch(
     settings.eligibilityStartsAt.getTime() === batch.eligibilityStartsAtSnapshot.getTime() &&
     batch.eligibleAt >= batch.eligibilityStartsAtSnapshot
   );
+}
+
+function consentEvidenceFailure(
+  evidence: ReviewEmailConsentEvidence,
+  input: {
+    now: Date;
+    storeId: string;
+    batchId: string;
+    orderSnapshotId: string | null;
+    recipientVersion: number;
+    recipientEmailHash: string | null;
+  },
+): 'review_email_consent_evidence_invalid' | 'review_email_consent_evidence_stale' | null {
+  if (
+    evidence.source !== 'ikas_list_customer' ||
+    evidence.status !== 'SUBSCRIBED' ||
+    evidence.storeId !== input.storeId ||
+    evidence.batchId !== input.batchId ||
+    evidence.orderSnapshotId !== input.orderSnapshotId ||
+    evidence.recipientVersion !== input.recipientVersion ||
+    !input.recipientEmailHash ||
+    !evidence.recipientExactLookupHashes.includes(input.recipientEmailHash)
+  ) {
+    return 'review_email_consent_evidence_invalid';
+  }
+  const ageMs = input.now.getTime() - evidence.checkedAt.getTime();
+  return ageMs < 0 || ageMs > REVIEW_EMAIL_CONSENT_EVIDENCE_TTL_SECONDS * 1000
+    ? 'review_email_consent_evidence_stale'
+    : null;
 }
 
 async function abandonPreparedBatchAttempt(
@@ -227,10 +289,89 @@ function requestIsEligibleForAttempt(status: string, kind: 'request' | 'reminder
   return kind === 'request' ? ['scheduled', 'error'].includes(status) : ['sent', 'sent_unknown', 'error'].includes(status);
 }
 
+export async function applyReviewEmailConsentDenial(
+  db: BatchJobDb,
+  jobId: string,
+  input: {
+    reason: ReviewEmailConsentDenialReason;
+    revokeAccess: boolean;
+    now?: Date;
+  },
+): Promise<void> {
+  const now = input.now ?? new Date();
+  await db.$transaction(async (tx) => {
+    const job = await tx.reviewEmailJob.findUnique({
+      where: { id: jobId },
+      include: { batch: true },
+    });
+    if (!job?.batch || !job.batchId || job.requestId) return;
+
+    if (job.batch.recipientEmailFoldedHash) {
+      await lockReviewEmailRecipient(tx, {
+        storeId: job.storeId,
+        category: REVIEW_EMAIL_CATEGORY,
+        foldedSubjectHash: job.batch.recipientEmailFoldedHash,
+      });
+    }
+
+    const initialNotSent = job.batch.firstSentAt === null;
+    const closeBatchAccess = input.revokeAccess || initialNotSent;
+    await tx.reviewEmailJob.updateMany({
+      where: {
+        batchId: job.batchId,
+        status: { in: ['pending', 'leased', 'dispatched', 'processing', 'retrying'] },
+        attemptsLog: { none: { sendCommittedAt: { not: null } } },
+      },
+      data: {
+        status: 'cancelled',
+        completedAt: now,
+        leaseOwner: null,
+        leaseExpiresAt: null,
+        lastErrorCode: input.reason,
+      },
+    });
+    await tx.reviewEmailBatch.updateMany({
+      where: { id: job.batchId, status: { in: ['scheduled', 'sending', 'active'] } },
+      data: closeBatchAccess
+        ? {
+            status: 'cancelled',
+            emailAccessStatus: input.revokeAccess ? input.reason : 'consent_denied',
+            cancelledAt: now,
+            cancellationReason: input.reason,
+          }
+        : {
+            emailAccessStatus: 'consent_denied',
+            cancellationReason: input.reason,
+          },
+    });
+
+    if (initialNotSent) {
+      await tx.reviewRequest.updateMany({
+        where: { batchId: job.batchId, status: { in: ['scheduled', 'sending', 'error'] }, firstSentAt: null },
+        data: { status: 'cancelled', cancelledAt: now, cancellationReason: input.reason },
+      });
+    }
+    if (!closeBatchAccess) return;
+
+    await tx.reviewRequestToken.updateMany({
+      where: { batchId: job.batchId, status: { in: ['prepared', 'active'] } },
+      data: { status: 'revoked', revokedAt: now, revocationReason: input.reason },
+    });
+    await tx.reviewRequestSession.updateMany({
+      where: { batchId: job.batchId, status: 'active' },
+      data: { status: 'revoked', revokedAt: now, revocationReason: input.reason },
+    });
+  });
+}
+
 export async function prepareReviewEmailBatchSend(
   db: BatchJobDb,
   jobId: string,
-  input: { now?: Date; expectedLeaseVersion?: number } = {},
+  input: {
+    consentEvidence: ReviewEmailConsentEvidence;
+    now?: Date;
+    expectedLeaseVersion?: number;
+  },
 ): Promise<ProviderNeutralReviewEmailEnvelope> {
   if (!isReviewEmailEnabled()) throw new ReviewEmailBatchJobError('review_email_feature_disabled');
   const now = input.now ?? new Date();
@@ -289,9 +430,10 @@ export async function prepareReviewEmailBatchSend(
         data: { status: 'retrying', completedAt: null, leaseOwner: null, leaseExpiresAt: null, lastErrorCode: 'sender_crashed_before_send' },
       });
     } else if (latestAttempt?.sendCommittedAt) {
+      const confirmationDeadlineAt = confirmationDeadlineForAttempt(latestAttempt);
       await tx.reviewEmailAttempt.updateMany({
         where: { id: latestAttempt.id, status: { in: ['sending', 'prepared'] } },
-        data: { status: 'awaiting_confirmation', errorCode: 'sender_result_missing' },
+        data: { status: 'awaiting_confirmation', errorCode: 'sender_result_missing', confirmationDeadlineAt },
       });
       await tx.reviewEmailJob.update({
         where: { id: job.id },
@@ -308,6 +450,30 @@ export async function prepareReviewEmailBatchSend(
       piiHashVersion(job.batch.recipientEmailHash) !== job.batch.recipientEmailHashKeyVersion
     ) {
       return batchJobFailure('review_email_recipient_missing');
+    }
+    const consentFailure = consentEvidenceFailure(input.consentEvidence, {
+      now,
+      storeId: job.storeId,
+      batchId: job.batch.id,
+      orderSnapshotId: job.batch.orderSnapshotId,
+      recipientVersion: job.batch.recipientVersion,
+      recipientEmailHash: job.batch.recipientEmailHash,
+    });
+    if (consentFailure) {
+      if (consentFailure === 'review_email_consent_evidence_stale') {
+        await tx.reviewEmailJob.update({
+          where: { id: job.id },
+          data: {
+            status: 'retrying',
+            sendAfter: now,
+            completedAt: null,
+            leaseOwner: null,
+            leaseExpiresAt: null,
+            lastErrorCode: consentFailure,
+          },
+        });
+      }
+      return batchJobFailure(consentFailure, consentFailure === 'review_email_consent_evidence_stale');
     }
     const recipient = decryptText(job.batch.recipientEmailEncrypted);
     const foldedHashes = hashFoldedEmailCandidates(recipient);
@@ -436,6 +602,10 @@ export async function prepareReviewEmailBatchSend(
         locale: job.batch.localeSnapshot,
         contentManifest: manifest,
         contentDigest: manifestDigest(manifest),
+        consentSource: input.consentEvidence.source,
+        consentStatus: input.consentEvidence.status,
+        consentStatusUpdatedAt: input.consentEvidence.statusUpdatedAt,
+        consentCheckedAt: input.consentEvidence.checkedAt,
         status: 'prepared',
       },
     });
@@ -487,6 +657,29 @@ export async function commitReviewEmailBatchSend(
       return batchJobFailure('review_email_attempt_not_prepared');
     }
     if (!attempt.recipientEmailFoldedHash || !attempt.recipientEmailEncrypted) return batchJobFailure('review_email_recipient_missing');
+    const consentAgeMs = attempt.consentCheckedAt
+      ? now.getTime() - attempt.consentCheckedAt.getTime()
+      : Number.POSITIVE_INFINITY;
+    if (
+      attempt.consentSource !== 'ikas_list_customer' ||
+      attempt.consentStatus !== 'SUBSCRIBED' ||
+      consentAgeMs < 0 ||
+      consentAgeMs > REVIEW_EMAIL_CONSENT_EVIDENCE_TTL_SECONDS * 1000
+    ) {
+      await abandonPreparedBatchAttempt(tx, attempt.id, now, 'consent_evidence_stale_before_send_commit');
+      await tx.reviewEmailJob.update({
+        where: { id: attempt.jobId },
+        data: {
+          status: 'retrying',
+          sendAfter: now,
+          completedAt: null,
+          leaseOwner: null,
+          leaseExpiresAt: null,
+          lastErrorCode: 'review_email_consent_evidence_stale',
+        },
+      });
+      return batchJobFailure('review_email_consent_evidence_stale', true);
+    }
     const manifest = parseAttemptManifest(attempt.contentManifest);
     const stalePreparedAttempt =
       !manifest ||
@@ -710,14 +903,14 @@ export async function finalizeAcceptedReviewEmailBatchAttempt(
 export async function markReviewEmailBatchAwaitingConfirmation(
   db: BatchJobDb,
   attemptId: string,
-  now = new Date(),
 ): Promise<void> {
   await db.$transaction(async (tx) => {
     const attempt = await tx.reviewEmailAttempt.findUnique({ where: { id: attemptId }, include: { job: true } });
     if (!attempt?.job.batchId || !attempt.sendCommittedAt) throw new ReviewEmailBatchJobError('review_email_attempt_not_committed');
+    const confirmationDeadlineAt = confirmationDeadlineForAttempt(attempt);
     await tx.reviewEmailAttempt.updateMany({
       where: { id: attemptId, status: { in: ['sending', 'prepared'] } },
-      data: { status: 'awaiting_confirmation', errorCode: 'sender_result_missing', confirmationDeadlineAt: attempt.confirmationDeadlineAt ?? now },
+      data: { status: 'awaiting_confirmation', errorCode: 'sender_result_missing', confirmationDeadlineAt },
     });
     await tx.reviewEmailJob.update({
       where: { id: attempt.jobId },

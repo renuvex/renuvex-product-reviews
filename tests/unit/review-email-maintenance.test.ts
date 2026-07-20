@@ -52,6 +52,7 @@ describe('review email lifecycle maintenance', () => {
             id: 'unknown-1',
             jobId: 'job-2',
             sendInitiatedAt: new Date('2026-07-09T00:00:00.000Z'),
+            sendCommittedAt: new Date('2026-07-09T00:00:00.000Z'),
             templateVersion: 'default_v1',
             locale: 'tr',
             job: { requestId: 'request-2', kind: 'request', request: { receiptId: null } },
@@ -90,6 +91,29 @@ describe('review email lifecycle maintenance', () => {
     expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: 'outcome_unknown' }),
     }));
+    expect(db.reviewEmailAttempt.findMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: {
+        status: { in: ['sending', 'awaiting_confirmation'] },
+        OR: [
+          { confirmationDeadlineAt: { lte: new Date('2026-07-10T12:00:00.000Z') } },
+          {
+            confirmationDeadlineAt: null,
+            sendInitiatedAt: { lte: new Date('2026-07-09T12:00:00.000Z') },
+          },
+          {
+            confirmationDeadlineAt: null,
+            sendInitiatedAt: null,
+            sendCommittedAt: { lte: new Date('2026-07-09T12:00:00.000Z') },
+          },
+        ],
+      },
+    }));
+    expect(tx.reviewRequestToken.updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ attemptId: 'unknown-1' }) }),
+    );
+    expect(tx.reviewRequestSession.updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ attemptId: 'unknown-1' }) }),
+    );
     expect(reportCronTaskError).toHaveBeenCalledWith(
       'daily-maintenance',
       'review-email-outcome-unknown',

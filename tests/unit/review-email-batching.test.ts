@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildReviewEmailDeliveryGroups, reviewEmailBatchMembershipChanged } from '@/lib/review-email/batching';
+import {
+  buildReviewEmailDeliveryGroupKey,
+  buildReviewEmailDeliveryGroups,
+  reviewEmailBatchMembershipChanged,
+} from '@/lib/review-email/batching';
 import type { NormalizedOrder, NormalizedOrderLine } from '@/lib/review-email/eligibility';
 
 const ELIGIBILITY_STARTS_AT = new Date('2026-07-01T00:00:00.000Z');
@@ -67,7 +71,10 @@ describe('review email delivery grouping', () => {
     const result = buildGroups(order(lines));
 
     expect(result.groups).toHaveLength(1);
-    expect(result.groups[0]).toMatchObject({ deliveryGroupKey: 'package:package-1', groupingMode: 'package' });
+    expect(result.groups[0]).toMatchObject({
+      deliveryGroupKey: buildReviewEmailDeliveryGroupKey(lines.map((item) => item.id)),
+      groupingMode: 'package',
+    });
     expect(result.groups[0]!.members).toHaveLength(20);
     expect(new Set(result.groups[0]!.members.map((member) => member.productId)).size).toBe(20);
   });
@@ -91,19 +98,16 @@ describe('review email delivery grouping', () => {
       ],
     }));
 
-    expect(result.groups.map((group) => ({
-      deliveryGroupKey: group.deliveryGroupKey,
-      productIds: group.members.map((member) => member.productId),
-    }))).toEqual([
-      {
-        deliveryGroupKey: 'package:package-1',
-        productIds: Array.from({ length: 10 }, (_, index) => `product-${index + 1}`),
-      },
-      {
-        deliveryGroupKey: 'package:package-2',
-        productIds: Array.from({ length: 10 }, (_, index) => `product-${index + 11}`),
-      },
-    ]);
+    const productsByGroup = new Map(result.groups.map((group) => [
+      group.deliveryGroupKey,
+      group.members.map((member) => member.productId),
+    ]));
+    expect(productsByGroup.get(buildReviewEmailDeliveryGroupKey(lines.slice(0, 10).map((item) => item.id)))).toEqual(
+      Array.from({ length: 10 }, (_, index) => `product-${index + 1}`),
+    );
+    expect(productsByGroup.get(buildReviewEmailDeliveryGroupKey(lines.slice(10).map((item) => item.id)))).toEqual(
+      Array.from({ length: 10 }, (_, index) => `product-${index + 11}`),
+    );
     const groupedProductIds = result.groups.flatMap((group) => group.members.map((member) => member.productId));
     expect(groupedProductIds).toHaveLength(20);
     expect(new Set(groupedProductIds).size).toBe(20);
@@ -136,10 +140,10 @@ describe('review email delivery grouping', () => {
     }));
 
     expect(result.groups).toHaveLength(0);
-    expect(result.productReasons.get('product-1')).toBe('shipment_not_delivered');
+    expect(result.productReasons.get('product-1')).toBe('line_not_delivered');
   });
 
-  it('uses the persisted first eligibility timestamp and a safe order fallback', () => {
+  it('does not create a batch without exact package membership', () => {
     const firstEligibleAt = new Date('2026-07-02T08:00:00.000Z');
     const lines = [line('line-1', 'product-1')];
     const result = buildGroups(
@@ -147,15 +151,36 @@ describe('review email delivery grouping', () => {
       { eligibleAtByLineId: new Map([['line-1', firstEligibleAt]]) },
     );
 
-    expect(result.groups).toEqual([
-      expect.objectContaining({ deliveryGroupKey: 'order:complete', eligibleAt: firstEligibleAt }),
-    ]);
+    expect(result.groups).toEqual([]);
+    expect(result.productReasons.get('product-1')).toBe('package_evidence_incomplete');
   });
 
-  it('keeps digital and no-shipment orders disabled in the first release', () => {
+  it('uses delivered package and line evidence for digital and no-shipment orders', () => {
     const lines = [line('line-1', 'product-1')];
-    expect(buildGroups(order(lines, { shippingMethod: 'DIGITAL_DELIVERY' })).groups).toEqual([]);
-    expect(buildGroups(order(lines, { shippingMethod: 'NO_SHIPMENT' })).groups).toEqual([]);
+    expect(buildGroups(order(lines, { shippingMethod: 'DIGITAL_DELIVERY' })).groups).toHaveLength(1);
+    expect(buildGroups(order(lines, { shippingMethod: 'NO_SHIPMENT' })).groups).toHaveLength(1);
+  });
+
+  it('keeps the delivery-group key stable when ikas recreates a package with the same lines', () => {
+    const lines = [line('line-2', 'product-2'), line('line-1', 'product-1')];
+    const first = buildGroups(order(lines, {
+      packages: [{
+        id: 'old-package-id',
+        status: 'DELIVERED',
+        orderLineItemIds: ['line-2', 'line-1'],
+        updatedAt: new Date('2026-07-10T09:00:00.000Z'),
+      }],
+    }));
+    const recreated = buildGroups(order(lines, {
+      packages: [{
+        id: 'new-package-id',
+        status: 'DELIVERED',
+        orderLineItemIds: ['line-1', 'line-2', 'line-1'],
+        updatedAt: new Date('2026-08-01T09:00:00.000Z'),
+      }],
+    }));
+
+    expect(first.groups[0]?.deliveryGroupKey).toBe(recreated.groups[0]?.deliveryGroupKey);
   });
 
   it('fails closed with missing_customer_email even after package delivery', () => {

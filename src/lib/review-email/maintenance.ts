@@ -87,14 +87,23 @@ export async function runReviewEmailLifecycleMaintenance(
   const ambiguous = await db.reviewEmailAttempt.findMany({
     where: {
       status: { in: ['sending', 'awaiting_confirmation'] },
-      sendInitiatedAt: { lte: confirmationBefore },
+      OR: [
+        { confirmationDeadlineAt: { lte: now } },
+        { confirmationDeadlineAt: null, sendInitiatedAt: { lte: confirmationBefore } },
+        {
+          confirmationDeadlineAt: null,
+          sendInitiatedAt: null,
+          sendCommittedAt: { lte: confirmationBefore },
+        },
+      ],
     },
-    orderBy: { sendInitiatedAt: 'asc' },
+    orderBy: [{ confirmationDeadlineAt: 'asc' }, { sendInitiatedAt: 'asc' }, { sendCommittedAt: 'asc' }],
     take: limit,
     select: {
       id: true,
       jobId: true,
       sendInitiatedAt: true,
+      sendCommittedAt: true,
       templateVersion: true,
       locale: true,
       job: { select: { requestId: true, batchId: true, kind: true, request: { select: { receiptId: true } } } },
@@ -128,7 +137,7 @@ export async function runReviewEmailLifecycleMaintenance(
         await recordReviewEmailBatchMetricContribution(tx, {
           batchId: attempt.job.batchId,
           dedupeKey: `review-email-attempt:${attempt.id}:outcome-unknown`,
-          metricDate: attempt.sendInitiatedAt ?? now,
+          metricDate: attempt.sendInitiatedAt ?? attempt.sendCommittedAt ?? now,
           kind: attempt.job.kind,
           templateVersion: attempt.templateVersion,
           locale: attempt.locale,
@@ -138,7 +147,7 @@ export async function runReviewEmailLifecycleMaintenance(
         await recordReviewEmailMetricContribution(tx, {
           receiptId: attempt.job.request.receiptId,
           dedupeKey: `review-email-attempt:${attempt.id}:outcome-unknown`,
-          metricDate: attempt.sendInitiatedAt ?? now,
+          metricDate: attempt.sendInitiatedAt ?? attempt.sendCommittedAt ?? now,
           kind: attempt.job.kind,
           templateVersion: attempt.templateVersion,
           locale: attempt.locale,

@@ -5,6 +5,7 @@ import {
   activatePreparedReviewRequestToken,
   claimReviewRequestForSubmission,
   claimReviewCenterItemForSubmission,
+  createRawReviewRequestSession,
   createRawReviewRequestToken,
   exchangeReviewCenterTokenForSession,
   exchangeReviewRequestTokenForSession,
@@ -12,6 +13,7 @@ import {
   prepareReviewEmailBatchToken,
   prepareReviewRequestToken,
   resolveActiveReviewCenterToken,
+  resolveActiveReviewCenterSession,
   resolveActiveReviewRequestToken,
   ReviewRequestTokenError,
   skipReviewCenterItem,
@@ -123,7 +125,65 @@ describe('review request token and session lifecycle', () => {
     expect(db.reviewRequestToken.findUnique).not.toHaveBeenCalled();
   });
 
-  it('prepares only a hash and activates the token for 30 days at sendInitiatedAt', async () => {
+  it('marks an expired batch token once and never reactivates it', async () => {
+    const rawToken = createRawReviewRequestToken(1);
+    const row = batchTokenRow(rawToken, KEY_ONE);
+    row.expiresAt = new Date('2026-07-09T00:00:00.000Z');
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const db = {
+      reviewRequestToken: {
+        findUnique: vi.fn()
+          .mockResolvedValueOnce(row)
+          .mockResolvedValueOnce({ ...row, status: 'expired' }),
+        updateMany,
+      },
+    };
+    const now = new Date('2026-07-10T00:00:00.000Z');
+    const keyRing = { currentVersion: 1, keys: new Map([[1, KEY_ONE]]) };
+
+    await expect(resolveActiveReviewCenterToken(db as never, rawToken, now, keyRing)).rejects.toBeInstanceOf(ReviewRequestTokenError);
+    await expect(resolveActiveReviewCenterToken(db as never, rawToken, now, keyRing)).rejects.toBeInstanceOf(ReviewRequestTokenError);
+
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'batch-token-1', status: 'active', expiresAt: { lte: now } },
+      data: { status: 'expired' },
+    });
+  });
+
+  it('marks an expired review-center session once and never reactivates it', async () => {
+    const rawSession = createRawReviewRequestSession();
+    const expiredAt = new Date('2026-07-09T00:00:00.000Z');
+    const session = {
+      id: 'session-1',
+      batchId: 'batch-1',
+      status: 'active',
+      expiresAt: expiredAt,
+      token: { status: 'active', expiresAt: new Date('2026-08-01T00:00:00.000Z') },
+      batch: { id: 'batch-1', status: 'active', expiresAt: new Date('2026-08-01T00:00:00.000Z'), requests: [] },
+    };
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const db = {
+      reviewRequestSession: {
+        findUnique: vi.fn()
+          .mockResolvedValueOnce(session)
+          .mockResolvedValueOnce({ ...session, status: 'expired' }),
+        updateMany,
+      },
+    };
+    const now = new Date('2026-07-10T00:00:00.000Z');
+
+    await expect(resolveActiveReviewCenterSession(db as never, rawSession, now, 'session-secret-with-at-least-thirty-two-characters')).rejects.toBeInstanceOf(ReviewRequestTokenError);
+    await expect(resolveActiveReviewCenterSession(db as never, rawSession, now, 'session-secret-with-at-least-thirty-two-characters')).rejects.toBeInstanceOf(ReviewRequestTokenError);
+
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'session-1', status: 'active', expiresAt: { lte: now } },
+      data: { status: 'expired' },
+    });
+  });
+
+  it('prepares only a hash and activates the token for 30 days at the send-commit boundary', async () => {
     const tx = {
       reviewRequestToken: {
         create: vi.fn().mockResolvedValue({ id: 'token-1' }),

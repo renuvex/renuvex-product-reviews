@@ -16,6 +16,10 @@ const cutoffMigration = fs.readFileSync(
   path.join(root, 'prisma', 'migrations', '20260716120000_add_review_email_eligibility_cutoff', 'migration.sql'),
   'utf8',
 );
+const ikasContractMigration = fs.readFileSync(
+  path.join(root, 'prisma', 'migrations', '20260720120000_align_ikas_review_email_contracts', 'migration.sql'),
+  'utf8',
+);
 
 describe('review email multi-product batch schema contract', () => {
   it('prevents duplicate live delivery groups across HMAC write-key rotations', () => {
@@ -91,5 +95,20 @@ describe('review email multi-product batch schema contract', () => {
     expect(cutoffMigration).toContain('ADD COLUMN "eligibilityStartsAt" TIMESTAMP(3)');
     expect(cutoffMigration).toContain('ADD COLUMN "eligibilityStartsAtSnapshot" TIMESTAMP(3)');
     expect(cutoffMigration).not.toContain('NOT NULL');
+  });
+
+  it('adds immutable delivery and current-customer consent evidence without a backfill', () => {
+    expect(schema).toContain('firstDeliveredAt    DateTime?');
+    expect(schema).toContain('consentSource                      String?');
+    expect(schema).toContain('consentStatus                      String?');
+    expect(schema).toContain('consentStatusUpdatedAt             DateTime?');
+    expect(schema).toContain('consentCheckedAt                   DateTime?');
+    expect(ikasContractMigration).toContain('ADD COLUMN "firstDeliveredAt" TIMESTAMP(3)');
+    expect(ikasContractMigration).toContain('ADD COLUMN "consentSource" VARCHAR(64)');
+    expect(ikasContractMigration).toContain('ADD COLUMN "consentStatus" VARCHAR(64)');
+    expect(ikasContractMigration).toContain('ADD COLUMN "consentStatusUpdatedAt" TIMESTAMP(3)');
+    expect(ikasContractMigration).toContain('ADD COLUMN "consentCheckedAt" TIMESTAMP(3)');
+    expect(ikasContractMigration).toContain("SET DEFAULT 'current_customer_subscription'");
+    expect(ikasContractMigration).not.toMatch(/\bUPDATE\b/u);
   });
 });

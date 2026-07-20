@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-16
-last_verified: 2026-07-16
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - hot-context
@@ -34,10 +34,10 @@ source_files:
   - "src/app/api/public/upload/sign/route.ts"
   - "src/app/api/public/upload/register/route.ts"
   - "src/app/api/internal/scheduled-jobs/route.ts"
-  - "src/lib/scheduled-jobs.ts"
   - "src/lib/review-email/eligibility.ts"
   - "src/lib/review-email/settings.ts"
-  - "src/lib/email/ses-sns.ts"
+  - "src/lib/review-email/ikas-orders.ts"
+  - "src/lib/review-email/ikas-send-preflight.ts"
   - "src/app/api/internal/email-events/ses/route.ts"
   - "src/lib/media/providers/aws-review-image.ts"
   - "src/lib/media/jobs.ts"
@@ -60,22 +60,21 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-16: Disabled review-email historical cutoff V2.2 source is
-  implemented. Successful enable/re-enable records a new activation epoch;
-  shipment eligibility requires every delivered line's exact `statusUpdatedAt`
-  at or after that epoch, and a multi-line product uses the latest evidence.
-  Package/order timestamps cannot cross the cutoff. Disable cancels pre-commit
-  work without reviving backlog, while committed ambiguous work remains
-  non-resendable. Click-and-collect remains fail-closed pending exact provider
-  timestamp evidence. The additive migration and integration suite pass on
-  disposable PostgreSQL 16/17; no production/AWS/SES/DNS/Vercel mutation exists.
+- 2026-07-20: Disabled review-email source is aligned with the detailed ikas
+  contract: current customer subscription plus exact recipient authorizes
+  sending; order consent is historical. Immutable delivery evidence, stable
+  package-line grouping, all four shipping methods, payment exclusion, consent
+  expiry, DSR cleanup, and scope gating are in source. Production migration,
+  reauthorization, AWS/SES/DNS, and sending remain gated.
+- 2026-07-16: Disabled review-email cutoff and confirmation contracts are
+  hardened: exact cutoff evidence, fixed 24-hour deadlines, no ambiguous
+  auto-resend, and pre-commit disable cancellation. PostgreSQL 16/17 and static
+  gates passed. Later ikas evidence supersedes the old order-consent reading.
 - 2026-07-15: Disabled review-email Multi-Product Batch / Envelope V3.2 source
-  is implemented: one delivery-group initial plus at most one reminder,
-  independent product requests, tenant-bound batch/job FKs, provider-neutral
-  attempts/events, send-commit/frequency/suppression guards, fragment-token
-  multi-device review center, per-item submit/skip/media ownership, and
-  V5-compatible DSR/retention. Migration/AWS/DNS/env/deploy/email sending remain
-  separately gated. See [[ADR_0036_Review_Request_Email_Architecture]].
+  adds one initial and at most one reminder per delivery group, independent
+  product requests, guarded attempts/events, review-center access, and
+  V5-compatible DSR/retention. Live rollout remains gated. See
+  [[ADR_0036_Review_Request_Email_Architecture]].
 - 2026-07-04: Wiki low-token routing is active: hot-path pages stay short; long critical pages use `## Agent Brief`.
 - 2026-07-04: QStash maintenance scheduler is active; health gate is delivery logs/DLQ plus `ScheduledJobRunLock`, not `nextScheduleTime`.
 - 2026-07-04: AWS review images are production path: `media.renuvex.app/reviews/...`, immutable public variants, private signed admin previews, public-only orphan scan.

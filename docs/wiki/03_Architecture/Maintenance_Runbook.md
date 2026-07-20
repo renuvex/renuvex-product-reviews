@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-07-15
-last_verified: 2026-07-15
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - runbook
@@ -107,6 +107,23 @@ One latest S3 lifecycle delete marker is expected only after the configured
 active retention interval; early/non-latest/marker-only/multiple markers or
 multiple data versions fail closed. `35/42` are current copy-register results,
 not hard-coded retention constants.
+
+Ambiguous review-email provider attempts use the persisted
+`confirmationDeadlineAt` as their maintenance deadline. New send commits write
+that value at the provider-call boundary plus 24 hours, and
+`awaiting_confirmation` preserves it. Legacy null rows derive the same deadline
+from `sendInitiatedAt ?? sendCommittedAt`; the invocation time must never move
+the window forward. Expiry produces terminal `outcome_unknown` without an
+automatic resend. Late signed provider evidence may still resolve the attempt,
+while only audited `confirmed_not_sent` may release its reservation and permit
+a new attempt.
+
+Review-email detail retention and exact-subject DSR also clear the bounded
+send-time consent evidence (`consentSource`, status, provider status timestamp,
+and checked-at) from attempts together with recipient PII. No raw
+`listCustomer` response is retained. The immutable line delivery timestamp is
+order lifecycle evidence and does not authorize a send without current package,
+line, installation, recipient, consent, and suppression checks.
 
 Store uninstall uses `POST /api/internal/review-email/store-erasure` as a
 QStash-signed continuation endpoint. Every destructive phase requires verified

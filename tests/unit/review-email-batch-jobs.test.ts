@@ -42,8 +42,10 @@ vi.mock('@/lib/review-email/analytics', () => ({
 }));
 
 import {
+  applyReviewEmailConsentDenial,
   commitReviewEmailBatchSend,
   finalizeAcceptedReviewEmailBatchAttempt,
+  markReviewEmailBatchAwaitingConfirmation,
   markReviewEmailBatchConfirmedNotSent,
   prepareReviewEmailBatchSend,
   ReviewEmailBatchJobError,
@@ -68,6 +70,7 @@ function request(overrides: Record<string, unknown> = {}) {
 function batch(overrides: Record<string, unknown> = {}) {
   return {
     id: 'batch-1',
+    orderSnapshotId: 'order-snapshot-1',
     storeId: 'store-1',
     installationGeneration: 3,
     status: 'scheduled',
@@ -85,6 +88,7 @@ function batch(overrides: Record<string, unknown> = {}) {
     reminderDelayDaysSnapshot: 1,
     groupingFrozenAt: null,
     recipientFrozenAt: null,
+    firstSentAt: null,
     eligibilityStartsAtSnapshot: new Date('2026-07-01T00:00:00.000Z'),
     eligibleAt: new Date('2026-07-10T00:00:00.000Z'),
     expiresAt: null,
@@ -140,6 +144,12 @@ function preparedAttempt(overrides: Record<string, unknown> = {}) {
     attemptNumber: 1,
     status: 'prepared',
     sendCommittedAt: null,
+    sendInitiatedAt: null,
+    confirmationDeadlineAt: null,
+    consentSource: 'ikas_list_customer',
+    consentStatus: 'SUBSCRIBED',
+    consentStatusUpdatedAt: new Date('2026-07-14T12:00:00.000Z'),
+    consentCheckedAt: NOW,
     createdAt: new Date('2026-07-15T09:59:00.000Z'),
     recipientEmailFoldedHash: 'folded-v2',
     recipientEmailEncrypted: 'encrypted-recipient',
@@ -154,6 +164,21 @@ function preparedAttempt(overrides: Record<string, unknown> = {}) {
       sequence: 0,
       batch: batch(),
     },
+    ...overrides,
+  };
+}
+
+function consentEvidence(overrides: Record<string, unknown> = {}) {
+  return {
+    source: 'ikas_list_customer' as const,
+    status: 'SUBSCRIBED' as const,
+    statusUpdatedAt: new Date('2026-07-14T12:00:00.000Z'),
+    checkedAt: NOW,
+    storeId: 'store-1',
+    batchId: 'batch-1',
+    orderSnapshotId: 'order-snapshot-1',
+    recipientVersion: 1,
+    recipientExactLookupHashes: ['exact-v2', 'exact-v1'],
     ...overrides,
   };
 }
@@ -244,7 +269,10 @@ describe('review email batch sender transaction boundaries', () => {
     const row = job({ status: 'processing', attemptsLog: [stale] });
     const { db, tx } = transaction(row);
 
-    const envelope = await prepareReviewEmailBatchSend(db as never, 'job-1', { now: NOW });
+    const envelope = await prepareReviewEmailBatchSend(db as never, 'job-1', {
+      now: NOW,
+      consentEvidence: consentEvidence(),
+    });
 
     expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith({
       where: { id: 'attempt-1', status: 'prepared', sendCommittedAt: null },
@@ -263,7 +291,14 @@ describe('review email batch sender transaction boundaries', () => {
       },
     });
     expect(tx.reviewEmailAttempt.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ attemptNumber: 2, status: 'prepared' }),
+      data: expect.objectContaining({
+        attemptNumber: 2,
+        status: 'prepared',
+        consentSource: 'ikas_list_customer',
+        consentStatus: 'SUBSCRIBED',
+        consentStatusUpdatedAt: new Date('2026-07-14T12:00:00.000Z'),
+        consentCheckedAt: NOW,
+      }),
     }));
     expect(envelope.attemptId).toBe('attempt-new');
   });
@@ -272,7 +307,10 @@ describe('review email batch sender transaction boundaries', () => {
     const row = job({}, { requests: [request({ orderLineSnapshot: { productName: null, variantName: 'Default' } })] });
     const { db } = transaction(row);
 
-    const envelope = await prepareReviewEmailBatchSend(db as never, 'job-1', { now: NOW });
+    const envelope = await prepareReviewEmailBatchSend(db as never, 'job-1', {
+      now: NOW,
+      consentEvidence: consentEvidence(),
+    });
 
     expect(envelope.manifest.items[0]?.productName).toBe('Product One');
     expect(mocks.prepareUnsubscribeToken).toHaveBeenCalledWith(expect.anything(), {
@@ -293,14 +331,21 @@ describe('review email batch sender transaction boundaries', () => {
     });
     const { db, tx } = transaction(row);
 
-    await expect(prepareReviewEmailBatchSend(db as never, 'job-1', { now: NOW })).rejects.toMatchObject({
+    await expect(prepareReviewEmailBatchSend(db as never, 'job-1', {
+      now: NOW,
+      consentEvidence: consentEvidence(),
+    })).rejects.toMatchObject({
       code: 'review_email_send_awaiting_confirmation',
       retryable: false,
     });
 
     expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith({
       where: { id: 'attempt-1', status: { in: ['sending', 'prepared'] } },
-      data: { status: 'awaiting_confirmation', errorCode: 'sender_result_missing' },
+      data: {
+        status: 'awaiting_confirmation',
+        errorCode: 'sender_result_missing',
+        confirmationDeadlineAt: new Date('2026-07-16T09:55:00.000Z'),
+      },
     });
     expect(tx.reviewEmailJob.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: 'awaiting_confirmation' }),
@@ -308,11 +353,56 @@ describe('review email batch sender transaction boundaries', () => {
     expect(tx.reviewEmailAttempt.create).not.toHaveBeenCalled();
   });
 
+  it('preserves a persisted confirmation deadline when the sender result is ambiguous', async () => {
+    const deadline = new Date('2026-07-16T12:30:00.000Z');
+    const { db, tx } = transaction();
+    tx.reviewEmailAttempt.findUnique.mockResolvedValue(preparedAttempt({
+      status: 'sending',
+      sendCommittedAt: new Date('2026-07-15T09:55:00.000Z'),
+      sendInitiatedAt: new Date('2026-07-15T09:56:00.000Z'),
+      confirmationDeadlineAt: deadline,
+    }));
+
+    await markReviewEmailBatchAwaitingConfirmation(db as never, 'attempt-1');
+
+    expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith({
+      where: { id: 'attempt-1', status: { in: ['sending', 'prepared'] } },
+      data: {
+        status: 'awaiting_confirmation',
+        errorCode: 'sender_result_missing',
+        confirmationDeadlineAt: deadline,
+      },
+    });
+    expect(tx.reviewRequestToken.updateMany).not.toHaveBeenCalled();
+    expect(tx.reviewRequestSession.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('derives a missing legacy confirmation deadline from the provider-call timestamp', async () => {
+    const { db, tx } = transaction();
+    tx.reviewEmailAttempt.findUnique.mockResolvedValue(preparedAttempt({
+      status: 'sending',
+      sendCommittedAt: new Date('2026-07-15T09:55:00.000Z'),
+      sendInitiatedAt: new Date('2026-07-15T09:56:00.000Z'),
+      confirmationDeadlineAt: null,
+    }));
+
+    await markReviewEmailBatchAwaitingConfirmation(db as never, 'attempt-1');
+
+    expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        confirmationDeadlineAt: new Date('2026-07-16T09:56:00.000Z'),
+      }),
+    }));
+  });
+
   it('persists access denial before returning a sender error', async () => {
     const { db, tx } = transaction();
     tx.reviewEmailSettings.findUnique.mockResolvedValue({ enabled: false, eligibilityStartsAt: null, reminderEnabled: true });
 
-    await expect(prepareReviewEmailBatchSend(db as never, 'job-1', { now: NOW })).rejects.toMatchObject({
+    await expect(prepareReviewEmailBatchSend(db as never, 'job-1', {
+      now: NOW,
+      consentEvidence: consentEvidence(),
+    })).rejects.toMatchObject({
       code: 'review_email_access_denied',
     });
 
@@ -329,12 +419,74 @@ describe('review email batch sender transaction boundaries', () => {
     expect(tx.reviewEmailAttempt.create).not.toHaveBeenCalled();
   });
 
+  it('closes an unsent batch when current customer consent is denied', async () => {
+    const { db, tx } = transaction();
+
+    await applyReviewEmailConsentDenial(db as never, 'job-1', {
+      reason: 'customer_not_subscribed',
+      revokeAccess: false,
+      now: NOW,
+    });
+
+    expect(tx.reviewEmailBatch.updateMany).toHaveBeenCalledWith({
+      where: { id: 'batch-1', status: { in: ['scheduled', 'sending', 'active'] } },
+      data: {
+        status: 'cancelled',
+        emailAccessStatus: 'consent_denied',
+        cancelledAt: NOW,
+        cancellationReason: 'customer_not_subscribed',
+      },
+    });
+    expect(tx.reviewRequest.updateMany).toHaveBeenCalledWith({
+      where: {
+        batchId: 'batch-1',
+        status: { in: ['scheduled', 'sending', 'error'] },
+        firstSentAt: null,
+      },
+      data: {
+        status: 'cancelled',
+        cancelledAt: NOW,
+        cancellationReason: 'customer_not_subscribed',
+      },
+    });
+    expect(tx.reviewRequestToken.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ revocationReason: 'customer_not_subscribed' }),
+    }));
+  });
+
+  it('stops a reminder after consent denial without revoking an existing review link', async () => {
+    const row = job(
+      { kind: 'reminder', sequence: 1 },
+      { status: 'active', firstSentAt: new Date('2026-07-14T10:00:00.000Z') },
+    );
+    const { db, tx } = transaction(row);
+
+    await applyReviewEmailConsentDenial(db as never, 'job-1', {
+      reason: 'customer_subscription_pending',
+      revokeAccess: false,
+      now: NOW,
+    });
+
+    expect(tx.reviewEmailBatch.updateMany).toHaveBeenCalledWith({
+      where: { id: 'batch-1', status: { in: ['scheduled', 'sending', 'active'] } },
+      data: {
+        emailAccessStatus: 'consent_denied',
+        cancellationReason: 'customer_subscription_pending',
+      },
+    });
+    expect(tx.reviewRequestToken.updateMany).not.toHaveBeenCalled();
+    expect(tx.reviewRequestSession.updateMany).not.toHaveBeenCalled();
+  });
+
   it('does not prepare a batch from an earlier activation epoch', async () => {
     const { db, tx } = transaction(job({}, {
       eligibilityStartsAtSnapshot: new Date('2026-06-01T00:00:00.000Z'),
     }));
 
-    await expect(prepareReviewEmailBatchSend(db as never, 'job-1', { now: NOW })).rejects.toMatchObject({
+    await expect(prepareReviewEmailBatchSend(db as never, 'job-1', {
+      now: NOW,
+      consentEvidence: consentEvidence(),
+    })).rejects.toMatchObject({
       code: 'review_email_access_denied',
     });
     expect(tx.reviewEmailAttempt.create).not.toHaveBeenCalled();
@@ -483,6 +635,26 @@ describe('review email batch sender transaction boundaries', () => {
     expect(result.expiresAt).toEqual(new Date('2026-08-14T10:00:00.000Z'));
   });
 
+  it('abandons the prepared token when current-customer evidence is older than sixty seconds', async () => {
+    const { db, tx } = transaction();
+    tx.reviewEmailAttempt.findUnique.mockResolvedValue(preparedAttempt({
+      consentCheckedAt: new Date(NOW.getTime() - 61_000),
+    }));
+
+    await expect(commitReviewEmailBatchSend(db as never, 'attempt-1', NOW)).rejects.toMatchObject({
+      code: 'review_email_consent_evidence_stale',
+      retryable: true,
+    });
+
+    expect(tx.reviewEmailAttempt.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: 'abandoned_before_send',
+        errorCode: 'consent_evidence_stale_before_send_commit',
+      }),
+    }));
+    expect(mocks.activateBatchToken).not.toHaveBeenCalled();
+  });
+
   it('extends batch and request expiry through the reminder token window', async () => {
     const { tx } = transaction();
     tx.reviewEmailAttempt.findUnique.mockResolvedValue(preparedAttempt({
@@ -546,6 +718,23 @@ describe('review email batch sender transaction boundaries', () => {
     expect(tx.reviewEmailUnsubscribeToken.updateMany).toHaveBeenCalledWith({
       where: { createdFromAttemptId: 'attempt-1', status: 'active' },
       data: { status: 'revoked', revokedAt: NOW },
+    });
+    expect(tx.reviewRequestToken.updateMany).toHaveBeenCalledWith({
+      where: { attemptId: 'attempt-1', status: { in: ['prepared', 'active'] } },
+      data: { status: 'revoked', revokedAt: NOW, revocationReason: 'confirmed_not_sent' },
+    });
+    expect(tx.reviewRequestSession.updateMany).toHaveBeenCalledWith({
+      where: { tokenId: 'token-1', status: 'active' },
+      data: { status: 'revoked', revokedAt: NOW, revocationReason: 'confirmed_not_sent' },
+    });
+    expect(tx.reviewEmailJob.update).toHaveBeenCalledWith({
+      where: { id: 'job-1' },
+      data: {
+        status: 'retrying',
+        sendAfter: NOW,
+        completedAt: null,
+        lastErrorCode: 'confirmed_not_sent',
+      },
     });
   });
 

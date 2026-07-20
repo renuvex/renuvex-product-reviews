@@ -3,8 +3,8 @@ type: database
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-16
-last_verified: 2026-07-16
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - database
@@ -32,6 +32,7 @@ source_files:
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
   - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
+  - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/lib/cleanup-orphan-images.ts"
   - "src/lib/review-email/"
@@ -84,13 +85,13 @@ Postgres (Supabase) accessed via Prisma. Core review/media models now include th
 | `StoreVideoUsage` | `(storeId, month)` | Atomic monthly quota reserve/consume counters for feature-gated video uploads. |
 | `MediaProviderJob` | `id` (uuid), unique `dedupeKey` | DB outbox for provider operations (`resolve_video_asset`, `reconcile_video`, `expire_upload_session`, `publish_video`, `protect_video`, `cleanup_video`, `cleanup_image`) dispatched through QStash with idempotent retries, stale-lock recovery, and DLQ/manual-repair state. |
 | `MediaProviderLease` | `key` | Expiring per-session/per-asset provider mutation lease with a fencing version. It serializes publish/protect/delete work without holding a database transaction open during a provider HTTP call. |
-| `ReviewEmailSettings` | `storeId` | Merchant review-request email settings: enable flag, delivery trigger mode, strict consent mode, first/reminder delay, sender display name, Reply-To, logo, color, locale, template version, and the current disabled-to-enabled `eligibilityStartsAt` epoch. |
+| `ReviewEmailSettings` | `storeId` | Merchant review-request email settings: enable flag, delivery trigger mode, current-customer subscription consent mode, first/reminder delay, sender display name, Reply-To, logo, color, locale, template version, and the current disabled-to-enabled `eligibilityStartsAt` epoch. Enablement requires OAuth `read_orders` and `read_customers`. |
 | `IkasOrderWebhookEvent` | `id` (uuid), unique `providerEventId` | Idempotent ikas order webhook audit/wake-up state for review-request email; stores only normalized ids/status and a payload digest, never the raw payload. |
-| `IkasOrderSnapshot` / `IkasOrderLineSnapshot` | `id` (uuid), unique order/line keys | Canonical order and order-line evidence from `listOrder`, with hashed/encrypted customer email and package/line status evidence. Only a delivered line's exact `statusUpdatedAt` can prove the historical activation cutoff; generic package/order timestamps are discovery/current-state fields. |
+| `IkasOrderSnapshot` / `IkasOrderLineSnapshot` | `id` (uuid), unique order/line keys | Canonical order and order-line evidence from `listOrder`, with hashed/encrypted order-recipient and package/line status evidence. `firstDeliveredAt` freezes the first observed exact delivered-line transition; current package/line state must still be eligible. Generic package/order timestamps are discovery/current-state fields only. |
 | `ReviewEmailBatch` | `id` (uuid), unique tenant/generation/fingerprint plus live order/group | One canonical delivery-group review sequence and recipient/timing/template/cutoff snapshot. It groups many product requests under one physical initial and at most one reminder, then remains as a protected duplicate tombstone after detail purge. |
 | `ReviewRequest` / `ReviewRequestToken` | `id` (uuid), unique product request, token hash, and attempt link | Product-scoped review right plus versioned request/batch access token. Batch tokens start `prepared`, activate only at `sendCommittedAt`, and expire 30 days later; raw values exist only in sender memory. Request/batch expiry extends to cover each scheduled reminder plus its token window. |
 | `ReviewRequestSession` | `id` (uuid), unique `sessionHash` | Two-hour host-only browser session created by fragment-token exchange. Multiple devices are allowed; the cookie is HttpOnly and only an HMAC hash is stored. |
-| `ReviewEmailJob` / `ReviewEmailAttempt` / `ReviewEmailEvent` | `id` (uuid), unique dedupe/correlation/transport ids | Physical-email schedule, one immutable provider-call attempt, and provider-neutral event ledger. Jobs carry lease/fencing state; attempts distinguish pre-call, committed ambiguous, accepted, and delivery evidence. Exact transport redelivery dedupes without collapsing distinct same-type provider facts. AWS queues will carry only opaque job ids later. |
+| `ReviewEmailJob` / `ReviewEmailAttempt` / `ReviewEmailEvent` | `id` (uuid), unique dedupe/correlation/transport ids | Physical-email schedule, one immutable provider-call attempt, and provider-neutral event ledger. Jobs carry lease/fencing state; attempts distinguish pre-call, committed ambiguous, accepted, and delivery evidence and snapshot bounded current-customer consent evidence for the authorized call. Exact transport redelivery dedupes without collapsing distinct same-type provider facts. AWS queues will carry only opaque job ids later. |
 | `ReviewEmailSuppression` / `ReviewEmailUnsubscribeToken` | scoped recipient identity / unique token hash | Store/category recipient access policy from permanent bounce, complaint, or explicit unsubscribe. Every token snapshots the versioned case-preserving exact recipient HMAC from its batch as well as the folded policy key. The nullable attempt link may be purged without losing exact DSR identity or old-link suppression behavior; no plaintext recipient or new token-level ciphertext is retained. |
 | `ReviewEmailSubjectBlock` | unique `storeId+installationGeneration+foldedSubjectHash` | Active-installation reingestion/suppression fence. Folded identity never selects DSR deletion targets. |
 | `ReviewRequestReceipt` | unique `storeId+installationGeneration+orderProductFingerprint` | Durable duplicate-request receipt plus exact-subject link and compact signed analytics manifest. `analyticsClosedAt` fences late provider events; DSR clears subject/manifest fields while preserving the order-product fingerprint. |
@@ -246,6 +247,9 @@ code run together, so a migration must not break the old code.
   this pattern for live multi-merchant data.
 
 ## Recent migration themes (chronological)
+- `align_ikas_review_email_contracts` - nullable immutable line-delivery
+  evidence and bounded current-customer consent evidence; defaults move to the
+  current-customer subscription contract without historical backfill
 - `add_review_email_eligibility_cutoff` - additive activation epoch and immutable
   batch snapshot for exact delivered-line historical cutoff enforcement
 - `init`, `add_product_slug_cache` — bootstrap

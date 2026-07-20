@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-16
-last_verified: 2026-07-16
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - adr
@@ -33,6 +33,7 @@ source_files:
   - "prisma/migrations/20260710210000_add_review_email_retention_analytics_journal/migration.sql"
   - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
   - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
+  - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
   - "config/review-email-copy-register.json"
   - "infra/aws/review-email-erasure-journal.cloudformation.json"
   - "infra/aws/review-email-erasure-journal-iam.cloudformation.json"
@@ -51,6 +52,8 @@ source_files:
   - "src/app/request/page.tsx"
   - "src/lib/review-email/batching.ts"
   - "src/lib/review-email/batch-jobs.ts"
+  - "src/lib/review-email/ikas-send-preflight.ts"
+  - "src/lib/review-email/maintenance.ts"
   - "src/lib/review-email/review-center-submit.ts"
   - "src/lib/review-email/review-center-scope.ts"
   - "src/lib/review-email/unsubscribe.ts"
@@ -75,6 +78,12 @@ source_files:
   - "tests/integration/review-email-installation-fence.test.ts"
   - "tests/integration/review-email-v5-db-guarantees.test.ts"
   - "tests/integration/review-email-batch-db-guarantees.test.ts"
+  - "tests/unit/review-email-batch-jobs.test.ts"
+  - "tests/unit/review-email-maintenance.test.ts"
+  - "tests/unit/review-email-pii.test.ts"
+  - "tests/unit/review-email-ses-events.test.ts"
+  - "tests/unit/review-email-settings.test.ts"
+  - "tests/unit/review-email-tokens.test.ts"
   - "tests/review-center-browser.spec.ts"
 ---
 
@@ -101,12 +110,14 @@ physical-email attempts, explicit prepared and ambiguous send states, versioned
 batch tokens, host-isolated multi-device browser sessions, atomic per-product
 verified-buyer submit/skip, dynamic request expiry, SES feedback persistence,
 installation-generation fencing,
-rotatable versioned PII protection, exact-subject DSR, reversible aggregate
+versioned PII protection, exact-subject DSR, reversible aggregate
 analytics, bounded retention, immutable S3 erasure journal intent, crash-safe
 `412` recovery, restore coverage checks, and retryable erasure. AWS dispatch
 resources, outbound SES sending, production migration/deploy, Lambda DB/secret
-strategy, journal-stack rollout, and product/legal consent expansion remain
-open. Verify the source files above and current
+strategy, journal-stack rollout, and IYS/privacy/legal acceptance remain open.
+The ikas consent source is closed: current
+`listCustomer.subscriptionStatus`, not the historical order snapshot, is the
+send-time source of truth. Verify the source files above and current
 ikas/AWS runtime evidence before extending this ADR.
 Do not apply DB migrations, create AWS resources, DNS records, QStash schedules,
 Vercel environment variables, or deploys from this document without a separate
@@ -231,18 +242,22 @@ for the detailed support-answer record. The current confirmed contract is:
 - `store/order/created` and `store/order/updated` are valid webhook scopes for
   this flow when the app has the matching API access permission. Orders read is
   required; customer-data usage may require Customers read.
-- `orderPackageStatus` is the high-level physical delivery field.
-  `DELIVERED` is the physical-delivery terminal state.
-- `shippingMethod` must be checked because `CLICK_AND_COLLECT` may terminate at
-  `READY_FOR_PICK_UP`, while digital/no-shipment orders may not have a shipping
-  delivery step.
-- `orderPackages[].orderPackageFulfillStatus` and `orderLineItems[].status`
-  are detail fields for package/line-level decisions and partial delivery.
-- `customer.email` and `customer.notificationsAccepted` may be used for
-  post-order customer communication. ikas distinguishes marketing/commercial
-  sending from transactional notifications; `notificationsAccepted=false` blocks
-  marketing/commercial sending, while order confirmation, shipping, delivery,
-  and similar transactional notifications are independent of that field.
+- `orderPackageStatus` is a rollup. Package
+  `orderPackageFulfillStatus=DELIVERED` plus included line
+  `status=DELIVERED` is the canonical delivery evidence for shipment,
+  click-and-collect, digital-delivery, and no-shipment orders.
+- `READY_FOR_PICK_UP` means ready, not collected. Review requests wait for
+  actual package/line `DELIVERED`.
+- `OrderLineItem.statusUpdatedAt` is the last line-status transition. It is
+  exact delivery evidence only while the line is currently `DELIVERED`; later
+  refund/cancel transitions overwrite the ikas value, so Renuvex persists the
+  first observed delivered timestamp.
+- `listOrder.customer.notificationsAccepted` is an immutable historical order
+  snapshot. Send-time authorization comes from current
+  `listCustomer.subscriptionStatus=SUBSCRIBED`, with current customer existence,
+  deletion, and exact-email checks.
+- Package ids can change after cancel/re-fulfill. Durable grouping therefore
+  uses the package's canonical sorted line-id set, not package id.
 - `store/order/updated` payload can contain email, line item ids,
   product/variant ids, and package status fields, but the robust flow is still
   webhook wake-up -> canonical `listOrder` re-read.
@@ -255,10 +270,9 @@ for the detailed support-answer record. The current confirmed contract is:
   email, address, order references, and order-line references must be deleted or
   anonymized within 24 hours.
 
-Remaining decisions are now product/legal and implementation decisions, not
-unknown platform facts: exact consent posture for review requests when
-`notificationsAccepted=false`, digital/no-shipment timing, partial-delivery
-line eligibility, schema shape, token lifetime, and rollout order.
+Remaining decisions are product/legal or rollout concerns rather than unknown
+ikas field semantics: IYS/privacy classification, future finance-only refund
+policy, token/reminder product defaults, and rollout order.
 
 ### Database state
 
@@ -371,10 +385,9 @@ Implemented in source, disabled until rollout:
 - `store/order/created` and `store/order/updated` webhook receiver that treats
   webhooks as wake-up signals and re-reads canonical order state via
   `listOrder`;
-- eligibility logic for physical shipments with exact delivered-line
-  `statusUpdatedAt` evidence at or after the merchant activation cutoff;
-  click-and-collect and digital/no-shipment stay closed until their terminal
-  transition timestamps are provider-verified;
+- eligibility logic for all four supported shipping methods using package
+  `DELIVERED`, current line `DELIVERED`, and immutable first-delivery evidence
+  at or after the merchant activation cutoff;
 - first request job creation at `eligibleAt + firstDelayDays`;
 - reminder job creation only after provider acceptance, at actual
   `firstSentAt + reminderDelayDays`;
@@ -386,7 +399,9 @@ Implemented in source, disabled until rollout:
   and pending reminder cancellation;
 - dynamic request expiry that covers every scheduled reminder plus its token
   window; it is not a fixed 60-day constant;
-- strict first-release consent mode requiring `notificationsAccepted=true`;
+- current-customer consent preflight requiring
+  `listCustomer.subscriptionStatus=SUBSCRIBED`, an undeleted customer, and an
+  exact canonical recipient match within a bounded 60-second evidence window;
 - canonical `merchantId` validation plus a store-scoped installation-generation
   fence shared by order ingest, webhook audit, reconciliation lease creation,
   settings mutation, OAuth activation, and uninstall erasure;
@@ -460,33 +475,25 @@ Still missing:
 - Order webhooks are wake-up signals, not the canonical durable order source.
   The future receiver must verify the HMAC signature, apply idempotency, and
   re-read the order through `listOrder` before deciding eligibility or sending.
-- The first accepted webhook scopes are `store/order/created` and
-  `store/order/updated`, backed by Orders read access and any customer-data
-  permission ikas requires for the final app review package.
-- Physical-order review requests use `orderPackageStatus=DELIVERED` as the
-  high-level trigger, then consult package/line detail for partial delivery.
-- `CLICK_AND_COLLECT` and digital/no-shipment orders must use explicit separate
-  eligibility branches; they must not be folded blindly into the physical
-  delivery branch.
-- For the first production release, a shipment line is eligible only when its
-  current status is `DELIVERED` and its own `statusUpdatedAt` is present and is
-  at or after the current review-email activation cutoff. Package/order
-  `updatedAt`, `orderedAt`, webhook receipt time, and processing time are not
-  terminal-transition evidence. Package/order status remains useful for current
-  state and grouping only.
-- The current ikas contract does not expose a verified
-  `READY_FOR_PICK_UP` transition timestamp. Click-and-collect therefore remains
-  fail-closed until a separate provider-contract acceptance proves such
-  evidence; recognizing the current terminal status alone is insufficient for
-  historical cutoff safety.
+- The accepted scopes are `store/order/created` and `store/order/updated`;
+  source enablement also requires OAuth `read_orders` and `read_customers`.
+- SHIPMENT, CLICK_AND_COLLECT, DIGITAL_DELIVERY, and NO_SHIPMENT use the same
+  final-delivery invariant: one canonical package is `DELIVERED`, every required
+  included line is currently `DELIVERED`, and each line has an immutable first
+  delivered timestamp at or after the activation cutoff.
+- `READY_FOR_PICK_UP` alone never starts a review request. Package/order
+  `updatedAt`, `orderedAt`, webhook receipt time, and processing time are
+  discovery/current-state evidence only.
+- `orderPaymentStatus=FAILED` is a hard exclusion. `WAITING + DELIVERED` remains
+  valid for manual, transfer, and cash-on-delivery scenarios.
 - Reconciliation uses `listOrder(updatedAt)` windows with `limit<=200` and
   `hasNext` pagination. The cadence and window overlap are implementation
   decisions, but the job must tolerate missed webhooks and duplicate updates.
 - `store/app/deleted` must trigger deletion or anonymization of stored customer
   email, address, order references, and order-line references within 24 hours.
-- `notificationsAccepted=false` is not a platform-level blocker for clearly
-  transactional notifications, but the final review-request consent rule is a
-  product/legal decision that must be explicit before launch.
+- `notificationsAccepted` is retained only as historical order audit evidence.
+  Current customer subscription and exact recipient equality authorize the
+  provider call; IYS/privacy/legal acceptance remains a launch gate.
 
 ### Sender and region
 
@@ -564,17 +571,18 @@ Migrations `20260710120000_add_review_request_email_lifecycle`,
 `20260710210000_add_review_email_retention_analytics_journal` are present in
 production migration history. The additive Multi-Product V3.2 migration
 `20260715120000_add_review_email_batch_envelope_v32` and historical-cutoff
-migration `20260716120000_add_review_email_eligibility_cutoff` are locally
-verified source only and are not applied to production by this checkpoint.
+migration `20260716120000_add_review_email_eligibility_cutoff`, plus
+`20260720120000_align_ikas_review_email_contracts`, are locally verified source
+only and are not applied to production by this checkpoint.
 
 Implemented ownership and privacy boundaries:
 
 - `ReviewEmailSettings` stores bounded merchant controls and order-webhook
   registration health. Defaults are first request `1` day after eligibility,
   one reminder `1` day after first provider acceptance, trigger `delivery`, and
-  strict `notificationsAccepted=true` consent. A successful disabled-to-enabled
-  transition also records `eligibilityStartsAt`; re-enable establishes a new
-  cutoff while an enabled-to-enabled settings edit preserves the current one.
+  current-customer subscription consent. A successful disabled-to-enabled
+  transition records `eligibilityStartsAt`; re-enable establishes a new cutoff
+  while an enabled-to-enabled settings edit preserves the current one.
 - `IkasStoreInstallation` is the store-scoped lifecycle fence. It binds one
   active `authorizedAppId` to a monotonically increasing generation and keeps
   an erased tombstone so a delayed uninstall/retry or OAuth callback cannot
@@ -584,6 +592,9 @@ Implemented ownership and privacy boundaries:
   Raw webhook/order payloads, addresses, phone numbers, payment details, IPs,
   user agents, and plaintext customer email are not persisted. Email is stored
   as HMAC plus AES-GCM ciphertext only where sending requires it.
+- `IkasOrderLineSnapshot.firstDeliveredAt` freezes the first exact delivered
+  line transition observed by Renuvex. It survives later ikas status changes but
+  never overrides current line/package ineligibility.
 - `ReviewEmailBatch.eligibilityStartsAtSnapshot` freezes the activation epoch
   used to authorize that batch. Sender prepare/commit must match the current
   enabled setting and reject a stale or missing snapshot.
@@ -647,11 +658,17 @@ Implemented state and expiry rules:
   the current versioned HMAC key, stored only as a hash, and returned in sender
   memory. If the sender crashes before `sendCommittedAt`, stale preparation is
   abandoned and a new attempt is safe. Once send is committed, the token becomes
-  active for 30 days from `sendInitiatedAt`.
+  active for 30 days from the send-commit boundary.
 - A missing/timeout SES result moves the attempt/job to
-  `awaiting_confirmation` and affected batch requests to `sent_unknown`; it is never
-  automatically resent. Signed SES feedback may reconcile it. After 24 hours,
-  maintenance marks `outcome_unknown` and emits operator evidence.
+  `awaiting_confirmation` and affected batch requests to `sent_unknown`; it is
+  never automatically resent. Every new send commit persists
+  `confirmationDeadlineAt = sendCommittedAt + 24 hours`, and the transition to
+  `awaiting_confirmation` preserves that deadline. Maintenance uses the stored
+  deadline first. Legacy rows with a null deadline derive it from
+  `sendInitiatedAt ?? sendCommittedAt`, never from the maintenance invocation
+  time. Signed SES feedback may reconcile the result. Once the deadline passes,
+  maintenance marks terminal `outcome_unknown` and emits operator evidence;
+  only an audited `confirmed_not_sent` decision may authorize another attempt.
 - Request lifetime is dynamic, not a fixed 60-day value. Initial expiry covers
   the first due time plus one 30-day token window. Every newly scheduled
   reminder extends request expiry to at least its `sendAfter + 30 days`; a late
@@ -666,6 +683,15 @@ Implemented state and expiry rules:
   erasure migration.
 - Bounded maintenance eagerly expires tokens, two-hour sessions, and requests;
   resolve/submit paths also fail closed and lazily mark expired credentials.
+- Access revocation is event-specific. Intermediate product submit/skip keeps
+  sibling access; the final product transition revokes all batch tokens and
+  sessions. Recipient change, DSR, uninstall, bounce, complaint, reject, and
+  rendering failure close active attempt access and prevent reminders. A
+  pre-commit store disable revokes unsent access and work, while a post-send
+  unsubscribe or store disable blocks future email without invalidating an
+  already delivered review link. `awaiting_confirmation` and
+  `outcome_unknown` preserve that possible-delivery link until normal expiry;
+  expired token/session rows cannot be reactivated.
 
 Implemented flow:
 
@@ -707,31 +733,28 @@ Implemented flow:
 
 Eligibility defaults for the first implementation:
 
-- Physical shipment: `shippingMethod=SHIPMENT` plus current package/order
-  delivery state identifies candidate grouping, but every required line must
-  be `DELIVERED` and carry its own exact `statusUpdatedAt` at or after the
-  activation cutoff. A product spanning multiple lines becomes eligible at the
-  latest required line timestamp. Missing exact evidence fails closed as
-  `missing_exact_delivery_timestamp`; generic package/order update timestamps
-  never replace it.
-- Click-and-collect: remain closed in the first production activation because
-  `READY_FOR_PICK_UP` currently has no provider-verified transition timestamp
-  for historical cutoff enforcement.
-- Digital delivery and no-shipment: remain closed until an explicit product
-  decision defines their terminal state and delay policy.
+- SHIPMENT, CLICK_AND_COLLECT, DIGITAL_DELIVERY, and NO_SHIPMENT require an
+  exact package membership, package `DELIVERED`, and every required line
+  currently `DELIVERED`. Review email never starts at pickup-ready.
+- A product spanning multiple lines becomes eligible at the maximum immutable
+  `firstDeliveredAt`. Missing exact evidence fails closed as
+  `missing_exact_delivery_timestamp`; generic package/order timestamps never
+  replace it.
+- A package is grouped by the SHA-256 digest of canonical sorted unique line
+  ids. Package id is audit-only because re-fulfillment creates a new id.
 - Cancellation, refund, return, unable-to-deliver, missing customer email,
   invalid email, suppression, disabled store settings, or expired token close
   or skip pending requests/jobs.
-- First-release consent mode is strict: send only when the order has a customer
-  email and `notificationsAccepted=true`. ikas says transactional messages may
-  be independent of that flag, but using that route for review requests remains
-  a product/legal decision, not a default.
+- Send authorization requires a current undeleted ikas customer with
+  `subscriptionStatus=SUBSCRIBED` and an exact canonical email equal to the
+  order/batch recipient. The historical order consent snapshot does not
+  authorize or deny sending.
 - The current `listOrder` document has no manual-order/source discriminator and
-  the lifecycle does not branch on origin. A manually created order returned by
-  `listOrder` follows the same strict recipient, consent, shipping, and delivery
-  checks. This source behavior is not live proof that every manual-order variant
-  exposes complete package/customer evidence; dev-store acceptance remains a
-  gate, and no alternative recipient is inferred.
+  the lifecycle does not branch on origin. A manual order follows its selected
+  shipping method plus the same current-customer, package, line, payment,
+  suppression, and cutoff checks. Development-store evidence verifies the ADMIN
+  shipment shape; real outbound acceptance remains an SES sandbox gate. No
+  alternative recipient is inferred.
 
 Uninstall registration caveat:
 
@@ -773,10 +796,9 @@ Uninstall registration caveat:
 
 ### Decisions still open
 
-- Product/legal consent posture for review-request email when
-  `notificationsAccepted=false`.
-- Exact digital/no-shipment timing, advanced partial-delivery edge cases, resend
-  rules, and reminder-count defaults beyond the first bounded release.
+- IYS/privacy/legal classification and merchant-facing consent copy.
+- Advanced partial-delivery and finance-only refund edge cases, resend rules,
+  and reminder-count defaults beyond the first bounded release.
 - Reconciliation cadence, overlap window, and rate-limit handling details.
 - The exact provider-side registration/configuration mechanism for the
   uninstall signal remains a live ikas rollout gate. The source receiver and
@@ -864,14 +886,15 @@ email delivery:
   installation generation, ikas order id, grouping mode, and group key only.
   Purged terminal tombstones are found by all active fingerprint key versions,
   so reingestion cannot recreate requests or jobs.
-- Canonical `listOrder` evidence groups exact package membership as
-  `package:{packageId}`. Ambiguous package evidence fails closed; the bounded
-  `order:complete` fallback is used only when all active shipment lines are
-  terminal-delivered. A product split across packages waits for every related
-  line. Variant/quantity repeats remain one product-level request. Regrouping is
-  allowed before `sendCommittedAt`; after that boundary membership and recipient
-  are frozen. A closed batch is never reopened, and a later discovered product
-  receives only a `late_after_batch_closed` receipt fence.
+- Canonical `listOrder` evidence groups exact package membership by a digest of
+  canonical sorted package line ids. Package id remains audit-only because
+  cancel/re-fulfill creates a new id. Missing or ambiguous membership fails
+  closed; there is no order-level fallback. A product split across packages
+  waits for every related line. Variant/quantity repeats remain one
+  product-level request. Regrouping is allowed before `sendCommittedAt`; after
+  that boundary membership and recipient are frozen. A closed batch is never
+  reopened, and a later discovered product receives only a
+  `late_after_batch_closed` receipt fence.
 - Composite tenant FKs bind batches to order snapshots and requests/jobs to the
   owning batch. Request-to-order and request-to-line remain `ON DELETE
   RESTRICT`; batch/order and DSR locks use deterministic transaction ordering.
@@ -992,15 +1015,86 @@ because of an unrelated later order/package update:
   and cancels scheduled/deferred/reminder work that has not crossed
   `sendCommittedAt`. A committed attempt may finish, but disabled access blocks
   reminder creation and no old cancelled backlog is revived after re-enable.
-- Click-and-collect remains fail-closed until ikas provides and a dev-store test
-  verifies an exact `READY_FOR_PICK_UP` transition timestamp. Digital and
-  no-shipment modes remain disabled as before.
+- All four supported shipping methods require actual package and line
+  `DELIVERED`; pickup-ready is not a review trigger. Digital and no-shipment
+  orders follow the same delivered-evidence rule rather than a source-specific
+  timing fallback.
 
 The additive migration is
 `20260716120000_add_review_email_eligibility_cutoff`. Production was verified
 read-only to contain no review-email lifecycle rows and not to have the V3.2
 batch migration applied. This checkpoint performs no production DB, AWS, SES,
 DNS, Vercel, or ikas mutation.
+
+### 2026-07-16 Confirmation and Access Contract Hardening
+
+The disabled source now pins the existing provider-ambiguous and access
+lifecycle without adding schema or product settings:
+
+- New send commits persist their 24-hour confirmation deadline. Maintenance
+  selects persisted deadlines and supports legacy null rows only through the
+  original provider-call timestamp; repeated maintenance runs cannot move the
+  deadline forward.
+- `awaiting_confirmation` and terminal `outcome_unknown` remain non-resendable
+  and preserve possible-delivery access until normal token expiry. Late signed
+  provider evidence may still resolve the attempt. Only audited
+  `confirmed_not_sent` closes old access and reopens safe retry.
+- Focused tests pin exact/folded email normalization boundaries, Gmail dot/plus
+  preservation, invalid address rejection, lifecycle-specific token/session
+  revocation, post-send setting behavior, and expired-credential non-revival.
+- The full unit suite passed `556/556`. The review-email integration suite
+  passed `26/26` against clean disposable PostgreSQL 16 and `26/26` against
+  PostgreSQL 17 after all 58 migrations. Prisma generation, TypeScript, ESLint,
+  and the Next.js webpack production build also passed.
+- MCP `listOrder` list/introspection and a direct read-only OAuth query verified
+  the manual-order evidence surface. Order `1010` was `createdBy=ADMIN`, used
+  `SHIPMENT`, and exposed coherent delivered package/line membership plus exact
+  line `statusUpdatedAt`. Its canonical order customer still reported
+  `notificationsAccepted=false`; the later 2026-07-20 ikas answer confirmed
+  this field is an immutable order snapshot rather than send-time consent.
+
+No production DB, AWS, SES, DNS, Vercel, or outbound-email mutation was
+performed by the agent. The merchant performed the dev-store manual-order
+status transitions and an uninstall/reinstall to restore OAuth. No
+`StoreDataErasureRun` was observed from that uninstall, so provider-side
+`store/app/deleted` registration/acceptance remains an explicit launch gate.
+
+### 2026-07-20 ikas Customer And Delivery Contract Alignment
+
+The detailed ikas developer answer received on 2026-07-20 supersedes the
+earlier consent and delivery assumptions without replacing the Batch/Envelope,
+token, DSR, analytics, or reconciliation architecture:
+
+- Order `notificationsAccepted` is retained only as historical audit evidence.
+  The provider-neutral sender preflight re-reads `listOrder`, synchronizes the
+  current order, then reads `listCustomer`. Only current
+  `subscriptionStatus=SUBSCRIBED`, an undeleted customer, and an exact canonical
+  email match authorize attempt preparation.
+- OAuth source includes `read_customers`; enablement fails before webhook/cutoff
+  writes when `read_orders` or `read_customers` is absent. Existing
+  installations missing the scope require a separate reauthorization rollout.
+- Consent evidence is bounded and attempt-scoped. It expires after 60 seconds,
+  is rechecked before send commit, contains no raw customer response, and is
+  scrubbed with attempt PII by DSR/retention.
+- `IkasOrderLineSnapshot.firstDeliveredAt` persists the first exact delivered
+  transition observed while the line is `DELIVERED`. Later ikas refund/cancel
+  status timestamps cannot overwrite it. Current line/package state must still
+  be eligible, so history alone never reopens a request.
+- SHIPMENT, CLICK_AND_COLLECT, DIGITAL_DELIVERY, and NO_SHIPMENT all require
+  package and included-line `DELIVERED`. Pickup-ready alone is ineligible.
+- Durable grouping hashes canonical sorted package line ids. Re-created package
+  ids carrying the same line set resolve to the same batch. Missing or
+  contradictory membership fails closed.
+- `orderPaymentStatus=FAILED` blocks; `WAITING + DELIVERED` remains valid.
+  Refund/cancel/return states close affected pending work, and rejected
+  refund/cancel flows do not automatically revive it.
+- Manual orders do not receive a source-specific branch or toggle; they follow
+  their selected shipping method and the same current-customer/evidence rules.
+
+Migration `20260720120000_align_ikas_review_email_contracts` is expand-only:
+nullable evidence columns and default changes only, with no historical
+backfill. The feature remains disabled and no production DB, ikas, AWS, SES,
+DNS, Vercel, or outbound-email mutation is part of this checkpoint.
 
 2026-07-10 V5 correctness hardening after the nine-finding source audit:
 
@@ -1335,13 +1429,30 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-20: Aligned disabled review-email source with the detailed ikas
+  customer/order contract. Current customer subscription and exact email now
+  authorize sending; immutable first-delivery evidence, package-line-set batch
+  identity, four-method delivered eligibility, payment failure exclusion,
+  consent evidence expiry, DSR cleanup, OAuth scope gating, and focused tests
+  replace the superseded order-snapshot consent and package-id assumptions. No
+  live provider or production mutation occurred.
+- 2026-07-16: Hardened the disabled confirmation-deadline and access-revocation
+  contracts without schema changes. Maintenance now prioritizes persisted
+  deadlines with provider-call-time legacy fallback; ambiguous outcomes remain
+  non-resendable, canonicalization and revocation boundaries have focused
+  coverage, and the complete unit/integration/static gate passed on disposable
+  PostgreSQL 16/17. A live manual-order fixture proves `ADMIN` origin and exact
+  shipment evidence; its order-consent interpretation was superseded by the
+  2026-07-20 current-customer contract. The merchant performed the
+  fixture/reinstall; the agent made no production or provider mutation.
 - 2026-07-16: Added the disabled historical-cutoff and exact terminal-evidence
   contract. Shipment eligibility now requires each delivered line's exact
   `statusUpdatedAt` at or after a settings activation epoch, multi-line products
   use the latest required timestamp, generic package/order updates cannot cross
-  the cutoff, disable cancels only pre-commit work, and click-and-collect stays
-  fail-closed pending provider timestamp evidence. Added an additive migration
-  and PostgreSQL 16/17 lifecycle proof; no live mutation occurred.
+  the cutoff, and disable cancels only pre-commit work. The 2026-07-20 contract
+  later generalized exact delivered evidence to all four shipping methods.
+  Added an additive migration and PostgreSQL 16/17 lifecycle proof; no live
+  mutation occurred.
 - 2026-07-15: Implemented the disabled Multi-Product Batch / Envelope V3.2
   source contract. Added delivery-group batches, product-scoped requests,
   physical job/attempt separation, provider-neutral event transport,
@@ -1389,7 +1500,8 @@ External contract evidence:
   re-read with `listOrder`, physical delivery uses `orderPackageStatus`, pickup
   and digital/no-shipment require separate branches, reconciliation uses
   `updatedAt` pagination, and uninstall requires personal-data deletion or
-  anonymization within 24 hours.
+  anonymization within 24 hours. Consent and delivery details were superseded by
+  the 2026-07-20 contract.
 - 2026-07-09: Prepared the SES foundation source package without provider
   mutation: CloudFormation templates, validators, disabled env placeholders, and
   a fail-closed signed SNS feedback endpoint skeleton. AWS stacks, DNS, Vercel

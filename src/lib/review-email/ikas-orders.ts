@@ -339,7 +339,13 @@ export async function syncIkasOrderForReviewRequests(
       const suppressed = subjectBlocked || await hasSuppression(tx, order, now);
       const existingLineRows = await tx.ikasOrderLineSnapshot.findMany({
         where: { storeId: order.storeId, ikasOrderId: order.ikasOrderId },
-        select: { id: true, ikasOrderLineItemId: true, productId: true, eligibleAt: true },
+        select: {
+          id: true,
+          ikasOrderLineItemId: true,
+          productId: true,
+          eligibleAt: true,
+          firstDeliveredAt: true,
+        },
       });
       const existingLines = new Map(existingLineRows.map((line) => [line.ikasOrderLineItemId, line]));
       const canonicalLineIds = new Set(order.lines.map((line) => line.id));
@@ -355,13 +361,15 @@ export async function syncIkasOrderForReviewRequests(
       }> = [];
 
       for (const line of order.lines) {
-        const eligibility = evaluateLineEligibility(order, line, settings.eligibilityStartsAt);
         const priorLine = existingLines.get(line.id);
-        const stableEligibleAt = eligibility.eligible
-          ? priorLine?.eligibleAt && priorLine.eligibleAt >= settings.eligibilityStartsAt
-            ? priorLine.eligibleAt
-            : eligibility.eligibleAt
-          : null;
+        const firstDeliveredAt = priorLine?.firstDeliveredAt ??
+          (line.status === 'DELIVERED' ? line.statusUpdatedAt : null);
+        const eligibility = evaluateLineEligibility(
+          order,
+          { ...line, statusUpdatedAt: firstDeliveredAt },
+          settings.eligibilityStartsAt,
+        );
+        const stableEligibleAt = eligibility.eligible ? eligibility.eligibleAt : null;
         const lineSnapshot = await tx.ikasOrderLineSnapshot.upsert({
           where: { storeId_ikasOrderLineItemId: { storeId: order.storeId, ikasOrderLineItemId: line.id } },
           create: {
@@ -373,6 +381,7 @@ export async function syncIkasOrderForReviewRequests(
             variantId: line.variantId,
             lineStatus: line.status,
             lineStatusUpdatedAt: line.statusUpdatedAt,
+            firstDeliveredAt,
             quantity: line.quantity,
             productName: line.productName,
             variantName: line.variantName,
@@ -388,6 +397,7 @@ export async function syncIkasOrderForReviewRequests(
             variantId: line.variantId,
             lineStatus: line.status,
             lineStatusUpdatedAt: line.statusUpdatedAt,
+            firstDeliveredAt,
             quantity: line.quantity,
             productName: line.productName,
             variantName: line.variantName,
@@ -453,15 +463,7 @@ export async function syncIkasOrderForReviewRequests(
           },
           orderBy: { createdAt: 'asc' },
         });
-        let reusableFallback = existingBatches.find((batch) =>
-          batch.deliveryGroupKey === 'order:complete' &&
-          batch.groupingFrozenAt === null &&
-          ['scheduled', 'sending'].includes(batch.status)
-        ) ?? null;
-        let preservedFallback = existingBatches.find((batch) =>
-          batch.deliveryGroupKey === 'order:complete' &&
-          (batch.groupingFrozenAt !== null || CLOSED_REVIEW_EMAIL_BATCH_STATUSES.has(batch.status))
-        ) ?? null;
+        const regroupedMutableBatchIds = new Set<string>();
         const incrementedMembershipVersions = new Set<string>();
         const batchesNeedingMembershipIncrement = new Set<string>();
 
@@ -482,31 +484,43 @@ export async function syncIkasOrderForReviewRequests(
             candidate.deliveryGroupKey === deliveryGroup.deliveryGroupKey || batchFingerprintCandidates.includes(candidate.batchFingerprint)
           ) ?? null;
 
-          if (!batch && deliveryGroup.groupingMode === 'package') {
+          if (!batch) {
+            const mutableMembershipBatch = existingBatches.find((candidate) =>
+              !regroupedMutableBatchIds.has(candidate.id) &&
+              candidate.groupingFrozenAt === null &&
+              ['scheduled', 'sending'].includes(candidate.status) &&
+              existingOrderRequests.some((request) => (
+                request.batchId === candidate.id && deliveryGroupProducts.has(request.productId)
+              ))
+            ) ?? null;
+            if (mutableMembershipBatch) {
+              batch = await tx.reviewEmailBatch.update({
+                where: { id: mutableMembershipBatch.id },
+                data: {
+                  deliveryGroupKey: deliveryGroup.deliveryGroupKey,
+                  deliveryGroupMode: deliveryGroup.groupingMode,
+                  groupingVersion: { increment: 1 },
+                  batchFingerprint,
+                  fingerprintKeyVersion: Number(batchFingerprint.split(':')[1]),
+                  eligibleAt: deliveryGroup.eligibleAt,
+                  sendAfter,
+                  expiresAt: initialRequestExpiresAt(sendAfter),
+                },
+              });
+              regroupedMutableBatchIds.add(batch.id);
+              const batchIndex = existingBatches.findIndex((candidate) => candidate.id === batch!.id);
+              if (batchIndex >= 0) existingBatches[batchIndex] = batch;
+            }
+          }
+
+          if (!batch) {
             const preservedMembershipBatch = existingBatches.find((candidate) =>
               (candidate.groupingFrozenAt !== null || CLOSED_REVIEW_EMAIL_BATCH_STATUSES.has(candidate.status)) &&
               existingOrderRequests.some((request) => (
                 request.batchId === candidate.id && deliveryGroupProducts.has(request.productId)
               ))
             ) ?? null;
-            batch = preservedFallback ?? preservedMembershipBatch;
-          }
-
-          if (!batch && reusableFallback && deliveryGroup.groupingMode === 'package') {
-            batch = await tx.reviewEmailBatch.update({
-              where: { id: reusableFallback.id },
-              data: {
-                deliveryGroupKey: deliveryGroup.deliveryGroupKey,
-                deliveryGroupMode: deliveryGroup.groupingMode,
-                groupingVersion: { increment: 1 },
-                batchFingerprint,
-                fingerprintKeyVersion: Number(batchFingerprint.split(':')[1]),
-                eligibleAt: deliveryGroup.eligibleAt,
-                sendAfter,
-                expiresAt: initialRequestExpiresAt(sendAfter),
-              },
-            });
-            reusableFallback = null;
+            batch = preservedMembershipBatch;
           }
 
           if (!batch) {
@@ -596,7 +610,6 @@ export async function syncIkasOrderForReviewRequests(
             incrementedMembershipVersions.add(batch.id);
             const batchIndex = existingBatches.findIndex((candidate) => candidate.id === selectedBatchId);
             if (batchIndex >= 0) existingBatches[batchIndex] = batch;
-            if (preservedFallback?.id === selectedBatchId) preservedFallback = batch;
           }
 
           const frozenRecipientChanged = Boolean(
