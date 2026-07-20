@@ -14,9 +14,9 @@ import { resolveActiveReviewCenterSession, ReviewRequestTokenError } from '@/lib
 
 export async function POST(request: NextRequest, context: { params: Promise<{ itemId: string }> }) {
   try {
+    if (!isReviewEmailEnabled()) return secureReviewCenterResponse(NextResponse.json({ error: 'not_found' }, { status: 404 }));
     assertReviewRequestPublicHost(request);
     assertReviewRequestSameOrigin(request);
-    if (!isReviewEmailEnabled()) return secureReviewCenterResponse(NextResponse.json({ error: 'not_found' }, { status: 404 }));
     const contentLength = Number(request.headers.get('content-length') ?? 0);
     if (Number.isFinite(contentLength) && contentLength > 64 * 1024) {
       return secureReviewCenterResponse(NextResponse.json({ error: 'payload_too_large' }, { status: 413 }));

@@ -84,6 +84,7 @@ source_files:
   - "tests/unit/review-email-ses-events.test.ts"
   - "tests/unit/review-email-settings.test.ts"
   - "tests/unit/review-email-tokens.test.ts"
+  - "tests/unit/review-email-disabled-public-routes.test.ts"
   - "tests/review-center-browser.spec.ts"
 ---
 
@@ -93,28 +94,27 @@ source_files:
 
 Use this accepted ADR when researching or designing post-purchase review-request
 email, verified-buyer submission, Amazon SES delivery, or email-job scheduling.
-The provider boundary, SES regional/sender/runtime/feedback contract,
-provider-neutral tenant direction, exact terminal-delivery cutoff evidence,
-and source-only SES foundation package are
-accepted. Review-request email dispatch now targets an AWS-native first
-implementation using EventBridge, SQS, Lambda, and SES. Existing QStash media
-and maintenance scheduling remains in place and is not part of the email
-cutover. Direct ikas feedback confirms the order webhook/listOrder,
-delivery-state, reconciliation, and uninstall-retention platform contract. The
-review-request DB/lifecycle V5 and multi-product Batch/Envelope V3.2 source
-implementations now exist behind a disabled feature flag: additive/RLS-hardened
+The provider boundary, SES regional/sender/runtime/feedback contract, exact
+terminal-delivery cutoff evidence, and source-only SES foundation are accepted.
+Email dispatch targets EventBridge, SQS, Lambda, and SES; existing QStash media
+and maintenance scheduling is unchanged. Direct ikas feedback confirms the
+order webhook/listOrder, delivery, reconciliation, and uninstall-retention
+contract. The review-request V5 and multi-product Batch/Envelope V3.2
+implementations exist behind a disabled feature flag: additive/RLS-hardened
 Prisma migrations, canonical
 `listOrder` re-read, leased reconciliation, immutable settings/recipient
 snapshots, delivery-group batches with product-scoped requests, provider-neutral
-physical-email attempts, explicit prepared and ambiguous send states, versioned
-batch tokens, host-isolated multi-device browser sessions, atomic per-product
-verified-buyer submit/skip, dynamic request expiry, SES feedback persistence,
-installation-generation fencing,
-versioned PII protection, exact-subject DSR, reversible aggregate
+physical-email attempts, explicit ambiguous send states, versioned batch tokens,
+host-isolated browser sessions, atomic per-product verified-buyer submit/skip,
+dynamic expiry, SES feedback persistence, installation-generation fencing,
+versioned PII protection, exact-subject DSR, reversible
 analytics, bounded retention, immutable S3 erasure journal intent, crash-safe
 `412` recovery, restore coverage checks, and retryable erasure. AWS dispatch
-resources, outbound SES sending, production migration/deploy, Lambda DB/secret
-strategy, journal-stack rollout, and IYS/privacy/legal acceptance remain open.
+resources, outbound SES sending, Lambda DB/secret strategy, journal-stack
+rollout, and IYS/privacy/legal acceptance remain open. The approved
+2026-07-20 rollout applied all 59 migrations and deployed this disabled source
+to Production; all review-email lifecycle tables remained empty and
+`REVIEW_EMAIL_ENABLED` remained absent.
 The ikas consent source is closed: current
 `listCustomer.subscriptionStatus`, not the historical order snapshot, is the
 send-time source of truth. Verify the source files above and current
@@ -128,8 +128,8 @@ scope, risk, rollback note, and explicit approval.
 This ADR records the verified state and accepted infrastructure/application
 contract for a future global-MVP review-request email feature. The first
 DB/backend lifecycle, V5 retention/DSR/journal, and multi-product
-Batch/Envelope V3.2 source packages are implemented but remain disabled until
-migration/deploy and provider rollout are separately approved. AWS SES in
+Batch/Envelope V3.2 source packages are implemented and deployed but remain
+disabled until provider rollout and activation are separately approved. AWS SES in
 `eu-central-1`, a review-specific sender domain, provider-neutral application
 boundaries, tenant-aware ownership, AWS-native email job dispatch, and a signed
 SES feedback path are accepted directions. Existing QStash usage remains scoped
@@ -148,15 +148,15 @@ Direct ikas feedback on 2026-07-09 confirms the high-level order webhook,
 canonical `listOrder` re-read, delivery-state, reconciliation, and uninstall
 cleanup contract. The additive DB/lifecycle contract is implemented in source;
 product/legal consent expansion, Lambda DB/secret strategy, AWS resource
-rollout, production migration/deploy, and production access remain open.
+rollout, production access, and outbound-email activation remain open.
 
 ## Status
 
 Accepted - infrastructure source package prepared; ikas platform contract and
 additive V5 DB/backend lifecycle, retention, analytics, DSR, journal, and
-multi-product Batch/Envelope V3.2 implementation exist in source. The feature
-is still off until production
-migration/deploy and provider rollout are approved.
+multi-product Batch/Envelope V3.2 implementation are deployed with all 59
+migrations applied. The feature is still off until provider rollout and
+activation are approved.
 
 This ADR does not authorize AWS stack creation, DNS records, Vercel env writes,
 DB migrations, deploys, or provider mutation.
@@ -426,8 +426,7 @@ Still missing:
 - live product UI for review-request settings and template preview;
 - provider-side verification and live acceptance of the separately configured
   uninstall signal plus the MCP-valid order-webhook registration;
-- production migration/deploy, SES sandbox exit, DNS/env rollout, and live email
-  acceptance tests.
+- SES sandbox exit, DNS/env rollout, and live email acceptance tests.
 
 ## Decision
 
@@ -683,6 +682,12 @@ Implemented state and expiry rules:
   erasure migration.
 - Bounded maintenance eagerly expires tokens, two-hour sessions, and requests;
   resolve/submit paths also fail closed and lazily mark expired credentials.
+- When the global feature is disabled, review token exchange, session resolve,
+  item listing, submit, and skip routes return `404 not_found` before reading
+  public-host or token/session secrets. This keeps a disabled deployment safe
+  even when activation-only environment values are absent. Unsubscribe is
+  intentionally excluded because retained links must continue honoring a
+  preference after future sending is disabled.
 - Access revocation is event-specific. Intermediate product submit/skip keeps
   sibling access; the final product transition revokes all batch tokens and
   sessions. Recipient change, DSR, uninstall, bounce, complaint, reject, and
@@ -970,8 +975,10 @@ The additive migration is
 `20260715120000_add_review_email_batch_envelope_v32`. Legacy request-scoped
 job/token/session columns remain nullable behind SQL XOR checks for deployment
 overlap; their contract removal requires separate zero-legacy-row evidence.
-The feature remains disabled and no production migration, AWS resource, DNS,
-environment value, deployment, or email send is authorized by this checkpoint.
+The feature remains disabled. The additive migration/deployment checkpoint
+completed on 2026-07-20 with all 59 migrations applied and zero lifecycle rows;
+no AWS email resource, review-domain DNS/env activation, or email send is
+authorized by this checkpoint.
 
 Deferred provider gates remain explicit:
 
@@ -1429,6 +1436,14 @@ External contract evidence:
 
 ## Change Log
 
+- 2026-07-20: Merged PR #8 and applied the three approved additive migrations
+  in Production (`59/59`, no failed migrations, zero review-email lifecycle
+  rows) while keeping the global feature absent/disabled. Live acceptance found
+  that disabled public review routes consulted activation-only host config
+  before the flag and returned `500`; the follow-up contract now returns
+  `404 not_found` before any secret, host, rate-limit, or persistence access.
+  `reviews.renuvex.app`, AWS sender resources, and outbound email remain
+  separately gated.
 - 2026-07-20: Aligned disabled review-email source with the detailed ikas
   customer/order contract. Current customer subscription and exact email now
   authorize sending; immutable first-delivery evidence, package-line-set batch

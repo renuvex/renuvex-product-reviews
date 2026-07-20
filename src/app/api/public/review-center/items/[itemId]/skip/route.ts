@@ -21,9 +21,9 @@ import {
 
 export async function POST(request: NextRequest, context: { params: Promise<{ itemId: string }> }) {
   try {
+    if (!isReviewEmailEnabled()) return secureReviewCenterResponse(NextResponse.json({ error: 'not_found' }, { status: 404 }));
     assertReviewRequestPublicHost(request);
     assertReviewRequestSameOrigin(request);
-    if (!isReviewEmailEnabled()) return secureReviewCenterResponse(NextResponse.json({ error: 'not_found' }, { status: 404 }));
     const limited = await reviewCenterRateLimit(request, 'skip', 20);
     if (limited) return limited;
     const session = await resolveActiveReviewCenterSession(prisma, getReviewRequestSessionCookie(request));

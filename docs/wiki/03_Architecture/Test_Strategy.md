@@ -48,6 +48,7 @@ source_files:
   - "tests/unit/review-email-retention.test.ts"
   - "tests/unit/review-email-batch-schema.test.ts"
   - "tests/unit/review-email-tokens.test.ts"
+  - "tests/unit/review-email-disabled-public-routes.test.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
@@ -177,6 +178,22 @@ credentials never revive. Maintenance prioritizes persisted
 `confirmationDeadlineAt`, uses provider-call timestamps for legacy null rows,
 and keeps `outcome_unknown` terminal and non-resendable while allowing late
 signed evidence.
+
+Disabled-runtime route coverage deliberately removes both
+`REVIEW_EMAIL_ENABLED` and `REVIEW_REQUEST_PUBLIC_BASE_URL`, then calls legacy
+and batch token/session/item/submit/skip endpoints. Every endpoint must return
+`404 not_found` before host, origin, token, rate-limit, or persistence work.
+This reproduces the 2026-07-20 Production acceptance finding without requiring
+the deferred `reviews.renuvex.app` DNS or activation secrets. Unsubscribe is not
+part of this gate because an already issued preference link must remain usable
+after future sending is disabled.
+
+2026-07-20 disabled-route fix-forward evidence: focused public-route tests
+passed `12/12`, the full unit suite passed `578/578`, and the review-center
+browser flow passed `1/1`. TypeScript, ESLint, the Next.js production build,
+wiki changed-source audit (`Errors: 0`), and diff checks also passed. No schema
+or migration changed, so this checkpoint does not supersede the PostgreSQL
+16/17 migration and integration evidence below.
 
 2026-07-16 local evidence: the full unit suite passed `556/556`; the
 review-email PostgreSQL integration suite passed `26/26` after all 58 migrations

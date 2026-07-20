@@ -67,8 +67,8 @@ async function rateLimitResponse(request: Request): Promise<NextResponse | null>
 
 export async function POST(request: NextRequest) {
   try {
-    assertReviewRequestPublicHost(request);
     if (!featureAvailable()) return noStore(NextResponse.json({ error: 'not_found' }, { status: 404 }));
+    assertReviewRequestPublicHost(request);
     const limited = await rateLimitResponse(request);
     if (limited) return limited;
 
@@ -98,8 +98,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    assertReviewRequestPublicHost(request);
     if (!featureAvailable()) return noStore(NextResponse.json({ error: 'not_found' }, { status: 404 }));
+    assertReviewRequestPublicHost(request);
     const limited = await rateLimitResponse(request);
     if (limited) return limited;
 

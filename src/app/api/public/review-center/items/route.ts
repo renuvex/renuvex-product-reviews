@@ -30,8 +30,8 @@ function encodeCursor(value: ItemCursor): string {
 
 export async function GET(request: NextRequest) {
   try {
-    assertReviewRequestPublicHost(request);
     if (!isReviewEmailEnabled()) return secureReviewCenterResponse(NextResponse.json({ error: 'not_found' }, { status: 404 }));
+    assertReviewRequestPublicHost(request);
     const limited = await reviewCenterRateLimit(request, 'items', 60);
     if (limited) return limited;
     const session = await resolveActiveReviewCenterSession(prisma, getReviewRequestSessionCookie(request));
