@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - index
@@ -191,4 +191,4 @@ source_files: []
 
 ---
 
-**Last Updated:** 2026-07-15 (disabled review-email V5 plus Multi-Product Batch / Envelope V3.2 source implemented and locally verified; production migration, AWS sender, DNS, deploy, and outbound email remain separately gated)
+**Last Updated:** 2026-07-20 (review-email V5 plus Multi-Product Batch / Envelope V3.2 schema/backend deployed with all 59 migrations while globally disabled; AWS sender, review-domain DNS, activation, and outbound email remain separately gated)

@@ -13,9 +13,9 @@ import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/rev
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isReviewEmailEnabled()) return secureReviewCenterResponse(NextResponse.json({ error: 'not_found' }, { status: 404 }));
     assertReviewRequestPublicHost(request);
     assertReviewRequestSameOrigin(request);
-    if (!isReviewEmailEnabled()) return secureReviewCenterResponse(NextResponse.json({ error: 'not_found' }, { status: 404 }));
     const limited = await reviewCenterRateLimit(request, 'session');
     if (limited) return limited;
     const body = await request.json().catch(() => null) as { token?: unknown } | null;

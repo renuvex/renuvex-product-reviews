@@ -36,6 +36,28 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - Do not re-enable Preview deployments until `pnpm verify:preview-db-isolation -- --json --branch=<branch>` proves that both Preview database URLs are isolated from Production. A failed isolation check is a rollout blocker, not a warning.
 - After every branch push while this guard is active, confirm that Vercel did not start a Preview deployment and that the Production migration set did not change.
 
+### Review-email disabled rollout
+
+- PR #8 merged as `6163fa11441092d36272da7e9e1d15697c01739e`.
+  Vercel deployment `dpl_5tikvdGzDwK5XBu3FHaP85R5QyeD` reached `Ready`
+  and `app.renuvex.app` was promoted to it.
+- The build applied the three additive review-email migrations successfully.
+  The Production database reports `59/59`, no failed migration, all
+  review-email lifecycle counts remain zero, and `REVIEW_EMAIL_ENABLED` remains
+  absent.
+- Production acceptance found and reproduced one disabled-state issue: public
+  review routes read activation-only host configuration before checking the
+  global flag, causing `500` while those secrets were intentionally absent.
+  The fix-forward checks the flag first and returns `404 not_found`; its focused
+  regression is `tests/unit/review-email-disabled-public-routes.test.ts`.
+- `reviews.renuvex.app` is not yet public DNS or a Vercel alias. That domain,
+  its runtime secrets, AWS sender infrastructure, and outbound email remain
+  separate activation gates. Do not weaken TLS or add a local DNS fallback to
+  simulate readiness.
+- No Cloudflare Worker deployment was required. The live Worker health endpoint
+  stayed healthy and its parsed build manifest remained semantically equal to
+  the committed manifest.
+
 ## Database
 - Provider: Supabase Postgres.
 - Two URLs:
@@ -136,6 +158,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-07-20: Recorded PR #8 disabled review-email Production rollout, `59/59` additive migration evidence, the public-route fail-closed fix-forward, and the still-deferred review domain/AWS activation.
 - 2026-07-20: Disabled non-`main` Vercel Git deployments while Preview and Production share the same Supabase project; recorded the mandatory isolation check for safely re-enabling Preview.
 - 2026-07-02: Refreshed live Worker notes after verifying settings read-cache is now live on `widget.renuvex.app` with `MISS -> HIT`; lazy-sync and write/upload/video routes remain on `app.renuvex.app`.
 - 2026-06-28: Updated initial Cloudflare Worker V2 public-read cache rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. At that stage V2 was live for allowlisted ratings/reviews reads; settings joined the Worker read-cache after the later read/sync split.

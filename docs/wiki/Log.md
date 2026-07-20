@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-16
-last_verified: 2026-07-16
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - log
@@ -27,6 +27,18 @@ source_files:
 
 # Project Log
 
+## 2026-07-20 - rollout | Deploy disabled review-email foundation
+- Merged PR #8 as `6163fa11441092d36272da7e9e1d15697c01739e`;
+  Vercel Production reached `Ready`, applied all 59 migrations, and retained
+  zero review-email lifecycle rows with `REVIEW_EMAIL_ENABLED` absent.
+- Live acceptance found that disabled public review routes read
+  activation-only host configuration before the feature flag and returned
+  `500`. The focused fix-forward moves the flag check first and requires
+  `404 not_found` without reading host, token, rate-limit, or persistence state.
+- `reviews.renuvex.app`, AWS sender/event infrastructure, journal activation,
+  SES sandbox evidence, and outbound email remain separate gates. Cloudflare
+  Worker source was unchanged; health and semantic manifest parity passed.
+
 ## 2026-07-20 - implementation | Align review email with ikas contracts
 - Replaced order-snapshot consent authorization with current
   `listCustomer.subscriptionStatus`, exact recipient equality, bounded consent
@@ -35,8 +47,9 @@ source_files:
   actual delivered support for all four shipping methods, payment failure
   exclusion, and DSR/retention cleanup for consent evidence.
 - Recorded the PII-free ikas answer and superseded the 2026-07-16 interpretation
-  of `notificationsAccepted`. Production migration, OAuth reauthorization, AWS,
-  SES, DNS, deploy, and outbound sending remain separate gates.
+  of `notificationsAccepted`. Production migration/deploy completed later in
+  the rollout entry above; OAuth reauthorization, AWS, SES, DNS, and outbound
+  sending remain separate gates.
 
 ## 2026-07-16 - docs | Align review-email wiki with V3.2 source
 - Recorded the then-current order-snapshot consent rule. The 2026-07-20 ikas

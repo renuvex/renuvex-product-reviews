@@ -60,12 +60,11 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-20: Disabled review-email source is aligned with the detailed ikas
-  contract: current customer subscription plus exact recipient authorizes
-  sending; order consent is historical. Immutable delivery evidence, stable
-  package-line grouping, all four shipping methods, payment exclusion, consent
-  expiry, DSR cleanup, and scope gating are in source. Production migration,
-  reauthorization, AWS/SES/DNS, and sending remain gated.
+- 2026-07-20: Review-email now uses current ikas customer subscription, exact
+  recipient matching, immutable delivery evidence, stable package-line grouping,
+  and all four shipping methods. PR #8 deployed the disabled backend and all 59
+  migrations; lifecycle rows remain zero and the flag is absent. A live
+  disabled-route `500` is covered by a flag-first `404` fix-forward.
 - 2026-07-16: Disabled review-email cutoff and confirmation contracts are
   hardened: exact cutoff evidence, fixed 24-hour deadlines, no ambiguous
   auto-resend, and pre-commit disable cancellation. PostgreSQL 16/17 and static
@@ -78,8 +77,6 @@ source_files:
 - 2026-07-04: Wiki low-token routing is active: hot-path pages stay short; long critical pages use `## Agent Brief`.
 - 2026-07-04: QStash maintenance scheduler is active; health gate is delivery logs/DLQ plus `ScheduledJobRunLock`, not `nextScheduleTime`.
 - 2026-07-04: AWS review images are production path: `media.renuvex.app/reviews/...`, immutable public variants, private signed admin previews, public-only orphan scan.
-- 2026-07-04: Cloudinary code/env/runtime cleanup is complete; old provider assets are out of app scope.
-- 2026-07-04: AWS public-scale guardrails are documented. See [[AWS_Setup_And_Access]].
 - 2026-07-08: CloudFront standard logging v2 is deployed for `media.renuvex.app`; logs deliver to the EU log bucket under `AWSLogs/989086371563/CloudFront/cloudfront/media/` with 14-day lifecycle and no query/cookie fields. See [[AWS_Setup_And_Access]].
 - 2026-07-09: SES email source package is prepared only: CloudFormation templates, validators, disabled env placeholders, and a fail-closed signed SNS feedback endpoint. No AWS SES resources, DNS, Vercel env, deploy, or outbound email sending exists yet. See [[ADR_0036_Review_Request_Email_Architecture]] and [[AWS_Setup_And_Access]].
 - 2026-07-02: Cloudflare Worker remains widget asset/read-cache delivery; AWS widget CDN canary is closed.
@@ -92,10 +89,11 @@ source_files:
 - Supabase RLS/default-grants hardening is a public-launch blocker.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
-- Review-email V5/V3.2 is not live. Activation requires actual restore-window
-  and app-deleted verification, then separate DB/journal/env/report/enforce
-  gates. SES sender/templates, AWS dispatch, DNS/sandbox, merchant settings UI,
-  review-center media controls, and live acceptance remain open.
+- Review-email V5/V3.2 schema and disabled backend are deployed, but outbound
+  email is not live. Activation still requires actual restore-window and
+  app-deleted verification, journal/env/report/enforce gates, SES
+  sender/templates, AWS dispatch, `reviews.renuvex.app` DNS, sandbox evidence,
+  merchant settings UI, review-center media controls, and live acceptance.
 
 ## Read Next
 - [[Current_Status]]
