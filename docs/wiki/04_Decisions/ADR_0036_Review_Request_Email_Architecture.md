@@ -113,8 +113,9 @@ analytics, bounded retention, immutable S3 erasure journal intent, crash-safe
 resources, outbound SES sending, Lambda DB/secret strategy, journal-stack
 rollout, and IYS/privacy/legal acceptance remain open. The approved
 2026-07-20 rollout applied all 59 migrations and deployed this disabled source
-to Production; all review-email lifecycle tables remained empty and
-`REVIEW_EMAIL_ENABLED` remained absent.
+to Production; customer/request/job/attempt lifecycle tables remained empty,
+report-mode purge audit rows remained error-free, and `REVIEW_EMAIL_ENABLED`
+remained absent.
 The ikas consent source is closed: current
 `listCustomer.subscriptionStatus`, not the historical order snapshot, is the
 send-time source of truth. Verify the source files above and current
@@ -976,9 +977,10 @@ The additive migration is
 job/token/session columns remain nullable behind SQL XOR checks for deployment
 overlap; their contract removal requires separate zero-legacy-row evidence.
 The feature remains disabled. The additive migration/deployment checkpoint
-completed on 2026-07-20 with all 59 migrations applied and zero lifecycle rows;
-no AWS email resource, review-domain DNS/env activation, or email send is
-authorized by this checkpoint.
+completed on 2026-07-20 with all 59 migrations applied and zero customer email
+lifecycle rows; successful report-mode maintenance audit rows are expected and
+are not customer lifecycle data. No AWS email resource, review-domain DNS/env
+activation, or email send is authorized by this checkpoint.
 
 Deferred provider gates remain explicit:
 
@@ -1437,13 +1439,13 @@ External contract evidence:
 ## Change Log
 
 - 2026-07-20: Merged PR #8 and applied the three approved additive migrations
-  in Production (`59/59`, no failed migrations, zero review-email lifecycle
+  in Production (`59/59`, no failed migrations, zero customer email lifecycle
   rows) while keeping the global feature absent/disabled. Live acceptance found
   that disabled public review routes consulted activation-only host config
-  before the flag and returned `500`; the follow-up contract now returns
-  `404 not_found` before any secret, host, rate-limit, or persistence access.
-  `reviews.renuvex.app`, AWS sender resources, and outbound email remain
-  separately gated.
+  before the flag and returned `500`. PR #9 (`7e89a6dd`) deployed the follow-up
+  contract; six live route checks now return `404 not_found` before any secret,
+  host, rate-limit, or persistence access. `reviews.renuvex.app`, AWS sender
+  resources, and outbound email remain separately gated.
 - 2026-07-20: Aligned disabled review-email source with the detailed ikas
   customer/order contract. Current customer subscription and exact email now
   authorize sending; immutable first-delivery evidence, package-line-set batch

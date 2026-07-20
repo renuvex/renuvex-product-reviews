@@ -63,8 +63,9 @@ source_files:
 - 2026-07-20: Review-email now uses current ikas customer subscription, exact
   recipient matching, immutable delivery evidence, stable package-line grouping,
   and all four shipping methods. PR #8 deployed the disabled backend and all 59
-  migrations; lifecycle rows remain zero and the flag is absent. A live
-  disabled-route `500` is covered by a flag-first `404` fix-forward.
+  migrations. PR #9 deployed the flag-first `404` fix for a live disabled-route
+  `500`; six live route checks pass, customer lifecycle rows remain zero, and
+  the flag is absent.
 - 2026-07-16: Disabled review-email cutoff and confirmation contracts are
   hardened: exact cutoff evidence, fixed 24-hour deadlines, no ambiguous
   auto-resend, and pre-commit disable cancellation. PostgreSQL 16/17 and static
