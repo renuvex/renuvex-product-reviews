@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-02
-last_verified: 2026-07-02
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - deployment
@@ -20,14 +20,21 @@ related:
 # Deployment Notes
 
 ## Summary
-Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. AWS S3/CloudFront for review images. Two scheduled jobs: daily maintenance and monthly AWS image cleanup. Build runs `prisma generate && prisma migrate deploy && next build`.
+Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler for runtime, session pooler for migrations). Upstash Redis for rate limits. AWS S3/CloudFront for review images. Two scheduled jobs: daily maintenance and monthly AWS image cleanup. Build runs `prisma generate && prisma migrate deploy && pnpm build:widget && next build --webpack`.
 
 ## Vercel
 - **Region**: `["fra1"]` ([vercel.json](vercel.json)). Reasonable proximity to ikas/Supabase EU regions.
 - **Production domains**: `app.renuvex.app` is the ikas app/admin/API origin and remains on the production Vercel project. `widget.renuvex.app` is the storefront widget static asset origin and is served by Cloudflare Worker Static Assets. The legacy pre-custom-domain Vercel alias has been removed from the project and must not be used for new configuration or documentation.
 - **Cron**: `/api/admin/daily-maintenance` daily at 03:00 UTC. It verifies pending storefront themes in batches and runs pending-upload cleanup plus storefront script reconciliation. The route still supports lightweight sub-daily execution if the Vercel plan is upgraded and the cron expression is changed later. `/api/admin/cleanup-images` remains monthly on day 1 at 04:00 UTC.
-- **Build command**: `pnpm build` → `prisma generate && prisma migrate deploy && next build --webpack`.
+- **Build command**: `pnpm build` → `prisma generate && prisma migrate deploy && pnpm build:widget && next build --webpack`.
 - **Why webpack**: build script forces `--webpack` (Turbopack opt-out, presumably for compatibility — verify when Next ships stable Turbopack production builds).
+
+### Preview database isolation gate
+
+- Non-`main` Git deployments are disabled in [vercel.json](vercel.json). Preview and Production currently resolve `DATABASE_URL` and `DIRECT_URL` to the same Supabase project, while every Vercel build runs `prisma migrate deploy`; allowing a branch Preview would therefore mutate the Production schema before PR approval.
+- `main` remains the only Git branch permitted to deploy automatically. Branch pushes must produce GitHub CI evidence without creating a Vercel Preview deployment.
+- Do not re-enable Preview deployments until `pnpm verify:preview-db-isolation -- --json --branch=<branch>` proves that both Preview database URLs are isolated from Production. A failed isolation check is a rollout blocker, not a warning.
+- After every branch push while this guard is active, confirm that Vercel did not start a Preview deployment and that the Production migration set did not change.
 
 ## Database
 - Provider: Supabase Postgres.
@@ -58,7 +65,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - OAuth callback URL: `<NEXT_PUBLIC_DEPLOY_URL>/api/oauth/callback/ikas`.
 - App entry URL: `<NEXT_PUBLIC_DEPLOY_URL>` (handles iframe + standalone via `useBaseHomePage`).
 - Storefront widget URL: `<STOREFRONT_WIDGET_BASE_URL>/widget.js?publicApiKey=<merchantId>`. Keep this as a stable public HTTPS URL. Local app development can use `NEXT_PUBLIC_DEPLOY_URL=http://localhost:3000`, but that localhost URL must not be written into real ikas storefront script records.
-- Scope: `read_orders,write_orders,read_products,read_inventories,write_inventories` (from [src/globals/config.ts](src/globals/config.ts)). Review necessity in [[Open_Questions]].
+- Scope: `read_orders,read_customers,write_orders,read_products,read_inventories,write_inventories` (from [src/globals/config.ts](src/globals/config.ts)). Review-email send authorization requires current customer subscription evidence and therefore fails closed without `read_customers`.
 
 ## Widget bundle
 - Built into [public/widget.js](public/widget.js). **Committed to git** so deploys ship without an extra build step on the Vercel pipeline.
@@ -129,6 +136,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-07-20: Disabled non-`main` Vercel Git deployments while Preview and Production share the same Supabase project; recorded the mandatory isolation check for safely re-enabling Preview.
 - 2026-07-02: Refreshed live Worker notes after verifying settings read-cache is now live on `widget.renuvex.app` with `MISS -> HIT`; lazy-sync and write/upload/video routes remain on `app.renuvex.app`.
 - 2026-06-28: Updated initial Cloudflare Worker V2 public-read cache rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. At that stage V2 was live for allowlisted ratings/reviews reads; settings joined the Worker read-cache after the later read/sync split.
 - 2026-06-28: Added Cloudflare Worker widget delivery rollout notes from [[ADR_0033_Cloudflare_Worker_Widget_Asset_Delivery]]. `widget.renuvex.app` becomes an asset-only target; `app.renuvex.app` remains backend/API.
