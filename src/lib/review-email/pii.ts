@@ -1,12 +1,15 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { domainToASCII } from 'node:url';
 import { getReviewEmailPiiKeyRing, type ReviewEmailPiiKeyRing } from '@/lib/review-email/config';
+import { canonicalizeJson } from '@/lib/review-email/canonical-json';
 
 const ENCRYPTION_PREFIX = 'e1';
 const LEGACY_HASH_PREFIX = 'h1';
 const EXACT_HASH_PREFIX = 'h2e';
 const FOLDED_HASH_PREFIX = 'h2f';
 const ORDER_PRODUCT_FINGERPRINT_PREFIX = 'op1';
+const REVIEW_EMAIL_BATCH_FINGERPRINT_PREFIX = 'rb1';
+const PROVIDER_MESSAGE_ID_HASH_PREFIX = 'pm1';
 const EMAIL_NORMALIZATION_VERSION = 2;
 const ASCII_LOCAL_PART = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+$/;
 const ASCII_DOMAIN_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -144,6 +147,57 @@ export function buildOrderProductFingerprintCandidates(
   return [...keyRing.keys.keys()]
     .sort((left, right) => right - left)
     .map((version) => buildOrderProductFingerprint(input, keyRing, version));
+}
+
+export type ReviewEmailBatchFingerprintInput = {
+  schemaVersion: 1;
+  storeId: string;
+  installationGeneration: number;
+  ikasOrderId: string;
+  groupingMode: 'package';
+  deliveryGroupKey: string;
+};
+
+export function buildReviewEmailBatchFingerprint(
+  input: ReviewEmailBatchFingerprintInput,
+  keyRing = getReviewEmailPiiKeyRing(),
+  version = keyRing.currentVersion,
+): string {
+  const canonical = canonicalizeJson({
+    deliveryGroupKey: input.deliveryGroupKey,
+    groupingMode: input.groupingMode,
+    ikasOrderId: input.ikasOrderId,
+    installationGeneration: input.installationGeneration,
+    schemaVersion: input.schemaVersion,
+    storeId: input.storeId,
+  });
+  return `${REVIEW_EMAIL_BATCH_FINGERPRINT_PREFIX}:${version}:${hmacDigest(canonical, 'review-email:batch:v1', keyRing, version)}`;
+}
+
+export function buildReviewEmailBatchFingerprintCandidates(
+  input: ReviewEmailBatchFingerprintInput,
+  keyRing = getReviewEmailPiiKeyRing(),
+): string[] {
+  return [...keyRing.keys.keys()]
+    .sort((left, right) => right - left)
+    .map((version) => buildReviewEmailBatchFingerprint(input, keyRing, version));
+}
+
+export function hashProviderMessageId(
+  providerMessageId: string,
+  keyRing = getReviewEmailPiiKeyRing(),
+  version = keyRing.currentVersion,
+): string {
+  return `${PROVIDER_MESSAGE_ID_HASH_PREFIX}:${version}:${hmacDigest(providerMessageId, 'review-email:provider-message:v1', keyRing, version)}`;
+}
+
+export function hashProviderMessageIdCandidates(
+  providerMessageId: string,
+  keyRing = getReviewEmailPiiKeyRing(),
+): string[] {
+  return [...keyRing.keys.keys()]
+    .sort((left, right) => right - left)
+    .map((version) => hashProviderMessageId(providerMessageId, keyRing, version));
 }
 
 export function piiHashVersion(value: string | null | undefined): number | null {

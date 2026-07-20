@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-06-09
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - runbook
@@ -27,6 +27,7 @@ source_files:
   - "src/lib/review-email/maintenance.ts"
   - "src/lib/review-email/erasure.ts"
   - "src/lib/review-email/retention.ts"
+  - "src/lib/review-email/batch-jobs.ts"
   - "src/lib/review-email/journal-coverage.ts"
   - "src/lib/ikas-installation-lifecycle.ts"
   - "src/app/api/admin/daily-maintenance/route.ts"
@@ -94,8 +95,10 @@ guessing which installation to erase.
 Review-email V5 retention defaults to `report`. Each invocation scans at most
 5 batches of 100 rows and stops after 10 seconds. `enforce` is a separate
 production gate; it physically removes eligible terminal token/session rows,
-180-day detail, and 210-day closed/reversed contribution tombstones. Receipt,
-subject-block, daily aggregate, and immutable S3 journal lifecycles follow
+180-day request/batch/attempt detail, and 210-day closed/reversed contribution
+and transport-event tombstones. Purged terminal batch fingerprints remain as
+active-installation duplicate fences after recipient/manifest PII is scrubbed.
+Receipt, subject-block, daily aggregate, and immutable S3 journal lifecycles follow
 [[ADR_0036_Review_Request_Email_Architecture]]. A longer database restore
 window must not be enabled before journal retention and coverage are extended
 through their separately approved operator workflow.
@@ -104,6 +107,23 @@ One latest S3 lifecycle delete marker is expected only after the configured
 active retention interval; early/non-latest/marker-only/multiple markers or
 multiple data versions fail closed. `35/42` are current copy-register results,
 not hard-coded retention constants.
+
+Ambiguous review-email provider attempts use the persisted
+`confirmationDeadlineAt` as their maintenance deadline. New send commits write
+that value at the provider-call boundary plus 24 hours, and
+`awaiting_confirmation` preserves it. Legacy null rows derive the same deadline
+from `sendInitiatedAt ?? sendCommittedAt`; the invocation time must never move
+the window forward. Expiry produces terminal `outcome_unknown` without an
+automatic resend. Late signed provider evidence may still resolve the attempt,
+while only audited `confirmed_not_sent` may release its reservation and permit
+a new attempt.
+
+Review-email detail retention and exact-subject DSR also clear the bounded
+send-time consent evidence (`consentSource`, status, provider status timestamp,
+and checked-at) from attempts together with recipient PII. No raw
+`listCustomer` response is retained. The immutable line delivery timestamp is
+order lifecycle evidence and does not authorize a send without current package,
+line, installation, recipient, consent, and suppression checks.
 
 Store uninstall uses `POST /api/internal/review-email/store-erasure` as a
 QStash-signed continuation endpoint. Every destructive phase requires verified

@@ -12,6 +12,9 @@ import {
   normalizeAwsReviewImageChecksum,
   normalizeAwsReviewImageContentType,
 } from '@/lib/media/providers/aws-review-image';
+import { resolveReviewCenterItemScope } from '@/lib/review-email/review-center-scope';
+import { ReviewRequestTokenError } from '@/lib/review-email/tokens';
+import { ReviewRequestHostError } from '@/lib/review-email/public-access';
 
 export const runtime = 'nodejs';
 
@@ -40,7 +43,12 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }));
     }
 
-    const storeId = normalizeReviewImageStoreId((body as { storeId?: unknown })?.storeId);
+    const scope = await resolveReviewCenterItemScope(
+      prisma,
+      request,
+      (body as { itemId?: unknown })?.itemId,
+    );
+    const storeId = scope?.storeId ?? normalizeReviewImageStoreId((body as { storeId?: unknown })?.storeId);
     if (!storeId) {
       return withCors(NextResponse.json({ error: 'Invalid store.' }, { status: 400 }));
     }
@@ -83,6 +91,7 @@ export async function POST(request: Request) {
       data: {
         publicId: buildAwsReviewImagePublicId(storeId, intent.assetId),
         storeId,
+        productId: scope?.productId ?? null,
         uploadSessionId: intent.uploadSessionId,
         url: null,
         assetId: intent.assetId,
@@ -100,6 +109,8 @@ export async function POST(request: Request) {
         metadataStatus: 'pending',
         variantStatus: 'pending',
         uploadExpiresAt: intent.expiresAt,
+        reviewRequestId: scope?.requestId ?? null,
+        reviewRequestSessionId: scope?.sessionId ?? null,
       },
     });
 
@@ -119,6 +130,9 @@ export async function POST(request: Request) {
       publicUrl: null,
     }));
   } catch (error) {
+    if (error instanceof ReviewRequestHostError || error instanceof ReviewRequestTokenError) {
+      return withCors(NextResponse.json({ error: error.code }, { status: error.status }));
+    }
     console.error('[SIGN ERROR]:', error);
     return withCors(NextResponse.json({ error: 'Upload signature could not be created.' }, { status: 500 }));
   }

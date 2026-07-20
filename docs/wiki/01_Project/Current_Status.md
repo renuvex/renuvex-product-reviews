@@ -3,8 +3,8 @@ type: status
 project: renuvex-product-reviews
 status: active
 created: 2026-05-05
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-16
+last_verified: 2026-07-16
 confidence: high
 source_files: []
 tags:
@@ -28,12 +28,14 @@ pre-public-launch; AWS review images, Mux video, Cloudflare Worker widget
 delivery, QStash maintenance scheduling, and public read-cache paths are live.
 Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
-The review-request email V5 DB/backend package exists only in disabled,
-correctness-hardened source. Production resources and live behavior do not yet exist.
-It adds install-generation fencing, exact-subject DSR, reversible daily
-analytics, bounded retention, and separately gated immutable erasure-journal
-IaC. Production migration, journal/AWS rollout, outbound dispatch, UI, and live
-email acceptance remain future approved work.
+The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages
+exist only in disabled, correctness-hardened source. Production sender resources
+and live behavior do not exist. Source now adds delivery-group batching,
+independent product review rights, provider-neutral attempts/events,
+host-isolated review-center sessions, install-generation fencing, exact-subject
+DSR, reversible analytics, bounded retention, and separately gated immutable
+erasure-journal IaC. The V3.2 migration, journal/AWS rollout, outbound dispatch,
+merchant UI, and live email acceptance remain future approved work.
 
 ## Current Phase
 Active development on the production test store. Core review, image, Mux video, moderation, storefront widget, Cloudflare Worker delivery, and public read-cache paths are implemented and live. The project is still pre-public-launch; remaining work is product polish, security hardening, operational smoke coverage, and future feature expansion rather than a pending Mux/Worker migration.
@@ -92,7 +94,14 @@ Active development on the production test store. Core review, image, Mux video, 
 
 ## Known Issues / Gaps
 - Structured-data injection exists in the widget runtime, but it is currently coupled to the rating badge/review-count path and still needs SEO validation and a clearer server/client strategy. See [[Structured_Data_And_Rich_Snippets]] and [[Yotpo_Style_Widget_Modular_Architecture]].
-- No live review-request emails / post-purchase sending. The disabled V5 DB/backend/retention/DSR/journal source is locally verified, including real restore replay and journal-first bounded uninstall. Production migration, actual DB restore-window verification, journal stack/genesis, provider-side app-deleted registration, AWS EventBridge/SQS/Lambda/SES dispatch, settings UI, and live ikas acceptance remain open.
+- No live review-request emails / post-purchase sending. The disabled V5 plus
+  Multi-Product Batch/Envelope V3.2 source is locally verified: one physical
+  initial and at most one reminder per delivery group, independent product
+  submit/skip, review-center session/media ownership, restore replay, and
+  journal-first bounded uninstall. The V3.2 production migration, actual DB
+  restore-window verification, journal stack/genesis, provider-side app-deleted
+  registration, AWS EventBridge/SQS/Lambda/SES dispatch, merchant settings UI,
+  review-center media controls, and live ikas acceptance remain open.
 - No CSV import/export of reviews
 - No analytics dashboard (review volume over time, conversion lift, etc.)
 - No multi-language storefront UI yet. The widget is Turkish-first; source still has hardcoded Turkish visible text, `tr-TR` formatting, and Turkish accessibility labels. Scope: [[Roadmap]] and [[Open_Questions]].
@@ -118,15 +127,21 @@ Active development on the production test store. Core review, image, Mux video, 
 2. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
 3. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
 4. Validate structured-data SEO on a public PDP with approved reviews.
-5. Continue review-request email rollout with the AWS dispatcher/sender implementation plan, then separately gate production migration, SES/DNS/env, settings UI, and live acceptance.
+5. Keep the committed V3.2 source feature-disabled; separately approve main
+   push/production migration, then run read-only schema and disabled-state
+   health before the AWS dispatcher/sender, SES/DNS/env, merchant UI, and
+   live-acceptance packages.
 6. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
 7. Add CSV import/export for reviews.
 8. Build a minimal analytics view in admin (counts, average rating trend).
 
 ## Last Updated
-2026-07-10
+2026-07-16
 
 ## Change Log
+- 2026-07-15: Added the disabled Multi-Product Batch / Envelope V3.2 source
+  status. No production migration, AWS/DNS/env mutation, deploy, or email send
+  occurred.
 - 2026-07-04: Fixed admin AWS private-image thumbnails after live acceptance exposed the text fallback in pending reviews. The list now lazy-loads the signed `thumb_320x427` variant through the authenticated image-preview endpoint, and the image modal loading state no longer uses video copy.
 - 2026-07-04: Applied the approved pre-public legacy image DB alignment. The apply retired 12 legacy image `ReviewMedia` rows, 6 stale pending rows, 8 legacy image flags/mirrors, 26 quarantine rows, 1 old provider job, and rebuilt one affected product summary. Post-checks report zero remaining legacy image-provider DB targets; no provider assets were mutated.
 - 2026-07-04: Recorded PR #5 production deployment and Cloudflare Worker deployment for AWS-only image source pass. Live AWS-only acceptance review `8962e9c8-7c7f-49db-9e16-cb68bbeff428` proved 14 variants, public `media.renuvex.app` delivery, immutable CloudFront cache headers, and no legacy-provider/private leak markers.

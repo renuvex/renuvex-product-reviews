@@ -3,12 +3,13 @@ type: api
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-10
-last_verified: 2026-07-10
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - ikas
   - orders
+  - customers
   - review-request
   - email
   - webhooks
@@ -17,113 +18,188 @@ related:
   - "[[ADR_0036_Review_Request_Email_Architecture]]"
   - "[[ADR_0004_Ikas_Integration_Strategy]]"
 source_files:
+  - "src/globals/config.ts"
   - "src/lib/ikas-client/graphql-requests.ts"
   - "src/lib/review-email/ikas-orders.ts"
-  - "src/lib/ikas-installation-lifecycle.ts"
+  - "src/lib/review-email/ikas-send-preflight.ts"
+  - "src/lib/review-email/batching.ts"
+  - "src/lib/review-email/eligibility.ts"
+  - "src/lib/review-email/batch-jobs.ts"
   - "src/app/api/webhooks/ikas/orders/route.ts"
-  - "src/app/api/webhooks/ikas/products/route.ts"
+  - "prisma/migrations/20260715120000_add_review_email_batch_envelope_v32/migration.sql"
+  - "prisma/migrations/20260716120000_add_review_email_eligibility_cutoff/migration.sql"
+  - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
 ---
 
 # ikas Order Review Request Notes
 
 ## Agent Brief
 
-Use this page when designing review-request emails, verified-buyer evidence,
-order webhooks, or order reconciliation. This page records direct ikas
-developer feedback received on 2026-07-09. It is platform evidence, not an
-implementation plan. Verify current ikas MCP/docs before adding GraphQL
-operations or webhook registrations, and do not mutate provider state without a
-separate approved plan.
+Use this page for review-request consent, order delivery, package grouping,
+manual orders, cancellation/refund invalidation, and reconciliation. It records
+PII-free contract evidence from ikas developer answers received on 2026-07-09
+and 2026-07-20, plus the MCP-introspected operations used by source. The
+2026-07-20 answer supersedes earlier assumptions that the order-level
+`notificationsAccepted` snapshot authorizes sending, that package ids are
+durable group identities, or that `READY_FOR_PICK_UP` means a review request
+may start.
 
-## Platform Feedback Summary
+Source remains authoritative. Re-run ikas MCP list and introspection before
+adding or changing a GraphQL operation. Provider mutation and live acceptance
+remain separate approval gates.
 
-Direct ikas developer feedback on 2026-07-09 clarified the order-trigger
-contract for a post-order single-use action link:
+## Verified Customer Consent Contract
 
-- `store/order/created` and `store/order/updated` are valid webhook scopes for
-  this flow.
-- App review does not need a special extra permission only for these webhook
-  scopes, but the app must have the matching API access permission. For order
-  review requests this means Orders read access; customer data use may also
-  require Customers read access.
-- The canonical high-level physical-delivery field is `orderPackageStatus`.
-  Delivered physical orders reach `DELIVERED`.
-- `shippingMethod` must also be checked because the terminal state differs by
-  order type. `CLICK_AND_COLLECT` orders may terminate at `READY_FOR_PICK_UP`.
-  Digital or no-shipment orders may not have a shipping-delivery step.
-- `orderPackages[].orderPackageFulfillStatus` and `orderLineItems[].status` are
-  detail fields for package/line-level logic, not the first high-level trigger.
-- `listOrder.customer.email` and `listOrder.customer.notificationsAccepted` may
-  be used for post-order customer communication.
-- ikas distinguishes marketing/commercial messages from transactional
-  notifications: when `notificationsAccepted=false`, marketing/commercial
-  sending should not happen; order confirmation, shipping, delivery, and similar
-  transactional notifications are independent of that setting.
-- `store/order/updated` payload can contain customer email, line item ids,
-  product/variant ids, and package status fields.
-- The recommended robust flow is still webhook wake-up -> canonical `listOrder`
-  re-read, because webhook ordering or delivery delay can make payload-only
-  processing stale.
-- General ikas webhooks support HMAC signature verification. Use the documented
-  signature/header mechanism and the existing project signature pattern as the
-  baseline for any future order webhook receiver.
-- If the webhook endpoint returns a non-`200`, ikas retries three more times.
-- Missed webhook reconciliation should use periodic `listOrder` reads filtered
-  by `updatedAt`.
-- `listOrder` pagination is page/limit based. The maximum `limit` is `200`, and
-  callers should advance while `hasNext` is true.
-- `store/app/deleted` is the uninstall signal. Stored personal data such as
-  email, address, order references, and order-line references must be deleted or
-  anonymized within 24 hours.
-- Current `saveWebhooks` MCP introspection does not list `store/app/deleted`.
-  The application therefore registers only `store/order/created` and
-  `store/order/updated` through that mutation. The signed uninstall receiver is
-  separate and review email cannot be enabled until provider-side app
-  configuration is verified and the operator gate is set.
+- `listOrder.customer` is an immutable order-creation snapshot.
+  `notificationsAccepted` is historical context and does not change when the
+  customer later changes communication preference.
+- For an ADMIN/manual draft, the snapshot is captured at draft creation, not
+  when `orderedAt` is later assigned. This explains why a newly completed manual
+  order may retain `notificationsAccepted=false` even when the current customer
+  is now subscribed.
+- Non-transactional post-purchase communication must re-read the current
+  customer through `listCustomer`. The accepted state is
+  `subscriptionStatus=SUBSCRIBED`; `NOT_SUBSCRIBED` and
+  `PENDING_CONFIRMATION` do not authorize a review-request email.
+- Renuvex also requires the current customer to exist, not be deleted, and have
+  an exact case-preserving canonical email equal to the order/batch recipient
+  snapshot. A mismatch closes access rather than guessing which address is
+  correct.
+- The OAuth application therefore needs both `read_orders` and
+  `read_customers`. Review email cannot be enabled without both scopes.
+- The sender records only bounded consent evidence
+  (`ikas_list_customer`, status, provider timestamps, checked-at), not a raw
+  customer response. Evidence is fresh for at most 60 seconds; after that the
+  preflight must be repeated.
+- A transient customer API failure is retryable and is not converted into a
+  consent denial. If an initial has not been sent, a definitive current denial
+  closes that lifecycle. After an initial send, a later denial cancels the
+  reminder while the existing review link retains its normal expiry. Missing,
+  deleted, or recipient-mismatched customers revoke batch access.
+- Turkish IYS and broader legal classification remain a separate
+  privacy/legal production gate. The ikas field contract does not replace that
+  review.
 
-## Product And Implementation Implications
+## Verified Delivery Contract
 
-- Do not send review-request email directly inside an order webhook handler.
-  The handler should verify the signature, persist/idempotently record the
-  event, and enqueue or wake canonical order reconciliation.
-- The canonical order state must come from `listOrder`, not only from the
-  webhook payload.
-- Eligibility logic must be tenant-aware and order-type-aware:
-  - physical shipment: use `orderPackageStatus=DELIVERED` as the high-level
-    trigger, then check package/line details when needed;
-  - click-and-collect: treat `READY_FOR_PICK_UP` as its own terminal state;
-  - digital/no-shipment: define a separate product decision because there may be
-    no delivery package transition;
-  - partial delivery: avoid sending for all order lines just because the order
-    has a partial terminal signal; line/package mapping is required.
-- `notificationsAccepted=false` is not a platform-level blocker for clearly
-  transactional notifications. Whether a review-request email is treated as
-  transactional enough, or whether Renuvex requires `notificationsAccepted=true`
-  for the MVP, remains a product/legal decision and should be explicit before
-  launch.
-- The source schema now supports journal-first bounded uninstall cleanup. It stores
-  protected email/order evidence only after active-installation and
-  merchant-enabled checks, and serializes ingest/reconciliation/erasure with a
-  store-scoped installation-generation fence. Review/customer content and
-  pending media are removed in bounded batches with idempotent provider cleanup
-  outbox jobs; signed QStash continuation plus daily fallback prevents a large
-  tenant from depending on one request transaction. Live provider-side
-  uninstall registration and 24-hour acceptance are still required before launch.
-- Reconciliation uses bounded `updatedAt` windows, max-200 pagination, a DB
-  lease/version fence, and the same installation lock. Its future AWS trigger
-  must wake this DB-owned lifecycle rather than perform raw broad scans.
+The canonical trigger is package plus line evidence, not an order-level
+fallback:
 
-## Open Implementation Work
+| Shipping method | Package evidence | Line evidence | Review-request trigger |
+|---|---|---|---|
+| `SHIPMENT` | `orderPackageFulfillStatus=DELIVERED` | every included line is `DELIVERED` | actual delivery |
+| `CLICK_AND_COLLECT` | package `DELIVERED` | included lines are `DELIVERED` | actual pickup, not `READY_FOR_PICK_UP` |
+| `DIGITAL_DELIVERY` | package `DELIVERED` | included lines are `DELIVERED` | completed digital delivery |
+| `NO_SHIPMENT` | package `DELIVERED` | included lines are `DELIVERED` | completed no-shipment fulfillment |
+| ADMIN/manual | selected shipping method rules | same line rules | no source-specific branch |
 
-- The ikas GraphQL document, additive Prisma lifecycle, signed order webhook
-  receiver, canonical `listOrder` re-read, and leased `updatedAt` reconciliation
-  are implemented in disabled source and locally verified.
-- Define the product/legal consent rule for review-request email when
-  `notificationsAccepted=false`.
-- Perform live ikas acceptance for the MCP-valid order registration and the
-  separately configured uninstall signal, then prove the
-  24-hour erasure path after an approved production migration/deploy.
-- Build the separately planned AWS EventBridge/SQS/Lambda sender and SES rollout.
+- `orderPackageStatus` is a rollup such as `PARTIALLY_DELIVERED` or
+  `DELIVERED`. It is useful for current-state context but does not replace
+  package membership.
+- `orderPackages[].orderPackageFulfillStatus` is package delivery source of
+  truth. `orderPackages[].orderLineItemIds` defines the complete lines in that
+  package.
+- `OrderLineItem.statusUpdatedAt` is the last line status transition, not a
+  status history. It is exact delivery evidence only while the current line
+  status is `DELIVERED`.
+- Renuvex stores the first observed delivered transition as immutable
+  `IkasOrderLineSnapshot.firstDeliveredAt`. Later refund, return, or cancellation
+  updates may overwrite ikas `statusUpdatedAt` but cannot overwrite this local
+  evidence. Current eligibility still requires the current package and line to
+  remain eligible; historical evidence alone never reopens a request.
+- Package/order `updatedAt`, order `orderedAt`, webhook receipt time, and local
+  processing time never create delivery eligibility. They remain discovery or
+  current-state timestamps.
+- `READY_FOR_PICK_UP` is only a pickup-ready signal. Review email waits until
+  the package and lines become `DELIVERED`, whose exact line transition can be
+  persisted.
+- Missing package membership, multiple active packages claiming the same line,
+  a non-delivered package/line, or missing exact line timestamp fails closed.
+
+## Partial Delivery And Stable Grouping
+
+- One package may contain many line ids. Quantity split across packages creates
+  a new line item linked through `originalOrderLineItemId`; package membership
+  does not contain a partial quantity value.
+- Package cancellation/re-fulfillment creates a new package id. Package id is
+  therefore audit data, not the durable batch key.
+- The durable delivery-group key is a SHA-256 digest of canonical JSON
+  containing the sorted unique package line-id set. Recreating a package with
+  the same line set resolves to the same logical batch.
+- One delivered package may create one physical initial sequence while another
+  package remains pending. Twenty products split into two delivered 10-item
+  packages therefore produce two batches, subject to the physical-email
+  governor.
+- Reviews remain product-scoped. Repeated quantities and variants of the same
+  product dedupe to one request. When one product spans multiple package lines,
+  every required line must be delivered; `eligibleAt` is the maximum immutable
+  delivery timestamp and the request is assigned deterministically to the
+  package line set containing that latest evidence.
+- Regrouping is allowed before send commit. Grouping freezes at the provider
+  call authorization boundary, so package churn cannot create a second initial
+  for a request already in a physical send sequence.
+
+## Cancellation, Refund, Editing, And Payment
+
+- Cancellation, `REFUND_REQUESTED`, `REFUND_REQUEST_ACCEPTED`, return states,
+  and `REFUNDED` close affected pending review-email work.
+- `REFUND_REJECTED` and `CANCEL_REJECTED` do not automatically revive a closed
+  lifecycle. A later explicit product decision would be required for re-open.
+- Line-level refund transitions overwrite ikas `statusUpdatedAt`; this is why
+  local immutable delivery evidence is required.
+- A purely financial refund may leave line status unchanged. Current source
+  follows product/line lifecycle evidence; future finance-only invalidation
+  would require a separately verified product contract.
+- Added or exchanged items receive new order line ids and their own lifecycle.
+  Existing line ids remain stable.
+- `WAITING + DELIVERED` is valid for manual, transfer, or cash-on-delivery
+  orders. Only `orderPaymentStatus=FAILED` is a hard payment exclusion.
+
+## Webhook And Reconciliation Contract
+
+- `store/order/created` and `store/order/updated` are wake-up signals.
+  Canonical decisions always re-read `listOrder`.
+- Delivery, cancellation, refund, package changes, and order editing update the
+  order-level `updatedAt`, so bounded `listOrder(updatedAt)` polling is the
+  missed-webhook safety net.
+- Reconciliation uses overlap, page/limit pagination (`limit<=200`), persisted
+  cursor/lease fencing, and idempotent canonical processing. It is not clamped
+  to review-email activation time: an order created before activation but
+  delivered afterward must still be discoverable.
+- Final cutoff is member-level. Only immutable first-delivery evidence at or
+  after `eligibilityStartsAt` is eligible.
+- Webhook ordering is not treated as guaranteed. The latest canonical document
+  plus local immutable evidence wins.
+- `store/app/deleted` remains the uninstall signal. Its provider-side
+  registration and 24-hour erasure acceptance are separate production gates.
+
+## Manual-Order Evidence
+
+- MCP confirms `listOrder.createdBy` can identify an ADMIN fixture, but
+  production code intentionally does not branch on source. A manual order uses
+  the same shipping-method, package, line, current-customer, payment, cutoff,
+  suppression, and installation rules.
+- A 2026-07-16 development-store read verified an ADMIN SHIPMENT order with
+  exact package-line membership, delivered package/line state, and exact line
+  `statusUpdatedAt`. Its order snapshot retained
+  `notificationsAccepted=false`; the 2026-07-20 ikas answer confirmed this can
+  be expected because the order snapshot is historical.
+- No staff, shipping, billing, or guessed email is used as a fallback.
+- Real outbound manual-order delivery is still part of the future SES sandbox
+  acceptance because no AWS sender exists in the current phase.
+
+## Implementation And Rollout State
+
+- Source now contains the canonical order reread, current-customer preflight,
+  scope gate, immutable delivery evidence, stable package-line grouping,
+  payment exclusion, DSR cleanup, and focused tests.
+- The alignment migration is expand-only and does not infer historical delivery
+  timestamps. Feature activation remains disabled until migration and scope
+  health checks pass.
+- Production migration, OAuth reauthorization where required, AWS sender/event
+  infrastructure, SES sandbox acceptance, IYS/privacy/legal review, ikas native
+  review-email conflict warning, and live merchant rollout remain separate
+  approved gates.
 
 ## Obsidian Links
 

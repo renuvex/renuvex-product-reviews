@@ -3,8 +3,8 @@ type: log
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-16
+last_verified: 2026-07-16
 confidence: high
 tags:
   - log
@@ -26,6 +26,37 @@ source_files:
 ---
 
 # Project Log
+
+## 2026-07-20 - implementation | Align review email with ikas contracts
+- Replaced order-snapshot consent authorization with current
+  `listCustomer.subscriptionStatus`, exact recipient equality, bounded consent
+  evidence, and `read_customers` enablement gating.
+- Added immutable first-delivery evidence, stable package-line-set grouping,
+  actual delivered support for all four shipping methods, payment failure
+  exclusion, and DSR/retention cleanup for consent evidence.
+- Recorded the PII-free ikas answer and superseded the 2026-07-16 interpretation
+  of `notificationsAccepted`. Production migration, OAuth reauthorization, AWS,
+  SES, DNS, deploy, and outbound sending remain separate gates.
+
+## 2026-07-16 - docs | Align review-email wiki with V3.2 source
+- Recorded the then-current order-snapshot consent rule. The 2026-07-20 ikas
+  contract and implementation entry above supersede that interpretation.
+- Clarified package-scoped partial delivery, documented the source-neutral
+  manual-order behavior and live acceptance gate, and added the physical
+  attempt/product request/batch analytics metric glossary.
+- Updated current-state and hot-context metadata. No runtime, migration,
+  provider, deployment, or production state changed.
+
+## 2026-07-15 - implementation | Add multi-product review-email batches
+- Added the disabled Batch/Envelope V3.2 source contract: one physical initial
+  plus at most one reminder per delivery group, independent product requests,
+  provider-neutral attempts/events, send-commit and recipient suppression
+  fences, and a host-isolated multi-item review center.
+- Added per-item submit/skip/media ownership, batch analytics/DSR/retention,
+  tenant composite FKs, deployment-overlap XOR constraints, HMAC tombstone
+  reingestion protection, and focused PostgreSQL/browser tests.
+- No production migration, AWS/DNS/env/provider mutation, deployment, or email
+  send occurred.
 
 ## 2026-07-11 - fix | Close review-email V5 integrity blockers
 - Replaced cascade-based DSR order selection with frozen direct-vs-linked

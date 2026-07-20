@@ -88,7 +88,10 @@ describe('review email internal route guards', () => {
     process.env.REVIEW_EMAIL_ENABLED = 'true';
     const authToken = { authorizedAppId: 'app-1', merchantId: 'store-1' };
     mocks.getAuthToken.mockResolvedValue(authToken);
-    mocks.getSettings.mockResolvedValue({ enabled: true });
+    mocks.getSettings.mockResolvedValue({
+      enabled: true,
+      eligibilityStartsAt: new Date('2026-07-01T00:00:00.000Z'),
+    });
     mocks.reconcile.mockResolvedValue({ state: 'completed', pages: 1, orders: 1 });
     mocks.getIkas.mockReturnValue({ queries: {} });
     const { POST } = await import('@/app/api/internal/review-email/reconcile-orders/route');
@@ -105,5 +108,20 @@ describe('review email internal route guards', () => {
       storeId: 'store-1',
       authorizedAppId: 'app-1',
     });
+  });
+
+  it('does not reconcile an enabled store without an activation cutoff', async () => {
+    process.env.REVIEW_EMAIL_ENABLED = 'true';
+    mocks.getAuthToken.mockResolvedValue({ authorizedAppId: 'app-1', merchantId: 'store-1' });
+    mocks.getSettings.mockResolvedValue({ enabled: true, eligibilityStartsAt: null });
+    const { POST } = await import('@/app/api/internal/review-email/reconcile-orders/route');
+
+    const response = await POST(request('/api/internal/review-email/reconcile-orders', {
+      authorizedAppId: 'app-1',
+    }));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'review_email_eligibility_cutoff_missing' });
+    expect(mocks.reconcile).not.toHaveBeenCalled();
   });
 });

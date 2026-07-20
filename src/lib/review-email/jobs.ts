@@ -16,7 +16,8 @@ type JobDb = Pick<PrismaClient, '$queryRaw' | '$transaction' | 'reviewEmailJob'>
 
 export type ClaimedReviewEmailJob = {
   id: string;
-  requestId: string;
+  requestId: string | null;
+  batchId: string | null;
   kind: string;
   sequence: number;
   status: string;
@@ -24,6 +25,7 @@ export type ClaimedReviewEmailJob = {
   dedupeKey: string;
   leaseOwner: string;
   leaseExpiresAt: Date;
+  leaseVersion: number;
   dispatchAttempts: number;
 };
 
@@ -63,6 +65,7 @@ export async function claimDueReviewEmailJobs(
         "leaseOwner" = ${input.leaseOwner},
         "leaseExpiresAt" = ${leaseExpiresAt},
         "dispatchAttempts" = "ReviewEmailJob"."dispatchAttempts" + 1,
+        "leaseVersion" = "ReviewEmailJob"."leaseVersion" + 1,
         "lastErrorCode" = NULL,
         "updatedAt" = CURRENT_TIMESTAMP
     WHERE "id" IN (
@@ -77,14 +80,14 @@ export async function claimDueReviewEmailJobs(
       LIMIT ${limit}
       FOR UPDATE SKIP LOCKED
     )
-    RETURNING "id", "requestId", "kind", "sequence", "status", "sendAfter",
-      "dedupeKey", "leaseOwner", "leaseExpiresAt", "dispatchAttempts"
+    RETURNING "id", "requestId", "batchId", "kind", "sequence", "status", "sendAfter",
+      "dedupeKey", "leaseOwner", "leaseExpiresAt", "leaseVersion", "dispatchAttempts"
   `;
 }
 
 export async function markReviewEmailJobDispatched(
   db: Pick<PrismaClient, 'reviewEmailJob'>,
-  input: { jobId: string; leaseOwner: string; queueMessageId: string; now?: Date },
+  input: { jobId: string; leaseOwner: string; leaseVersion?: number; queueMessageId: string; now?: Date },
 ): Promise<boolean> {
   const now = input.now ?? new Date();
   const updated = await db.reviewEmailJob.updateMany({
@@ -93,6 +96,7 @@ export async function markReviewEmailJobDispatched(
       status: 'leased',
       leaseOwner: input.leaseOwner,
       leaseExpiresAt: { gt: now },
+      ...(input.leaseVersion === undefined ? {} : { leaseVersion: input.leaseVersion }),
     },
     data: {
       status: 'dispatched',
@@ -125,7 +129,11 @@ export async function cancelActiveReviewEmailJobsForStore(
   now = new Date(),
 ): Promise<void> {
   await tx.reviewEmailJob.updateMany({
-    where: { storeId, status: { in: [...REVIEW_EMAIL_ACTIVE_JOB_STATUSES] } },
+    where: {
+      storeId,
+      status: { in: [...REVIEW_EMAIL_ACTIVE_JOB_STATUSES] },
+      attemptsLog: { none: { sendCommittedAt: { not: null } } },
+    },
     data: {
       status: 'cancelled',
       completedAt: now,
@@ -206,7 +214,7 @@ export async function prepareReviewEmailSend(
         attemptsLog: { orderBy: { attemptNumber: 'desc' }, take: 1, include: { token: true } },
       },
     });
-    if (!job) throw new ReviewEmailJobError('review_email_job_not_found');
+    if (!job?.request || !job.requestId || job.batchId) throw new ReviewEmailJobError('review_email_job_not_found');
     if (['sent', 'skipped', 'failed', 'cancelled', 'outcome_unknown'].includes(job.status)) {
       throw new ReviewEmailJobError('review_email_job_closed');
     }
@@ -364,7 +372,7 @@ export async function markReviewEmailSendInitiated(
       where: { id: attemptId },
       include: { job: { include: { request: true } } },
     });
-    if (!attempt || attempt.status !== 'prepared' || attempt.sendInitiatedAt) {
+    if (!attempt?.job.request || !attempt.job.requestId || attempt.job.batchId || attempt.status !== 'prepared' || attempt.sendInitiatedAt) {
       throw new ReviewEmailJobError('review_email_attempt_not_prepared');
     }
 
@@ -468,7 +476,9 @@ export async function finalizeAcceptedReviewEmailAttempt(
     where: { id: input.attemptId },
     include: { job: { include: { request: true } } },
   });
-  if (!attempt) throw new ReviewEmailJobError('review_email_attempt_not_found');
+  if (!attempt?.job.request || !attempt.job.requestId || attempt.job.batchId) {
+    throw new ReviewEmailJobError('review_email_attempt_not_found');
+  }
   if (['rejected', 'failed', 'bounced', 'complained', 'abandoned_before_send'].includes(attempt.status)) {
     throw new ReviewEmailJobError('review_email_attempt_closed');
   }
@@ -560,7 +570,7 @@ export async function markReviewEmailSendAwaitingConfirmation(
       where: { id: attemptId },
       include: { job: { include: { request: true } } },
     });
-    if (!attempt || !attempt.sendInitiatedAt || !['sending', 'awaiting_confirmation'].includes(attempt.status)) {
+    if (!attempt?.job.request || !attempt.job.requestId || attempt.job.batchId || !attempt.sendInitiatedAt || !['sending', 'awaiting_confirmation'].includes(attempt.status)) {
       throw new ReviewEmailJobError('review_email_attempt_not_sending');
     }
     await tx.reviewEmailAttempt.update({
@@ -600,7 +610,9 @@ export async function markReviewEmailSendFailed(
       where: { id: attemptId },
       include: { job: { include: { request: true } } },
     });
-    if (!attempt) throw new ReviewEmailJobError('review_email_attempt_not_found');
+    if (!attempt?.job.request || !attempt.job.requestId || attempt.job.batchId) {
+      throw new ReviewEmailJobError('review_email_attempt_not_found');
+    }
     if (attempt.status === 'awaiting_confirmation' || attempt.status === 'accepted' || attempt.status === 'delivery_confirmed') {
       throw new ReviewEmailJobError('review_email_attempt_result_ambiguous');
     }

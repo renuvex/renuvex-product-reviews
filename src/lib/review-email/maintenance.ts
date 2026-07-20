@@ -7,7 +7,10 @@ import {
 import { getReviewRequestTokenKeyRing } from '@/lib/review-email/config';
 import { cancelPendingReviewEmailJobs } from '@/lib/review-email/jobs';
 import { reportCronTaskError } from '@/lib/cron-observability';
-import { recordReviewEmailMetricContribution } from '@/lib/review-email/analytics';
+import {
+  recordReviewEmailBatchMetricContribution,
+  recordReviewEmailMetricContribution,
+} from '@/lib/review-email/analytics';
 import { runReviewEmailRetentionPurge, type ReviewEmailRetentionResult } from '@/lib/review-email/retention';
 
 export type ReviewEmailMaintenanceResult = {
@@ -15,6 +18,7 @@ export type ReviewEmailMaintenanceResult = {
   outcomeUnknownAttempts: number;
   expiredTokens: number;
   expiredSessions: number;
+  expiredBatches: number;
   expiredRequests: number;
   activeKeyVersions: number[];
   retention: ReviewEmailRetentionResult;
@@ -64,6 +68,10 @@ export async function runReviewEmailLifecycleMaintenance(
         where: { attemptId: attempt.id, status: 'prepared' },
         data: { status: 'revoked', revokedAt: now, revocationReason: 'sender_crashed_before_send' },
       });
+      await tx.reviewEmailUnsubscribeToken.updateMany({
+        where: { createdFromAttemptId: attempt.id, status: 'active' },
+        data: { status: 'revoked', revokedAt: now },
+      });
       await tx.reviewEmailJob.updateMany({
         where: { id: attempt.jobId, status: { in: ['processing', 'leased', 'dispatched'] } },
         data: {
@@ -79,17 +87,26 @@ export async function runReviewEmailLifecycleMaintenance(
   const ambiguous = await db.reviewEmailAttempt.findMany({
     where: {
       status: { in: ['sending', 'awaiting_confirmation'] },
-      sendInitiatedAt: { lte: confirmationBefore },
+      OR: [
+        { confirmationDeadlineAt: { lte: now } },
+        { confirmationDeadlineAt: null, sendInitiatedAt: { lte: confirmationBefore } },
+        {
+          confirmationDeadlineAt: null,
+          sendInitiatedAt: null,
+          sendCommittedAt: { lte: confirmationBefore },
+        },
+      ],
     },
-    orderBy: { sendInitiatedAt: 'asc' },
+    orderBy: [{ confirmationDeadlineAt: 'asc' }, { sendInitiatedAt: 'asc' }, { sendCommittedAt: 'asc' }],
     take: limit,
     select: {
       id: true,
       jobId: true,
       sendInitiatedAt: true,
+      sendCommittedAt: true,
       templateVersion: true,
       locale: true,
-      job: { select: { requestId: true, kind: true, request: { select: { receiptId: true } } } },
+      job: { select: { requestId: true, batchId: true, kind: true, request: { select: { receiptId: true } } } },
     },
   });
   let outcomeUnknownAttempts = 0;
@@ -99,6 +116,7 @@ export async function runReviewEmailLifecycleMaintenance(
         where: { id: attempt.id, status: { in: ['sending', 'awaiting_confirmation'] } },
         data: {
           status: 'outcome_unknown',
+          outcomeUnknownAt: now,
           completedAt: now,
           errorCode: 'ses_confirmation_timeout',
         },
@@ -115,11 +133,21 @@ export async function runReviewEmailLifecycleMaintenance(
           lastErrorCode: 'ses_confirmation_timeout',
         },
       });
-      if (attempt.job.request.receiptId) {
+      if (attempt.job.batchId) {
+        await recordReviewEmailBatchMetricContribution(tx, {
+          batchId: attempt.job.batchId,
+          dedupeKey: `review-email-attempt:${attempt.id}:outcome-unknown`,
+          metricDate: attempt.sendInitiatedAt ?? attempt.sendCommittedAt ?? now,
+          kind: attempt.job.kind,
+          templateVersion: attempt.templateVersion,
+          locale: attempt.locale,
+          metric: 'outcomeUnknown',
+        });
+      } else if (attempt.job.request?.receiptId) {
         await recordReviewEmailMetricContribution(tx, {
           receiptId: attempt.job.request.receiptId,
           dedupeKey: `review-email-attempt:${attempt.id}:outcome-unknown`,
-          metricDate: attempt.sendInitiatedAt ?? now,
+          metricDate: attempt.sendInitiatedAt ?? attempt.sendCommittedAt ?? now,
           kind: attempt.job.kind,
           templateVersion: attempt.templateVersion,
           locale: attempt.locale,
@@ -128,7 +156,9 @@ export async function runReviewEmailLifecycleMaintenance(
       }
       if (attempt.job.kind === 'request') {
         await tx.reviewRequest.updateMany({
-          where: { id: attempt.job.requestId, status: { in: ['sending', 'sent_unknown'] } },
+          where: attempt.job.batchId
+            ? { batchId: attempt.job.batchId, status: { in: ['sending', 'sent_unknown'] } }
+            : { id: attempt.job.requestId ?? '__missing__', status: { in: ['sending', 'sent_unknown'] } },
           data: { status: 'sent_unknown' },
         });
       }
@@ -151,6 +181,43 @@ export async function runReviewEmailLifecycleMaintenance(
     where: { status: 'active', expiresAt: { lte: now } },
     data: { status: 'expired' },
   });
+
+  const expirableBatches = await db.reviewEmailBatch.findMany({
+    where: {
+      status: { in: ['scheduled', 'sending', 'active'] },
+      expiresAt: { lte: now },
+    },
+    orderBy: { expiresAt: 'asc' },
+    take: limit,
+    select: { id: true },
+  });
+  let expiredBatches = 0;
+  for (const batch of expirableBatches) {
+    await db.$transaction(async (tx) => {
+      const expired = await tx.reviewEmailBatch.updateMany({
+        where: { id: batch.id, status: { in: ['scheduled', 'sending', 'active'] }, expiresAt: { lte: now } },
+        data: { status: 'expired', completedAt: now, cancellationReason: 'batch_expired' },
+      });
+      if (expired.count !== 1) return;
+      expiredBatches += 1;
+      await tx.reviewEmailJob.updateMany({
+        where: { batchId: batch.id, status: { in: ['pending', 'leased', 'dispatched', 'processing', 'retrying', 'awaiting_confirmation'] } },
+        data: { status: 'cancelled', completedAt: now, leaseOwner: null, leaseExpiresAt: null, lastErrorCode: 'batch_expired' },
+      });
+      await tx.reviewRequest.updateMany({
+        where: { batchId: batch.id, status: { in: ['scheduled', 'sending', 'sent', 'sent_unknown', 'error'] } },
+        data: { status: 'expired', cancelledAt: now, cancellationReason: 'batch_expired' },
+      });
+      await tx.reviewRequestToken.updateMany({
+        where: { batchId: batch.id, status: { in: ['prepared', 'active'] } },
+        data: { status: 'expired' },
+      });
+      await tx.reviewRequestSession.updateMany({
+        where: { batchId: batch.id, status: 'active' },
+        data: { status: 'expired' },
+      });
+    });
+  }
 
   const expirableRequests = await db.reviewRequest.findMany({
     where: {
@@ -192,6 +259,7 @@ export async function runReviewEmailLifecycleMaintenance(
     outcomeUnknownAttempts,
     expiredTokens: expiredTokens.count,
     expiredSessions: expiredSessions.count,
+    expiredBatches,
     expiredRequests,
     activeKeyVersions,
     retention,

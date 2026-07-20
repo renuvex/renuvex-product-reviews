@@ -61,6 +61,7 @@
     "test:widget-media:firefox": "playwright test --config=playwright.media.config.ts tests/widget-media-cross-browser.spec.ts --project=firefox-desktop",
     "test:widget-media:webkit": "playwright test --config=playwright.media.config.ts tests/widget-media-cross-browser.spec.ts --project=webkit-desktop",
     "test:admin-preview": "playwright test --config=playwright.widget.config.ts tests/admin-preview-smoke.spec.ts",
+    "test:review-center": "playwright test --config=playwright.review-center.config.ts",
     "test:unit": "vitest run --config=vitest.config.ts",
     "test:integration:review-email": "vitest run --config=vitest.integration.config.ts",
     "test:ci": "pnpm test:unit && pnpm test:widget-smoke && pnpm test:widget-runtime && pnpm test:widget-interactions && pnpm test:admin-preview",

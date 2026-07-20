@@ -127,6 +127,25 @@ export const LIST_ORDERS_FOR_REVIEW_REQUESTS = gql`
   }
 `;
 
+export const LIST_CUSTOMERS_FOR_REVIEW_EMAIL_CONSENT = gql`
+  query listCustomersForReviewEmailConsent($pagination: PaginationInput, $id: StringFilterInput) {
+    listCustomer(pagination: $pagination, id: $id) {
+      count
+      hasNext
+      limit
+      page
+      data {
+        id
+        email
+        deleted
+        subscriptionStatus
+        subscriptionStatusUpdatedAt
+        updatedAt
+      }
+    }
+  }
+`;
+
 export const SAVE_PRODUCT_WEBHOOKS = gql`
   mutation saveProductWebhooks($input: WebhookInput!) {
     saveWebhooks(input: $input) {

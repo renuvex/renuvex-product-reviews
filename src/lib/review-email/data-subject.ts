@@ -5,7 +5,7 @@ import { dispatchMediaProviderJob } from '@/lib/media/jobs';
 import { requireActiveIkasStoreInstallation } from '@/lib/ikas-installation-lifecycle';
 import { enqueueReviewMediaCleanup } from '@/lib/review-deletion';
 import { applyReviewSummaryRemovals } from '@/lib/review-summary';
-import { closeAndReverseReceiptAnalytics } from '@/lib/review-email/analytics';
+import { closeAndReverseBatchAnalytics, closeAndReverseReceiptAnalytics } from '@/lib/review-email/analytics';
 import {
   canonicalizeEmailIdentity,
   decryptText,
@@ -26,6 +26,8 @@ import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/rev
 type DataSubjectDb = Pick<PrismaClient, '$transaction' | 'reviewEmailDataSubjectRun'>;
 
 type SubjectInventory = {
+  batchIds: string[];
+  unsubscribeTokenIds: string[];
   receiptIds: string[];
   requestIds: string[];
   directOrderSnapshotIds: string[];
@@ -70,6 +72,8 @@ function inventoryFromProgress(progress: Prisma.JsonValue | null): SubjectInvent
     : null;
   const receiptIds = stringArray('receiptIds');
   const requestIds = stringArray('requestIds');
+  const batchIds = row.batchIds === undefined ? [] : stringArray('batchIds');
+  const unsubscribeTokenIds = row.unsubscribeTokenIds === undefined ? [] : stringArray('unsubscribeTokenIds');
   const directOrderSnapshotIds = stringArray('directOrderSnapshotIds');
   const linkedOrderSnapshotIds = stringArray('linkedOrderSnapshotIds');
   const reviewIds = stringArray('reviewIds');
@@ -77,10 +81,12 @@ function inventoryFromProgress(progress: Prisma.JsonValue | null): SubjectInvent
   const foldedSubjectLookupHashes = stringArray('foldedSubjectLookupHashes');
   const opaqueResourceIds = stringArray('opaqueResourceIds');
   const rowCounts = row.rowCounts;
-  if (!receiptIds || !requestIds || !directOrderSnapshotIds || !linkedOrderSnapshotIds || !reviewIds || !exactSubjectLookupHashes || !foldedSubjectLookupHashes || !opaqueResourceIds || !rowCounts || typeof rowCounts !== 'object' || Array.isArray(rowCounts)) {
+  if (!batchIds || !unsubscribeTokenIds || !receiptIds || !requestIds || !directOrderSnapshotIds || !linkedOrderSnapshotIds || !reviewIds || !exactSubjectLookupHashes || !foldedSubjectLookupHashes || !opaqueResourceIds || !rowCounts || typeof rowCounts !== 'object' || Array.isArray(rowCounts)) {
     return null;
   }
   return {
+    batchIds,
+    unsubscribeTokenIds,
     receiptIds,
     requestIds,
     directOrderSnapshotIds,
@@ -113,7 +119,23 @@ async function loadSubjectInventory(
     foldedHashCandidates: string[];
   },
 ): Promise<SubjectInventory> {
-  const [receipts, requests, orders] = await Promise.all([
+  const batches = await tx.reviewEmailBatch.findMany({
+    where: {
+      storeId: input.storeId,
+      installationGeneration: input.installationGeneration,
+      recipientEmailHash: { in: input.exactHashCandidates },
+    },
+    select: { id: true, orderSnapshotId: true, recipientEmailEncrypted: true },
+  });
+  const batchIds = sortedUnique(batches.map((row) => row.id));
+  const [unsubscribeTokens, receipts, requests, orders] = await Promise.all([
+    tx.reviewEmailUnsubscribeToken.findMany({
+      where: {
+        storeId: input.storeId,
+        recipientExactHash: { in: input.exactHashCandidates },
+      },
+      select: { id: true },
+    }),
     tx.reviewRequestReceipt.findMany({
       where: {
         storeId: input.storeId,
@@ -123,7 +145,13 @@ async function loadSubjectInventory(
       select: { id: true },
     }),
     tx.reviewRequest.findMany({
-      where: { storeId: input.storeId, recipientEmailHash: { in: input.exactHashCandidates } },
+      where: {
+        storeId: input.storeId,
+        OR: [
+          { recipientEmailHash: { in: input.exactHashCandidates } },
+          ...(batchIds.length ? [{ batchId: { in: batchIds } }] : []),
+        ],
+      },
       select: { id: true, receiptId: true, recipientEmailEncrypted: true, orderSnapshotId: true },
     }),
     tx.ikasOrderSnapshot.findMany({
@@ -131,9 +159,11 @@ async function loadSubjectInventory(
       select: { id: true, customerEmailEncrypted: true },
     }),
   ]);
+  const unsubscribeTokenIds = sortedUnique(unsubscribeTokens.map((row) => row.id));
   assertEncryptedSubjectMatches(
     [
       ...requests.map((row) => ({ encrypted: row.recipientEmailEncrypted })),
+      ...batches.map((row) => ({ encrypted: row.recipientEmailEncrypted })),
       ...orders.map((row) => ({ encrypted: row.customerEmailEncrypted })),
     ],
     input.exactCanonical,
@@ -142,7 +172,10 @@ async function loadSubjectInventory(
   const receiptIds = sortedUnique([...receipts.map((row) => row.id), ...requests.flatMap((row) => row.receiptId ? [row.receiptId] : [])]);
   const requestIds = sortedUnique(requests.map((row) => row.id));
   const directOrderSnapshotIds = sortedUnique(orders.map((row) => row.id));
-  const linkedOrderSnapshotIds = sortedUnique(requests.map((row) => row.orderSnapshotId));
+  const linkedOrderSnapshotIds = sortedUnique([
+    ...requests.map((row) => row.orderSnapshotId),
+    ...batches.flatMap((row) => row.orderSnapshotId ? [row.orderSnapshotId] : []),
+  ]);
   const orderSnapshotIds = sortedUnique([...directOrderSnapshotIds, ...linkedOrderSnapshotIds]);
   const reviews = await tx.review.findMany({
     where: {
@@ -157,6 +190,8 @@ async function loadSubjectInventory(
   });
   const reviewIds = sortedUnique(reviews.map((row) => row.id));
   const opaqueResourceIds = sortedUnique([
+    ...batchIds.map((id) => `batch:${id}`),
+    ...unsubscribeTokenIds.map((id) => `unsubscribe-token:${id}`),
     ...receiptIds.map((id) => `receipt:${id}`),
     ...requestIds.map((id) => `request:${id}`),
     ...directOrderSnapshotIds.map((id) => `order-direct:${id}`),
@@ -164,6 +199,8 @@ async function loadSubjectInventory(
     ...reviewIds.map((id) => `review:${id}`),
   ]);
   return {
+    batchIds,
+    unsubscribeTokenIds,
     receiptIds,
     requestIds,
     directOrderSnapshotIds,
@@ -173,6 +210,8 @@ async function loadSubjectInventory(
     foldedSubjectLookupHashes: sortedUnique(input.foldedHashCandidates),
     opaqueResourceIds,
     rowCounts: {
+      batches: batchIds.length,
+      unsubscribeTokens: unsubscribeTokenIds.length,
       receipts: receiptIds.length,
       requests: requestIds.length,
       orderSnapshots: orderSnapshotIds.length,
@@ -251,10 +290,47 @@ export async function createOrResumeReviewEmailDataSubjectRun(
       update: { sourceRunId: runId, reason: 'subject_erasure' },
     });
 
+    const batchIdsToFence = (await tx.reviewEmailBatch.findMany({
+      where: {
+        storeId: input.storeId,
+        installationGeneration: installation.generation,
+        recipientEmailHash: { in: protectedSubject.exactLookupHashes },
+      },
+      select: { id: true },
+    })).map((batch) => batch.id);
     const requestIdsToFence = (await tx.reviewRequest.findMany({
-      where: { storeId: input.storeId, recipientEmailHash: { in: protectedSubject.exactLookupHashes } },
+      where: {
+        storeId: input.storeId,
+        OR: [
+          { recipientEmailHash: { in: protectedSubject.exactLookupHashes } },
+          ...(batchIdsToFence.length ? [{ batchId: { in: batchIdsToFence } }] : []),
+        ],
+      },
       select: { id: true },
     })).map((request) => request.id);
+    if (batchIdsToFence.length) {
+      await tx.reviewEmailBatch.updateMany({
+        where: { id: { in: batchIdsToFence } },
+        data: {
+          status: 'cancelled',
+          emailAccessStatus: 'subject_erasure',
+          cancelledAt: now,
+          cancellationReason: 'subject_erasure_pending',
+        },
+      });
+      await tx.reviewEmailJob.updateMany({
+        where: { batchId: { in: batchIdsToFence }, status: { in: ['pending', 'leased', 'dispatched', 'processing', 'retrying', 'awaiting_confirmation'] } },
+        data: { status: 'cancelled', completedAt: now, leaseOwner: null, leaseExpiresAt: null, lastErrorCode: 'subject_erasure_pending' },
+      });
+      await tx.reviewRequestToken.updateMany({
+        where: { batchId: { in: batchIdsToFence }, status: { in: ['prepared', 'active'] } },
+        data: { status: 'revoked', revokedAt: now, revocationReason: 'subject_erasure_pending' },
+      });
+      await tx.reviewRequestSession.updateMany({
+        where: { batchId: { in: batchIdsToFence }, status: 'active' },
+        data: { status: 'revoked', revokedAt: now, revocationReason: 'subject_erasure_pending' },
+      });
+    }
     if (requestIdsToFence.length) {
       await tx.reviewRequest.updateMany({
         where: { id: { in: requestIdsToFence }, status: { notIn: ['submitted', 'cancelled', 'expired', 'suppressed'] } },
@@ -337,7 +413,7 @@ function journalPayloadForRun(
     foldedSubjectLookupHashes: inventory.foldedSubjectLookupHashes,
     opaqueResourceIds: inventory.opaqueResourceIds,
     rowCounts: inventory.rowCounts,
-    actions: ['close_analytics', 'conditionally_erase_order_details', 'delete_verified_reviews', 'enqueue_media_cleanup'],
+    actions: ['close_analytics', 'conditionally_erase_order_details', 'delete_unsubscribe_tokens', 'delete_verified_reviews', 'enqueue_media_cleanup'],
     createdAt: run.createdAt.toISOString(),
     retentionBaseAt: run.journalRetentionBaseAt.toISOString(),
   });
@@ -373,6 +449,29 @@ async function lockCandidateOrderSnapshots(
     ORDER BY "id" ASC
     FOR UPDATE
   `);
+}
+
+async function lockSubjectAttemptRows(
+  tx: Prisma.TransactionClient,
+  requestIds: string[],
+  batchIds: string[],
+): Promise<string[]> {
+  if (!requestIds.length && !batchIds.length) return [];
+  const requestFilter = requestIds.length
+    ? Prisma.sql`job."requestId" IN (${Prisma.join(sortedUnique(requestIds))})`
+    : Prisma.sql`FALSE`;
+  const batchFilter = batchIds.length
+    ? Prisma.sql`job."batchId" IN (${Prisma.join(sortedUnique(batchIds))})`
+    : Prisma.sql`FALSE`;
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT attempt."id"
+    FROM "ReviewEmailAttempt" attempt
+    INNER JOIN "ReviewEmailJob" job ON job."id" = attempt."jobId"
+    WHERE ${requestFilter} OR ${batchFilter}
+    ORDER BY attempt."id" ASC
+    FOR UPDATE OF attempt
+  `);
+  return rows.map((row) => row.id);
 }
 
 async function claimDataSubjectRun(runId: string, now: Date) {
@@ -432,6 +531,10 @@ async function executeFrozenSubjectInventory(
     const directOrderSnapshotIds = new Set(inventory.directOrderSnapshotIds);
     const exactSubjectLookupHashes = new Set(inventory.exactSubjectLookupHashes);
 
+    // SES event reduction locks attempt rows before analytics parents. Keep the
+    // erasure path in the same order so an event and DSR cannot deadlock.
+    const attemptIds = await lockSubjectAttemptRows(tx, inventory.requestIds, inventory.batchIds);
+
     await tx.reviewEmailSubjectBlock.upsert({
       where: {
         storeId_installationGeneration_foldedSubjectHash: {
@@ -451,6 +554,9 @@ async function executeFrozenSubjectInventory(
       update: { sourceRunId: run.id, reason: 'subject_erasure' },
     });
 
+    for (const batchId of inventory.batchIds) {
+      await closeAndReverseBatchAnalytics(tx, batchId, { now, reason: 'subject_erasure' });
+    }
     for (const receiptId of inventory.receiptIds) {
       await closeAndReverseReceiptAnalytics(tx, receiptId, { now, reason: 'subject_erasure' });
     }
@@ -462,16 +568,63 @@ async function executeFrozenSubjectInventory(
       await tx.review.deleteMany({ where: { id: { in: reviews.map((review) => review.id) }, storeId: run.storeId } });
       await applyReviewSummaryRemovals(tx, reviews);
     }
-    const attemptIds = inventory.requestIds.length
-      ? (await tx.reviewEmailAttempt.findMany({
-          where: { job: { requestId: { in: inventory.requestIds } } },
-          select: { id: true },
-        })).map((attempt) => attempt.id)
-      : [];
-    if (attemptIds.length) await tx.reviewEmailEvent.deleteMany({ where: { attemptId: { in: attemptIds } } });
+    if (attemptIds.length) {
+      await tx.reviewEmailEvent.updateMany({
+        where: { attemptId: { in: attemptIds } },
+        data: { providerMessageId: null },
+      });
+      await tx.reviewEmailAttempt.updateMany({
+        where: { id: { in: attemptIds } },
+        data: {
+          providerMessageId: null,
+          recipientEmailHash: null,
+          recipientEmailFoldedHash: null,
+          recipientEmailHashKeyVersion: null,
+          recipientEmailEncrypted: null,
+          consentSource: null,
+          consentStatus: null,
+          consentStatusUpdatedAt: null,
+          consentCheckedAt: null,
+          analyticsClosedAt: now,
+          piiScrubbedAt: now,
+        },
+      });
+    }
+    if (inventory.unsubscribeTokenIds.length || attemptIds.length) {
+      await tx.reviewEmailUnsubscribeToken.deleteMany({
+        where: {
+          storeId: run.storeId,
+          OR: [
+            ...(inventory.unsubscribeTokenIds.length ? [{ id: { in: inventory.unsubscribeTokenIds } }] : []),
+            ...(attemptIds.length ? [{ createdFromAttemptId: { in: attemptIds } }] : []),
+          ],
+        },
+      });
+    }
     const deletedRequests = inventory.requestIds.length
       ? await tx.reviewRequest.deleteMany({ where: { id: { in: inventory.requestIds }, storeId: run.storeId } })
       : { count: 0 };
+    if (inventory.batchIds.length) {
+      await tx.reviewEmailBatch.updateMany({
+        where: { id: { in: inventory.batchIds }, storeId: run.storeId },
+        data: {
+          orderSnapshotId: null,
+          status: 'cancelled',
+          emailAccessStatus: 'subject_erasure',
+          cancelledAt: now,
+          cancellationReason: 'subject_erasure',
+          recipientEmailHash: null,
+          recipientEmailFoldedHash: null,
+          recipientEmailHashKeyVersion: null,
+          recipientEmailEncrypted: null,
+          analyticsManifest: Prisma.JsonNull,
+          analyticsClosedAt: now,
+          analyticsCloseReason: 'subject_erasure',
+          piiScrubbedAt: now,
+          detailPurgedAt: now,
+        },
+      });
+    }
     let deletedOrderSnapshots = 0;
     let scrubbedSharedOrderSnapshots = 0;
     let preservedChangedSubjectOrderSnapshots = 0;
@@ -513,9 +666,16 @@ async function executeFrozenSubjectInventory(
       });
       scrubbedSharedOrderSnapshots += scrubbed.count;
     }
-    if (inventory.foldedSubjectLookupHashes.length) {
+    if (inventory.exactSubjectLookupHashes.length) {
+      const suppressions = await tx.reviewEmailSuppression.findMany({
+        where: {
+          storeId: run.storeId,
+          recipientExactHash: { in: inventory.exactSubjectLookupHashes },
+        },
+        select: { id: true },
+      });
       await tx.reviewEmailSuppression.deleteMany({
-        where: { storeId: run.storeId, emailHash: { in: inventory.foldedSubjectLookupHashes } },
+        where: { id: { in: suppressions.map((row) => row.id) }, storeId: run.storeId },
       });
     }
     const resultRowCounts = {
@@ -647,6 +807,8 @@ function inventoryFromJournalPayload(payload: ReviewEmailErasureJournalPayload):
     .filter((value) => value.startsWith(`${prefix}:`))
     .map((value) => value.slice(prefix.length + 1));
   return {
+    batchIds: ids('batch'),
+    unsubscribeTokenIds: ids('unsubscribe-token'),
     receiptIds: ids('receipt'),
     requestIds: ids('request'),
     directOrderSnapshotIds: ids('order-direct'),

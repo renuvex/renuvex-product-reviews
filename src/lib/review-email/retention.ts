@@ -8,14 +8,16 @@ import {
   REVIEW_EMAIL_TERMINAL_TOKEN_SESSION_GRACE_DAYS,
 } from '@/lib/review-email/constants';
 import { getReviewEmailRetentionMode } from '@/lib/review-email/config';
-import { closeAndReverseReceiptAnalytics } from '@/lib/review-email/analytics';
+import { closeAndReverseBatchAnalytics, closeAndReverseReceiptAnalytics } from '@/lib/review-email/analytics';
 import { normalizeReviewEmailFailure, reportReviewEmailFailure } from '@/lib/review-email/failures';
 
-const TERMINAL_REQUEST_STATUSES = ['submitted', 'cancelled', 'expired', 'suppressed', 'error'] as const;
+const TERMINAL_REQUEST_STATUSES = ['submitted', 'skipped', 'cancelled', 'expired', 'suppressed', 'error'] as const;
 const TERMINAL_TOKEN_STATUSES = ['consumed', 'expired', 'revoked'] as const;
 const TERMINAL_SESSION_STATUSES = ['consumed', 'expired', 'revoked'] as const;
 
 type PurgeCounts = {
+  batchDetails: number;
+  batchTransportFamilies: number;
   requests: number;
   tokens: number;
   sessions: number;
@@ -41,6 +43,8 @@ function subtractDays(value: Date, days: number): Date {
 
 function emptyCounts(): PurgeCounts {
   return {
+    batchDetails: 0,
+    batchTransportFamilies: 0,
     requests: 0,
     tokens: 0,
     sessions: 0,
@@ -71,6 +75,28 @@ async function purgeBatch(
     ORDER BY "updatedAt" ASC
     LIMIT ${input.limit}
     FOR UPDATE SKIP LOCKED
+  `;
+  const batchRows = await tx.$queryRaw<Array<{ id: string; orderSnapshotId: string | null }>>`
+    SELECT "id", "orderSnapshotId"
+    FROM "ReviewEmailBatch"
+    WHERE "status" IN ('completed', 'cancelled', 'expired')
+      AND "detailPurgedAt" IS NULL
+      AND COALESCE("completedAt", "cancelledAt", "expiresAt", "updatedAt") <= ${detailCutoff}
+    ORDER BY "updatedAt" ASC
+    LIMIT ${input.limit}
+    FOR UPDATE SKIP LOCKED
+  `;
+  const batchTransportRows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT batch."id"
+    FROM "ReviewEmailBatch" batch
+    WHERE batch."detailPurgedAt" IS NOT NULL
+      AND COALESCE(batch."analyticsClosedAt", batch."detailPurgedAt") <= ${contributionCutoff}
+      AND EXISTS (
+        SELECT 1 FROM "ReviewEmailJob" job WHERE job."batchId" = batch."id"
+      )
+    ORDER BY batch."detailPurgedAt" ASC
+    LIMIT ${input.limit}
+    FOR UPDATE OF batch SKIP LOCKED
   `;
   const tokenRows = await tx.$queryRaw<Array<{ id: string }>>`
     SELECT "id"
@@ -128,6 +154,8 @@ async function purgeBatch(
     FOR UPDATE SKIP LOCKED
   `;
   const candidates: PurgeCounts = {
+    batchDetails: batchRows.length,
+    batchTransportFamilies: batchTransportRows.length,
     requests: requestRows.length,
     tokens: tokenRows.length,
     sessions: sessionRows.length,
@@ -143,6 +171,69 @@ async function purgeBatch(
   for (const receiptId of [...new Set(requestRows.flatMap((row) => row.receiptId ? [row.receiptId] : []))]) {
     await closeAndReverseReceiptAnalytics(tx, receiptId, { now: input.now, reason: 'detail_retention' });
   }
+  for (const batch of batchRows) {
+    await closeAndReverseBatchAnalytics(tx, batch.id, { now: input.now, reason: 'detail_retention' });
+    const attemptIds = (await tx.reviewEmailAttempt.findMany({
+      where: { job: { batchId: batch.id } },
+      select: { id: true },
+    })).map((attempt) => attempt.id);
+    if (attemptIds.length) {
+      await tx.reviewEmailEvent.updateMany({
+        where: { attemptId: { in: attemptIds } },
+        data: { providerMessageId: null },
+      });
+      await tx.reviewEmailAttempt.updateMany({
+        where: { id: { in: attemptIds } },
+        data: {
+          providerMessageId: null,
+          recipientEmailHash: null,
+          recipientEmailFoldedHash: null,
+          recipientEmailHashKeyVersion: null,
+          recipientEmailEncrypted: null,
+          consentSource: null,
+          consentStatus: null,
+          consentStatusUpdatedAt: null,
+          consentCheckedAt: null,
+          contentManifest: Prisma.JsonNull,
+          contentDigest: null,
+          piiScrubbedAt: input.now,
+        },
+      });
+    }
+    await tx.reviewEmailMetricContribution.updateMany({
+      where: { batchId: batch.id },
+      data: { exactSubjectHash: null },
+    });
+    await tx.reviewEmailBatch.update({
+      where: { id: batch.id },
+      data: {
+        orderSnapshotId: null,
+        recipientEmailHash: null,
+        recipientEmailFoldedHash: null,
+        recipientEmailHashKeyVersion: null,
+        recipientEmailEncrypted: null,
+        piiScrubbedAt: input.now,
+        detailPurgedAt: input.now,
+      },
+    });
+    deleted.batchDetails += 1;
+  }
+  for (const batch of batchTransportRows) {
+    const jobIds = (await tx.reviewEmailJob.findMany({
+      where: { batchId: batch.id },
+      select: { id: true },
+    })).map((job) => job.id);
+    if (!jobIds.length) continue;
+    const attemptIds = (await tx.reviewEmailAttempt.findMany({
+      where: { jobId: { in: jobIds } },
+      select: { id: true },
+    })).map((attempt) => attempt.id);
+    if (attemptIds.length) {
+      await tx.reviewEmailEvent.deleteMany({ where: { attemptId: { in: attemptIds } } });
+    }
+    await tx.reviewEmailJob.deleteMany({ where: { id: { in: jobIds } } });
+    deleted.batchTransportFamilies += 1;
+  }
   if (sessionRows.length) {
     deleted.sessions = (await tx.reviewRequestSession.deleteMany({ where: { id: { in: sessionRows.map((row) => row.id) } } })).count;
   }
@@ -151,11 +242,13 @@ async function purgeBatch(
   }
   const requestIds = requestRows.map((row) => row.id);
   if (requestIds.length) {
-    const attemptIds = (await tx.reviewEmailAttempt.findMany({
+    const requestAttemptIds = (await tx.reviewEmailAttempt.findMany({
       where: { job: { requestId: { in: requestIds } } },
       select: { id: true },
-    })).map((row) => row.id);
-    if (attemptIds.length) await tx.reviewEmailEvent.deleteMany({ where: { attemptId: { in: attemptIds } } });
+    })).map((attempt) => attempt.id);
+    if (requestAttemptIds.length) {
+      await tx.reviewEmailEvent.deleteMany({ where: { attemptId: { in: requestAttemptIds } } });
+    }
     deleted.requests = (await tx.reviewRequest.deleteMany({ where: { id: { in: requestIds } } })).count;
   }
   if (contributionRows.length) {
@@ -179,10 +272,14 @@ async function purgeBatch(
     })).count;
   }
 
-  const orderSnapshotIds = [...new Set(requestRows.map((row) => row.orderSnapshotId))];
+  const orderSnapshotIds = [...new Set([
+    ...requestRows.map((row) => row.orderSnapshotId),
+    ...batchRows.flatMap((row) => row.orderSnapshotId ? [row.orderSnapshotId] : []),
+  ])];
   for (const orderSnapshotId of orderSnapshotIds) {
     const remaining = await tx.reviewRequest.count({ where: { orderSnapshotId } });
-    if (remaining !== 0) continue;
+    const remainingBatches = await tx.reviewEmailBatch.count({ where: { orderSnapshotId } });
+    if (remaining !== 0 || remainingBatches !== 0) continue;
     deleted.orderSnapshots += (await tx.ikasOrderSnapshot.deleteMany({
       where: { id: orderSnapshotId, updatedAt: { lte: detailCutoff } },
     })).count;

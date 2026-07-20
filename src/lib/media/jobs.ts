@@ -257,6 +257,8 @@ async function updateSessionWithMuxAsset(input: {
   bytes: number;
   providerUploadId: string;
   providerAssetId: string;
+  reviewRequestId?: string | null;
+  reviewRequestSessionId?: string | null;
 }) {
   const publicId = `${VIDEO_PROVIDER}:${input.providerAssetId}`;
   const claimed = await prisma.videoUploadSession.updateMany({
@@ -294,6 +296,8 @@ async function updateSessionWithMuxAsset(input: {
       bytes: input.bytes,
       metadataSource: 'mux_upload',
       metadataStatus: 'pending',
+      reviewRequestId: input.reviewRequestId ?? null,
+      reviewRequestSessionId: input.reviewRequestSessionId ?? null,
     },
     update: {
       provider: VIDEO_PROVIDER,
@@ -303,6 +307,8 @@ async function updateSessionWithMuxAsset(input: {
       sourceAssetId: null,
       metadataSource: 'mux_upload',
       metadataStatus: 'pending',
+      reviewRequestId: input.reviewRequestId ?? null,
+      reviewRequestSessionId: input.reviewRequestSessionId ?? null,
     },
   });
   return true;
@@ -331,6 +337,8 @@ async function resolveMuxVideoAsset(payload: z.infer<typeof resolveVideoAssetPay
     bytes: session.bytes,
     providerUploadId,
     providerAssetId: upload.asset_id,
+    reviewRequestId: session.reviewRequestId,
+    reviewRequestSessionId: session.reviewRequestSessionId,
   });
   if (!claimed) return { status: 'superseded' };
 
@@ -410,6 +418,8 @@ async function reconcileMuxVideo(payload: z.infer<typeof reconcileVideoPayload>)
           bytes: session.bytes,
           providerUploadId,
           providerAssetId,
+          reviewRequestId: session.reviewRequestId,
+          reviewRequestSessionId: session.reviewRequestSessionId,
         });
         session = await prisma.videoUploadSession.findUnique({ where: { id: session.id } });
         if (!session) return { status: 'superseded' };
@@ -604,12 +614,38 @@ async function cleanupAwsImages(payload: z.infer<typeof cleanupAwsImagePayload>)
 }
 
 async function publishAwsImage(payload: z.infer<typeof awsImageVariantMutationPayload>): Promise<MediaJobResult> {
+  if (payload.mediaId) {
+    const media = await prisma.reviewMedia.findUnique({
+      where: { id: payload.mediaId },
+      select: {
+        provider: true,
+        resourceType: true,
+        review: { select: { status: true } },
+      },
+    });
+    if (
+      !media || media.provider !== AWS_REVIEW_IMAGE_PROVIDER || media.resourceType !== 'image' ||
+      media.review.status !== 'approved'
+    ) {
+      await revokeAwsReviewImagePublicVariants(payload.variantManifest);
+      return { status: 'superseded' };
+    }
+  }
   await publishAwsReviewImageVariants(payload.variantManifest);
   if (payload.mediaId) {
-    await prisma.reviewMedia.updateMany({
-      where: { id: payload.mediaId, provider: AWS_REVIEW_IMAGE_PROVIDER, resourceType: 'image' },
-      data: { variantStatus: 'public_ready', variantPublishedAt: new Date(), variantRevokedAt: null },
+    const updated = await prisma.reviewMedia.updateMany({
+      where: {
+        id: payload.mediaId,
+        provider: AWS_REVIEW_IMAGE_PROVIDER,
+        resourceType: 'image',
+        review: { status: 'approved' },
+      },
+      data: { variantStatus: 'public_ready', variantPublishedAt: new Date(), variantRevokedAt: null, visible: true },
     });
+    if (updated.count !== 1) {
+      await revokeAwsReviewImagePublicVariants(payload.variantManifest);
+      return { status: 'superseded' };
+    }
   }
   return { status: 'succeeded' };
 }

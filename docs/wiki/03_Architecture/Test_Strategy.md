@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - testing
@@ -21,6 +21,7 @@ source_files:
   - "package.json"
   - "playwright.widget.config.ts"
   - "playwright.media.config.ts"
+  - "playwright.review-center.config.ts"
   - "vitest.config.ts"
   - "vitest.integration.config.ts"
   - ".github/workflows/widget-smoke.yml"
@@ -33,6 +34,20 @@ source_files:
   - "scripts/measure-storefront-waterfall.mjs"
   - "scripts/verify-deployed-jsonld.mjs"
   - "tests/widget-harness.ts"
+  - "tests/review-center-browser.spec.ts"
+  - "tests/integration/review-email-batch-db-guarantees.test.ts"
+  - "tests/unit/review-email-batch-jobs.test.ts"
+  - "tests/unit/review-email-maintenance.test.ts"
+  - "tests/unit/review-email-pii.test.ts"
+  - "tests/unit/review-email-ses-events.test.ts"
+  - "tests/unit/review-email-eligibility.test.ts"
+  - "tests/unit/review-email-batching.test.ts"
+  - "tests/unit/review-email-settings.test.ts"
+  - "tests/unit/review-email-order-sync.test.ts"
+  - "tests/unit/review-email-ikas-send-preflight.test.ts"
+  - "tests/unit/review-email-retention.test.ts"
+  - "tests/unit/review-email-batch-schema.test.ts"
+  - "tests/unit/review-email-tokens.test.ts"
   - "tests/widget-network-smoke.spec.ts"
   - "tests/widget-runtime-smoke.spec.ts"
   - "tests/widget-interaction-smoke.spec.ts"
@@ -111,7 +126,7 @@ broader gates when the change crosses provider, widget, or public API
 boundaries.
 
 ## Summary
-The automated test suite has six layers: widget network/chunk contracts, widget layout/runtime rendering, storefront interactions, cross-browser review media, admin preview/settings behavior, and backend/theme-state unit tests. The suite is designed to catch regressions in public widget behavior without depending on real ikas auth, production DB data, AWS/Mux provider uploads, or live merchant credentials.
+The automated test suite covers widget network/chunk contracts, widget layout/runtime rendering, storefront interactions, cross-browser review media, admin preview/settings behavior, the isolated review center, and backend/database contracts. The suite is designed to catch regressions without depending on real ikas auth, production DB data, AWS/Mux provider uploads, or live merchant credentials.
 
 ## Worker Delivery Gates
 Cloudflare Worker widget delivery has a separate local gate because it validates an edge asset target without deploying it:
@@ -136,7 +151,38 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | Cross-browser review media | `pnpm test:widget-media` | Local fast path runs Chromium desktop only. CI runs PR media coverage as isolated matrix jobs for Chromium desktop, Pixel Android emulation, and iPhone WebKit emulation. The scheduled cross-browser workflow adds Firefox desktop and desktop WebKit. The suite pins poster-first card/list/gallery rendering, size presets, no list autoplay/preload, Mux Player lightbox attributes, browser-back cleanup, Mux direct-upload wizard submit, and video-to-image navigation cleanup. |
 | Admin preview/settings | `pnpm test:admin-preview` | Preview `postMessage` update path, layout/icon/color/toggle effects, and static `widgetDefs.ts` option/showWhen alignment with widget registries. |
 | Unit/API/theme state | `pnpm test:unit` | Public API route behavior, product review summary read-model helpers, review GET filters, review POST validation/rate-limit/profanity/image-policy/approval branches, widget-error sanitization, storefront theme stable/pending/generic/fail-closed helpers, surface test contracts, popover registry lifecycle contract, stable widget asset cache headers, and the overlay shared-surface invariant (scroll-lock / focus-trap primitives live only in their shared modules — ADR_0025). Vitest runs these unit files with a single worker because the route-level tests rely on mocked module graphs and Next route imports that showed 5s timeout flakes under parallel local Windows runs; serial execution is slower but deterministic. |
-| Review-email DB guarantees | `pnpm test:integration:review-email` | Opt-in test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves concurrent uninstall/reinstall serialization, stale-uninstall rejection, tenant-scoped DSR idempotency, one receipt/review guarantee, bounded retention and analytics reversal, request-parent `RESTRICT` enforcement, shared-order conditional PII scrub, final-parent deletion, changed-subject preservation, a real different-subject DSR/reconciliation race, and journal replay equivalence. Migrations must be applied first. It is not a production/CI DB mutation gate. |
+| Review-center browser | `pnpm test:review-center` | Isolated `reviews.renuvex.app`-style flow with mocked network: fragment token exchange/removal, session item reads, independent Product A submit, Product B continuation/skip, and terminal batch state. It does not send email or call AWS/Mux. |
+| Review-email DB guarantees | `pnpm test:integration:review-email` | Opt-in test against an explicitly supplied local disposable PostgreSQL DB. It refuses non-local hosts and requires `DATABASE_URL` to equal `REVIEW_EMAIL_INTEGRATION_DATABASE_URL`; it proves install/DSR/retention guarantees plus batch fingerprint/live-group races, product membership uniqueness, job target checks, cross-store composite FKs, provider-neutral event dedupe, attempt evidence retention, DSR/event lock ordering, journal replay equivalence, and disable/re-enable behavior around committed versus uncommitted attempts. Exact-identity coverage includes same-folded/different-exact collision isolation, retained-key lookup, real retention detaching an unsubscribe token from its attempt, old-link suppression without ciphertext, normal/journal DSR deletion, and legacy progress/payload compatibility. Migrations must be applied first. It is not a production/CI DB mutation gate. |
+
+Review-email cutoff coverage pins the historical-delivery invariant separately:
+unit tests require exact delivered-line `statusUpdatedAt`, reject generic
+package/order timestamp fallbacks, use the latest timestamp for a multi-line
+product, preserve the reconciliation discovery window for pre-enable orders,
+fail closed on missing cutoff or click-and-collect transition evidence, and
+prove that explicit `null` evidence cannot trigger a batching fallback. The DB
+integration suite proves disable cancels only pre-commit work, a committed
+attempt remains non-resendable, and re-enable establishes a new cutoff without
+reviving cancelled backlog. Clean PostgreSQL 16 and 17 migration/application
+runs are required for this package.
+
+Review-email contract-hardening coverage also pins identity and ambiguous-send
+behavior. Canonicalization tests preserve local-part case for exact identity,
+lowercase only the folded policy identity, retain Gmail dots and plus tags, and
+reject malformed/unsupported addresses. Lifecycle-owner tests prove the
+token/session revocation matrix rather than duplicating it in a mock-only meta
+test: intermediate item actions retain siblings; terminal batch, recipient
+change, DSR, uninstall, and provider failure close the required access; post-send
+disable stops future email while retaining an existing review link; and expired
+credentials never revive. Maintenance prioritizes persisted
+`confirmationDeadlineAt`, uses provider-call timestamps for legacy null rows,
+and keeps `outcome_unknown` terminal and non-resendable while allowing late
+signed evidence.
+
+2026-07-16 local evidence: the full unit suite passed `556/556`; the
+review-email PostgreSQL integration suite passed `26/26` after all 58 migrations
+on disposable PostgreSQL 16 and independently `26/26` on PostgreSQL 17. Prisma
+generation, TypeScript, ESLint, and the Next.js webpack production build passed.
+These are local disposable-database results, not production migration evidence.
 
 `pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
 
@@ -248,6 +294,14 @@ The suite uses risk-based pairwise coverage instead of a full cartesian matrix. 
 
 ## What Is Not Automated Yet
 - Real authenticated ikas dashboard iframe flows are not in CI. They still need manual-auth smoke or a future test-auth harness.
+- Manual-order source and shipment evidence are partially proven on a
+  development store. A read-only query verified `createdBy=ADMIN`, physical
+  shipment, exact package-to-line membership, delivered status, and a non-null
+  line `statusUpdatedAt`. The 2026-07-20 ikas answer confirms that the order
+  `notificationsAccepted` value is only a historical snapshot; current
+  `listCustomer.subscriptionStatus` is the send-time authorization source.
+  Unit tests cover that contract, but a real outbound manual-order email remains
+  a future SES sandbox/provider acceptance test because no sender is deployed.
 - Admin widget editor skeleton/error/retry screens are not in CI because the current admin preview harness mounts the preview runtime, not the authenticated admin page.
 - Admin widget editor iframe-preview loading overlays are not in CI for the same reason; reducer behavior is covered by unit tests and visual behavior needs manual-auth smoke or a future admin editor harness.
 - Live dev-store post-deploy smoke is not replaced by CI. Runtime-affecting widget changes should still be checked on the dev storefront after deploy.

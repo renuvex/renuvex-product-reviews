@@ -1543,6 +1543,12 @@ describe('/api/public/reviews', () => {
         uploadExpiresAt: new Date(Date.now() + 60_000),
       },
     ]);
+    prismaMock.reviewMedia.create
+      .mockResolvedValueOnce({ id: 'media-image-1' })
+      .mockResolvedValueOnce({ id: 'media-image-2' });
+    prismaMock.mediaProviderJob.upsert
+      .mockResolvedValueOnce({ id: 'job-publish-image-1' })
+      .mockResolvedValueOnce({ id: 'job-publish-image-2' });
 
     const response = await postPublicReview(validReviewPayload({
       images: [awsImageRef(), secondRef],
@@ -1552,12 +1558,12 @@ describe('/api/public/reviews', () => {
     expect(redisMock.expire).toHaveBeenCalledWith('renuvex_pr_rl:203.0.113.5', 600);
     expect(prismaMock.review.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        images: JSON.stringify([AWS_REVIEW_IMAGE_URL, SECOND_AWS_REVIEW_IMAGE_URL]),
+        images: null,
         hasImages: true,
         status: 'approved',
       }),
     }));
-    expect(awsImageMock.publishAwsReviewImageVariants).toHaveBeenCalledTimes(2);
+    expect(awsImageMock.publishAwsReviewImageVariants).not.toHaveBeenCalled();
     expect(prismaMock.pendingReviewImage.findMany).toHaveBeenCalledWith({
       where: {
         storeId: 'store-1',
@@ -1566,42 +1572,42 @@ describe('/api/public/reviews', () => {
       },
       select: expect.any(Object),
     });
-    expect(prismaMock.reviewMedia.createMany).toHaveBeenCalledWith({
-      data: [
-        expect.objectContaining({
-          reviewId: 'review-created',
-          storeId: 'store-1',
-          productId: 'product-1',
-          url: AWS_REVIEW_IMAGE_URL,
-          publicId: `aws_s3:store-1:${AWS_IMAGE_ASSET_ID}`,
-          assetId: AWS_IMAGE_ASSET_ID,
-          provider: 'aws_s3',
-          providerAssetId: AWS_IMAGE_ASSET_ID,
-          resourceType: 'image',
-          format: 'jpg',
-          mimeType: 'image/jpeg',
-          width: 1200,
-          height: 1600,
-          bytes: 450000,
-          metadataSource: 'aws_s3_register',
-          metadataStatus: 'complete',
-          metadataFetchedAt: new Date('2026-06-08T00:00:00.000Z'),
-          variantStatus: 'public_ready',
-          position: 0,
-          visible: true,
-        }),
-        expect.objectContaining({
-          reviewId: 'review-created',
-          storeId: 'store-1',
-          productId: 'product-1',
-          url: SECOND_AWS_REVIEW_IMAGE_URL,
-          publicId: `aws_s3:store-1:${SECOND_AWS_IMAGE_ASSET_ID}`,
-          position: 1,
-          visible: true,
-        }),
-      ],
-      skipDuplicates: true,
+    expect(prismaMock.reviewMedia.create).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({
+        reviewId: 'review-created',
+        storeId: 'store-1',
+        productId: 'product-1',
+        url: AWS_REVIEW_IMAGE_URL,
+        publicId: `aws_s3:store-1:${AWS_IMAGE_ASSET_ID}`,
+        assetId: AWS_IMAGE_ASSET_ID,
+        provider: 'aws_s3',
+        providerAssetId: AWS_IMAGE_ASSET_ID,
+        resourceType: 'image',
+        format: 'jpg',
+        mimeType: 'image/jpeg',
+        width: 1200,
+        height: 1600,
+        bytes: 450000,
+        metadataSource: 'aws_s3_register',
+        metadataStatus: 'complete',
+        metadataFetchedAt: new Date('2026-06-08T00:00:00.000Z'),
+        variantStatus: 'private_ready',
+        position: 0,
+        visible: false,
+      }),
     });
+    expect(prismaMock.reviewMedia.create).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({
+        reviewId: 'review-created',
+        storeId: 'store-1',
+        productId: 'product-1',
+        url: SECOND_AWS_REVIEW_IMAGE_URL,
+        publicId: `aws_s3:store-1:${SECOND_AWS_IMAGE_ASSET_ID}`,
+        position: 1,
+        visible: false,
+      }),
+    });
+    expect(prismaMock.mediaProviderJob.upsert).toHaveBeenCalledTimes(2);
     expect(prismaMock.pendingReviewImage.deleteMany).toHaveBeenCalledWith({
       where: {
         publicId: {

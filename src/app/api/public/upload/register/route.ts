@@ -12,6 +12,9 @@ import {
   sanitizeAwsReviewImageRef,
   validateAwsReviewImageOriginal,
 } from '@/lib/media/providers/aws-review-image';
+import { resolveReviewCenterItemScope } from '@/lib/review-email/review-center-scope';
+import { ReviewRequestTokenError } from '@/lib/review-email/tokens';
+import { ReviewRequestHostError } from '@/lib/review-email/public-access';
 
 export const runtime = 'nodejs';
 
@@ -49,8 +52,9 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }));
     }
 
-    const payload = body as { storeId?: unknown; provider?: unknown };
-    const storeId = normalizeReviewImageStoreId(payload?.storeId);
+    const payload = body as { storeId?: unknown; provider?: unknown; itemId?: unknown };
+    const scope = await resolveReviewCenterItemScope(prisma, request, payload.itemId);
+    const storeId = scope?.storeId ?? normalizeReviewImageStoreId(payload?.storeId);
     if (!storeId) {
       return withCors(NextResponse.json({ error: 'Invalid store.' }, { status: 400 }));
     }
@@ -79,6 +83,13 @@ export async function POST(request: Request) {
     });
     if (!pending) {
       return withCors(NextResponse.json({ error: 'Upload intent not found.' }, { status: 400 }));
+    }
+    if (scope && (
+      pending.reviewRequestId !== scope.requestId ||
+      pending.reviewRequestSessionId !== scope.sessionId ||
+      pending.productId !== scope.productId
+    )) {
+      return withCors(NextResponse.json({ error: 'Upload intent scope mismatch.' }, { status: 409 }));
     }
     if (pending.uploadExpiresAt && pending.uploadExpiresAt <= new Date()) {
       return withCors(NextResponse.json({ error: 'Upload intent expired.' }, { status: 400 }));
@@ -155,6 +166,9 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: 'Image upload could not be verified.' }, { status: 400 }));
     }
   } catch (error) {
+    if (error instanceof ReviewRequestHostError || error instanceof ReviewRequestTokenError) {
+      return withCors(NextResponse.json({ error: error.code }, { status: error.status }));
+    }
     console.error('[upload/register] ERROR:', error);
     return withCors(NextResponse.json({ error: 'Server error.' }, { status: 500 }));
   }

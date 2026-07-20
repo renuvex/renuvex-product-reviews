@@ -8,6 +8,8 @@ import {
   type NormalizedOrderLine,
 } from '@/lib/review-email/eligibility';
 
+const ELIGIBILITY_STARTS_AT = new Date('2026-07-01T00:00:00.000Z');
+
 function line(overrides: Partial<NormalizedOrderLine> = {}): NormalizedOrderLine {
   return {
     id: 'line-1',
@@ -59,7 +61,7 @@ function order(overrides: Partial<NormalizedOrder> = {}): NormalizedOrder {
 
 describe('review email eligibility timing', () => {
   it('schedules the first request one day after delivery eligibility by default', () => {
-    const eligible = evaluateLineEligibility(order(), line());
+    const eligible = evaluateLineEligibility(order(), line(), ELIGIBILITY_STARTS_AT);
 
     expect(eligible).toMatchObject({ eligible: true });
     if (!eligible.eligible) throw new Error('expected eligibility');
@@ -80,14 +82,22 @@ describe('review email eligibility timing', () => {
     expect(initialRequestExpiresAt(sendAfter)).toEqual(new Date('2026-08-30T10:00:00.000Z'));
   });
 
-  it('does not mark digital or notification-denied orders eligible in the first release', () => {
-    expect(evaluateLineEligibility(order({ shippingMethod: 'DIGITAL_DELIVERY' }), line())).toMatchObject({
-      eligible: false,
-      reason: 'shipping_method_disabled',
+  it('uses current delivery evidence instead of the historical order consent snapshot', () => {
+    expect(evaluateLineEligibility(order({ shippingMethod: 'DIGITAL_DELIVERY' }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
+      eligible: true,
     });
-    expect(evaluateLineEligibility(order({ notificationsAccepted: false }), line())).toMatchObject({
+    expect(evaluateLineEligibility(order({ notificationsAccepted: false }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
+      eligible: true,
+    });
+  });
+
+  it('blocks failed payment but accepts waiting payment after delivery', () => {
+    expect(evaluateLineEligibility(order({ orderPaymentStatus: 'FAILED' }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
       eligible: false,
-      reason: 'notifications_not_accepted',
+      reason: 'payment_failed',
+    });
+    expect(evaluateLineEligibility(order({ orderPaymentStatus: 'WAITING' }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
+      eligible: true,
     });
   });
 
@@ -95,11 +105,58 @@ describe('review email eligibility timing', () => {
     expect(evaluateLineEligibility(order({
       orderStatus: 'PARTIALLY_REFUNDED',
       orderPackageStatus: 'PARTIALLY_CANCELLED',
-    }), line())).toMatchObject({ eligible: true });
+    }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({ eligible: true });
 
     expect(evaluateLineEligibility(order({
       orderStatus: 'PARTIALLY_REFUNDED',
       orderPackageStatus: 'PARTIALLY_REFUNDED',
-    }), line({ status: 'REFUNDED' }))).toMatchObject({ eligible: false, reason: 'line_refunded' });
+    }), line({ status: 'REFUNDED' }), ELIGIBILITY_STARTS_AT)).toMatchObject({ eligible: false, reason: 'line_refunded' });
+  });
+
+  it('uses only the exact line terminal timestamp for the activation cutoff', () => {
+    const startsAt = new Date('2026-07-10T00:00:00.000Z');
+    const oldDelivery = line({ statusUpdatedAt: new Date('2026-07-09T23:59:59.999Z') });
+    const laterGenericUpdate = order({
+      updatedAt: new Date('2026-08-08T00:00:00.000Z'),
+      packages: [{
+        id: 'package-1',
+        status: 'DELIVERED',
+        orderLineItemIds: ['line-1'],
+        updatedAt: new Date('2026-08-08T00:00:00.000Z'),
+      }],
+    });
+
+    expect(evaluateLineEligibility(laterGenericUpdate, oldDelivery, startsAt)).toMatchObject({
+      eligible: false,
+      reason: 'delivery_before_email_activation',
+    });
+    expect(evaluateLineEligibility(laterGenericUpdate, line({ statusUpdatedAt: null }), startsAt)).toMatchObject({
+      eligible: false,
+      reason: 'missing_exact_delivery_timestamp',
+    });
+    expect(evaluateLineEligibility(laterGenericUpdate, line({ status: 'SHIPPED' }), startsAt)).toMatchObject({
+      eligible: false,
+      reason: 'line_not_delivered',
+    });
+  });
+
+  it('waits for actual click-and-collect delivery instead of ready-for-pick-up', () => {
+    expect(evaluateLineEligibility(order({
+      shippingMethod: 'CLICK_AND_COLLECT',
+      orderPackageStatus: 'READY_FOR_PICK_UP',
+      packages: [{
+        id: 'package-1',
+        status: 'READY_FOR_PICK_UP',
+        orderLineItemIds: ['line-1'],
+        updatedAt: new Date('2026-07-02T00:00:00.000Z'),
+      }],
+    }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({
+      eligible: false,
+      reason: 'package_not_delivered',
+    });
+    expect(evaluateLineEligibility(order({
+      shippingMethod: 'CLICK_AND_COLLECT',
+      orderPackageStatus: 'DELIVERED',
+    }), line(), ELIGIBILITY_STARTS_AT)).toMatchObject({ eligible: true });
   });
 });

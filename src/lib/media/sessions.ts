@@ -55,6 +55,8 @@ export async function createReservedVideoSession(input: {
   mimeType: string;
   bytes: number;
   fileFingerprint?: string | null;
+  reviewRequestId?: string | null;
+  reviewRequestSessionId?: string | null;
   monthlyLimit: number;
   now?: Date;
 }) {
@@ -73,6 +75,8 @@ export async function createReservedVideoSession(input: {
         mimeType: input.mimeType,
         bytes: input.bytes,
         fileFingerprint: input.fileFingerprint?.slice(0, 128) || null,
+        reviewRequestId: input.reviewRequestId ?? null,
+        reviewRequestSessionId: input.reviewRequestSessionId ?? null,
         provider: VIDEO_PROVIDER,
         reservedMonth: month,
         expiresAt: new Date(now.getTime() + VIDEO_UPLOAD_SESSION_TTL_MS),

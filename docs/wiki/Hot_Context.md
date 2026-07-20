@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-11
-last_verified: 2026-07-11
+updated: 2026-07-20
+last_verified: 2026-07-20
 confidence: high
 tags:
   - hot-context
@@ -34,8 +34,10 @@ source_files:
   - "src/app/api/public/upload/sign/route.ts"
   - "src/app/api/public/upload/register/route.ts"
   - "src/app/api/internal/scheduled-jobs/route.ts"
-  - "src/lib/scheduled-jobs.ts"
-  - "src/lib/email/ses-sns.ts"
+  - "src/lib/review-email/eligibility.ts"
+  - "src/lib/review-email/settings.ts"
+  - "src/lib/review-email/ikas-orders.ts"
+  - "src/lib/review-email/ikas-send-preflight.ts"
   - "src/app/api/internal/email-events/ses/route.ts"
   - "src/lib/media/providers/aws-review-image.ts"
   - "src/lib/media/jobs.ts"
@@ -58,13 +60,27 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
+- 2026-07-20: Disabled review-email source is aligned with the detailed ikas
+  contract: current customer subscription plus exact recipient authorizes
+  sending; order consent is historical. Immutable delivery evidence, stable
+  package-line grouping, all four shipping methods, payment exclusion, consent
+  expiry, DSR cleanup, and scope gating are in source. Production migration,
+  reauthorization, AWS/SES/DNS, and sending remain gated.
+- 2026-07-16: Disabled review-email cutoff and confirmation contracts are
+  hardened: exact cutoff evidence, fixed 24-hour deadlines, no ambiguous
+  auto-resend, and pre-commit disable cancellation. PostgreSQL 16/17 and static
+  gates passed. Later ikas evidence supersedes the old order-consent reading.
+- 2026-07-15: Disabled review-email Multi-Product Batch / Envelope V3.2 source
+  adds one initial and at most one reminder per delivery group, independent
+  product requests, guarded attempts/events, review-center access, and
+  V5-compatible DSR/retention. Live rollout remains gated. See
+  [[ADR_0036_Review_Request_Email_Architecture]].
 - 2026-07-04: Wiki low-token routing is active: hot-path pages stay short; long critical pages use `## Agent Brief`.
 - 2026-07-04: QStash maintenance scheduler is active; health gate is delivery logs/DLQ plus `ScheduledJobRunLock`, not `nextScheduleTime`.
 - 2026-07-04: AWS review images are production path: `media.renuvex.app/reviews/...`, immutable public variants, private signed admin previews, public-only orphan scan.
 - 2026-07-04: Cloudinary code/env/runtime cleanup is complete; old provider assets are out of app scope.
 - 2026-07-04: AWS public-scale guardrails are documented. See [[AWS_Setup_And_Access]].
 - 2026-07-08: CloudFront standard logging v2 is deployed for `media.renuvex.app`; logs deliver to the EU log bucket under `AWSLogs/989086371563/CloudFront/cloudfront/media/` with 14-day lifecycle and no query/cookie fields. See [[AWS_Setup_And_Access]].
-- 2026-07-11: Review-email V5 source is hardened but disabled. DSR uses exact-HMAC frozen direct/linked inventory, `RESTRICT` request-parent FKs, deterministic parent locks, conditional shared-order PII scrub, and identical normal/replay execution. Coverage accepts only configured-horizon lifecycle markers and consumes both S3 version markers. Persistent/logged failures are code-only. Defaults: request/reminder `+1 day`, token `30` days, session `2` hours, detail/contribution `180/210` days; current copy-register result is journal `35/42` days. Clean PostgreSQL proof: 56 migrations, 466 unit and 12 integration tests. No production mutation or live email exists. See [[ADR_0036_Review_Request_Email_Architecture]].
 - 2026-07-09: SES email source package is prepared only: CloudFormation templates, validators, disabled env placeholders, and a fail-closed signed SNS feedback endpoint. No AWS SES resources, DNS, Vercel env, deploy, or outbound email sending exists yet. See [[ADR_0036_Review_Request_Email_Architecture]] and [[AWS_Setup_And_Access]].
 - 2026-07-02: Cloudflare Worker remains widget asset/read-cache delivery; AWS widget CDN canary is closed.
 - 2026-06-21/23: Mux video upload/playback/cleanup is live; Mux Data tracking/cookies stay disabled. See [[ADR_0032_Review_Video_On_Mux]].
@@ -76,7 +92,10 @@ source_files:
 - Supabase RLS/default-grants hardening is a public-launch blocker.
 - Theme adapters depend on `listStorefront.themes[].isMainTheme`; no ikas theme webhook exists.
 - Deferred gaps: unsupported-theme warning UI, authenticated dashboard smoke, Sentry post-deploy health.
-- Review-email V5 is not live. Activation requires actual restore-window and app-deleted verification, then separate DB/journal/env/report/enforce gates. SES sender/templates, AWS dispatch, DNS/sandbox, UI, and live acceptance remain open.
+- Review-email V5/V3.2 is not live. Activation requires actual restore-window
+  and app-deleted verification, then separate DB/journal/env/report/enforce
+  gates. SES sender/templates, AWS dispatch, DNS/sandbox, merchant settings UI,
+  review-center media controls, and live acceptance remain open.
 
 ## Read Next
 - [[Current_Status]]

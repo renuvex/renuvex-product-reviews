@@ -1,5 +1,11 @@
 {
   "regions": ["fra1"],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "**": false
+    }
+  },
   "headers": [
     {
       "source": "/widget.js",
