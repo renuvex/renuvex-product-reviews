@@ -30,11 +30,15 @@ source_files:
 ## 2026-07-20 - rollout | Deploy disabled review-email foundation
 - Merged PR #8 as `6163fa11441092d36272da7e9e1d15697c01739e`;
   Vercel Production reached `Ready`, applied all 59 migrations, and retained
-  zero review-email lifecycle rows with `REVIEW_EMAIL_ENABLED` absent.
+  zero customer review-email lifecycle rows with `REVIEW_EMAIL_ENABLED` absent.
+  Nine report-mode maintenance purge audits are expected operational evidence;
+  all succeeded without an error code.
 - Live acceptance found that disabled public review routes read
   activation-only host configuration before the feature flag and returned
-  `500`. The focused fix-forward moves the flag check first and requires
-  `404 not_found` without reading host, token, rate-limit, or persistence state.
+  `500`. PR #9 merged as `7e89a6dd760388df6a2f033162f2eca944069d51`;
+  Vercel deployment `dpl_5KHmYepsDxhVbKoHMN9JPRA2g82s` reached `Ready`, and
+  six live route checks return `404 not_found` without reading host, token,
+  rate-limit, or persistence state.
 - `reviews.renuvex.app`, AWS sender/event infrastructure, journal activation,
   SES sandbox evidence, and outbound email remain separate gates. Cloudflare
   Worker source was unchanged; health and semantic manifest parity passed.

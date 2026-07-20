@@ -43,13 +43,19 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
   and `app.renuvex.app` was promoted to it.
 - The build applied the three additive review-email migrations successfully.
   The Production database reports `59/59`, no failed migration, all
-  review-email lifecycle counts remain zero, and `REVIEW_EMAIL_ENABLED` remains
-  absent.
+  customer/request/job/attempt lifecycle counts remain zero, and
+  `REVIEW_EMAIL_ENABLED` remains absent. Nine report-mode
+  `ReviewEmailPurgeRun` maintenance audits exist; all succeeded without a
+  sanitized error code.
 - Production acceptance found and reproduced one disabled-state issue: public
   review routes read activation-only host configuration before checking the
   global flag, causing `500` while those secrets were intentionally absent.
-  The fix-forward checks the flag first and returns `404 not_found`; its focused
-  regression is `tests/unit/review-email-disabled-public-routes.test.ts`.
+  PR #9 merged as `7e89a6dd760388df6a2f033162f2eca944069d51`.
+  Vercel deployment `dpl_5KHmYepsDxhVbKoHMN9JPRA2g82s` reached `Ready` with no
+  pending migration. Live GET/POST checks across legacy exchange, batch session,
+  items, submit, and skip now return `404 not_found` with `private, no-store`.
+  The focused regression is
+  `tests/unit/review-email-disabled-public-routes.test.ts`.
 - `reviews.renuvex.app` is not yet public DNS or a Vercel alias. That domain,
   its runtime secrets, AWS sender infrastructure, and outbound email remain
   separate activation gates. Do not weaken TLS or add a local DNS fallback to
@@ -158,6 +164,7 @@ Vercel hosting in `fra1` (Frankfurt). Postgres on Supabase (transaction pooler f
 - [[Open_Questions]]
 
 ## Change Log
+- 2026-07-20: Closed the disabled-route fix-forward through PR #9, recorded its Ready Vercel deployment, six-route live `404` acceptance, unchanged `59/59` migration set, zero customer lifecycle rows, and successful report-mode purge audit rows.
 - 2026-07-20: Recorded PR #8 disabled review-email Production rollout, `59/59` additive migration evidence, the public-route fail-closed fix-forward, and the still-deferred review domain/AWS activation.
 - 2026-07-20: Disabled non-`main` Vercel Git deployments while Preview and Production share the same Supabase project; recorded the mandatory isolation check for safely re-enabling Preview.
 - 2026-07-02: Refreshed live Worker notes after verifying settings read-cache is now live on `widget.renuvex.app` with `MISS -> HIT`; lazy-sync and write/upload/video routes remain on `app.renuvex.app`.

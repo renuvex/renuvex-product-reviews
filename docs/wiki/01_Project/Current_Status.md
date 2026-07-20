@@ -30,7 +30,9 @@ Remaining public-launch blockers are mainly security hardening, operational
 observability, authenticated dashboard smoke, and product polish.
 The review-request email V5 plus Multi-Product Batch/Envelope V3.2 packages are
 deployed as a disabled backend and schema; all 59 Production migrations are
-applied, lifecycle rows remain zero, and `REVIEW_EMAIL_ENABLED` remains absent.
+applied, customer/request/job/attempt lifecycle rows remain zero, and
+`REVIEW_EMAIL_ENABLED` remains absent. Report-mode maintenance has produced
+only successful, error-free `ReviewEmailPurgeRun` audit rows.
 Production sender resources and live email behavior do not exist. Source adds
 delivery-group batching,
 independent product review rights, provider-neutral attempts/events,
@@ -130,9 +132,9 @@ Active development on the production test store. Core review, image, Mux video, 
 2. Run authenticated dashboard smoke and Sentry post-deploy health after the next meaningful deploy.
 3. Add a periodic Mux asset reconciliation dry-run/report if video ops needs automated orphan evidence.
 4. Validate structured-data SEO on a public PDP with approved reviews.
-5. Land the disabled-route `404 not_found` fix-forward, then keep V3.2
-   feature-disabled while the AWS dispatcher/sender, SES/DNS/env, merchant UI,
-   journal, and live-acceptance packages proceed through separate gates.
+5. Keep the deployed V3.2 backend feature-disabled while the AWS
+   dispatcher/sender, SES/DNS/env, merchant UI, journal, and live-acceptance
+   packages proceed through separate gates.
 6. Decide and document Q&A widget scope before adding fields to schema (see [[Open_Questions]]).
 7. Add CSV import/export for reviews.
 8. Build a minimal analytics view in admin (counts, average rating trend).
@@ -142,10 +144,11 @@ Active development on the production test store. Core review, image, Mux video, 
 
 ## Change Log
 - 2026-07-20: PR #8 deployed the disabled review-email backend and all 59
-  migrations with zero lifecycle rows and no global enable flag. Production
-  acceptance found that activation-only host config could make disabled public
-  routes return `500`; the flag-first fix-forward restores deterministic
-  `404 not_found`. AWS/SES/DNS and outbound sending remain gated.
+  migrations. PR #9 (`7e89a6dd`) deployed the flag-first fix-forward through
+  Vercel deployment `dpl_5KHmYepsDxhVbKoHMN9JPRA2g82s`; all six disabled
+  public-route checks now return deterministic `404 not_found`. Customer
+  lifecycle rows remain zero, nine report-mode purge audits succeeded without
+  errors, and AWS/SES/DNS plus outbound sending remain gated.
 - 2026-07-15: Added the disabled Multi-Product Batch / Envelope V3.2 source
   status. No production migration, AWS/DNS/env mutation, deploy, or email send
   occurred.

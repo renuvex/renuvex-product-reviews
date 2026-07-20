@@ -194,6 +194,9 @@ browser flow passed `1/1`. TypeScript, ESLint, the Next.js production build,
 wiki changed-source audit (`Errors: 0`), and diff checks also passed. No schema
 or migration changed, so this checkpoint does not supersede the PostgreSQL
 16/17 migration and integration evidence below.
+Production deployment `dpl_5KHmYepsDxhVbKoHMN9JPRA2g82s` then passed the same
+six disabled-route behaviors through `app.renuvex.app`: each returned
+`404 not_found` with `private, no-store`.
 
 2026-07-16 local evidence: the full unit suite passed `556/556`; the
 review-email PostgreSQL integration suite passed `26/26` after all 58 migrations
