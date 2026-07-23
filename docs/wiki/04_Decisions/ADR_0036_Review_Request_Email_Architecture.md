@@ -589,17 +589,22 @@ Still missing:
   confirmed the exact approved change-set and `PassRole` paths while denying
   wrong stack/role/region/import, direct stack deletion, SES send, journal
   deletion/retention, access-key creation, and managed-policy attachment.
-- The persistent `renuvex-review-email` SSO profile uses the provisioned
-  execute-only permission set after the pending access update. The planned
-  `renuvex-review-email-author` profile uses the create-only permission set.
-  Administrator remains an approval/bootstrap/decommission boundary.
+- The persistent `renuvex-review-email` and
+  `renuvex-review-email-author` SSO profiles use the provisioned execute-only
+  and create-only permission sets respectively. Administrator remains an
+  approval/bootstrap/decommission boundary and is not persisted as a normal
+  local profile.
 
 #### Foundation execution hardening
 
 - The original live bootstrap allowed the operator to execute any matching
   review-email change-set name on the three exact stacks and to delete unused
-  change sets. A 2026-07-23 source hardening supersedes that contract but is
-  not live until a separate approved access-stack update completes.
+  change sets. A separately approved Administrator update on 2026-07-23
+  replaced that contract with the source hardening from pushed commit
+  `b957375c74f7b475c12fc1af5b8079d31db1a5c6`. The access stack returned to
+  `UPDATE_COMPLETE`, retained termination protection, and passed source-equality
+  verification. The operator's denied attempt to update the bootstrap-owned
+  access stack is expected evidence of the ownership boundary.
 - The hardened source splits creation and execution. Neither author nor
   operator has `DeleteChangeSet`. An administrator stages one exact name per
   stack while execute approval is expired; execution additionally requires
@@ -661,10 +666,12 @@ Still missing:
 - Automatic KMS rotation is enabled with `RotationPeriodInDays=365`. The
   optional HTTPS subscription remains false when `FeedbackEndpointUrl=""`;
   event and subscription resources explicitly wait for their resource policies.
-- Until the access hardening is deployed and the live verifier returns to
-  source equality, foundation mutation remains **NO-GO**. Current read-only
-  evidence still shows zero foundation, sender, tenant, Lambda, and Scheduler
-  resources.
+- The access-hardening prerequisite is closed. Current read-only evidence still
+  shows zero foundation, sender, tenant, Lambda, and Scheduler resources.
+  Foundation creation remains a separate mutation gate requiring exact-name
+  staging, author creation, canonical-template/effective-change verification,
+  separate approval, and operator execution; this access update authorizes none
+  of those actions by itself.
 
 - The AWS-native email worker path requires a separate Lambda execution role
   with least-privilege access to its SQS queue, SES send action, CloudWatch

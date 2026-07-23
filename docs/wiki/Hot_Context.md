@@ -60,12 +60,14 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-23: Review-email access bootstrap is live; stricter author/operator
-  separation and rollback hardening remain source-only. An approved hardening
-  change set exists but is unexecuted. Verification now handles the absent
-  `ChangeSetType` output and only the exact dependency-only SSO assignment row.
-  Foundation remains NO-GO until execution and read-only acceptance; foundation,
-  journal, and sender stacks remain absent. See [[AWS_Setup_And_Access]].
+- 2026-07-23: Review-email access hardening is live and read-only verified.
+  The access stack is `UPDATE_COMPLETE` with termination protection; separate
+  author/create-only and operator/execute-only profiles are provisioned, every
+  approval window is closed, and the temporary Administrator config is removed.
+  Verification handles the absent `ChangeSetType` output and only the exact
+  dependency-only SSO assignment row. Foundation, journal, and sender stacks
+  remain absent; foundation change-set staging is the next separate AWS
+  mutation gate. See [[AWS_Setup_And_Access]].
 - 2026-07-20: Review-email now uses current ikas customer subscription, exact
   recipient matching, immutable delivery evidence, stable package-line grouping,
   and all four shipping methods. PR #8 deployed the disabled backend and all 59

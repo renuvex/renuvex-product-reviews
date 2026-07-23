@@ -674,28 +674,41 @@ termination protection enabled.
 Live acceptance found one `RenuvexReviewEmailOperators` group with the approved
 operator membership, one provisioned `RenuvexReviewEmailOperator` permission
 set, one account assignment, and the three expected CloudFormation service
-roles. No foundation, journal, or journal-IAM downstream stack was created.
-The local `renuvex-review-email` SSO profile resolves to the provisioned
-least-privilege role. No persistent Administrator profile was added to the
-normal AWS config. Identity Center instance, identity-store, and operator-user
-IDs remain deployment parameters and must never be committed.
+roles. On 2026-07-23, a separately approved Administrator update applied the
+author/operator hardening from pushed source commit
+`b957375c74f7b475c12fc1af5b8079d31db1a5c6`. The stack returned to
+`UPDATE_COMPLETE` at `2026-07-23T20:42:14Z`, retained termination protection,
+and then passed the source-equality live verifier with two groups, two
+memberships, two permission sets, two assignments, three service roles, and
+eleven stack resources.
 
-The original live bootstrap contract is:
+No foundation, journal, or journal-IAM downstream stack was created. The local
+`renuvex-review-email` and `renuvex-review-email-author` SSO profiles resolve to
+the provisioned execute-only and create-only roles respectively. No persistent
+Administrator profile was added to the normal AWS config; the temporary
+bootstrap config was removed after acceptance. Identity Center instance,
+identity-store, and user IDs remain deployment parameters and must never be
+committed.
+
+The live hardened access contract is:
 
 - `RenuvexReviewEmailOperators` is a dedicated Identity Center group assigned
   to account `989086371563` through the `RenuvexReviewEmailOperator` permission
   set with a two-hour session.
-- The currently deployed operator policy can validate templates and create,
-  inspect, execute, or discard
-  change sets only for `renuvex-review-email-foundation-prod`,
-  `renuvex-review-email-erasure-journal-prod`, and
-  `renuvex-review-email-erasure-journal-iam-prod`.
+- The author can create, inspect, and describe only the administrator-staged
+  exact change-set name for `renuvex-review-email-foundation-prod`,
+  `renuvex-review-email-erasure-journal-prod`, or
+  `renuvex-review-email-erasure-journal-iam-prod`. It cannot execute or delete
+  a change set.
 - Each `CreateChangeSet` path requires its matching CloudFormation service role;
   `iam:PassRole` is limited to those three exact role ARNs and
   `cloudformation.amazonaws.com`. IMPORT change sets are denied.
+- The operator can inspect and execute only the administrator-staged exact
+  change-set name before its bounded approval deadline. It cannot create or
+  delete change sets and has no `iam:PassRole`.
 - Direct `CreateStack`, `UpdateStack`, `DeleteStack`, SES send, service control
   plane, general IAM mutation, managed policy, and broad pass-role permissions
-  are absent from the human operator policy.
+  are absent from both human permission sets.
 - `renuvex-review-email-foundation-cfn` manages only the existing SES/KMS/SNS/SQS
   foundation resource surface and has no send or IAM permission.
 - SES create operations and the legacy configuration-set describe action do not
@@ -739,12 +752,11 @@ all denied.
 ### Review-email foundation pre-mutation hardening
 
 Source hardening prepared on 2026-07-23 supersedes the original operator
-execution model, but it has **not** been applied to the live access stack. The
-live verifier therefore intentionally fails source equality until an
-Administrator-reviewed access-hardening change set is executed. Foundation
-change-set creation or execution is **NO-GO** while that drift exists.
+execution model. The separately approved access-stack update is now live and
+the read-only verifier confirms source equality. This closes the access-drift
+`NO-GO`; it does not authorize or deploy the foundation stack.
 
-The pending source contract is:
+The live source contract is:
 
 - An administrator first stages one exact stack-specific change-set name while
   execute approval remains expired. A dedicated author may create that exact
@@ -848,22 +860,24 @@ Analyzer reports no blocking finding for the author, operator, foundation
 service role, KMS, SNS, or SQS policies. The live foundation verifier reports
 zero foundation and sender resources.
 
-Required order from this checkpoint:
+Checkpoint status and required next order:
 
-1. Commit and push the source hardening.
-2. Create and read-only verify the access-hardening change set. It may modify
-   only `ReviewEmailOperatorPermissionSet` and
-   `ReviewEmailFoundationCloudFormationRole` in place, and add only the author
-   group, membership, permission set, and assignment. CloudFormation may also
-   report the unchanged operator assignment as the exact dependency-only
-   conditional row described above; no other resource or conditional
-   replacement is accepted.
-3. Obtain separate approval and execute that access update.
-4. Create the local `renuvex-review-email-author` SSO profile, then prove both
-   provisioned permission sets and all live access policies match source while
-   every approval parameter is closed.
-5. Only then stage, create, verify, separately approve, and execute the
-   foundation change set.
+1. Source hardening was committed, pushed, and passed the GitHub quality gate.
+2. The access-hardening change set was read-only verified before execution. It
+   modified only `ReviewEmailOperatorPermissionSet` and
+   `ReviewEmailFoundationCloudFormationRole` in place, added only the author
+   group, membership, permission set, and assignment, and contained the exact
+   dependency-only operator-assignment row described above.
+3. The operator was denied access-stack execution as designed; the separately
+   approved temporary Administrator session executed the bootstrap-owned
+   update.
+4. Both provisioned permission sets, both local least-privilege profiles, every
+   live access policy, and closed approval parameters passed read-only
+   acceptance. The temporary Administrator config was removed.
+5. The next AWS mutation is a separate gate: stage the exact foundation
+   change-set name, create it with the author profile, verify its template and
+   effective changes read-only, obtain separate execution approval, and only
+   then execute it with the operator profile.
 
 No command in this section authorizes an AWS mutation by itself. Each
 `--apply`, change-set execution, stack-policy write, or termination-protection
