@@ -11,7 +11,9 @@ import {
   canonicalJsonSha256,
   declaredResourceTypes,
   effectiveResourceLogicalIds,
+  gitCommitIsAncestor,
   parseJsonDocument,
+  readStrictJsonAtGitCommit,
   readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
@@ -38,10 +40,10 @@ const templateDigest = canonicalJsonSha256(template);
 const stackPolicyDigest = canonicalJsonSha256(
   readStrictJsonFile(STACK_POLICY_PATH, 'foundation stack policy'),
 );
-const sourceCommit = git(['rev-parse', 'HEAD']).trim();
+const verifierCommit = git(['rev-parse', 'HEAD']).trim();
 const originMain = git(['rev-parse', 'origin/main']).trim();
-assert(/^[a-f0-9]{40}$/.test(sourceCommit), 'Current source commit is not a full Git SHA.');
-assert(sourceCommit === originMain, 'Current source commit must match origin/main before AWS mutation.');
+assert(/^[a-f0-9]{40}$/.test(verifierCommit), 'Current source commit is not a full Git SHA.');
+assert(verifierCommit === originMain, 'Current source commit must match origin/main before AWS mutation.');
 assert(gitStatusIsClean(), 'Working tree must be clean before foundation change-set acceptance.');
 
 const caller = awsJson(['sts', 'get-caller-identity']);
@@ -63,7 +65,6 @@ assert(changeSet.StackName === REVIEW_EMAIL_FOUNDATION_STACK_NAME, 'Change set t
 assert(changeSet.ChangeSetName === changeSetName, 'CloudFormation returned a different change-set name.');
 assert(changeSet.Status === 'CREATE_COMPLETE', `Change set is not complete: ${changeSet.Status}.`);
 assert(changeSet.ExecutionStatus === 'AVAILABLE', `Change set is not executable: ${changeSet.ExecutionStatus}.`);
-assert(changeSet.RoleARN === expectedRoleArn, 'Change set uses the wrong CloudFormation service role.');
 assert(changeSet.OnStackFailure === 'ROLLBACK', 'CREATE change set must use OnStackFailure=ROLLBACK.');
 assert(changeSet.IncludeNestedStacks !== true, 'Nested stacks are not allowed.');
 assert(changeSet.ImportExistingResources !== true, 'Auto-import is not allowed.');
@@ -84,6 +85,38 @@ assert(
   pendingStack?.StackStatus === 'REVIEW_IN_PROGRESS',
   `Foundation placeholder stack has an unexpected status: ${pendingStack?.StackStatus ?? 'missing'}.`,
 );
+assert(
+  pendingStack?.RoleARN === expectedRoleArn,
+  'Foundation placeholder stack uses the wrong CloudFormation service role.',
+);
+
+const actualTags = Object.fromEntries((changeSet.Tags ?? []).map(({ Key, Value }) => [Key, Value]));
+const sourceCommit = actualTags.SourceCommit;
+assert(/^[a-f0-9]{40}$/.test(sourceCommit ?? ''), 'Change-set SourceCommit tag is invalid.');
+assert(
+  gitCommitIsAncestor(ROOT, sourceCommit, 'origin/main'),
+  'Change-set SourceCommit is not an ancestor of origin/main.',
+);
+const committedTemplate = readStrictJsonAtGitCommit(
+  ROOT,
+  sourceCommit,
+  'infra/aws/review-email-foundation.cloudformation.json',
+  'tagged foundation template',
+);
+const committedStackPolicy = readStrictJsonAtGitCommit(
+  ROOT,
+  sourceCommit,
+  'infra/aws/review-email-foundation.stack-policy.json',
+  'tagged foundation stack policy',
+);
+assert(
+  canonicalJsonSha256(committedTemplate) === templateDigest,
+  'Current foundation template differs from the tagged source commit.',
+);
+assert(
+  canonicalJsonSha256(committedStackPolicy) === stackPolicyDigest,
+  'Current foundation stack policy differs from the tagged source commit.',
+);
 
 const expectedParameters = Object.fromEntries(
   Object.entries(template.Parameters ?? {}).map(([name, definition]) => [name, definition.Default ?? '']),
@@ -93,7 +126,6 @@ const actualParameters = Object.fromEntries(
 );
 assertDeepEqual(actualParameters, expectedParameters, 'Change-set parameters');
 
-const actualTags = Object.fromEntries((changeSet.Tags ?? []).map(({ Key, Value }) => [Key, Value]));
 const expectedTags = {
   ...FOUNDATION_STACK_TAGS,
   SourceCommit: sourceCommit,
@@ -101,6 +133,11 @@ const expectedTags = {
   TemplateDigest: templateDigest,
 };
 assertDeepEqual(actualTags, expectedTags, 'Change-set provenance tags');
+assert(
+  changeSet.Description ===
+    `source=${sourceCommit} template-sha256=${templateDigest} stack-policy-sha256=${stackPolicyDigest}`,
+  'Change-set description does not match the tagged source provenance.',
+);
 
 const templateResponse = awsJson([
   'cloudformation',
@@ -151,6 +188,7 @@ report({
   stackName: REVIEW_EMAIL_FOUNDATION_STACK_NAME,
   status: 'verified',
   templateStage: 'Original',
+  verifierCommit,
 });
 
 function gitStatusIsClean() {

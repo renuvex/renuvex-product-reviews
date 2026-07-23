@@ -117,13 +117,24 @@ assert(
 );
 assert(
   verifierSource.includes("'--template-stage',\n  'Original'") &&
-    verifierSource.includes("changeSet.OnStackFailure === 'ROLLBACK'"),
-  'Change-set verifier must compare TemplateStage=Original and enforce rollback.',
+    verifierSource.includes("changeSet.OnStackFailure === 'ROLLBACK'") &&
+    verifierSource.includes('pendingStack?.RoleARN === expectedRoleArn') &&
+    !verifierSource.includes('changeSet.RoleARN') &&
+    verifierSource.includes("gitCommitIsAncestor(ROOT, sourceCommit, 'origin/main')") &&
+    verifierSource.includes('readStrictJsonAtGitCommit'),
+  'Change-set verifier must verify Original provenance, rollback, and the placeholder stack service role.',
 );
 assert(
   finalizerSource.indexOf("stack?.StackStatus === 'CREATE_COMPLETE'") <
-    finalizerSource.indexOf("'set-stack-policy'"),
-  'Stack policy must be applied only after CREATE_COMPLETE verification.',
+    finalizerSource.indexOf("'set-stack-policy'") &&
+    finalizerSource.includes("gitCommitIsAncestor(ROOT, sourceCommit, 'origin/main')") &&
+    finalizerSource.includes('readStrictJsonAtGitCommit'),
+  'Finalizer must verify committed provenance after CREATE_COMPLETE before applying the stack policy.',
+);
+assert(
+  liveVerifierSource.includes("gitCommitIsAncestor(ROOT, sourceCommit, 'origin/main')") &&
+    liveVerifierSource.includes('readStrictJsonAtGitCommit'),
+  'Live verifier must bind deployed provenance to a committed origin/main source contract.',
 );
 for (const [label, source] of [
   ['creator', creatorSource],

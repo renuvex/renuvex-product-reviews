@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { TextDecoder } from 'node:util';
 
@@ -31,6 +32,48 @@ export function canonicalJsonSha256(value) {
 
 export function readStrictJsonFile(filePath, label = 'JSON file') {
   return parseStrictJsonBytes(readFileSync(filePath), label);
+}
+
+export function readStrictJsonAtGitCommit(
+  root,
+  sourceCommit,
+  relativePath,
+  label = 'committed JSON file',
+) {
+  assertGitCommit(sourceCommit);
+  const normalizedPath = String(relativePath).replaceAll('\\', '/');
+  if (
+    normalizedPath.startsWith('/') ||
+    normalizedPath.includes('../') ||
+    normalizedPath.includes(':') ||
+    !/^[A-Za-z0-9._/-]+$/.test(normalizedPath)
+  ) {
+    throw new Error(`${label} has an unsafe repository path`);
+  }
+
+  const result = spawnSync('git', ['show', `${sourceCommit}:${normalizedPath}`], {
+    cwd: root,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `${label} is unavailable at the tagged source commit: ${String(result.stderr).trim()}`,
+    );
+  }
+  return parseStrictJsonBytes(result.stdout, label);
+}
+
+export function gitCommitIsAncestor(root, sourceCommit, descendant = 'origin/main') {
+  assertGitCommit(sourceCommit);
+  const result = spawnSync('git', ['merge-base', '--is-ancestor', sourceCommit, descendant], {
+    cwd: root,
+    stdio: 'pipe',
+  });
+  if (result.status === 0) return true;
+  if (result.status === 1) return false;
+  throw new Error(
+    `Unable to verify tagged source ancestry: ${String(result.stderr).trim()}`,
+  );
 }
 
 export function parseStrictJsonBytes(bytes, label = 'JSON document') {
@@ -258,5 +301,11 @@ function assertScalarString(value, label, path) {
     } else if (code >= 0xdc00 && code <= 0xdfff) {
       throw new Error(`${label} contains an unpaired low surrogate at ${path}`);
     }
+  }
+}
+
+function assertGitCommit(sourceCommit) {
+  if (!/^[a-f0-9]{40}$/.test(String(sourceCommit))) {
+    throw new Error('Tagged source commit must be a full lowercase Git SHA');
   }
 }

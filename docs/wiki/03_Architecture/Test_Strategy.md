@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-23
-last_verified: 2026-07-23
+updated: 2026-07-24
+last_verified: 2026-07-24
 confidence: high
 tags:
   - testing
@@ -146,7 +146,7 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | Layer | Command | Scope |
 |---|---|---|
 | CloudFormation IaC lint | `pnpm aws:lint-templates` | Runs `cfn-lint` against committed AWS CloudFormation templates with their deployment regions (`eu-central-1` for S3/CloudFront review-image and widget stacks, `us-east-1` for CloudFront global observability/log delivery). CI installs pinned `cfn-lint==1.52.1` before this gate. |
-| Review-email IaC contracts | `pnpm aws:review-email:validate-templates` | Runs strict UTF-8/JSON/canonical-digest fixtures plus semantic access, foundation, and journal validators. It rejects author/operator privilege overlap, omitted or unexpected resource types, malformed provenance tags, unsafe rollback/finalization contracts, wrong event sets, and policy drift that schema-only lint cannot detect. Fixtures also pin existing-stack update evidence and the one exact dependency-only SSO assignment signature; arbitrary conditional replacement remains forbidden. The non-live command is required in CI; IAM simulation, Access Analyzer, and live verifiers remain read-only pre-mutation gates because CI has no production AWS credentials. |
+| Review-email IaC contracts | `pnpm aws:review-email:validate-templates` | Runs strict UTF-8/JSON/canonical-digest fixtures plus semantic access, foundation, and journal validators. It rejects author/operator privilege overlap, omitted or unexpected resource types, malformed provenance tags, unsafe rollback/finalization contracts, wrong event sets, and policy drift that schema-only lint cannot detect. Fixtures also pin committed-source ancestry and blob reads, placeholder-stack service-role evidence, existing-stack update evidence, and the one exact dependency-only SSO assignment signature; arbitrary conditional replacement remains forbidden. The non-live command is required in CI; IAM simulation, Access Analyzer, and live verifiers remain read-only pre-mutation gates because CI has no production AWS credentials. |
 | Widget performance budget | `pnpm budget:widget` | Deterministic local artifact budget after `pnpm build:widget`; fails on loader/runtime/always-loaded graph, major lazy surface graph, largest output, or manifest-count regressions. Live deployed request budgets stay report-only via `pnpm budget:widget:network`. |
 | Widget network/chunk smoke | `pnpm test:widget-smoke` | Built `public/widget.js` and content-hashed runtime chunks; validates API fan-out, lazy chunk boundaries, badge/review/structured-data combinations, unsupported theme behavior, listing fallback gating, and local transfer evidence without byte-budget gating. |
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, media gallery toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |

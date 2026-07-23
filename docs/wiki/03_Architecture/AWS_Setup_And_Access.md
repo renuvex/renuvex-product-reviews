@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-23
-last_verified: 2026-07-23
+updated: 2026-07-24
+last_verified: 2026-07-24
 confidence: high
 tags:
   - aws
@@ -820,6 +820,17 @@ The live source contract is:
   stack ID, absent `OnStackFailure`, and absence of import actions. A foundation
   create is proved separately by its `REVIEW_IN_PROGRESS` placeholder,
   `OnStackFailure=ROLLBACK`, and all-`Add` inventory.
+- `RoleARN` is likewise a `CreateChangeSet` request field but is not returned by
+  `DescribeChangeSet`. For a foundation CREATE, the verifier reads the exact
+  CloudFormation service role from the attached `REVIEW_IN_PROGRESS`
+  placeholder stack. A missing or different stack role is a stop condition.
+- A verifier-only source correction after change-set creation does not require
+  recreating an otherwise immutable and valid change set. The tagged
+  `SourceCommit` must be a full ancestor of `origin/main`; the canonical
+  foundation template and stack-policy blobs at that commit must equal the
+  current committed files, the provenance tags, and the AWS
+  `TemplateStage=Original` body. Template or policy drift still requires a new
+  reviewed change set.
 - Updating an `AWS::SSO::PermissionSet` can make CloudFormation report its
   unchanged `AWS::SSO::Assignment` dependency as `Modify/Conditional`, because
   `PermissionSetArn` is a dynamic resource attribute whose assignment property

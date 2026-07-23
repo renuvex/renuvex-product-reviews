@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-23
-last_verified: 2026-07-23
+updated: 2026-07-24
+last_verified: 2026-07-24
 confidence: high
 tags:
   - adr
@@ -644,6 +644,16 @@ Still missing:
   `OnStackFailure` is absent, and no import action exists. Foundation creates
   are accepted only with the matching `REVIEW_IN_PROGRESS` placeholder,
   `OnStackFailure=ROLLBACK`, and an all-`Add` effective resource inventory.
+- AWS also accepts `RoleARN` on `CreateChangeSet` without returning that field
+  from `DescribeChangeSet`. The foundation verifier therefore proves the
+  service-role boundary from the matching placeholder stack's `RoleARN`, where
+  CloudFormation persists the role for execution and later stack operations.
+- Deployment tooling may advance after a change set is created, but template
+  provenance may not. A tagged source commit is accepted only when it is an
+  ancestor of current `origin/main` and its committed template and stack-policy
+  canonical digests equal current source, provenance tags, and AWS
+  `TemplateStage=Original`. This permits verifier-only corrections without
+  weakening template immutability or silently accepting an older template.
 - CloudFormation can surface an unchanged `AWS::SSO::Assignment` as a
   dependency-only `Modify/Conditional` row when its in-place permission set is
   updated. This is accepted only for the exact `PermissionSetArn`

@@ -9,7 +9,9 @@ import {
   REVIEW_EMAIL_REGION,
   canonicalJsonSha256,
   effectiveResourceLogicalIds,
+  gitCommitIsAncestor,
   parseJsonDocument,
+  readStrictJsonAtGitCommit,
   readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
@@ -96,6 +98,32 @@ const stackParameters = Object.fromEntries(
 assertDeepEqual(stackParameters, defaults, 'Foundation stack parameters');
 const sourceCommit = stack.Tags?.find(({ Key }) => Key === 'SourceCommit')?.Value;
 assert(/^[a-f0-9]{40}$/.test(sourceCommit ?? ''), 'Foundation SourceCommit tag is invalid.');
+assert(
+  gitCommitIsAncestor(ROOT, sourceCommit, 'origin/main'),
+  'Foundation SourceCommit is not an ancestor of origin/main.',
+);
+assert(
+  canonicalJsonSha256(
+    readStrictJsonAtGitCommit(
+      ROOT,
+      sourceCommit,
+      'infra/aws/review-email-foundation.cloudformation.json',
+      'tagged foundation template',
+    ),
+  ) === templateDigest,
+  'Current foundation template differs from the tagged source commit.',
+);
+assert(
+  canonicalJsonSha256(
+    readStrictJsonAtGitCommit(
+      ROOT,
+      sourceCommit,
+      'infra/aws/review-email-foundation.stack-policy.json',
+      'tagged foundation stack policy',
+    ),
+  ) === stackPolicyDigest,
+  'Current foundation stack policy differs from the tagged source commit.',
+);
 assertDeepEqual(
   Object.fromEntries((stack.Tags ?? []).map(({ Key, Value }) => [Key, Value])),
   {
@@ -166,6 +194,7 @@ report({
   region,
   senderResourceCount: 0,
   sesProductionAccessEnabled: false,
+  sourceCommit,
   stackPolicyDigest,
   stackStatus: stack.StackStatus,
   templateDigest,

@@ -5,13 +5,18 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   canonicalJsonSha256,
+  gitCommitIsAncestor,
   isDependencyOnlySsoAssignmentChange,
   isExistingStackUpdateChangeSet,
   parseSsoPermissionSetPhysicalId,
   parseStrictJsonBytes,
   parseStrictJsonText,
+  readStrictJsonAtGitCommit,
   readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
+
+const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
+const root = resolve(scriptsDirectory, '..');
 
 const ordered = parseStrictJsonText('{\n  "z": 1,\n  "a": {"b": true}\n}\n', 'ordered fixture');
 const reordered = parseStrictJsonText('{"a":{"b":true},"z":1}', 'reordered fixture');
@@ -149,7 +154,44 @@ readStrictJsonFile(
   'foundation stack policy',
 );
 
-const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
+const headResult = spawnSync('git', ['rev-parse', 'HEAD'], {
+  cwd: root,
+  encoding: 'utf8',
+  stdio: 'pipe',
+});
+assert.equal(headResult.status, 0, headResult.stderr || 'Unable to resolve HEAD.');
+const head = headResult.stdout.trim();
+assert.equal(gitCommitIsAncestor(root, head, 'HEAD'), true);
+assert.equal(
+  canonicalJsonSha256(
+    readStrictJsonAtGitCommit(
+      root,
+      head,
+      'infra/aws/review-email-foundation.cloudformation.json',
+      'committed foundation template',
+    ),
+  ),
+  canonicalJsonSha256(
+    readStrictJsonFile(
+      new URL('../infra/aws/review-email-foundation.cloudformation.json', import.meta.url),
+      'current foundation template',
+    ),
+  ),
+);
+assert.throws(
+  () => readStrictJsonAtGitCommit(root, head, '../package.json', 'unsafe committed path'),
+  /unsafe repository path/,
+);
+assert.throws(
+  () =>
+    readStrictJsonAtGitCommit(
+      root,
+      'not-a-commit',
+      'infra/aws/review-email-foundation.cloudformation.json',
+    ),
+  /full lowercase Git SHA/,
+);
+
 const infrastructureScripts = readdirSync(scriptsDirectory)
   .filter((name) => name.endsWith('.mjs') && name.includes('review-email'))
   .map((name) => resolve(scriptsDirectory, name));

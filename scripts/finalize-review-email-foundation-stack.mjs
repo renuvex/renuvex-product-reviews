@@ -9,7 +9,9 @@ import {
   REVIEW_EMAIL_REGION,
   canonicalJsonSha256,
   effectiveResourceLogicalIds,
+  gitCommitIsAncestor,
   parseJsonDocument,
+  readStrictJsonAtGitCommit,
   readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
@@ -32,8 +34,8 @@ const template = readStrictJsonFile(TEMPLATE_PATH, 'foundation template');
 const stackPolicy = readStrictJsonFile(STACK_POLICY_PATH, 'foundation stack policy');
 const templateDigest = canonicalJsonSha256(template);
 const stackPolicyDigest = canonicalJsonSha256(stackPolicy);
-const sourceCommit = git(['rev-parse', 'HEAD']).trim();
-assert(sourceCommit === git(['rev-parse', 'origin/main']).trim(), 'HEAD must match origin/main.');
+const verifierCommit = git(['rev-parse', 'HEAD']).trim();
+assert(verifierCommit === git(['rev-parse', 'origin/main']).trim(), 'HEAD must match origin/main.');
 assert(gitStatusIsClean(), 'Working tree must be clean before foundation finalization.');
 
 const caller = awsJson(['sts', 'get-caller-identity']);
@@ -51,6 +53,34 @@ const stack = awsJson([
 ]).Stacks?.[0];
 assert(stack?.StackStatus === 'CREATE_COMPLETE', 'Foundation must be CREATE_COMPLETE before stack policy is applied.');
 const stackTags = Object.fromEntries((stack.Tags ?? []).map(({ Key, Value }) => [Key, Value]));
+const sourceCommit = stackTags.SourceCommit;
+assert(/^[a-f0-9]{40}$/.test(sourceCommit ?? ''), 'Foundation SourceCommit tag is invalid.');
+assert(
+  gitCommitIsAncestor(ROOT, sourceCommit, 'origin/main'),
+  'Foundation SourceCommit is not an ancestor of origin/main.',
+);
+assert(
+  canonicalJsonSha256(
+    readStrictJsonAtGitCommit(
+      ROOT,
+      sourceCommit,
+      'infra/aws/review-email-foundation.cloudformation.json',
+      'tagged foundation template',
+    ),
+  ) === templateDigest,
+  'Current foundation template differs from the tagged source commit.',
+);
+assert(
+  canonicalJsonSha256(
+    readStrictJsonAtGitCommit(
+      ROOT,
+      sourceCommit,
+      'infra/aws/review-email-foundation.stack-policy.json',
+      'tagged foundation stack policy',
+    ),
+  ) === stackPolicyDigest,
+  'Current foundation stack policy differs from the tagged source commit.',
+);
 assertDeepEqual(
   stackTags,
   {
@@ -109,6 +139,7 @@ process.stdout.write(`${JSON.stringify({
   stackPolicyDigest,
   templateDigest,
   terminationProtectionBefore: stack.EnableTerminationProtection === true,
+  verifierCommit,
 }, null, 2)}\n`);
 
 if (!apply) {
