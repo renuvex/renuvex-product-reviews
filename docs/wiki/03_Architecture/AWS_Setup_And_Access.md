@@ -41,6 +41,7 @@ source_files:
   - "scripts/validate-review-email-deployment-access-template.mjs"
   - "scripts/verify-review-email-deployment-access-live.mjs"
   - "scripts/lib/review-email-cloudformation-contract.mjs"
+  - "scripts/test-review-email-cloudformation-contract.mjs"
   - "scripts/simulate-review-email-deployment-access-policy.mjs"
   - "scripts/validate-review-email-aws-policies.mjs"
   - "scripts/create-review-email-access-hardening-change-set.mjs"
@@ -122,7 +123,8 @@ Profiles:
 | `renuvex-readonly` | Read-only evidence gathering and audits. |
 | `renuvex-widget-canary` | Limited CloudFront/S3/CloudFormation operator for the widget CDN canary. |
 | `renuvex-review-images` | Limited review-image AWS migration/operator profile. Use only for approved review-image infrastructure work; read-only checks are allowed. |
-| `renuvex-review-email` | Planned review-email change-set operator. Source policy exists, but the permission set, assignment, and local profile are not live. |
+| `renuvex-review-email` | Live review-email operator profile. Its current live policy predates the pending author/operator split; foundation mutation remains blocked until the access stack is updated and re-verified. |
+| `renuvex-review-email-author` | Planned change-set author profile. Source policy exists, but its permission set, group, assignment, and local profile are not live. |
 
 The `AdministratorAccess` permission set exists for manual emergency or console
 operations, but it is not the normal automation profile and should not be made
@@ -745,9 +747,11 @@ change-set creation or execution is **NO-GO** while that drift exists.
 The pending source contract is:
 
 - An administrator first stages one exact stack-specific change-set name while
-  execute approval remains expired. The operator cannot use the disabled
-  sentinel because both create and execute also require the stack-specific name
-  prefix.
+  execute approval remains expired. A dedicated author may create that exact
+  change set but cannot execute or delete it. The operator may inspect and
+  execute the exact staged name before expiry but cannot create, delete, or
+  pass a service role. The disabled sentinel cannot satisfy either
+  stack-specific name prefix.
 - Foundation and non-IAM journal `CreateChangeSet` requests must include the
   complete declared `ResourceTypes` allowlist. `Null=false` prevents omission;
   `ForAllValues:StringEquals` rejects unapproved types. The conditional
@@ -759,22 +763,29 @@ The pending source contract is:
   boundary.
 - Create requests require exact project/purpose/environment tags plus bounded
   40-character source-commit and 64-character template-digest values.
-- The operator no longer has `DeleteChangeSet`. This closes the
+  Foundation requests additionally require the canonical 64-character
+  `StackPolicyDigest`.
+- Neither author nor operator has `DeleteChangeSet`. This closes the
   delete-and-recreate race after an administrator verifies a staged name.
 - `ExecuteChangeSet` is split into three exact stack statements. Each requires
   the administrator-staged exact name and an `aws:CurrentTime` value before its
   explicit UTC expiry. Steady state is `approval-disabled` plus
   `1970-01-01T00:00:00Z`.
-- IAM cannot bind `TemplateBody` to a content hash. The technical boundary is
-  therefore staged authorization: the operator may create only the staged
-  name, a read-only verifier compares the local, change-set `Original`, and
-  eventual stack `Original` canonical SHA-256 values, and only then may an
-  administrator open a maximum 15-minute execute window. Because the operator
-  cannot delete the verified change set, another template cannot replace that
-  approved name.
-- Canonicalization recursively sorts JSON object keys and removes insignificant
-  whitespace. Raw file hashes or CloudFormation's serialization are not used.
-  A digest mismatch is a stop condition.
+- IAM cannot bind `TemplateBody` to a content hash. The account-level boundary
+  therefore splits create from execute: the author can submit only the staged
+  name/resource types/tags/service role and cannot execute; the operator can
+  execute but cannot submit or replace a template. A read-only verifier compares
+  local source, change-set `Original`, and eventual stack `Original` canonical
+  SHA-256 values before an administrator opens a maximum 15-minute execute
+  window. Both permission sets are assigned to the same approved user, so this
+  is capability separation rather than independent-person approval; verifier
+  evidence and the separate administrator gate remain mandatory.
+- Local IaC is decoded as strict UTF-8 JSON. Duplicate keys, unpaired Unicode
+  surrogates, trailing commas, and non-canonical numeric/escape spellings are
+  rejected. Canonicalization then recursively sorts object keys and removes
+  insignificant whitespace. Raw file hashes or CloudFormation serialization
+  are not used. Any template or stack-policy digest mismatch is a stop
+  condition.
 - The execution wrapper sends `RetainExceptOnCreate=true`, never sends
   `DisableRollback`, and accepts only a CREATE change set with
   `OnStackFailure=ROLLBACK`. Approval closure runs in `finally`; if cleanup
@@ -816,23 +827,26 @@ pnpm aws:review-email:validate-aws-policies -- --profile=renuvex-readonly --regi
 pnpm aws:review-email:foundation:verify-live -- --expect=absent --profile=renuvex-readonly --region=eu-central-1 --json
 ```
 
-The source IAM simulator passes 24 positive and negative cases, including exact
-create/execute, missing or wrong resource types, wrong name/stack/role, expired
+The source IAM simulator passes 33 positive and negative cases, including
+author/operator separation, exact create/execute, missing or wrong resource
+types, malformed provenance, wrong account/region/name/stack/role, expired
 approval, delete-change-set denial, stack-policy/termination-protection denial,
 exact rollback cleanup, KMS tag/window checks, and SES send denial. IAM Access
-Analyzer reports no blocking finding for the operator, foundation service role,
-KMS, SNS, or SQS policies. The live foundation verifier reports zero foundation
-and sender resources.
+Analyzer reports no blocking finding for the author, operator, foundation
+service role, KMS, SNS, or SQS policies. The live foundation verifier reports
+zero foundation and sender resources.
 
 Required order from this checkpoint:
 
 1. Commit and push the source hardening.
 2. Create and read-only verify the access-hardening change set. It may modify
    only `ReviewEmailOperatorPermissionSet` and
-   `ReviewEmailFoundationCloudFormationRole`, both in place.
+   `ReviewEmailFoundationCloudFormationRole` in place, and add only the author
+   group, membership, permission set, and assignment.
 3. Obtain separate approval and execute that access update.
-4. Prove the live access template/policies match source and all approval
-   parameters are closed.
+4. Create the local `renuvex-review-email-author` SSO profile, then prove both
+   provisioned permission sets and all live access policies match source while
+   every approval parameter is closed.
 5. Only then stage, create, verify, separately approve, and execute the
    foundation change set.
 

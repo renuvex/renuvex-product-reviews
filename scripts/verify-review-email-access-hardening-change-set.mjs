@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -8,6 +8,8 @@ import {
   REVIEW_EMAIL_REGION,
   canonicalJsonSha256,
   parseJsonDocument,
+  parseSsoPermissionSetPhysicalId,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +28,7 @@ if (!/^renuvex-review-email-access-hardening-[a-z0-9][a-z0-9-]{0,95}$/.test(chan
 if (region !== REVIEW_EMAIL_REGION) fail(`Access hardening is locked to ${REVIEW_EMAIL_REGION}.`);
 if (!existsSync(TEMPLATE_PATH)) fail(`Missing deployment-access template: ${TEMPLATE_PATH}`);
 
-const sourceTemplate = JSON.parse(readFileSync(TEMPLATE_PATH, 'utf8'));
+const sourceTemplate = readStrictJsonFile(TEMPLATE_PATH, 'deployment-access template');
 const sourceTemplateDigest = canonicalJsonSha256(sourceTemplate);
 const caller = awsJson(['sts', 'get-caller-identity']);
 assert(caller.Account === REVIEW_EMAIL_ACCOUNT_ID, 'AWS caller account is not the locked account.');
@@ -80,19 +82,31 @@ assert(
 );
 
 const expectedChanges = {
-  ReviewEmailFoundationCloudFormationRole: 'AWS::IAM::Role',
-  ReviewEmailOperatorPermissionSet: 'AWS::SSO::PermissionSet',
+  ReviewEmailAuthorAssignment: { action: 'Add', type: 'AWS::SSO::Assignment' },
+  ReviewEmailAuthorMembership: { action: 'Add', type: 'AWS::IdentityStore::GroupMembership' },
+  ReviewEmailAuthorPermissionSet: { action: 'Add', type: 'AWS::SSO::PermissionSet' },
+  ReviewEmailAuthorsGroup: { action: 'Add', type: 'AWS::IdentityStore::Group' },
+  ReviewEmailFoundationCloudFormationRole: { action: 'Modify', type: 'AWS::IAM::Role' },
+  ReviewEmailOperatorPermissionSet: { action: 'Modify', type: 'AWS::SSO::PermissionSet' },
 };
 const actualChanges = {};
 for (const change of changeSet.Changes ?? []) {
   assert(change.Type === 'Resource', 'Access hardening may contain only resource changes.');
   const resource = change.ResourceChange;
-  assert(resource?.Action === 'Modify', `${resource?.LogicalResourceId ?? 'unknown'} must be an in-place Modify.`);
+  const expected = expectedChanges[resource?.LogicalResourceId];
+  assert(expected, `Unexpected access hardening resource: ${resource?.LogicalResourceId ?? 'unknown'}.`);
+  assert(
+    resource?.Action === expected.action,
+    `${resource.LogicalResourceId} must be ${expected.action}, received ${resource?.Action ?? 'unknown'}.`,
+  );
   assert(
     resource.Replacement !== 'True' && resource.Replacement !== 'Conditional',
     `${resource.LogicalResourceId} must not be replaced.`,
   );
-  actualChanges[resource.LogicalResourceId] = resource.ResourceType;
+  actualChanges[resource.LogicalResourceId] = {
+    action: resource.Action,
+    type: resource.ResourceType,
+  };
 }
 assertDeepEqual(actualChanges, expectedChanges, 'Access hardening resource diff');
 
@@ -126,6 +140,24 @@ const newOperatorPolicy = renderTemplateValue(
   sourceTemplate.Resources.ReviewEmailOperatorPermissionSet.Properties.InlinePolicy,
   renderContext,
 );
+const newAuthorPolicy = renderTemplateValue(
+  sourceTemplate.Resources.ReviewEmailAuthorPermissionSet.Properties.InlinePolicy,
+  renderContext,
+);
+assert(
+  actionSet(newAuthorPolicy).has('cloudformation:CreateChangeSet') &&
+    actionSet(newAuthorPolicy).has('iam:PassRole') &&
+    !actionSet(newAuthorPolicy).has('cloudformation:ExecuteChangeSet') &&
+    !actionSet(newAuthorPolicy).has('cloudformation:DeleteChangeSet'),
+  'New author policy must create constrained change sets without execute or delete authority.',
+);
+assert(
+  actionSet(newOperatorPolicy).has('cloudformation:ExecuteChangeSet') &&
+    !actionSet(newOperatorPolicy).has('cloudformation:CreateChangeSet') &&
+    !actionSet(newOperatorPolicy).has('cloudformation:DeleteChangeSet') &&
+    !actionSet(newOperatorPolicy).has('iam:PassRole'),
+  'New operator policy must execute approved change sets without create, delete, or PassRole authority.',
+);
 const permissionSetPhysicalId = awsJson([
   'cloudformation',
   'describe-stack-resource',
@@ -135,6 +167,14 @@ const permissionSetPhysicalId = awsJson([
   'ReviewEmailOperatorPermissionSet',
 ]).StackResourceDetail?.PhysicalResourceId;
 assert(permissionSetPhysicalId, 'Live operator permission-set ARN is missing.');
+const {
+  instanceArn: livePermissionSetInstanceArn,
+  permissionSetArn,
+} = parseSsoPermissionSetPhysicalId(permissionSetPhysicalId);
+assert(
+  livePermissionSetInstanceArn === changeSetParameters.IdentityCenterInstanceArn,
+  'Live operator permission set belongs to a different Identity Center instance.',
+);
 const currentOperatorPolicy = parseJsonDocument(
   awsJson([
     'sso-admin',
@@ -142,7 +182,7 @@ const currentOperatorPolicy = parseJsonDocument(
     '--instance-arn',
     changeSetParameters.IdentityCenterInstanceArn,
     '--permission-set-arn',
-    permissionSetPhysicalId,
+    permissionSetArn,
   ]).InlinePolicy,
   'Live operator policy',
 );
@@ -150,7 +190,15 @@ assertActionDelta(
   currentOperatorPolicy,
   newOperatorPolicy,
   [],
-  ['cloudformation:DeleteChangeSet'],
+  [
+    'cloudformation:CreateChangeSet',
+    'cloudformation:DeleteChangeSet',
+    'cloudformation:DescribeAccountLimits',
+    'cloudformation:GetTemplateSummary',
+    'cloudformation:ListStacks',
+    'cloudformation:ValidateTemplate',
+    'iam:PassRole',
+  ],
   'Operator policy',
 );
 
@@ -185,8 +233,23 @@ report({
   account: REVIEW_EMAIL_ACCOUNT_ID,
   changeSetName,
   mode: 'read-only',
-  modifiedResources: Object.keys(expectedChanges).sort(),
-  operatorActionsRemoved: ['cloudformation:DeleteChangeSet'],
+  addedResources: Object.entries(expectedChanges)
+    .filter(([, value]) => value.action === 'Add')
+    .map(([logicalId]) => logicalId)
+    .sort(),
+  modifiedResources: Object.entries(expectedChanges)
+    .filter(([, value]) => value.action === 'Modify')
+    .map(([logicalId]) => logicalId)
+    .sort(),
+  operatorActionsRemoved: [
+    'cloudformation:CreateChangeSet',
+    'cloudformation:DeleteChangeSet',
+    'cloudformation:DescribeAccountLimits',
+    'cloudformation:GetTemplateSummary',
+    'cloudformation:ListStacks',
+    'cloudformation:ValidateTemplate',
+    'iam:PassRole',
+  ],
   serviceRoleActionsAdded: [
     'kms:ScheduleKeyDeletion',
     'ses:DeleteConfigurationSet',

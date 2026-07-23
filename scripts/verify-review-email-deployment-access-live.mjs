@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readStrictJsonFile } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -9,9 +10,25 @@ const TEMPLATE_PATH = resolve(ROOT, 'infra/aws/review-email-deployment-access.cl
 const EXPECTED_ACCOUNT_ID = '989086371563';
 const EXPECTED_REGION = 'eu-central-1';
 const EXPECTED_STACK_NAME = 'renuvex-review-email-access-prod';
-const EXPECTED_GROUP_NAME = 'RenuvexReviewEmailOperators';
-const EXPECTED_PERMISSION_SET_NAME = 'RenuvexReviewEmailOperator';
 const EXPECTED_OPERATOR_USERNAME = 'mert';
+const EXPECTED_PRINCIPALS = {
+  author: {
+    assignmentLogicalId: 'ReviewEmailAuthorAssignment',
+    groupLogicalId: 'ReviewEmailAuthorsGroup',
+    groupName: 'RenuvexReviewEmailAuthors',
+    membershipLogicalId: 'ReviewEmailAuthorMembership',
+    permissionSetLogicalId: 'ReviewEmailAuthorPermissionSet',
+    permissionSetName: 'RenuvexReviewEmailAuthor',
+  },
+  operator: {
+    assignmentLogicalId: 'ReviewEmailOperatorAssignment',
+    groupLogicalId: 'ReviewEmailOperatorsGroup',
+    groupName: 'RenuvexReviewEmailOperators',
+    membershipLogicalId: 'ReviewEmailOperatorMembership',
+    permissionSetLogicalId: 'ReviewEmailOperatorPermissionSet',
+    permissionSetName: 'RenuvexReviewEmailOperator',
+  },
+};
 const EXPECTED_SERVICE_ROLES = {
   ReviewEmailFoundationCloudFormationRole: 'renuvex-review-email-foundation-cfn',
   ReviewEmailJournalCloudFormationRole: 'renuvex-review-email-journal-cfn',
@@ -23,6 +40,10 @@ const DOWNSTREAM_STACK_NAMES = [
   'renuvex-review-email-erasure-journal-iam-prod',
 ];
 const EXPECTED_STACK_RESOURCES = {
+  ReviewEmailAuthorsGroup: 'AWS::IdentityStore::Group',
+  ReviewEmailAuthorMembership: 'AWS::IdentityStore::GroupMembership',
+  ReviewEmailAuthorPermissionSet: 'AWS::SSO::PermissionSet',
+  ReviewEmailAuthorAssignment: 'AWS::SSO::Assignment',
   ReviewEmailOperatorsGroup: 'AWS::IdentityStore::Group',
   ReviewEmailOperatorMembership: 'AWS::IdentityStore::GroupMembership',
   ReviewEmailOperatorPermissionSet: 'AWS::SSO::PermissionSet',
@@ -56,7 +77,7 @@ if (!existsSync(TEMPLATE_PATH)) {
   fail(`Missing deployment-access template: ${TEMPLATE_PATH}`);
 }
 
-const template = JSON.parse(readFileSync(TEMPLATE_PATH, 'utf8'));
+const template = readStrictJsonFile(TEMPLATE_PATH, 'deployment-access template');
 const caller = awsJson(['sts', 'get-caller-identity']);
 assert(caller.Account === EXPECTED_ACCOUNT_ID, 'AWS caller account does not match the locked production account.');
 
@@ -77,15 +98,23 @@ const stack = optionalAwsJson(
   ['cloudformation', 'describe-stacks', '--stack-name', EXPECTED_STACK_NAME],
   isCloudFormationNotFound,
 )?.Stacks?.[0] ?? null;
-const groups = awsJson([
-  'identitystore',
-  'list-groups',
-  '--identity-store-id',
-  instance.IdentityStoreId,
-  '--filters',
-  `AttributePath=DisplayName,AttributeValue=${EXPECTED_GROUP_NAME}`,
-]).Groups ?? [];
-const permissionSets = findPermissionSetsByName(instance.InstanceArn, EXPECTED_PERMISSION_SET_NAME);
+const principalSurfaces = Object.fromEntries(
+  Object.entries(EXPECTED_PRINCIPALS).map(([key, expected]) => [
+    key,
+    {
+      expected,
+      groups: awsJson([
+        'identitystore',
+        'list-groups',
+        '--identity-store-id',
+        instance.IdentityStoreId,
+        '--filters',
+        `AttributePath=DisplayName,AttributeValue=${expected.groupName}`,
+      ]).Groups ?? [],
+      permissionSets: findPermissionSetsByName(instance.InstanceArn, expected.permissionSetName),
+    },
+  ]),
+);
 const serviceRoles = Object.values(EXPECTED_SERVICE_ROLES)
   .map((roleName) => optionalAwsJson(['iam', 'get-role', '--role-name', roleName], isIamNotFound)?.Role ?? null)
   .filter(Boolean);
@@ -98,13 +127,16 @@ const downstreamStacks = DOWNSTREAM_STACK_NAMES
 
 if (expectation === 'absent') {
   assert(stack === null, 'Access stack must be absent before bootstrap.');
-  assert(groups.length === 0, 'Review-email operator group must be absent before bootstrap.');
-  assert(permissionSets.length === 0, 'Review-email operator permission set must be absent before bootstrap.');
+  for (const { expected, groups, permissionSets } of Object.values(principalSurfaces)) {
+    assert(groups.length === 0, `${expected.groupName} must be absent before bootstrap.`);
+    assert(permissionSets.length === 0, `${expected.permissionSetName} must be absent before bootstrap.`);
+  }
   assert(serviceRoles.length === 0, 'Review-email CloudFormation service roles must be absent before bootstrap.');
   assert(downstreamStacks.length === 0, 'Downstream review-email stacks must remain absent before bootstrap.');
   report({
     account: EXPECTED_ACCOUNT_ID,
     expectation,
+    authorGroupCount: 0,
     operatorGroupCount: 0,
     permissionSetCount: 0,
     region,
@@ -120,8 +152,10 @@ assert(
   `Access stack is not in a stable complete state: ${stack.StackStatus}.`,
 );
 assert(stack.EnableTerminationProtection === true, 'Access stack termination protection must be enabled.');
-assert(groups.length === 1, 'Expected exactly one review-email operator group.');
-assert(permissionSets.length === 1, 'Expected exactly one review-email operator permission set.');
+for (const { expected, groups, permissionSets } of Object.values(principalSurfaces)) {
+  assert(groups.length === 1, `Expected exactly one ${expected.groupName} group.`);
+  assert(permissionSets.length === 1, `Expected exactly one ${expected.permissionSetName} permission set.`);
+}
 assert(serviceRoles.length === 3, 'Expected exactly three review-email CloudFormation service roles.');
 assert(downstreamStacks.length === 0, 'Bootstrap must not create downstream review-email stacks.');
 
@@ -141,23 +175,27 @@ for (const [name, expected] of Object.entries(DISABLED_APPROVAL_PARAMETERS)) {
 Object.assign(renderContext, stackParameters);
 
 verifyStackResources();
-verifyGroup(groups[0], stackParameters.OperatorUserId);
-verifyPermissionSet(permissionSets[0], groups[0].GroupId);
+for (const [label, { expected, groups, permissionSets }] of Object.entries(principalSurfaces)) {
+  verifyGroup(groups[0], stackParameters.OperatorUserId, label);
+  verifyPermissionSet(permissionSets[0], groups[0].GroupId, expected, label);
+  verifyProvisionedSsoRole(expected.permissionSetName, label);
+}
 for (const [logicalId, roleName] of Object.entries(EXPECTED_SERVICE_ROLES)) {
   verifyServiceRole(logicalId, roleName);
 }
-verifyProvisionedSsoRole();
 
 report({
   account: EXPECTED_ACCOUNT_ID,
-  assignmentCount: 1,
+  assignmentCount: 2,
+  authorGroupCount: 1,
+  authorMembershipCount: 1,
   expectation,
   operatorGroupCount: 1,
   operatorMembershipCount: 1,
-  permissionSetCount: 1,
+  permissionSetCount: 2,
   region,
   serviceRoleCount: 3,
-  stackResourceCount: 7,
+  stackResourceCount: 11,
   stackStatus: stack.StackStatus,
   terminationProtection: true,
 });
@@ -169,7 +207,7 @@ function verifyStackResources() {
     '--stack-name',
     EXPECTED_STACK_NAME,
   ]).StackResourceSummaries ?? [];
-  assert(resources.length === 7, 'Access stack must contain exactly seven resources.');
+  assert(resources.length === 11, 'Access stack must contain exactly eleven resources.');
   const actual = Object.fromEntries(
     resources.map(({ LogicalResourceId, ResourceType }) => [LogicalResourceId, ResourceType]),
   );
@@ -182,7 +220,7 @@ function verifyStackResources() {
   }
 }
 
-function verifyGroup(group, expectedUserId) {
+function verifyGroup(group, expectedUserId, label) {
   const memberships = awsJson([
     'identitystore',
     'list-group-memberships',
@@ -191,9 +229,9 @@ function verifyGroup(group, expectedUserId) {
     '--group-id',
     group.GroupId,
   ]).GroupMemberships ?? [];
-  assert(memberships.length === 1, 'Review-email operator group must contain exactly one membership.');
+  assert(memberships.length === 1, `Review-email ${label} group must contain exactly one membership.`);
   const userId = memberships[0]?.MemberId?.UserId;
-  assert(userId === expectedUserId, 'Operator group membership does not match the stack parameter.');
+  assert(userId === expectedUserId, `${label} group membership does not match the stack parameter.`);
   const user = awsJson([
     'identitystore',
     'describe-user',
@@ -202,13 +240,13 @@ function verifyGroup(group, expectedUserId) {
     '--user-id',
     userId,
   ]);
-  assert(user.UserName === EXPECTED_OPERATOR_USERNAME, 'Operator group member is not the approved user.');
+  assert(user.UserName === EXPECTED_OPERATOR_USERNAME, `${label} group member is not the approved user.`);
 }
 
-function verifyPermissionSet(permissionSet, expectedGroupId) {
-  assert(permissionSet.SessionDuration === 'PT2H', 'Operator permission-set session must be PT2H.');
+function verifyPermissionSet(permissionSet, expectedGroupId, expected, label) {
+  assert(permissionSet.SessionDuration === 'PT2H', `${label} permission-set session must be PT2H.`);
   const expectedPolicy = renderTemplateValue(
-    template.Resources.ReviewEmailOperatorPermissionSet.Properties.InlinePolicy,
+    template.Resources[expected.permissionSetLogicalId].Properties.InlinePolicy,
     renderContext,
   );
   const actualPolicyResponse = awsJson([
@@ -222,7 +260,7 @@ function verifyPermissionSet(permissionSet, expectedGroupId) {
   assertPolicyEqual(
     parsePolicyDocument(actualPolicyResponse.InlinePolicy),
     expectedPolicy,
-    'Operator permission-set inline policy',
+    `${label} permission-set inline policy`,
   );
 
   const managedPolicies = awsJson([
@@ -233,7 +271,7 @@ function verifyPermissionSet(permissionSet, expectedGroupId) {
     '--permission-set-arn',
     permissionSet.PermissionSetArn,
   ]).AttachedManagedPolicies ?? [];
-  assert(managedPolicies.length === 0, 'Operator permission set must not have AWS managed policies.');
+  assert(managedPolicies.length === 0, `${label} permission set must not have AWS managed policies.`);
 
   const customerPolicies = awsJson([
     'sso-admin',
@@ -243,7 +281,7 @@ function verifyPermissionSet(permissionSet, expectedGroupId) {
     '--permission-set-arn',
     permissionSet.PermissionSetArn,
   ]).CustomerManagedPolicyReferences ?? [];
-  assert(customerPolicies.length === 0, 'Operator permission set must not have customer managed policies.');
+  assert(customerPolicies.length === 0, `${label} permission set must not have customer managed policies.`);
 
   const boundary = optionalAwsJson(
     [
@@ -256,7 +294,7 @@ function verifyPermissionSet(permissionSet, expectedGroupId) {
     ],
     isSsoNotFound,
   );
-  assert(!boundary?.PermissionsBoundary, 'Operator permission set must not have a permissions boundary.');
+  assert(!boundary?.PermissionsBoundary, `${label} permission set must not have a permissions boundary.`);
 
   const assignments = awsJson([
     'sso-admin',
@@ -268,9 +306,9 @@ function verifyPermissionSet(permissionSet, expectedGroupId) {
     '--permission-set-arn',
     permissionSet.PermissionSetArn,
   ]).AccountAssignments ?? [];
-  assert(assignments.length === 1, 'Expected exactly one account assignment for the operator permission set.');
-  assert(assignments[0].PrincipalType === 'GROUP', 'Operator permission set must be assigned to a group.');
-  assert(assignments[0].PrincipalId === expectedGroupId, 'Operator permission set is assigned to the wrong group.');
+  assert(assignments.length === 1, `Expected exactly one account assignment for the ${label} permission set.`);
+  assert(assignments[0].PrincipalType === 'GROUP', `${label} permission set must be assigned to a group.`);
+  assert(assignments[0].PrincipalId === expectedGroupId, `${label} permission set is assigned to the wrong group.`);
 
   const provisioned = awsJson([
     'sso-admin',
@@ -282,7 +320,7 @@ function verifyPermissionSet(permissionSet, expectedGroupId) {
   ]).PermissionSets ?? [];
   assert(
     provisioned.includes(permissionSet.PermissionSetArn),
-    'Operator permission set is not provisioned to the target account.',
+    `${label} permission set is not provisioned to the target account.`,
   );
 }
 
@@ -339,11 +377,11 @@ function verifyServiceRole(logicalId, roleName) {
   assert(attachedPolicies.length === 0, `${roleName} must not have managed policies.`);
 }
 
-function verifyProvisionedSsoRole() {
+function verifyProvisionedSsoRole(permissionSetName, label) {
   const roles = awsJson(['iam', 'list-roles']).Roles ?? [];
   const matching = roles.filter((role) =>
-    role.RoleName.startsWith(`AWSReservedSSO_${EXPECTED_PERMISSION_SET_NAME}_`));
-  assert(matching.length === 1, 'Expected exactly one provisioned IAM Identity Center operator role.');
+    role.RoleName.startsWith(`AWSReservedSSO_${permissionSetName}_`));
+  assert(matching.length === 1, `Expected exactly one provisioned IAM Identity Center ${label} role.`);
 }
 
 function findPermissionSetsByName(instanceArn, name) {

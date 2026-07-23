@@ -3,8 +3,8 @@ type: architecture
 project: renuvex-product-reviews
 status: active
 created: 2026-05-28
-updated: 2026-07-20
-last_verified: 2026-07-20
+updated: 2026-07-23
+last_verified: 2026-07-23
 confidence: high
 tags:
   - testing
@@ -27,6 +27,7 @@ source_files:
   - ".github/workflows/widget-smoke.yml"
   - ".github/workflows/media-cross-browser.yml"
   - ".github/pull_request_template.md"
+  - "scripts/test-review-email-cloudformation-contract.mjs"
   - "scripts/check-widget-runtime.mjs"
   - "scripts/check-widget-performance-budget.mjs"
   - "scripts/prepare-widget-worker-assets.mjs"
@@ -145,6 +146,7 @@ Unit coverage for this layer lives in `tests/unit/widget-origin.test.ts` and `te
 | Layer | Command | Scope |
 |---|---|---|
 | CloudFormation IaC lint | `pnpm aws:lint-templates` | Runs `cfn-lint` against committed AWS CloudFormation templates with their deployment regions (`eu-central-1` for S3/CloudFront review-image and widget stacks, `us-east-1` for CloudFront global observability/log delivery). CI installs pinned `cfn-lint==1.52.1` before this gate. |
+| Review-email IaC contracts | `pnpm aws:review-email:validate-templates` | Runs strict UTF-8/JSON/canonical-digest fixtures plus semantic access, foundation, and journal validators. It rejects author/operator privilege overlap, omitted or unexpected resource types, malformed provenance tags, unsafe rollback/finalization contracts, wrong event sets, and policy drift that schema-only lint cannot detect. The non-live command is required in CI; IAM simulation, Access Analyzer, and live verifiers remain read-only pre-mutation gates because CI has no production AWS credentials. |
 | Widget performance budget | `pnpm budget:widget` | Deterministic local artifact budget after `pnpm build:widget`; fails on loader/runtime/always-loaded graph, major lazy surface graph, largest output, or manifest-count regressions. Live deployed request budgets stay report-only via `pnpm budget:widget:network`. |
 | Widget network/chunk smoke | `pnpm test:widget-smoke` | Built `public/widget.js` and content-hashed runtime chunks; validates API fan-out, lazy chunk boundaries, badge/review/structured-data combinations, unsupported theme behavior, listing fallback gating, and local transfer evidence without byte-budget gating. |
 | Widget layout/runtime smoke | `pnpm test:widget-runtime` | Pairwise summary/review layout matrix (`classic`, `compact`, `hero`, `minimal`, `split` x `card`, `list`, `gallery`), rating bar keyboard filtering + badge/summary isolation, compact mobile accordion persistence/motion after rating-bar filter renders, large localized bar-count layout, media gallery toggles, badge/JSON-LD presence, hostile host-theme CSS isolation (a light-DOM `img{width:100%!important}` balloons a control image but cannot reach the shadow-hosted review thumbnail — ADR_0021 regression), and unexpected console errors. |
@@ -204,7 +206,7 @@ on disposable PostgreSQL 16 and independently `26/26` on PostgreSQL 17. Prisma
 generation, TypeScript, ESLint, and the Next.js webpack production build passed.
 These are local disposable-database results, not production migration evidence.
 
-`pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
+`pnpm test:ci` runs the core non-media quality gate: unit tests, widget network smoke, widget runtime smoke, storefront interactions, and admin preview. `.github/workflows/widget-smoke.yml` uses Node 24 runtime action majors, installs Python 3.13 plus pinned `cfn-lint==1.52.1`, runs `pnpm aws:lint-templates` and `pnpm aws:review-email:validate-templates`, runs `pnpm prisma:generate` first so Linux CI has the generated Prisma client, then runs `pnpm build:widget`, installs Chromium, runs `pnpm test:ci`, syntax-checks generated widget assets with `pnpm check:widget-js`, then runs TypeScript, lint, and whitespace gates. The same workflow runs PR media coverage as a separate Playwright matrix so each media browser/device project gets its own Ubuntu runner and failure artifact.
 
 The media config uses Playwright's official desktop and device descriptors for Desktop Chrome, Desktop Firefox, Desktop Safari, Pixel 7, and iPhone 15. It keeps one active worker per Playwright project to avoid browser-engine memory contention and uses isolated tests with screenshots on failure. Trace recording follows Playwright's CI guidance: local media runs keep tracing off, while CI records traces only on the first retry of a failed test. Local media scripts are single-project entry points (`test:widget-media:*`), with `pnpm test:widget-media` kept as the fast Chromium desktop default. GitHub Actions does not run a local full-matrix wrapper; the PR workflow runs the three highest-value shopper targets as separate matrix jobs, and the scheduled `Media Cross-Browser` workflow runs all five projects daily as separate matrix jobs.
 

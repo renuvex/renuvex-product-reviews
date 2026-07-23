@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -12,14 +12,16 @@ import {
   REVIEW_EMAIL_REGION,
   canonicalJsonSha256,
   declaredResourceTypes,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const TEMPLATE_PATH = resolve(ROOT, 'infra/aws/review-email-foundation.cloudformation.json');
+const STACK_POLICY_PATH = resolve(ROOT, 'infra/aws/review-email-foundation.stack-policy.json');
 const apply = process.argv.includes('--apply');
 const changeSetName = readOption('--change-set-name');
-const operatorProfile = readOption('--operator-profile') || 'renuvex-review-email';
+const authorProfile = readOption('--author-profile') || 'renuvex-review-email-author';
 const readProfile = readOption('--read-profile') || 'renuvex-readonly';
 const region = readOption('--region') || REVIEW_EMAIL_REGION;
 const awsCli = resolveAwsCli();
@@ -30,9 +32,12 @@ if (!/^renuvex-review-email-foundation-[a-z0-9][a-z0-9-]{0,95}$/.test(changeSetN
 }
 if (region !== REVIEW_EMAIL_REGION) fail(`Foundation deployment is locked to ${REVIEW_EMAIL_REGION}.`);
 if (!existsSync(TEMPLATE_PATH)) fail(`Missing foundation template: ${TEMPLATE_PATH}`);
+if (!existsSync(STACK_POLICY_PATH)) fail(`Missing foundation stack policy: ${STACK_POLICY_PATH}`);
 
-const template = JSON.parse(readFileSync(TEMPLATE_PATH, 'utf8'));
+const template = readStrictJsonFile(TEMPLATE_PATH, 'foundation template');
 const templateDigest = canonicalJsonSha256(template);
+const stackPolicy = readStrictJsonFile(STACK_POLICY_PATH, 'foundation stack policy');
+const stackPolicyDigest = canonicalJsonSha256(stackPolicy);
 const sourceCommit = git(['rev-parse', 'HEAD']).trim();
 const originMain = git(['rev-parse', 'origin/main']).trim();
 assert(sourceCommit === originMain, 'HEAD must match origin/main.');
@@ -41,12 +46,14 @@ assert(gitStatusIsClean(), 'Working tree must be clean before change-set creatio
 
 const caller = awsJson(['sts', 'get-caller-identity'], readProfile);
 assert(caller.Account === REVIEW_EMAIL_ACCOUNT_ID, 'Read-only caller account is not the locked account.');
-const operator = awsJson(['sts', 'get-caller-identity'], operatorProfile);
-assert(operator.Account === REVIEW_EMAIL_ACCOUNT_ID, 'Operator caller account is not the locked account.');
-assert(
-  /AWSReservedSSO_RenuvexReviewEmailOperator_/.test(operator.Arn ?? ''),
-  'Mutation profile is not the dedicated review-email operator.',
-);
+if (apply) {
+  const author = awsJson(['sts', 'get-caller-identity'], authorProfile);
+  assert(author.Account === REVIEW_EMAIL_ACCOUNT_ID, 'Author caller account is not the locked account.');
+  assert(
+    /AWSReservedSSO_RenuvexReviewEmailAuthor_/.test(author.Arn ?? ''),
+    'Mutation profile is not the dedicated review-email change-set author.',
+  );
+}
 
 const accessStack = awsJson(
   ['cloudformation', 'describe-stacks', '--stack-name', REVIEW_EMAIL_ACCESS_STACK_NAME],
@@ -76,6 +83,7 @@ const resourceTypes = declaredResourceTypes(template);
 const tags = {
   ...FOUNDATION_STACK_TAGS,
   SourceCommit: sourceCommit,
+  StackPolicyDigest: stackPolicyDigest,
   TemplateDigest: templateDigest,
 };
 const roleArn =
@@ -95,7 +103,7 @@ const createArgs = [
   '--change-set-type',
   'CREATE',
   '--description',
-  `source=${sourceCommit} template-sha256=${templateDigest}`,
+  `source=${sourceCommit} template-sha256=${templateDigest} stack-policy-sha256=${stackPolicyDigest}`,
   '--template-body',
   `file://${TEMPLATE_PATH.replaceAll('\\', '/')}`,
   '--role-arn',
@@ -111,12 +119,14 @@ const createArgs = [
 ];
 
 process.stdout.write(`${JSON.stringify({
+  authorIdentityVerified: apply,
   changeSetName,
   effectiveMutation: apply,
   mode: apply ? 'apply' : 'dry-run',
   onStackFailure: 'ROLLBACK',
   resourceTypes,
   sourceCommit,
+  stackPolicyDigest,
   stackName: REVIEW_EMAIL_FOUNDATION_STACK_NAME,
   templateDigest,
 }, null, 2)}\n`);
@@ -126,7 +136,7 @@ if (!apply) {
   process.exit(0);
 }
 
-awsJson(createArgs, operatorProfile);
+awsJson(createArgs, authorProfile);
 runAws(
   [
     'cloudformation',

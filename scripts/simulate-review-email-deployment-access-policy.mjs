@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   REVIEW_EMAIL_ACCOUNT_ID,
   REVIEW_EMAIL_REGION,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,7 +17,7 @@ const jsonOutput = process.argv.includes('--json');
 const awsCli = resolveAwsCli();
 
 if (region !== REVIEW_EMAIL_REGION) fail(`IAM simulation is locked to ${REVIEW_EMAIL_REGION}.`);
-const template = JSON.parse(readFileSync(TEMPLATE_PATH, 'utf8'));
+const template = readStrictJsonFile(TEMPLATE_PATH, 'deployment-access template');
 const approvedName = 'renuvex-review-email-foundation-0123456789ab-20990101';
 const expiry = '2099-01-01T00:15:00Z';
 const context = {
@@ -31,7 +32,11 @@ const context = {
   JournalIamExecutionApprovalExpiresAt: '1970-01-01T00:00:00Z',
   TargetAccountId: REVIEW_EMAIL_ACCOUNT_ID,
 };
-const policy = renderTemplateValue(
+const authorPolicy = renderTemplateValue(
+  template.Resources.ReviewEmailAuthorPermissionSet.Properties.InlinePolicy,
+  context,
+);
+const operatorPolicy = renderTemplateValue(
   template.Resources.ReviewEmailOperatorPermissionSet.Properties.InlinePolicy,
   context,
 );
@@ -46,7 +51,7 @@ const foundationRoleArn =
   `arn:aws:iam::${REVIEW_EMAIL_ACCOUNT_ID}:role/renuvex/review-email/cloudformation/` +
   'renuvex-review-email-foundation-cfn';
 const resourceTypes =
-  template.Resources.ReviewEmailOperatorPermissionSet.Properties.InlinePolicy.Statement
+  template.Resources.ReviewEmailAuthorPermissionSet.Properties.InlinePolicy.Statement
     .find((statement) => statement.Sid === 'CreateFoundationChangeSetWithFoundationRole')
     .Condition['ForAllValues:StringEquals']['cloudformation:ResourceTypes'];
 const foundationKeyArn = `arn:aws:kms:${REVIEW_EMAIL_REGION}:${REVIEW_EMAIL_ACCOUNT_ID}:key/00000000-0000-0000-0000-000000000000`;
@@ -67,10 +72,11 @@ const validCreateContext = [
   entry('aws:RequestTag/Project', ['renuvex-product-reviews']),
   entry('aws:RequestTag/Purpose', ['review-request-email']),
   entry('aws:RequestTag/SourceCommit', ['a'.repeat(40)]),
+  entry('aws:RequestTag/StackPolicyDigest', ['c'.repeat(64)]),
   entry('aws:RequestTag/TemplateDigest', ['b'.repeat(64)]),
   entry(
     'aws:TagKeys',
-    ['Environment', 'Project', 'Purpose', 'SourceCommit', 'TemplateDigest'],
+    ['Environment', 'Project', 'Purpose', 'SourceCommit', 'StackPolicyDigest', 'TemplateDigest'],
     'stringList',
   ),
   entry('cloudformation:ChangeSetName', [approvedName]),
@@ -84,6 +90,7 @@ const scenarios = [
     contextEntries: validCreateContext,
     expected: 'allowed',
     name: 'create exact foundation change set',
+    policy: authorPolicy,
     resource: foundationStackArn,
   },
   {
@@ -93,6 +100,7 @@ const scenarios = [
     ),
     expected: 'implicitDeny',
     name: 'create without ResourceTypes',
+    policy: authorPolicy,
     resource: foundationStackArn,
   },
   {
@@ -105,6 +113,7 @@ const scenarios = [
     ),
     expected: 'implicitDeny',
     name: 'create with unapproved resource type',
+    policy: authorPolicy,
     resource: foundationStackArn,
   },
   {
@@ -116,6 +125,7 @@ const scenarios = [
     ),
     expected: 'implicitDeny',
     name: 'create with unapproved name',
+    policy: authorPolicy,
     resource: foundationStackArn,
   },
   {
@@ -127,6 +137,7 @@ const scenarios = [
     ),
     expected: 'implicitDeny',
     name: 'create with wrong service role',
+    policy: authorPolicy,
     resource: foundationStackArn,
   },
   {
@@ -134,9 +145,70 @@ const scenarios = [
     contextEntries: validCreateContext,
     expected: 'implicitDeny',
     name: 'create on wrong stack',
+    policy: authorPolicy,
     resource:
       `arn:aws:cloudformation:${REVIEW_EMAIL_REGION}:${REVIEW_EMAIL_ACCOUNT_ID}:` +
       'stack/unapproved/test-stack-id',
+  },
+  {
+    action: 'cloudformation:CreateChangeSet',
+    contextEntries: validCreateContext.filter(
+      ({ ContextKeyName }) => ContextKeyName !== 'aws:RequestTag/StackPolicyDigest',
+    ),
+    expected: 'implicitDeny',
+    name: 'author create without stack-policy digest',
+    policy: authorPolicy,
+    resource: foundationStackArn,
+  },
+  {
+    action: 'cloudformation:CreateChangeSet',
+    contextEntries: replaceContext(
+      validCreateContext,
+      'aws:RequestTag/StackPolicyDigest',
+      ['short'],
+    ),
+    expected: 'implicitDeny',
+    name: 'author create with malformed stack-policy digest',
+    policy: authorPolicy,
+    resource: foundationStackArn,
+  },
+  {
+    action: 'cloudformation:CreateChangeSet',
+    contextEntries: replaceContext(
+      validCreateContext,
+      'aws:TagKeys',
+      ['Environment', 'Project', 'Purpose', 'SourceCommit', 'StackPolicyDigest', 'TemplateDigest', 'Unexpected'],
+      'stringList',
+    ),
+    expected: 'implicitDeny',
+    name: 'author create with extra stack tag',
+    policy: authorPolicy,
+    resource: foundationStackArn,
+  },
+  {
+    action: 'cloudformation:CreateChangeSet',
+    contextEntries: replaceContext(validCreateContext, 'aws:RequestedRegion', ['us-east-1']),
+    expected: 'implicitDeny',
+    name: 'author create in wrong region',
+    policy: authorPolicy,
+    resource: foundationStackArn,
+  },
+  {
+    action: 'cloudformation:CreateChangeSet',
+    contextEntries: validCreateContext,
+    expected: 'implicitDeny',
+    name: 'author create in wrong account',
+    policy: authorPolicy,
+    resource:
+      `arn:aws:cloudformation:${REVIEW_EMAIL_REGION}:111111111111:` +
+      'stack/renuvex-review-email-foundation-prod/test-stack-id',
+  },
+  {
+    action: 'cloudformation:CreateChangeSet',
+    contextEntries: validCreateContext,
+    expected: 'implicitDeny',
+    name: 'operator cannot create approved change set',
+    resource: foundationStackArn,
   },
   {
     action: 'cloudformation:ExecuteChangeSet',
@@ -172,10 +244,30 @@ const scenarios = [
     resource: foundationStackArn,
   },
   {
+    action: 'cloudformation:ExecuteChangeSet',
+    contextEntries: [
+      entry('aws:RequestedRegion', [REVIEW_EMAIL_REGION]),
+      entry('aws:CurrentTime', ['2099-01-01T00:10:00Z'], 'date'),
+      entry('cloudformation:ChangeSetName', [approvedName]),
+    ],
+    expected: 'implicitDeny',
+    name: 'author cannot execute approved change set',
+    policy: authorPolicy,
+    resource: foundationStackArn,
+  },
+  {
     action: 'cloudformation:DeleteChangeSet',
     contextEntries: [],
     expected: 'implicitDeny',
     name: 'delete staged change set',
+    resource: foundationStackArn,
+  },
+  {
+    action: 'cloudformation:DeleteChangeSet',
+    contextEntries: [],
+    expected: 'implicitDeny',
+    name: 'author cannot delete staged change set',
+    policy: authorPolicy,
     resource: foundationStackArn,
   },
   {
@@ -204,6 +296,7 @@ const scenarios = [
     contextEntries: [entry('iam:PassedToService', ['cloudformation.amazonaws.com'])],
     expected: 'allowed',
     name: 'pass exact foundation service role',
+    policy: authorPolicy,
     resource: foundationRoleArn,
   },
   {
@@ -211,7 +304,15 @@ const scenarios = [
     contextEntries: [entry('iam:PassedToService', ['cloudformation.amazonaws.com'])],
     expected: 'implicitDeny',
     name: 'pass unapproved role',
+    policy: authorPolicy,
     resource: `arn:aws:iam::${REVIEW_EMAIL_ACCOUNT_ID}:role/unapproved`,
+  },
+  {
+    action: 'iam:PassRole',
+    contextEntries: [entry('iam:PassedToService', ['cloudformation.amazonaws.com'])],
+    expected: 'implicitDeny',
+    name: 'operator cannot pass exact foundation service role',
+    resource: foundationRoleArn,
   },
   {
     action: 'kms:ScheduleKeyDeletion',
@@ -324,7 +425,7 @@ function simulate(scenario) {
   const input = {
     ActionNames: [scenario.action],
     ContextEntries: scenario.contextEntries,
-    PolicyInputList: [JSON.stringify(scenario.policy ?? policy)],
+    PolicyInputList: [JSON.stringify(scenario.policy ?? operatorPolicy)],
     ResourceArns: [scenario.resource],
   };
   const response = awsJson([

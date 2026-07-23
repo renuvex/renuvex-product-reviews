@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -12,11 +12,13 @@ import {
   declaredResourceTypes,
   effectiveResourceLogicalIds,
   parseJsonDocument,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const TEMPLATE_PATH = resolve(ROOT, 'infra/aws/review-email-foundation.cloudformation.json');
+const STACK_POLICY_PATH = resolve(ROOT, 'infra/aws/review-email-foundation.stack-policy.json');
 const profile = readOption('--profile') || process.env.AWS_PROFILE || 'renuvex-readonly';
 const region = readOption('--region') || process.env.AWS_REGION || REVIEW_EMAIL_REGION;
 const changeSetName = readOption('--change-set-name');
@@ -29,9 +31,13 @@ if (!/^renuvex-review-email-foundation-[a-z0-9][a-z0-9-]{0,95}$/.test(changeSetN
 }
 if (region !== REVIEW_EMAIL_REGION) fail(`Foundation verification is locked to ${REVIEW_EMAIL_REGION}.`);
 if (!existsSync(TEMPLATE_PATH)) fail(`Missing foundation template: ${TEMPLATE_PATH}`);
+if (!existsSync(STACK_POLICY_PATH)) fail(`Missing foundation stack policy: ${STACK_POLICY_PATH}`);
 
-const template = JSON.parse(readFileSync(TEMPLATE_PATH, 'utf8'));
+const template = readStrictJsonFile(TEMPLATE_PATH, 'foundation template');
 const templateDigest = canonicalJsonSha256(template);
+const stackPolicyDigest = canonicalJsonSha256(
+  readStrictJsonFile(STACK_POLICY_PATH, 'foundation stack policy'),
+);
 const sourceCommit = git(['rev-parse', 'HEAD']).trim();
 const originMain = git(['rev-parse', 'origin/main']).trim();
 assert(/^[a-f0-9]{40}$/.test(sourceCommit), 'Current source commit is not a full Git SHA.');
@@ -81,6 +87,7 @@ const actualTags = Object.fromEntries((changeSet.Tags ?? []).map(({ Key, Value }
 const expectedTags = {
   ...FOUNDATION_STACK_TAGS,
   SourceCommit: sourceCommit,
+  StackPolicyDigest: stackPolicyDigest,
   TemplateDigest: templateDigest,
 };
 assertDeepEqual(actualTags, expectedTags, 'Change-set provenance tags');
@@ -130,6 +137,7 @@ report({
   onStackFailure: 'ROLLBACK',
   region,
   sourceCommit,
+  stackPolicyDigest,
   stackName: REVIEW_EMAIL_FOUNDATION_STACK_NAME,
   status: 'verified',
   templateStage: 'Original',

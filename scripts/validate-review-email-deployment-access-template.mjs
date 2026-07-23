@@ -1,15 +1,20 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { declaredResourceTypes } from './lib/review-email-cloudformation-contract.mjs';
+import {
+  declaredResourceTypes,
+  readStrictJsonFile,
+} from './lib/review-email-cloudformation-contract.mjs';
 
 const templatePath = path.join(process.cwd(), 'infra', 'aws', 'review-email-deployment-access.cloudformation.json');
 const raw = await readFile(templatePath, 'utf8');
-const template = JSON.parse(raw);
-const foundationTemplate = JSON.parse(
-  await readFile(path.join(process.cwd(), 'infra', 'aws', 'review-email-foundation.cloudformation.json'), 'utf8'),
+const template = readStrictJsonFile(templatePath, 'deployment-access template');
+const foundationTemplate = readStrictJsonFile(
+  path.join(process.cwd(), 'infra', 'aws', 'review-email-foundation.cloudformation.json'),
+  'foundation template',
 );
-const journalTemplate = JSON.parse(
-  await readFile(path.join(process.cwd(), 'infra', 'aws', 'review-email-erasure-journal.cloudformation.json'), 'utf8'),
+const journalTemplate = readStrictJsonFile(
+  path.join(process.cwd(), 'infra', 'aws', 'review-email-erasure-journal.cloudformation.json'),
+  'journal template',
 );
 
 const REGION = 'eu-central-1';
@@ -23,6 +28,7 @@ const stackRoleMap = {
     executionSid: 'ExecuteApprovedFoundationChangeSet',
     purpose: 'review-request-email',
     resourceTypes: declaredResourceTypes(foundationTemplate),
+    stackPolicyDigest: true,
     stackName: 'renuvex-review-email-foundation-prod',
     changeSetPrefix: 'renuvex-review-email-foundation-',
     roleName: 'renuvex-review-email-foundation-cfn',
@@ -33,6 +39,7 @@ const stackRoleMap = {
     executionSid: 'ExecuteApprovedJournalChangeSet',
     purpose: 'review-email-erasure-journal',
     resourceTypes: declaredResourceTypes(journalTemplate),
+    stackPolicyDigest: false,
     stackName: 'renuvex-review-email-erasure-journal-prod',
     changeSetPrefix: 'renuvex-review-email-journal-',
     roleName: 'renuvex-review-email-journal-cfn',
@@ -43,6 +50,7 @@ const stackRoleMap = {
     executionSid: 'ExecuteApprovedJournalIamChangeSet',
     purpose: 'review-email-erasure-journal-iam',
     resourceTypes: null,
+    stackPolicyDigest: false,
     stackName: 'renuvex-review-email-erasure-journal-iam-prod',
     changeSetPrefix: 'renuvex-review-email-journal-iam-',
     roleName: 'renuvex-review-email-journal-iam-cfn',
@@ -55,9 +63,26 @@ const serviceRoleMap = {
   ReviewEmailJournalIamCloudFormationRole: 'renuvex-review-email-journal-iam-cfn',
 };
 
-const expectedOperatorActions = new Set([
+const expectedAuthorActions = new Set([
   'cloudformation:CreateChangeSet',
   'cloudformation:DescribeAccountLimits',
+  'cloudformation:DescribeChangeSet',
+  'cloudformation:DescribeEvents',
+  'cloudformation:DescribeStackEvents',
+  'cloudformation:DescribeStackResource',
+  'cloudformation:DescribeStackResources',
+  'cloudformation:DescribeStacks',
+  'cloudformation:GetStackPolicy',
+  'cloudformation:GetTemplate',
+  'cloudformation:GetTemplateSummary',
+  'cloudformation:ListChangeSets',
+  'cloudformation:ListStackResources',
+  'cloudformation:ListStacks',
+  'cloudformation:ValidateTemplate',
+  'iam:PassRole',
+]);
+
+const expectedOperatorActions = new Set([
   'cloudformation:DescribeChangeSet',
   'cloudformation:DescribeEvents',
   'cloudformation:DescribeStackEvents',
@@ -67,12 +92,8 @@ const expectedOperatorActions = new Set([
   'cloudformation:ExecuteChangeSet',
   'cloudformation:GetStackPolicy',
   'cloudformation:GetTemplate',
-  'cloudformation:GetTemplateSummary',
   'cloudformation:ListChangeSets',
   'cloudformation:ListStackResources',
-  'cloudformation:ListStacks',
-  'cloudformation:ValidateTemplate',
-  'iam:PassRole',
 ]);
 
 const expectedFoundationActions = new Set([
@@ -261,6 +282,10 @@ function assertOnlyAllowedWildcardResources(policyDocument, allowedSids, label) 
 
 const resources = template.Resources ?? {};
 const requiredResources = [
+  'ReviewEmailAuthorsGroup',
+  'ReviewEmailAuthorMembership',
+  'ReviewEmailAuthorPermissionSet',
+  'ReviewEmailAuthorAssignment',
   'ReviewEmailOperatorsGroup',
   'ReviewEmailOperatorMembership',
   'ReviewEmailOperatorPermissionSet',
@@ -304,39 +329,92 @@ for (const forbidden of ['AdministratorAccess', 'PowerUserAccess', 'AWS_SECRET_A
   assert(!raw.includes(forbidden), `Access template contains forbidden content: ${forbidden}`);
 }
 
-const group = resources.ReviewEmailOperatorsGroup;
-assert(group.Type === 'AWS::IdentityStore::Group', 'ReviewEmailOperatorsGroup must be an Identity Store group.');
-assert(group.Properties?.DisplayName === 'RenuvexReviewEmailOperators', 'Review-email operator group name must remain stable.');
-assert(refValue(group.Properties?.IdentityStoreId) === 'IdentityStoreId', 'Review-email operator group must use the IdentityStoreId parameter.');
+function assertIdentityGroup(logicalId, displayName) {
+  const group = resources[logicalId];
+  assert(group.Type === 'AWS::IdentityStore::Group', `${logicalId} must be an Identity Store group.`);
+  assert(group.Properties?.DisplayName === displayName, `${logicalId} display name must remain stable.`);
+  assert(refValue(group.Properties?.IdentityStoreId) === 'IdentityStoreId', `${logicalId} must use the IdentityStoreId parameter.`);
+}
 
-const membership = resources.ReviewEmailOperatorMembership;
-assert(membership.Type === 'AWS::IdentityStore::GroupMembership', 'ReviewEmailOperatorMembership must be an Identity Store group membership.');
-assert(JSON.stringify(getAtt(membership.Properties?.GroupId)) === JSON.stringify(['ReviewEmailOperatorsGroup', 'GroupId']), 'Group membership must use GroupId via Fn::GetAtt, not Ref.');
-assert(refValue(membership.Properties?.IdentityStoreId) === 'IdentityStoreId', 'Group membership must use the IdentityStoreId parameter.');
-assert(refValue(membership.Properties?.MemberId?.UserId) === 'OperatorUserId', 'Group membership must use the parameterized operator user ID.');
+function assertMembership(logicalId, groupLogicalId) {
+  const membership = resources[logicalId];
+  assert(membership.Type === 'AWS::IdentityStore::GroupMembership', `${logicalId} must be an Identity Store group membership.`);
+  assert(
+    JSON.stringify(getAtt(membership.Properties?.GroupId)) === JSON.stringify([groupLogicalId, 'GroupId']),
+    `${logicalId} must use ${groupLogicalId}.GroupId via Fn::GetAtt.`,
+  );
+  assert(refValue(membership.Properties?.IdentityStoreId) === 'IdentityStoreId', `${logicalId} must use the IdentityStoreId parameter.`);
+  assert(refValue(membership.Properties?.MemberId?.UserId) === 'OperatorUserId', `${logicalId} must use the parameterized operator user ID.`);
+}
 
-const permissionSet = resources.ReviewEmailOperatorPermissionSet;
-assert(permissionSet.Type === 'AWS::SSO::PermissionSet', 'ReviewEmailOperatorPermissionSet must be AWS::SSO::PermissionSet.');
-assert(permissionSet.Properties?.Name === 'RenuvexReviewEmailOperator', 'Review-email permission-set name must remain stable.');
-assert(permissionSet.Properties?.SessionDuration === 'PT2H', 'Review-email operator session must be two hours.');
-assert(refValue(permissionSet.Properties?.InstanceArn) === 'IdentityCenterInstanceArn', 'Permission set must use the parameterized Identity Center instance ARN.');
-assert(!permissionSet.Properties?.ManagedPolicies, 'Operator permission set must not use AWS managed policies.');
-assert(!permissionSet.Properties?.CustomerManagedPolicyReferences, 'Operator permission set must not use customer managed policies.');
-assert(!permissionSet.Properties?.PermissionsBoundary, 'Operator permission set must not attach a permissions boundary.');
+function assertPermissionSet(logicalId, name, label) {
+  const permissionSet = resources[logicalId];
+  assert(permissionSet.Type === 'AWS::SSO::PermissionSet', `${logicalId} must be AWS::SSO::PermissionSet.`);
+  assert(permissionSet.Properties?.Name === name, `${label} permission-set name must remain stable.`);
+  assert(permissionSet.Properties?.SessionDuration === 'PT2H', `${label} session must be two hours.`);
+  assert(refValue(permissionSet.Properties?.InstanceArn) === 'IdentityCenterInstanceArn', `${label} must use the parameterized Identity Center instance ARN.`);
+  assert(!permissionSet.Properties?.ManagedPolicies, `${label} must not use AWS managed policies.`);
+  assert(!permissionSet.Properties?.CustomerManagedPolicyReferences, `${label} must not use customer managed policies.`);
+  assert(!permissionSet.Properties?.PermissionsBoundary, `${label} must not attach a permissions boundary.`);
+  return permissionSet.Properties?.InlinePolicy;
+}
 
-const operatorPolicy = permissionSet.Properties?.InlinePolicy;
+function assertAssignment(logicalId, permissionSetLogicalId, groupLogicalId, label) {
+  const assignment = resources[logicalId];
+  assert(assignment.Type === 'AWS::SSO::Assignment', `${logicalId} must be AWS::SSO::Assignment.`);
+  assert(refValue(assignment.Properties?.InstanceArn) === 'IdentityCenterInstanceArn', `${label} assignment must use the parameterized Identity Center instance.`);
+  assert(
+    JSON.stringify(getAtt(assignment.Properties?.PermissionSetArn)) ===
+      JSON.stringify([permissionSetLogicalId, 'PermissionSetArn']),
+    `${label} assignment must use the local permission set ARN.`,
+  );
+  assert(
+    JSON.stringify(getAtt(assignment.Properties?.PrincipalId)) ===
+      JSON.stringify([groupLogicalId, 'GroupId']),
+    `${label} assignment must target the local group.`,
+  );
+  assert(assignment.Properties?.PrincipalType === 'GROUP', `${label} assignment must target a group.`);
+  assert(refValue(assignment.Properties?.TargetId) === 'TargetAccountId', `${label} assignment must target the locked account parameter.`);
+  assert(assignment.Properties?.TargetType === 'AWS_ACCOUNT', `${label} assignment target type must be AWS_ACCOUNT.`);
+}
+
+assertIdentityGroup('ReviewEmailAuthorsGroup', 'RenuvexReviewEmailAuthors');
+assertMembership('ReviewEmailAuthorMembership', 'ReviewEmailAuthorsGroup');
+assertIdentityGroup('ReviewEmailOperatorsGroup', 'RenuvexReviewEmailOperators');
+assertMembership('ReviewEmailOperatorMembership', 'ReviewEmailOperatorsGroup');
+
+const authorPolicy = assertPermissionSet(
+  'ReviewEmailAuthorPermissionSet',
+  'RenuvexReviewEmailAuthor',
+  'Review-email author',
+);
+const operatorPolicy = assertPermissionSet(
+  'ReviewEmailOperatorPermissionSet',
+  'RenuvexReviewEmailOperator',
+  'Review-email operator',
+);
+assert(authorPolicy?.Version === '2012-10-17', 'Author inline policy must use IAM policy version 2012-10-17.');
 assert(operatorPolicy?.Version === '2012-10-17', 'Operator inline policy must use IAM policy version 2012-10-17.');
+assertSetEqual(actionSet(authorPolicy), expectedAuthorActions, 'Author policy');
 assertSetEqual(actionSet(operatorPolicy), expectedOperatorActions, 'Operator policy');
+assertNoWildcardActions(authorPolicy, 'Author policy');
 assertNoWildcardActions(operatorPolicy, 'Operator policy');
-assertOnlyAllowedWildcardResources(operatorPolicy, new Set(['ValidateAndListCloudFormation']), 'Operator policy');
+assertOnlyAllowedWildcardResources(authorPolicy, new Set(['ValidateAndListCloudFormation']), 'Author policy');
+assertOnlyAllowedWildcardResources(operatorPolicy, new Set(), 'Operator policy');
 
+for (const action of actionSet(authorPolicy)) {
+  assert(action.startsWith('cloudformation:') || action === 'iam:PassRole', `Author policy has a direct service permission: ${action}`);
+}
 for (const action of actionSet(operatorPolicy)) {
-  assert(action.startsWith('cloudformation:') || action === 'iam:PassRole', `Operator policy has a direct service permission: ${action}`);
-  assert(!['cloudformation:CreateStack', 'cloudformation:UpdateStack', 'cloudformation:DeleteStack'].includes(action), `Operator policy must not allow direct stack mutation: ${action}`);
+  assert(action.startsWith('cloudformation:'), `Operator policy has a non-CloudFormation permission: ${action}`);
+}
+for (const action of ['cloudformation:CreateStack', 'cloudformation:UpdateStack', 'cloudformation:DeleteStack']) {
+  assert(!actionSet(authorPolicy).has(action), `Author policy must not allow ${action}.`);
+  assert(!actionSet(operatorPolicy).has(action), `Operator policy must not allow ${action}.`);
 }
 
 for (const [sid, expected] of Object.entries(stackRoleMap)) {
-  const statement = statementBySid(operatorPolicy, sid);
+  const statement = statementBySid(authorPolicy, sid);
   assert(statement?.Effect === 'Allow', `${sid} must exist and allow CreateChangeSet.`);
   assert(JSON.stringify(asArray(statement.Action)) === JSON.stringify(['cloudformation:CreateChangeSet']), `${sid} must allow only CreateChangeSet.`);
   assert(
@@ -371,9 +449,22 @@ for (const [sid, expected] of Object.entries(stackRoleMap)) {
     statement.Condition?.StringLike?.['aws:RequestTag/TemplateDigest'] === '?'.repeat(64),
     `${sid} must require a 64-character template digest tag.`,
   );
+  if (expected.stackPolicyDigest) {
+    assert(
+      statement.Condition?.StringLike?.['aws:RequestTag/StackPolicyDigest'] === '?'.repeat(64),
+      `${sid} must require a 64-character stack-policy digest tag.`,
+    );
+  } else {
+    assert(
+      statement.Condition?.StringLike?.['aws:RequestTag/StackPolicyDigest'] === undefined,
+      `${sid} must not invent a stack-policy digest for a stack without this provenance contract.`,
+    );
+  }
+  const expectedTagKeys = ['Environment', 'Project', 'Purpose', 'SourceCommit', 'TemplateDigest'];
+  if (expected.stackPolicyDigest) expectedTagKeys.push('StackPolicyDigest');
   assertSetEqual(
     new Set(asArray(statement.Condition?.['ForAllValues:StringEquals']?.['aws:TagKeys'])),
-    new Set(['Environment', 'Project', 'Purpose', 'SourceCommit', 'TemplateDigest']),
+    new Set(expectedTagKeys),
     `${sid} tag-key allowlist`,
   );
   assert(statement.Condition?.Null?.['aws:TagKeys'] === 'false', `${sid} must require the tag-key request field.`);
@@ -417,20 +508,31 @@ for (const [sid, expected] of Object.entries(stackRoleMap)) {
   );
 }
 
-const inspect = statementBySid(operatorPolicy, 'InspectApprovedReviewEmailChangeSets');
-assert(inspect?.Effect === 'Allow', 'InspectApprovedReviewEmailChangeSets must exist.');
+for (const [label, policy] of [['Author', authorPolicy], ['Operator', operatorPolicy]]) {
+  const inspect = statementBySid(policy, 'InspectApprovedReviewEmailChangeSets');
+  assert(inspect?.Effect === 'Allow', `${label} read-only change-set inspection must exist.`);
+  assert(
+    !actionSet({ Statement: [inspect] }).has('cloudformation:ExecuteChangeSet') &&
+      !actionSet({ Statement: [inspect] }).has('cloudformation:DeleteChangeSet'),
+    `${label} read-only inspection must not execute or delete change sets.`,
+  );
+  assert(
+    !actionSet(policy).has('cloudformation:DeleteChangeSet'),
+    `${label} must not delete a staged change set and recreate it under an approved name.`,
+  );
+}
 assert(
-  !actionSet({ Statement: [inspect] }).has('cloudformation:ExecuteChangeSet') &&
-    !actionSet({ Statement: [inspect] }).has('cloudformation:DeleteChangeSet'),
-  'Read-only change-set inspection must not execute or delete change sets.',
+  !actionSet(authorPolicy).has('cloudformation:ExecuteChangeSet'),
+  'Author must not execute a change set it created.',
 );
 assert(
-  !actionSet(operatorPolicy).has('cloudformation:DeleteChangeSet'),
-  'Operator must not delete a staged change set and recreate it under an approved name.',
+  !actionSet(operatorPolicy).has('cloudformation:CreateChangeSet') &&
+    !actionSet(operatorPolicy).has('iam:PassRole'),
+  'Operator must not create change sets or pass a CloudFormation service role.',
 );
 
-const passRole = statementBySid(operatorPolicy, 'PassOnlyApprovedCloudFormationServiceRoles');
-assert(passRole?.Action === 'iam:PassRole', 'Operator must have one exact iam:PassRole statement.');
+const passRole = statementBySid(authorPolicy, 'PassOnlyApprovedCloudFormationServiceRoles');
+assert(passRole?.Action === 'iam:PassRole', 'Author must have one exact iam:PassRole statement.');
 assert(passRole?.Condition?.StringEquals?.['iam:PassedToService'] === 'cloudformation.amazonaws.com', 'iam:PassRole must be limited to CloudFormation.');
 const expectedPassRoleArns = Object.values(serviceRoleMap).map((roleName) => `arn:\${AWS::Partition}:iam::\${TargetAccountId}:role${ROLE_PATH}${roleName}`);
 assert(
@@ -438,14 +540,18 @@ assert(
   'iam:PassRole resources must be the three exact CloudFormation service roles.',
 );
 
-const assignment = resources.ReviewEmailOperatorAssignment;
-assert(assignment.Type === 'AWS::SSO::Assignment', 'ReviewEmailOperatorAssignment must be AWS::SSO::Assignment.');
-assert(refValue(assignment.Properties?.InstanceArn) === 'IdentityCenterInstanceArn', 'Assignment must use the parameterized Identity Center instance.');
-assert(JSON.stringify(getAtt(assignment.Properties?.PermissionSetArn)) === JSON.stringify(['ReviewEmailOperatorPermissionSet', 'PermissionSetArn']), 'Assignment must use the local permission set ARN.');
-assert(JSON.stringify(getAtt(assignment.Properties?.PrincipalId)) === JSON.stringify(['ReviewEmailOperatorsGroup', 'GroupId']), 'Assignment must target the local operator group.');
-assert(assignment.Properties?.PrincipalType === 'GROUP', 'Assignment must target a group, not a user directly.');
-assert(refValue(assignment.Properties?.TargetId) === 'TargetAccountId', 'Assignment must target the locked account parameter.');
-assert(assignment.Properties?.TargetType === 'AWS_ACCOUNT', 'Assignment target type must be AWS_ACCOUNT.');
+assertAssignment(
+  'ReviewEmailAuthorAssignment',
+  'ReviewEmailAuthorPermissionSet',
+  'ReviewEmailAuthorsGroup',
+  'Author',
+);
+assertAssignment(
+  'ReviewEmailOperatorAssignment',
+  'ReviewEmailOperatorPermissionSet',
+  'ReviewEmailOperatorsGroup',
+  'Operator',
+);
 
 for (const [logicalId, roleName] of Object.entries(serviceRoleMap)) {
   const role = resources[logicalId];
@@ -564,6 +670,8 @@ const expectedJournalRoleArns = [
 assert(JSON.stringify(managedJournalRoleArns) === JSON.stringify(expectedJournalRoleArns), 'Journal IAM service role must target only the four existing journal roles.');
 
 for (const outputName of [
+  'ReviewEmailAuthorGroupId',
+  'ReviewEmailAuthorPermissionSetArn',
   'ReviewEmailOperatorGroupId',
   'ReviewEmailOperatorPermissionSetArn',
   'ReviewEmailFoundationCloudFormationRoleArn',

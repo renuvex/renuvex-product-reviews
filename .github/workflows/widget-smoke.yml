@@ -38,6 +38,9 @@ jobs:
       - name: Lint CloudFormation templates
         run: pnpm aws:lint-templates
 
+      - name: Validate review-email infrastructure contracts
+        run: pnpm aws:review-email:validate-templates
+
       - name: Generate Prisma client
         run: pnpm prisma:generate
 

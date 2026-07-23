@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -10,6 +10,7 @@ import {
   canonicalJsonSha256,
   effectiveResourceLogicalIds,
   parseJsonDocument,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,8 +27,8 @@ if (!['absent', 'deployed-pending-dns'].includes(expectation)) {
   fail('--expect must be absent or deployed-pending-dns.');
 }
 if (region !== REVIEW_EMAIL_REGION) fail(`Foundation verification is locked to ${REVIEW_EMAIL_REGION}.`);
-const template = JSON.parse(readFileSync(TEMPLATE_PATH, 'utf8'));
-const stackPolicy = JSON.parse(readFileSync(STACK_POLICY_PATH, 'utf8'));
+const template = readStrictJsonFile(TEMPLATE_PATH, 'foundation template');
+const stackPolicy = readStrictJsonFile(STACK_POLICY_PATH, 'foundation stack policy');
 const templateDigest = canonicalJsonSha256(template);
 const stackPolicyDigest = canonicalJsonSha256(stackPolicy);
 const defaults = Object.fromEntries(
@@ -100,6 +101,7 @@ assertDeepEqual(
   {
     ...FOUNDATION_STACK_TAGS,
     SourceCommit: sourceCommit,
+    StackPolicyDigest: stackPolicyDigest,
     TemplateDigest: templateDigest,
   },
   'Foundation stack tags',
@@ -164,6 +166,7 @@ report({
   region,
   senderResourceCount: 0,
   sesProductionAccessEnabled: false,
+  stackPolicyDigest,
   stackStatus: stack.StackStatus,
   templateDigest,
   terminationProtection: true,

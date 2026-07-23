@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -10,6 +10,7 @@ import {
   REVIEW_EMAIL_REGION,
   canonicalJsonSha256,
   parseJsonDocument,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -34,7 +35,7 @@ if (mode !== 'close' && !/^renuvex-review-email-foundation-[a-z0-9][a-z0-9-]{0,9
   fail('A valid exact foundation --change-set-name is required.');
 }
 
-const sourceTemplate = JSON.parse(readFileSync(ACCESS_TEMPLATE_PATH, 'utf8'));
+const sourceTemplate = readStrictJsonFile(ACCESS_TEMPLATE_PATH, 'deployment-access template');
 const sourceTemplateDigest = canonicalJsonSha256(sourceTemplate);
 const caller = awsJson(['sts', 'get-caller-identity']);
 assert(caller.Account === REVIEW_EMAIL_ACCOUNT_ID, 'Administrator caller account is not the locked account.');
@@ -167,16 +168,28 @@ assert(
   'Access approval change set must acknowledge only CAPABILITY_NAMED_IAM.',
 );
 const changes = accessChangeSet.Changes ?? [];
-assert(changes.length === 1, 'Access approval change set must modify exactly one logical resource.');
-const resource = changes[0]?.ResourceChange;
+const nameChanged = currentParameters.ApprovedFoundationChangeSetName !== target.name;
+const expiryChanged = currentParameters.FoundationExecutionApprovalExpiresAt !== target.expiry;
+const expectedLogicalIds = new Set(['ReviewEmailOperatorPermissionSet']);
+if (nameChanged) expectedLogicalIds.add('ReviewEmailAuthorPermissionSet');
 assert(
-  resource?.Action === 'Modify' &&
-    resource.LogicalResourceId === 'ReviewEmailOperatorPermissionSet' &&
-    resource.ResourceType === 'AWS::SSO::PermissionSet' &&
-    resource.Replacement !== 'True' &&
-    resource.Replacement !== 'Conditional',
-  'Access approval change set may modify only the existing permission set in place.',
+  changes.length === expectedLogicalIds.size,
+  `Access approval change set must modify exactly ${expectedLogicalIds.size} permission set(s).`,
 );
+for (const change of changes) {
+  const resource = change?.ResourceChange;
+  assert(
+    resource?.Action === 'Modify' &&
+      expectedLogicalIds.has(resource.LogicalResourceId) &&
+      resource.ResourceType === 'AWS::SSO::PermissionSet' &&
+      resource.Replacement !== 'True' &&
+      resource.Replacement !== 'Conditional',
+    'Access approval change set may modify only expected permission sets in place.',
+  );
+  expectedLogicalIds.delete(resource.LogicalResourceId);
+}
+assert(expectedLogicalIds.size === 0, 'Access approval change set omitted an expected permission-set update.');
+assert(nameChanged || expiryChanged, 'Approval update has no effective parameter change.');
 
 runAws([
   'cloudformation',

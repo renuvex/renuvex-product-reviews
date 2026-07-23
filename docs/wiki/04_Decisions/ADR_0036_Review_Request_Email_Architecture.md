@@ -39,6 +39,7 @@ source_files:
   - "infra/aws/review-email-foundation.stack-policy.json"
   - "scripts/verify-review-email-deployment-access-live.mjs"
   - "scripts/lib/review-email-cloudformation-contract.mjs"
+  - "scripts/test-review-email-cloudformation-contract.mjs"
   - "scripts/simulate-review-email-deployment-access-policy.mjs"
   - "scripts/validate-review-email-aws-policies.mjs"
   - "scripts/create-review-email-access-hardening-change-set.mjs"
@@ -551,18 +552,22 @@ Still missing:
 ### Runtime credentials and IAM
 
 - Deployment access is separated from runtime access. The
-  `review-email-deployment-access.cloudformation.json` package defines the
-  `RenuvexReviewEmailOperators` group, the `RenuvexReviewEmailOperator`
-  permission set, account assignment, and three retained CloudFormation service
-  roles. Identity Center instance/store/user IDs are deployment parameters.
-- The human operator can only create and execute reviewed change sets for the
-  exact foundation, erasure-journal, and erasure-journal-IAM stack names. Each
-  `CreateChangeSet` statement requires its matching service role; pass-role is
-  limited to those role ARNs and the CloudFormation service principal, and
-  resource-import change sets are denied.
-- The operator has no direct create/update/delete-stack action, SES send or
-  control-plane action, journal object/retention action, broad IAM mutation,
-  managed policy, or general pass-role permission.
+  `review-email-deployment-access.cloudformation.json` package defines separate
+  `RenuvexReviewEmailAuthors` and `RenuvexReviewEmailOperators` groups,
+  create-only and execute-only permission sets, their account assignments, and
+  three retained CloudFormation service roles. Identity Center
+  instance/store/user IDs are deployment parameters.
+- The author can create constrained change sets for the exact foundation,
+  erasure-journal, and erasure-journal-IAM stack names, but cannot execute or
+  delete them. Each create statement requires its matching service role;
+  pass-role is limited to those role ARNs and CloudFormation, and imports are
+  denied.
+- The operator can inspect and execute only the administrator-staged exact
+  change-set name before its explicit expiry. It cannot create or delete change
+  sets and has no `iam:PassRole`.
+- Neither principal has direct create/update/delete-stack, SES send or
+  control-plane, journal object/retention, broad IAM, or managed-policy
+  permissions.
 - Foundation, journal-bucket, and journal-IAM service roles are independently
   scoped to the resource types and physical names in their existing templates.
   They trust only `cloudformation.amazonaws.com`; sender Lambda/Scheduler IAM is
@@ -578,15 +583,16 @@ Still missing:
   2026-07-23 from source commit `67a5babd3b37b97700b27764332a90a42ef00d68`.
   Its change set contained exactly the seven expected additions and only
   `CAPABILITY_NAMED_IAM`. The completed stack has termination protection.
-- Live read-only verification compares the deployed permission set, assignment,
-  group membership, service-role trust and inline policies, managed-policy
-  absence, and stack inventory with the source template. IAM simulation
+- Live read-only verification compares every deployed permission set,
+  assignment, group membership, service-role trust and inline policy,
+  managed-policy absence, and stack inventory with the source template. IAM simulation
   confirmed the exact approved change-set and `PassRole` paths while denying
   wrong stack/role/region/import, direct stack deletion, SES send, journal
   deletion/retention, access-key creation, and managed-policy attachment.
 - The persistent `renuvex-review-email` SSO profile uses the provisioned
-  least-privilege permission set. Administrator remains a bootstrap/decommission
-  boundary and is not the normal review-email deployment profile.
+  execute-only permission set after the pending access update. The planned
+  `renuvex-review-email-author` profile uses the create-only permission set.
+  Administrator remains an approval/bootstrap/decommission boundary.
 
 #### Foundation execution hardening
 
@@ -594,19 +600,27 @@ Still missing:
   review-email change-set name on the three exact stacks and to delete unused
   change sets. A 2026-07-23 source hardening supersedes that contract but is
   not live until a separate approved access-stack update completes.
-- The hardened permission set removes `DeleteChangeSet`. An administrator
-  stages one exact name per stack while execute approval is expired; execution
-  additionally requires `aws:CurrentTime` before a bounded UTC deadline.
-  Steady-state parameters are disabled and expired.
+- The hardened source splits creation and execution. Neither author nor
+  operator has `DeleteChangeSet`. An administrator stages one exact name per
+  stack while execute approval is expired; execution additionally requires
+  `aws:CurrentTime` before a bounded UTC deadline. Steady-state parameters are
+  disabled and expired.
 - The administrator performs two distinct gates: stage the exact name before
   creation, then open a maximum 15-minute execute window only after read-only
   verification. The execution wrapper closes the window in `finally`; the IAM
   deadline is the independent fail-safe if cleanup fails.
-- IAM cannot authorize a `TemplateBody` hash. Template integrity is instead
-  bound to the immutable staged change-set name: the operator cannot delete and
-  recreate it, and canonical SHA-256 equality is required across local JSON,
+- IAM cannot authorize a `TemplateBody` hash. The author therefore cannot
+  execute and the operator cannot submit or replace a template. Template
+  integrity is bound to the immutable staged change-set name plus canonical
+  SHA-256 equality across strict local JSON,
   `GetTemplate(TemplateStage=Original)` for the change set, and the completed
-  stack. Source commit and template digest are also exact stack tags.
+  stack. Source commit, template digest, and foundation stack-policy digest are
+  exact stack tags. Because both permission sets currently target the same
+  approved user, this is capability separation rather than independent-person
+  approval; read-only verification and the administrator gate remain required.
+- Strict local decoding rejects malformed UTF-8, duplicate JSON keys,
+  unpaired Unicode surrogates, trailing commas, and non-canonical numeric or
+  escape spellings before canonical hashing.
 - Foundation and non-IAM journal change-set creation must provide their
   template-derived `cloudformation:ResourceTypes` allowlists. Omitting the
   request field is denied. The journal-IAM stack omits `ResourceTypes` because

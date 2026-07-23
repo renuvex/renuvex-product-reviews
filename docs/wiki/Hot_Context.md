@@ -61,11 +61,13 @@ source_files:
 
 ## Recent Important Changes
 - 2026-07-23: Review-email deployment access bootstrap is live, but stricter
-  exact-name/time-bounded execution and rollback hardening now exists only in
-  source. The live access stack intentionally fails source equality until its
+  author-create/operator-execute separation, exact-name/time-bounded execution,
+  strict canonical JSON, stack-policy provenance, and rollback hardening now
+  exist only in source. Semantic infrastructure validators are also wired into
+  CI. The live access stack intentionally fails source equality until its
   separately approved hardening update. Foundation mutation is NO-GO before
-  that update. Foundation, journal, and sender stacks remain undeployed. See
-  [[AWS_Setup_And_Access]].
+  that update and read-only acceptance. Foundation, journal, and sender stacks
+  remain undeployed. See [[AWS_Setup_And_Access]].
 - 2026-07-20: Review-email now uses current ikas customer subscription, exact
   recipient matching, immutable delivery evidence, stable package-line grouping,
   and all four shipping methods. PR #8 deployed the disabled backend and all 59

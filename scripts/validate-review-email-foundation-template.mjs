@@ -4,13 +4,14 @@ import {
   canonicalJsonSha256,
   declaredResourceTypes,
   effectiveResourceLogicalIds,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const templatePath = path.join(process.cwd(), 'infra', 'aws', 'review-email-foundation.cloudformation.json');
 const stackPolicyPath = path.join(process.cwd(), 'infra', 'aws', 'review-email-foundation.stack-policy.json');
 const raw = await readFile(templatePath, 'utf8');
-const template = JSON.parse(raw);
-const stackPolicy = JSON.parse(await readFile(stackPolicyPath, 'utf8'));
+const template = readStrictJsonFile(templatePath, 'foundation template');
+const stackPolicy = readStrictJsonFile(stackPolicyPath, 'foundation stack policy');
 const creatorSource = await readFile(
   path.join(process.cwd(), 'scripts', 'create-review-email-foundation-change-set.mjs'),
   'utf8',
@@ -23,8 +24,16 @@ const executorSource = await readFile(
   path.join(process.cwd(), 'scripts', 'execute-review-email-foundation-change-set.mjs'),
   'utf8',
 );
+const approvalSource = await readFile(
+  path.join(process.cwd(), 'scripts', 'set-review-email-foundation-execution-approval.mjs'),
+  'utf8',
+);
 const finalizerSource = await readFile(
   path.join(process.cwd(), 'scripts', 'finalize-review-email-foundation-stack.mjs'),
+  'utf8',
+);
+const liveVerifierSource = await readFile(
+  path.join(process.cwd(), 'scripts', 'verify-review-email-foundation-live.mjs'),
   'utf8',
 );
 const canonicalDigest = canonicalJsonSha256(template);
@@ -86,14 +95,25 @@ assert(
 );
 assert(
   creatorSource.includes("'--on-stack-failure',\n  'ROLLBACK'") &&
-    creatorSource.includes("'--resource-types'"),
-  'Foundation creator must require ROLLBACK and the declared ResourceTypes list.',
+    creatorSource.includes("'--resource-types'") &&
+    creatorSource.includes("readOption('--author-profile')") &&
+    creatorSource.includes('AWSReservedSSO_RenuvexReviewEmailAuthor_'),
+  'Foundation creator must require ROLLBACK, declared ResourceTypes, and the dedicated author principal.',
 );
 assert(
   executorSource.includes("'--retain-except-on-create'") &&
     executorSource.includes('finally {') &&
+    !executorSource.includes('if (approvalOpened)') &&
+    executorSource.indexOf("'--mode=close'") > executorSource.indexOf('finally {') &&
     !executorSource.includes('disable-rollback'),
-  'Foundation executor must retain-except-on-create, close approval in finally, and never disable rollback.',
+  'Foundation executor must retain-except-on-create, unconditionally close approval in finally, and never disable rollback.',
+);
+assert(
+  approvalSource.includes("'ReviewEmailAuthorPermissionSet'") &&
+    approvalSource.includes("'ReviewEmailOperatorPermissionSet'") &&
+    approvalSource.includes('nameChanged') &&
+    approvalSource.includes('expiryChanged'),
+  'Approval updates must account for exact-name changes in author and operator policies and expiry changes in the operator policy.',
 );
 assert(
   verifierSource.includes("'--template-stage',\n  'Original'") &&
@@ -105,6 +125,17 @@ assert(
     finalizerSource.indexOf("'set-stack-policy'"),
   'Stack policy must be applied only after CREATE_COMPLETE verification.',
 );
+for (const [label, source] of [
+  ['creator', creatorSource],
+  ['change-set verifier', verifierSource],
+  ['finalizer', finalizerSource],
+  ['live verifier', liveVerifierSource],
+]) {
+  assert(
+    source.includes('StackPolicyDigest') && source.includes('stackPolicyDigest'),
+    `Foundation ${label} must bind the canonical stack-policy digest into provenance.`,
+  );
+}
 
 const forbiddenSecretHints = [
   'AWS_SECRET_ACCESS_KEY',

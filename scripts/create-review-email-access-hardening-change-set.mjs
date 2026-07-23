@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -7,6 +7,7 @@ import {
   REVIEW_EMAIL_ACCOUNT_ID,
   REVIEW_EMAIL_REGION,
   canonicalJsonSha256,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -27,7 +28,7 @@ if (!adminProfile) fail('--admin-profile is required; no default administrator p
 if (region !== REVIEW_EMAIL_REGION) fail(`Access hardening is locked to ${REVIEW_EMAIL_REGION}.`);
 if (!existsSync(TEMPLATE_PATH)) fail(`Missing deployment-access template: ${TEMPLATE_PATH}`);
 
-const sourceTemplate = JSON.parse(readFileSync(TEMPLATE_PATH, 'utf8'));
+const sourceTemplate = readStrictJsonFile(TEMPLATE_PATH, 'deployment-access template');
 const sourceTemplateDigest = canonicalJsonSha256(sourceTemplate);
 const sourceCommit = git(['rev-parse', 'HEAD']).trim();
 assert(sourceCommit === git(['rev-parse', 'origin/main']).trim(), 'HEAD must match origin/main.');

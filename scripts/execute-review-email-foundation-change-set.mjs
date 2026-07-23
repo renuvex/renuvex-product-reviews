@@ -45,7 +45,6 @@ if (!apply) {
   process.exit(0);
 }
 
-let approvalOpened = false;
 let executeAccepted = false;
 let operationError = null;
 let closeError = null;
@@ -59,7 +58,6 @@ try {
     `--region=${region}`,
     '--apply',
   ]);
-  approvalOpened = true;
 
   const operator = awsJson(['sts', 'get-caller-identity'], operatorProfile);
   assert(operator.Account === REVIEW_EMAIL_ACCOUNT_ID, 'Operator caller account is not the locked account.');
@@ -83,18 +81,16 @@ try {
 } catch (error) {
   operationError = error;
 } finally {
-  if (approvalOpened) {
-    try {
-      runNode([
-        resolve(ROOT, 'scripts/set-review-email-foundation-execution-approval.mjs'),
-        '--mode=close',
-        `--admin-profile=${adminProfile}`,
-        `--region=${region}`,
-        '--apply',
-      ]);
-    } catch (error) {
-      closeError = error;
-    }
+  try {
+    runNode([
+      resolve(ROOT, 'scripts/set-review-email-foundation-execution-approval.mjs'),
+      '--mode=close',
+      `--admin-profile=${adminProfile}`,
+      `--region=${region}`,
+      '--apply',
+    ]);
+  } catch (error) {
+    closeError = error;
   }
 }
 

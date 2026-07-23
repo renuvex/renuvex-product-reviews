@@ -1,11 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   REVIEW_EMAIL_ACCOUNT_ID,
   REVIEW_EMAIL_REGION,
+  readStrictJsonFile,
 } from './lib/review-email-cloudformation-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -17,8 +18,8 @@ const region = readOption('--region') || process.env.AWS_REGION || REVIEW_EMAIL_
 const awsCli = resolveAwsCli();
 
 if (region !== REVIEW_EMAIL_REGION) fail(`Policy validation is locked to ${REVIEW_EMAIL_REGION}.`);
-const access = JSON.parse(readFileSync(ACCESS_PATH, 'utf8'));
-const foundation = JSON.parse(readFileSync(FOUNDATION_PATH, 'utf8'));
+const access = readStrictJsonFile(ACCESS_PATH, 'deployment-access template');
+const foundation = readStrictJsonFile(FOUNDATION_PATH, 'foundation template');
 const context = {
   'AWS::AccountId': REVIEW_EMAIL_ACCOUNT_ID,
   'AWS::Partition': 'aws',
@@ -40,6 +41,11 @@ const context = {
   TargetAccountId: REVIEW_EMAIL_ACCOUNT_ID,
 };
 const policies = [
+  {
+    document: access.Resources.ReviewEmailAuthorPermissionSet.Properties.InlinePolicy,
+    label: 'change-set author identity policy',
+    type: 'IDENTITY_POLICY',
+  },
   {
     document: access.Resources.ReviewEmailOperatorPermissionSet.Properties.InlinePolicy,
     label: 'operator identity policy',
