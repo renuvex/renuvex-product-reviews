@@ -677,11 +677,11 @@ Still missing:
   optional HTTPS subscription remains false when `FeedbackEndpointUrl=""`;
   event and subscription resources explicitly wait for their resource policies.
 - The access-hardening prerequisite is closed. Current read-only evidence still
-  shows zero foundation, sender, tenant, Lambda, and Scheduler resources.
-  Foundation creation remains a separate mutation gate requiring exact-name
-  staging, author creation, canonical-template/effective-change verification,
-  separate approval, and operator execution; this access update authorizes none
-  of those actions by itself.
+  shows zero deployed foundation, sender, tenant, Lambda, and Scheduler
+  resources. The exact foundation CREATE change set is staged, created, and
+  read-only verified but remains unexecuted with approval expired. Foundation
+  creation therefore remains a separate mutation gate requiring a new explicit
+  approval before the bounded operator execution wrapper runs.
 
 - The AWS-native email worker path requires a separate Lambda execution role
   with least-privilege access to its SQS queue, SES send action, CloudWatch

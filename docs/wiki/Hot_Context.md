@@ -60,7 +60,8 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-24: The unexecuted foundation change set is approval-closed.
+- 2026-07-24: The unexecuted foundation change set is read-only verified and
+  approval-closed.
   CloudFormation exposes its service role on the `REVIEW_IN_PROGRESS` stack,
   not `DescribeChangeSet`; verifier-only later commits must prove unchanged
   tagged template/policy blobs before a separate execution approval.

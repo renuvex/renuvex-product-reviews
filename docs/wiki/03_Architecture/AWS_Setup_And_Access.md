@@ -885,10 +885,21 @@ Checkpoint status and required next order:
 4. Both provisioned permission sets, both local least-privilege profiles, every
    live access policy, and closed approval parameters passed read-only
    acceptance. The temporary Administrator config was removed.
-5. The next AWS mutation is a separate gate: stage the exact foundation
-   change-set name, create it with the author profile, verify its template and
-   effective changes read-only, obtain separate execution approval, and only
-   then execute it with the operator profile.
+5. The administrator staged
+   `renuvex-review-email-foundation-20260724-59a09d88` while execute approval
+   remained expired. The author created the foundation CREATE change set from
+   source commit `59a09d88426e50b907ce835d3456a0b89b086dcc`.
+6. The first verifier stopped without executing or deleting the change set
+   because it incorrectly expected `RoleARN` in `DescribeChangeSet`. Pushed
+   verifier commit `42763c1c309dd8191f280830a4563739841f1dc4` corrected the
+   provider-output assumption and read-only verification then passed: nine
+   exact `Add` resources, `OnStackFailure=ROLLBACK`, matching historical,
+   current, and AWS Original template digests, and the exact service role on
+   the placeholder stack.
+7. The change set remains `AVAILABLE`, its placeholder has zero resources, the
+   execution approval expiry is still `1970-01-01T00:00:00Z`, and the target
+   SES, KMS, SNS, and SQS resources remain absent. The next AWS mutation is the
+   separately approved execution wrapper; this checkpoint does not authorize it.
 
 No command in this section authorizes an AWS mutation by itself. Each
 `--apply`, change-set execution, stack-policy write, or termination-protection
