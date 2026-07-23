@@ -26,6 +26,7 @@
     "aws:review-images:validate-template": "node scripts/validate-review-images-aws-template.mjs",
     "aws:review-images:validate-runtime-iam-template": "node scripts/validate-review-images-runtime-iam-template.mjs",
     "aws:review-email:validate-access-template": "node scripts/validate-review-email-deployment-access-template.mjs",
+    "aws:review-email:verify-access-live": "node scripts/verify-review-email-deployment-access-live.mjs",
     "aws:review-email:validate-foundation-template": "node scripts/validate-review-email-foundation-template.mjs",
     "aws:review-email:calculate-journal-retention": "node scripts/calculate-review-email-journal-retention.mjs",
     "aws:review-email:require-current-copy-register": "node scripts/calculate-review-email-journal-retention.mjs --require-current",

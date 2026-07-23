@@ -3,8 +3,8 @@ type: decision
 project: renuvex-product-reviews
 status: active
 created: 2026-07-09
-updated: 2026-07-21
-last_verified: 2026-07-21
+updated: 2026-07-23
+last_verified: 2026-07-23
 confidence: high
 tags:
   - adr
@@ -36,6 +36,7 @@ source_files:
   - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
   - "config/review-email-copy-register.json"
   - "infra/aws/review-email-deployment-access.cloudformation.json"
+  - "scripts/verify-review-email-deployment-access-live.mjs"
   - "infra/aws/review-email-erasure-journal.cloudformation.json"
   - "infra/aws/review-email-erasure-journal-iam.cloudformation.json"
   - "src/lib/ikas-installation-lifecycle.ts"
@@ -537,7 +538,7 @@ Still missing:
 
 ### Runtime credentials and IAM
 
-- Deployment access is separated from runtime access. The source-only
+- Deployment access is separated from runtime access. The
   `review-email-deployment-access.cloudformation.json` package defines the
   `RenuvexReviewEmailOperators` group, the `RenuvexReviewEmailOperator`
   permission set, account assignment, and three retained CloudFormation service
@@ -561,10 +562,19 @@ Still missing:
 - Service roles use `DeletionPolicy: Retain` and `UpdateReplacePolicy: Retain`.
   Permission set, group, membership, and assignment use normal stack lifecycle.
   Role retirement therefore needs a separate decommission plan.
-- This source checkpoint does not authorize the future
-  `renuvex-review-email-access-prod` bootstrap. Administrator change-set review,
-  stack execution, assignment verification, and local profile creation are a
-  separate mutation phase.
+- The approved `renuvex-review-email-access-prod` bootstrap was deployed on
+  2026-07-23 from source commit `67a5babd3b37b97700b27764332a90a42ef00d68`.
+  Its change set contained exactly the seven expected additions and only
+  `CAPABILITY_NAMED_IAM`. The completed stack has termination protection.
+- Live read-only verification compares the deployed permission set, assignment,
+  group membership, service-role trust and inline policies, managed-policy
+  absence, and stack inventory with the source template. IAM simulation
+  confirmed the exact approved change-set and `PassRole` paths while denying
+  wrong stack/role/region/import, direct stack deletion, SES send, journal
+  deletion/retention, access-key creation, and managed-policy attachment.
+- The persistent `renuvex-review-email` SSO profile uses the provisioned
+  least-privilege permission set. Administrator remains a bootstrap/decommission
+  boundary and is not the normal review-email deployment profile.
 
 - The AWS-native email worker path requires a separate Lambda execution role
   with least-privilege access to its SQS queue, SES send action, CloudWatch

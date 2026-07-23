@@ -3,8 +3,8 @@ type: context
 project: renuvex-product-reviews
 status: active
 created: 2026-05-13
-updated: 2026-07-21
-last_verified: 2026-07-21
+updated: 2026-07-23
+last_verified: 2026-07-23
 confidence: high
 tags:
   - hot-context
@@ -60,9 +60,11 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-21: Review-email deployment-access source and validator exist. No
-  permission set, group, role, stack, assignment, or local profile is live;
-  bootstrap remains a separate mutation gate.
+- 2026-07-23: Review-email deployment access is live and
+  verified. The protected access stack contains the expected seven resources;
+  the local operator profile is least-privilege and negative IAM simulations
+  pass. Foundation, journal, and sender stacks remain undeployed. See
+  [[AWS_Setup_And_Access]].
 - 2026-07-20: Review-email now uses current ikas customer subscription, exact
   recipient matching, immutable delivery evidence, stable package-line grouping,
   and all four shipping methods. PR #8 deployed the disabled backend and all 59

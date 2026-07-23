@@ -3,8 +3,8 @@ type: maintenance
 project: renuvex-product-reviews
 status: active
 created: 2026-06-29
-updated: 2026-07-21
-last_verified: 2026-07-21
+updated: 2026-07-23
+last_verified: 2026-07-23
 confidence: high
 tags:
   - aws
@@ -38,6 +38,7 @@ source_files:
   - "scripts/validate-media-access-logs-bucket-template.mjs"
   - "scripts/validate-media-access-logs-delivery-template.mjs"
   - "scripts/validate-review-email-deployment-access-template.mjs"
+  - "scripts/verify-review-email-deployment-access-live.mjs"
   - ".agents/skills/aws-iam/SKILL.md"
   - ".agents/skills/aws-messaging-and-streaming/SKILL.md"
   - ".agents/skills/aws-serverless/SKILL.md"
@@ -645,20 +646,25 @@ the inputs for a future sender package. They do not mean SQS, Lambda,
 EventBridge, SES tenants, configuration-set associations, DNS, or outbound
 email are deployed.
 
-### Source-only deployment access bootstrap
+### Review-email deployment access bootstrap
 
 The first deployment-access checkpoint was prepared on 2026-07-21 in
-`infra/aws/review-email-deployment-access.cloudformation.json`. It is a
-source-only bootstrap package and has not been executed. Live read-only checks
-at this checkpoint found no `RenuvexReviewEmailOperator` permission set, no
-`RenuvexReviewEmailOperators` group, no `renuvex-review-email-*` CloudFormation
-service role, and no review-email CloudFormation stack. The local
-`renuvex-review-email` SSO profile therefore does not exist yet.
+`infra/aws/review-email-deployment-access.cloudformation.json`. On 2026-07-23,
+an explicitly approved Administrator change set created
+`renuvex-review-email-access-prod` with the source commit
+`67a5babd3b37b97700b27764332a90a42ef00d68`. The reviewed change set contained
+exactly seven `Add` operations and only `CAPABILITY_NAMED_IAM`; it had no nested
+stack or bootstrap service role. The stack reached `CREATE_COMPLETE` and has
+termination protection enabled.
 
-The future bootstrap stack name is `renuvex-review-email-access-prod`. It must
-be created separately with `CAPABILITY_NAMED_IAM` by an explicitly approved
-administrator. Identity Center instance, identity-store, and operator-user IDs
-are deployment parameters and must never be committed.
+Live acceptance found one `RenuvexReviewEmailOperators` group with the approved
+operator membership, one provisioned `RenuvexReviewEmailOperator` permission
+set, one account assignment, and the three expected CloudFormation service
+roles. No foundation, journal, or journal-IAM downstream stack was created.
+The local `renuvex-review-email` SSO profile resolves to the provisioned
+least-privilege role. No persistent Administrator profile was added to the
+normal AWS config. Identity Center instance, identity-store, and operator-user
+IDs remain deployment parameters and must never be committed.
 
 The source contract is:
 
@@ -701,12 +707,19 @@ Source validation is:
 pnpm aws:review-email:validate-access-template
 pnpm aws:review-email:validate-templates
 pnpm aws:lint-templates:eu-central-1
+pnpm aws:review-email:verify-access-live -- --expect=ready --profile=renuvex-readonly --region=eu-central-1 --json
 ```
 
-The next access phase is a distinct mutation gate: inspect an Administrator
-change set, execute the bootstrap, verify group assignment and effective policy,
-then add the local `renuvex-review-email` SSO profile. Preparing this source does
-not approve that phase.
+The live verifier is read-only and fail-closed. It compares stack inventory,
+group membership, account assignment, permission-set policy, service-role
+trust/inline policies, managed-policy absence, and termination protection with
+the source contract without printing identity IDs or policy bodies.
+
+Effective-policy simulation on 2026-07-23 allowed only the exact approved
+change-set and matching CloudFormation `PassRole` paths. Wrong stack, service
+role, region, import request, direct stack delete, SES send, journal object or
+retention mutation, access-key creation, and managed-policy attachment were
+all denied.
 
 Deferred acceptance gates remain separate:
 
