@@ -29,19 +29,19 @@ source_files:
   - "prisma/schema.prisma"
   - "src/widget/loader.js"
   - "src/widget/reviews-section/bootstrap.js"
-  - "src/widget/reviews-section/render/media-gallery.js"
   - "src/app/api/public/reviews/route.ts"
   - "src/app/api/public/upload/sign/route.ts"
-  - "src/app/api/public/upload/register/route.ts"
-  - "src/app/api/internal/scheduled-jobs/route.ts"
   - "src/lib/review-email/eligibility.ts"
   - "src/lib/review-email/settings.ts"
   - "src/lib/review-email/ikas-orders.ts"
   - "src/lib/review-email/ikas-send-preflight.ts"
   - "src/app/api/internal/email-events/ses/route.ts"
+  - "infra/aws/review-email-deployment-access.cloudformation.json"
+  - "infra/aws/review-email-foundation.cloudformation.json"
+  - "infra/aws/review-email-foundation.stack-policy.json"
+  - "scripts/verify-review-email-deployment-access-live.mjs"
+  - "scripts/verify-review-email-foundation-live.mjs"
   - "src/lib/media/providers/aws-review-image.ts"
-  - "src/lib/media/jobs.ts"
-  - "src/lib/media/lifecycle.ts"
   - "workers/widget-delivery/src/index.ts"
   - "scripts/build-widget.mjs"
   - "config/widget-performance-budget.json"
@@ -60,10 +60,11 @@ source_files:
 - No deploy, migration apply, env write, provider write, or teardown without explicit stop/go approval.
 
 ## Recent Important Changes
-- 2026-07-23: Review-email deployment access is live and
-  verified. The protected access stack contains the expected seven resources;
-  the local operator profile is least-privilege and negative IAM simulations
-  pass. Foundation, journal, and sender stacks remain undeployed. See
+- 2026-07-23: Review-email deployment access bootstrap is live, but stricter
+  exact-name/time-bounded execution and rollback hardening now exists only in
+  source. The live access stack intentionally fails source equality until its
+  separately approved hardening update. Foundation mutation is NO-GO before
+  that update. Foundation, journal, and sender stacks remain undeployed. See
   [[AWS_Setup_And_Access]].
 - 2026-07-20: Review-email now uses current ikas customer subscription, exact
   recipient matching, immutable delivery evidence, stable package-line grouping,
@@ -71,10 +72,6 @@ source_files:
   migrations. PR #9 deployed the flag-first `404` fix for a live disabled-route
   `500`; six live route checks pass, customer lifecycle rows remain zero, and
   the flag is absent.
-- 2026-07-16: Disabled review-email cutoff and confirmation contracts are
-  hardened: exact cutoff evidence, fixed 24-hour deadlines, no ambiguous
-  auto-resend, and pre-commit disable cancellation. PostgreSQL 16/17 and static
-  gates passed. Later ikas evidence supersedes the old order-consent reading.
 - 2026-07-15: Disabled review-email Multi-Product Batch / Envelope V3.2 source
   adds one initial and at most one reminder per delivery group, independent
   product requests, guarded attempts/events, review-center access, and

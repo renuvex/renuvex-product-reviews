@@ -31,6 +31,14 @@ const EXPECTED_STACK_RESOURCES = {
   ReviewEmailJournalCloudFormationRole: 'AWS::IAM::Role',
   ReviewEmailJournalIamCloudFormationRole: 'AWS::IAM::Role',
 };
+const DISABLED_APPROVAL_PARAMETERS = {
+  ApprovedFoundationChangeSetName: 'approval-disabled',
+  ApprovedJournalChangeSetName: 'approval-disabled',
+  ApprovedJournalIamChangeSetName: 'approval-disabled',
+  FoundationExecutionApprovalExpiresAt: '1970-01-01T00:00:00Z',
+  JournalExecutionApprovalExpiresAt: '1970-01-01T00:00:00Z',
+  JournalIamExecutionApprovalExpiresAt: '1970-01-01T00:00:00Z',
+};
 
 const profile = readOption('--profile') || process.env.AWS_PROFILE || 'renuvex-readonly';
 const region = readOption('--region') || process.env.AWS_REGION || EXPECTED_REGION;
@@ -124,7 +132,13 @@ assert(stackParameters.TargetAccountId === EXPECTED_ACCOUNT_ID, 'Stack target ac
 assert(stackParameters.DeploymentRegion === EXPECTED_REGION, 'Stack deployment region parameter drifted.');
 assert(stackParameters.IdentityCenterInstanceArn === instance.InstanceArn, 'Stack Identity Center instance drifted.');
 assert(stackParameters.IdentityStoreId === instance.IdentityStoreId, 'Stack Identity Store drifted.');
-renderContext.OperatorUserId = stackParameters.OperatorUserId;
+for (const [name, expected] of Object.entries(DISABLED_APPROVAL_PARAMETERS)) {
+  assert(
+    stackParameters[name] === expected,
+    `${name} must be fail-closed outside an explicitly approved execution window.`,
+  );
+}
+Object.assign(renderContext, stackParameters);
 
 verifyStackResources();
 verifyGroup(groups[0], stackParameters.OperatorUserId);

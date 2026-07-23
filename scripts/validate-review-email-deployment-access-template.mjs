@@ -1,9 +1,16 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { declaredResourceTypes } from './lib/review-email-cloudformation-contract.mjs';
 
 const templatePath = path.join(process.cwd(), 'infra', 'aws', 'review-email-deployment-access.cloudformation.json');
 const raw = await readFile(templatePath, 'utf8');
 const template = JSON.parse(raw);
+const foundationTemplate = JSON.parse(
+  await readFile(path.join(process.cwd(), 'infra', 'aws', 'review-email-foundation.cloudformation.json'), 'utf8'),
+);
+const journalTemplate = JSON.parse(
+  await readFile(path.join(process.cwd(), 'infra', 'aws', 'review-email-erasure-journal.cloudformation.json'), 'utf8'),
+);
 
 const REGION = 'eu-central-1';
 const ACCOUNT_ID = '989086371563';
@@ -11,15 +18,33 @@ const ROLE_PATH = '/renuvex/review-email/cloudformation/';
 
 const stackRoleMap = {
   CreateFoundationChangeSetWithFoundationRole: {
+    approvalNameParameter: 'ApprovedFoundationChangeSetName',
+    executionExpiryParameter: 'FoundationExecutionApprovalExpiresAt',
+    executionSid: 'ExecuteApprovedFoundationChangeSet',
+    purpose: 'review-request-email',
+    resourceTypes: declaredResourceTypes(foundationTemplate),
     stackName: 'renuvex-review-email-foundation-prod',
+    changeSetPrefix: 'renuvex-review-email-foundation-',
     roleName: 'renuvex-review-email-foundation-cfn',
   },
   CreateJournalChangeSetWithJournalRole: {
+    approvalNameParameter: 'ApprovedJournalChangeSetName',
+    executionExpiryParameter: 'JournalExecutionApprovalExpiresAt',
+    executionSid: 'ExecuteApprovedJournalChangeSet',
+    purpose: 'review-email-erasure-journal',
+    resourceTypes: declaredResourceTypes(journalTemplate),
     stackName: 'renuvex-review-email-erasure-journal-prod',
+    changeSetPrefix: 'renuvex-review-email-journal-',
     roleName: 'renuvex-review-email-journal-cfn',
   },
   CreateJournalIamChangeSetWithJournalIamRole: {
+    approvalNameParameter: 'ApprovedJournalIamChangeSetName',
+    executionExpiryParameter: 'JournalIamExecutionApprovalExpiresAt',
+    executionSid: 'ExecuteApprovedJournalIamChangeSet',
+    purpose: 'review-email-erasure-journal-iam',
+    resourceTypes: null,
     stackName: 'renuvex-review-email-erasure-journal-iam-prod',
+    changeSetPrefix: 'renuvex-review-email-journal-iam-',
     roleName: 'renuvex-review-email-journal-iam-cfn',
   },
 };
@@ -32,7 +57,6 @@ const serviceRoleMap = {
 
 const expectedOperatorActions = new Set([
   'cloudformation:CreateChangeSet',
-  'cloudformation:DeleteChangeSet',
   'cloudformation:DescribeAccountLimits',
   'cloudformation:DescribeChangeSet',
   'cloudformation:DescribeEvents',
@@ -64,6 +88,7 @@ const expectedFoundationActions = new Set([
   'kms:ListKeys',
   'kms:ListResourceTags',
   'kms:PutKeyPolicy',
+  'kms:ScheduleKeyDeletion',
   'kms:TagResource',
   'kms:UntagResource',
   'kms:UpdateAlias',
@@ -71,7 +96,9 @@ const expectedFoundationActions = new Set([
   'ses:CreateConfigurationSet',
   'ses:CreateConfigurationSetEventDestination',
   'ses:CreateEmailIdentity',
+  'ses:DeleteConfigurationSet',
   'ses:DeleteConfigurationSetEventDestination',
+  'ses:DeleteEmailIdentity',
   'ses:DescribeConfigurationSet',
   'ses:GetConfigurationSet',
   'ses:GetConfigurationSetEventDestinations',
@@ -91,6 +118,7 @@ const expectedFoundationActions = new Set([
   'ses:UntagResource',
   'ses:UpdateConfigurationSetEventDestination',
   'sns:CreateTopic',
+  'sns:DeleteTopic',
   'sns:GetDataProtectionPolicy',
   'sns:GetSubscriptionAttributes',
   'sns:GetTopicAttributes',
@@ -105,6 +133,7 @@ const expectedFoundationActions = new Set([
   'sns:Unsubscribe',
   'sns:UntagResource',
   'sqs:CreateQueue',
+  'sqs:DeleteQueue',
   'sqs:GetQueueAttributes',
   'sqs:GetQueueUrl',
   'sqs:ListQueues',
@@ -249,6 +278,27 @@ assert(template.Parameters?.TargetAccountId?.Default === ACCOUNT_ID, 'Target acc
 assert(JSON.stringify(template.Parameters.TargetAccountId.AllowedValues) === JSON.stringify([ACCOUNT_ID]), 'TargetAccountId must have one allowed account.');
 assert(template.Parameters?.DeploymentRegion?.Default === REGION, 'Deployment region must default to eu-central-1.');
 assert(JSON.stringify(template.Parameters.DeploymentRegion.AllowedValues) === JSON.stringify([REGION]), 'DeploymentRegion must be locked to eu-central-1.');
+for (const {
+  approvalNameParameter,
+  changeSetPrefix,
+  executionExpiryParameter,
+} of Object.values(stackRoleMap)) {
+  const nameParameter = template.Parameters?.[approvalNameParameter];
+  const expiryParameter = template.Parameters?.[executionExpiryParameter];
+  assert(nameParameter?.Default === 'approval-disabled', `${approvalNameParameter} must fail closed by default.`);
+  assert(
+    nameParameter?.AllowedPattern?.includes(`^${changeSetPrefix}`),
+    `${approvalNameParameter} must allow only its exact stack-specific prefix or the disabled sentinel.`,
+  );
+  assert(
+    expiryParameter?.Default === '1970-01-01T00:00:00Z',
+    `${executionExpiryParameter} must be expired by default.`,
+  );
+  assert(
+    expiryParameter?.AllowedPattern?.includes('T') && expiryParameter.AllowedPattern.endsWith('Z$'),
+    `${executionExpiryParameter} must require a UTC timestamp.`,
+  );
+}
 
 for (const forbidden of ['AdministratorAccess', 'PowerUserAccess', 'AWS_SECRET_ACCESS_KEY', 'OperatorUserId": "', 'AWS::Lambda::Function', 'ses:SendEmail', 'ses:SendRawEmail']) {
   assert(!raw.includes(forbidden), `Access template contains forbidden content: ${forbidden}`);
@@ -299,9 +349,85 @@ for (const [sid, expected] of Object.entries(stackRoleMap)) {
       `arn:\${AWS::Partition}:iam::\${TargetAccountId}:role${ROLE_PATH}${expected.roleName}`,
     `${sid} must require the matching CloudFormation service role.`,
   );
-  assert(statement.Condition?.StringLike?.['cloudformation:ChangeSetName'] === 'renuvex-review-email-*', `${sid} must require the review-email change-set prefix.`);
+  assert(
+    refValue(statement.Condition?.StringEquals?.['cloudformation:ChangeSetName']) === expected.approvalNameParameter,
+    `${sid} must require the administrator-staged exact change-set name.`,
+  );
+  assert(
+    statement.Condition?.StringLike?.['cloudformation:ChangeSetName'] === `${expected.changeSetPrefix}*`,
+    `${sid} must require the stack-specific change-set prefix.`,
+  );
+  assert(
+    statement.Condition?.StringEquals?.['aws:RequestTag/Environment'] === 'production' &&
+      statement.Condition?.StringEquals?.['aws:RequestTag/Project'] === 'renuvex-product-reviews' &&
+      statement.Condition?.StringEquals?.['aws:RequestTag/Purpose'] === expected.purpose,
+    `${sid} must require the exact provenance scope tags.`,
+  );
+  assert(
+    statement.Condition?.StringLike?.['aws:RequestTag/SourceCommit'] === '?'.repeat(40),
+    `${sid} must require a 40-character source commit tag.`,
+  );
+  assert(
+    statement.Condition?.StringLike?.['aws:RequestTag/TemplateDigest'] === '?'.repeat(64),
+    `${sid} must require a 64-character template digest tag.`,
+  );
+  assertSetEqual(
+    new Set(asArray(statement.Condition?.['ForAllValues:StringEquals']?.['aws:TagKeys'])),
+    new Set(['Environment', 'Project', 'Purpose', 'SourceCommit', 'TemplateDigest']),
+    `${sid} tag-key allowlist`,
+  );
+  assert(statement.Condition?.Null?.['aws:TagKeys'] === 'false', `${sid} must require the tag-key request field.`);
   assert(statement.Condition?.Null?.['cloudformation:ImportResourceTypes'] === 'true', `${sid} must reject IMPORT change sets.`);
+  if (expected.resourceTypes) {
+    assertSetEqual(
+      new Set(asArray(statement.Condition?.['ForAllValues:StringEquals']?.['cloudformation:ResourceTypes'])),
+      new Set(expected.resourceTypes),
+      `${sid} resource-type allowlist`,
+    );
+    assert(statement.Condition?.Null?.['cloudformation:ResourceTypes'] === 'false', `${sid} must require ResourceTypes.`);
+  } else {
+    assert(
+      statement.Condition?.Null?.['cloudformation:ResourceTypes'] === 'true',
+      `${sid} must omit ResourceTypes because CAPABILITY_NAMED_IAM is required.`,
+    );
+  }
+
+  const execute = statementBySid(operatorPolicy, expected.executionSid);
+  assert(execute?.Effect === 'Allow', `${expected.executionSid} must exist.`);
+  assert(execute.Action === 'cloudformation:ExecuteChangeSet', `${expected.executionSid} must allow only ExecuteChangeSet.`);
+  assert(
+    fnSubValue(execute.Resource) === `arn:\${AWS::Partition}:cloudformation:\${DeploymentRegion}:\${TargetAccountId}:stack/${expected.stackName}/*`,
+    `${expected.executionSid} must target only ${expected.stackName}.`,
+  );
+  assert(
+    refValue(execute.Condition?.StringEquals?.['aws:RequestedRegion']) === 'DeploymentRegion',
+    `${expected.executionSid} must require the locked region.`,
+  );
+  assert(
+    refValue(execute.Condition?.StringEquals?.['cloudformation:ChangeSetName']) === expected.approvalNameParameter,
+    `${expected.executionSid} must require the exact staged change-set name.`,
+  );
+  assert(
+    execute.Condition?.StringLike?.['cloudformation:ChangeSetName'] === `${expected.changeSetPrefix}*`,
+    `${expected.executionSid} must reject the disabled sentinel.`,
+  );
+  assert(
+    refValue(execute.Condition?.DateLessThan?.['aws:CurrentTime']) === expected.executionExpiryParameter,
+    `${expected.executionSid} must expire at the administrator-staged UTC deadline.`,
+  );
 }
+
+const inspect = statementBySid(operatorPolicy, 'InspectApprovedReviewEmailChangeSets');
+assert(inspect?.Effect === 'Allow', 'InspectApprovedReviewEmailChangeSets must exist.');
+assert(
+  !actionSet({ Statement: [inspect] }).has('cloudformation:ExecuteChangeSet') &&
+    !actionSet({ Statement: [inspect] }).has('cloudformation:DeleteChangeSet'),
+  'Read-only change-set inspection must not execute or delete change sets.',
+);
+assert(
+  !actionSet(operatorPolicy).has('cloudformation:DeleteChangeSet'),
+  'Operator must not delete a staged change set and recreate it under an approved name.',
+);
 
 const passRole = statementBySid(operatorPolicy, 'PassOnlyApprovedCloudFormationServiceRoles');
 assert(passRole?.Action === 'iam:PassRole', 'Operator must have one exact iam:PassRole statement.');
@@ -357,6 +483,24 @@ const createKmsKey = statementBySid(foundationPolicy, 'CreateSymmetricReviewEmai
 assert(createKmsKey?.Action === 'kms:CreateKey' && createKmsKey.Resource === '*', 'KMS key creation must isolate only kms:CreateKey on Resource "*".');
 assert(createKmsKey.Condition?.StringEquals?.['aws:RequestTag/Project'] === 'renuvex-product-reviews', 'KMS key creation must require the project request tag.');
 assert(createKmsKey.Condition?.StringEquals?.['aws:RequestTag/Purpose'] === 'review-request-email', 'KMS key creation must require the purpose request tag.');
+assert(createKmsKey.Condition?.StringEquals?.['aws:RequestTag/Environment'] === 'production', 'KMS key creation must require the production request tag.');
+const scheduleKeyDeletion = statementBySid(foundationPolicy, 'ScheduleDeletionForTaggedReviewEmailKmsKey');
+assert(scheduleKeyDeletion?.Action === 'kms:ScheduleKeyDeletion', 'KMS rollback cleanup must isolate kms:ScheduleKeyDeletion.');
+assert(
+  fnSubValue(scheduleKeyDeletion?.Resource) ===
+    'arn:${AWS::Partition}:kms:${DeploymentRegion}:${TargetAccountId}:key/*',
+  'KMS rollback cleanup must remain account/region key scoped.',
+);
+assert(
+  scheduleKeyDeletion.Condition?.StringEquals?.['aws:ResourceTag/Environment'] === 'production' &&
+    scheduleKeyDeletion.Condition?.StringEquals?.['aws:ResourceTag/Project'] === 'renuvex-product-reviews' &&
+    scheduleKeyDeletion.Condition?.StringEquals?.['aws:ResourceTag/Purpose'] === 'review-request-email',
+  'KMS rollback cleanup must require all three resource tags.',
+);
+assert(
+  scheduleKeyDeletion.Condition?.NumericEquals?.['kms:ScheduleKeyDeletionPendingWindowInDays'] === '7',
+  'KMS rollback cleanup must require the seven-day pending-deletion window.',
+);
 for (const [sid, action] of [
   ['CreateTaggedReviewEmailConfigurationSet', 'ses:CreateConfigurationSet'],
   ['CreateTaggedReviewEmailIdentity', 'ses:CreateEmailIdentity'],
@@ -364,6 +508,7 @@ for (const [sid, action] of [
   const statement = statementBySid(foundationPolicy, sid);
   assert(statement?.Action === action && statement.Resource === '*', `${sid} must isolate the SES create action on Resource "*".`);
   assert(refValue(statement.Condition?.StringEquals?.['aws:RequestedRegion']) === 'DeploymentRegion', `${sid} must require the locked deployment region.`);
+  assert(statement.Condition?.StringEquals?.['aws:RequestTag/Environment'] === 'production', `${sid} must require the production request tag.`);
   assert(statement.Condition?.StringEquals?.['aws:RequestTag/Project'] === 'renuvex-product-reviews', `${sid} must require the project request tag.`);
   assert(statement.Condition?.StringEquals?.['aws:RequestTag/Purpose'] === 'review-request-email', `${sid} must require the purpose request tag.`);
 }

@@ -36,7 +36,19 @@ source_files:
   - "prisma/migrations/20260720120000_align_ikas_review_email_contracts/migration.sql"
   - "config/review-email-copy-register.json"
   - "infra/aws/review-email-deployment-access.cloudformation.json"
+  - "infra/aws/review-email-foundation.stack-policy.json"
   - "scripts/verify-review-email-deployment-access-live.mjs"
+  - "scripts/lib/review-email-cloudformation-contract.mjs"
+  - "scripts/simulate-review-email-deployment-access-policy.mjs"
+  - "scripts/validate-review-email-aws-policies.mjs"
+  - "scripts/create-review-email-access-hardening-change-set.mjs"
+  - "scripts/verify-review-email-access-hardening-change-set.mjs"
+  - "scripts/create-review-email-foundation-change-set.mjs"
+  - "scripts/verify-review-email-foundation-change-set.mjs"
+  - "scripts/set-review-email-foundation-execution-approval.mjs"
+  - "scripts/execute-review-email-foundation-change-set.mjs"
+  - "scripts/finalize-review-email-foundation-stack.mjs"
+  - "scripts/verify-review-email-foundation-live.mjs"
   - "infra/aws/review-email-erasure-journal.cloudformation.json"
   - "infra/aws/review-email-erasure-journal-iam.cloudformation.json"
   - "src/lib/ikas-installation-lifecycle.ts"
@@ -575,6 +587,59 @@ Still missing:
 - The persistent `renuvex-review-email` SSO profile uses the provisioned
   least-privilege permission set. Administrator remains a bootstrap/decommission
   boundary and is not the normal review-email deployment profile.
+
+#### Foundation execution hardening
+
+- The original live bootstrap allowed the operator to execute any matching
+  review-email change-set name on the three exact stacks and to delete unused
+  change sets. A 2026-07-23 source hardening supersedes that contract but is
+  not live until a separate approved access-stack update completes.
+- The hardened permission set removes `DeleteChangeSet`. An administrator
+  stages one exact name per stack while execute approval is expired; execution
+  additionally requires `aws:CurrentTime` before a bounded UTC deadline.
+  Steady-state parameters are disabled and expired.
+- The administrator performs two distinct gates: stage the exact name before
+  creation, then open a maximum 15-minute execute window only after read-only
+  verification. The execution wrapper closes the window in `finally`; the IAM
+  deadline is the independent fail-safe if cleanup fails.
+- IAM cannot authorize a `TemplateBody` hash. Template integrity is instead
+  bound to the immutable staged change-set name: the operator cannot delete and
+  recreate it, and canonical SHA-256 equality is required across local JSON,
+  `GetTemplate(TemplateStage=Original)` for the change set, and the completed
+  stack. Source commit and template digest are also exact stack tags.
+- Foundation and non-IAM journal change-set creation must provide their
+  template-derived `cloudformation:ResourceTypes` allowlists. Omitting the
+  request field is denied. The journal-IAM stack omits `ResourceTypes` because
+  CloudFormation does not permit it together with `CAPABILITY_NAMED_IAM`; exact
+  template verification and the narrowly scoped service role remain mandatory.
+- Foundation first-create rollback is `OnStackFailure=ROLLBACK` plus
+  `RetainExceptOnCreate=true`. The operator never sends `DisableRollback`.
+  Exact rollback permissions include the created SNS/SQS/SES resources and a
+  seven-day, tag-scoped `kms:ScheduleKeyDeletion`.
+- The foundation stack policy is applied only after `CREATE_COMPLETE`. It
+  denies `Update:Delete` and `Update:Replace` for every declared logical
+  resource, including the KMS alias and SES event destination; termination
+  protection is enabled only after policy read-back succeeds.
+- Source foundation safety is layered, not attributed solely to the
+  configuration set: no sender role or SES send action exists, DNS is not
+  configured, and `SendingEnabled=false`. A caller could explicitly select a
+  different configuration set in a future send API request, so the sender
+  phase must separately bind the exact identity, From address, tenant, and
+  configuration set in IAM, application validation, and live verification.
+- The foundation configuration set does not set `SuppressionOptions`; AWS
+  configuration-set suppression would override tenant/account suppression and
+  is therefore deferred to the tenant-aware sender contract.
+- The SNS topic is encrypted with the direct KMS key ARN. The KMS and SNS
+  resource policies both restrict SES to the expected account and exact
+  configuration-set source ARN. No unverified encryption-context condition is
+  introduced.
+- Automatic KMS rotation is enabled with `RotationPeriodInDays=365`. The
+  optional HTTPS subscription remains false when `FeedbackEndpointUrl=""`;
+  event and subscription resources explicitly wait for their resource policies.
+- Until the access hardening is deployed and the live verifier returns to
+  source equality, foundation mutation remains **NO-GO**. Current read-only
+  evidence still shows zero foundation, sender, tenant, Lambda, and Scheduler
+  resources.
 
 - The AWS-native email worker path requires a separate Lambda execution role
   with least-privilege access to its SQS queue, SES send action, CloudWatch

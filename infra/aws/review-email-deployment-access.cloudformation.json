@@ -40,6 +40,42 @@
         "renuvex-review-email-erasure-journal-prod-989086371563-euc1"
       ],
       "Description": "Locked journal bucket managed by the journal CloudFormation service role."
+    },
+    "ApprovedFoundationChangeSetName": {
+      "Type": "String",
+      "Default": "approval-disabled",
+      "AllowedPattern": "^approval-disabled$|^renuvex-review-email-foundation-[a-z0-9][a-z0-9-]{0,95}$",
+      "Description": "Exact foundation change-set name staged by an administrator. The disabled default cannot satisfy the create/execute prefix condition."
+    },
+    "FoundationExecutionApprovalExpiresAt": {
+      "Type": "String",
+      "Default": "1970-01-01T00:00:00Z",
+      "AllowedPattern": "^1970-01-01T00:00:00Z$|^20[0-9]{2}-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-1])T([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$",
+      "Description": "UTC expiry for the exact foundation ExecuteChangeSet authorization."
+    },
+    "ApprovedJournalChangeSetName": {
+      "Type": "String",
+      "Default": "approval-disabled",
+      "AllowedPattern": "^approval-disabled$|^renuvex-review-email-journal-[a-z0-9][a-z0-9-]{0,95}$",
+      "Description": "Exact journal change-set name staged by an administrator."
+    },
+    "JournalExecutionApprovalExpiresAt": {
+      "Type": "String",
+      "Default": "1970-01-01T00:00:00Z",
+      "AllowedPattern": "^1970-01-01T00:00:00Z$|^20[0-9]{2}-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-1])T([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$",
+      "Description": "UTC expiry for the exact journal ExecuteChangeSet authorization."
+    },
+    "ApprovedJournalIamChangeSetName": {
+      "Type": "String",
+      "Default": "approval-disabled",
+      "AllowedPattern": "^approval-disabled$|^renuvex-review-email-journal-iam-[a-z0-9][a-z0-9-]{0,95}$",
+      "Description": "Exact journal-IAM change-set name staged by an administrator."
+    },
+    "JournalIamExecutionApprovalExpiresAt": {
+      "Type": "String",
+      "Default": "1970-01-01T00:00:00Z",
+      "AllowedPattern": "^1970-01-01T00:00:00Z$|^20[0-9]{2}-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-1])T([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$",
+      "Description": "UTC expiry for the exact journal-IAM ExecuteChangeSet authorization."
     }
   },
   "Resources": {
@@ -114,15 +150,46 @@
                   "aws:RequestedRegion": {
                     "Ref": "DeploymentRegion"
                   },
+                  "aws:RequestTag/Environment": "production",
+                  "aws:RequestTag/Project": "renuvex-product-reviews",
+                  "aws:RequestTag/Purpose": "review-request-email",
+                  "cloudformation:ChangeSetName": {
+                    "Ref": "ApprovedFoundationChangeSetName"
+                  },
                   "cloudformation:RoleArn": {
                     "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-foundation-cfn"
                   }
                 },
                 "StringLike": {
-                  "cloudformation:ChangeSetName": "renuvex-review-email-*"
+                  "aws:RequestTag/SourceCommit": "????????????????????????????????????????",
+                  "aws:RequestTag/TemplateDigest": "????????????????????????????????????????????????????????????????",
+                  "cloudformation:ChangeSetName": "renuvex-review-email-foundation-*"
+                },
+                "ForAllValues:StringEquals": {
+                  "aws:TagKeys": [
+                    "Environment",
+                    "Project",
+                    "Purpose",
+                    "SourceCommit",
+                    "TemplateDigest"
+                  ],
+                  "cloudformation:ResourceTypes": [
+                    "AWS::KMS::Alias",
+                    "AWS::KMS::Key",
+                    "AWS::SES::ConfigurationSet",
+                    "AWS::SES::ConfigurationSetEventDestination",
+                    "AWS::SES::EmailIdentity",
+                    "AWS::SNS::Subscription",
+                    "AWS::SNS::Topic",
+                    "AWS::SNS::TopicPolicy",
+                    "AWS::SQS::Queue",
+                    "AWS::SQS::QueuePolicy"
+                  ]
                 },
                 "Null": {
-                  "cloudformation:ImportResourceTypes": "true"
+                  "aws:TagKeys": "false",
+                  "cloudformation:ImportResourceTypes": "true",
+                  "cloudformation:ResourceTypes": "false"
                 }
               }
             },
@@ -138,15 +205,38 @@
                   "aws:RequestedRegion": {
                     "Ref": "DeploymentRegion"
                   },
+                  "aws:RequestTag/Environment": "production",
+                  "aws:RequestTag/Project": "renuvex-product-reviews",
+                  "aws:RequestTag/Purpose": "review-email-erasure-journal",
+                  "cloudformation:ChangeSetName": {
+                    "Ref": "ApprovedJournalChangeSetName"
+                  },
                   "cloudformation:RoleArn": {
                     "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-journal-cfn"
                   }
                 },
                 "StringLike": {
-                  "cloudformation:ChangeSetName": "renuvex-review-email-*"
+                  "aws:RequestTag/SourceCommit": "????????????????????????????????????????",
+                  "aws:RequestTag/TemplateDigest": "????????????????????????????????????????????????????????????????",
+                  "cloudformation:ChangeSetName": "renuvex-review-email-journal-*"
+                },
+                "ForAllValues:StringEquals": {
+                  "aws:TagKeys": [
+                    "Environment",
+                    "Project",
+                    "Purpose",
+                    "SourceCommit",
+                    "TemplateDigest"
+                  ],
+                  "cloudformation:ResourceTypes": [
+                    "AWS::S3::Bucket",
+                    "AWS::S3::BucketPolicy"
+                  ]
                 },
                 "Null": {
-                  "cloudformation:ImportResourceTypes": "true"
+                  "aws:TagKeys": "false",
+                  "cloudformation:ImportResourceTypes": "true",
+                  "cloudformation:ResourceTypes": "false"
                 }
               }
             },
@@ -162,29 +252,46 @@
                   "aws:RequestedRegion": {
                     "Ref": "DeploymentRegion"
                   },
+                  "aws:RequestTag/Environment": "production",
+                  "aws:RequestTag/Project": "renuvex-product-reviews",
+                  "aws:RequestTag/Purpose": "review-email-erasure-journal-iam",
+                  "cloudformation:ChangeSetName": {
+                    "Ref": "ApprovedJournalIamChangeSetName"
+                  },
                   "cloudformation:RoleArn": {
                     "Fn::Sub": "arn:${AWS::Partition}:iam::${TargetAccountId}:role/renuvex/review-email/cloudformation/renuvex-review-email-journal-iam-cfn"
                   }
                 },
                 "StringLike": {
-                  "cloudformation:ChangeSetName": "renuvex-review-email-*"
+                  "aws:RequestTag/SourceCommit": "????????????????????????????????????????",
+                  "aws:RequestTag/TemplateDigest": "????????????????????????????????????????????????????????????????",
+                  "cloudformation:ChangeSetName": "renuvex-review-email-journal-iam-*"
+                },
+                "ForAllValues:StringEquals": {
+                  "aws:TagKeys": [
+                    "Environment",
+                    "Project",
+                    "Purpose",
+                    "SourceCommit",
+                    "TemplateDigest"
+                  ]
                 },
                 "Null": {
-                  "cloudformation:ImportResourceTypes": "true"
+                  "aws:TagKeys": "false",
+                  "cloudformation:ImportResourceTypes": "true",
+                  "cloudformation:ResourceTypes": "true"
                 }
               }
             },
             {
-              "Sid": "OperateApprovedReviewEmailChangeSets",
+              "Sid": "InspectApprovedReviewEmailChangeSets",
               "Effect": "Allow",
               "Action": [
-                "cloudformation:DeleteChangeSet",
                 "cloudformation:DescribeChangeSet",
                 "cloudformation:DescribeStackEvents",
                 "cloudformation:DescribeStackResource",
                 "cloudformation:DescribeStackResources",
                 "cloudformation:DescribeStacks",
-                "cloudformation:ExecuteChangeSet",
                 "cloudformation:GetStackPolicy",
                 "cloudformation:GetTemplate",
                 "cloudformation:ListChangeSets",
@@ -205,6 +312,84 @@
                 "StringEquals": {
                   "aws:RequestedRegion": {
                     "Ref": "DeploymentRegion"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "ExecuteApprovedFoundationChangeSet",
+              "Effect": "Allow",
+              "Action": "cloudformation:ExecuteChangeSet",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-foundation-prod/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  },
+                  "cloudformation:ChangeSetName": {
+                    "Ref": "ApprovedFoundationChangeSetName"
+                  }
+                },
+                "StringLike": {
+                  "cloudformation:ChangeSetName": "renuvex-review-email-foundation-*"
+                },
+                "DateLessThan": {
+                  "aws:CurrentTime": {
+                    "Ref": "FoundationExecutionApprovalExpiresAt"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "ExecuteApprovedJournalChangeSet",
+              "Effect": "Allow",
+              "Action": "cloudformation:ExecuteChangeSet",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-erasure-journal-prod/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  },
+                  "cloudformation:ChangeSetName": {
+                    "Ref": "ApprovedJournalChangeSetName"
+                  }
+                },
+                "StringLike": {
+                  "cloudformation:ChangeSetName": "renuvex-review-email-journal-*"
+                },
+                "DateLessThan": {
+                  "aws:CurrentTime": {
+                    "Ref": "JournalExecutionApprovalExpiresAt"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "ExecuteApprovedJournalIamChangeSet",
+              "Effect": "Allow",
+              "Action": "cloudformation:ExecuteChangeSet",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${DeploymentRegion}:${TargetAccountId}:stack/renuvex-review-email-erasure-journal-iam-prod/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestedRegion": {
+                    "Ref": "DeploymentRegion"
+                  },
+                  "cloudformation:ChangeSetName": {
+                    "Ref": "ApprovedJournalIamChangeSetName"
+                  }
+                },
+                "StringLike": {
+                  "cloudformation:ChangeSetName": "renuvex-review-email-journal-iam-*"
+                },
+                "DateLessThan": {
+                  "aws:CurrentTime": {
+                    "Ref": "JournalIamExecutionApprovalExpiresAt"
                   }
                 }
               }
@@ -333,6 +518,7 @@
                       "aws:RequestedRegion": {
                         "Ref": "DeploymentRegion"
                       },
+                      "aws:RequestTag/Environment": "production",
                       "aws:RequestTag/Project": "renuvex-product-reviews",
                       "aws:RequestTag/Purpose": "review-request-email",
                       "kms:KeySpec": "SYMMETRIC_DEFAULT",
@@ -355,6 +541,7 @@
                       "aws:RequestedRegion": {
                         "Ref": "DeploymentRegion"
                       },
+                      "aws:RequestTag/Environment": "production",
                       "aws:RequestTag/Project": "renuvex-product-reviews",
                       "aws:RequestTag/Purpose": "review-request-email"
                     }
@@ -382,8 +569,30 @@
                       "aws:RequestedRegion": {
                         "Ref": "DeploymentRegion"
                       },
+                      "aws:ResourceTag/Environment": "production",
                       "aws:ResourceTag/Project": "renuvex-product-reviews",
                       "aws:ResourceTag/Purpose": "review-request-email"
+                    }
+                  }
+                },
+                {
+                  "Sid": "ScheduleDeletionForTaggedReviewEmailKmsKey",
+                  "Effect": "Allow",
+                  "Action": "kms:ScheduleKeyDeletion",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:kms:${DeploymentRegion}:${TargetAccountId}:key/*"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestedRegion": {
+                        "Ref": "DeploymentRegion"
+                      },
+                      "aws:ResourceTag/Environment": "production",
+                      "aws:ResourceTag/Project": "renuvex-product-reviews",
+                      "aws:ResourceTag/Purpose": "review-request-email"
+                    },
+                    "NumericEquals": {
+                      "kms:ScheduleKeyDeletionPendingWindowInDays": "7"
                     }
                   }
                 },
@@ -421,6 +630,7 @@
                       "aws:RequestedRegion": {
                         "Ref": "DeploymentRegion"
                       },
+                      "aws:ResourceTag/Environment": "production",
                       "aws:ResourceTag/Project": "renuvex-product-reviews",
                       "aws:ResourceTag/Purpose": "review-request-email"
                     }
@@ -447,6 +657,7 @@
                   "Effect": "Allow",
                   "Action": [
                     "sns:CreateTopic",
+                    "sns:DeleteTopic",
                     "sns:GetDataProtectionPolicy",
                     "sns:GetTopicAttributes",
                     "sns:ListSubscriptionsByTopic",
@@ -507,6 +718,7 @@
                   "Effect": "Allow",
                   "Action": [
                     "sqs:CreateQueue",
+                    "sqs:DeleteQueue",
                     "sqs:GetQueueAttributes",
                     "sqs:GetQueueUrl",
                     "sqs:ListQueueTags",
@@ -548,6 +760,7 @@
                       "aws:RequestedRegion": {
                         "Ref": "DeploymentRegion"
                       },
+                      "aws:RequestTag/Environment": "production",
                       "aws:RequestTag/Project": "renuvex-product-reviews",
                       "aws:RequestTag/Purpose": "review-request-email"
                     }
@@ -571,6 +784,7 @@
                   "Effect": "Allow",
                   "Action": [
                     "ses:CreateConfigurationSetEventDestination",
+                    "ses:DeleteConfigurationSet",
                     "ses:DeleteConfigurationSetEventDestination",
                     "ses:GetConfigurationSet",
                     "ses:GetConfigurationSetEventDestinations",
@@ -602,6 +816,7 @@
                       "aws:RequestedRegion": {
                         "Ref": "DeploymentRegion"
                       },
+                      "aws:RequestTag/Environment": "production",
                       "aws:RequestTag/Project": "renuvex-product-reviews",
                       "aws:RequestTag/Purpose": "review-request-email"
                     }
@@ -611,6 +826,7 @@
                   "Sid": "ManageExactReviewEmailIdentity",
                   "Effect": "Allow",
                   "Action": [
+                    "ses:DeleteEmailIdentity",
                     "ses:GetEmailIdentity",
                     "ses:ListTagsForResource",
                     "ses:PutEmailIdentityConfigurationSetAttributes",

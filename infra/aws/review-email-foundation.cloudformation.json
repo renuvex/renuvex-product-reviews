@@ -52,7 +52,8 @@
       "UpdateReplacePolicy": "Retain",
       "Properties": {
         "Description": "Encrypts Renuvex SES review-request feedback SNS topic.",
-        "EnableKeyRotation": false,
+        "EnableKeyRotation": true,
+        "RotationPeriodInDays": 365,
         "KeySpec": "SYMMETRIC_DEFAULT",
         "KeyUsage": "ENCRYPT_DECRYPT",
         "PendingWindowInDays": 7,
@@ -104,6 +105,10 @@
           {
             "Key": "Purpose",
             "Value": "review-request-email"
+          },
+          {
+            "Key": "Environment",
+            "Value": "production"
           }
         ]
       }
@@ -140,6 +145,10 @@
           {
             "Key": "Purpose",
             "Value": "review-request-email"
+          },
+          {
+            "Key": "Environment",
+            "Value": "production"
           }
         ]
       }
@@ -200,6 +209,10 @@
           {
             "Key": "Purpose",
             "Value": "review-request-email"
+          },
+          {
+            "Key": "Environment",
+            "Value": "production"
           }
         ]
       }
@@ -248,6 +261,7 @@
     "ReviewEmailEventsHttpsSubscription": {
       "Type": "AWS::SNS::Subscription",
       "Condition": "HasFeedbackEndpoint",
+      "DependsOn": "ReviewEmailEventsDlqPolicy",
       "Properties": {
         "TopicArn": {
           "Ref": "ReviewEmailEventsTopic"
@@ -287,16 +301,10 @@
           "Ref": "ConfigurationSetName"
         },
         "SendingOptions": {
-          "SendingEnabled": true
+          "SendingEnabled": false
         },
         "ReputationOptions": {
           "ReputationMetricsEnabled": true
-        },
-        "SuppressionOptions": {
-          "SuppressedReasons": [
-            "BOUNCE",
-            "COMPLAINT"
-          ]
         },
         "Tags": [
           {
@@ -306,12 +314,17 @@
           {
             "Key": "Purpose",
             "Value": "review-request-email"
+          },
+          {
+            "Key": "Environment",
+            "Value": "production"
           }
         ]
       }
     },
     "ReviewEmailConfigurationSetEventDestination": {
       "Type": "AWS::SES::ConfigurationSetEventDestination",
+      "DependsOn": "ReviewEmailEventsTopicPolicy",
       "Properties": {
         "ConfigurationSetName": {
           "Ref": "ReviewEmailConfigurationSet"
@@ -372,6 +385,10 @@
           {
             "Key": "Purpose",
             "Value": "review-request-email"
+          },
+          {
+            "Key": "Environment",
+            "Value": "production"
           }
         ]
       }
